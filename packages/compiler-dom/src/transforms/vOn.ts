@@ -1,6 +1,7 @@
 import {
   CompilerDeprecationTypes,
   type DirectiveTransform,
+  ErrorCodes,
   type ExpressionNode,
   NodeTypes,
   type SimpleExpressionNode,
@@ -9,6 +10,7 @@ import {
   transformOn as baseTransform,
   checkCompatEnabled,
   createCallExpression,
+  createCompilerError,
   createCompoundExpression,
   createObjectProperty,
   createSimpleExpression,
@@ -121,14 +123,23 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
     const { modifiers } = dir
     if (!modifiers.length) return baseResult
 
+    const staticModifiers = modifiers.filter(isStaticExp)
+    if (staticModifiers.length !== modifiers.length) {
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+          dir.loc,
+          undefined,
+          ` v-on only supports static modifiers.`,
+        ),
+      )
+    }
+
+    if (!staticModifiers.length) return baseResult
+
     let { key, value: handlerExp } = baseResult.props[0]
     const { keyModifiers, nonKeyModifiers, eventOptionModifiers } =
-      resolveModifiers(
-        key,
-        modifiers as SimpleExpressionNode[],
-        context,
-        dir.loc,
-      )
+      resolveModifiers(key, staticModifiers, context, dir.loc)
 
     // normalize click.right and click.middle since they don't actually fire
     if (nonKeyModifiers.includes('right')) {

@@ -402,6 +402,19 @@ describe('v-on', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
+  test('should error on dynamic modifiers', () => {
+    const onError = vi.fn()
+    compileWithVOn(`<div @keyup.[key]="handler" />`, {
+      onError,
+      prefixIdentifiers: true,
+    })
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+      }),
+    )
+  })
+
   test('should support multiple modifiers and event options w/ prefixIdentifiers: true', () => {
     const { code, ir, helpers } = compileWithVOn(
       `<div @click.stop.prevent.capture.once="test"/>`,

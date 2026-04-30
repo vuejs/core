@@ -203,6 +203,17 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
+  test('dynamic modifier should error', () => {
+    const onError = vi.fn()
+    parseWithVBind(`<div v-bind:foo.[mods]="id"/>`, { onError })
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+      }),
+    )
+  })
+
   test('.camel modifier w/ no expression', () => {
     const node = parseWithVBind(`<div v-bind:foo-bar.camel />`)
     const props = (node.codegenNode as VNodeCall).props as ObjectExpression

@@ -166,6 +166,17 @@ describe('compiler: vModel transform', () => {
 
       expect(code).toMatchSnapshot()
     })
+
+    test('dynamic modifiers', () => {
+      const { code } = compileWithVModel(
+        '<input v-model.trim.[mods]="model" />',
+        {
+          prefixIdentifiers: true,
+        },
+      )
+
+      expect(code).contains(`Object.assign({ trim: true }, _ctx.mods)`)
+    })
   })
 
   test('should support member expression', () => {
@@ -286,7 +297,10 @@ describe('compiler: vModel transform', () => {
               key: { content: 'modelValue', isStatic: true },
               values: [{ content: 'foo', isStatic: false }],
               model: true,
-              modelModifiers: ['trim', 'bar-baz'],
+              modelModifiers: [
+                { content: 'trim', isStatic: true },
+                { content: 'bar-baz', isStatic: true },
+              ],
             },
           ],
         ],
@@ -309,13 +323,13 @@ describe('compiler: vModel transform', () => {
               key: { content: 'foo', isStatic: true },
               values: [{ content: 'foo', isStatic: false }],
               model: true,
-              modelModifiers: ['trim'],
+              modelModifiers: [{ content: 'trim', isStatic: true }],
             },
             {
               key: { content: 'bar', isStatic: true },
               values: [{ content: 'bar', isStatic: false }],
               model: true,
-              modelModifiers: ['number'],
+              modelModifiers: [{ content: 'number', isStatic: true }],
             },
           ],
         ],
@@ -337,7 +351,7 @@ describe('compiler: vModel transform', () => {
               key: { content: 'model', isStatic: true },
               values: [{ content: 'foo', isStatic: false }],
               model: true,
-              modelModifiers: ['trim'],
+              modelModifiers: [{ content: 'trim', isStatic: true }],
             },
           ],
         ],
@@ -365,14 +379,43 @@ describe('compiler: vModel transform', () => {
             key: { content: 'foo', isStatic: false },
             values: [{ content: 'foo', isStatic: false }],
             model: true,
-            modelModifiers: ['trim'],
+            modelModifiers: [{ content: 'trim', isStatic: true }],
           },
           {
             key: { content: 'bar', isStatic: false },
             values: [{ content: 'bar', isStatic: false }],
             model: true,
-            modelModifiers: ['number'],
+            modelModifiers: [{ content: 'number', isStatic: true }],
           },
+        ],
+      })
+    })
+
+    test('v-model for component should generate dynamic modelModifiers', () => {
+      const { code, ir } = compileWithVModel(
+        '<Comp v-model.trim.[mods]="foo" />',
+        {
+          prefixIdentifiers: true,
+        },
+      )
+      expect(code).contains(
+        `modelModifiers: () => (Object.assign({ trim: true }, _ctx.mods))`,
+      )
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Comp',
+        props: [
+          [
+            {
+              key: { content: 'modelValue', isStatic: true },
+              values: [{ content: 'foo', isStatic: false }],
+              model: true,
+              modelModifiers: [
+                { content: 'trim', isStatic: true },
+                { content: 'mods', isStatic: false },
+              ],
+            },
+          ],
         ],
       })
     })

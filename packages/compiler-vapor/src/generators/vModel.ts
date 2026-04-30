@@ -3,6 +3,7 @@ import type { DirectiveIRNode } from '../ir'
 import { type CodeFragment, NEWLINE, genCall } from './utils'
 import { genExpression } from './expression'
 import type { SimpleExpressionNode } from '@vue/compiler-dom'
+import { genDirectiveModifiers } from './directive'
 
 const helperMap = {
   text: 'applyTextModel',
@@ -33,9 +34,7 @@ export function genVModel(
       // setter
       genModelHandler(exp!, context),
       // modifiers
-      modifiers.length
-        ? `{ ${modifiers.map(e => e.content + ': true').join(',')} }`
-        : undefined,
+      modifiers.length ? genDirectiveModifiers(modifiers, context) : undefined,
     ),
   ]
 }

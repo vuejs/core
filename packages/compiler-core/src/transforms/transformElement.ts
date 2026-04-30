@@ -51,6 +51,8 @@ import {
 } from '../runtimeHelpers'
 import {
   findProp,
+  hasDynamicModifier,
+  hasStaticModifier,
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
@@ -541,9 +543,20 @@ export function buildProps(
       )
     } else {
       // directives
-      const { name, arg, exp, loc, modifiers } = prop
+      const { name, arg, exp, loc } = prop
       const isVBind = name === 'bind'
       const isVOn = name === 'on'
+
+      if (!arg && isVBind && hasDynamicModifier(prop)) {
+        context.onError(
+          createCompilerError(
+            ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+            loc,
+            undefined,
+            ` v-bind only supports static modifiers.`,
+          ),
+        )
+      }
 
       // skip v-slot - it is handled by its dedicated transform.
       if (name === 'slot') {
@@ -668,10 +681,7 @@ export function buildProps(
       }
 
       // force hydration for v-bind with .prop modifier
-      if (
-        isVBind &&
-        modifiers.some(mod => (mod as SimpleExpressionNode).content === 'prop')
-      ) {
+      if (isVBind && hasStaticModifier(prop, 'prop')) {
         patchFlag |= PatchFlags.NEED_HYDRATION
       }
 
@@ -907,7 +917,7 @@ export function buildDirectiveArgs(
     }
     dirArgs.push(dir.arg)
   }
-  if (Object.keys(dir.modifiers).length) {
+  if (dir.modifiers.length) {
     if (!dir.arg) {
       if (!dir.exp) {
         dirArgs.push(`void 0`)
@@ -931,8 +941,8 @@ export function transformModifiers(dir: DirectiveNode): Property['value'] {
   const callArgs: (ObjectExpression | ExpressionNode)[] = []
 
   for (let i = 0; i < dir.modifiers.length; i++) {
-    const modifier = dir.modifiers[i] as SimpleExpressionNode
-    const isStatic = modifier.isStatic
+    const modifier = dir.modifiers[i]
+    const isStatic = isStaticExp(modifier)
 
     if (isStatic) {
       staticMods.push(modifier)
@@ -963,7 +973,7 @@ export function transformModifiers(dir: DirectiveNode): Property['value'] {
     }
   }
 
-  // Only static mods were passed. Use simple expression to avoid adding modelModidifiers to dynamic prop keys
+  // Only static mods were passed. Use simple expression to avoid adding modelModifiers to dynamic prop keys
   if (staticMods.length === dir.modifiers.length) {
     const modifiers = staticMods
       .map(m => (m as SimpleExpressionNode).content)

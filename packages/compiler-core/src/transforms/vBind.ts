@@ -8,15 +8,27 @@ import {
 import { ErrorCodes, createCompilerError } from '../errors'
 import { camelize } from '@vue/shared'
 import { CAMELIZE } from '../runtimeHelpers'
+import { hasDynamicModifier, hasStaticModifier } from '../utils'
 
 // v-bind without arg is handled directly in ./transformElement.ts due to its affecting
 // codegen for the entire props object. This transform here is only for v-bind
 // *with* args.
 export const transformBind: DirectiveTransform = (dir, _node, context) => {
-  const { modifiers, loc } = dir
+  const { loc } = dir
   const arg = dir.arg!
 
   let { exp } = dir
+
+  if (hasDynamicModifier(dir)) {
+    context.onError(
+      createCompilerError(
+        ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+        loc,
+        undefined,
+        ` v-bind only supports static modifiers.`,
+      ),
+    )
+  }
 
   // handle empty expression
   if (exp && exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim()) {
@@ -45,9 +57,7 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   }
 
   // .sync is replaced by v-model:arg
-  if (
-    modifiers.some(mod => (mod as SimpleExpressionNode).content === 'camel')
-  ) {
+  if (hasStaticModifier(dir, 'camel')) {
     if (arg.type === NodeTypes.SIMPLE_EXPRESSION) {
       if (arg.isStatic) {
         arg.content = camelize(arg.content)
@@ -61,14 +71,10 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   }
 
   if (!context.inSSR) {
-    if (
-      modifiers.some(mod => (mod as SimpleExpressionNode).content === 'prop')
-    ) {
+    if (hasStaticModifier(dir, 'prop')) {
       injectPrefix(arg, '.')
     }
-    if (
-      modifiers.some(mod => (mod as SimpleExpressionNode).content === 'attr')
-    ) {
+    if (hasStaticModifier(dir, 'attr')) {
       injectPrefix(arg, '^')
     }
   }

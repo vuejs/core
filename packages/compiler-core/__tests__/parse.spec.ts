@@ -1504,6 +1504,26 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('directive with literal-like static modifier names', () => {
+      ;['true', 'false', 'null', 'undefined'].forEach(modifier => {
+        const onError = vi.fn()
+        const ast = baseParse(`<div v-foo.${modifier} />`, { onError })
+        const directive = (ast.children[0] as ElementNode).props[0]
+
+        expect(onError).not.toHaveBeenCalled()
+        expect(directive).toMatchObject({
+          type: NodeTypes.DIRECTIVE,
+          name: 'foo',
+          modifiers: [
+            {
+              content: modifier,
+              isStatic: true,
+            },
+          ],
+        })
+      })
+    })
+
     test('directive with empty modifier name', () => {
       let errorCode = -1
       const ast = baseParse('<div v-on./>', {
@@ -1605,39 +1625,48 @@ describe('compiler: parse', () => {
     test('directive with invalid dynamic modifier value', () => {
       const possibleWrongValues = [
         '[]',
+        'true',
+        'false',
         'null',
+        'undefined',
         '123',
         '"foo"',
         '`foo`',
         '!false',
       ]
 
-      possibleWrongValues.forEach(val => {
-        let errorCode = -1
-        const ast = baseParse(`<div v-on.[${val}] />`, {
-          onError: err => {
-            errorCode = err.code as number
-          },
-          prefixIdentifiers: true,
-        })
-        const directive = (ast.children[0] as ElementNode).props[0]
+      ;[false, true].forEach(prefixIdentifiers => {
+        possibleWrongValues.forEach(val => {
+          let errorCode = -1
+          const ast = baseParse(`<div v-on.[${val}] />`, {
+            onError: err => {
+              errorCode = err.code as number
+            },
+            prefixIdentifiers,
+          })
+          const directive = (ast.children[0] as ElementNode).props[0]
 
-        expect(errorCode).toBe(
-          ErrorCodes.X_INVALID_VALUE_IN_DYNAMIC_DIRECTIVE_MODIFIER,
-        )
+          expect(errorCode).toBe(
+            ErrorCodes.X_INVALID_VALUE_IN_DYNAMIC_DIRECTIVE_MODIFIER,
+          )
 
-        expect(directive).toStrictEqual({
-          type: NodeTypes.DIRECTIVE,
-          name: 'on',
-          rawName: `v-on.[${val}]`,
-          arg: undefined,
-          modifiers: [],
-          exp: undefined,
-          loc: {
-            end: { column: 13 + val.length, line: 1, offset: 12 + val.length },
-            source: `v-on.[${val}]`,
-            start: { column: 6, line: 1, offset: 5 },
-          },
+          expect(directive).toStrictEqual({
+            type: NodeTypes.DIRECTIVE,
+            name: 'on',
+            rawName: `v-on.[${val}]`,
+            arg: undefined,
+            modifiers: [],
+            exp: undefined,
+            loc: {
+              end: {
+                column: 13 + val.length,
+                line: 1,
+                offset: 12 + val.length,
+              },
+              source: `v-on.[${val}]`,
+              start: { column: 6, line: 1, offset: 5 },
+            },
+          })
         })
       })
     })
@@ -1846,9 +1875,9 @@ describe('compiler: parse', () => {
         },
         modifiers: [
           {
-            constType: 0,
+            constType: ConstantTypes.CAN_STRINGIFY,
             content: 'prop',
-            isStatic: false,
+            isStatic: true,
             loc: {
               end: {
                 column: 1,

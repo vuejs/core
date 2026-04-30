@@ -48,6 +48,18 @@ import { isWhitespace } from './tokenizer'
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
 
+export const isStaticModifier = (
+  modifier: ExpressionNode,
+  name?: string,
+): modifier is SimpleExpressionNode =>
+  isStaticExp(modifier) && (name === undefined || modifier.content === name)
+
+export const hasStaticModifier = (dir: DirectiveNode, name: string): boolean =>
+  dir.modifiers.some(modifier => isStaticModifier(modifier, name))
+
+export const hasDynamicModifier = (dir: DirectiveNode): boolean =>
+  dir.modifiers.some(modifier => !isStaticModifier(modifier))
+
 export function isCoreComponent(tag: string): symbol | void {
   switch (tag) {
     case 'Teleport':

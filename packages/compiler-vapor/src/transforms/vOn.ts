@@ -27,6 +27,18 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   const isComponent = node.tagType === ElementTypes.COMPONENT
   const isSlotOutlet = node.tag === 'slot'
 
+  const staticModifiers = modifiers.filter(isStaticExp)
+  if (staticModifiers.length !== modifiers.length) {
+    context.options.onError(
+      createCompilerError(
+        ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+        loc,
+        undefined,
+        ` v-on only supports static modifiers.`,
+      ),
+    )
+  }
+
   if (!exp && !modifiers.length) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc),
@@ -43,7 +55,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   const { keyModifiers, nonKeyModifiers, eventOptionModifiers } =
     resolveModifiers(
       arg.isStatic ? `on${arg.content}` : arg,
-      modifiers,
+      staticModifiers,
       null,
       loc,
     )
@@ -155,7 +167,7 @@ function hasStopHandlerForStaticEvent(node: ElementNode, eventName: string) {
 
     const { nonKeyModifiers } = resolveModifiers(
       `on${arg.content}`,
-      prop.modifiers,
+      prop.modifiers.filter(isStaticExp),
       null,
       prop.loc,
     )

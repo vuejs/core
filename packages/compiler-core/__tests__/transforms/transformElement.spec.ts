@@ -265,6 +265,17 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test('v-bind dynamic modifier should error', () => {
+    const onError = vi.fn()
+    parseWithElementTransform(`<div v-bind.[mods]="obj" />`, { onError })
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+      }),
+    )
+  })
+
   test('v-bind="obj" after static prop', () => {
     const { root, node } = parseWithElementTransform(
       `<div id="foo" v-bind="obj" />`,
