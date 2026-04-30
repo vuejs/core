@@ -132,7 +132,6 @@ export interface CodegenContext extends Omit<
   Required<CodegenOptions>,
   | 'bindingMetadata'
   | 'inline'
-  | 'identifiers'
   | 'vaporRuntimeModuleName'
   | 'expressionPlugins'
 > {

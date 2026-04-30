@@ -104,6 +104,30 @@ describe('ssr: components', () => {
         `)
     })
 
+    test('slot prop component', () => {
+      const { code } = compile(`<foo v-slot="{ Foo }"><Foo /></foo>`)
+
+      expect(code).toContain(
+        `_ssrRenderComponent(Foo, null, null, _parent, _scopeId)`,
+      )
+      expect(code).toContain(`_createVNode(Foo)`)
+      expect(code).not.toContain(`_component_Foo`)
+      expect(code).not.toContain(`_resolveComponent("Foo")`)
+    })
+
+    test('namespaced slot prop component', () => {
+      const { code } = compile(
+        `<foo v-slot="slotProps"><slot-props.Foo /></foo>`,
+      )
+
+      expect(code).toContain(
+        `_ssrRenderComponent(slotProps.Foo, null, null, _parent, _scopeId)`,
+      )
+      expect(code).toContain(`_createVNode(slotProps.Foo)`)
+      expect(code).not.toContain(`_component_slot_props`)
+      expect(code).not.toContain(`_resolveComponent("slot-props.Foo")`)
+    })
+
     test('empty attribute should not produce syntax error', () => {
       // previously this would produce syntax error `default: _withCtx((, _push, ...)`
       expect(compile(`<foo v-slot="">foo</foo>`).code).not.toMatch(`(,`)
