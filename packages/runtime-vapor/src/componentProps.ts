@@ -5,6 +5,7 @@ import {
   hasOwn,
   isArray,
   isFunction,
+  isPlainObject,
   isString,
 } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
@@ -62,10 +63,10 @@ export function resolveFunctionSource<T>(
   // where source was defined.
   const parent = currentInstance && currentInstance.parent
   if (parent) {
-    source._cache = computed(() => {
+    source._cache = computed(oldValue => {
       const prev = setCurrentInstance(parent)
       try {
-        return source()
+        return stabilizeDynamicSourceValue(oldValue, source())
       } finally {
         setCurrentInstance(...prev)
       }
@@ -76,6 +77,33 @@ export function resolveFunctionSource<T>(
 
   // no parent, no cache - just call directly
   return source()
+}
+
+function stabilizeDynamicSourceValue<T>(oldValue: T | undefined, value: T): T {
+  if (!isPlainObject(oldValue) || !isPlainObject(value)) {
+    return value
+  }
+
+  // Dynamic sources often allocate a fresh object even when the resolved
+  // props/attrs are unchanged. Keep the previous identity in that case so
+  // computed consumers do not trigger child updates for equivalent values.
+  const oldKeys = Object.keys(oldValue)
+  const newKeys = Object.keys(value)
+  if (oldKeys.length !== newKeys.length) {
+    return value
+  }
+
+  for (let i = 0; i < newKeys.length; i++) {
+    const key = newKeys[i]
+    if (
+      !hasOwn(oldValue, key) ||
+      !Object.is((oldValue as any)[key], (value as any)[key])
+    ) {
+      return value
+    }
+  }
+
+  return oldValue
 }
 
 export function getPropsProxyHandlers(
