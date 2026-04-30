@@ -669,6 +669,50 @@ describe('component: props', () => {
       expect(sourceCallCount).toBe(2)
     })
 
+    test('v-bind object should not update child when resolved values are unchanged', async () => {
+      let childRenderCount = 0
+      const activeId = ref(0)
+
+      const t0 = template('<div></div>', true)
+      const Child = defineVaporComponent({
+        props: ['active', 'tone'],
+        setup(props: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            childRenderCount++
+            setElementText(n0, `${props.active}-${props.tone}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [
+              () => {
+                const active = activeId.value === 1
+                return {
+                  active,
+                  tone: 'stable',
+                  class: active ? 'active' : 'inactive',
+                }
+              },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div class="inactive">false-stable</div>')
+      expect(childRenderCount).toBe(1)
+
+      activeId.value = 2
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div class="inactive">false-stable</div>')
+      expect(childRenderCount).toBe(1)
+    })
+
     test('v-bind object should be cached when child accesses multiple attrs', () => {
       let sourceCallCount = 0
       const obj = ref({ foo: 1, bar: 2, baz: 3 })
