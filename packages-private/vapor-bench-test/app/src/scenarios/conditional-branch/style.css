@@ -1,0 +1,180 @@
+:root {
+  color: #16212b;
+  background: #f4f6f5;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.branch-shell {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.branch-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 14px;
+}
+
+.branch-header p,
+.branch-header h1 {
+  margin-top: 0;
+}
+
+.branch-header p {
+  margin-bottom: 4px;
+  color: #59705e;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.branch-header h1 {
+  margin-bottom: 0;
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.branch-summary {
+  display: flex;
+  gap: 8px;
+}
+
+.branch-summary span,
+.branch-group,
+.branch-card {
+  border: 1px solid #d2ddd4;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.branch-summary span {
+  min-width: 120px;
+  padding: 8px 10px;
+  color: #23382b;
+  font-weight: 700;
+}
+
+.branch-groups {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.branch-group {
+  padding: 8px;
+}
+
+.branch-group h2 {
+  margin: 0 0 8px;
+  color: #435348;
+  font-size: 0.9rem;
+}
+
+.branch-list {
+  display: grid;
+  gap: 6px;
+}
+
+.branch-card {
+  min-height: 86px;
+  padding: 8px;
+}
+
+.branch-card.hot {
+  border-color: #5d9269;
+  background: #edf7ef;
+}
+
+.branch-card--expanded {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+}
+
+.branch-title,
+.branch-compact-title {
+  margin: 0;
+  color: #16271b;
+  font-weight: 800;
+}
+
+.branch-title {
+  font-size: 0.92rem;
+}
+
+.branch-compact-title {
+  font-size: 0.86rem;
+}
+
+.branch-owner,
+.branch-code,
+.branch-detail,
+.branch-load {
+  color: #596960;
+}
+
+.branch-owner,
+.branch-code {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.branch-score {
+  min-width: 46px;
+  color: #244932;
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.branch-detail {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.branch-compact {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  align-content: center;
+}
+
+.branch-badges {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 4px;
+}
+
+.branch-badges span {
+  min-width: 44px;
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: #e7ece8;
+  color: #34463a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
