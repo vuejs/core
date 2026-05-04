@@ -114,8 +114,19 @@ export class ReactiveEffect<T = any>
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
-    if (activeEffectScope && activeEffectScope.active) {
-      activeEffectScope.effects.push(this)
+    if (activeEffectScope) {
+      if (activeEffectScope.active) {
+        activeEffectScope.effects.push(this)
+      } else {
+        // The active scope has already been stopped. This happens when a
+        // component's setup is resumed after a top-level `await` (via the
+        // compiler-emitted `__restore()` from `withAsyncContext`) but the
+        // component was unmounted while pending under <Suspense>. Without
+        // this guard the effect would become an orphan: not held by any
+        // scope (so it cannot be stopped via the scope chain) yet still
+        // able to subscribe to reactive deps and fire forever.
+        this.flags &= ~EffectFlags.ACTIVE
+      }
     }
   }
 
