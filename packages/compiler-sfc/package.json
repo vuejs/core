@@ -49,7 +49,7 @@
     "@vue/shared": "workspace:*",
     "estree-walker": "catalog:",
     "magic-string": "catalog:",
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.14",
     "source-map-js": "catalog:"
   },
   "devDependencies": {
