@@ -128,6 +128,30 @@ describe('ssr: components', () => {
       expect(code).not.toContain(`_resolveComponent("slot-props.Foo")`)
     })
 
+    test('does not resolve v-for binding as slot prop component', () => {
+      const { code } = compile(
+        `<template v-for="Foo in list"><Foo :value="Foo" /></template>`,
+      )
+
+      expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+      expect(code).toContain(`_ssrRenderComponent(_component_Foo`)
+      expect(code).toContain(`value: Foo`)
+      expect(code).not.toContain(`_ssrRenderComponent(Foo,`)
+    })
+
+    test('does not resolve slot prop component when shadowed by v-for', () => {
+      const { code } = compile(
+        `<foo v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template></foo>`,
+      )
+
+      expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+      expect(code).toContain(`_ssrRenderComponent(_component_Foo`)
+      expect(code).toContain(`_createBlock(_component_Foo)`)
+      expect(code).not.toContain(`_ssrRenderComponent(Foo, null`)
+      expect(code).not.toContain(`_createVNode(Foo)`)
+      expect(code).not.toContain(`_createBlock(Foo)`)
+    })
+
     test('empty attribute should not produce syntax error', () => {
       // previously this would produce syntax error `default: _withCtx((, _push, ...)`
       expect(compile(`<foo v-slot="">foo</foo>`).code).not.toMatch(`(,`)

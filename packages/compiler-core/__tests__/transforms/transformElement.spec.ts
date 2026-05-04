@@ -172,6 +172,70 @@ describe('compiler: element transform', () => {
     expect(code).toContain(`_createVNode(_component_Foo)`)
   })
 
+  test('does not resolve component from v-for bindings', () => {
+    const { code } = baseCompile(
+      `<template v-for="Foo in list"><Foo :value="Foo" /></template>`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+    expect(code).toContain(`_createBlock(_component_Foo`)
+    expect(code).toContain(`value: Foo`)
+    expect(code).not.toContain(`_createVNode(Foo`)
+    expect(code).not.toContain(`_createBlock(Foo`)
+  })
+
+  test('does not resolve component from scoped slot bindings shadowed by v-for', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template></Example>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+    expect(code).toContain(`_createBlock(_component_Foo)`)
+    expect(code).not.toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_createBlock(Foo)`)
+  })
+
+  test('resolve component from scoped slot bindings shadowing v-for', () => {
+    const { code } = baseCompile(
+      `<div v-for="Foo in list"><Example v-slot="{ Foo }"><Foo /></Example></div>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_component_Foo`)
+    expect(code).not.toContain(`_resolveComponent("Foo")`)
+  })
+
+  test('resolve component from template scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example><template #default="{ Foo }"><Foo /></template></Example>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_component_Foo`)
+    expect(code).not.toContain(`_resolveComponent("Foo")`)
+  })
+
   test('resolve namespaced component from setup bindings', () => {
     const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
       bindingMetadata: {

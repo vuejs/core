@@ -286,12 +286,12 @@ export function resolveComponentType(
   // this is skipped in browser build since browser builds do not perform
   // identifier tracking.
   if (!__BROWSER__) {
-    const fromScope = resolveScopeReference(tag, context)
+    const fromScope = resolveSlotScopeReference(tag, context)
     if (fromScope) return fromScope
 
     const dotIndex = tag.indexOf('.')
     if (dotIndex > 0) {
-      const ns = resolveScopeReference(tag.slice(0, dotIndex), context)
+      const ns = resolveSlotScopeReference(tag.slice(0, dotIndex), context)
       if (ns) return ns + tag.slice(dotIndex)
     }
   }
@@ -333,19 +333,19 @@ export function resolveComponentType(
   return toValidAssetId(tag, `component`)
 }
 
-function resolveScopeReference(name: string, context: TransformContext) {
-  const identifiers = context.identifiers
+function resolveSlotScopeReference(name: string, context: TransformContext) {
   const camelName = camelize(name)
   const PascalName = capitalize(camelName)
-  const isInScope = (reference: string) => (identifiers[reference] || 0) > 0
+  const isInSlotScope = (reference: string) =>
+    context.isSlotScopeIdentifier(reference)
 
-  if (isInScope(name)) {
+  if (isInSlotScope(name)) {
     return name
   }
-  if (isInScope(camelName)) {
+  if (isInSlotScope(camelName)) {
     return camelName
   }
-  if (isInScope(PascalName)) {
+  if (isInSlotScope(PascalName)) {
     return PascalName
   }
 }
