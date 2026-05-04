@@ -1,5 +1,7 @@
 import {
+  VaporTransition,
   child,
+  createComponent,
   createIf,
   insert,
   renderEffect,
@@ -183,6 +185,101 @@ describe('createIf', () => {
     await nextTick()
     expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
     expect(onUpdated).toHaveBeenCalledTimes(2)
+  })
+
+  test('should not set branch block key without Transition or KeepAlive', async () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    const { host } = define(() =>
+      createIf(
+        () => show.value,
+        () => (branch = t0()),
+        () => (branch = t1()),
+        undefined,
+        undefined,
+        0,
+      ),
+    ).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(branch.$key).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<div>bar</div><!--if-->')
+    expect(branch.$key).toBeUndefined()
+  })
+
+  test('should not set branch block key outside Transition after Transition is used', async () => {
+    const show = ref(true)
+    const transitionChild = template('<span>transition</span>')
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    const { host } = define(() => [
+      createComponent(
+        VaporTransition,
+        null,
+        {
+          default: () => transitionChild(),
+        },
+        true,
+      ),
+      createIf(
+        () => show.value,
+        () => (branch = t0()),
+        () => (branch = t1()),
+        undefined,
+        undefined,
+        0,
+      ),
+    ]).render()
+
+    expect(host.innerHTML).toBe(
+      '<span>transition</span><div>foo</div><!--if-->',
+    )
+    expect(branch.$key).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+
+    expect(host.innerHTML).toBe(
+      '<span>transition</span><div>bar</div><!--if-->',
+    )
+    expect(branch.$key).toBeUndefined()
+  })
+
+  test('should set branch block key inside Transition', () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    define(() =>
+      createComponent(
+        VaporTransition,
+        null,
+        {
+          default: () =>
+            createIf(
+              () => show.value,
+              () => (branch = t0()),
+              () => (branch = t1()),
+              undefined,
+              undefined,
+              0,
+            ),
+        },
+        true,
+      ),
+    ).render()
+
+    expect(branch.$key).toBe('00')
   })
 
   // vapor custom directives have no lifecycle hooks.

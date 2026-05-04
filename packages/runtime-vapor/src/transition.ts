@@ -1,5 +1,7 @@
+import { getComponentName } from '@vue/runtime-dom'
 import type { Block } from './block'
 import type { VaporTransitionHooks } from './block'
+import type { VaporComponent } from './component'
 
 // Transition hooks registry for tree-shaking
 // These are registered by Transition component when it's used
@@ -25,4 +27,10 @@ export function registerTransitionHooks(
   isTransitionEnabled = true
   applyTransitionHooks = applyHooks
   applyTransitionLeaveHooks = applyLeaveHooks
+}
+
+export const displayName = 'VaporTransition'
+
+export function isVaporTransition(component: VaporComponent): boolean {
+  return getComponentName(component) === displayName
 }

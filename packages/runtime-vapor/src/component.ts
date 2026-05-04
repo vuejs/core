@@ -130,7 +130,7 @@ import {
 } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import { setComponentScopeId, setScopeId } from './scopeId'
-import { isTransitionEnabled } from './transition'
+import { isTransitionEnabled, isVaporTransition } from './transition'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -1153,10 +1153,6 @@ export function getRootElement(
     }
     return hasComment ? singleRoot : undefined
   }
-}
-
-function isVaporTransition(component: VaporComponent): boolean {
-  return getComponentName(component) === 'VaporTransition'
 }
 
 function handleSetupResult(

@@ -58,6 +58,7 @@ import {
   applyTransitionHooks,
   applyTransitionLeaveHooks,
   isTransitionEnabled,
+  isVaporTransition,
 } from './transition'
 
 export class VaporFragment<
@@ -170,6 +171,7 @@ export class DynamicFragment extends VaporFragment {
   pending?: { render?: BlockFn; key: any }
   anchorLabel?: string
   keyed?: boolean
+  inTransition?: boolean
 
   // fallthrough attrs
   attrs?: Record<string, any>
@@ -180,6 +182,13 @@ export class DynamicFragment extends VaporFragment {
   ) {
     super([])
     this.keyed = keyed
+    if (
+      isTransitionEnabled &&
+      currentInstance &&
+      isVaporTransition(currentInstance.type)
+    ) {
+      this.inTransition = true
+    }
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       if (locate) locateHydrationNode()
@@ -339,7 +348,13 @@ export class DynamicFragment extends VaporFragment {
         } finally {
           // propagate the fragment key onto freshly rendered nodes.
           const key = this.keyed ? this.current : this.$key
-          if (key !== undefined) setBlockKey(this.nodes, key)
+          // Only propagate branch keys when Transition or KeepAlive consumes them.
+          if (
+            key !== undefined &&
+            (transition || this.inTransition || keepAliveCtx)
+          ) {
+            setBlockKey(this.nodes, key)
+          }
 
           if (isTransitionEnabled && transition) {
             this.$transition = applyTransitionHooks(this.nodes, transition)
