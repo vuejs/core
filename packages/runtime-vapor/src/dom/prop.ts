@@ -28,6 +28,7 @@ import {
   patchStyle,
   queuePostFlushCb,
   shouldSetAsProp,
+  shouldSetAsPropForVueCE,
   toClassSet,
   toStyleMap,
   unsafeToTrustedHTML,
@@ -345,14 +346,17 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
       return
     }
 
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration text mismatch in`,
-        el.parentNode,
-        `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
-          `\n  - expected on client: ${JSON.stringify(value)}`,
-      )
-    logMismatchError()
+    const parent = el.parentElement
+    if (parent && !isMismatchAllowed(parent, MismatchTypes.TEXT)) {
+      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        warn(
+          `Hydration text mismatch in`,
+          el.parentNode,
+          `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
+            `\n  - expected on client: ${JSON.stringify(value)}`,
+        )
+      logMismatchError()
+    }
   }
 
   if (el.$txt !== value) {
@@ -470,19 +474,35 @@ function setHtmlToBlock(block: Block, value: any): void {
 export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
   const props = args.length > 1 ? mergeProps(...args) : args[0]
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
-  const prevKeys = el[cacheKey] as string[]
+  const prevProps = el[cacheKey] as Record<string, any> | undefined
+  const nextProps: Record<string, any> = Object.create(null)
 
-  if (prevKeys) {
-    for (const key of prevKeys) {
+  if (prevProps) {
+    for (const key in prevProps) {
       if (!(key in props)) {
         setDynamicProp(el, key, null, isSVG)
       }
     }
   }
 
-  for (const key of (el[cacheKey] = Object.keys(props))) {
-    setDynamicProp(el, key, props[key], isSVG)
+  for (const key of Object.keys(props)) {
+    const value = props[key]
+    nextProps[key] = value
+    // Events and objects can have stable identity with mutable internals, so
+    // only skip unchanged primitive values.
+    if (
+      prevProps &&
+      key in prevProps &&
+      !isOn(key) &&
+      (value == null || typeof value !== 'object') &&
+      Object.is(prevProps[key], value)
+    ) {
+      continue
+    }
+    setDynamicProp(el, key, value, isSVG)
   }
+
+  el[cacheKey] = nextProps
 }
 
 /**
@@ -519,9 +539,13 @@ export function setDynamicProp(
       setDOMProp(el, key, value, forceHydrate)
     }
   } else if (
-    // custom elements
+    // #11081 force set props for possible async custom element
     (el as VaporElement)._isVueCE &&
-    (/[A-Z]/.test(key) || !isString(value))
+    // #12408 check if it's declared prop or it's async custom element
+    (shouldSetAsPropForVueCE(el as VaporElement, key) ||
+      // @ts-expect-error _def is private
+      ((el as VaporElement)._def.__asyncLoader &&
+        (/[A-Z]/.test(key) || !isString(value))))
   ) {
     setDOMProp(el, camelize(key), value, forceHydrate, key)
   } else {

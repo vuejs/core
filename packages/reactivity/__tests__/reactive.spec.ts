@@ -112,6 +112,19 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(false)
   })
 
+  // #8647
+  test('observing Set with reactive initial value', () => {
+    const observed = reactive({})
+    const observedSet = reactive(new Set([observed]))
+
+    expect(observedSet.has(observed)).toBe(true)
+    expect(observedSet.size).toBe(1)
+
+    // expect nothing happens
+    observedSet.add(observed)
+    expect(observedSet.size).toBe(1)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)

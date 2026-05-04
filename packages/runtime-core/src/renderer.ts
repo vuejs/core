@@ -87,6 +87,7 @@ import {
   hmrDirtyComponentsMode,
   isHmrUpdating,
   registerHMR,
+  setHmrUpdating,
   unregisterHMR,
 } from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
@@ -777,10 +778,17 @@ function baseCreateRenderer(
     }
 
     if ((vnodeHook = props && props.onVnodeMounted) || dirs) {
+      const isHmr = __DEV__ && isHmrUpdating
       queuePostRenderEffect(
         () => {
-          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          let prev
+          if (__DEV__) prev = setHmrUpdating(isHmr)
+          try {
+            vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+            dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+          } finally {
+            if (__DEV__) setHmrUpdating(prev!)
+          }
         },
         undefined,
         parentSuspense,
@@ -1196,6 +1204,8 @@ function baseCreateRenderer(
             parentComponent!,
           )
         } else {
+          const vnodeBeforeMountHook =
+            !isAsyncWrapper(n2) && n2.props && n2.props.onVnodeBeforeMount
           getVaporInterface(parentComponent, n2).mount(
             n2,
             container,
@@ -1208,6 +1218,11 @@ function baseCreateRenderer(
                 invokeDirectiveHook(n2, null, parentComponent, 'beforeMount')
               }
             },
+            () => {
+              if (vnodeBeforeMountHook) {
+                invokeVNodeHook(vnodeBeforeMountHook, parentComponent, n2)
+              }
+            },
           )
           if (n2.dirs) {
             queuePostRenderEffect(
@@ -1216,21 +1231,45 @@ function baseCreateRenderer(
               parentSuspense,
             )
           }
+          const vnodeMountedHook =
+            !isAsyncWrapper(n2) && n2.props && n2.props.onVnodeMounted
+          if (vnodeMountedHook) {
+            const scopedVNode = n2
+            queuePostRenderEffect(
+              () =>
+                invokeVNodeHook(vnodeMountedHook, parentComponent, scopedVNode),
+              undefined,
+              parentSuspense,
+            )
+          }
         }
       } else {
+        const shouldUpdate = shouldUpdateComponent(n1, n2, optimized)
         getVaporInterface(parentComponent, n2).update(
           n1,
           n2,
-          shouldUpdateComponent(n1, n2, optimized),
+          shouldUpdate,
           () => {
             if (n2.dirs) {
               invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
             }
           },
+          () => {
+            const vnodeBeforeUpdateHook =
+              n2.props && n2.props.onVnodeBeforeUpdate
+            if (vnodeBeforeUpdateHook) {
+              invokeVNodeHook(vnodeBeforeUpdateHook, parentComponent, n2, n1)
+            }
+          },
         )
-        if (n2.dirs) {
+        const vnodeUpdatedHook = n2.props && n2.props.onVnodeUpdated
+        if (shouldUpdate && (vnodeUpdatedHook || n2.dirs)) {
           queuePostRenderEffect(
-            () => invokeDirectiveHook(n2, n1, parentComponent, 'updated'),
+            () => {
+              n2.dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
+              vnodeUpdatedHook &&
+                invokeVNodeHook(vnodeUpdatedHook, parentComponent, n2, n1)
+            },
             undefined,
             parentSuspense,
           )
@@ -1527,7 +1566,10 @@ function baseCreateRenderer(
             (root as ComponentInternalInstance).ce &&
             (root as ComponentInternalInstance).ce!._hasShadowRoot()
           ) {
-            ;(root as ComponentInternalInstance).ce!._injectChildStyle(type)
+            ;(root as ComponentInternalInstance).ce!._injectChildStyle(
+              type,
+              instance.parent ? instance.parent.type : undefined,
+            )
           }
 
           if (__DEV__) {
@@ -2333,6 +2375,7 @@ function baseCreateRenderer(
       patchFlag,
       dirs,
       cacheIndex,
+      memo,
     } = vnode
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -2381,10 +2424,17 @@ function baseCreateRenderer(
           invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
         }
         getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
-        if (dirs) {
+        if (
+          (shouldInvokeVnodeHook &&
+            (vnodeHook = props && props.onVnodeUnmounted)) ||
+          dirs
+        ) {
           queuePostRenderEffect(
-            () =>
-              invokeDirectiveHook(vnode, null, parentComponent, 'unmounted'),
+            () => {
+              dirs &&
+                invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+              vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+            },
             undefined,
             parentSuspense,
           )
@@ -2450,16 +2500,25 @@ function baseCreateRenderer(
       }
     }
 
+    // v-for + v-memo stores cached vnodes inside renderList's array cache rather
+    // than component renderCache. Invalidate detached cached vnodes after
+    // unmount so a later v-if remount won't reuse a vnode whose DOM is gone.
+    const shouldInvalidateMemo = memo != null && cacheIndex == null
+
     if (
       (shouldInvokeVnodeHook &&
         (vnodeHook = props && props.onVnodeUnmounted)) ||
-      shouldInvokeDirs
+      shouldInvokeDirs ||
+      shouldInvalidateMemo
     ) {
       queuePostRenderEffect(
         () => {
           vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
           shouldInvokeDirs &&
             invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+          if (shouldInvalidateMemo) {
+            vnode.el = null
+          }
         },
         undefined,
         parentSuspense,

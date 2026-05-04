@@ -8,6 +8,7 @@ import {
   defineVaporComponent,
   insert,
   renderEffect,
+  setBlockKey,
   setHtml,
   setInsertionState,
   template,
@@ -182,6 +183,23 @@ describe('api: createDynamicComponent', () => {
     expect(html()).toBe(
       '<div><span>hi</span><!--slot--></div><!--dynamic-component-->',
     )
+  })
+
+  test('compiled static key on dynamic component fallback', () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        const n0 = createDynamicComponent(() => 'div', null, null, true)
+        setBlockKey(n0, 'foo')
+        return n0
+      },
+    })
+
+    const { html, instance } = define(Comp).render()
+    expect(html()).toBe('<div></div><!--dynamic-component-->')
+
+    const block = instance!.block as any
+    expect(block.$key).toBe('foo')
+    expect(block.nodes.$key).toBe('foo')
   })
 
   test('resolves slot owner local components after dynamic updates', async () => {

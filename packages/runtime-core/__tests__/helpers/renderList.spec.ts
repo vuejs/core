@@ -29,12 +29,24 @@ describe('renderList', () => {
   })
 
   it('should warn when given a non-integer N', () => {
-    try {
-      renderList(3.1, () => {})
-    } catch (e) {}
+    expect(renderList(3.1, () => {})).toEqual([])
     expect(
-      `The v-for range expect an integer value but got 3.1.`,
+      `The v-for range expects a positive integer value but got 3.1.`,
     ).toHaveBeenWarned()
+  })
+
+  it('should warn when given a negative N', () => {
+    expect(renderList(-1, () => {})).toEqual([])
+    expect(
+      `The v-for range expects a positive integer value but got -1.`,
+    ).toHaveBeenWarned()
+  })
+
+  it('should not warn when given 0', () => {
+    renderList(0, () => {})
+    expect(
+      `The v-for range expects a positive integer value but got 0.`,
+    ).not.toHaveBeenWarned()
   })
 
   it('should render properties in an object', () => {
@@ -56,6 +68,10 @@ describe('renderList', () => {
     expect(
       renderList(iterable(), (item, index) => `node ${index}: ${item}`),
     ).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
+  })
+
+  it('should return empty array when source is 0', () => {
+    expect(renderList(0, (item, index) => `node ${index}: ${item}`)).toEqual([])
   })
 
   it('should return empty array when source is undefined', () => {

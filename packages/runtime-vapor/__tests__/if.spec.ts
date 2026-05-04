@@ -1,5 +1,7 @@
 import {
+  VaporTransition,
   child,
+  createComponent,
   createIf,
   insert,
   renderEffect,
@@ -12,6 +14,7 @@ import type { Mock } from 'vitest'
 import { makeRender } from './_utils'
 import { unmountComponent } from '../src/component'
 import { setElementText } from '../src/dom/prop'
+import type { DynamicFragment } from '../src/fragment'
 
 const define = makeRender()
 
@@ -142,6 +145,7 @@ describe('createIf', () => {
           () => toggle.value,
           () => template('<p>foo</p>')(),
           () => template('<p>bar</p>')(),
+          undefined,
           true,
         )
       },
@@ -153,6 +157,129 @@ describe('createIf', () => {
     await nextTick()
     // should not change
     expect(html()).toBe('<p>bar</p>')
+  })
+
+  test('should trigger fragment onUpdated when branch becomes empty', async () => {
+    const show = ref(true)
+    const onUpdated = vi.fn()
+    let frag!: DynamicFragment
+
+    const { host } = define(() => {
+      frag = createIf(
+        () => show.value,
+        () => template('<div>foo</div>')(),
+      ) as DynamicFragment
+      frag.onUpdated = [onUpdated]
+      return frag
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
+    expect(onUpdated).toHaveBeenCalledTimes(1)
+    expect(onUpdated).toHaveBeenLastCalledWith([])
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(onUpdated).toHaveBeenCalledTimes(2)
+  })
+
+  test('should not set branch block key without Transition or KeepAlive', async () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    const { host } = define(() =>
+      createIf(
+        () => show.value,
+        () => (branch = t0()),
+        () => (branch = t1()),
+        undefined,
+        undefined,
+        0,
+      ),
+    ).render()
+
+    expect(host.innerHTML).toBe('<div>foo</div><!--if-->')
+    expect(branch.$key).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<div>bar</div><!--if-->')
+    expect(branch.$key).toBeUndefined()
+  })
+
+  test('should not set branch block key outside Transition after Transition is used', async () => {
+    const show = ref(true)
+    const transitionChild = template('<span>transition</span>')
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    const { host } = define(() => [
+      createComponent(
+        VaporTransition,
+        null,
+        {
+          default: () => transitionChild(),
+        },
+        true,
+      ),
+      createIf(
+        () => show.value,
+        () => (branch = t0()),
+        () => (branch = t1()),
+        undefined,
+        undefined,
+        0,
+      ),
+    ]).render()
+
+    expect(host.innerHTML).toBe(
+      '<span>transition</span><div>foo</div><!--if-->',
+    )
+    expect(branch.$key).toBeUndefined()
+
+    show.value = false
+    await nextTick()
+
+    expect(host.innerHTML).toBe(
+      '<span>transition</span><div>bar</div><!--if-->',
+    )
+    expect(branch.$key).toBeUndefined()
+  })
+
+  test('should set branch block key inside Transition', () => {
+    const show = ref(true)
+    const t0 = template('<div>foo</div>')
+    const t1 = template('<div>bar</div>')
+    let branch!: any
+
+    define(() =>
+      createComponent(
+        VaporTransition,
+        null,
+        {
+          default: () =>
+            createIf(
+              () => show.value,
+              () => (branch = t0()),
+              () => (branch = t1()),
+              undefined,
+              undefined,
+              0,
+            ),
+        },
+        true,
+      ),
+    ).render()
+
+    expect(branch.$key).toBe('00')
   })
 
   // vapor custom directives have no lifecycle hooks.

@@ -114,18 +114,34 @@ describe('async component hydration strategies', () => {
       // patch
       await page().evaluate(() => (window.show.value = false))
       await click('button')
-      expect(await text('button')).toBe('1')
+      if (!vapor) {
+        expect(await text('button')).toBe('1')
+      } else {
+        // Vapor lazy hydration does not run the async component's setup until
+        // hydration actually starts, so there is no pre-hydration patch here.
+        expect(await text('button')).toBe('0')
+      }
 
       // resize
       await page().setViewport({ width: 400, height: 600 })
       await page().waitForFunction(() => window.isHydrated)
-      await assertHydrationSuccess('2')
+      if (!vapor) {
+        await assertHydrationSuccess('2')
+      } else {
+        await assertHydrationSuccess('1')
+      }
 
       expect(spy).toBeCalledTimes(0)
       currentPage.off('pageerror', spy)
-      expect(
-        warn.some(w => w.includes('Skipping lazy hydration for component')),
-      ).toBe(true)
+
+      // Vapor still enters lazy hydration after the strategy triggers, so it
+      // corrects the drift through mismatch recovery instead of taking the
+      // shared "Skipping lazy hydration..." short-circuit path.
+      if (!vapor) {
+        expect(
+          warn.some(w => w.includes('Skipping lazy hydration for component')),
+        ).toBe(true)
+      }
     })
 
     test('interaction', async () => {

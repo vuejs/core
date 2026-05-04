@@ -1,4 +1,5 @@
 import {
+  type Attrs,
   type Component,
   type ComponentInternalInstance,
   type Data,
@@ -307,7 +308,7 @@ export type ComponentPublicInstance<
   $props: MakeDefaultsOptional extends true
     ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
     : Prettify<P> & PublicProps
-  $attrs: Data
+  $attrs: Attrs
   $refs: Data & TypeRefs
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null

@@ -182,7 +182,7 @@ async function main() {
 
   // generate changelog
   step('\nGenerating changelog...')
-  await run(`pnpm`, ['run', 'changelog'])
+  await run('vp', ['run', 'changelog'])
 
   if (!skipPrompts) {
     /** @type {{ yes: boolean }} */
@@ -197,9 +197,9 @@ async function main() {
     }
   }
 
-  // update pnpm-lock.yaml
+  // update lockfile
   step('\nUpdating lockfile...')
-  await run(`pnpm`, ['install', '--prefer-offline'])
+  await run('vp', ['install', '--prefer-offline'])
 
   if (!skipGit) {
     const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
@@ -280,7 +280,7 @@ async function runTestsIfNeeded() {
   if (!skipTests) {
     step('\nRunning tests...')
     if (!isDryRun) {
-      await run('pnpm', ['run', 'test', '--run'])
+      await run('vp', ['test', '--run'])
     } else {
       console.log(`Skipped (dry run)`)
     }
@@ -369,7 +369,7 @@ function updatePackage(pkgRoot, version, getNewPackageName) {
 async function buildPackages() {
   step('\nBuilding all packages...')
   if (!skipBuild) {
-    await run('pnpm', ['run', 'build', '--withTypes'])
+    await run('vp', ['run', 'build', '--withTypes'])
   } else {
     console.log(`(skipped)`)
   }
@@ -426,8 +426,10 @@ async function publishPackage(pkgName, version, additionalFlags) {
     // Don't change the package manager here as we rely on pnpm to handle
     // workspace:* deps
     await run(
-      'pnpm',
+      'vp',
       [
+        'exec',
+        'pnpm',
         'publish',
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',

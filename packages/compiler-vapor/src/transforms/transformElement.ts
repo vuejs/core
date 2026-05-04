@@ -41,11 +41,18 @@ import {
   type IRPropsDynamicAttribute,
   type IRPropsStatic,
   type IRSlots,
+  type SetBlockKeyIRNode,
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
-import { findProp, isBuiltInComponent } from '../utils'
+import {
+  findProp,
+  isBuiltInComponent,
+  isStaticExpression,
+  resolveExpression,
+} from '../utils'
 import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
+import { normalizeBindShorthand } from './vBind'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -81,12 +88,22 @@ export const transformElement: NodeTransform = (node, context) => {
       return
 
     // treat custom elements as components because the template helper cannot
-    // resolve them properly; they require creation via createElement
-    const isCustomElement = !!context.options.isCustomElement(node.tag)
+    // resolve them properly; they require creation via createElement.
+    // Native <template> has the same constraint: when created from an HTML
+    // string, its parsed children live in .content instead of childNodes.
+    const useCreateElement = shouldUseCreateElement(
+      node,
+      context as TransformContext<ElementNode>,
+    )
     const isComponent =
-      node.tagType === ElementTypes.COMPONENT || isCustomElement
+      node.tagType === ElementTypes.COMPONENT || useCreateElement
 
     const isDynamicComponent = isComponentTag(node.tag)
+    const staticKey = resolveStaticKey(
+      node,
+      context as TransformContext<ElementNode>,
+      isComponent,
+    )
 
     const propsResult = buildProps(
       node,
@@ -102,15 +119,17 @@ export const transformElement: NodeTransform = (node, context) => {
       transformComponentElement(
         node as ComponentNode,
         propsResult,
+        staticKey,
         singleRoot,
         context,
         isDynamicComponent,
-        isCustomElement,
+        useCreateElement,
       )
     } else {
       transformNativeElement(
         node as PlainElementNode,
         propsResult,
+        staticKey,
         singleRoot,
         context,
         getEffectIndex,
@@ -199,10 +218,11 @@ function isSingleRoot(
 function transformComponentElement(
   node: ComponentNode,
   propsResult: PropsResult,
+  staticKey: SimpleExpressionNode | undefined,
   singleRoot: boolean,
   context: TransformContext,
   isDynamicComponent: boolean,
-  isCustomElement: boolean,
+  useCreateElement: boolean,
 ) {
   const dynamicComponent = isDynamicComponent
     ? resolveDynamicComponent(node)
@@ -211,7 +231,7 @@ function transformComponentElement(
   let { tag } = node
   let asset = true
 
-  if (!dynamicComponent && !isCustomElement) {
+  if (!dynamicComponent && !useCreateElement) {
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
@@ -246,9 +266,10 @@ function transformComponentElement(
   }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
+  const id = context.reference()
   context.dynamic.operation = {
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
-    id: context.reference(),
+    id,
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
@@ -256,7 +277,10 @@ function transformComponentElement(
     slots: [...context.slots],
     once: context.inVOnce,
     dynamic: dynamicComponent,
-    isCustomElement,
+    useCreateElement,
+  }
+  if (staticKey) {
+    context.registerOperation(createSetBlockKey(id, staticKey))
   }
   context.slots = []
 }
@@ -306,6 +330,7 @@ const NEEDS_QUOTES_RE = /[\s"'`=<>]/
 function transformNativeElement(
   node: PlainElementNode,
   propsResult: PropsResult,
+  staticKey: SimpleExpressionNode | undefined,
   singleRoot: boolean,
   context: TransformContext,
   getEffectIndex: () => number,
@@ -387,9 +412,7 @@ function transformNativeElement(
     template += `</${tag}>`
   }
 
-  if (singleRoot) {
-    context.ir.rootTemplateIndexes.add(context.ir.template.size)
-  }
+  context.templateRoot = singleRoot
 
   if (
     context.parent &&
@@ -401,6 +424,41 @@ function transformNativeElement(
     context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
   } else {
     context.template += template
+  }
+
+  if (staticKey) {
+    context.registerOperation(createSetBlockKey(context.reference(), staticKey))
+  }
+}
+
+function resolveStaticKey(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+  isComponent: boolean,
+): SimpleExpressionNode | undefined {
+  const keyProp = findProp(node, 'key', false, true)
+  if (!keyProp) return
+
+  if (keyProp.type === NodeTypes.ATTRIBUTE) {
+    return keyProp.value
+      ? createSimpleExpression(keyProp.value.content, true, keyProp.value.loc)
+      : EMPTY_EXPRESSION
+  }
+
+  const value = keyProp.exp || normalizeBindShorthand(keyProp.arg!, context)
+  if (isStaticExpression(value, context.options.bindingMetadata)) {
+    return resolveExpression(value, isComponent)
+  }
+}
+
+function createSetBlockKey(
+  element: number,
+  value: SimpleExpressionNode,
+): SetBlockKeyIRNode {
+  return {
+    type: IRNodeTypes.SET_BLOCK_KEY,
+    element,
+    value,
   }
 }
 
@@ -603,4 +661,14 @@ function mergePropValues(existing: IRProp, incoming: IRProp) {
 
 function isComponentTag(tag: string) {
   return tag === 'component' || tag === 'Component'
+}
+
+export function shouldUseCreateElement(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): boolean {
+  return (
+    context.options.isCustomElement(node.tag) ||
+    (node.tagType === ElementTypes.ELEMENT && node.tag === 'template')
+  )
 }

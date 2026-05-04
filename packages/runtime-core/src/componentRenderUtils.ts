@@ -478,13 +478,16 @@ function hasPropValueChanged(
 }
 
 export function updateHOCHostEl(
-  { vnode, parent }: ComponentInternalInstance,
+  { vnode, parent, suspense }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
 ): void {
   while (parent && !parent.vapor) {
     const root = parent.subTree!
     if (root.suspense && root.suspense.activeBranch === vnode) {
-      root.el = vnode.el
+      // Suspense proxies its active branch host node, so keep propagating from
+      // the boundary vnode to any wrapper components above it.
+      root.suspense.vnode.el = root.el = el
+      vnode = root
     }
     if (root === vnode) {
       ;(vnode = parent.vnode!).el = el
@@ -492,5 +495,9 @@ export function updateHOCHostEl(
     } else {
       break
     }
+  }
+  // also update suspense vnode el
+  if (suspense && suspense.activeBranch === vnode) {
+    suspense.vnode.el = el
   }
 }

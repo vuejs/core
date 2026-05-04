@@ -190,12 +190,14 @@ export interface VaporInteropInterface {
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     onBeforeMount?: () => void,
+    onVnodeBeforeMount?: () => void,
   ): GenericComponentInstance // VaporComponentInstance
   update(
     n1: VNode,
     n2: VNode,
     shouldUpdate: boolean,
     onBeforeUpdate?: () => void,
+    onVnodeBeforeUpdate?: () => void,
   ): void
   unmount(vnode: VNode, doRemove?: boolean): void
   move(vnode: VNode, container: any, anchor: any, moveType: MoveType): void
@@ -214,8 +216,15 @@ export interface VaporInteropInterface {
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    onBeforeMount?: () => void,
+    onVnodeBeforeMount?: () => void,
   ): Node
-  hydrateSlot(vnode: VNode, node: any): Node
+  hydrateSlot(
+    vnode: VNode,
+    node: any,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+  ): Node
   activate(
     vnode: VNode,
     container: any,
@@ -233,7 +242,6 @@ export interface VaporInteropInterface {
     parentComponent: any,
     props?: any,
     slots?: any,
-    isSingleRoot?: boolean,
   ) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (

@@ -1,5 +1,5 @@
 import type { CodegenContext } from '../generate'
-import type { KeyIRNode } from '../ir'
+import type { KeyIRNode, SetBlockKeyIRNode } from '../ir'
 import { genBlock } from './block'
 import { genExpression } from './expression'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
@@ -23,4 +23,18 @@ export function genKey(
   )
 
   return frag
+}
+
+export function genSetBlockKey(
+  oper: SetBlockKeyIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  return [
+    NEWLINE,
+    ...genCall(
+      context.helper('setBlockKey'),
+      `n${oper.element}`,
+      genExpression(oper.value, context),
+    ),
+  ]
 }

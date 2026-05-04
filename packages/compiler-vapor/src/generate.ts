@@ -201,9 +201,6 @@ export function generate(
       `const ${setTemplateRefIdent} = ${context.helper('createTemplateRefSetter')}()`,
     )
   }
-  if (ir.hasDeferredVShow) {
-    push(NEWLINE, `const deferredApplyVShows = []`)
-  }
   push(...genBlockContent(ir.block, context, true))
   push(INDENT_END, NEWLINE)
 
@@ -212,7 +209,7 @@ export function generate(
   }
 
   const delegates = genDelegates(context)
-  const templates = genTemplates(ir.template, ir.rootTemplateIndexes, context)
+  const templates = genTemplates(ir.template.entries, context)
   const imports = genHelperImports(context) + genAssetImports(context)
   const preamble = imports + templates + delegates
 

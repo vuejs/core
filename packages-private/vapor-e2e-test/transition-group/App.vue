@@ -1,20 +1,15 @@
 <script setup vapor lang="ts">
 import type { Component } from 'vue'
+const props = defineProps<{
+  caseId: string
+}>()
 
 type CaseModule = { default: Component }
 const caseModules = import.meta.glob<CaseModule>('./cases/**/*.vue', {
   eager: true,
 })
 
-const params = new URLSearchParams(window.location.search)
-const caseId = params.get('case')
-if (!caseId) {
-  throw new Error(
-    '[transition-group] Missing "case" query param. Example: /transition-group/?case=vapor-transition-group/enter',
-  )
-}
-
-const moduleKey = `./cases/${caseId}.vue`
+const moduleKey = `./cases/${props.caseId}.vue`
 const selectedCase = caseModules[moduleKey]
 if (!selectedCase) {
   const availableCases = Object.keys(caseModules)
@@ -22,7 +17,7 @@ if (!selectedCase) {
     .sort()
     .join(', ')
   throw new Error(
-    `[transition-group] Unknown case "${caseId}". Available cases: ${availableCases}`,
+    `[transition-group] Unknown case "${props.caseId}". Available cases: ${availableCases}`,
   )
 }
 

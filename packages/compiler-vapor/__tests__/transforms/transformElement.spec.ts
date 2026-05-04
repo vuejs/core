@@ -409,6 +409,32 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('component vue vnode hooks', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo @vue:mounted="handleMounted" />`,
+        {
+          bindingMetadata: {
+            handleMounted: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`onVnodeMounted`)
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          [
+            {
+              key: { content: 'vnode-mounted' },
+              handler: true,
+              values: [{ content: 'handleMounted' }],
+            },
+          ],
+        ],
+      })
+    })
+
     test('v-on expression is a function call', () => {
       const { code, ir } = compileWithElementTransform(
         `<Foo v-on:bar="handleBar($event)" />`,
@@ -1151,23 +1177,70 @@ describe('compiler: element transform', () => {
     expect(code).toContain('createPlainElement')
   })
 
+  test('custom element with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      '<my-custom-element><div>{{ msg }}</div></my-custom-element>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+  })
+
+  test('plain template element', () => {
+    const { code } = compileWithElementTransform(
+      '<template><div>{{ msg }}</div></template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
+  test('plain template element with static child', () => {
+    const { code } = compileWithElementTransform(
+      '<template><div>hi</div></template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
+  test('plain template element with static text child', () => {
+    const { code } = compileWithElementTransform('<template>hello</template>')
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
+  test('plain template element with dynamic text child', () => {
+    const { code } = compileWithElementTransform(
+      '<template>{{ msg }}</template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+    expect(code).not.toContain('_txt(n0)')
+  })
+
   test('svg', () => {
     const t = `<svg><circle r="40"></circle></svg>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
     const expectedTemplate = '<svg><circle r=40>'
-    expect(code).contains(`_template("${expectedTemplate}", true, 1)`)
+    expect(code).contains(`_template("${expectedTemplate}", true, true, 1)`)
     expect([...ir.template.keys()]).toMatchObject([expectedTemplate])
-    expect(ir.template.get(expectedTemplate)).toBe(1)
+    expect(ir.template.entries[0].ns).toBe(1)
   })
 
   test('MathML', () => {
     const t = `<math><mrow><mi>x</mi></mrow></math>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
-    expect(code).contains('_template("<math><mrow><mi>x", true, 2)')
+    expect(code).contains('_template("<math><mrow><mi>x", true, true, 2)')
     expect([...ir.template.keys()]).toMatchObject(['<math><mrow><mi>x'])
-    expect(ir.template.get('<math><mrow><mi>x')).toBe(2)
+    expect(ir.template.entries[0].ns).toBe(2)
   })
 
   describe('static props quoting', () => {

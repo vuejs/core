@@ -1,20 +1,12 @@
-import type { SuspenseBoundary } from '@vue/runtime-dom'
-
-export let parentSuspense: SuspenseBoundary | null = null
-
-export function setParentSuspense(
-  suspense: SuspenseBoundary | null,
-): SuspenseBoundary | null {
-  try {
-    return parentSuspense
-  } finally {
-    parentSuspense = suspense
-  }
-}
+import { withSuspenseEnabled } from '../suspense'
 
 // TODO: implement this
-export const VaporSuspenseImpl = {
+export const VaporSuspenseImpl: {
+  name: string
+  __isSuspense: true
+  process(): void
+} = /*@__PURE__*/ withSuspenseEnabled({
   name: 'VaporSuspense',
   __isSuspense: true,
   process(): void {},
-}
+})
