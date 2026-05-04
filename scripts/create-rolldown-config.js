@@ -28,6 +28,7 @@ const packagesDir = path.resolve(__dirname, '../packages')
  *   devOnly?: boolean
  *   prodOnly?: boolean
  *   sourceMap?: boolean
+ *   e2eTest?: boolean
  *   localDev?: boolean
  *   inlineDeps?: boolean
  * }} options
@@ -39,6 +40,7 @@ export function createConfigsForPackage({
   devOnly = false,
   prodOnly = false,
   sourceMap = false,
+  e2eTest = false,
   localDev = false,
   inlineDeps = false,
 }) {
@@ -189,6 +191,8 @@ export function createConfigsForPackage({
         __VERSION__: `"${masterVersion}"`,
         // this is only used during Vue's internal tests
         __TEST__: `false`,
+        // this is only used during Vue's internal e2e-tests
+        __E2E_TEST__: String(e2eTest),
         // If the build is expected to run directly in the browser (global / esm builds)
         __BROWSER__: String(isBrowserBuild),
         __GLOBAL__: String(isGlobalBuild),

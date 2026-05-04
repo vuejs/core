@@ -409,6 +409,32 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('component vue vnode hooks', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo @vue:mounted="handleMounted" />`,
+        {
+          bindingMetadata: {
+            handleMounted: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`onVnodeMounted`)
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'Foo',
+        props: [
+          [
+            {
+              key: { content: 'vnode-mounted' },
+              handler: true,
+              values: [{ content: 'handleMounted' }],
+            },
+          ],
+        ],
+      })
+    })
+
     test('v-on expression is a function call', () => {
       const { code, ir } = compileWithElementTransform(
         `<Foo v-on:bar="handleBar($event)" />`,
@@ -572,6 +598,45 @@ describe('compiler: element transform', () => {
         root: true,
         props: [[{ key: { content: 'is' }, values: [{ content: 'foo' }] }]],
       })
+    })
+
+    test('normal component with dynamic :is prop', () => {
+      const { code, ir, helpers } = compileWithElementTransform(
+        `<custom-input :is="'foo'" />`,
+        {
+          isNativeTag: () => false,
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).not.toContain('resolveDynamicComponent')
+      expect(code).toContain(
+        '_createComponentWithFallback(_component_custom_input, { is: () => ("foo") }, null, true)',
+      )
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'custom-input',
+        asset: true,
+        root: true,
+        props: [[{ key: { content: 'is' } }]],
+      })
+    })
+
+    test('component keeps both :is and is props', () => {
+      const { code } = compileWithElementTransform(
+        `<Comp :is="'Parent'" /><Comp is="Parent" />`,
+        {
+          bindingMetadata: {
+            Comp: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      expect(code).toMatchSnapshot()
+      expect(
+        code.match(
+          /_createComponent\(_ctx\.Comp, \{ is: \(\) => \("Parent"\) \}\)/g,
+        )?.length,
+      ).toBe(2)
     })
   })
 
@@ -1112,23 +1177,70 @@ describe('compiler: element transform', () => {
     expect(code).toContain('createPlainElement')
   })
 
+  test('custom element with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      '<my-custom-element><div>{{ msg }}</div></my-custom-element>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+  })
+
+  test('plain template element', () => {
+    const { code } = compileWithElementTransform(
+      '<template><div>{{ msg }}</div></template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
+  test('plain template element with static child', () => {
+    const { code } = compileWithElementTransform(
+      '<template><div>hi</div></template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
+  test('plain template element with static text child', () => {
+    const { code } = compileWithElementTransform('<template>hello</template>')
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).not.toContain('_template("<template>')
+  })
+
+  test('plain template element with dynamic text child', () => {
+    const { code } = compileWithElementTransform(
+      '<template>{{ msg }}</template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+    expect(code).not.toContain('_txt(n0)')
+  })
+
   test('svg', () => {
     const t = `<svg><circle r="40"></circle></svg>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
     const expectedTemplate = '<svg><circle r=40>'
-    expect(code).contains(`_template("${expectedTemplate}", true, 1)`)
+    expect(code).contains(`_template("${expectedTemplate}", true, true, 1)`)
     expect([...ir.template.keys()]).toMatchObject([expectedTemplate])
-    expect(ir.template.get(expectedTemplate)).toBe(1)
+    expect(ir.template.entries[0].ns).toBe(1)
   })
 
   test('MathML', () => {
     const t = `<math><mrow><mi>x</mi></mrow></math>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
-    expect(code).contains('_template("<math><mrow><mi>x", true, 2)')
+    expect(code).contains('_template("<math><mrow><mi>x", true, true, 2)')
     expect([...ir.template.keys()]).toMatchObject(['<math><mrow><mi>x'])
-    expect(ir.template.get('<math><mrow><mi>x')).toBe(2)
+    expect(ir.template.entries[0].ns).toBe(2)
   })
 
   describe('static props quoting', () => {
@@ -1240,67 +1352,6 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(JSON.stringify(template))
       expect([...ir.template.keys()]).toMatchObject([template])
-    })
-  })
-
-  describe('with dynamic key', () => {
-    test('component + key', () => {
-      const { code } = compileWithElementTransform(`<Foo :key="id" />`)
-      expect(code).toMatchSnapshot()
-      expect(code).contains('_createKeyedFragment(() => _ctx.id')
-    })
-
-    test('element + key', () => {
-      const { code } = compileWithElementTransform(`<div :key="id"></div>`)
-      expect(code).toMatchSnapshot()
-      expect(code).contains('_createKeyedFragment(() => _ctx.id')
-    })
-
-    test('<component is/> + key', () => {
-      const { code } = compileWithElementTransform(
-        `<component :is="view" :key="id" />`,
-      )
-      expect(code).toMatchSnapshot()
-      expect(code).contains('_createKeyedFragment(() => _ctx.id')
-    })
-
-    test('v-if + key', () => {
-      const { code } = compileWithElementTransform(
-        `<div v-if="ok" :key="id"></div>`,
-      )
-      expect(code).toMatchSnapshot()
-      expect(code).not.contains('_createKeyedFragment(')
-    })
-
-    test('v-for + key', () => {
-      const { code } = compileWithElementTransform(
-        `<div v-for="i in list" :key="i"></div>`,
-      )
-      expect(code).toMatchSnapshot()
-      expect(code).not.contains('_createKeyedFragment(')
-    })
-  })
-
-  // static keys will be ignored
-  describe('with static key', () => {
-    test('component + key', () => {
-      const { code } = compileWithElementTransform(`<Foo key="1" />`)
-      expect(code).toMatchSnapshot()
-      expect(code).not.contains('_createKeyedFragment(')
-    })
-
-    test('element + key', () => {
-      const { code } = compileWithElementTransform(`<div key="1"></div>`)
-      expect(code).toMatchSnapshot()
-      expect(code).not.contains('_createKeyedFragment(')
-    })
-
-    test('<component is/> + key', () => {
-      const { code } = compileWithElementTransform(
-        `<component :is="view" key="1" />`,
-      )
-      expect(code).toMatchSnapshot()
-      expect(code).not.contains('_createKeyedFragment(')
     })
   })
 })

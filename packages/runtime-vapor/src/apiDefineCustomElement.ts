@@ -29,11 +29,21 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import type { StaticSlots } from './componentSlots'
-import { isFragment } from './fragment'
+import { SlotFragment, isFragment } from './fragment'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
 }
+
+type VaporCustomElementHydrate = (
+  container: ParentNode,
+  createComponent: () => void,
+) => void
+
+const vaporCustomElementHydrates = new WeakMap<
+  Function,
+  VaporCustomElementHydrate
+>()
 
 // overload 1: direct setup function
 export function defineVaporCustomElement<Props, RawBindings = object>(
@@ -146,14 +156,23 @@ export function defineVaporCustomElement(
    * @internal
    */
   _createApp?: CreateAppFunction<ParentNode, VaporComponent>,
+  /**
+   * @internal
+   */
+  _hydrate?: VaporCustomElementHydrate,
 ): VaporElementConstructor {
   let Comp = defineVaporComponent(options, extraOptions)
   if (isPlainObject(Comp)) Comp = extend({}, Comp, extraOptions)
   class VaporCustomElement extends VaporElement {
     static def = Comp
+
     constructor(initialProps?: Record<string, any>) {
       super(Comp, initialProps, _createApp)
     }
+  }
+
+  if (_hydrate) {
+    vaporCustomElementHydrates.set(VaporCustomElement, _hydrate)
   }
 
   return VaporCustomElement
@@ -164,8 +183,13 @@ export const defineVaporSSRCustomElement = ((
   options: any,
   extraOptions?: Omit<VaporComponentOptions, 'setup'>,
 ) => {
-  // @ts-expect-error
-  return defineVaporCustomElement(options, extraOptions, createVaporSSRApp)
+  return defineVaporCustomElement(
+    options,
+    extraOptions,
+    // @ts-expect-error
+    createVaporSSRApp,
+    withHydration,
+  )
 }) as typeof defineVaporCustomElement
 
 type VaporInnerComponentDef = VaporComponent & CustomElementOptions
@@ -184,7 +208,8 @@ export class VaporElement extends VueElementBase<
   }
 
   protected _needsHydration(): boolean {
-    if (this.shadowRoot && this._createApp !== createVaporApp) {
+    const hydrate = vaporCustomElementHydrates.get(this.constructor)
+    if (this.shadowRoot && hydrate) {
       return true
     } else {
       if (__DEV__ && this.shadowRoot) {
@@ -208,8 +233,9 @@ export class VaporElement extends VueElementBase<
     }
 
     // create component in hydration context
-    if (this.shadowRoot && this._createApp === createVaporSSRApp) {
-      withHydration(this._root, this._createComponent.bind(this))
+    const hydrate = vaporCustomElementHydrates.get(this.constructor)
+    if (this.shadowRoot && hydrate) {
+      hydrate(this._root, this._createComponent.bind(this))
     } else {
       this._createComponent()
     }
@@ -259,7 +285,9 @@ export class VaporElement extends VueElementBase<
   /**
    * Only called when shadowRoot is false
    */
-  protected _updateSlotNodes(replacements: Map<Node, Node[]>): void {
+  protected _updateSlotNodes(
+    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
+  ): void {
     this._updateFragmentNodes(
       (this._instance! as VaporComponentInstance).block,
       replacements,
@@ -272,7 +300,7 @@ export class VaporElement extends VueElementBase<
    */
   private _updateFragmentNodes(
     block: Block,
-    replacements: Map<Node, Node[]>,
+    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
   ): void {
     if (Array.isArray(block)) {
       block.forEach(item => this._updateFragmentNodes(item, replacements))
@@ -281,19 +309,25 @@ export class VaporElement extends VueElementBase<
 
     if (!isFragment(block)) return
     const { nodes } = block
-    if (Array.isArray(nodes)) {
-      const newNodes: Block[] = []
-      for (const node of nodes) {
-        if (node instanceof HTMLSlotElement) {
-          newNodes.push(...replacements.get(node)!)
-        } else {
-          this._updateFragmentNodes(node, replacements)
-          newNodes.push(node)
-        }
+    if (nodes instanceof HTMLSlotElement) {
+      const replacement = replacements.get(nodes)
+      if (!replacement) return
+
+      // Slotted content can be represented as plain nodes, but fallback must
+      // stay as its live block so nested updates and unmounting keep using the
+      // current owner rather than a stale DOM snapshot.
+      if (
+        replacement.usedFallback &&
+        block instanceof SlotFragment &&
+        block.customElementFallback
+      ) {
+        this._updateFragmentNodes(block.customElementFallback, replacements)
+        block.nodes = block.customElementFallback
+      } else {
+        block.nodes = replacement.nodes
       }
-      block.nodes = newNodes
-    } else if (nodes instanceof HTMLSlotElement) {
-      block.nodes = replacements.get(nodes)!
+    } else if (Array.isArray(nodes)) {
+      nodes.forEach(item => this._updateFragmentNodes(item, replacements))
     } else {
       this._updateFragmentNodes(nodes, replacements)
     }

@@ -1,7 +1,9 @@
 import {
   type ElementWithTransition,
   type TransitionGroupProps,
+  type TransitionProps,
   TransitionPropsValidators,
+  type TransitionState,
   baseApplyTranslation,
   callPendingCbs,
   currentInstance,
@@ -17,32 +19,73 @@ import {
 import { extend, isArray } from '@vue/shared'
 import {
   type Block,
+  type BlockFn,
   type TransitionBlock,
-  type VaporTransitionHooks,
   insert,
 } from '../block'
 import { renderEffect } from '../renderEffect'
 import {
+  type ResolvedTransitionBlock,
   ensureTransitionHooksRegistered,
+  getTransitionElementFromVNode,
   resolveTransitionHooks,
   setTransitionHooks,
-  setTransitionHooksOnFragment,
 } from './Transition'
 import {
   type VaporComponentInstance,
   type VaporComponentOptions,
   isVaporComponent,
 } from '../component'
-import { isForBlock } from '../apiCreateFor'
-import { createElement } from '../dom/node'
-import { isFragment } from '../fragment'
+import { isForBlock, setForHydrationAnchorResolver } from '../apiCreateFor'
+import { createComment, createElement, createTextNode } from '../dom/node'
+import { DynamicFragment, type VaporFragment, isFragment } from '../fragment'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
+import { isInteropEnabled } from '../vdomInteropState'
+import {
+  adoptTemplate,
+  cleanupHydrationTail,
+  currentHydrationNode,
+  isHydrating,
+  locateNextNode,
+  markHydrationAnchor,
+  setCurrentHydrationNode,
+} from '../dom/hydration'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
+
+let isForHydrationAnchorResolverRegistered = false
+let currentForHydrationContainer: ParentNode | undefined
+
+function ensureForHydrationAnchorResolver(): void {
+  if (isForHydrationAnchorResolverRegistered) return
+  isForHydrationAnchorResolverRegistered = true
+  setForHydrationAnchorResolver((hydrationStart, anchorNode) => {
+    const container = currentForHydrationContainer
+    if (!container) return
+    if (
+      hydrationStart !== container &&
+      hydrationStart.parentNode !== container
+    ) {
+      return
+    }
+
+    const anchor =
+      anchorNode &&
+      anchorNode !== container &&
+      anchorNode.parentNode === container
+        ? anchorNode
+        : null
+    const parentAnchor = markHydrationAnchor(
+      __DEV__ ? createComment('for') : createTextNode(),
+    )
+    container.insertBefore(parentAnchor, anchor)
+    return parentAnchor
+  })
+}
 
 const decorate = <T extends VaporComponentOptions>(t: T): T => {
   delete (t.props! as any).mode
@@ -57,7 +100,10 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     moveClass: String,
   }),
 
-  setup(props: TransitionGroupProps, { slots }) {
+  setup(props: TransitionGroupProps, { slots, expose }) {
+    // @ts-expect-error
+    expose()
+
     // Register transition hooks on first use
     ensureTransitionHooksRegistered()
 
@@ -76,27 +122,25 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       cssTransitionProps = resolveTransitionProps(props)
     })
 
-    let prevChildren: TransitionBlock[]
-    let children: TransitionBlock[]
-    const slottedBlock = slots.default && slots.default()
+    let prevChildren: ResolvedTransitionBlock[]
+    let slottedBlock: Block = []
 
     onBeforeUpdate(() => {
       prevChildren = []
-      children = getTransitionBlocks(slottedBlock)
-      if (children) {
-        for (let i = 0; i < children.length; i++) {
-          const child = children[i]
-          if (isValidTransitionBlock(child)) {
-            prevChildren.push(child)
-            // disabled transition during enter, so the children will be
-            // inserted into the correct position immediately. this prevents
-            // `recordPosition` from getting incorrect positions in `onUpdated`
-            child.$transition!.disabled = true
-            positionMap.set(
-              child,
-              getTransitionElement(child).getBoundingClientRect(),
-            )
-          }
+      const children = getTransitionBlocks(slottedBlock)
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i]
+        const el =
+          isValidTransitionBlock(child) && child.$transition
+            ? getTransitionElement(child)
+            : undefined
+        if (el) {
+          prevChildren.push(child)
+          // disabled transition during enter, so the children will be
+          // inserted into the correct position immediately. this prevents
+          // `recordPosition` from getting incorrect positions in `onUpdated`
+          child.$transition!.disabled = true
+          positionMap.set(child, el.getBoundingClientRect())
         }
       }
     })
@@ -138,39 +182,74 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       prevChildren = []
     })
 
-    // store props and state on fragment for reusing during insert new items
-    setTransitionHooksOnFragment(slottedBlock, {
-      props: propsProxy,
-      state,
-      instance,
-    } as VaporTransitionHooks)
+    const frag = new DynamicFragment('transition-group')
+    let currentTag: string | undefined
+    let currentSlot: BlockFn | undefined
+    let isMounted = false
 
-    children = getTransitionBlocks(slottedBlock)
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i]
-      if (isValidTransitionBlock(child)) {
-        if (child.$key != null) {
-          const hooks = resolveTransitionHooks(
-            child,
+    renderEffect(() => {
+      const tag = props.tag
+      const slot = slots.default
+      // if the tag and slot are the same as previous render, no need to update.
+      if (isMounted && tag === currentTag && slot === currentSlot) return
+
+      const container = tag
+        ? isHydrating
+          ? (adoptTemplate(currentHydrationNode!, `<${tag}/>`) as HTMLElement)
+          : createElement(tag)
+        : undefined
+      let nextNode: Node | null = null
+      let prevForHydrationContainer: ParentNode | undefined
+      if (isHydrating && container) {
+        // `transition-group + v-for` SSR output does not include `<!--]-->`.
+        // Expose the container so `v-for` hydration can create its own anchor.
+        ensureForHydrationAnchorResolver()
+        prevForHydrationContainer = currentForHydrationContainer
+        currentForHydrationContainer = container
+        nextNode = locateNextNode(container)
+        setCurrentHydrationNode(container.firstChild || container)
+      }
+      let block: Block = slottedBlock
+      let transitionBlocks: ResolvedTransitionBlock[] = []
+      try {
+        frag.update(() => {
+          block = (slot && slot()) || []
+          transitionBlocks = applyGroupTransitionHooks(
+            block,
             propsProxy,
             state,
-            instance!,
+            instance,
           )
-          setTransitionHooks(child, hooks)
-        } else if (__DEV__) {
-          warn(`<transition-group> children must be keyed`)
+          if (container) {
+            if (!isHydrating) insert(block, container)
+            return container
+          }
+          return block
+        })
+        if (
+          isHydrating &&
+          container &&
+          currentHydrationNode &&
+          currentHydrationNode.parentNode === container &&
+          !transitionBlocks.some(child => child === currentHydrationNode)
+        ) {
+          // Remove extra SSR nodes left after hydrating the current children,
+          // but keep a node that was claimed as a transition child.
+          cleanupHydrationTail(currentHydrationNode, container)
+        }
+      } finally {
+        if (isHydrating && container) {
+          currentForHydrationContainer = prevForHydrationContainer
+          setCurrentHydrationNode(nextNode)
         }
       }
-    }
+      slottedBlock = block
 
-    const tag = props.tag
-    if (tag) {
-      const container = createElement(tag)
-      insert(slottedBlock, container)
-      return container
-    } else {
-      return slottedBlock
-    }
+      currentTag = tag
+      currentSlot = slot
+      isMounted = true
+    })
+    return frag
   },
 })
 
@@ -180,49 +259,110 @@ export const VaporTransitionGroup: DefineVaporComponent<
   TransitionGroupProps
 > = /*@__PURE__*/ decorate(VaporTransitionGroupImpl)
 
-function getTransitionBlocks(block: Block) {
-  let children: TransitionBlock[] = []
-  if (block instanceof Node) {
+function applyGroupTransitionHooks(
+  block: Block,
+  props: TransitionProps,
+  state: TransitionState,
+  instance: VaporComponentInstance,
+): ResolvedTransitionBlock[] {
+  const fragments: VaporFragment[] = []
+  const children = getTransitionBlocks(block, frag => fragments.push(frag))
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (isValidTransitionBlock(child)) {
+      if (child.$key != null) {
+        setTransitionHooks(
+          child,
+          resolveTransitionHooks(child, props, state, instance),
+        )
+      } else if (__DEV__) {
+        warn(`<transition-group> children must be keyed`)
+      }
+    }
+  }
+
+  // propagate hooks to inner fragments for reusing during insert new items
+  fragments.forEach(frag => {
+    const hooks = resolveTransitionHooks(frag, props, state, instance)
+    hooks.applyGroup = applyGroupTransitionHooks
+    frag.$transition = hooks
+  })
+  return children
+}
+
+function inheritKey(children: TransitionBlock[], key: any): void {
+  if (key === undefined || children.length === 0) return
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    child.$key = String(key) + String(child.$key != null ? child.$key : i)
+  }
+}
+
+function getTransitionBlocks(
+  block: Block,
+  onFragment?: (frag: VaporFragment) => void,
+): ResolvedTransitionBlock[] {
+  let children: ResolvedTransitionBlock[] = []
+  if (block instanceof Element) {
     children.push(block)
   } else if (isVaporComponent(block)) {
-    children.push(...getTransitionBlocks(block.block))
+    const blocks = getTransitionBlocks(block.block, onFragment)
+    inheritKey(blocks, block.$key)
+    children.push(...blocks)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       const b = block[i]
-      const blocks = getTransitionBlocks(b)
+      const blocks = getTransitionBlocks(b, onFragment)
       if (isForBlock(b)) blocks.forEach(block => (block.$key = b.key))
       children.push(...blocks)
     }
   } else if (isFragment(block)) {
-    if (block.insert) {
+    if (isInteropEnabled && block.vnode) {
       // vdom component
       children.push(block)
     } else {
-      children.push(...getTransitionBlocks(block.nodes))
+      if (onFragment) onFragment(block)
+      const blocks = getTransitionBlocks(block.nodes, onFragment)
+      inheritKey(blocks, block.$key)
+      children.push(...blocks)
     }
   }
 
   return children
 }
 
-function isValidTransitionBlock(block: Block): boolean {
-  return !!(block instanceof Element || (isFragment(block) && block.insert))
+function isValidTransitionBlock(
+  block: Block,
+): block is ResolvedTransitionBlock {
+  return !!(block instanceof Element || (isFragment(block) && block.vnode))
 }
 
-function getTransitionElement(c: TransitionBlock): Element {
-  return (isFragment(c) ? (c.nodes as Element) : c) as Element
+function getTransitionElement(
+  block: ResolvedTransitionBlock,
+): Element | undefined {
+  if (block instanceof Element) return block
+
+  // vdom interop
+  if (isInteropEnabled && isFragment(block) && block.vnode) {
+    return getTransitionElementFromVNode(block.vnode)
+  }
 }
 
-function recordPosition(c: TransitionBlock) {
-  newPositionMap.set(c, getTransitionElement(c).getBoundingClientRect())
+function recordPosition(c: ResolvedTransitionBlock) {
+  const el = getTransitionElement(c)
+  if (el) newPositionMap.set(c, el.getBoundingClientRect())
 }
 
-function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
+function applyTranslation(
+  c: ResolvedTransitionBlock,
+): ResolvedTransitionBlock | undefined {
+  const el = getTransitionElement(c)
   if (
+    el &&
     baseApplyTranslation(
       positionMap.get(c)!,
       newPositionMap.get(c)!,
-      getTransitionElement(c) as ElementWithTransition,
+      el as ElementWithTransition,
     )
   ) {
     return c
@@ -230,11 +370,11 @@ function applyTranslation(c: TransitionBlock): TransitionBlock | undefined {
 }
 
 function getFirstConnectedChild(
-  children: TransitionBlock[],
+  children: ResolvedTransitionBlock[],
 ): Element | undefined {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     const el = getTransitionElement(child)
-    if (el.isConnected) return el
+    if (el && el.isConnected) return el
   }
 }

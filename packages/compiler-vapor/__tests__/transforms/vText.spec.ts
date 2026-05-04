@@ -70,6 +70,14 @@ describe('v-text', () => {
     expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
   })
 
+  test('work with plain template createElement path', () => {
+    const { code } = compileWithVText(`<template v-text="foo"></template>`)
+    expect(code).matchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+    expect(code).not.toContain('_txt(n0)')
+  })
+
   test('should raise error and ignore children when v-text is present', () => {
     const onError = vi.fn()
     const { code, ir } = compileWithVText(`<div v-text="test">hello</div>`, {

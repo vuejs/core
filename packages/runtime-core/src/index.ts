@@ -271,7 +271,9 @@ export type {
   ConcreteComponent,
   FunctionalComponent,
   ComponentInternalInstance,
+  Attrs,
   SetupContext,
+  AllowedAttrs,
   ComponentCustomProps,
   AllowedComponentProps,
   GlobalComponents,
@@ -538,7 +540,7 @@ export { baseEmit, isEmitListener } from './componentEmits'
 /**
  * @internal
  */
-export { queueJob, flushOnAppMount } from './scheduler'
+export { queueJob, flushOnAppMount, SchedulerJobFlags } from './scheduler'
 /**
  * @internal
  */
@@ -607,11 +609,16 @@ export { setRef } from './rendererTemplateRef'
 /**
  * @internal
  */
-export { type VNodeNormalizedRef, normalizeRef } from './vnode'
+export {
+  VaporSlot,
+  normalizeVNode,
+  type VNodeNormalizedRef,
+  normalizeRef,
+} from './vnode'
 /**
  * @internal
  */
-export { ensureVaporSlotFallback } from './helpers/renderSlot'
+export { ensureValidVNode, ensureVaporSlotFallback } from './helpers/renderSlot'
 /**
  * @internal
  */
@@ -633,7 +640,11 @@ export { devtoolsComponentAdded } from './devtools'
 /**
  * @internal
  */
-export { performTransitionEnter, performTransitionLeave } from './renderer'
+export {
+  performTransitionEnter,
+  performTransitionLeave,
+  invalidateMount,
+} from './renderer'
 /**
  * @internal
  */
@@ -682,4 +693,18 @@ export type { GenericComponent } from './component'
 export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
+  shouldUpdateComponent,
 } from './componentRenderUtils'
+
+/**
+ * @internal
+ */
+export { knownTemplateRefs, isTemplateRefKey } from './helpers/useTemplateRef'
+/**
+ * @internal
+ */
+export { setCurrentRenderingInstance } from './componentRenderContext'
+/**
+ * @internal
+ */
+export { invokeDirectiveHook } from './directives'

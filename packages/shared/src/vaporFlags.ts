@@ -18,3 +18,9 @@ export enum VaporVForFlags {
    */
   ONCE = 1 << 2,
 }
+
+export enum VaporBlockShape {
+  EMPTY = 0,
+  SINGLE_ROOT = 1,
+  MULTI_ROOT = 2,
+}

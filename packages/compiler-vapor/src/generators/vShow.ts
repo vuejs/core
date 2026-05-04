@@ -7,15 +7,13 @@ export function genVShow(
   oper: DirectiveIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { deferred, element } = oper
+  const { element } = oper
   return [
     NEWLINE,
-    deferred ? `deferredApplyVShows.push(() => ` : undefined,
     ...genCall(context.helper('applyVShow'), `n${element}`, [
       `() => (`,
       ...genExpression(oper.dir.exp!, context),
       `)`,
     ]),
-    deferred ? `)` : undefined,
   ]
 }

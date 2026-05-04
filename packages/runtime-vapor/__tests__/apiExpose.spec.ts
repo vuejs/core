@@ -1,6 +1,6 @@
 import { ref, shallowRef } from '@vue/reactivity'
 import { type VaporComponentInstance, createComponent } from '../src/component'
-import { setRef } from '../src/apiTemplateRef'
+import { createTemplateRefSetter } from '../src/apiTemplateRef'
 import { makeRender } from './_utils'
 import { currentInstance } from '@vue/runtime-dom'
 import { defineVaporComponent } from '../src/apiDefineComponent'
@@ -23,7 +23,8 @@ describe('api: expose', () => {
     define({
       setup: () => {
         const n0 = (i = createComponent(Child))
-        setRef(currentInstance as VaporComponentInstance, n0, childRef)
+        const setRef = createTemplateRefSetter()
+        setRef(n0, childRef)
         return n0
       },
     }).render()
@@ -46,7 +47,8 @@ describe('api: expose', () => {
     define({
       setup: () => {
         const n0 = createComponent(Child)
-        setRef(currentInstance as VaporComponentInstance, n0, childRef)
+        const setRef = createTemplateRefSetter()
+        setRef(n0, childRef)
         return n0
       },
     }).render()

@@ -9,6 +9,7 @@ import {
 import {
   createComponent,
   createInvoker,
+  createSlot,
   createTemplateRefSetter,
   defineVaporComponent,
   delegateEvents,
@@ -214,6 +215,33 @@ describe('error handling', () => {
 
     define(Comp).render()
     expect(fn).toHaveBeenCalledWith(err, 'render function')
+  })
+
+  test('in slot fallback body', () => {
+    const err = new Error('foo')
+    const fn = vi.fn()
+
+    const Comp: VaporComponent = {
+      setup() {
+        onErrorCaptured((err, instance, info) => {
+          fn(err, info)
+          return false
+        })
+        return createComponent(Child)
+      },
+    }
+
+    const Child = defineVaporComponent({
+      setup() {
+        return createSlot('default', null, () => {
+          throw err
+        })
+      },
+    })
+
+    define(Comp).render()
+    expect(fn).toHaveBeenCalledWith(err, 'setup function')
+    expect(`returned non-block value`).toHaveBeenWarned()
   })
 
   test('in function ref', () => {

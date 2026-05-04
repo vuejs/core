@@ -64,7 +64,9 @@ export {
 } from './apiCreateFor'
 export { createTemplateRefSetter } from './apiTemplateRef'
 export { useVaporCssVars } from './helpers/useCssVars'
+export { setBlockKey } from './helpers/setKey'
 export { createDynamicComponent } from './apiCreateDynamicComponent'
+export { withAsyncContext } from './apiSetupHelpers'
 export { applyVShow } from './directives/vShow'
 export {
   applyTextModel,
@@ -82,4 +84,4 @@ export { VaporTransitionGroup } from './components/TransitionGroup'
 export type { VaporComponent, VaporComponentOptions } from './component'
 export type { VaporSlot } from './componentSlots'
 export type { VaporTransitionHooks } from './block'
-export type { VaporKeepAliveContext } from './components/KeepAlive'
+export type { VaporKeepAliveContext } from './keepAlive'

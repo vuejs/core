@@ -1,4 +1,9 @@
-import { MismatchTypes, isMismatchAllowed, warn } from '@vue/runtime-dom'
+import {
+  MismatchTypes,
+  isMismatchAllowed,
+  isHydrating as isVdomHydrating,
+  warn,
+} from '@vue/runtime-dom'
 import {
   insertionIndex,
   insertionParent,
@@ -10,8 +15,6 @@ import {
   _next,
   createElement,
   createTextNode,
-  disableHydrationNodeLookup,
-  enableHydrationNodeLookup,
   locateChildByLogicalIndex,
   parentNode,
 } from './node'
@@ -27,7 +30,7 @@ export let currentHydrationNode: Node | null = null
 
 export let isHydrating = false
 function setIsHydrating(value: boolean) {
-  if (!isHydratingEnabled) return false
+  if (!isHydratingEnabled && !isVdomHydrating) return false
   try {
     return isHydrating
   } finally {
@@ -58,18 +61,21 @@ function performHydration<T>(
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
+    ;(Node.prototype as any).$vha = undefined
 
     isOptimized = true
   }
-  enableHydrationNodeLookup()
   const prev = setIsHydrating(true)
-  setup()
-  const res = fn()
-  cleanup()
+  const prevHydrationNode = currentHydrationNode
   currentHydrationNode = null
-  setIsHydrating(prev)
-  if (!isHydrating) disableHydrationNodeLookup()
-  return res
+  try {
+    setup()
+    return fn()
+  } finally {
+    cleanup()
+    currentHydrationNode = prevHydrationNode
+    setIsHydrating(prev)
+  }
 }
 
 export function withHydration(container: ParentNode, fn: () => void): void {
@@ -84,16 +90,41 @@ export function hydrateNode(node: Node, fn: () => void): void {
   return performHydration(fn, setup, cleanup)
 }
 
-export let adoptTemplate: (node: Node, template: string) => Node | null
-export let locateHydrationNode: () => void
+export function enterHydration(node: Node): () => void {
+  const prevHydrationEnabled = isHydratingEnabled
+  if (!prevHydrationEnabled) {
+    setIsHydratingEnabled(true)
+  }
 
-type Anchor = Comment & {
-  // cached matching fragment end to avoid repeated traversal
-  // on nested fragments
+  const prev = setIsHydrating(true)
+  const prevHydrationNode = currentHydrationNode
+  currentHydrationNode = node
+
+  return () => {
+    currentHydrationNode = prevHydrationNode
+    setIsHydrating(prev)
+    if (!prevHydrationEnabled) {
+      setIsHydratingEnabled(false)
+    }
+  }
+}
+
+export let adoptTemplate: (node: Node, template: string) => Node | null
+export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
+
+type Anchor = Node & {
+  // Runtime-created or reused hydration anchor that mismatch recovery and
+  // boundary cleanup must keep in place.
+  $vha?: 1
+
+  // cached matching fragment end to avoid repeated traversal on nested
+  // comment fragments.
   $fe?: Anchor
 }
 
-export const isComment = (node: Node, data: string): node is Anchor =>
+type CommentAnchor = Comment & Anchor
+
+export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
 export function setCurrentHydrationNode(node: Node | null): void {
@@ -103,12 +134,12 @@ export function setCurrentHydrationNode(node: Node | null): void {
 /* @__NO_SIDE_EFFECTS__ */
 function locateNextSiblingOfParent(n: Node): Node | null {
   if (!n.parentNode) return null
-  return n.parentNode.nextSibling || locateNextSiblingOfParent(n.parentNode)
+  return _next(n.parentNode) || locateNextSiblingOfParent(n.parentNode)
 }
 
 export function advanceHydrationNode(node: Node): void {
   // if no next sibling, find the next node in the parent chain
-  const ret = node.nextSibling || locateNextSiblingOfParent(node)
+  const ret = _next(node) || locateNextSiblingOfParent(node)
   if (ret) setCurrentHydrationNode(ret)
 }
 
@@ -118,19 +149,16 @@ export function advanceHydrationNode(node: Node): void {
  */
 function adoptTemplateImpl(node: Node, template: string): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
-    while (node.nodeType === 8) {
-      node = node.nextSibling!
-
-      // empty text node in slot
-      if (
-        template.trim() === '' &&
-        isComment(node, ']') &&
-        isComment(node.previousSibling!, '[')
-      ) {
-        node.before((node = createTextNode()))
-        break
-      }
+    // empty text node in slot
+    if (
+      template.trim() === '' &&
+      isComment(node, ']') &&
+      isComment(node.previousSibling!, '[')
+    ) {
+      node.before((node = createTextNode()))
     }
+
+    node = resolveHydrationTarget(node)
   }
 
   const type = node.nodeType
@@ -144,7 +172,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     node = handleMismatch(node, template)
   }
 
-  currentHydrationNode = node.nextSibling
+  advanceHydrationNode(node)
   return node
 }
 
@@ -156,7 +184,7 @@ export function locateNextNode(node: Node): Node | null {
       : _next(node)
 }
 
-function locateHydrationNodeImpl(): void {
+function locateHydrationNodeImpl(consumeFragmentStart = false) {
   let node: Node | null
 
   if (insertionIndex !== undefined) {
@@ -167,6 +195,11 @@ function locateHydrationNodeImpl(): void {
     node = insertionParent.firstChild
   } else {
     node = currentHydrationNode
+  }
+
+  // consume fragment start anchor if needed
+  if (consumeFragmentStart && node && isComment(node, '[')) {
+    node = node.nextSibling
   }
 
   if (__DEV__ && !node) {
@@ -181,7 +214,7 @@ function locateHydrationNodeImpl(): void {
 }
 
 export function locateEndAnchor(
-  node: Anchor,
+  node: CommentAnchor,
   open = '[',
   close = ']',
 ): Node | null {
@@ -190,8 +223,8 @@ export function locateEndAnchor(
     return node.$fe
   }
 
-  const stack: Anchor[] = [node]
-  while ((node = node.nextSibling as Anchor) && stack.length > 0) {
+  const stack: CommentAnchor[] = [node]
+  while ((node = _next(node) as CommentAnchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       if (node.data === open) {
         stack.push(node)
@@ -205,13 +238,30 @@ export function locateEndAnchor(
 
   return null
 }
-export function locateFragmentEndAnchor(label: string = ']'): Comment | null {
-  let node = currentHydrationNode!
-  while (node) {
-    if (isComment(node, label)) return node
-    node = node.nextSibling!
+
+// Find the SSR close marker for the current owner.
+export function locateHydrationBoundaryClose(
+  node: Node,
+  closeHint: Node | null = null,
+): Node {
+  let close = closeHint
+  if (!close || !isComment(close, ']')) {
+    if (isComment(node, ']')) {
+      close = node
+    } else {
+      let candidate = locateNextNode(node)
+      while (candidate && !isComment(candidate, ']')) {
+        candidate = locateNextNode(candidate)
+      }
+      close = candidate
+    }
   }
-  return null
+
+  if (!close) {
+    return node
+  }
+
+  return close
 }
 
 function handleMismatch(node: Node, template: string): Node {
@@ -236,9 +286,15 @@ function handleMismatch(node: Node, template: string): Node {
     removeFragmentNodes(node)
   }
 
-  const next = _next(node)
+  // Reused hydration anchors are structural boundaries, not replaceable
+  // content. Mismatch recovery inserts the new node before the anchor and
+  // keeps the anchor in place.
+  const shouldPreserveAnchor = isHydrationAnchor(node)
   const container = parentNode(node)!
-  remove(node, container)
+  const next = shouldPreserveAnchor ? node : _next(node)
+  if (!shouldPreserveAnchor) {
+    remove(node, container)
+  }
 
   // fast path for text nodes
   if (template[0] !== '<') {
@@ -249,10 +305,14 @@ function handleMismatch(node: Node, template: string): Node {
   const t = createElement('template') as HTMLTemplateElement
   t.innerHTML = template
   const newNode = _child(t.content).cloneNode(true) as Element
-  newNode.innerHTML = (node as Element).innerHTML
-  Array.from((node as Element).attributes).forEach(attr => {
-    newNode.setAttribute(attr.name, attr.value)
-  })
+  // only carry over existing children/attrs when the original node is itself
+  // an element (the legacy element-vs-element mismatch case).
+  if (node.nodeType === 1) {
+    newNode.innerHTML = (node as Element).innerHTML
+    Array.from((node as Element).attributes).forEach(attr => {
+      newNode.setAttribute(attr.name, attr.value)
+    })
+  }
   container.insertBefore(newNode, next)
   return newNode
 }
@@ -268,13 +328,150 @@ export const logMismatchError = (): void => {
 }
 
 export function removeFragmentNodes(node: Node, endAnchor?: Node): void {
-  const end = endAnchor || locateEndAnchor(node as Anchor)
+  const parent = parentNode(node)
+  if (!parent) {
+    return
+  }
+  const end = endAnchor || locateEndAnchor(node as CommentAnchor)
   while (true) {
     const next = _next(node)
     if (next && next !== end) {
-      remove(next, parentNode(node)!)
+      remove(next, parent)
     } else {
       break
     }
+  }
+}
+
+function removeHydrationNode(node: Node, close: Node | null = null): void {
+  const parent = parentNode(node)
+  if (!parent) {
+    return
+  }
+
+  if (isComment(node, '[')) {
+    const end = locateEndAnchor(node)
+    removeFragmentNodes(node, end || undefined)
+    const endParent = end && parentNode(end)
+    if (end && end !== close && endParent) {
+      remove(end, endParent)
+    }
+  } else if (isComment(node, 'teleport start')) {
+    const end = locateEndAnchor(node, 'teleport start', 'teleport end')
+    removeFragmentNodes(node, end || undefined)
+    const endParent = end && parentNode(end)
+    if (end && end !== close && endParent) {
+      remove(end, endParent)
+    }
+  }
+
+  remove(node, parent)
+}
+
+export function cleanupHydrationTail(node: Node, container?: ParentNode): void {
+  const mismatchContainer = container || node.parentElement
+  if (mismatchContainer instanceof Element) {
+    warnHydrationChildrenMismatch(mismatchContainer)
+  }
+  if (!container) {
+    removeHydrationNode(node)
+    return
+  }
+
+  let current: Node | null = node
+  while (current && current.parentNode === container) {
+    const next = locateNextNode(current)
+    removeHydrationNode(current)
+    current = next
+  }
+}
+
+export function markHydrationAnchor<T extends Node>(node: T): T {
+  ;(node as Anchor).$vha = 1
+  return node
+}
+
+export function isHydrationAnchor(node: Node | null | undefined): boolean {
+  return !!node && (node as Anchor).$vha === 1
+}
+
+export function resolveHydrationTarget(node: Node): Node {
+  while (true) {
+    if (isHydrationAnchor(node)) {
+      return node
+    }
+
+    if (
+      node.nodeType === 8 &&
+      ((node as Comment).data === '[' ||
+        (node as Comment).data === ']' ||
+        (node as Comment).data === 'teleport start' ||
+        (node as Comment).data === 'teleport end')
+    ) {
+      const next = node.nextSibling
+      if (!next) return node
+      node = next
+      continue
+    }
+
+    return node
+  }
+}
+
+function finalizeHydrationBoundary(close: Node | null): void {
+  let node = currentHydrationNode
+
+  // Once the hydration cursor has already reached `close`, this scope has no
+  // unclaimed SSR nodes left to trim. Single-root paths commonly end up here,
+  // so there is no children-count mismatch to report for this boundary.
+  if (!close || !node || node === close) {
+    return
+  }
+
+  // This boundary only owns cleanup while the current cursor is still inside
+  // its SSR range. If nested hydration has already advanced past `close`, stop
+  // here so we don't delete sibling or parent-owned SSR nodes by mistake.
+  let cur: Node | null = node
+  let hasRemovableNode = false
+  while (cur && cur !== close) {
+    if (!isHydrationAnchor(cur)) {
+      hasRemovableNode = true
+    }
+    cur = locateNextNode(cur)
+  }
+  if (!cur) return
+  if (!hasRemovableNode) {
+    setCurrentHydrationNode(close)
+    return
+  }
+
+  warnHydrationChildrenMismatch((close as Node).parentElement)
+
+  while (node && node !== close) {
+    const next = locateNextNode(node)
+    if (!isHydrationAnchor(node)) {
+      removeHydrationNode(node, close)
+    }
+    node = next!
+  }
+
+  setCurrentHydrationNode(close)
+}
+
+function warnHydrationChildrenMismatch(container: Element | null): void {
+  if (container && !isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration children mismatch on`,
+        container,
+        `\nServer rendered element contains more child nodes than client nodes.`,
+      )
+    logMismatchError()
+  }
+}
+
+export function enterHydrationBoundary(close: Node | null): () => void {
+  return () => {
+    finalizeHydrationBoundary(close)
   }
 }

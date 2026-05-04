@@ -683,6 +683,77 @@ describe('SSR hydration', () => {
     expect(teleportContainer.innerHTML).toBe('')
   })
 
+  test('Teleport unmount (disabled + full integration)', async () => {
+    const disabled = ref(true)
+    const target = ref('#teleport001')
+    const toggle = ref(true)
+
+    const Comp = {
+      template: `
+      <div>
+        <div id="teleport001">
+          <Teleport
+            :to="target"
+            :disabled="disabled"
+          >
+            <template v-for="section in order">
+              <div>{{section}}</div>
+            </template>
+          </Teleport>
+        </div>
+        <div id="teleport002"></div>
+      </div>
+      `,
+      setup() {
+        const order = ref(['A', 'B', 'C'])
+        return { target, disabled, order }
+      },
+    }
+    const App = {
+      template: `<Comp v-if="toggle"/>`,
+      components: {
+        Comp,
+      },
+      setup() {
+        return { toggle }
+      },
+    }
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<div id="teleport001">` +
+        `<!--teleport start-->` +
+        `<!--[--><div>A</div><div>B</div><div>C</div><!--]-->` +
+        `<!--teleport end-->` +
+        `</div>` +
+        `<div id="teleport002"></div>` +
+        `</div>`,
+    )
+
+    // hydrate
+    createSSRApp(App).mount(container)
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    target.value = '#teleport002'
+    disabled.value = false
+    await nextTick()
+    expect(container.querySelector('#teleport001')!.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end-->',
+    )
+    expect(container.querySelector('#teleport002')!.innerHTML).toBe(
+      '<!--[--><div>A</div><div>B</div><div>C</div><!--]-->',
+    )
+
+    toggle.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<!--v-if-->')
+  })
+
   test('Teleport target change (mismatch + full integration)', async () => {
     const target = ref('#target1')
     const Comp = {

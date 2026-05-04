@@ -350,9 +350,9 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).not.contains('const t0 =')
       expect(code).not.contains('const t2 =')
-      expect(code).contains('const t1 = _template("<div>")')
-      expect(code).contains('const t3 = _template("<span>")')
-      expect(code).contains('const t4 = _template("<p>")')
+      expect(code).contains('const t1 = _template("<div>", false, true)')
+      expect(code).contains('const t3 = _template("<span>", false, true)')
+      expect(code).contains('const t4 = _template("<p>", false, true)')
     })
 
     test('should bump placeholder var (p*) on conflict', () => {

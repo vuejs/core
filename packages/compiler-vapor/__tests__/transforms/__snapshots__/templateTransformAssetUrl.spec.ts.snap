@@ -2,9 +2,9 @@
 
 exports[`compiler sfc: transform asset url > should allow for full base URLs, with paths 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<img src=http://localhost:3000/src/logo.png>", true)
+const t0 = _template("<img src=http://localhost:3000/src/logo.png>", true, true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -12,9 +12,9 @@ export function render(_ctx) {
 
 exports[`compiler sfc: transform asset url > should allow for full base URLs, without paths 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<img src=http://localhost:3000/logo.png>", true)
+const t0 = _template("<img src=http://localhost:3000/logo.png>", true, true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -22,9 +22,9 @@ export function render(_ctx) {
 
 exports[`compiler sfc: transform asset url > should allow for full base URLs, without port 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<img src=http://localhost/logo.png>", true)
+const t0 = _template("<img src=http://localhost/logo.png>", true, true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -32,9 +32,9 @@ export function render(_ctx) {
 
 exports[`compiler sfc: transform asset url > should allow for full base URLs, without protocol 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<img src=//localhost/logo.png>", true)
+const t0 = _template("<img src=//localhost/logo.png>", true, true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -43,9 +43,9 @@ export function render(_ctx) {
 exports[`compiler sfc: transform asset url > support uri fragment 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from '@svg/file.svg';
-const t0 = _template("<use href=\\"" + _imports_0 + '#fragment' + "\\">", false, 1)
+const t0 = _template("<use href=\\"" + _imports_0 + '#fragment' + "\\">", false, true, 1)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n1 = t0()
   return [n0, n1]
@@ -54,9 +54,9 @@ export function render(_ctx) {
 
 exports[`compiler sfc: transform asset url > support uri is empty 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<use href>", true, 1)
+const t0 = _template("<use href>", true, true, 1)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -67,14 +67,14 @@ exports[`compiler sfc: transform asset url > transform assetUrls 1`] = `
 import _imports_0 from './logo.png';
 import _imports_1 from 'fixtures/logo.png';
 import _imports_2 from '/fixtures/logo.png';
-const t0 = _template("<img src=\\"" + _imports_0 + "\\">")
-const t1 = _template("<img src=\\"" + _imports_1 + "\\">")
-const t2 = _template("<img src=http://example.com/fixtures/logo.png>")
-const t3 = _template("<img src=//example.com/fixtures/logo.png>")
-const t4 = _template("<img src=\\"" + _imports_2 + "\\">")
-const t5 = _template("<img src=data:image/png;base64,i>")
+const t0 = _template("<img src=\\"" + _imports_0 + "\\">", false, true)
+const t1 = _template("<img src=\\"" + _imports_1 + "\\">", false, true)
+const t2 = _template("<img src=http://example.com/fixtures/logo.png>", false, true)
+const t3 = _template("<img src=//example.com/fixtures/logo.png>", false, true)
+const t4 = _template("<img src=\\"" + _imports_2 + "\\">", false, true)
+const t5 = _template("<img src=data:image/png;base64,i>", false, true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t1()
@@ -90,9 +90,9 @@ exports[`compiler sfc: transform asset url > transform with stringify 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from './bar.png';
 import _imports_1 from '/bar.png';
-const t0 = _template("<div><img src=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_1 + "\\"><img src=https://foo.bar/baz.png><img src=//foo.bar/baz.png><img src=\\"" + _imports_0 + "\\">", true)
+const t0 = _template("<div><img src=\\"" + _imports_0 + "\\"><img src=\\"" + _imports_1 + "\\"><img src=https://foo.bar/baz.png><img src=//foo.bar/baz.png><img src=\\"" + _imports_0 + "\\">", true, true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   return n0
 }"
@@ -102,11 +102,11 @@ exports[`compiler sfc: transform asset url > with explicit base 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from 'bar.png';
 import _imports_1 from '@theme/bar.png';
-const t0 = _template("<img src=/foo/bar.png>")
-const t1 = _template("<img src=\\"" + _imports_0 + "\\">")
-const t2 = _template("<img src=\\"" + _imports_1 + "\\">")
+const t0 = _template("<img src=/foo/bar.png>", false, true)
+const t1 = _template("<img src=\\"" + _imports_0 + "\\">", false, true)
+const t2 = _template("<img src=\\"" + _imports_1 + "\\">", false, true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t1()
@@ -119,12 +119,12 @@ exports[`compiler sfc: transform asset url > with includeAbsolute: true 1`] = `
 "import { template as _template } from 'vue';
 import _imports_0 from './bar.png';
 import _imports_1 from '/bar.png';
-const t0 = _template("<img src=\\"" + _imports_0 + "\\">")
-const t1 = _template("<img src=\\"" + _imports_1 + "\\">")
-const t2 = _template("<img src=https://foo.bar/baz.png>")
-const t3 = _template("<img src=//foo.bar/baz.png>")
+const t0 = _template("<img src=\\"" + _imports_0 + "\\">", false, true)
+const t1 = _template("<img src=\\"" + _imports_1 + "\\">", false, true)
+const t2 = _template("<img src=https://foo.bar/baz.png>", false, true)
+const t3 = _template("<img src=//foo.bar/baz.png>", false, true)
 
-export function render(_ctx) {
+export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n1 = t1()
   const n2 = t2()

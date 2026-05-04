@@ -7,7 +7,12 @@ import {
   ssrUtils,
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
-import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
+import {
+  type SSRBuffer,
+  type SSRContext,
+  cleanupContext,
+  renderComponentVNode,
+} from './render'
 
 const { isVNode } = ssrUtils
 
@@ -81,19 +86,17 @@ export async function renderToString(
   vnode.appContext = input._context
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
-  const buffer = await renderComponentVNode(vnode)
+  try {
+    const buffer = await renderComponentVNode(vnode)
 
-  const result = await unrollBuffer(buffer as SSRBuffer)
+    const result = await unrollBuffer(buffer as SSRBuffer)
 
-  await resolveTeleports(context)
+    await resolveTeleports(context)
 
-  if (context.__watcherHandles) {
-    for (const unwatch of context.__watcherHandles) {
-      unwatch()
-    }
+    return result
+  } finally {
+    cleanupContext(context)
   }
-
-  return result
 }
 
 export async function resolveTeleports(context: SSRContext): Promise<void> {

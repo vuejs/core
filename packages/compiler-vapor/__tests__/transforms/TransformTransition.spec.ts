@@ -2,6 +2,7 @@ import { makeCompile } from './_utils'
 import {
   transformChildren,
   transformElement,
+  transformKey,
   transformText,
   transformVBind,
   transformVIf,
@@ -15,6 +16,7 @@ const compileWithElementTransform = makeCompile({
   nodeTransforms: [
     transformText,
     transformVIf,
+    transformKey,
     transformElement,
     transformVSlot,
     transformChildren,
@@ -57,7 +59,7 @@ describe('compiler: transition', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains('_createKeyedFragment(() => _ctx.key')
+    expect(code).contains('_createKeyedFragment(() => (_ctx.key)')
   })
 
   function checkWarning(template: string, shouldWarn = true) {
@@ -117,6 +119,46 @@ describe('compiler: transition', () => {
     )
   })
 
+  test('does not warn with template v-if containing one child', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div>hey</div>
+        </template>
+      </transition>
+      `,
+      false,
+    )
+  })
+
+  test('warns with template v-if containing multiple children', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div>hey</div>
+          <div>there</div>
+        </template>
+      </transition>
+      `,
+      true,
+    )
+  })
+
+  test('warns with template v-if containing v-for', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="ok">
+          <div v-for="i in items">hey</div>
+        </template>
+      </transition>
+      `,
+      true,
+    )
+  })
+
   test('warns with multiple templates', () => {
     checkWarning(
       `
@@ -126,6 +168,18 @@ describe('compiler: transition', () => {
       </transition>
       `,
       true,
+    )
+  })
+
+  test('does not warn with multiple templates containing one child each', () => {
+    checkWarning(
+      `
+      <transition>
+        <template v-if="a"><div>hey</div></template>
+        <template v-else><div>there</div></template>
+      </transition>
+      `,
+      false,
     )
   })
 

@@ -4,10 +4,12 @@ import {
   type Ref,
   inject,
   nextTick,
+  onBeforeMount,
   onMounted,
   onUpdated,
   provide,
   ref,
+  toDisplayString,
   useAttrs,
   watch,
   watchEffect,
@@ -20,8 +22,9 @@ import {
   renderEffect,
   setInsertionState,
   template,
+  txt,
 } from '../src'
-import { makeRender } from './_utils'
+import { compile, compileToVaporRender, makeRender } from './_utils'
 import type { VaporComponentInstance } from '../src/component'
 import { setElementText, setText } from '../src/dom/prop'
 
@@ -158,6 +161,35 @@ describe('component', () => {
     outer.value++
     await nextTick()
     expect(host.innerHTML).toBe('<div>1</div><div>1</div>')
+  })
+
+  it('events in dynamic props', async () => {
+    const { component: Child } = define({
+      props: ['count'],
+      setup(props: any, { emit }) {
+        emit('update', props.count + 1)
+        const n0 = template('<div></div>')()
+        renderEffect(() => setElementText(n0, props.count))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { host } = define({
+      setup() {
+        const n0 = createComponent(Child, {
+          $: [
+            () => ({
+              count: count.value,
+            }),
+            { onUpdate: () => (val: number) => (count.value = val) },
+          ],
+        })
+        return n0
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>1</div>')
   })
 
   it('child only updates once when triggered in multiple ways', async () => {
@@ -456,20 +488,47 @@ describe('component', () => {
 
   test('should mount component only with template in production mode', () => {
     __DEV__ = false
-    const { component: Child } = define({
-      render() {
-        return template('<div> HI </div>', true)()
-      },
-    })
+    try {
+      const { component: Child } = define({
+        render() {
+          return template('<div> HI </div>', true)()
+        },
+      })
 
-    const { host } = define({
-      setup() {
-        return createComponent(Child, null, null, true)
-      },
-    }).render()
+      const { host } = define({
+        setup() {
+          return createComponent(Child, null, null, true)
+        },
+      }).render()
 
-    expect(host.innerHTML).toBe('<div> HI </div>')
-    __DEV__ = true
+      expect(host.innerHTML).toBe('<div> HI </div>')
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('should pass slot args to template-only component render in production mode', () => {
+    __DEV__ = false
+    try {
+      const { component: Child } = define({
+        render: compileToVaporRender(
+          `<span v-if="$slots.default"><slot /></span>`,
+          { bindingMetadata: {} },
+        ),
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => template('<button>slot</button>')(),
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<span><button>slot</button></span>')
+    } finally {
+      __DEV__ = true
+    }
   })
 
   it('warn if functional vapor component not return a block', () => {
@@ -509,6 +568,215 @@ describe('component', () => {
     expect(
       'Property "foo" was accessed during render but is not defined on instance.',
     ).toHaveBeenWarned()
+  })
+
+  test('display attrs', () => {
+    const App = defineVaporComponent({
+      props: {},
+      emits: [],
+      setup(props, { attrs }) {
+        const n0 = template('<div> ')() as any
+        const x0 = txt(n0) as any
+        renderEffect(() => setText(x0, toDisplayString(attrs)))
+        return n0
+      },
+    })
+    const { render } = define(App)
+    expect(render).not.toThrow(TypeError)
+    expect(
+      'Unhandled error during execution of setup function',
+    ).not.toHaveBeenWarned()
+  })
+
+  it('mounts plain template elements with dynamic descendants', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template>
+          <div>{{ msg }}</div>
+        </template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+
+    const div = templateEl.firstChild as HTMLDivElement
+    expect(div.tagName).toBe('DIV')
+    expect(div.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(div.textContent).toBe('34')
+  })
+
+  it('mounts plain template elements with dynamic text children', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template>
+          {{ msg }}
+        </template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(templateEl.textContent).toBe('34')
+  })
+
+  it('mounts plain template literal interpolation as text', () => {
+    const Comp = compile(
+      `<template>
+        <template>{{ "<b>foo</b>" }}</template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template escaped static text as text', () => {
+    const Comp = compile(
+      `<template>
+        <template>&lt;b&gt;foo&lt;/b&gt;</template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template literal v-text as text', () => {
+    const Comp = compile(
+      `<template>
+        <template v-text="'<b>foo</b>'"></template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template elements with slot content', () => {
+    const data = ref('unused')
+    const Child = compile(
+      `<template>
+        <template><slot /></template>
+      </template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child><div>slot child</div></components.Child></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild).toBeInstanceOf(HTMLDivElement)
+    expect(templateEl.firstChild!.textContent).toBe('slot child')
+  })
+
+  it('mounts plain template elements with v-html', () => {
+    const msg = ref('<b>foo</b>')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template v-html="msg"></template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.innerHTML.toLowerCase()).toBe('<b>foo</b>')
+    expect(templateEl.content.firstChild).toBeInstanceOf(HTMLElement)
+    expect((templateEl.content.firstChild as HTMLElement).tagName).toBe('B')
+  })
+
+  it('mounts plain template elements with v-text', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template v-text="msg"></template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(templateEl.textContent).toBe('34')
+  })
+
+  it('should invalidate pending mounted hooks when unmounted before flush', async () => {
+    const mountedSpy = vi.fn()
+    const show = ref(false)
+
+    const Child = defineVaporComponent({
+      setup() {
+        onBeforeMount(() => {
+          show.value = false
+        })
+        onMounted(mountedSpy)
+        return template('<div>child</div>')()
+      },
+    })
+
+    define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => createComponent(Child),
+        )
+      },
+    }).render()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+
+    show.value = true
+    await nextTick()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
   })
 })
 

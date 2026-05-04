@@ -9,19 +9,31 @@ import {
   delegateEvents,
   renderEffect,
   setStyle,
+  setText,
   template,
   useVaporCssVars,
 } from '../src'
-import { defineAsyncComponent, nextTick, reactive, ref } from '@vue/runtime-dom'
+import {
+  createSSRApp,
+  defineAsyncComponent,
+  defineComponent,
+  h,
+  nextTick,
+  reactive,
+  ref,
+  withDirectives,
+} from '@vue/runtime-dom'
 import { isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
+import { hydrateNode, setIsHydratingEnabled } from '../src/dom/hydration'
 
 const formatHtml = (raw: string) => {
   return raw
     .replace(/<!--\[/g, '\n<!--[')
     .replace(/]-->/g, ']-->\n')
+    .replace(/<!--teleport (start|end)-->/g, '\n<!--teleport $1-->\n')
     .replace(/\n{2,}/g, '\n')
 }
 
@@ -371,6 +383,23 @@ describe('Vapor Mode hydration', () => {
   })
 
   describe('component', () => {
+    test('root component should not enter beforeMount twice during hydration', async () => {
+      const beforeMount = vi.fn()
+      await testHydration(
+        `
+          <script vapor>
+            import { onBeforeMount } from 'vue'
+            const data = _data
+            onBeforeMount(() => data.value.beforeMount())
+          </script>
+          <template><div>root</div></template>
+        `,
+        {},
+        ref({ beforeMount }),
+      )
+      expect(beforeMount).toHaveBeenCalledTimes(1)
+    })
+
     test('basic component', async () => {
       const { container, data } = await testHydration(
         `
@@ -990,6 +1019,72 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('v-if KeepAlive with dynamic component should preserve cached branches', async () => {
+      const data = ref({
+        current: 'CompA',
+        useKeepAlive: true,
+      })
+      const { container } = await testHydration(
+        `<script setup>
+          import { KeepAlive, computed } from 'vue'
+          const data = _data
+          const components = _components
+          const current = computed(() => components[data.value.current])
+        </script>
+        <template>
+          <KeepAlive v-if="data.useKeepAlive">
+            <component :is="current" />
+          </KeepAlive>
+          <component v-else :is="current" />
+        </template>`,
+        {
+          CompA: `<script setup>
+            import { ref } from 'vue'
+            const count = ref(0)
+          </script>
+          <template>
+            <button @click="count++">A {{ count }}</button>
+          </template>`,
+          CompB: `<script setup>
+            import { ref } from 'vue'
+            const msg = ref('')
+          </script>
+          <template>
+            <input v-model="msg">
+            <p>B {{ msg }}</p>
+          </template>`,
+        },
+        data,
+      )
+
+      const getButton = () =>
+        container.querySelector('button') as HTMLButtonElement
+      const getInput = () =>
+        container.querySelector('input') as HTMLInputElement
+      const getText = () => container.querySelector('p')!.textContent
+
+      expect(getButton().textContent).toBe('A 0')
+      triggerEvent('click', getButton())
+      await nextTick()
+      expect(getButton().textContent).toBe('A 1')
+
+      data.value.current = 'CompB'
+      await nextTick()
+      getInput().value = 'hello'
+      triggerEvent('input', getInput())
+      await nextTick()
+      expect(getText()).toBe('B hello')
+
+      data.value.current = 'CompA'
+      await nextTick()
+      expect(getButton().textContent).toBe('A 1')
+
+      data.value.current = 'CompB'
+      await nextTick()
+      expect(getInput().value).toBe('hello')
+      expect(getText()).toBe('B hello')
+    })
+
     test('consecutive dynamic components with insertion anchor', async () => {
       const { container, data } = await testHydration(
         `<template>
@@ -1134,14 +1229,12 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!--if-->"`,
-      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
 
       data.value = true
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div>foo</div><!--if-->"`,
+        `"<div>foo</div><!---->"`,
       )
     })
 
@@ -2297,6 +2390,136 @@ describe('Vapor Mode hydration', () => {
       `)
     })
 
+    test('named slot with initially empty v-if and trailing sibling', async () => {
+      const data = reactive({
+        show: false,
+        msg: 'foo',
+        tail: 'tail',
+      })
+
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo>
+              <template v-if="data.show">
+                <span>{{ data.msg }}</span>
+              </template>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><div><slot name="foo"/></div><span>{{ data.tail }}</span></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><!--if--><!--]-->
+        </div><span>tail</span><!--]-->
+        "
+      `,
+      )
+
+      data.show = true
+      data.msg = 'bar'
+      data.tail = 'tail updated'
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><span>bar</span><!--if--><!--]-->
+        </div><span>tail updated</span><!--]-->
+        "
+      `,
+      )
+
+      data.show = false
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><!--if--><!--]-->
+        </div><span>tail updated</span><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('named slot with initially empty v-if and sibling inside slot content', async () => {
+      const data = reactive({
+        show: false,
+        msgA: 'foo',
+        msgB: 'bar',
+        after: 'after',
+        tail: 'tail',
+      })
+
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo>
+              <template v-if="data.show">
+                <span>{{ data.msgA }}</span>
+                <b>{{ data.msgB }}</b>
+              </template>
+              <i>{{ data.after }}</i>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><div><slot name="foo"/></div><span>{{ data.tail }}</span></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><!----><i>after</i><!--]-->
+        </div><span>tail</span><!--]-->
+        "
+      `,
+      )
+
+      data.show = true
+      data.msgA = 'baz'
+      data.msgB = 'qux'
+      data.after = 'after updated'
+      data.tail = 'tail updated'
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><span>baz</span><b>qux</b><!----><i>after updated</i><!--]-->
+        </div><span>tail updated</span><!--]-->
+        "
+      `,
+      )
+
+      data.show = false
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>
+        <!--[--><!----><i>after updated</i><!--]-->
+        </div><span>tail updated</span><!--]-->
+        "
+      `,
+      )
+    })
+
     test('named slot with v-if and v-for', async () => {
       const data = reactive({
         show: true,
@@ -2957,6 +3180,347 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('slot fallback from empty v-if branch', async () => {
+      const data = reactive({
+        show: false,
+        fallback: 'foo',
+        slot: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-if="data.show">
+                <span>{{ data.slot }}</span>
+              </template>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot><div>{{ data.fallback }}</div></slot></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>foo</div><!--if--><!--]-->
+        "
+      `,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.fallback = 'baz'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>baz</div><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.slot = 'qux'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>qux</span><!--if--><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('slot fallback from empty v-for branch', async () => {
+      const data = reactive({
+        items: [] as string[],
+        fallback: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <span v-for="item in data.items" :key="item">{{ item }}</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot><div>{{ data.fallback }}</div></slot></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>foo</div><!--for--><!--]-->
+        "
+      `,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.fallback = 'baz'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>baz</div><!--for--><!--]-->
+        "
+      `,
+      )
+
+      data.items = ['bar', 'qux']
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><span>qux</span><!--for--><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('slot content from empty v-for branch with trailing sibling', async () => {
+      const data = reactive({
+        items: [] as string[],
+        tail: 'tail',
+        fallback: 'fallback',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <span v-for="item in data.items" :key="item">{{ item }}</span>
+              <i>{{ data.tail }}</i>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <slot><div>{{ data.fallback }}</div></slot>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->
+        <!--[--><!--]-->
+        <!--for--><i>tail</i><!--]-->
+        "
+      `,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.items = ['foo', 'bar']
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->
+        <!--[--><!--]-->
+        <span>foo</span><span>bar</span><!--for--><i>tail</i><!--]-->
+        "
+      `,
+      )
+
+      data.tail = 'tail2'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->
+        <!--[--><!--]-->
+        <span>foo</span><span>bar</span><!--for--><i>tail2</i><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('hydrate non-empty v-for over empty SSR range with trailing sibling', async () => {
+      const ssrData = ref({
+        items: [] as string[],
+        tail: 'tail',
+      })
+      const clientData = ref({
+        items: ['foo', 'bar'],
+        tail: 'tail',
+      })
+      const code = `
+        <div>
+          <span v-for="item in data.items" :key="item">{{ item }}</span>
+          <i>{{ data.tail }}</i>
+        </div>
+      `
+      const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+
+      const { container } = await mountWithHydration(html, code, clientData)
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>\n<!--[--><span>foo</span><span>bar</span><!--]-->\n<i>tail</i></div>"`,
+      )
+    })
+
+    test('slot fallback from invalid v-for branch', async () => {
+      const data = reactive({
+        items: [{ text: 'bar', show: false }],
+        fallback: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-for="item in data.items" :key="item.text">
+                <template v-if="item.show">
+                  <span>{{ item.text }}</span>
+                </template>
+              </template>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot><div>{{ data.fallback }}</div></slot></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>foo</div><!--if--><!--for--><!--]-->
+        "
+      `,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.fallback = 'baz'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>baz</div><!--if--><!--for--><!--]-->
+        "
+      `,
+      )
+
+      data.items[0].show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--if--><!--for--><!--]-->
+        "
+      `,
+      )
+
+      data.items[0].show = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>baz</div><!--if--><!--for--><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('slot content from multi-item invalid v-for branch keeps list order', async () => {
+      const data = reactive({
+        items: [
+          { text: 'a', show: false },
+          { text: 'b', show: false },
+        ],
+        tail: 'tail',
+        fallback: 'fallback',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-for="item in data.items" :key="item.text">
+                <template v-if="item.show">
+                  <span>{{ item.text }}</span>
+                </template>
+              </template>
+              <i>{{ data.tail }}</i>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <slot><div>{{ data.fallback }}</div></slot>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"
+      	<!--[-->
+      	<!--[-->
+      	<!--[--><!----><!--]-->
+      	<!--[--><!----><!--]-->
+      	<!--for--><!--]-->
+      	<i>tail</i><!--]-->
+      	"
+      `)
+
+      data.items.push({ text: 'c', show: true })
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"
+      	<!--[-->
+      	<!--[-->
+      	<!--[--><!----><!--]-->
+      	<!--[--><!----><!--]-->
+      	<span>c</span><!--if--><!--for--><!--]-->
+      	<i>tail</i><!--]-->
+      	"
+      `,
+      )
+
+      data.items[1].show = true
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->
+        <!--[-->
+        <!--[--><!----><!--]-->
+        <!--[--><span>b</span><!----><!--]-->
+        <span>c</span><!--if--><!--for--><!--]-->
+        <i>tail</i><!--]-->
+        "
+      `,
+      )
+    })
+
     test('forwarded slot', async () => {
       const data = reactive({
         foo: 'foo',
@@ -2979,11 +3543,11 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div><div><div>
-        <!--[-->
-        <!--[--><span>foo</span><!--]-->
-        <!--]-->
-        </div></div><div>bar</div></div>"
+      	"<div><div><div>
+      	<!--[-->
+      	<!--[--><span>foo</span><!--]-->
+      	<!--]-->
+      	</div></div><div>bar</div></div>"
       `,
       )
 
@@ -2992,13 +3556,45 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div><div><div>
-        <!--[-->
-        <!--[--><span>foo1</span><!--]-->
-        <!--]-->
-        </div></div><div>bar1</div></div>"
+      	"<div><div><div>
+      	<!--[-->
+      	<!--[--><span>foo1</span><!--]-->
+      	<!--]-->
+      	</div></div><div>bar1</div></div>"
       `,
       )
+    })
+
+    test('forwarded slot with fallback but rendered content', async () => {
+      const data = reactive({ foo: 'foo' })
+      const { container } = await testHydration(
+        `<template>
+          <components.Parent><span>{{data.foo}}</span></components.Parent>
+        </template>`,
+        {
+          Parent: `<template><components.Child><slot/></components.Child></template>`,
+          Child: `<template><div><slot>bar</slot></div></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[-->
+      	<!--[--><span>foo</span><!--]-->
+      	<!--]-->
+      	</div>"
+      `)
+
+      data.foo = 'foo1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[-->
+      	<!--[--><span>foo1</span><!--]-->
+      	<!--]-->
+      	</div>"
+      `)
     })
 
     test('forwarded slot with fallback', async () => {
@@ -3017,9 +3613,9 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[-->foo<!--]-->
-        </div>"
+      	"<div>
+      	<!--[-->foo<!--]-->
+      	<!--slot--></div>"
       `,
       )
 
@@ -3027,9 +3623,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[-->foo1<!--]-->
-        </div>"
+      	"<div>
+      	<!--[-->foo1<!--]-->
+      	<!--slot--></div>"
       `,
       )
     })
@@ -3076,9 +3672,9 @@ describe('Vapor Mode hydration', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[--><!--]-->
-        <div>foo</div></div>"
+      	"<div>
+      	<!--[--><!--]-->
+      	<!--slot--><!--slot--><!--slot--><div>foo</div></div>"
       `,
       )
 
@@ -3086,9 +3682,117 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-        "<div>
-        <!--[--><!--]-->
-        <div>bar</div></div>"
+      	"<div>
+      	<!--[--><!--]-->
+      	<!--slot--><!--slot--><!--slot--><div>bar</div></div>"
+      `,
+      )
+    })
+
+    test('forwarded empty named slot with trailing sibling nodes', async () => {
+      const { container } = await testHydration(
+        `<template>
+          <components.Layout>
+            <template #banner>
+              <div>banner</div>
+            </template>
+            <template #footer-before>
+              <slot name="footer-before" />
+            </template>
+          </components.Layout>
+        </template>`,
+        {
+          Layout: `<template>
+            <div>
+              <slot name="banner" />
+              <components.Page>
+                <template #footer-before>
+                  <slot name="footer-before" />
+                </template>
+              </components.Page>
+            </div>
+          </template>`,
+          Page: `<template>
+            <div>
+              <main><span>content</span></main>
+              <slot name="footer-before" />
+              <p>footer</p>
+            </div>
+          </template>`,
+        },
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"<div>
+      	<!--[--><div>banner</div><!--]-->
+      	<div><main><span>content</span></main>
+      	<!--[--><!--]-->
+      	<!--slot--><!--slot--><p>footer</p></div></div>"
+      `,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('forwarded named slot can appear after hydrating as empty', async () => {
+      const data = reactive({
+        show: false,
+        foo: 'foo',
+        bar: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Foo>
+            <template v-if="data.show" #foo>
+              <span>{{data.foo}}</span>
+            </template>
+          </components.Foo>
+        </template>`,
+        {
+          Foo: `<template>
+                  <components.Bar>
+                    <template #foo>
+                      <slot name="foo" />
+                    </template>
+                  </components.Bar>
+                </template>`,
+          Bar: `<template>
+                  <div>
+                    <slot name="foo" />
+                    <div>{{data.bar}}</div>
+                  </div>
+                </template>`,
+        },
+        data,
+      )
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"<div>
+      	<!--[--><!--]-->
+      	<!--slot--><div>bar</div></div>"
+      `,
+      )
+
+      data.show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"<div>
+      	<!--[--><!--]-->
+      	<span>foo</span><!--slot--><div>bar</div></div>"
+      `,
+      )
+
+      data.foo = 'foo1'
+      data.bar = 'bar1'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"<div>
+      	<!--[--><!--]-->
+      	<span>foo1</span><!--slot--><div>bar1</div></div>"
       `,
       )
     })
@@ -3136,7 +3840,7 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!--slot--><!--if-->"`,
+        `"<!----><!--if-->"`,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
 
@@ -3158,9 +3862,7 @@ describe('Vapor Mode hydration', () => {
         undefined,
         data,
       )
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!--if-->"`,
-      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
       expect(`mismatch`).not.toHaveBeenWarned()
     })
 
@@ -3176,7 +3878,60 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div style="display:none;" class="v-enter-from v-enter-active v-leave-from v-leave-active">foo</div>"`,
+        `"<div style="display:none;" class="v-enter-from v-enter-active">foo</div>"`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear with slotted v-show', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <components.Child>
+              <div v-show="data">foo</div>
+            </components.Child>
+          </transition>
+        </template>`,
+        {
+          Child: `<template><slot /></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"
+      	<!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
+      	"
+      `,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('transition appear with forwarded slotted v-show', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <transition appear>
+            <components.Parent>
+              <div v-show="data">foo</div>
+            </components.Parent>
+          </transition>
+        </template>`,
+        {
+          Parent: `<template><components.Child><slot /></components.Child></template>`,
+          Child: `<template><slot /></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+      	"
+      	<!--[-->
+      	<!--[--><div style="display:none;" class="v-enter-from v-enter-active">foo</div><!--]-->
+      	<!--]-->
+      	"
+      `,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
     })
@@ -3202,6 +3957,394 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<button style="" class="v-enter-from v-enter-active">1</button>"`,
       )
+    })
+
+    test('transition should hydrate empty v-if placeholder without fragment markers', async () => {
+      const data = ref(false)
+      const { container } = await testHydration(
+        `<template>
+          <Transition :css="false">
+            <div v-if="data">foo</div>
+          </Transition>
+        </template>`,
+        undefined,
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
+      expect(`mismatch`).not.toHaveBeenWarned()
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div>foo</div><!---->"`,
+      )
+
+      data.value = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
+    })
+  })
+
+  describe('transition-group', () => {
+    test('with tag should hydrate existing container for flattened v-for children', async () => {
+      const data = ref({
+        items: [1],
+      })
+      const code = `
+        <TransitionGroup name="list" tag="ul" style="margin-top:20px;">
+          <li v-for="item in data.items" :key="item">
+            {{ item }}
+          </li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+
+      const { container } = await mountWithHydration(html, code, data)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<ul name="list" style="margin-top:20px;"><li>1</li><!--for--></ul><!--transition-group-->"`,
+      )
+      data.value.items.push(2)
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<ul name="list" style="margin-top:20px;"><li>1</li><li class="list-enter-from list-enter-active">2</li><!--for--></ul><!--transition-group-->"`,
+      )
+
+      data.value.items.shift()
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<ul name="list" style="margin-top:20px;"><li class="list-leave-from list-leave-active">1</li><li class="list-enter-from list-enter-active">2</li><!--for--></ul><!--transition-group-->"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should keep nested v-for anchor inside container', async () => {
+      const data = reactive({
+        items: [1, 2, 3, 4, 5],
+      })
+      const { container } = await testWithVDOMApp(
+        `<template><components.Child /></template>`,
+        {
+          Child: {
+            code: `
+              <template>
+                <div class="demo">
+                  <TransitionGroup name="list" tag="ul" style="margin-top:20px;">
+                    <li v-for="item in data.items" :key="item">{{ item }}</li>
+                  </TransitionGroup>
+                </div>
+              </template>
+            `,
+            vapor: true,
+          },
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+
+      data.items.splice(2, 0, 6)
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>2</li><li class="list-enter-from list-enter-active">6</li><li>3</li><li>4</li><li>5</li><!--for-->"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should remove stale SSR v-for children when client list is shorter', async () => {
+      const ssrData = ref({
+        items: [1, 2, 3],
+      })
+      const data = ref({
+        items: [1],
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><!--for-->"`,
+      )
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+      data.value.items.push(4)
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>4</li><!--for-->"`,
+      )
+    })
+
+    test('with tag should preserve trailing sibling when removing stale SSR v-for children', async () => {
+      const ssrData = ref({
+        items: [1, 2, 3],
+        tail: 'tail',
+      })
+      const data = ref({
+        items: [1],
+        tail: 'tail',
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item" class="item">{{ item }}</li>
+          <li key="tail" class="tail">{{ data.tail }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li class="item">1</li><!--for--><li class="item">tail</li>"`,
+      )
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+      data.value.items.push(4)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li class="item">1</li><li class="item">4</li><!--for--><li class="item">tail updated</li>"`,
+      )
+    })
+
+    test('with tag should keep v-for anchor before replaced trailing sibling', async () => {
+      const ssrData = ref({
+        items: [1, 2, 3],
+        tail: 'tail',
+      })
+      const data = ref({
+        items: [1],
+        tail: 'tail',
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="div">
+          <span v-for="item in data.items" :key="item">{{ item }}</span>
+          <p key="tail">{{ data.tail }}</p>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const div = container.querySelector('div')!
+
+      expect(formatHtml(div.innerHTML)).toMatchInlineSnapshot(
+        `"<span>1</span><!--for--><p>tail</p>"`,
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+      data.value.items.push(4)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(formatHtml(div.innerHTML)).toMatchInlineSnapshot(
+        `"<span>1</span><span>4</span><!--for--><p>tail updated</p>"`,
+      )
+    })
+
+    test('with tag should place v-for anchor before trailing sibling without SSR close marker', async () => {
+      const data = ref({
+        items: [1, 2],
+        tail: 'tail',
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+          <li key="tail">{{ data.tail }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>2</li><li>3</li><!--for--><li>tail updated</li>"`,
+      )
+
+      data.value.items.shift()
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>2</li><li>3</li><!--for--><li>tail updated</li>"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should hydrate empty claimed container for flattened v-for children', async () => {
+      const data = ref({
+        items: [] as number[],
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(`"<!--for-->"`)
+
+      data.value.items.push(1, 2)
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><li>2</li><!--for-->"`,
+      )
+
+      data.value.items.shift()
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>2</li><!--for-->"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should place empty v-for anchor before trailing sibling', async () => {
+      const data = ref({
+        items: [] as number[],
+        tail: 'tail',
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+          <li key="tail">{{ data.tail }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<!--for--><li>tail</li>"`,
+      )
+
+      data.value.items.push(1)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><!--for--><li>tail updated</li>"`,
+      )
+
+      data.value.items.shift()
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<!--for--><li>tail updated</li>"`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should keep empty v-for anchor inside container when wrapped by parent fragment boundary', async () => {
+      const data = ref({
+        items: [] as number[],
+        after: 'after',
+      })
+      const code = `
+        <div>
+          <template v-if="true">
+            <TransitionGroup :css="false" tag="ul">
+              <li v-for="item in data.items" :key="item">{{ item }}</li>
+            </TransitionGroup>
+            <span>{{ data.after }}</span>
+          </template>
+        </div>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(`"<!--for-->"`)
+      expect(formatHtml(container.innerHTML)).toContain('<span>after</span>')
+
+      data.value.items.push(1)
+      data.value.after = 'after updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><!--for-->"`,
+      )
+      expect(formatHtml(container.innerHTML)).toContain(
+        '<span>after updated</span>',
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should prefer local anchor over slot fallback boundary', async () => {
+      const data = reactive({
+        items: [] as number[],
+        tail: 'tail',
+        after: 'after',
+      })
+      const { container } = await testHydration(
+        `<template><components.Child /></template>`,
+        {
+          Child: `<template>
+            <slot>
+              <TransitionGroup :css="false" tag="ul">
+                <li v-for="item in data.items" :key="item">{{ item }}</li>
+                <li key="tail">{{ data.tail }}</li>
+              </TransitionGroup>
+              <i>{{ data.after }}</i>
+            </slot>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<!--for--><li>tail</li>"`,
+      )
+      expect(formatHtml(container.innerHTML)).toContain('<i>after</i>')
+
+      data.items.push(1)
+      data.after = 'after updated'
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>1</li><!--for--><li>tail</li>"`,
+      )
+      expect(formatHtml(container.innerHTML)).toContain('<i>after updated</i>')
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
     })
   })
 
@@ -3484,6 +4627,86 @@ describe('Vapor Mode hydration', () => {
           `<div class="bar2">bar</div>` +
           `<!--]-->`,
       )
+    })
+
+    test('nested disabled teleport hydration should locate correct end anchor', async () => {
+      const data = ref({ msg: ref('after') })
+      const { block, container } = await mountWithHydration(
+        `<!--[-->` +
+          `<!--teleport start-->` +
+          `<div>outer</div>` +
+          `<!--teleport start-->` +
+          `<div>inner</div>` +
+          `<!--teleport end-->` +
+          `<!--teleport end-->` +
+          `<div>after</div>` +
+          `<!--]-->`,
+        `<teleport to="body" disabled>
+          <div>outer</div>
+          <teleport to="body" disabled>
+            <div>inner</div>
+          </teleport>
+        </teleport>
+        <div>{{data.msg}}</div>`,
+        data,
+      )
+
+      const blocks = block as any[]
+      const outerTeleport = blocks[0] as TeleportFragment
+      // The outer teleport's anchor must be the LAST <!--teleport end-->,
+      // NOT the inner one. If locateTeleportEndAnchor doesn't handle nesting,
+      // it would incorrectly pick the inner <!--teleport end-->.
+      const allEndComments = Array.from(container.childNodes).filter(
+        n => n.nodeType === 8 && (n as Comment).data === 'teleport end',
+      )
+      expect(allEndComments.length).toBe(2)
+      expect(outerTeleport.anchor).toBe(allEndComments[1]) // must be the LAST one
+
+      // The sibling <div>after</div> should hydrate correctly
+      // If the outer anchor is wrong, the hydration cursor is misaligned
+      // and the sibling element won't match.
+      expect(container.innerHTML).toBe(
+        `<!--[-->` +
+          `<!--teleport start-->` +
+          `<div>outer</div>` +
+          `<!--teleport start-->` +
+          `<div>inner</div>` +
+          `<!--teleport end-->` +
+          `<!--teleport end-->` +
+          `<div>after</div>` +
+          `<!--]-->`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('multiple disabled teleports hydrating to the same target should consume distinct target anchors', async () => {
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport-disabled-shared'
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` +
+        `<!--teleport anchor-->` +
+        `<!--teleport start anchor-->` +
+        `<!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+
+      const { block } = await mountWithHydration(
+        `<!--[-->` +
+          `<!--teleport start--><div>one</div><!--teleport end-->` +
+          `<!--teleport start--><div>two</div><!--teleport end-->` +
+          `<!--]-->`,
+        `<teleport to="#teleport-disabled-shared" disabled>
+            <div>one</div>
+          </teleport>
+          <teleport to="#teleport-disabled-shared" disabled>
+            <div>two</div>
+          </teleport>`,
+      )
+
+      const teleports = block as TeleportFragment[]
+      expect(teleports[0].targetStart).toBe(teleportContainer.childNodes[0])
+      expect(teleports[0].targetAnchor).toBe(teleportContainer.childNodes[1])
+      expect(teleports[1].targetStart).toBe(teleportContainer.childNodes[2])
+      expect(teleports[1].targetAnchor).toBe(teleportContainer.childNodes[3])
     })
 
     test('disabled + as component root', async () => {
@@ -3786,6 +5009,233 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('disabled teleport with null target hydration', async () => {
+      const { block, container } = await mountWithHydration(
+        '<!--teleport start--><div>content</div><!--teleport end-->',
+        `<teleport :to="undefined" :disabled="true">
+          <div>content</div>
+        </teleport>`,
+      )
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><div>content</div><!--teleport end-->`,
+      )
+      expect(`mismatch`).not.toHaveBeenWarned()
+
+      // targetStart must NOT be set when there's no target
+      const teleport = block as TeleportFragment
+      expect(teleport.targetStart).toBeNull()
+      expect(teleport.targetAnchor).toBeNull()
+    })
+
+    test('enabled teleport hydration should preserve existing target end anchor when target is empty', async () => {
+      const data = ref({ msg: 'foo' })
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport-empty-anchors'
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` + `<!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport to="#teleport-empty-anchors">
+          <span>{{data.msg}}</span>
+        </teleport>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor--><span>foo</span><!--teleport anchor-->`,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor--><span>bar</span><!--teleport anchor-->`,
+      )
+    })
+
+    test('disabled teleport hydration over empty main-view range should preserve teleport end anchor', async () => {
+      const data = ref({ msg: 'foo' })
+
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport :to="undefined" :disabled="true">
+          <span>{{data.msg}}</span>
+        </teleport>`,
+        data,
+      )
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><span>foo</span><!--teleport end-->`,
+      )
+
+      data.value.msg = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><span>bar</span><!--teleport end-->`,
+      )
+    })
+
+    test('enabled teleport with null target', async () => {
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport to="#non-existent-target-hydrate">
+          <div>content</div>
+        </teleport>`,
+      )
+
+      // Align with VDOM Teleport behavior
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect('Failed to locate Teleport target').toHaveBeenWarned()
+    })
+
+    test('disabled teleport with null target should preserve trailing sibling when re-enabled without target', async () => {
+      const data = ref({
+        disabled: true,
+        target: undefined as string | undefined,
+        tail: 'tail',
+      })
+
+      const { container } = await mountWithHydration(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--]-->',
+        `<teleport :to="data.target" :disabled="data.disabled">
+          <div>content</div>
+        </teleport>
+        <span>{{data.tail}}</span>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail</span><!--]-->',
+      )
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+      data.value.tail = 'tail-updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+      expect('Invalid Teleport target').not.toHaveBeenWarned()
+
+      data.value.disabled = false
+      await nextTick()
+      expect('Invalid Teleport target').toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+    })
+
+    test('enabled teleport with null target should preserve trailing sibling when toggling disabled', async () => {
+      const data = ref({
+        disabled: false,
+        target: '#non-existent-target-hydrate-sibling' as string | undefined,
+        tail: 'tail',
+      })
+
+      const { container } = await mountWithHydration(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail</span><!--]-->',
+        `<teleport :to="data.target" :disabled="data.disabled">
+          <div>content</div>
+        </teleport>
+        <span>{{data.tail}}</span>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail</span><!--]-->',
+      )
+      expect('Failed to locate Teleport target').toHaveBeenWarned()
+
+      data.value.tail = 'tail-updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+
+      data.value.disabled = true
+      data.value.target = undefined
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+
+      data.value.disabled = false
+      data.value.target = '#non-existent-target-hydrate-sibling'
+      await nextTick()
+      expect('Invalid Teleport target on mount').toHaveBeenWarned()
+      expect(container.innerHTML).toBe(
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+      )
+    })
+
+    test('enabled teleport with null target should delay child setup until target becomes available', async () => {
+      const version = ref('one')
+      const target = ref<any>('#non-existent-target-hydrate-late')
+      const setups: string[] = []
+
+      const Child = defineVaporComponent({
+        props: { msg: String },
+        setup(props) {
+          setups.push(String(props.msg))
+          const n0 = template('<div> </div>')() as any
+          const x0 = child(n0) as any
+          renderEffect(() => setText(x0, String(props.msg)))
+          return n0
+        },
+      })
+
+      const App = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VaporTeleport,
+            { to: () => target.value },
+            {
+              default: () => {
+                const current = version.value
+                return createComponent(Child, { msg: () => current })
+              },
+            },
+          )
+        },
+      })
+
+      const container = document.createElement('div')
+      container.innerHTML = '<!--teleport start--><!--teleport end-->'
+      document.body.appendChild(container)
+
+      const app = createVaporSSRApp(App)
+      app.mount(container)
+
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(setups).toEqual([])
+      expect('Failed to locate Teleport target').toHaveBeenWarned()
+
+      version.value = 'two'
+      await nextTick()
+      version.value = 'three'
+      await nextTick()
+      expect(setups).toEqual([])
+
+      const targetEl = document.createElement('div')
+      target.value = targetEl
+      await nextTick()
+
+      expect(setups).toEqual(['three'])
+      expect(targetEl.innerHTML).toBe('<div>three</div>')
+    })
+
     test('should apply css vars after hydration', async () => {
       const state = reactive({ color: 'red' })
 
@@ -3955,9 +5405,9 @@ describe('Vapor Mode hydration', () => {
       clientResolve(Comp)
       await new Promise(r => setTimeout(r))
 
-      // prevent lazy hydration since the component has been patched
-      expect('Skipping lazy hydration for component').toHaveBeenWarned()
-      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      // vapor lazy hydration always proceeds; drift is corrected by the
+      // mismatch handling path.
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
       expect(container.innerHTML).toMatchInlineSnapshot(
         `"<h1>Updated async component</h1><!--async component-->"`,
       )
@@ -4028,19 +5478,950 @@ describe('Vapor Mode hydration', () => {
       clientResolve(Comp)
       await new Promise(r => setTimeout(r))
 
-      // prevent lazy hydration since the component has been patched
-      expect('Skipping lazy hydration for component').toHaveBeenWarned()
-      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      // vapor lazy hydration always proceeds; drift is corrected by the
+      // mismatch handling path.
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<!--[--><h1>Updated async component</h1><h2>fragment root</h2><!--async component--><!--]-->"`,
+        `"<!--[--><h1>Updated async component</h1><h2>fragment root</h2><!--]--><!--async component-->"`,
       )
     })
 
-    // required vapor Suspense
-    test.todo('hydrate safely when property used by async setup changed before render', async () => {})
+    test('update async component fallthrough attrs after parent mount before async component resolve', async () => {
+      const data = ref({
+        cls: 'foo',
+      })
+      const compCode = `<div>Async component</div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp :class="data.cls"/>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
 
-    // required vapor Suspense
-    test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(html).toMatchInlineSnapshot(
+        `"<div class=\"foo\">Async component</div>"`,
+      )
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.cls = 'bar'
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration class mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<div class="foo bar">Async component</div><!--async component-->"`,
+      )
+    })
+
+    test('update async component slot content after parent mount before async component resolve', async () => {
+      const data = ref({
+        msg: 'foo',
+      })
+      const compCode = `<div><slot/></div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp><span>{{data.msg}}</span></components.AsyncComp>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(formatHtml(html)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><span>foo</span><!--]-->
+      	</div>"
+      `)
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.msg = 'bar'
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><span>bar</span><!--]-->
+      	</div><!--async component-->"
+      `)
+    })
+
+    test('update async component slot structure after parent mount before async component resolve', async () => {
+      const data = ref({
+        show: false,
+        msg: 'bar',
+      })
+      const compCode = `<div><slot/></div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp><span v-if="data.show">{{data.msg}}</span></components.AsyncComp>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(formatHtml(html)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><!--]-->
+      	</div>"
+      `)
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.show = true
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><span>bar</span><!--if--><!--]-->
+      	</div><!--async component-->"
+      `)
+    })
+
+    test('update async component slot single-root if with trailing sibling after parent mount before async component resolve', async () => {
+      const data = ref({
+        show: false,
+        msg: 'bar',
+        tail: 'tail',
+      })
+      const compCode = `<div><slot/></div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp><span v-if="data.show">{{data.msg}}</span><i>{{data.tail}}</i></components.AsyncComp>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+      expect(formatHtml(html)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><!----><i>tail</i><!--]-->
+      	</div>"
+      `)
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.show = true
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[--><span>bar</span><!--if--><i>tail</i><!--]-->
+      	</div><!--async component-->"
+      `)
+    })
+
+    test('update async component slot content from empty v-for branch with trailing sibling after parent mount before async component resolve', async () => {
+      const data = ref({
+        items: [] as string[],
+        tail: 'tail',
+      })
+      const compCode = `<div><slot/></div>`
+      const SSRComp = compileVaporComponent(
+        compCode,
+        undefined,
+        undefined,
+        true,
+      )
+      let serverResolve: any
+      let AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            serverResolve = r
+          }),
+      )
+      const appCode = `<components.AsyncComp><span v-for="item in data.items" :key="item">{{item}}</span><i>{{data.tail}}</i></components.AsyncComp>`
+      const SSRApp = compileVaporComponent(appCode, data, { AsyncComp }, true)
+
+      const htmlPromise = VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      serverResolve(SSRComp)
+      const html = await htmlPromise
+
+      let clientResolve: any
+      AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      ) as any
+
+      const Comp = compileVaporComponent(compCode)
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      data.value.items = ['foo', 'bar']
+      await nextTick()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      	"<div>
+      	<!--[-->
+      	<!--[--><span>foo</span><span>bar</span><!--]-->
+      	<i>tail</i><!--]-->
+      	</div><!--async component-->"
+      `)
+    })
+
+    test('trigger @vue:mounted for VDOM async component mounted after hydration', async () => {
+      const data = ref({
+        started: false,
+        loaded: false,
+      })
+      const ResolvedComp = defineComponent({
+        setup() {
+          return () =>
+            h('div', { id: 'docsearch' }, [
+              h('button', { type: 'button' }, 'loaded'),
+            ])
+        },
+      })
+      const appCode = `
+        <components.AsyncComp v-if="data.started" @vue:mounted="data.loaded = true" />
+        <div v-if="!data.loaded" id="docsearch">placeholder</div>
+      `
+      const SSRApp = compileVaporComponent(
+        appCode,
+        data,
+        { AsyncComp: ResolvedComp },
+        true,
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+
+      let clientResolve: any
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      )
+
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = createVaporSSRApp(App)
+      app.use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+
+      expect(container.querySelectorAll('#docsearch')).toHaveLength(1)
+
+      data.value.started = true
+      await nextTick()
+      clientResolve(ResolvedComp)
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+
+      expect(data.value.loaded).toBe(true)
+      expect(container.querySelectorAll('#docsearch')).toHaveLength(1)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><div id="docsearch"><button type="button">loaded</button></div><!----><!--if--><!--]-->
+        "
+      `)
+    })
+
+    describe('suspense', () => {
+      describe('VDOM suspense', () => {
+        test('hydrate VDOM Suspense vapor async setup updates empty v-for before trailing sibling', async () => {
+          const data = ref({
+            items: [] as string[],
+            tail: 'tail',
+          })
+          const vaporChildCode = `
+            <script vapor>
+              import { onMounted } from 'vue'
+              const data = _data
+              onMounted(() => {
+                data.value.items = ['foo', 'bar']
+              })
+              await new Promise(r => setTimeout(r, 10))
+            </script>
+            <template>
+              <div>
+                <span v-for="item in data.items" :key="item">{{ item }}</span>
+                <i>{{ data.tail }}</i>
+              </div>
+            </template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <components.VaporChild />
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          const serverComp = compile(appCode, data, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverComp),
+          )
+          expect(formatHtml(html)).toMatchInlineSnapshot(`
+          	"<div>
+          	<!--[--><!--]-->
+          	<i>tail</i></div>"
+          `)
+
+          const container = document.createElement('div')
+          document.body.appendChild(container)
+          container.innerHTML = html
+
+          const clientComp = compile(appCode, data, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+          const app = runtimeDom.createSSRApp(clientComp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          await new Promise(r => setTimeout(r, 20))
+          await nextTick()
+
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+          	"<div>
+          	<!--[--><span>foo</span><span>bar</span><!--]-->
+          	<i>tail</i></div>"
+          `)
+        })
+
+        test('hydrate VDOM Suspense vapor async setup should not enter mount hooks twice', async () => {
+          const beforeMount = vi.fn()
+          const data = ref({ beforeMount })
+          const vaporChildCode = `
+            <script vapor>
+              import { onBeforeMount } from 'vue'
+              const data = _data
+              onBeforeMount(() => data.value.beforeMount())
+              await new Promise(r => setTimeout(r, 10))
+            </script>
+            <template><h1>Async component</h1></template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <components.VaporChild />
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+
+          const serverApp = compile(appCode, data, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          const clientApp = compile(appCode, data, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+
+          app.mount(container)
+          await new Promise(r => setTimeout(r, 10))
+          await nextTick()
+
+          // beforeMount should only be called once during hydration
+          expect(beforeMount).toHaveBeenCalledTimes(1)
+        })
+
+        test('hydrate VDOM Suspense vapor async multi-root setup should preserve SSR range before resolve', async () => {
+          let resolveClient!: () => void
+          const serverData = ref({
+            wait: Promise.resolve(),
+            msg: 'one',
+          })
+          const clientData = ref({
+            wait: new Promise<void>(r => {
+              resolveClient = r
+            }),
+            msg: 'one',
+          })
+          const vaporChildCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template>
+              <span>{{ data.msg }}</span>
+              <span>two</span>
+            </template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <div>
+                  <components.VaporChild />
+                  <i>after</i>
+                </div>
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            serverData,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            clientData,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          const serverApp = compile(appCode, serverData, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          const clientApp = compile(appCode, clientData, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          expect(container.querySelectorAll('span')).toHaveLength(2)
+          expect(container.textContent).toBe('onetwoafter')
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+          resolveClient()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "<div>
+            <!--[--><span>one</span><span>two</span><!--]-->
+            <i>after</i></div>"
+          `)
+        })
+
+        test('hydrate safely when property used by async setup changed before render', async () => {
+          const data = ref({ toggle: true })
+          const vaporChildCode = `
+            <script vapor>
+              defineProps(['prop'])
+              await new Promise(r => setTimeout(r, 10))
+            </script>
+            <template><h1>{{ prop }}</h1></template>
+          `
+          const wrapperCode = `
+            <script setup>
+              const props = defineProps(['prop'])
+              const components = _components
+            </script>
+            <template>
+              <components.VaporChild :prop="props.prop" />
+            </template>
+          `
+          const siblingCode = `
+            <script setup>
+              const data = _data
+              data.value.toggle = false
+            </script>
+            <template><span/></template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <main>
+                  <components.AsyncWrapper :prop="data.toggle ? 'hello' : 'world'" />
+                  <components.SiblingComp />
+                </main>
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          serverComponents.AsyncWrapper = compile(
+            wrapperCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.AsyncWrapper = compile(
+            wrapperCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+          serverComponents.SiblingComp = compile(
+            siblingCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.SiblingComp = compile(
+            siblingCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+
+          const serverApp = compile(appCode, data, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          expect(html).toBe('<main><h1>hello</h1><span></span></main>')
+          expect(data.value.toggle).toBe(false)
+
+          data.value.toggle = true
+
+          const clientApp = compile(appCode, data, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+          expect(container.innerHTML).toBe(html)
+
+          await new Promise(r => setTimeout(r, 10))
+          await nextTick()
+
+          expect(data.value.toggle).toBe(false)
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+          expect(container.innerHTML).toBe(
+            '<main><h1>world</h1><span></span></main>',
+          )
+        })
+
+        test('hydrate safely when property used by deep nested async setup changed before render', async () => {
+          const data = ref({ toggle: true })
+          const vaporChildCode = `
+            <script vapor>
+              defineProps(['prop'])
+              await new Promise(r => setTimeout(r, 10))
+            </script>
+            <template><h1>{{ prop }}</h1></template>
+          `
+          const wrapperCode = `
+            <script setup>
+              const components = _components
+            </script>
+            <template>
+              <components.VaporChild v-bind="$attrs" />
+            </template>
+          `
+          const wrapperWrapperCode = `
+            <script setup>
+              const components = _components
+            </script>
+            <template>
+              <components.AsyncWrapper v-bind="$attrs" />
+            </template>
+          `
+          const siblingCode = `
+            <script setup>
+              const data = _data
+              data.value.toggle = false
+            </script>
+            <template><span/></template>
+          `
+          const appCode = `
+            <script setup>
+              import { Suspense } from 'vue'
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <main>
+                  <components.AsyncWrapperWrapper :prop="data.toggle ? 'hello' : 'world'" />
+                  <components.SiblingComp />
+                </main>
+              </Suspense>
+            </template>
+          `
+
+          const serverComponents: any = {}
+          const clientComponents: any = {}
+          serverComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            serverComponents,
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          clientComponents.VaporChild = compile(
+            vaporChildCode,
+            data,
+            clientComponents,
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          serverComponents.AsyncWrapper = compile(
+            wrapperCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.AsyncWrapper = compile(
+            wrapperCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+          serverComponents.AsyncWrapperWrapper = compile(
+            wrapperWrapperCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.AsyncWrapperWrapper = compile(
+            wrapperWrapperCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+          serverComponents.SiblingComp = compile(
+            siblingCode,
+            data,
+            serverComponents,
+            {
+              vapor: false,
+              ssr: true,
+            },
+          )
+          clientComponents.SiblingComp = compile(
+            siblingCode,
+            data,
+            clientComponents,
+            {
+              vapor: false,
+              ssr: false,
+            },
+          )
+
+          const serverApp = compile(appCode, data, serverComponents, {
+            vapor: false,
+            ssr: true,
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          expect(html).toBe('<main><h1>hello</h1><span></span></main>')
+          expect(data.value.toggle).toBe(false)
+
+          data.value.toggle = true
+
+          const clientApp = compile(appCode, data, clientComponents, {
+            vapor: false,
+            ssr: false,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+          expect(container.innerHTML).toBe(html)
+
+          await new Promise(r => setTimeout(r, 10))
+          await nextTick()
+
+          expect(data.value.toggle).toBe(false)
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+          expect(container.innerHTML).toBe(
+            '<main><h1>world</h1><span></span></main>',
+          )
+        })
+      })
+
+      // required vapor Suspense
+      describe.todo('vapor suspense', () => {
+        test.todo('hydrate safely when property used by async setup changed before render', async () => {})
+        test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
+      })
+    })
 
     test('unmount async wrapper before load', async () => {
       const data = ref({
@@ -4346,48 +6727,62 @@ describe('mismatch handling', () => {
     expect(container.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
-  // test('fragment mismatch removal', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
-  //     () => h('div', [h('span', 'replaced')]),
-  //   )
-  //   expect(container.innerHTML).toBe('<div><span>replaced</span></div>')
-  //   expect(`Hydration node mismatch`).toHaveBeenWarned()
-  // })
-  // test('fragment not enough children', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
-  //     () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
-  //   )
-  //   expect(`Hydration node mismatch`).toHaveBeenWarned()
-  // })
-  // test('fragment too many children', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
-  //     () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>',
-  //   )
-  //   // fragment ends early and attempts to hydrate the extra <div>bar</div>
-  //   // as 2nd fragment child.
-  //   expect(`Hydration text content mismatch`).toHaveBeenWarned()
-  //   // excessive children removal
-  //   expect(`Hydration children mismatch`).toHaveBeenWarned()
-  // })
-  // test('Teleport target has empty children', () => {
-  //   const teleportContainer = document.createElement('div')
-  //   teleportContainer.id = 'teleport'
-  //   document.body.appendChild(teleportContainer)
-  //   mountWithHydration('<!--teleport start--><!--teleport end-->', () =>
-  //     h(Teleport, { to: '#teleport' }, [h('span', 'value')]),
-  //   )
-  //   expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
-  //   expect(`Hydration children mismatch`).toHaveBeenWarned()
-  // })
+  test('fragment mismatch removal', async () => {
+    const data = ref({ items: [] as string[] })
+    const { container } = await mountWithHydration(
+      `<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
+      `<div>
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div><!--[--><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+  })
+  test('fragment not enough children', async () => {
+    const data = ref({ items: ['a', 'b'] })
+    const { container } = await mountWithHydration(
+      `<div><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
+      `<div>
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div><!--[--><div>foo</div><div>foo</div><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
+  test('fragment too many children', async () => {
+    const data = ref({ items: ['a'] })
+    const { container } = await mountWithHydration(
+      `<div><!--[--><div>foo</div><div>foo</div><!--]--><div>baz</div></div>`,
+      `<div>
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+  })
+  test('Teleport target has empty children', async () => {
+    const teleportContainer = document.createElement('div')
+    teleportContainer.id = 'teleport'
+    document.body.appendChild(teleportContainer)
+    await mountWithHydration(
+      '<!--teleport start--><!--teleport end-->',
+      `<teleport to="#teleport"><span>value</span></teleport>`,
+    )
+    expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+  })
   // test('comment mismatch (element)', () => {
   //   const { container } = mountWithHydration(`<div><span></span></div>`, () =>
   //     h('div', [createCommentVNode('hi')]),
@@ -4790,6 +7185,153 @@ describe('mismatch handling', () => {
     app.mount(container)
     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
   })
+
+  describe('static template', () => {
+    beforeEach(() => {
+      setIsHydratingEnabled(true)
+    })
+
+    afterEach(() => {
+      setIsHydratingEnabled(false)
+    })
+
+    test('static element', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div><span>foo</span></div><span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('<div><span>foo', false, true)() as HTMLElement
+        const n1 = template('<span> </span>')() as HTMLElement
+        const x1 = child(n1) as Text
+
+        expect(n0).toBe(container.firstChild)
+        expect(n1).toBe(container.lastChild)
+        renderEffect(() => setText(x1, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(
+        `<div><span>foo</span></div><span>after</span>`,
+      )
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<div><span>foo</span></div><span>updated</span>`,
+      )
+    })
+
+    test('static text', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `hello<span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('hello', false, true)() as Text
+        const n1 = template('<span> </span>')() as HTMLElement
+        const x1 = child(n1) as Text
+
+        expect(n0).toBe(container.firstChild)
+        expect(n0.data).toBe('hello')
+        expect(n1).toBe(container.lastChild)
+        renderEffect(() => setText(x1, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(`hello<span>after</span>`)
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(`hello<span>updated</span>`)
+    })
+
+    test('static comment', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<!--foo--><span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('<!--foo-->', false, true)() as Comment
+        const n1 = template('<span> </span>')() as HTMLElement
+        const x1 = child(n1) as Text
+
+        expect(n0).toBe(container.firstChild)
+        expect(n0.data).toBe('foo')
+        expect(n1).toBe(container.lastChild)
+        renderEffect(() => setText(x1, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(`<!--foo--><span>after</span>`)
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<!--foo--><span>updated</span>`)
+    })
+
+    test('multi-root static nodes', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<!--[--><div>one</div><p>two</p><!--]--><span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('<div>one', false, true)() as HTMLElement
+        const n1 = template('<p>two', false, true)() as HTMLElement
+        const n2 = template('<span> </span>')() as HTMLElement
+        const x2 = child(n2) as Text
+
+        expect(n0).toBe(container.childNodes[1])
+        expect(n1).toBe(container.childNodes[2])
+        expect(n2).toBe(container.lastChild)
+        renderEffect(() => setText(x2, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(
+        `<!--[--><div>one</div><p>two</p><!--]--><span>after</span>`,
+      )
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--[--><div>one</div><p>two</p><!--]--><span>updated</span>`,
+      )
+    })
+
+    test('stripped static template', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div>claimed</div><span>after</span>`
+      const msg = ref('after')
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('', false, true)() as HTMLElement
+        const n1 = template('<span> </span>')() as HTMLElement
+        const x1 = child(n1) as Text
+
+        expect(n0).toBe(container.firstChild)
+        expect(n1).toBe(container.lastChild)
+        renderEffect(() => setText(x1, msg.value))
+      })
+
+      expect(container.innerHTML).toBe(`<div>claimed</div><span>after</span>`)
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<div>claimed</div><span>updated</span>`)
+    })
+
+    test('stripped static template can be cloned after hydration', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div>claimed</div>`
+      const t1 = template('', true, true)
+      let hydrated: HTMLElement
+
+      hydrateNode(container.firstChild!, () => {
+        hydrated = t1() as HTMLElement
+        expect(hydrated).toBe(container.firstChild)
+        expect((hydrated as any).$root).toBe(true)
+      })
+
+      hydrated!.textContent = 'mutated'
+
+      const cloned = t1() as HTMLElement
+      expect(cloned).not.toBe(hydrated!)
+      expect((cloned as any).$root).toBe(true)
+      expect(cloned.outerHTML).toBe(`<div>claimed</div>`)
+    })
+  })
 })
 
 describe('data-allow-mismatch', () => {
@@ -4836,40 +7378,51 @@ describe('data-allow-mismatch', () => {
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
-  // test('fragment mismatch removal', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
-  //     () => h('div', [h('span', 'replaced')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div data-allow-mismatch="children"><span>replaced</span></div>',
-  //   )
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
-  // test('fragment not enough children', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
-  //     () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
-  //   )
-  //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-  // })
-  // test('fragment too many children', () => {
-  //   const { container } = mountWithHydration(
-  //     `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
-  //     () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
-  //   )
-  //   expect(container.innerHTML).toBe(
-  //     '<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>',
-  //   )
-  //   // fragment ends early and attempts to hydrate the extra <div>bar</div>
-  //   // as 2nd fragment child.
-  //   expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
-  //   // excessive children removal
-  //   expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-  // })
+  test('fragment mismatch removal', async () => {
+    const data = ref({ items: [] as string[] })
+    const { container } = await mountWithHydration(
+      `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
+      `<div data-allow-mismatch="children">
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--[--><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+  test('fragment not enough children', async () => {
+    const data = ref({ items: ['a', 'b'] })
+    const { container } = await mountWithHydration(
+      `<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
+      `<div data-allow-mismatch="children">
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--[--><div>foo</div><div>foo</div><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+  test('fragment too many children', async () => {
+    const data = ref({ items: ['a'] })
+    const { container } = await mountWithHydration(
+      `<div data-allow-mismatch="children"><!--[--><div>foo</div><div>foo</div><!--]--><div>baz</div></div>`,
+      `<div data-allow-mismatch="children">
+        <div v-for="item in data.items" :key="item">foo</div>
+        <div>baz</div>
+      </div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--[--><div>foo</div><!--]--><div>baz</div></div>',
+    )
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
   // test('comment mismatch (element)', () => {
   //   const { container } = mountWithHydration(
   //     `<div data-allow-mismatch="children"><span></span></div>`,
@@ -4926,6 +7479,81 @@ describe('data-allow-mismatch', () => {
 })
 
 describe('VDOM interop', () => {
+  // Previous tests (e.g. createVaporSSRApp) leave isHydratingEnabled = true.
+  beforeEach(() => {
+    setIsHydratingEnabled(false)
+  })
+
+  test('hydrate VDOM -> Vapor component should invoke vnode and directive mount hooks in VDOM order', async () => {
+    const calls: string[] = []
+    const dir = {
+      created: vi.fn(() => calls.push('directive created')),
+      beforeMount: vi.fn(() => calls.push('directive beforeMount')),
+      mounted: vi.fn(() => calls.push('directive mounted')),
+    }
+    const serverVaporChild = compile(
+      `<template><div>child</div></template>`,
+      ref({}),
+      {},
+      {
+        vapor: true,
+        ssr: true,
+      },
+    )
+    const clientVaporChild = compile(
+      `<template><div>child</div></template>`,
+      ref({}),
+      {},
+      {
+        vapor: true,
+        ssr: false,
+      },
+    )
+    const ServerApp = defineComponent({
+      setup() {
+        return () =>
+          withDirectives(
+            h(serverVaporChild as any, {
+              onVnodeBeforeMount: () => calls.push('vnode beforeMount'),
+              onVnodeMounted: () => calls.push('vnode mounted'),
+            }),
+            [[dir]],
+          )
+      },
+    })
+    const ClientApp = defineComponent({
+      setup() {
+        return () =>
+          withDirectives(
+            h(clientVaporChild as any, {
+              onVnodeBeforeMount: () => calls.push('vnode beforeMount'),
+              onVnodeMounted: () => calls.push('vnode mounted'),
+            }),
+            [[dir]],
+          )
+      },
+    })
+
+    const html = await VueServerRenderer.renderToString(createSSRApp(ServerApp))
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+
+    const app = createSSRApp(ClientApp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    await nextTick()
+
+    expect(calls).toEqual([
+      'vnode beforeMount',
+      'directive created',
+      'directive beforeMount',
+      'directive mounted',
+      'vnode mounted',
+    ])
+  })
+
   test('basic render vapor component', async () => {
     const data = ref(true)
     const { container } = await testWithVDOMApp(
@@ -5019,6 +7647,85 @@ describe('VDOM interop', () => {
       "
     `,
     )
+  })
+
+  test('nested components (VDOM -> Vapor(multi-root) -> VDOM) with preceding sibling', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const data = _data; const components = _components;</script>
+      <template>
+        <p>before</p>
+        <components.VaporChild/>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild/><div>second</div></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data;</script>
+            <template><span>{{ data }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[--><span>foo</span><div>second</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[--><span>bar</span><div>second</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
+  test('nested components (VDOM -> Vapor) should not duplicate', async () => {
+    const { container } = await testWithVDOMApp(
+      `<script setup>const components = _components;</script>
+          <template>
+            <components.VaporChild/>
+          </template>`,
+      {
+        VaporChild: {
+          code: `<script vapor>
+                import { ref } from 'vue'
+                const show = ref(true)
+              </script>
+              <template>
+                <template v-if="show">
+                  <div>1</div>
+                  <div>2</div>
+                </template>
+              </template>`,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>1</div><div>2</div><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
 
   test('nested components (VDOM -> Vapor -> VDOM (with slot fallback))', async () => {
@@ -5338,6 +8045,1353 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate static VNode chunk rendered via createDynamicComponent', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { createStaticVNode } from 'vue'
+        const data = _data
+        const StaticChunk = createStaticVNode(
+          '<div>first static</div><div>second static</div>',
+          2,
+        )
+      </script>
+      <template>
+        <div>
+          <component :is="StaticChunk" />
+        </div>
+        <span>{{ data }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div><div>first static</div><div>second static</div><!--dynamic-component--></div><span>foo</span><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div><div>first static</div><div>second static</div><!--dynamic-component--></div><span>bar</span><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate Fragment VNode rendered via createDynamicComponent', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Fragment, h } from 'vue'
+        const data = _data
+        const FragmentChunk = h(Fragment, null, [
+          h('div', null, 'first fragment'),
+          h('div', null, 'second fragment'),
+        ])
+      </script>
+      <template>
+        <div>
+          <component :is="FragmentChunk" />
+        </div>
+        <span>{{ data }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><div>first fragment</div><div>second fragment</div><!--]-->
+      <!--dynamic-component--></div><span>foo</span><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><div>first fragment</div><div>second fragment</div><!--]-->
+      <!--dynamic-component--></div><span>bar</span><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate vapor slot in vdom component with sibling nodes', async () => {
+    const msg = ref('Hello World!')
+    const { container } = await testWithVaporApp(
+      `<script setup vapor>
+        const msg = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Comp>
+          <h1>{{ msg }}</h1>
+        </components.Comp>
+        <h1>{{ msg }}</h1>
+      </template>`,
+      {
+        Comp: {
+          code: `
+          <template>
+            <div>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+      msg,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><h1>Hello World!</h1><!--]-->
+      </div><h1>Hello World!</h1><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'Hi Vapor'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><h1>Hi Vapor</h1><!--]-->
+      </div><h1>Hi Vapor</h1><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate dynamic vapor slot re-mount should stop stale effects from previous slot function', async () => {
+    const staleState = reactive({ id: 0, text: 'zero' })
+    const activeState = reactive({ id: 1, text: 'one' })
+    const nextState = reactive({ id: 2, text: 'two' })
+    const data = reactive({
+      items: [staleState, activeState],
+      track: vi.fn((_: number, text: string) => text),
+    })
+
+    const { container } = await testWithVaporApp(
+      `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Comp>
+          <template v-for="item in data.items" #default>
+            <span>{{ data.track(item.id, item.text) }}</span>
+          </template>
+        </components.Comp>
+      </template>`,
+      {
+        Comp: {
+          code: `
+          <template>
+            <div>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[--><span>one</span><!--]-->
+      </div>"
+    `)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.items.push(nextState)
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[--><span>two</span><!--]-->
+      </div>"
+    `)
+
+    data.track.mockClear()
+    activeState.text = 'stale-one'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[--><span>two</span><!--]-->
+      </div>"
+    `)
+    expect(data.track).not.toHaveBeenCalled()
+  })
+
+  test('hydrate multi-root VNode component via createDynamicComponent and switch branch', async () => {
+    const data = ref({
+      showMulti: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { computed, h } from 'vue'
+        const data = _data
+        const components = _components
+        const vnode = computed(() =>
+          data.value.showMulti
+            ? h(components.VdomMultiRoot)
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`,
+      {
+        VdomMultiRoot: {
+          code: `<template><div>first</div><div>second</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><!--dynamic-component--><div>first</div><div>second</div><!--]-->
+      <span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value.showMulti = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><p>fallback</p><!--dynamic-component--><!--]-->
+      <span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.showMulti = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><div>first</div><div>second</div><!--dynamic-component--><!--]-->
+      <span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--[--><div>first</div><div>second</div><!--dynamic-component--><!--]-->
+      <span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate empty createDynamicComponent should fill before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late</div><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.msg = 'late-updated'
+    data.value.tail = 'tail-updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late-updated</div><!--dynamic-component--><span>tail-updated</span><!--]-->',
+    )
+  })
+
+  test('hydrate empty createDynamicComponent under keyed Transition should fill before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      key: 'empty',
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><!----><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <Transition :css="false">
+          <component :is="data.show ? 'div' : null" :key="data.key">
+            {{ data.msg }}
+          </component>
+        </Transition>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!----><!--keyed--><span>tail</span><!--]-->',
+    )
+
+    data.value.show = true
+    data.value.key = 'filled'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late</div><!--dynamic-component--><!--keyed--><span>tail</span><!--]-->',
+    )
+
+    data.value.msg = 'late-updated'
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>late-updated</div><!--dynamic-component--><!--keyed--><span>tail-updated</span><!--]-->',
+    )
+  })
+
+  test('hydrate createDynamicComponent to null branch should remove stale branch before trailing sibling', async () => {
+    const data = ref({
+      show: false,
+      msg: 'late',
+      tail: 'tail',
+    })
+    const { container } = await mountWithHydration(
+      '<!--[--><div>late</div><!--dynamic-component--><span>tail</span><!--]-->',
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail</span><!--]-->',
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><!--dynamic-component--><span>tail-updated</span><!--]-->',
+    )
+  })
+
+  test('hydrate createDynamicComponent to null branch at end of container', async () => {
+    const data = ref({
+      show: true,
+      msg: 'late',
+    })
+    const code = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.show = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    createVaporSSRApp(clientComp).mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe('<!--dynamic-component-->')
+
+    data.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div>late</div><!--dynamic-component-->')
+
+    data.value.msg = 'late-updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div>late-updated</div><!--dynamic-component-->',
+    )
+  })
+
+  test('hydrate createDynamicComponent to null branch at end of allowed-mismatch container', async () => {
+    const data = ref({
+      show: true,
+      msg: 'late',
+    })
+    const code = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <div data-allow-mismatch="children">
+          <component :is="data.show ? 'div' : null">{{ data.msg }}</component>
+        </div>
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.show = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    createVaporSSRApp(clientComp).mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--dynamic-component--></div>',
+    )
+  })
+
+  test('hydrate Fragment dynamic component to null branch at end of container', async () => {
+    const data = ref({
+      showMulti: true,
+    })
+    const code = `<script setup>
+        import { Fragment, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showMulti
+            ? h(Fragment, null, [
+                h('div', null, 'first fragment'),
+                h('div', null, 'second fragment'),
+              ])
+            : null
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.showMulti = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe('<!--dynamic-component-->')
+
+    data.value.showMulti = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>first fragment</div><div>second fragment</div><!--dynamic-component-->"
+    `)
+  })
+
+  test('hydrate Fragment dynamic component to null branch at end of allowed-mismatch container', async () => {
+    const data = ref({
+      showMulti: true,
+    })
+    const code = `<script setup>
+        import { Fragment, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showMulti
+            ? h(Fragment, null, [
+                h('div', null, 'first fragment'),
+                h('div', null, 'second fragment'),
+              ])
+            : null
+        )
+      </script>
+      <template>
+        <div data-allow-mismatch="children">
+          <component :is="vnode" />
+        </div>
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.showMulti = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--dynamic-component--></div>',
+    )
+  })
+
+  test('hydrate Teleport VNode dynamic component to null branch at end of container', async () => {
+    const data = ref({
+      showTeleport: true,
+    })
+    const code = `<script setup>
+        import { Teleport, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showTeleport
+            ? h(Teleport, { to: '#target', disabled: true }, [
+                h('div', null, 'teleported'),
+              ])
+            : null
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.showTeleport = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe('<!--dynamic-component-->')
+
+    data.value.showTeleport = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component-->"
+    `)
+  })
+
+  test('hydrate Teleport VNode dynamic component to null branch at end of allowed-mismatch container', async () => {
+    const data = ref({
+      showTeleport: true,
+    })
+    const code = `<script setup>
+        import { Teleport, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showTeleport
+            ? h(Teleport, { to: '#target', disabled: true }, [
+                h('div', null, 'teleported'),
+              ])
+            : null
+        )
+      </script>
+      <template>
+        <div data-allow-mismatch="children">
+          <component :is="vnode" />
+        </div>
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.showTeleport = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="children"><!--dynamic-component--></div>',
+    )
+  })
+
+  test('hydrate vapor slot in vdom component with empty slot and sibling nodes', async () => {
+    const msg = ref('Hello World!')
+    const { container } = await testWithVaporApp(
+      `<script setup vapor>
+        const msg = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Comp />
+        <h1>{{ msg }}</h1>
+      </template>`,
+      {
+        Comp: {
+          code: `
+          <template>
+            <div>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+      msg,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><!--]-->
+      </div><h1>Hello World!</h1><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'Hi Vapor'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><!--]-->
+      </div><h1>Hi Vapor</h1><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate static/fragment VNode via createDynamicComponent and switch type', async () => {
+    const data = ref({
+      useStatic: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Fragment, computed, createStaticVNode, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.useStatic
+            ? createStaticVNode(
+                '<div>first static</div><div>second static</div>',
+                2,
+              )
+            : h(Fragment, null, [
+                h('div', null, 'first fragment'),
+                h('div', null, 'second fragment'),
+              ])
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value.useStatic = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>first fragment</div><div>second fragment</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.useStatic = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>first static</div><div>second static</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Teleport VNode via createDynamicComponent and switch branch', async () => {
+    const data = ref({
+      showTeleport: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Teleport, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showTeleport
+            ? h(Teleport, { to: '#target', disabled: true }, [
+                h('div', null, 'teleported'),
+              ])
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showTeleport = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showTeleport = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Teleport dynamic component to null branch should remove teleport range and preserve trailing sibling', async () => {
+    const data = ref({
+      showTeleport: true,
+      tail: 'tail',
+    })
+
+    const code = `<script setup>
+        import { Teleport } from 'vue'
+        const data = _data
+      </script>
+      <template>
+        <component
+          :is="data.showTeleport ? Teleport : null"
+          to="#target"
+          :disabled="true"
+        >
+          <div>teleported</div>
+        </component>
+        <span>{{ data.tail }}</span>
+      </template>`
+
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    data.value.showTeleport = false
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    createVaporSSRApp(clientComp).mount(container)
+
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate enabled Teleport VNode via createDynamicComponent and switch branch', async () => {
+    const data = ref({
+      showTeleport: true,
+      tail: 'tail',
+    })
+    const code = `<script setup>
+        import { Teleport, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showTeleport
+            ? h(Teleport, { to: '#target' }, [h('div', null, 'teleported')])
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`
+    const serverComp = compile(code, data, {}, { vapor: true, ssr: true })
+    const ssrCtx: Record<string, any> = {}
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+      ssrCtx,
+    )
+
+    const target = document.createElement('div')
+    target.id = 'target'
+    target.innerHTML = ssrCtx.teleports['#target']
+    document.body.appendChild(target)
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(code, data, {}, { vapor: true, ssr: false })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--teleport start-->
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+    expect(formatHtml(target.innerHTML)).toMatchInlineSnapshot(
+      `"<!--teleport start anchor--><div>teleported</div><!--teleport anchor-->"`,
+    )
+
+    data.value.showTeleport = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+    expect(formatHtml(target.innerHTML)).toMatchInlineSnapshot(`""`)
+
+    data.value.showTeleport = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--teleport start-->
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+    expect(formatHtml(target.innerHTML)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`,
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Suspense VNode via createDynamicComponent and switch branch', async () => {
+    const data = ref({
+      showSuspense: true,
+      msg: 'foo',
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Suspense, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showSuspense
+            ? h(Suspense, null, {
+                default: () => h('div', null, data.value.msg),
+                fallback: () => h('div', null, 'pending'),
+              })
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <component :is="vnode" />
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>foo</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value.msg = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>bar</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.showSuspense = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.showSuspense = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>bar</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `,
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>bar</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate async Suspense VNode via createDynamicComponent and show fallback', async () => {
+    const data = ref({
+      showSuspense: true,
+      tail: 'tail',
+    })
+
+    const appCode = `<script setup>
+      import { Suspense, computed, h } from 'vue'
+      const data = _data
+      const components = _components
+      const vnode = computed(() =>
+        data.value.showSuspense
+          ? h(Suspense, { timeout: 0 }, {
+              default: () => h(components.AsyncComp),
+              fallback: () => h('div', null, 'pending'),
+            })
+          : h('p', null, 'fallback')
+      )
+    </script>
+    <template>
+      <component :is="vnode" />
+      <span>{{ data.tail }}</span>
+    </template>`
+
+    const AsyncResolvedComp = {
+      render: () => runtimeDom.h('div', null, 'async resolved'),
+    }
+
+    let serverResolve: (comp: any) => void
+    const ServerAsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        }),
+    )
+
+    const SSRApp = compile(
+      appCode,
+      data,
+      { AsyncComp: ServerAsyncComp },
+      {
+        vapor: true,
+        ssr: true,
+      },
+    )
+
+    const htmlPromise = VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+    serverResolve!(AsyncResolvedComp)
+    const html = await htmlPromise
+
+    let clientResolve: (comp: any) => void
+    const ClientAsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        }),
+    )
+    const App = compile(
+      appCode,
+      data,
+      { AsyncComp: ClientAsyncComp },
+      {
+        vapor: true,
+        ssr: false,
+      },
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const app = createVaporSSRApp(App)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showSuspense = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showSuspense = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><div>pending</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    clientResolve!(AsyncResolvedComp)
+    await new Promise(r => setTimeout(r))
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>async resolved</div><div>async resolved</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Suspense VNode via createDynamicComponent under KeepAlive', async () => {
+    const data = ref({
+      msg: 'foo',
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { KeepAlive, Suspense, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          h(Suspense, null, {
+            default: () => h('div', null, data.value.msg),
+            fallback: () => h('div', null, 'pending'),
+          })
+        )
+      </script>
+      <template>
+        <KeepAlive>
+          <component :is="vnode" />
+        </KeepAlive>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>foo</div><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>foo</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate Teleport VNode via createDynamicComponent under Transition', async () => {
+    const data = ref({
+      showTeleport: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Teleport, Transition, computed, h } from 'vue'
+        const data = _data
+        const vnode = computed(() =>
+          data.value.showTeleport
+            ? h(Teleport, { to: '#target', disabled: true }, [
+                h('div', null, 'teleported'),
+              ])
+            : h('p', null, 'fallback')
+        )
+      </script>
+      <template>
+        <Transition>
+          <component :is="vnode" />
+        </Transition>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[-->
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showTeleport = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><p class="v-enter-from v-enter-active">fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.showTeleport = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><p class="v-enter-from v-leave-from v-leave-active">fallback</p>
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail</span><!--]-->
+      "
+    `)
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><p class="v-enter-from v-leave-from v-leave-active">fallback</p>
+      <!--teleport start-->
+      <div>teleported</div>
+      <!--teleport end-->
+      <!--dynamic-component--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
+  test('hydrate interop dynamic component under KeepAlive', async () => {
+    const data = ref({
+      show: true,
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { KeepAlive, computed, h } from 'vue'
+        const data = _data
+        const components = _components
+        const vnode = computed(() => h(components.Counter))
+      </script>
+      <template>
+        <KeepAlive>
+          <component v-if="data.show" :is="vnode" />
+        </KeepAlive>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      {
+        Counter: {
+          code: `<script setup>
+            import { ref } from 'vue'
+            const count = ref(0)
+          </script>
+          <template><button @click="count++">{{ count }}</button></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    const getButton = () =>
+      container.querySelector('button') as HTMLButtonElement
+
+    expect(getButton().textContent).toBe('0')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    triggerEvent('click', getButton())
+    await nextTick()
+    expect(getButton().textContent).toBe('1')
+
+    data.value.show = false
+    await nextTick()
+    expect(container.querySelector('button')).toBeNull()
+
+    data.value.show = true
+    await nextTick()
+    expect(getButton().textContent).toBe('1')
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><button>1</button><!--dynamic-component--><!--if--><span>tail-updated</span><!--]-->
+      "
+    `)
+  })
+
   test('hydrate VDOM slot content', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(
@@ -5380,6 +9434,100 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate VDOM slot content should unmount hydrated slot child before first insert', async () => {
+    const data = ref({
+      unmounted: vi.fn(),
+    })
+
+    const appCode = `<script setup>
+      const components = _components
+    </script>
+    <template>
+      <components.VaporChild>
+        <components.SlotChild />
+      </components.VaporChild>
+    </template>`
+
+    const ssrComponents = {
+      VaporChild: compile(
+        `<template><slot /></template>`,
+        data,
+        {},
+        {
+          vapor: true,
+          ssr: true,
+        },
+      ),
+      SlotChild: compile(
+        `<script setup>
+          import { onUnmounted } from 'vue'
+          const data = _data
+          onUnmounted(() => data.value.unmounted())
+        </script>
+        <template><div>slot child</div></template>`,
+        data,
+        {},
+        {
+          vapor: false,
+          ssr: true,
+        },
+      ),
+    }
+
+    const clientComponents = {
+      VaporChild: compile(
+        `<template><slot /></template>`,
+        data,
+        {},
+        {
+          vapor: true,
+          ssr: false,
+        },
+      ),
+      SlotChild: compile(
+        `<script setup>
+          import { onUnmounted } from 'vue'
+          const data = _data
+          onUnmounted(() => data.value.unmounted())
+        </script>
+        <template><div>slot child</div></template>`,
+        data,
+        {},
+        {
+          vapor: false,
+          ssr: false,
+        },
+      ),
+    }
+
+    const serverComp = compile(appCode, data, ssrComponents, {
+      vapor: false,
+      ssr: true,
+    })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+
+    const clientComp = compile(appCode, data, clientComponents, {
+      vapor: false,
+      ssr: false,
+    })
+    const app = runtimeDom.createSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    app.unmount()
+    await nextTick()
+
+    expect(data.value.unmounted).toHaveBeenCalledTimes(1)
+  })
+
   test('hydrate VDOM slot fallback', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(
@@ -5418,6 +9566,530 @@ describe('VDOM interop', () => {
       "
     `,
     )
+  })
+
+  test('hydrate VDOM slot content can mount after hydrating as empty', async () => {
+    const data = reactive({
+      show: false,
+      text: 'foo',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild>
+          <template v-if="data.show">
+            <span>{{ data.text }}</span>
+          </template>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><slot /></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>foo</span><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate VDOM slot multi-root content can mount after hydrating as empty', async () => {
+    const data = reactive({
+      show: false,
+      text: 'foo',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+          const data = _data
+          const components = _components
+        </script>
+        <template>
+          <components.VaporChild>
+            <template v-if="data.show">
+              <span>{{ data.text }}</span>
+              <span>{{ data.text }}</span>
+            </template>
+          </components.VaporChild>
+        </template>`,
+      {
+        VaporChild: {
+          code: `<template><slot /></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><span>foo</span><span>foo</span><!--]-->
+        "
+      `,
+    )
+  })
+
+  test('hydrate interop vapor slot fallback', async () => {
+    const data = reactive({
+      text: 'foo',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild /></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+          <template><slot><span>{{ data.text }}</span></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>foo</span><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.text = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>bar</span><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate interop vapor slot fallback from empty slot branch', async () => {
+    const data = reactive({
+      show: false,
+      fallback: 'foo',
+      slot: 'bar',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template>
+            <components.VdomChild>
+              <template #default>
+                <template v-if="data.show">
+                  <span>{{ data.slot }}</span>
+                </template>
+              </template>
+            </components.VdomChild>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+          <template><slot><div>{{ data.fallback }}</div></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>foo</div><!--if--><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.fallback = 'baz'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>baz</div><!--if--><!--]-->
+      "
+    `,
+    )
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>bar</span><!--if--><!--]-->
+      "
+    `,
+    )
+
+    data.slot = 'qux'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>qux</span><!--if--><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate interop vapor slot with fallback should preserve valid slot branches', async () => {
+    const data = reactive({
+      slot: 'bar',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+          const components = _components
+        </script>
+        <template>
+          <components.VaporChild />
+        </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <components.VdomChild>
+                <template #default>
+                  <div>
+                    <template v-if="false">
+                      <i>unused</i>
+                    </template>
+                    <span>{{ data.slot }}</span>
+                  </div>
+                </template>
+              </components.VdomChild>
+            </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<template><slot><p>fallback</p></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><div><!----><span>bar</span></div><!--]-->
+        "
+      `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.slot = 'baz'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><div><!----><span>baz</span></div><!--]-->
+        "
+      `,
+    )
+  })
+
+  test('hydrate interop vapor multi-root slot fallback from empty slot branch', async () => {
+    const data = reactive({
+      show: false,
+      fallbackA: 'foo',
+      fallbackB: 'bar',
+      slot: 'baz',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+          const components = _components
+        </script>
+        <template>
+          <components.VaporChild />
+        </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <components.VdomChild>
+                <template #default>
+                  <template v-if="data.show">
+                    <span>{{ data.slot }}</span>
+                  </template>
+                </template>
+              </components.VdomChild>
+            </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <slot>
+                <div>{{ data.fallbackA }}</div>
+                <p>{{ data.fallbackB }}</p>
+              </slot>
+            </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><div>foo</div><p>bar</p><!--if--><!--]-->
+        "
+      `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.fallbackA = 'qux'
+    data.fallbackB = 'quux'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><div>qux</div><p>quux</p><!--if--><!--]-->
+        "
+      `,
+    )
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><span>baz</span><!--if--><!--]-->
+        "
+      `,
+    )
+  })
+
+  test('hydrate interop vapor multi-root slot fallback should preserve slot anchor on updates', async () => {
+    const data = reactive({
+      show: false,
+      extra: false,
+      fallbackA: 'foo',
+      fallbackB: 'bar',
+      tail: 'tail',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+          const components = _components
+        </script>
+        <template>
+          <components.VaporChild />
+        </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <components.VdomChild>
+                <template #default>
+                  <template v-if="data.show">
+                    <span>slot</span>
+                  </template>
+                </template>
+              </components.VdomChild>
+            </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <slot>
+                <div>{{ data.fallbackA }}</div>
+                <p v-if="data.extra">{{ data.fallbackB }}</p>
+              </slot>
+              <i>{{ data.tail }}</i>
+            </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[-->
+        <!--[--><div>foo</div><!----><!--if--><!--]-->
+        <i>tail</i><!--]-->
+        "
+      `,
+    )
+
+    data.extra = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[-->
+        <!--[--><div>foo</div><p>bar</p><!--if--><!--]-->
+        <i>tail</i><!--]-->
+        "
+      `,
+    )
+  })
+
+  test('hydrate interop vapor slot fallback should preserve nested forwarded slots', async () => {
+    const data = reactive({
+      fallback: 'foo',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+          const components = _components
+        </script>
+        <template>
+          <components.VaporChild />
+        </template>`,
+      {
+        VaporChild: {
+          code: `<template><components.VdomChild /></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<template><slot><components.Forwarder /></slot></template>`,
+          vapor: false,
+        },
+        Forwarder: {
+          code: `<template><components.Receiver><slot /></components.Receiver></template>`,
+          vapor: true,
+        },
+        Receiver: {
+          code: `<script setup>const data = _data</script>
+            <template><div><slot>{{ data.fallback }}</slot></div></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><div>
+        <!--[-->foo<!--]-->
+        <!--slot--></div><!--]-->
+        "
+      `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.fallback = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+        "
+        <!--[--><div>
+        <!--[-->bar<!--]-->
+        <!--slot--></div><!--]-->
+        "
+      `,
+    )
+  })
+
+  test('hydrate forwarded slot fallback with nested component before parent close marker', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <template #foo><slot name="foo" /></template>
+        </components.Child>
+      </template>`,
+      {
+        Child: {
+          code: `<script setup>
+              const components = _components
+              const data = _data
+            </script>
+            <template>
+              <div>
+                <slot name="foo">
+                  <components.GrandChild
+                    v-if="data"
+                    :text="data"
+                  />
+                </slot>
+              </div>
+            </template>`,
+          vapor: true,
+        },
+        GrandChild: {
+          code: `<script setup>
+              defineProps(['text'])
+            </script>
+            <template>
+              <template v-if="text">
+                <span v-if="text">{{ text }}</span>
+              </template>
+            </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[-->
+      <!--[--><span>foo</span><!--if--><!--if--><!--if--><!--]-->
+      <!--slot--><!--]-->
+      </div>"
+    `)
   })
 
   test('hydrate VDOM component returning Fragment', async () => {
@@ -5459,5 +10131,1230 @@ describe('VDOM interop', () => {
       "
     `,
     )
+  })
+
+  test('hydrate handwritten multi-root VDOM component inside multi-root Vapor component', async () => {
+    const first = ref('Hello')
+    const second = ref('World')
+
+    // Handwritten VDOM component that returns a Fragment (multi-root)
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', first.value),
+          runtimeDom.h('span', second.value),
+        ]
+      },
+    }
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const MultiRootVDOM = _data.MultiRootVDOM
+      </script>
+      <template>
+        <div>Before</div>
+        <MultiRootVDOM />
+        <div>After</div>
+      </template>`,
+      {},
+      { MultiRootVDOM },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    first.value = 'Updated'
+    second.value = 'Again'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Updated</span><span>Again</span><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate handwritten multi-root VDOM component as first child in multi-root Vapor', async () => {
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', 'Hello'),
+          runtimeDom.h('span', 'World'),
+        ]
+      },
+    }
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const MultiRootVDOM = _data.MultiRootVDOM
+      </script>
+      <template>
+        <MultiRootVDOM />
+        <div>After</div>
+      </template>`,
+      {},
+      { MultiRootVDOM },
+    )
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('hydrate SFC multi-root VDOM component inside multi-root Vapor', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data; const components = _components;
+      </script>
+      <template>
+        <div>Before</div>
+        <components.VdomMultiRoot />
+        <div>After</div>
+      </template>`,
+      {
+        VdomMultiRoot: {
+          code: `<script setup>const data = _data;</script><template><div>first {{ data }}</div><div>second {{ data }}</div></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><div>first foo</div><div>second foo</div><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><div>first bar</div><div>second bar</div><!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate handwritten multi-root VDOM via createDynamicComponent with siblings', async () => {
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', 'Hello'),
+          runtimeDom.h('span', 'World'),
+        ]
+      },
+    }
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const MultiRootVDOM = _data.MultiRootVDOM
+        const vnode = h(MultiRootVDOM)
+      </script>
+      <template>
+        <component :is="vnode" />
+        <div>After</div>
+      </template>`,
+      {},
+      { MultiRootVDOM },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <!--dynamic-component--><div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate handwritten multi-root VDOM via createDynamicComponent as first child of nested multi-root Vapor', async () => {
+    const first = ref('Hello')
+    const second = ref('World')
+    const after = ref('After')
+
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', first.value),
+          runtimeDom.h('span', second.value),
+        ]
+      },
+    }
+
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <p>before</p>
+        <components.VaporChild />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            import { h } from 'vue'
+            const MultiRootVDOM = _data.MultiRootVDOM
+            const after = _data.after
+            const vnode = h(MultiRootVDOM)
+          </script>
+          <template>
+            <component :is="vnode" />
+            <div>{{ after }}</div>
+          </template>`,
+          vapor: true,
+        },
+      },
+      { MultiRootVDOM, after },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[-->
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <!--dynamic-component--><div>After</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+
+    first.value = 'Updated'
+    second.value = 'Again'
+    after.value = 'After updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[-->
+      <!--[--><span>Updated</span><span>Again</span><!--]-->
+      <!--dynamic-component--><div>After updated</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate multi-root VDOM slot as first child of nested multi-root Vapor', async () => {
+    const msg = ref('Hello')
+    const after = ref('After')
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+        const msg = _data.msg
+      </script>
+      <template>
+        <p>before</p>
+        <components.VaporChild>
+          <components.VdomChild />
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            const after = _data.after
+          </script>
+          <template>
+            <slot />
+            <div>{{ after }}</div>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const msg = _data.msg</script>
+            <template><span>{{ msg }}</span><span>{{ msg }}</span></template>`,
+          vapor: false,
+        },
+      },
+      { msg, after },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[-->
+      <!--[-->
+      <!--[--><span>Hello</span><span>Hello</span><!--]-->
+      <!--]-->
+      <div>After</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    msg.value = 'Updated'
+    after.value = 'After updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><p>before</p>
+      <!--[-->
+      <!--[-->
+      <!--[--><span>Updated</span><span>Updated</span><!--]-->
+      <!--]-->
+      <div>After updated</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate slot Fragment as first child of DynamicFragment with trailing sibling', async () => {
+    const msg = ref('2')
+    const tail = ref('1')
+
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+        const msg = _data.msg
+      </script>
+      <template>
+        <components.Comp>{{ msg }}</components.Comp>
+      </template>`,
+      {
+        Comp: {
+          code: `<script setup>
+            const tail = _data.tail
+          </script>
+          <template>
+            <template v-if="true">
+              <slot />
+              <span>{{ tail }}</span>
+            </template>
+          </template>`,
+          vapor: true,
+        },
+      },
+      { msg, tail },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[-->2<!--]-->
+      <span>1</span><!--]-->
+      "
+    `,
+    )
+
+    msg.value = '3'
+    tail.value = '4'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[-->3<!--]-->
+      <span>4</span><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate VDOM component as first child of DynamicFragment with preceding sibling', async () => {
+    const data = ref({
+      show: true,
+      msg: 'Hello',
+      tail: 'Tail',
+    })
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            const components = _components
+            const data = _data
+          </script>
+          <template>
+            <div>Before</div>
+            <template v-if="data.show">
+              <components.VdomChild />
+              <span>{{ data.tail }}</span>
+            </template>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+            <template><span>{{ data.msg }}</span><span>{{ data.msg }}</span></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[-->
+      <!--[--><span>Hello</span><span>Hello</span><!--]-->
+      <span>Tail</span><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+
+    data.value.msg = 'Updated'
+    data.value.tail = 'Tail updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[-->
+      <!--[--><span>Updated</span><span>Updated</span><!--]-->
+      <span>Tail updated</span><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate empty slot as first child of DynamicFragment with preceding sibling', async () => {
+    const data = ref({
+      show: true,
+      tail: 'Tail',
+    })
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            const data = _data
+          </script>
+          <template>
+            <div>Before</div>
+            <template v-if="data.show">
+              <slot />
+              <span>{{ data.tail }}</span>
+            </template>
+          </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[-->
+      <!--[--><!--]-->
+      <span>Tail</span><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+
+    data.value.tail = 'Tail updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[-->
+      <!--[--><!--]-->
+      <span>Tail updated</span><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate empty multi-root if with preceding sibling', async () => {
+    const data = ref({
+      show: false,
+      msg: 'Hello',
+      tail: 'Tail',
+    })
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <div>Before</div>
+        <template v-if="data.show">
+          <span>{{ data.msg }}</span>
+          <span>{{ data.msg }}</span>
+        </template>
+        <span>{{ data.tail }}</span>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+    	"
+    	<!--[--><div>Before</div><!----><span>Tail</span><!--]-->
+    	"
+    `,
+    )
+
+    data.value.show = true
+    data.value.msg = 'Updated'
+    data.value.tail = 'Tail updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+    	"
+    	<!--[--><div>Before</div><span>Updated</span><span>Updated</span><!----><span>Tail updated</span><!--]-->
+    	"
+    `,
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+    	"
+    	<!--[--><div>Before</div><!----><span>Tail updated</span><!--]-->
+    	"
+    `,
+    )
+  })
+
+  test('hydrate multi-root VDOM component as first child of v-for boundary with sibling', async () => {
+    const first = ref('Hello')
+    const second = ref('World')
+    const items = ref([1])
+
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', first.value),
+          runtimeDom.h('span', second.value),
+        ]
+      },
+    }
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const items = _data.items
+        const MultiRootVDOM = _data.MultiRootVDOM
+      </script>
+      <template>
+        <div>Before</div>
+        <MultiRootVDOM v-for="item in items" :key="item" />
+        <div>After</div>
+      </template>`,
+      {},
+      { items, MultiRootVDOM },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[-->
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+
+    first.value = 'Updated'
+    second.value = 'Again'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[-->
+      <!--[--><span>Updated</span><span>Again</span><!--]-->
+      <!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate multi-root Vapor component should preserve close marker when client renders extra child', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: '',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <div>Before</div>
+        <components.Child />
+        <div>After</div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = 'Tail'
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span>Tail<!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+
+    data.value.extra = 'Tail updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span>Tail updated<!--]-->
+      <div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate multi-root Vapor component should cleanup extra SSR text without crossing trailing sibling', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: 'Tail',
+      after: 'After',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <div data-test="wrapper">
+          <components.Child />
+          <span>{{ data.after }}</span>
+        </div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = ''
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-test="wrapper"><!--[--><span>Hello</span><!--]--><span>After</span></div>',
+    )
+
+    data.value.extra = 'Updated'
+    data.value.after = 'After updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<div data-test="wrapper"><!--[--><span>Hello</span>Updated<!--]--><span>After updated</span></div>',
+    )
+  })
+
+  test('hydrate multi-root Vapor component should cleanup extra SSR text within allow-mismatch wrapper', async () => {
+    const data = ref({
+      msg: 'Hello',
+      extra: 'Tail',
+      after: 'After',
+    })
+
+    const childCode = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <span>{{ data.msg }}</span>{{ data.extra }}
+      </template>`
+
+    const appCode = `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <div data-allow-mismatch="text">
+          <components.Child />
+          <span>{{ data.after }}</span>
+        </div>
+      </template>`
+
+    const SSRChild = compileVaporComponent(childCode, data, undefined, true)
+    const SSRApp = compileVaporComponent(
+      appCode,
+      data,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    data.value.extra = ''
+
+    const ClientChild = compileVaporComponent(childCode, data)
+    const ClientApp = compileVaporComponent(appCode, data, {
+      Child: ClientChild,
+    })
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    createVaporSSRApp(ClientApp).mount(container)
+
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="text"><!--[--><span>Hello</span><!--]--><span>After</span></div>',
+    )
+
+    data.value.extra = 'Updated'
+    data.value.after = 'After updated'
+    await nextTick()
+
+    expect(container.innerHTML).toBe(
+      '<div data-allow-mismatch="text"><!--[--><span>Hello</span>Updated<!--]--><span>After updated</span></div>',
+    )
+  })
+
+  test('hydrate multi-root VDOM via mountVNode as non-first child', async () => {
+    const MultiRootVDOM = {
+      setup() {
+        return () => [
+          runtimeDom.h('span', 'Hello'),
+          runtimeDom.h('span', 'World'),
+        ]
+      },
+    }
+
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const MultiRootVDOM = _data.MultiRootVDOM
+        const vnode = h(MultiRootVDOM)
+      </script>
+      <template>
+        <div>Before</div>
+        <component :is="vnode" />
+        <div>After</div>
+      </template>`,
+      {},
+      { MultiRootVDOM },
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>Before</div>
+      <!--[--><span>Hello</span><span>World</span><!--]-->
+      <!--dynamic-component--><div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate Fragment VNode as first child of multi-root Vapor via createDynamicComponent', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { Fragment, h } from 'vue'
+        const FragmentChunk = h(Fragment, null, [
+          h('div', null, 'first fragment'),
+          h('div', null, 'second fragment'),
+        ])
+      </script>
+      <template>
+        <component :is="FragmentChunk" />
+        <div>After</div>
+      </template>`,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><div>first fragment</div><div>second fragment</div><!--]-->
+      <!--dynamic-component--><div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate Element VNode as first child of multi-root Vapor via createDynamicComponent', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const elementVNode = h('span', null, 'hello')
+      </script>
+      <template>
+        <component :is="elementVNode" />
+        <div>After</div>
+      </template>`,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>hello</span><!--dynamic-component--><div>After</div><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate interop vapor slot fallback from empty slot branch under Suspense', async () => {
+    const data = reactive({
+      show: false,
+      fallback: 'foo',
+      slot: 'bar',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <Suspense>
+          <components.VaporChild />
+          <template #fallback>
+            <i>pending</i>
+          </template>
+        </Suspense>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template>
+            <components.VdomChild>
+              <template #default>
+                <template v-if="data.show">
+                  <span>{{ data.slot }}</span>
+                </template>
+              </template>
+            </components.VdomChild>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+          <template><slot><div>{{ data.fallback }}</div></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>foo</div><!--if--><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.fallback = 'baz'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>baz</div><!--if--><!--]-->
+      "
+    `,
+    )
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>bar</span><!--if--><!--]-->
+      "
+    `,
+    )
+
+    data.slot = 'qux'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><span>qux</span><!--if--><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate interop vapor forwarded empty named slot with multi-root fallback', async () => {
+    const data = reactive({
+      banner: 'banner',
+      title: 'Vue.js',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Layout>
+          <template #banner>
+            <div>{{ data.banner }}</div>
+          </template>
+        </components.Layout>
+      </template>`,
+      {
+        Layout: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <div>
+              <slot name="banner" />
+              <components.Nav>
+                <template #navbar-title>
+                  <slot name="navbar-title" />
+                </template>
+              </components.Nav>
+            </div>
+          </template>`,
+          vapor: true,
+        },
+        Nav: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <header>
+              <components.NavBar>
+                <template #navbar-title>
+                  <slot name="navbar-title" />
+                </template>
+              </components.NavBar>
+            </header>
+          </template>`,
+          vapor: true,
+        },
+        NavBar: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <div>
+              <components.NavBarTitle>
+                <template #navbar-title>
+                  <slot name="navbar-title" />
+                </template>
+              </components.NavBarTitle>
+            </div>
+          </template>`,
+          vapor: true,
+        },
+        NavBarTitle: {
+          code: `<script setup>
+            const data = _data
+          </script>
+          <template>
+            <a>
+              <slot name="navbar-title">
+                <svg><path /></svg>
+                <span>{{ data.title }}</span>
+              </slot>
+            </a>
+          </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toContain(
+      '<!--[--><div>banner</div><!--]-->',
+    )
+    expect(formatHtml(container.innerHTML)).toContain(
+      '<!--[--><svg><path></path></svg><span>Vue.js</span><!--]-->',
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.title = 'Vapor'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toContain(
+      '<!--[--><svg><path></path></svg><span>Vapor</span><!--]-->',
+    )
+  })
+
+  test('ssr output for forwarded empty named VDOM slot with trailing sibling nodes', async () => {
+    const data = ref({})
+    const ssrComponents: Record<string, any> = {}
+
+    ssrComponents.Page = compile(
+      `<template>
+        <div>
+          <main><span>content</span></main>
+          <slot name="footer-before" />
+          <p>footer</p>
+        </div>
+      </template>`,
+      data,
+      ssrComponents,
+      { vapor: false, ssr: true },
+    )
+    ssrComponents.Layout = compile(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <div>
+          <slot name="banner" />
+          <components.Page>
+            <template #footer-before>
+              <slot name="footer-before" />
+            </template>
+          </components.Page>
+        </div>
+      </template>`,
+      data,
+      ssrComponents,
+      { vapor: false, ssr: true },
+    )
+
+    const ServerApp = compile(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Layout>
+          <template #banner>
+            <div>banner</div>
+          </template>
+          <template #footer-before>
+            <slot name="footer-before" />
+          </template>
+        </components.Layout>
+      </template>`,
+      data,
+      ssrComponents,
+      { vapor: true, ssr: true },
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(ServerApp),
+    )
+
+    expect(formatHtml(html)).toMatchInlineSnapshot(`
+    	"<div>
+    	<!--[--><div>banner</div><!--]-->
+    	<div><main><span>content</span></main>
+    	<!--[--><!--]-->
+    	<p>footer</p></div></div>"
+    `)
+  })
+
+  test('hydrate prepended multi-root component with trailing empty if should restore outer cursor', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <div>
+          <components.Child />
+          <span>inside</span>
+        </div>
+        <p>after</p>
+      </template>`,
+      {
+        Child: {
+          code: `<template>
+            <span>child</span>
+            <template v-if="false"></template>
+          </template>`,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><div>
+      <!--[--><span>child</span><!----><!--]-->
+      <span>inside</span></div><p>after</p><!--]-->
+      "
+      `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('hydrate forwarded empty named VDOM slot with trailing sibling nodes', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Layout>
+          <template #banner>
+            <div>banner</div>
+          </template>
+          <template #footer-before>
+            <slot name="footer-before" />
+          </template>
+        </components.Layout>
+      </template>`,
+      {
+        Layout: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <div>
+              <slot name="banner" />
+              <components.Page>
+                <template #footer-before>
+                  <slot name="footer-before" />
+                </template>
+              </components.Page>
+            </div>
+          </template>`,
+          vapor: false,
+        },
+        Page: {
+          code: `<template>
+            <div>
+              <main><span>content</span></main>
+              <slot name="footer-before" />
+              <p>footer</p>
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "<div>
+      <!--[--><div>banner</div><!--]-->
+      <div><main><span>content</span></main>
+      <!--[--><!--]-->
+      <!--slot--><p>footer</p></div></div>"
+      `,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
 })

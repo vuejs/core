@@ -6,8 +6,11 @@ import {
 } from '../../src/component'
 import {
   type VaporDirective,
+  VaporKeepAlive,
   VaporTeleport,
+  VaporTransition,
   child,
+  createFor,
   createIf,
   createTemplateRefSetter,
   createVaporApp,
@@ -16,17 +19,24 @@ import {
   setInsertionState,
   setText,
   template,
+  useVaporCssVars,
   vaporInteropPlugin,
+  withVaporCtx,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
 import { makeRender } from '../_utils'
 import {
+  defineComponent,
   h,
   nextTick,
+  onActivated,
   onBeforeUnmount,
+  onDeactivated,
   onMounted,
   onUnmounted,
+  reactive,
   ref,
+  renderSlot,
   shallowRef,
 } from 'vue'
 
@@ -122,6 +132,35 @@ describe('renderer: VaporTeleport', () => {
       expect(root.innerHTML).toBe(
         `<!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div><!--if-->`,
       )
+    })
+
+    test('should not mount deferred teleport content after unmount', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      const show = ref(true)
+      const { mount } = define({
+        setup() {
+          return createIf(
+            () => show.value,
+            () =>
+              createComp(
+                VaporTeleport,
+                {
+                  to: () => target,
+                  defer: () => true,
+                },
+                { default: () => template('<div>teleported</div>')() },
+              ),
+            () => template('<div>root</div>')(),
+          )
+        },
+      }).create()
+      mount(root)
+
+      show.value = false
+      await nextTick()
+
+      expect(target.innerHTML).toBe('')
     })
   })
 
@@ -704,13 +743,34 @@ function runSharedTests(deferMode: boolean): void {
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
 
+  test('should handle missing slots without crashing', () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+
+    const { mount } = define({
+      setup() {
+        const n0 = createComponent(VaporTeleport, {
+          to: () => target,
+        })
+        const n1 = template('<div>root</div>')()
+        return [n0, n1]
+      },
+    }).create()
+    mount(root)
+
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
+    expect(target.innerHTML).toBe('')
+  })
+
   test('should work with SVG', async () => {
     const svg = ref()
     const circle = ref()
     const { host } = define({
       setup() {
         const _setTemplateRef = createTemplateRefSetter()
-        const n0 = template('<svg></svg>', false, 1)() as any
+        const n0 = template('<svg></svg>', false, false, 1)() as any
         const n1 = createIf(
           () => svg.value,
           () => {
@@ -719,7 +779,12 @@ function runSharedTests(deferMode: boolean): void {
               { to: () => svg.value },
               {
                 default: () => {
-                  const n3 = template('<circle></circle>', false, 1)() as any
+                  const n3 = template(
+                    '<circle></circle>',
+                    false,
+                    false,
+                    1,
+                  )() as any
                   _setTemplateRef(n3, circle, undefined, 'circle')
                   return n3
                 },
@@ -778,6 +843,51 @@ function runSharedTests(deferMode: boolean): void {
     )
     expect(targetA.innerHTML).toBe('')
     expect(targetB.innerHTML).toBe('<div>teleported</div>')
+  })
+
+  test('should clean up anchors when target becomes invalid', async () => {
+    const targetA = document.createElement('div')
+    const target = ref<any>(targetA)
+    const root = document.createElement('div')
+
+    const { app } = define({
+      setup() {
+        const n0 = createComponent(
+          VaporTeleport,
+          {
+            to: () => target.value,
+          },
+          {
+            default: () => template('<div>teleported</div>')(),
+          },
+        )
+        const n1 = template('<div>root</div>')()
+        return [n0, n1]
+      },
+    }).create()
+
+    app.mount(root)
+
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
+    expect(targetA.innerHTML).toBe('<div>teleported</div>')
+    expect(targetA.childNodes.length).toBe(3)
+
+    target.value = '#missing-teleport-target'
+    await nextTick()
+    expect('Failed to locate Teleport target').toHaveBeenWarned()
+    expect('Invalid Teleport target on update').toHaveBeenWarned()
+
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><div>root</div>',
+    )
+    expect(targetA.innerHTML).toBe('<div>teleported</div>')
+    expect(targetA.childNodes.length).toBe(3)
+
+    app.unmount()
+    expect(targetA.innerHTML).toBe('')
+    expect(targetA.childNodes.length).toBe(0)
   })
 
   test('should update children', async () => {
@@ -1211,6 +1321,118 @@ function runSharedTests(deferMode: boolean): void {
     expect(root.innerHTML).toBe('<div>foo</div><!--if-->')
   })
 
+  test('should remove teleport with insertion parent when toggled off', async () => {
+    const root = document.createElement('div')
+    const target = document.createElement('div')
+    const show = ref(true)
+
+    const { mount } = define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => {
+            const n0 = template('<div></div>')()
+            setInsertionState(n0 as any, null, 0, true)
+            createComponent(
+              VaporTeleport,
+              {
+                to: () => target,
+              },
+              {
+                default: () => template('<input>')(),
+              },
+            )
+            return n0
+          },
+        )
+      },
+    }).create()
+
+    mount(root)
+
+    expect(root.innerHTML).toBe(
+      '<div><!--teleport start--><!--teleport end--></div><!--if-->',
+    )
+    expect(target.innerHTML).toBe('<input>')
+
+    show.value = false
+    await nextTick()
+
+    expect(root.innerHTML).toBe('<!--if-->')
+    expect(target.innerHTML).toBe('')
+  })
+
+  test('should unmount teleport nested under vdom components when toggled off', async () => {
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const show = ref(true)
+
+    const Comp1 = defineComponent({
+      setup(_, { slots }) {
+        return () => renderSlot(slots, 'default')
+      },
+    })
+
+    const Comp2 = defineComponent({
+      setup(_, { slots }) {
+        return () => renderSlot(slots, 'default')
+      },
+    })
+
+    const App = defineVaporComponent({
+      setup() {
+        const n0 = template('<button></button>')()
+        const n1 = createIf(
+          () => show.value,
+          () =>
+            createComponent(Comp1 as any, null, {
+              default: withVaporCtx(() =>
+                createComponent(Comp2 as any, null, {
+                  default: withVaporCtx(() =>
+                    createComponent(
+                      VaporTeleport,
+                      {
+                        to: () => 'body',
+                      },
+                      {
+                        default: () => template('<input>')(),
+                      },
+                    ),
+                  ),
+                }),
+              ),
+            }),
+        )
+        return [n0, n1]
+      },
+    })
+
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin)
+    try {
+      app.mount(root)
+
+      expect(document.body.querySelectorAll('input')).toHaveLength(1)
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<button></button><!--if-->')
+      expect(document.body.querySelectorAll('input')).toHaveLength(0)
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe(
+        '<button></button><!--teleport start--><!--teleport end--><!--if-->',
+      )
+      expect(document.body.querySelectorAll('input')).toHaveLength(1)
+    } finally {
+      app.unmount()
+      root.remove()
+    }
+  })
+
   test('unmount previous sibling node inside target node', async () => {
     const root = document.createElement('div')
     const parentShow = ref(false)
@@ -1329,4 +1551,281 @@ function runSharedTests(deferMode: boolean): void {
     expect(target.innerHTML).toBe('content')
     app.unmount()
   })
+
+  test('avoid unnecessary update and transition', async () => {
+    const target1 = document.createElement('div')
+    const target2 = document.createElement('div')
+
+    const target = shallowRef(target1)
+    const defer = ref(false)
+    const disabled = ref(false)
+    const beforeEnter = vi.fn()
+
+    define({
+      setup() {
+        const n4 = createComponent(
+          VaporTeleport,
+          {
+            defer: () => defer.value,
+            to: () => target.value,
+            disabled: () => disabled.value,
+          },
+          {
+            default: () =>
+              createComponent(
+                VaporTransition,
+                {
+                  onBeforeEnter: () => beforeEnter,
+                },
+                {
+                  default: () => template('<div>Teleport')(),
+                },
+              ),
+          },
+        )
+        return n4
+      },
+    }).render()
+
+    expect(beforeEnter).toHaveBeenCalledTimes(0)
+    defer.value = true
+    await nextTick()
+    expect(beforeEnter).toHaveBeenCalledTimes(0)
+
+    disabled.value = true
+    await nextTick()
+    expect(beforeEnter).toHaveBeenCalledTimes(0)
+
+    target.value = target2
+    await nextTick()
+    expect(beforeEnter).toHaveBeenCalledTimes(0)
+  })
 }
+
+test('should clean up old anchors when target changes', async () => {
+  const targetA = document.createElement('div')
+  const targetB = document.createElement('div')
+  const target = ref(targetA)
+
+  const { mount } = define({
+    setup() {
+      const n0 = createComponent(
+        VaporTeleport,
+        { to: () => target.value },
+        { default: () => template('<div>teleported</div>')() },
+      )
+      return n0
+    },
+  }).create()
+  const root = document.createElement('div')
+  mount(root)
+  await nextTick()
+
+  const oldChildCount = targetA.childNodes.length
+  expect(oldChildCount).toBeGreaterThan(0) // has targetStart + content + targetAnchor
+
+  target.value = targetB
+  await nextTick()
+
+  // Old target should have no residual anchor nodes
+  expect(targetA.childNodes.length).toBe(0)
+  // New target should have the content
+  expect(targetB.childNodes.length).toBe(oldChildCount)
+})
+
+test('should not duplicate main-view anchors when keyed list reorders teleport roots', async () => {
+  const target = document.createElement('div')
+  const items = ref([
+    { id: 'one', text: 'one' },
+    { id: 'two', text: 'two' },
+  ])
+
+  const { host } = define(() =>
+    createFor(
+      () => items.value,
+      item =>
+        createComponent(
+          VaporTeleport,
+          { to: () => target },
+          { default: () => template(item.value.text)() },
+        ),
+      item => item.id,
+    ),
+  ).render()
+
+  const countAnchors = (label: 'start' | 'end') =>
+    (host.innerHTML.match(new RegExp(`<!--teleport ${label}-->`, 'g')) || [])
+      .length
+
+  expect(countAnchors('start')).toBe(2)
+  expect(countAnchors('end')).toBe(2)
+
+  items.value = [items.value[1], items.value[0]]
+  await nextTick()
+
+  expect(countAnchors('start')).toBe(2)
+  expect(countAnchors('end')).toBe(2)
+})
+
+test('should delay child setup until teleport target becomes available', async () => {
+  const version = ref('one')
+  const target = ref<any>('#missing-teleport-target')
+  const setups: string[] = []
+
+  const Child = defineVaporComponent({
+    props: { msg: String },
+    setup(props) {
+      setups.push(String(props.msg))
+      const n0 = template('<div> </div>')() as any
+      const x0 = child(n0) as any
+      renderEffect(() => setText(x0, String(props.msg)))
+      return n0
+    },
+  })
+
+  const { mount } = define({
+    setup() {
+      return createComponent(
+        VaporTeleport,
+        { to: () => target.value },
+        {
+          default: () => {
+            const current = version.value
+            return createComponent(Child, { msg: () => current })
+          },
+        },
+      )
+    },
+  }).create()
+
+  const root = document.createElement('div')
+  mount(root)
+  expect('Failed to locate Teleport target').toHaveBeenWarned()
+  expect('Invalid Teleport target on mount').toHaveBeenWarned()
+  expect(setups).toEqual([])
+  expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+
+  version.value = 'two'
+  await nextTick()
+  version.value = 'three'
+  await nextTick()
+  expect(setups).toEqual([])
+
+  const targetEl = document.createElement('div')
+  target.value = targetEl
+  await nextTick()
+
+  expect(setups).toEqual(['three'])
+  expect(targetEl.innerHTML).toBe('<div>three</div>')
+})
+
+test('should cache delayed teleported child under KeepAlive once target becomes available', async () => {
+  const show = ref(true)
+  const target = ref<any>('#missing-teleport-target-keepalive')
+  const hooks = {
+    mounted: vi.fn(),
+    activated: vi.fn(),
+    deactivated: vi.fn(),
+    unmounted: vi.fn(),
+  }
+
+  const Child = defineVaporComponent({
+    name: 'DelayedTeleportKeepAliveChild',
+    setup() {
+      onMounted(hooks.mounted)
+      onActivated(hooks.activated)
+      onDeactivated(hooks.deactivated)
+      onUnmounted(hooks.unmounted)
+      return template('<div>child</div>')()
+    },
+  })
+
+  const { mount } = define({
+    setup() {
+      return createComponent(VaporKeepAlive, null, {
+        default: () =>
+          createIf(
+            () => show.value,
+            () =>
+              createComponent(
+                VaporTeleport,
+                { to: () => target.value },
+                {
+                  default: () => createComponent(Child),
+                },
+              ),
+          ),
+      })
+    },
+  }).create()
+
+  const root = document.createElement('div')
+  mount(root)
+
+  expect('Failed to locate Teleport target').toHaveBeenWarned()
+  expect('Invalid Teleport target on mount').toHaveBeenWarned()
+  expect(hooks.mounted).toHaveBeenCalledTimes(0)
+  expect(root.innerHTML).toBe(
+    '<!--teleport start--><!--teleport end--><!--if-->',
+  )
+
+  const targetEl = document.createElement('div')
+  target.value = targetEl
+  await nextTick()
+
+  expect(targetEl.innerHTML).toBe('<div>child</div>')
+  expect(hooks.mounted).toHaveBeenCalledTimes(1)
+  expect(hooks.activated).toHaveBeenCalledTimes(1)
+
+  show.value = false
+  await nextTick()
+
+  expect(targetEl.innerHTML).toBe('')
+  expect(hooks.deactivated).toHaveBeenCalledTimes(1)
+  expect(hooks.unmounted).toHaveBeenCalledTimes(0)
+
+  show.value = true
+  await nextTick()
+
+  expect(targetEl.innerHTML).toBe('<div>child</div>')
+  expect(hooks.mounted).toHaveBeenCalledTimes(1)
+  expect(hooks.activated).toHaveBeenCalledTimes(2)
+})
+
+test('should reapply css vars when teleport root children are replaced', async () => {
+  const target = document.createElement('div')
+  document.body.appendChild(target)
+
+  const state = reactive({ color: 'red' })
+  const showAlt = ref(false)
+
+  define({
+    setup() {
+      useVaporCssVars(() => state)
+      return createComponent(
+        VaporTeleport,
+        { to: () => target },
+        {
+          default: () =>
+            showAlt.value
+              ? template('<p>alt</p>', true)()
+              : template('<span>base</span>', true)(),
+        },
+      )
+    },
+  }).render()
+  await nextTick()
+
+  showAlt.value = true
+  await nextTick()
+
+  const teleported = target.firstElementChild as HTMLElement
+  expect(teleported.tagName).toBe('P')
+  expect(teleported.getAttribute('data-v-owner')).toBeTruthy()
+  expect(teleported.style.getPropertyValue('--color')).toBe('red')
+
+  state.color = 'blue'
+  await nextTick()
+
+  expect(teleported.style.getPropertyValue('--color')).toBe('blue')
+})

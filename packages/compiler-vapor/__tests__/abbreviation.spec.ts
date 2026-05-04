@@ -179,17 +179,17 @@ test('always close tags', () => {
     '<div><textarea></textarea><span>sibling</span></div>',
   )
 
-  // template always needs closing tag unless rightmost
-  checkAbbr(
-    '<div><template></template></div>',
-    '<div><template>',
-    '<div><template></template></div>',
-  )
-  checkAbbr(
-    '<div><template></template><span>sibling</span></div>',
-    '<div><template></template><span>sibling',
-    '<div><template></template><span>sibling</span></div>',
-  )
+  // native <template> now always goes through createElement path
+  // checkAbbr(
+  //   '<div><template></template></div>',
+  //   '<div><template>',
+  //   '<div><template></template></div>',
+  // )
+  // checkAbbr(
+  //   '<div><template></template><span>sibling</span></div>',
+  //   '<div><template></template><span>sibling',
+  //   '<div><template></template><span>sibling</span></div>',
+  // )
 
   // script always needs closing tag unless rightmost
   checkAbbr(

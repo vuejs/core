@@ -17,10 +17,9 @@ import {
 } from './utils'
 import type { Expression, Identifier, Node } from '@babel/types'
 import { parseExpression } from '@babel/parser'
-import { VaporVForFlags } from '../../../shared/src/vaporFlags'
 import { walk } from 'estree-walker'
 import { genOperation } from './operation'
-import { extend, isGloballyAllowed } from '@vue/shared'
+import { VaporVForFlags, extend, isGloballyAllowed } from '@vue/shared'
 
 export function genFor(
   oper: ForIRNode,

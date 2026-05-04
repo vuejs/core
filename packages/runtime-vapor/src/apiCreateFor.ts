@@ -13,13 +13,7 @@ import {
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import {
-  type Block,
-  applyTransitionHooks,
-  findBlockNode,
-  insert,
-  remove,
-} from './block'
+import { type Block, insert, isValidBlock, remove } from './block'
 import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import {
@@ -28,16 +22,25 @@ import {
   setCurrentSlotOwner,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { VaporVForFlags } from '../../shared/src/vaporFlags'
+import { VaporVForFlags } from '@vue/shared'
 import {
   advanceHydrationNode,
   currentHydrationNode,
+  enterHydrationBoundary,
   isComment,
   isHydrating,
+  locateHydrationBoundaryClose,
   locateHydrationNode,
+  locateNextNode,
+  markHydrationAnchor,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { ForFragment, VaporFragment } from './fragment'
+import {
+  ForBlock,
+  ForFragment,
+  getCurrentSlotEndAnchor,
+  isHydratingSlotFallbackActive,
+} from './fragment'
 import {
   type ChildItem,
   insertionAnchor,
@@ -46,34 +49,7 @@ import {
   isLastInsertion,
   resetInsertionState,
 } from './insertionState'
-
-class ForBlock extends VaporFragment {
-  scope: EffectScope | undefined
-  key: any
-  prev?: ForBlock
-  next?: ForBlock
-  prevAnchor?: ForBlock
-
-  itemRef: ShallowRef<any>
-  keyRef: ShallowRef<any> | undefined
-  indexRef: ShallowRef<number | undefined> | undefined
-
-  constructor(
-    nodes: Block,
-    scope: EffectScope | undefined,
-    item: ShallowRef<any>,
-    key: ShallowRef<any> | undefined,
-    index: ShallowRef<number | undefined> | undefined,
-    renderKey: any,
-  ) {
-    super(nodes)
-    this.scope = scope
-    this.itemRef = item
-    this.keyRef = key
-    this.indexRef = index
-    this.key = renderKey
-  }
-}
+import { applyTransitionHooks, isTransitionEnabled } from './transition'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -82,6 +58,19 @@ type ResolvedSource = {
   needsWrap: boolean
   isReadonlySource: boolean
   keys?: string[]
+}
+
+type ForHydrationAnchorResolver = (
+  hydrationStart: Node,
+  anchorNode: Node | null | undefined,
+) => Node | undefined
+
+let resolveForHydrationAnchor: ForHydrationAnchorResolver | undefined
+
+export function setForHydrationAnchorResolver(
+  resolver: ForHydrationAnchorResolver,
+): void {
+  resolveForHydrationAnchor = resolver
 }
 
 export const createFor = (
@@ -102,7 +91,7 @@ export const createFor = (
   const _insertionIndex = insertionIndex
   const _isLastInsertion = isLastInsertion
   if (isHydrating) {
-    locateHydrationNode()
+    locateHydrationNode(true)
   } else {
     resetInsertionState()
   }
@@ -114,6 +103,7 @@ export const createFor = (
   // createSelector only
   let currentKey: any
   let parentAnchor: Node
+  let pendingHydrationAnchor = false
   if (!isHydrating) {
     parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   }
@@ -127,7 +117,7 @@ export const createFor = (
     cleanup: () => void
   }[] = []
 
-  const scopeOwner = currentSlotOwner
+  const slotOwner = currentSlotOwner
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -138,49 +128,110 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
-    let isFallback = false
 
     const prevSub = setActiveSub()
 
     if (!isMounted) {
       isMounted = true
-      for (let i = 0; i < newLength; i++) {
-        const nodes = mount(source, i).nodes
-        if (isHydrating) {
-          setCurrentHydrationNode(findBlockNode(nodes!).nextNode)
-        }
-      }
-
       if (isHydrating) {
-        parentAnchor =
-          newLength === 0
-            ? currentHydrationNode!.nextSibling!
-            : currentHydrationNode!
-        if (
-          __DEV__ &&
-          (!parentAnchor || (parentAnchor && !isComment(parentAnchor, ']')))
-        ) {
-          throw new Error(
-            `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
-          )
-        }
+        const hydrationStart = currentHydrationNode!
+        let exitHydrationBoundary: (() => void) | undefined
+        let nextNode
+        const emptyLocalRange =
+          isComment(hydrationStart, ']') &&
+          isComment(hydrationStart.previousSibling!, '[')
+        const slotEndAnchor = getCurrentSlotEndAnchor()
+        const slotFallbackRange =
+          isHydratingSlotFallbackActive() && slotEndAnchor
 
-        // optimization: cache the fragment end anchor as $llc (last logical child)
-        // so that locateChildByLogicalIndex can skip the entire fragment
-        if (_insertionParent && isComment(parentAnchor, ']')) {
-          ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
-          _insertionParent.$llc = parentAnchor
+        try {
+          if (emptyLocalRange && newLength) {
+            parentAnchor = markHydrationAnchor(hydrationStart)
+            exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+            for (let i = 0; i < newLength; i++) {
+              mount(source, i)
+            }
+            setCurrentHydrationNode(parentAnchor)
+          } else {
+            for (let i = 0; i < newLength; i++) {
+              if (isComment(currentHydrationNode!, ']')) {
+                nextNode = markHydrationAnchor(currentHydrationNode!)
+                setCurrentHydrationNode(nextNode)
+              } else {
+                nextNode = locateNextNode(currentHydrationNode!)
+              }
+              mount(source, i)
+              if (nextNode) setCurrentHydrationNode(nextNode)
+            }
+
+            // special handling transition-group + v-for, without <!--]--> marker
+            const resolvedAnchor =
+              resolveForHydrationAnchor &&
+              resolveForHydrationAnchor(
+                hydrationStart,
+                newLength ? nextNode : currentHydrationNode,
+              )
+            if (resolvedAnchor) {
+              parentAnchor = resolvedAnchor
+              pendingHydrationAnchor = true
+            } else if (slotFallbackRange && !isValidBlock(newBlocks)) {
+              // Slot fallback can fall through an empty/invalid `v-for`. In that
+              // case SSR only rendered the parent slot range, so this `v-for` has no
+              // own `<!--]-->` to reuse. If `hydrationStart` is not the parent slot
+              // end anchor, use `hydrationStart.nextSibling` as the insertion point
+              // so the runtime `<!--for-->` lands immediately after that local SSR
+              // range. Otherwise insert it before the parent slot end anchor.
+              const anchor =
+                // The invalid list still consumed local SSR item ranges.
+                currentHydrationNode !== hydrationStart
+                  ? currentHydrationNode!
+                  : // Empty source with trailing slot siblings.
+                    hydrationStart !== slotEndAnchor
+                    ? hydrationStart.nextSibling!
+                    : slotEndAnchor!
+              parentAnchor = markHydrationAnchor(
+                __DEV__ ? createComment('for') : createTextNode(),
+              )
+              pendingHydrationAnchor = true
+              if (
+                currentHydrationNode === hydrationStart ||
+                currentHydrationNode === slotEndAnchor
+              ) {
+                setCurrentHydrationNode(hydrationStart)
+              }
+              queuePostFlushCb(() => {
+                const parentNode = anchor.parentNode
+                if (parentNode) parentNode.insertBefore(parentAnchor, anchor)
+              })
+            } else {
+              const close = locateHydrationBoundaryClose(currentHydrationNode!)
+              parentAnchor = markHydrationAnchor(close)
+              exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+              if (__DEV__ && !isComment(parentAnchor, ']')) {
+                throw new Error(
+                  `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
+                )
+              }
+
+              // optimization: cache the fragment end anchor as $llc (last logical child)
+              // so that locateChildByLogicalIndex can skip the entire fragment
+              if (_insertionParent && isComment(parentAnchor, ']')) {
+                ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
+                _insertionParent.$llc = parentAnchor
+              }
+            }
+          }
+        } finally {
+          exitHydrationBoundary && exitHydrationBoundary()
+        }
+      } else {
+        for (let i = 0; i < newLength; i++) {
+          mount(source, i)
         }
       }
     } else {
-      const prevOwner = setCurrentSlotOwner(scopeOwner)
-      parent = parent || parentAnchor!.parentNode
+      parent = parentAnchor!.parentNode
       if (!oldLength) {
-        // remove fallback nodes
-        if (frag.fallback && (frag.nodes[0] as Block[]).length > 0) {
-          remove(frag.nodes[0], parent!)
-        }
-
         // fast path for all new
         for (let i = 0; i < newLength; i++) {
           mount(source, i)
@@ -197,12 +248,6 @@ export const createFor = (
         if (canUseFastRemove) {
           parent!.textContent = ''
           parent!.appendChild(parentAnchor)
-        }
-
-        // render fallback nodes
-        if (frag.fallback) {
-          insert((frag.nodes[0] = frag.fallback()), parent!, parentAnchor)
-          isFallback = true
         }
       } else if (!getKey) {
         // unkeyed fast path
@@ -401,15 +446,10 @@ export const createFor = (
           }
         }
       }
-      setCurrentSlotOwner(prevOwner)
     }
 
-    if (!isFallback) {
-      frag.nodes = [(oldBlocks = newBlocks)]
-      if (parentAnchor) frag.nodes.push(parentAnchor)
-    } else {
-      oldBlocks = []
-    }
+    frag.nodes = [(oldBlocks = newBlocks)]
+    if (parentAnchor) frag.nodes.push(parentAnchor)
 
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
     setActiveSub(prevSub)
@@ -453,7 +493,7 @@ export const createFor = (
     ))
 
     // apply transition for new nodes
-    if (frag.$transition) {
+    if (isTransitionEnabled && frag.$transition) {
       applyTransitionHooks(block.nodes, frag.$transition)
     }
 
@@ -500,12 +540,20 @@ export const createFor = (
   if (flags & VaporVForFlags.ONCE) {
     renderList()
   } else {
-    renderEffect(renderList)
+    renderEffect(() => {
+      if (!isMounted) return renderList()
+      const prevOwner = setCurrentSlotOwner(slotOwner)
+      try {
+        renderList()
+      } finally {
+        setCurrentSlotOwner(prevOwner)
+      }
+    })
   }
 
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-  } else {
+  } else if (!pendingHydrationAnchor) {
     advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
   }
 

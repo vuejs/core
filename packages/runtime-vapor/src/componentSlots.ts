@@ -1,5 +1,5 @@
 import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
-import { type Block, type BlockFn, insert, setScopeId } from './block'
+import { type Block, type BlockFn, insert } from './block'
 import { rawPropsProxyHandlers, resolveFunctionSource } from './componentProps'
 import {
   type GenericComponentInstance,
@@ -24,9 +24,12 @@ import {
   type DynamicFragment,
   SlotFragment,
   type VaporFragment,
+  withOwnedSlotBoundary,
 } from './fragment'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
+import { isInteropEnabled } from './vdomInteropState'
+import { setScopeId } from './scopeId'
 
 /**
  * Flag to indicate if we are executing a once slot.
@@ -114,8 +117,8 @@ export function getSlot(
         const slot = resolveFunctionSource(source)
         if (slot) {
           if (isArray(slot)) {
-            for (const s of slot) {
-              if (String(s.name) === key) return s.fn
+            for (let j = slot.length - 1; j >= 0; j--) {
+              if (String(slot[j].name) === key) return slot[j].fn
             }
           } else if (String(slot.name) === key) {
             return slot.fn
@@ -161,8 +164,8 @@ export function getScopeOwner(): VaporComponentInstance | null {
  * Wrap a slot function to track the slot owner.
  *
  * This ensures:
- * 1. createSlot gets rawSlots from the correct component (slot owner)
- * 2. Elements inherit the slot owner's scopeId
+ * 1. createSlot gets rawSlots from the correct instance (slot owner)
+ * 2. elements inherit the slot owner's scopeId
  */
 export function withVaporCtx(fn: Function): BlockFn {
   const owner = getScopeOwner()
@@ -194,8 +197,8 @@ export function createSlot(
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
 
-  let fragment: SlotFragment
-  if (isRef(rawSlots._)) {
+  let fragment: VaporFragment
+  if (isRef(rawSlots._) && isInteropEnabled) {
     if (isHydrating) locateHydrationNode()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
@@ -205,7 +208,10 @@ export function createSlot(
       fallback,
     )
   } else {
-    fragment = new SlotFragment()
+    const slotFragment = (fragment = new SlotFragment())
+    // mark the slot as forwarded
+    slotFragment.forwarded =
+      currentSlotOwner != null && currentSlotOwner !== currentInstance
     const isDynamicName = isFunction(name)
 
     // Calculate slotScopeIds once (for vdom interop)
@@ -236,7 +242,16 @@ export function createSlot(
             slotName !== 'default' ? { name: slotName } : {},
           ])
         })
-        if (fallback) insert(fallback(), el)
+        if (fallback) {
+          withOwnedSlotBoundary(slotFragment.parentSlotBoundary, () => {
+            const fallbackBlock = fallback()
+            // Keep the live fallback owner on the SlotFragment itself. The
+            // native slot outlet is temporary and gets removed by CE slot
+            // replacement, but the fragment remains Vapor's long-lived owner.
+            slotFragment.customElementFallback = fallbackBlock
+            insert(fallbackBlock, el)
+          })
+        }
         fragment.nodes = el
         return
       }
@@ -248,7 +263,7 @@ export function createSlot(
         // (v-for creates multiple fragments) so each fragment keeps its own
         // slotProps without cross-talk.
         const boundMap = slot._boundMap || (slot._boundMap = new WeakMap())
-        let bound = boundMap.get(fragment)
+        let bound = boundMap.get(slotFragment)
         if (!bound) {
           bound = () => {
             const prevSlotScopeIds = setCurrentSlotScopeIds(
@@ -263,11 +278,11 @@ export function createSlot(
               setCurrentSlotScopeIds(prevSlotScopeIds)
             }
           }
-          boundMap.set(fragment, bound)
+          boundMap.set(slotFragment, bound)
         }
-        fragment.updateSlot(bound, fallback)
+        slotFragment.updateSlot(bound, fallback)
       } else {
-        fragment.updateSlot(undefined, fallback)
+        slotFragment.updateSlot(undefined, fallback)
       }
     }
 

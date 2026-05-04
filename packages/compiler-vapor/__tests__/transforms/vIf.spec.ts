@@ -12,6 +12,7 @@ import {
   transformVText,
 } from '../../src'
 import { ErrorCodes, NodeTypes, type RootNode } from '@vue/compiler-dom'
+import { VaporBlockShape } from '@vue/shared'
 
 const compileWithVIf = makeCompile({
   nodeTransforms: [
@@ -60,6 +61,7 @@ describe('compiler: v-if', () => {
 
     expect(ir.block.effect).toEqual([])
     expect((op as IfIRNode).positive.effect).lengthOf(1)
+    expect((op as IfIRNode).blockShape).toBe(VaporBlockShape.SINGLE_ROOT)
 
     expect(code).matchSnapshot()
   })
@@ -70,9 +72,9 @@ describe('compiler: v-if', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`_template("<div>foo")`)
-    expect(code).contains(`_template("<div>bar")`)
-    expect(code).contains(`_template("<div>baz")`)
+    expect(code).contains(`_template("<div>foo", false, true)`)
+    expect(code).contains(`_template("<div>bar", false, true)`)
+    expect(code).contains(`_template("<div>baz", false, true)`)
     expect([...ir.template.keys()]).toMatchObject([
       '<div>foo',
       '<div>bar',
@@ -86,9 +88,9 @@ describe('compiler: v-if', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`_template("<div>foo")`)
-    expect(code).contains(`_template("<div>bar")`)
-    expect(code).contains(`_template("<div>baz")`)
+    expect(code).contains(`_template("<div>foo", false, true)`)
+    expect(code).contains(`_template("<div>bar", false, true)`)
+    expect(code).contains(`_template("<div>baz", false, true)`)
     expect([...ir.template.keys()]).toMatchObject([
       '<div>foo',
       '<div>bar',
@@ -136,7 +138,7 @@ describe('compiler: v-if', () => {
     const { code, ir } = compileWithVIf(`<template v-if="foo">hello</template>`)
 
     expect(code).toMatchSnapshot()
-    expect(code).toContain('_template("hello")')
+    expect(code).toContain('_template("hello", false, true)')
     expect([...ir.template.keys()]).toMatchObject(['hello'])
   })
 
@@ -147,7 +149,7 @@ describe('compiler: v-if', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).toContain('_template("<div>hi", true)')
+    expect(code).toContain('_template("<div>hi", true, true)')
     expect([...ir.template.keys()]).toMatchObject(['<div>hi'])
   })
 
@@ -157,9 +159,12 @@ describe('compiler: v-if', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).toContain('_template("<div>hi")')
-    expect(code).toContain('_template("<div>ho")')
+    expect(code).toContain('_template("<div>hi", false, true)')
+    expect(code).toContain('_template("<div>ho", false, true)')
     expect([...ir.template.keys()]).toMatchObject(['<div>hi', '<div>ho'])
+    expect(
+      (ir.block.dynamic.children[0].operation as IfIRNode).blockShape,
+    ).toBe(VaporBlockShape.MULTI_ROOT)
   })
 
   test('template v-if (with v-for inside)', () => {
@@ -190,20 +195,46 @@ describe('compiler: v-if', () => {
     })
   })
 
+  test('v-if in template v-for forces MULTI_ROOT shape', () => {
+    const { ir, helpers } = compileWithVIf(
+      `<template v-for="item in list">
+        <span v-if="item.ok">
+          <span>{{ item.text }}</span>
+        </span>
+      </template>`,
+    )
+
+    expect(helpers).toContain('createIf')
+    expect(helpers).toContain('createFor')
+
+    const forOp = ir.block.dynamic.children[0].operation
+    expect(forOp).toMatchObject({
+      type: IRNodeTypes.FOR,
+    })
+
+    const ifOp = (forOp as any).render.dynamic.children[0].operation as IfIRNode
+    expect(ifOp.blockShape).toBe(
+      VaporBlockShape.MULTI_ROOT | (VaporBlockShape.MULTI_ROOT << 2),
+    )
+  })
+
   test('template v-if + normal v-else', () => {
     const { code, ir } = compileWithVIf(
       `<template v-if="foo"><div>hi</div><div>ho</div></template><div v-else/>`,
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).toContain('_template("<div>hi")')
-    expect(code).toContain('_template("<div>ho")')
-    expect(code).toContain('_template("<div>", true)')
+    expect(code).toContain('_template("<div>hi", false, true)')
+    expect(code).toContain('_template("<div>ho", false, true)')
+    expect(code).toContain('_template("<div>", true, true)')
     expect([...ir.template.keys()]).toMatchObject([
       '<div>hi',
       '<div>ho',
       '<div>',
     ])
+    expect(
+      (ir.block.dynamic.children[0].operation as IfIRNode).blockShape,
+    ).toBe(VaporBlockShape.MULTI_ROOT | (VaporBlockShape.SINGLE_ROOT << 2))
   })
 
   test('dedupe same template', () => {
@@ -243,7 +274,13 @@ describe('compiler: v-if', () => {
         type: IRNodeTypes.BLOCK,
         dynamic: {
           children: [
-            { operation: { asset: true, tag: 'Component', type: 11 } },
+            {
+              operation: {
+                asset: true,
+                tag: 'Component',
+                type: IRNodeTypes.CREATE_COMPONENT_NODE,
+              },
+            },
           ],
         },
       },
@@ -357,6 +394,16 @@ describe('compiler: v-if', () => {
         },
       },
     })
+
+    const op = ir.block.dynamic.children[0].operation as IfIRNode
+    const nested = op.negative as IfIRNode
+    const innermost = nested.negative as IfIRNode
+    const singleOrSingle =
+      VaporBlockShape.SINGLE_ROOT | (VaporBlockShape.SINGLE_ROOT << 2)
+
+    expect(op.blockShape).toBe(singleOrSingle)
+    expect(nested.blockShape).toBe(singleOrSingle)
+    expect(innermost.blockShape).toBe(singleOrSingle)
   })
 
   test('v-if + v-if / v-else[-if]', () => {

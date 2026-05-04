@@ -28,6 +28,7 @@ import {
   patchStyle,
   queuePostFlushCb,
   shouldSetAsProp,
+  shouldSetAsPropForVueCE,
   toClassSet,
   toStyleMap,
   unsafeToTrustedHTML,
@@ -345,14 +346,17 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
       return
     }
 
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration text mismatch in`,
-        el.parentNode,
-        `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
-          `\n  - expected on client: ${JSON.stringify(value)}`,
-      )
-    logMismatchError()
+    const parent = el.parentElement
+    if (parent && !isMismatchAllowed(parent, MismatchTypes.TEXT)) {
+      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        warn(
+          `Hydration text mismatch in`,
+          el.parentNode,
+          `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
+            `\n  - expected on client: ${JSON.stringify(value)}`,
+        )
+      logMismatchError()
+    }
   }
 
   if (el.$txt !== value) {
@@ -519,9 +523,13 @@ export function setDynamicProp(
       setDOMProp(el, key, value, forceHydrate)
     }
   } else if (
-    // custom elements
+    // #11081 force set props for possible async custom element
     (el as VaporElement)._isVueCE &&
-    (/[A-Z]/.test(key) || !isString(value))
+    // #12408 check if it's declared prop or it's async custom element
+    (shouldSetAsPropForVueCE(el as VaporElement, key) ||
+      // @ts-expect-error _def is private
+      ((el as VaporElement)._def.__asyncLoader &&
+        (/[A-Z]/.test(key) || !isString(value))))
   ) {
     setDOMProp(el, camelize(key), value, forceHydrate, key)
   } else {

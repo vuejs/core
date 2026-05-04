@@ -193,7 +193,13 @@ export function resolveParserPlugins(
     // should remove the jsx from user options
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
-  if (lang === 'ts' || lang === 'mts' || lang === 'tsx' || lang === 'mtsx') {
+  if (
+    lang === 'ts' ||
+    lang === 'mts' ||
+    lang === 'tsx' ||
+    lang === 'cts' ||
+    lang === 'mtsx'
+  ) {
     plugins.push(['typescript', { dts }], 'explicitResourceManagement')
     if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')

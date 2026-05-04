@@ -15,6 +15,7 @@ export enum IRNodeTypes {
   ROOT,
   BLOCK,
 
+  SET_BLOCK_KEY,
   SET_PROP,
   SET_DYNAMIC_PROPS,
   SET_TEXT,
@@ -32,13 +33,13 @@ export enum IRNodeTypes {
 
   IF,
   FOR,
+  KEY,
 
   GET_TEXT_CHILD,
 }
 
 export interface BaseIRNode {
   type: IRNodeTypes
-  key?: SimpleExpressionNode | undefined
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -53,27 +54,38 @@ export interface BlockIRNode extends BaseIRNode {
   effect: IREffect[]
   operation: OperationNode[]
   returns: number[]
-  keyed?: boolean
-  keyExpr?: SimpleExpressionNode
 }
 
 export interface RootIRNode {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
-  template: Map<string, Namespace>
-  templateIndexMap: Map<string, number>
-  rootTemplateIndexes: Set<number>
+  template: TemplateRegistry
   component: Set<string>
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
-  hasDeferredVShow: boolean
+}
+
+export interface IRTemplate {
+  content: string
+  ns: Namespace
+  root: boolean
+  static: boolean
+}
+
+export class TemplateRegistry {
+  entries: IRTemplate[] = []
+
+  keys(): string[] {
+    return this.entries.map(({ content }) => content)
+  }
 }
 
 export interface IfIRNode extends BaseIRNode {
   type: IRNodeTypes.IF
   id: number
+  blockShape: number
   condition: SimpleExpressionNode
   positive: BlockIRNode
   negative?: BlockIRNode | IfIRNode
@@ -106,6 +118,24 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   logicalIndex?: number
   append?: boolean
   last?: boolean
+}
+
+export interface KeyIRNode extends BaseIRNode {
+  type: IRNodeTypes.KEY
+  id: number
+  value: SimpleExpressionNode
+  block: BlockIRNode
+  parent?: number
+  anchor?: number
+  logicalIndex?: number
+  append?: boolean
+  last?: boolean
+}
+
+export interface SetBlockKeyIRNode extends BaseIRNode {
+  type: IRNodeTypes.SET_BLOCK_KEY
+  element: number
+  value: SimpleExpressionNode
 }
 
 export interface SetPropIRNode extends BaseIRNode {
@@ -192,7 +222,6 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
-  deferred?: boolean
 }
 
 export interface CreateComponentIRNode extends BaseIRNode {
@@ -205,7 +234,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   root: boolean
   once: boolean
   dynamic?: SimpleExpressionNode
-  isCustomElement: boolean
+  useCreateElement: boolean
   parent?: number
   anchor?: number
   logicalIndex?: number
@@ -235,6 +264,7 @@ export interface GetTextChildIRNode extends BaseIRNode {
 
 export type IRNode = OperationNode | RootIRNode
 export type OperationNode =
+  | SetBlockKeyIRNode
   | SetPropIRNode
   | SetDynamicPropsIRNode
   | SetTextIRNode
@@ -247,6 +277,7 @@ export type OperationNode =
   | DirectiveIRNode
   | IfIRNode
   | ForIRNode
+  | KeyIRNode
   | CreateComponentIRNode
   | SlotOutletIRNode
   | GetTextChildIRNode
@@ -309,6 +340,7 @@ export type VaporDirectiveNode = Overwrite<
 export type InsertionStateTypes =
   | IfIRNode
   | ForIRNode
+  | KeyIRNode
   | SlotOutletIRNode
   | CreateComponentIRNode
 
@@ -318,6 +350,7 @@ export function isBlockOperation(op: OperationNode): op is InsertionStateTypes {
     type === IRNodeTypes.CREATE_COMPONENT_NODE ||
     type === IRNodeTypes.SLOT_OUTLET_NODE ||
     type === IRNodeTypes.IF ||
+    type === IRNodeTypes.KEY ||
     type === IRNodeTypes.FOR
   )
 }

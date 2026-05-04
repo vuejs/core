@@ -26,6 +26,7 @@ import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
 import { processExpressions } from './expression'
 import { genBuiltinDirective } from './directive'
+import { genKey, genSetBlockKey } from './key'
 
 export function genOperations(
   opers: OperationNode[],
@@ -55,6 +56,8 @@ export function genOperation(
   context: CodegenContext,
 ): CodeFragment[] {
   switch (oper.type) {
+    case IRNodeTypes.SET_BLOCK_KEY:
+      return genSetBlockKey(oper, context)
     case IRNodeTypes.SET_PROP:
       return genSetProp(oper, context)
     case IRNodeTypes.SET_DYNAMIC_PROPS:
@@ -77,6 +80,8 @@ export function genOperation(
       return genIf(oper, context)
     case IRNodeTypes.FOR:
       return genFor(oper, context)
+    case IRNodeTypes.KEY:
+      return genKey(oper, context)
     case IRNodeTypes.CREATE_COMPONENT_NODE:
       return genCreateComponent(oper, context)
     case IRNodeTypes.SLOT_OUTLET_NODE:

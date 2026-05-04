@@ -11,7 +11,13 @@
     },
     {
       groupName: 'test',
-      matchPackageNames: ['vitest', 'jsdom', 'puppeteer', '@vitest{/,}**'],
+      matchPackageNames: [
+        'vitest',
+        'jsdom',
+        'playwright',
+        'puppeteer',
+        '@vitest{/,}**',
+      ],
     },
     {
       groupName: 'playground',
@@ -28,15 +34,12 @@
       groupName: 'build',
       matchPackageNames: [
         'vite',
+        'vite-plus',
         'rolldown-plugin-dts',
         '@rolldown{/,}**',
         'oxc-*',
         '@vitejs{/,}**',
       ],
-    },
-    {
-      groupName: 'lint',
-      matchPackageNames: ['simple-git-hooks', 'lint-staged', 'oxlint', 'oxfmt'],
     },
   ],
   ignoreDeps: [
@@ -48,6 +51,9 @@
 
     // ESM only
     'estree-walker',
+
+    // v8 is ESM-only and breaks compiler-core's CJS path
+    'entities',
 
     // pinned
     // https://github.com/vuejs/core/issues/10300#issuecomment-1940855364

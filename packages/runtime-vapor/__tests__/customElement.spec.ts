@@ -604,6 +604,26 @@ describe('defineVaporCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
     })
 
+    // #12408
+    test('should set number tabindex as attribute', () => {
+      const { container: root } = render('my-el-attrs', {
+        tabindex: () => 1,
+        'data-test': () => true,
+      })
+      const el = root.children[0] as HTMLElement
+      expect(el.getAttribute('tabindex')).toBe('1')
+      expect(el.getAttribute('data-test')).toBe('true')
+    })
+
+    test('should keep undeclared native attrs as attrs', () => {
+      const { container: root } = render('my-el-attrs', {
+        translate: () => 'no',
+      })
+      const el = root.children[0] as HTMLElement
+      expect(el.getAttribute('translate')).toBe('no')
+      expect(el.translate).toBe(false)
+    })
+
     // https://github.com/vuejs/core/issues/12964
     // Disabled because of missing support for `delegatesFocus` in jsdom
     // https://github.com/jsdom/jsdom/issues/3418
@@ -911,6 +931,30 @@ describe('defineVaporCustomElement', () => {
       )
     })
 
+    test('should resolve correct parent when element is slotted in shadow DOM', async () => {
+      const GrandParent = defineVaporCustomElement({
+        setup() {
+          provide('foo', ref('GrandParent'))
+          const n0 = createPlainElement('my-parent-in-shadow', null, {
+            default: () => template('<slot></slot>')(),
+          })
+          return n0
+        },
+      })
+      const Parent = defineVaporCustomElement({
+        setup() {
+          provide('foo', ref('Parent'))
+          return template('<slot></slot>')()
+        },
+      })
+      customElements.define('my-grand-parent', GrandParent)
+      customElements.define('my-parent-in-shadow', Parent)
+      container.innerHTML = `<my-grand-parent><my-consumer></my-consumer></my-grand-parent>`
+      const grandParent = container.childNodes[0] as VaporElement,
+        consumer = grandParent.firstElementChild as VaporElement
+      expect(consumer.shadowRoot!.textContent).toBe('Parent')
+    })
+
     test('inherited from app context within nested elements', async () => {
       const outerValues: (string | undefined)[] = []
       const innerValues: (string | undefined)[] = []
@@ -1091,6 +1135,190 @@ describe('defineVaporCustomElement', () => {
       assertStyles(el, [`div { color: blue; }`, `div { color: red; }`])
     })
 
+    test('root custom element HMR should preserve child-first style order', async () => {
+      const Child = defineVaporComponent({
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('child')()
+        },
+      } as any)
+      const def = defineVaporComponent({
+        __hmrId: 'root-child-style-order',
+        styles: [`div { color: red; }`],
+        setup() {
+          return createComponent(Child)
+        },
+      } as any)
+      const Foo = defineVaporCustomElement(def)
+      customElements.define('my-el-root-hmr-style-order', Foo)
+      container.innerHTML = `<my-el-root-hmr-style-order></my-el-root-hmr-style-order>`
+      const el = container.childNodes[0] as VaporElement
+
+      assertStyles(el, [`div { color: green; }`, `div { color: red; }`])
+
+      __VUE_HMR_RUNTIME__.reload((def as any).__hmrId!, {
+        ...def,
+        styles: [`div { color: blue; }`, `div { color: yellow; }`],
+      } as any)
+
+      await nextTick()
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: yellow; }`,
+      ])
+    })
+
+    test('inject child component styles before parent styles', async () => {
+      const Bar = defineVaporComponent({
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const Baz = () => createComponent(Bar)
+      const WrapperBar = defineVaporComponent({
+        styles: [`div { color: blue; }`],
+        setup() {
+          return createComponent(Baz)
+        },
+      } as any)
+      const WBaz = () => createComponent(WrapperBar)
+      const Foo = defineVaporCustomElement({
+        styles: [`div { color: red; }`],
+        setup() {
+          return [createComponent(Baz), createComponent(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-wrapper-child-styles', Foo)
+      container.innerHTML = `<my-el-with-wrapper-child-styles></my-el-with-wrapper-child-styles>`
+      const el = container.childNodes[0] as VaporElement
+
+      // inject order should be child -> parent
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+    })
+
+    test('inject nested child component styles after HMR removes parent styles', async () => {
+      const Bar = defineVaporComponent({
+        __hmrId: 'nested-child-style-hmr-bar',
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const WrapperBar = defineVaporComponent({
+        __hmrId: 'nested-child-style-hmr-wrapper',
+        styles: [`div { color: blue; }`],
+        setup() {
+          return createComponent(Bar)
+        },
+      } as any)
+      const Foo = defineVaporCustomElement({
+        styles: [`div { color: red; }`],
+        setup() {
+          return createComponent(WrapperBar)
+        },
+      })
+      customElements.define('my-el-with-hmr-nested-child-styles', Foo)
+      container.innerHTML = `<my-el-with-hmr-nested-child-styles></my-el-with-hmr-nested-child-styles>`
+      const el = container.childNodes[0] as VaporElement
+
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: blue; }`,
+        `div { color: red; }`,
+      ])
+
+      __VUE_HMR_RUNTIME__.reload((WrapperBar as any).__hmrId!, {
+        ...WrapperBar,
+        styles: undefined,
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: green; }`, `div { color: red; }`])
+
+      __VUE_HMR_RUNTIME__.reload((Bar as any).__hmrId!, {
+        ...Bar,
+        styles: [`div { color: yellow; }`],
+      } as any)
+      await nextTick()
+      assertStyles(el, [`div { color: yellow; }`, `div { color: red; }`])
+    })
+
+    test('inject child component styles when parent has no styles', async () => {
+      const Bar = defineVaporComponent({
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const Baz = () => createComponent(Bar)
+      const WrapperBar = defineVaporComponent({
+        styles: [`div { color: blue; }`],
+        setup() {
+          return createComponent(Baz)
+        },
+      } as any)
+      const WBaz = () => createComponent(WrapperBar)
+      // without styles
+      const Foo = defineVaporCustomElement({
+        setup() {
+          return [createComponent(Baz), createComponent(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-inject-child-styles', Foo)
+      container.innerHTML = `<my-el-with-inject-child-styles></my-el-with-inject-child-styles>`
+      const el = container.childNodes[0] as VaporElement
+
+      assertStyles(el, [`div { color: green; }`, `div { color: blue; }`])
+    })
+
+    test('inject nested child component styles', async () => {
+      const Bar = defineVaporComponent({
+        styles: [`div { color: green; }`],
+        setup() {
+          return template('bar')()
+        },
+      } as any)
+      const Baz = defineVaporComponent({
+        styles: [`div { color: yellow; }`],
+        setup() {
+          return createComponent(Bar)
+        },
+      } as any)
+      const WrapperBar = defineVaporComponent({
+        styles: [`div { color: blue; }`],
+        setup() {
+          return createComponent(Baz)
+        },
+      } as any)
+      const WBaz = defineVaporComponent({
+        styles: [`div { color: black; }`],
+        setup() {
+          return createComponent(WrapperBar)
+        },
+      } as any)
+      const Foo = defineVaporCustomElement({
+        styles: [`div { color: red; }`],
+        setup() {
+          return [createComponent(Baz), createComponent(WBaz)]
+        },
+      })
+      customElements.define('my-el-with-inject-nested-child-styles', Foo)
+      container.innerHTML = `<my-el-with-inject-nested-child-styles></my-el-with-inject-nested-child-styles>`
+      const el = container.childNodes[0] as VaporElement
+      assertStyles(el, [
+        `div { color: green; }`,
+        `div { color: yellow; }`,
+        `div { color: blue; }`,
+        `div { color: black; }`,
+        `div { color: red; }`,
+      ])
+    })
+
     test("child components should not inject styles to root element's shadow root w/ shadowRoot false", async () => {
       const Bar = defineVaporComponent({
         styles: [`div { color: green; }`],
@@ -1235,6 +1463,55 @@ describe('defineVaporCustomElement', () => {
       expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
     })
 
+    test('render object prop before resolve', async () => {
+      const AsyncComp = defineVaporComponent({
+        props: { value: Object },
+        setup(props: any) {
+          const n0 = template('<div> </div>', true)() as any
+          const x0 = txt(n0) as any
+          renderEffect(() => setText(x0, props.value.x))
+          return n0
+        },
+      })
+      let resolve!: (comp: typeof AsyncComp) => void
+      const p = new Promise<typeof AsyncComp>(res => {
+        resolve = res
+      })
+      const E = defineVaporCustomElement(defineVaporAsyncComponent(() => p))
+      customElements.define('my-el-async-object-prop', E)
+
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const value = { x: 1 }
+
+      const app = createVaporApp({
+        setup() {
+          return createPlainElement(
+            'my-el-async-object-prop',
+            { value: () => value },
+            null,
+            true,
+          )
+        },
+      })
+      app.mount(root)
+
+      const el = root.children[0] as VaporElement & { value: typeof value }
+      expect(el.value).toBe(value)
+      expect(el.getAttribute('value')).toBe(null)
+
+      resolve(AsyncComp)
+
+      await new Promise(r => setTimeout(r))
+
+      expect(el.value).toBe(value)
+      expect(el.getAttribute('value')).toBe(null)
+      expect(el.shadowRoot!.innerHTML).toBe(`<div>1</div>`)
+
+      app.unmount()
+      root.remove()
+    })
+
     test('Number prop casting before resolve', async () => {
       const E = defineVaporCustomElement(
         defineVaporAsyncComponent(() => {
@@ -1375,6 +1652,119 @@ describe('defineVaporCustomElement', () => {
           `<!--if-->` +
           `<div>fallback</div><!--slot-->`,
       )
+    })
+
+    test('should update nested slot fallback rendered from outer fallback', async () => {
+      const showNamedFallback = ref(true)
+      const NestedFallback = defineVaporCustomElement(
+        {
+          setup() {
+            return createSlot('default', null, () =>
+              createSlot('named', null, () =>
+                createIf(
+                  () => showNamedFallback.value,
+                  () => template('<span>named fallback</span>')(),
+                ),
+              ),
+            )
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define(
+        'my-el-shadowroot-false-nested-fallback',
+        NestedFallback,
+      )
+
+      container.innerHTML =
+        `<my-el-shadowroot-false-nested-fallback>` +
+        `</my-el-shadowroot-false-nested-fallback>`
+      const e = container.childNodes[0] as VaporElement
+
+      expect(e.innerHTML).toBe(
+        `<span>named fallback</span><!--if--><!--slot--><!--slot-->`,
+      )
+
+      showNamedFallback.value = false
+      await nextTick()
+      expect(e.innerHTML).toBe(`<!--if--><!--slot--><!--slot-->`)
+
+      showNamedFallback.value = true
+      await nextTick()
+      expect(e.innerHTML).toBe(
+        `<span>named fallback</span><!--if--><!--slot--><!--slot-->`,
+      )
+    })
+
+    test('should render nested slot content from outer fallback', async () => {
+      const NestedContent = defineVaporCustomElement(
+        {
+          setup() {
+            return createSlot('default', null, () => createSlot('named'))
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define(
+        'my-el-shadowroot-false-nested-content',
+        NestedContent,
+      )
+
+      container.innerHTML =
+        `<my-el-shadowroot-false-nested-content>` +
+        `<div slot="named">named</div>` +
+        `</my-el-shadowroot-false-nested-content>`
+      const e = container.childNodes[0] as VaporElement
+
+      expect(e.innerHTML).toBe(
+        `<div slot="named">named</div><!--slot--><!--slot-->`,
+      )
+    })
+
+    test('should unmount nested slot fallback rendered from outer fallback after updates', async () => {
+      const showNamedFallback = ref(true)
+      const NestedFallback = defineVaporCustomElement(
+        {
+          setup() {
+            return createSlot('default', null, () =>
+              createSlot('named', null, () =>
+                createIf(
+                  () => showNamedFallback.value,
+                  () => template('<span>named fallback</span>')(),
+                ),
+              ),
+            )
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define(
+        'my-el-shadowroot-false-nested-fallback-unmount',
+        NestedFallback,
+      )
+
+      container.innerHTML =
+        `<my-el-shadowroot-false-nested-fallback-unmount>` +
+        `</my-el-shadowroot-false-nested-fallback-unmount>`
+      const e = container.childNodes[0] as VaporElement
+
+      expect(e.innerHTML).toBe(
+        `<span>named fallback</span><!--if--><!--slot--><!--slot-->`,
+      )
+
+      showNamedFallback.value = false
+      await nextTick()
+      expect(e.innerHTML).toBe(`<!--if--><!--slot--><!--slot-->`)
+      showNamedFallback.value = true
+      await nextTick()
+      expect(e.innerHTML).toBe(
+        `<span>named fallback</span><!--if--><!--slot--><!--slot-->`,
+      )
+
+      container.removeChild(e)
+      await nextTick()
+      expect(e.innerHTML).toBe(``)
+      expect(e._instance).toBe(null)
     })
 
     test('render nested customElement w/ shadowRoot false', async () => {
@@ -2123,5 +2513,18 @@ describe('defineVaporCustomElement', () => {
       __vapor: true,
       name: 'Foo',
     })
+  })
+
+  test('inherit slots', () => {
+    const Comp = defineVaporCustomElement({
+      setup(props, { slots }) {
+        return createPlainElement('a', props, slots)
+      },
+    })
+    customElements.define('my-comp', Comp)
+    container.innerHTML = `<my-comp><my-comp>`
+    const comp = container.childNodes[0] as VaporElement
+    const consumer = comp.shadowRoot!.childNodes[0] as VaporElement
+    expect(consumer.tagName).toBe('A')
   })
 })

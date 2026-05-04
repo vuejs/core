@@ -68,6 +68,7 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
         false,
         false,
         app._context,
+        true,
       )
     mountComponent(instance, container)
     flushOnAppMount()
