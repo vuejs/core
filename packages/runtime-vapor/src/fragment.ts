@@ -107,8 +107,8 @@ export class VaporFragment<
     }
   }
 
-  protected runWithRenderCtx<R>(fn: () => R): R {
-    const prevInstance = setCurrentInstance(this.renderInstance)
+  protected runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
+    const prevInstance = setCurrentInstance(this.renderInstance, scope)
     const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
     let prevKeepAliveCtx: VaporKeepAliveContext | null = null
     if (isKeepAliveEnabled) {

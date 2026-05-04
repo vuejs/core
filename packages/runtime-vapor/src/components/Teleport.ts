@@ -1,4 +1,4 @@
-import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { getCurrentScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -76,6 +76,7 @@ export class TeleportFragment extends VaporFragment {
   private childrenInitialized = false
   private readonly ownerInstance =
     currentInstance as VaporComponentInstance | null
+  private readonly childrenScope = getCurrentScope()
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -125,16 +126,21 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private initChildren(): void {
-    const prevInstance = setCurrentInstance(this.ownerInstance)
+    const prevInstance = setCurrentInstance(
+      this.ownerInstance,
+      this.childrenScope,
+    )
     try {
       this.childrenInitialized = true
       renderEffect(() =>
-        this.runWithRenderCtx(() =>
-          this.handleChildrenUpdate(
-            this.rawSlots && this.rawSlots.default
-              ? (this.rawSlots.default as BlockFn)()
-              : [],
-          ),
+        this.runWithRenderCtx(
+          () =>
+            this.handleChildrenUpdate(
+              this.rawSlots && this.rawSlots.default
+                ? (this.rawSlots.default as BlockFn)()
+                : [],
+            ),
+          this.childrenScope,
         ),
       )
       this.bindChildren(this.nodes)
