@@ -1231,6 +1231,62 @@ function runSharedTests(deferMode: boolean): void {
     expect(teardown).toHaveBeenCalledTimes(1)
   })
 
+  test(`should run directive cleanup when teleport branch is unmounted`, async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+    const show = ref(false)
+
+    const spy = vi.fn()
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn(() => {
+      spy()
+      return teardown
+    })
+
+    const { mount } = define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () =>
+            createComponent(
+              VaporTeleport,
+              {
+                to: () => target,
+              },
+              {
+                default: () => {
+                  const n1 = template('<div>foo</div>')() as any
+                  withVaporDirectives(n1, [[dir]])
+                  return n1
+                },
+              },
+            ),
+        )
+      },
+    }).create()
+
+    mount(root)
+    expect(root.innerHTML).toBe('<!--if-->')
+    expect(target.innerHTML).toBe('')
+    expect(spy).not.toHaveBeenCalled()
+
+    show.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end--><!--if-->',
+    )
+    expect(target.innerHTML).toBe('<div>foo</div>')
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(teardown).not.toHaveBeenCalled()
+
+    show.value = false
+    await nextTick()
+    expect(root.innerHTML).toBe('<!--if-->')
+    expect(target.innerHTML).toBe('')
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(teardown).toHaveBeenCalledTimes(1)
+  })
+
   test(`ensure that target changes when disabled are updated correctly when enabled`, async () => {
     const root = document.createElement('div')
     const target1 = document.createElement('div')
