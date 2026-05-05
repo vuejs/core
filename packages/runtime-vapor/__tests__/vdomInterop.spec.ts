@@ -30,6 +30,7 @@ import {
   vShow,
   withDirectives,
 } from '@vue/runtime-dom'
+import { VaporSlot } from '../../runtime-core/src/vnode'
 import { makeInteropRender } from './_utils'
 import {
   VaporKeepAlive,
@@ -3638,6 +3639,32 @@ describe('vdomInterop', () => {
 
       await nextTick()
       expect(html()).toContain('<span>resolved</span>')
+    })
+  })
+
+  describe('VaporSlot vnode vs metadata', () => {
+    test('mount and update do not throw when vs is missing (nuxt/ui #6395)', async () => {
+      const tick = ref(0)
+      const App = defineComponent({
+        setup() {
+          return () => {
+            tick.value
+            const vnode = createVNode(VaporSlot, {})
+            delete (vnode as any).vs
+            return vnode
+          }
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+
+      expect(() => app.mount(root)).not.toThrow()
+
+      tick.value++
+      await nextTick()
+      expect(root.childNodes.length).toBeGreaterThan(0)
     })
   })
 

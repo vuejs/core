@@ -352,7 +352,8 @@ const vaporInteropImpl: Omit<
       // update
       // slot function changed (e.g. dynamic slots from _createForSlots),
       // need to re-mount the vapor block
-      if (n2.vs!.slot !== n1.vs!.slot) {
+      const needsRemount = !n1.vs || !n2.vs || n2.vs.slot !== n1.vs.slot
+      if (needsRemount) {
         const selfAnchor = n1.anchor as Node
         const parent = selfAnchor.parentNode as ParentNode
         const nextSibling = selfAnchor.nextSibling
@@ -377,10 +378,12 @@ const vaporInteropImpl: Omit<
         insert((n2.el = n2.anchor = newAnchor), parent, insertAnchor)
         insert((n2.vb = slotBlock), parent, newAnchor)
       } else {
+        const vs1 = n1.vs!
+        const vs2 = n2.vs!
         n2.el = n2.anchor = n1.anchor
         n2.vb = n1.vb
-        ;(n2.vs!.ref = n1.vs!.ref)!.value = n2.props
-        n2.vs!.scope = n1.vs!.scope
+        ;(vs2.ref = vs1.ref)!.value = n2.props
+        vs2.scope = vs1.scope
         syncInteropVaporSlotState(n1, n2)
       }
     }
@@ -1607,6 +1610,9 @@ function renderVaporSlot(
     prevSuspense = setParentSuspense(parentSuspense)
   }
   try {
+    if (!vnode.vs || !vnode.vs.slot) {
+      return []
+    }
     const slotState = resolveInteropVaporSlotState(vnode)
     // Most of the interop setup is shared, but slots that start with a local
     // VDOM fallback still need to let an inner SlotFragment own the active
