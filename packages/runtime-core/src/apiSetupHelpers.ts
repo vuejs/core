@@ -548,11 +548,16 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   }
 
   const restore = () => {
+    const resetStoppedScope = ctx && !ctx.scope.active ? ctx.scope : undefined
     setCurrentInstance(ctx)
     if (inSSRSetup) {
       setInSSRSetupState(true)
     }
-    return restoreAsyncContext && restoreAsyncContext()
+    const reset = restoreAsyncContext && restoreAsyncContext()
+    return () => {
+      if (reset) reset()
+      if (resetStoppedScope) resetStoppedScope.reset()
+    }
   }
 
   // Never restore a captured "prev" instance here: in concurrent async setup
