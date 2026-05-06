@@ -1,4 +1,4 @@
-# [3.6.0-beta.10](https://github.com/vuejs/core/compare/v3.5.32...v3.6.0-beta.10) (2026-04-13)
+# [3.6.0-beta.10](https://github.com/vuejs/core/compare/v3.6.0-beta.9...v3.6.0-beta.10) (2026-04-13)
 
 
 ### Bug Fixes

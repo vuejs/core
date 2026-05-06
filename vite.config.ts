@@ -57,7 +57,10 @@ export default defineConfig({
           name: 'unit-gc',
           pool: 'forks',
           execArgv: ['--expose-gc'],
-          include: ['packages/reactivity/__tests__/gc.spec.ts'],
+          include: [
+            'packages/reactivity/__tests__/gc.spec.ts',
+            'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+          ],
         },
       },
       {
@@ -67,6 +70,7 @@ export default defineConfig({
           exclude: [
             ...configDefaults.exclude,
             'packages/reactivity/__tests__/gc.spec.ts',
+            'packages/server-renderer/__tests__/ssrWatch.spec.ts',
             '**/e2e/**',
             '**/vapor-e2e-test/**',
             'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**',

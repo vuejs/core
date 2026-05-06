@@ -143,6 +143,24 @@ interface ResolvedElements {
   calls?: (TSCallSignatureDeclaration | TSFunctionType)[]
 }
 
+function recordScopeDep(
+  ctx: TypeResolveContext,
+  scope: TypeScope | undefined,
+): void {
+  if (scope && scope.filename !== ctx.filename) {
+    ;(ctx.deps || (ctx.deps = new Set())).add(scope.filename)
+  }
+}
+
+function recordResolvedElementDeps(
+  ctx: TypeResolveContext,
+  { props }: ResolvedElements,
+): void {
+  for (const key in props) {
+    recordScopeDep(ctx, props[key]._ownerScope)
+  }
+}
+
 /**
  * Resolve arbitrary type node to a list of type elements that can be then
  * mapped to runtime props or emits.
@@ -155,6 +173,7 @@ export function resolveTypeElements(
 ): ResolvedElements {
   const canCache = !typeParameters
   if (canCache && node._resolvedElements) {
+    recordResolvedElementDeps(ctx, node._resolvedElements)
     return node._resolvedElements
   }
   const resolved = innerResolveTypeElements(
@@ -738,6 +757,7 @@ function resolveTypeReference(
 ): ScopeTypeNode | undefined {
   const canCache = !scope?.isGenericScope
   if (canCache && node._resolvedReference) {
+    recordScopeDep(ctx, node._resolvedReference._ownerScope)
     return node._resolvedReference
   }
   const resolved = innerResolveTypeReference(
@@ -779,7 +799,11 @@ function innerResolveTypeReference(
             const src = node.type === 'TSTypeQuery' ? s.declares : s.types
             if (src[name]) {
               ;(ctx.deps || (ctx.deps = new Set())).add(s.filename)
-              return src[name]
+              const resolved = src[name]
+              if (resolved._ownerScope && resolved._ownerScope !== s) {
+                ctx.deps.add(resolved._ownerScope.filename)
+              }
+              return resolved
             }
           }
         }
@@ -918,6 +942,7 @@ function importSourceToScope(
   node: Node,
   scope: TypeScope,
   source: string,
+  trackDep = true,
 ): TypeScope {
   let fs: FS | undefined
   try {
@@ -968,13 +993,23 @@ function importSourceToScope(
       }
       resolved = resolveWithTS(scope.filename, source, ts, fs)
     }
+    if (!resolved && source[0] === '.' && __CJS__) {
+      if (!ts) {
+        if (loadTS) ts = loadTS()
+      }
+      if (ts) {
+        resolved = resolveWithTS(scope.filename, source, ts, fs)
+      }
+    }
     if (resolved) {
       resolved = scope.resolvedImportSources[source] = normalizePath(resolved)
     }
   }
   if (resolved) {
     // (hmr) register dependency file on ctx
-    ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
+    if (trackDep) {
+      ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
+    }
     return fileToScope(ctx, resolved)
   } else {
     return ctx.error(
@@ -1337,9 +1372,45 @@ function recordTypes(
         }
       } else if (stmt.type === 'TSModuleDeclaration' && stmt.global) {
         for (const s of (stmt.body as TSModuleBlock).body) {
-          if (s.type === 'ExportNamedDeclaration' && s.declaration) {
-            // Handle export declarations inside declare global
-            recordType(s.declaration, types, declares)
+          if (s.type === 'ExportNamedDeclaration') {
+            if (s.declaration) {
+              // Handle export declarations inside declare global
+              recordType(s.declaration, types, declares)
+            } else if (s.source) {
+              // Handle re-exports inside declare global, e.g.
+              // `export type { Foo } from './foo'`. Global lookup only checks
+              // `types`/`declares`, so resolve the source eagerly.
+              const sourceScope = importSourceToScope(
+                ctx,
+                s.source,
+                scope,
+                s.source.value,
+                false,
+              )
+              for (const spec of s.specifiers) {
+                if (spec.type === 'ExportSpecifier') {
+                  const exported = getId(spec.exported)
+                  const local = spec.local.name
+                  if (sourceScope.exportedTypes[local]) {
+                    types[exported] = sourceScope.exportedTypes[local]
+                  }
+                  if (sourceScope.exportedDeclares[local]) {
+                    declares[exported] = sourceScope.exportedDeclares[local]
+                  }
+                }
+              }
+            }
+          } else if (s.type === 'ExportAllDeclaration' && s.source) {
+            // Handle `export * from './foo'` inside declare global
+            const sourceScope = importSourceToScope(
+              ctx,
+              s.source,
+              scope,
+              s.source.value,
+              false,
+            )
+            Object.assign(types, sourceScope.exportedTypes)
+            Object.assign(declares, sourceScope.exportedDeclares)
           } else {
             recordType(s, types, declares)
           }
@@ -1406,11 +1477,11 @@ function recordTypes(
   }
   for (const key of Object.keys(types)) {
     const node = types[key]
-    node._ownerScope = scope
-    if (node._ns) node._ns._ownerScope = scope
+    if (!node._ownerScope) node._ownerScope = scope
+    if (node._ns && !node._ns._ownerScope) node._ns._ownerScope = scope
   }
   for (const key of Object.keys(declares)) {
-    declares[key]._ownerScope = scope
+    if (!declares[key]._ownerScope) declares[key]._ownerScope = scope
   }
 }
 
@@ -1656,7 +1727,13 @@ export function inferRuntimeType(
         }
 
       case 'TSTypeReference': {
-        const resolved = resolveTypeReference(ctx, node, scope)
+        // #14729 — if resolution fails (e.g. an unresolvable import), still
+        // fall through to the built-in name handling below so that well-known
+        // types like Ref/MaybeRef/Promise can be inferred from the name alone.
+        let resolved: ScopeTypeNode | undefined
+        try {
+          resolved = resolveTypeReference(ctx, node, scope)
+        } catch {}
         if (resolved) {
           if (resolved.type === 'TSTypeAliasDeclaration') {
             // #13240
@@ -1787,6 +1864,34 @@ export function inferRuntimeType(
                 return ['Map']
               case 'ReadonlySet':
                 return ['Set']
+
+              // Vue ref wrapper types — handled here so that runtime type
+              // inference still works when `vue` types cannot be resolved
+              // (e.g. consumed as built artifacts in another package). #14729
+              case 'Ref':
+              case 'ShallowRef':
+              case 'ComputedRef':
+              case 'WritableComputedRef':
+                return ['Object']
+              case 'MaybeRef':
+              case 'MaybeRefOrGetter': {
+                const types = new Set<string>(['Object'])
+                if (node.typeName.name === 'MaybeRefOrGetter') {
+                  types.add('Function')
+                }
+                if (node.typeParameters && node.typeParameters.params[0]) {
+                  for (const t of inferRuntimeType(
+                    ctx,
+                    node.typeParameters.params[0],
+                    scope,
+                    false,
+                    typeParameters,
+                  )) {
+                    types.add(t)
+                  }
+                }
+                return Array.from(types)
+              }
 
               case 'NonNullable':
                 if (node.typeParameters && node.typeParameters.params[0]) {

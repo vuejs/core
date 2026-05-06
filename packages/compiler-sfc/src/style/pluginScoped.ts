@@ -101,6 +101,8 @@ function rewriteSelector(
 ) {
   let node: selectorParser.Node | null = null
   let shouldInject = !deep
+  let hasNestedDeep = false
+  let splitForNestedDeep = false
   // find the last child node to insert attribute selector
   selector.each(n => {
     // DEPRECATED ">>>" and "/deep/" combinator
@@ -119,6 +121,64 @@ function rewriteSelector(
 
     if (n.type === 'pseudo') {
       const { value } = n
+      if (isDeepContainerPseudo(n)) {
+        const hasDeepSelectors = n.nodes.some(selector =>
+          selector.some(isDeepSelector),
+        )
+        if (hasDeepSelectors) {
+          const hasScopeAnchor = !!node
+          const hasMixedSelectors = n.nodes.some(
+            selector => !selector.some(isDeepSelector),
+          )
+          const hasTrailingNodes = selector.index(n) < selector.length - 1
+          if (
+            canSplitDeepContainerPseudo(n) &&
+            !deep &&
+            !hasScopeAnchor &&
+            hasMixedSelectors &&
+            hasTrailingNodes
+          ) {
+            splitSelectorForNestedDeep(
+              id,
+              rule,
+              selector,
+              selectorRoot,
+              n,
+              deep,
+              slotted,
+            )
+            splitForNestedDeep = true
+            return false
+          }
+
+          if (
+            value === ':not' &&
+            !deep &&
+            !hasScopeAnchor &&
+            hasMixedSelectors &&
+            hasTrailingNodes
+          ) {
+            return
+          }
+
+          n.nodes.forEach(selector =>
+            rewriteSelector(
+              id,
+              rule,
+              selector,
+              selectorRoot,
+              deep || hasScopeAnchor,
+              slotted,
+            ),
+          )
+          if (!hasScopeAnchor) {
+            node = n
+            shouldInject = false
+          }
+          hasNestedDeep = true
+        }
+      }
+
       // deep: inject [id] attribute at the node before the ::v-deep
       // combinator.
       if (value === ':deep' || value === '::v-deep') {
@@ -219,14 +279,19 @@ function rewriteSelector(
     }
 
     if (
-      (n.type !== 'pseudo' && n.type !== 'combinator') ||
-      (n.type === 'pseudo' &&
-        (n.value === ':is' || n.value === ':where') &&
-        !node)
+      !hasNestedDeep &&
+      ((n.type !== 'pseudo' && n.type !== 'combinator') ||
+        (n.type === 'pseudo' &&
+          (n.value === ':is' || n.value === ':where') &&
+          !node))
     ) {
       node = n
     }
   })
+
+  if (splitForNestedDeep) {
+    return
+  }
 
   if (rule.nodes.some(node => node.type === 'rule')) {
     const deep = (rule as any).__deep
@@ -240,7 +305,7 @@ function rewriteSelector(
     shouldInject = deep
   }
 
-  if (node) {
+  if (node && !hasNestedDeep) {
     const { type, value } = node as selectorParser.Node
     if (type === 'pseudo' && (value === ':is' || value === ':where')) {
       ;(node as selectorParser.Pseudo).nodes.forEach(value =>
@@ -277,6 +342,67 @@ function rewriteSelector(
 
 function isSpaceCombinator(node: selectorParser.Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
+}
+
+function isDeepSelector(node: selectorParser.Node): boolean {
+  if (
+    node.type === 'pseudo' &&
+    (node.value === ':deep' || node.value === '::v-deep')
+  ) {
+    return true
+  }
+
+  return !!(
+    node as selectorParser.Node & { nodes?: selectorParser.Node[] }
+  ).nodes?.some(child => isDeepSelector(child))
+}
+
+function isDeepContainerPseudo(
+  node: selectorParser.Node,
+): node is selectorParser.Pseudo {
+  return (
+    node.type === 'pseudo' &&
+    (node.value === ':is' ||
+      node.value === ':where' ||
+      node.value === ':has' ||
+      node.value === ':not')
+  )
+}
+
+function canSplitDeepContainerPseudo(node: selectorParser.Pseudo): boolean {
+  return (
+    node.value === ':is' || node.value === ':where' || node.value === ':has'
+  )
+}
+
+function splitSelectorForNestedDeep(
+  id: string,
+  rule: Rule,
+  selector: selectorParser.Selector,
+  selectorRoot: selectorParser.Root,
+  pseudo: selectorParser.Pseudo,
+  deep: boolean,
+  slotted: boolean,
+) {
+  const pseudoIndex = selector.index(pseudo)
+  const selectors = pseudo.nodes.map((branch, index) => {
+    const branchSelector = selector.clone()
+    if (branchSelector.first) {
+      branchSelector.first.spaces.before =
+        index === 0 ? selector.first.spaces.before : ' '
+    }
+    const branchPseudo = branchSelector.at(pseudoIndex) as selectorParser.Pseudo
+    const branchClone = branch.clone()
+    if (branchClone.first) {
+      branchClone.first.spaces.before = ''
+    }
+    branchPseudo.removeAll()
+    branchPseudo.append(branchClone)
+    rewriteSelector(id, rule, branchSelector, selectorRoot, deep, slotted)
+    return branchSelector
+  })
+
+  selector.replaceWith(...selectors)
 }
 
 function extractAndWrapNodes(parentNode: Rule | AtRule) {
