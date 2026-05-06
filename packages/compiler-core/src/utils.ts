@@ -202,14 +202,17 @@ export const isFnExpressionNode: (
   ? (NOOP as any)
   : (exp, context) => {
       try {
+        const plugins = context.expressionPlugins
+          ? [...context.expressionPlugins, 'typescript']
+          : ['typescript']
         let ret: Node =
           exp.ast ||
           parseExpression(getExpSource(exp), {
-            plugins: context.expressionPlugins
-              ? [...context.expressionPlugins, 'typescript']
-              : ['typescript'],
+            plugins,
           })
         // parser may parse the exp as statements when it contains semicolons
+        // e.g. `function () { ';' }` is parsed as FunctionDeclaration (error)
+        // because function declarations require a name
         if (ret.type === 'Program') {
           ret = ret.body[0]
           if (ret.type === 'ExpressionStatement') {
@@ -217,10 +220,28 @@ export const isFnExpressionNode: (
           }
         }
         ret = unwrapTSNode(ret) as Expression
-        return (
-          ret.type === 'FunctionExpression' ||
-          ret.type === 'ArrowFunctionExpression'
-        )
+        if (ret.type === 'FunctionExpression' || ret.type === 'ArrowFunctionExpression') {
+          return true
+        }
+        // If we got a FunctionDeclaration without a name (e.g. `function () { ';' }`),
+        // try wrapping in parens to force it to be parsed as an expression
+        if (ret.type === 'FunctionDeclaration' && !ret.id) {
+          ret = parseExpression(`(${getExpSource(exp)})`, {
+            plugins,
+          })
+          if (ret.type === 'Program') {
+            ret = ret.body[0]
+            if (ret.type === 'ExpressionStatement') {
+              ret = ret.expression
+            }
+          }
+          ret = unwrapTSNode(ret) as Expression
+          return (
+            ret.type === 'FunctionExpression' ||
+            ret.type === 'ArrowFunctionExpression'
+          )
+        }
+        return false
       } catch (e) {
         return false
       }
