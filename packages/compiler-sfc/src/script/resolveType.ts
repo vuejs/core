@@ -143,6 +143,24 @@ interface ResolvedElements {
   calls?: (TSCallSignatureDeclaration | TSFunctionType)[]
 }
 
+function recordScopeDep(
+  ctx: TypeResolveContext,
+  scope: TypeScope | undefined,
+): void {
+  if (scope && scope.filename !== ctx.filename) {
+    ;(ctx.deps || (ctx.deps = new Set())).add(scope.filename)
+  }
+}
+
+function recordResolvedElementDeps(
+  ctx: TypeResolveContext,
+  { props }: ResolvedElements,
+): void {
+  for (const key in props) {
+    recordScopeDep(ctx, props[key]._ownerScope)
+  }
+}
+
 /**
  * Resolve arbitrary type node to a list of type elements that can be then
  * mapped to runtime props or emits.
@@ -155,6 +173,7 @@ export function resolveTypeElements(
 ): ResolvedElements {
   const canCache = !typeParameters
   if (canCache && node._resolvedElements) {
+    recordResolvedElementDeps(ctx, node._resolvedElements)
     return node._resolvedElements
   }
   const resolved = innerResolveTypeElements(
@@ -738,6 +757,7 @@ function resolveTypeReference(
 ): ScopeTypeNode | undefined {
   const canCache = !scope?.isGenericScope
   if (canCache && node._resolvedReference) {
+    recordScopeDep(ctx, node._resolvedReference._ownerScope)
     return node._resolvedReference
   }
   const resolved = innerResolveTypeReference(

@@ -1595,7 +1595,13 @@ describe('resolveType', () => {
 
     test('global types with re-exports track source deps after cache reuse', () => {
       const files = {
-        '/foo.ts': `export interface Foo { foo: number }`,
+        '/base.ts': `export interface Base { age: number }`,
+        '/types.ts': `export type Name = string`,
+        '/foo.ts': `
+          import type { Base } from './base'
+          import type { Name } from './types'
+          export interface Foo extends Base { name: Name }
+        `,
         '/global.d.ts': `
           declare global {
             export type { Foo } from './foo'
@@ -1604,8 +1610,14 @@ describe('resolveType', () => {
         `,
       }
       const globalTypeFiles = { globalTypeFiles: ['/global.d.ts'] }
+      const expectedDeps = ['/global.d.ts', '/foo.ts', '/base.ts', '/types.ts']
 
-      resolve(`defineProps<Foo>()`, files, globalTypeFiles)
+      const { deps: coldDeps } = resolve(
+        `defineProps<Foo>()`,
+        files,
+        globalTypeFiles,
+      )
+      expect(coldDeps && [...coldDeps]).toStrictEqual(expectedDeps)
 
       const { deps } = resolve(
         `defineProps<Foo>()`,
@@ -1615,7 +1627,7 @@ describe('resolveType', () => {
         false,
       )
 
-      expect(deps && [...deps]).toStrictEqual(['/global.d.ts', '/foo.ts'])
+      expect(deps && [...deps]).toStrictEqual(expectedDeps)
     })
 
     test('global types with ambient references', () => {
