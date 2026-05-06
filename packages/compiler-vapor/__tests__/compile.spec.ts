@@ -245,6 +245,54 @@ describe('compile', () => {
       )
     })
 
+    test('flushes previous effects before creating child component', () => {
+      const code = compile(`<div>parent: {{ useId() }}</div><Child />`, {
+        bindingMetadata: {
+          useId: BindingTypes.SETUP_CONST,
+        },
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
+  const n1 = _createComponentWithFallback(_component_Child)`,
+      )
+    })
+
+    test('flushes parent props before creating child component', () => {
+      const code = compile(`<div :id="useId()"><Child /></div>`, {
+        bindingMetadata: {
+          useId: BindingTypes.SETUP_CONST,
+        },
+      })
+      expect(code).contains(
+        `_renderEffect(() => _setProp(n1, "id", _ctx.useId()))
+  _setInsertionState(n1, null, 0, true)
+  const n0 = _createComponentWithFallback(_component_Child)`,
+      )
+      expect(code).matchSnapshot()
+    })
+
+    test('does not flush later v-for effects before child component', () => {
+      const code = compile(
+        `<div v-for="row of rows" :key="row.id">
+          <span>{{ selected === row.id ? 'danger' : '' }}</span>
+          <Child />
+          <span>{{ useId() }}</span>
+        </div>`,
+        {
+          bindingMetadata: {
+            useId: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `const n3 = _createComponentWithFallback(_component_Child)
+    const x4 = _txt(n4)
+    _renderEffect(() => _setText(x4, _toDisplayString(_ctx.useId())))`,
+      )
+    })
+
     describe('setInsertionState', () => {
       test('next, child and nthChild should be above the setInsertionState', () => {
         const code = compile(`

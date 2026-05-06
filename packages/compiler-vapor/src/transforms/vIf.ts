@@ -53,6 +53,7 @@ export function processIf(
       context.dynamic.operation = {
         type: IRNodeTypes.IF,
         id,
+        ...context.effectBoundary(),
         blockShape: encodeIfBlockShape(branch, forceMultiRoot),
         condition: dir.exp!,
         positive: branch,

@@ -11328,6 +11328,35 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
 
+  test('hydrate useId in parent template before child setup', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { useId } from 'vue'
+        const components = _components
+      </script>
+      <template>
+        <div>parent: {{ useId() }}</div>
+        <components.Child />
+      </template>`,
+      {
+        Child: `<script setup>
+          import { useId } from 'vue'
+          const id = useId()
+        </script>
+        <template>
+          <div>child: {{ id }}</div>
+        </template>`,
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>parent: v-0</div><div>child: v-1</div><!--]-->
+      "
+    `)
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+  })
+
   test('hydrate forwarded empty named VDOM slot with trailing sibling nodes', async () => {
     const { container } = await testWithVaporApp(
       `<script setup>

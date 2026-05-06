@@ -34,6 +34,7 @@ import {
   type SetEventIRNode,
   TemplateRegistry,
   type VaporDirectiveNode,
+  isBlockOperation,
 } from './ir'
 import { isConstantExpression, isStaticExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
@@ -270,7 +271,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   registerEffect(
     expressions: SimpleExpressionNode[],
     operation: OperationNode | OperationNode[],
-    getIndex = (): number => this.block.effect.length,
+    getIndex?: () => number,
   ): void {
     const operations = [operation].flat()
     expressions = expressions.filter(exp => !isConstantExpression(exp))
@@ -284,14 +285,25 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    this.block.effect.splice(getIndex(), 0, {
+    const index = getIndex ? getIndex() : this.block.effect.length
+    this.block.effect.splice(index, 0, {
       expressions,
       operations,
     })
+    if (getIndex) {
+      this.shiftEffectBoundaries(index)
+    }
   }
 
   registerOperation(...node: OperationNode[]): void {
     this.block.operation.push(...node)
+  }
+
+  effectBoundary(): { operationIndex: number; effectIndex: number } {
+    return {
+      operationIndex: this.operationIndex,
+      effectIndex: this.effectIndex,
+    }
   }
 
   create<T extends TemplateChildNode>(
@@ -349,6 +361,25 @@ export class TransformContext<T extends AllNode = AllNode> {
       isOnRightmostPath,
       hasInlineAncestorNeedingClose,
     } satisfies Partial<TransformContext<T>>)
+  }
+
+  private shiftEffectBoundaries(
+    index: number,
+    dynamic: IRDynamicInfo = this.dynamic,
+  ): void {
+    const operation = dynamic.operation
+    if (
+      operation &&
+      isBlockOperation(operation) &&
+      operation.effectIndex !== undefined &&
+      operation.effectIndex >= index
+    ) {
+      operation.effectIndex++
+    }
+
+    for (const child of dynamic.children) {
+      this.shiftEffectBoundaries(index, child)
+    }
   }
 
   private isEffectivelyLastChild(index: number): boolean {
