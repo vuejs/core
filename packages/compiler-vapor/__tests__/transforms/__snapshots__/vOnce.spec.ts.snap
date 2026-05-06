@@ -27,7 +27,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`compiler: v-once > inside v-once 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><div>", true)
+const t0 = _template("<div><div>", true, true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -74,7 +74,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with key 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", true, true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -97,7 +97,7 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with v-if 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", true, true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.expr), () => {
@@ -110,8 +110,8 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > with v-if/else 1`] = `
 "import { createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", true)
-const t1 = _template("<p>", true)
+const t0 = _template("<div>", true, true)
+const t1 = _template("<p>", true, true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.expr), () => {

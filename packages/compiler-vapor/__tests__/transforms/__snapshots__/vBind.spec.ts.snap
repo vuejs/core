@@ -266,7 +266,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > :class w/ svg elements 1`] = `
 "import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<svg>", true, 1)
+const t0 = _template("<svg>", true, false, 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -288,7 +288,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > :style w/ svg elements 1`] = `
 "import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<svg>", true, 1)
+const t0 = _template("<svg>", true, false, 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -444,7 +444,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > should error if empty expression 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div arg>", true)
+const t0 = _template("<div arg>", true, true)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -454,7 +454,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > v-bind w/ svg elements 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<svg>", true, 1)
+const t0 = _template("<svg>", true, false, 1)
 
 export function render(_ctx) {
   const n0 = t0()

@@ -25,7 +25,7 @@ import {
   isString,
   remove,
 } from '@vue/shared'
-import { isTeleportFragment } from './components/Teleport'
+import { isTeleportEnabled, isTeleportFragment } from './teleport'
 import {
   type DynamicFragment,
   type VaporFragment,
@@ -285,7 +285,7 @@ const getRefValue = (el: RefEl) => {
       return getRefValue((el.block as DynamicFragment).nodes as RefEl)
     }
     return getExposed(el) || el
-  } else if (isTeleportFragment(el)) {
+  } else if (isTeleportEnabled && isTeleportFragment(el)) {
     return null
   } else if (isDynamicFragment(el)) {
     if (isArray(el.nodes)) return null

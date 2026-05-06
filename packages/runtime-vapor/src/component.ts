@@ -99,16 +99,18 @@ import {
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
+import type { TeleportFragment } from './components/Teleport'
 import {
-  type TeleportFragment,
+  isTeleportEnabled,
   isTeleportFragment,
   isVaporTeleport,
-} from './components/Teleport'
+} from './teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import {
   currentKeepAliveCtx,
+  isKeepAliveEnabled,
   setCurrentKeepAliveCtx,
-} from './components/KeepAlive'
+} from './keepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -121,9 +123,14 @@ import type {
 } from './apiDefineComponent'
 import { DynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineCustomElement'
-import { parentSuspense, setParentSuspense } from './components/Suspense'
+import {
+  isSuspenseEnabled,
+  parentSuspense,
+  setParentSuspense,
+} from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import { setComponentScopeId, setScopeId } from './scopeId'
+import { isTransitionEnabled, isVaporTransition } from './transition'
 
 export { currentInstance } from '@vue/runtime-dom'
 
@@ -274,14 +281,21 @@ export function createComponent(
 
   try {
     let prevSuspense: SuspenseBoundary | null = null
-    if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
+    if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      currentInstance &&
+      currentInstance.suspense
+    ) {
       prevSuspense = setParentSuspense(currentInstance.suspense)
     }
 
     if (
       (isSingleRoot ||
         // transition has attrs fallthrough
-        (currentInstance && isVaporTransition(currentInstance!.type))) &&
+        (isTransitionEnabled
+          ? currentInstance && isVaporTransition(currentInstance!.type)
+          : false)) &&
       component.inheritAttrs !== false &&
       isVaporComponent(currentInstance) &&
       currentInstance.hasFallthrough
@@ -300,6 +314,7 @@ export function createComponent(
 
     // keep-alive
     if (
+      isKeepAliveEnabled &&
       currentInstance &&
       currentInstance.vapor &&
       isKeepAlive(currentInstance)
@@ -331,7 +346,7 @@ export function createComponent(
     }
 
     // teleport
-    if (isVaporTeleport(component)) {
+    if (isTeleportEnabled && isVaporTeleport(component)) {
       const frag = component.process(rawProps!, rawSlots!)
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
@@ -361,7 +376,11 @@ export function createComponent(
     // handle currentKeepAliveCtx for component boundary isolation
     // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
     // DynamicFragment can capture it
-    if (currentKeepAliveCtx && !isAsyncWrapper(instance)) {
+    if (
+      isKeepAliveEnabled &&
+      currentKeepAliveCtx &&
+      !isAsyncWrapper(instance)
+    ) {
       currentKeepAliveCtx.processShapeFlag(instance)
       // clear currentKeepAliveCtx so child components don't associate
       // with parent's KeepAlive
@@ -405,7 +424,12 @@ export function createComponent(
       endMeasure(instance, 'init')
     }
 
-    if (__FEATURE_SUSPENSE__ && currentInstance && currentInstance.suspense) {
+    if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      currentInstance &&
+      currentInstance.suspense
+    ) {
       setParentSuspense(prevSuspense)
     }
 
@@ -422,6 +446,8 @@ export function createComponent(
     }
 
     if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
       isHydrating &&
       hydrationClose &&
       instance.suspense &&
@@ -737,8 +763,12 @@ export class VaporComponentInstance<
     this.emitted = this.exposed = this.exposeProxy = this.propsDefaults = null
 
     // suspense related
-    this.suspense = parentSuspense
-    this.suspenseId = parentSuspense ? parentSuspense.pendingId : 0
+    this.suspense = null
+    this.suspenseId = 0
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) {
+      this.suspense = parentSuspense
+      this.suspenseId = parentSuspense ? parentSuspense.pendingId : 0
+    }
     this.asyncDep = null
     this.asyncResolved = false
 
@@ -953,6 +983,7 @@ export function mountComponent(
 ): void {
   if (
     __FEATURE_SUSPENSE__ &&
+    isSuspenseEnabled &&
     instance.suspense &&
     instance.asyncDep &&
     !instance.asyncResolved
@@ -981,7 +1012,10 @@ export function mountComponent(
     return
   }
 
-  if (instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+  if (
+    isKeepAliveEnabled &&
+    instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE
+  ) {
     ;(instance.parent as KeepAliveInstance)!.ctx.activate(
       instance,
       parent,
@@ -1009,6 +1043,7 @@ export function mountComponent(
   }
   if (instance.m) queuePostFlushCb(instance.m!)
   if (
+    isKeepAliveEnabled &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.a
   ) {
@@ -1026,6 +1061,7 @@ export function unmountComponent(
 ): void {
   // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
+    isKeepAliveEnabled &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.parent &&
     instance.parent.vapor &&
@@ -1086,7 +1122,7 @@ export function getRootElement(
     return getRootElement(block.block, onDynamicFragment, recurse)
   }
 
-  if (isFragment(block) && !isTeleportFragment(block)) {
+  if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
     if (block instanceof DynamicFragment && onDynamicFragment) {
       onDynamicFragment(block)
     }
@@ -1117,10 +1153,6 @@ export function getRootElement(
     }
     return hasComment ? singleRoot : undefined
   }
-}
-
-function isVaporTransition(component: VaporComponent): boolean {
-  return getComponentName(component) === 'VaporTransition'
 }
 
 function handleSetupResult(
@@ -1177,7 +1209,8 @@ function handleSetupResult(
     if (root) {
       renderEffect(() => {
         const attrs =
-          isFunction(component) && !isVaporTransition(component)
+          isFunction(component) &&
+          !(isTransitionEnabled ? isVaporTransition(component) : false)
             ? getFunctionalFallthrough(instance.attrs)
             : instance.attrs
         if (attrs) applyFallthroughProps(root, attrs)
@@ -1189,7 +1222,7 @@ function handleSetupResult(
         instance.block.length) ||
         // preventing attrs fallthrough on Teleport
         // consistent with VDOM Teleport behavior
-        isTeleportFragment(instance.block))
+        (isTeleportEnabled && isTeleportFragment(instance.block)))
     ) {
       warnExtraneousAttributes(instance.attrs)
     }

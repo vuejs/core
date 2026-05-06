@@ -27,6 +27,7 @@ import {
 } from './dom/hydration'
 import type { TransitionOptions } from './block'
 import { _next } from './dom/node'
+import { isKeepAliveEnabled } from './keepAlive'
 
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
@@ -185,7 +186,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 
         frag.update(render)
         // Manually trigger cacheBlock for KeepAlive
-        if (frag.keepAliveCtx) frag.keepAliveCtx.cacheBlock()
+        if (isKeepAliveEnabled && frag.keepAliveCtx) {
+          frag.keepAliveCtx.cacheBlock()
+        }
       })
 
       return frag

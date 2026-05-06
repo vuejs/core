@@ -111,6 +111,7 @@ import {
 } from './fragment'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  ensureTransitionHooksRegistered,
   getVNodeKey,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
@@ -118,14 +119,20 @@ import { setInteropEnabled } from './vdomInteropState'
 import {
   type KeepAliveInstance,
   activate,
-  currentKeepAliveCtx,
   deactivate,
-  setCurrentKeepAliveCtx,
 } from './components/KeepAlive'
 import {
+  currentKeepAliveCtx,
+  enableKeepAlive,
+  isKeepAliveEnabled,
+  setCurrentKeepAliveCtx,
+} from './keepAlive'
+import {
   parentSuspense as currentParentSuspense,
+  enableSuspense,
+  isSuspenseEnabled,
   setParentSuspense,
-} from './components/Suspense'
+} from './suspense'
 
 export const interopKey: unique symbol = Symbol(`interop`)
 
@@ -168,7 +175,7 @@ const vaporInteropImpl: Omit<
     const slotsRef = shallowRef(vnode.children)
 
     let prevSuspense: SuspenseBoundary | null = null
-    if (__FEATURE_SUSPENSE__ && parentSuspense) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
       prevSuspense = setParentSuspense(parentSuspense)
     }
 
@@ -197,17 +204,20 @@ const vaporInteropImpl: Omit<
     ensureVNodeHookState(instance, vnode)
 
     // copy the shape flag from the vdom component if inside a keep-alive
-    if (parentComponent && isKeepAlive(parentComponent))
+    if (parentComponent && isKeepAlive(parentComponent)) {
+      enableKeepAlive()
       instance.shapeFlag = vnode.shapeFlag
+    }
 
     if (vnode.transition) {
+      ensureTransitionHooksRegistered()
       setVaporTransitionHooks(
         instance,
         vnode.transition as VaporTransitionHooks,
       )
     }
 
-    if (__FEATURE_SUSPENSE__ && parentSuspense) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
       setParentSuspense(prevSuspense)
     }
 
@@ -342,7 +352,13 @@ const vaporInteropImpl: Omit<
       // update
       // slot function changed (e.g. dynamic slots from _createForSlots),
       // need to re-mount the vapor block
-      if (n2.vs!.slot !== n1.vs!.slot) {
+      const needsRemount =
+        !n1.vs ||
+        !n2.vs ||
+        !n1.vs.slot ||
+        !n2.vs.slot ||
+        n2.vs.slot !== n1.vs.slot
+      if (needsRemount) {
         const selfAnchor = n1.anchor as Node
         const parent = selfAnchor.parentNode as ParentNode
         const nextSibling = selfAnchor.nextSibling
@@ -367,10 +383,12 @@ const vaporInteropImpl: Omit<
         insert((n2.el = n2.anchor = newAnchor), parent, insertAnchor)
         insert((n2.vb = slotBlock), parent, newAnchor)
       } else {
+        const vs1 = n1.vs!
+        const vs2 = n2.vs!
         n2.el = n2.anchor = n1.anchor
         n2.vb = n1.vb
-        ;(n2.vs!.ref = n1.vs!.ref)!.value = n2.props
-        n2.vs!.scope = n1.vs!.scope
+        ;(vs2.ref = vs1.ref)!.value = n2.props
+        vs2.scope = vs1.scope
         syncInteropVaporSlotState(n1, n2)
       }
     }
@@ -434,6 +452,7 @@ const vaporInteropImpl: Omit<
   },
 
   setTransitionHooks(component, hooks) {
+    ensureTransitionHooksRegistered()
     setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
   },
 
@@ -785,7 +804,7 @@ function createVDOMComponent(
   frag.$key = vnode.key
   trackFragmentVNodeUpdates(frag, vnode)
 
-  if (currentKeepAliveCtx) {
+  if (isKeepAliveEnabled && currentKeepAliveCtx) {
     currentKeepAliveCtx.processShapeFlag(frag)
     // for VDOM async components, trigger cacheBlock after resolution
     if ((component as any).__asyncLoader) {
@@ -1423,6 +1442,9 @@ function shouldUseCurrentParent(block: Block): boolean {
 }
 
 export const vaporInteropPlugin: Plugin = app => {
+  if (__FEATURE_SUSPENSE__) {
+    enableSuspense()
+  }
   setInteropEnabled()
   const internals = ensureRenderer().internals
   app._context.vapor = extend(vaporInteropImpl, {
@@ -1486,11 +1508,16 @@ const renderEmptyVNodes = (): VNodeArrayChildren => []
 // VDOM fallback cleanup follow a different lifecycle.
 function runWithFragmentRenderCtx<R>(fragment: VaporFragment, fn: () => R): R {
   const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
-  const prevKeepAliveCtx = setCurrentKeepAliveCtx(fragment.keepAliveCtx)
+  let prevKeepAliveCtx = null
+  if (isKeepAliveEnabled) {
+    prevKeepAliveCtx = setCurrentKeepAliveCtx(fragment.keepAliveCtx || null)
+  }
   try {
     return withOwnedSlotBoundary(fragment.inheritedSlotBoundary, fn)
   } finally {
-    setCurrentKeepAliveCtx(prevKeepAliveCtx)
+    if (isKeepAliveEnabled) {
+      setCurrentKeepAliveCtx(prevKeepAliveCtx)
+    }
     setCurrentSlotOwner(prevSlotOwner)
   }
 }
@@ -1584,10 +1611,13 @@ function renderVaporSlot(
   const prev = currentInstance
   let prevSuspense: SuspenseBoundary | null = null
   simpleSetCurrentInstance(parentComponent)
-  if (__FEATURE_SUSPENSE__ && parentSuspense) {
+  if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
     prevSuspense = setParentSuspense(parentSuspense)
   }
   try {
+    if (!vnode.vs || !vnode.vs.slot) {
+      return []
+    }
     const slotState = resolveInteropVaporSlotState(vnode)
     // Most of the interop setup is shared, but slots that start with a local
     // VDOM fallback still need to let an inner SlotFragment own the active
@@ -1758,7 +1788,7 @@ function renderVaporSlot(
       throw e
     }
   } finally {
-    if (__FEATURE_SUSPENSE__ && parentSuspense) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
       setParentSuspense(prevSuspense)
     }
     simpleSetCurrentInstance(prev)

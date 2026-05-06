@@ -42,6 +42,11 @@ export interface BaseIRNode {
   type: IRNodeTypes
 }
 
+export interface EffectBoundary {
+  operationIndex?: number
+  effectIndex?: number
+}
+
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
 
 export type VaporHelper = keyof typeof import('packages/runtime-vapor/src')
@@ -60,16 +65,29 @@ export interface RootIRNode {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
-  template: Map<string, Namespace>
-  templateIndexMap: Map<string, number>
-  rootTemplateIndexes: Set<number>
+  template: TemplateRegistry
   component: Set<string>
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
 }
 
-export interface IfIRNode extends BaseIRNode {
+export interface IRTemplate {
+  content: string
+  ns: Namespace
+  root: boolean
+  static: boolean
+}
+
+export class TemplateRegistry {
+  entries: IRTemplate[] = []
+
+  keys(): string[] {
+    return this.entries.map(({ content }) => content)
+  }
+}
+
+export interface IfIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.IF
   id: number
   blockShape: number
@@ -92,7 +110,7 @@ export interface IRFor {
   index?: SimpleExpressionNode
 }
 
-export interface ForIRNode extends BaseIRNode, IRFor {
+export interface ForIRNode extends BaseIRNode, IRFor, EffectBoundary {
   type: IRNodeTypes.FOR
   id: number
   keyProp?: SimpleExpressionNode
@@ -107,7 +125,7 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   last?: boolean
 }
 
-export interface KeyIRNode extends BaseIRNode {
+export interface KeyIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.KEY
   id: number
   value: SimpleExpressionNode
@@ -211,7 +229,7 @@ export interface DirectiveIRNode extends BaseIRNode {
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
 }
 
-export interface CreateComponentIRNode extends BaseIRNode {
+export interface CreateComponentIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.CREATE_COMPONENT_NODE
   id: number
   tag: string
@@ -229,7 +247,7 @@ export interface CreateComponentIRNode extends BaseIRNode {
   last?: boolean
 }
 
-export interface SlotOutletIRNode extends BaseIRNode {
+export interface SlotOutletIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.SLOT_OUTLET_NODE
   id: number
   name: SimpleExpressionNode

@@ -270,6 +270,7 @@ function transformComponentElement(
   context.dynamic.operation = {
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
     id,
+    ...context.effectBoundary(),
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,
@@ -412,9 +413,7 @@ function transformNativeElement(
     template += `</${tag}>`
   }
 
-  if (singleRoot) {
-    context.ir.rootTemplateIndexes.add(context.ir.template.size)
-  }
+  context.templateRoot = singleRoot
 
   if (
     context.parent &&

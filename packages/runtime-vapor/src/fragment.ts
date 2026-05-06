@@ -50,10 +50,16 @@ import { setBlockKey } from './helpers/setKey'
 import {
   type VaporKeepAliveContext,
   currentKeepAliveCtx,
+  isKeepAliveEnabled,
   setCurrentKeepAliveCtx,
   withCurrentCacheKey,
-} from './components/KeepAlive'
-import { applyTransitionHooks, applyTransitionLeaveHooks } from './transition'
+} from './keepAlive'
+import {
+  applyTransitionHooks,
+  applyTransitionLeaveHooks,
+  isTransitionEnabled,
+  isVaporTransition,
+} from './transition'
 
 export class VaporFragment<
   T extends Block = Block,
@@ -90,24 +96,32 @@ export class VaporFragment<
   // render context
   readonly renderInstance: GenericComponentInstance | null = currentInstance
   readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
-  readonly keepAliveCtx: VaporKeepAliveContext | null = currentKeepAliveCtx
+  readonly keepAliveCtx?: VaporKeepAliveContext | null
   readonly inheritedSlotBoundary: SlotBoundaryContext | null =
     currentSlotBoundary
 
   constructor(nodes: T) {
     this.nodes = nodes
+    if (isKeepAliveEnabled) {
+      this.keepAliveCtx = currentKeepAliveCtx
+    }
   }
 
-  protected runWithRenderCtx<R>(fn: () => R): R {
-    const prevInstance = setCurrentInstance(this.renderInstance)
+  protected runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
+    const prevInstance = setCurrentInstance(this.renderInstance, scope)
     const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
-    const prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx)
+    let prevKeepAliveCtx: VaporKeepAliveContext | null = null
+    if (isKeepAliveEnabled) {
+      prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx || null)
+    }
     const prevBoundary = setCurrentSlotBoundary(this.inheritedSlotBoundary)
     try {
       return fn()
     } finally {
       setCurrentSlotBoundary(prevBoundary)
-      setCurrentKeepAliveCtx(prevKeepAliveCtx)
+      if (isKeepAliveEnabled) {
+        setCurrentKeepAliveCtx(prevKeepAliveCtx)
+      }
       setCurrentSlotOwner(prevSlotOwner)
       setCurrentInstance(...prevInstance)
     }
@@ -157,6 +171,7 @@ export class DynamicFragment extends VaporFragment {
   pending?: { render?: BlockFn; key: any }
   anchorLabel?: string
   keyed?: boolean
+  inTransition?: boolean
 
   // fallthrough attrs
   attrs?: Record<string, any>
@@ -167,6 +182,13 @@ export class DynamicFragment extends VaporFragment {
   ) {
     super([])
     this.keyed = keyed
+    if (
+      isTransitionEnabled &&
+      currentInstance &&
+      isVaporTransition(currentInstance.type)
+    ) {
+      this.inTransition = true
+    }
     if (isHydrating) {
       this.anchorLabel = anchorLabel
       if (locate) locateHydrationNode()
@@ -192,7 +214,7 @@ export class DynamicFragment extends VaporFragment {
       return
     }
 
-    const transition = this.$transition
+    const transition = isTransitionEnabled ? this.$transition : undefined
     // currently leaving: defer mounting the next branch until
     // the leave finishes.
     if (transition && transition.state.isLeaving) {
@@ -209,24 +231,28 @@ export class DynamicFragment extends VaporFragment {
     const parent = isHydrating ? null : this.anchor.parentNode
     // teardown previous branch
     if (this.scope) {
-      let retainScope = false
-      const keepAliveCtx = this.keepAliveCtx
+      if (isKeepAliveEnabled) {
+        let retainScope = false
+        const keepAliveCtx = this.keepAliveCtx
 
-      // if keepAliveCtx exists and processShapeFlag returns a cache key,
-      // cache the scope and retain it.
-      const cacheKey = keepAliveCtx
-        ? this.keyed
-          ? withCurrentCacheKey(this.current, () =>
-              keepAliveCtx.processShapeFlag(this.nodes),
-            )
-          : keepAliveCtx.processShapeFlag(this.nodes)
-        : false
-      if (cacheKey !== false) {
-        keepAliveCtx!.cacheScope(cacheKey, this.current, this.scope)
-        retainScope = true
-      }
+        // if keepAliveCtx exists and processShapeFlag returns a cache key,
+        // cache the scope and retain it.
+        if (keepAliveCtx) {
+          const cacheKey = this.keyed
+            ? withCurrentCacheKey(this.current, () =>
+                keepAliveCtx.processShapeFlag(this.nodes),
+              )
+            : keepAliveCtx.processShapeFlag(this.nodes)
+          if (cacheKey !== false) {
+            keepAliveCtx.cacheScope(cacheKey, this.current, this.scope)
+            retainScope = true
+          }
+        }
 
-      if (!retainScope) {
+        if (!retainScope) {
+          this.scope.stop()
+        }
+      } else {
         this.scope.stop()
       }
       const mode = transition && transition.mode
@@ -305,7 +331,7 @@ export class DynamicFragment extends VaporFragment {
   ): void {
     this.current = key
     if (render) {
-      const keepAliveCtx = this.keepAliveCtx
+      const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx : null
       // try to reuse the kept-alive scope
       const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
       if (scope) {
@@ -322,9 +348,15 @@ export class DynamicFragment extends VaporFragment {
         } finally {
           // propagate the fragment key onto freshly rendered nodes.
           const key = this.keyed ? this.current : this.$key
-          if (key !== undefined) setBlockKey(this.nodes, key)
+          // Only propagate branch keys when Transition or KeepAlive consumes them.
+          if (
+            key !== undefined &&
+            (transition || this.inTransition || keepAliveCtx)
+          ) {
+            setBlockKey(this.nodes, key)
+          }
 
-          if (transition) {
+          if (isTransitionEnabled && transition) {
             this.$transition = applyTransitionHooks(this.nodes, transition)
           }
 
@@ -398,6 +430,55 @@ export class DynamicFragment extends VaporFragment {
           this.anchor = markHydrationAnchor(currentHydrationNode!)
           advanceHydrationNode(currentHydrationNode)
           return
+        }
+        if (
+          this.anchorLabel &&
+          currentHydrationNode &&
+          !isHydratingSlotFallbackActive() &&
+          !isComment(currentHydrationNode, ']')
+        ) {
+          const parentNode = getParentNode(currentHydrationNode)
+          const anchor = locateNextNode(currentHydrationNode)
+          // Empty branch against non-empty SSR output has no block node to
+          // derive an insertion point from, so use the current hydration range.
+          const reusableAnchor =
+            anchor &&
+            anchor.nodeType === 8 &&
+            isReusableDynamicFragmentAnchor(
+              anchor as Comment,
+              this.anchorLabel,
+            ) &&
+            getParentNode(anchor)
+              ? anchor
+              : null
+          if (parentNode) {
+            this.nodes = []
+            if (reusableAnchor) {
+              this.anchor = markHydrationAnchor(reusableAnchor)
+              exitHydrationBoundary = enterHydrationBoundary(this.anchor)
+              advanceAfterRestore = this.anchor
+            } else {
+              if (anchor) {
+                exitHydrationBoundary = enterHydrationBoundary(anchor)
+              } else {
+                cleanupHydrationTail(currentHydrationNode)
+                setCurrentHydrationNode(null)
+              }
+              queuePostFlushCb(() => {
+                const nextNode =
+                  anchor && anchor.parentNode === parentNode ? anchor : null
+                parentNode.insertBefore(
+                  (this.anchor = markHydrationAnchor(
+                    __DEV__
+                      ? createComment(this.anchorLabel!)
+                      : createTextNode(),
+                  )),
+                  nextNode,
+                )
+              })
+            }
+            return
+          }
         }
       }
 
@@ -521,6 +602,16 @@ export class DynamicFragment extends VaporFragment {
         const anchor = markHydrationAnchor(slotAnchor!)
         parentNode = anchor.parentNode
         nextNode = anchor.nextSibling
+      } else if (
+        this.anchorLabel === 'if' &&
+        !isValidBlock(this.nodes) &&
+        currentSlotEndAnchor &&
+        currentHydrationNode === currentSlotEndAnchor
+      ) {
+        // Only reuse the slot end anchor when this empty inner `v-if`
+        // has already consumed the whole local slot range.
+        parentNode = currentSlotEndAnchor.parentNode
+        nextNode = currentSlotEndAnchor
       } else {
         const node = findBlockNode(this.nodes)
         parentNode = node.parentNode

@@ -6,7 +6,6 @@ import {
   type ElementNode,
   ElementTypes,
   NodeTypes,
-  type PlainElementNode,
   type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
@@ -33,7 +32,9 @@ import {
   type OperationNode,
   type RootIRNode,
   type SetEventIRNode,
+  TemplateRegistry,
   type VaporDirectiveNode,
+  isBlockOperation,
 } from './ir'
 import { isConstantExpression, isStaticExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
@@ -87,6 +88,8 @@ export class TransformContext<T extends AllNode = AllNode> {
   >
 
   template: string = ''
+  templateRoot: boolean = false
+  templateIndexMap: Map<string, number> = new Map()
   childrenTemplate: (string | null)[] = []
   dynamic: IRDynamicInfo = this.ir.block.dynamic
   imports: ImportItem[] = []
@@ -98,6 +101,9 @@ export class TransformContext<T extends AllNode = AllNode> {
   directive: Set<string> = this.ir.directive
 
   slots: IRSlots[] = []
+
+  effectIndex: number = this.block.effect.length
+  operationIndex: number = this.block.operation.length
 
   // whether this node is the last effective child of its parent
   // (all siblings after it are components, which don't appear in HTML template)
@@ -125,21 +131,39 @@ export class TransformContext<T extends AllNode = AllNode> {
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
-    const { block, template, dynamic, childrenTemplate, slots } = this
+    const {
+      block,
+      template,
+      templateRoot,
+      templateIndexMap,
+      dynamic,
+      childrenTemplate,
+      slots,
+      effectIndex,
+      operationIndex,
+    } = this
     this.block = ir
     this.dynamic = ir.dynamic
     this.template = ''
+    this.templateRoot = false
+    this.templateIndexMap = templateIndexMap
     this.childrenTemplate = []
     this.slots = []
+    this.effectIndex = ir.effect.length
+    this.operationIndex = ir.operation.length
     isVFor && this.inVFor++
     return () => {
       // exit
       this.registerTemplate()
       this.block = block
       this.template = template
+      this.templateRoot = templateRoot
+      this.templateIndexMap = templateIndexMap
       this.dynamic = dynamic
       this.childrenTemplate = childrenTemplate
       this.slots = slots
+      this.effectIndex = effectIndex
+      this.operationIndex = operationIndex
       isVFor && this.inVFor--
     }
   }
@@ -180,27 +204,74 @@ export class TransformContext<T extends AllNode = AllNode> {
     return this.ifIndex++
   }
 
-  pushTemplate(content: string): number {
-    const existingIndex = this.ir.templateIndexMap.get(content)
+  private getTemplateNamespace(): number {
+    return this.node.type === NodeTypes.ELEMENT ? this.node.ns : 0
+  }
+
+  private canUseStaticTemplate(): boolean {
+    if (!this.template) return false
+    if (this.inVFor) return false
+    if (this.dynamic.hasDynamicChild) return false
+    if (this.block.effect.length !== this.effectIndex) return false
+    if (this.block.operation.length !== this.operationIndex) return false
+
+    if (
+      this.node.type === NodeTypes.TEXT ||
+      this.node.type === NodeTypes.COMMENT
+    ) {
+      return true
+    }
+
+    return (
+      this.node.type === NodeTypes.ELEMENT &&
+      this.node.tagType === ElementTypes.ELEMENT &&
+      !(
+        this.options.isCustomElement(this.node.tag) ||
+        this.node.tag === 'template'
+      )
+    )
+  }
+
+  pushTemplate(
+    content: string,
+    {
+      root = false,
+      static: isStatic = false,
+    }: {
+      root?: boolean
+      static?: boolean
+    } = {},
+  ): number {
+    const templateKey = JSON.stringify([
+      this.getTemplateNamespace(),
+      root,
+      isStatic,
+      content,
+    ])
+    const existingIndex = this.templateIndexMap.get(templateKey)
     if (existingIndex !== undefined) {
       return existingIndex
     }
 
-    const newIndex = this.ir.template.size
-    this.ir.template.set(content, (this.node as PlainElementNode).ns)
-    this.ir.templateIndexMap.set(content, newIndex)
+    const ns = this.getTemplateNamespace()
+    const newIndex = this.ir.template.entries.length
+    this.ir.template.entries.push({ content, ns, root, static: isStatic })
+    this.templateIndexMap.set(templateKey, newIndex)
     return newIndex
   }
   registerTemplate(): number {
     if (!this.template) return -1
-    const id = this.pushTemplate(this.template)
+    const id = this.pushTemplate(this.template, {
+      root: this.templateRoot,
+      static: this.canUseStaticTemplate(),
+    })
     return (this.dynamic.template = id)
   }
 
   registerEffect(
     expressions: SimpleExpressionNode[],
     operation: OperationNode | OperationNode[],
-    getIndex = (): number => this.block.effect.length,
+    getIndex?: () => number,
   ): void {
     const operations = [operation].flat()
     expressions = expressions.filter(exp => !isConstantExpression(exp))
@@ -214,14 +285,25 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    this.block.effect.splice(getIndex(), 0, {
+    const index = getIndex ? getIndex() : this.block.effect.length
+    this.block.effect.splice(index, 0, {
       expressions,
       operations,
     })
+    if (getIndex) {
+      this.shiftEffectBoundaries(index)
+    }
   }
 
   registerOperation(...node: OperationNode[]): void {
     this.block.operation.push(...node)
+  }
+
+  effectBoundary(): { operationIndex: number; effectIndex: number } {
+    return {
+      operationIndex: this.operationIndex,
+      effectIndex: this.effectIndex,
+    }
   }
 
   create<T extends TemplateChildNode>(
@@ -268,13 +350,36 @@ export class TransformContext<T extends AllNode = AllNode> {
       index,
 
       template: '',
+      templateRoot: false,
       childrenTemplate: [],
+      templateIndexMap: this.templateIndexMap,
       dynamic: newDynamic(),
+      effectIndex: this.block.effect.length,
+      operationIndex: this.block.operation.length,
       effectiveParent,
       isLastEffectiveChild,
       isOnRightmostPath,
       hasInlineAncestorNeedingClose,
     } satisfies Partial<TransformContext<T>>)
+  }
+
+  private shiftEffectBoundaries(
+    index: number,
+    dynamic: IRDynamicInfo = this.dynamic,
+  ): void {
+    const operation = dynamic.operation
+    if (
+      operation &&
+      isBlockOperation(operation) &&
+      operation.effectIndex !== undefined &&
+      operation.effectIndex >= index
+    ) {
+      operation.effectIndex++
+    }
+
+    for (const child of dynamic.children) {
+      this.shiftEffectBoundaries(index, child)
+    }
   }
 
   private isEffectivelyLastChild(index: number): boolean {
@@ -322,9 +427,7 @@ export function transform(
     type: IRNodeTypes.ROOT,
     node,
     source: node.source,
-    template: new Map<string, number>(),
-    templateIndexMap: new Map<string, number>(),
-    rootTemplateIndexes: new Set(),
+    template: new TemplateRegistry(),
     component: new Set(),
     directive: new Set(),
     block: newBlock(node),

@@ -131,16 +131,21 @@ export function setCurrentHydrationNode(node: Node | null): void {
   currentHydrationNode = node
 }
 
-/* @__NO_SIDE_EFFECTS__ */
-function locateNextSiblingOfParent(n: Node): Node | null {
-  if (!n.parentNode) return null
-  return _next(n.parentNode) || locateNextSiblingOfParent(n.parentNode)
-}
-
 export function advanceHydrationNode(node: Node): void {
+  let next = node.nextSibling
+  if (next && currentHydrationNode === next) {
+    return
+  }
   // if no next sibling, find the next node in the parent chain
-  const ret = _next(node) || locateNextSiblingOfParent(node)
-  if (ret) setCurrentHydrationNode(ret)
+  while (!next) {
+    const parent = node.parentNode
+    if (!parent) break
+    node = parent
+    next = node.nextSibling
+  }
+  if (currentHydrationNode !== next) {
+    currentHydrationNode = next
+  }
 }
 
 /**
@@ -368,12 +373,22 @@ function removeHydrationNode(node: Node, close: Node | null = null): void {
   remove(node, parent)
 }
 
-export function cleanupHydrationTail(node: Node): void {
-  const container = node.parentElement
-  if (container) {
-    warnHydrationChildrenMismatch(container)
+export function cleanupHydrationTail(node: Node, container?: ParentNode): void {
+  const mismatchContainer = container || node.parentElement
+  if (mismatchContainer instanceof Element) {
+    warnHydrationChildrenMismatch(mismatchContainer)
   }
-  removeHydrationNode(node)
+  if (!container) {
+    removeHydrationNode(node)
+    return
+  }
+
+  let current: Node | null = node
+  while (current && current.parentNode === container) {
+    const next = locateNextNode(current)
+    removeHydrationNode(current)
+    current = next
+  }
 }
 
 export function markHydrationAnchor<T extends Node>(node: T): T {
@@ -385,7 +400,7 @@ export function isHydrationAnchor(node: Node | null | undefined): boolean {
   return !!node && (node as Anchor).$vha === 1
 }
 
-function resolveHydrationTarget(node: Node): Node {
+export function resolveHydrationTarget(node: Node): Node {
   while (true) {
     if (isHydrationAnchor(node)) {
       return node

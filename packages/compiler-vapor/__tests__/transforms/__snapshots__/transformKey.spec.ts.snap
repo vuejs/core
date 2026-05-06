@@ -29,7 +29,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > complex key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", true, true)
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.a,_ctx.b), () => {
@@ -55,7 +55,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > component slot + key 1`] = `
 "import { resolveComponent as _resolveComponent, createKeyedFragment as _createKeyedFragment, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div>foo")
+const t0 = _template("<div>foo", false, true)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -74,7 +74,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > element + key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", true, true)
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
@@ -103,7 +103,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > shortbind key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", true, true)
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.key), () => {
@@ -116,7 +116,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > v-else-if + key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", true, true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
@@ -148,7 +148,7 @@ export function render(_ctx) {
 
 exports[`compiler: key > with dynamic key > v-if + key 1`] = `
 "import { createKeyedFragment as _createKeyedFragment, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", true, true)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {

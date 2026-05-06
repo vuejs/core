@@ -34,6 +34,12 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   }
   arg = resolveExpression(arg!)
 
+  if (arg.isStatic && arg.content.startsWith('vue:')) {
+    arg = extend({}, arg, {
+      content: `vnode-${arg.content.slice(4)}`,
+    })
+  }
+
   const { keyModifiers, nonKeyModifiers, eventOptionModifiers } =
     resolveModifiers(
       arg.isStatic ? `on${arg.content}` : arg,

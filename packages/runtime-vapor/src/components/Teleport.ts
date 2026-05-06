@@ -1,4 +1,4 @@
-import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { getCurrentScope, pauseTracking, resetTracking } from '@vue/reactivity'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -45,7 +45,8 @@ import {
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import { getScopeOwner } from '../componentSlots'
-import { applyTransitionHooks } from '../transition'
+import { applyTransitionHooks, isTransitionEnabled } from '../transition'
+import { enableTeleport } from '../teleport'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -75,6 +76,7 @@ export class TeleportFragment extends VaporFragment {
   private childrenInitialized = false
   private readonly ownerInstance =
     currentInstance as VaporComponentInstance | null
+  private readonly childrenScope = getCurrentScope()
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -124,16 +126,21 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private initChildren(): void {
-    const prevInstance = setCurrentInstance(this.ownerInstance)
+    const prevInstance = setCurrentInstance(
+      this.ownerInstance,
+      this.childrenScope,
+    )
     try {
       this.childrenInitialized = true
       renderEffect(() =>
-        this.runWithRenderCtx(() =>
-          this.handleChildrenUpdate(
-            this.rawSlots && this.rawSlots.default
-              ? (this.rawSlots.default as BlockFn)()
-              : [],
-          ),
+        this.runWithRenderCtx(
+          () =>
+            this.handleChildrenUpdate(
+              this.rawSlots && this.rawSlots.default
+                ? (this.rawSlots.default as BlockFn)()
+                : [],
+            ),
+          this.childrenScope,
         ),
       )
       this.bindChildren(this.nodes)
@@ -196,7 +203,7 @@ export class TeleportFragment extends VaporFragment {
   private mount(parent: ParentNode, anchor: Node | null) {
     // don't apply transitions during move teleports
     // algin with Vue DOM teleport behavior
-    if (this.$transition && !this.isMounted) {
+    if (isTransitionEnabled && this.$transition && !this.isMounted) {
       applyTransitionHooks(this.nodes, this.$transition)
     }
     if (this.isMounted) {
@@ -500,26 +507,10 @@ export class TeleportFragment extends VaporFragment {
   }
 }
 
-export const VaporTeleport =
-  VaporTeleportImpl as unknown as DefineVaporSetupFnComponent<TeleportProps>
-
-/**
- * Use duck typing to check for VaporTeleport instead of direct reference
- * to VaporTeleportImpl, allowing tree-shaking when Teleport is not used.
- */
-export function isVaporTeleport(
-  value: unknown,
-): value is typeof VaporTeleportImpl {
-  return !!(value && (value as any).__isTeleport && (value as any).__vapor)
-}
-
-/**
- * Use duck typing to check for TeleportFragment instead of instanceof,
- * allowing tree-shaking when Teleport is not used.
- */
-export function isTeleportFragment(value: unknown): value is TeleportFragment {
-  return !!(value && (value as any).__isTeleportFragment)
-}
+export const VaporTeleport: DefineVaporSetupFnComponent<TeleportProps> =
+  /*@__PURE__*/ enableTeleport(
+    VaporTeleportImpl as unknown as DefineVaporSetupFnComponent<TeleportProps>,
+  )
 
 function locateTeleportEndAnchor(
   node: Node = currentHydrationNode!,

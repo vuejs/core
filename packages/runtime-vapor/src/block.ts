@@ -17,11 +17,11 @@ import {
 } from '@vue/runtime-dom'
 import {
   type DynamicFragment,
-  SlotFragment,
   type VaporFragment,
   isFragment,
 } from './fragment'
-import { isTeleportFragment } from './components/Teleport'
+import { isTeleportEnabled, isTeleportFragment } from './teleport'
+import { isTransitionEnabled } from './transition'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
@@ -79,11 +79,15 @@ export function isValidBlock(block: Block | null | undefined): boolean {
     return block.length > 0 && block.some(isValidBlock)
   } else if (block.validityPending) {
     return true
-  } else if (block instanceof SlotFragment) {
-    return isValidBlock(block.getEffectiveOutput())
   } else {
-    // fragment
-    return isValidBlock(block.nodes)
+    const getEffectiveOutput = (
+      block as VaporFragment & {
+        getEffectiveOutput?: () => Block
+      }
+    ).getEffectiveOutput
+    return isValidBlock(
+      getEffectiveOutput ? getEffectiveOutput.call(block) : block.nodes,
+    )
   }
 }
 
@@ -98,6 +102,7 @@ export function insert(
     if (!isHydrating) {
       // only apply transition on Element nodes
       if (
+        isTransitionEnabled &&
         block instanceof Element &&
         (block as TransitionBlock).$transition &&
         !(block as TransitionBlock).$transition!.disabled
@@ -148,6 +153,7 @@ export function move(
   if (block instanceof Node) {
     // only apply transition on Element nodes
     if (
+      isTransitionEnabled &&
       block instanceof Element &&
       (block as TransitionBlock).$transition &&
       !(block as TransitionBlock).$transition!.disabled &&
@@ -237,7 +243,11 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
 
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    if ((block as TransitionBlock).$transition && block instanceof Element) {
+    if (
+      isTransitionEnabled &&
+      (block as TransitionBlock).$transition &&
+      block instanceof Element
+    ) {
       performTransitionLeave(
         block,
         (block as TransitionBlock).$transition as TransitionHooks,
@@ -283,7 +293,7 @@ export function normalizeBlock(block: Block): Node[] {
   } else if (isVaporComponent(block)) {
     nodes.push(...normalizeBlock(block.block!))
   } else {
-    if (isTeleportFragment(block)) {
+    if (isTeleportEnabled && isTeleportFragment(block)) {
       nodes.push(block.placeholder!, block.anchor!)
     } else {
       nodes.push(...normalizeBlock(block.nodes))

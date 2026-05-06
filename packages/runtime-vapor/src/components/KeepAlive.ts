@@ -36,36 +36,12 @@ import { unsetRef } from '../refCleanup'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
-
-export interface VaporKeepAliveContext {
-  processShapeFlag(block: Block): CacheKey | false
-  cacheBlock(block?: Block): void
-  cacheScope(cacheKey: CacheKey, scopeLookupKey: any, scope: EffectScope): void
-  getScope(key: any): EffectScope | undefined
-}
-
-export let currentKeepAliveCtx: VaporKeepAliveContext | null = null
-
-export function setCurrentKeepAliveCtx(
-  ctx: VaporKeepAliveContext | null,
-): VaporKeepAliveContext | null {
-  try {
-    return currentKeepAliveCtx
-  } finally {
-    currentKeepAliveCtx = ctx
-  }
-}
-
-let currentCacheKey: any | undefined
-export function withCurrentCacheKey<T>(key: any, fn: () => T): T {
-  const prev = currentCacheKey
-  currentCacheKey = key
-  try {
-    return fn()
-  } finally {
-    currentCacheKey = prev
-  }
-}
+import {
+  type VaporKeepAliveContext,
+  currentCacheKey,
+  setCurrentKeepAliveCtx,
+  withKeepAliveEnabled,
+} from '../keepAlive'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   ctx: {
@@ -416,7 +392,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
 })
 
 export const VaporKeepAlive: DefineVaporComponent<{}, string, KeepAliveProps> =
-  VaporKeepAliveImpl
+  /*@__PURE__*/ withKeepAliveEnabled(VaporKeepAliveImpl)
 
 const shouldCache = (
   block: GenericComponentInstance | VaporFragment,

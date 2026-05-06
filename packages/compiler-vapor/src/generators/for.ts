@@ -6,7 +6,13 @@ import {
 import { genBlockContent } from './block'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
-import type { BlockIRNode, ForIRNode, IREffect } from '../ir'
+import {
+  type BlockIRNode,
+  type ForIRNode,
+  type IRDynamicInfo,
+  type IREffect,
+  isBlockOperation,
+} from '../ir'
 import {
   type CodeFragment,
   INDENT_END,
@@ -333,17 +339,20 @@ function matchPatterns(
   const keyOnlyBindingPatterns: NonNullable<
     ReturnType<typeof matchKeyOnlyBindingPattern>
   >[] = []
+  const removedEffectIndexes: number[] = []
 
-  render.effect = render.effect.filter(effect => {
+  render.effect = render.effect.filter((effect, index) => {
     if (keyProp !== undefined) {
       const selector = matchSelectorPattern(effect, keyProp.content, idMap)
       if (selector) {
         selectorPatterns.push(selector)
+        removedEffectIndexes.push(index)
         return false
       }
       const keyOnly = matchKeyOnlyBindingPattern(effect, keyProp.content)
       if (keyOnly) {
         keyOnlyBindingPatterns.push(keyOnly)
+        removedEffectIndexes.push(index)
         return false
       }
     }
@@ -351,9 +360,39 @@ function matchPatterns(
     return true
   })
 
+  if (removedEffectIndexes.length) {
+    shiftEffectBoundaries(render.dynamic, removedEffectIndexes)
+  }
+
   return {
     keyOnlyBindingPatterns,
     selectorPatterns,
+  }
+}
+
+function shiftEffectBoundaries(
+  dynamic: IRDynamicInfo,
+  removedEffectIndexes: number[],
+): void {
+  const operation = dynamic.operation
+  if (
+    operation &&
+    isBlockOperation(operation) &&
+    operation.effectIndex !== undefined
+  ) {
+    let offset = 0
+    for (const removedIndex of removedEffectIndexes) {
+      if (removedIndex < operation.effectIndex) {
+        offset++
+      } else {
+        break
+      }
+    }
+    operation.effectIndex -= offset
+  }
+
+  for (const child of dynamic.children) {
+    shiftEffectBoundaries(child, removedEffectIndexes)
   }
 }
 

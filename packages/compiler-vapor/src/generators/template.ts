@@ -1,5 +1,5 @@
 import type { CodegenContext } from '../generate'
-import { DynamicFlag, type IRDynamicInfo } from '../ir'
+import { DynamicFlag, type IRDynamicInfo, type IRTemplate } from '../ir'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
 import {
@@ -11,30 +11,47 @@ import {
 } from './utils'
 
 export function genTemplates(
-  templates: Map<string, number>,
-  rootIndexes: Set<number>,
+  templates: IRTemplate[],
   context: CodegenContext,
 ): string {
   const result: string[] = []
-  let i = 0
-  templates.forEach((ns, template) => {
-    result.push(
-      `const ${context.tName(i)} = ${context.helper('template')}(${JSON.stringify(
-        template,
-      ).replace(
-        // replace import expressions with string concatenation
-        IMPORT_EXPR_RE,
-        `" + $1 + "`,
-      )}${rootIndexes.has(i) ? ', true' : ns ? ', false' : ''}${ns ? `, ${ns}` : ''})\n`,
+  templates.forEach(({ content, ns, root, static: isStatic }, i) => {
+    let args = JSON.stringify(content).replace(
+      // replace import expressions with string concatenation
+      IMPORT_EXPR_RE,
+      `" + $1 + "`,
     )
-    i++
+
+    if (root) {
+      args += ', true'
+    } else if (isStatic || ns) {
+      args += ', false'
+    }
+
+    if (isStatic || ns) {
+      args += `, ${isStatic ? 'true' : 'false'}`
+    }
+
+    if (ns) {
+      args += `, ${ns}`
+    }
+
+    result.push(
+      `const ${context.tName(i)} = ${context.helper('template')}(${args})\n`,
+    )
   })
   return result.join('')
 }
 
+type FlushBeforeDynamic = (
+  dynamic: IRDynamicInfo,
+  push: (...items: CodeFragment[]) => number,
+) => void
+
 export function genSelf(
   dynamic: IRDynamicInfo,
   context: CodegenContext,
+  flushBeforeDynamic?: FlushBeforeDynamic,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   const { id, template, operation, hasDynamicChild } = dynamic
@@ -49,7 +66,7 @@ export function genSelf(
   }
 
   if (hasDynamicChild) {
-    push(...genChildren(dynamic, context, push, `n${id}`))
+    push(...genChildren(dynamic, context, push, `n${id}`, flushBeforeDynamic))
   }
 
   return frag
@@ -60,6 +77,7 @@ export function genChildren(
   context: CodegenContext,
   pushBlock: (...items: CodeFragment[]) => number,
   from: string = `n${dynamic.id}`,
+  flushBeforeDynamic?: FlushBeforeDynamic,
 ): CodeFragment[] {
   const { helper } = context
   const [frag, push] = buildCodeFragment()
@@ -74,7 +92,8 @@ export function genChildren(
     }
 
     if (child.flags & DynamicFlag.INSERT && child.template != null) {
-      push(...genSelf(child, context))
+      flushBeforeDynamic && flushBeforeDynamic(child, push)
+      push(...genSelf(child, context, flushBeforeDynamic))
       continue
     }
 
@@ -86,7 +105,8 @@ export function genChildren(
         : undefined
 
     if (id === undefined && !child.hasDynamicChild) {
-      push(...genSelf(child, context))
+      flushBeforeDynamic && flushBeforeDynamic(child, push)
+      push(...genSelf(child, context, flushBeforeDynamic))
       continue
     }
 
@@ -139,7 +159,8 @@ export function genChildren(
     }
 
     if (id === child.anchor && !child.hasDynamicChild) {
-      push(...genSelf(child, context))
+      flushBeforeDynamic && flushBeforeDynamic(child, push)
+      push(...genSelf(child, context, flushBeforeDynamic))
     }
 
     if (id !== undefined) {
@@ -147,7 +168,9 @@ export function genChildren(
     }
 
     prev = [variable, elementIndex]
-    push(...genChildren(child, context, pushBlock, variable))
+    push(
+      ...genChildren(child, context, pushBlock, variable, flushBeforeDynamic),
+    )
   }
 
   return frag
