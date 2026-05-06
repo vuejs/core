@@ -38,6 +38,7 @@ import {
   createApp,
   defineAsyncComponent as defineAsyncComp,
   defineComponent,
+  effectScope,
   inject,
   provide,
 } from 'vue'
@@ -3163,6 +3164,60 @@ describe('Suspense', () => {
 
       expect(resolvers.length).toBe(3)
       resolvers.forEach(r => r(undefined))
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    test('nested scope created after pending branch is abandoned', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      let resolvePending!: (v?: unknown) => void
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvePending = r
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          effectScope().run(() => {
+            watch(stateRef, updateSpy)
+          })
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const FillerComp = defineComponent({
+        setup: () => () => h('div', 'filler'),
+      })
+
+      const view = shallowRef<any>(SlowComp)
+      const Comp = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback'),
+          }),
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      view.value = FillerComp
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>filler</div>`)
+
+      resolvePending(undefined)
       await new Promise(r => setTimeout(r))
 
       stateRef.value++

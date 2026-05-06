@@ -22,6 +22,7 @@ export class EffectScope {
   cleanups: (() => void)[] = []
 
   private _isPaused = false
+  private _warnOnRun = true
 
   /**
    * only assigned by undetached scope
@@ -44,12 +45,19 @@ export class EffectScope {
   // TODO isolatedDeclarations ReactiveFlags.SKIP
 
   constructor(public detached = false) {
-    this.parent = activeEffectScope
     if (!detached && activeEffectScope) {
-      this.index =
-        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
-          this,
-        ) - 1
+      if (activeEffectScope.active) {
+        this.parent = activeEffectScope
+        this.index =
+          (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
+            this,
+          ) - 1
+      } else {
+        // The parent scope has already stopped, so this child must not become
+        // a detached live scope.
+        this._active = false
+        this._warnOnRun = false
+      }
     }
   }
 
@@ -101,7 +109,7 @@ export class EffectScope {
       } finally {
         activeEffectScope = currentEffectScope
       }
-    } else if (__DEV__) {
+    } else if (__DEV__ && this._warnOnRun) {
       warn(`cannot run an inactive effect scope.`)
     }
   }
