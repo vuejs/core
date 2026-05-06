@@ -58,7 +58,7 @@ export function defineVaporCustomElement<Props, RawBindings = object>(
   ) => RawBindings | VaporRenderResult,
   options?: Pick<VaporComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
     CustomElementOptions & {
-      props?: (keyof Props)[]
+      props?: (keyof NoInfer<Props>)[]
     },
 ): VaporElementConstructor<Props>
 export function defineVaporCustomElement<Props, RawBindings = object>(

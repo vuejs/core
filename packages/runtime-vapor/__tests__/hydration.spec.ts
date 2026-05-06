@@ -6727,6 +6727,33 @@ describe('mismatch handling', () => {
     expect(container.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
+  test('v-if empty branch should remove stale branch before trailing sibling', async () => {
+    const code = `
+      <div>
+        <span v-if="data.show">shown</span>
+        <i>{{ data.tail }}</i>
+      </div>
+    `
+    const ssrData = ref({ show: true, tail: 'tail' })
+    const clientData = ref({ show: false, tail: 'tail' })
+    const SSRComp = compileVaporComponent(code, ssrData, undefined, true)
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRComp),
+    )
+
+    const { container } = await mountWithHydration(html, code, clientData)
+
+    expect(container.innerHTML).toBe('<div><!--if--><i>tail</i></div>')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    clientData.value.show = true
+    clientData.value.tail = 'tail updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><span>shown</span><!--if--><i>tail updated</i></div>',
+    )
+  })
   test('fragment mismatch removal', async () => {
     const data = ref({ items: [] as string[] })
     const { container } = await mountWithHydration(
@@ -11299,6 +11326,35 @@ describe('VDOM interop', () => {
       `,
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('hydrate useId in parent template before child setup', async () => {
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { useId } from 'vue'
+        const components = _components
+      </script>
+      <template>
+        <div>parent: {{ useId() }}</div>
+        <components.Child />
+      </template>`,
+      {
+        Child: `<script setup>
+          import { useId } from 'vue'
+          const id = useId()
+        </script>
+        <template>
+          <div>child: {{ id }}</div>
+        </template>`,
+      },
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>parent: v-0</div><div>child: v-1</div><!--]-->
+      "
+    `)
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
   })
 
   test('hydrate forwarded empty named VDOM slot with trailing sibling nodes', async () => {

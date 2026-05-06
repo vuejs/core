@@ -131,16 +131,21 @@ export function setCurrentHydrationNode(node: Node | null): void {
   currentHydrationNode = node
 }
 
-/* @__NO_SIDE_EFFECTS__ */
-function locateNextSiblingOfParent(n: Node): Node | null {
-  if (!n.parentNode) return null
-  return _next(n.parentNode) || locateNextSiblingOfParent(n.parentNode)
-}
-
 export function advanceHydrationNode(node: Node): void {
+  let next = node.nextSibling
+  if (next && currentHydrationNode === next) {
+    return
+  }
   // if no next sibling, find the next node in the parent chain
-  const ret = _next(node) || locateNextSiblingOfParent(node)
-  if (ret) setCurrentHydrationNode(ret)
+  while (!next) {
+    const parent = node.parentNode
+    if (!parent) break
+    node = parent
+    next = node.nextSibling
+  }
+  if (currentHydrationNode !== next) {
+    currentHydrationNode = next
+  }
 }
 
 /**

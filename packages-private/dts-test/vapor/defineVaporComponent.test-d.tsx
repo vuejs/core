@@ -820,7 +820,7 @@ describe('function syntax w/ expose', () => {
 describe('function syntax w/ runtime props', () => {
   // with runtime props, the runtime props must match
   // manual type declaration
-  defineVaporComponent(
+  const Comp1 = defineVaporComponent(
     (_props: { msg: string }) => {
       return []
     },
@@ -829,7 +829,34 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error bar isn't specified in props definition
   defineVaporComponent(
+    (_props: { msg: string }) => {
+      return []
+    },
+    {
+      props: ['msg', 'bar'],
+    },
+  )
+
+  defineVaporComponent(
+    (_props: { msg: string; bar: string }) => {
+      return []
+    },
+    {
+      props: ['msg'],
+    },
+  )
+
+  expectType<JSX.Element>(<Comp1 msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp1 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp1 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp1 msg="1" bar="2" />)
+
+  const Comp2 = defineVaporComponent(
     <T extends string>(_props: { msg: T }) => {
       return []
     },
@@ -838,7 +865,36 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error bar isn't specified in props definition
   defineVaporComponent(
+    <T extends string>(_props: { msg: T }) => {
+      return []
+    },
+    {
+      props: ['msg', 'bar'],
+    },
+  )
+
+  defineVaporComponent(
+    <T extends string>(_props: { msg: T; bar: T }) => {
+      return []
+    },
+    {
+      props: ['msg'],
+    },
+  )
+
+  expectType<JSX.Element>(<Comp2 msg="1" />)
+  expectType<JSX.Element>(<Comp2<string> msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp2 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp2 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp2 msg="1" bar="2" />)
+
+  // Note: generics aren't supported with object runtime props
+  const Comp3 = defineVaporComponent(
     <T extends string>(_props: { msg: T }) => {
       return []
     },
@@ -848,6 +904,40 @@ describe('function syntax w/ runtime props', () => {
       },
     },
   )
+
+  defineVaporComponent(
+    // @ts-expect-error bar isn't specified in props definition
+    <T extends string>(_props: { msg: T }) => {
+      return []
+    },
+    {
+      props: {
+        bar: String,
+      },
+    },
+  )
+
+  defineVaporComponent(
+    // @ts-expect-error generics aren't supported with object runtime props
+    <T extends string>(_props: { msg: T; bar: T }) => {
+      return []
+    },
+    {
+      props: {
+        msg: String,
+      },
+    },
+  )
+
+  expectType<JSX.Element>(<Comp3 msg="1" />)
+  // @ts-expect-error generics aren't supported with object runtime props
+  expectType<JSX.Element>(<Comp3<string> msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp3 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp3 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp3 msg="1" bar="2" />)
 
   // @ts-expect-error string prop names don't match
   defineVaporComponent(
@@ -867,19 +957,6 @@ describe('function syntax w/ runtime props', () => {
       props: {
         // @ts-expect-error prop type mismatch
         msg: Number,
-      },
-    },
-  )
-
-  // @ts-expect-error prop keys don't match
-  defineVaporComponent(
-    (_props: { msg: string }, ctx) => {
-      return []
-    },
-    {
-      props: {
-        msg: String,
-        bar: String,
       },
     },
   )

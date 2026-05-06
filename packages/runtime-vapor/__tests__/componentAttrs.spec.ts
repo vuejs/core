@@ -505,6 +505,29 @@ describe('attribute fallthrough', () => {
     expect(html()).toBe(`<div></div><div></div>`)
   })
 
+  it('should not warn when only emits is defined', () => {
+    const Parent = {
+      render() {
+        return createComponent(Child, {
+          onBar: () => () => {},
+        })
+      },
+    }
+
+    const Child = defineVaporComponent({
+      emits: ['bar'],
+      render() {
+        const n0 = template('<div></div>')() as Element
+        const n1 = template('<div></div>')() as Element
+
+        return [n0, n1]
+      },
+    })
+
+    define(Parent).render()
+    expect(`Extraneous non-emits event listeners`).not.toHaveBeenWarned()
+  })
+
   it('should not let listener fallthrough when declared in emits (stateful)', () => {
     const Child = defineVaporComponent({
       emits: ['click'],

@@ -32,6 +32,7 @@ export const transformKey: NodeTransform = (node, context) => {
     context.dynamic.operation = {
       type: IRNodeTypes.KEY,
       id,
+      ...context.effectBoundary(),
       value,
       block,
     }

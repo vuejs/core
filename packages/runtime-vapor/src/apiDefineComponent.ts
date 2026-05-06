@@ -113,7 +113,7 @@ export function defineVaporComponent<
     },
   ) => VaporRenderResult<TypeBlock> | void,
   extraOptions?: VaporComponentOptions<
-    (keyof Props)[],
+    (keyof NoInfer<Props>)[],
     Emits,
     RuntimeEmitsKeys,
     Slots,

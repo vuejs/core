@@ -107,8 +107,8 @@ export class VaporFragment<
     }
   }
 
-  protected runWithRenderCtx<R>(fn: () => R): R {
-    const prevInstance = setCurrentInstance(this.renderInstance)
+  protected runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
+    const prevInstance = setCurrentInstance(this.renderInstance, scope)
     const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
     let prevKeepAliveCtx: VaporKeepAliveContext | null = null
     if (isKeepAliveEnabled) {
@@ -430,6 +430,55 @@ export class DynamicFragment extends VaporFragment {
           this.anchor = markHydrationAnchor(currentHydrationNode!)
           advanceHydrationNode(currentHydrationNode)
           return
+        }
+        if (
+          this.anchorLabel &&
+          currentHydrationNode &&
+          !isHydratingSlotFallbackActive() &&
+          !isComment(currentHydrationNode, ']')
+        ) {
+          const parentNode = getParentNode(currentHydrationNode)
+          const anchor = locateNextNode(currentHydrationNode)
+          // Empty branch against non-empty SSR output has no block node to
+          // derive an insertion point from, so use the current hydration range.
+          const reusableAnchor =
+            anchor &&
+            anchor.nodeType === 8 &&
+            isReusableDynamicFragmentAnchor(
+              anchor as Comment,
+              this.anchorLabel,
+            ) &&
+            getParentNode(anchor)
+              ? anchor
+              : null
+          if (parentNode) {
+            this.nodes = []
+            if (reusableAnchor) {
+              this.anchor = markHydrationAnchor(reusableAnchor)
+              exitHydrationBoundary = enterHydrationBoundary(this.anchor)
+              advanceAfterRestore = this.anchor
+            } else {
+              if (anchor) {
+                exitHydrationBoundary = enterHydrationBoundary(anchor)
+              } else {
+                cleanupHydrationTail(currentHydrationNode)
+                setCurrentHydrationNode(null)
+              }
+              queuePostFlushCb(() => {
+                const nextNode =
+                  anchor && anchor.parentNode === parentNode ? anchor : null
+                parentNode.insertBefore(
+                  (this.anchor = markHydrationAnchor(
+                    __DEV__
+                      ? createComment(this.anchorLabel!)
+                      : createTextNode(),
+                  )),
+                  nextNode,
+                )
+              })
+            }
+            return
+          }
         }
       }
 
