@@ -121,6 +121,121 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`Example`)
   })
 
+  test('resolve component from scoped slot bindings and shadows setup bindings', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ Foo }"><Foo /></Example>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+          Foo: BindingTypes.SETUP_MAYBE_REF,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_component_Foo`)
+    expect(code).not.toContain(`_resolveComponent("Foo")`)
+    expect(code).not.toContain(`$setup["Foo"]`)
+  })
+
+  test('resolve kebab-cased component from scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ fooBar }"><foo-bar /></Example>`,
+      {
+        prefixIdentifiers: true,
+        isNativeTag: tag => tag !== 'foo-bar',
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(fooBar)`)
+    expect(code).not.toContain(`_component_foo_bar`)
+    expect(code).not.toContain(`_resolveComponent("foo-bar")`)
+  })
+
+  test('does not resolve component from inactive scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ Foo }"><Foo /></Example><Foo />`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+    expect(code).toContain(`_createVNode(_component_Foo)`)
+  })
+
+  test('does not resolve component from v-for bindings', () => {
+    const { code } = baseCompile(
+      `<template v-for="Foo in list"><Foo :value="Foo" /></template>`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+    expect(code).toContain(`_createBlock(_component_Foo`)
+    expect(code).toContain(`value: Foo`)
+    expect(code).not.toContain(`_createVNode(Foo`)
+    expect(code).not.toContain(`_createBlock(Foo`)
+  })
+
+  test('does not resolve component from scoped slot bindings shadowed by v-for', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="{ Foo }"><template v-for="Foo in list"><Foo /></template></Example>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`const _component_Foo = _resolveComponent("Foo")`)
+    expect(code).toContain(`_createBlock(_component_Foo)`)
+    expect(code).not.toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_createBlock(Foo)`)
+  })
+
+  test('resolve component from scoped slot bindings shadowing v-for', () => {
+    const { code } = baseCompile(
+      `<div v-for="Foo in list"><Example v-slot="{ Foo }"><Foo /></Example></div>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_component_Foo`)
+    expect(code).not.toContain(`_resolveComponent("Foo")`)
+  })
+
+  test('resolve component from template scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example><template #default="{ Foo }"><Foo /></template></Example>`,
+      {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(Foo)`)
+    expect(code).not.toContain(`_component_Foo`)
+    expect(code).not.toContain(`_resolveComponent("Foo")`)
+  })
+
   test('resolve namespaced component from setup bindings', () => {
     const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
       bindingMetadata: {
@@ -173,6 +288,23 @@ describe('compiler: element transform', () => {
     })
     expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
     expect(node.tag).toBe('_unref($props["Foo"]).Example')
+  })
+
+  test('resolve namespaced component from scoped slot bindings', () => {
+    const { code } = baseCompile(
+      `<Example v-slot="slotProps"><slot-props.Foo /></Example>`,
+      {
+        prefixIdentifiers: true,
+        isNativeTag: tag => tag !== 'slot-props.Foo',
+        bindingMetadata: {
+          Example: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).toContain(`_createVNode(slotProps.Foo)`)
+    expect(code).not.toContain(`_component_slot_props`)
+    expect(code).not.toContain(`_resolveComponent("slot-props.Foo")`)
   })
 
   test('do not resolve component from non-script-setup bindings', () => {
