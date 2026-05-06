@@ -37,7 +37,11 @@ import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import { type Block, isValidBlock } from '../src/block'
-import { hydrateNode, setCurrentHydrationNode } from '../src/dom/hydration'
+import {
+  hydrateNode,
+  setCurrentHydrationNode,
+  setIsHydratingEnabled,
+} from '../src/dom/hydration'
 import {
   DynamicFragment,
   ForFragment,
@@ -442,6 +446,35 @@ describe('component: slots', () => {
           expect(isHydratingSlotFallbackActive()).toBe(false)
         })
       })
+    })
+
+    test('empty forwarded slot hydration does not clean following sibling', async () => {
+      const start = document.createComment('[')
+      const end = document.createComment(']')
+      const footer = document.createElement('footer')
+      footer.textContent = 'footer'
+      const host = document.createElement('div')
+      host.append(start, end, footer)
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            const frag = new SlotFragment()
+            frag.forwarded = true
+            setCurrentHydrationNode(footer)
+            frag.hydrate(true, true)
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+      await nextTick()
+
+      expect(host.innerHTML).toBe(
+        '<!--[--><!--]--><!--slot--><footer>footer</footer>',
+      )
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
     test('slot fallback controller stops fallback scope when fallback body throws', async () => {

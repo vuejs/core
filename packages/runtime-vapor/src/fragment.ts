@@ -432,6 +432,7 @@ export class DynamicFragment extends VaporFragment {
           return
         }
         if (
+          !isSlot &&
           this.anchorLabel &&
           currentHydrationNode &&
           !isHydratingSlotFallbackActive() &&
