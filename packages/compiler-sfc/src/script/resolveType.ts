@@ -922,6 +922,7 @@ function importSourceToScope(
   node: Node,
   scope: TypeScope,
   source: string,
+  trackDep = true,
 ): TypeScope {
   let fs: FS | undefined
   try {
@@ -978,7 +979,9 @@ function importSourceToScope(
   }
   if (resolved) {
     // (hmr) register dependency file on ctx
-    ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
+    if (trackDep) {
+      ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
+    }
     return fileToScope(ctx, resolved)
   } else {
     return ctx.error(
@@ -1354,6 +1357,7 @@ function recordTypes(
                 s.source,
                 scope,
                 s.source.value,
+                false,
               )
               for (const spec of s.specifiers) {
                 if (spec.type === 'ExportSpecifier') {
@@ -1375,6 +1379,7 @@ function recordTypes(
               s.source,
               scope,
               s.source.value,
+              false,
             )
             Object.assign(types, sourceScope.exportedTypes)
             Object.assign(declares, sourceScope.exportedDeclares)

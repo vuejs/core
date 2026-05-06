@@ -1514,23 +1514,32 @@ describe('resolveType', () => {
 
       const globalTypeFiles = { globalTypeFiles: ['/global.d.ts'] }
 
-      expect(
-        resolve(`defineProps<Foo>()`, files, globalTypeFiles).props,
-      ).toStrictEqual({
+      const fooRes = resolve(`defineProps<Foo>()`, files, globalTypeFiles)
+      expect(fooRes.props).toStrictEqual({
         foo: ['Number'],
       })
+      expect(fooRes.deps && [...fooRes.deps]).toStrictEqual([
+        '/global.d.ts',
+        '/foo.ts',
+      ])
 
-      expect(
-        resolve(`defineProps<Bar>()`, files, globalTypeFiles).props,
-      ).toStrictEqual({
+      const barRes = resolve(`defineProps<Bar>()`, files, globalTypeFiles)
+      expect(barRes.props).toStrictEqual({
         bar: ['Boolean'],
       })
+      expect(barRes.deps && [...barRes.deps]).toStrictEqual([
+        '/global.d.ts',
+        '/bar.ts',
+      ])
 
-      expect(
-        resolve(`defineProps<Baz>()`, files, globalTypeFiles).props,
-      ).toStrictEqual({
+      const bazRes = resolve(`defineProps<Baz>()`, files, globalTypeFiles)
+      expect(bazRes.props).toStrictEqual({
         baz: ['String'],
       })
+      expect(bazRes.deps && [...bazRes.deps]).toStrictEqual([
+        '/global.d.ts',
+        '/baz.ts',
+      ])
     })
 
     test('global types with re-exports preserve source-module scope', () => {
