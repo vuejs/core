@@ -130,10 +130,7 @@ export enum NewlineType {
 
 export interface CodegenContext extends Omit<
   Required<CodegenOptions>,
-  | 'bindingMetadata'
-  | 'inline'
-  | 'vaporRuntimeModuleName'
-  | 'expressionPlugins'
+  'bindingMetadata' | 'inline' | 'vaporRuntimeModuleName' | 'expressionPlugins'
 > {
   source: string
   code: string
