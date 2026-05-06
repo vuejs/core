@@ -352,7 +352,12 @@ const vaporInteropImpl: Omit<
       // update
       // slot function changed (e.g. dynamic slots from _createForSlots),
       // need to re-mount the vapor block
-      const needsRemount = !n1.vs || !n2.vs || n2.vs.slot !== n1.vs.slot
+      const needsRemount =
+        !n1.vs ||
+        !n2.vs ||
+        !n1.vs.slot ||
+        !n2.vs.slot ||
+        n2.vs.slot !== n1.vs.slot
       if (needsRemount) {
         const selfAnchor = n1.anchor as Node
         const parent = selfAnchor.parentNode as ParentNode

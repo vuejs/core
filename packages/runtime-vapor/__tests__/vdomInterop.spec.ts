@@ -3659,12 +3659,43 @@ describe('vdomInterop', () => {
       const root = document.createElement('div')
       const app = createApp(App)
       app.use(vaporInteropPlugin)
+      const errorHandler = vi.fn()
+      app.config.errorHandler = errorHandler
 
       expect(() => app.mount(root)).not.toThrow()
 
       tick.value++
       await nextTick()
       expect(root.childNodes.length).toBeGreaterThan(0)
+      expect(errorHandler).not.toHaveBeenCalled()
+      app.unmount()
+    })
+
+    test('mount and update do not throw when vs slot is missing', async () => {
+      const tick = ref(0)
+      const App = defineComponent({
+        setup() {
+          return () => {
+            tick.value
+            const vnode = createVNode(VaporSlot, {})
+            ;(vnode as any).vs = {}
+            return vnode
+          }
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      const errorHandler = vi.fn()
+      app.config.errorHandler = errorHandler
+
+      expect(() => app.mount(root)).not.toThrow()
+
+      tick.value++
+      await nextTick()
+      expect(errorHandler).not.toHaveBeenCalled()
+      app.unmount()
     })
   })
 
