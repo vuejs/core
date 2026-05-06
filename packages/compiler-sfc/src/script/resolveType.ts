@@ -973,6 +973,14 @@ function importSourceToScope(
       }
       resolved = resolveWithTS(scope.filename, source, ts, fs)
     }
+    if (!resolved && source[0] === '.' && __CJS__) {
+      if (!ts) {
+        if (loadTS) ts = loadTS()
+      }
+      if (ts) {
+        resolved = resolveWithTS(scope.filename, source, ts, fs)
+      }
+    }
     if (resolved) {
       resolved = scope.resolvedImportSources[source] = normalizePath(resolved)
     }

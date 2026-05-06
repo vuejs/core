@@ -1566,6 +1566,33 @@ describe('resolveType', () => {
       })
     })
 
+    test('global types with re-exports from package directory', () => {
+      const files = {
+        '/node_modules/pkg/package.json': `{ "types": "dist/index.d.ts" }`,
+        '/node_modules/pkg/dist/index.d.ts': `
+          export interface PackageType { value: string }
+        `,
+        '/global.d.ts': `
+          declare global {
+            export type { PackageType } from './node_modules/pkg'
+          }
+          export {}
+        `,
+      }
+
+      const { props, deps } = resolve(`defineProps<PackageType>()`, files, {
+        globalTypeFiles: ['/global.d.ts'],
+      })
+
+      expect(props).toStrictEqual({
+        value: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual([
+        '/global.d.ts',
+        '/node_modules/pkg/dist/index.d.ts',
+      ])
+    })
+
     test('global types with re-exports track source deps after cache reuse', () => {
       const files = {
         '/foo.ts': `export interface Foo { foo: number }`,
