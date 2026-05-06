@@ -8,20 +8,20 @@ describe('api: expose', () => {
       setup(_, { expose }) {
         expose({
           foo: 1,
-          bar: ref(2)
+          bar: ref(2),
         })
         return {
           bar: ref(3),
-          baz: ref(4)
+          baz: ref(4),
         }
-      }
+      },
     })
 
     const childRef = ref()
     const Parent = {
       setup() {
         return () => h(Child, { ref: childRef })
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
@@ -36,23 +36,23 @@ describe('api: expose', () => {
       render() {},
       data() {
         return {
-          foo: 1
+          foo: 1,
         }
       },
       setup() {
         return {
           bar: ref(2),
-          baz: ref(3)
+          baz: ref(3),
         }
       },
-      expose: ['foo', 'bar']
+      expose: ['foo', 'bar'],
     })
 
     const childRef = ref()
     const Parent = {
       setup() {
         return () => h(Child, { ref: childRef })
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
@@ -68,25 +68,25 @@ describe('api: expose', () => {
       expose: ['foo'],
       data() {
         return {
-          foo: 1
+          foo: 1,
         }
       },
       setup(_, { expose }) {
         expose({
-          bar: ref(2)
+          bar: ref(2),
         })
         return {
           bar: ref(3),
-          baz: ref(4)
+          baz: ref(4),
         }
-      }
+      },
     })
 
     const childRef = ref()
     const Parent = {
       setup() {
         return () => h(Child, { ref: childRef })
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
@@ -102,16 +102,16 @@ describe('api: expose', () => {
       expose: [],
       data() {
         return {
-          foo: 1
+          foo: 1,
         }
-      }
+      },
     })
 
     const childRef = ref()
     const Parent = {
       setup() {
         return () => h(Child, { ref: childRef })
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
@@ -125,16 +125,16 @@ describe('api: expose', () => {
       expose: [],
       setup(_, { expose }) {
         expose({
-          foo: 1
+          foo: 1,
         })
-      }
+      },
     })
 
     const childRef = ref()
     const Parent = {
       setup() {
         return () => h(Child, { ref: childRef })
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
@@ -149,22 +149,22 @@ describe('api: expose', () => {
         expect((this.$parent! as any).bar).toBe(undefined)
         expect((this.$root! as any).foo).toBe(1)
         expect((this.$root! as any).bar).toBe(undefined)
-      }
+      },
     })
 
     const Parent = defineComponent({
       expose: [],
       setup(_, { expose }) {
         expose({
-          foo: 1
+          foo: 1,
         })
         return {
-          bar: 2
+          bar: 2,
         }
       },
       render() {
         return h(Child)
-      }
+      },
     })
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
@@ -174,15 +174,15 @@ describe('api: expose', () => {
     const Component = defineComponent({
       setup(_, { expose }) {
         expose({
-          foo: 1
+          foo: 1,
         })
         return {
-          bar: 2
+          bar: 2,
         }
       },
       render() {
         return h('div')
-      }
+      },
     })
     const root = nodeOps.createElement('div')
     const vm = createApp(Component).mount(root) as any
@@ -194,7 +194,7 @@ describe('api: expose', () => {
     const GrandChild = defineComponent({
       render() {
         return h('div')
-      }
+      },
     })
 
     const grandChildRef = ref()
@@ -204,17 +204,17 @@ describe('api: expose', () => {
       },
       setup(_, { expose }) {
         expose({
-          foo: 42
+          foo: 42,
         })
         return () => h(GrandChild, { ref: grandChildRef })
-      }
+      },
     })
 
     const childRef = ref()
     const Parent = {
       setup() {
         return () => h(Child, { ref: childRef })
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
@@ -231,11 +231,11 @@ describe('api: expose', () => {
       setup(_, { expose }) {
         expose(ref(1))
         return () => null
-      }
+      },
     })
     render(h(Comp), nodeOps.createElement('div'))
     expect(
-      'expose() should be passed a plain object, received ref'
+      'expose() should be passed a plain object, received ref',
     ).toHaveBeenWarned()
   })
 
@@ -244,11 +244,11 @@ describe('api: expose', () => {
       setup(_, { expose }) {
         expose(['focus'])
         return () => null
-      }
+      },
     })
     render(h(Comp), nodeOps.createElement('div'))
     expect(
-      'expose() should be passed a plain object, received array'
+      'expose() should be passed a plain object, received array',
     ).toHaveBeenWarned()
   })
 
@@ -257,11 +257,11 @@ describe('api: expose', () => {
       setup(_, { expose }) {
         expose(() => null)
         return () => null
-      }
+      },
     })
     render(h(Comp), nodeOps.createElement('div'))
     expect(
-      'expose() should be passed a plain object, received function'
+      'expose() should be passed a plain object, received function',
     ).toHaveBeenWarned()
   })
 })

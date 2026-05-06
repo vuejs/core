@@ -10,9 +10,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-
+const props = __props
 
 return { props, bar }
 }
@@ -20,17 +18,56 @@ return { props, bar }
 }"
 `;
 
+exports[`defineProps > custom element retains the props type & default value & production mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Props { 
+          foo?: number;
+      }
+      
+export default /*@__PURE__*/_defineComponent({
+  __name: 'app.ce',
+  props: {
+    foo: { default: 5.5, type: Number }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      const props = __props;
+      
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > custom element retains the props type & production mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  __name: 'app.ce',
+  props: {
+    foo: {type: Number}
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      const props = __props
+      
+return { props }
+}
+
+})"
+`;
+
 exports[`defineProps > defineProps w/ runtime options 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: { foo: String },
   setup(__props, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-
+const props = __props
 
 return { props }
 }
@@ -41,17 +78,60 @@ return { props }
 exports[`defineProps > destructure without enabling reactive destructure 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     foo: { type: null, required: true }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const { foo } = __props;
+      const { foo } = __props
+      
+return { foo }
+}
 
-      
-      
+})"
+`;
+
+exports[`defineProps > should escape names w/ special symbols 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    "spa ce": { type: null, required: true },
+    "exclamation!mark": { type: null, required: true },
+    "double\\"quote": { type: null, required: true },
+    "hash#tag": { type: null, required: true },
+    "dollar$sign": { type: null, required: true },
+    "percentage%sign": { type: null, required: true },
+    "amper&sand": { type: null, required: true },
+    "single'quote": { type: null, required: true },
+    "round(brack)ets": { type: null, required: true },
+    "aste*risk": { type: null, required: true },
+    "pl+us": { type: null, required: true },
+    "com,ma": { type: null, required: true },
+    "do.t": { type: null, required: true },
+    "sla/sh": { type: null, required: true },
+    "co:lon": { type: null, required: true },
+    "semi;colon": { type: null, required: true },
+    "angle<brack>ets": { type: null, required: true },
+    "equal=sign": { type: null, required: true },
+    "question?mark": { type: null, required: true },
+    "at@sign": { type: null, required: true },
+    "square[brack]ets": { type: null, required: true },
+    "back\\\\slash": { type: null, required: true },
+    "ca^ret": { type: null, required: true },
+    "back\`tick": { type: null, required: true },
+    "curly{bra}ces": { type: null, required: true },
+    "pi|pe": { type: null, required: true },
+    "til~de": { type: null, required: true },
+    "da-sh": { type: null, required: true }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    
+    
 return {  }
 }
 
@@ -61,7 +141,7 @@ return {  }
 exports[`defineProps > w/ TS assertion 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: ['foo'],
   setup(__props, { expose: __expose }) {
   __expose();
@@ -78,7 +158,7 @@ exports[`defineProps > w/ exported interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Props { x?: number }
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   },
@@ -98,7 +178,7 @@ exports[`defineProps > w/ exported interface in normal script 1`] = `
 
       export interface Props { x?: number }
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   },
@@ -117,7 +197,7 @@ exports[`defineProps > w/ exported type alias 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export type Props = { x?: number }
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   },
@@ -142,7 +222,34 @@ interface Bar extends Foo { y?: number }
       
       interface Foo { x?: number }
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    z: { type: Number, required: true },
+    y: { type: String, required: true },
+    x: { type: Number, required: false }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+    
+return {  }
+}
+
+})"
+`;
+
+exports[`defineProps > w/ extends intersection type 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Foo = {
+        x?: number;
+      };
+      interface Props extends Foo {
+        z: number
+        y: string
+      }
+      
+export default /*@__PURE__*/_defineComponent({
   props: {
     z: { type: Number, required: true },
     y: { type: String, required: true },
@@ -167,9 +274,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props, get propsModel() { return propsModel } }
 }
@@ -181,7 +286,7 @@ exports[`defineProps > w/ interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Props { x?: number }
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   },
@@ -196,6 +301,31 @@ return {  }
 })"
 `;
 
+exports[`defineProps > w/ intersection type 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Foo = {
+        x?: number;
+      };
+      type Bar = {
+        y: string;
+      };
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    x: { type: Number, required: false },
+    y: { type: String, required: true }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+    
+return {  }
+}
+
+})"
+`;
+
 exports[`defineProps > w/ leading code 1`] = `
 "import { x } from './x'
     
@@ -203,9 +333,7 @@ export default {
   props: {},
   setup(__props, { expose: __expose }) {
   __expose();
-
-const props = __props;
-
+const props = __props
     
 return { props, get x() { return x } }
 }
@@ -220,7 +348,7 @@ interface Test {}
     type Alias = number[]
 
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     string: { type: String, required: true },
     number: { type: Number, required: true },
@@ -242,6 +370,7 @@ export default /*#__PURE__*/_defineComponent({
     alias: { type: Array, required: true },
     method: { type: Function, required: true },
     symbol: { type: Symbol, required: true },
+    error: { type: Error, required: true },
     extract: { type: Number, required: true },
     exclude: { type: [Number, Boolean], required: true },
     uppercase: { type: String, required: true },
@@ -276,7 +405,7 @@ exports[`defineProps > w/ type alias 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 type Props = { x?: number }
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     x: { type: Number, required: false }
   },
@@ -295,8 +424,8 @@ exports[`defineProps > withDefaults (dynamic) 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 import { defaults } from './foo'
     
-export default /*#__PURE__*/_defineComponent({
-  props: _mergeDefaults({
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeDefaults({
     foo: { type: String, required: false },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true }
@@ -304,9 +433,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props, get defaults() { return defaults } }
 }
@@ -318,8 +445,8 @@ exports[`defineProps > withDefaults (dynamic) w/ production mode 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 import { defaults } from './foo'
     
-export default /*#__PURE__*/_defineComponent({
-  props: _mergeDefaults({
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeDefaults({
     foo: { type: Function },
     bar: { type: Boolean },
     baz: { type: [Boolean, Function] },
@@ -328,9 +455,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props, get defaults() { return defaults } }
 }
@@ -342,8 +467,8 @@ exports[`defineProps > withDefaults (reference) 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 import { defaults } from './foo'
     
-export default /*#__PURE__*/_defineComponent({
-  props: _mergeDefaults({
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeDefaults({
     foo: { type: String, required: false },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true }
@@ -351,9 +476,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props, get defaults() { return defaults } }
 }
@@ -368,16 +491,14 @@ exports[`defineProps > withDefaults (static) + normal script 1`] = `
         a?: string;
       }
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
-    a: { type: String, required: false, default: \\"a\\" }
+    a: { type: String, required: false, default: "a" }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-      
+      const props = __props;
     
 return { props }
 }
@@ -388,7 +509,7 @@ return { props }
 exports[`defineProps > withDefaults (static) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     foo: { type: String, required: false, default: 'hi' },
     bar: { type: Number, required: false },
@@ -396,14 +517,13 @@ export default /*#__PURE__*/_defineComponent({
     qux: { type: Function, required: false, default() { return 1 } },
     quux: { type: Function, required: false, default() { } },
     quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } },
+    quuux: { type: Number, required: false, default(a, [b, ...c], {d, ...e}, ...f) { return 1 } },
     fred: { type: String, required: false, get default() { return 'fred' } }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props }
 }
@@ -414,7 +534,7 @@ return { props }
 exports[`defineProps > withDefaults (static) w/ production mode 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   props: {
     foo: {},
     bar: { type: Boolean },
@@ -424,9 +544,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props }
 }
@@ -437,8 +555,8 @@ return { props }
 exports[`defineProps > withDefaults w/ dynamic object method 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
-  props: _mergeDefaults({
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeDefaults({
     foo: { type: Function, required: false }
   }, {
       ['fo' + 'o']() { return 'foo' }
@@ -446,9 +564,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props }
 }

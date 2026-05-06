@@ -3,11 +3,11 @@ import { compile } from '../src'
 describe('ssr compile: suspense', () => {
   test('implicit default', () => {
     expect(compile(`<suspense><foo/></suspense>`).code).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require(\\"vue\\")
-      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"vue/server-renderer\\")
+      "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _component_foo = _resolveComponent(\\"foo\\")
+        const _component_foo = _resolveComponent("foo")
 
         _ssrRenderSuspense(_push, {
           default: () => {
@@ -28,13 +28,13 @@ describe('ssr compile: suspense', () => {
       <template #fallback>
         loading...
       </template>
-    </suspense>`).code
+    </suspense>`).code,
     ).toMatchInlineSnapshot(`
-      "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require(\\"vue\\")
-      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"vue/server-renderer\\")
+      "const { resolveComponent: _resolveComponent, withCtx: _withCtx } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderSuspense: _ssrRenderSuspense } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _component_foo = _resolveComponent(\\"foo\\")
+        const _component_foo = _resolveComponent("foo")
 
         _ssrRenderSuspense(_push, {
           default: () => {

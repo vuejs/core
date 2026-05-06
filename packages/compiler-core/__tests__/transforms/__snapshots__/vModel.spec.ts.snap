@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: transform v-model > compound expression (with prefixIdentifiers) 1`] = `
-"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"input\\", {
+  return (_openBlock(), _createElementBlock("input", {
     modelValue: _ctx.model[_ctx.index],
-    \\"onUpdate:modelValue\\": $event => ((_ctx.model[_ctx.index]) = $event)
-  }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+    "onUpdate:modelValue": $event => ((_ctx.model[_ctx.index]) = $event)
+  }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
 }"
 `;
 
@@ -18,10 +18,10 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"input\\", {
+    return (_openBlock(), _createElementBlock("input", {
       modelValue: model[index],
-      \\"onUpdate:modelValue\\": $event => ((model[index]) = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+      "onUpdate:modelValue": $event => ((model[index]) = $event)
+    }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
   }
 }"
 `;
@@ -33,30 +33,30 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"input\\", {
+    return (_openBlock(), _createElementBlock("input", {
       modelValue: 
  model
 .
 foo 
 ,
-      \\"onUpdate:modelValue\\": $event => ((
+      "onUpdate:modelValue": $event => ((
  model
 .
 foo 
 ) = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+    }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
   }
 }"
 `;
 
 exports[`compiler: transform v-model > simple expression (with prefixIdentifiers) 1`] = `
-"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"input\\", {
+  return (_openBlock(), _createElementBlock("input", {
     modelValue: _ctx.model,
-    \\"onUpdate:modelValue\\": $event => ((_ctx.model) = $event)
-  }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+    "onUpdate:modelValue": $event => ((_ctx.model) = $event)
+  }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
 }"
 `;
 
@@ -67,10 +67,10 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"input\\", {
+    return (_openBlock(), _createElementBlock("input", {
       modelValue: model,
-      \\"onUpdate:modelValue\\": $event => ((model) = $event)
-    }, null, 8 /* PROPS */, [\\"modelValue\\", \\"onUpdate:modelValue\\"]))
+      "onUpdate:modelValue": $event => ((model) = $event)
+    }, null, 8 /* PROPS */, ["modelValue", "onUpdate:modelValue"]))
   }
 }"
 `;
@@ -82,21 +82,21 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"input\\", {
-      \\"foo-value\\": model,
-      \\"onUpdate:fooValue\\": $event => ((model) = $event)
-    }, null, 40 /* PROPS, HYDRATE_EVENTS */, [\\"foo-value\\", \\"onUpdate:fooValue\\"]))
+    return (_openBlock(), _createElementBlock("input", {
+      "foo-value": model,
+      "onUpdate:fooValue": $event => ((model) = $event)
+    }, null, 40 /* PROPS, NEED_HYDRATION */, ["foo-value", "onUpdate:fooValue"]))
   }
 }"
 `;
 
 exports[`compiler: transform v-model > with dynamic argument (with prefixIdentifiers) 1`] = `
-"import { normalizeProps as _normalizeProps, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+"import { normalizeProps as _normalizeProps, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
 export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock(\\"input\\", _normalizeProps({
+  return (_openBlock(), _createElementBlock("input", _normalizeProps({
     [_ctx.value]: _ctx.model,
-    [\\"onUpdate:\\" + _ctx.value]: $event => ((_ctx.model) = $event)
+    ["onUpdate:" + _ctx.value]: $event => ((_ctx.model) = $event)
   }), null, 16 /* FULL_PROPS */))
 }"
 `;
@@ -108,9 +108,9 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { normalizeProps: _normalizeProps, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
-    return (_openBlock(), _createElementBlock(\\"input\\", _normalizeProps({
+    return (_openBlock(), _createElementBlock("input", _normalizeProps({
       [value]: model,
-      [\\"onUpdate:\\" + value]: $event => ((model) = $event)
+      ["onUpdate:" + value]: $event => ((model) = $event)
     }), null, 16 /* FULL_PROPS */))
   }
 }"

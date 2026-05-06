@@ -69,27 +69,27 @@ describe('utils/looseEqual', () => {
     const date2 = new Date(2019, 1, 2, 3, 4, 5, 7)
     const file1 = new File([''], 'filename.txt', {
       type: 'text/plain',
-      lastModified: date1.getTime()
+      lastModified: date1.getTime(),
     })
     const file2 = new File([''], 'filename.txt', {
       type: 'text/plain',
-      lastModified: date1.getTime()
+      lastModified: date1.getTime(),
     })
     const file3 = new File([''], 'filename.txt', {
       type: 'text/plain',
-      lastModified: date2.getTime()
+      lastModified: date2.getTime(),
     })
     const file4 = new File([''], 'filename.csv', {
       type: 'text/csv',
-      lastModified: date1.getTime()
+      lastModified: date1.getTime(),
     })
     const file5 = new File(['abcdef'], 'filename.txt', {
       type: 'text/plain',
-      lastModified: date1.getTime()
+      lastModified: date1.getTime(),
     })
     const file6 = new File(['12345'], 'filename.txt', {
       type: 'text/plain',
-      lastModified: date1.getTime()
+      lastModified: date1.getTime(),
     })
 
     // Identical file object references
@@ -178,7 +178,7 @@ describe('utils/looseEqual', () => {
     const date1 = new Date(2019, 1, 2, 3, 4, 5, 6)
     const file1 = new File([''], 'filename.txt', {
       type: 'text/plain',
-      lastModified: date1.getTime()
+      lastModified: date1.getTime(),
     })
 
     expect(looseEqual(123, '123')).toBe(true)

@@ -14,7 +14,7 @@ describe('reactivity/collections', () => {
 
         sroMap.set(key, {} as any)
         expect(
-          `Set operation on key "[object Object]" failed: target is readonly.`
+          `Set operation on key "[object Object]" failed: target is readonly.`,
         ).toHaveBeenWarned()
       })
 
@@ -28,7 +28,7 @@ describe('reactivity/collections', () => {
 
         sroMap.get(key)!.foo = 2
         expect(
-          `Set operation on key "foo" failed: target is readonly.`
+          `Set operation on key "foo" failed: target is readonly.`,
         ).not.toHaveBeenWarned()
       })
     })
@@ -48,7 +48,7 @@ describe('reactivity/collections', () => {
 
       values1[0].foo = 2
       expect(
-        `Set operation on key "foo" failed: target is readonly.`
+        `Set operation on key "foo" failed: target is readonly.`,
       ).not.toHaveBeenWarned()
 
       expect(isReadonly(values2[0][1])).toBe(false)
@@ -57,7 +57,7 @@ describe('reactivity/collections', () => {
 
       values2[0][1].foo = 2
       expect(
-        `Set operation on key "foo" failed: target is readonly.`
+        `Set operation on key "foo" failed: target is readonly.`,
       ).not.toHaveBeenWarned()
     })
 
@@ -73,7 +73,7 @@ describe('reactivity/collections', () => {
 
         val.foo = 2
         expect(
-          `Set operation on key "foo" failed: target is readonly.`
+          `Set operation on key "foo" failed: target is readonly.`,
         ).not.toHaveBeenWarned()
       })
     })
@@ -91,7 +91,7 @@ describe('reactivity/collections', () => {
 
         sroSet.add({} as any)
         expect(
-          `Add operation on key "[object Object]" failed: target is readonly.`
+          `Add operation on key "[object Object]" failed: target is readonly.`,
         ).toHaveBeenWarned()
       })
     })
@@ -109,12 +109,12 @@ describe('reactivity/collections', () => {
 
       sroSet.add({} as any)
       expect(
-        `Add operation on key "[object Object]" failed: target is readonly.`
+        `Add operation on key "[object Object]" failed: target is readonly.`,
       ).toHaveBeenWarned()
 
       values[0].foo = 2
       expect(
-        `Set operation on key "foo" failed: target is readonly.`
+        `Set operation on key "foo" failed: target is readonly.`,
       ).not.toHaveBeenWarned()
     })
 
@@ -132,7 +132,7 @@ describe('reactivity/collections', () => {
 
       values1[0].foo = 2
       expect(
-        `Set operation on key "foo" failed: target is readonly.`
+        `Set operation on key "foo" failed: target is readonly.`,
       ).not.toHaveBeenWarned()
 
       expect(isReadonly(values2[0][1])).toBe(false)
@@ -141,7 +141,7 @@ describe('reactivity/collections', () => {
 
       values2[0][1].foo = 2
       expect(
-        `Set operation on key "foo" failed: target is readonly.`
+        `Set operation on key "foo" failed: target is readonly.`,
       ).not.toHaveBeenWarned()
     })
 
@@ -157,7 +157,7 @@ describe('reactivity/collections', () => {
 
         val.foo = 2
         expect(
-          `Set operation on key "foo" failed: target is readonly.`
+          `Set operation on key "foo" failed: target is readonly.`,
         ).not.toHaveBeenWarned()
       })
     })

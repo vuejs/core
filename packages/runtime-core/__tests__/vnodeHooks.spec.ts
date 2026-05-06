@@ -1,11 +1,11 @@
 import {
-  h,
-  render,
-  nodeOps,
-  VNodeProps,
-  TestElement,
+  type TestElement,
   TestNodeTypes,
-  VNode
+  type VNode,
+  type VNodeProps,
+  h,
+  nodeOps,
+  render,
 } from '@vue/runtime-test'
 
 describe('renderer: vnode hooks', () => {
@@ -40,22 +40,22 @@ describe('renderer: vnode hooks', () => {
 
   test('should work on element', () => {
     const hooks: VNodeProps = {
-      onVnodeBeforeMount: vi.fn(),
-      onVnodeMounted: vi.fn(),
+      onVnodeBeforeMount: vi.fn<(vnode: VNode) => void>(),
+      onVnodeMounted: vi.fn<(vnode: VNode) => void>(),
       onVnodeBeforeUpdate: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
           type: TestNodeTypes.TEXT,
-          text: 'foo'
+          text: 'foo',
         })
       }),
       onVnodeUpdated: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
           type: TestNodeTypes.TEXT,
-          text: 'bar'
+          text: 'bar',
         })
       }),
-      onVnodeBeforeUnmount: vi.fn(),
-      onVnodeUnmounted: vi.fn()
+      onVnodeBeforeUnmount: vi.fn<(vnode: VNode) => void>(),
+      onVnodeUnmounted: vi.fn<(vnode: VNode) => void>(),
     }
 
     assertHooks(hooks, h('div', hooks, 'foo'), h('div', hooks, 'bar'))
@@ -65,34 +65,34 @@ describe('renderer: vnode hooks', () => {
     const Comp = (props: { msg: string }) => props.msg
 
     const hooks: VNodeProps = {
-      onVnodeBeforeMount: vi.fn(),
-      onVnodeMounted: vi.fn(),
+      onVnodeBeforeMount: vi.fn<(vnode: VNode) => void>(),
+      onVnodeMounted: vi.fn<(vnode: VNode) => void>(),
       onVnodeBeforeUpdate: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
           type: TestNodeTypes.TEXT,
-          text: 'foo'
+          text: 'foo',
         })
       }),
       onVnodeUpdated: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
           type: TestNodeTypes.TEXT,
-          text: 'bar'
+          text: 'bar',
         })
       }),
-      onVnodeBeforeUnmount: vi.fn(),
-      onVnodeUnmounted: vi.fn()
+      onVnodeBeforeUnmount: vi.fn<(vnode: VNode) => void>(),
+      onVnodeUnmounted: vi.fn<(vnode: VNode) => void>(),
     }
 
     assertHooks(
       hooks,
       h(Comp, {
         ...hooks,
-        msg: 'foo'
+        msg: 'foo',
       }),
       h(Comp, {
         ...hooks,
-        msg: 'bar'
-      })
+        msg: 'bar',
+      }),
     )
   })
 })

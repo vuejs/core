@@ -1,13 +1,17 @@
-import { ReactiveEffect } from './effect'
+import type { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
-let activeEffectScope: EffectScope | undefined
+export let activeEffectScope: EffectScope | undefined
 
 export class EffectScope {
   /**
    * @internal
    */
   private _active = true
+  /**
+   * @internal track `on` calls, allow `on` call multiple times
+   */
+  private _on = 0
   /**
    * @internal
    */
@@ -16,6 +20,8 @@ export class EffectScope {
    * @internal
    */
   cleanups: (() => void)[] = []
+
+  private _isPaused = false
 
   /**
    * only assigned by undetached scope
@@ -34,18 +40,56 @@ export class EffectScope {
    */
   private index: number | undefined
 
+  readonly __v_skip = true
+  // TODO isolatedDeclarations ReactiveFlags.SKIP
+
   constructor(public detached = false) {
     this.parent = activeEffectScope
     if (!detached && activeEffectScope) {
       this.index =
         (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
-          this
+          this,
         ) - 1
     }
   }
 
-  get active() {
+  get active(): boolean {
     return this._active
+  }
+
+  pause(): void {
+    if (this._active) {
+      this._isPaused = true
+      let i, l
+      if (this.scopes) {
+        for (i = 0, l = this.scopes.length; i < l; i++) {
+          this.scopes[i].pause()
+        }
+      }
+      for (i = 0, l = this.effects.length; i < l; i++) {
+        this.effects[i].pause()
+      }
+    }
+  }
+
+  /**
+   * Resumes the effect scope, including all child scopes and effects.
+   */
+  resume(): void {
+    if (this._active) {
+      if (this._isPaused) {
+        this._isPaused = false
+        let i, l
+        if (this.scopes) {
+          for (i = 0, l = this.scopes.length; i < l; i++) {
+            this.scopes[i].resume()
+          }
+        }
+        for (i = 0, l = this.effects.length; i < l; i++) {
+          this.effects[i].resume()
+        }
+      }
+    }
   }
 
   run<T>(fn: () => T): T | undefined {
@@ -62,36 +106,69 @@ export class EffectScope {
     }
   }
 
+  prevScope: EffectScope | undefined
   /**
    * This should only be called on non-detached scopes
    * @internal
    */
-  on() {
-    activeEffectScope = this
+  on(): void {
+    if (++this._on === 1) {
+      this.prevScope = activeEffectScope
+      activeEffectScope = this
+    }
   }
 
   /**
    * This should only be called on non-detached scopes
    * @internal
    */
-  off() {
-    activeEffectScope = this.parent
+  off(): void {
+    if (this._on > 0 && --this._on === 0) {
+      // Fast path: in the common LIFO case this scope is still at the top
+      // of the active chain, so we can restore the previous scope directly.
+      if (activeEffectScope === this) {
+        activeEffectScope = this.prevScope
+      } else {
+        // withAsyncContext() restores the current component scope for the
+        // current async continuation, then defers its cleanup to a microtask.
+        // If sibling continuations interleave (A restore -> B restore ->
+        // A cleanup), activeEffectScope is already B instead of this scope A
+        // when A's cleanup calls off(). Unlink A from the middle of the
+        // active chain so a stale scope doesn't remain globally reachable.
+        let current = activeEffectScope
+        while (current) {
+          if (current.prevScope === this) {
+            current.prevScope = this.prevScope
+            break
+          }
+          current = current.prevScope
+        }
+      }
+      this.prevScope = undefined
+    }
   }
 
-  stop(fromParent?: boolean) {
+  stop(fromParent?: boolean): void {
     if (this._active) {
+      this._active = false
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
         this.effects[i].stop()
       }
+      this.effects.length = 0
+
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()
       }
+      this.cleanups.length = 0
+
       if (this.scopes) {
         for (i = 0, l = this.scopes.length; i < l; i++) {
           this.scopes[i].stop(true)
         }
+        this.scopes.length = 0
       }
+
       // nested scope, dereference from parent to avoid memory leaks
       if (!this.detached && this.parent && !fromParent) {
         // optimized O(1) removal
@@ -102,7 +179,6 @@ export class EffectScope {
         }
       }
       this.parent = undefined
-      this._active = false
     }
   }
 }
@@ -116,17 +192,8 @@ export class EffectScope {
  * @param detached - Can be used to create a "detached" effect scope.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#effectscope}
  */
-export function effectScope(detached?: boolean) {
+export function effectScope(detached?: boolean): EffectScope {
   return new EffectScope(detached)
-}
-
-export function recordEffectScope(
-  effect: ReactiveEffect,
-  scope: EffectScope | undefined = activeEffectScope
-) {
-  if (scope && scope.active) {
-    scope.effects.push(effect)
-  }
 }
 
 /**
@@ -134,7 +201,7 @@ export function recordEffectScope(
  *
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#getcurrentscope}
  */
-export function getCurrentScope() {
+export function getCurrentScope(): EffectScope | undefined {
   return activeEffectScope
 }
 
@@ -145,13 +212,13 @@ export function getCurrentScope() {
  * @param fn - The callback function to attach to the scope's cleanup.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
-export function onScopeDispose(fn: () => void) {
+export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope) {
     activeEffectScope.cleanups.push(fn)
-  } else if (__DEV__) {
+  } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
-        ` to be associated with.`
+        ` to be associated with.`,
     )
   }
 }

@@ -1,16 +1,19 @@
 import {
-  AttributeNode,
-  buildProps,
-  ComponentNode,
-  createCallExpression,
-  DirectiveNode,
-  findProp,
-  JSChildNode,
+  type AttributeNode,
+  type ComponentNode,
+  type DirectiveNode,
+  type JSChildNode,
   NodeTypes,
-  TransformContext
+  type TransformContext,
+  buildProps,
+  createCallExpression,
+  findProp,
 } from '@vue/compiler-dom'
 import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
-import { processChildren, SSRTransformContext } from '../ssrCodegenTransform'
+import {
+  type SSRTransformContext,
+  processChildren,
+} from '../ssrCodegenTransform'
 import { buildSSRProps } from './ssrTransformElement'
 
 const wipMap = new WeakMap<ComponentNode, WIPEntry>()
@@ -18,14 +21,15 @@ const wipMap = new WeakMap<ComponentNode, WIPEntry>()
 interface WIPEntry {
   tag: AttributeNode | DirectiveNode
   propsExp: string | JSChildNode | null
+  scopeId: string | null
 }
 
 // phase 1: build props
 export function ssrTransformTransitionGroup(
   node: ComponentNode,
-  context: TransformContext
+  context: TransformContext,
 ) {
-  return () => {
+  return (): void => {
     const tag = findProp(node, 'tag')
     if (tag) {
       const otherProps = node.props.filter(p => p !== tag)
@@ -35,17 +39,18 @@ export function ssrTransformTransitionGroup(
         otherProps,
         true /* isComponent */,
         false /* isDynamicComponent */,
-        true /* ssr (skip event listeners) */
+        true /* ssr (skip event listeners) */,
       )
       let propsExp = null
       if (props || directives.length) {
         propsExp = createCallExpression(context.helper(SSR_RENDER_ATTRS), [
-          buildSSRProps(props, directives, context)
+          buildSSRProps(props, directives, context),
         ])
       }
       wipMap.set(node, {
         tag,
-        propsExp
+        propsExp,
+        scopeId: context.scopeId || null,
       })
     }
   }
@@ -54,17 +59,20 @@ export function ssrTransformTransitionGroup(
 // phase 2: process children
 export function ssrProcessTransitionGroup(
   node: ComponentNode,
-  context: SSRTransformContext
-) {
+  context: SSRTransformContext,
+): void {
   const entry = wipMap.get(node)
   if (entry) {
-    const { tag, propsExp } = entry
+    const { tag, propsExp, scopeId } = entry
     if (tag.type === NodeTypes.DIRECTIVE) {
       // dynamic :tag
       context.pushStringPart(`<`)
       context.pushStringPart(tag.exp!)
       if (propsExp) {
         context.pushStringPart(propsExp)
+      }
+      if (scopeId) {
+        context.pushStringPart(` ${scopeId}`)
       }
       context.pushStringPart(`>`)
 
@@ -78,7 +86,14 @@ export function ssrProcessTransitionGroup(
          * be patched using the same key map) so we need to account for that here
          * by disabling nested fragment wrappers from being generated.
          */
-        true
+        true,
+        /**
+         * TransitionGroup filters out comment children at runtime and thus
+         * doesn't expect comments to be present during hydration. We need to
+         * account for that by disabling the empty comment that is otherwise
+         * rendered for a falsy v-if that has no v-else specified. (#6715)
+         */
+        true,
       )
       context.pushStringPart(`</`)
       context.pushStringPart(tag.exp!)
@@ -89,12 +104,15 @@ export function ssrProcessTransitionGroup(
       if (propsExp) {
         context.pushStringPart(propsExp)
       }
+      if (scopeId) {
+        context.pushStringPart(` ${scopeId}`)
+      }
       context.pushStringPart(`>`)
-      processChildren(node, context, false, true)
+      processChildren(node, context, false, true, true)
       context.pushStringPart(`</${tag.value!.content}>`)
     }
   } else {
     // fragment
-    processChildren(node, context, true, true)
+    processChildren(node, context, true, true, true)
   }
 }

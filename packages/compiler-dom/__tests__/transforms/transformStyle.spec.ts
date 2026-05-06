@@ -1,10 +1,10 @@
 import {
+  type CompilerOptions,
+  type ElementNode,
+  NodeTypes,
+  type VNodeCall,
   baseParse as parse,
   transform,
-  CompilerOptions,
-  ElementNode,
-  NodeTypes,
-  VNodeCall
 } from '@vue/compiler-core'
 import { transformBind } from '../../../compiler-core/src/transforms/vBind'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
@@ -12,16 +12,16 @@ import { transformStyle } from '../../src/transforms/transformStyle'
 
 function transformWithStyleTransform(
   template: string,
-  options: CompilerOptions = {}
+  options: CompilerOptions = {},
 ) {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [transformStyle],
-    ...options
+    ...options,
   })
   return {
     root: ast,
-    node: ast.children[0] as ElementNode
+    node: ast.children[0] as ElementNode,
   }
 }
 
@@ -34,13 +34,13 @@ describe('compiler: style transform', () => {
       arg: {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: `style`,
-        isStatic: true
+        isStatic: true,
       },
       exp: {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: `{"color":"red"}`,
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
   })
 
@@ -48,8 +48,8 @@ describe('compiler: style transform', () => {
     const { node } = transformWithStyleTransform(`<div style="color: red"/>`, {
       nodeTransforms: [transformStyle, transformElement],
       directiveTransforms: {
-        bind: transformBind
-      }
+        bind: transformBind,
+      },
     })
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       type: NodeTypes.JS_OBJECT_EXPRESSION,
@@ -58,15 +58,15 @@ describe('compiler: style transform', () => {
           key: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `style`,
-            isStatic: true
+            isStatic: true,
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `{"color":"red"}`,
-            isStatic: false
-          }
-        }
-      ]
+            isStatic: false,
+          },
+        },
+      ],
     })
     // should not cause the STYLE patchFlag to be attached
     expect((node.codegenNode as VNodeCall).patchFlag).toBeUndefined()

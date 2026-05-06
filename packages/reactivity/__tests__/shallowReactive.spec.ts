@@ -3,11 +3,11 @@ import {
   isShallow,
   reactive,
   shallowReactive,
-  shallowReadonly
+  shallowReadonly,
 } from '../src/reactive'
 
 import { effect } from '../src/effect'
-import { Ref, isRef, ref } from '../src/ref'
+import { type Ref, isRef, ref } from '../src/ref'
 
 describe('shallowReactive', () => {
   test('should not make non-reactive properties reactive', () => {
@@ -50,7 +50,7 @@ describe('shallowReactive', () => {
   // vuejs/vue#12597
   test('should not unwrap refs', () => {
     const foo = shallowReactive({
-      bar: ref(123)
+      bar: ref(123),
     })
     expect(isRef(foo.bar)).toBe(true)
     expect(foo.bar.value).toBe(123)
@@ -60,7 +60,7 @@ describe('shallowReactive', () => {
   test('should not mutate refs', () => {
     const original = ref(123)
     const foo = shallowReactive<{ bar: Ref<number> | number }>({
-      bar: original
+      bar: original,
     })
     expect(foo.bar).toBe(original)
     foo.bar = 234
@@ -123,6 +123,29 @@ describe('shallowReactive', () => {
       shallowSet.forEach(x => expect(isReactive(x)).toBe(false))
     })
 
+    test('Setting a reactive object on a shallowReactive map', () => {
+      const msg = ref('ads')
+      const bar = reactive({ msg })
+      const foo = shallowReactive(new Map([['foo1', bar]]))
+      foo.set('foo2', bar)
+
+      expect(isReactive(foo.get('foo2'))).toBe(true)
+      expect(isReactive(foo.get('foo1'))).toBe(true)
+    })
+
+    test('Setting a reactive object on a shallowReactive set', () => {
+      const msg = ref(1)
+      const bar = reactive({ msg })
+      const foo = reactive({ msg })
+
+      const deps = shallowReactive(new Set([bar]))
+      deps.add(foo)
+
+      deps.forEach(dep => {
+        expect(isReactive(dep)).toBe(true)
+      })
+    })
+
     // #1210
     test('onTrack on called on objectSpread', () => {
       const onTrackFn = vi.fn()
@@ -133,8 +156,8 @@ describe('shallowReactive', () => {
           a = Array.from(shallowSet)
         },
         {
-          onTrack: onTrackFn
-        }
+          onTrack: onTrackFn,
+        },
       )
 
       expect(a).toMatchObject([])
@@ -160,6 +183,7 @@ describe('shallowReactive', () => {
       shallowArray.pop()
       expect(size).toBe(0)
     })
+
     test('should not observe when iterating', () => {
       const shallowArray = shallowReactive<object[]>([])
       const a = {}
@@ -178,8 +202,8 @@ describe('shallowReactive', () => {
           a = Array.from(shallowArray)
         },
         {
-          onTrack: onTrackFn
-        }
+          onTrack: onTrackFn,
+        },
       )
 
       expect(a).toMatchObject([])

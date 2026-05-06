@@ -1,4 +1,4 @@
-import { createSSRApp, defineComponent, h, computed, reactive } from 'vue'
+import { computed, createSSRApp, defineComponent, h, reactive, ref } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 // #5208 reported memory leak of keeping computed alive during SSR
@@ -17,7 +17,7 @@ test('computed reactivity during SSR', async () => {
     // pretend to fetch some data from an api
     async fetchData() {
       this.state.items = ['hello', 'world']
-    }
+    },
   }
 
   const getterSpy = vi.fn()
@@ -33,7 +33,6 @@ test('computed reactivity during SSR', async () => {
     // In both cases we need to fetch data.
     if (!msg.value) await store.fetchData()
 
-    expect(msg.value).toBe('hello world')
     return () => h('div', null, msg.value + msg.value + msg.value)
   })
 
@@ -45,4 +44,24 @@ test('computed reactivity during SSR', async () => {
   // should only be called twice since access should be cached
   // during the render phase
   expect(getterSpy).toHaveBeenCalledTimes(2)
+})
+
+// although we technically shouldn't allow state mutation during render,
+// it does sometimes happen
+test('computed mutation during render', async () => {
+  const App = defineComponent(async () => {
+    const n = ref(0)
+    const m = computed(() => n.value + 1)
+
+    m.value // force non-dirty
+
+    return () => {
+      n.value++
+      return h('div', null, `value: ${m.value}`)
+    }
+  })
+
+  const app = createSSRApp(App)
+  const html = await renderToString(app)
+  expect(html).toMatch('value: 2')
 })

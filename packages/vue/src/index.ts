@@ -1,11 +1,25 @@
 // This entry is the "full-build" that includes both the runtime
 // and the compiler, and supports on-the-fly compilation of the template option.
 import { initDev } from './dev'
-import { compile, CompilerOptions, CompilerError } from '@vue/compiler-dom'
-import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
+import {
+  type CompilerError,
+  type CompilerOptions,
+  compile,
+} from '@vue/compiler-dom'
+import {
+  type RenderFunction,
+  registerRuntimeCompiler,
+  warn,
+} from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
-import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
-import { InternalRenderFunction } from 'packages/runtime-core/src/component'
+import {
+  NOOP,
+  extend,
+  genCacheKey,
+  generateCodeFrame,
+  isString,
+} from '@vue/shared'
+import type { InternalRenderFunction } from 'packages/runtime-core/src/component'
 
 if (__DEV__) {
   initDev()
@@ -15,7 +29,7 @@ const compileCache: Record<string, RenderFunction> = Object.create(null)
 
 function compileToFunction(
   template: string | HTMLElement,
-  options?: CompilerOptions
+  options?: CompilerOptions,
 ): RenderFunction {
   if (!isString(template)) {
     if (template.nodeType) {
@@ -26,7 +40,7 @@ function compileToFunction(
     }
   }
 
-  const key = template
+  const key = genCacheKey(template, options)
   const cached = compileCache[key]
   if (cached) {
     return cached
@@ -48,9 +62,9 @@ function compileToFunction(
     {
       hoistStatic: true,
       onError: __DEV__ ? onError : undefined,
-      onWarn: __DEV__ ? e => onError(e, true) : NOOP
+      onWarn: __DEV__ ? e => onError(e, true) : NOOP,
     } as CompilerOptions,
-    options
+    options,
   )
 
   if (!opts.isCustomElement && typeof customElements !== 'undefined') {
@@ -68,7 +82,7 @@ function compileToFunction(
       generateCodeFrame(
         template as string,
         err.loc.start.offset,
-        err.loc.end.offset
+        err.loc.end.offset,
       )
     warn(codeFrame ? `${message}\n${codeFrame}` : message)
   }

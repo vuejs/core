@@ -2,12 +2,12 @@ import { ShapeFlags } from '@vue/shared'
 import Vue from '@vue/compat'
 import { createComponentInstance } from '../../runtime-core/src/component'
 import { setCurrentRenderingInstance } from '../../runtime-core/src/componentRenderContext'
-import { DirectiveBinding } from '../../runtime-core/src/directives'
+import type { DirectiveBinding } from '../../runtime-core/src/directives'
 import { createVNode } from '../../runtime-core/src/vnode'
 import {
-  deprecationData,
   DeprecationTypes,
-  toggleDeprecationWarning
+  deprecationData,
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 import { compatH as h } from '../../runtime-core/src/compat/renderFn'
 
@@ -15,7 +15,7 @@ beforeEach(() => {
   toggleDeprecationWarning(false)
   Vue.configureCompat({
     MODE: 2,
-    GLOBAL_MOUNT: 'suppress-warning'
+    GLOBAL_MOUNT: 'suppress-warning',
   })
 })
 
@@ -29,16 +29,16 @@ describe('compat: render function', () => {
   const mockChildComp = {}
   const mockComponent = {
     directives: {
-      mockDir
+      mockDir,
     },
     components: {
-      foo: mockChildComp
-    }
+      foo: mockChildComp,
+    },
   }
   const mockInstance = createComponentInstance(
     createVNode(mockComponent),
     null,
-    null
+    null,
   )
   beforeEach(() => {
     setCurrentRenderingInstance(mockInstance)
@@ -49,7 +49,7 @@ describe('compat: render function', () => {
 
   test('string component lookup', () => {
     expect(h('foo')).toMatchObject({
-      type: mockChildComp
+      type: mockChildComp,
     })
   })
 
@@ -59,23 +59,23 @@ describe('compat: render function', () => {
         class: 'foo',
         style: { color: 'red' },
         attrs: {
-          id: 'foo'
+          id: 'foo',
         },
         domProps: {
-          innerHTML: 'hi'
+          innerHTML: 'hi',
         },
         props: {
-          myProp: 'foo'
-        }
-      })
+          myProp: 'foo',
+        },
+      }),
     ).toMatchObject({
       props: {
         class: 'foo',
         style: { color: 'red' },
         id: 'foo',
         innerHTML: 'hi',
-        myProp: 'foo'
-      }
+        myProp: 'foo',
+      },
     })
   })
 
@@ -83,12 +83,12 @@ describe('compat: render function', () => {
     expect(
       h('div', {
         class: { foo: true },
-        staticClass: 'bar'
-      })
+        staticClass: 'bar',
+      }),
     ).toMatchObject({
       props: {
-        class: 'bar foo'
-      }
+        class: 'bar foo',
+      },
     })
   })
 
@@ -96,15 +96,15 @@ describe('compat: render function', () => {
     expect(
       h('div', {
         style: { color: 'red' },
-        staticStyle: { fontSize: '14px' }
-      })
+        staticStyle: { fontSize: '14px' },
+      }),
     ).toMatchObject({
       props: {
         style: {
           color: 'red',
-          fontSize: '14px'
-        }
-      }
+          fontSize: '14px',
+        },
+      },
     })
   })
 
@@ -114,20 +114,20 @@ describe('compat: render function', () => {
       h('div', {
         on: {
           click: fn,
-          fooBar: fn
+          fooBar: fn,
         },
         nativeOn: {
           click: fn,
-          'bar-baz': fn
-        }
-      })
+          'bar-baz': fn,
+        },
+      }),
     ).toMatchObject({
       props: {
         onClick: fn,
         onClickNative: fn,
         onFooBar: fn,
-        'onBar-bazNative': fn
-      }
+        'onBar-bazNative': fn,
+      },
     })
   })
 
@@ -138,15 +138,15 @@ describe('compat: render function', () => {
         on: {
           '&click': fn,
           '~keyup': fn,
-          '!touchend': fn
-        }
-      })
+          '!touchend': fn,
+        },
+      }),
     ).toMatchObject({
       props: {
         onClickPassive: fn,
         onKeyupOnce: fn,
-        onTouchendCapture: fn
-      }
+        onTouchendCapture: fn,
+      },
     })
   })
 
@@ -160,11 +160,11 @@ describe('compat: render function', () => {
             // expression: '1 + 1',
             arg: 'foo',
             modifiers: {
-              bar: true
-            }
-          }
-        ]
-      })
+              bar: true,
+            },
+          },
+        ],
+      }),
     ).toMatchObject({
       dirs: [
         {
@@ -174,22 +174,22 @@ describe('compat: render function', () => {
           oldValue: void 0,
           arg: 'foo',
           modifiers: {
-            bar: true
-          }
-        }
-      ] as DirectiveBinding[]
+            bar: true,
+          },
+        },
+      ] as DirectiveBinding[],
     })
   })
 
   test('scopedSlots', () => {
     const scopedSlots = {
-      default() {}
+      default() {},
     }
     const vnode = h(mockComponent, {
-      scopedSlots
+      scopedSlots,
     })
     expect(vnode).toMatchObject({
-      children: scopedSlots
+      children: scopedSlots,
     })
     expect('scopedSlots' in vnode.props!).toBe(false)
     expect(vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN).toBeTruthy()
@@ -201,7 +201,7 @@ describe('compat: render function', () => {
       h('div', { slot: 'foo' }, 'one'),
       h('div', { slot: 'bar' }, 'two'),
       h('div', { slot: 'foo' }, 'three'),
-      h('div', 'four')
+      h('div', 'four'),
     ])
     expect(vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN).toBeTruthy()
     const slots = vnode.children as any
@@ -210,7 +210,7 @@ describe('compat: render function', () => {
     expect(slots.default()).toMatchObject(['text', { children: 'four' }])
     expect(slots.foo()).toMatchObject([
       { children: 'one' },
-      { children: 'three' }
+      { children: 'three' },
     ])
     expect(slots.bar()).toMatchObject([{ children: 'two' }])
   })
@@ -224,16 +224,16 @@ describe('compat: render function', () => {
           'div',
           {
             class: 'foo',
-            attrs: { id: 'bar' }
+            attrs: { id: 'bar' },
           },
-          'hello'
+          'hello',
         )
-      }
+      },
     }).$mount()
     expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.outerHTML).toBe(`<div class="foo" id="bar">hello</div>`)
     expect(
-      deprecationData[DeprecationTypes.RENDER_FUNCTION].message
+      deprecationData[DeprecationTypes.RENDER_FUNCTION].message,
     ).toHaveBeenWarned()
   })
 
@@ -241,13 +241,13 @@ describe('compat: render function', () => {
     const vm = new Vue({
       data() {
         return {
-          a: 'hello'
+          a: 'hello',
         }
       },
       // check is arg length based
       render(c: any, _c: any) {
         return createVNode('div', null, c.a)
-      }
+      },
     }).$mount()
     expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.outerHTML).toBe(`<div>hello</div>`)

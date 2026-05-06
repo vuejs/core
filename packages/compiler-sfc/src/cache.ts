@@ -1,11 +1,11 @@
-import LRU from 'lru-cache'
+import { LRUCache } from 'lru-cache'
 
-export function createCache<T>(size = 500): Map<string, T> & { max?: number } {
+export function createCache<T extends {}>(
+  max = 500,
+): Map<string, T> | LRUCache<string, T> {
+  /* v8 ignore next 3 */
   if (__GLOBAL__ || __ESM_BROWSER__) {
     return new Map<string, T>()
   }
-  const cache = new LRU(size)
-  // @ts-expect-error
-  cache.delete = cache.del.bind(cache)
-  return cache as any as Map<string, T>
+  return new LRUCache({ max })
 }

@@ -1,6 +1,6 @@
-import { NodeTransform } from '../transform'
+import type { NodeTransform } from '../transform'
 import { findDir } from '../utils'
-import { ElementNode, ForNode, IfNode, NodeTypes } from '../ast'
+import { type ElementNode, type ForNode, type IfNode, NodeTypes } from '../ast'
 import { SET_BLOCK_TRACKING } from '../runtimeHelpers'
 
 const seen = new WeakSet()
@@ -17,7 +17,11 @@ export const transformOnce: NodeTransform = (node, context) => {
       context.inVOnce = false
       const cur = context.currentNode as ElementNode | IfNode | ForNode
       if (cur.codegenNode) {
-        cur.codegenNode = context.cache(cur.codegenNode, true /* isVNode */)
+        cur.codegenNode = context.cache(
+          cur.codegenNode,
+          true /* isVNode */,
+          true /* inVOnce */,
+        )
       }
     }
   }

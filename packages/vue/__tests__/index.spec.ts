@@ -1,5 +1,5 @@
 import { EMPTY_ARR } from '@vue/shared'
-import { createApp, ref, nextTick, reactive } from '../src'
+import { createApp, nextTick, reactive, ref } from '../src'
 
 describe('compiler + runtime integration', () => {
   it('should support runtime template compilation', () => {
@@ -8,9 +8,9 @@ describe('compiler + runtime integration', () => {
       template: `{{ count }}`,
       data() {
         return {
-          count: 0
+          count: 0,
         }
-      }
+      },
     }
     createApp(App).mount(container)
     expect(container.innerHTML).toBe(`0`)
@@ -25,7 +25,7 @@ describe('compiler + runtime integration', () => {
       mounted: vi.fn(),
       activated: vi.fn(),
       deactivated: vi.fn(),
-      unmounted: vi.fn()
+      unmounted: vi.fn(),
     }
 
     const toggle = ref(true)
@@ -38,12 +38,12 @@ describe('compiler + runtime integration', () => {
       `,
       data() {
         return {
-          toggle
+          toggle,
         }
       },
       components: {
-        One: one
-      }
+        One: one,
+      },
     }
     createApp(App).mount(container)
     expect(container.innerHTML).toBe(`one`)
@@ -83,9 +83,9 @@ describe('compiler + runtime integration', () => {
       template: `#template`,
       data() {
         return {
-          count: 0
+          count: 0,
         }
-      }
+      },
     }
     createApp(App).mount(container)
     expect(container.innerHTML).toBe(`0`)
@@ -101,9 +101,9 @@ describe('compiler + runtime integration', () => {
       template,
       data() {
         return {
-          count: 0
+          count: 0,
         }
-      }
+      },
     }
     createApp(App).mount(container)
     expect(container.innerHTML).toBe(`0`)
@@ -112,28 +112,28 @@ describe('compiler + runtime integration', () => {
   it('should warn template compilation errors with codeframe', () => {
     const container = document.createElement('div')
     const App = {
-      template: `<div v-if>`
+      template: `<div v-if>`,
     }
     createApp(App).mount(container)
     expect(
-      `Template compilation error: Element is missing end tag`
+      `Template compilation error: Element is missing end tag`,
     ).toHaveBeenWarned()
     expect(
       `
 1  |  <div v-if>
-   |  ^`.trim()
+   |  ^`.trim(),
     ).toHaveBeenWarned()
     expect(`v-if/v-else-if is missing expression`).toHaveBeenWarned()
     expect(
       `
 1  |  <div v-if>
-   |       ^^^^`.trim()
+   |       ^^^^`.trim(),
     ).toHaveBeenWarned()
   })
 
   it('should support custom element via config.isCustomElement (deprecated)', () => {
     const app = createApp({
-      template: '<custom></custom>'
+      template: '<custom></custom>',
     })
     const container = document.createElement('div')
     app.config.isCustomElement = tag => tag === 'custom'
@@ -143,7 +143,7 @@ describe('compiler + runtime integration', () => {
 
   it('should support custom element via config.compilerOptions.isCustomElement', () => {
     const app = createApp({
-      template: '<custom></custom>'
+      template: '<custom></custom>',
     })
     const container = document.createElement('div')
     app.config.compilerOptions.isCustomElement = tag => tag === 'custom'
@@ -154,8 +154,8 @@ describe('compiler + runtime integration', () => {
   it('should support using element innerHTML as template', () => {
     const app = createApp({
       data: () => ({
-        msg: 'hello'
-      })
+        msg: 'hello',
+      }),
     })
     const container = document.createElement('div')
     container.innerHTML = '{{msg}}'
@@ -172,9 +172,9 @@ describe('compiler + runtime integration', () => {
       template: `{{ count }}`,
       data() {
         return {
-          count: 0
+          count: 0,
         }
-      }
+      },
     }
     createApp(App).mount('#app')
     expect(container.innerHTML).toBe(`0`)
@@ -183,7 +183,7 @@ describe('compiler + runtime integration', () => {
 
   it('should warn when template is not available', () => {
     const app = createApp({
-      template: {}
+      template: {},
     })
     const container = document.createElement('div')
     app.mount(container)
@@ -192,12 +192,12 @@ describe('compiler + runtime integration', () => {
 
   it('should warn when template is is not found', () => {
     const app = createApp({
-      template: '#not-exist-id'
+      template: '#not-exist-id',
     })
     const container = document.createElement('div')
     app.mount(container)
     expect(
-      '[Vue warn]: Template element not found or is empty: #not-exist-id'
+      '[Vue warn]: Template element not found or is empty: #not-exist-id',
     ).toHaveBeenWarned()
   })
 
@@ -208,14 +208,14 @@ describe('compiler + runtime integration', () => {
       template: `{{ count }}`,
       data() {
         return {
-          count: 0
+          count: 0,
         }
-      }
+      },
     }
     createApp(App).mount('#not-exist-id')
 
     expect(
-      '[Vue warn]: Failed to mount app: mount target selector "#not-exist-id" returned null.'
+      '[Vue warn]: Failed to mount app: mount target selector "#not-exist-id" returned null.',
     ).toHaveBeenWarned()
     document.querySelector = origin
   })
@@ -238,9 +238,9 @@ describe('compiler + runtime integration', () => {
       `,
       data() {
         return {
-          count
+          count,
         }
-      }
+      },
     }
     createApp(App).mount(container)
     expect(container.innerHTML).toBe(`<!--teleport start--><!--teleport end-->`)
@@ -265,7 +265,7 @@ describe('compiler + runtime integration', () => {
       setup() {
         return { ok }
       },
-      template: `<div>{{ ok }}<div v-if="ok" v-once>{{ ok }}</div></div>`
+      template: `<div>{{ ok }}<div v-if="ok" v-once>{{ ok }}</div></div>`,
     }
     const container = document.createElement('div')
     createApp(App).mount(container)
@@ -282,7 +282,7 @@ describe('compiler + runtime integration', () => {
       setup() {
         return { list }
       },
-      template: `<div>{{ list.length }}<div v-for="i in list" v-once>{{ i }}</div></div>`
+      template: `<div>{{ list.length }}<div v-for="i in list" v-once>{{ i }}</div></div>`,
     }
     const container = document.createElement('div')
     createApp(App).mount(container)
@@ -296,7 +296,7 @@ describe('compiler + runtime integration', () => {
   // #2413
   it('EMPTY_ARR should not change', () => {
     const App = {
-      template: `<div v-for="v of ['a']">{{ v }}</div>`
+      template: `<div v-for="v of ['a']">{{ v }}</div>`,
     }
     const container = document.createElement('div')
     createApp(App).mount(container)
@@ -305,7 +305,7 @@ describe('compiler + runtime integration', () => {
 
   test('BigInt support', () => {
     const app = createApp({
-      template: `<div>{{ BigInt(BigInt(100000111)) + BigInt(2000000000n) * 30000000n }}</div>`
+      template: `<div>{{ BigInt(BigInt(100000111)) + BigInt(2000000000n) * 30000000n }}</div>`,
     })
     const root = document.createElement('div')
     app.mount(root)

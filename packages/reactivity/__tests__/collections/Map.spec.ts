@@ -1,4 +1,4 @@
-import { reactive, effect, toRaw, isReactive } from '../../src'
+import { effect, isReactive, reactive, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   function coverCollectionFn(collection: Map<any, any>, fnName: string) {
@@ -69,7 +69,6 @@ describe('reactivity/collections', () => {
       const map = reactive(new Map())
       effect(() => {
         dummy = 0
-        // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map) {
           key
           dummy += num
@@ -164,7 +163,6 @@ describe('reactivity/collections', () => {
       effect(() => {
         dummy = ''
         dummy2 = 0
-        // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map.entries()) {
           dummy += key
           dummy2 += num
@@ -411,7 +409,7 @@ describe('reactivity/collections', () => {
       const map = reactive(raw)
       map.set(key, 2)
       expect(
-        `Reactive Map contains both the raw and reactive`
+        `Reactive Map contains both the raw and reactive`,
       ).toHaveBeenWarned()
     })
 
@@ -472,6 +470,31 @@ describe('reactivity/collections', () => {
       const map = reactive(new Map())
       const result = map.set('a', 'a')
       expect(result).toBe(map)
+    })
+
+    it('should wrapped iterator inherit all iterator properties', () => {
+      const raw = new Map([['key', 'value']])
+      const map = reactive(raw)
+
+      const rawIterator = raw.entries()
+      const wrappedIterator = map.entries()
+
+      // Wrapped iterator should have the same properties as original iterator
+      expect(typeof wrappedIterator.next).toBe('function')
+      expect(typeof wrappedIterator[Symbol.iterator]).toBe('function')
+      expect(wrappedIterator[Symbol.iterator]()).toBe(wrappedIterator)
+
+      // Check inherited iterator helper methods if they exist on the original
+      for (const key of Object.getOwnPropertyNames(
+        Object.getPrototypeOf(rawIterator),
+      )) {
+        expect(key in wrappedIterator).toBe(true)
+      }
+      for (const key of Object.getOwnPropertySymbols(
+        Object.getPrototypeOf(rawIterator),
+      )) {
+        expect(key in wrappedIterator).toBe(true)
+      }
     })
   })
 })

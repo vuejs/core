@@ -1,18 +1,25 @@
-import puppeteer, { Browser, Page, ClickOptions } from 'puppeteer'
+import puppeteer, {
+  type Browser,
+  type ClickOptions,
+  type LaunchOptions,
+  type Page,
+} from 'puppeteer'
 
-export const E2E_TIMEOUT = 30 * 1000
+export const E2E_TIMEOUT: number = 30 * 1000
 
-const puppeteerOptions = process.env.CI
-  ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] }
-  : {}
+const puppeteerOptions: LaunchOptions = {
+  args: process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
+  headless: true,
+}
 
 const maxTries = 30
-export const timeout = (n: number) => new Promise(r => setTimeout(r, n))
+export const timeout = (n: number): Promise<any> =>
+  new Promise(r => setTimeout(r, n))
 
 export async function expectByPolling(
   poll: () => Promise<any>,
-  expected: string
-) {
+  expected: string,
+): Promise<void> {
   for (let tries = 0; tries < maxTries; tries++) {
     const actual = (await poll()) || ''
     if (actual.indexOf(expected) > -1 || tries === maxTries - 1) {
@@ -24,12 +31,40 @@ export async function expectByPolling(
   }
 }
 
-export function setupPuppeteer() {
+interface PuppeteerUtils {
+  page: () => Page
+  click(selector: string, options?: ClickOptions): Promise<void>
+  count(selector: string): Promise<number>
+  text(selector: string): Promise<string | null>
+  value(selector: string): Promise<string>
+  html(selector: string): Promise<string>
+  classList(selector: string): Promise<string[]>
+  style(selector: string, property: keyof CSSStyleDeclaration): Promise<any>
+  children(selector: string): Promise<any[]>
+  isVisible(selector: string): Promise<boolean>
+  isChecked(selector: string): Promise<boolean>
+  isFocused(selector: string): Promise<boolean>
+  setValue(selector: string, value: string): Promise<any>
+  typeValue(selector: string, value: string): Promise<any>
+  enterValue(selector: string, value: string): Promise<any>
+  clearValue(selector: string): Promise<any>
+  timeout(time: number): Promise<any>
+  nextFrame(): Promise<any>
+}
+
+export function setupPuppeteer(args?: string[]): PuppeteerUtils {
   let browser: Browser
   let page: Page
 
+  const resolvedOptions = args
+    ? {
+        ...puppeteerOptions,
+        args: [...puppeteerOptions.args!, ...args],
+      }
+    : puppeteerOptions
+
   beforeAll(async () => {
-    browser = await puppeteer.launch(puppeteerOptions)
+    browser = await puppeteer.launch(resolvedOptions)
   }, 20000)
 
   beforeEach(async () => {
@@ -42,10 +77,7 @@ export function setupPuppeteer() {
     page.on('console', e => {
       if (e.type() === 'error') {
         const err = e.args()[0]
-        console.error(
-          `Error from Puppeteer-loaded page:\n`,
-          err.remoteObject().description
-        )
+        console.error(`Error from Puppeteer-loaded page:\n`, err.remoteObject())
       }
     })
   })
@@ -58,35 +90,51 @@ export function setupPuppeteer() {
     await browser.close()
   })
 
-  async function click(selector: string, options?: ClickOptions) {
+  async function click(
+    selector: string,
+    options?: ClickOptions,
+  ): Promise<void> {
     await page.click(selector, options)
   }
 
-  async function count(selector: string) {
+  async function count(selector: string): Promise<number> {
     return (await page.$$(selector)).length
   }
 
-  async function text(selector: string) {
-    return await page.$eval(selector, node => node.textContent)
+  async function text(selector: string): Promise<string | null> {
+    return page.$eval(selector, node => node.textContent)
   }
 
-  async function value(selector: string) {
-    return await page.$eval(selector, node => (node as HTMLInputElement).value)
+  async function value(selector: string): Promise<string> {
+    return page.$eval(selector, node => (node as HTMLInputElement).value)
   }
 
-  async function html(selector: string) {
-    return await page.$eval(selector, node => node.innerHTML)
+  async function html(selector: string): Promise<string> {
+    return page.$eval(selector, node => node.innerHTML)
   }
 
-  async function classList(selector: string) {
-    return await page.$eval(selector, (node: any) => [...node.classList])
+  async function classList(selector: string): Promise<string[]> {
+    return page.$eval(selector, (node: any) => [...node.classList])
   }
 
-  async function children(selector: string) {
-    return await page.$eval(selector, (node: any) => [...node.children])
+  async function children(selector: string): Promise<any[]> {
+    return page.$eval(selector, (node: any) => [...node.children])
   }
 
-  async function isVisible(selector: string) {
+  async function style(
+    selector: string,
+    property: keyof CSSStyleDeclaration,
+  ): Promise<any> {
+    return await page.$eval(
+      selector,
+      (node, property) => {
+        return window.getComputedStyle(node)[property]
+      },
+      property,
+    )
+  }
+
+  async function isVisible(selector: string): Promise<boolean> {
     const display = await page.$eval(selector, node => {
       return window.getComputedStyle(node).display
     })
@@ -96,7 +144,7 @@ export function setupPuppeteer() {
   async function isChecked(selector: string) {
     return await page.$eval(
       selector,
-      node => (node as HTMLInputElement).checked
+      node => (node as HTMLInputElement).checked,
     )
   }
 
@@ -111,7 +159,7 @@ export function setupPuppeteer() {
         ;(node as HTMLInputElement).value = value as string
         node.dispatchEvent(new Event('input'))
       },
-      value
+      value,
     )
   }
 
@@ -131,7 +179,7 @@ export function setupPuppeteer() {
   async function clearValue(selector: string) {
     return await page.$eval(
       selector,
-      node => ((node as HTMLInputElement).value = '')
+      node => ((node as HTMLInputElement).value = ''),
     )
   }
 
@@ -161,6 +209,7 @@ export function setupPuppeteer() {
     value,
     html,
     classList,
+    style,
     children,
     isVisible,
     isChecked,
@@ -170,6 +219,6 @@ export function setupPuppeteer() {
     enterValue,
     clearValue,
     timeout,
-    nextFrame
+    nextFrame,
   }
 }

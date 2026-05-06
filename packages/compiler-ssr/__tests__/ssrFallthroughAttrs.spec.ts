@@ -3,7 +3,7 @@ import { compile } from '../src'
 describe('ssr: attrs fallthrough', () => {
   test('basic', () => {
     expect(compile(`<div/>`).code).toMatchInlineSnapshot(`
-      "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}></div>\`)
@@ -13,7 +13,7 @@ describe('ssr: attrs fallthrough', () => {
 
   test('with comments', () => {
     expect(compile(`<!--!--><div/>`).code).toMatchInlineSnapshot(`
-      "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<!--[--><!--!--><div\${_ssrRenderAttrs(_attrs)}></div><!--]-->\`)
@@ -40,10 +40,35 @@ describe('ssr: attrs fallthrough', () => {
   test('fallthrough component content (root with comments)', () => {
     expect(compile(`<!--root--><transition><div/></transition>`).code)
       .toMatchInlineSnapshot(`
-        "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<!--[--><!--root--><div\${_ssrRenderAttrs(_attrs)}></div><!--]-->\`)
+        }"
+      `)
+  })
+
+  //#8072
+  test(`fallthrough component content (with whitespace: 'preserve')`, () => {
+    expect(
+      compile(
+        `
+      <a v-if="to">Foo</a>
+      <a v-else>Bar</a>
+    `,
+        {
+          whitespace: 'preserve',
+        },
+      ).code,
+    ).toMatchInlineSnapshot(`
+        "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.to) {
+            _push(\`<a\${_ssrRenderAttrs(_attrs)}>Foo</a>\`)
+          } else {
+            _push(\`<a\${_ssrRenderAttrs(_attrs)}>Bar</a>\`)
+          }
         }"
       `)
   })

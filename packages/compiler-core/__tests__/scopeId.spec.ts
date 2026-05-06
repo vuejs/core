@@ -1,7 +1,4 @@
 import { baseCompile } from '../src/compile'
-import { PUSH_SCOPE_ID, POP_SCOPE_ID } from '../src/runtimeHelpers'
-import { PatchFlags } from '@vue/shared'
-import { genFlagText } from './testUtils'
 
 /**
  * Ensure all slot functions are wrapped with _withCtx
@@ -18,7 +15,7 @@ describe('scopeId compiler support', () => {
   test('should wrap default slot', () => {
     const { code } = baseCompile(`<Child><div/></Child>`, {
       mode: 'module',
-      scopeId: 'test'
+      scopeId: 'test',
     })
     expect(code).toMatch(`default: _withCtx(() => [`)
     expect(code).toMatchSnapshot()
@@ -33,8 +30,8 @@ describe('scopeId compiler support', () => {
       `,
       {
         mode: 'module',
-        scopeId: 'test'
-      }
+        scopeId: 'test',
+      },
     )
     expect(code).toMatch(`foo: _withCtx(({ msg }) => [`)
     expect(code).toMatch(`bar: _withCtx(() => [`)
@@ -50,35 +47,11 @@ describe('scopeId compiler support', () => {
       `,
       {
         mode: 'module',
-        scopeId: 'test'
-      }
+        scopeId: 'test',
+      },
     )
     expect(code).toMatch(/name: "foo",\s+fn: _withCtx\(/)
     expect(code).toMatch(/name: i,\s+fn: _withCtx\(/)
-    expect(code).toMatchSnapshot()
-  })
-
-  test('should push scopeId for hoisted nodes', () => {
-    const { ast, code } = baseCompile(
-      `<div><div>hello</div>{{ foo }}<div>world</div></div>`,
-      {
-        mode: 'module',
-        scopeId: 'test',
-        hoistStatic: true
-      }
-    )
-    expect(ast.helpers).toContain(PUSH_SCOPE_ID)
-    expect(ast.helpers).toContain(POP_SCOPE_ID)
-    expect(ast.hoists.length).toBe(2)
-    ;[
-      `const _withScopeId = n => (_pushScopeId("test"),n=n(),_popScopeId(),n)`,
-      `const _hoisted_1 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "hello", ${genFlagText(
-        PatchFlags.HOISTED
-      )}))`,
-      `const _hoisted_2 = /*#__PURE__*/ _withScopeId(() => /*#__PURE__*/_createElementVNode("div", null, "world", ${genFlagText(
-        PatchFlags.HOISTED
-      )}))`
-    ].forEach(c => expect(code).toMatch(c))
     expect(code).toMatchSnapshot()
   })
 })

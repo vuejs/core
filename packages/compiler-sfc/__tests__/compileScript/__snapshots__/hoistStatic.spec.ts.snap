@@ -1,7 +1,8 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`sfc hoist static > should enable when only script setup 1`] = `
-"const foo = 'bar'
+"
+    const foo = 'bar'
     
 export default {
   setup(__props) {
@@ -70,7 +71,7 @@ return () => {}
 exports[`sfc hoist static > should not hoist a constant initialized to a reference value 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props) {
 
     const KEY1 = Boolean
@@ -91,7 +92,8 @@ return () => {}
 `;
 
 exports[`sfc hoist static > should not hoist a function or class 1`] = `
-"export default {
+"
+export default {
   setup(__props) {
 
     const fn = () => {}
@@ -105,7 +107,8 @@ return () => {}
 `;
 
 exports[`sfc hoist static > should not hoist a object or array 1`] = `
-"export default {
+"
+export default {
   setup(__props) {
 
     const obj = { foo: 'bar' }
@@ -118,7 +121,8 @@ return () => {}
 `;
 
 exports[`sfc hoist static > should not hoist a variable 1`] = `
-"export default {
+"
+export default {
   setup(__props) {
 
     let KEY1 = 'default value'
@@ -133,7 +137,8 @@ return () => {}
 `;
 
 exports[`sfc hoist static > should not hoist when disabled 1`] = `
-"export default {
+"
+export default {
   setup(__props) {
 
     const foo = 'bar'

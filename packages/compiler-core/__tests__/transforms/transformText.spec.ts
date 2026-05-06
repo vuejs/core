@@ -1,11 +1,12 @@
 import {
-  CompilerOptions,
-  baseParse as parse,
-  transform,
+  type CompilerOptions,
+  type ElementNode,
+  type ForNode,
   NodeTypes,
   generate,
-  ForNode,
-  ElementNode
+  isWhitespaceText,
+  baseParse as parse,
+  transform,
 } from '../../src'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformText } from '../../src/transforms/transformText'
@@ -22,9 +23,9 @@ function transformWithTextOpt(template: string, options: CompilerOptions = {}) {
       transformFor,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
       transformElement,
-      transformText
+      transformText,
     ],
-    ...options
+    ...options,
   })
   return ast
 }
@@ -35,8 +36,8 @@ describe('compiler: transform text', () => {
     expect(root.children[0]).toMatchObject({
       type: NodeTypes.INTERPOLATION,
       content: {
-        content: `foo`
-      }
+        content: `foo`,
+      },
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -51,8 +52,8 @@ describe('compiler: transform text', () => {
         ` + `,
         { type: NodeTypes.TEXT, content: ` bar ` },
         ` + `,
-        { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
-      ]
+        { type: NodeTypes.INTERPOLATION, content: { content: `baz` } },
+      ],
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -75,12 +76,12 @@ describe('compiler: transform text', () => {
               ` + `,
               { type: NodeTypes.TEXT, content: ` bar ` },
               ` + `,
-              { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
-            ]
+              { type: NodeTypes.INTERPOLATION, content: { content: `baz` } },
+            ],
           },
-          genFlagText(PatchFlags.TEXT)
-        ]
-      }
+          genFlagText(PatchFlags.TEXT),
+        ],
+      },
     })
     expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
     expect(generate(root).code).toMatchSnapshot()
@@ -99,19 +100,37 @@ describe('compiler: transform text', () => {
         arguments: [
           {
             type: NodeTypes.TEXT,
-            content: `hello`
-          }
+            content: `hello`,
+          },
           // should have no flag
-        ]
-      }
+        ],
+      },
     })
     expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('whitespace text', () => {
+    const root = transformWithTextOpt(`<div/>hello<div/>  <div/>`)
+    expect(root.children.length).toBe(5)
+    expect(root.children[0].type).toBe(NodeTypes.ELEMENT)
+    expect(root.children[1].type).toBe(NodeTypes.TEXT_CALL)
+    expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
+    expect(root.children[3].type).toBe(NodeTypes.TEXT_CALL)
+    expect(root.children[4].type).toBe(NodeTypes.ELEMENT)
+
+    expect(root.children.map(isWhitespaceText)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      false,
+    ])
+  })
+
   test('consecutive text mixed with elements', () => {
     const root = transformWithTextOpt(
-      `<div/>{{ foo }} bar {{ baz }}<div/>hello<div/>`
+      `<div/>{{ foo }} bar {{ baz }}<div/>hello<div/>`,
     )
     expect(root.children.length).toBe(5)
     expect(root.children[0].type).toBe(NodeTypes.ELEMENT)
@@ -128,12 +147,12 @@ describe('compiler: transform text', () => {
               ` + `,
               { type: NodeTypes.TEXT, content: ` bar ` },
               ` + `,
-              { type: NodeTypes.INTERPOLATION, content: { content: `baz` } }
-            ]
+              { type: NodeTypes.INTERPOLATION, content: { content: `baz` } },
+            ],
           },
-          genFlagText(PatchFlags.TEXT)
-        ]
-      }
+          genFlagText(PatchFlags.TEXT),
+        ],
+      },
     })
     expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
     expect(root.children[3]).toMatchObject({
@@ -144,10 +163,10 @@ describe('compiler: transform text', () => {
         arguments: [
           {
             type: NodeTypes.TEXT,
-            content: `hello`
-          }
-        ]
-      }
+            content: `hello`,
+          },
+        ],
+      },
     })
     expect(root.children[4].type).toBe(NodeTypes.ELEMENT)
     expect(generate(root).code).toMatchSnapshot()
@@ -155,21 +174,21 @@ describe('compiler: transform text', () => {
 
   test('<template v-for>', () => {
     const root = transformWithTextOpt(
-      `<template v-for="i in list">foo</template>`
+      `<template v-for="i in list">foo</template>`,
     )
     expect(root.children[0].type).toBe(NodeTypes.FOR)
     const forNode = root.children[0] as ForNode
     // should convert template v-for text children because they are inside
     // fragments
     expect(forNode.children[0]).toMatchObject({
-      type: NodeTypes.TEXT_CALL
+      type: NodeTypes.TEXT_CALL,
     })
     expect(generate(root).code).toMatchSnapshot()
   })
 
   test('with prefixIdentifiers: true', () => {
     const root = transformWithTextOpt(`{{ foo }} bar {{ baz + qux }}`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect(root.children.length).toBe(1)
     expect(root.children[0]).toMatchObject({
@@ -183,15 +202,15 @@ describe('compiler: transform text', () => {
           type: NodeTypes.INTERPOLATION,
           content: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [{ content: `_ctx.baz` }, ` + `, { content: `_ctx.qux` }]
-          }
-        }
-      ]
+            children: [{ content: `_ctx.baz` }, ` + `, { content: `_ctx.qux` }],
+          },
+        },
+      ],
     })
     expect(
       generate(root, {
-        prefixIdentifiers: true
-      }).code
+        prefixIdentifiers: true,
+      }).code,
     ).toMatchSnapshot()
   })
 
@@ -210,12 +229,12 @@ describe('compiler: transform text', () => {
             type: NodeTypes.INTERPOLATION,
             content: {
               type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'foo'
-            }
+              content: 'foo',
+            },
           },
-          genFlagText(PatchFlags.TEXT)
-        ]
-      }
+          genFlagText(PatchFlags.TEXT),
+        ],
+      },
     })
     expect(generate(root).code).toMatchSnapshot()
   })

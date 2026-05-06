@@ -5,7 +5,7 @@ exports[`CSS vars injection > codegen > <script> w/ default export 1`] = `
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-color\\": (_ctx.color)
+  "xxxxxxxx-color": (_ctx.color)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -23,7 +23,7 @@ exports[`CSS vars injection > codegen > <script> w/ default export in strings/co
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-color\\": (_ctx.color)
+  "xxxxxxxx-color": (_ctx.color)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -39,7 +39,7 @@ const __default__ = {}
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-color\\": (_ctx.color)
+  "xxxxxxxx-color": (_ctx.color)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -57,7 +57,7 @@ export default {
   __expose();
 
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-width\\": (width)
+  "xxxxxxxx-width": (width)
 }))
 
 return { color, width }
@@ -74,10 +74,10 @@ export default {
   __expose();
 
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-foo\\": (_unref(foo)),
-  \\"xxxxxxxx-foo\\\\ \\\\+\\\\ \\\\'px\\\\'\\": (_unref(foo) + 'px'),
-  \\"xxxxxxxx-\\\\(a\\\\ \\\\+\\\\ b\\\\)\\\\ \\\\/\\\\ 2\\\\ \\\\+\\\\ \\\\'px\\\\'\\": ((_unref(a) + _unref(b)) / 2 + 'px'),
-  \\"xxxxxxxx-\\\\(\\\\(a\\\\ \\\\+\\\\ b\\\\)\\\\)\\\\ \\\\/\\\\ \\\\(2\\\\ \\\\*\\\\ a\\\\)\\": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
+  "xxxxxxxx-foo": (_unref(foo)),
+  "xxxxxxxx-foo\\ \\+\\ \\'px\\'": (_unref(foo) + 'px'),
+  "xxxxxxxx-\\(a\\ \\+\\ b\\)\\ \\/\\ 2\\ \\+\\ \\'px\\'": ((_unref(a) + _unref(b)) / 2 + 'px'),
+  "xxxxxxxx-\\(\\(a\\ \\+\\ b\\)\\)\\ \\/\\ \\(2\\ \\*\\ a\\)": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
 }))
 
         let a = 100
@@ -98,7 +98,7 @@ export default {
   __expose();
 
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-color\\": (color)
+  "xxxxxxxx-color": (color)
 }))
 
 return { color }
@@ -116,7 +116,7 @@ export default {
   __expose();
 
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-color\\": (color)
+  "xxxxxxxx-color": (color)
 }))
 
         
@@ -132,8 +132,8 @@ const __default__ = {}
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-color\\": (_ctx.color),
-  \\"xxxxxxxx-font\\\\.size\\": (_ctx.font.size)
+  "xxxxxxxx-color": (_ctx.color),
+  "xxxxxxxx-font\\.size": (_ctx.font.size)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__
@@ -156,9 +156,9 @@ export default {
   __expose();
 
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-color\\": (color),
-  \\"xxxxxxxx-size\\": (size.value),
-  \\"xxxxxxxx-foo\\": (__props.foo)
+  "xxxxxxxx-color": (color),
+  "xxxxxxxx-size": (size.value),
+  "xxxxxxxx-foo": (__props.foo)
 }))
 
         const size = ref('10px')
@@ -183,7 +183,7 @@ exports[`CSS vars injection > w/ normal <script> binding analysis 1`] = `
 import { useCssVars as _useCssVars } from 'vue'
 const __injectCSSVars__ = () => {
 _useCssVars(_ctx => ({
-  \\"xxxxxxxx-size\\": (_ctx.size)
+  "xxxxxxxx-size": (_ctx.size)
 }))}
 const __setup__ = __default__.setup
 __default__.setup = __setup__

@@ -1,8 +1,8 @@
 {
   "name": "@vue/runtime-test",
-  "version": "3.3.4",
-  "description": "@vue/runtime-test",
   "private": true,
+  "version": "0.0.0",
+  "description": "@vue/runtime-test",
   "main": "index.js",
   "module": "dist/runtime-test.esm-bundler.js",
   "types": "dist/runtime-test.d.ts",
@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-test#readme",
   "dependencies": {
-    "@vue/shared": "3.3.4",
-    "@vue/runtime-core": "3.3.4"
+    "@vue/shared": "workspace:*",
+    "@vue/runtime-core": "workspace:*"
   }
 }

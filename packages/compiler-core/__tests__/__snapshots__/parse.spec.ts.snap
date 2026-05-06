@@ -1,38 +1,45 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: parse > Errors > ABRUPT_CLOSING_OF_EMPTY_COMMENT > <template><!--></template> 1`] = `
+exports[`compiler: parse > Edge Cases > invalid html 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
-          "content": "",
+          "children": [],
+          "codegenNode": undefined,
           "loc": {
             "end": {
-              "column": 16,
-              "line": 1,
-              "offset": 15,
+              "column": 1,
+              "line": 3,
+              "offset": 13,
             },
-            "source": "<!-->",
+            "source": "<span>
+",
             "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
+              "column": 1,
+              "line": 2,
+              "offset": 6,
             },
           },
-          "type": 3,
+          "ns": 0,
+          "props": [],
+          "tag": "span",
+          "tagType": 0,
+          "type": 1,
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
-          "column": 27,
-          "line": 1,
-          "offset": 26,
+          "column": 7,
+          "line": 3,
+          "offset": 19,
         },
-        "source": "<template><!--></template>",
+        "source": "<div>
+<span>
+</div>",
         "start": {
           "column": 1,
           "line": 1,
@@ -41,7 +48,7 @@ exports[`compiler: parse > Errors > ABRUPT_CLOSING_OF_EMPTY_COMMENT > <template>
       },
       "ns": 0,
       "props": [],
-      "tag": "template",
+      "tag": "div",
       "tagType": 0,
       "type": 1,
     },
@@ -54,125 +61,44 @@ exports[`compiler: parse > Errors > ABRUPT_CLOSING_OF_EMPTY_COMMENT > <template>
   "imports": [],
   "loc": {
     "end": {
-      "column": 27,
-      "line": 1,
-      "offset": 26,
-    },
-    "source": "<template><!--></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > ABRUPT_CLOSING_OF_EMPTY_COMMENT > <template><!---></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "",
-          "loc": {
-            "end": {
-              "column": 17,
-              "line": 1,
-              "offset": 16,
-            },
-            "source": "<!--->",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 28,
-          "line": 1,
-          "offset": 27,
-        },
-        "source": "<template><!---></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 28,
-      "line": 1,
+      "column": 8,
+      "line": 4,
       "offset": 27,
     },
-    "source": "<template><!---></template>",
+    "source": "<div>
+<span>
+</div>
+</span>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
+  "source": "<div>
+<span>
+</div>
+</span>",
   "temps": 0,
   "type": 0,
 }
 `;
 
-exports[`compiler: parse > Errors > ABRUPT_CLOSING_OF_EMPTY_COMMENT > <template><!----></template> 1`] = `
+exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "content": "",
-          "loc": {
-            "end": {
-              "column": 18,
-              "line": 1,
-              "offset": 17,
-            },
-            "source": "<!---->",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
+      "isSelfClosing": true,
       "loc": {
         "end": {
-          "column": 29,
+          "column": 37,
           "line": 1,
-          "offset": 28,
+          "offset": 36,
         },
-        "source": "<template><!----></template>",
+        "source": "<div :class="{ some: condition }" />",
         "start": {
           "column": 1,
           "line": 1,
@@ -180,8 +106,147 @@ exports[`compiler: parse > Errors > ABRUPT_CLOSING_OF_EMPTY_COMMENT > <template>
         },
       },
       "ns": 0,
-      "props": [],
-      "tag": "template",
+      "props": [
+        {
+          "arg": {
+            "constType": 3,
+            "content": "class",
+            "isStatic": true,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "class",
+              "start": {
+                "column": 7,
+                "line": 1,
+                "offset": 6,
+              },
+            },
+            "type": 4,
+          },
+          "exp": {
+            "constType": 0,
+            "content": "{ some: condition }",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 33,
+                "line": 1,
+                "offset": 32,
+              },
+              "source": "{ some: condition }",
+              "start": {
+                "column": 14,
+                "line": 1,
+                "offset": 13,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 34,
+              "line": 1,
+              "offset": 33,
+            },
+            "source": ":class="{ some: condition }"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [],
+          "name": "bind",
+          "rawName": ":class",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+    {
+      "children": [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": {
+        "end": {
+          "column": 37,
+          "line": 2,
+          "offset": 73,
+        },
+        "source": "<p v-bind:style="{ color: 'red' }"/>",
+        "start": {
+          "column": 1,
+          "line": 2,
+          "offset": 37,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": {
+            "constType": 3,
+            "content": "style",
+            "isStatic": true,
+            "loc": {
+              "end": {
+                "column": 16,
+                "line": 2,
+                "offset": 52,
+              },
+              "source": "style",
+              "start": {
+                "column": 11,
+                "line": 2,
+                "offset": 47,
+              },
+            },
+            "type": 4,
+          },
+          "exp": {
+            "constType": 0,
+            "content": "{ color: 'red' }",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 34,
+                "line": 2,
+                "offset": 70,
+              },
+              "source": "{ color: 'red' }",
+              "start": {
+                "column": 18,
+                "line": 2,
+                "offset": 54,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 35,
+              "line": 2,
+              "offset": 71,
+            },
+            "source": "v-bind:style="{ color: 'red' }"",
+            "start": {
+              "column": 4,
+              "line": 2,
+              "offset": 40,
+            },
+          },
+          "modifiers": [],
+          "name": "bind",
+          "rawName": "v-bind:style",
+          "type": 7,
+        },
+      ],
+      "tag": "p",
       "tagType": 0,
       "type": 1,
     },
@@ -194,17 +259,238 @@ exports[`compiler: parse > Errors > ABRUPT_CLOSING_OF_EMPTY_COMMENT > <template>
   "imports": [],
   "loc": {
     "end": {
-      "column": 29,
-      "line": 1,
-      "offset": 28,
+      "column": 37,
+      "line": 2,
+      "offset": 73,
     },
-    "source": "<template><!----></template>",
+    "source": "<div :class="{ some: condition }" />
+<p v-bind:style="{ color: 'red' }"/>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
+  "source": "<div :class="{ some: condition }" />
+<p v-bind:style="{ color: 'red' }"/>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Edge Cases > valid html 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "children": [],
+          "codegenNode": undefined,
+          "isSelfClosing": true,
+          "loc": {
+            "end": {
+              "column": 39,
+              "line": 2,
+              "offset": 73,
+            },
+            "source": "<p v-bind:style="{ color: 'red' }"/>",
+            "start": {
+              "column": 3,
+              "line": 2,
+              "offset": 37,
+            },
+          },
+          "ns": 0,
+          "props": [
+            {
+              "arg": {
+                "constType": 3,
+                "content": "style",
+                "isStatic": true,
+                "loc": {
+                  "end": {
+                    "column": 18,
+                    "line": 2,
+                    "offset": 52,
+                  },
+                  "source": "style",
+                  "start": {
+                    "column": 13,
+                    "line": 2,
+                    "offset": 47,
+                  },
+                },
+                "type": 4,
+              },
+              "exp": {
+                "constType": 0,
+                "content": "{ color: 'red' }",
+                "isStatic": false,
+                "loc": {
+                  "end": {
+                    "column": 36,
+                    "line": 2,
+                    "offset": 70,
+                  },
+                  "source": "{ color: 'red' }",
+                  "start": {
+                    "column": 20,
+                    "line": 2,
+                    "offset": 54,
+                  },
+                },
+                "type": 4,
+              },
+              "loc": {
+                "end": {
+                  "column": 37,
+                  "line": 2,
+                  "offset": 71,
+                },
+                "source": "v-bind:style="{ color: 'red' }"",
+                "start": {
+                  "column": 6,
+                  "line": 2,
+                  "offset": 40,
+                },
+              },
+              "modifiers": [],
+              "name": "bind",
+              "rawName": "v-bind:style",
+              "type": 7,
+            },
+          ],
+          "tag": "p",
+          "tagType": 0,
+          "type": 1,
+        },
+        {
+          "content": " a comment with <html> inside it ",
+          "loc": {
+            "end": {
+              "column": 43,
+              "line": 3,
+              "offset": 116,
+            },
+            "source": "<!-- a comment with <html> inside it -->",
+            "start": {
+              "column": 3,
+              "line": 3,
+              "offset": 76,
+            },
+          },
+          "type": 3,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 7,
+          "line": 4,
+          "offset": 123,
+        },
+        "source": "<div :class="{ some: condition }">
+  <p v-bind:style="{ color: 'red' }"/>
+  <!-- a comment with <html> inside it -->
+</div>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": {
+            "constType": 3,
+            "content": "class",
+            "isStatic": true,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "class",
+              "start": {
+                "column": 7,
+                "line": 1,
+                "offset": 6,
+              },
+            },
+            "type": 4,
+          },
+          "exp": {
+            "constType": 0,
+            "content": "{ some: condition }",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 33,
+                "line": 1,
+                "offset": 32,
+              },
+              "source": "{ some: condition }",
+              "start": {
+                "column": 14,
+                "line": 1,
+                "offset": 13,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 34,
+              "line": 1,
+              "offset": 33,
+            },
+            "source": ":class="{ some: condition }"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [],
+          "name": "bind",
+          "rawName": ":class",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 7,
+      "line": 4,
+      "offset": 123,
+    },
+    "source": "<div :class="{ some: condition }">
+  <p v-bind:style="{ color: 'red' }"/>
+  <!-- a comment with <html> inside it -->
+</div>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div :class="{ some: condition }">
+  <p v-bind:style="{ color: 'red' }"/>
+  <!-- a comment with <html> inside it -->
+</div>",
   "temps": 0,
   "type": 0,
 }
@@ -212,30 +498,11 @@ exports[`compiler: parse > Errors > ABRUPT_CLOSING_OF_EMPTY_COMMENT > <template>
 
 exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[cdata]]></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "content": "[CDATA[cdata]]",
-          "loc": {
-            "end": {
-              "column": 28,
-              "line": 1,
-              "offset": 27,
-            },
-            "source": "<![CDATA[cdata]]>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 39,
@@ -275,6 +542,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[c
       "offset": 0,
     },
   },
+  "source": "<template><![CDATA[cdata]]></template>",
   "temps": 0,
   "type": 0,
 }
@@ -282,7 +550,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[c
 
 exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CDATA[cdata]]></svg></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -307,7 +575,6 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
             },
           ],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 39,
@@ -329,7 +596,6 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 50,
@@ -369,6 +635,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
       "offset": 0,
     },
   },
+  "source": "<template><svg><![CDATA[cdata]]></svg></template>",
   "temps": 0,
   "type": 0,
 }
@@ -376,21 +643,20 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
 
 exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" id=""></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 34,
               "line": 1,
               "offset": 33,
             },
-            "source": "<div id=\\"\\" id=\\"\\"></div>",
+            "source": "<div id="" id=""></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -406,7 +672,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                   "line": 1,
                   "offset": 20,
                 },
-                "source": "id=\\"\\"",
+                "source": "id=""",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -414,6 +680,19 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                 },
               },
               "name": "id",
+              "nameLoc": {
+                "end": {
+                  "column": 18,
+                  "line": 1,
+                  "offset": 17,
+                },
+                "source": "id",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "",
@@ -423,7 +702,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                     "line": 1,
                     "offset": 20,
                   },
-                  "source": "\\"\\"",
+                  "source": """",
                   "start": {
                     "column": 19,
                     "line": 1,
@@ -440,7 +719,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                   "line": 1,
                   "offset": 26,
                 },
-                "source": "id=\\"\\"",
+                "source": "id=""",
                 "start": {
                   "column": 22,
                   "line": 1,
@@ -448,6 +727,19 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                 },
               },
               "name": "id",
+              "nameLoc": {
+                "end": {
+                  "column": 24,
+                  "line": 1,
+                  "offset": 23,
+                },
+                "source": "id",
+                "start": {
+                  "column": 22,
+                  "line": 1,
+                  "offset": 21,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "",
@@ -457,7 +749,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                     "line": 1,
                     "offset": 26,
                   },
-                  "source": "\\"\\"",
+                  "source": """",
                   "start": {
                     "column": 25,
                     "line": 1,
@@ -474,14 +766,13 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 45,
           "line": 1,
           "offset": 44,
         },
-        "source": "<template><div id=\\"\\" id=\\"\\"></div></template>",
+        "source": "<template><div id="" id=""></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -507,165 +798,14 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
       "line": 1,
       "offset": 44,
     },
-    "source": "<template><div id=\\"\\" id=\\"\\"></div></template>",
+    "source": "<template><div id="" id=""></div></template>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > END_TAG_WITH_ATTRIBUTES > <template><div></div id=""></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 28,
-              "line": 1,
-              "offset": 27,
-            },
-            "source": "<div></div id=\\"\\">",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 39,
-          "line": 1,
-          "offset": 38,
-        },
-        "source": "<template><div></div id=\\"\\"></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 39,
-      "line": 1,
-      "offset": 38,
-    },
-    "source": "<template><div></div id=\\"\\"></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > END_TAG_WITH_TRAILING_SOLIDUS > <template><div></div/></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-            "source": "<div></div/>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 34,
-          "line": 1,
-          "offset": 33,
-        },
-        "source": "<template><div></div/></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 34,
-      "line": 1,
-      "offset": 33,
-    },
-    "source": "<template><div></div/></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
+  "source": "<template><div id="" id=""></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -673,7 +813,7 @@ exports[`compiler: parse > Errors > END_TAG_WITH_TRAILING_SOLIDUS > <template><d
 
 exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -696,7 +836,6 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 12,
@@ -736,6 +875,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><",
   "temps": 0,
   "type": 0,
 }
@@ -743,7 +883,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
 
 exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -766,7 +906,6 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 13,
@@ -806,6 +945,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template></",
   "temps": 0,
   "type": 0,
 }
@@ -813,14 +953,13 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 25,
@@ -842,7 +981,6 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 25,
@@ -882,6 +1020,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
       "offset": 0,
     },
   },
+  "source": "<template><svg><![CDATA[",
   "temps": 0,
   "type": 0,
 }
@@ -889,7 +1028,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
 
 exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -914,7 +1053,6 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
             },
           ],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 30,
@@ -936,7 +1074,6 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 30,
@@ -976,146 +1113,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
       "offset": 0,
     },
   },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><! 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "",
-          "loc": {
-            "end": {
-              "column": 13,
-              "line": 1,
-              "offset": 12,
-            },
-            "source": "<!",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 13,
-          "line": 1,
-          "offset": 12,
-        },
-        "source": "<template><!",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 13,
-      "line": 1,
-      "offset": 12,
-    },
-    "source": "<template><!",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!- 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "-",
-          "loc": {
-            "end": {
-              "column": 14,
-              "line": 1,
-              "offset": 13,
-            },
-            "source": "<!-",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 14,
-          "line": 1,
-          "offset": 13,
-        },
-        "source": "<template><!-",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 14,
-      "line": 1,
-      "offset": 13,
-    },
-    "source": "<template><!-",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
+  "source": "<template><svg><![CDATA[cdata",
   "temps": 0,
   "type": 0,
 }
@@ -1123,30 +1121,11 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!- 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "content": "",
-          "loc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "<!--",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 15,
@@ -1186,6 +1165,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><!--",
   "temps": 0,
   "type": 0,
 }
@@ -1193,7 +1173,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -1201,9 +1181,9 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
           "content": "comment",
           "loc": {
             "end": {
-              "column": 22,
+              "column": 25,
               "line": 1,
-              "offset": 21,
+              "offset": 24,
             },
             "source": "<!--comment",
             "start": {
@@ -1216,7 +1196,6 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 22,
@@ -1256,216 +1235,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
       "offset": 0,
     },
   },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!abc 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "abc",
-          "loc": {
-            "end": {
-              "column": 16,
-              "line": 1,
-              "offset": 15,
-            },
-            "source": "<!abc",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 16,
-          "line": 1,
-          "offset": 15,
-        },
-        "source": "<template><!abc",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 16,
-      "line": 1,
-      "offset": 15,
-    },
-    "source": "<template><!abc",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT > <script><!--console.log('hello') 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "<!--console.log('hello')",
-          "loc": {
-            "end": {
-              "column": 33,
-              "line": 1,
-              "offset": 32,
-            },
-            "source": "<!--console.log('hello')",
-            "start": {
-              "column": 9,
-              "line": 1,
-              "offset": 8,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 33,
-          "line": 1,
-          "offset": 32,
-        },
-        "source": "<script><!--console.log('hello')",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "script",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 33,
-      "line": 1,
-      "offset": 32,
-    },
-    "source": "<script><!--console.log('hello')",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT > <script>console.log('hello') 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "console.log('hello')",
-          "loc": {
-            "end": {
-              "column": 29,
-              "line": 1,
-              "offset": 28,
-            },
-            "source": "console.log('hello')",
-            "start": {
-              "column": 9,
-              "line": 1,
-              "offset": 8,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 29,
-          "line": 1,
-          "offset": 28,
-        },
-        "source": "<script>console.log('hello')",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "script",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 29,
-      "line": 1,
-      "offset": 28,
-    },
-    "source": "<script>console.log('hello')",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
+  "source": "<template><!--comment",
   "temps": 0,
   "type": 0,
 }
@@ -1473,12 +1243,11 @@ exports[`compiler: parse > Errors > EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT > <scri
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 11,
@@ -1518,6 +1287,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
       "offset": 0,
     },
   },
+  "source": "<div></div",
   "temps": 0,
   "type": 0,
 }
@@ -1525,36 +1295,11 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 16,
-              "line": 1,
-              "offset": 15,
-            },
-            "source": "<div ",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 16,
@@ -1594,6 +1339,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div ",
   "temps": 0,
   "type": 0,
 }
@@ -1601,36 +1347,11 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "<div",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 15,
@@ -1670,6 +1391,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div",
   "temps": 0,
   "type": 0,
 }
@@ -1677,55 +1399,11 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 19,
-              "line": 1,
-              "offset": 18,
-            },
-            "source": "<div id ",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 18,
-                  "line": 1,
-                  "offset": 17,
-                },
-                "source": "id",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": undefined,
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 19,
@@ -1765,6 +1443,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div id ",
   "temps": 0,
   "type": 0,
 }
@@ -1772,55 +1451,11 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-            "source": "<div id =",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 20,
-                  "line": 1,
-                  "offset": 19,
-                },
-                "source": "id =",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": undefined,
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 20,
@@ -1860,6 +1495,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div id =",
   "temps": 0,
   "type": 0,
 }
@@ -1867,55 +1503,11 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 18,
-              "line": 1,
-              "offset": 17,
-            },
-            "source": "<div id",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 18,
-                  "line": 1,
-                  "offset": 17,
-                },
-                "source": "id",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": undefined,
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 18,
@@ -1955,6 +1547,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div id",
   "temps": 0,
   "type": 0,
 }
@@ -1962,78 +1555,18 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-            "source": "<div id=\\"abc",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 23,
-                  "line": 1,
-                  "offset": 22,
-                },
-                "source": "id=\\"abc",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "abc",
-                "loc": {
-                  "end": {
-                    "column": 23,
-                    "line": 1,
-                    "offset": 22,
-                  },
-                  "source": "\\"abc",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 23,
           "line": 1,
           "offset": 22,
         },
-        "source": "<template><div id=\\"abc",
+        "source": "<template><div id="abc",
         "start": {
           "column": 1,
           "line": 1,
@@ -2059,13 +1592,14 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
       "line": 1,
       "offset": 22,
     },
-    "source": "<template><div id=\\"abc",
+    "source": "<template><div id="abc",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
+  "source": "<template><div id="abc",
   "temps": 0,
   "type": 0,
 }
@@ -2073,78 +1607,18 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 24,
-              "line": 1,
-              "offset": 23,
-            },
-            "source": "<div id=\\"abc\\"",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-                "source": "id=\\"abc\\"",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "abc",
-                "loc": {
-                  "end": {
-                    "column": 24,
-                    "line": 1,
-                    "offset": 23,
-                  },
-                  "source": "\\"abc\\"",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 24,
           "line": 1,
           "offset": 23,
         },
-        "source": "<template><div id=\\"abc\\"",
+        "source": "<template><div id="abc"",
         "start": {
           "column": 1,
           "line": 1,
@@ -2170,13 +1644,14 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
       "line": 1,
       "offset": 23,
     },
-    "source": "<template><div id=\\"abc\\"",
+    "source": "<template><div id="abc"",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
+  "source": "<template><div id="abc"",
   "temps": 0,
   "type": 0,
 }
@@ -2184,78 +1659,36 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
+          "content": "/",
           "loc": {
             "end": {
               "column": 25,
               "line": 1,
               "offset": 24,
             },
-            "source": "<div id=\\"abc\\"/",
+            "source": "/",
             "start": {
-              "column": 11,
+              "column": 0,
               "line": 1,
-              "offset": 10,
+              "offset": -1,
             },
           },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-                "source": "id=\\"abc\\"",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "abc",
-                "loc": {
-                  "end": {
-                    "column": 24,
-                    "line": 1,
-                    "offset": 23,
-                  },
-                  "source": "\\"abc\\"",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
+          "type": 2,
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 25,
           "line": 1,
           "offset": 24,
         },
-        "source": "<template><div id=\\"abc\\"/",
+        "source": "<template><div id="abc"/",
         "start": {
           "column": 1,
           "line": 1,
@@ -2281,13 +1714,14 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
       "line": 1,
       "offset": 24,
     },
-    "source": "<template><div id=\\"abc\\"/",
+    "source": "<template><div id="abc"/",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
+  "source": "<template><div id="abc"/",
   "temps": 0,
   "type": 0,
 }
@@ -2295,71 +1729,11 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 23,
-              "line": 1,
-              "offset": 22,
-            },
-            "source": "<div id='abc",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 23,
-                  "line": 1,
-                  "offset": 22,
-                },
-                "source": "id='abc",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "abc",
-                "loc": {
-                  "end": {
-                    "column": 23,
-                    "line": 1,
-                    "offset": 22,
-                  },
-                  "source": "'abc",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 23,
@@ -2399,6 +1773,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div id='abc",
   "temps": 0,
   "type": 0,
 }
@@ -2406,71 +1781,11 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 24,
-              "line": 1,
-              "offset": 23,
-            },
-            "source": "<div id='abc'",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-                "source": "id='abc'",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "abc",
-                "loc": {
-                  "end": {
-                    "column": 24,
-                    "line": 1,
-                    "offset": 23,
-                  },
-                  "source": "'abc'",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 24,
@@ -2510,6 +1825,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div id='abc'",
   "temps": 0,
   "type": 0,
 }
@@ -2517,71 +1833,29 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
+          "content": "/",
           "loc": {
             "end": {
               "column": 25,
               "line": 1,
               "offset": 24,
             },
-            "source": "<div id='abc'/",
+            "source": "/",
             "start": {
-              "column": 11,
+              "column": 0,
               "line": 1,
-              "offset": 10,
+              "offset": -1,
             },
           },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-                "source": "id='abc'",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "abc",
-                "loc": {
-                  "end": {
-                    "column": 24,
-                    "line": 1,
-                    "offset": 23,
-                  },
-                  "source": "'abc'",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
+          "type": 2,
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 25,
@@ -2621,6 +1895,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = 
       "offset": 0,
     },
   },
+  "source": "<template><div id='abc'/",
   "temps": 0,
   "type": 0,
 }
@@ -2628,71 +1903,29 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = 
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
+          "content": "/",
           "loc": {
             "end": {
               "column": 24,
               "line": 1,
               "offset": 23,
             },
-            "source": "<div id=abc /",
+            "source": "/",
             "start": {
-              "column": 11,
+              "column": 0,
               "line": 1,
-              "offset": 10,
+              "offset": -1,
             },
           },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 22,
-                  "line": 1,
-                  "offset": 21,
-                },
-                "source": "id=abc",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "abc",
-                "loc": {
-                  "end": {
-                    "column": 22,
-                    "line": 1,
-                    "offset": 21,
-                  },
-                  "source": "abc",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
+          "type": 2,
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 24,
@@ -2732,6 +1965,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div id=abc /",
   "temps": 0,
   "type": 0,
 }
@@ -2739,71 +1973,11 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
 
 exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 22,
-              "line": 1,
-              "offset": 21,
-            },
-            "source": "<div id=abc",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 22,
-                  "line": 1,
-                  "offset": 21,
-                },
-                "source": "id=abc",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "abc",
-                "loc": {
-                  "end": {
-                    "column": 22,
-                    "line": 1,
-                    "offset": 21,
-                  },
-                  "source": "abc",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 22,
@@ -2843,717 +2017,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
       "offset": 0,
     },
   },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INCORRECTLY_CLOSED_COMMENT > <template><!--comment--!></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "comment",
-          "loc": {
-            "end": {
-              "column": 26,
-              "line": 1,
-              "offset": 25,
-            },
-            "source": "<!--comment--!>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 37,
-          "line": 1,
-          "offset": 36,
-        },
-        "source": "<template><!--comment--!></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 37,
-      "line": 1,
-      "offset": 36,
-    },
-    "source": "<template><!--comment--!></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INCORRECTLY_OPENED_COMMENT > <!DOCTYPE html> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "content": "DOCTYPE html",
-      "loc": {
-        "end": {
-          "column": 16,
-          "line": 1,
-          "offset": 15,
-        },
-        "source": "<!DOCTYPE html>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "type": 3,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 16,
-      "line": 1,
-      "offset": 15,
-    },
-    "source": "<!DOCTYPE html>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INCORRECTLY_OPENED_COMMENT > <template><!></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "",
-          "loc": {
-            "end": {
-              "column": 14,
-              "line": 1,
-              "offset": 13,
-            },
-            "source": "<!>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 25,
-          "line": 1,
-          "offset": 24,
-        },
-        "source": "<template><!></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 25,
-      "line": 1,
-      "offset": 24,
-    },
-    "source": "<template><!></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INCORRECTLY_OPENED_COMMENT > <template><!-></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "-",
-          "loc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "<!->",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 26,
-          "line": 1,
-          "offset": 25,
-        },
-        "source": "<template><!-></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 26,
-      "line": 1,
-      "offset": 25,
-    },
-    "source": "<template><!-></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INCORRECTLY_OPENED_COMMENT > <template><!ELEMENT br EMPTY></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "ELEMENT br EMPTY",
-          "loc": {
-            "end": {
-              "column": 30,
-              "line": 1,
-              "offset": 29,
-            },
-            "source": "<!ELEMENT br EMPTY>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 41,
-          "line": 1,
-          "offset": 40,
-        },
-        "source": "<template><!ELEMENT br EMPTY></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 41,
-      "line": 1,
-      "offset": 40,
-    },
-    "source": "<template><!ELEMENT br EMPTY></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INVALID_FIRST_CHARACTER_OF_TAG_NAME > <template></�></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "�",
-          "loc": {
-            "end": {
-              "column": 15,
-              "line": 1,
-              "offset": 14,
-            },
-            "source": "</�>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 26,
-          "line": 1,
-          "offset": 25,
-        },
-        "source": "<template></�></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 26,
-      "line": 1,
-      "offset": 25,
-    },
-    "source": "<template></�></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INVALID_FIRST_CHARACTER_OF_TAG_NAME > <template><�></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "<�>",
-          "loc": {
-            "end": {
-              "column": 14,
-              "line": 1,
-              "offset": 13,
-            },
-            "source": "<�>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 25,
-          "line": 1,
-          "offset": 24,
-        },
-        "source": "<template><�></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 25,
-      "line": 1,
-      "offset": 24,
-    },
-    "source": "<template><�></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INVALID_FIRST_CHARACTER_OF_TAG_NAME > <template>{{a < b}}</template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": {
-            "constType": 0,
-            "content": "a < b",
-            "isStatic": false,
-            "loc": {
-              "end": {
-                "column": 18,
-                "line": 1,
-                "offset": 17,
-              },
-              "source": "a < b",
-              "start": {
-                "column": 13,
-                "line": 1,
-                "offset": 12,
-              },
-            },
-            "type": 4,
-          },
-          "loc": {
-            "end": {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-            "source": "{{a < b}}",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 5,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 31,
-          "line": 1,
-          "offset": 30,
-        },
-        "source": "<template>{{a < b}}</template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 31,
-      "line": 1,
-      "offset": 30,
-    },
-    "source": "<template>{{a < b}}</template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INVALID_FIRST_CHARACTER_OF_TAG_NAME > <template>a < b</template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "a < b",
-          "loc": {
-            "end": {
-              "column": 16,
-              "line": 1,
-              "offset": 15,
-            },
-            "source": "a < b",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 27,
-          "line": 1,
-          "offset": 26,
-        },
-        "source": "<template>a < b</template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 27,
-      "line": 1,
-      "offset": 26,
-    },
-    "source": "<template>a < b</template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > INVALID_FIRST_CHARACTER_OF_TAG_NAME > <template>a </ b</template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "a ",
-          "loc": {
-            "end": {
-              "column": 13,
-              "line": 1,
-              "offset": 12,
-            },
-            "source": "a ",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 2,
-        },
-        {
-          "content": " b</template",
-          "loc": {
-            "end": {
-              "column": 28,
-              "line": 1,
-              "offset": 27,
-            },
-            "source": "</ b</template>",
-            "start": {
-              "column": 13,
-              "line": 1,
-              "offset": 12,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 28,
-          "line": 1,
-          "offset": 27,
-        },
-        "source": "<template>a </ b</template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 28,
-      "line": 1,
-      "offset": 27,
-    },
-    "source": "<template>a </ b</template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
+  "source": "<template><div id=abc",
   "temps": 0,
   "type": 0,
 }
@@ -3561,14 +2025,13 @@ exports[`compiler: parse > Errors > INVALID_FIRST_CHARACTER_OF_TAG_NAME > <templ
 
 exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id= /></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 28,
@@ -3599,6 +2062,19 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                 },
               },
               "name": "id",
+              "nameLoc": {
+                "end": {
+                  "column": 18,
+                  "line": 1,
+                  "offset": 17,
+                },
+                "source": "id",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "/",
@@ -3625,7 +2101,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 39,
@@ -3665,6 +2140,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "offset": 0,
     },
   },
+  "source": "<template><div id= /></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -3672,14 +2148,13 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
 
 exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id= ></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 27,
@@ -3710,8 +2185,37 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                 },
               },
               "name": "id",
+              "nameLoc": {
+                "end": {
+                  "column": 18,
+                  "line": 1,
+                  "offset": 17,
+                },
+                "source": "id",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
-              "value": undefined,
+              "value": {
+                "content": "",
+                "loc": {
+                  "end": {
+                    "column": 20,
+                    "line": 1,
+                    "offset": 19,
+                  },
+                  "source": "",
+                  "start": {
+                    "column": 20,
+                    "line": 1,
+                    "offset": 19,
+                  },
+                },
+                "type": 2,
+              },
             },
           ],
           "tag": "div",
@@ -3720,7 +2224,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 38,
@@ -3760,6 +2263,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "offset": 0,
     },
   },
+  "source": "<template><div id= ></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -3767,14 +2271,13 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
 
 exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 26,
@@ -3805,8 +2308,37 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                 },
               },
               "name": "id",
+              "nameLoc": {
+                "end": {
+                  "column": 18,
+                  "line": 1,
+                  "offset": 17,
+                },
+                "source": "id",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
-              "value": undefined,
+              "value": {
+                "content": "",
+                "loc": {
+                  "end": {
+                    "column": 19,
+                    "line": 1,
+                    "offset": 18,
+                  },
+                  "source": "",
+                  "start": {
+                    "column": 19,
+                    "line": 1,
+                    "offset": 18,
+                  },
+                },
+                "type": 2,
+              },
             },
           ],
           "tag": "div",
@@ -3815,7 +2347,6 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 37,
@@ -3855,6 +2386,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "offset": 0,
     },
   },
+  "source": "<template><div id=></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -3862,12 +2394,11 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
 
 exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 25,
@@ -3907,649 +2438,7 @@ exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></templa
       "offset": 0,
     },
   },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > MISSING_WHITESPACE_BETWEEN_ATTRIBUTES > <template><div id="foo"\\x0d;\\x0a;class="bar"></div></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 19,
-              "line": 2,
-              "offset": 43,
-            },
-            "source": "<div id=\\"foo\\"
-class=\\"bar\\"></div>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-                "source": "id=\\"foo\\"",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "foo",
-                "loc": {
-                  "end": {
-                    "column": 24,
-                    "line": 1,
-                    "offset": 23,
-                  },
-                  "source": "\\"foo\\"",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-            {
-              "loc": {
-                "end": {
-                  "column": 12,
-                  "line": 2,
-                  "offset": 36,
-                },
-                "source": "class=\\"bar\\"",
-                "start": {
-                  "column": 1,
-                  "line": 2,
-                  "offset": 25,
-                },
-              },
-              "name": "class",
-              "type": 6,
-              "value": {
-                "content": "bar",
-                "loc": {
-                  "end": {
-                    "column": 12,
-                    "line": 2,
-                    "offset": 36,
-                  },
-                  "source": "\\"bar\\"",
-                  "start": {
-                    "column": 7,
-                    "line": 2,
-                    "offset": 31,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 30,
-          "line": 2,
-          "offset": 54,
-        },
-        "source": "<template><div id=\\"foo\\"
-class=\\"bar\\"></div></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 30,
-      "line": 2,
-      "offset": 54,
-    },
-    "source": "<template><div id=\\"foo\\"
-class=\\"bar\\"></div></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > MISSING_WHITESPACE_BETWEEN_ATTRIBUTES > <template><div id="foo"class="bar"></div></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 42,
-              "line": 1,
-              "offset": 41,
-            },
-            "source": "<div id=\\"foo\\"class=\\"bar\\"></div>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "loc": {
-                "end": {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-                "source": "id=\\"foo\\"",
-                "start": {
-                  "column": 16,
-                  "line": 1,
-                  "offset": 15,
-                },
-              },
-              "name": "id",
-              "type": 6,
-              "value": {
-                "content": "foo",
-                "loc": {
-                  "end": {
-                    "column": 24,
-                    "line": 1,
-                    "offset": 23,
-                  },
-                  "source": "\\"foo\\"",
-                  "start": {
-                    "column": 19,
-                    "line": 1,
-                    "offset": 18,
-                  },
-                },
-                "type": 2,
-              },
-            },
-            {
-              "loc": {
-                "end": {
-                  "column": 35,
-                  "line": 1,
-                  "offset": 34,
-                },
-                "source": "class=\\"bar\\"",
-                "start": {
-                  "column": 24,
-                  "line": 1,
-                  "offset": 23,
-                },
-              },
-              "name": "class",
-              "type": 6,
-              "value": {
-                "content": "bar",
-                "loc": {
-                  "end": {
-                    "column": 35,
-                    "line": 1,
-                    "offset": 34,
-                  },
-                  "source": "\\"bar\\"",
-                  "start": {
-                    "column": 30,
-                    "line": 1,
-                    "offset": 29,
-                  },
-                },
-                "type": 2,
-              },
-            },
-          ],
-          "tag": "div",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 53,
-          "line": 1,
-          "offset": 52,
-        },
-        "source": "<template><div id=\\"foo\\"class=\\"bar\\"></div></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 53,
-      "line": 1,
-      "offset": 52,
-    },
-    "source": "<template><div id=\\"foo\\"class=\\"bar\\"></div></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > NESTED_COMMENT > <template><!--a<!-- 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "a<!--",
-          "loc": {
-            "end": {
-              "column": 20,
-              "line": 1,
-              "offset": 19,
-            },
-            "source": "<!--a<!--",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 20,
-          "line": 1,
-          "offset": 19,
-        },
-        "source": "<template><!--a<!--",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 20,
-      "line": 1,
-      "offset": 19,
-    },
-    "source": "<template><!--a<!--",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > NESTED_COMMENT > <template><!--a<!--></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "a<!",
-          "loc": {
-            "end": {
-              "column": 21,
-              "line": 1,
-              "offset": 20,
-            },
-            "source": "<!--a<!-->",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 32,
-          "line": 1,
-          "offset": 31,
-        },
-        "source": "<template><!--a<!--></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 32,
-      "line": 1,
-      "offset": 31,
-    },
-    "source": "<template><!--a<!--></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > NESTED_COMMENT > <template><!--a<!--b<!----></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "a<!--b<!--",
-          "loc": {
-            "end": {
-              "column": 28,
-              "line": 1,
-              "offset": 27,
-            },
-            "source": "<!--a<!--b<!---->",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 39,
-          "line": 1,
-          "offset": 38,
-        },
-        "source": "<template><!--a<!--b<!----></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 39,
-      "line": 1,
-      "offset": 38,
-    },
-    "source": "<template><!--a<!--b<!----></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > NESTED_COMMENT > <template><!--a<!--b<!--c--></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "a<!--b<!--c",
-          "loc": {
-            "end": {
-              "column": 29,
-              "line": 1,
-              "offset": 28,
-            },
-            "source": "<!--a<!--b<!--c-->",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 40,
-          "line": 1,
-          "offset": 39,
-        },
-        "source": "<template><!--a<!--b<!--c--></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 40,
-      "line": 1,
-      "offset": 39,
-    },
-    "source": "<template><!--a<!--b<!--c--></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > Errors > NESTED_COMMENT > <template><!--a<!--b--></template> 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "content": "a<!--b",
-          "loc": {
-            "end": {
-              "column": 24,
-              "line": 1,
-              "offset": 23,
-            },
-            "source": "<!--a<!--b-->",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 35,
-          "line": 1,
-          "offset": 34,
-        },
-        "source": "<template><!--a<!--b--></template>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "template",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 35,
-      "line": 1,
-      "offset": 34,
-    },
-    "source": "<template><!--a<!--b--></template>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
+  "source": "<template></></template>",
   "temps": 0,
   "type": 0,
 }
@@ -4557,21 +2446,20 @@ exports[`compiler: parse > Errors > NESTED_COMMENT > <template><!--a<!--b--></te
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div a"bc=''></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 30,
               "line": 1,
               "offset": 29,
             },
-            "source": "<div a\\"bc=''></div>",
+            "source": "<div a"bc=''></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -4587,14 +2475,27 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                   "line": 1,
                   "offset": 22,
                 },
-                "source": "a\\"bc=''",
+                "source": "a"bc=''",
                 "start": {
                   "column": 16,
                   "line": 1,
                   "offset": 15,
                 },
               },
-              "name": "a\\"bc",
+              "name": "a"bc",
+              "nameLoc": {
+                "end": {
+                  "column": 20,
+                  "line": 1,
+                  "offset": 19,
+                },
+                "source": "a"bc",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "",
@@ -4621,14 +2522,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 41,
           "line": 1,
           "offset": 40,
         },
-        "source": "<template><div a\\"bc=''></div></template>",
+        "source": "<template><div a"bc=''></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -4654,13 +2554,14 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "line": 1,
       "offset": 40,
     },
-    "source": "<template><div a\\"bc=''></div></template>",
+    "source": "<template><div a"bc=''></div></template>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
+  "source": "<template><div a"bc=''></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -4668,14 +2569,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div a'bc=''></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 30,
@@ -4706,6 +2606,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                 },
               },
               "name": "a'bc",
+              "nameLoc": {
+                "end": {
+                  "column": 20,
+                  "line": 1,
+                  "offset": 19,
+                },
+                "source": "a'bc",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "",
@@ -4732,7 +2645,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 41,
@@ -4772,6 +2684,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "offset": 0,
     },
   },
+  "source": "<template><div a'bc=''></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -4779,14 +2692,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div a<bc=''></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 30,
@@ -4817,6 +2729,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                 },
               },
               "name": "a<bc",
+              "nameLoc": {
+                "end": {
+                  "column": 20,
+                  "line": 1,
+                  "offset": 19,
+                },
+                "source": "a<bc",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "",
@@ -4843,7 +2768,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 41,
@@ -4883,6 +2807,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "offset": 0,
     },
   },
+  "source": "<template><div a<bc=''></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -4890,21 +2815,20 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar"></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 31,
               "line": 1,
               "offset": 30,
             },
-            "source": "<div foo=bar\\"></div>",
+            "source": "<div foo=bar"></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -4920,7 +2844,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 23,
                 },
-                "source": "foo=bar\\"",
+                "source": "foo=bar"",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -4928,16 +2852,29 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                 },
               },
               "name": "foo",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "foo",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
-                "content": "bar\\"",
+                "content": "bar"",
                 "loc": {
                   "end": {
                     "column": 24,
                     "line": 1,
                     "offset": 23,
                   },
-                  "source": "bar\\"",
+                  "source": "bar"",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -4954,14 +2891,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 42,
           "line": 1,
           "offset": 41,
         },
-        "source": "<template><div foo=bar\\"></div></template>",
+        "source": "<template><div foo=bar"></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -4987,13 +2923,14 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "line": 1,
       "offset": 41,
     },
-    "source": "<template><div foo=bar\\"></div></template>",
+    "source": "<template><div foo=bar"></div></template>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
+  "source": "<template><div foo=bar"></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5001,14 +2938,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar'></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 31,
@@ -5039,6 +2975,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                 },
               },
               "name": "foo",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "foo",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "bar'",
@@ -5065,7 +3014,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 42,
@@ -5105,6 +3053,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "offset": 0,
     },
   },
+  "source": "<template><div foo=bar'></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5112,14 +3061,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar<div></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 34,
@@ -5150,6 +3098,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                 },
               },
               "name": "foo",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "foo",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "bar<div",
@@ -5176,7 +3137,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 45,
@@ -5216,6 +3176,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "offset": 0,
     },
   },
+  "source": "<template><div foo=bar<div></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5223,14 +3184,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar=baz></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 34,
@@ -5261,6 +3221,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                 },
               },
               "name": "foo",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "foo",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "bar=baz",
@@ -5287,7 +3260,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 45,
@@ -5327,6 +3299,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "offset": 0,
     },
   },
+  "source": "<template><div foo=bar=baz></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5334,14 +3307,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE > <template><div foo=bar\`></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 31,
@@ -5372,6 +3344,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                 },
               },
               "name": "foo",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "foo",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "bar\`",
@@ -5398,7 +3383,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 42,
@@ -5438,6 +3422,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "offset": 0,
     },
   },
+  "source": "<template><div foo=bar\`></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5445,14 +3430,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
 
 exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME > <template><div =></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 24,
@@ -5483,6 +3467,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                 },
               },
               "name": "=",
+              "nameLoc": {
+                "end": {
+                  "column": 17,
+                  "line": 1,
+                  "offset": 16,
+                },
+                "source": "=",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": undefined,
             },
@@ -5493,7 +3490,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 35,
@@ -5533,6 +3529,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
       "offset": 0,
     },
   },
+  "source": "<template><div =></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5540,14 +3537,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
 
 exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME > <template><div =foo=bar></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 31,
@@ -5578,6 +3574,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                 },
               },
               "name": "=foo",
+              "nameLoc": {
+                "end": {
+                  "column": 20,
+                  "line": 1,
+                  "offset": 19,
+                },
+                "source": "=foo",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": {
                 "content": "bar",
@@ -5604,7 +3613,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 42,
@@ -5644,6 +3652,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
       "offset": 0,
     },
   },
+  "source": "<template><div =foo=bar></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5651,30 +3660,11 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
 
 exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME > <template><?xml?></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
-      "children": [
-        {
-          "content": "?xml?",
-          "loc": {
-            "end": {
-              "column": 18,
-              "line": 1,
-              "offset": 17,
-            },
-            "source": "<?xml?>",
-            "start": {
-              "column": 11,
-              "line": 1,
-              "offset": 10,
-            },
-          },
-          "type": 3,
-        },
-      ],
+      "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 29,
@@ -5714,6 +3704,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME
       "offset": 0,
     },
   },
+  "source": "<template><?xml?></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5721,14 +3712,13 @@ exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME
 
 exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a/b></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 26,
@@ -5759,6 +3749,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
                 },
               },
               "name": "a",
+              "nameLoc": {
+                "end": {
+                  "column": 17,
+                  "line": 1,
+                  "offset": 16,
+                },
+                "source": "a",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
               "type": 6,
               "value": undefined,
             },
@@ -5777,6 +3780,19 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
                 },
               },
               "name": "b",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "b",
+                "start": {
+                  "column": 18,
+                  "line": 1,
+                  "offset": 17,
+                },
+              },
               "type": 6,
               "value": undefined,
             },
@@ -5787,7 +3803,6 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 37,
@@ -5827,6 +3842,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
       "offset": 0,
     },
   },
+  "source": "<template><div a/b></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -5834,7 +3850,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]></svg> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -5857,7 +3873,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 30,
@@ -5897,6 +3912,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
       "offset": 0,
     },
   },
+  "source": "<svg><![CDATA[</div>]]></svg>",
   "temps": 0,
   "type": 0,
 }
@@ -5904,7 +3920,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -5927,7 +3943,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 25,
@@ -5967,6 +3982,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
       "offset": 0,
     },
   },
+  "source": "<svg><!--</div>--></svg>",
   "temps": 0,
   "type": 0,
 }
@@ -5974,12 +3990,11 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 34,
@@ -6019,6 +4034,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></
       "offset": 0,
     },
   },
+  "source": "<template></div></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -6026,12 +4042,11 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 28,
@@ -6071,6 +4086,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></templa
       "offset": 0,
     },
   },
+  "source": "<template></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -6078,7 +4094,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></templa
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -6119,7 +4135,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 34,
@@ -6159,6 +4174,77 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
       "offset": 0,
     },
   },
+  "source": "<template>{{'</div>'}}</template>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>a </ b</template> 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "content": "a ",
+          "loc": {
+            "end": {
+              "column": 13,
+              "line": 1,
+              "offset": 12,
+            },
+            "source": "a ",
+            "start": {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "type": 2,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 28,
+          "line": 1,
+          "offset": 27,
+        },
+        "source": "<template>a </ b</template>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "template",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 28,
+      "line": 1,
+      "offset": 27,
+    },
+    "source": "<template>a </ b</template>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<template>a </ b</template>",
   "temps": 0,
   "type": 0,
 }
@@ -6166,7 +4252,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
 
 exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textarea> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
@@ -6189,7 +4275,6 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 28,
@@ -6229,6 +4314,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
       "offset": 0,
     },
   },
+  "source": "<textarea></div></textarea>",
   "temps": 0,
   "type": 0,
 }
@@ -6236,7 +4322,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
 
 exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <div v-foo:[sef fsef] /> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [],
@@ -6264,11 +4350,11 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
             "isStatic": false,
             "loc": {
               "end": {
-                "column": 16,
+                "column": 17,
                 "line": 1,
-                "offset": 15,
+                "offset": 16,
               },
-              "source": "[sef",
+              "source": "[sef ",
               "start": {
                 "column": 12,
                 "line": 1,
@@ -6293,6 +4379,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
           },
           "modifiers": [],
           "name": "foo",
+          "rawName": "v-foo:[sef",
           "type": 7,
         },
         {
@@ -6310,6 +4397,19 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
             },
           },
           "name": "fsef]",
+          "nameLoc": {
+            "end": {
+              "column": 22,
+              "line": 1,
+              "offset": 21,
+            },
+            "source": "fsef]",
+            "start": {
+              "column": 17,
+              "line": 1,
+              "offset": 16,
+            },
+          },
           "type": 6,
           "value": undefined,
         },
@@ -6338,6 +4438,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
       "offset": 0,
     },
   },
+  "source": "<div v-foo:[sef fsef] />",
   "temps": 0,
   "type": 0,
 }
@@ -6345,14 +4446,13 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
 
 exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 16,
@@ -6374,7 +4474,6 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 16,
@@ -6414,6 +4513,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
       "offset": 0,
     },
   },
+  "source": "<template><div>",
   "temps": 0,
   "type": 0,
 }
@@ -6421,14 +4521,13 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
 
 exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></template> 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "children": [
         {
           "children": [],
           "codegenNode": undefined,
-          "isSelfClosing": false,
           "loc": {
             "end": {
               "column": 16,
@@ -6450,7 +4549,6 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
         },
       ],
       "codegenNode": undefined,
-      "isSelfClosing": false,
       "loc": {
         "end": {
           "column": 27,
@@ -6490,6 +4588,77 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
       "offset": 0,
     },
   },
+  "source": "<template><div></template>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > <div>{{ foo</div> 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "content": "{{ foo</div>",
+          "loc": {
+            "end": {
+              "column": 18,
+              "line": 1,
+              "offset": 17,
+            },
+            "source": "{{ foo</div>",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "type": 2,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 18,
+          "line": 1,
+          "offset": 17,
+        },
+        "source": "<div>{{ foo</div>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 18,
+      "line": 1,
+      "offset": 17,
+    },
+    "source": "<div>{{ foo</div>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div>{{ foo</div>",
   "temps": 0,
   "type": 0,
 }
@@ -6497,7 +4666,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
 
 exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "content": "{{",
@@ -6536,6 +4705,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ 1`] = `
       "offset": 0,
     },
   },
+  "source": "{{",
   "temps": 0,
   "type": 0,
 }
@@ -6543,7 +4713,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ 1`] = `
 
 exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ foo 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "content": "{{ foo",
@@ -6582,6 +4752,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ foo 1`] = `
       "offset": 0,
     },
   },
+  "source": "{{ foo",
   "temps": 0,
   "type": 0,
 }
@@ -6589,7 +4760,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ foo 1`] = `
 
 exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{}} 1`] = `
 {
-  "cached": 0,
+  "cached": [],
   "children": [
     {
       "content": {
@@ -6646,491 +4817,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{}} 1`] = `
       "offset": 0,
     },
   },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > invalid html 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": false,
-          "loc": {
-            "end": {
-              "column": 1,
-              "line": 3,
-              "offset": 13,
-            },
-            "source": "<span>
-",
-            "start": {
-              "column": 1,
-              "line": 2,
-              "offset": 6,
-            },
-          },
-          "ns": 0,
-          "props": [],
-          "tag": "span",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 7,
-          "line": 3,
-          "offset": 19,
-        },
-        "source": "<div>
-<span>
-</div>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "div",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 8,
-      "line": 4,
-      "offset": 27,
-    },
-    "source": "<div>
-<span>
-</div>
-</span>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > self closing multiple tag 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [],
-      "codegenNode": undefined,
-      "isSelfClosing": true,
-      "loc": {
-        "end": {
-          "column": 37,
-          "line": 1,
-          "offset": 36,
-        },
-        "source": "<div :class=\\"{ some: condition }\\" />",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [
-        {
-          "arg": {
-            "constType": 3,
-            "content": "class",
-            "isStatic": true,
-            "loc": {
-              "end": {
-                "column": 12,
-                "line": 1,
-                "offset": 11,
-              },
-              "source": "class",
-              "start": {
-                "column": 7,
-                "line": 1,
-                "offset": 6,
-              },
-            },
-            "type": 4,
-          },
-          "exp": {
-            "constType": 0,
-            "content": "{ some: condition }",
-            "isStatic": false,
-            "loc": {
-              "end": {
-                "column": 33,
-                "line": 1,
-                "offset": 32,
-              },
-              "source": "{ some: condition }",
-              "start": {
-                "column": 14,
-                "line": 1,
-                "offset": 13,
-              },
-            },
-            "type": 4,
-          },
-          "loc": {
-            "end": {
-              "column": 34,
-              "line": 1,
-              "offset": 33,
-            },
-            "source": ":class=\\"{ some: condition }\\"",
-            "start": {
-              "column": 6,
-              "line": 1,
-              "offset": 5,
-            },
-          },
-          "modifiers": [],
-          "name": "bind",
-          "type": 7,
-        },
-      ],
-      "tag": "div",
-      "tagType": 0,
-      "type": 1,
-    },
-    {
-      "children": [],
-      "codegenNode": undefined,
-      "isSelfClosing": true,
-      "loc": {
-        "end": {
-          "column": 37,
-          "line": 2,
-          "offset": 73,
-        },
-        "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
-        "start": {
-          "column": 1,
-          "line": 2,
-          "offset": 37,
-        },
-      },
-      "ns": 0,
-      "props": [
-        {
-          "arg": {
-            "constType": 3,
-            "content": "style",
-            "isStatic": true,
-            "loc": {
-              "end": {
-                "column": 16,
-                "line": 2,
-                "offset": 52,
-              },
-              "source": "style",
-              "start": {
-                "column": 11,
-                "line": 2,
-                "offset": 47,
-              },
-            },
-            "type": 4,
-          },
-          "exp": {
-            "constType": 0,
-            "content": "{ color: 'red' }",
-            "isStatic": false,
-            "loc": {
-              "end": {
-                "column": 34,
-                "line": 2,
-                "offset": 70,
-              },
-              "source": "{ color: 'red' }",
-              "start": {
-                "column": 18,
-                "line": 2,
-                "offset": 54,
-              },
-            },
-            "type": 4,
-          },
-          "loc": {
-            "end": {
-              "column": 35,
-              "line": 2,
-              "offset": 71,
-            },
-            "source": "v-bind:style=\\"{ color: 'red' }\\"",
-            "start": {
-              "column": 4,
-              "line": 2,
-              "offset": 40,
-            },
-          },
-          "modifiers": [],
-          "name": "bind",
-          "type": 7,
-        },
-      ],
-      "tag": "p",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 37,
-      "line": 2,
-      "offset": 73,
-    },
-    "source": "<div :class=\\"{ some: condition }\\" />
-<p v-bind:style=\\"{ color: 'red' }\\"/>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > valid html 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": true,
-          "loc": {
-            "end": {
-              "column": 39,
-              "line": 2,
-              "offset": 73,
-            },
-            "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
-            "start": {
-              "column": 3,
-              "line": 2,
-              "offset": 37,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "arg": {
-                "constType": 3,
-                "content": "style",
-                "isStatic": true,
-                "loc": {
-                  "end": {
-                    "column": 18,
-                    "line": 2,
-                    "offset": 52,
-                  },
-                  "source": "style",
-                  "start": {
-                    "column": 13,
-                    "line": 2,
-                    "offset": 47,
-                  },
-                },
-                "type": 4,
-              },
-              "exp": {
-                "constType": 0,
-                "content": "{ color: 'red' }",
-                "isStatic": false,
-                "loc": {
-                  "end": {
-                    "column": 36,
-                    "line": 2,
-                    "offset": 70,
-                  },
-                  "source": "{ color: 'red' }",
-                  "start": {
-                    "column": 20,
-                    "line": 2,
-                    "offset": 54,
-                  },
-                },
-                "type": 4,
-              },
-              "loc": {
-                "end": {
-                  "column": 37,
-                  "line": 2,
-                  "offset": 71,
-                },
-                "source": "v-bind:style=\\"{ color: 'red' }\\"",
-                "start": {
-                  "column": 6,
-                  "line": 2,
-                  "offset": 40,
-                },
-              },
-              "modifiers": [],
-              "name": "bind",
-              "type": 7,
-            },
-          ],
-          "tag": "p",
-          "tagType": 0,
-          "type": 1,
-        },
-        {
-          "content": " a comment with <html> inside it ",
-          "loc": {
-            "end": {
-              "column": 43,
-              "line": 3,
-              "offset": 116,
-            },
-            "source": "<!-- a comment with <html> inside it -->",
-            "start": {
-              "column": 3,
-              "line": 3,
-              "offset": 76,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "isSelfClosing": false,
-      "loc": {
-        "end": {
-          "column": 7,
-          "line": 4,
-          "offset": 123,
-        },
-        "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
-  <!-- a comment with <html> inside it -->
-</div>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [
-        {
-          "arg": {
-            "constType": 3,
-            "content": "class",
-            "isStatic": true,
-            "loc": {
-              "end": {
-                "column": 12,
-                "line": 1,
-                "offset": 11,
-              },
-              "source": "class",
-              "start": {
-                "column": 7,
-                "line": 1,
-                "offset": 6,
-              },
-            },
-            "type": 4,
-          },
-          "exp": {
-            "constType": 0,
-            "content": "{ some: condition }",
-            "isStatic": false,
-            "loc": {
-              "end": {
-                "column": 33,
-                "line": 1,
-                "offset": 32,
-              },
-              "source": "{ some: condition }",
-              "start": {
-                "column": 14,
-                "line": 1,
-                "offset": 13,
-              },
-            },
-            "type": 4,
-          },
-          "loc": {
-            "end": {
-              "column": 34,
-              "line": 1,
-              "offset": 33,
-            },
-            "source": ":class=\\"{ some: condition }\\"",
-            "start": {
-              "column": 6,
-              "line": 1,
-              "offset": 5,
-            },
-          },
-          "modifiers": [],
-          "name": "bind",
-          "type": 7,
-        },
-      ],
-      "tag": "div",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 7,
-      "line": 4,
-      "offset": 123,
-    },
-    "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
-  <!-- a comment with <html> inside it -->
-</div>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
+  "source": "{{}}",
   "temps": 0,
   "type": 0,
 }

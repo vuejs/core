@@ -1,6 +1,6 @@
 # @vue/server-renderer
 
-**Note: as of 3.2.13+, this package is included as a dependency of the main `vue` package and can be accessed as `vue/server-renderer`. This means you no longer need to explicitly install this package and ensure its version match that of `vue`'s. Just use the `vue/server-renderer` deep import instead.**
+**Note: as of 3.2.13+, this package is included as a dependency of the main `vue` package and can be accessed as `vue/server-renderer`. This means you no longer need to explicitly install this package and ensure its version matches that of `vue`'s. Just use the `vue/server-renderer` deep import instead.**
 
 ## Basic API
 
@@ -11,7 +11,7 @@
 ```ts
 function renderToString(
   input: App | VNode,
-  context?: SSRContext
+  context?: SSRContext,
 ): Promise<string>
 ```
 
@@ -23,7 +23,7 @@ const { renderToString } = require('@vue/server-renderer')
 
 const app = createSSRApp({
   data: () => ({ msg: 'hello' }),
-  template: `<div>{{ msg }}</div>`
+  template: `<div>{{ msg }}</div>`,
 })
 
 ;(async () => {
@@ -74,7 +74,7 @@ Render and pipe to an existing [Node.js Writable stream](https://nodejs.org/api/
 function pipeToNodeWritable(
   input: App | VNode,
   context: SSRContext = {},
-  writable: Writable
+  writable: Writable,
 ): void
 ```
 
@@ -94,7 +94,7 @@ Renders input as a [Web ReadableStream](https://developer.mozilla.org/en-US/docs
 ```ts
 function renderToWebStream(
   input: App | VNode,
-  context?: SSRContext
+  context?: SSRContext,
 ): ReadableStream
 ```
 
@@ -117,7 +117,7 @@ Render and pipe to an existing [Web WritableStream](https://developer.mozilla.or
 function pipeToWebWritable(
   input: App | VNode,
   context: SSRContext = {},
-  writable: WritableStream
+  writable: WritableStream,
 ): void
 ```
 
@@ -144,7 +144,7 @@ Renders input in streaming mode using a simple readable interface.
 function renderToSimpleStream(
   input: App | VNode,
   context: SSRContext,
-  options: SimpleReadable
+  options: SimpleReadable,
 ): SimpleReadable
 
 interface SimpleReadable {
@@ -165,14 +165,14 @@ renderToSimpleStream(
     push(chunk) {
       if (chunk === null) {
         // done
-        console(`render complete: ${res}`)
+        console.log(`render complete: ${res}`)
       } else {
         res += chunk
       }
     },
     destroy(err) {
       // error encountered
-    }
-  }
+    },
+  },
 )
 ```

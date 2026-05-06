@@ -44,6 +44,12 @@ attr
     expect(generateCodeFrame(source, attrStart, attrEnd)).toMatchSnapshot()
   })
 
+  test('invalid start and end', () => {
+    expect(generateCodeFrame(source, -Infinity, 0)).toMatchSnapshot()
+    expect(generateCodeFrame(source, 0, Infinity)).toMatchSnapshot()
+    expect(generateCodeFrame(source, Infinity, 0)).toMatchSnapshot()
+  })
+
   {
     const source = `
 <template>
@@ -75,7 +81,7 @@ attr
       const keyEnd =
         windowsNewLineSource.indexOf(endToken, keyStart) + endToken.length
       expect(
-        generateCodeFrame(windowsNewLineSource, keyStart, keyEnd)
+        generateCodeFrame(windowsNewLineSource, keyStart, keyEnd),
       ).toMatchSnapshot()
     })
 
@@ -84,7 +90,7 @@ attr
       const keyEnd =
         unixNewlineSource.indexOf(endToken, keyStart) + endToken.length
       expect(
-        generateCodeFrame(unixNewlineSource, keyStart, keyEnd)
+        generateCodeFrame(unixNewlineSource, keyStart, keyEnd),
       ).toMatchSnapshot()
     })
   }

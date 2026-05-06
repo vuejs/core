@@ -1,5 +1,5 @@
-import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
+import path from 'node:path'
+import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import mocks from './commits.mock'
 
 describe('e2e: commits', () => {
@@ -8,7 +8,7 @@ describe('e2e: commits', () => {
   async function testCommits(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../../examples/${apiType}/commits.html`
+      `../../examples/${apiType}/commits.html`,
     )}`
 
     // intercept and mock the response to avoid hitting the actual API
@@ -22,7 +22,7 @@ describe('e2e: commits', () => {
           status: 200,
           contentType: 'application/json',
           headers: { 'Access-Control-Allow-Origin': '*' },
-          body: JSON.stringify(mocks[match[1] as 'main' | 'v2-compat'])
+          body: JSON.stringify(mocks[match[1] as 'main' | 'v2-compat']),
         })
       }
     })
@@ -51,7 +51,7 @@ describe('e2e: commits', () => {
     async () => {
       await testCommits('classic')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -59,6 +59,6 @@ describe('e2e: commits', () => {
     async () => {
       await testCommits('composition')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })

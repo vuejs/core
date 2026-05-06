@@ -1,5 +1,5 @@
-import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
+import path from 'node:path'
+import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 
 declare const globalStats: {
   label: string
@@ -9,7 +9,7 @@ declare const globalStats: {
 declare function valueToPoint(
   value: number,
   index: number,
-  total: number
+  total: number,
 ): {
   x: number
   y: number
@@ -33,8 +33,8 @@ describe('e2e: svg', () => {
             document.querySelector('polygon')!.attributes[0].value === points
           )
         },
-        [total]
-      )
+        [total],
+      ),
     ).toBe(true)
   }
 
@@ -47,12 +47,12 @@ describe('e2e: svg', () => {
           return [point.x, point.y]
         })
       },
-      [total]
+      [total],
     )
     for (let i = 0; i < total; i++) {
       const textPosition = await page().$eval(
         `text:nth-child(${i + 3})`,
-        node => [+node.attributes[0].value, +node.attributes[1].value]
+        node => [+node.attributes[0].value, +node.attributes[1].value],
       )
       expect(textPosition).toEqual(positions[i])
     }
@@ -73,7 +73,7 @@ describe('e2e: svg', () => {
   async function testSvg(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../../examples/${apiType}/svg.html`
+      `../../examples/${apiType}/svg.html`,
     )}`
 
     await page().goto(baseUrl)
@@ -144,7 +144,7 @@ describe('e2e: svg', () => {
     async () => {
       await testSvg('classic')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -152,6 +152,6 @@ describe('e2e: svg', () => {
     async () => {
       await testSvg('composition')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })

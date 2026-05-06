@@ -6,7 +6,7 @@ describe('toHandlers', () => {
     toHandlers(undefined as any)
 
     expect(
-      'v-on with no argument expects an object value.'
+      'v-on with no argument expects an object value.',
     ).toHaveBeenWarnedTimes(2)
   })
 
@@ -16,7 +16,7 @@ describe('toHandlers', () => {
 
     expect(toHandlers({ input, change })).toStrictEqual({
       onInput: input,
-      onChange: change
+      onChange: change,
     })
   })
 })

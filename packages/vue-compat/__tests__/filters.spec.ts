@@ -1,9 +1,9 @@
 import Vue from '@vue/compat'
 import { CompilerDeprecationTypes } from '../../compiler-core/src'
 import {
-  deprecationData,
   DeprecationTypes,
-  toggleDeprecationWarning
+  deprecationData,
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 
 beforeEach(() => {
@@ -40,8 +40,8 @@ describe('FILTERS', () => {
     const vm = new Vue({
       template: '<div>{{ msg | globalUpper }}</div>',
       data: () => ({
-        msg: 'hi'
-      })
+        msg: 'hi',
+      }),
     }).$mount()
     expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.textContent).toBe('HI')
@@ -54,11 +54,11 @@ describe('FILTERS', () => {
     const vm = new Vue({
       template: '<div>{{ msg | upper }}</div>',
       data: () => ({
-        msg: 'hi'
+        msg: 'hi',
       }),
       filters: {
-        upper
-      }
+        upper,
+      },
     }).$mount()
     expect(vm.$el.textContent).toBe('HI')
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -68,12 +68,12 @@ describe('FILTERS', () => {
     const vm = new Vue({
       template: '<div>{{ msg | upper | reverse }}</div>',
       data: () => ({
-        msg: 'hi'
+        msg: 'hi',
       }),
       filters: {
         upper,
-        reverse
-      }
+        reverse,
+      },
     }).$mount()
     expect(vm.$el.textContent).toBe('IH')
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -91,13 +91,13 @@ describe('FILTERS', () => {
       filters: {
         upper,
         reverse,
-        lower
+        lower,
       },
       data: () => ({
         id: 'abc',
         cls: 'foo',
-        ref: 'BAR'
-      })
+        ref: 'BAR',
+      }),
     }).$mount()
     expect(vm.$el.id).toBe('CBA')
     expect(vm.$el.className).toBe('oof')
@@ -112,9 +112,9 @@ describe('FILTERS', () => {
       components: {
         test: {
           props: ['pattern'],
-          template: '<div></div>'
-        }
-      }
+          template: '<div></div>',
+        },
+      },
     }).$mount() as any
     expect(vm.$refs.test.pattern).toBeInstanceOf(RegExp)
     expect(vm.$refs.test.pattern.toString()).toBe('/a|b\\//')
@@ -125,7 +125,7 @@ describe('FILTERS', () => {
     const vm = new Vue({
       data: () => ({ a: 2 }),
       template: `<div>{{ 1/a / 4 | double }}</div>`,
-      filters: { double }
+      filters: { double },
     }).$mount()
     expect(vm.$el.textContent).toBe(String(1 / 4))
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -135,7 +135,7 @@ describe('FILTERS', () => {
     const vm = new Vue({
       data: () => ({ a: 20 }),
       template: `<div>{{ (a*2) / 5 | double }}</div>`,
-      filters: { double }
+      filters: { double },
     }).$mount()
     expect(vm.$el.textContent).toBe(String(16))
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -144,7 +144,7 @@ describe('FILTERS', () => {
   it('handle division with dot', () => {
     const vm = new Vue({
       template: `<div>{{ 20. / 5 | double }}</div>`,
-      filters: { double }
+      filters: { double },
     }).$mount()
     expect(vm.$el.textContent).toBe(String(8))
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -154,7 +154,7 @@ describe('FILTERS', () => {
     const vm = new Vue({
       data: () => ({ a: [20] }),
       template: `<div>{{ a[0] / 5 | double }}</div>`,
-      filters: { double }
+      filters: { double },
     }).$mount()
     expect(vm.$el.textContent).toBe(String(8))
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -164,7 +164,7 @@ describe('FILTERS', () => {
     const vm = new Vue({
       data: () => ({ a: { n: 20 } }),
       template: `<div>{{ a['n'] / 5 | double }}</div>`,
-      filters: { double }
+      filters: { double },
     }).$mount()
     expect(vm.$el.textContent).toBe(String(8))
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -174,7 +174,7 @@ describe('FILTERS', () => {
     const vm = new Vue({
       data: () => ({ a_: 8 }),
       template: `<div>{{ a_ / 2 | double }}</div>`,
-      filters: { double }
+      filters: { double },
     }).$mount()
     expect(vm.$el.textContent).toBe(String(8))
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -185,11 +185,11 @@ describe('FILTERS', () => {
       template: `<div>{{ msg | add(a, 3) }}</div>`,
       data: () => ({
         msg: 1,
-        a: 2
+        a: 2,
       }),
       filters: {
-        add: (v: number, arg1: number, arg2: number) => v + arg1 + arg2
-      }
+        add: (v: number, arg1: number, arg2: number) => v + arg1 + arg2,
+      },
     }).$mount()
     expect(vm.$el.textContent).toBe('6')
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -199,11 +199,11 @@ describe('FILTERS', () => {
     const vm = new Vue({
       template: `<div>{{ msg + "b | c" + 'd' | upper }}</div>`,
       data: () => ({
-        msg: 'a'
+        msg: 'a',
       }),
       filters: {
-        upper
-      }
+        upper,
+      },
     }).$mount()
     expect(vm.$el.textContent).toBe('AB | CD')
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -214,11 +214,11 @@ describe('FILTERS', () => {
       template: `<div>{{ b || msg | upper }}</div>`,
       data: () => ({
         b: false,
-        msg: 'a'
+        msg: 'a',
       }),
       filters: {
-        upper
-      }
+        upper,
+      },
     }).$mount()
     expect(vm.$el.textContent).toBe('A')
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -228,8 +228,8 @@ describe('FILTERS', () => {
     const vm = new Vue({
       template: `<div>{{ { a: 123 } | pick('a') }}</div>`,
       filters: {
-        pick: (v: any, key: string) => v[key]
-      }
+        pick: (v: any, key: string) => v[key],
+      },
     }).$mount()
     expect(vm.$el.textContent).toBe('123')
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -239,8 +239,8 @@ describe('FILTERS', () => {
     const vm = new Vue({
       template: `<div>{{ [1, 2, 3] | reverse }}</div>`,
       filters: {
-        reverse: (arr: any[]) => arr.reverse().join(',')
-      }
+        reverse: (arr: any[]) => arr.reverse().join(','),
+      },
     }).$mount()
     expect(vm.$el.textContent).toBe('3,2,1')
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
@@ -248,7 +248,7 @@ describe('FILTERS', () => {
 
   it('bigint support', () => {
     const vm = new Vue({
-      template: `<div>{{ BigInt(BigInt(10000000)) + BigInt(2000000000n) * 3000000n }}</div>`
+      template: `<div>{{ BigInt(BigInt(10000000)) + BigInt(2000000000n) * 3000000n }}</div>`,
     }).$mount()
     expect(vm.$el.textContent).toBe('6000000010000000')
   })

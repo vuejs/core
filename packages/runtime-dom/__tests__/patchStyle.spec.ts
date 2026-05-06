@@ -16,7 +16,7 @@ describe(`runtime-dom: style patching`, () => {
       get(): any {
         return value
       },
-      set: fn
+      set: fn,
     })
     patchProp(el, 'style', value, value)
     expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
@@ -29,6 +29,25 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
   })
 
+  it('should preserve textarea resize dimensions while reapplying unrelated unchanged object styles', () => {
+    const el = document.createElement('textarea')
+    const value = {
+      width: '200px',
+      height: '100px',
+      display: 'none',
+    }
+
+    patchProp(el, 'style', null, value)
+    el.style.width = '320px'
+    el.style.height = '160px'
+    el.style.display = 'block'
+
+    patchProp(el, 'style', value, value)
+    expect(el.style.width).toBe('320px')
+    expect(el.style.height).toBe('160px')
+    expect(el.style.display).toBe('none')
+  })
+
   it('camelCase', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { marginRight: '10px' })
@@ -39,7 +58,7 @@ describe(`runtime-dom: style patching`, () => {
     const el = document.createElement('div')
     patchProp(el, 'style', null, {
       color: undefined,
-      borderRadius: null
+      borderRadius: null,
     })
     expect(el.style.cssText.replace(/\s/g, '')).toBe('')
 
@@ -47,7 +66,7 @@ describe(`runtime-dom: style patching`, () => {
       el,
       'style',
       { color: 'red' },
-      { color: null, borderRadius: undefined }
+      { color: null, borderRadius: undefined },
     )
     expect(el.style.cssText.replace(/\s/g, '')).toBe('')
   })
@@ -62,7 +81,7 @@ describe(`runtime-dom: style patching`, () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { marginRight: '10px !important' })
     expect(el.style.cssText.replace(/\s/g, '')).toBe(
-      'margin-right:10px!important;'
+      'margin-right:10px!important;',
     )
   })
 
@@ -91,12 +110,12 @@ describe(`runtime-dom: style patching`, () => {
     const el = document.createElement('div')
     patchProp(el, 'style', null, { color: 'red;' })
     expect(
-      `Unexpected semicolon at the end of 'color' style value: 'red;'`
+      `Unexpected semicolon at the end of 'color' style value: 'red;'`,
     ).toHaveBeenWarned()
 
     patchProp(el, 'style', null, { '--custom': '100; ' })
     expect(
-      `Unexpected semicolon at the end of '--custom' style value: '100; '`
+      `Unexpected semicolon at the end of '--custom' style value: '100; '`,
     ).toHaveBeenWarned()
   })
 
@@ -112,7 +131,7 @@ describe(`runtime-dom: style patching`, () => {
       el as any,
       'style',
       { borderBottom: '1px solid red' },
-      { border: '1px solid green' }
+      { border: '1px solid green' },
     )
     expect(el.style.border).toBe('1px solid green')
     expect(el.style.borderBottom).toBe('1px solid green')
@@ -131,8 +150,8 @@ describe(`runtime-dom: style patching`, () => {
         },
         getPropertyValue(key: string) {
           return store[key]
-        }
-      }
+        },
+      },
     }
   }
 
@@ -154,8 +173,17 @@ describe(`runtime-dom: style patching`, () => {
       el as any,
       'style',
       {},
-      { display: ['-webkit-box', '-ms-flexbox', 'flex'] }
+      { display: ['-webkit-box', '-ms-flexbox', 'flex'] },
     )
     expect(el.style.display).toBe('flex')
+  })
+
+  it('should clear previous css string value', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', {}, 'color:red')
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
+
+    patchProp(el, 'style', 'color:red', { fontSize: '12px' })
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('font-size:12px;')
   })
 })

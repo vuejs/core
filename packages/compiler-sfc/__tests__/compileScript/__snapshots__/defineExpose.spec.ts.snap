@@ -16,7 +16,8 @@ return { n, get x() { return x } }
 `;
 
 exports[`defineExpose() 1`] = `
-"export default {
+"
+export default {
   setup(__props, { expose: __expose }) {
 
 __expose({ foo: 123 })
