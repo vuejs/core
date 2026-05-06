@@ -142,8 +142,8 @@ function autoPrefix(style: CSSStyleDeclaration, rawName: string): string {
 function shouldPreserveTextareaResizeStyle(
   el: Element,
   key: string,
-  prev: string | string[] | undefined,
-  next: string | string[],
+  prev: unknown,
+  next: unknown,
 ): boolean {
   return (
     el.tagName === 'TEXTAREA' &&
