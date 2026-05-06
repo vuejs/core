@@ -1,4 +1,5 @@
-import type { BlockIRNode, CoreHelper } from '../ir'
+import type { BlockIRNode, CoreHelper, IRDynamicInfo } from '../ir'
+import { isBlockOperation } from '../ir'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -10,7 +11,11 @@ import {
   genMulti,
 } from './utils'
 import type { CodegenContext } from '../generate'
-import { genEffects, genOperations } from './operation'
+import {
+  genEffects,
+  genOperationWithInsertionState,
+  genOperations,
+} from './operation'
 import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
 
@@ -61,17 +66,70 @@ export function genBlockContent(
     genResolveAssets('directive', 'resolveDirective')
   }
 
-  for (const child of dynamic.children) {
-    push(...genSelf(child, context))
+  let operationIndex = 0
+  let effectIndex = 0
+  const flushPendingOperations = (
+    operationEnd: number,
+    effectEnd: number,
+    push: (...items: CodeFragment[]) => number,
+  ) => {
+    while (operationIndex < operationEnd) {
+      push(
+        ...genOperationWithInsertionState(operation[operationIndex], context),
+      )
+      operationIndex++
+    }
+
+    if (effectIndex < effectEnd) {
+      push(...genEffects(effect.slice(effectIndex, effectEnd), context))
+      effectIndex = effectEnd
+    }
   }
-  for (const child of dynamic.children) {
-    if (!child.hasDynamicChild) {
-      push(...genChildren(child, context, push, `n${child.id!}`))
+  const flushBeforeDynamic = (
+    dynamic: IRDynamicInfo,
+    push: (...items: CodeFragment[]) => number,
+  ) => {
+    const operation = dynamic.operation
+    if (
+      operation &&
+      isBlockOperation(operation) &&
+      operation.operationIndex !== undefined &&
+      operation.effectIndex !== undefined
+    ) {
+      flushPendingOperations(
+        operation.operationIndex,
+        operation.effectIndex,
+        push,
+      )
     }
   }
 
-  push(...genOperations(operation, context))
-  push(...genEffects(effect, context, genEffectsExtraFrag))
+  for (const child of dynamic.children) {
+    flushBeforeDynamic(child, push)
+    push(...genSelf(child, context, flushBeforeDynamic))
+  }
+  for (const child of dynamic.children) {
+    if (!child.hasDynamicChild) {
+      push(
+        ...genChildren(
+          child,
+          context,
+          push,
+          `n${child.id!}`,
+          flushBeforeDynamic,
+        ),
+      )
+    }
+  }
+
+  if (operationIndex < operation.length) {
+    push(...genOperations(operation.slice(operationIndex), context))
+  }
+  if (effectIndex < effect.length) {
+    push(...genEffects(effect.slice(effectIndex), context, genEffectsExtraFrag))
+  } else if (genEffectsExtraFrag) {
+    push(...genEffects([], context, genEffectsExtraFrag))
+  }
 
   push(NEWLINE, `return `)
 
