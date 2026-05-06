@@ -13,6 +13,7 @@ import {
   isDataUrl,
   isExternalUrl,
   isRelativeUrl,
+  normalizeDecodedImportPath,
   parseUrl,
 } from './templateUtils'
 import { isArray } from '@vue/shared'
@@ -34,14 +35,20 @@ export interface AssetURLOptions {
   tags?: AssetURLTagConfig
 }
 
+// Built-in attrs that always represent resource URLs. `use` is intentionally
+// omitted because its hash-only values may still be fragment references.
+const resourceUrlTagConfig: AssetURLTagConfig = {
+  video: ['src', 'poster'],
+  source: ['src'],
+  img: ['src'],
+  image: ['xlink:href', 'href'],
+}
+
 export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
   base: null,
   includeAbsolute: false,
   tags: {
-    video: ['src', 'poster'],
-    source: ['src'],
-    img: ['src'],
-    image: ['xlink:href', 'href'],
+    ...resourceUrlTagConfig,
     use: ['xlink:href', 'href'],
   },
 }
@@ -67,6 +74,10 @@ export const createAssetUrlTransformWithOptions = (
 ): NodeTransform => {
   return (node, context) =>
     (transformAssetUrl as Function)(node, context, options)
+}
+
+function canTransformHashImport(tag: string, attrName: string): boolean {
+  return !!resourceUrlTagConfig[tag]?.includes(attrName)
 }
 
 /**
@@ -104,17 +115,24 @@ export const transformAssetUrl: NodeTransform = (
       if (
         attr.type !== NodeTypes.ATTRIBUTE ||
         !assetAttrs.includes(attr.name) ||
-        !attr.value ||
-        isExternalUrl(attr.value.content) ||
-        isDataUrl(attr.value.content) ||
-        attr.value.content[0] === '#' ||
-        (!options.includeAbsolute && !isRelativeUrl(attr.value.content))
+        !attr.value
       ) {
         return
       }
 
-      const url = parseUrl(attr.value.content)
-      if (options.base && attr.value.content[0] === '.') {
+      const urlValue = attr.value.content
+      const isHashOnlyValue = urlValue[0] === '#'
+      if (
+        isExternalUrl(urlValue) ||
+        isDataUrl(urlValue) ||
+        (isHashOnlyValue && !canTransformHashImport(node.tag, attr.name)) ||
+        (!options.includeAbsolute && !isRelativeUrl(urlValue))
+      ) {
+        return
+      }
+
+      const url = parseUrl(urlValue)
+      if (options.base && urlValue[0] === '.') {
         // explicit base - directly rewrite relative urls into absolute url
         // to avoid generating extra imports
         // Allow for full hostnames provided in options.base
@@ -147,70 +165,113 @@ export const transformAssetUrl: NodeTransform = (
   }
 }
 
+/**
+ * Resolves or registers an import for the given source path
+ * @param source - Path to resolve import for
+ * @param loc - Source location
+ * @param context - Transform context
+ * @returns Object containing import name and expression
+ */
+function resolveOrRegisterImport(
+  source: string,
+  loc: SourceLocation,
+  context: TransformContext,
+): {
+  name: string
+  exp: SimpleExpressionNode
+} {
+  const normalizedSource = normalizeDecodedImportPath(source)
+  const existingIndex = context.imports.findIndex(
+    i => i.path === normalizedSource,
+  )
+  if (existingIndex > -1) {
+    return {
+      name: `_imports_${existingIndex}`,
+      exp: context.imports[existingIndex].exp as SimpleExpressionNode,
+    }
+  }
+
+  const name = `_imports_${context.imports.length}`
+  const exp = createSimpleExpression(
+    name,
+    false,
+    loc,
+    ConstantTypes.CAN_STRINGIFY,
+  )
+
+  // We need to ensure the path is not encoded (to %2F),
+  // so we decode it back in case it is encoded
+  context.imports.push({
+    exp,
+    path: normalizedSource,
+  })
+
+  return { name, exp }
+}
+
+/**
+ * Transforms asset URLs into import expressions or string literals
+ */
 function getImportsExpressionExp(
   path: string | null,
   hash: string | null,
   loc: SourceLocation,
   context: TransformContext,
 ): ExpressionNode {
-  if (path) {
-    let name: string
-    let exp: SimpleExpressionNode
-    const existingIndex = context.imports.findIndex(i => i.path === path)
-    if (existingIndex > -1) {
-      name = `_imports_${existingIndex}`
-      exp = context.imports[existingIndex].exp as SimpleExpressionNode
-    } else {
-      name = `_imports_${context.imports.length}`
-      exp = createSimpleExpression(
-        name,
-        false,
-        loc,
-        ConstantTypes.CAN_STRINGIFY,
-      )
+  // Neither path nor hash - return empty string
+  if (!path && !hash) {
+    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
+  }
 
-      // We need to ensure the path is not encoded (to %2F),
-      // so we decode it back in case it is encoded
-      context.imports.push({
-        exp,
-        path: decodeURIComponent(path),
-      })
-    }
+  // Only hash without path - treat hash as the import source (likely a subpath import)
+  if (!path && hash) {
+    const { exp } = resolveOrRegisterImport(hash, loc, context)
+    return exp
+  }
 
-    if (!hash) {
-      return exp
-    }
+  // Only path without hash - straightforward import
+  if (path && !hash) {
+    const { exp } = resolveOrRegisterImport(path, loc, context)
+    return exp
+  }
 
-    const hashExp = `${name} + '${hash}'`
-    const finalExp = createSimpleExpression(
-      hashExp,
+  // At this point, we know we have both path and hash components
+  const { name } = resolveOrRegisterImport(path!, loc, context)
+
+  // Combine path import with hash
+  const hashExp = `${name} + '${hash}'`
+  const finalExp = createSimpleExpression(
+    hashExp,
+    false,
+    loc,
+    ConstantTypes.CAN_STRINGIFY,
+  )
+
+  // No hoisting needed
+  if (!context.hoistStatic) {
+    return finalExp
+  }
+
+  // Check for existing hoisted expression
+  const existingHoistIndex = context.hoists.findIndex(h => {
+    return (
+      h &&
+      h.type === NodeTypes.SIMPLE_EXPRESSION &&
+      !h.isStatic &&
+      h.content === hashExp
+    )
+  })
+
+  // Return existing hoisted expression if found
+  if (existingHoistIndex > -1) {
+    return createSimpleExpression(
+      `_hoisted_${existingHoistIndex + 1}`,
       false,
       loc,
       ConstantTypes.CAN_STRINGIFY,
     )
-
-    if (!context.hoistStatic) {
-      return finalExp
-    }
-
-    const existingHoistIndex = context.hoists.findIndex(h => {
-      return (
-        h &&
-        h.type === NodeTypes.SIMPLE_EXPRESSION &&
-        !h.isStatic &&
-        h.content === hashExp
-      )
-    })
-    if (existingHoistIndex > -1) {
-      return createSimpleExpression(
-        `_hoisted_${existingHoistIndex + 1}`,
-        false,
-        loc,
-        ConstantTypes.CAN_STRINGIFY,
-      )
-    }
-    return context.hoist(finalExp)
-  } else {
-    return createSimpleExpression(`''`, false, loc, ConstantTypes.CAN_STRINGIFY)
   }
+
+  // Hoist the expression and return the hoisted expression
+  return context.hoist(finalExp)
 }

@@ -10,14 +10,29 @@ import {
   markRaw,
   nextTick,
   nodeOps,
+  onMounted,
   h as originalH,
   ref,
   render,
+  serialize,
   serializeInner,
+  useModel,
   withDirectives,
 } from '@vue/runtime-test'
-import { Fragment, createCommentVNode, createVNode } from '../../src/vnode'
+import {
+  Fragment,
+  createBlock,
+  createCommentVNode,
+  createTextVNode,
+  createVNode,
+  openBlock,
+} from '../../src/vnode'
+import { toDisplayString } from '@vue/shared'
 import { compile, createApp as createDOMApp, render as domRender } from 'vue'
+import type { HMRRuntime } from '../../src/hmr'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { rerender, createRecord } = __VUE_HMR_RUNTIME__
 
 describe('renderer: teleport', () => {
   describe('eager mode', () => {
@@ -85,6 +100,299 @@ describe('renderer: teleport', () => {
           `<!--teleport start--><!--teleport end-->` +
           `<div id="target-suspense"><div>teleported</div></div>` +
           `</div>`,
+      )
+    })
+
+    test('update before mounted with defer', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const foo = ref('foo')
+      const Header = {
+        props: { foo: String },
+        setup(props: any) {
+          return () => h('div', props.foo)
+        },
+      }
+      const Footer = {
+        setup() {
+          foo.value = 'bar'
+          return () => h('div', 'Footer')
+        },
+      }
+      createDOMApp({
+        render() {
+          return show.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId', defer: true },
+                  h(Header, { foo: foo.value }),
+                ),
+                h(Footer),
+                h('div', { id: 'targetId' }),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div></div>"`)
+
+      show.value = true
+      await nextTick()
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div>"`,
+      )
+    })
+
+    test('should keep the mounted vnode as the patch base across deferred updates', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const disabled = ref(false)
+      const text = ref('A')
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          disabled.value = true
+          text.value = 'B'
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          disabled.value = false
+          text.value = 'C'
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return show.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId2', defer: true, disabled: disabled.value },
+                  h('div', text.value),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+                h('div', { id: 'targetId2' }),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><!--teleport end--><div>step2</div><div id="targetId2"><div>C</div></div>"`,
+      )
+    })
+
+    test('should handle disabled teleport updates before deferred mount', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId3'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const disabled = ref(false)
+
+      const Step = {
+        setup() {
+          disabled.value = true
+          return () => h('div', 'step')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId3', defer: true, disabled: disabled.value },
+                  h('div', 'teleported'),
+                ),
+                h(Step),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div></div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><div>teleported</div><!--teleport end--><div>step</div>"`,
+      )
+      expect(target.innerHTML).toBe(``)
+    })
+
+    test('should not mount discarded teleport after deferred updates', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId4'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          showTeleport.value = false
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId4', defer: true },
+                  h('div', 'teleported'),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+              ]
+            : [h('div', 'done')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+    })
+
+    test('should not mount discarded disabled teleport after deferred updates', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId5'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const disabled = ref(false)
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          disabled.value = true
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          showTeleport.value = false
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId5', defer: true, disabled: disabled.value },
+                  h('div', 'teleported'),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+              ]
+            : [h('div', 'done')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+    })
+
+    // #13349
+    test('handle deferred teleport updates before and after mount', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const data2 = ref('2')
+      const data3 = ref('3')
+
+      const Comp = {
+        props: {
+          modelValue: {},
+          modelModifiers: {},
+        },
+        emits: ['update:modelValue'],
+        setup(props: any) {
+          const data2 = useModel(props, 'modelValue')
+          data2.value = '2+'
+          return () => h('span')
+        },
+      }
+
+      createDOMApp({
+        setup() {
+          setTimeout(() => (show.value = true), 5)
+          setTimeout(() => (data3.value = '3+'), 10)
+        },
+        render() {
+          return h(Fragment, null, [
+            h('span', { id: 'targetId001' }),
+            show.value
+              ? h(Fragment, null, [
+                  h(Teleport, { to: '#targetId001', defer: true }, [
+                    createTextVNode(String(data3.value)),
+                  ]),
+                  h(Comp, {
+                    modelValue: data2.value,
+                    'onUpdate:modelValue': (event: any) =>
+                      (data2.value = event),
+                  }),
+                ])
+              : createCommentVNode('v-if'),
+          ])
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<span id="targetId001"></span><!--v-if-->"`,
+      )
+
+      await new Promise(r => setTimeout(r, 10))
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<span id="targetId001">3+</span><!--teleport start--><!--teleport end--><span></span>"`,
       )
     })
   })
@@ -178,6 +486,49 @@ describe('renderer: teleport', () => {
       expect(serializeInner(targetB)).toBe(`<div>teleported</div>`)
     })
 
+    test('move cached text nodes', async () => {
+      document.body.innerHTML = ''
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const to = ref('#teleport01')
+      const disabled = ref(true)
+
+      const App = defineComponent({
+        setup() {
+          return { to, disabled, deferMode }
+        },
+        template: `  
+          <div id="teleport01">
+            <Teleport :to="to" :defer="deferMode" :disabled="disabled">
+              static text
+            </Teleport>
+          </div>
+          <div id="teleport02"></div>
+        `,
+      })
+
+      domRender(h(App), root)
+      await nextTick()
+
+      const target1 = root.querySelector('#teleport01') as HTMLElement
+      const target2 = root.querySelector('#teleport02') as HTMLElement
+      expect(target1.innerHTML).toBe(
+        '<!--teleport start--> static text <!--teleport end-->',
+      )
+      expect(target2.innerHTML).toBe('')
+
+      to.value = '#teleport02'
+      disabled.value = false
+
+      await nextTick()
+      expect(target1.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+      expect(target2.innerHTML).toContain('static text')
+
+      domRender(null, root)
+      root.remove()
+    })
+
     test('should update children', async () => {
       const target = nodeOps.createElement('div')
       const root = nodeOps.createElement('div')
@@ -198,6 +549,39 @@ describe('renderer: teleport', () => {
       await nextTick()
 
       expect(serializeInner(target)).toBe(`teleported`)
+    })
+
+    test('should traverse comment node after updating in optimize mode', async () => {
+      const target = nodeOps.createElement('div')
+      const root = nodeOps.createElement('div')
+      const count = ref(0)
+      let teleport
+
+      __DEV__ = false
+      render(
+        h(() => {
+          teleport =
+            (openBlock(),
+            createBlock(Teleport, { to: target }, [
+              createCommentVNode('comment in teleport'),
+            ]))
+          return h('div', null, [
+            createTextVNode(toDisplayString(count.value)),
+            teleport,
+          ])
+        }),
+        root,
+      )
+      const commentNode = teleport!.children[0].el
+      expect(serializeInner(root)).toBe(`<div>0</div>`)
+      expect(serializeInner(target)).toBe(`<!--comment in teleport-->`)
+      expect(serialize(commentNode)).toBe(`<!--comment in teleport-->`)
+
+      count.value = 1
+      await nextTick()
+      __DEV__ = true
+      expect(serializeInner(root)).toBe(`<div>1</div>`)
+      expect(teleport!.children[0].el).toBe(commentNode)
     })
 
     test('should remove children when unmounted', () => {
@@ -224,6 +608,34 @@ describe('renderer: teleport', () => {
       testUnmount({ to: target, disabled: false })
       testUnmount({ to: target, disabled: true })
       testUnmount({ to: null, disabled: true })
+    })
+
+    // #10747
+    test('should unmount correctly when using top level comment in teleport', async () => {
+      const target = nodeOps.createElement('div')
+      const root = nodeOps.createElement('div')
+      const count = ref(0)
+
+      __DEV__ = false
+      render(
+        h(() => {
+          return h('div', null, [
+            createTextVNode(toDisplayString(count.value)),
+            (openBlock(),
+            createBlock(Teleport, { to: target }, [
+              createCommentVNode('comment in teleport'),
+            ])),
+          ])
+        }),
+        root,
+      )
+
+      count.value = 1
+
+      await nextTick()
+      __DEV__ = true
+      render(null, root)
+      expect(root.children.length).toBe(0)
     })
 
     test('component with multi roots should be removed when unmounted', () => {
@@ -698,4 +1110,56 @@ describe('renderer: teleport', () => {
       expect(tRefInMounted).toBe(target.children[1])
     })
   }
+
+  test('handle update and hmr rerender', async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+
+    const Comp = {
+      setup() {
+        const cls = ref('foo')
+        onMounted(() => {
+          // trigger update
+          cls.value = 'bar'
+        })
+        return { cls, target }
+      },
+      template: `
+        <Teleport :to="target">
+          <div :class="cls">
+            <div>
+              <slot></slot>
+            </div>
+          </div>
+        </Teleport>
+      `,
+    }
+
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      components: { Comp },
+      render() {
+        return originalH(Comp, null, { default: () => originalH('div', 'foo') })
+      },
+    }
+    createRecord(appId, App)
+
+    domRender(originalH(App), root)
+    expect(target.innerHTML).toBe(
+      '<div class="foo"><div><div>foo</div></div></div>',
+    )
+    await nextTick()
+    expect(target.innerHTML).toBe(
+      '<div class="bar"><div><div>foo</div></div></div>',
+    )
+
+    rerender(appId, () =>
+      originalH(Comp, null, { default: () => originalH('div', 'bar') }),
+    )
+    await nextTick()
+    expect(target.innerHTML).toBe(
+      '<div class="bar"><div><div>bar</div></div></div>',
+    )
+  })
 })

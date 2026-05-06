@@ -29,6 +29,25 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
   })
 
+  it('should preserve textarea resize dimensions while reapplying unrelated unchanged object styles', () => {
+    const el = document.createElement('textarea')
+    const value = {
+      width: '200px',
+      height: '100px',
+      display: 'none',
+    }
+
+    patchProp(el, 'style', null, value)
+    el.style.width = '320px'
+    el.style.height = '160px'
+    el.style.display = 'block'
+
+    patchProp(el, 'style', value, value)
+    expect(el.style.width).toBe('320px')
+    expect(el.style.height).toBe('160px')
+    expect(el.style.display).toBe('none')
+  })
+
   it('camelCase', () => {
     const el = document.createElement('div')
     patchProp(el, 'style', {}, { marginRight: '10px' })

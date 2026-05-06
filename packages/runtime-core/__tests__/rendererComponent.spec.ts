@@ -6,6 +6,7 @@ import {
   inject,
   nextTick,
   nodeOps,
+  onMounted,
   provide,
   ref,
   render,
@@ -473,5 +474,56 @@ describe('renderer: component', () => {
     expect(
       `Property '$attrs' was accessed via 'this'. Avoid using 'this' in templates.`,
     ).toHaveBeenWarned()
+  })
+
+  test('should not update child component if style is not changed', async () => {
+    const text = ref(0)
+    const spy = vi.fn()
+
+    const ClientOnly = {
+      setup(_: any, { slots }: SetupContext) {
+        const mounted = ref(false)
+        onMounted(() => {
+          mounted.value = true
+        })
+        return () => {
+          if (mounted.value) {
+            return slots.default!()
+          }
+        }
+      },
+    }
+
+    const App = {
+      render() {
+        return h(ClientOnly, null, {
+          default: () => [
+            h('span', null, [text.value]),
+            h(Comp, { style: { width: '100%' } }),
+          ],
+        })
+      },
+    }
+
+    const Comp = {
+      render(this: any) {
+        spy()
+        return null
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!---->`)
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<span>0</span><!---->`)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    text.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<span>1</span><!---->`)
+    // expect Comp to not be re-rendered
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 })

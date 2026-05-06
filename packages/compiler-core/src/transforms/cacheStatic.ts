@@ -21,7 +21,13 @@ import {
   getVNodeHelper,
 } from '../ast'
 import type { TransformContext } from '../transform'
-import { PatchFlags, isArray, isString, isSymbol } from '@vue/shared'
+import {
+  PatchFlagNames,
+  PatchFlags,
+  isArray,
+  isString,
+  isSymbol,
+} from '@vue/shared'
 import { findDir, isSlotOutlet } from '../utils'
 import {
   GUARD_REACTIVE_PROPS,
@@ -38,20 +44,19 @@ export function cacheStatic(root: RootNode, context: TransformContext): void {
     context,
     // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
-    isSingleElementRoot(root, root.children[0]),
+    !!getSingleElementRoot(root),
   )
 }
 
-export function isSingleElementRoot(
+export function getSingleElementRoot(
   root: RootNode,
-  child: TemplateChildNode,
-): child is PlainElementNode | ComponentNode | TemplateNode {
-  const { children } = root
-  return (
-    children.length === 1 &&
-    child.type === NodeTypes.ELEMENT &&
-    !isSlotOutlet(child)
-  )
+): PlainElementNode | ComponentNode | TemplateNode | null {
+  const children = root.children.filter(x => x.type !== NodeTypes.COMMENT)
+  return children.length === 1 &&
+    children[0].type === NodeTypes.ELEMENT &&
+    !isSlotOutlet(children[0])
+    ? children[0]
+    : null
 }
 
 function walk(
@@ -107,6 +112,15 @@ function walk(
         ? ConstantTypes.NOT_CONSTANT
         : getConstantType(child, context)
       if (constantType >= ConstantTypes.CAN_CACHE) {
+        if (
+          child.codegenNode.type === NodeTypes.JS_CALL_EXPRESSION &&
+          child.codegenNode.arguments.length > 0
+        ) {
+          child.codegenNode.arguments.push(
+            PatchFlags.CACHED +
+              (__DEV__ ? ` /* ${PatchFlagNames[PatchFlags.CACHED]} */` : ``),
+          )
+        }
         toCache.push(child)
         continue
       }
@@ -205,9 +219,13 @@ function walk(
     // #6978, #7138, #7114
     // a cached children array inside v-for can caused HMR errors since
     // it might be mutated when mounting the first item
-    if (inFor && context.hmr) {
-      exp.needArraySpread = true
-    }
+    // #13221
+    // fix memory leak in cached array:
+    // cached vnodes get replaced by cloned ones during mountChildren,
+    // which bind DOM elements. These DOM references persist after unmount,
+    // preventing garbage collection. Array spread avoids mutating cached
+    // array, preventing memory leaks.
+    exp.needArraySpread = true
     return exp
   }
 

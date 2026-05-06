@@ -3,11 +3,21 @@ import {
   defineComponent,
   h,
   nextTick,
+  onScopeDispose,
   ref,
   watch,
   watchEffect,
+  withAsyncContext,
 } from 'vue'
 import { type SSRContext, renderToString } from '../src'
+
+const gc = () =>
+  new Promise<void>(resolve => {
+    setTimeout(() => {
+      global.gc!()
+      resolve()
+    })
+  })
 
 describe('ssr: watch', () => {
   // #6013
@@ -119,6 +129,89 @@ describe('ssr: watch', () => {
     await nextTick()
     expect(msg).toBe('start')
   })
+
+  test('should not run non-immediate watchers registered after async context restore', async () => {
+    const text = ref('start')
+    let beforeAwaitTriggered = false
+    let afterAwaitTriggered = false
+
+    const App = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+
+        watch(text, () => {
+          beforeAwaitTriggered = true
+        })
+        ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+        __temp = await __temp
+        __restore()
+
+        watch(text, () => {
+          afterAwaitTriggered = true
+        })
+
+        text.value = 'changed'
+        expect(beforeAwaitTriggered).toBe(false)
+        expect(afterAwaitTriggered).toBe(false)
+
+        return () => h('div', null, text.value)
+      },
+    })
+
+    const app = createSSRApp(App)
+    const ctx: SSRContext = {}
+    const html = await renderToString(app, ctx)
+
+    expect(ctx.__watcherHandles).toBeUndefined()
+    expect(html).toMatch('changed')
+    await nextTick()
+    expect(beforeAwaitTriggered).toBe(false)
+    expect(afterAwaitTriggered).toBe(false)
+  })
+
+  test('should not run non-immediate watchers registered after async context restore on rejection', async () => {
+    const text = ref('start')
+    let beforeAwaitTriggered = false
+    let afterAwaitTriggered = false
+
+    const App = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+
+        watch(text, () => {
+          beforeAwaitTriggered = true
+        })
+
+        try {
+          ;[__temp, __restore] = withAsyncContext(() =>
+            Promise.reject(new Error('failed')),
+          )
+          __temp = await __temp
+          __restore()
+        } catch {}
+
+        watch(text, () => {
+          afterAwaitTriggered = true
+        })
+
+        text.value = 'changed'
+        expect(beforeAwaitTriggered).toBe(false)
+        expect(afterAwaitTriggered).toBe(false)
+
+        return () => h('div', null, text.value)
+      },
+    })
+
+    const app = createSSRApp(App)
+    const ctx: SSRContext = {}
+    const html = await renderToString(app, ctx)
+
+    expect(ctx.__watcherHandles).toBeUndefined()
+    expect(html).toMatch('changed')
+    await nextTick()
+    expect(beforeAwaitTriggered).toBe(false)
+    expect(afterAwaitTriggered).toBe(false)
+  })
 })
 
 describe('ssr: watchEffect', () => {
@@ -198,5 +291,64 @@ describe('ssr: watchEffect', () => {
     expect(html).toMatch('unchanged')
     await nextTick()
     expect(msg).toBe('unchanged')
+  })
+})
+
+describe.skipIf(!global.gc)('ssr: watch gc', () => {
+  test('should not retain apps when a watcher stop handle is registered with onScopeDispose after async context restore', async () => {
+    const weakRefs: { deref(): unknown | undefined }[] = []
+
+    const ComponentA = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+        ;[__temp, __restore] = withAsyncContext(() => Promise.resolve(false))
+        const enabled = await __temp
+        __restore()
+
+        const el = ref(null)
+        const stop = watch(
+          () => el.value,
+          () => {},
+          { immediate: true },
+        )
+        onScopeDispose(stop)
+
+        return () => h('div', { ref: el }, `Component A ${enabled}`)
+      },
+    })
+
+    const ComponentB = defineComponent({
+      async setup() {
+        let __temp: any, __restore: any
+        ;[__temp, __restore] = withAsyncContext(() => Promise.resolve(false))
+        const enabled = await __temp
+        __restore()
+
+        return () => h('div', `Component B ${enabled}`)
+      },
+    })
+
+    async function renderOnce() {
+      const app = createSSRApp({
+        render: () => h('div', [h(ComponentA), h(ComponentB)]),
+      })
+      // @ts-expect-error ES2021 API
+      weakRefs.push(new WeakRef(app))
+
+      const html = await renderToString(app)
+
+      expect(html).toContain('Component A false')
+      expect(html).toContain('Component B false')
+    }
+
+    for (let i = 0; i < 10; i++) {
+      await renderOnce()
+    }
+
+    for (let i = 0; i < 5; i++) {
+      await gc()
+    }
+
+    expect(weakRefs.filter(ref => ref.deref()).length).toBe(0)
   })
 })

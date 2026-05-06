@@ -16,10 +16,20 @@
   .test-appear,
   .test-enter,
   .test-leave-active,
+  .test-reflow-enter,
+  .test-reflow-leave-to,
   .hello,
   .bye.active,
   .changed-enter {
     opacity: 0;
+  }
+  .test-reflow-leave-active,
+  .test-reflow-enter-active {
+    -webkit-transition: opacity 50ms ease;
+    transition: opacity 50ms ease;
+  }
+  .test-reflow-leave-from {
+    opacity: 0.9;
   }
   .test-anim-enter-active {
     animation: test-enter 50ms;

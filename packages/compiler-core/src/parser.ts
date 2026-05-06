@@ -40,11 +40,13 @@ import {
 } from './errors'
 import {
   forAliasRE,
+  isAllWhitespace,
   isCoreComponent,
   isSimpleIdentifier,
   isStaticArgOf,
+  isVPre,
 } from './utils'
-import { decodeHTML } from 'entities/lib/decode.js'
+import { decodeHTML } from 'entities/decode'
 import {
   type ParserOptions as BabelOptions,
   parse,
@@ -246,7 +248,7 @@ const tokenizer = new Tokenizer(stack, {
   ondirarg(start, end) {
     if (start === end) return
     const arg = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += arg
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else {
@@ -262,7 +264,7 @@ const tokenizer = new Tokenizer(stack, {
 
   ondirmodifier(start, end) {
     const mod = getSlice(start, end)
-    if (inVPre) {
+    if (inVPre && !isVPre(currentProp!)) {
       ;(currentProp as AttributeNode).name += '.' + mod
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else if ((currentProp as DirectiveNode).name === 'slot') {
@@ -388,7 +390,7 @@ const tokenizer = new Tokenizer(stack, {
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
               currentOptions,
               currentProp.loc,
-              currentProp.rawName,
+              currentProp.arg!.loc.source,
             )
           ) {
             currentProp.name = 'model'
@@ -647,7 +649,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
 
   // whitespace management
   if (!tokenizer.inRCDATA) {
-    el.children = condenseWhitespace(children, tag)
+    el.children = condenseWhitespace(children)
   }
 
   if (ns === Namespaces.HTML && currentOptions.isIgnoreNewlineTag(tag)) {
@@ -832,10 +834,7 @@ function isUpperCase(c: number) {
 }
 
 const windowsNewlineRE = /\r\n/g
-function condenseWhitespace(
-  nodes: TemplateChildNode[],
-  tag?: string,
-): TemplateChildNode[] {
+function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false
   for (let i = 0; i < nodes.length; i++) {
@@ -881,15 +880,6 @@ function condenseWhitespace(
     }
   }
   return removedWhitespace ? nodes.filter(Boolean) : nodes
-}
-
-function isAllWhitespace(str: string) {
-  for (let i = 0; i < str.length; i++) {
-    if (!isWhitespace(str.charCodeAt(i))) {
-      return false
-    }
-  }
-  return true
 }
 
 function hasNewlineChar(str: string) {
@@ -1056,7 +1046,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         `[@vue/compiler-core] decodeEntities option is passed but will be ` +
           `ignored in non-browser builds.`,
       )
-    } else if (__BROWSER__ && !currentOptions.decodeEntities) {
+    } else if (__BROWSER__ && !__TEST__ && !currentOptions.decodeEntities) {
       throw new Error(
         `[@vue/compiler-core] decodeEntities option is required in browser builds.`,
       )

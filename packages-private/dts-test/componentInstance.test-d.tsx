@@ -137,3 +137,18 @@ describe('Generic component', () => {
   expectType<string | number>(comp.msg)
   expectType<Array<string | number>>(comp.list)
 })
+
+// #12751
+{
+  const Comp = defineComponent({
+    __typeEmits: {} as {
+      'update:visible': [value?: boolean]
+    },
+  })
+  const comp: ComponentInstance<typeof Comp> = {} as any
+
+  expectType<((value?: boolean) => any) | undefined>(comp['onUpdate:visible'])
+  expectType<{ 'onUpdate:visible'?: (value?: boolean) => any }>(comp['$props'])
+  // @ts-expect-error
+  comp['$props']['$props']
+}
