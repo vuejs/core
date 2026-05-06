@@ -1557,6 +1557,31 @@ describe('resolveType', () => {
       })
     })
 
+    test('global types with re-exports track source deps after cache reuse', () => {
+      const files = {
+        '/foo.ts': `export interface Foo { foo: number }`,
+        '/global.d.ts': `
+          declare global {
+            export type { Foo } from './foo'
+          }
+          export {}
+        `,
+      }
+      const globalTypeFiles = { globalTypeFiles: ['/global.d.ts'] }
+
+      resolve(`defineProps<Foo>()`, files, globalTypeFiles)
+
+      const { deps } = resolve(
+        `defineProps<Foo>()`,
+        files,
+        globalTypeFiles,
+        '/Other.vue',
+        false,
+      )
+
+      expect(deps && [...deps]).toStrictEqual(['/global.d.ts', '/foo.ts'])
+    })
+
     test('global types with ambient references', () => {
       const files = {
         // with references

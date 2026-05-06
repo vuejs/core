@@ -779,7 +779,11 @@ function innerResolveTypeReference(
             const src = node.type === 'TSTypeQuery' ? s.declares : s.types
             if (src[name]) {
               ;(ctx.deps || (ctx.deps = new Set())).add(s.filename)
-              return src[name]
+              const resolved = src[name]
+              if (resolved._ownerScope && resolved._ownerScope !== s) {
+                ctx.deps.add(resolved._ownerScope.filename)
+              }
+              return resolved
             }
           }
         }
