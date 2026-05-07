@@ -106,8 +106,8 @@ describe('compiler: logicalIndex', () => {
             <span>A</span>
           </div>
         `)
-        // setInsertionState(parent, anchor=0(prepend), logicalIndex=0, last=true)
-        expect(code).toContain('_setInsertionState(n1, 0, 0, true)')
+        // setInsertionState(parent, anchor=0(prepend), logicalIndex=0)
+        expect(code).toContain('_setInsertionState(n1, 0, 0)')
         expect(code).toMatchSnapshot()
       })
 
@@ -122,7 +122,7 @@ describe('compiler: logicalIndex', () => {
         // Comp1
         expect(code).toContain('_setInsertionState(n2, 0, 0)')
         // Comp2
-        expect(code).toContain('_setInsertionState(n2, 0, 1, true)')
+        expect(code).toContain('_setInsertionState(n2, 0, 1)')
         expect(code).toMatchSnapshot()
       })
     })
@@ -136,8 +136,8 @@ describe('compiler: logicalIndex', () => {
             <p>B</p>
           </div>
         `)
-        // setInsertionState(parent, anchor=n${id}, logicalIndex=1, last=true)
-        expect(code).toContain('_setInsertionState(n2, n1, 1, true)')
+        // setInsertionState(parent, anchor=n${id}, logicalIndex=1)
+        expect(code).toContain('_setInsertionState(n2, n1, 1)')
         expect(code).toMatchSnapshot()
       })
 
@@ -153,7 +153,7 @@ describe('compiler: logicalIndex', () => {
         // Comp1
         expect(code).toContain('_setInsertionState(n3, n2, 1)')
         // Comp2
-        expect(code).toContain('_setInsertionState(n3, n2, 2, true)')
+        expect(code).toContain('_setInsertionState(n3, n2, 2)')
         expect(code).toMatchSnapshot()
       })
     })
@@ -166,8 +166,8 @@ describe('compiler: logicalIndex', () => {
             <Comp />
           </div>
         `)
-        // setInsertionState(parent, null(append), logicalIndex=1, last=true)
-        expect(code).toContain('_setInsertionState(n1, null, 1, true)')
+        // setInsertionState(parent, null(append), logicalIndex=1)
+        expect(code).toContain('_setInsertionState(n1, null, 1)')
         expect(code).toMatchSnapshot()
       })
 
@@ -182,7 +182,7 @@ describe('compiler: logicalIndex', () => {
         // Comp1
         expect(code).toContain('_setInsertionState(n2, null, 1)')
         // Comp2
-        expect(code).toContain('_setInsertionState(n2, null, 2, true)')
+        expect(code).toContain('_setInsertionState(n2, null, 2)')
         expect(code).toMatchSnapshot()
       })
 
@@ -192,7 +192,7 @@ describe('compiler: logicalIndex', () => {
             <Comp />
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n1, null, 0, true)')
+        expect(code).toContain('_setInsertionState(n1, null, 0)')
         expect(code).toMatchSnapshot()
       })
     })
@@ -209,7 +209,7 @@ describe('compiler: logicalIndex', () => {
         // Comp1: prepend, logicalIndex=0
         expect(code).toContain('_setInsertionState(n2, 0, 0)')
         // Comp2: append, logicalIndex=2
-        expect(code).toContain('_setInsertionState(n2, null, 2, true)')
+        expect(code).toContain('_setInsertionState(n2, null, 2)')
         expect(code).toMatchSnapshot()
       })
 
@@ -228,7 +228,7 @@ describe('compiler: logicalIndex', () => {
         // Comp2: insert, logicalIndex=2
         expect(code).toContain('_setInsertionState(n3, n4, 2)')
         // Comp3: append, logicalIndex=4
-        expect(code).toContain('_setInsertionState(n3, null, 4, true)')
+        expect(code).toContain('_setInsertionState(n3, null, 4)')
         expect(code).toMatchSnapshot()
       })
     })
@@ -241,7 +241,7 @@ describe('compiler: logicalIndex', () => {
             <span>A</span>
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n3, 0, 0, true)')
+        expect(code).toContain('_setInsertionState(n3, 0, 0)')
         expect(code).toMatchSnapshot()
       })
 
@@ -253,7 +253,7 @@ describe('compiler: logicalIndex', () => {
             <p>B</p>
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n4, n3, 1, true)')
+        expect(code).toContain('_setInsertionState(n4, n3, 1)')
         expect(code).toMatchSnapshot()
       })
 
@@ -264,7 +264,7 @@ describe('compiler: logicalIndex', () => {
             <div v-if="show" />
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n3, null, 1, true)')
+        expect(code).toContain('_setInsertionState(n3, null, 1)')
         expect(code).toMatchSnapshot()
       })
     })
@@ -277,7 +277,7 @@ describe('compiler: logicalIndex', () => {
             <span>A</span>
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n3, 0, 0, true)')
+        expect(code).toContain('_setInsertionState(n3, 0, 0)')
         expect(code).toMatchSnapshot()
       })
 
@@ -288,7 +288,7 @@ describe('compiler: logicalIndex', () => {
             <div v-for="i in list" :key="i" />
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n3, null, 1, true)')
+        expect(code).toContain('_setInsertionState(n3, null, 1)')
         expect(code).toMatchSnapshot()
       })
     })
@@ -301,7 +301,7 @@ describe('compiler: logicalIndex', () => {
             <span>A</span>
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n1, 0, 0, true)')
+        expect(code).toContain('_setInsertionState(n1, 0, 0)')
         expect(code).toMatchSnapshot()
       })
 
@@ -312,7 +312,7 @@ describe('compiler: logicalIndex', () => {
             <slot />
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n1, null, 1, true)')
+        expect(code).toContain('_setInsertionState(n1, null, 1)')
         expect(code).toMatchSnapshot()
       })
     })
@@ -329,7 +329,7 @@ describe('compiler: logicalIndex', () => {
           </div>
         `)
         // The entire if/else block is logicalIndex = 1
-        expect(code).toContain('_setInsertionState(n6, n5, 1, true)')
+        expect(code).toContain('_setInsertionState(n6, n5, 1)')
         expect(code).toMatchSnapshot()
       })
 
@@ -344,7 +344,7 @@ describe('compiler: logicalIndex', () => {
           </div>
         `)
         // The entire if/else-if/else block is logicalIndex = 1
-        expect(code).toContain('_setInsertionState(n8, n7, 1, true)')
+        expect(code).toContain('_setInsertionState(n8, n7, 1)')
         expect(code).toMatchSnapshot()
       })
 
@@ -357,7 +357,7 @@ describe('compiler: logicalIndex', () => {
           </div>
         `)
         // logicalIndex = 0 for prepend
-        expect(code).toContain('_setInsertionState(n5, 0, 0, true)')
+        expect(code).toContain('_setInsertionState(n5, 0, 0)')
         expect(code).toMatchSnapshot()
       })
 
@@ -370,7 +370,7 @@ describe('compiler: logicalIndex', () => {
           </div>
         `)
         // logicalIndex = 1 for append
-        expect(code).toContain('_setInsertionState(n5, null, 1, true)')
+        expect(code).toContain('_setInsertionState(n5, null, 1)')
         expect(code).toMatchSnapshot()
       })
 
@@ -386,7 +386,7 @@ describe('compiler: logicalIndex', () => {
         // v-if/v-else: logicalIndex = 1
         // Comp: logicalIndex = 2
         expect(code).toContain('_setInsertionState(n6, null, 1)')
-        expect(code).toContain('_setInsertionState(n6, null, 2, true)')
+        expect(code).toContain('_setInsertionState(n6, null, 2)')
         expect(code).toMatchSnapshot()
       })
 
@@ -403,7 +403,7 @@ describe('compiler: logicalIndex', () => {
         // v-if/v-else: logicalIndex = 1
         // span: logicalIndex = 2
         expect(code).toContain('_setInsertionState(n6, 0, 0)')
-        expect(code).toContain('_setInsertionState(n6, 0, 1, true)')
+        expect(code).toContain('_setInsertionState(n6, 0, 1)')
         expect(code).toMatchSnapshot()
       })
 
@@ -421,7 +421,7 @@ describe('compiler: logicalIndex', () => {
         // Comp2: logicalIndex = 2
         expect(code).toContain('_setInsertionState(n7, null, 0)')
         expect(code).toContain('_setInsertionState(n7, null, 1)')
-        expect(code).toContain('_setInsertionState(n7, null, 2, true)')
+        expect(code).toContain('_setInsertionState(n7, null, 2)')
         expect(code).toMatchSnapshot()
       })
     })
@@ -434,7 +434,7 @@ describe('compiler: logicalIndex', () => {
             <span>A</span>
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n2, 0, 0, true)')
+        expect(code).toContain('_setInsertionState(n2, 0, 0)')
         expect(code).toMatchSnapshot()
       })
 
@@ -446,7 +446,7 @@ describe('compiler: logicalIndex', () => {
           </div>
         `)
         expect(code).toMatchSnapshot()
-        expect(code).toContain('_setInsertionState(n2, null, 1, true)')
+        expect(code).toContain('_setInsertionState(n2, null, 1)')
       })
 
       test('key in middle', () => {
@@ -457,7 +457,7 @@ describe('compiler: logicalIndex', () => {
             <span>B</span>
           </div>
         `)
-        expect(code).toContain('_setInsertionState(n3, n2, 1, true)')
+        expect(code).toContain('_setInsertionState(n3, n2, 1)')
         expect(code).toMatchSnapshot()
       })
     })

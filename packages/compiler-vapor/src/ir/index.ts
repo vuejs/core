@@ -100,7 +100,6 @@ export interface IfIRNode extends BaseIRNode, EffectBoundary {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
 export interface IRFor {
@@ -122,7 +121,6 @@ export interface ForIRNode extends BaseIRNode, IRFor, EffectBoundary {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
 export interface KeyIRNode extends BaseIRNode, EffectBoundary {
@@ -134,7 +132,6 @@ export interface KeyIRNode extends BaseIRNode, EffectBoundary {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
 export interface SetBlockKeyIRNode extends BaseIRNode {
@@ -244,7 +241,6 @@ export interface CreateComponentIRNode extends BaseIRNode, EffectBoundary {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
 export interface SlotOutletIRNode extends BaseIRNode, EffectBoundary {
@@ -259,7 +255,6 @@ export interface SlotOutletIRNode extends BaseIRNode, EffectBoundary {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {

@@ -5060,6 +5060,38 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('enabled teleport hydration with empty v-if should preserve target anchors', async () => {
+      const data = ref({ ok: false, msg: 'foo' })
+
+      const teleportContainer = document.createElement('div')
+      teleportContainer.id = 'teleport-empty-if'
+      teleportContainer.innerHTML =
+        `<!--teleport start anchor-->` + `<!--teleport anchor-->`
+      document.body.appendChild(teleportContainer)
+
+      const { container } = await mountWithHydration(
+        '<!--teleport start--><!--teleport end-->',
+        `<teleport to="#teleport-empty-if">
+          <span v-if="data.ok">{{data.msg}}</span>
+        </teleport>`,
+        data,
+      )
+      await nextTick()
+
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><!--teleport end-->`,
+      )
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor--><!--if--><!--teleport anchor-->`,
+      )
+
+      data.value.ok = true
+      await nextTick()
+      expect(teleportContainer.innerHTML).toBe(
+        `<!--teleport start anchor--><span>foo</span><!--if--><!--teleport anchor-->`,
+      )
+    })
+
     test('disabled teleport hydration over empty main-view range should preserve teleport end anchor', async () => {
       const data = ref({ msg: 'foo' })
 
@@ -7358,6 +7390,136 @@ describe('mismatch handling', () => {
       expect((cloned as any).$root).toBe(true)
       expect(cloned.outerHTML).toBe(`<div>claimed</div>`)
     })
+  })
+
+  test('nested insertion hydration preserves outer sibling cursor', async () => {
+    const { container, data } = await testWithVaporApp(
+      `
+      <template>
+        <section><div><components.Child /></div><span>static</span></section>
+        <section>{{ data }}</section>
+      </template>
+      `,
+      {
+        Child: '<template><a>child</a></template>',
+      },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><a>child</a></div><span>static</span></section><section>foo</section><!--]-->`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><a>child</a></div><span>static</span></section><section>bar</section><!--]-->`,
+    )
+  })
+
+  test('nested v-if hydration preserves outer sibling cursor', async () => {
+    const { container, data } = await testWithVaporApp(`
+      <template>
+        <section><div><span v-if="true">child</span></div><span>static</span></section>
+        <section>{{ data }}</section>
+      </template>
+    `)
+
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><span>child</span></div><span>static</span></section><section>foo</section><!--]-->`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><span>child</span></div><span>static</span></section><section>bar</section><!--]-->`,
+    )
+  })
+
+  test('nested v-if hydration preserves same-root dynamic sibling and outer cursor', async () => {
+    const { container, data } = await testWithVaporApp(`
+      <template>
+        <section><div><span v-if="true">child</span></div><span>{{ data }}</span></section>
+        <section>{{ data }}</section>
+      </template>
+    `)
+
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><span>child</span></div><span>foo</span></section><section>foo</section><!--]-->`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><span>child</span></div><span>bar</span></section><section>bar</section><!--]-->`,
+    )
+  })
+
+  test('single-root nested v-if hydration keeps static siblings', async () => {
+    const { container, data } = await testWithVaporApp(`
+      <template>
+        <main>
+          <section><div><span v-if="true">child</span></div><span>static</span></section>
+          <section>{{ data }}</section>
+        </main>
+      </template>
+    `)
+
+    expect(container.innerHTML).toBe(
+      `<main><section><div><span>child</span></div><span>static</span></section><section>foo</section></main>`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<main><section><div><span>child</span></div><span>static</span></section><section>bar</section></main>`,
+    )
+  })
+
+  test('nested v-for hydration preserves outer sibling cursor', async () => {
+    const { container, data } = await testWithVaporApp(`
+      <template>
+        <section><div><span v-for="item in ['child']">{{ item }}</span></div><span>static</span></section>
+        <section>{{ data }}</section>
+      </template>
+    `)
+
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><!--[--><span>child</span><!--]--></div><span>static</span></section><section>foo</section><!--]-->`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><!--[--><span>child</span><!--]--></div><span>static</span></section><section>bar</section><!--]-->`,
+    )
+  })
+
+  test('nested slot hydration preserves outer sibling cursor', async () => {
+    const { container, data } = await testWithVaporApp(
+      `
+      <template>
+        <components.Wrapper><a>child</a></components.Wrapper>
+      </template>
+      `,
+      {
+        Wrapper: `
+          <template>
+            <section><div><slot /></div><span>static</span></section>
+            <section>{{ data }}</section>
+          </template>
+        `,
+      },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><!--[--><a>child</a><!--]--></div><span>static</span></section><section>foo</section><!--]-->`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><section><div><!--[--><a>child</a><!--]--></div><span>static</span></section><section>bar</section><!--]-->`,
+    )
   })
 })
 

@@ -1,13 +1,15 @@
 import { type Block, type BlockFn, insert } from './block'
 import {
+  type HydrationCursor,
   advanceHydrationNode,
+  currentHydrationNode,
+  enterHydrationCursor,
+  exitHydrationCursor,
   isHydrating,
-  locateHydrationNode,
 } from './dom/hydration'
 import {
   insertionAnchor,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
@@ -25,15 +27,17 @@ export function createIf(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
+  let hydrationCursor: HydrationCursor | null = null
+  let branchShape: VaporBlockShape | undefined
 
   let frag: Block
   if (once) {
     const ok = condition()
     if (isHydrating) {
-      locateHydrationNode(
-        decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
+      branchShape = decodeIfShape(blockShape!, ok)
+      hydrationCursor = enterHydrationCursor(
+        branchShape === VaporBlockShape.MULTI_ROOT,
       )
     }
     frag = ok
@@ -51,8 +55,9 @@ export function createIf(
     renderEffect(() => {
       const ok = condition()
       if (isHydrating) {
-        locateHydrationNode(
-          decodeIfShape(blockShape!, ok) === VaporBlockShape.MULTI_ROOT,
+        branchShape = decodeIfShape(blockShape!, ok)
+        hydrationCursor = enterHydrationCursor(
+          branchShape === VaporBlockShape.MULTI_ROOT,
         )
       }
       ;(frag as DynamicFragment).update(
@@ -65,9 +70,20 @@ export function createIf(
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
   } else {
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
+    // SSR empty branches render as <!---->, and no template adoption consumes
+    // that comment. Claim it before restoring the outer cursor.
+    if (branchShape === VaporBlockShape.EMPTY && hydrationCursor) {
+      const start = hydrationCursor.start
+      if (
+        start &&
+        currentHydrationNode === start &&
+        start.nodeType === 8 &&
+        (start as Comment).data === ''
+      ) {
+        advanceHydrationNode(start)
+      }
     }
+    exitHydrationCursor(hydrationCursor)
   }
 
   return frag

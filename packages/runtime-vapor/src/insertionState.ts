@@ -16,11 +16,6 @@ export let insertionAnchor: Node | 0 | undefined | null
 // logical index for hydration
 export let insertionIndex: number | undefined
 
-// indicates whether the insertion is the last one in the parent.
-// if true, means no more nodes need to be hydrated after this insertion,
-// advancing current hydration node to parent nextSibling
-export let isLastInsertion: boolean | undefined
-
 /**
  * This function is called before a block type that requires insertion
  * (component, slot outlet, if, for) is created. The state is used for actual
@@ -30,10 +25,8 @@ export function setInsertionState(
   parent: ParentNode & { $fc?: Node | null },
   anchor?: Node | 0 | null,
   logicalIndex?: number,
-  last?: boolean,
 ): void {
   insertionParent = parent
-  isLastInsertion = last
   insertionIndex = logicalIndex
 
   if (anchor !== undefined) {
@@ -52,9 +45,5 @@ export function setInsertionState(
 }
 
 export function resetInsertionState(): void {
-  insertionParent =
-    insertionAnchor =
-    insertionIndex =
-    isLastInsertion =
-      undefined
+  insertionParent = insertionAnchor = insertionIndex = undefined
 }

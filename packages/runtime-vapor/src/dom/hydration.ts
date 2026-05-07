@@ -148,6 +148,42 @@ export function advanceHydrationNode(node: Node): void {
   }
 }
 
+export type HydrationCursor = {
+  start: Node | null
+  // `undefined` means this scope follows the cursor advanced by its body.
+  // `null` is a real resume point: the outer scope has no next node.
+  resume: Node | null | undefined
+}
+
+export function enterHydrationCursor(
+  consumeFragmentStart = false,
+): HydrationCursor {
+  const resume = insertionParent ? currentHydrationNode : undefined
+  locateHydrationNode(consumeFragmentStart)
+  return {
+    start: currentHydrationNode,
+    resume,
+  }
+}
+
+/**
+ * Capture only the outer resume cursor for dynamic wrappers whose inner owner
+ * locates the local start later, after the selected inner path is known.
+ * This avoids consuming insertion state too early.
+ */
+export function captureHydrationCursor(): HydrationCursor {
+  return {
+    start: null,
+    resume: insertionParent ? currentHydrationNode : undefined,
+  }
+}
+
+export function exitHydrationCursor(cursor: HydrationCursor | null): void {
+  if (cursor && cursor.resume !== undefined) {
+    setCurrentHydrationNode(cursor.resume)
+  }
+}
+
 /**
  * Locate the first non-fragment-comment node and locate the next node
  * while handling potential fragments.

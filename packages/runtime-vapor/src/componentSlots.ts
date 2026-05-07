@@ -12,13 +12,14 @@ import { renderEffect } from './renderEffect'
 import {
   insertionAnchor,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import {
-  advanceHydrationNode,
+  type HydrationCursor,
+  captureHydrationCursor,
+  enterHydrationCursor,
+  exitHydrationCursor,
   isHydrating,
-  locateHydrationNode,
 } from './dom/hydration'
 import {
   type DynamicFragment,
@@ -188,8 +189,8 @@ export function createSlot(
 ): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
+  let hydrationCursor: HydrationCursor | null = null
 
   const instance = getScopeOwner()!
   const rawSlots = instance.rawSlots
@@ -199,7 +200,7 @@ export function createSlot(
 
   let fragment: VaporFragment
   if (isRef(rawSlots._) && isInteropEnabled) {
-    if (isHydrating) locateHydrationNode()
+    if (isHydrating) hydrationCursor = enterHydrationCursor()
     fragment = instance.appContext.vapor!.vdomSlot(
       rawSlots._,
       name,
@@ -208,6 +209,7 @@ export function createSlot(
       fallback,
     )
   } else {
+    if (isHydrating) hydrationCursor = captureHydrationCursor()
     const slotFragment = (fragment = new SlotFragment())
     // mark the slot as forwarded
     slotFragment.forwarded =
@@ -307,9 +309,7 @@ export function createSlot(
     if (fragment.insert) {
       ;(fragment as VaporFragment).hydrate!()
     }
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
-    }
+    exitHydrationCursor(hydrationCursor)
   }
 
   return fragment

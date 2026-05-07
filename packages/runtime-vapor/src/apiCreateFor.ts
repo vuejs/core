@@ -24,13 +24,15 @@ import {
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '@vue/shared'
 import {
+  type HydrationCursor,
   advanceHydrationNode,
   currentHydrationNode,
   enterHydrationBoundary,
+  enterHydrationCursor,
+  exitHydrationCursor,
   isComment,
   isHydrating,
   locateHydrationBoundaryClose,
-  locateHydrationNode,
   locateNextNode,
   markHydrationAnchor,
   setCurrentHydrationNode,
@@ -46,7 +48,6 @@ import {
   insertionAnchor,
   insertionIndex,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
@@ -89,9 +90,9 @@ export const createFor = (
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   const _insertionIndex = insertionIndex
-  const _isLastInsertion = isLastInsertion
+  let hydrationCursor: HydrationCursor | null = null
   if (isHydrating) {
-    locateHydrationNode(true)
+    hydrationCursor = enterHydrationCursor(true)
   } else {
     resetInsertionState()
   }
@@ -556,8 +557,11 @@ export const createFor = (
 
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
-  } else if (!pendingHydrationAnchor) {
-    advanceHydrationNode(_isLastInsertion ? _insertionParent! : parentAnchor!)
+  } else {
+    if (!pendingHydrationAnchor && currentHydrationNode === parentAnchor!) {
+      advanceHydrationNode(parentAnchor!)
+    }
+    exitHydrationCursor(hydrationCursor)
   }
 
   return frag
