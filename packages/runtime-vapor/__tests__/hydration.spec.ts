@@ -5914,7 +5914,6 @@ describe('Vapor Mode hydration', () => {
           `
           const appCode = `
             <script setup>
-              import { Suspense } from 'vue'
               const components = _components
             </script>
             <template>
@@ -5996,7 +5995,6 @@ describe('Vapor Mode hydration', () => {
           `
           const appCode = `
             <script setup>
-              import { Suspense } from 'vue'
               const components = _components
             </script>
             <template>
@@ -6079,7 +6077,6 @@ describe('Vapor Mode hydration', () => {
           `
           const appCode = `
             <script setup>
-              import { Suspense } from 'vue'
               const components = _components
             </script>
             <template>
@@ -6177,7 +6174,6 @@ describe('Vapor Mode hydration', () => {
           `
           const appCode = `
             <script setup>
-              import { Suspense } from 'vue'
               const data = _data
               const components = _components
             </script>
@@ -6320,7 +6316,6 @@ describe('Vapor Mode hydration', () => {
           `
           const appCode = `
             <script setup>
-              import { Suspense } from 'vue'
               const data = _data
               const components = _components
             </script>
@@ -9318,6 +9313,75 @@ describe('VDOM interop', () => {
       "
       <!--[--><div>bar</div><!--dynamic-component--><span>tail-updated</span><!--]-->
       "
+    `)
+  })
+
+  test('hydrate static Suspense with vapor child before trailing sibling', async () => {
+    const serverData = ref({
+      tail: 'tail',
+    })
+    const clientData = ref({
+      html: '',
+      tail: 'tail',
+    })
+    const appCode = `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <div>
+          <p>before</p>
+          <Suspense>
+            <components.Child />
+            <template #fallback></template>
+          </Suspense>
+          <span>{{ data.tail }}</span>
+        </div>
+      </template>`
+    const serverChildCode = `<div id="dmermaid"><svg></svg></div>`
+    const clientChildCode = `<script setup>
+            const data = _data
+          </script>
+          <template><div v-html="data.html"></div></template>`
+
+    const SSRChild = compileVaporComponent(
+      serverChildCode,
+      serverData,
+      undefined,
+      true,
+    )
+    const SSRApp = compileVaporComponent(
+      appCode,
+      serverData,
+      { Child: SSRChild },
+      true,
+    )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRApp),
+    )
+
+    const ClientChild = compileVaporComponent(clientChildCode, clientData)
+    const ClientApp = compileVaporComponent(appCode, clientData, {
+      Child: ClientChild,
+    })
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    const app = createVaporSSRApp(ClientApp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div><p>before</p><div id="dmermaid"><svg></svg></div><span>tail</span></div>"
+    `)
+
+    clientData.value.html = '<svg data-updated="true"></svg>'
+    clientData.value.tail = 'tail-updated'
+    await nextTick()
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div><p>before</p><div id="dmermaid"><svg data-updated="true"></svg></div><span>tail-updated</span></div>"
     `)
   })
 
