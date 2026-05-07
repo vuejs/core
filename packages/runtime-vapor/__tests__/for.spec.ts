@@ -426,12 +426,12 @@ describe('createFor', () => {
       '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
     )
 
-    // change deep value should not update
+    // change deep value and refresh source
     list.value[0].name = 'a'
     setList()
     await nextTick()
     expect(host.innerHTML).toBe(
-      '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
+      '<li>0. a</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
     )
 
     // remove
@@ -439,13 +439,89 @@ describe('createFor', () => {
     setList()
     await nextTick()
     expect(host.innerHTML).toBe(
-      '<li>0. 1</li><li>1. 3</li><li>2. 4</li><!--for-->',
+      '<li>0. a</li><li>1. 3</li><li>2. 4</li><!--for-->',
     )
 
     // clear
     setList([])
     await nextTick()
     expect(host.innerHTML).toBe('<!--for-->')
+  })
+
+  test('should update same item references when source is refreshed', async () => {
+    let rawList = [{ number: 0 }, { number: 1 }]
+    const list = shallowRef(rawList)
+
+    const { host } = define(() => {
+      const n1 = createFor(
+        () => list.value,
+        item => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.textContent = JSON.stringify(item.value)
+          })
+          return span
+        },
+        (_item, key) => `${key}-test`,
+      )
+      return n1
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<li>{"number":0}</li><li>{"number":1}</li><!--for-->',
+    )
+
+    rawList[0].number = 2
+    list.value = rawList.slice()
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"number":2}</li><li>{"number":1}</li><!--for-->',
+    )
+
+    list.value[0].number = 3
+    triggerRef(list)
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"number":3}</li><li>{"number":1}</li><!--for-->',
+    )
+
+    rawList = [{ number: 0 }, { number: 1 }]
+    list.value = rawList
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"number":0}</li><li>{"number":1}</li><!--for-->',
+    )
+  })
+
+  test('should update same reactive item references when source is replaced', async () => {
+    const rawList = [{ number: 0 }, { number: 1 }]
+    const list = ref(rawList)
+
+    const { host } = define(() => {
+      const n1 = createFor(
+        () => list.value,
+        item => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.textContent = JSON.stringify(item.value)
+          })
+          return span
+        },
+        (_item, key) => `${key}-test`,
+      )
+      return n1
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<li>{"number":0}</li><li>{"number":1}</li><!--for-->',
+    )
+
+    rawList[0].number = 2
+    list.value = rawList.slice()
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>{"number":2}</li><li>{"number":1}</li><!--for-->',
+    )
   })
 
   test('should optimize call frequency during list operations', async () => {
@@ -518,6 +594,14 @@ describe('createFor', () => {
     }
     await nextTick()
     expectCalledTimesToBe('Update every 10th row', 0, 0, length() / 10, 0)
+
+    // Replace a row with the same key
+    list.value[0] = {
+      id: list.value[0].id,
+      label: list.value[0].label + 10000,
+    }
+    await nextTick()
+    expectCalledTimesToBe('Replace a row with the same key', 1, 0, 1, 0)
 
     // Append rows
     list.value.push(...createItems(100))
@@ -637,6 +721,15 @@ describe('createFor', () => {
     }
     await nextTick()
     expectCalledTimesToBe('Update every 10th row', 0, 0, length() / 10, 0)
+
+    // Replace a row with the same key
+    list.value[0] = {
+      id: list.value[0].id,
+      label: shallowRef(list.value[0].label.value + 10000),
+    }
+    triggerRef(list)
+    await nextTick()
+    expectCalledTimesToBe('Replace a row with the same key', 1, 0, 1, 0)
 
     // Append rows
     list.value.push(...createItems(100))
