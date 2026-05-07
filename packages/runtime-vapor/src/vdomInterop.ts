@@ -286,6 +286,7 @@ const vaporInteropImpl: Omit<
   unmount(vnode, doRemove) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
     const instance = vnode.component as any as VaporComponentInstance
+    let slotStartAnchor: Node | null = null
     if (instance) {
       // the async component may not be resolved yet, block is null
       if (instance.block) {
@@ -304,6 +305,11 @@ const vaporInteropImpl: Omit<
       }
     } else if (vnode.vb) {
       const anchor = vnode.anchor as Node | null
+      // `hydrateSlot()` records the opening marker for VDOM SSR slot fragments
+      // on vnode.el while vnode.anchor points at the closing marker.
+      if (vnode.el && vnode.el !== anchor && isComment(vnode.el as Node, '[')) {
+        slotStartAnchor = vnode.el as Node
+      }
       // Fragment child unmounts invoke VaporSlot with doRemove = false, so the
       // renderer does not pass us a container. Most slot blocks can still
       // clean themselves up without it, but KeepAlive needs the host container
@@ -317,6 +323,12 @@ const vaporInteropImpl: Omit<
       stopVaporSlotScope(vnode)
     }
     if (doRemove) {
+      if (slotStartAnchor) {
+        const parent = slotStartAnchor.parentNode
+        if (parent) {
+          remove(slotStartAnchor, parent)
+        }
+      }
       const anchor = vnode.anchor as Node
       // `container` is captured before unmount starts, but the unmount above
       // may already remove or move this anchor. Only remove it if it is still
@@ -362,6 +374,10 @@ const vaporInteropImpl: Omit<
         const selfAnchor = n1.anchor as Node
         const parent = selfAnchor.parentNode as ParentNode
         const nextSibling = selfAnchor.nextSibling
+        const rangeStartAnchor =
+          n1.el && n1.el !== selfAnchor && isComment(n1.el as Node, '[')
+            ? (n1.el as Node)
+            : undefined
         const oldBlockOwnsAnchor =
           isFragment(n1.vb!) && n1.vb!.anchor === selfAnchor
         // remove old vapor block
@@ -380,12 +396,14 @@ const vaporInteropImpl: Omit<
           newAnchor = selfAnchor
           insertAnchor = selfAnchor
         }
-        insert((n2.el = n2.anchor = newAnchor), parent, insertAnchor)
+        insert((n2.anchor = newAnchor), parent, insertAnchor)
+        n2.el = rangeStartAnchor || newAnchor
         insert((n2.vb = slotBlock), parent, newAnchor)
       } else {
         const vs1 = n1.vs!
         const vs2 = n2.vs!
-        n2.el = n2.anchor = n1.anchor
+        n2.el = n1.el
+        n2.anchor = n1.anchor
         n2.vb = n1.vb
         ;(vs2.ref = vs1.ref)!.value = n2.props
         vs2.scope = vs1.scope
@@ -395,6 +413,13 @@ const vaporInteropImpl: Omit<
   },
 
   move(vnode, container, anchor, moveType) {
+    if (
+      vnode.el &&
+      vnode.el !== vnode.anchor &&
+      isComment(vnode.el as Node, '[')
+    ) {
+      move(vnode.el as any, container, anchor, moveType)
+    }
     move(vnode.vb || (vnode.component as any), container, anchor, moveType)
     move(vnode.anchor as any, container, anchor, moveType)
   },
@@ -432,11 +457,18 @@ const vaporInteropImpl: Omit<
     if (!isHydrating && !isVdomHydrating) return node
     vaporHydrateNode(node, () => {
       vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
-      vnode.anchor = vnode.el =
+      const anchor =
         isFragment(vnode.vb) && vnode.vb.anchor
           ? vnode.vb.anchor
           : currentHydrationNode!
-
+      // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
+      // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
+      if (isComment(node, '[') && isComment(anchor, ']')) {
+        vnode.el = node
+        vnode.anchor = anchor
+      } else {
+        vnode.anchor = vnode.el = anchor
+      }
       if (__DEV__ && !vnode.anchor) {
         throw new Error(
           `Failed to locate slot anchor. this is likely a Vue internal bug.`,
