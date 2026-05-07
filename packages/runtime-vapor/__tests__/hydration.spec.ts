@@ -9339,6 +9339,121 @@ describe('VDOM interop', () => {
     }
   })
 
+  test('hydrate client-mounted VDOM Teleport slot content and switch vapor branch', async () => {
+    const targetId = 'interop-vdom-mounted-teleport-slot-hydration-target'
+    const data = ref({
+      show: true,
+      tail: 'tail',
+    })
+    const mountedPortalCode = `<script setup>
+        import { onMounted, ref } from 'vue'
+        defineOptions({ name: 'VDomMountedPortal' })
+        defineProps({ to: String })
+        const mounted = ref(false)
+        onMounted(() => {
+          mounted.value = true
+        })
+      </script>
+      <template>
+        <Teleport v-if="mounted" :to="to">
+          <slot />
+        </Teleport>
+      </template>`
+    const portalCode = `<script setup>
+        defineOptions({ name: 'VDomPortalForwarder' })
+        defineProps({ to: String })
+        const components = _components
+      </script>
+      <template>
+        <components.MountedPortal :to="to">
+          <slot />
+        </components.MountedPortal>
+      </template>`
+    const rootCode = `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Portal v-if="data.show" :to="'#${targetId}'">
+          <span>teleported</span>
+        </components.Portal>
+        <p v-else>next</p>
+        <span>{{ data.tail }}</span>
+      </template>`
+
+    const ssrComponents: any = {}
+    ssrComponents.MountedPortal = compile(
+      mountedPortalCode,
+      data,
+      ssrComponents,
+      {
+        vapor: false,
+        ssr: true,
+      },
+    )
+    ssrComponents.Portal = compile(portalCode, data, ssrComponents, {
+      vapor: false,
+      ssr: true,
+    })
+    const clientComponents: any = {}
+    clientComponents.MountedPortal = compile(
+      mountedPortalCode,
+      data,
+      clientComponents,
+      {
+        vapor: false,
+        ssr: false,
+      },
+    )
+    clientComponents.Portal = compile(portalCode, data, clientComponents, {
+      vapor: false,
+      ssr: false,
+    })
+    const serverComp = compile(rootCode, data, ssrComponents, {
+      vapor: true,
+      ssr: true,
+    })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    const target = document.createElement('div')
+    target.id = targetId
+    document.body.appendChild(target)
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    const clientComp = compile(rootCode, data, clientComponents, {
+      vapor: true,
+      ssr: false,
+    })
+    const app = createVaporSSRApp(clientComp)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    try {
+      app.mount(container)
+      await nextTick()
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(formatHtml(target.innerHTML)).toBe('<span>teleported</span>')
+
+      data.value.show = false
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><p>next</p><!--if--><span>tail</span><!--]-->
+        "
+      `)
+      expect(target.innerHTML).toBe('')
+    } finally {
+      app.unmount()
+      container.remove()
+      target.remove()
+    }
+  })
+
   test('hydrate Suspense VNode via createDynamicComponent and switch branch', async () => {
     const data = ref({
       showSuspense: true,
