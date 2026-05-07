@@ -919,7 +919,7 @@ function createVDOMComponent(
   }
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     if (isUnmounted) {
-      removeDom(parentNode)
+      if (!transition) removeDom(parentNode)
       return
     }
     // unset ref
@@ -935,18 +935,16 @@ function createVDOMComponent(
       )
       return
     }
-    // Vapor block removal and scope disposal can both reach this path.
-    // VDOM fragment ranges must only be removed once.
     isUnmounted = true
     isMounted = false
     internals.umt(vnode.component!, null, !!parentNode)
-    removeDom(parentNode)
+    // VDOM transitions own their leaving DOM until the leave finishes.
+    if (!transition) removeDom(parentNode)
   }
 
   frag.hydrate = () => {
     if (!isHydrating) return
     hydrateVNode(vnode, parentComponent as any)
-    onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
     frag.validityPending = false
@@ -984,7 +982,6 @@ function createVDOMComponent(
         )
         // set ref
         if (rawRef) vdomSetRef(rawRef, null, null, vnode)
-        onScopeDispose(unmount, true)
         isMounted = true
       } else {
         // move
