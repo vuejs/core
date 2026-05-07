@@ -7454,6 +7454,34 @@ describe('mismatch handling', () => {
     )
   })
 
+  test('nthChild hydration uses logical index after inserted sibling', async () => {
+    const { container, data } = await testWithVaporApp(
+      `
+      <template>
+        <div>
+          <components.Child />
+          <span>static</span>
+          <p>static</p>
+          <section>{{ data }}</section>
+        </div>
+      </template>
+    `,
+      {
+        Child: '<template><a>child</a></template>',
+      },
+    )
+
+    expect(container.innerHTML).toBe(
+      `<div><a>child</a><span>static</span><p>static</p><section>foo</section></div>`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><a>child</a><span>static</span><p>static</p><section>bar</section></div>`,
+    )
+  })
+
   test('single-root nested v-if hydration keeps static siblings', async () => {
     const { container, data } = await testWithVaporApp(`
       <template>
