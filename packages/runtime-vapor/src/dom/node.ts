@@ -49,9 +49,13 @@ export function child(node: InsertionParent, logicalIndex?: number): Node {
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function nthChild(node: InsertionParent, i: number): Node {
+export function nthChild(
+  node: InsertionParent,
+  i: number,
+  logicalIndex: number = i,
+): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, i)!
+    return locateChildByLogicalIndex(node, logicalIndex)!
   }
   return node.childNodes[i]
 }
