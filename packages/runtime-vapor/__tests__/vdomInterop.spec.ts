@@ -1505,6 +1505,40 @@ describe('vdomInterop', () => {
       expect(vdomRef.value.name).toBe('vdomChild')
     })
 
+    it('dynamic component includes vdom component should unmount with vapor branch', async () => {
+      const show = ref(true)
+      const unmounted = vi.fn()
+      const VdomChild = defineComponent({
+        setup() {
+          onUnmounted(unmounted)
+          return () => h('div', 'vdom child')
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => show.value,
+            () => createDynamicComponent(() => VdomChild),
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toContain('<div>vdom child</div>')
+
+      show.value = false
+      await nextTick()
+
+      expect(unmounted).toHaveBeenCalledTimes(1)
+      expect(html()).not.toContain('vdom child')
+    })
+
     it('dynamic component includes vdom component should cleanup old ref', async () => {
       const VdomChild = defineComponent({
         setup(_, { expose }) {
@@ -1904,6 +1938,121 @@ describe('vdomInterop', () => {
           // A: re-activated (not re-mounted)
           expect(hooksA.mounted).toHaveBeenCalledTimes(1)
           expect(hooksA.activated).toHaveBeenCalledTimes(2)
+        })
+
+        it('unmounts cached inner VDOM components', async () => {
+          const hooksA = {
+            unmounted: vi.fn(),
+          }
+          const hooksB = {
+            unmounted: vi.fn(),
+          }
+
+          const VDOMCompA = defineComponent({
+            setup() {
+              onUnmounted(() => hooksA.unmounted())
+              return () => h('div', 'vdom A')
+            },
+          })
+
+          const VDOMCompB = defineComponent({
+            setup() {
+              onUnmounted(() => hooksB.unmounted())
+              return () => h('div', 'vdom B')
+            },
+          })
+
+          const current = shallowRef<any>(VDOMCompA)
+
+          const App = defineVaporComponent({
+            setup() {
+              return createComponent(VaporKeepAlive, null, {
+                default: () => createDynamicComponent(() => current.value),
+              })
+            },
+          })
+
+          const root = document.createElement('div')
+          const app = createApp({
+            setup() {
+              return () => h(App as any)
+            },
+          })
+          app.use(vaporInteropPlugin)
+          app.mount(root)
+
+          expect(root.innerHTML).toBe(
+            '<div>vdom A</div><!--dynamic-component-->',
+          )
+
+          current.value = VDOMCompB
+          await nextTick()
+          expect(root.innerHTML).toBe(
+            '<div>vdom B</div><!--dynamic-component-->',
+          )
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(0)
+          expect(hooksB.unmounted).toHaveBeenCalledTimes(0)
+
+          app.unmount()
+          await nextTick()
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(1)
+          expect(hooksB.unmounted).toHaveBeenCalledTimes(1)
+        })
+
+        it('unmounts inactive cached inner VDOM components during KeepAlive hmr rerender', async () => {
+          const hooksA = {
+            unmounted: vi.fn(),
+          }
+          const hooksB = {
+            unmounted: vi.fn(),
+          }
+
+          const VDOMCompA = defineComponent({
+            setup() {
+              onUnmounted(() => hooksA.unmounted())
+              return () => h('div', 'vdom A')
+            },
+          })
+
+          const VDOMCompB = defineComponent({
+            setup() {
+              onUnmounted(() => hooksB.unmounted())
+              return () => h('div', 'vdom B')
+            },
+          })
+
+          const current = shallowRef<any>(VDOMCompA)
+          let keepAlive: any
+
+          const App = defineVaporComponent({
+            setup() {
+              keepAlive = createComponent(VaporKeepAlive, null, {
+                default: () => createDynamicComponent(() => current.value),
+              })
+              return keepAlive
+            },
+          })
+
+          const { html } = define({
+            setup() {
+              return () => h(App as any)
+            },
+          }).render()
+
+          expect(html()).toBe('<div>vdom A</div><!--dynamic-component-->')
+
+          current.value = VDOMCompB
+          await nextTick()
+          expect(html()).toBe('<div>vdom B</div><!--dynamic-component-->')
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(0)
+          expect(hooksB.unmounted).toHaveBeenCalledTimes(0)
+
+          keepAlive.hmrRerender()
+          await nextTick()
+
+          expect(hooksA.unmounted).toHaveBeenCalledTimes(1)
+          expect(hooksB.unmounted).toHaveBeenCalledTimes(1)
+          expect(html()).toBe('<div>vdom B</div><!--dynamic-component-->')
         })
 
         it('switch VNode with inner mixed vapor/VDOM components', async () => {
