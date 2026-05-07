@@ -86,14 +86,16 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
+  type HydrationCursor,
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
   enterHydrationBoundary,
+  enterHydrationCursor,
+  exitHydrationCursor,
   isComment,
   isHydrating,
   locateEndAnchor,
-  locateHydrationNode,
   locateNextNode,
   markHydrationAnchor,
   setCurrentHydrationNode,
@@ -114,7 +116,6 @@ import {
 import {
   insertionAnchor,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import type {
@@ -256,8 +257,8 @@ export function createComponent(
 ): VaporComponentInstance {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
   let hydrationClose: Node | null = null
+  let hydrationCursor: HydrationCursor | null = null
   let exitHydrationBoundary: (() => void) | undefined
   let deferHydrationBoundary = false
   const finalizeHydrationBoundary = () => {
@@ -267,7 +268,7 @@ export function createComponent(
     }
   }
   if (isHydrating) {
-    locateHydrationNode()
+    hydrationCursor = enterHydrationCursor()
     if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
       hydrationClose = locateEndAnchor(currentHydrationNode!)
       exitHydrationBoundary = enterHydrationBoundary(
@@ -338,9 +339,6 @@ export function createComponent(
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {
         frag.hydrate()
-        if (_isLastInsertion) {
-          advanceHydrationNode(_insertionParent!)
-        }
       }
       return frag
     }
@@ -357,9 +355,6 @@ export function createComponent(
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {
         frag.hydrate()
-        if (_isLastInsertion) {
-          advanceHydrationNode(_insertionParent!)
-        }
       }
 
       return frag as any
@@ -441,10 +436,6 @@ export function createComponent(
       mountComponent(instance, _insertionParent!, _insertionAnchor)
     }
 
-    if (isHydrating && _isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
-    }
-
     if (
       __FEATURE_SUSPENSE__ &&
       isSuspenseEnabled &&
@@ -466,12 +457,16 @@ export function createComponent(
         }
         finalizeHydrationBoundary()
       }
+      exitHydrationCursor(hydrationCursor)
     }
 
     return instance
   } finally {
     if (isHydrating && !deferHydrationBoundary) {
+      // Boundary cleanup still needs the component-local cursor. Only after
+      // that do we restore the outer cursor's resume point.
       finalizeHydrationBoundary()
+      exitHydrationCursor(hydrationCursor)
     }
   }
 }
@@ -912,9 +907,9 @@ export function createPlainElement(
 ): HTMLElement {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
+  let hydrationCursor: HydrationCursor | null = null
   if (isHydrating) {
-    locateHydrationNode()
+    hydrationCursor = enterHydrationCursor()
   } else {
     resetInsertionState()
   }
@@ -968,9 +963,7 @@ export function createPlainElement(
   if (!isHydrating) {
     if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
   } else {
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
-    }
+    exitHydrationCursor(hydrationCursor)
   }
 
   return el

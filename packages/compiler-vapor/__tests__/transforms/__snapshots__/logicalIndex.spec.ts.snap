@@ -11,7 +11,7 @@ export function render(_ctx) {
   const n3 = _next(_child(n2), 2)
   _setInsertionState(n2, 0, 0)
   const n0 = _createComponentWithFallback(_component_Comp1)
-  _setInsertionState(n2, n3, 2, true)
+  _setInsertionState(n2, n3, 2)
   const n1 = _createComponentWithFallback(_component_Comp2)
   return n2
 }"
@@ -31,7 +31,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp1)
   _setInsertionState(n3, 0, 1)
   const n1 = _createComponentWithFallback(_component_Comp2)
-  _setInsertionState(n3, n4, 3, true)
+  _setInsertionState(n3, n4, 3)
   const n2 = _createComponentWithFallback(_component_Comp3)
   return n3
 }"
@@ -48,7 +48,7 @@ export function render(_ctx) {
   const n4 = _next(_child(n5), 1)
   _setInsertionState(n5, n4, 1)
   const n0 = _createComponentWithFallback(_component_Comp)
-  _setInsertionState(n5, null, 3, true)
+  _setInsertionState(n5, null, 3)
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
@@ -69,7 +69,7 @@ export function render(_ctx) {
   const n6 = _nthChild(n5, 3, 3)
   _setInsertionState(n5, n4, 1)
   const n0 = _createComponentWithFallback(_component_Comp)
-  _setInsertionState(n5, n6, 3, true)
+  _setInsertionState(n5, n6, 3)
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
@@ -88,7 +88,7 @@ export function render(_ctx) {
   const n2 = t0()
   _setInsertionState(n2, null, 1)
   const n0 = _createComponentWithFallback(_component_Comp1)
-  _setInsertionState(n2, null, 2, true)
+  _setInsertionState(n2, null, 2)
   const n1 = _createComponentWithFallback(_component_Comp2)
   return n2
 }"
@@ -101,7 +101,7 @@ const t0 = _template("<div>", true)
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = t0()
-  _setInsertionState(n1, null, 0, true)
+  _setInsertionState(n1, null, 0)
   const n0 = _createComponentWithFallback(_component_Comp)
   return n1
 }"
@@ -114,7 +114,7 @@ const t0 = _template("<div><span>A", true)
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = t0()
-  _setInsertionState(n1, null, 1, true)
+  _setInsertionState(n1, null, 1)
   const n0 = _createComponentWithFallback(_component_Comp)
   return n1
 }"
@@ -131,7 +131,7 @@ export function render(_ctx) {
   const n2 = _next(_child(n3), 1)
   _setInsertionState(n3, n2, 1)
   const n0 = _createComponentWithFallback(_component_Comp1)
-  _setInsertionState(n3, n2, 2, true)
+  _setInsertionState(n3, n2, 2)
   const n1 = _createComponentWithFallback(_component_Comp2)
   return n3
 }"
@@ -145,7 +145,7 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n2 = t0()
   const n1 = _next(_child(n2), 1)
-  _setInsertionState(n2, n1, 1, true)
+  _setInsertionState(n2, n1, 1)
   const n0 = _createComponentWithFallback(_component_Comp)
   return n2
 }"
@@ -158,7 +158,7 @@ const t1 = _template("<div><span>A</span>", true)
 
 export function render(_ctx) {
   const n2 = t1()
-  _setInsertionState(n2, null, 1, true)
+  _setInsertionState(n2, null, 1)
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
     const n1 = t0()
     return n1
@@ -175,7 +175,7 @@ const t1 = _template("<div><span>A</span><!><span>B", true)
 export function render(_ctx) {
   const n3 = t1()
   const n2 = _next(_child(n3), 1)
-  _setInsertionState(n3, n2, 1, true)
+  _setInsertionState(n3, n2, 1)
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
     const n1 = t0()
     return n1
@@ -191,7 +191,7 @@ const t1 = _template("<div><span>A", true)
 
 export function render(_ctx) {
   const n2 = t1()
-  _setInsertionState(n2, 0, 0, true)
+  _setInsertionState(n2, 0, 0)
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
     const n1 = t0()
     return n1
@@ -210,7 +210,7 @@ export function render(_ctx) {
   const n2 = t0()
   _setInsertionState(n2, 0, 0)
   const n0 = _createComponentWithFallback(_component_Comp1)
-  _setInsertionState(n2, null, 2, true)
+  _setInsertionState(n2, null, 2)
   const n1 = _createComponentWithFallback(_component_Comp2)
   return n2
 }"
@@ -230,7 +230,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp1)
   _setInsertionState(n3, n4, 2)
   const n1 = _createComponentWithFallback(_component_Comp2)
-  _setInsertionState(n3, null, 4, true)
+  _setInsertionState(n3, null, 4)
   const n2 = _createComponentWithFallback(_component_Comp3)
   return n3
 }"
@@ -246,7 +246,7 @@ export function render(_ctx) {
   const n2 = t0()
   _setInsertionState(n2, 0, 0)
   const n0 = _createComponentWithFallback(_component_Comp1)
-  _setInsertionState(n2, 0, 1, true)
+  _setInsertionState(n2, 0, 1)
   const n1 = _createComponentWithFallback(_component_Comp2)
   return n2
 }"
@@ -259,7 +259,7 @@ const t0 = _template("<div><span>A", true)
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n1 = t0()
-  _setInsertionState(n1, 0, 0, true)
+  _setInsertionState(n1, 0, 0)
   const n0 = _createComponentWithFallback(_component_Comp)
   return n1
 }"
@@ -271,7 +271,7 @@ const t0 = _template("<div><span>A</span>", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  _setInsertionState(n1, null, 1, true)
+  _setInsertionState(n1, null, 1)
   const n0 = _createSlot("default", null)
   return n1
 }"
@@ -283,7 +283,7 @@ const t0 = _template("<div><span>A", true)
 
 export function render(_ctx) {
   const n1 = t0()
-  _setInsertionState(n1, 0, 0, true)
+  _setInsertionState(n1, 0, 0)
   const n0 = _createSlot("default", null)
   return n1
 }"
@@ -296,7 +296,7 @@ const t1 = _template("<div><span>A</span>", true)
 
 export function render(_ctx) {
   const n3 = t1()
-  _setInsertionState(n3, null, 1, true)
+  _setInsertionState(n3, null, 1)
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
@@ -312,7 +312,7 @@ const t1 = _template("<div><span>A", true)
 
 export function render(_ctx) {
   const n3 = t1()
-  _setInsertionState(n3, 0, 0, true)
+  _setInsertionState(n3, 0, 0)
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
@@ -328,7 +328,7 @@ const t1 = _template("<div><span>A</span>", true)
 
 export function render(_ctx) {
   const n3 = t1()
-  _setInsertionState(n3, null, 1, true)
+  _setInsertionState(n3, null, 1)
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
@@ -345,7 +345,7 @@ const t1 = _template("<div><span>A</span><!><p>B", true)
 export function render(_ctx) {
   const n4 = t1()
   const n3 = _next(_child(n4), 1)
-  _setInsertionState(n4, n3, 1, true)
+  _setInsertionState(n4, n3, 1)
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
@@ -361,7 +361,7 @@ const t1 = _template("<div><span>A", true)
 
 export function render(_ctx) {
   const n3 = t1()
-  _setInsertionState(n3, 0, 0, true)
+  _setInsertionState(n3, 0, 0)
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
@@ -390,7 +390,7 @@ export function render(_ctx) {
     const n5 = t1()
     return n5
   }, 5, null, 0)
-  _setInsertionState(n7, null, 2, true)
+  _setInsertionState(n7, null, 2)
   const n6 = _createComponentWithFallback(_component_Comp2)
   return n7
 }"
@@ -407,7 +407,7 @@ export function render(_ctx) {
   const n6 = t2()
   _setInsertionState(n6, 0, 0)
   const n0 = _createComponentWithFallback(_component_Comp)
-  _setInsertionState(n6, 0, 1, true)
+  _setInsertionState(n6, 0, 1)
   const n1 = _createIf(() => (_ctx.show), () => {
     const n3 = t0()
     return n3
@@ -428,7 +428,7 @@ const t2 = _template("<div><span>A</span><!><p>B", true)
 export function render(_ctx) {
   const n6 = t2()
   const n5 = _next(_child(n6), 1)
-  _setInsertionState(n6, n5, 1, true)
+  _setInsertionState(n6, n5, 1)
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
@@ -450,7 +450,7 @@ const t3 = _template("<div><span>A</span><!><p>B", true)
 export function render(_ctx) {
   const n8 = t3()
   const n7 = _next(_child(n8), 1)
-  _setInsertionState(n8, n7, 1, true)
+  _setInsertionState(n8, n7, 1)
   const n0 = _createIf(() => (_ctx.a), () => {
     const n2 = t0()
     return n2
@@ -473,7 +473,7 @@ const t2 = _template("<div><span>A</span>", true)
 
 export function render(_ctx) {
   const n5 = t2()
-  _setInsertionState(n5, null, 1, true)
+  _setInsertionState(n5, null, 1)
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
@@ -502,7 +502,7 @@ export function render(_ctx) {
     const n4 = t1()
     return n4
   }, 5, null, 0)
-  _setInsertionState(n6, null, 2, true)
+  _setInsertionState(n6, null, 2)
   const n5 = _createComponentWithFallback(_component_Comp)
   return n6
 }"
@@ -516,7 +516,7 @@ const t2 = _template("<div><span>A", true)
 
 export function render(_ctx) {
   const n5 = t2()
-  _setInsertionState(n5, 0, 0, true)
+  _setInsertionState(n5, 0, 0)
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2

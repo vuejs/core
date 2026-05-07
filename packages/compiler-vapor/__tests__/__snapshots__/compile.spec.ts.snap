@@ -38,7 +38,7 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (true), () => {
         const n3 = t0()
-        _setInsertionState(n3, null, 0, true)
+        _setInsertionState(n3, null, 0)
         const n2 = _createComponentWithFallback(_component_Bar)
         _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
         return n3
@@ -159,7 +159,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n3 = t1()
   const n2 = _child(n3, 1)
   _renderEffect(() => _setProp(n3, "id", _ctx.foo))
-  _setInsertionState(n3, 0, 0, true)
+  _setInsertionState(n3, 0, 0)
   const n1 = _createComponentWithFallback(_component_Comp)
   _renderEffect(() => _setText(n2, _toDisplayString(_ctx.bar)))
   return [n0, n3]
@@ -223,7 +223,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
     const n5 = _next(n2, 1)
     const n4 = _next(n5, 2)
     const x2 = _txt(n2)
-    _setInsertionState(n6, n5, 1, true)
+    _setInsertionState(n6, n5, 1)
     const n3 = _createComponentWithFallback(_component_Child)
     const x4 = _txt(n4)
     _renderEffect(() => _setText(x4, _toDisplayString(_ctx.useId())))
@@ -246,7 +246,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Child = _resolveComponent("Child")
   const n1 = t0()
   _renderEffect(() => _setProp(n1, "id", _ctx.useId()))
-  _setInsertionState(n1, null, 0, true)
+  _setInsertionState(n1, null, 0)
   const n0 = _createComponentWithFallback(_component_Child)
   return n1
 }"
@@ -280,7 +280,7 @@ export function render(_ctx) {
   const n4 = _child(p0)
   _setInsertionState(n6, n5, 1)
   const n0 = _createComponentWithFallback(_component_Comp)
-  _setInsertionState(n6, n7, 3, true)
+  _setInsertionState(n6, n7, 3)
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
@@ -298,9 +298,9 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n3 = t0()
   const n1 = _child(n3)
-  _setInsertionState(n1, null, 0, true)
+  _setInsertionState(n1, null, 0)
   const n0 = _createSlot("default", null)
-  _setInsertionState(n3, null, 1, true)
+  _setInsertionState(n3, null, 1)
   const n2 = _createComponentWithFallback(_component_Comp)
   return n3
 }"

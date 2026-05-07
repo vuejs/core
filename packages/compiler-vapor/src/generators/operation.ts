@@ -171,7 +171,7 @@ function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { parent, anchor, logicalIndex, append, last } = operation
+  const { parent, anchor, logicalIndex, append } = operation
   return [
     NEWLINE,
     ...genCall(
@@ -186,7 +186,6 @@ function genInsertionState(
               'null'
             : `n${anchor}`,
       logicalIndex !== undefined ? String(logicalIndex) : undefined,
-      last && 'true',
     ),
   ]
 }

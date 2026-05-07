@@ -8,7 +8,6 @@ import {
   DynamicFlag,
   type IRDynamicInfo,
   IRNodeTypes,
-  type InsertionStateTypes,
   isBlockOperation,
 } from '../ir'
 import { shouldUseCreateElement } from './transformElement'
@@ -81,8 +80,6 @@ export const transformChildren: NodeTransform = (node, context) => {
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
   let staticCount = 0
-  let dynamicCount = 0
-  let lastInsertionChild: IRDynamicInfo | undefined
   const children = context.dynamic.children
 
   // Track logical index for each child.
@@ -94,7 +91,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
       child.logicalIndex = logicalIndex
-      prevDynamics.push((lastInsertionChild = child))
+      prevDynamics.push(child)
       logicalIndex++
     }
 
@@ -109,7 +106,6 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         } else {
           registerInsertion(prevDynamics, context, -1 /* prepend */)
         }
-        dynamicCount += prevDynamics.length
         prevDynamics = []
       }
       staticCount++
@@ -122,13 +118,9 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
       prevDynamics,
       context,
       // the logical index of append child
-      dynamicCount + staticCount,
+      prevDynamics[0].logicalIndex!,
       true,
     )
-  }
-
-  if (lastInsertionChild && lastInsertionChild.operation) {
-    ;(lastInsertionChild.operation! as InsertionStateTypes).last = true
   }
 }
 

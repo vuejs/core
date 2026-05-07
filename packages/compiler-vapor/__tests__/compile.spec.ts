@@ -266,7 +266,7 @@ describe('compile', () => {
       })
       expect(code).contains(
         `_renderEffect(() => _setProp(n1, "id", _ctx.useId()))
-  _setInsertionState(n1, null, 0, true)
+  _setInsertionState(n1, null, 0)
   const n0 = _createComponentWithFallback(_component_Child)`,
       )
       expect(code).matchSnapshot()

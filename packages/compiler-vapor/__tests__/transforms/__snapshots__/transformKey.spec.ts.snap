@@ -92,7 +92,7 @@ const t0 = _template("<div>", true)
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n2 = t0()
-  _setInsertionState(n2, null, 0, true)
+  _setInsertionState(n2, null, 0)
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
     const n1 = _createComponentWithFallback(_component_Foo)
     return n1

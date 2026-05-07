@@ -432,6 +432,28 @@ export class DynamicFragment extends VaporFragment {
           return
         }
         if (
+          this.anchorLabel &&
+          currentHydrationNode &&
+          isComment(currentHydrationNode, 'teleport anchor')
+        ) {
+          const parentNode = getParentNode(currentHydrationNode)
+          const anchor = markHydrationAnchor(currentHydrationNode)
+          if (parentNode) {
+            // Target-side teleport anchors are structural. Empty dynamic
+            // fragments insert their own anchor before the target anchor
+            // instead of consuming it as mismatched SSR content.
+            queuePostFlushCb(() => {
+              parentNode.insertBefore(
+                (this.anchor = markHydrationAnchor(
+                  __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
+                )),
+                anchor.parentNode === parentNode ? anchor : null,
+              )
+            })
+            return
+          }
+        }
+        if (
           !isSlot &&
           this.anchorLabel &&
           currentHydrationNode &&
