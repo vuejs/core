@@ -636,9 +636,8 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 
-// Static/Fragment vnodes always represent a contiguous range [el..anchor].
-// For component vnodes, only treat them as a range when their hydrated subTree
-// is Static/Fragment (multi-root component case).
+// Static/Fragment/Teleport vnodes represent a root range [el..anchor].
+// Component roots can update internally, so resolve through the current subtree.
 function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
   const { type, shapeFlag, el, anchor } = vnode
   if (shapeFlag & ShapeFlags.TELEPORT && el && anchor && anchor !== el) {
@@ -648,21 +647,11 @@ function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
   if ((type === Static || type === Fragment) && el && anchor && anchor !== el) {
     return [el as Node, anchor as Node]
   }
-  if (!(shapeFlag & ShapeFlags.COMPONENT)) {
-    return
-  }
-
-  const subTree = vnode.component && vnode.component.subTree
-  const subEl = subTree && subTree.el
-  const subAnchor = subTree && subTree.anchor
-  if (
-    subTree &&
-    (subTree.type === Static || subTree.type === Fragment) &&
-    subEl &&
-    subAnchor &&
-    subAnchor !== subEl
-  ) {
-    return [subEl as Node, subAnchor as Node]
+  if (shapeFlag & ShapeFlags.COMPONENT) {
+    const subTree = vnode.component && vnode.component.subTree
+    if (subTree) {
+      return resolveVNodeRange(subTree)
+    }
   }
 }
 
@@ -687,7 +676,25 @@ function resolveVNodeNodes(vnode: VNode): Block {
     }
     return nodeRange
   }
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const subTree = vnode.component && vnode.component.subTree
+    if (subTree) {
+      return resolveVNodeNodes(subTree)
+    }
+  }
   return vnode.el as Block
+}
+
+function removeAttachedNodes(block: Block, parent: ParentNode): void {
+  if (block instanceof Node) {
+    if (block.parentNode === parent) {
+      remove(block, parent)
+    }
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      removeAttachedNodes(block[i], parent)
+    }
+  }
 }
 
 function appendVnodeUpdatedHook(vnode: VNode, hook: () => void): void {
@@ -901,7 +908,20 @@ function createVDOMComponent(
 
   let rawRef: VNodeNormalizedRef | null = null
   let isMounted = false
+  let isUnmounted = false
+  let isDomRemoved = false
+  const removeDom = (parentNode?: ParentNode): void => {
+    if (!parentNode || isDomRemoved) {
+      return
+    }
+    removeAttachedNodes(resolveVNodeNodes(vnode), parentNode)
+    isDomRemoved = true
+  }
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    if (isUnmounted) {
+      removeDom(parentNode)
+      return
+    }
     // unset ref
     if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     if (transition) setVNodeTransitionHooks(vnode, transition)
@@ -915,7 +935,12 @@ function createVDOMComponent(
       )
       return
     }
+    // Vapor block removal and scope disposal can both reach this path.
+    // VDOM fragment ranges must only be removed once.
+    isUnmounted = true
+    isMounted = false
     internals.umt(vnode.component!, null, !!parentNode)
+    removeDom(parentNode)
   }
 
   frag.hydrate = () => {
