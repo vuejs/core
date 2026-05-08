@@ -24,6 +24,7 @@ import {
   isBlockTag,
   isBuiltInDirective,
   isFormattingTag,
+  isInlineTag,
   isVoidTag,
   makeMap,
 } from '@vue/shared'
@@ -161,10 +162,11 @@ function canOmitEndTag(
   }
 
   if (
-    context.templateCloseTags &&
-    (context.templateCloseTags.has(node.tag) ||
-      isAlwaysCloseTag(node.tag) ||
-      isFormattingTag(node.tag))
+    (context.templateCloseTags &&
+      (context.templateCloseTags.has(node.tag) ||
+        isAlwaysCloseTag(node.tag) ||
+        isFormattingTag(node.tag))) ||
+    (context.templateCloseBlocks && isBlockTag(node.tag))
   ) {
     return false
   }
@@ -186,18 +188,17 @@ function canOmitEndTag(
     return context.isOnRightmostPath
   }
 
-  // For inline element containing block element, if the inline ancestor
-  // is not on rightmost path, the block must close to avoid parsing issues
-  if (isBlockTag(node.tag) && context.hasInlineAncestorNeedingClose) {
-    return false
-  }
-
   return context.isLastEffectiveChild
 }
 
-export function getChildTemplateCloseTags(
+interface TemplateCloseState {
+  tags: Set<string> | undefined
+  blocks: boolean
+}
+
+export function getChildTemplateCloseState(
   context: TransformContext<ElementNode>,
-): Set<string> | undefined {
+): TemplateCloseState | undefined {
   const { node } = context
   if (
     node.type !== NodeTypes.ELEMENT ||
@@ -207,21 +208,28 @@ export function getChildTemplateCloseTags(
     return
   }
 
-  const inherited = isInSameTemplateAsParent(context)
+  const inSameTemplateAsParent = isInSameTemplateAsParent(context)
+  const inheritedTags = inSameTemplateAsParent
     ? context.templateCloseTags
     : undefined
+  const inheritedBlocks = inSameTemplateAsParent && context.templateCloseBlocks
 
   const omitEndTag =
     context.root === context.effectiveParent ||
     canOmitEndTag(node as PlainElementNode, context)
 
   if (omitEndTag || isVoidTag(node.tag)) {
-    return inherited
+    return inheritedTags || inheritedBlocks
+      ? { tags: inheritedTags, blocks: inheritedBlocks }
+      : undefined
   }
 
-  const tags = new Set(inherited)
+  const tags = new Set(inheritedTags)
   tags.add(node.tag)
-  return tags
+  return {
+    tags,
+    blocks: inheritedBlocks || isInlineTag(node.tag),
+  }
 }
 
 export function isInSameTemplateAsParent(
