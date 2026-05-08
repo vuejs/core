@@ -160,6 +160,15 @@ function canOmitEndTag(
     return true
   }
 
+  if (
+    context.templateCloseTags &&
+    (context.templateCloseTags.has(node.tag) ||
+      isAlwaysCloseTag(node.tag) ||
+      isFormattingTag(node.tag))
+  ) {
+    return false
+  }
+
   // Elements in the alwaysClose list cannot have their end tags omitted
   // unless they are on the rightmost path.
   if (isAlwaysCloseTag(node.tag) && !context.isOnRightmostPath) {
@@ -184,6 +193,58 @@ function canOmitEndTag(
   }
 
   return context.isLastEffectiveChild
+}
+
+export function getChildTemplateCloseTags(
+  context: TransformContext<ElementNode>,
+): Set<string> | undefined {
+  const { node } = context
+  if (
+    node.type !== NodeTypes.ELEMENT ||
+    node.tagType !== ElementTypes.ELEMENT ||
+    shouldUseCreateElement(node, context)
+  ) {
+    return
+  }
+
+  const inherited = isInSameTemplateAsParent(context)
+    ? context.templateCloseTags
+    : undefined
+
+  const omitEndTag =
+    context.root === context.effectiveParent ||
+    canOmitEndTag(node as PlainElementNode, context)
+
+  if (omitEndTag || isVoidTag(node.tag)) {
+    return inherited
+  }
+
+  const tags = new Set(inherited)
+  tags.add(node.tag)
+  return tags
+}
+
+export function isInSameTemplateAsParent(
+  context: TransformContext<ElementNode>,
+): boolean {
+  const { parent, node, block } = context
+  if (!parent || block !== parent.block) {
+    return false
+  }
+  const parentNode = parent.node
+  if (
+    parentNode.type !== NodeTypes.ELEMENT ||
+    parentNode.tagType !== ElementTypes.ELEMENT
+  ) {
+    return false
+  }
+
+  return (
+    !shouldUseCreateElement(
+      parentNode,
+      parent as TransformContext<ElementNode>,
+    ) && isValidHTMLNesting(parentNode.tag, node.tag)
+  )
 }
 
 function isSingleRoot(

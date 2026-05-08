@@ -114,6 +114,10 @@ export class TransformContext<T extends AllNode = AllNode> {
   // whether there is an inline ancestor that needs closing
   // (i.e. is an inline tag and not on the rightmost path)
   hasInlineAncestorNeedingClose: boolean = false
+  // If an ancestor in the same template must close explicitly, descendants
+  // with matching tags must also close so the browser doesn't consume the
+  // ancestor close tag for the descendant.
+  templateCloseTags: Set<string> | undefined = undefined
 
   private globalId = 0
   private nextIdMap: Map<number, number> | null = null
@@ -360,6 +364,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       isLastEffectiveChild,
       isOnRightmostPath,
       hasInlineAncestorNeedingClose,
+      templateCloseTags: this.templateCloseTags,
     } satisfies Partial<TransformContext<T>>)
   }
 
