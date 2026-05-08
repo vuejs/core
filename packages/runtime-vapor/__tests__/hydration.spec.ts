@@ -11880,4 +11880,85 @@ describe('VDOM interop', () => {
     )
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   })
+
+  test('hydrate dynamically forwarded empty Vapor slots with trailing sibling nodes', async () => {
+    const data = reactive({
+      msg: 'late',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Theme />
+      </template>`,
+      {
+        Theme: {
+          code: `<script>
+            import { h } from 'vue'
+
+            export default {
+              setup() {
+                const components = _components
+                return () => h(components.Forward, null, {
+                  late: () => h(components.Late)
+                })
+              }
+            }
+          </script>`,
+          vapor: false,
+        },
+        Forward: `<script setup>
+          import { useSlots } from 'vue'
+
+          const components = _components
+          const slots = useSlots()
+        </script>
+        <template>
+          <components.Inner>
+            <template v-for="(_, name) in slots" #[name]="slotData">
+              <slot :name="name" v-bind="slotData || {}" />
+            </template>
+          </components.Inner>
+        </template>`,
+        Inner: `<template>
+          <div>
+            <slot name="empty" />
+            <slot name="late" />
+            <p>after</p>
+          </div>
+        </template>`,
+        Late: `<template>
+          <span>{{ data.msg }}</span>
+          <template v-if="false"></template>
+        </template>`,
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[--><!--]-->
+      <!--[-->
+      <!--[-->
+      <!--[--><span>late</span><!----><!--]-->
+      <!--]-->
+      <!--]-->
+      <p>after</p></div>"
+    `)
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    data.msg = 'updated'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[--><!--]-->
+      <!--[-->
+      <!--[-->
+      <!--[--><span>updated</span><!----><!--]-->
+      <!--]-->
+      <!--]-->
+      <p>after</p></div>"
+    `)
+  })
 })
