@@ -624,6 +624,26 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > withVaporCtx optimization > dynamic slot source with slot outlet should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      _withVaporCtx(() => (_createForSlots(_ctx.slots, (_, name) => ({
+        name: name,
+        fn: _withVaporCtx(() => {
+          const n0 = _createSlot(() => (name), null)
+          return n0
+        })
+      }))))
+    ]
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: transform slot > withVaporCtx optimization > slot with component inside v-for should have withVaporCtx 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
 const t0 = _template("<div>")

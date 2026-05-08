@@ -488,7 +488,25 @@ function genDynamicSlot(
       frag = genConditionalSlot(slot, context)
       break
   }
-  return withFunction ? ['() => (', ...frag, ')'] : frag
+  if (!withFunction) return frag
+
+  return needsDynamicSlotSourceCtx(slot)
+    ? [`${context.helper('withVaporCtx')}(() => (`, ...frag, '))']
+    : ['() => (', ...frag, ')']
+}
+
+function needsDynamicSlotSourceCtx(slot: IRSlotDynamic): boolean {
+  switch (slot.slotType) {
+    case IRSlotType.DYNAMIC:
+      return needsVaporCtx(slot.fn)
+    case IRSlotType.LOOP:
+      return needsVaporCtx(slot.fn)
+    case IRSlotType.CONDITIONAL:
+      return (
+        needsDynamicSlotSourceCtx(slot.positive) ||
+        (slot.negative ? needsDynamicSlotSourceCtx(slot.negative) : false)
+      )
+  }
 }
 
 function genBasicDynamicSlot(

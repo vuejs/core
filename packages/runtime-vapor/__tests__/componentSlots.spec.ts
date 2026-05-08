@@ -32,6 +32,7 @@ import {
   renderSlot,
   shallowRef,
   toDisplayString,
+  useSlots,
 } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
@@ -905,6 +906,50 @@ describe('component: slots', () => {
       val.value = 'footer'
       await nextTick()
       expect(host.innerHTML).toBe('<div>footer<!--slot--></div>')
+    })
+
+    test('dynamic slot source inside forwarded slot should preserve owner', async () => {
+      const msg = ref('late')
+      const Leaf = defineVaporComponent(() => createSlot('late', null))
+      const Carrier = defineVaporComponent(() => createSlot('default', null))
+      const Root = defineVaporComponent(() => {
+        const slots = useSlots()
+        return createComponent(Carrier, null, {
+          default: withVaporCtx(() =>
+            createComponent(Leaf, null, {
+              $: [
+                // required wrapped in withVaporCtx to preserve owner when create dynamic slot source
+                withVaporCtx(() =>
+                  createForSlots(slots, (_slot, name) => ({
+                    name,
+                    fn: withVaporCtx(() => createSlot(name)),
+                  })),
+                ) as any,
+              ],
+            }),
+          ),
+        })
+      })
+
+      const { host } = define(() =>
+        createComponent(Root, null, {
+          late: withVaporCtx(() => {
+            const n0 = template('<span></span>')()
+            renderEffect(() => setElementText(n0, msg.value))
+            return n0
+          }),
+        }),
+      ).render()
+
+      expect(host.innerHTML).toBe(
+        '<span>late</span><!--slot--><!--slot--><!--slot-->',
+      )
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(host.innerHTML).toBe(
+        '<span>updated</span><!--slot--><!--slot--><!--slot-->',
+      )
     })
 
     test('fallback should be render correctly', () => {
