@@ -10,7 +10,11 @@ import {
   IRNodeTypes,
   isBlockOperation,
 } from '../ir'
-import { shouldUseCreateElement } from './transformElement'
+import {
+  getChildTemplateCloseTags,
+  isInSameTemplateAsParent,
+  shouldUseCreateElement,
+} from './transformElement'
 
 export const transformChildren: NodeTransform = (node, context) => {
   const isFragment =
@@ -24,9 +28,23 @@ export const transformChildren: NodeTransform = (node, context) => {
   const useCreateElement =
     node.type === NodeTypes.ELEMENT &&
     shouldUseCreateElement(node, context as TransformContext<ElementNode>)
+  const childTemplateCloseTags =
+    !isFragment && !useCreateElement
+      ? getChildTemplateCloseTags(context as TransformContext<ElementNode>)
+      : undefined
 
   for (const [i, child] of node.children.entries()) {
     const childContext = context.create(child, i)
+    childContext.templateCloseTags =
+      childTemplateCloseTags &&
+      child.type === NodeTypes.ELEMENT &&
+      child.tagType === ElementTypes.ELEMENT &&
+      isInSameTemplateAsParent(childContext as TransformContext<ElementNode>)
+        ? childTemplateCloseTags
+        : undefined
+    if (isFragment || useCreateElement) {
+      childContext.hasInlineAncestorNeedingClose = false
+    }
     transformNode(childContext)
 
     const childDynamic = childContext.dynamic

@@ -109,6 +109,33 @@ test('same-name nested tags', () => {
   )
 })
 
+test('same-name descendant before an ancestor close', () => {
+  checkAbbr(
+    '<div><div><section><div>x</div></section></div><p>after</p></div>',
+    '<div><div><section><div>x</div></div><p>after',
+    '<div><div><section><div>x</div></section></div><p>after</p></div>',
+  )
+})
+
+test('same-name boundary does not cross component templates', () => {
+  checkAbbr(
+    '<main><div><Comp><div><section><div>x</div></section></div></Comp></div><p>after</p></main>',
+    ['<div><section><div>x', '<main><div></div><p>after'],
+    [
+      '<div><section><div>x</div></section></div>',
+      '<main><div></div><p>after</p></main>',
+    ],
+  )
+})
+
+test('same-name boundary does not cross invalid nesting templates', () => {
+  checkAbbr(
+    '<main><div><p><div>x</div></p></div><section>after</section></main>',
+    ['<div>x', '<main><div><p></div><section>after'],
+    ['<div>x</div>', '<main><div><p></p></div><section>after</section></main>'],
+  )
+})
+
 test('void tags', () => {
   // void tags never need closing tags
   checkAbbr('<div><br></div>', '<div><br>', '<div><br></div>')
@@ -257,7 +284,7 @@ test('inline/block ancestor relationships', () => {
   // Both inner divs need closing because they are inside spans that need closing
   checkAbbr(
     '<div><span><div><span><div>text</div></span></div></span><p>after</p></div>',
-    '<div><span><div><span><div>text</div></div></span><p>after',
+    '<div><span><div><span><div>text</div></span></div></span><p>after',
     '<div><span><div><span><div>text</div></span></div></span><p>after</p></div>',
   )
 })
