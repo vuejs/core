@@ -26,8 +26,10 @@ import {
   shallowRef,
   toDisplayString,
   useModel,
+  useSlots,
   useTemplateRef,
   vShow,
+  withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
 import { VaporSlot } from '../../runtime-core/src/vnode'
@@ -878,6 +880,136 @@ describe('vdomInterop', () => {
       }).render()
 
       expect(html()).toBe('default slot')
+    })
+
+    test('normalizes raw VDOM slot function values passed to Vapor', async () => {
+      const msg = ref('default slot')
+      const VaporChild = defineVaporComponent(() => createSlot('default', null))
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => h('span', msg.value),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>default slot</span>')
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>updated</span>')
+    })
+
+    test('preserves normalized VDOM slot functions passed to Vapor', async () => {
+      const msg = ref('default slot')
+      const VaporChild = defineVaporComponent(() => createSlot('default', null))
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: withCtx(() => [h('span', msg.value)]),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>default slot</span>')
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>updated</span>')
+    })
+
+    test('normalizes raw VDOM non-function slot values passed to Vapor', async () => {
+      const msg = ref('default slot')
+      const VaporChild = defineVaporComponent(() => createSlot('default', null))
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: h('span', msg.value),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>default slot</span>')
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>updated</span>')
+    })
+
+    test('normalizes raw VDOM array children as default Vapor slot', async () => {
+      const msg = ref('default slot')
+      const VaporChild = defineVaporComponent(() => createSlot('default', null))
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any, null, [h('span', msg.value)])
+        },
+      }).render()
+
+      expect(html()).toBe('<span>default slot</span>')
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>updated</span>')
+    })
+
+    test('updates dynamically forwarded VDOM slot keys passed to Vapor', async () => {
+      const mode = ref<'late' | 'both' | 'none'>('late')
+      const Inner = defineVaporComponent(() => [
+        createSlot('early', null),
+        createSlot('late', null),
+        template('<p>after</p>')(),
+      ])
+      const Forwarder = defineVaporComponent(() => {
+        const slots = useSlots()
+        return createComponent(Inner, null, {
+          $: [
+            withVaporCtx(() =>
+              createForSlots(slots, (_slot, name) => ({
+                name,
+                fn: withVaporCtx(() => createSlot(name)),
+              })),
+            ) as any,
+          ],
+        })
+      })
+
+      const { html } = define({
+        setup() {
+          return () => {
+            const slots: Record<string, () => any> = {}
+            if (mode.value === 'both') {
+              slots.early = () => h('span', 'early')
+            }
+            if (mode.value !== 'none') {
+              slots.late = () => h('span', 'late')
+            }
+            return h(Forwarder as any, null, slots)
+          }
+        },
+      }).render()
+
+      expect(html()).toMatchInlineSnapshot(
+        `"<!--slot--><span>late</span><!--slot--><p>after</p>"`,
+      )
+
+      mode.value = 'both'
+      await nextTick()
+      expect(html()).toMatchInlineSnapshot(
+        `"<span>early</span><!--slot--><span>late</span><!--slot--><p>after</p>"`,
+      )
+
+      mode.value = 'none'
+      await nextTick()
+      expect(html()).toMatchInlineSnapshot(
+        `"<!--slot--><!--slot--><p>after</p>"`,
+      )
     })
 
     test('cloneVNode keeps vapor slot instances isolated across prop updates', async () => {
