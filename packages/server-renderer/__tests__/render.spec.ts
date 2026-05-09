@@ -232,6 +232,17 @@ function testRender(type: string, render: typeof renderToString) {
         ).toBe(`<div>parent<div>hello</div></div>`)
       })
 
+      test('renders unresolved tag fallback as plain element', async () => {
+        const html = await render(
+          createApp({
+            template: `<center><span>foo</span></center>`,
+          }),
+        )
+
+        expect(html).toBe(`<center><span>foo</span></center>`)
+        expect(`Failed to resolve component: center`).toHaveBeenWarned()
+      })
+
       test('nested template components', async () => {
         const Child = {
           props: ['msg'],

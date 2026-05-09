@@ -809,6 +809,38 @@ describe('SSR hydration', () => {
     expect(teleportContainer2.innerHTML).toBe('<span>Teleported</span>')
   })
 
+  test('hydrates unresolved tag fallback rendered as plain element', async () => {
+    const msg = ref('foo')
+    const App = {
+      setup() {
+        return { msg }
+      },
+      template: `
+        <center><span>{{ msg }}</span></center>
+        <span>after</span>
+      `,
+    }
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    expect(container.innerHTML).toBe(
+      '<!--[--><center><span>foo</span></center><span>after</span><!--]-->',
+    )
+
+    createSSRApp(App).mount(container)
+    expect(container.innerHTML).toBe(
+      '<!--[--><center><span>foo</span></center><span>after</span><!--]-->',
+    )
+
+    msg.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[--><center><span>bar</span></center><span>after</span><!--]-->',
+    )
+    expect(`Failed to resolve component: center`).toHaveBeenWarned()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
   // compile SSR + client render fn from the same template & hydrate
   test('full compiler integration', async () => {
     const mounted: string[] = []

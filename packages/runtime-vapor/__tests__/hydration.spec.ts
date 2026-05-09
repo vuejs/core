@@ -143,7 +143,7 @@ async function testHydration(
   }
 
   app.mount(container)
-  return { data, container }
+  return { data, container, html }
 }
 
 const triggerEvent = (type: string, el: Element) => {
@@ -329,6 +329,41 @@ describe('Vapor Mode hydration', () => {
         `"<div></div>"`,
       )
       expect(`mismatch in <div>`).not.toHaveBeenWarned()
+    })
+
+    test('plain element fallback hydrates unresolved lowercase tag', async () => {
+      const code = `
+      <template>
+        <center><span>{{ data }}</span></center>
+        <span>after</span>
+      </template>
+    `
+      const { container, data, html } = await testHydration(code)
+      expect(formatHtml(html)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><center><span>foo</span></center><span>after</span><!--]-->
+        "
+      `,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><center><span>foo</span></center><span>after</span><!--]-->
+        "
+      `,
+      )
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><center><span>bar</span></center><span>after</span><!--]-->
+        "
+      `,
+      )
+      expect(`Failed to resolve component: center`).toHaveBeenWarned()
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     })
 
     test('element with binding and text children', async () => {
