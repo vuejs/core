@@ -5,3 +5,17 @@ export let isInteropEnabled = false
 export function setInteropEnabled(): void {
   isInteropEnabled = true
 }
+
+// Active while probing a Vapor slot for VDOM child metadata. This dry pass must
+// not mount or hydrate the real slot output.
+export let isCollectingVdomSlotVNodes = false
+
+export function withVdomSlotVNodeCollection<T>(fn: () => T): T {
+  const prev = isCollectingVdomSlotVNodes
+  isCollectingVdomSlotVNodes = true
+  try {
+    return fn()
+  } finally {
+    isCollectingVdomSlotVNodes = prev
+  }
+}

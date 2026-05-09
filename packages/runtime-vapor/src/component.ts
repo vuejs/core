@@ -129,7 +129,10 @@ import {
   parentSuspense,
   setParentSuspense,
 } from './suspense'
-import { isInteropEnabled } from './vdomInteropState'
+import {
+  isCollectingVdomSlotVNodes,
+  isInteropEnabled,
+} from './vdomInteropState'
 import { setComponentScopeId, setScopeId } from './scopeId'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
@@ -255,6 +258,16 @@ export function createComponent(
     emptyContext,
   managedMount = false,
 ): VaporComponentInstance {
+  if (isInteropEnabled && isCollectingVdomSlotVNodes) {
+    if (component.__vapor) {
+      // Vapor components cannot be represented as VDOM child metadata. Bail out
+      // with undefined so slots.default() falls back to the real renderSlot path.
+      return undefined as any
+    }
+    const owner = getScopeOwner()
+    if (owner) appContext = owner.appContext
+  }
+
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationClose: Node | null = null
@@ -335,6 +348,11 @@ export function createComponent(
         rawProps,
         rawSlots,
       )
+      if (isCollectingVdomSlotVNodes) {
+        // VDOM interop children already expose frag.vnode for collection. Do not
+        // mount or hydrate the dry fragment.
+        return frag as any
+      }
       if (!isHydrating) {
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {
