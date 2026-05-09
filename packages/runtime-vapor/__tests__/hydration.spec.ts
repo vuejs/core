@@ -9928,6 +9928,102 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate VDOM slot vnode collection with forwarded Vapor slot', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data; const components = _components;
+      </script>
+      <template>
+        <components.Forwarder>
+          <p>{{ data }}</p>
+        </components.Forwarder>
+        <span>after</span>
+      </template>`,
+      {
+        Collector: {
+          code: `<script setup>
+            import { computed, useSlots } from 'vue'
+
+            const slots = useSlots()
+            const count = computed(() => slots.default?.().length || 0)
+          </script>
+          <template>
+            <div>
+              <span>{{ count }}</span>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+        Forwarder: `<script setup>
+          const components = _components
+        </script>
+        <template>
+          <components.Collector>
+            <slot />
+          </components.Collector>
+        </template>`,
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div><span>1</span>
+      <!--[-->
+      <!--[--><p>foo</p><!--]-->
+      <!--]-->
+      </div><span>after</span><!--]-->
+      "
+    `)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('hydrate VDOM slot vnode collection with plain Vapor slot content', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const data = _data; const components = _components;
+      </script>
+      <template>
+        <components.Collector>
+          <p>{{ data }}</p>
+        </components.Collector>
+        <span>after</span>
+      </template>`,
+      {
+        Collector: {
+          code: `<script setup>
+            import { computed, useSlots } from 'vue'
+
+            const slots = useSlots()
+            const count = computed(() => slots.default?.().length || 0)
+          </script>
+          <template>
+            <div>
+              <span>{{ count }}</span>
+              <slot />
+            </div>
+          </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div><span>1</span>
+      <!--[--><p>foo</p><!--]-->
+      </div><span>after</span><!--]-->
+      "
+    `)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
+
   test('hydrate VDOM slot content should unmount hydrated slot child before first insert', async () => {
     const data = ref({
       unmounted: vi.fn(),

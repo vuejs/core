@@ -95,9 +95,17 @@ import {
   isHydrating,
   isHydrationAnchor,
   locateEndAnchor,
+  runWithoutHydration,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
+import {
+  insertionAnchor,
+  insertionIndex,
+  insertionParent,
+  resetInsertionState,
+  setInsertionState,
+} from './insertionState'
 import {
   SlotFallbackController,
   SlotFragment,
@@ -118,7 +126,11 @@ import {
   getVNodeKey,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
-import { setInteropEnabled } from './vdomInteropState'
+import {
+  isCollectingVdomSlotVNodes,
+  setInteropEnabled,
+  withVdomSlotVNodeCollection,
+} from './vdomInteropState'
 import {
   type KeepAliveInstance,
   activate,
@@ -623,17 +635,95 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
         return cached.wrapped
       }
 
-      // Create a wrapper that internally uses renderSlot for proper vapor slot handling
-      // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
-      const wrapped = (props?: Record<string, any>) => [
-        renderSlot({ [key]: slot }, key as string, props),
-      ]
+      // Direct slots.default() calls may be used for vnode introspection.
+      // Try collecting VDOM child metadata first; if the Vapor slot cannot be
+      // represented as VDOM vnodes, fall back to the real renderSlot protocol.
+      const wrapped = (props?: Record<string, any>) => {
+        return (
+          normalizeVaporSlotVNodes(slot, props) || [
+            renderSlot({ [key]: slot }, key as string, props),
+          ]
+        )
+      }
       ;(wrapped as any).__vs = slot
       wrappers.set(key, { slot, wrapped })
       return wrapped
     }
     return slot
   },
+}
+
+const collectedVdomSlotVNodes = new WeakMap<VaporFragment, VNode>()
+
+function normalizeVaporSlotVNodes(
+  slot: Function,
+  props: Record<string, any> | undefined,
+): VNode[] | undefined {
+  if (props && hasVNodeSlotProps(props)) {
+    return
+  }
+  const scope = effectScope()
+  let value: any
+  try {
+    value = runVdomSlotVNodeCollection(() =>
+      scope.run(() => withVdomSlotVNodeCollection(() => slot(props))),
+    )
+  } finally {
+    scope.stop()
+  }
+  const children = isArray(value) ? value : [value]
+  const vnodes: VNode[] = []
+  for (const child of children) {
+    if (isVNode(child)) {
+      vnodes.push(child)
+      continue
+    }
+    const vnode =
+      child &&
+      isObject(child) &&
+      collectedVdomSlotVNodes.get(child as VaporFragment)
+    if (!isVNode(vnode)) return
+    vnodes.push(vnode)
+  }
+  return vnodes
+}
+
+function hasVNodeSlotProps(props: Record<string, any>): boolean {
+  for (const key in props) {
+    const value = props[key]
+    if (isVNode(value)) {
+      return true
+    }
+    if (isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        if (isVNode(value[i])) {
+          return true
+        }
+      }
+    }
+  }
+  return false
+}
+
+function runVdomSlotVNodeCollection<T>(fn: () => T): T {
+  const prevInsertionParent = insertionParent
+  const prevInsertionAnchor = insertionAnchor
+  const prevInsertionIndex = insertionIndex
+  try {
+    // Collection only probes metadata. It must not adopt DOM or advance the
+    // Vapor hydration cursor while evaluating the slot body.
+    return runWithoutHydration(fn)
+  } finally {
+    if (prevInsertionParent) {
+      setInsertionState(
+        prevInsertionParent,
+        prevInsertionAnchor,
+        prevInsertionIndex,
+      )
+    } else {
+      resetInsertionState()
+    }
+  }
 }
 
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
@@ -845,7 +935,11 @@ function createVDOMComponent(
   frag.$key = vnode.key
   trackFragmentVNodeUpdates(frag, vnode)
 
-  if (isKeepAliveEnabled && currentKeepAliveCtx) {
+  if (
+    !isCollectingVdomSlotVNodes &&
+    isKeepAliveEnabled &&
+    currentKeepAliveCtx
+  ) {
     currentKeepAliveCtx.processShapeFlag(frag)
     // for VDOM async components, trigger cacheBlock after resolution
     if ((component as any).__asyncLoader) {
@@ -870,6 +964,13 @@ function createVDOMComponent(
     parentComponent ? parentComponent.appContext : undefined,
     undefined,
   )
+
+  if (isCollectingVdomSlotVNodes) {
+    collectedVdomSlotVNodes.set(
+      frag,
+      createCollectedVDOMSlotVNode(component, rawProps, wrapper.slots),
+    )
+  }
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
@@ -1031,6 +1132,24 @@ function createVDOMComponent(
   }
 
   return frag
+}
+
+function createCollectedVDOMSlotVNode(
+  component: ConcreteComponent,
+  rawProps: LooseRawProps | null | undefined,
+  slots: RawSlots,
+): VNode {
+  // This vnode is returned to a VDOM slots.default() caller and may be rendered
+  // by the VDOM renderer directly. Keep it as a normal VDOM vnode; the real
+  // Vapor-owned interop mount path uses frag.vnode with vi instead.
+  const vnode = createVNode(
+    component,
+    rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
+    slots === EMPTY_OBJ ? null : new Proxy(slots, vaporSlotsProxyHandler),
+  )
+  vnode.scopeId = getCurrentScopeId() || null
+  vnode.slotScopeIds = currentSlotScopeIds
+  return vnode
 }
 
 const rendererBridgeCache = new WeakMap<

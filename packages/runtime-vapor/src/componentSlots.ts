@@ -29,7 +29,10 @@ import {
 } from './fragment'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
-import { isInteropEnabled } from './vdomInteropState'
+import {
+  isCollectingVdomSlotVNodes,
+  isInteropEnabled,
+} from './vdomInteropState'
 import { setScopeId } from './scopeId'
 
 /**
@@ -187,6 +190,12 @@ export function createSlot(
   noSlotted?: boolean,
   once?: boolean,
 ): Block {
+  if (isInteropEnabled && isCollectingVdomSlotVNodes) {
+    // A Vapor <slot/> cannot expose child vnode metadata without real slot
+    // hydration. Bail out so renderSlot() handles it for real.
+    return undefined as any
+  }
+
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()
