@@ -293,8 +293,9 @@ export function createComponent(
     resetInsertionState()
   }
 
+  let prevSuspense: SuspenseBoundary | null = null
+  let hasParentSuspense = false
   try {
-    let prevSuspense: SuspenseBoundary | null = null
     if (
       __FEATURE_SUSPENSE__ &&
       isSuspenseEnabled &&
@@ -302,6 +303,7 @@ export function createComponent(
       currentInstance.suspense
     ) {
       prevSuspense = setParentSuspense(currentInstance.suspense)
+      hasParentSuspense = true
     }
 
     if (
@@ -402,52 +404,56 @@ export function createComponent(
 
     // reset currentSlotOwner to null to avoid affecting the child components
     const prevSlotOwner = setCurrentSlotOwner(null)
+    let hasWarningContext = false
+    let hasInitMeasure = false
+    try {
+      // HMR
+      if (__DEV__) {
+        registerHMR(instance)
+        instance.isSingleRoot = isSingleRoot
+        instance.hmrRerender = hmrRerender.bind(null, instance)
+        instance.hmrReload = hmrReload.bind(null, instance)
 
-    // HMR
-    if (__DEV__) {
-      registerHMR(instance)
-      instance.isSingleRoot = isSingleRoot
-      instance.hmrRerender = hmrRerender.bind(null, instance)
-      instance.hmrReload = hmrReload.bind(null, instance)
+        pushWarningContext(instance)
+        hasWarningContext = true
+        startMeasure(instance, `init`)
+        hasInitMeasure = true
 
-      pushWarningContext(instance)
-      startMeasure(instance, `init`)
+        // cache normalized options for dev only emit check
+        instance.propsOptions = normalizePropsOptions(component)
+        instance.emitsOptions = normalizeEmitsOptions(component)
+      }
 
-      // cache normalized options for dev only emit check
-      instance.propsOptions = normalizePropsOptions(component)
-      instance.emitsOptions = normalizeEmitsOptions(component)
+      // hydrating async component
+      if (
+        isHydrating &&
+        isAsyncWrapper(instance) &&
+        component.__asyncHydrate &&
+        !component.__asyncResolved
+      ) {
+        component.__asyncHydrate(
+          currentHydrationNode as Element,
+          instance,
+          () => setupComponent(instance, component),
+        )
+      } else {
+        setupComponent(instance, component)
+      }
+    } finally {
+      if (__DEV__) {
+        if (hasWarningContext) {
+          popWarningContext()
+        }
+        if (hasInitMeasure) {
+          endMeasure(instance, 'init')
+        }
+      }
+      setCurrentSlotOwner(prevSlotOwner)
+      if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && hasParentSuspense) {
+        setParentSuspense(prevSuspense)
+        hasParentSuspense = false
+      }
     }
-
-    // hydrating async component
-    if (
-      isHydrating &&
-      isAsyncWrapper(instance) &&
-      component.__asyncHydrate &&
-      !component.__asyncResolved
-    ) {
-      component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
-        setupComponent(instance, component),
-      )
-    } else {
-      setupComponent(instance, component)
-    }
-
-    if (__DEV__) {
-      popWarningContext()
-      endMeasure(instance, 'init')
-    }
-
-    if (
-      __FEATURE_SUSPENSE__ &&
-      isSuspenseEnabled &&
-      currentInstance &&
-      currentInstance.suspense
-    ) {
-      setParentSuspense(prevSuspense)
-    }
-
-    // restore currentSlotOwner to previous value after setupFn is called
-    setCurrentSlotOwner(prevSlotOwner)
     onScopeDispose(() => unmountComponent(instance), true)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
@@ -480,6 +486,9 @@ export function createComponent(
 
     return instance
   } finally {
+    if (hasParentSuspense) {
+      setParentSuspense(prevSuspense)
+    }
     if (isHydrating && !deferHydrationBoundary) {
       // Boundary cleanup still needs the component-local cursor. Only after
       // that do we restore the outer cursor's resume point.
