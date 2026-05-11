@@ -91,6 +91,29 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'bench-browser',
+          include: [],
+          browser: {
+            enabled: true,
+            provider: playwright({
+              launchOptions: {
+                args: process.env.CI
+                  ? ['--no-sandbox', '--disable-setuid-sandbox']
+                  : [],
+              },
+            }),
+            headless: true,
+            screenshotFailures: false,
+            instances: [{ browser: 'chromium' }],
+          },
+          benchmark: {
+            include: ['packages/runtime-vapor/__tests__/bench/*.bench.ts'],
+          },
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'e2e',
           environment: 'jsdom',
           isolate: true,

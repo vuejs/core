@@ -1,6 +1,7 @@
 import {
   NewlineType,
   type SimpleExpressionNode,
+  createSimpleExpression,
   isSimpleIdentifier,
 } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
@@ -26,9 +27,18 @@ import {
   capitalize,
   extend,
   isSVGTag,
+  normalizeClass,
   shouldSetAsAttr,
   toHandlerKey,
 } from '@vue/shared'
+import { getLiteralExpressionValue } from '../utils'
+import { type ParserOptions, parseExpression } from '@babel/parser'
+import type {
+  ConditionalExpression,
+  Expression,
+  ObjectExpression,
+  ObjectProperty,
+} from '@babel/types'
 
 export type HelperConfig = {
   name: VaporHelper
@@ -42,6 +52,7 @@ const helpers = {
   setText: { name: 'setText' },
   setHtml: { name: 'setHtml' },
   setClass: { name: 'setClass' },
+  setClassName: { name: 'setClassName' },
   setStyle: { name: 'setStyle' },
   setValue: { name: 'setValue' },
   setAttr: { name: 'setAttr', needKey: true },
@@ -60,6 +71,14 @@ export function genSetProp(
     tag,
   } = oper
   const resolvedHelper = getRuntimeHelper(tag, key.content, modifier)
+  if (
+    key.content === 'class' &&
+    !resolvedHelper.isSVG &&
+    resolvedHelper.name === 'setClass'
+  ) {
+    const className = genSetClassName(oper, context)
+    if (className) return className
+  }
   const propValue = genPropValue(values, context)
   return [
     NEWLINE,
@@ -71,6 +90,238 @@ export function genSetProp(
       resolvedHelper.isSVG && 'true',
     ),
   ]
+}
+
+interface ClassNameEntry {
+  className: string
+  condition?: SimpleExpressionNode
+  negate?: boolean
+  value?: boolean
+}
+
+interface ClassNameInfo {
+  prefix: string
+  suffix: string
+  entries: ClassNameEntry[]
+}
+
+const MAX_CLASS_NAME_ENTRIES = 31
+
+function genSetClassName(
+  oper: SetPropIRNode,
+  context: CodegenContext,
+): CodeFragment[] | undefined {
+  const info = resolveClassName(oper.prop.values, context)
+  if (!info) return
+
+  const { helper } = context
+  const flags = genClassFlags(info.entries, context)
+  const fragments = genMulti(
+    DELIMITERS_ARRAY,
+    ...info.entries.map(entry =>
+      JSON.stringify(
+        !info.prefix && info.entries.length === 1
+          ? entry.className
+          : ` ${entry.className}`,
+      ),
+    ),
+  )
+
+  return [
+    NEWLINE,
+    ...genCall(
+      [helper('setClassName'), '""'],
+      `n${oper.element}`,
+      flags,
+      fragments,
+      info.prefix && JSON.stringify(info.prefix),
+      info.suffix && JSON.stringify(info.suffix),
+    ),
+  ]
+}
+
+function resolveClassName(
+  values: SimpleExpressionNode[],
+  context: CodegenContext,
+): ClassNameInfo | undefined {
+  let prefix = ''
+  let suffix = ''
+  const entries: ClassNameEntry[] = []
+  let sawDynamic = false
+  let sawSuffix = false
+
+  for (const value of values) {
+    const staticValue = getLiteralExpressionValue(value, true)
+    if (staticValue != null) {
+      const normalized = normalizeClass(staticValue)
+      if (normalized) {
+        if (sawSuffix) {
+          suffix = appendClass(suffix, normalized)
+        } else if (sawDynamic) {
+          sawSuffix = true
+          suffix = appendClass(suffix, normalized)
+        } else {
+          prefix = appendClass(prefix, normalized)
+        }
+      }
+      continue
+    }
+
+    const ast = value.ast
+    if (!ast || sawSuffix) return
+    sawDynamic = true
+
+    if (ast.type === 'ObjectExpression') {
+      if (!resolveObjectClassName(value, ast, entries, context)) return
+    } else if (ast.type === 'ConditionalExpression') {
+      if (!resolveConditionalClassName(value, ast, entries, context)) return
+    } else {
+      return
+    }
+  }
+
+  return entries.length && entries.length <= MAX_CLASS_NAME_ENTRIES
+    ? { prefix, suffix, entries }
+    : undefined
+}
+
+function resolveObjectClassName(
+  source: SimpleExpressionNode,
+  ast: ObjectExpression,
+  entries: ClassNameEntry[],
+  context: CodegenContext,
+): boolean {
+  for (const prop of ast.properties) {
+    if (prop.type !== 'ObjectProperty' || prop.computed) {
+      return false
+    }
+
+    const rawClassName = getObjectPropertyName(prop)
+    if (rawClassName == null) return false
+
+    const className = normalizeClass(rawClassName)
+    if (!className) continue
+
+    const value = getBooleanValue(prop.value)
+    entries.push({
+      className,
+      value,
+      condition:
+        value == null
+          ? createSubExpression(source, prop.value as Expression, context)
+          : undefined,
+    })
+  }
+  return true
+}
+
+function resolveConditionalClassName(
+  source: SimpleExpressionNode,
+  ast: ConditionalExpression,
+  entries: ClassNameEntry[],
+  context: CodegenContext,
+): boolean {
+  const consequent = getStringClassValue(ast.consequent)
+  const alternate = getStringClassValue(ast.alternate)
+
+  if (consequent && alternate === '') {
+    entries.push({
+      className: consequent,
+      condition: createSubExpression(source, ast.test, context),
+    })
+    return true
+  } else if (alternate && consequent === '') {
+    entries.push({
+      className: alternate,
+      condition: createSubExpression(source, ast.test, context),
+      negate: true,
+    })
+    return true
+  }
+
+  return false
+}
+
+function genClassFlags(
+  entries: ClassNameEntry[],
+  context: CodegenContext,
+): CodeFragment[] {
+  const values: CodeFragment[] = []
+
+  entries.forEach((entry, index) => {
+    if (index) values.push(' | ')
+
+    const bit = 1 << index
+    if (entry.value != null) {
+      values.push(entry.value ? String(bit) : '0')
+      return
+    }
+
+    values.push(
+      '(',
+      ...genExpression(entry.condition!, context),
+      entry.negate ? ` ? 0 : ${bit}` : ` ? ${bit} : 0`,
+      ')',
+    )
+  })
+
+  return values
+}
+
+function appendClass(base: string, value: string): string {
+  return base ? (value ? `${base} ${value}` : base) : value
+}
+
+function getObjectPropertyName(prop: ObjectProperty): string | undefined {
+  const key = prop.key
+  if (key.type === 'Identifier') {
+    return key.name
+  } else if (key.type === 'StringLiteral') {
+    return key.value
+  } else if (key.type === 'NumericLiteral') {
+    return String(key.value)
+  }
+}
+
+function getStringClassValue(node: Expression): string | undefined {
+  if (node.type === 'StringLiteral') {
+    return normalizeClass(node.value)
+  } else if (node.type === 'TemplateLiteral' && node.expressions.length === 0) {
+    return normalizeClass(node.quasis[0].value.cooked || '')
+  } else if (
+    node.type === 'NullLiteral' ||
+    (node.type === 'BooleanLiteral' && !node.value)
+  ) {
+    return ''
+  }
+}
+
+function getBooleanValue(node: ObjectProperty['value']): boolean | undefined {
+  if (node.type === 'BooleanLiteral') {
+    return node.value
+  }
+}
+
+function createSubExpression(
+  source: SimpleExpressionNode,
+  node: Expression,
+  context: CodegenContext,
+): SimpleExpressionNode {
+  const start = node.start == null ? 0 : node.start - 1
+  const end = node.end == null ? source.content.length : node.end - 1
+  const content = source.content.slice(start, end)
+  const expression = createSimpleExpression(content, false, source.loc)
+  expression.ast = isSimpleIdentifier(content)
+    ? null
+    : parseExpression(`(${content})`, getParserOptions(context))
+  return expression
+}
+
+function getParserOptions(context: CodegenContext): ParserOptions {
+  const plugins = context.options.expressionPlugins
+  return {
+    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+  }
 }
 
 // dynamic key props and v-bind="{}" will reach here

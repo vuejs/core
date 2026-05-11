@@ -330,6 +330,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > array class falls back to setClass 1`] = `
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, [_ctx.foo, { danger: _ctx.active }]))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > attributes must be set as attribute 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>")
@@ -381,6 +392,50 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > class with v-bind object falls back to dynamic props 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ class: ["foo", { bar: _ctx.isBar }] }, _ctx.mayBeHasClass]))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > className helper falls back when bit flags are exhausted 1`] = `
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, { c0: _ctx.a0, c1: _ctx.a1, c2: _ctx.a2, c3: _ctx.a3, c4: _ctx.a4, c5: _ctx.a5, c6: _ctx.a6, c7: _ctx.a7, c8: _ctx.a8, c9: _ctx.a9, c10: _ctx.a10, c11: _ctx.a11, c12: _ctx.a12, c13: _ctx.a13, c14: _ctx.a14, c15: _ctx.a15, c16: _ctx.a16, c17: _ctx.a17, c18: _ctx.a18, c19: _ctx.a19, c20: _ctx.a20, c21: _ctx.a21, c22: _ctx.a22, c23: _ctx.a23, c24: _ctx.a24, c25: _ctx.a25, c26: _ctx.a26, c27: _ctx.a27, c28: _ctx.a28, c29: _ctx.a29, c30: _ctx.a30, c31: _ctx.a31 }))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > className helper normalizes static and string class values 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.ok ? 1 : 0), [" baz"], "foo bar"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > computed object class key falls back to setClass 1`] = `
+"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClass(n0, { [_ctx.name]: _ctx.active }))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > dynamic arg 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", true)
@@ -406,6 +461,17 @@ export function render(_ctx) {
     const _id = _ctx.id
     _setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }])
   })
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > multiple simple object className helper 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"]))
   return n0
 }"
 `;
@@ -442,12 +508,133 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > object class with multi-token key 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), ["foo bar"]))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > reverse ternary string className helper 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), ["danger"]))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > should error if empty expression 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div arg>", true, true)
 
 export function render(_ctx) {
   const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > simple object className helper 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), ["active"]))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class after conditional uses className helper with suffix 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), ["danger"], "", "foo"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class after multiple object className helper uses suffix 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"], "", "tail"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class in reverse order uses className helper with suffix 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), ["bar"], "", "foo"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class with multiple object className helper 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0) | (_ctx.active ? 2 : 0), [" danger", " is-active"], "foo"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class with overlapping multi-token object class 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), [" foo bar"], "foo"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class with overlapping object class 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), [" bar"], "bar"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > static class with simple object className helper 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), [" bar"], "foo"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > ternary string className helper 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), ["danger"]))
   return n0
 }"
 `;

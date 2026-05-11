@@ -5,6 +5,7 @@ import {
   setBlockHtml,
   setBlockText,
   setClass,
+  setClassName,
   setDynamicProps,
   setElementText,
   setHtml,
@@ -50,6 +51,50 @@ describe('patchProp', () => {
       expect(el.className).toBe('bar baz')
       setClass(el, { a: true, b: false })
       expect(el.className).toBe('a')
+    })
+
+    test('should set class with flags', () => {
+      const el = document.createElement('div')
+
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+
+      setClassName(el, 0, ['danger'])
+      expect(el.className).toBe('')
+
+      setClassName(el, 1, [' danger'])
+      expect(el.className).toBe('danger')
+
+      const multi = document.createElement('div')
+      setClassName(multi, 3, [' danger', ' active'])
+      expect(multi.className).toBe('danger active')
+
+      setClassName(el, 3, [' danger', ' active'], 'base')
+      expect(el.className).toBe('base danger active')
+
+      setClassName(el, 1, ['danger'], '', 'tail')
+      expect(el.className).toBe('danger tail')
+
+      setClassName(el, 0, ['danger'], '', 'tail')
+      expect(el.className).toBe('tail')
+    })
+
+    test('should set root class with flags incrementally', () => {
+      const el = document.createElement('div')
+      el.className = 'fallthrough'
+      ;(el as any).$root = true
+
+      setClassName(el, 1, [' danger'], 'base')
+      expect(el.className).toBe('fallthrough base danger')
+
+      setClassName(el, 0, [' danger'], 'base')
+      expect(el.className).toBe('fallthrough base')
+
+      setClassName(el, 1, ['danger'], '', 'tail')
+      expect(el.className).toBe('fallthrough danger tail')
+
+      setClassName(el, 0, ['danger'], '', 'tail')
+      expect(el.className).toBe('fallthrough tail')
     })
   })
 

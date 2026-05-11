@@ -50,6 +50,7 @@ type TargetElement = Element & {
   $root?: true
   $html?: string
   $cls?: string
+  $clsFlags?: number
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
@@ -178,11 +179,12 @@ export function setClass(
   el: TargetElement,
   value: any,
   isSVG: boolean = false,
+  isNormalized: boolean = false,
 ): void {
   if (el.$root) {
-    setClassIncremental(el, value)
+    setClassIncremental(el, value, isNormalized)
   } else {
-    value = normalizeClass(value)
+    if (!isNormalized) value = normalizeClass(value)
     if (
       (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       isHydrating &&
@@ -202,9 +204,48 @@ export function setClass(
   }
 }
 
-function setClassIncremental(el: any, value: any): void {
+export function setClassName(
+  el: TargetElement,
+  flags: number,
+  cls: string[],
+  prefix: string = '',
+  suffix: string = '',
+): void {
+  // The compiler passes static fragments/prefix/suffix, so flags uniquely
+  // identify the rendered class string for this element.
+  if (flags === el.$clsFlags) return
+
+  el.$clsFlags = flags
+  let value = prefix
+  for (let i = 0, bit = 1; i < cls.length; i++, bit <<= 1) {
+    if (flags & bit) value += cls[i]
+  }
+  if (!prefix && value.charCodeAt(0) === 32) {
+    value = value.slice(1)
+  }
+  if (suffix) {
+    value = value ? `${value} ${suffix}` : suffix
+  }
+
+  if (
+    el.$root ||
+    ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating)
+  ) {
+    // Root fallthrough and hydration still need the existing setClass;
+    // pass the rebuilt string as normalized to avoid doing that work twice.
+    setClass(el, value, false, true)
+  } else {
+    el.className = el.$cls = value
+  }
+}
+
+function setClassIncremental(
+  el: any,
+  value: any,
+  isNormalized: boolean = false,
+): void {
   const cacheKey = `$clsi${isApplyingFallthroughProps ? '$' : ''}`
-  const normalizedValue = normalizeClass(value)
+  const normalizedValue = isNormalized ? value : normalizeClass(value)
 
   if (
     (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
