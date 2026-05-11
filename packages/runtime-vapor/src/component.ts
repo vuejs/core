@@ -550,8 +550,11 @@ export function applyFallthroughProps(
   attrs: Record<string, any>,
 ): void {
   isApplyingFallthroughProps = true
-  setDynamicProps(el, [attrs])
-  isApplyingFallthroughProps = false
+  try {
+    setDynamicProps(el, [attrs])
+  } finally {
+    isApplyingFallthroughProps = false
+  }
 }
 
 /**

@@ -17,6 +17,7 @@ import {
   VaporComponentInstance,
   applyFallthroughProps,
   createComponent,
+  isApplyingFallthroughProps,
 } from '../../src/component'
 import { ref, setCurrentInstance, svgNS, xlinkNS } from '@vue/runtime-dom'
 import { makeRender } from '../_utils'
@@ -580,6 +581,21 @@ describe('patchProp', () => {
 
       applyFallthroughProps(el, { ['.bar']: 'next' })
       expect(fallthroughSetCount).toBe(2)
+    })
+
+    test('should restore fallthrough state when dynamic props throw', () => {
+      const el = document.createElement('div')
+      const attrs: Record<string, any> = {}
+
+      Object.defineProperty(attrs, 'foo', {
+        enumerable: true,
+        get() {
+          throw new Error('fallthrough boom')
+        },
+      })
+
+      expect(() => applyFallthroughProps(el, attrs)).toThrow('fallthrough boom')
+      expect(isApplyingFallthroughProps).toBe(false)
     })
   })
 
