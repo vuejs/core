@@ -3,7 +3,7 @@
   "version": "3.6.0-beta.11",
   "description": "@vue/compiler-vapor",
   "main": "dist/compiler-vapor.cjs.js",
-  "module": "dist/compiler-vapor.esm-bundler.js",
+  "module": "dist/compiler-vapor.esm-browser.js",
   "types": "dist/compiler-vapor.d.ts",
   "files": [
     "dist"
