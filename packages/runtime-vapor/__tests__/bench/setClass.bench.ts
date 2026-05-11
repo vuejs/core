@@ -2,6 +2,7 @@ import { bench, describe } from 'vitest'
 import { setClass, setClassName } from '../../src/dom/prop'
 
 type TargetElement = HTMLElement & {
+  $root?: true
   $cls?: string
   $clsFlags?: number
 }
@@ -31,7 +32,7 @@ function createEmptyEl(): TargetElement {
 
 function createRootEl(): TargetElement {
   const el = document.createElement('div') as TargetElement
-  ;(el as any).$root = true
+  el.$root = true
   el.className = 'fallthrough'
   return el
 }
@@ -42,6 +43,25 @@ function currentSetClassTernary1(el: TargetElement, state: number): void {
 
 function currentSetClassObject1(el: TargetElement, state: number): void {
   setClass(el, { danger: state })
+}
+
+function currentSetClassObject1WithBase(
+  el: TargetElement,
+  state: number,
+): void {
+  setClass(el, ['base', { danger: state }])
+}
+
+// Mirrors generated output for a single dynamic class fragment. The compiler
+// passes a string here so stable updates allocate no fragment array.
+function currentSetClassName1(el: TargetElement, state: number): void {
+  setClassName(el, state ? 1 : 0, 'danger')
+}
+
+// Static base classes are folded into the prefix argument. The dynamic fragment
+// keeps its leading space so the runtime can concatenate without joining arrays.
+function currentSetClassName1WithBase(el: TargetElement, state: number): void {
+  setClassName(el, state ? 1 : 0, ' danger', 'base')
 }
 
 function currentSetClass2(el: TargetElement, state: number): void {
@@ -80,10 +100,6 @@ function currentSetClass8(el: TargetElement, state: number): void {
       c7: state & 128,
     },
   ])
-}
-
-function currentSetClassName1(el: TargetElement, state: number): void {
-  setClassName(el, state ? 1 : 0, ['danger'])
 }
 
 function currentSetClassName2(el: TargetElement, state: number): void {
@@ -181,6 +197,48 @@ describe('setClass', () => {
       bench('setClassName toggles every update', () => {
         for (let j = 0; j < BATCH; j++) {
           currentSetClassName1(el, toggle(i++, 1))
+        }
+      })
+    }
+  })
+
+  describe('1 key with base', () => {
+    {
+      const el = createEl()
+      let i = 0
+      bench('setClass object stable', () => {
+        for (let j = 0; j < BATCH; j++) {
+          currentSetClassObject1WithBase(el, stable2[i++ & 3] & 1)
+        }
+      })
+    }
+
+    {
+      const el = createEl()
+      let i = 0
+      bench('setClassName stable', () => {
+        for (let j = 0; j < BATCH; j++) {
+          currentSetClassName1WithBase(el, stable2[i++ & 3] & 1)
+        }
+      })
+    }
+
+    {
+      const el = createEl()
+      let i = 0
+      bench('setClass object toggles every update', () => {
+        for (let j = 0; j < BATCH; j++) {
+          currentSetClassObject1WithBase(el, toggle(i++, 1))
+        }
+      })
+    }
+
+    {
+      const el = createEl()
+      let i = 0
+      bench('setClassName toggles every update', () => {
+        for (let j = 0; j < BATCH; j++) {
+          currentSetClassName1WithBase(el, toggle(i++, 1))
         }
       })
     }

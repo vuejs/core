@@ -62,6 +62,10 @@ describe('patchProp', () => {
       setClassName(el, 0, ['danger'])
       expect(el.className).toBe('')
 
+      const string = document.createElement('div')
+      setClassName(string, 1, 'danger')
+      expect(string.className).toBe('danger')
+
       setClassName(el, 1, [' danger'])
       expect(el.className).toBe('danger')
 
@@ -71,6 +75,10 @@ describe('patchProp', () => {
 
       setClassName(el, 3, [' danger', ' active'], 'base')
       expect(el.className).toBe('base danger active')
+
+      const stringWithBase = document.createElement('div')
+      setClassName(stringWithBase, 1, ' danger', 'base')
+      expect(stringWithBase.className).toBe('base danger')
 
       setClassName(el, 1, ['danger'], '', 'tail')
       expect(el.className).toBe('danger tail')

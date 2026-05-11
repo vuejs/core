@@ -727,7 +727,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
-    expect(code).contains('["active"]')
+    expect(code).contains('"active"')
     expect(code).not.contains('{ active:')
   })
 
@@ -737,7 +737,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), ["danger"])',
+      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger")',
     )
   })
 
@@ -747,7 +747,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), ["danger"])',
+      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), "danger")',
     )
   })
 
@@ -757,7 +757,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), ["danger"], "", "foo")`,
+      `_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo")`,
     )
   })
 
@@ -767,7 +767,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
-    expect(code).contains('[" bar"], "foo"')
+    expect(code).contains('" bar", "foo"')
     expect(code).not.contains('{ bar:')
   })
 
@@ -777,7 +777,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.isBar ? 1 : 0), ["bar"], "", "foo")',
+      '_setClassName(n0, (_ctx.isBar ? 1 : 0), "bar", "", "foo")',
     )
   })
 
@@ -820,7 +820,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
-    expect(code).contains('["foo bar"]')
+    expect(code).contains('"foo bar"')
     expect(code).not.contains("'foo bar':")
   })
 
@@ -830,7 +830,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
-    expect(code).contains('[" bar"], "bar"')
+    expect(code).contains('" bar", "bar"')
     expect(code).not.contains('{ bar:')
   })
 
@@ -840,7 +840,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
-    expect(code).contains('[" foo bar"], "foo"')
+    expect(code).contains('" foo bar", "foo"')
     expect(code).not.contains("'foo bar':")
   })
 
@@ -850,7 +850,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.ok ? 1 : 0), [" baz"], "foo bar")',
+      '_setClassName(n0, (_ctx.ok ? 1 : 0), " baz", "foo bar")',
     )
   })
 

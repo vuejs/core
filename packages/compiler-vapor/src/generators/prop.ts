@@ -119,16 +119,17 @@ function genSetClassName(
 
   const { helper } = context
   const flags = genClassFlags(info.entries, context)
-  const fragments = genMulti(
-    DELIMITERS_ARRAY,
-    ...info.entries.map(entry =>
-      JSON.stringify(
-        !info.prefix && info.entries.length === 1
-          ? entry.className
-          : ` ${entry.className}`,
-      ),
+  const classFragments = info.entries.map(entry =>
+    JSON.stringify(
+      !info.prefix && info.entries.length === 1
+        ? entry.className
+        : ` ${entry.className}`,
     ),
   )
+  const fragments =
+    classFragments.length === 1
+      ? classFragments[0]
+      : genMulti(DELIMITERS_ARRAY, ...classFragments)
 
   return [
     NEWLINE,

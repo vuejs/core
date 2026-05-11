@@ -191,7 +191,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     _selector0_0(() => {
-      _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), ["danger"])
+      _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "danger")
     })
     return n2
   }, (row) => (row.id), undefined, ({ createSelector }) => {
@@ -210,7 +210,7 @@ export function render(_ctx) {
     const n2 = t0()
     _renderEffect(() => {
       const _row = _for_item0.value
-      _setClassName(n2, (_row.label === _row.id ? 1 : 0), ["danger"])
+      _setClassName(n2, (_row.label === _row.id ? 1 : 0), "danger")
     })
     return n2
   }, (row) => (row.id))
@@ -227,7 +227,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     _selector0_0(() => {
-      _setClassName(n2, (_for_item0.value.id === _ctx.selected ? 1 : 0), ["danger"])
+      _setClassName(n2, (_for_item0.value.id === _ctx.selected ? 1 : 0), "danger")
     })
     return n2
   }, (row) => (row.id), undefined, ({ createSelector }) => {

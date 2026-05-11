@@ -208,7 +208,7 @@ export function setClass(
 export function setClassName(
   el: TargetElement,
   flags: number,
-  cls: string[],
+  cls: string | string[],
   prefix: string = '',
   suffix: string = '',
 ): void {
@@ -218,9 +218,13 @@ export function setClassName(
   if (flags === el.$clsFlags) return
 
   let value = prefix
-  // The compiler caps this at 31 entries because JS bitwise shifts are signed.
-  for (let i = 0, bit = 1; i < cls.length; i++, bit <<= 1) {
-    if (flags & bit) value += cls[i]
+  if (isString(cls)) {
+    if (flags & 1) value += cls
+  } else {
+    // The compiler caps this at 31 entries because JS bitwise shifts are signed.
+    for (let i = 0, bit = 1; i < cls.length; i++, bit <<= 1) {
+      if (flags & bit) value += cls[i]
+    }
   }
   if (!prefix && value.charCodeAt(0) === 32) {
     value = value.slice(1)

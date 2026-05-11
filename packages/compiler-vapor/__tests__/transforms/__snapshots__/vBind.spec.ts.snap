@@ -420,7 +420,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.ok ? 1 : 0), [" baz"], "foo bar"))
+  _renderEffect(() => _setClassName(n0, (_ctx.ok ? 1 : 0), " baz", "foo bar"))
   return n0
 }"
 `;
@@ -514,7 +514,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), ["foo bar"]))
+  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), "foo bar"))
   return n0
 }"
 `;
@@ -525,7 +525,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), ["danger"]))
+  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), "danger"))
   return n0
 }"
 `;
@@ -546,7 +546,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), ["active"]))
+  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), "active"))
   return n0
 }"
 `;
@@ -557,7 +557,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), ["danger"], "", "foo"))
+  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo"))
   return n0
 }"
 `;
@@ -579,7 +579,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), ["bar"], "", "foo"))
+  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), "bar", "", "foo"))
   return n0
 }"
 `;
@@ -601,7 +601,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), [" foo bar"], "foo"))
+  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), " foo bar", "foo"))
   return n0
 }"
 `;
@@ -612,7 +612,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), [" bar"], "bar"))
+  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), " bar", "bar"))
   return n0
 }"
 `;
@@ -623,7 +623,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), [" bar"], "foo"))
+  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), " bar", "foo"))
   return n0
 }"
 `;
@@ -634,7 +634,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), ["danger"]))
+  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger"))
   return n0
 }"
 `;
