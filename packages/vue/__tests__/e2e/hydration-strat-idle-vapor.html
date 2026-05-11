@@ -37,13 +37,15 @@
   const AsyncComp = defineVaporAsyncComponent({
     loader: () =>
       new Promise(resolve => {
-        setTimeout(() => {
-          console.log('resolve')
-          resolve(Comp)
-          requestIdleCallback(() => {
-            console.log('busy')
-          })
-        }, 10)
+        window.resolveLoader = () => {
+          setTimeout(() => {
+            console.log('resolve')
+            resolve(Comp)
+            requestIdleCallback(() => {
+              console.log('busy')
+            })
+          }, 10)
+        }
       }),
     hydrate: hydrateOnIdle(),
   })

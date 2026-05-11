@@ -11,6 +11,7 @@ import {
   type Plugin,
   type RendererInternals,
   type ShallowRef,
+  type Slot,
   type Slots,
   Static,
   type SuspenseBoundary,
@@ -47,6 +48,7 @@ import {
   deactivate as vdomDeactivate,
   setRef as vdomSetRef,
   warn,
+  withCtx,
 } from '@vue/runtime-dom'
 import { effectScope } from '@vue/reactivity'
 import {
@@ -77,6 +79,7 @@ import {
   extend,
   isArray,
   isFunction,
+  isObject,
   isReservedProp,
 } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
@@ -92,9 +95,17 @@ import {
   isHydrating,
   isHydrationAnchor,
   locateEndAnchor,
+  runWithoutHydration,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
+import {
+  insertionAnchor,
+  insertionIndex,
+  insertionParent,
+  resetInsertionState,
+  setInsertionState,
+} from './insertionState'
 import {
   SlotFallbackController,
   SlotFragment,
@@ -115,7 +126,12 @@ import {
   getVNodeKey,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
-import { setInteropEnabled } from './vdomInteropState'
+import {
+  interopKey,
+  isCollectingVdomSlotVNodes,
+  setInteropEnabled,
+  withVdomSlotVNodeCollection,
+} from './vdomInteropState'
 import {
   type KeepAliveInstance,
   activate,
@@ -133,8 +149,6 @@ import {
   isSuspenseEnabled,
   setParentSuspense,
 } from './suspense'
-
-export const interopKey: unique symbol = Symbol(`interop`)
 
 function filterReservedProps(props: VNode['props']): VNode['props'] {
   const filtered: VNode['props'] = {}
@@ -172,7 +186,8 @@ const vaporInteropImpl: Omit<
     simpleSetCurrentInstance(parentComponent)
 
     const propsRef = shallowRef(filterReservedProps(vnode.props))
-    const slotsRef = shallowRef(vnode.children)
+    const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
+    const rawSlots = createInteropRawSlots(slotsRef)
 
     let prevSuspense: SuspenseBoundary | null = null
     if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
@@ -190,9 +205,7 @@ const vaporInteropImpl: Omit<
       {
         $: dynamicPropSource,
       } as RawProps,
-      {
-        _: slotsRef, // pass the slots ref
-      } as any as RawSlots,
+      rawSlots,
       undefined,
       undefined,
       (parentComponent ? parentComponent.appContext : vnode.appContext) as any,
@@ -273,7 +286,7 @@ const vaporInteropImpl: Omit<
       }
       vnodeHookState.skipVnodeHooks = true
       instance.rawPropsRef!.value = filterReservedProps(n2.props)
-      instance.rawSlotsRef!.value = n2.children
+      instance.rawSlotsRef!.value = normalizeInteropSlots(n2.children)
       queuePostFlushCb(() => {
         syncVNodeEl(n2, instance)
         if (!instance.isUpdating) {
@@ -286,6 +299,7 @@ const vaporInteropImpl: Omit<
   unmount(vnode, doRemove) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
     const instance = vnode.component as any as VaporComponentInstance
+    let slotStartAnchor: Node | null = null
     if (instance) {
       // the async component may not be resolved yet, block is null
       if (instance.block) {
@@ -304,6 +318,11 @@ const vaporInteropImpl: Omit<
       }
     } else if (vnode.vb) {
       const anchor = vnode.anchor as Node | null
+      // `hydrateSlot()` records the opening marker for VDOM SSR slot fragments
+      // on vnode.el while vnode.anchor points at the closing marker.
+      if (vnode.el && vnode.el !== anchor && isComment(vnode.el as Node, '[')) {
+        slotStartAnchor = vnode.el as Node
+      }
       // Fragment child unmounts invoke VaporSlot with doRemove = false, so the
       // renderer does not pass us a container. Most slot blocks can still
       // clean themselves up without it, but KeepAlive needs the host container
@@ -317,6 +336,12 @@ const vaporInteropImpl: Omit<
       stopVaporSlotScope(vnode)
     }
     if (doRemove) {
+      if (slotStartAnchor) {
+        const parent = slotStartAnchor.parentNode
+        if (parent) {
+          remove(slotStartAnchor, parent)
+        }
+      }
       const anchor = vnode.anchor as Node
       // `container` is captured before unmount starts, but the unmount above
       // may already remove or move this anchor. Only remove it if it is still
@@ -352,10 +377,20 @@ const vaporInteropImpl: Omit<
       // update
       // slot function changed (e.g. dynamic slots from _createForSlots),
       // need to re-mount the vapor block
-      if (n2.vs!.slot !== n1.vs!.slot) {
+      const needsRemount =
+        !n1.vs ||
+        !n2.vs ||
+        !n1.vs.slot ||
+        !n2.vs.slot ||
+        n2.vs.slot !== n1.vs.slot
+      if (needsRemount) {
         const selfAnchor = n1.anchor as Node
         const parent = selfAnchor.parentNode as ParentNode
         const nextSibling = selfAnchor.nextSibling
+        const rangeStartAnchor =
+          n1.el && n1.el !== selfAnchor && isComment(n1.el as Node, '[')
+            ? (n1.el as Node)
+            : undefined
         const oldBlockOwnsAnchor =
           isFragment(n1.vb!) && n1.vb!.anchor === selfAnchor
         // remove old vapor block
@@ -374,19 +409,30 @@ const vaporInteropImpl: Omit<
           newAnchor = selfAnchor
           insertAnchor = selfAnchor
         }
-        insert((n2.el = n2.anchor = newAnchor), parent, insertAnchor)
+        insert((n2.anchor = newAnchor), parent, insertAnchor)
+        n2.el = rangeStartAnchor || newAnchor
         insert((n2.vb = slotBlock), parent, newAnchor)
       } else {
-        n2.el = n2.anchor = n1.anchor
+        const vs1 = n1.vs!
+        const vs2 = n2.vs!
+        n2.el = n1.el
+        n2.anchor = n1.anchor
         n2.vb = n1.vb
-        ;(n2.vs!.ref = n1.vs!.ref)!.value = n2.props
-        n2.vs!.scope = n1.vs!.scope
+        ;(vs2.ref = vs1.ref)!.value = n2.props
+        vs2.scope = vs1.scope
         syncInteropVaporSlotState(n1, n2)
       }
     }
   },
 
   move(vnode, container, anchor, moveType) {
+    if (
+      vnode.el &&
+      vnode.el !== vnode.anchor &&
+      isComment(vnode.el as Node, '[')
+    ) {
+      move(vnode.el as any, container, anchor, moveType)
+    }
     move(vnode.vb || (vnode.component as any), container, anchor, moveType)
     move(vnode.anchor as any, container, anchor, moveType)
   },
@@ -424,11 +470,18 @@ const vaporInteropImpl: Omit<
     if (!isHydrating && !isVdomHydrating) return node
     vaporHydrateNode(node, () => {
       vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
-      vnode.anchor = vnode.el =
+      const anchor =
         isFragment(vnode.vb) && vnode.vb.anchor
           ? vnode.vb.anchor
           : currentHydrationNode!
-
+      // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
+      // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
+      if (isComment(node, '[') && isComment(anchor, ']')) {
+        vnode.el = node
+        vnode.anchor = anchor
+      } else {
+        vnode.anchor = vnode.el = anchor
+      }
       if (__DEV__ && !vnode.anchor) {
         throw new Error(
           `Failed to locate slot anchor. this is likely a Vue internal bug.`,
@@ -474,7 +527,7 @@ const vaporInteropImpl: Omit<
     if (shouldUpdate) {
       vnodeHookState.skipVnodeHooks = true
       instance.rawPropsRef!.value = filterReservedProps(vnode.props)
-      instance.rawSlotsRef!.value = vnode.children
+      instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
       const vnodeBeforeUpdateHook =
         vnode.props && vnode.props.onVnodeBeforeUpdate
       if (vnodeBeforeUpdateHook) {
@@ -581,11 +634,16 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
         return cached.wrapped
       }
 
-      // Create a wrapper that internally uses renderSlot for proper vapor slot handling
-      // This ensures that calling slots.default() works the same as renderSlot(slots, 'default')
-      const wrapped = (props?: Record<string, any>) => [
-        renderSlot({ [key]: slot }, key as string, props),
-      ]
+      // Direct slots.default() calls may be used for vnode introspection.
+      // Try collecting VDOM child metadata first; if the Vapor slot cannot be
+      // represented as VDOM vnodes, fall back to the real renderSlot protocol.
+      const wrapped = (props?: Record<string, any>) => {
+        return (
+          normalizeVaporSlotVNodes(slot, props) || [
+            renderSlot({ [key]: slot }, key as string, props),
+          ]
+        )
+      }
       ;(wrapped as any).__vs = slot
       wrappers.set(key, { slot, wrapped })
       return wrapped
@@ -594,11 +652,83 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
   },
 }
 
+const collectedVdomSlotVNodes = new WeakMap<VaporFragment, VNode>()
+
+function normalizeVaporSlotVNodes(
+  slot: Function,
+  props: Record<string, any> | undefined,
+): VNode[] | undefined {
+  if (props && hasVNodeSlotProps(props)) {
+    return
+  }
+  const scope = effectScope()
+  let value: any
+  try {
+    value = runVdomSlotVNodeCollection(() =>
+      scope.run(() => withVdomSlotVNodeCollection(() => slot(props))),
+    )
+  } finally {
+    scope.stop()
+  }
+  const children = isArray(value) ? value : [value]
+  const vnodes: VNode[] = []
+  for (const child of children) {
+    if (isVNode(child)) {
+      vnodes.push(child)
+      continue
+    }
+    const vnode =
+      child &&
+      isObject(child) &&
+      collectedVdomSlotVNodes.get(child as VaporFragment)
+    if (!isVNode(vnode)) return
+    vnodes.push(vnode)
+  }
+  return vnodes
+}
+
+function hasVNodeSlotProps(props: Record<string, any>): boolean {
+  for (const key in props) {
+    const value = props[key]
+    if (isVNode(value)) {
+      return true
+    }
+    if (isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        if (isVNode(value[i])) {
+          return true
+        }
+      }
+    }
+  }
+  return false
+}
+
+function runVdomSlotVNodeCollection<T>(fn: () => T): T {
+  const prevInsertionParent = insertionParent
+  const prevInsertionAnchor = insertionAnchor
+  const prevInsertionIndex = insertionIndex
+  try {
+    // Collection only probes metadata. It must not adopt DOM or advance the
+    // Vapor hydration cursor while evaluating the slot body.
+    return runWithoutHydration(fn)
+  } finally {
+    if (prevInsertionParent) {
+      setInsertionState(
+        prevInsertionParent,
+        prevInsertionAnchor,
+        prevInsertionIndex,
+      )
+    } else {
+      resetInsertionState()
+    }
+  }
+}
+
 let vdomHydrateNode: HydrationRenderer['hydrateNode'] | undefined
 
-// Static/Fragment vnodes always represent a contiguous range [el..anchor].
-// For component vnodes, only treat them as a range when their hydrated subTree
-// is Static/Fragment (multi-root component case).
+// Static/Fragment/Teleport vnodes represent a root range [el..anchor].
+// Component roots can update internally, so resolve through the current subtree.
 function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
   const { type, shapeFlag, el, anchor } = vnode
   if (shapeFlag & ShapeFlags.TELEPORT && el && anchor && anchor !== el) {
@@ -608,21 +738,11 @@ function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
   if ((type === Static || type === Fragment) && el && anchor && anchor !== el) {
     return [el as Node, anchor as Node]
   }
-  if (!(shapeFlag & ShapeFlags.COMPONENT)) {
-    return
-  }
-
-  const subTree = vnode.component && vnode.component.subTree
-  const subEl = subTree && subTree.el
-  const subAnchor = subTree && subTree.anchor
-  if (
-    subTree &&
-    (subTree.type === Static || subTree.type === Fragment) &&
-    subEl &&
-    subAnchor &&
-    subAnchor !== subEl
-  ) {
-    return [subEl as Node, subAnchor as Node]
+  if (shapeFlag & ShapeFlags.COMPONENT) {
+    const subTree = vnode.component && vnode.component.subTree
+    if (subTree) {
+      return resolveVNodeRange(subTree)
+    }
   }
 }
 
@@ -647,7 +767,25 @@ function resolveVNodeNodes(vnode: VNode): Block {
     }
     return nodeRange
   }
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const subTree = vnode.component && vnode.component.subTree
+    if (subTree) {
+      return resolveVNodeNodes(subTree)
+    }
+  }
   return vnode.el as Block
+}
+
+function removeAttachedNodes(block: Block, parent: ParentNode): void {
+  if (block instanceof Node) {
+    if (block.parentNode === parent) {
+      remove(block, parent)
+    }
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      removeAttachedNodes(block[i], parent)
+    }
+  }
 }
 
 function appendVnodeUpdatedHook(vnode: VNode, hook: () => void): void {
@@ -796,7 +934,11 @@ function createVDOMComponent(
   frag.$key = vnode.key
   trackFragmentVNodeUpdates(frag, vnode)
 
-  if (isKeepAliveEnabled && currentKeepAliveCtx) {
+  if (
+    !isCollectingVdomSlotVNodes &&
+    isKeepAliveEnabled &&
+    currentKeepAliveCtx
+  ) {
     currentKeepAliveCtx.processShapeFlag(frag)
     // for VDOM async components, trigger cacheBlock after resolution
     if ((component as any).__asyncLoader) {
@@ -821,6 +963,13 @@ function createVDOMComponent(
     parentComponent ? parentComponent.appContext : undefined,
     undefined,
   )
+
+  if (isCollectingVdomSlotVNodes) {
+    collectedVdomSlotVNodes.set(
+      frag,
+      createCollectedVDOMSlotVNode(component, rawProps, wrapper.slots),
+    )
+  }
 
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
@@ -861,7 +1010,20 @@ function createVDOMComponent(
 
   let rawRef: VNodeNormalizedRef | null = null
   let isMounted = false
+  let isUnmounted = false
+  let isDomRemoved = false
+  const removeDom = (parentNode?: ParentNode): void => {
+    if (!parentNode || isDomRemoved) {
+      return
+    }
+    removeAttachedNodes(resolveVNodeNodes(vnode), parentNode)
+    isDomRemoved = true
+  }
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    if (isUnmounted) {
+      if (!transition) removeDom(parentNode)
+      return
+    }
     // unset ref
     if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     if (transition) setVNodeTransitionHooks(vnode, transition)
@@ -875,13 +1037,16 @@ function createVDOMComponent(
       )
       return
     }
+    isUnmounted = true
+    isMounted = false
     internals.umt(vnode.component!, null, !!parentNode)
+    // VDOM transitions own their leaving DOM until the leave finishes.
+    if (!transition) removeDom(parentNode)
   }
 
   frag.hydrate = () => {
     if (!isHydrating) return
     hydrateVNode(vnode, parentComponent as any)
-    onScopeDispose(unmount, true)
     isMounted = true
     frag.nodes = resolveVNodeNodes(vnode)
     frag.validityPending = false
@@ -919,7 +1084,6 @@ function createVDOMComponent(
         )
         // set ref
         if (rawRef) vdomSetRef(rawRef, null, null, vnode)
-        onScopeDispose(unmount, true)
         isMounted = true
       } else {
         // move
@@ -967,6 +1131,24 @@ function createVDOMComponent(
   }
 
   return frag
+}
+
+function createCollectedVDOMSlotVNode(
+  component: ConcreteComponent,
+  rawProps: LooseRawProps | null | undefined,
+  slots: RawSlots,
+): VNode {
+  // This vnode is returned to a VDOM slots.default() caller and may be rendered
+  // by the VDOM renderer directly. Keep it as a normal VDOM vnode; the real
+  // Vapor-owned interop mount path uses frag.vnode with vi instead.
+  const vnode = createVNode(
+    component,
+    rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
+    slots === EMPTY_OBJ ? null : new Proxy(slots, vaporSlotsProxyHandler),
+  )
+  vnode.scopeId = getCurrentScopeId() || null
+  vnode.slotScopeIds = currentSlotScopeIds
+  return vnode
 }
 
 const rendererBridgeCache = new WeakMap<
@@ -1607,6 +1789,9 @@ function renderVaporSlot(
     prevSuspense = setParentSuspense(parentSuspense)
   }
   try {
+    if (!vnode.vs || !vnode.vs.slot) {
+      return []
+    }
     const slotState = resolveInteropVaporSlotState(vnode)
     // Most of the interop setup is shared, but slots that start with a local
     // VDOM fallback still need to let an inner SlotFragment own the active
@@ -2041,4 +2226,110 @@ function isSameResolvedOutput(prev: Block, next: Block): boolean {
       prev.length === next.length &&
       prev.every((node, index) => node === next[index]))
   )
+}
+
+function normalizeInteropSlots(rawSlots: any): any {
+  if (rawSlots == null) return rawSlots
+  // VDOM children bypass runtime-core's component slot initialization here,
+  // so normalize raw children into a callable default slot first.
+  if (!isObject(rawSlots) || isArray(rawSlots) || isVNode(rawSlots)) {
+    return normalizeInteropDefaultSlot(rawSlots)
+  }
+
+  // VDOM render-function slots can return a single VNode, but renderSlot()
+  // consumes normalized slots that return VNode arrays.
+  const normalized = createInternalObject() as any
+  for (const key in rawSlots) {
+    if (isInternalSlotKey(key)) continue
+
+    const slot = rawSlots[key]
+    if (isFunction(slot)) {
+      // Already-normalized VDOM slots and Vapor slots carry their own runtime
+      // protocol markers, so keep them intact.
+      normalized[key] =
+        (slot as any).__vapor || (slot as any).__vs || (slot as any)._n
+          ? slot
+          : normalizeInteropSlot(slot, rawSlots._ctx)
+    } else if (slot != null) {
+      normalized[key] = () => normalizeInteropSlotValue(slot)
+    }
+  }
+  // Preserve VDOM slot metadata for renderSlot() while keeping it hidden from
+  // Vapor useSlots() enumeration.
+  ;(['_', '_ctx', '$stable'] as const).forEach(key => {
+    const descriptor = Object.getOwnPropertyDescriptor(rawSlots, key)
+    if (descriptor) {
+      Object.defineProperty(normalized, key, descriptor)
+    }
+  })
+  return normalized
+}
+
+function normalizeInteropSlot(
+  rawSlot: Function,
+  ctx: ComponentInternalInstance | null | undefined,
+): Slot {
+  const normalized = withCtx(
+    (...args: any[]) => normalizeInteropSlotValue(rawSlot(...args)),
+    ctx,
+  ) as Slot
+  ;(normalized as any)._c = false
+  return normalized
+}
+
+function normalizeInteropDefaultSlot(value: unknown): Slots {
+  const normalized = createInternalObject() as any
+  const normalizedValue = normalizeInteropSlotValue(value)
+  normalized.default = () => normalizedValue
+  return normalized
+}
+
+function normalizeInteropSlotValue(value: unknown): VNode[] {
+  return isArray(value)
+    ? value.map(child => normalizeVNode(child as any))
+    : [normalizeVNode(value as any)]
+}
+
+const isInternalSlotKey = (key: string): boolean =>
+  key === '_' || key === '_ctx' || key === '$stable'
+
+const interopSlotsSourceHandlers: ProxyHandler<ShallowRef<Slots>> = {
+  get(target, key: any) {
+    const slots = target.value
+    return slots && slots[key]
+  },
+  has(target, key: any) {
+    const slots = target.value
+    return !!slots && key in slots
+  },
+  ownKeys(target) {
+    const slots = target.value
+    return slots
+      ? Object.keys(slots).filter(key => !isInternalSlotKey(key))
+      : []
+  },
+  getOwnPropertyDescriptor(target, key: any) {
+    const slots = target.value
+    const descriptor = slots && Object.getOwnPropertyDescriptor(slots, key)
+    if (descriptor && descriptor.enumerable && !isInternalSlotKey(key)) {
+      return {
+        enumerable: true,
+        configurable: true,
+        value: descriptor.value,
+      }
+    }
+  },
+}
+
+function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
+  // `_` keeps direct <slot> outlets on the VDOM slot path; `$` exposes live
+  // slot keys to Vapor useSlots() / dynamic forwarding.
+  const rawSlots = {
+    $: [new Proxy(slotsRef, interopSlotsSourceHandlers)],
+  } as any
+  Object.defineProperty(rawSlots, '_', {
+    value: slotsRef, // pass the slots ref
+    configurable: true,
+  })
+  return rawSlots as RawSlots
 }

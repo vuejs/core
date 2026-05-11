@@ -8,10 +8,13 @@ import {
   DynamicFlag,
   type IRDynamicInfo,
   IRNodeTypes,
-  type InsertionStateTypes,
   isBlockOperation,
 } from '../ir'
-import { shouldUseCreateElement } from './transformElement'
+import {
+  getChildTemplateCloseState,
+  isInSameTemplateAsParent,
+  shouldUseCreateElement,
+} from './transformElement'
 
 export const transformChildren: NodeTransform = (node, context) => {
   const isFragment =
@@ -25,9 +28,24 @@ export const transformChildren: NodeTransform = (node, context) => {
   const useCreateElement =
     node.type === NodeTypes.ELEMENT &&
     shouldUseCreateElement(node, context as TransformContext<ElementNode>)
+  const childTemplateCloseState =
+    !isFragment && !useCreateElement
+      ? getChildTemplateCloseState(context as TransformContext<ElementNode>)
+      : undefined
 
   for (const [i, child] of node.children.entries()) {
     const childContext = context.create(child, i)
+    const isInSameTemplate =
+      childTemplateCloseState &&
+      child.type === NodeTypes.ELEMENT &&
+      child.tagType === ElementTypes.ELEMENT &&
+      isInSameTemplateAsParent(childContext as TransformContext<ElementNode>)
+    childContext.templateCloseTags = isInSameTemplate
+      ? childTemplateCloseState.tags
+      : undefined
+    childContext.templateCloseBlocks = isInSameTemplate
+      ? childTemplateCloseState.blocks
+      : false
     transformNode(childContext)
 
     const childDynamic = childContext.dynamic
@@ -81,8 +99,6 @@ export const transformChildren: NodeTransform = (node, context) => {
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
   let staticCount = 0
-  let dynamicCount = 0
-  let lastInsertionChild: IRDynamicInfo | undefined
   const children = context.dynamic.children
 
   // Track logical index for each child.
@@ -94,7 +110,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
       child.logicalIndex = logicalIndex
-      prevDynamics.push((lastInsertionChild = child))
+      prevDynamics.push(child)
       logicalIndex++
     }
 
@@ -109,7 +125,6 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         } else {
           registerInsertion(prevDynamics, context, -1 /* prepend */)
         }
-        dynamicCount += prevDynamics.length
         prevDynamics = []
       }
       staticCount++
@@ -122,13 +137,9 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
       prevDynamics,
       context,
       // the logical index of append child
-      dynamicCount + staticCount,
+      prevDynamics[0].logicalIndex!,
       true,
     )
-  }
-
-  if (lastInsertionChild && lastInsertionChild.operation) {
-    ;(lastInsertionChild.operation! as InsertionStateTypes).last = true
   }
 }
 

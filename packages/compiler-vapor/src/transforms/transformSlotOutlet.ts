@@ -103,6 +103,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
     context.dynamic.operation = {
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id,
+      ...context.effectBoundary(),
       name: slotName,
       props: irProps,
       fallback,

@@ -411,7 +411,7 @@ export function render(_ctx) {
   const n6 = t0()
   _setInsertionState(n6, null, 0)
   const n0 = _createSlot("foo", null)
-  _setInsertionState(n6, null, 1, true)
+  _setInsertionState(n6, null, 1)
   const n1 = _createIf(() => (true), () => {
     const n3 = _createComponentWithFallback(_component_Foo)
     return n3
@@ -624,6 +624,26 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > withVaporCtx optimization > dynamic slot source with slot outlet should have withVaporCtx 1`] = `
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, withVaporCtx as _withVaporCtx, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      _withVaporCtx(() => (_createForSlots(_ctx.slots, (_, name) => ({
+        name: name,
+        fn: _withVaporCtx(() => {
+          const n0 = _createSlot(() => (name), null)
+          return n0
+        })
+      }))))
+    ]
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: transform slot > withVaporCtx optimization > slot with component inside v-for should have withVaporCtx 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
 const t0 = _template("<div>")
@@ -635,7 +655,7 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
         const n3 = t0()
-        _setInsertionState(n3, null, 0, true)
+        _setInsertionState(n3, null, 0)
         const n2 = _createComponentWithFallback(_component_ChildComp)
         return n3
       })
@@ -657,7 +677,7 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (_ctx.show), () => {
         const n3 = t0()
-        _setInsertionState(n3, null, 0, true)
+        _setInsertionState(n3, null, 0)
         const n2 = _createComponentWithFallback(_component_ChildComp)
         return n3
       }, null, 1)
@@ -694,7 +714,7 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (_ctx.show), () => {
         const n3 = t0()
-        _setInsertionState(n3, null, 0, true)
+        _setInsertionState(n3, null, 0)
         const n2 = _createPlainElement("my-element")
         return n3
       }, null, 1)
@@ -732,10 +752,10 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (_ctx.a), () => {
         const n6 = t1()
-        _setInsertionState(n6, null, 0, true)
+        _setInsertionState(n6, null, 0)
         const n2 = _createIf(() => (_ctx.b), () => {
           const n5 = t0()
-          _setInsertionState(n5, null, 0, true)
+          _setInsertionState(n5, null, 0)
           const n4 = _createComponentWithFallback(_component_ChildComp)
           return n5
         }, null, 1)

@@ -131,16 +131,57 @@ export function setCurrentHydrationNode(node: Node | null): void {
   currentHydrationNode = node
 }
 
-/* @__NO_SIDE_EFFECTS__ */
-function locateNextSiblingOfParent(n: Node): Node | null {
-  if (!n.parentNode) return null
-  return _next(n.parentNode) || locateNextSiblingOfParent(n.parentNode)
+export function advanceHydrationNode(node: Node): void {
+  let next = node.nextSibling
+  if (next && currentHydrationNode === next) {
+    return
+  }
+  // if no next sibling, find the next node in the parent chain
+  while (!next) {
+    const parent = node.parentNode
+    if (!parent) break
+    node = parent
+    next = node.nextSibling
+  }
+  if (currentHydrationNode !== next) {
+    currentHydrationNode = next
+  }
 }
 
-export function advanceHydrationNode(node: Node): void {
-  // if no next sibling, find the next node in the parent chain
-  const ret = _next(node) || locateNextSiblingOfParent(node)
-  if (ret) setCurrentHydrationNode(ret)
+export type HydrationCursor = {
+  start: Node | null
+  // `undefined` means this scope follows the cursor advanced by its body.
+  // `null` is a real resume point: the outer scope has no next node.
+  resume: Node | null | undefined
+}
+
+export function enterHydrationCursor(
+  consumeFragmentStart = false,
+): HydrationCursor {
+  const resume = insertionParent ? currentHydrationNode : undefined
+  locateHydrationNode(consumeFragmentStart)
+  return {
+    start: currentHydrationNode,
+    resume,
+  }
+}
+
+/**
+ * Capture only the outer resume cursor for dynamic wrappers whose inner owner
+ * locates the local start later, after the selected inner path is known.
+ * This avoids consuming insertion state too early.
+ */
+export function captureHydrationCursor(): HydrationCursor {
+  return {
+    start: null,
+    resume: insertionParent ? currentHydrationNode : undefined,
+  }
+}
+
+export function exitHydrationCursor(cursor: HydrationCursor | null): void {
+  if (cursor && cursor.resume !== undefined) {
+    setCurrentHydrationNode(cursor.resume)
+  }
 }
 
 /**

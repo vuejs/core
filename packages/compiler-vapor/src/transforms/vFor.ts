@@ -74,6 +74,7 @@ export function processFor(
     context.dynamic.operation = {
       type: IRNodeTypes.FOR,
       id,
+      ...context.effectBoundary(),
       source: source as SimpleExpressionNode,
       value: value as SimpleExpressionNode | undefined,
       key: key as SimpleExpressionNode | undefined,

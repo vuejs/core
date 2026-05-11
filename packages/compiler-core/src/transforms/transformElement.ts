@@ -282,7 +282,21 @@ export function resolveComponentType(
     return builtIn
   }
 
-  // 3. user component (from setup bindings)
+  // 3. component from slot props
+  // this is skipped in browser build since browser builds do not perform
+  // identifier tracking.
+  if (!__BROWSER__) {
+    const fromScope = resolveSlotScopeReference(tag, context)
+    if (fromScope) return fromScope
+
+    const dotIndex = tag.indexOf('.')
+    if (dotIndex > 0) {
+      const ns = resolveSlotScopeReference(tag.slice(0, dotIndex), context)
+      if (ns) return ns + tag.slice(dotIndex)
+    }
+  }
+
+  // 4. user component (from setup bindings)
   // this is skipped in browser build since browser builds do not perform
   // binding analysis.
   if (!__BROWSER__) {
@@ -299,7 +313,7 @@ export function resolveComponentType(
     }
   }
 
-  // 4. Self referencing component (inferred from filename)
+  // 5. Self referencing component (inferred from filename)
   if (
     !__BROWSER__ &&
     context.selfName &&
@@ -313,10 +327,27 @@ export function resolveComponentType(
     return toValidAssetId(tag, `component`)
   }
 
-  // 5. user component (resolve)
+  // 6. user component (resolve)
   context.helper(RESOLVE_COMPONENT)
   context.components.add(tag)
   return toValidAssetId(tag, `component`)
+}
+
+function resolveSlotScopeReference(name: string, context: TransformContext) {
+  const camelName = camelize(name)
+  const PascalName = capitalize(camelName)
+  const isInSlotScope = (reference: string) =>
+    context.isSlotScopeIdentifier(reference)
+
+  if (isInSlotScope(name)) {
+    return name
+  }
+  if (isInSlotScope(camelName)) {
+    return camelName
+  }
+  if (isInSlotScope(PascalName)) {
+    return PascalName
+  }
 }
 
 function resolveSetupReference(name: string, context: TransformContext) {

@@ -125,7 +125,7 @@ describe('defineVaporCustomElement', () => {
       const containerComp = defineVaporComponent({
         setup() {
           const n1 = template('<div><div id="move"></div></div>', true)() as any
-          setInsertionState(n1, 0, 0, true)
+          setInsertionState(n1, 0, 0)
           createPlainElement('my-el-input', {
             value: () => num.value,
             onInput: () => ($event: CustomEvent) => {
@@ -781,13 +781,13 @@ describe('defineVaporCustomElement', () => {
         const t0 = template('<div>fallback</div>')
         const t1 = template('<div></div>')
         const n3 = t1() as any
-        setInsertionState(n3, null, 0, true)
+        setInsertionState(n3, null, 0)
         createSlot('default', null, () => {
           const n2 = t0()
           return n2
         })
         const n5 = t1() as any
-        setInsertionState(n5, null, 0, true)
+        setInsertionState(n5, null, 0)
         createSlot('named', null)
         return [n3, n5]
       },

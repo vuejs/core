@@ -24,6 +24,7 @@ import {
   isBlockTag,
   isBuiltInDirective,
   isFormattingTag,
+  isInlineTag,
   isVoidTag,
   makeMap,
 } from '@vue/shared'
@@ -160,6 +161,16 @@ function canOmitEndTag(
     return true
   }
 
+  if (
+    (context.templateCloseTags &&
+      (context.templateCloseTags.has(node.tag) ||
+        isAlwaysCloseTag(node.tag) ||
+        isFormattingTag(node.tag))) ||
+    (context.templateCloseBlocks && isBlockTag(node.tag))
+  ) {
+    return false
+  }
+
   // Elements in the alwaysClose list cannot have their end tags omitted
   // unless they are on the rightmost path.
   if (isAlwaysCloseTag(node.tag) && !context.isOnRightmostPath) {
@@ -177,13 +188,71 @@ function canOmitEndTag(
     return context.isOnRightmostPath
   }
 
-  // For inline element containing block element, if the inline ancestor
-  // is not on rightmost path, the block must close to avoid parsing issues
-  if (isBlockTag(node.tag) && context.hasInlineAncestorNeedingClose) {
+  return context.isLastEffectiveChild
+}
+
+interface TemplateCloseState {
+  tags: Set<string> | undefined
+  blocks: boolean
+}
+
+export function getChildTemplateCloseState(
+  context: TransformContext<ElementNode>,
+): TemplateCloseState | undefined {
+  const { node } = context
+  if (
+    node.type !== NodeTypes.ELEMENT ||
+    node.tagType !== ElementTypes.ELEMENT ||
+    shouldUseCreateElement(node, context)
+  ) {
+    return
+  }
+
+  const inSameTemplateAsParent = isInSameTemplateAsParent(context)
+  const inheritedTags = inSameTemplateAsParent
+    ? context.templateCloseTags
+    : undefined
+  const inheritedBlocks = inSameTemplateAsParent && context.templateCloseBlocks
+
+  const omitEndTag =
+    context.root === context.effectiveParent ||
+    canOmitEndTag(node as PlainElementNode, context)
+
+  if (omitEndTag || isVoidTag(node.tag)) {
+    return inheritedTags || inheritedBlocks
+      ? { tags: inheritedTags, blocks: inheritedBlocks }
+      : undefined
+  }
+
+  const tags = new Set(inheritedTags)
+  tags.add(node.tag)
+  return {
+    tags,
+    blocks: inheritedBlocks || isInlineTag(node.tag),
+  }
+}
+
+export function isInSameTemplateAsParent(
+  context: TransformContext<ElementNode>,
+): boolean {
+  const { parent, node, block } = context
+  if (!parent || block !== parent.block) {
+    return false
+  }
+  const parentNode = parent.node
+  if (
+    parentNode.type !== NodeTypes.ELEMENT ||
+    parentNode.tagType !== ElementTypes.ELEMENT
+  ) {
     return false
   }
 
-  return context.isLastEffectiveChild
+  return (
+    !shouldUseCreateElement(
+      parentNode,
+      parent as TransformContext<ElementNode>,
+    ) && isValidHTMLNesting(parentNode.tag, node.tag)
+  )
 }
 
 function isSingleRoot(
@@ -270,6 +339,7 @@ function transformComponentElement(
   context.dynamic.operation = {
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
     id,
+    ...context.effectBoundary(),
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     asset,

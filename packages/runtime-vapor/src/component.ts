@@ -86,14 +86,16 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
+  type HydrationCursor,
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
   enterHydrationBoundary,
+  enterHydrationCursor,
+  exitHydrationCursor,
   isComment,
   isHydrating,
   locateEndAnchor,
-  locateHydrationNode,
   locateNextNode,
   markHydrationAnchor,
   setCurrentHydrationNode,
@@ -114,7 +116,6 @@ import {
 import {
   insertionAnchor,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import type {
@@ -128,7 +129,10 @@ import {
   parentSuspense,
   setParentSuspense,
 } from './suspense'
-import { isInteropEnabled } from './vdomInteropState'
+import {
+  isCollectingVdomSlotVNodes,
+  isInteropEnabled,
+} from './vdomInteropState'
 import { setComponentScopeId, setScopeId } from './scopeId'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
@@ -254,10 +258,20 @@ export function createComponent(
     emptyContext,
   managedMount = false,
 ): VaporComponentInstance {
+  if (isInteropEnabled && isCollectingVdomSlotVNodes) {
+    if (component.__vapor) {
+      // Vapor components cannot be represented as VDOM child metadata. Bail out
+      // with undefined so slots.default() falls back to the real renderSlot path.
+      return undefined as any
+    }
+    const owner = getScopeOwner()
+    if (owner) appContext = owner.appContext
+  }
+
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
   let hydrationClose: Node | null = null
+  let hydrationCursor: HydrationCursor | null = null
   let exitHydrationBoundary: (() => void) | undefined
   let deferHydrationBoundary = false
   const finalizeHydrationBoundary = () => {
@@ -267,7 +281,7 @@ export function createComponent(
     }
   }
   if (isHydrating) {
-    locateHydrationNode()
+    hydrationCursor = enterHydrationCursor()
     if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
       hydrationClose = locateEndAnchor(currentHydrationNode!)
       exitHydrationBoundary = enterHydrationBoundary(
@@ -279,8 +293,9 @@ export function createComponent(
     resetInsertionState()
   }
 
+  let prevSuspense: SuspenseBoundary | null = null
+  let hasParentSuspense = false
   try {
-    let prevSuspense: SuspenseBoundary | null = null
     if (
       __FEATURE_SUSPENSE__ &&
       isSuspenseEnabled &&
@@ -288,6 +303,7 @@ export function createComponent(
       currentInstance.suspense
     ) {
       prevSuspense = setParentSuspense(currentInstance.suspense)
+      hasParentSuspense = true
     }
 
     if (
@@ -334,13 +350,15 @@ export function createComponent(
         rawProps,
         rawSlots,
       )
+      if (isCollectingVdomSlotVNodes) {
+        // VDOM interop children already expose frag.vnode for collection. Do not
+        // mount or hydrate the dry fragment.
+        return frag as any
+      }
       if (!isHydrating) {
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {
         frag.hydrate()
-        if (_isLastInsertion) {
-          advanceHydrationNode(_insertionParent!)
-        }
       }
       return frag
     }
@@ -357,9 +375,6 @@ export function createComponent(
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {
         frag.hydrate()
-        if (_isLastInsertion) {
-          advanceHydrationNode(_insertionParent!)
-        }
       }
 
       return frag as any
@@ -389,60 +404,60 @@ export function createComponent(
 
     // reset currentSlotOwner to null to avoid affecting the child components
     const prevSlotOwner = setCurrentSlotOwner(null)
+    let hasWarningContext = false
+    let hasInitMeasure = false
+    try {
+      // HMR
+      if (__DEV__) {
+        registerHMR(instance)
+        instance.isSingleRoot = isSingleRoot
+        instance.hmrRerender = hmrRerender.bind(null, instance)
+        instance.hmrReload = hmrReload.bind(null, instance)
 
-    // HMR
-    if (__DEV__) {
-      registerHMR(instance)
-      instance.isSingleRoot = isSingleRoot
-      instance.hmrRerender = hmrRerender.bind(null, instance)
-      instance.hmrReload = hmrReload.bind(null, instance)
+        pushWarningContext(instance)
+        hasWarningContext = true
+        startMeasure(instance, `init`)
+        hasInitMeasure = true
 
-      pushWarningContext(instance)
-      startMeasure(instance, `init`)
+        // cache normalized options for dev only emit check
+        instance.propsOptions = normalizePropsOptions(component)
+        instance.emitsOptions = normalizeEmitsOptions(component)
+      }
 
-      // cache normalized options for dev only emit check
-      instance.propsOptions = normalizePropsOptions(component)
-      instance.emitsOptions = normalizeEmitsOptions(component)
+      // hydrating async component
+      if (
+        isHydrating &&
+        isAsyncWrapper(instance) &&
+        component.__asyncHydrate &&
+        !component.__asyncResolved
+      ) {
+        component.__asyncHydrate(
+          currentHydrationNode as Element,
+          instance,
+          () => setupComponent(instance, component),
+        )
+      } else {
+        setupComponent(instance, component)
+      }
+    } finally {
+      if (__DEV__) {
+        if (hasWarningContext) {
+          popWarningContext()
+        }
+        if (hasInitMeasure) {
+          endMeasure(instance, 'init')
+        }
+      }
+      setCurrentSlotOwner(prevSlotOwner)
+      if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && hasParentSuspense) {
+        setParentSuspense(prevSuspense)
+        hasParentSuspense = false
+      }
     }
-
-    // hydrating async component
-    if (
-      isHydrating &&
-      isAsyncWrapper(instance) &&
-      component.__asyncHydrate &&
-      !component.__asyncResolved
-    ) {
-      component.__asyncHydrate(currentHydrationNode as Element, instance, () =>
-        setupComponent(instance, component),
-      )
-    } else {
-      setupComponent(instance, component)
-    }
-
-    if (__DEV__) {
-      popWarningContext()
-      endMeasure(instance, 'init')
-    }
-
-    if (
-      __FEATURE_SUSPENSE__ &&
-      isSuspenseEnabled &&
-      currentInstance &&
-      currentInstance.suspense
-    ) {
-      setParentSuspense(prevSuspense)
-    }
-
-    // restore currentSlotOwner to previous value after setupFn is called
-    setCurrentSlotOwner(prevSlotOwner)
     onScopeDispose(() => unmountComponent(instance), true)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
       mountComponent(instance, _insertionParent!, _insertionAnchor)
-    }
-
-    if (isHydrating && _isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
     }
 
     if (
@@ -466,12 +481,19 @@ export function createComponent(
         }
         finalizeHydrationBoundary()
       }
+      exitHydrationCursor(hydrationCursor)
     }
 
     return instance
   } finally {
+    if (hasParentSuspense) {
+      setParentSuspense(prevSuspense)
+    }
     if (isHydrating && !deferHydrationBoundary) {
+      // Boundary cleanup still needs the component-local cursor. Only after
+      // that do we restore the outer cursor's resume point.
       finalizeHydrationBoundary()
+      exitHydrationCursor(hydrationCursor)
     }
   }
 }
@@ -537,8 +559,11 @@ export function applyFallthroughProps(
   attrs: Record<string, any>,
 ): void {
   isApplyingFallthroughProps = true
-  setDynamicProps(el, [attrs])
-  isApplyingFallthroughProps = false
+  try {
+    setDynamicProps(el, [attrs])
+  } finally {
+    isApplyingFallthroughProps = false
+  }
 }
 
 /**
@@ -912,9 +937,9 @@ export function createPlainElement(
 ): HTMLElement {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
+  let hydrationCursor: HydrationCursor | null = null
   if (isHydrating) {
-    locateHydrationNode()
+    hydrationCursor = enterHydrationCursor()
   } else {
     resetInsertionState()
   }
@@ -954,7 +979,7 @@ export function createPlainElement(
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
     } else {
-      let slot = getSlot(rawSlots as RawSlots, 'default')
+      const slot = getSlot(rawSlots as RawSlots, 'default')
       if (slot) {
         const block = slot()
         if (!isHydrating) insert(block, el)
@@ -968,9 +993,7 @@ export function createPlainElement(
   if (!isHydrating) {
     if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
   } else {
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
-    }
+    exitHydrationCursor(hydrationCursor)
   }
 
   return el

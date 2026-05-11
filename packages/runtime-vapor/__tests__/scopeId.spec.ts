@@ -316,7 +316,7 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       setup() {
         const n0 = template('<div>')() as any
-        setInsertionState(n0, null, 0, true)
+        setInsertionState(n0, null, 0)
         createSlot('default')
         return n0
       },
@@ -380,7 +380,7 @@ describe('scopeId', () => {
     const Parent = defineVaporComponent({
       setup() {
         const n1 = template('<div>', true)() as any
-        setInsertionState(n1, null, 0, true)
+        setInsertionState(n1, null, 0)
         createSlot('default', null)
         return n1
       },
@@ -389,7 +389,7 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       setup() {
         const n1 = template('<div>', true)() as any
-        setInsertionState(n1, null, 0, true)
+        setInsertionState(n1, null, 0)
         createSlot('default', null)
         return n1
       },

@@ -818,6 +818,20 @@ describe('compiler: transform slot', () => {
       expect(code).toMatchSnapshot()
     })
 
+    test('dynamic slot source with slot outlet should have withVaporCtx', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template v-for="(_, name) in slots" #[name]>
+            <slot :name="name" />
+          </template>
+        </Comp>
+      `)
+      expect(code).toContain(`$: [
+      _withVaporCtx(() => (_createForSlots`)
+      expect(code).toContain(`fn: _withVaporCtx(() =>`)
+      expect(code).toMatchSnapshot()
+    })
+
     test('slot with component inside v-if should have withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>

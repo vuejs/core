@@ -42,6 +42,11 @@ export interface BaseIRNode {
   type: IRNodeTypes
 }
 
+export interface EffectBoundary {
+  operationIndex?: number
+  effectIndex?: number
+}
+
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
 
 export type VaporHelper = keyof typeof import('packages/runtime-vapor/src')
@@ -82,7 +87,7 @@ export class TemplateRegistry {
   }
 }
 
-export interface IfIRNode extends BaseIRNode {
+export interface IfIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.IF
   id: number
   blockShape: number
@@ -95,7 +100,6 @@ export interface IfIRNode extends BaseIRNode {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
 export interface IRFor {
@@ -105,7 +109,7 @@ export interface IRFor {
   index?: SimpleExpressionNode
 }
 
-export interface ForIRNode extends BaseIRNode, IRFor {
+export interface ForIRNode extends BaseIRNode, IRFor, EffectBoundary {
   type: IRNodeTypes.FOR
   id: number
   keyProp?: SimpleExpressionNode
@@ -117,10 +121,9 @@ export interface ForIRNode extends BaseIRNode, IRFor {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
-export interface KeyIRNode extends BaseIRNode {
+export interface KeyIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.KEY
   id: number
   value: SimpleExpressionNode
@@ -129,7 +132,6 @@ export interface KeyIRNode extends BaseIRNode {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
 export interface SetBlockKeyIRNode extends BaseIRNode {
@@ -224,7 +226,7 @@ export interface DirectiveIRNode extends BaseIRNode {
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
 }
 
-export interface CreateComponentIRNode extends BaseIRNode {
+export interface CreateComponentIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.CREATE_COMPONENT_NODE
   id: number
   tag: string
@@ -239,10 +241,9 @@ export interface CreateComponentIRNode extends BaseIRNode {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
-export interface SlotOutletIRNode extends BaseIRNode {
+export interface SlotOutletIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.SLOT_OUTLET_NODE
   id: number
   name: SimpleExpressionNode
@@ -254,7 +255,6 @@ export interface SlotOutletIRNode extends BaseIRNode {
   anchor?: number
   logicalIndex?: number
   append?: boolean
-  last?: boolean
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {

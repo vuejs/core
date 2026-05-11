@@ -21,11 +21,12 @@ import { type RawSlots, getScopeOwner } from './componentSlots'
 import {
   insertionAnchor,
   insertionParent,
-  isLastInsertion,
   resetInsertionState,
 } from './insertionState'
 import {
-  advanceHydrationNode,
+  type HydrationCursor,
+  captureHydrationCursor,
+  exitHydrationCursor,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
@@ -43,8 +44,10 @@ export function createDynamicComponent(
 ): VaporFragment {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  const _isLastInsertion = isLastInsertion
   if (!isHydrating) resetInsertionState()
+  const hydrationCursor: HydrationCursor | null = isHydrating
+    ? captureHydrationCursor()
+    : null
 
   const frag =
     isHydrating || __DEV__
@@ -74,9 +77,6 @@ export function createDynamicComponent(
         if (isHydrating) {
           locateHydrationNode(shouldConsumeFragmentStart(value))
           frag.hydrate()
-          if (_isLastInsertion) {
-            advanceHydrationNode(_insertionParent!)
-          }
         }
         return frag
       }
@@ -98,9 +98,7 @@ export function createDynamicComponent(
   if (!isHydrating) {
     if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
   } else {
-    if (_isLastInsertion) {
-      advanceHydrationNode(_insertionParent!)
-    }
+    exitHydrationCursor(hydrationCursor)
   }
   return frag
 }

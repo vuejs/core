@@ -141,6 +141,17 @@ describe('compiler: v-for', () => {
     expect(code).matchSnapshot()
   })
 
+  test('multi className helper with repeated v-for value', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="todo of todos" :key="todo.id" :class="{ completed: todo.completed, editing: todo === editedTodo }" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains(`const _todo = _for_item0.value`)
+    expect(code).contains(
+      `_setClassName(n2, (_todo.completed ? 1 : 0) | (_todo === _ctx.editedTodo ? 2 : 0), [" completed", " editing"])`,
+    )
+  })
+
   test('w/o value', () => {
     const { code } = compileWithVFor(`<div v-for=" of items">item</div>`)
     expect(code).matchSnapshot()

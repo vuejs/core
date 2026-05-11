@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.6.0-beta.10",
+  "version": "3.6.0-beta.11",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
@@ -50,7 +50,7 @@
     "@vue/shared": "workspace:*",
     "estree-walker": "catalog:",
     "magic-string": "catalog:",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.14",
     "source-map-js": "catalog:"
   },
   "devDependencies": {

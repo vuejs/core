@@ -125,7 +125,15 @@ const VaporKeepAliveImpl = defineVaporComponent({
       const rerender = keepAliveInstance.hmrRerender
       keepAliveInstance.hmrRerender = () => {
         keepAliveInstance.exposed = null
-        cache.forEach(cached => unsetShapeFlag(cached))
+        cache.forEach(cached => {
+          unsetShapeFlag(cached)
+          if (cached !== current) {
+            // Cached blocks may contain interop children whose VDOM teardown
+            // is owned by remove(), not scope.stop().
+            const parentNode = findBlockNode(cached).parentNode
+            if (parentNode) remove(cached, parentNode as ParentNode)
+          }
+        })
         cache.clear()
         keys.clear()
         keptAliveScopes.forEach(scope => scope.stop())

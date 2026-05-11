@@ -32,12 +32,17 @@ import {
   renderSlot,
   shallowRef,
   toDisplayString,
+  useSlots,
 } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import { type Block, isValidBlock } from '../src/block'
-import { hydrateNode, setCurrentHydrationNode } from '../src/dom/hydration'
+import {
+  hydrateNode,
+  setCurrentHydrationNode,
+  setIsHydratingEnabled,
+} from '../src/dom/hydration'
 import {
   DynamicFragment,
   ForFragment,
@@ -442,6 +447,35 @@ describe('component: slots', () => {
           expect(isHydratingSlotFallbackActive()).toBe(false)
         })
       })
+    })
+
+    test('empty forwarded slot hydration does not clean following sibling', async () => {
+      const start = document.createComment('[')
+      const end = document.createComment(']')
+      const footer = document.createElement('footer')
+      footer.textContent = 'footer'
+      const host = document.createElement('div')
+      host.append(start, end, footer)
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            const frag = new SlotFragment()
+            frag.forwarded = true
+            setCurrentHydrationNode(footer)
+            frag.hydrate(true, true)
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+      await nextTick()
+
+      expect(host.innerHTML).toBe(
+        '<!--[--><!--]--><!--slot--><footer>footer</footer>',
+      )
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
     test('slot fallback controller stops fallback scope when fallback body throws', async () => {
@@ -872,6 +906,50 @@ describe('component: slots', () => {
       val.value = 'footer'
       await nextTick()
       expect(host.innerHTML).toBe('<div>footer<!--slot--></div>')
+    })
+
+    test('dynamic slot source inside forwarded slot should preserve owner', async () => {
+      const msg = ref('late')
+      const Leaf = defineVaporComponent(() => createSlot('late', null))
+      const Carrier = defineVaporComponent(() => createSlot('default', null))
+      const Root = defineVaporComponent(() => {
+        const slots = useSlots()
+        return createComponent(Carrier, null, {
+          default: withVaporCtx(() =>
+            createComponent(Leaf, null, {
+              $: [
+                // required wrapped in withVaporCtx to preserve owner when create dynamic slot source
+                withVaporCtx(() =>
+                  createForSlots(slots, (_slot, name) => ({
+                    name,
+                    fn: withVaporCtx(() => createSlot(name)),
+                  })),
+                ) as any,
+              ],
+            }),
+          ),
+        })
+      })
+
+      const { host } = define(() =>
+        createComponent(Root, null, {
+          late: withVaporCtx(() => {
+            const n0 = template('<span></span>')()
+            renderEffect(() => setElementText(n0, msg.value))
+            return n0
+          }),
+        }),
+      ).render()
+
+      expect(host.innerHTML).toBe(
+        '<span>late</span><!--slot--><!--slot--><!--slot-->',
+      )
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(host.innerHTML).toBe(
+        '<span>updated</span><!--slot--><!--slot--><!--slot-->',
+      )
     })
 
     test('fallback should be render correctly', () => {
@@ -1643,7 +1721,7 @@ describe('component: slots', () => {
                   () => props.show,
                   () => {
                     const n5 = template('<div></div>')() as any
-                    setInsertionState(n5, null, 0, true)
+                    setInsertionState(n5, null, 0)
                     createSlot('header', null, () => {
                       const n4 = template('default header')()
                       return n4

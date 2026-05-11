@@ -5,6 +5,7 @@ import {
   setBlockHtml,
   setBlockText,
   setClass,
+  setClassName,
   setDynamicProps,
   setElementText,
   setHtml,
@@ -17,6 +18,7 @@ import {
   VaporComponentInstance,
   applyFallthroughProps,
   createComponent,
+  isApplyingFallthroughProps,
 } from '../../src/component'
 import { ref, setCurrentInstance, svgNS, xlinkNS } from '@vue/runtime-dom'
 import { makeRender } from '../_utils'
@@ -49,6 +51,80 @@ describe('patchProp', () => {
       expect(el.className).toBe('bar baz')
       setClass(el, { a: true, b: false })
       expect(el.className).toBe('a')
+    })
+
+    test('should set class with flags', () => {
+      const el = document.createElement('div')
+
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+
+      setClassName(el, 0, ['danger'])
+      expect(el.className).toBe('')
+
+      const string = document.createElement('div')
+      setClassName(string, 1, 'danger')
+      expect(string.className).toBe('danger')
+
+      setClassName(el, 1, [' danger'])
+      expect(el.className).toBe('danger')
+
+      const multi = document.createElement('div')
+      setClassName(multi, 3, [' danger', ' active'])
+      expect(multi.className).toBe('danger active')
+
+      setClassName(el, 3, [' danger', ' active'], 'base')
+      expect(el.className).toBe('base danger active')
+
+      const stringWithBase = document.createElement('div')
+      setClassName(stringWithBase, 1, ' danger', 'base')
+      expect(stringWithBase.className).toBe('base danger')
+
+      setClassName(el, 1, ['danger'], '', 'tail')
+      expect(el.className).toBe('danger tail')
+
+      setClassName(el, 0, ['danger'], '', 'tail')
+      expect(el.className).toBe('tail')
+    })
+
+    test('should refresh after generic class writes', () => {
+      const el = document.createElement('div')
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+
+      setClass(el, 'fallthrough')
+      expect(el.className).toBe('fallthrough')
+
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+    })
+
+    test('should support the max className flag bit', () => {
+      const el = document.createElement('div')
+      const classes = Array.from({ length: 31 }, (_, i) => ` c${i}`)
+
+      setClassName(el, 0x7fffffff, classes, 'base')
+      expect(el.className).toBe(
+        `base ${Array.from({ length: 31 }, (_, i) => `c${i}`).join(' ')}`,
+      )
+    })
+
+    test('should set root class with flags incrementally', () => {
+      const el = document.createElement('div')
+      el.className = 'fallthrough'
+      ;(el as any).$root = true
+
+      setClassName(el, 1, [' danger'], 'base')
+      expect(el.className).toBe('fallthrough base danger')
+
+      setClassName(el, 0, [' danger'], 'base')
+      expect(el.className).toBe('fallthrough base')
+
+      setClassName(el, 1, ['danger'], '', 'tail')
+      expect(el.className).toBe('fallthrough danger tail')
+
+      setClassName(el, 0, ['danger'], '', 'tail')
+      expect(el.className).toBe('fallthrough tail')
     })
   })
 
@@ -580,6 +656,21 @@ describe('patchProp', () => {
 
       applyFallthroughProps(el, { ['.bar']: 'next' })
       expect(fallthroughSetCount).toBe(2)
+    })
+
+    test('should restore fallthrough state when dynamic props throw', () => {
+      const el = document.createElement('div')
+      const attrs: Record<string, any> = {}
+
+      Object.defineProperty(attrs, 'foo', {
+        enumerable: true,
+        get() {
+          throw new Error('fallthrough boom')
+        },
+      })
+
+      expect(() => applyFallthroughProps(el, attrs)).toThrow('fallthrough boom')
+      expect(isApplyingFallthroughProps).toBe(false)
     })
   })
 

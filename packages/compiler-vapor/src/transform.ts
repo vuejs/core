@@ -14,14 +14,7 @@ import {
   getSelfName,
   isVSlot,
 } from '@vue/compiler-dom'
-import {
-  EMPTY_OBJ,
-  NOOP,
-  extend,
-  isArray,
-  isInlineTag,
-  isString,
-} from '@vue/shared'
+import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
 import {
   type BlockIRNode,
   DynamicFlag,
@@ -34,6 +27,7 @@ import {
   type SetEventIRNode,
   TemplateRegistry,
   type VaporDirectiveNode,
+  isBlockOperation,
 } from './ir'
 import { isConstantExpression, isStaticExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
@@ -110,9 +104,13 @@ export class TransformContext<T extends AllNode = AllNode> {
   // whether this node is on the rightmost path of the tree
   // (all ancestors are also last effective children)
   isOnRightmostPath: boolean = true
-  // whether there is an inline ancestor that needs closing
-  // (i.e. is an inline tag and not on the rightmost path)
-  hasInlineAncestorNeedingClose: boolean = false
+  // If an ancestor in the same template must close explicitly, descendants
+  // with matching tags must also close so the browser doesn't consume the
+  // ancestor close tag for the descendant.
+  templateCloseTags: Set<string> | undefined = undefined
+  // Inline ancestors with explicit close tags also require block descendants
+  // in the same template to close explicitly.
+  templateCloseBlocks: boolean = false
 
   private globalId = 0
   private nextIdMap: Map<number, number> | null = null
@@ -270,7 +268,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   registerEffect(
     expressions: SimpleExpressionNode[],
     operation: OperationNode | OperationNode[],
-    getIndex = (): number => this.block.effect.length,
+    getIndex?: () => number,
   ): void {
     const operations = [operation].flat()
     expressions = expressions.filter(exp => !isConstantExpression(exp))
@@ -284,14 +282,25 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    this.block.effect.splice(getIndex(), 0, {
+    const index = getIndex ? getIndex() : this.block.effect.length
+    this.block.effect.splice(index, 0, {
       expressions,
       operations,
     })
+    if (getIndex) {
+      this.shiftEffectBoundaries(index)
+    }
   }
 
   registerOperation(...node: OperationNode[]): void {
     this.block.operation.push(...node)
+  }
+
+  effectBoundary(): { operationIndex: number; effectIndex: number } {
+    return {
+      operationIndex: this.operationIndex,
+      effectIndex: this.effectIndex,
+    }
   }
 
   create<T extends TemplateChildNode>(
@@ -313,25 +322,6 @@ export class TransformContext<T extends AllNode = AllNode> {
     const isLastEffectiveChild = this.isEffectivelyLastChild(index)
     const isOnRightmostPath = this.isOnRightmostPath && isLastEffectiveChild
 
-    // propagate the inline ancestor status
-    let hasInlineAncestorNeedingClose = this.hasInlineAncestorNeedingClose
-    if (this.node.type === NodeTypes.ELEMENT) {
-      if (this.node.tag === 'template') {
-        // <template> acts as a boundary ensuring its content is parsed as a fragment,
-        // protecting inner blocks from outer inline contexts.
-        hasInlineAncestorNeedingClose = false
-      } else if (
-        !hasInlineAncestorNeedingClose &&
-        !this.isOnRightmostPath &&
-        isInlineTag(this.node.tag)
-      ) {
-        // Logic: if current node (parent of the node being created) is inline
-        // AND it's not on the rightmost path, then it needs closing.
-        // Any block child inside will need to be careful.
-        hasInlineAncestorNeedingClose = true
-      }
-    }
-
     return Object.assign(Object.create(TransformContext.prototype), this, {
       node,
       parent: this as any,
@@ -347,8 +337,28 @@ export class TransformContext<T extends AllNode = AllNode> {
       effectiveParent,
       isLastEffectiveChild,
       isOnRightmostPath,
-      hasInlineAncestorNeedingClose,
+      templateCloseTags: this.templateCloseTags,
+      templateCloseBlocks: this.templateCloseBlocks,
     } satisfies Partial<TransformContext<T>>)
+  }
+
+  private shiftEffectBoundaries(
+    index: number,
+    dynamic: IRDynamicInfo = this.dynamic,
+  ): void {
+    const operation = dynamic.operation
+    if (
+      operation &&
+      isBlockOperation(operation) &&
+      operation.effectIndex !== undefined &&
+      operation.effectIndex >= index
+    ) {
+      operation.effectIndex++
+    }
+
+    for (const child of dynamic.children) {
+      this.shiftEffectBoundaries(index, child)
+    }
   }
 
   private isEffectivelyLastChild(index: number): boolean {

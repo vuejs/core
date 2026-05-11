@@ -12,6 +12,7 @@ import {
   createBlock,
   createCommentVNode,
   createElementBlock,
+  getCurrentInstance,
   h,
   nextTick,
   nodeOps,
@@ -29,6 +30,7 @@ import {
   shallowRef,
   watch,
   watchEffect,
+  withAsyncContext,
   withDirectives,
 } from '@vue/runtime-test'
 import {
@@ -36,6 +38,7 @@ import {
   createApp,
   defineAsyncComponent as defineAsyncComp,
   defineComponent,
+  effectScope,
   inject,
   provide,
 } from 'vue'
@@ -2869,6 +2872,44 @@ describe('Suspense', () => {
     expect(serializeInner(target)).toBe(``)
   })
 
+  // #14701
+  test('should not crash when moving disabled teleport with component children inside suspense', async () => {
+    const target = nodeOps.createElement('div')
+
+    const Comp = {
+      render() {
+        return h('div', 'comp')
+      },
+    }
+
+    const Async = defineAsyncComponent({
+      render() {
+        // Multi-root fragment: element + disabled teleport with component child
+        return [
+          h('div', 'content'),
+          h(Teleport, { to: target, disabled: true }, h(Comp)),
+        ]
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(Suspense, null, {
+        default: h(Async),
+        fallback: h('div', 'fallback'),
+      }),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div>content</div><!--teleport start--><div>comp</div><!--teleport end-->`,
+    )
+  })
+
   //#11617
   test('update async component before resolve then update again', async () => {
     const arr: boolean[] = []
@@ -3268,6 +3309,219 @@ describe('Suspense', () => {
       await Promise.all(deps)
       await nextTick()
       expect(unmounted).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('async setup with top-level await', () => {
+    test('pending branch replaced before async setup resolves', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      let resolvePending!: (v?: unknown) => void
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvePending = r
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          watch(stateRef, updateSpy)
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const FillerComp = defineComponent({
+        setup: () => () => h('div', 'filler'),
+      })
+
+      const view = shallowRef<any>(SlowComp)
+      const Comp = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback'),
+          }),
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      view.value = FillerComp
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>filler</div>`)
+
+      // wait a macro task tick for all micro ticks to resolve
+      resolvePending(undefined)
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    test('boundary unmounted before async setup resolves', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      let resolvePending!: (v?: unknown) => void
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvePending = r
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          watch(stateRef, updateSpy)
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() =>
+          h(Suspense, null, {
+            default: h(SlowComp),
+            fallback: h('div', 'fallback'),
+          }),
+        ),
+        root,
+      )
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      render(null, root)
+
+      resolvePending(undefined)
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    test('repeated branch replacement before async setup resolves', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      const resolvers: Array<(v?: unknown) => void> = []
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvers.push(r)
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          const uid = getCurrentInstance()!.uid
+          watch(stateRef, () => {
+            updateSpy(uid)
+          })
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const FillerComp = defineComponent({
+        setup: () => () => h('div', 'filler'),
+      })
+
+      const view = shallowRef<any>(FillerComp)
+      const Comp = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback'),
+          }),
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>filler</div>`)
+
+      for (let i = 0; i < 3; i++) {
+        view.value = SlowComp
+        await nextTick()
+        view.value = FillerComp
+        await nextTick()
+      }
+
+      expect(resolvers.length).toBe(3)
+      resolvers.forEach(r => r(undefined))
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    test('nested scope created after pending branch is abandoned', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      let resolvePending!: (v?: unknown) => void
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvePending = r
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          effectScope().run(() => {
+            watch(stateRef, updateSpy)
+          })
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const FillerComp = defineComponent({
+        setup: () => () => h('div', 'filler'),
+      })
+
+      const view = shallowRef<any>(SlowComp)
+      const Comp = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback'),
+          }),
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      view.value = FillerComp
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>filler</div>`)
+
+      resolvePending(undefined)
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
     })
   })
 })

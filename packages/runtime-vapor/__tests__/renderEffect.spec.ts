@@ -187,6 +187,47 @@ describe('renderEffect', () => {
     ).toHaveBeenWarned()
   })
 
+  test('should restore update state when render throws during update', async () => {
+    const calls: string[] = []
+    const { instance } = createDemo(
+      // setup
+      () => {
+        const source = ref(0)
+        const update = () => source.value++
+        onBeforeUpdate(() => calls.push(`beforeUpdate ${source.value}`))
+        onUpdated(() => calls.push(`updated ${source.value}`))
+        return { source, update }
+      },
+      // render
+      ctx => {
+        renderEffect(() => {
+          calls.push(`render ${ctx.source}`)
+          if (ctx.source === 1) {
+            throw new Error('error in render')
+          }
+        })
+      },
+    ).render()
+
+    const { update } = instance?.setupState as any
+    expect(calls).toEqual(['render 0'])
+    calls.length = 0
+
+    update()
+    await expect(nextTick()).rejects.toThrow('error in render')
+    expect(
+      '[Vue warn]: Unhandled error during execution of component update',
+    ).toHaveBeenWarned()
+    expect(currentInstance).toBe(null)
+    expect((instance as any).isUpdating).toBe(false)
+
+    calls.length = 0
+    update()
+    await nextTick()
+    expect(calls).toEqual(['beforeUpdate 2', 'render 2', 'updated 2'])
+    expect((instance as any).isUpdating).toBe(false)
+  })
+
   test('errors should include the execution location with updated hook', async () => {
     const { instance } = createDemo(
       // setup
