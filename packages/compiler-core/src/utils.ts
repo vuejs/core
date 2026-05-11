@@ -217,6 +217,18 @@ export const isFnExpressionNode: (
           }
         }
         ret = unwrapTSNode(ret) as Expression
+        // An unnamed function declaration (e.g. `function () { ';' }`) is
+        // actually a valid function expression. Babel's parseExpression may
+        // parse it as a FunctionDeclaration when the source contains a
+        // semicolon, so re-parse wrapped in parens to disambiguate.
+        if (ret.type === 'FunctionDeclaration' && (ret as any).id === null) {
+          ret = parseExpression(`(${getExpSource(exp)})`, {
+            plugins: context.expressionPlugins
+              ? [...context.expressionPlugins, 'typescript']
+              : ['typescript'],
+          })
+          ret = unwrapTSNode(ret) as Expression
+        }
         return (
           ret.type === 'FunctionExpression' ||
           ret.type === 'ArrowFunctionExpression'
