@@ -127,6 +127,7 @@ import {
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
 import {
+  interopKey,
   isCollectingVdomSlotVNodes,
   setInteropEnabled,
   withVdomSlotVNodeCollection,
@@ -148,8 +149,6 @@ import {
   isSuspenseEnabled,
   setParentSuspense,
 } from './suspense'
-
-export const interopKey: unique symbol = Symbol(`interop`)
 
 function filterReservedProps(props: VNode['props']): VNode['props'] {
   const filtered: VNode['props'] = {}
