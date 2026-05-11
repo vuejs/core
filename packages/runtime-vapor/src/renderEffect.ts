@@ -3,6 +3,7 @@ import {
   type SchedulerJob,
   SchedulerJobFlags,
   currentInstance,
+  endMeasure,
   queueJob,
   queuePostFlushCb,
   setCurrentInstance,
@@ -71,18 +72,26 @@ export class RenderEffect extends ReactiveEffect {
       startMeasure(instance, `renderEffect`)
     }
     const prev = setCurrentInstance(instance, scope)
-    if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
-      // avoid recurse update until updateJob flushed
-      instance.isUpdating = true
-      instance.bu && invokeArrayFns(instance.bu)
-      this.render()
-      queuePostFlushCb(this.updateJob)
-    } else {
-      this.render()
-    }
-    setCurrentInstance(...prev)
-    if (__DEV__ && instance) {
-      startMeasure(instance, `renderEffect`)
+    try {
+      if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
+        // avoid recurse update until updateJob flushed
+        instance.isUpdating = true
+        try {
+          instance.bu && invokeArrayFns(instance.bu)
+          this.render()
+        } catch (err) {
+          instance.isUpdating = false
+          throw err
+        }
+        queuePostFlushCb(this.updateJob)
+      } else {
+        this.render()
+      }
+    } finally {
+      setCurrentInstance(...prev)
+      if (__DEV__ && instance) {
+        endMeasure(instance, `renderEffect`)
+      }
     }
   }
 
