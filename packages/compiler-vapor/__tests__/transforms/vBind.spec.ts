@@ -864,6 +864,16 @@ describe('compiler v-bind', () => {
     expect(code).not.contains('_setClassName')
   })
 
+  test('className helper supports the max safe bit flag', () => {
+    const entries = Array.from({ length: 31 }, (_, i) => `c${i}: a${i}`).join(
+      ', ',
+    )
+    const { code } = compileWithVBind(`<div :class="{ ${entries} }"/>`)
+    expect(code).contains('_setClassName')
+    expect(code).contains('(_ctx.a30 ? 1073741824 : 0)')
+    expect(code).not.contains('_setClass(n0, {')
+  })
+
   test('computed object class key falls back to setClass', () => {
     const { code } = compileWithVBind(`
       <div :class="{ [name]: active }"/>

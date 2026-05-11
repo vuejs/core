@@ -79,6 +79,28 @@ describe('patchProp', () => {
       expect(el.className).toBe('tail')
     })
 
+    test('should refresh after generic class writes', () => {
+      const el = document.createElement('div')
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+
+      setClass(el, 'fallthrough')
+      expect(el.className).toBe('fallthrough')
+
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+    })
+
+    test('should support the max className flag bit', () => {
+      const el = document.createElement('div')
+      const classes = Array.from({ length: 31 }, (_, i) => ` c${i}`)
+
+      setClassName(el, 0x7fffffff, classes, 'base')
+      expect(el.className).toBe(
+        `base ${Array.from({ length: 31 }, (_, i) => `c${i}`).join(' ')}`,
+      )
+    })
+
     test('should set root class with flags incrementally', () => {
       const el = document.createElement('div')
       el.className = 'fallthrough'

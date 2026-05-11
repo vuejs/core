@@ -181,6 +181,7 @@ export function setClass(
   isSVG: boolean = false,
   isNormalized: boolean = false,
 ): void {
+  if (el.$clsFlags !== undefined) el.$clsFlags = undefined
   if (el.$root) {
     setClassIncremental(el, value, isNormalized)
   } else {
@@ -212,11 +213,12 @@ export function setClassName(
   suffix: string = '',
 ): void {
   // The compiler passes static fragments/prefix/suffix, so flags uniquely
-  // identify the rendered class string for this element.
+  // identify the rendered class string for this element. Generic setClass()
+  // calls clear this cache before writing class through the slower path.
   if (flags === el.$clsFlags) return
 
-  el.$clsFlags = flags
   let value = prefix
+  // The compiler caps this at 31 entries because JS bitwise shifts are signed.
   for (let i = 0, bit = 1; i < cls.length; i++, bit <<= 1) {
     if (flags & bit) value += cls[i]
   }
@@ -237,6 +239,7 @@ export function setClassName(
   } else {
     el.className = el.$cls = value
   }
+  el.$clsFlags = flags
 }
 
 function setClassIncremental(

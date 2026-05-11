@@ -1,6 +1,7 @@
 import {
   NewlineType,
   type SimpleExpressionNode,
+  advancePositionWithClone,
   createSimpleExpression,
   isSimpleIdentifier,
 } from '@vue/compiler-dom'
@@ -105,6 +106,8 @@ interface ClassNameInfo {
   entries: ClassNameEntry[]
 }
 
+// Runtime uses signed bitwise shifts when iterating fragments, so 31 entries
+// is the largest safe flag set (1 << 30).
 const MAX_CLASS_NAME_ENTRIES = 31
 
 function genSetClassName(
@@ -130,6 +133,7 @@ function genSetClassName(
   return [
     NEWLINE,
     ...genCall(
+      // Use an empty prefix placeholder so suffix can be emitted alone.
       [helper('setClassName'), '""'],
       `n${oper.element}`,
       flags,
@@ -200,6 +204,7 @@ function resolveObjectClassName(
     if (rawClassName == null) return false
 
     const className = normalizeClass(rawClassName)
+    // Empty normalized keys contribute no class and no flag bit.
     if (!className) continue
 
     const value = getBooleanValue(prop.value)
@@ -310,7 +315,11 @@ function createSubExpression(
   const start = node.start == null ? 0 : node.start - 1
   const end = node.end == null ? source.content.length : node.end - 1
   const content = source.content.slice(start, end)
-  const expression = createSimpleExpression(content, false, source.loc)
+  const expression = createSimpleExpression(content, false, {
+    start: advancePositionWithClone(source.loc.start, source.content, start),
+    end: advancePositionWithClone(source.loc.start, source.content, end),
+    source: content,
+  })
   expression.ast = isSimpleIdentifier(content)
     ? null
     : parseExpression(`(${content})`, getParserOptions(context))
@@ -320,7 +329,11 @@ function createSubExpression(
 function getParserOptions(context: CodegenContext): ParserOptions {
   const plugins = context.options.expressionPlugins
   return {
-    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+    plugins: plugins
+      ? plugins.some(plugin => plugin === 'typescript')
+        ? plugins
+        : [...plugins, 'typescript']
+      : ['typescript'],
   }
 }
 
