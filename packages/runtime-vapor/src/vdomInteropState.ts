@@ -6,6 +6,8 @@ export function setInteropEnabled(): void {
   isInteropEnabled = true
 }
 
+export const interopKey: unique symbol = Symbol(`interop`)
+
 // Active while probing a Vapor slot for VDOM child metadata. This dry pass must
 // not mount or hydrate the real slot output.
 export let isCollectingVdomSlotVNodes = false
