@@ -2,6 +2,7 @@ import {
   type EffectScope,
   ReactiveEffect,
   type Ref,
+  type SuspenseBoundary,
   inject,
   nextTick,
   onBeforeMount,
@@ -25,8 +26,14 @@ import {
   txt,
 } from '../src'
 import { compile, compileToVaporRender, makeRender } from './_utils'
-import type { VaporComponentInstance } from '../src/component'
+import { type VaporComponentInstance, currentInstance } from '../src/component'
+import { currentSlotOwner, setCurrentSlotOwner } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
+import {
+  enableSuspense,
+  parentSuspense,
+  setParentSuspense,
+} from '../src/suspense'
 
 const define = makeRender()
 
@@ -777,6 +784,51 @@ describe('component', () => {
     await nextTick()
 
     expect(mountedSpy).toHaveBeenCalledTimes(0)
+  })
+
+  it('should restore component context when child setup throws', () => {
+    enableSuspense()
+
+    const err = new Error('setup boom')
+    const owner = { type: {} } as VaporComponentInstance
+    const previousSuspense = { pendingId: 1 } as SuspenseBoundary
+    const activeSuspense = { pendingId: 2 } as SuspenseBoundary
+    let caught: unknown
+    let ownerAfterThrow: VaporComponentInstance | null = null
+    let suspenseAfterThrow: SuspenseBoundary | null = null
+
+    const { component: Child } = define({
+      setup() {
+        throw err
+      },
+    })
+
+    define({
+      setup() {
+        const instance = currentInstance as VaporComponentInstance
+        instance.suspense = activeSuspense
+
+        const prevOwner = setCurrentSlotOwner(owner)
+        const prevSuspense = setParentSuspense(previousSuspense)
+        try {
+          createComponent(Child)
+        } catch (e) {
+          caught = e
+        }
+        ownerAfterThrow = currentSlotOwner
+        suspenseAfterThrow = parentSuspense
+        setCurrentSlotOwner(prevOwner)
+        setParentSuspense(prevSuspense)
+        return []
+      },
+    }).render()
+
+    expect(
+      `Unhandled error during execution of setup function`,
+    ).toHaveBeenWarned()
+    expect(caught).toBe(err)
+    expect(ownerAfterThrow).toBe(owner)
+    expect(suspenseAfterThrow).toBe(previousSuspense)
   })
 })
 
