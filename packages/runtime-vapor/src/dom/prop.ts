@@ -608,6 +608,7 @@ export function optimizePropertyLookup(): void {
   proto.$key = undefined
   proto.$fc = proto.$evtclick = undefined
   proto.$root = false
+  proto.$clsFlags = undefined
   proto.$html = proto.$cls = proto.$sty = ''
   // Initialize $txt to undefined instead of empty string to ensure setText()
   // properly updates the text node even when the value is empty string.
