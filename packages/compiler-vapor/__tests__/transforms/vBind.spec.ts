@@ -721,6 +721,188 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setClass(n0, _ctx.cls, true))')
   })
 
+  test('simple object className helper', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('"active"')
+    expect(code).not.contains('{ active:')
+  })
+
+  test('ternary string className helper', () => {
+    const { code } = compileWithVBind(`
+      <div :class="selected === row.id ? 'danger' : ''"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger")',
+    )
+  })
+
+  test('reverse ternary string className helper', () => {
+    const { code } = compileWithVBind(`
+      <div :class="selected === row.id ? '' : 'danger'"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), "danger")',
+    )
+  })
+
+  test('static class after conditional uses className helper with suffix', () => {
+    const { code } = compileWithVBind(`
+      <div :class="selected === row.id ? 'danger' : ''" class="foo"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      `_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo")`,
+    )
+  })
+
+  test('static class with simple object className helper', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ bar: isBar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
+    expect(code).contains('" bar", "foo"')
+    expect(code).not.contains('{ bar:')
+  })
+
+  test('static class in reverse order uses className helper with suffix', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ bar: isBar }" class="foo"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.isBar ? 1 : 0), "bar", "", "foo")',
+    )
+  })
+
+  test('static class after multiple object className helper uses suffix', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: ok, foo: bar }" class="tail"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"], "", "tail")',
+    )
+  })
+
+  test('multiple simple object className helper', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: ok, foo: bar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0)',
+    )
+    expect(code).contains('[" active", " foo"]')
+    expect(code).not.contains('{ active:')
+  })
+
+  test('static class with multiple object className helper', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ danger: selected === row.id, 'is-active': active }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0) | (_ctx.active ? 2 : 0), [" danger", " is-active"], "foo")',
+    )
+    expect(code).not.contains('{ danger:')
+  })
+
+  test('object class with multi-token key', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ 'foo bar': isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('"foo bar"')
+    expect(code).not.contains("'foo bar':")
+  })
+
+  test('static class with overlapping object class', () => {
+    const { code } = compileWithVBind(`
+      <div class="bar" :class="{ bar: isBar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
+    expect(code).contains('" bar", "bar"')
+    expect(code).not.contains('{ bar:')
+  })
+
+  test('static class with overlapping multi-token object class', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ 'foo bar': isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('" foo bar", "foo"')
+    expect(code).not.contains("'foo bar':")
+  })
+
+  test('className helper normalizes static and string class values', () => {
+    const { code } = compileWithVBind(`
+      <div class=" foo  bar " :class="ok ? ' baz ' : ''"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.ok ? 1 : 0), " baz", "foo bar")',
+    )
+  })
+
+  test('className helper falls back when bit flags are exhausted', () => {
+    const entries = Array.from({ length: 32 }, (_, i) => `c${i}: a${i}`).join(
+      ', ',
+    )
+    const { code } = compileWithVBind(`<div :class="{ ${entries} }"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClass(n0, {')
+    expect(code).not.contains('_setClassName')
+  })
+
+  test('className helper supports the max safe bit flag', () => {
+    const entries = Array.from({ length: 31 }, (_, i) => `c${i}: a${i}`).join(
+      ', ',
+    )
+    const { code } = compileWithVBind(`<div :class="{ ${entries} }"/>`)
+    expect(code).contains('_setClassName')
+    expect(code).contains('(_ctx.a30 ? 1073741824 : 0)')
+    expect(code).not.contains('_setClass(n0, {')
+  })
+
+  test('computed object class key falls back to setClass', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ [name]: active }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClass(n0, { [_ctx.name]: _ctx.active })')
+    expect(code).not.contains('_setClassName')
+  })
+
+  test('array class falls back to setClass', () => {
+    const { code } = compileWithVBind(`
+      <div :class="[foo, { danger: active }]"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClass(n0, [_ctx.foo, { danger: _ctx.active }])')
+    expect(code).not.contains('_setClassName')
+  })
+
+  test('class with v-bind object falls back to dynamic props', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ bar: isBar }" v-bind="mayBeHasClass"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setDynamicProps(n0, [{ class: ["foo", { bar: _ctx.isBar }] }, _ctx.mayBeHasClass])',
+    )
+    expect(code).not.contains('_setClassName')
+  })
+
   test(':style w/ svg elements', () => {
     const { code } = compileWithVBind(`
       <svg :style="style"/>
