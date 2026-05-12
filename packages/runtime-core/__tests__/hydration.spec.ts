@@ -82,6 +82,11 @@ describe('SSR hydration', () => {
     expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
   })
 
+  test('text w/ newlines', async () => {
+    mountWithHydration('<div>1\n2\n3</div>', () => h('div', '1\r\n2\r3'))
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+  })
+
   test('comment', () => {
     const { vnode, container } = mountWithHydration('<!---->', () => null)
     expect(vnode.el).toBe(container.firstChild)
@@ -678,6 +683,77 @@ describe('SSR hydration', () => {
     expect(teleportContainer.innerHTML).toBe('')
   })
 
+  test('Teleport unmount (disabled + full integration)', async () => {
+    const disabled = ref(true)
+    const target = ref('#teleport001')
+    const toggle = ref(true)
+
+    const Comp = {
+      template: `
+      <div>
+        <div id="teleport001">
+          <Teleport
+            :to="target"
+            :disabled="disabled"
+          >
+            <template v-for="section in order">
+              <div>{{section}}</div>
+            </template>
+          </Teleport>
+        </div>
+        <div id="teleport002"></div>
+      </div>
+      `,
+      setup() {
+        const order = ref(['A', 'B', 'C'])
+        return { target, disabled, order }
+      },
+    }
+    const App = {
+      template: `<Comp v-if="toggle"/>`,
+      components: {
+        Comp,
+      },
+      setup() {
+        return { toggle }
+      },
+    }
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    // server render
+    container.innerHTML = await renderToString(h(App))
+    expect(container.innerHTML).toBe(
+      `<div>` +
+        `<div id="teleport001">` +
+        `<!--teleport start-->` +
+        `<!--[--><div>A</div><div>B</div><div>C</div><!--]-->` +
+        `<!--teleport end-->` +
+        `</div>` +
+        `<div id="teleport002"></div>` +
+        `</div>`,
+    )
+
+    // hydrate
+    createSSRApp(App).mount(container)
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    target.value = '#teleport002'
+    disabled.value = false
+    await nextTick()
+    expect(container.querySelector('#teleport001')!.innerHTML).toBe(
+      '<!--teleport start--><!--teleport end-->',
+    )
+    expect(container.querySelector('#teleport002')!.innerHTML).toBe(
+      '<!--[--><div>A</div><div>B</div><div>C</div><!--]-->',
+    )
+
+    toggle.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<!--v-if-->')
+  })
+
   test('Teleport target change (mismatch + full integration)', async () => {
     const target = ref('#target1')
     const Comp = {
@@ -1160,6 +1236,69 @@ describe('SSR hydration', () => {
     )
   })
 
+  // #13510
+  test('update async component after parent mount before async component resolve', async () => {
+    const Comp = {
+      props: ['toggle'],
+      render(this: any) {
+        return h('h1', [
+          this.toggle ? 'Async component' : 'Updated async component',
+        ])
+      },
+    }
+    let serverResolve: any
+    let AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        }),
+    )
+
+    const toggle = ref(true)
+    const App = {
+      setup() {
+        onMounted(() => {
+          // change state, after mount and before async component resolve
+          nextTick(() => (toggle.value = false))
+        })
+
+        return () => {
+          return h(AsyncComp, { toggle: toggle.value })
+        }
+      },
+    }
+
+    // server render
+    const htmlPromise = renderToString(h(App))
+    serverResolve(Comp)
+    const html = await htmlPromise
+    expect(html).toMatchInlineSnapshot(`"<h1>Async component</h1>"`)
+
+    // hydration
+    let clientResolve: any
+    AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        }),
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    // resolve
+    clientResolve(Comp)
+    await new Promise(r => setTimeout(r))
+
+    // prevent lazy hydration since the component has been patched
+    expect('Skipping lazy hydration for component').toHaveBeenWarned()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<h1>Updated async component</h1>"`,
+    )
+  })
+
   test('hydrate safely when property used by async setup changed before render', async () => {
     const toggle = ref(true)
 
@@ -1529,6 +1668,24 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any).foo).toBe(msg.value)
   })
 
+  // #14274
+  test('should not render ref on custom element during hydration', () => {
+    const container = document.createElement('div')
+    container.innerHTML = '<my-element>hello</my-element>'
+    const root = ref()
+    const app = createSSRApp({
+      render: () =>
+        h('my-element', {
+          ref: root,
+          innerHTML: 'hello',
+        }),
+    })
+    app.mount(container)
+    expect(container.innerHTML).toBe('<my-element>hello</my-element>')
+    expect((container.firstChild as Element).hasAttribute('ref')).toBe(false)
+    expect(root.value).toBe(container.firstChild)
+  })
+
   // #5728
   test('empty text node in slot', () => {
     const Comp = {
@@ -1675,6 +1832,35 @@ describe('SSR hydration', () => {
     `)
     expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  // #13394
+  test('transition appear work with empty content', async () => {
+    const show = ref(true)
+    const { vnode, container } = mountWithHydration(
+      `<template><!----></template>`,
+      function (this: any) {
+        return h(
+          Transition,
+          { appear: true },
+          {
+            default: () =>
+              show.value
+                ? renderSlot(this.$slots, 'default')
+                : createTextVNode('foo'),
+          },
+        )
+      },
+    )
+
+    // empty slot render as a comment node
+    expect(container.firstChild!.nodeType).toBe(Node.COMMENT_NODE)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+
+    show.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('foo')
   })
 
   test('transition appear with v-if', () => {
@@ -2263,6 +2449,30 @@ describe('SSR hydration', () => {
       })
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('with disabled teleport + undefined target', async () => {
+      const container = document.createElement('div')
+      const isOpen = ref(false)
+      const App = {
+        setup() {
+          return { isOpen }
+        },
+        template: `
+          <Teleport :to="undefined" :disabled="true">
+            <div v-if="isOpen">
+              Menu is open...
+            </div>
+          </Teleport>`,
+      }
+      container.innerHTML = await renderToString(h(App))
+      const app = createSSRApp(App)
+      app.mount(container)
+      isOpen.value = true
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<!--teleport start--><div> Menu is open... </div><!--teleport end-->`,
+      )
     })
 
     test('escape css var name', () => {

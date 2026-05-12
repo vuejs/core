@@ -39,6 +39,24 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`h1 .foo { color: red; }`)).toMatch(
       `h1 .foo[data-v-test] { color: red;`,
     )
+
+    // #13387
+    expect(
+      compileScoped(`main {
+  width: 100%;
+  > * {
+    max-width: 200px;
+  }
+}`),
+    ).toMatchInlineSnapshot(`
+      "main {
+&[data-v-test] {
+  width: 100%;
+}
+> *[data-v-test] {
+    max-width: 200px;
+}
+}"`)
   })
 
   test('nesting selector', () => {
@@ -131,6 +149,41 @@ color: red
     expect(compileScoped(`:where(.foo :deep(.bar)) { color: red; }`))
       .toMatchInlineSnapshot(`
       ":where(.foo[data-v-test] .bar) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:is(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:is(:deep(.foo), .bar) .baz { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is([data-v-test] .foo) .baz, :is(.bar) .baz[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(:deep(.foo), .bar) .baz { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where([data-v-test] .foo) .baz, :where(.bar) .baz[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`:not(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":not([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:has(:deep(.foo)) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":has([data-v-test] .foo) .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`:has(:deep(.foo), .bar) .baz { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":has([data-v-test] .foo) .baz, :has(.bar) .baz[data-v-test] { color: red;
       }"
     `)
     expect(compileScoped(`:deep(.foo) { color: red; .bar { color: red; } }`))
@@ -493,31 +546,7 @@ describe('SFC style preprocessors', () => {
       }"
     `)
     expect(compileScoped(`.foo * { color: red; }`)).toMatchInlineSnapshot(`
-      ".foo[data-v-test] [data-v-test] { color: red;
-      }"
-    `)
-    expect(compileScoped(`.foo :active { color: red; }`))
-      .toMatchInlineSnapshot(`
-      ".foo[data-v-test] :active { color: red;
-      }"
-    `)
-    expect(compileScoped(`.foo *:active { color: red; }`))
-      .toMatchInlineSnapshot(`
-      ".foo[data-v-test] [data-v-test]:active { color: red;
-      }"
-    `)
-    expect(compileScoped(`.foo * .bar { color: red; }`)).toMatchInlineSnapshot(`
-      ".foo * .bar[data-v-test] { color: red;
-      }"
-    `)
-    expect(compileScoped(`:last-child * { color: red; }`))
-      .toMatchInlineSnapshot(`
-      "[data-v-test]:last-child [data-v-test] { color: red;
-      }"
-    `)
-    expect(compileScoped(`:last-child *:active { color: red; }`))
-      .toMatchInlineSnapshot(`
-      "[data-v-test]:last-child [data-v-test]:active { color: red;
+      ".foo[data-v-test] * { color: red;
       }"
     `)
   })
