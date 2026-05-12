@@ -5,6 +5,9 @@ on:
     - cron: 0 1 * * MON
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   canary:
     # prevents this action from running on forks

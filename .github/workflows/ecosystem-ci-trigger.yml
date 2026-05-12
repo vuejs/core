@@ -4,6 +4,11 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
 jobs:
   trigger:
     runs-on: ubuntu-latest
