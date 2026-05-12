@@ -99,7 +99,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('treats a root if / else-if / else chain as a single owner unit', () => {
@@ -127,7 +127,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('treats preserved root comments as root units', () => {
@@ -172,7 +172,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('ignores comments between root if branches', () => {
@@ -197,7 +197,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('ignores preserved whitespace between root if branches', () => {
@@ -227,7 +227,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('treats root v-for as a single owner unit', () => {
@@ -248,7 +248,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('treats a root slot outlet as a single owner unit', () => {
@@ -267,7 +267,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('treats root text with a sibling as multi-root', () => {
@@ -306,7 +306,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('treats a root component with a sibling as multi-root', () => {
@@ -350,7 +350,7 @@ describe('multiRoot metadata', () => {
       },
     )
 
-    expect(content).toContain(`__multiRoot: false`)
+    expect(content).not.toContain(`__multiRoot`)
   })
 
   test('marks an inline component as multi-root', () => {
