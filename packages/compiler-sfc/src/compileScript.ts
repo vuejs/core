@@ -1098,10 +1098,11 @@ export function compileScript(
 
   // add multiRoot marker for vapor component
   if (vapor && !ssr && sfc.template && !sfc.template.src) {
-    runtimeOptions += `\n  __multiRoot: ${isMultiRoot(
-      sfc.template.ast!,
-      options.templateOptions?.compilerOptions,
-    )},`
+    if (
+      isMultiRoot(sfc.template.ast!, options.templateOptions?.compilerOptions)
+    ) {
+      runtimeOptions += `\n  __multiRoot: true,`
+    }
   }
 
   let definedOptions = ''
