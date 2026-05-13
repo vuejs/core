@@ -1,4 +1,4 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/v3.0.0/src/system.ts
+// Ported from https://github.com/stackblitz/alien-signals/blob/v3.2.0/src/system.ts
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 import type { EffectScope } from './effectScope.js'
@@ -148,7 +148,7 @@ export function unlink(
   return nextDep
 }
 
-export function propagate(link: Link): void {
+export function propagate(link: Link, innerWrite: boolean = false): void {
   let next = link.nextSub
   let stack: Stack<Link | undefined> | undefined
 
@@ -167,6 +167,9 @@ export function propagate(link: Link): void {
         )
       ) {
         sub.flags = flags | ReactiveFlags.Pending
+        if (innerWrite) {
+          sub.flags |= ReactiveFlags.Recursed
+        }
       } else if (
         !(flags & (ReactiveFlags.RecursedCheck | ReactiveFlags.Recursed))
       ) {
@@ -274,8 +277,8 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Dirty)
     ) {
+      const subs = dep.subs!
       if ((dep as Computed).update()) {
-        const subs = dep.subs!
         if (subs.nextSub !== undefined) {
           shallowPropagate(subs)
         }
@@ -285,9 +288,7 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Pending)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Pending)
     ) {
-      if (link.nextSub !== undefined || link.prevSub !== undefined) {
-        stack = { value: link, prev: stack }
-      }
+      stack = { value: link, prev: stack }
       link = dep.deps!
       sub = dep
       ++checkDepth
@@ -301,18 +302,13 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
 
     while (checkDepth) {
       --checkDepth
-      const firstSub = sub.subs!
-      const hasMultipleSubs = firstSub.nextSub !== undefined
-      if (hasMultipleSubs) {
-        link = stack!.value
-        stack = stack!.prev
-      } else {
-        link = firstSub
-      }
+      link = stack!.value
+      stack = stack!.prev
       if (dirty) {
+        const subs = sub.subs!
         if ((sub as Computed).update()) {
-          if (hasMultipleSubs) {
-            shallowPropagate(firstSub)
+          if (subs.nextSub !== undefined) {
+            shallowPropagate(subs)
           }
           sub = link.sub
           continue
@@ -328,7 +324,7 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       dirty = false
     }
 
-    return dirty
+    return dirty && !!sub.flags
   } while (true)
 }
 
