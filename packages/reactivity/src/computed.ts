@@ -10,7 +10,9 @@ import {
   ReactiveFlags as SystemReactiveFlags,
   activeSub,
   checkDirty,
+  decRunDepth,
   endTracking,
+  incRunDepth,
   link,
   shallowPropagate,
   startTracking,
@@ -163,6 +165,7 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
 
   update(): boolean {
     const prevSub = startTracking(this)
+    incRunDepth()
     try {
       const oldValue = this._value
       const newValue = this.fn(oldValue)
@@ -172,6 +175,7 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
       }
       return false
     } finally {
+      decRunDepth()
       endTracking(this, prevSub)
     }
   }

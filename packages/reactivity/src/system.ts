@@ -40,7 +40,16 @@ export const enum ReactiveFlags {
 const notifyBuffer: (Effect | undefined)[] = []
 
 export let batchDepth = 0
+export let runDepth = 0
 export let activeSub: ReactiveNode | undefined = undefined
+
+export function incRunDepth(): void {
+  ++runDepth
+}
+
+export function decRunDepth(): void {
+  --runDepth
+}
 
 let globalVersion = 0
 let notifyIndex = 0

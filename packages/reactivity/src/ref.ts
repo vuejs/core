@@ -31,6 +31,7 @@ import {
   flush,
   link,
   propagate,
+  runDepth,
   shallowPropagate,
 } from './system'
 
@@ -188,7 +189,7 @@ class RefImpl<T = any> implements ReactiveNode {
             oldValue,
           })
         }
-        propagate(subs)
+        propagate(subs, !!runDepth)
         if (!batchDepth) {
           flush()
         }
@@ -234,7 +235,7 @@ export function triggerRef(ref: Ref): void {
   // ref may be an instance of ObjectRefImpl
   const dep = (ref as unknown as RefImpl).dep
   if (dep !== undefined && dep.subs !== undefined) {
-    propagate(dep.subs)
+    propagate(dep.subs, !!runDepth)
     shallowPropagate(dep.subs)
     if (!batchDepth) {
       flush()
