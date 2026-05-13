@@ -1,4 +1,5 @@
-// Ported from https://github.com/stackblitz/alien-signals/blob/7e53655f40c3dd298168c278b3bf248a72f742d9/src/system.ts
+// Ported from alien-signals. Diff against upstream main:
+// https://github.com/stackblitz/alien-signals/compare/7e53655f40c3dd298168c278b3bf248a72f742d9...main
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 import type { EffectScope } from './effectScope.js'
