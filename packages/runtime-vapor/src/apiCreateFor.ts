@@ -4,6 +4,7 @@ import {
   isReactive,
   isReadonly,
   isShallow,
+  onScopeDispose,
   setActiveSub,
   shallowReadArray,
   shallowRef,
@@ -122,6 +123,21 @@ export const createFor = (
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
+  }
+
+  if (!isComponent) {
+    onScopeDispose(() => {
+      stopBlockScopes(oldBlocks)
+      if (newBlocks && newBlocks !== oldBlocks) {
+        stopBlockScopes(newBlocks)
+      }
+      for (const selector of selectors) {
+        selector.cleanup()
+      }
+      selectors.length = 0
+      oldBlocks = []
+      newBlocks = []
+    }, true)
   }
 
   const renderList = () => {
@@ -389,10 +405,15 @@ export const createFor = (
       // component already has its own scope so no outer scope needed
       nodes = renderItem(itemRef, keyRef as any, indexRef as any)
     } else {
-      scope = new EffectScope()
-      nodes = scope.run(() =>
-        renderItem(itemRef, keyRef as any, indexRef as any),
-      )!
+      scope = new EffectScope(true)
+      try {
+        nodes = scope.run(() =>
+          renderItem(itemRef, keyRef as any, indexRef as any),
+        )!
+      } catch (err) {
+        scope.stop()
+        throw err
+      }
     }
 
     const block = (newBlocks[idx] = new ForBlock(
@@ -636,6 +657,16 @@ function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
   block.prev = newPrev
   block.next = newNext
   block.prevAnchor = block
+}
+
+function stopBlockScopes(blocks: ForBlock[]): void {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (block) {
+      const scope = block.scope
+      if (scope) scope.stop()
+    }
+  }
 }
 
 export function createForSlots(
