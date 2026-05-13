@@ -9,7 +9,6 @@ import {
   endBatch,
   link,
   propagate,
-  runDepth,
   shallowPropagate,
   startBatch,
 } from './system'
@@ -119,7 +118,7 @@ export function trigger(
           oldTarget,
         })
       }
-      propagate(dep.subs, !!runDepth)
+      propagate(dep.subs)
       shallowPropagate(dep.subs)
       if (__DEV__) {
         triggerEventInfos.pop()

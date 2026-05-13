@@ -40,8 +40,9 @@ export const enum ReactiveFlags {
 const notifyBuffer: (Effect | undefined)[] = []
 
 export let batchDepth = 0
-export let runDepth = 0
 export let activeSub: ReactiveNode | undefined = undefined
+
+let runDepth = 0
 
 export function incRunDepth(): void {
   ++runDepth
@@ -157,7 +158,7 @@ export function unlink(
   return nextDep
 }
 
-export function propagate(link: Link, innerWrite: boolean = false): void {
+export function propagate(link: Link): void {
   let next = link.nextSub
   let stack: Stack<Link | undefined> | undefined
 
@@ -176,7 +177,7 @@ export function propagate(link: Link, innerWrite: boolean = false): void {
         )
       ) {
         sub.flags = flags | ReactiveFlags.Pending
-        if (innerWrite) {
+        if (runDepth) {
           sub.flags |= ReactiveFlags.Recursed
         }
       } else if (
