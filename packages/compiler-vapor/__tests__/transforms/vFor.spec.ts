@@ -134,6 +134,30 @@ describe('compiler: v-for', () => {
     ).matchSnapshot()
   })
 
+  test('multiple selector patterns on one v-for', () => {
+    const { code } = compileWithVFor(
+      `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="selected === row.id ? 'a' : ''"
+            :title="active === row.id ? 'b' : ''"
+          ></tr>
+      `,
+    )
+    expect(code).matchSnapshot()
+    // both selectors created at outer scope with sub-indexed names
+    expect(code).contains(
+      `const _selector0_0 = _createSelector(() => _ctx.selected)`,
+    )
+    expect(code).contains(
+      `const _selector0_1 = _createSelector(() => _ctx.active)`,
+    )
+    // both wired to the same fragment's onReset
+    expect(code).contains(`n0.onReset(_selector0_0.reset)`)
+    expect(code).contains(`n0.onReset(_selector0_1.reset)`)
+  })
+
   test('multi effect', () => {
     const { code } = compileWithVFor(
       `<div v-for="(item, index) of items" :item="item" :index="index" />`,
