@@ -26,6 +26,108 @@ import { makeRender, shuffle } from './_utils'
 const define = makeRender()
 
 describe('createFor', () => {
+  test('should not register DOM item scopes on parent scope', () => {
+    const renderList = (list: Ref<number[]>) =>
+      define(() => {
+        return createFor(
+          () => list.value,
+          item => {
+            const span = document.createElement('span')
+            renderEffect(() => {
+              span.textContent = `${item.value}`
+            })
+            return span
+          },
+        )
+      }).render()
+
+    const empty = renderList(ref([]))
+    const emptyCount = getEffectsCount(empty.instance!.scope)
+    empty.app.unmount()
+    empty.host.innerHTML = ''
+
+    const filled = renderList(ref([1, 2, 3]))
+
+    expect(getEffectsCount(filled.instance!.scope)).toBe(emptyCount)
+  })
+
+  test('should stop DOM item scopes when parent scope is disposed', async () => {
+    const show = ref(true)
+    const list = ref([1, 2, 3])
+    const calls: string[] = []
+
+    const { host } = define(() => {
+      return createIf(
+        () => show.value,
+        () =>
+          createFor(
+            () => list.value,
+            item => {
+              const span = document.createElement('span')
+              renderEffect(() => {
+                calls.push(`render ${item.value}`)
+                span.textContent = `${item.value}`
+              })
+              return span
+            },
+          ),
+      )
+    }).render()
+
+    expect(calls).toEqual(['render 1', 'render 2', 'render 3'])
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
+    list.value[0] = 10
+    await nextTick()
+
+    expect(calls).toEqual(['render 1', 'render 2', 'render 3'])
+  })
+
+  test('should stop DOM item scopes when list is disposed by an outer v-for item', async () => {
+    const groups = ref([
+      { id: 1, items: [1, 2] },
+      { id: 2, items: [3] },
+    ])
+    const calls: string[] = []
+    const removed = groups.value[0]
+
+    define(() => {
+      return createFor(
+        () => groups.value,
+        group =>
+          createFor(
+            () => group.value.items,
+            item => {
+              const span = document.createElement('span')
+              renderEffect(() => {
+                calls.push(`render ${group.value.id}:${item.value}`)
+                span.textContent = `${item.value}`
+              })
+              return span
+            },
+          ),
+        group => group.id,
+      )
+    }).render()
+
+    expect(calls).toEqual(['render 1:1', 'render 1:2', 'render 2:3'])
+
+    groups.value.shift()
+    await nextTick()
+    removed.items[0] = 10
+    groups.value[0].items[0] = 30
+    await nextTick()
+
+    expect(calls).toEqual([
+      'render 1:1',
+      'render 1:2',
+      'render 2:3',
+      'render 2:30',
+    ])
+  })
+
   test('array source', async () => {
     const list = ref([{ name: '1' }, { name: '2' }, { name: '3' }])
     function reverse() {
@@ -1503,3 +1605,11 @@ describe('createFor', () => {
     })
   })
 })
+
+function getEffectsCount(scope: { deps: any }) {
+  let count = 0
+  for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
+    count++
+  }
+  return count
+}
