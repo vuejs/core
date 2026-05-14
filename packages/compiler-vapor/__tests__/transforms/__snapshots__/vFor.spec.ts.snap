@@ -96,6 +96,29 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > multiple selector patterns on one v-for 1`] = `
+"import { createSelector as _createSelector, setClassName as _setClassName, setProp as _setProp, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr>")
+
+export function render(_ctx) {
+  const _selector0_0 = _createSelector(() => _ctx.selected)
+  const _selector0_1 = _createSelector(() => _ctx.active)
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    _selector0_0(_for_item0.value.id, () => {
+      _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "a")
+    })
+    _selector0_1(_for_item0.value.id, () => {
+      _setProp(n2, "title", _ctx.active === _for_item0.value.id ? 'b' : '')
+    })
+    return n2
+  }, (row) => (row.id))
+  n0.onReset(_selector0_0.reset)
+  n0.onReset(_selector0_1.reset)
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > nested v-for 1`] = `
 "import { setInsertionState as _setInsertionState, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<span> ")
@@ -163,40 +186,38 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > selector pattern 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
+"import { createSelector as _createSelector, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<tr> ")
 
 export function render(_ctx) {
-  let _selector0_0
+  const _selector0 = _createSelector(() => _ctx.selected)
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     const x2 = _txt(n2)
-    _selector0_0(() => {
+    _selector0(_for_item0.value.id, () => {
       _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
     })
     return n2
-  }, (row) => (row.id), undefined, ({ createSelector }) => {
-    _selector0_0 = createSelector(() => _ctx.selected)
-  })
+  }, (row) => (row.id))
+  n0.onReset(_selector0.reset)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > selector pattern 2`] = `
-"import { setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+"import { createSelector as _createSelector, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<tr>")
 
 export function render(_ctx) {
-  let _selector0_0
+  const _selector0 = _createSelector(() => _ctx.selected)
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
-    _selector0_0(() => {
+    _selector0(_for_item0.value.id, () => {
       _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id), undefined, ({ createSelector }) => {
-    _selector0_0 = createSelector(() => _ctx.selected)
-  })
+  }, (row) => (row.id))
+  n0.onReset(_selector0.reset)
   return n0
 }"
 `;
@@ -219,20 +240,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > selector pattern 4`] = `
-"import { setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+"import { createSelector as _createSelector, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<tr>")
 
 export function render(_ctx) {
-  let _selector0_0
+  const _selector0 = _createSelector(() => _ctx.selected)
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
-    _selector0_0(() => {
+    _selector0(_for_item0.value.id, () => {
       _setClassName(n2, (_for_item0.value.id === _ctx.selected ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id), undefined, ({ createSelector }) => {
-    _selector0_0 = createSelector(() => _ctx.selected)
-  })
+  }, (row) => (row.id))
+  n0.onReset(_selector0.reset)
   return n0
 }"
 `;

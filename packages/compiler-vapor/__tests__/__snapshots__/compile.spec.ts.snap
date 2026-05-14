@@ -211,12 +211,12 @@ export function render(_ctx) {
 `;
 
 exports[`compile > execution order > does not flush later v-for effects before child component 1`] = `
-"import { resolveComponent as _resolveComponent, child as _child, next as _next, txt as _txt, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, createSelector as _createSelector, child as _child, next as _next, txt as _txt, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div><span> </span><!><span> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const _component_Child = _resolveComponent("Child")
-  let _selector0_0
+  const _selector0 = _createSelector(() => _ctx.selected)
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n6 = t0()
     const n2 = _child(n6)
@@ -227,13 +227,12 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
     const n3 = _createComponentWithFallback(_component_Child)
     const x4 = _txt(n4)
     _renderEffect(() => _setText(x4, _toDisplayString(_ctx.useId())))
-    _selector0_0(() => {
+    _selector0(_for_item0.value.id, () => {
       _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
     })
     return n6
-  }, (row) => (row.id), undefined, ({ createSelector }) => {
-    _selector0_0 = createSelector(() => _ctx.selected)
-  })
+  }, (row) => (row.id))
+  n0.onReset(_selector0.reset)
   return n0
 }"
 `;

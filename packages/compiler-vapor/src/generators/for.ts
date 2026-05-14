@@ -81,26 +81,19 @@ export function genFor(
     idMap,
   )
   const selectorDeclarations: CodeFragment[] = []
-  const selectorSetup: CodeFragment[] = []
+  const selectorName = (i: number) =>
+    selectorPatterns.length > 1 ? `_selector${id}_${i}` : `_selector${id}`
 
   for (let i = 0; i < selectorPatterns.length; i++) {
     const { selector } = selectorPatterns[i]
-    const selectorName = `_selector${id}_${i}`
-    selectorDeclarations.push(`let ${selectorName}`, NEWLINE)
-    if (i === 0) {
-      selectorSetup.push(`({ createSelector }) => {`, INDENT_START)
-    }
-    selectorSetup.push(
-      NEWLINE,
-      `${selectorName} = `,
-      ...genCall(`createSelector`, [
+    selectorDeclarations.push(
+      `const ${selectorName(i)} = `,
+      ...genCall(helper('createSelector'), [
         `() => `,
         ...genExpression(selector, context),
       ]),
+      NEWLINE,
     )
-    if (i === selectorPatterns.length - 1) {
-      selectorSetup.push(INDENT_END, NEWLINE, '}')
-    }
   }
 
   const blockFn = context.withId(() => {
@@ -115,7 +108,9 @@ export function genFor(
             const { effect } = selectorPatterns[i]
             patternFrag.push(
               NEWLINE,
-              `_selector${id}_${i}(() => {`,
+              `${selectorName(i)}(`,
+              ...genExpression(keyProp!, context),
+              `, () => {`,
               INDENT_START,
             )
             for (const oper of effect.operations) {
@@ -152,6 +147,11 @@ export function genFor(
     flags |= VaporVForFlags.ONCE
   }
 
+  const onResetCalls: CodeFragment[] = []
+  for (let i = 0; i < selectorPatterns.length; i++) {
+    onResetCalls.push(NEWLINE, `n${id}.onReset(${selectorName(i)}.reset)`)
+  }
+
   return [
     NEWLINE,
     ...selectorDeclarations,
@@ -162,9 +162,9 @@ export function genFor(
       blockFn,
       genCallback(keyProp),
       flags ? String(flags) : undefined,
-      selectorSetup.length ? selectorSetup : undefined,
       // todo: hydrationNode
     ),
+    ...onResetCalls,
   ]
 
   function genCallback(expr: SimpleExpressionNode | undefined) {

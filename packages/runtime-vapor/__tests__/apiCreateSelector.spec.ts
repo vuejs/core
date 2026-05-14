@@ -1,6 +1,6 @@
 import { ref } from '@vue/reactivity'
 import { makeRender } from './_utils'
-import { createFor } from '../src'
+import { createFor, createSelector } from '../src'
 import { nextTick } from '@vue/runtime-dom'
 
 const define = makeRender()
@@ -14,12 +14,12 @@ describe('api: createSelector', () => {
     const index = ref(0)
 
     const { host } = define(() => {
-      let selector: (cb: () => void) => void
+      const selector = createSelector(() => index.value)
       return createFor(
         () => list.value,
         item => {
           const span = document.createElement('li')
-          selector(() => {
+          selector(item.value.id, () => {
             calledTimes += 1
             const { id } = item.value
             span.textContent = `${id}.${id === index.value ? 't' : 'f'}`
@@ -27,10 +27,6 @@ describe('api: createSelector', () => {
           return span
         },
         item => item.id,
-        undefined,
-        ({ createSelector }) => {
-          selector = createSelector(() => index.value)
-        },
       )
     }).render()
 
@@ -52,13 +48,6 @@ describe('api: createSelector', () => {
       '<li>0.f</li><li>1.f</li><li>2.t</li><!--for-->',
     )
     expect(calledTimes).toBe((expectedCalledTimes += 2))
-
-    // list.value[2].id = 3
-    // await nextTick()
-    // expect(host.innerHTML).toBe(
-    //   '<li>0.f</li><li>1.f</li><li>3.f</li><!--for-->',
-    // )
-    // expect(calledTimes).toBe((expectedCalledTimes += 1))
   })
 
   test('selector runs after list updates when value changes first', async () => {
@@ -66,12 +55,12 @@ describe('api: createSelector', () => {
     const index = ref(-1)
 
     const { host } = define(() => {
-      let selector: (cb: () => void) => void
+      const selector = createSelector(() => index.value)
       return createFor(
         () => items.value,
         item => {
           const div = document.createElement('div')
-          selector(() => {
+          selector(item.value, () => {
             div.className = index.value === item.value ? 'active' : ''
           })
           const btn = document.createElement('button')
@@ -80,10 +69,6 @@ describe('api: createSelector', () => {
           return div
         },
         item => item,
-        undefined,
-        ({ createSelector }) => {
-          selector = createSelector(() => index.value)
-        },
       )
     }).render()
 
@@ -101,5 +86,94 @@ describe('api: createSelector', () => {
     expect(host.innerHTML).toBe(
       '<div class=""><button>0</button></div><!--for-->',
     )
+  })
+
+  test('multiple selectors on one v-for, each tracking its own source', async () => {
+    const list = ref([{ id: 0 }, { id: 1 }, { id: 2 }])
+    const selA = ref(0)
+    const selB = ref(2)
+
+    const { host } = define(() => {
+      const sA = createSelector(() => selA.value)
+      const sB = createSelector(() => selB.value)
+      return createFor(
+        () => list.value,
+        item => {
+          const span = document.createElement('span')
+          let a = ''
+          let b = ''
+          const update = () => (span.textContent = `${item.value.id}:${a},${b}`)
+          sA(item.value.id, () => {
+            a = item.value.id === selA.value ? 'A' : ''
+            update()
+          })
+          sB(item.value.id, () => {
+            b = item.value.id === selB.value ? 'B' : ''
+            update()
+          })
+          return span
+        },
+        item => item.id,
+      )
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<span>0:A,</span><span>1:,</span><span>2:,B</span><!--for-->',
+    )
+
+    selA.value = 1
+    selB.value = 0
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<span>0:,B</span><span>1:A,</span><span>2:,</span><!--for-->',
+    )
+  })
+
+  test('fast-reset path: clearing list bulk-resets selector state', async () => {
+    const list = ref([{ id: 0 }, { id: 1 }, { id: 2 }])
+    const sel = ref(0)
+    let resetCalls = 0
+
+    const { host } = define(() => {
+      const s = createSelector(() => sel.value)
+      // wrap reset to count invocations
+      const realReset = s.reset
+      s.reset = () => {
+        resetCalls++
+        realReset()
+      }
+      const frag = createFor(
+        () => list.value,
+        item => {
+          const span = document.createElement('span')
+          s(item.value.id, () => {
+            span.textContent =
+              item.value.id === sel.value
+                ? `${item.value.id}*`
+                : `${item.value.id}`
+          })
+          return span
+        },
+        item => item.id,
+      )
+      frag.onReset(s.reset)
+      return frag
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<span>0*</span><span>1</span><span>2</span><!--for-->',
+    )
+    expect(resetCalls).toBe(0)
+
+    list.value = []
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--for-->')
+    expect(resetCalls).toBe(1)
+
+    // After bulk reset, refilling and changing source should still work
+    list.value = [{ id: 5 }, { id: 6 }]
+    sel.value = 6
+    await nextTick()
+    expect(host.innerHTML).toBe('<span>5</span><span>6*</span><!--for-->')
   })
 })
