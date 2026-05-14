@@ -594,11 +594,17 @@ export function createSelector(source: () => any): ForSelector {
   const operMap = new Map<any, (() => void)[]>()
   let activeKey = source()
   let activeOpers: (() => void)[] | undefined
+  let pendingKey = activeKey
+  let pending = false
   // bumped by reset(); register captures the current value and uses it as
   // a stale-check so post-reset deregisters become no-ops
   let generation = 0
 
   watch(source, newValue => {
+    pendingKey = newValue
+    if (pending) return
+    pending = true
+
     if (activeOpers !== undefined) {
       for (const oper of activeOpers) {
         oper()
@@ -608,8 +614,9 @@ export function createSelector(source: () => any): ForSelector {
     // watch may trigger before list patched
     // defer to post-flush so operMap is up to date
     queuePostFlushCb(() => {
-      activeKey = newValue
-      activeOpers = operMap.get(newValue)
+      pending = false
+      activeKey = pendingKey
+      activeOpers = operMap.get(activeKey)
       if (activeOpers !== undefined) {
         for (const oper of activeOpers) {
           oper()
