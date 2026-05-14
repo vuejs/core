@@ -60,6 +60,7 @@ export { createKeyedFragment } from './apiCreateFragment'
 export {
   createFor,
   createForSlots,
+  createSelector,
   getRestElement,
   getDefaultValue,
 } from './apiCreateFor'

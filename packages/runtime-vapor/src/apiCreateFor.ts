@@ -4,6 +4,7 @@ import {
   isReactive,
   isReadonly,
   isShallow,
+  onScopeDispose,
   setActiveSub,
   shallowReadArray,
   shallowRef,
@@ -83,9 +84,6 @@ export const createFor = (
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
-  setup?: (_: {
-    createSelector: (source: () => any) => (cb: () => void) => void
-  }) => void,
 ): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -101,8 +99,6 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
-  // createSelector only
-  let currentKey: any
   let parentAnchor: Node
   let pendingHydrationAnchor = false
   if (!isHydrating) {
@@ -113,15 +109,22 @@ export const createFor = (
   const instance = currentInstance!
   const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
-  const selectors: {
-    deregister: (key: any) => void
-    cleanup: () => void
-  }[] = []
 
   const slotOwner = currentSlotOwner
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
+  }
+
+  if (!isComponent) {
+    onScopeDispose(() => {
+      stopBlockScopes(oldBlocks)
+      if (newBlocks && newBlocks !== oldBlocks) {
+        stopBlockScopes(newBlocks)
+      }
+      oldBlocks = []
+      newBlocks = []
+    }, true)
   }
 
   const renderList = () => {
@@ -149,13 +152,17 @@ export const createFor = (
           mount(source, i)
         }
       } else if (!newLength) {
-        // fast path for clearing all
-        for (const selector of selectors) {
-          selector.cleanup()
+        // fast path for clearing all.
+        // Fire reset listeners BEFORE per-item unmount so attached selectors
+        // bump their generation counter; the subsequent block.scope.stop()
+        // calls then short-circuit their onScopeDispose deregisters instead
+        // of doing N individual Map.delete() ops.
+        if (frag.resetListeners) {
+          for (const fn of frag.resetListeners) fn()
         }
         const doRemove = !canUseFastRemove
         for (let i = 0; i < oldLength; i++) {
-          unmount(oldBlocks[i], doRemove, false)
+          unmount(oldBlocks[i], doRemove)
         }
         if (canUseFastRemove) {
           parent!.textContent = ''
@@ -278,21 +285,20 @@ export const createFor = (
 
         const useFastRemove = mountCounter === newLength
 
+        // Same ordering note as the !newLength path: reset before unmount so
+        // the generation bump turns per-item deregisters into no-ops.
+        if (useFastRemove && frag.resetListeners) {
+          for (const fn of frag.resetListeners) fn()
+        }
         for (const leftoverIndex of oldKeyIndexMap.values()) {
           unmount(
             oldBlocks[leftoverIndex],
             !(useFastRemove && canUseFastRemove),
-            !useFastRemove,
           )
         }
-        if (useFastRemove) {
-          for (const selector of selectors) {
-            selector.cleanup()
-          }
-          if (canUseFastRemove) {
-            parent!.textContent = ''
-            parent!.appendChild(parentAnchor)
-          }
+        if (useFastRemove && canUseFastRemove) {
+          parent!.textContent = ''
+          parent!.appendChild(parentAnchor)
         }
 
         if (opers.length === mountCounter) {
@@ -382,17 +388,21 @@ export const createFor = (
     const keyRef = needKey ? shallowRef(key) : undefined
     const indexRef = needIndex ? shallowRef(index) : undefined
 
-    currentKey = key2
     let nodes: Block
     let scope: EffectScope | undefined
     if (isComponent) {
       // component already has its own scope so no outer scope needed
       nodes = renderItem(itemRef, keyRef as any, indexRef as any)
     } else {
-      scope = new EffectScope()
-      nodes = scope.run(() =>
-        renderItem(itemRef, keyRef as any, indexRef as any),
-      )!
+      scope = new EffectScope(true)
+      try {
+        nodes = scope.run(() =>
+          renderItem(itemRef, keyRef as any, indexRef as any),
+        )!
+      } catch (err) {
+        scope.stop()
+        throw err
+      }
     }
 
     const block = (newBlocks[idx] = new ForBlock(
@@ -523,22 +533,13 @@ export const createFor = (
     }
   }
 
-  const unmount = (block: ForBlock, doRemove = true, doDeregister = true) => {
+  const unmount = (block: ForBlock, doRemove = true) => {
     if (!isComponent) {
       block.scope!.stop()
     }
     if (doRemove) {
       remove(block.nodes, parent!)
     }
-    if (doDeregister) {
-      for (const selector of selectors) {
-        selector.deregister(block.key)
-      }
-    }
-  }
-
-  if (setup) {
-    setup({ createSelector })
   }
 
   if (flags & VaporVForFlags.ONCE) {
@@ -565,61 +566,97 @@ export const createFor = (
   }
 
   return frag
+}
 
-  function createSelector(source: () => any): (cb: () => void) => void {
-    let operMap = new Map<any, (() => void)[]>()
-    let activeKey = source()
-    let activeOpers: (() => void)[] | undefined
+export interface ForSelector {
+  (key: any, oper: () => void): void
+  /**
+   * Bulk-reset the selector's internal state. Hook into a v-for's fast-reset
+   * paths via `forFragment.onReset(selector.reset)` so the lazy per-item
+   * `onScopeDispose` teardowns short-circuit instead of doing N individual
+   * Map.delete() calls.
+   */
+  reset(): void
+}
 
-    watch(source, newValue => {
+/**
+ * Builds a key-indexed selector that activates only the opers registered with
+ * the key matching the current source value. Compared to letting each item
+ * subscribe directly, this keeps re-renders on source change O(2) instead of
+ * O(N) (only previous and new active item re-run).
+ *
+ * Selector cleanup follows the current scope. Per-item teardown is auto-wired
+ * via `onScopeDispose` so callers (typically v-for item scopes) don't need
+ * explicit deregistration. For bulk-reset hot paths, attach the selector to
+ * the v-for via `frag.onReset(selector.reset)` to skip the per-item Map ops.
+ */
+export function createSelector(source: () => any): ForSelector {
+  const operMap = new Map<any, (() => void)[]>()
+  let activeKey = source()
+  let activeOpers: (() => void)[] | undefined
+  let pendingKey = activeKey
+  let pending = false
+  // bumped by reset(); register captures the current value and uses it as
+  // a stale-check so post-reset deregisters become no-ops
+  let generation = 0
+
+  watch(source, newValue => {
+    pendingKey = newValue
+    if (pending) return
+    pending = true
+
+    if (activeOpers !== undefined) {
+      for (const oper of activeOpers) {
+        oper()
+      }
+    }
+
+    // watch may trigger before list patched
+    // defer to post-flush so operMap is up to date
+    queuePostFlushCb(() => {
+      pending = false
+      activeKey = pendingKey
+      activeOpers = operMap.get(activeKey)
       if (activeOpers !== undefined) {
         for (const oper of activeOpers) {
           oper()
         }
       }
-
-      // watch may trigger before list patched
-      // defer to post-flush so operMap is up to date
-      queuePostFlushCb(() => {
-        activeKey = newValue
-        activeOpers = operMap.get(newValue)
-        if (activeOpers !== undefined) {
-          for (const oper of activeOpers) {
-            oper()
-          }
-        }
-      })
     })
+  })
 
-    selectors.push({ deregister, cleanup })
-    return register
-
-    function cleanup() {
-      operMap = new Map()
-      activeOpers = undefined
-    }
-
-    function register(oper: () => void) {
-      oper()
-      let opers = operMap.get(currentKey)
-      if (opers !== undefined) {
-        opers.push(oper)
-      } else {
-        opers = [oper]
-        operMap.set(currentKey, opers)
-        if (currentKey === activeKey) {
-          activeOpers = opers
-        }
-      }
-    }
-
-    function deregister(key: any) {
-      operMap.delete(key)
+  const register: ForSelector = (key, oper) => {
+    oper()
+    let opers = operMap.get(key)
+    if (opers !== undefined) {
+      opers.push(oper)
+    } else {
+      opers = [oper]
+      operMap.set(key, opers)
       if (key === activeKey) {
-        activeOpers = undefined
+        activeOpers = opers
       }
     }
+    const myGen = generation
+    onScopeDispose(() => {
+      if (myGen !== generation) return // bulk-cleared, skip
+      const list = operMap.get(key)
+      if (list === undefined) return
+      if (list.length === 1) {
+        operMap.delete(key)
+        if (key === activeKey) activeOpers = undefined
+      } else {
+        const idx = list.indexOf(oper)
+        if (idx !== -1) list.splice(idx, 1)
+      }
+    }, true)
   }
+  register.reset = () => {
+    operMap.clear()
+    activeOpers = undefined
+    generation++
+  }
+  return register
 }
 
 function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
@@ -636,6 +673,16 @@ function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
   block.prev = newPrev
   block.next = newNext
   block.prevAnchor = block
+}
+
+function stopBlockScopes(blocks: ForBlock[]): void {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (block) {
+      const scope = block.scope
+      if (scope) scope.stop()
+    }
+  }
 }
 
 export function createForSlots(

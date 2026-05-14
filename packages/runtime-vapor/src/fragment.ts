@@ -129,9 +129,19 @@ export class VaporFragment<
 }
 
 export class ForFragment extends VaporFragment<Block[]> {
+  // Listeners fired when the v-for resets its items in one shot
+  // (whole-list clear or full remount). Selectors hook in here via
+  // `frag.onReset(selector.reset)` so they can drop their internal state in
+  // O(1) instead of N per-item Map.delete calls.
+  resetListeners?: (() => void)[]
+
   constructor(nodes: Block[]) {
     super(nodes)
     trackSlotBoundaryDirtying(this)
+  }
+
+  onReset(fn: () => void): void {
+    ;(this.resetListeners ||= []).push(fn)
   }
 }
 

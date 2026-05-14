@@ -80,6 +80,20 @@ describe('compiler: v-for', () => {
       `,
       ).code,
     ).matchSnapshot()
+
+    const reverseMemberSelector = compileWithVFor(
+      `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="row.id === state.selected ? 'danger' : ''"
+          ></tr>
+      `,
+    ).code
+    expect(reverseMemberSelector).matchSnapshot()
+    expect(reverseMemberSelector).contains(
+      `const _selector0 = _createSelector(() => _ctx.state.selected)`,
+    )
   })
 
   test('selector pattern', () => {
@@ -132,6 +146,30 @@ describe('compiler: v-for', () => {
       `,
       ).code,
     ).matchSnapshot()
+  })
+
+  test('multiple selector patterns on one v-for', () => {
+    const { code } = compileWithVFor(
+      `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="selected === row.id ? 'a' : ''"
+            :title="active === row.id ? 'b' : ''"
+          ></tr>
+      `,
+    )
+    expect(code).matchSnapshot()
+    // both selectors created at outer scope with sub-indexed names
+    expect(code).contains(
+      `const _selector0_0 = _createSelector(() => _ctx.selected)`,
+    )
+    expect(code).contains(
+      `const _selector0_1 = _createSelector(() => _ctx.active)`,
+    )
+    // both wired to the same fragment's onReset
+    expect(code).contains(`n0.onReset(_selector0_0.reset)`)
+    expect(code).contains(`n0.onReset(_selector0_1.reset)`)
   })
 
   test('multi effect', () => {
