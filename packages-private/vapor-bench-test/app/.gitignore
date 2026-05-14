@@ -1,3 +1,5 @@
 dist/
 node_modules/
 results/
+.bench-artifacts/
+src/scenarios/code-slope/generated/

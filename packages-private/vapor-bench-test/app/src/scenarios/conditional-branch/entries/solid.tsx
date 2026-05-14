@@ -4,4 +4,4 @@ import ConditionalBranch from '../solid/Solid'
 
 performance.mark('bench:entry-start')
 
-render(() => <ConditionalBranch />, document.getElementById('app')!)
+render(() => <ConditionalBranch />, globalThis.document.getElementById('app')!)

@@ -4,4 +4,4 @@ import StaticHeavy from '../solid/Solid'
 
 performance.mark('bench:entry-start')
 
-render(() => <StaticHeavy />, document.getElementById('app')!)
+render(() => <StaticHeavy />, globalThis.document.getElementById('app')!)

@@ -12,12 +12,30 @@ export function summarizeTrace(events, options = {}) {
     unionDuration(mainEvents.filter(isRenderingEvent), traceWindow) / 1000
   const paintingMs =
     unionDuration(mainEvents.filter(isPaintingEvent), traceWindow) / 1000
+  const taskEvents = mainEvents.filter(isTaskEvent)
+  const taskDurations = (
+    taskEvents.length > 0
+      ? taskEvents
+          .map(event => getEventInterval(event, traceWindow))
+          .filter(Boolean)
+      : unionIntervals(mainEvents, traceWindow)
+  ).map(([start, end]) => (end - start) / 1000)
+  const jsParseCompileMs =
+    unionDuration(mainEvents.filter(isJsParseCompileEvent), traceWindow) / 1000
+  const jsEvaluateMs =
+    unionDuration(mainEvents.filter(isJsEvaluateEvent), traceWindow) / 1000
   const summary = {
     mainThread,
     mainThreadBusyMs: round(busyMs),
     scriptingMs: round(scriptingMs),
     renderingMs: round(renderingMs),
     paintingMs: round(paintingMs),
+    longTaskCount: taskDurations.filter(duration => duration >= 50).length,
+    maxTaskMs: round(
+      taskDurations.length === 0 ? 0 : Math.max(...taskDurations),
+    ),
+    jsParseCompileMs: round(jsParseCompileMs),
+    jsEvaluateMs: round(jsEvaluateMs),
   }
 
   if (traceWindow) {
@@ -34,14 +52,16 @@ export function summarizeTrace(events, options = {}) {
 function resolveTraceWindow(events, traceWindow) {
   if (!traceWindow) return undefined
 
+  const startMark = findTraceMark(events, traceWindow.startMark)
+  const endMark = findTraceMark(events, traceWindow.endMark)
   const startTs =
     typeof traceWindow.startTs === 'number'
       ? traceWindow.startTs
-      : findTraceMark(events, traceWindow.startMark)?.ts
+      : startMark && startMark.ts
   const endTs =
     typeof traceWindow.endTs === 'number'
       ? traceWindow.endTs
-      : findTraceMark(events, traceWindow.endMark)?.ts
+      : endMark && endMark.ts
 
   if (typeof startTs !== 'number') {
     throw new Error(`Missing trace start mark "${traceWindow.startMark}"`)
@@ -75,7 +95,8 @@ function findRendererMainThread(events, completeEvents, traceWindow) {
         event =>
           event.ph === 'M' &&
           event.name === 'process_name' &&
-          event.args?.name === 'Renderer',
+          event.args &&
+          event.args.name === 'Renderer',
       )
       .map(event => event.pid),
   )
@@ -84,7 +105,8 @@ function findRendererMainThread(events, completeEvents, traceWindow) {
       event =>
         event.ph === 'M' &&
         event.name === 'thread_name' &&
-        event.args?.name === 'CrRendererMain' &&
+        event.args &&
+        event.args.name === 'CrRendererMain' &&
         (rendererPids.size === 0 || rendererPids.has(event.pid)),
     )
     .map(event => ({
@@ -123,17 +145,26 @@ function findBusyThread(events, traceWindow) {
     )
   }
 
-  return Array.from(totals.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || 0
+  const busiest = Array.from(totals.entries()).sort((a, b) => b[1] - a[1])[0]
+
+  return busiest ? busiest[0] : 0
 }
 
 function unionDuration(events, traceWindow) {
+  return unionIntervals(events, traceWindow).reduce(
+    (total, [start, end]) => total + end - start,
+    0,
+  )
+}
+
+function unionIntervals(events, traceWindow) {
   const intervals = events
     .filter(isTimelineEvent)
     .map(event => getEventInterval(event, traceWindow))
     .filter(Boolean)
     .sort((a, b) => a[0] - b[0])
 
-  let total = 0
+  const merged = []
   let currentStart = 0
   let currentEnd = 0
 
@@ -144,17 +175,17 @@ function unionDuration(events, traceWindow) {
     } else if (start <= currentEnd) {
       currentEnd = Math.max(currentEnd, end)
     } else {
-      total += currentEnd - currentStart
+      merged.push([currentStart, currentEnd])
       currentStart = start
       currentEnd = end
     }
   }
 
   if (currentEnd !== 0) {
-    total += currentEnd - currentStart
+    merged.push([currentStart, currentEnd])
   }
 
-  return total
+  return merged
 }
 
 function getEventInterval(event, traceWindow) {
@@ -193,6 +224,22 @@ function isScriptingEvent(event) {
       'RunMicrotasks',
       'EventDispatch',
     ].includes(event.name)
+  )
+}
+
+function isTaskEvent(event) {
+  return event.name === 'RunTask'
+}
+
+function isJsParseCompileEvent(event) {
+  return /compile|parse/i.test(event.name)
+}
+
+function isJsEvaluateEvent(event) {
+  return (
+    event.name === 'EvaluateScript' ||
+    event.name === 'v8.evaluateModule' ||
+    event.name === 'V8.EvaluateModule'
   )
 }
 

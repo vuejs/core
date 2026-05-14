@@ -27,11 +27,11 @@ Trace window: operation start through two animation frames after DOM settle. ope
 - Vapor vs VDOM: mainThreadBusyMs 21.5% lower; scriptingMs 76.1% lower.
 - Vapor vs Solid: mainThreadBusyMs 0.9% difference, within noise threshold; scriptingMs 19.4% higher.
 
-| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | operationMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vue VDOM | 153.55 | 3.87 | 12.69 | 10.85 | 50.98 | 60.35 | 48.9 | 65794 | 25403 | 23068 |
-| Vue Vapor | 120.58 | 35.26 | 27.76 | 2.59 | 51.14 | 62.05 | 2.7 | 46529 | 17554 | 16032 |
-| Solid | 119.53 | 17.03 | 16.02 | 2.17 | 49.84 | 61.02 | 2.5 | 14126 | 5597 | 5069 |
+| Target    | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | operationMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
+| --------- | ----------------------: | -------: | ----------: | -----------------: | -----------------: | ----------------: | -----------------: | -----------: | ------------: | --------------: |
+| Vue VDOM  |                  153.55 |     3.87 |       12.69 |              10.85 |              50.98 |             60.35 |               48.9 |        65794 |         25403 |           23068 |
+| Vue Vapor |                  120.58 |    35.26 |       27.76 |               2.59 |              51.14 |             62.05 |                2.7 |        46529 |         17554 |           16032 |
+| Solid     |                  119.53 |    17.03 |       16.02 |               2.17 |              49.84 |             61.02 |                2.5 |        14126 |          5597 |            5069 |
 
 ### Stability Notes
 
@@ -44,11 +44,11 @@ Trace window: operation start through two animation frames after DOM settle. ope
 - Vapor vs VDOM: mainThreadBusyMs 18.2% lower; scriptingMs 81.7% lower.
 - Vapor vs Solid: mainThreadBusyMs 6.0% higher; scriptingMs 2.6% lower.
 
-| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | operationMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vue VDOM | 159.41 | 10.5 | 30.48 | 12.29 | 55.41 | 62.43 | 50.8 | 65794 | 25403 | 23068 |
-| Vue Vapor | 130.46 | 42.37 | 23.88 | 2.25 | 52.25 | 66.43 | 6.4 | 46529 | 17554 | 16032 |
-| Solid | 123.06 | 9.57 | 18.97 | 2.31 | 52.32 | 62.22 | 4.8 | 14126 | 5597 | 5069 |
+| Target    | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | operationMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
+| --------- | ----------------------: | -------: | ----------: | -----------------: | -----------------: | ----------------: | -----------------: | -----------: | ------------: | --------------: |
+| Vue VDOM  |                  159.41 |     10.5 |       30.48 |              12.29 |              55.41 |             62.43 |               50.8 |        65794 |         25403 |           23068 |
+| Vue Vapor |                  130.46 |    42.37 |       23.88 |               2.25 |              52.25 |             66.43 |                6.4 |        46529 |         17554 |           16032 |
+| Solid     |                  123.06 |     9.57 |       18.97 |               2.31 |              52.32 |             62.22 |                4.8 |        14126 |          5597 |            5069 |
 
 ### Stability Notes
 
@@ -61,11 +61,11 @@ Trace window: operation start through two animation frames after DOM settle. ope
 - Vapor vs VDOM: mainThreadBusyMs 19.6% lower; scriptingMs 62.1% lower.
 - Vapor vs Solid: mainThreadBusyMs 5.4% lower; scriptingMs 51.7% higher.
 
-| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | operationMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vue VDOM | 204.86 | 31.56 | 23.87 | 11.54 | 88.21 | 72.47 | 63.5 | 65794 | 25403 | 23068 |
-| Vue Vapor | 164.76 | 26.38 | 21.85 | 4.37 | 78.7 | 73.12 | 30.2 | 46529 | 17554 | 16032 |
-| Solid | 174.17 | 22.04 | 17.32 | 2.88 | 85.03 | 79.48 | 30.3 | 14126 | 5597 | 5069 |
+| Target    | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | operationMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
+| --------- | ----------------------: | -------: | ----------: | -----------------: | -----------------: | ----------------: | -----------------: | -----------: | ------------: | --------------: |
+| Vue VDOM  |                  204.86 |    31.56 |       23.87 |              11.54 |              88.21 |             72.47 |               63.5 |        65794 |         25403 |           23068 |
+| Vue Vapor |                  164.76 |    26.38 |       21.85 |               4.37 |               78.7 |             73.12 |               30.2 |        46529 |         17554 |           16032 |
+| Solid     |                  174.17 |    22.04 |       17.32 |               2.88 |              85.03 |             79.48 |               30.3 |        14126 |          5597 |            5069 |
 
 ### Stability Notes
 

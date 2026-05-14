@@ -10,16 +10,19 @@ export function installConditionalBranchBenchmark(
   target: string,
   runOperation: (operation: string) => void | Promise<void>,
 ) {
-  window.__BENCH_RUN_OPERATION__ = runOperation
-  window.__BENCH_ASSERT_OPERATION__ = assertConditionalBranchOperation
+  const benchWindow = globalThis as Window
+  const benchDocument = globalThis.document
+
+  benchWindow.__BENCH_RUN_OPERATION__ = runOperation
+  benchWindow.__BENCH_ASSERT_OPERATION__ = assertConditionalBranchOperation
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       performance.mark('bench:first-screen-ready')
-      document.documentElement.dataset.benchScenario = 'conditional-branch'
-      document.documentElement.dataset.benchTarget = target
-      document.documentElement.dataset.benchReady = 'true'
-      window.__BENCH_READY__ = true
+      benchDocument.documentElement.dataset.benchScenario = 'conditional-branch'
+      benchDocument.documentElement.dataset.benchTarget = target
+      benchDocument.documentElement.dataset.benchReady = 'true'
+      benchWindow.__BENCH_READY__ = true
     })
   })
 }
@@ -38,7 +41,7 @@ function assertConditionalBranchOperation() {
 }
 
 function readBenchState() {
-  const marker = document.querySelector('[data-bench-state]')
+  const marker = globalThis.document.querySelector('[data-bench-state]')
   if (!marker || !marker.textContent) {
     throw new Error('Missing conditional branch bench state')
   }
@@ -47,7 +50,7 @@ function readBenchState() {
 }
 
 function assertTextIncludes(selector: string, expected: string) {
-  const element = document.querySelector(selector)
+  const element = globalThis.document.querySelector(selector)
   if (
     !element ||
     !element.textContent ||
@@ -58,7 +61,7 @@ function assertTextIncludes(selector: string, expected: string) {
 }
 
 function assertBranchState(index: number, expanded: boolean) {
-  const slot = document.querySelectorAll('.branch-slot')[index]
+  const slot = globalThis.document.querySelectorAll('.branch-slot')[index]
   if (!slot) {
     throw new Error(`Missing branch slot ${index}`)
   }

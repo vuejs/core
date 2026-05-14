@@ -28,6 +28,7 @@ export function createChromeLaunchOptions({ chromePath, headless }) {
       '--disable-extensions',
       `--disable-features=${disabledFeatures.join(',')}`,
       '--disable-sync',
+      '--enable-precise-memory-info',
       '--js-flags=--expose-gc',
       '--no-default-browser-check',
       '--no-first-run',

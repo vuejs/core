@@ -4,4 +4,4 @@ import LocalizedLeaf from '../solid/Solid'
 
 performance.mark('bench:entry-start')
 
-render(() => <LocalizedLeaf />, document.getElementById('app')!)
+render(() => <LocalizedLeaf />, globalThis.document.getElementById('app')!)

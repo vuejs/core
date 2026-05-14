@@ -1,3 +1,5 @@
+import { getMemoryMetricKeys } from './memory.mjs'
+
 export function createRunStats(runs) {
   const stats = {
     mainThreadBusyMs: createMetricStats(
@@ -8,11 +10,28 @@ export function createRunStats(runs) {
     paintingMs: createMetricStats(runs.map(run => run.trace.paintingMs)),
   }
 
+  for (const key of [
+    'longTaskCount',
+    'maxTaskMs',
+    'jsParseCompileMs',
+    'jsEvaluateMs',
+  ]) {
+    if (runs.every(run => typeof run.trace[key] === 'number')) {
+      stats[key] = createMetricStats(runs.map(run => run.trace[key]))
+    }
+  }
+
   if (runs.every(run => typeof run.readyMs === 'number')) {
     stats.readyMs = createMetricStats(runs.map(run => run.readyMs))
   }
   if (runs.every(run => typeof run.operationMs === 'number')) {
     stats.operationMs = createMetricStats(runs.map(run => run.operationMs))
+  }
+  if (runs.every(run => run.memory)) {
+    stats.memory = createMemoryStats(runs.map(run => run.memory))
+  }
+  if (runs.every(run => run.memoryDelta)) {
+    stats.memoryDelta = createMemoryStats(runs.map(run => run.memoryDelta))
   }
 
   return stats
@@ -95,6 +114,15 @@ export function createPlausibilitySummary(runs) {
     warnings,
     traceWarnings,
   }
+}
+
+function createMemoryStats(snapshots) {
+  return Object.fromEntries(
+    getMemoryMetricKeys().map(key => [
+      key,
+      createMetricStats(snapshots.map(snapshot => snapshot[key])),
+    ]),
+  )
 }
 
 function medianOfSorted(sorted) {

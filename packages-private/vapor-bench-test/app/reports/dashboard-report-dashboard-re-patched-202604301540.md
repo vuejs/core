@@ -23,12 +23,11 @@ Primary timing metric: mainThreadBusyMs
 - Vue Vapor vs Vue VDOM: mainThreadBusyMs 0.4% difference, within noise threshold; gzip JS 28.4% lower; scriptingMs 1.3% lower.
 - Vue Vapor vs Solid: mainThreadBusyMs 6.7% higher; gzip JS 177.6% higher; scriptingMs 30.7% higher.
 
-| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | readyMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vue VDOM | 120.53 | 5.42 | 22.29 | 36.69 | 61.29 | 19.43 | 139.7 | 67306 | 25985 | 23650 |
-| Vue Vapor | 120.09 | 9.45 | 9.71 | 36.2 | 60.77 | 19.29 | 134.4 | 49118 | 18601 | 16945 |
-| Solid | 112.5 | 7.17 | 10.24 | 27.69 | 62.09 | 19.52 | 128.6 | 16968 | 6700 | 6065 |
-
+| Target    | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | readyMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
+| --------- | ----------------------: | -------: | ----------: | -----------------: | -----------------: | ----------------: | -------------: | -----------: | ------------: | --------------: |
+| Vue VDOM  |                  120.53 |     5.42 |       22.29 |              36.69 |              61.29 |             19.43 |          139.7 |        67306 |         25985 |           23650 |
+| Vue Vapor |                  120.09 |     9.45 |        9.71 |               36.2 |              60.77 |             19.29 |          134.4 |        49118 |         18601 |           16945 |
+| Solid     |                   112.5 |     7.17 |       10.24 |              27.69 |              62.09 |             19.52 |          128.6 |        16968 |          6700 |            6065 |
 
 ## Stability Notes
 

@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 import solid from 'vite-plugin-solid'
 import { defineConfig } from 'vite'
 import { resolveScenario } from './src/bench/targets.mjs'
+import { createCodeSizePlugin } from './src/bench/codeSize.mjs'
 
 const require = createRequire(import.meta.url)
 const rootDir = fileURLToPath(new URL('.', import.meta.url))
@@ -75,6 +76,7 @@ export default defineConfig(({ mode }) => {
   const scenario = process.env.BENCH_SCENARIO || 'dashboard'
   const buildMode = process.env.BENCH_BUILD_MODE || 'client'
   const minify = process.env.BENCH_MINIFY !== 'false'
+  const codeSlopeCount = process.env.BENCH_CODE_SLOPE_COUNT || '1'
   const scenarioConfig = resolveScenario(scenario)
   const sourceScenario = scenarioConfig.sourceScenarioId || scenario
   const isHydration = scenarioConfig.measurement === 'hydration-first-screen'
@@ -101,7 +103,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     root: rootDir,
-    base: scenario === 'dashboard' ? `/${target}/` : `/${scenario}/${target}/`,
+    base:
+      scenario === 'dashboard'
+        ? `/${target}/`
+        : scenario === 'code-slope'
+          ? `/${scenario}/${codeSlopeCount}/${target}/`
+          : `/${scenario}/${target}/`,
     clearScreen: false,
     resolve: {
       alias: target === 'solid' ? {} : vueAliases,
@@ -117,14 +124,24 @@ export default defineConfig(({ mode }) => {
         : vue({
             compiler,
           }),
+      !isServerBuild &&
+        createCodeSizePlugin({
+          appRoot: rootDir,
+          repoRoot,
+          scenarioId: scenario,
+          sourceScenarioId: sourceScenario,
+          targetId: target,
+        }),
       !isServerBuild && scenarioEntryPlugin(entry),
     ],
     build: {
       outDir: isHydration
         ? path.resolve(rootDir, 'dist', scenario, target, buildMode)
-        : scenario === 'dashboard'
-          ? path.resolve(rootDir, 'dist', target)
-          : path.resolve(rootDir, 'dist', scenario, target),
+        : scenario === 'code-slope'
+          ? path.resolve(rootDir, 'dist', scenario, codeSlopeCount, target)
+          : scenario === 'dashboard'
+            ? path.resolve(rootDir, 'dist', target)
+            : path.resolve(rootDir, 'dist', scenario, target),
       emptyOutDir: true,
       ssr: isServerBuild ? path.resolve(rootDir, 'src', entry) : false,
       minify,

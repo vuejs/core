@@ -28,6 +28,10 @@ test('run stats are derived from trace and browser timing samples', () => {
     scriptingMs: createMetricStats([4, 5, 6]),
     renderingMs: createMetricStats([3, 3, 4]),
     paintingMs: createMetricStats([2, 2, 2]),
+    longTaskCount: createMetricStats([0, 1, 2]),
+    maxTaskMs: createMetricStats([40, 50, 60]),
+    jsParseCompileMs: createMetricStats([1, 2, 3]),
+    jsEvaluateMs: createMetricStats([2, 3, 4]),
     readyMs: createMetricStats([100, 110, 120]),
   })
 })
@@ -41,6 +45,10 @@ function sample(run, busy, script, render, paint, ready) {
       scriptingMs: script,
       renderingMs: render,
       paintingMs: paint,
+      longTaskCount: run - 1,
+      maxTaskMs: 30 + run * 10,
+      jsParseCompileMs: run,
+      jsEvaluateMs: run + 1,
       warnings: [],
     },
   }

@@ -30,16 +30,17 @@ artifacts before running the benchmark.
 
 ## Implemented Scenarios
 
-| Scenario | Type | Purpose |
-| --- | --- | --- |
-| `dashboard` | First screen | Realistic SPA dashboard with summary cards, tables, filters, status badges, and conditional classes. |
-| `dashboard-hydration` | Hydration first screen | Hydrates the same Dashboard SSR HTML and compares browser main-thread cost across Vue VDOM, Vue Vapor, and Solid. |
-| `static-heavy` | First screen | Large static DOM with a few dynamic points, used to measure static-heavy first-screen cost. |
-| `static-heavy-hydration` | Hydration first screen | Hydrates the same Static-heavy SSR HTML and compares browser main-thread cost across Vue VDOM, Vue Vapor, and Solid. |
-| `localized-leaf` | Update | Updates one cell, one row, and 1,000 cells in a 100 x 100 grid. |
-| `conditional-branch` | Update | Toggles conditional branches at local, group, and full-page scale. |
-| `component-fanout` | Update | Updates active child, shared revision, and display mode across many leaf components. |
-| `dynamic-props-attrs` | Update | Exercises dynamic props, attrs fallthrough, and prop bag updates. |
+| Scenario                 | Type                   | Purpose                                                                                                                       |
+| ------------------------ | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `dashboard`              | First screen           | Realistic SPA dashboard with summary cards, tables, filters, status badges, and conditional classes.                          |
+| `dashboard-hydration`    | Hydration first screen | Hydrates the same Dashboard SSR HTML and compares browser main-thread cost across Vue VDOM, Vue Vapor, and Solid.             |
+| `static-heavy`           | First screen           | Large static DOM with a few dynamic points, used to measure static-heavy first-screen cost.                                   |
+| `static-heavy-hydration` | Hydration first screen | Hydrates the same Static-heavy SSR HTML and compares browser main-thread cost across Vue VDOM, Vue Vapor, and Solid.          |
+| `localized-leaf`         | Update                 | Updates one cell, one row, and 1,000 cells in a 100 x 100 grid.                                                               |
+| `conditional-branch`     | Update                 | Toggles conditional branches at local, group, and full-page scale.                                                            |
+| `component-fanout`       | Update                 | Updates active child, shared revision, and display mode across many leaf components.                                          |
+| `dynamic-props-attrs`    | Update                 | Exercises dynamic props, attrs fallthrough, and prop bag updates.                                                             |
+| `code-slope`             | Build-only code size   | Builds 1, 10, 100, and 500 same-shape components to estimate generated-code and final-bundle gzip growth per added component. |
 
 Each scenario keeps its source, build entries, result directory, and latest
 reports so Vue changes can be validated against the same workloads later.
@@ -56,6 +57,44 @@ Reports count JavaScript only, not CSS. Each target records:
 - raw bytes
 - gzip bytes
 - brotli bytes
+- rendered byte attribution by module bucket:
+  - Vapor runtime
+  - Vue runtime
+  - Solid runtime
+  - generated component code
+  - scenario user code
+
+The attribution uses bundler module metadata. Raw rendered bytes are additive;
+gzip and brotli are only reported for whole JS assets because compressed bucket
+sizes are not additive.
+
+### Generated Component Code Size
+
+Each build also records post-transform component module output before final
+bundling. This compares the same scenario shape across:
+
+- Vue VDOM SFC generated output
+- Vue Vapor SFC generated output
+- Solid TSX generated output
+
+Each target records raw, gzip, and brotli bytes for the captured component
+modules, plus the final rendered generated module bytes after the bundler and
+minifier.
+
+### Generated Code Slope
+
+The `code-slope` benchmark is build-only. It does not launch Chrome. It
+generates the same component shape at multiple project sizes and records:
+
+- generated component raw/gzip/brotli bytes
+- final rendered generated module bytes
+- final JS bundle raw/gzip/brotli bytes
+- runtime rendered bytes at the largest count
+- generated modules per logical component
+- estimated bundle gzip break-even when one target has lower fixed cost but
+  higher per-component growth
+
+Default counts are `1,10,100,500`, and the default build rounds are `3`.
 
 ### First-Screen CPU
 
@@ -73,7 +112,17 @@ Reports record:
 - `scriptingMs`
 - `renderingMs`
 - `paintingMs`
+- `longTaskCount`
+- `maxTaskMs`
+- `jsParseCompileMs`
+- `jsEvaluateMs`
 - `readyMs`
+- post-GC retained memory:
+  - `jsHeapUsedBytes`
+  - `jsHeapTotalBytes`
+  - `documents`
+  - `nodes`
+  - `jsEventListeners`
 
 ### Update CPU
 
@@ -89,6 +138,12 @@ Reports record:
 
 - `mainThreadBusyMs`
 - `scriptingMs`
+- `longTaskCount`
+- `maxTaskMs`
+- `jsParseCompileMs`
+- `jsEvaluateMs`
+- post-GC retained memory after the operation
+- post-GC retained memory delta from before the operation
 - whether the DOM state changed after the operation.
 
 ## Chrome Collection Protocol
@@ -144,6 +199,7 @@ pnpm run bench:localized-leaf
 pnpm run bench:conditional-branch
 pnpm run bench:component-fanout
 pnpm run bench:dynamic-props-attrs
+pnpm run bench:code-slope
 ```
 
 Run only Hydration scenarios:
@@ -164,10 +220,22 @@ Run all registered scenarios headlessly:
 pnpm run bench:all:headless
 ```
 
+Run three complete memory-report batches, excluding build-only code-size slope:
+
+```sh
+pnpm run bench:memory:all:headless
+```
+
 Sampling parameters can also be overridden explicitly:
 
 ```sh
 BENCH_HEADLESS=1 BENCH_WARMUP_RUNS=5 BENCH_RUNS=15 pnpm run bench:all
+```
+
+Run only generated-code slope:
+
+```sh
+BENCH_CODE_SLOPE_COUNTS=1,10,100,500 BENCH_SLOPE_RUNS=3 pnpm run bench:code-slope
 ```
 
 Run only Hydration scenarios headlessly:
@@ -207,5 +275,6 @@ reports/dashboard-report-20264290850.md
 - `reports/conditional-branch-report-<report-run-id>.md`
 - `reports/component-fanout-report-<report-run-id>.md`
 - `reports/dynamic-props-attrs-report-<report-run-id>.md`
+- `reports/code-slope-report-<report-run-id>.md`
 
 `dist/`, `node_modules/`, and `results/` are not committed.

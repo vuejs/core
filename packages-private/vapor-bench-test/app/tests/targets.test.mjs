@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import {
   getFirstScreenUrl,
   getHydrationScenarios,
+  getMemoryScenarios,
   getScenarioTargets,
   resolveScenario,
 } from '../src/bench/targets.mjs'
@@ -92,5 +93,21 @@ test('hydration scenario list only includes hydration benches', () => {
   assert.deepEqual(
     getHydrationScenarios().map(scenario => scenario.id),
     ['dashboard-hydration', 'static-heavy-hydration'],
+  )
+})
+
+test('memory scenario list excludes build-only code size benches', () => {
+  assert.deepEqual(
+    getMemoryScenarios().map(scenario => scenario.id),
+    [
+      'dashboard',
+      'dashboard-hydration',
+      'static-heavy',
+      'static-heavy-hydration',
+      'localized-leaf',
+      'conditional-branch',
+      'component-fanout',
+      'dynamic-props-attrs',
+    ],
   )
 })

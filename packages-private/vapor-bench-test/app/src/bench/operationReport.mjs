@@ -14,6 +14,7 @@ export function renderOperationReport({
     )
     .join('\n\n')
   const conclusion = renderConclusion(operations, summaries)
+  const codeSizeSections = renderCodeSizeSections(bundleSize)
 
   return `# ${scenario.reportTitle}
 
@@ -36,6 +37,8 @@ Trace window: operation start through two animation frames after DOM settle. ope
 ## Conclusion
 
 ${conclusion}
+
+${codeSizeSections}
 
 ${sections}
 `
@@ -67,7 +70,7 @@ function renderOperationSection(operation, summaries, bundleSize) {
     .map(summary => {
       const stats = summary.stats
       const size = bundleSize[summary.target].totals
-      return `| ${summary.label} | ${stats.mainThreadBusyMs.median} | ${stats.mainThreadBusyMs.iqr} | ${stats.mainThreadBusyMs.stddev} | ${stats.scriptingMs.median} | ${stats.renderingMs.median} | ${stats.paintingMs.median} | ${stats.operationMs.median} | ${size.raw} | ${size.gzip} | ${size.brotli} |`
+      return `| ${summary.label} | ${stats.mainThreadBusyMs.median} | ${stats.mainThreadBusyMs.iqr} | ${stats.mainThreadBusyMs.stddev} | ${stats.scriptingMs.median} | ${stats.renderingMs.median} | ${stats.paintingMs.median} | ${formatStatMetric(stats, 'longTaskCount')} | ${formatStatMetric(stats, 'maxTaskMs')} | ${formatStatMetric(stats, 'jsParseCompileMs')} | ${formatStatMetric(stats, 'jsEvaluateMs')} | ${stats.operationMs.median} | ${formatMemoryMetric(stats, 'jsHeapUsedBytes')} | ${formatMemoryDeltaMetric(stats, 'jsHeapUsedBytes')} | ${formatMemoryMetric(stats, 'nodes')} | ${formatMemoryDeltaMetric(stats, 'nodes')} | ${size.raw} | ${size.gzip} | ${size.brotli} |`
     })
     .join('\n')
   const stabilityNotes = renderStabilityNotes(Object.values(summaries))
@@ -81,16 +84,17 @@ function renderOperationSection(operation, summaries, bundleSize) {
 - Vapor vs VDOM: mainThreadBusyMs ${formatNoisyComparison(vapor.stats.mainThreadBusyMs.median, vdom.stats.mainThreadBusyMs.median)}; scriptingMs ${formatScriptComparison(vapor.stats.scriptingMs.median, vdom.stats.scriptingMs.median)}.
 - Vapor vs Solid: mainThreadBusyMs ${formatNoisyComparison(vapor.stats.mainThreadBusyMs.median, solid.stats.mainThreadBusyMs.median)}; scriptingMs ${formatScriptComparison(vapor.stats.scriptingMs.median, solid.stats.scriptingMs.median)}.
 
-| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | operationMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | long tasks median | max task median | JS parse/compile median | JS evaluate median | operationMs median | JS heap used median | JS heap delta median | DOM nodes median | DOM nodes delta median | JS raw bytes | JS gzip bytes | JS brotli bytes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 ${rows}${stabilityNotes}`
 }
 
 function renderStabilityNotes(summaries) {
   const notes = summaries
     .map(summary => {
-      const warnings = summary.plausibility?.warnings || []
-      const traceWarnings = summary.plausibility?.traceWarnings || []
+      const plausibility = summary.plausibility || {}
+      const warnings = plausibility.warnings || []
+      const traceWarnings = plausibility.traceWarnings || []
       const parts = []
 
       if (warnings.length > 0) {
@@ -122,6 +126,90 @@ function formatScriptComparison(value, baseline) {
   }
 
   return formatPercentComparison(value, baseline)
+}
+
+function renderCodeSizeSections(bundleSize) {
+  const targetEntries = Object.entries(bundleSize)
+  const attributionRows = targetEntries
+    .filter(([, size]) => size.attribution)
+    .map(([target, size]) => {
+      const buckets = size.attribution.buckets
+      return `| ${target} | ${formatAttributionBucket(buckets['vapor-runtime'])} | ${formatAttributionBucket(buckets['vue-runtime'])} | ${formatAttributionBucket(buckets['solid-runtime'])} | ${formatAttributionBucket(buckets['generated-component'])} | ${formatAttributionBucket(buckets['scenario-user-code'])} |`
+    })
+    .join('\n')
+  const generatedRows = targetEntries
+    .filter(([, size]) => size.generatedCode)
+    .map(([target, size]) => {
+      const totals = size.generatedCode.totals
+      return `| ${target} | ${totals.raw} | ${totals.gzip} | ${totals.brotli} | ${formatGeneratedRenderedBytes(size)} |`
+    })
+    .join('\n')
+  const sections = []
+
+  if (attributionRows) {
+    sections.push(`## Runtime / generated code split
+
+Rendered bytes are attributed from bundler module metadata. Gzip is reported only for whole assets because per-bucket gzip is not additive.
+
+| Target | Vapor runtime | Vue runtime | Solid runtime | Generated component | Scenario user code |
+| --- | ---: | ---: | ---: | ---: | ---: |
+${attributionRows}`)
+  }
+  if (generatedRows) {
+    sections.push(`## Generated component code size
+
+Post-transform component module output before final bundling, plus final rendered generated module bytes after bundler/minifier output.
+
+| Target | raw bytes | gzip bytes | brotli bytes | final rendered bytes |
+| --- | ---: | ---: | ---: | ---: |
+${generatedRows}`)
+  }
+
+  return sections.join('\n\n')
+}
+
+function formatAttributionBucket(bucket) {
+  if (!bucket || bucket.renderedBytes === 0) return '0 (0.0%)'
+
+  return `${bucket.renderedBytes} (${bucket.sharePct.toFixed(1)}%)`
+}
+
+function formatGeneratedRenderedBytes(size) {
+  const generatedRenderedCode = size.generatedRenderedCode
+  const totals = generatedRenderedCode && generatedRenderedCode.totals
+
+  if (!totals || typeof totals.renderedBytes !== 'number') return '-'
+
+  return String(totals.renderedBytes)
+}
+
+function formatMemoryMetric(stats, key) {
+  const memory = stats.memory
+  const metric = memory && memory[key]
+  const value = metric && metric.median
+
+  if (typeof value !== 'number') return '-'
+  if (key.includes('Bytes')) return formatBytes(value)
+
+  return String(value)
+}
+
+function formatMemoryDeltaMetric(stats, key) {
+  const memoryDelta = stats.memoryDelta
+  const metric = memoryDelta && memoryDelta[key]
+  const value = metric && metric.median
+
+  if (typeof value !== 'number') return '-'
+  if (key.includes('Bytes')) return formatBytes(value)
+
+  return String(value)
+}
+
+function formatStatMetric(stats, key) {
+  const metric = stats[key]
+  const value = metric && metric.median
+
+  return typeof value === 'number' ? String(value) : '-'
 }
 
 function formatOutcomeSummary(results, baselineLabel) {
@@ -181,7 +269,9 @@ function classifyComparison(value, baseline) {
 
 function formatPercentComparison(value, baseline) {
   if (baseline === 0) {
-    return value === 0 ? 'flat' : `increased from 0ms to ${formatNumber(value)}ms`
+    return value === 0
+      ? 'flat'
+      : `increased from 0ms to ${formatNumber(value)}ms`
   }
 
   const percent = percentDiff(value, baseline)
@@ -214,6 +304,10 @@ function percentDiff(value, baseline) {
 
 function formatPercent(value) {
   return `${(Math.round(value * 10) / 10).toFixed(1)}%`
+}
+
+function formatBytes(bytes) {
+  return `${(bytes / 1024).toFixed(1)} KiB`
 }
 
 function formatNumber(value) {

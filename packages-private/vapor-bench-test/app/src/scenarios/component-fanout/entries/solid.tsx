@@ -4,4 +4,4 @@ import ComponentFanout from '../solid/Solid'
 
 performance.mark('bench:entry-start')
 
-render(() => <ComponentFanout />, document.getElementById('app')!)
+render(() => <ComponentFanout />, globalThis.document.getElementById('app')!)

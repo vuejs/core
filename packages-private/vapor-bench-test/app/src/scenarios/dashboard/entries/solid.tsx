@@ -4,4 +4,4 @@ import Dashboard from '../solid/Solid'
 
 performance.mark('bench:entry-start')
 
-render(() => <Dashboard />, document.getElementById('app')!)
+render(() => <Dashboard />, globalThis.document.getElementById('app')!)

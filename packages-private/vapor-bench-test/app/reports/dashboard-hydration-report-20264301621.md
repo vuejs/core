@@ -23,12 +23,11 @@ Primary timing metric: mainThreadBusyMs
 - Vue Vapor Hydration vs Vue VDOM Hydration: mainThreadBusyMs 1.6% difference, within noise threshold; gzip JS 25.2% lower; scriptingMs 1.5% higher.
 - Vue Vapor Hydration vs Solid Hydration: mainThreadBusyMs 1.3% difference, within noise threshold; gzip JS 183.5% higher; scriptingMs 7.2% higher.
 
-| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | readyMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vue VDOM Hydration | 124.97 | 6.19 | 4.69 | 35.69 | 62.82 | 20.51 | 151.4 | 71812 | 27802 | 25223 |
-| Vue Vapor Hydration | 126.94 | 4.79 | 4.57 | 36.24 | 63.78 | 20.08 | 147.2 | 55423 | 20804 | 18968 |
-| Solid Hydration | 125.3 | 6.79 | 5.01 | 33.81 | 63.12 | 20.1 | 147.3 | 18737 | 7337 | 6620 |
-
+| Target              | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | readyMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
+| ------------------- | ----------------------: | -------: | ----------: | -----------------: | -----------------: | ----------------: | -------------: | -----------: | ------------: | --------------: |
+| Vue VDOM Hydration  |                  124.97 |     6.19 |        4.69 |              35.69 |              62.82 |             20.51 |          151.4 |        71812 |         27802 |           25223 |
+| Vue Vapor Hydration |                  126.94 |     4.79 |        4.57 |              36.24 |              63.78 |             20.08 |          147.2 |        55423 |         20804 |           18968 |
+| Solid Hydration     |                   125.3 |     6.79 |        5.01 |              33.81 |              63.12 |              20.1 |          147.3 |        18737 |          7337 |            6620 |
 
 ## Stability Notes
 

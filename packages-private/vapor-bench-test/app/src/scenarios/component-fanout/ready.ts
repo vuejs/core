@@ -10,16 +10,19 @@ export function installComponentFanoutBenchmark(
   target: string,
   runOperation: (operation: string) => void | Promise<void>,
 ) {
-  window.__BENCH_RUN_OPERATION__ = runOperation
-  window.__BENCH_ASSERT_OPERATION__ = assertComponentFanoutOperation
+  const benchWindow = globalThis as Window
+  const benchDocument = globalThis.document
+
+  benchWindow.__BENCH_RUN_OPERATION__ = runOperation
+  benchWindow.__BENCH_ASSERT_OPERATION__ = assertComponentFanoutOperation
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       performance.mark('bench:first-screen-ready')
-      document.documentElement.dataset.benchScenario = 'component-fanout'
-      document.documentElement.dataset.benchTarget = target
-      document.documentElement.dataset.benchReady = 'true'
-      window.__BENCH_READY__ = true
+      benchDocument.documentElement.dataset.benchScenario = 'component-fanout'
+      benchDocument.documentElement.dataset.benchTarget = target
+      benchDocument.documentElement.dataset.benchReady = 'true'
+      benchWindow.__BENCH_READY__ = true
     })
   })
 }
@@ -46,7 +49,7 @@ function assertComponentFanoutOperation() {
 }
 
 function readBenchState() {
-  const marker = document.querySelector('[data-bench-state]')
+  const marker = globalThis.document.querySelector('[data-bench-state]')
   if (!marker || !marker.textContent) {
     throw new Error('Missing component fanout bench state')
   }
@@ -55,7 +58,7 @@ function readBenchState() {
 }
 
 function getCard(index: number) {
-  const card = document.querySelectorAll('.fanout-card')[index]
+  const card = globalThis.document.querySelectorAll('.fanout-card')[index]
   if (!card) {
     throw new Error(`Missing fanout card ${index}`)
   }
@@ -71,7 +74,9 @@ function assertClass(element: Element, className: string) {
 
 function assertTextIncludes(target: string | Element, expected: string) {
   const element =
-    typeof target === 'string' ? document.querySelector(target) : target
+    typeof target === 'string'
+      ? globalThis.document.querySelector(target)
+      : target
   if (
     !element ||
     !element.textContent ||

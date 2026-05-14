@@ -13,16 +13,20 @@ export function installDynamicPropsAttrsBenchmark(
   target: string,
   runOperation: (operation: string) => void | Promise<void>,
 ) {
-  window.__BENCH_RUN_OPERATION__ = runOperation
-  window.__BENCH_ASSERT_OPERATION__ = assertDynamicPropsAttrsOperation
+  const benchWindow = globalThis as Window
+  const benchDocument = globalThis.document
+
+  benchWindow.__BENCH_RUN_OPERATION__ = runOperation
+  benchWindow.__BENCH_ASSERT_OPERATION__ = assertDynamicPropsAttrsOperation
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       performance.mark('bench:first-screen-ready')
-      document.documentElement.dataset.benchScenario = 'dynamic-props-attrs'
-      document.documentElement.dataset.benchTarget = target
-      document.documentElement.dataset.benchReady = 'true'
-      window.__BENCH_READY__ = true
+      benchDocument.documentElement.dataset.benchScenario =
+        'dynamic-props-attrs'
+      benchDocument.documentElement.dataset.benchTarget = target
+      benchDocument.documentElement.dataset.benchReady = 'true'
+      benchWindow.__BENCH_READY__ = true
     })
   })
 }
@@ -52,7 +56,7 @@ function assertDynamicPropsAttrsOperation() {
 }
 
 function readBenchState() {
-  const marker = document.querySelector('[data-bench-state]')
+  const marker = globalThis.document.querySelector('[data-bench-state]')
   if (!marker || !marker.textContent) {
     throw new Error('Missing dynamic props attrs bench state')
   }
@@ -61,7 +65,7 @@ function readBenchState() {
 }
 
 function getCard(index: number) {
-  const card = document.querySelectorAll('.attrs-card')[index]
+  const card = globalThis.document.querySelectorAll('.attrs-card')[index]
   if (!card) {
     throw new Error(`Missing attrs card ${index}`)
   }
@@ -102,7 +106,9 @@ function assertAttribute(element: Element, name: string, expected: string) {
 
 function assertTextIncludes(target: string | Element, expected: string) {
   const element =
-    typeof target === 'string' ? document.querySelector(target) : target
+    typeof target === 'string'
+      ? globalThis.document.querySelector(target)
+      : target
   if (
     !element ||
     !element.textContent ||

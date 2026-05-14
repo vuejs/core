@@ -29,6 +29,10 @@ import {
   createPlausibilitySummary,
   createRunStats,
 } from '../src/bench/stats.mjs'
+import {
+  collectRetainedMemorySnapshot,
+  createMemoryDelta,
+} from '../src/bench/memory.mjs'
 
 const appRoot = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
 const distRoot = path.join(appRoot, 'dist')
@@ -199,6 +203,7 @@ async function measureSample(browser, sample, resultDir) {
     })
     await stopTracing(client)
     tracing = false
+    const memory = await collectRetainedMemorySnapshot(page, client)
 
     const targetDir = path.join(resultDir, sample.target.id)
     await fs.mkdir(targetDir, { recursive: true })
@@ -217,6 +222,7 @@ async function measureSample(browser, sample, resultDir) {
       round: sample.round,
       readyMs: round(browserTiming.readyMs),
       paints: browserTiming.paints,
+      memory,
       trace: summarizeTrace(traceEvents),
     }
   } finally {
@@ -322,6 +328,7 @@ async function measureOperationSample(browser, sample, resultDir) {
       return undefined
     }
 
+    const memoryBefore = await collectRetainedMemorySnapshot(page, client)
     const traceEvents = []
     const stateBefore = await readBrowserDomState(page)
     client.on('Tracing.dataCollected', event => {
@@ -341,6 +348,7 @@ async function measureOperationSample(browser, sample, resultDir) {
     tracing = false
     const stateAfter = await readBrowserDomState(page)
     await assertBrowserOperation(page, sample.operation.id)
+    const memory = await collectRetainedMemorySnapshot(page, client)
 
     if (stateBefore === stateAfter) {
       throw new Error(
@@ -371,6 +379,9 @@ async function measureOperationSample(browser, sample, resultDir) {
       operationMs: operationResult.duration,
       stateBefore,
       stateAfter,
+      memoryBefore,
+      memory,
+      memoryDelta: createMemoryDelta(memoryBefore, memory),
       traceWindow: operationResult.traceWindow,
       trace: summarizeTrace(traceEvents, {
         window: operationResult.traceWindow,
@@ -669,10 +680,26 @@ async function collectBundleSizes() {
     sizes[target.id] = {
       totals,
       assets,
+      ...(await readCodeSizeArtifact(target.id)),
     }
   }
 
   return sizes
+}
+
+async function readCodeSizeArtifact(targetId) {
+  const artifactPath = path.join(
+    appRoot,
+    '.bench-artifacts',
+    scenario.id,
+    `${targetId}.json`,
+  )
+
+  try {
+    return JSON.parse(await fs.readFile(artifactPath, 'utf8'))
+  } catch {
+    return {}
+  }
 }
 
 async function listFiles(dir) {

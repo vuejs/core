@@ -15,10 +15,11 @@ export function renderFirstScreenReport({
     .map(summary => {
       const stats = summary.stats
       const size = bundleSize[summary.target].totals
-      return `| ${summary.label} | ${stats.mainThreadBusyMs.median} | ${stats.mainThreadBusyMs.iqr} | ${stats.mainThreadBusyMs.stddev} | ${stats.scriptingMs.median} | ${stats.renderingMs.median} | ${stats.paintingMs.median} | ${stats.readyMs.median} | ${size.raw} | ${size.gzip} | ${size.brotli} |`
+      return `| ${summary.label} | ${stats.mainThreadBusyMs.median} | ${stats.mainThreadBusyMs.iqr} | ${stats.mainThreadBusyMs.stddev} | ${stats.scriptingMs.median} | ${stats.renderingMs.median} | ${stats.paintingMs.median} | ${formatStatMetric(stats, 'longTaskCount')} | ${formatStatMetric(stats, 'maxTaskMs')} | ${formatStatMetric(stats, 'jsParseCompileMs')} | ${formatStatMetric(stats, 'jsEvaluateMs')} | ${stats.readyMs.median} | ${formatMemoryMetric(stats, 'jsHeapUsedBytes')} | ${formatMemoryMetric(stats, 'nodes')} | ${formatMemoryMetric(stats, 'jsEventListeners')} | ${size.raw} | ${size.gzip} | ${size.brotli} |`
     })
     .join('\n')
   const stabilityNotes = renderStabilityNotes(targetSummaries)
+  const codeSizeSections = renderCodeSizeSections(bundleSize)
 
   return `# ${scenario.reportTitle}
 
@@ -40,9 +41,10 @@ Primary timing metric: mainThreadBusyMs
 
 ${renderConclusions(conclusion)}
 
-| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | readyMs median | JS raw bytes | JS gzip bytes | JS brotli bytes |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Target | mainThreadBusyMs median | busy IQR | busy stddev | scriptingMs median | renderingMs median | paintingMs median | long tasks median | max task median | JS parse/compile median | JS evaluate median | readyMs median | JS heap used median | DOM nodes median | event listeners median | JS raw bytes | JS gzip bytes | JS brotli bytes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 ${rows}
+${codeSizeSections}
 ${stabilityNotes}
 `
 }
@@ -111,8 +113,9 @@ function renderConclusions({
 function renderStabilityNotes(summaries) {
   const notes = summaries
     .map(summary => {
-      const warnings = summary.plausibility?.warnings || []
-      const traceWarnings = summary.plausibility?.traceWarnings || []
+      const plausibility = summary.plausibility || {}
+      const warnings = plausibility.warnings || []
+      const traceWarnings = plausibility.traceWarnings || []
       const parts = []
 
       if (warnings.length > 0) {
@@ -133,6 +136,79 @@ function renderStabilityNotes(summaries) {
 ## Stability Notes
 
 ${notes.join('\n')}`
+}
+
+function renderCodeSizeSections(bundleSize) {
+  const targetEntries = Object.entries(bundleSize)
+  const attributionRows = targetEntries
+    .filter(([, size]) => size.attribution)
+    .map(([target, size]) => {
+      const buckets = size.attribution.buckets
+      return `| ${target} | ${formatAttributionBucket(buckets['vapor-runtime'])} | ${formatAttributionBucket(buckets['vue-runtime'])} | ${formatAttributionBucket(buckets['solid-runtime'])} | ${formatAttributionBucket(buckets['generated-component'])} | ${formatAttributionBucket(buckets['scenario-user-code'])} |`
+    })
+    .join('\n')
+  const generatedRows = targetEntries
+    .filter(([, size]) => size.generatedCode)
+    .map(([target, size]) => {
+      const totals = size.generatedCode.totals
+      return `| ${target} | ${totals.raw} | ${totals.gzip} | ${totals.brotli} | ${formatGeneratedRenderedBytes(size)} |`
+    })
+    .join('\n')
+  const sections = []
+
+  if (attributionRows) {
+    sections.push(`## Runtime / generated code split
+
+Rendered bytes are attributed from bundler module metadata. Gzip is reported only for whole assets because per-bucket gzip is not additive.
+
+| Target | Vapor runtime | Vue runtime | Solid runtime | Generated component | Scenario user code |
+| --- | ---: | ---: | ---: | ---: | ---: |
+${attributionRows}`)
+  }
+  if (generatedRows) {
+    sections.push(`## Generated component code size
+
+Post-transform component module output before final bundling, plus final rendered generated module bytes after bundler/minifier output.
+
+| Target | raw bytes | gzip bytes | brotli bytes | final rendered bytes |
+| --- | ---: | ---: | ---: | ---: |
+${generatedRows}`)
+  }
+
+  return sections.length > 0 ? `\n${sections.join('\n\n')}\n` : ''
+}
+
+function formatAttributionBucket(bucket) {
+  if (!bucket || bucket.renderedBytes === 0) return '0 (0.0%)'
+
+  return `${bucket.renderedBytes} (${bucket.sharePct.toFixed(1)}%)`
+}
+
+function formatGeneratedRenderedBytes(size) {
+  const generatedRenderedCode = size.generatedRenderedCode
+  const totals = generatedRenderedCode && generatedRenderedCode.totals
+
+  if (!totals || typeof totals.renderedBytes !== 'number') return '-'
+
+  return String(totals.renderedBytes)
+}
+
+function formatMemoryMetric(stats, key) {
+  const memory = stats.memory
+  const metric = memory && memory[key]
+  const value = metric && metric.median
+
+  if (typeof value !== 'number') return '-'
+  if (key.includes('Bytes')) return formatBytes(value)
+
+  return String(value)
+}
+
+function formatStatMetric(stats, key) {
+  const metric = stats[key]
+  const value = metric && metric.median
+
+  return typeof value === 'number' ? String(value) : '-'
 }
 
 function minBy(items, getValue) {

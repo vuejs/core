@@ -10,16 +10,19 @@ export function installLocalizedLeafBenchmark(
   target: string,
   runOperation: (operation: string) => void | Promise<void>,
 ) {
-  window.__BENCH_RUN_OPERATION__ = runOperation
-  window.__BENCH_ASSERT_OPERATION__ = assertLocalizedLeafOperation
+  const benchWindow = globalThis as Window
+  const benchDocument = globalThis.document
+
+  benchWindow.__BENCH_RUN_OPERATION__ = runOperation
+  benchWindow.__BENCH_ASSERT_OPERATION__ = assertLocalizedLeafOperation
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       performance.mark('bench:first-screen-ready')
-      document.documentElement.dataset.benchScenario = 'localized-leaf'
-      document.documentElement.dataset.benchTarget = target
-      document.documentElement.dataset.benchReady = 'true'
-      window.__BENCH_READY__ = true
+      benchDocument.documentElement.dataset.benchScenario = 'localized-leaf'
+      benchDocument.documentElement.dataset.benchTarget = target
+      benchDocument.documentElement.dataset.benchReady = 'true'
+      benchWindow.__BENCH_READY__ = true
     })
   })
 }
@@ -41,7 +44,7 @@ function assertLocalizedLeafOperation(operation: string) {
 }
 
 function readBenchState() {
-  const marker = document.querySelector('[data-bench-state]')
+  const marker = globalThis.document.querySelector('[data-bench-state]')
   if (!marker || !marker.textContent) {
     throw new Error('Missing localized leaf bench state')
   }
@@ -50,7 +53,7 @@ function readBenchState() {
 }
 
 function assertTextIncludes(selector: string, expected: string) {
-  const element = document.querySelector(selector)
+  const element = globalThis.document.querySelector(selector)
   if (
     !element ||
     !element.textContent ||
@@ -61,7 +64,7 @@ function assertTextIncludes(selector: string, expected: string) {
 }
 
 function assertCellText(index: number, expected: string) {
-  const cell = document.querySelectorAll('.leaf-cell')[index]
+  const cell = globalThis.document.querySelectorAll('.leaf-cell')[index]
   const actual = cell && cell.textContent ? cell.textContent.trim() : ''
 
   if (actual !== expected) {

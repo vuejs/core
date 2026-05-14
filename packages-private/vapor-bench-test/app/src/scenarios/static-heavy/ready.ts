@@ -5,13 +5,16 @@ declare global {
 }
 
 export function markStaticHeavyReady(target: string) {
+  const benchWindow = globalThis as Window
+  const benchDocument = globalThis.document
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       performance.mark('bench:first-screen-ready')
-      document.documentElement.dataset.benchScenario = 'static-heavy'
-      document.documentElement.dataset.benchTarget = target
-      document.documentElement.dataset.benchReady = 'true'
-      window.__BENCH_READY__ = true
+      benchDocument.documentElement.dataset.benchScenario = 'static-heavy'
+      benchDocument.documentElement.dataset.benchTarget = target
+      benchDocument.documentElement.dataset.benchReady = 'true'
+      benchWindow.__BENCH_READY__ = true
     })
   })
 }

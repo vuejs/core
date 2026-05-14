@@ -76,6 +76,13 @@ export const BENCH_SCENARIOS = {
     resultPrefix: 'dynamic-props-attrs',
     measurement: 'operations',
   },
+  codeSlope: {
+    id: 'code-slope',
+    label: 'Generated code slope',
+    reportTitle: 'Generated Code Slope Report',
+    resultPrefix: 'code-slope',
+    measurement: 'code-size-slope',
+  },
 }
 
 export const DASHBOARD_TARGETS = getScenarioTargets('dashboard')
@@ -100,6 +107,12 @@ export function resolveScenario(id) {
 export function getHydrationScenarios() {
   return Object.values(BENCH_SCENARIOS).filter(
     scenario => scenario.measurement === 'hydration-first-screen',
+  )
+}
+
+export function getMemoryScenarios() {
+  return Object.values(BENCH_SCENARIOS).filter(
+    scenario => scenario.measurement !== 'code-size-slope',
   )
 }
 

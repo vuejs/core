@@ -4,4 +4,4 @@ import DynamicPropsAttrs from '../solid/Solid'
 
 performance.mark('bench:entry-start')
 
-render(() => <DynamicPropsAttrs />, document.getElementById('app')!)
+render(() => <DynamicPropsAttrs />, globalThis.document.getElementById('app')!)

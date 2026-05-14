@@ -4,4 +4,4 @@ import StaticHeavy from '../solid/Solid'
 
 performance.mark('bench:entry-start')
 
-hydrate(() => <StaticHeavy />, document.getElementById('app')!)
+hydrate(() => <StaticHeavy />, globalThis.document.getElementById('app')!)
