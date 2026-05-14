@@ -21,9 +21,9 @@ export function ssrRenderList(
     }
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
-      const arr = Array.from(source as Iterable<any>)
-      for (let i = 0, l = arr.length; i < l; i++) {
-        renderItem(arr[i], i)
+      let i = 0
+      for (const item of source as Iterable<any>) {
+        renderItem(item, i++)
       }
     } else {
       const keys = Object.keys(source)
