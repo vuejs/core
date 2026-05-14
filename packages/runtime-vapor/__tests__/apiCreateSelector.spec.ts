@@ -129,6 +129,47 @@ describe('api: createSelector', () => {
     )
   })
 
+  test('coalesces selector source changes before post-flush', async () => {
+    let calledTimes = 0
+    let expectedCalledTimes = 0
+
+    const list = ref([{ id: 0 }, { id: 1 }, { id: 2 }])
+    const index = ref(0)
+
+    const { host } = define(() => {
+      const selector = createSelector(() => index.value)
+      return createFor(
+        () => list.value,
+        item => {
+          const span = document.createElement('span')
+          selector(item.value.id, () => {
+            calledTimes++
+            span.textContent =
+              item.value.id === index.value
+                ? `${item.value.id}*`
+                : `${item.value.id}`
+          })
+          return span
+        },
+        item => item.id,
+      )
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<span>0*</span><span>1</span><span>2</span><!--for-->',
+    )
+    expect(calledTimes).toBe((expectedCalledTimes += 3))
+
+    index.value = 1
+    index.value = 2
+    await nextTick()
+
+    expect(host.innerHTML).toBe(
+      '<span>0</span><span>1</span><span>2*</span><!--for-->',
+    )
+    expect(calledTimes).toBe((expectedCalledTimes += 2))
+  })
+
   test('fast-reset path: clearing list bulk-resets selector state', async () => {
     const list = ref([{ id: 0 }, { id: 1 }, { id: 2 }])
     const sel = ref(0)
