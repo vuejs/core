@@ -7,7 +7,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(e => _ctx.a['b' + _ctx.c](e))
+  n0.$evtclick = _createInvoker(e => (_ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](e)))
   return n0
 }"
 `;
@@ -45,7 +45,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.event, _createInvoker(e => _ctx.handler(e)), {
+    _on(n0, _ctx.event, _createInvoker(e => (_ctx.handler && _ctx.handler(e))), {
       effect: true
     })
   })
@@ -61,7 +61,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.event(_ctx.foo), _createInvoker(e => _ctx.handler(e)), {
+    _on(n0, _ctx.event(_ctx.foo), _createInvoker(e => (_ctx.handler && _ctx.handler(e))), {
       effect: true
     })
   })
@@ -77,7 +77,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.event, _createInvoker(e => _ctx.handler(e)), {
+    _on(n0, _ctx.event, _createInvoker(e => (_ctx.handler && _ctx.handler(e))), {
       effect: true
     })
   })
@@ -141,8 +141,8 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   n16.$evtkeyup = _createInvoker(_withKeys(_ctx.handleEvent, ["up"]))
   n17.$evtkeyup = _createInvoker(_withKeys(_ctx.handleEvent, ["down"]))
   n18.$evtkeyup = _createInvoker(_withKeys(_ctx.handleEvent, ["left"]))
-  n19.$evtkeyup = _createInvoker(_withModifiers(e => _ctx.submit(e), ["middle"]))
-  n20.$evtkeyup = _createInvoker(_withModifiers(e => _ctx.submit(e), ["middle","self"]))
+  n19.$evtkeyup = _createInvoker(_withModifiers(e => (_ctx.submit && _ctx.submit(e)), ["middle"]))
+  n20.$evtkeyup = _createInvoker(_withModifiers(e => (_ctx.submit && _ctx.submit(e)), ["middle","self"]))
   n21.$evtkeyup = _createInvoker(_withKeys(_withModifiers(_ctx.handleEvent, ["self"]), ["enter"]))
   return [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19, n20, n21]
 }"
@@ -155,7 +155,7 @@ _delegateEvents("click")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(e => (_ctx.foo[_ctx.handleClick] as any)(e))
+  n0.$evtclick = _createInvoker(e => ((_ctx.foo[_ctx.handleClick] as any && _ctx.foo[_ctx.handleClick] as any)(e)))
   return n0
 }"
 `;
@@ -255,7 +255,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(e => _ctx.a['b' + _ctx.c](e))
+  n0.$evtclick = _createInvoker(e => (_ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](e)))
   return n0
 }"
 `;
@@ -267,7 +267,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(e => _ctx.test(e))
+  n0.$evtclick = _createInvoker(e => (_ctx.test && _ctx.test(e)))
   return n0
 }"
 `;
@@ -305,8 +305,8 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", _createInvoker(e => _ctx.test(e)))
-  _on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
+  _on(n0, "click", _createInvoker(e => (_ctx.test && _ctx.test(e))))
+  _on(n0, "click", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop"])))
   return n0
 }"
 `;
@@ -317,8 +317,8 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["right"])))
-  _on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
+  _on(n0, "contextmenu", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["right"])))
+  _on(n0, "contextmenu", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop"])))
   return n0
 }"
 `;
@@ -330,7 +330,7 @@ _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(e => _ctx.foo.bar(e))
+  n0.$evtclick = _createInvoker(e => (_ctx.foo.bar && _ctx.foo.bar(e)))
   return n0
 }"
 `;
@@ -342,7 +342,7 @@ _delegateEvents("keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtkeyup = _createInvoker(_withModifiers(e => _ctx.test(e), ["exact"]))
+  n0.$evtkeyup = _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["exact"]))
   return n0
 }"
 `;
@@ -354,8 +354,8 @@ _delegateEvents("keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
-  n0.$evtkeyup = _createInvoker(_withKeys(e => _ctx.test(e), ["enter"]))
+  _on(n0, "click", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop"])))
+  n0.$evtkeyup = _createInvoker(_withKeys(e => (_ctx.test && _ctx.test(e)), ["enter"]))
   return n0
 }"
 `;
@@ -366,7 +366,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop","prevent"])), {
+  _on(n0, "click", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop","prevent"])), {
     capture: true,
     once: true
   })
@@ -381,7 +381,7 @@ _delegateEvents("mouseup")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtmouseup = _createInvoker(_withModifiers(e => _ctx.test(e), ["middle"]))
+  n0.$evtmouseup = _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["middle"]))
   return n0
 }"
 `;
@@ -394,7 +394,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), _createInvoker(_withModifiers(e => _ctx.test(e), ["middle"])), {
+    _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["middle"])), {
       effect: true
     })
   })
@@ -409,7 +409,7 @@ _delegateEvents("contextmenu")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtcontextmenu = _createInvoker(_withModifiers(e => _ctx.test(e), ["right"]))
+  n0.$evtcontextmenu = _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["right"]))
   return n0
 }"
 `;
@@ -422,7 +422,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _createInvoker(_withKeys(_withModifiers(e => _ctx.test(e), ["right"]), ["right"])), {
+    _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _createInvoker(_withKeys(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["right"]), ["right"])), {
       effect: true
     })
   })
@@ -450,7 +450,7 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     
-    _on(n0, _ctx.e, _createInvoker(_withKeys(_withModifiers(e => _ctx.test(e), ["left"]), ["left"])), {
+    _on(n0, _ctx.e, _createInvoker(_withKeys(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["left"]), ["left"])), {
       effect: true
     })
   })
@@ -476,7 +476,7 @@ const t0 = _template("<div>", true)
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "keydown", _createInvoker(_withKeys(_withModifiers(e => _ctx.test(e), ["stop","ctrl"]), ["a"])), {
+  _on(n0, "keydown", _createInvoker(_withKeys(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop","ctrl"]), ["a"])), {
     capture: true
   })
   return n0
@@ -490,7 +490,7 @@ _delegateEvents("keyup")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtkeyup = _createInvoker(_withKeys(e => _ctx.test(e), ["left"]))
+  n0.$evtkeyup = _createInvoker(_withKeys(e => (_ctx.test && _ctx.test(e)), ["left"]))
   return n0
 }"
 `;
@@ -502,7 +502,19 @@ _delegateEvents("click")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(_ctx.handleClick)
+  n0.$evtclick = _createInvoker(e => (_ctx.handleClick && _ctx.handleClick(e)))
+  return n0
+}"
+`;
+
+exports[`v-on > simple expression1 1`] = `
+"import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div>", true)
+_delegateEvents("click")
+
+export function render(_ctx) {
+  const n0 = t0()
+  n0.$evtclick = _createInvoker(e => (_ctx.handleClick && _ctx.handleClick(e)))
   return n0
 }"
 `;

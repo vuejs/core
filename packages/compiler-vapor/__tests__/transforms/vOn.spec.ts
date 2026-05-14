@@ -359,7 +359,7 @@ describe('v-on', () => {
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `n0.$evtclick = _createInvoker(e => _ctx.a['b' + _ctx.c](e))`,
+      `n0.$evtclick = _createInvoker(e => (_ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](e)))`,
     )
   })
 
@@ -430,7 +430,7 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      `_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop","prevent"])), {
+      `_on(n0, "click", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop","prevent"])), {
     capture: true,
     once: true
   })`,
@@ -488,8 +488,8 @@ describe('v-on', () => {
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
-  n0.$evtkeyup = _createInvoker(_withKeys(e => _ctx.test(e), ["enter"]))`,
+      `_on(n0, "click", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop"])))
+  n0.$evtkeyup = _createInvoker(_withKeys(e => (_ctx.test && _ctx.test(e)), ["enter"]))`,
     )
   })
 
@@ -672,7 +672,9 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`n0.$evtclick = _createInvoker(e => _ctx.foo.bar(e))`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker(e => (_ctx.foo.bar && _ctx.foo.bar(e)))`,
+    )
   })
 
   test('should delegate event', () => {
@@ -696,9 +698,11 @@ describe('v-on', () => {
     expect(helpers).not.contains('delegate')
     expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
-    expect(code).contains('_on(n0, "click", _createInvoker(e => _ctx.test(e)))')
     expect(code).contains(
-      '_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
+      '_on(n0, "click", _createInvoker(e => (_ctx.test && _ctx.test(e)))',
+    )
+    expect(code).contains(
+      '_on(n0, "click", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop"])))',
     )
   })
 
@@ -711,10 +715,10 @@ describe('v-on', () => {
     expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["right"])))',
+      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["right"])))',
     )
     expect(code).contains(
-      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
+      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => (_ctx.test && _ctx.test(e)), ["stop"])))',
     )
   })
 
@@ -729,7 +733,7 @@ describe('v-on', () => {
     )
     expect(code).matchSnapshot()
     expect(code).include(
-      'n0.$evtclick = _createInvoker(e => (_ctx.foo[_ctx.handleClick] as any)(e))',
+      'n0.$evtclick = _createInvoker(e => ((_ctx.foo[_ctx.handleClick] as any) && (_ctx.foo[_ctx.handleClick] as any)(e)))',
     )
   })
 

@@ -138,13 +138,8 @@ export function genEventHandler(
             // when passing as component handler, access is always dynamic so we
             // can skip this
             const isTSNode = value.ast && TS_NODE_TYPES.includes(value.ast.type)
-            exp = [
-              `e => `,
-              isTSNode ? '(' : '',
-              ...exp,
-              isTSNode ? ')' : '',
-              `(e)`,
-            ]
+            exp = [isTSNode ? '(' : '', ...exp, isTSNode ? ')' : '']
+            exp = [`e => (`, ...exp, ' && ', ...exp, `(e))`]
           }
         } else if (isFnExpression(value, context.options)) {
           // Fn expression: @click="e => foo(e)"
