@@ -215,6 +215,20 @@ describe('compile', () => {
       })
       expect(code).matchSnapshot()
     })
+
+    test('keeps member selector source offsets after prefixing', () => {
+      const code = compile(
+        `<tr
+          v-for="row in rows"
+          :key="row.id"
+          :class="row.id === state.selected ? 'danger' : ''"
+        ></tr>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `const _selector0 = _createSelector(() => _ctx.state.selected)`,
+      )
+    })
   })
 
   describe('custom directive', () => {

@@ -62,6 +62,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > key only binding pattern 2`] = `
+"import { createSelector as _createSelector, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.state.selected)
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.id, () => {
+      _setClassName(n2, (_for_item0.value.id === _ctx.state.selected ? 1 : 0), "danger")
+    })
+    return n2
+  }, (row) => (row.id))
+  n0.onReset(_selector0.reset)
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > multi className helper with repeated v-for value 1`] = `
 "import { setClassName as _setClassName, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div>")

@@ -122,10 +122,6 @@ export const createFor = (
       if (newBlocks && newBlocks !== oldBlocks) {
         stopBlockScopes(newBlocks)
       }
-      for (const selector of selectors) {
-        selector.cleanup()
-      }
-      selectors.length = 0
       oldBlocks = []
       newBlocks = []
     }, true)

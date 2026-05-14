@@ -19,8 +19,13 @@ import {
 import type { Identifier, Node } from '@babel/types'
 import type { CodegenContext } from '../generate'
 import { isConstantExpression } from '../utils'
-import { type CodeFragment, NEWLINE, buildCodeFragment } from './utils'
-import { type ParserOptions, parseExpression } from '@babel/parser'
+import {
+  type CodeFragment,
+  NEWLINE,
+  buildCodeFragment,
+  getParserOptions,
+} from './utils'
+import { parseExpression } from '@babel/parser'
 
 export function genExpression(
   node: SimpleExpressionNode,
@@ -669,11 +674,10 @@ function escapeRegExp(string: string) {
 }
 
 function parseExp(context: CodegenContext, content: string): Node {
-  const plugins = context.options.expressionPlugins
-  const options: ParserOptions = {
-    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
-  }
-  return parseExpression(`(${content})`, options)
+  return parseExpression(
+    `(${content})`,
+    getParserOptions(context.options.expressionPlugins),
+  )
 }
 
 export function genVarName(exp: string): string {

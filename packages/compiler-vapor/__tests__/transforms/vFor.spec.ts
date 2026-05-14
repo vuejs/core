@@ -80,6 +80,20 @@ describe('compiler: v-for', () => {
       `,
       ).code,
     ).matchSnapshot()
+
+    const reverseMemberSelector = compileWithVFor(
+      `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="row.id === state.selected ? 'danger' : ''"
+          ></tr>
+      `,
+    ).code
+    expect(reverseMemberSelector).matchSnapshot()
+    expect(reverseMemberSelector).contains(
+      `const _selector0 = _createSelector(() => _ctx.state.selected)`,
+    )
   })
 
   test('selector pattern', () => {

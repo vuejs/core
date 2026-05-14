@@ -20,12 +20,13 @@ import {
   NEWLINE,
   genCall,
   genMulti,
+  getParserOptions,
 } from './utils'
 import type { Expression, Identifier, Node } from '@babel/types'
 import { parseExpression } from '@babel/parser'
 import { walk } from 'estree-walker'
 import { genOperation } from './operation'
-import { VaporVForFlags, extend, isGloballyAllowed } from '@vue/shared'
+import { VaporVForFlags, isGloballyAllowed } from '@vue/shared'
 
 export function genFor(
   oper: ForIRNode,
@@ -79,6 +80,7 @@ export function genFor(
     render,
     keyProp,
     idMap,
+    context,
   )
   const selectorDeclarations: CodeFragment[] = []
   const selectorName = (i: number) =>
@@ -315,9 +317,7 @@ export function buildDestructureIdMap(
 
       if (pathInfo.dynamic) {
         const node = (idMap[id] = createSimpleExpression(path))
-        node.ast = parseExpression(`(${path})`, {
-          plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
-        })
+        node.ast = parseExpression(`(${path})`, getParserOptions(plugins))
       } else {
         idMap[id] = path
       }
@@ -332,6 +332,7 @@ function matchPatterns(
   render: BlockIRNode,
   keyProp: SimpleExpressionNode | undefined,
   idMap: Record<string, string | SimpleExpressionNode | null>,
+  context: CodegenContext,
 ) {
   const selectorPatterns: NonNullable<
     ReturnType<typeof matchSelectorPattern>
@@ -343,7 +344,12 @@ function matchPatterns(
 
   render.effect = render.effect.filter((effect, index) => {
     if (keyProp !== undefined) {
-      const selector = matchSelectorPattern(effect, keyProp.content, idMap)
+      const selector = matchSelectorPattern(
+        effect,
+        keyProp.content,
+        idMap,
+        context,
+      )
       if (selector) {
         selectorPatterns.push(selector)
         removedEffectIndexes.push(index)
@@ -419,6 +425,7 @@ function matchSelectorPattern(
   effect: IREffect,
   key: string,
   idMap: Record<string, string | SimpleExpressionNode | null>,
+  context: CodegenContext,
 ):
   | {
       effect: IREffect
@@ -473,18 +480,18 @@ function matchSelectorPattern(
 
         if (!hasExtraId) {
           const name = content.slice(selector.start! - 1, selector.end! - 1)
+          const selectorExpression = createSimpleExpression(
+            name,
+            false,
+            selector.loc as any,
+          )
+          selectorExpression.ast = parseExpression(
+            `(${name})`,
+            getParserOptions(context.options.expressionPlugins),
+          )
           return {
             effect,
-            // @ts-expect-error
-            selector: {
-              content: name,
-              ast: extend({}, selector, {
-                start: 1,
-                end: name.length + 1,
-              }),
-              loc: selector.loc as any,
-              isStatic: false,
-            },
+            selector: selectorExpression,
           }
         }
       }
