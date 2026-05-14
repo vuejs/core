@@ -22,7 +22,6 @@ import {
   isHydrating,
 } from './dom/hydration'
 import {
-  type DynamicFragment,
   SlotFragment,
   type VaporFragment,
   withOwnedSlotBoundary,
@@ -104,12 +103,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   deleteProperty: NO,
 }
 
-export function getSlot(
-  target: RawSlots,
-  key: string,
-):
-  | (VaporSlot & { _boundMap?: WeakMap<DynamicFragment, VaporSlot> })
-  | undefined {
+export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
   if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
@@ -269,32 +263,32 @@ export function createSlot(
 
       const slot = getSlot(rawSlots, slotName)
       if (slot) {
-        // Create and cache bound slot to keep it stable and avoid unnecessary
-        // updates when it resolves to the same slot. Cache per-fragment
-        // (v-for creates multiple fragments) so each fragment keeps its own
-        // slotProps without cross-talk.
-        const boundMap = slot._boundMap || (slot._boundMap = new WeakMap())
-        let bound = boundMap.get(slotFragment)
-        if (!bound) {
-          bound = () => {
-            const prevSlotScopeIds = setCurrentSlotScopeIds(
-              slotScopeIds.length > 0 ? slotScopeIds : null,
-            )
-            const prev = inOnceSlot
-            try {
-              if (once) inOnceSlot = true
-              return slot(slotProps)
-            } finally {
-              inOnceSlot = prev
-              setCurrentSlotScopeIds(prevSlotScopeIds)
-            }
-          }
-          boundMap.set(slotFragment, bound)
-        }
-        slotFragment.updateSlot(bound, fallback)
+        slotFragment.updateSlot(getBoundSlot(slot), fallback)
       } else {
         slotFragment.updateSlot(undefined, fallback)
       }
+    }
+
+    let cachedSlot: VaporSlot | undefined
+    let cachedBoundSlot: VaporSlot | undefined
+    const getBoundSlot = (slot: VaporSlot): VaporSlot => {
+      if (slot !== cachedSlot) {
+        cachedSlot = slot
+        cachedBoundSlot = () => {
+          const prevSlotScopeIds = setCurrentSlotScopeIds(
+            slotScopeIds.length > 0 ? slotScopeIds : null,
+          )
+          const prev = inOnceSlot
+          try {
+            if (once) inOnceSlot = true
+            return slot(slotProps)
+          } finally {
+            inOnceSlot = prev
+            setCurrentSlotScopeIds(prevSlotScopeIds)
+          }
+        }
+      }
+      return cachedBoundSlot!
     }
 
     // dynamic slot name or has dynamicSlots

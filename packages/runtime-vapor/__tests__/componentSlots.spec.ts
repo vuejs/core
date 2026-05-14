@@ -37,7 +37,7 @@ import {
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
-import { type Block, isValidBlock } from '../src/block'
+import { type Block, type BlockFn, isValidBlock } from '../src/block'
 import {
   hydrateNode,
   setCurrentHydrationNode,
@@ -47,12 +47,15 @@ import {
   DynamicFragment,
   ForFragment,
   type SlotBoundaryContext,
-  SlotFallbackController,
+  type SlotFallbackOutlet,
   SlotFragment,
   VaporFragment,
   getCurrentSlotBoundary,
   getCurrentSlotEndAnchor,
   isHydratingSlotFallbackActive,
+  markSlotFallbackDirty,
+  recheckSlotFallback,
+  syncActiveSlotFallback,
   trackSlotBoundaryDirtying,
   withHydratingSlotBoundary,
   withHydratingSlotFallbackActive,
@@ -81,6 +84,36 @@ function renderWithSlots(slots: any): any {
 
   render()
   return instance
+}
+
+function createTestSlotFallbackOutlet(options: {
+  fallback?: BlockFn
+  content?: Block
+  parentNode?: ParentNode | null
+  anchor?: Node | null
+  isContentValid?: () => boolean
+  isDisposed?: () => boolean
+}): SlotFallbackOutlet {
+  let outlet!: SlotFallbackOutlet
+  const boundary: SlotBoundaryContext = {
+    parent: null,
+    getLocalFallback: () => options.fallback,
+    markDirty: () => markSlotFallbackDirty(outlet),
+  }
+  outlet = {
+    boundary,
+    activeFallback: null,
+    pendingRecheck: false,
+    isRenderingFallback: false,
+    getContent: () => options.content || [],
+    getParentNode: () => options.parentNode || null,
+    getAnchor: () => options.anchor || null,
+    runWithRenderCtx: fn => fn(),
+    isDisposed: options.isDisposed,
+    isContentValid: options.isContentValid,
+    notifyFallbackValidityChange: vi.fn(),
+  }
+  return outlet
 }
 
 describe('component: slots', () => {
@@ -393,23 +426,16 @@ describe('component: slots', () => {
       expect(container.innerHTML).toBe('fallback<!--slot-->')
     })
 
-    test('slot fallback controller ignores dirty notifications after dispose', () => {
+    test('slot fallback outlet ignores dirty notifications after dispose', () => {
       let disposed = false
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => undefined,
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
+      const outlet = createTestSlotFallbackOutlet({
         isDisposed: () => disposed,
-        onValidityChange: vi.fn(),
       })
 
       disposed = true
-      controller.boundary.markDirty()
+      outlet.boundary.markDirty()
 
-      expect(controller.takePendingRecheck()).toBe(false)
+      expect(outlet.pendingRecheck).toBe(false)
     })
 
     test('withHydratingSlotBoundary isolates fallback-active state between boundaries without local markers', () => {
@@ -478,30 +504,24 @@ describe('component: slots', () => {
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
-    test('slot fallback controller stops fallback scope when fallback body throws', async () => {
+    test('slot fallback outlet stops fallback scope when fallback body throws', async () => {
       const source = ref(0)
       const effectRuns = vi.fn()
       const cleanup = vi.fn()
       const err = new Error('fallback boom')
 
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => {
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => {
           onScopeDispose(cleanup)
           renderEffect(() => {
             effectRuns(source.value)
           })
           throw err
         },
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
       })
 
-      expect(() => controller.recheck()).toThrow(err)
-      expect(controller.getActiveFallback()).toBe(null)
+      expect(() => recheckSlotFallback(outlet)).toThrow(err)
+      expect(outlet.activeFallback).toBe(null)
       expect(cleanup).toHaveBeenCalledTimes(1)
       expect(effectRuns).toHaveBeenCalledTimes(1)
 
@@ -511,31 +531,25 @@ describe('component: slots', () => {
       expect(effectRuns).toHaveBeenCalledTimes(1)
     })
 
-    test('slot fallback controller does not accumulate order-sync hooks', async () => {
+    test('slot fallback outlet does not accumulate order-sync hooks', async () => {
       const fallback = new VaporFragment([
         document.createTextNode('a'),
         document.createTextNode('b'),
       ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => fallback,
       })
 
-      controller.recheck()
+      recheckSlotFallback(outlet)
       expect(fallback.onUpdated).toHaveLength(1)
 
-      controller.syncActiveFallback()
+      syncActiveSlotFallback(outlet)
       await nextTick()
 
       expect(fallback.onUpdated).toHaveLength(1)
     })
 
-    test('slot fallback controller re-syncs the whole carrier block order', async () => {
+    test('slot fallback outlet re-syncs the whole carrier block order', async () => {
       const container = document.createElement('div')
       const carrierA = document.createTextNode('x')
       const carrierB = document.createTextNode('y')
@@ -545,29 +559,26 @@ describe('component: slots', () => {
         document.createTextNode('a'),
         document.createTextNode('b'),
       ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [carrierA, carrierB],
-        getParentNode: () => container,
-        getAnchor: () => slotAnchor,
-        runWithRenderCtx: fn => fn(),
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => fallback,
+        content: [carrierA, carrierB],
+        parentNode: container,
+        anchor: slotAnchor,
         isContentValid: () => false,
-        onValidityChange: vi.fn(),
       })
 
       container.append(carrierA, marker, carrierB, slotAnchor)
-      controller.recheck()
+      recheckSlotFallback(outlet)
 
       expect(container.innerHTML).toBe('abx!y<!--slot-->')
 
-      controller.syncActiveFallback()
+      syncActiveSlotFallback(outlet)
       await nextTick()
 
       expect(container.innerHTML).toBe('abxy!<!--slot-->')
     })
 
-    test('slot fallback controller re-syncs carrier order when fallback ends with a fragment anchor', async () => {
+    test('slot fallback outlet re-syncs carrier order when fallback ends with a fragment anchor', async () => {
       const container = document.createElement('div')
       const carrierA = document.createTextNode('x')
       const carrierB = document.createTextNode('y')
@@ -579,43 +590,34 @@ describe('component: slots', () => {
         document.createTextNode('a'),
         trailingFragment,
       ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [carrierA, carrierB],
-        getParentNode: () => container,
-        getAnchor: () => slotAnchor,
-        runWithRenderCtx: fn => fn(),
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => fallback,
+        content: [carrierA, carrierB],
+        parentNode: container,
+        anchor: slotAnchor,
         isContentValid: () => false,
-        onValidityChange: vi.fn(),
       })
 
       container.append(carrierA, marker, carrierB, slotAnchor)
-      controller.recheck()
+      recheckSlotFallback(outlet)
 
       expect(container.innerHTML).toBe('ab<!--if-->x!y<!--slot-->')
 
-      controller.syncActiveFallback()
+      syncActiveSlotFallback(outlet)
       await nextTick()
 
       expect(container.innerHTML).toBe('ab<!--if-->xy!<!--slot-->')
     })
 
-    test('slot fallback controller defaults to idle when isBusy is omitted', () => {
+    test('slot fallback outlet defaults to idle when isBusy is omitted', () => {
       const fallback = document.createTextNode('fallback')
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => fallback,
       })
 
-      controller.boundary.markDirty()
+      outlet.boundary.markDirty()
 
-      expect(controller.getActiveFallback()).toBe(fallback)
+      expect(outlet.activeFallback).toBe(fallback)
     })
 
     test('vdom slot dirties parent boundary once when content stays valid', async () => {
