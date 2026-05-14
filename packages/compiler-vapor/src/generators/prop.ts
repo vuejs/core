@@ -21,6 +21,7 @@ import {
   NEWLINE,
   genCall,
   genMulti,
+  getParserOptions,
 } from './utils'
 import {
   camelize,
@@ -33,7 +34,7 @@ import {
   toHandlerKey,
 } from '@vue/shared'
 import { getLiteralExpressionValue } from '../utils'
-import { type ParserOptions, parseExpression } from '@babel/parser'
+import { parseExpression } from '@babel/parser'
 import type {
   ConditionalExpression,
   Expression,
@@ -323,19 +324,11 @@ function createSubExpression(
   })
   expression.ast = isSimpleIdentifier(content)
     ? null
-    : parseExpression(`(${content})`, getParserOptions(context))
+    : parseExpression(
+        `(${content})`,
+        getParserOptions(context.options.expressionPlugins),
+      )
   return expression
-}
-
-function getParserOptions(context: CodegenContext): ParserOptions {
-  const plugins = context.options.expressionPlugins
-  return {
-    plugins: plugins
-      ? plugins.some(plugin => plugin === 'typescript')
-        ? plugins
-        : [...plugins, 'typescript']
-      : ['typescript'],
-  }
 }
 
 // dynamic key props and v-bind="{}" will reach here
