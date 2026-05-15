@@ -329,7 +329,7 @@ exports[`compiler: element transform > component dynamic event with once modifie
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_toHandlerKey(_ctx.foo) + "Once"]: () => _ctx.bar })
+    () => ({ [_toHandlerKey(_ctx.foo) + "Once"]: _ctx.bar })
   ] }, null, true)
   return n0
 }"
@@ -381,8 +381,20 @@ exports[`compiler: element transform > component with dynamic event arguments 1`
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }),
-    () => ({ [_toHandlerKey(_ctx.baz)]: () => _ctx.qux })
+    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: _ctx.bar }),
+    () => ({ [_toHandlerKey(_ctx.baz)]: _ctx.qux })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component with dynamic event arguments and inline statement 1`] = `
+"import { resolveComponent as _resolveComponent, toHandlerKey as _toHandlerKey, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+    () => ({ [_toHandlerKey(_ctx.event)]: $event => (_ctx.bar($event)) })
   ] }, null, true)
   return n0
 }"
