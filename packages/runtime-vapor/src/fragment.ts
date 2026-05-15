@@ -174,6 +174,66 @@ export class ForBlock extends VaporFragment {
   }
 }
 
+const enum CloseAnchorOwner {
+  None,
+  Self,
+  ParentBefore,
+  ParentAfter,
+}
+
+function getDynamicCloseOwner(
+  isSlot: boolean,
+  forwardedSlot: boolean,
+  anchorLabel: string | undefined,
+  nodes: Block,
+  currentSlotEndAnchor: Node | null,
+): CloseAnchorOwner {
+  const valid = isValidBlock(nodes)
+
+  // Slot fragments own the close marker unless this is an empty forwarded slot.
+  // Empty forwarded slots must leave the close marker to the parent boundary
+  // and create their runtime anchor after it.
+  if (isSlot) {
+    return !forwardedSlot || valid
+      ? CloseAnchorOwner.Self
+      : CloseAnchorOwner.ParentAfter
+  }
+
+  // SSR wraps multi-root `v-if` branches in a fragment range, so the closing
+  // `<!--]-->` belongs to the branch itself.
+  if (anchorLabel === 'if' && isArray(nodes) && nodes.length > 1) {
+    return CloseAnchorOwner.Self
+  }
+
+  // Slot fallback can fall through an inner `v-if`. When the `if` resolves
+  // to an invalid block and the fallback is selected, the `if` still needs
+  // its own runtime anchor instead of reusing the parent slot's end anchor.
+  if (
+    anchorLabel === 'if' &&
+    !valid &&
+    currentSlotEndAnchor &&
+    isHydratingSlotFallbackActive()
+  ) {
+    return CloseAnchorOwner.ParentBefore
+  }
+
+  return CloseAnchorOwner.None
+}
+
+function queueAnchorInsert(
+  parentNode: Node,
+  nextNode: Node | null,
+  createAnchor: () => Node,
+): void {
+  // Create the runtime anchor only after insertion is flushed so traversal
+  // cannot observe a detached anchor too early.
+  queuePostFlushCb(() => {
+    const anchor =
+      nextNode && getParentNode(nextNode) === parentNode ? nextNode : null
+    parentNode.insertBefore(createAnchor(), anchor)
+  })
+}
+
 export class DynamicFragment extends VaporFragment {
   // @ts-expect-error - assigned in hydrate()
   anchor: Node
@@ -438,13 +498,42 @@ export class DynamicFragment extends VaporFragment {
     let advanceAfterRestore: Node | null = null
     let exitHydrationBoundary: (() => void) | undefined
 
+    const reuseAnchor = (anchor: Node): void => {
+      this.anchor = markHydrationAnchor(anchor)
+      if (currentHydrationNode === this.anchor) {
+        advanceHydrationNode(this.anchor)
+      } else {
+        exitHydrationBoundary = enterHydrationBoundary(this.anchor)
+        advanceAfterRestore = this.anchor
+      }
+    }
+
+    const createRuntimeAnchor = (): Node =>
+      (this.anchor = markHydrationAnchor(
+        __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
+      ))
+
+    const cleanupAndInsertRuntimeAnchor = (
+      parentNode: Node,
+      nextNode: Node | null,
+      cleanupStart: Node,
+      cleanupUntil: Node | null,
+    ): void => {
+      if (cleanupUntil) {
+        exitHydrationBoundary = enterHydrationBoundary(cleanupUntil)
+      } else {
+        cleanupHydrationTail(cleanupStart)
+        setCurrentHydrationNode(null)
+      }
+      queueAnchorInsert(parentNode, nextNode, createRuntimeAnchor)
+    }
+
     try {
       // reuse `<!---->` as anchor
       // `<div v-if="false"></div>` -> `<!---->`
       if (isEmpty) {
         if (isComment(currentHydrationNode!, '')) {
-          this.anchor = markHydrationAnchor(currentHydrationNode!)
-          advanceHydrationNode(currentHydrationNode)
+          reuseAnchor(currentHydrationNode!)
           return
         }
         if (
@@ -458,14 +547,7 @@ export class DynamicFragment extends VaporFragment {
             // Target-side teleport anchors are structural. Empty dynamic
             // fragments insert their own anchor before the target anchor
             // instead of consuming it as mismatched SSR content.
-            queuePostFlushCb(() => {
-              parentNode.insertBefore(
-                (this.anchor = markHydrationAnchor(
-                  __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
-                )),
-                anchor.parentNode === parentNode ? anchor : null,
-              )
-            })
+            queueAnchorInsert(parentNode, anchor, createRuntimeAnchor)
             return
           }
         }
@@ -493,28 +575,14 @@ export class DynamicFragment extends VaporFragment {
           if (parentNode) {
             this.nodes = []
             if (reusableAnchor) {
-              this.anchor = markHydrationAnchor(reusableAnchor)
-              exitHydrationBoundary = enterHydrationBoundary(this.anchor)
-              advanceAfterRestore = this.anchor
+              reuseAnchor(reusableAnchor)
             } else {
-              if (anchor) {
-                exitHydrationBoundary = enterHydrationBoundary(anchor)
-              } else {
-                cleanupHydrationTail(currentHydrationNode)
-                setCurrentHydrationNode(null)
-              }
-              queuePostFlushCb(() => {
-                const nextNode =
-                  anchor && anchor.parentNode === parentNode ? anchor : null
-                parentNode.insertBefore(
-                  (this.anchor = markHydrationAnchor(
-                    __DEV__
-                      ? createComment(this.anchorLabel!)
-                      : createTextNode(),
-                  )),
-                  nextNode,
-                )
-              })
+              cleanupAndInsertRuntimeAnchor(
+                parentNode,
+                anchor,
+                currentHydrationNode,
+                anchor,
+              )
             }
             return
           }
@@ -532,15 +600,9 @@ export class DynamicFragment extends VaporFragment {
         isReusableDynamicFragmentAnchor(this.nodes, this.anchorLabel) &&
         getParentNode(this.nodes)
       ) {
-        this.anchor = markHydrationAnchor(this.nodes)
+        const anchor = this.nodes
         this.nodes = []
-        const needsCleanup = currentHydrationNode !== this.anchor
-        if (needsCleanup) {
-          exitHydrationBoundary = enterHydrationBoundary(this.anchor)
-          advanceAfterRestore = this.anchor
-        } else {
-          advanceHydrationNode(this.anchor)
-        }
+        reuseAnchor(anchor)
         return
       }
 
@@ -560,95 +622,84 @@ export class DynamicFragment extends VaporFragment {
         const nextNode = locateNextNode(currentHydrationNode)
         if (parentNode) {
           this.nodes = []
-          if (nextNode) {
-            exitHydrationBoundary = enterHydrationBoundary(nextNode)
-          } else {
-            cleanupHydrationTail(currentHydrationNode)
-            setCurrentHydrationNode(null)
-          }
-          queuePostFlushCb(() => {
-            parentNode.insertBefore(
-              (this.anchor = markHydrationAnchor(
-                __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
-              )),
-              nextNode,
-            )
-          })
+          cleanupAndInsertRuntimeAnchor(
+            parentNode,
+            nextNode,
+            currentHydrationNode,
+            nextNode,
+          )
           return
         }
       }
 
-      // Slot fallback can fall through an inner `v-if`. When the `if` resolves
-      // to an invalid block and the fallback is selected, the `if` still needs
-      // its own runtime anchor instead of reusing the parent slot's end anchor.
       const currentSlotEndAnchor = getCurrentSlotEndAnchor()
-      if (
-        this.anchorLabel === 'if' &&
-        currentSlotEndAnchor &&
-        isHydratingSlotFallbackActive() &&
-        !isValidBlock(this.nodes)
-      ) {
-        const endAnchor = currentSlotEndAnchor
-        queuePostFlushCb(() => {
-          const parentNode = endAnchor.parentNode
-          if (!parentNode) return
-          parentNode.insertBefore(
-            (this.anchor = markHydrationAnchor(
-              __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
-            )),
-            endAnchor,
-          )
-        })
-        return
-      }
-
       const forwardedSlot = (this as any as SlotFragment).forwarded
       const slotAnchor = isSlot ? currentSlotEndAnchor : null
+
       // Reuse SSR `<!--]-->` as anchor.
       // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
       // Non-forwarded slots always own the closing `<!--]-->`, even when empty.
       // Forwarded slots only own it when they rendered valid content.
-      if (
-        (isSlot && (!forwardedSlot || isValidBlock(this.nodes))) ||
-        (this.anchorLabel === 'if' &&
-          isArray(this.nodes) &&
-          this.nodes.length > 1)
-      ) {
+      const closeOwner = getDynamicCloseOwner(
+        isSlot,
+        forwardedSlot,
+        this.anchorLabel,
+        this.nodes,
+        currentSlotEndAnchor,
+      )
+      if (closeOwner === CloseAnchorOwner.Self) {
         const anchor = locateHydrationBoundaryClose(
           slotAnchor || currentHydrationNode!,
           slotAnchor || null,
         )
         if (isComment(anchor!, ']')) {
-          this.anchor = markHydrationAnchor(anchor)
-          exitHydrationBoundary = enterHydrationBoundary(anchor)
-          advanceHydrationNode(anchor)
+          reuseAnchor(anchor)
           return
         } else if (__DEV__) {
           throw new Error(
             `Failed to locate ${this.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
           )
         }
+      } else if (
+        closeOwner === CloseAnchorOwner.ParentAfter &&
+        currentSlotEndAnchor
+      ) {
+        // Otherwise, create a new anchor.
+        // This covers: empty forwarded slots.
+        // Keep the forwarded slot close marker structural for parent cleanup,
+        // even though this fragment uses a runtime anchor after it.
+        const anchor = markHydrationAnchor(currentSlotEndAnchor)
+        queueAnchorInsert(
+          anchor.parentNode!,
+          anchor.nextSibling,
+          createRuntimeAnchor,
+        )
+        return
+      } else if (
+        closeOwner === CloseAnchorOwner.ParentBefore &&
+        currentSlotEndAnchor
+      ) {
+        const endAnchor = currentSlotEndAnchor
+        queuePostFlushCb(() => {
+          const parentNode = getParentNode(endAnchor)
+          if (!parentNode) return
+          parentNode.insertBefore(createRuntimeAnchor(), endAnchor)
+        })
+        return
       }
 
       // Otherwise, create a new anchor.
-      // This covers: empty forwarded slots, dynamic-component,
-      // async component, keyed fragment.
+      // This covers: dynamic-component, async component, keyed fragment.
       let parentNode: Node | null
       let nextNode: Node | null
-      if (forwardedSlot) {
-        // Keep the forwarded slot close marker structural for parent cleanup,
-        // even though this fragment uses a runtime anchor after it.
-        const anchor = markHydrationAnchor(slotAnchor!)
-        parentNode = anchor.parentNode
-        nextNode = anchor.nextSibling
-      } else if (
+      if (
         this.anchorLabel === 'if' &&
         !isValidBlock(this.nodes) &&
         currentSlotEndAnchor &&
         currentHydrationNode === currentSlotEndAnchor
       ) {
-        // Only reuse the slot end anchor when this empty inner `v-if`
-        // has already consumed the whole local slot range.
+        // Only reuse the slot end anchor as insertion point when this empty
+        // inner `v-if` has already consumed the whole local slot range.
         parentNode = currentSlotEndAnchor.parentNode
         nextNode = currentSlotEndAnchor
       } else {
@@ -656,20 +707,7 @@ export class DynamicFragment extends VaporFragment {
         parentNode = node.parentNode
         nextNode = node.nextNode
       }
-
-      // Assign `this.anchor` only after the anchor is inserted.
-      // Otherwise detached anchors could be observed too early by traversal
-      // logic such as `findLastChild()`.
-      queuePostFlushCb(() => {
-        const anchor =
-          nextNode && nextNode.parentNode === parentNode ? nextNode : null
-        parentNode!.insertBefore(
-          (this.anchor = markHydrationAnchor(
-            __DEV__ ? createComment(this.anchorLabel!) : createTextNode(),
-          )),
-          anchor,
-        )
-      })
+      queueAnchorInsert(parentNode!, nextNode, createRuntimeAnchor)
     } finally {
       exitHydrationBoundary && exitHydrationBoundary()
       if (advanceAfterRestore && currentHydrationNode === advanceAfterRestore) {
