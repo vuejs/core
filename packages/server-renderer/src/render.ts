@@ -92,6 +92,7 @@ export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
+  vShowValue?: Props,
 ): SSRBuffer | Promise<SSRBuffer> {
   const instance = (vnode.component = createComponentInstance(
     vnode,
@@ -116,15 +117,18 @@ export function renderComponentVNode(
       })
       // Note: error display is already done by the wrapped lifecycle hook function.
       .catch(NOOP)
-    return p.then(() => renderComponentSubTree(instance, slotScopeId))
+    return p.then(() =>
+      renderComponentSubTree(instance, slotScopeId, vShowValue),
+    )
   } else {
-    return renderComponentSubTree(instance, slotScopeId)
+    return renderComponentSubTree(instance, slotScopeId, vShowValue)
   }
 }
 
 function renderComponentSubTree(
   instance: ComponentInternalInstance,
   slotScopeId?: string,
+  vShowValue?: Props,
 ): SSRBuffer | Promise<SSRBuffer> {
   if (__DEV__) pushWarningContext(instance.vnode)
   const comp = instance.type as Component
@@ -186,6 +190,12 @@ function renderComponentSubTree(
         }
       }
 
+      if (vShowValue) {
+        // v-show has higher priority
+        if (attrs) attrs = mergeProps(attrs, vShowValue)
+        else attrs = vShowValue
+      }
+
       // set current rendering instance for asset resolution
       const prev = setCurrentRenderingInstance(instance)
       try {
@@ -225,6 +235,7 @@ export function renderVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  vShowValue?: Props,
 ): void {
   const { type, shapeFlag, children, dirs, props } = vnode
   if (dirs) {
@@ -263,7 +274,9 @@ export function renderVNode(
       if (shapeFlag & ShapeFlags.ELEMENT) {
         renderElementVNode(push, vnode, parentComponent, slotScopeId)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
-        push(renderComponentVNode(vnode, parentComponent, slotScopeId))
+        push(
+          renderComponentVNode(vnode, parentComponent, slotScopeId, vShowValue),
+        )
       } else if (shapeFlag & ShapeFlags.TELEPORT) {
         renderTeleportVNode(push, vnode, parentComponent, slotScopeId)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
