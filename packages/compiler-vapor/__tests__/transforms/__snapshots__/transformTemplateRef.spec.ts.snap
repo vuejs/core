@@ -41,7 +41,7 @@ export function render(_ctx) {
     const n2 = t0()
     _setTemplateRef(n2, "foo", true)
     return n2
-  }, undefined, 4)
+  }, undefined, 12)
   return n0
 }"
 `;

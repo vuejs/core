@@ -146,7 +146,7 @@ export function render(_ctx) {
     const n2 = _createFor(() => (_ctx.list), (_for_item0) => {
       const n4 = t0()
       return n4
-    })
+    }, undefined, 8)
     return n2
   }, null, 1)
   return n0
@@ -164,7 +164,7 @@ export function render(_ctx) {
       const x4 = _txt(n4)
       _renderEffect(() => _setText(x4, "item: " + _toDisplayString(_for_item0.value)))
       return n4
-    }, (item, index) => (index))
+    }, (item, index) => (index), 8)
     return n2
   }, null, 1)
   return n0

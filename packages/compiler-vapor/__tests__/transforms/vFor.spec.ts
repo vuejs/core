@@ -4,16 +4,19 @@ import {
   IRNodeTypes,
   transformChildren,
   transformElement,
+  transformSlotOutlet,
   transformText,
   transformVBind,
   transformVFor,
   transformVOn,
 } from '../../src'
 import { NodeTypes } from '@vue/compiler-dom'
+import { VaporVForFlags } from '@vue/shared'
 
 const compileWithVFor = makeCompile({
   nodeTransforms: [
     transformVFor,
+    transformSlotOutlet,
     transformText,
     transformElement,
     transformChildren,
@@ -32,6 +35,9 @@ describe('compiler: v-for', () => {
 
     expect(code).matchSnapshot()
     expect(helpers).contains('createFor')
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_SINGLE_NODE})`,
+    )
     expect([...ir.template.keys()]).toEqual(['<div> '])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.FOR,
@@ -423,9 +429,68 @@ describe('compiler: v-for', () => {
       `<Comp v-for="item in list">{{item}}</Comp>`,
     )
     expect(code).matchSnapshot()
+    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_COMPONENT})`)
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
     ).toBe(true)
+  })
+
+  test('v-for on dynamic component marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<component :is="view" v-for="item in list" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${
+        VaporVForFlags.IS_COMPONENT | VaporVForFlags.IS_FRAGMENT
+      })`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      dynamic: { content: 'view' },
+    })
+  })
+
+  test('v-for on static dynamic component keeps component block', () => {
+    const { code } = compileWithVFor(
+      `<component is="view" v-for="item in list" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_COMPONENT})`,
+    )
+  })
+
+  test('v-for on slot outlet marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<slot v-for="item in list" :name="item.name" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_FRAGMENT})`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.SLOT_OUTLET_NODE,
+    })
+  })
+
+  test('v-for single node flag is not set for fragment item blocks', () => {
+    const { code } = compileWithVFor(
+      `<template v-for="item in list"><div>{{ item }}</div><span>{{ item }}</span></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).not.toContain(
+      `}, undefined, ${VaporVForFlags.IS_SINGLE_NODE})`,
+    )
   })
 
   test('v-for on template with single component child', () => {
@@ -433,6 +498,7 @@ describe('compiler: v-for', () => {
       `<template v-for="item in list"><Comp>{{item}}</Comp></template>`,
     )
     expect(code).matchSnapshot()
+    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_COMPONENT})`)
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
     ).toBe(true)

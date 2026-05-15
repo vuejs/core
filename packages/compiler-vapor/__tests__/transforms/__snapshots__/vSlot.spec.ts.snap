@@ -206,7 +206,7 @@ export function render(_ctx) {
       const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
         const n2 = _createSlot("default", null)
         return n2
-      })
+      }, undefined, 16)
       return n0
     })
   }, true)
@@ -658,7 +658,7 @@ export function render(_ctx) {
         _setInsertionState(n3, null, 0)
         const n2 = _createComponentWithFallback(_component_ChildComp)
         return n3
-      })
+      }, undefined, 8)
       return n0
     })
   }, true)
@@ -829,7 +829,7 @@ export function render(_ctx) {
         const x2 = _txt(n2)
         _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
         return n2
-      })
+      }, undefined, 8)
       const x0 = _txt(n0)
       _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
       return n0

@@ -231,7 +231,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
       _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
     })
     return n6
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -344,7 +344,7 @@ export function render(_ctx) {
       _setClassName(n2, (_for_item0.value.id === _ctx.state.selected ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -369,7 +369,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.a.b), (_for_item0, _for_key0, _for_index0) => {
     const n2 = t0()
     return n2
-  })
+  }, undefined, 8)
   return n0
 }"
 `;

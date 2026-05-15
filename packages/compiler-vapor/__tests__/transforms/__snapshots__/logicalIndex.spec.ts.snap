@@ -300,7 +300,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, (i) => (i))
+  }, (i) => (i), 8)
   return n3
 }"
 `;
@@ -316,7 +316,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, (i) => (i))
+  }, (i) => (i), 8)
   return n3
 }"
 `;
