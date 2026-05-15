@@ -10398,6 +10398,106 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate interop vapor slot falls through when vdom local fallback invalidates', async () => {
+    const data = reactive({
+      mode: 'local',
+      local: 'local fallback',
+      outlet: 'outlet fallback',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.VaporBridge />
+      </template>`,
+      {
+        VaporBridge: {
+          code: `<script setup>
+            const components = _components
+          </script>
+          <template>
+            <components.VdomInnerSlot>
+              <template #bar><slot name="bar" /></template>
+            </components.VdomInnerSlot>
+          </template>`,
+          vapor: true,
+        },
+        VdomInnerSlot: {
+          code: `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template>
+            <components.VdomOuterSlot>
+              <template #foo>
+                <slot name="bar">
+                  <div v-if="data.mode === 'local'">{{ data.local }}</div>
+                </slot>
+              </template>
+            </components.VdomOuterSlot>
+          </template>`,
+          vapor: false,
+        },
+        VdomOuterSlot: {
+          code: `<script setup>const data = _data</script>
+          <template><slot name="foo"><section>{{ data.outlet }}</section></slot></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><div>local fallback</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.mode = 'empty'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><section>outlet fallback</section><!--v-if--><!--v-if--><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+
+    data.outlet = 'updated outlet fallback'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><section>updated outlet fallback</section><!--v-if--><!--v-if--><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+
+    data.local = 'updated local fallback'
+    data.mode = 'local'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[-->
+      <!--[--><div>updated local fallback</div><!--]-->
+      <!--]-->
+      "
+    `,
+    )
+  })
+
   test('hydrate interop vapor slot with fallback should preserve valid slot branches', async () => {
     const data = reactive({
       slot: 'bar',

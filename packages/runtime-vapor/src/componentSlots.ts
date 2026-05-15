@@ -22,7 +22,6 @@ import {
   isHydrating,
 } from './dom/hydration'
 import {
-  type DynamicFragment,
   SlotFragment,
   type VaporFragment,
   withOwnedSlotBoundary,
@@ -104,12 +103,7 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   deleteProperty: NO,
 }
 
-export function getSlot(
-  target: RawSlots,
-  key: string,
-):
-  | (VaporSlot & { _boundMap?: WeakMap<DynamicFragment, VaporSlot> })
-  | undefined {
+export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
   if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
@@ -206,6 +200,8 @@ export function createSlot(
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
+  const scopeId = !noSlotted && instance.type.__scopeId
+  const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
 
   let fragment: VaporFragment
   if (isRef(rawSlots._) && isInteropEnabled) {
@@ -224,15 +220,6 @@ export function createSlot(
     slotFragment.forwarded =
       currentSlotOwner != null && currentSlotOwner !== currentInstance
     const isDynamicName = isFunction(name)
-
-    // Calculate slotScopeIds once (for vdom interop)
-    const slotScopeIds: string[] = []
-    if (!noSlotted) {
-      const scopeId = instance.type.__scopeId
-      if (scopeId) {
-        slotScopeIds.push(`${scopeId}-s`)
-      }
-    }
 
     const renderSlot = () => {
       const slotName = isFunction(name) ? name() : name
@@ -269,32 +256,30 @@ export function createSlot(
 
       const slot = getSlot(rawSlots, slotName)
       if (slot) {
-        // Create and cache bound slot to keep it stable and avoid unnecessary
-        // updates when it resolves to the same slot. Cache per-fragment
-        // (v-for creates multiple fragments) so each fragment keeps its own
-        // slotProps without cross-talk.
-        const boundMap = slot._boundMap || (slot._boundMap = new WeakMap())
-        let bound = boundMap.get(slotFragment)
-        if (!bound) {
-          bound = () => {
-            const prevSlotScopeIds = setCurrentSlotScopeIds(
-              slotScopeIds.length > 0 ? slotScopeIds : null,
-            )
-            const prev = inOnceSlot
-            try {
-              if (once) inOnceSlot = true
-              return slot(slotProps)
-            } finally {
-              inOnceSlot = prev
-              setCurrentSlotScopeIds(prevSlotScopeIds)
-            }
-          }
-          boundMap.set(slotFragment, bound)
-        }
-        slotFragment.updateSlot(bound, fallback)
+        slotFragment.updateSlot(getBoundSlot(slot), fallback)
       } else {
         slotFragment.updateSlot(undefined, fallback)
       }
+    }
+
+    let cachedSlot: VaporSlot | undefined
+    let cachedBoundSlot: VaporSlot | undefined
+    const getBoundSlot = (slot: VaporSlot): VaporSlot => {
+      if (slot !== cachedSlot) {
+        cachedSlot = slot
+        cachedBoundSlot = () => {
+          const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
+          const prev = inOnceSlot
+          try {
+            if (once) inOnceSlot = true
+            return slot(slotProps)
+          } finally {
+            inOnceSlot = prev
+            setCurrentSlotScopeIds(prevSlotScopeIds)
+          }
+        }
+      }
+      return cachedBoundSlot!
     }
 
     // dynamic slot name or has dynamicSlots
@@ -306,11 +291,8 @@ export function createSlot(
   }
 
   if (!isHydrating) {
-    if (!noSlotted) {
-      const scopeId = instance.type.__scopeId
-      if (scopeId) {
-        setScopeId(fragment, [`${scopeId}-s`])
-      }
+    if (slotScopeIds) {
+      setScopeId(fragment, slotScopeIds)
     }
 
     if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)

@@ -1278,6 +1278,78 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<span>updated</span>')
     })
 
+    test('falls through to outlet fallback when vdom local fallback is invalidated or removed from VaporSlot', async () => {
+      const mode = ref<'local' | 'empty' | 'none'>('local')
+      const localText = ref('local fallback')
+      const outletText = ref('outlet fallback')
+      const localFallback = () =>
+        mode.value === 'empty' ? [] : [h('div', localText.value)]
+
+      const VDomOuterSlot = defineComponent({
+        setup(_, { slots }) {
+          return () =>
+            renderSlot(slots, 'foo', {}, () => [h('section', outletText.value)])
+        },
+      })
+
+      const VDomInnerSlot = defineComponent({
+        setup(_, { slots }) {
+          return () =>
+            h(VDomOuterSlot, null, {
+              foo: () => [
+                renderSlot(
+                  slots,
+                  'bar',
+                  {},
+                  mode.value === 'none' ? undefined : localFallback,
+                ),
+              ],
+              _: 3 /* FORWARDED */,
+            })
+        },
+      })
+
+      const VaporBridge = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomInnerSlot as any,
+            null,
+            {
+              bar: withVaporCtx(() => createSlot('bar', null)),
+            },
+            true,
+          )
+        },
+      })
+
+      const root = document.createElement('div')
+      createVaporApp(VaporBridge).use(vaporInteropPlugin).mount(root)
+      expect(root.innerHTML).toBe('<div>local fallback</div><!--slot-->')
+
+      mode.value = 'empty'
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        '<section>outlet fallback</section><!--slot-->',
+      )
+
+      localText.value = 'stale local fallback'
+      outletText.value = 'updated outlet fallback'
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        '<section>updated outlet fallback</section><!--slot-->',
+      )
+
+      mode.value = 'local'
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>stale local fallback</div><!--slot-->')
+
+      mode.value = 'none'
+      await nextTick()
+      expect(root.innerHTML).toBe(
+        '<section>updated outlet fallback</section><!--slot-->',
+      )
+    })
+
     test('preserves normalized VDOM slot functions passed to Vapor', async () => {
       const msg = ref('default slot')
       const VaporChild = defineVaporComponent(() => createSlot('default', null))
