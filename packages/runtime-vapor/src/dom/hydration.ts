@@ -38,6 +38,21 @@ function setIsHydrating(value: boolean) {
   }
 }
 
+let deferredHydrationBoundaryDepth = 0
+
+export function isInDeferredHydrationBoundary(): boolean {
+  return deferredHydrationBoundaryDepth > 0
+}
+
+export function withDeferredHydrationBoundary<T>(fn: () => T): T {
+  deferredHydrationBoundaryDepth++
+  try {
+    return fn()
+  } finally {
+    deferredHydrationBoundaryDepth--
+  }
+}
+
 export function runWithoutHydration(fn: () => any): any {
   const prev = setIsHydrating(false)
   try {

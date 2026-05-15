@@ -99,6 +99,7 @@ import {
   locateNextNode,
   markHydrationAnchor,
   setCurrentHydrationNode,
+  withDeferredHydrationBoundary,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
 import type { TeleportFragment } from './components/Teleport'
@@ -1018,11 +1019,17 @@ export function mountComponent(
       const reset =
         instance.restoreAsyncContext && instance.restoreAsyncContext()
       try {
-        handleSetupResult(setupResult, component, instance)
-        mountComponent(instance, parent, anchor)
         if (isHydrating) {
-          instance.deferredHydrationBoundary &&
-            instance.deferredHydrationBoundary()
+          withDeferredHydrationBoundary(() => {
+            handleSetupResult(setupResult, component, instance)
+            mountComponent(instance, parent, anchor)
+            if (instance.deferredHydrationBoundary) {
+              instance.deferredHydrationBoundary()
+            }
+          })
+        } else {
+          handleSetupResult(setupResult, component, instance)
+          mountComponent(instance, parent, anchor)
         }
       } finally {
         if (isHydrating) {

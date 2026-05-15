@@ -24,6 +24,7 @@ import {
   isHydrating,
   locateEndAnchor,
   setCurrentHydrationNode,
+  withDeferredHydrationBoundary,
 } from './dom/hydration'
 import type { TransitionOptions } from './block'
 import { _next } from './dom/node'
@@ -93,7 +94,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       performAsyncHydrate(
         el,
         instance,
-        () => hydrateNode(el, hydrate),
+        () => hydrateNode(el, () => withDeferredHydrationBoundary(hydrate)),
         getResolvedComp,
         load,
         hydrateStrategy,
