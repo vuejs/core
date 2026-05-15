@@ -19,6 +19,7 @@ import {
   ShapeFlags,
   escapeHtml,
   escapeHtmlComment,
+  hasOwn,
   isArray,
   isFunction,
   isPromise,
@@ -303,7 +304,7 @@ function renderElementVNode(
     openTag += ssrRenderAttrs(props, tag)
   }
 
-  if (scopeId) {
+  if (scopeId && (!props || !hasOwn(props, scopeId))) {
     openTag += ` ${scopeId}`
   }
   // inherit parent chain scope id if this is the root node
