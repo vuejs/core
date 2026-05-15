@@ -26,6 +26,7 @@ import {
   toRawType,
 } from '@vue/shared'
 import { warn } from './warning'
+import type { WarnFunction } from './warning'
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
@@ -58,6 +59,12 @@ export interface PropOptions<T = any, D = T> {
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown, props: Data): boolean
+  extendValidator?: (
+    name: string,
+    value: unknown,
+    props: Data,
+    warn: WarnFunction,
+  ) => unknown
   /**
    * @internal
    */
@@ -681,7 +688,7 @@ function validateProp(
   props: Data,
   isAbsent: boolean,
 ) {
-  const { type, required, validator, skipCheck } = prop
+  const { type, required, validator, skipCheck, extendValidator } = prop
   // required!
   if (required && isAbsent) {
     warn('Missing required prop: "' + name + '"')
@@ -708,6 +715,10 @@ function validateProp(
     }
   }
   // custom validator
+  if (extendValidator) {
+    extendValidator(name, value, props, warn)
+    return
+  }
   if (validator && !validator(value, props)) {
     warn('Invalid prop: custom validator check failed for prop "' + name + '".')
   }
