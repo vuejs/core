@@ -83,12 +83,12 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
   return [event, options]
 }
 
-// To avoid the overhead of repeatedly calling Date.now(), we cache
+// To avoid the overhead of repeatedly calling performance.now(), we cache
 // and use the same timestamp for all event listeners attached in the same tick.
 let cachedNow: number = 0
 const p = /*@__PURE__*/ Promise.resolve()
 const getNow = () =>
-  cachedNow || (p.then(() => (cachedNow = 0)), (cachedNow = Date.now()))
+  cachedNow || (p.then(() => (cachedNow = 0)), (cachedNow = performance.now()))
 
 function createInvoker(
   initialValue: EventValue,
@@ -108,7 +108,7 @@ function createInvoker(
     // The handler would only fire if the event passed to it was fired
     // AFTER it was attached.
     if (!e._vts) {
-      e._vts = Date.now()
+      e._vts = performance.now()
     } else if (e._vts <= invoker.attached) {
       return
     }
