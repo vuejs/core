@@ -200,6 +200,8 @@ export function createSlot(
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
+  const scopeId = !noSlotted && instance.type.__scopeId
+  const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
 
   let fragment: VaporFragment
   if (isRef(rawSlots._) && isInteropEnabled) {
@@ -218,15 +220,6 @@ export function createSlot(
     slotFragment.forwarded =
       currentSlotOwner != null && currentSlotOwner !== currentInstance
     const isDynamicName = isFunction(name)
-
-    // Calculate slotScopeIds once (for vdom interop)
-    const slotScopeIds: string[] = []
-    if (!noSlotted) {
-      const scopeId = instance.type.__scopeId
-      if (scopeId) {
-        slotScopeIds.push(`${scopeId}-s`)
-      }
-    }
 
     const renderSlot = () => {
       const slotName = isFunction(name) ? name() : name
@@ -275,9 +268,7 @@ export function createSlot(
       if (slot !== cachedSlot) {
         cachedSlot = slot
         cachedBoundSlot = () => {
-          const prevSlotScopeIds = setCurrentSlotScopeIds(
-            slotScopeIds.length > 0 ? slotScopeIds : null,
-          )
+          const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
           const prev = inOnceSlot
           try {
             if (once) inOnceSlot = true
@@ -300,11 +291,8 @@ export function createSlot(
   }
 
   if (!isHydrating) {
-    if (!noSlotted) {
-      const scopeId = instance.type.__scopeId
-      if (scopeId) {
-        setScopeId(fragment, [`${scopeId}-s`])
-      }
+    if (slotScopeIds) {
+      setScopeId(fragment, slotScopeIds)
     }
 
     if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)

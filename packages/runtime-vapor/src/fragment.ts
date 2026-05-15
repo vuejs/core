@@ -675,8 +675,10 @@ export class DynamicFragment extends VaporFragment {
 
 export interface SlotBoundaryContext {
   parent: SlotBoundaryContext | null
-  getLocalFallback: () => BlockFn | undefined
+  getFallback: () => BlockFn | undefined
+  run<R>(fn: () => R, scope?: EffectScope): R
   markDirty: () => void
+  redirected?: SlotBoundaryContext
 }
 
 let currentSlotBoundary: SlotBoundaryContext | null = null
@@ -707,34 +709,20 @@ export function withOwnedSlotBoundary<R>(
   }
 }
 
-const slotFallbackBoundaryCache = new WeakMap<
-  SlotBoundaryContext,
-  SlotBoundaryContext
->()
-
-// Render a fallback body on behalf of `boundary`.
-// Nested slots inside the fallback must look up from the grandparent to avoid
-// fallback -> <slot> -> same fallback recursion, but dirty notifications from
-// dynamic children must still reach the owning boundary so the slot can
-// re-check its effective output when the fallback becomes valid/invalid.
-export function withSlotFallbackBoundary<R>(
+function getRedirectedBoundary(
   boundary: SlotBoundaryContext,
-  fn: () => R,
-): R {
-  let fallbackBoundary = slotFallbackBoundaryCache.get(boundary)
-  if (!fallbackBoundary) {
-    slotFallbackBoundaryCache.set(
-      boundary,
-      (fallbackBoundary = {
-        get parent() {
-          return boundary.parent
-        },
-        getLocalFallback: () => undefined,
-        markDirty: () => boundary.markDirty(),
-      }),
-    )
+): SlotBoundaryContext {
+  if (boundary.redirected) {
+    return boundary.redirected
   }
-  return withOwnedSlotBoundary(fallbackBoundary, fn)
+  return (boundary.redirected = {
+    get parent() {
+      return boundary.parent
+    },
+    getFallback: () => undefined,
+    run: (fn, scope) => boundary.run(fn, scope),
+    markDirty: () => boundary.markDirty(),
+  })
 }
 
 // Dynamic children (`v-if`, `v-for`, interop fragments) created under a slot
@@ -858,7 +846,7 @@ export function hasSlotFallback(
   boundary: SlotBoundaryContext | null | undefined,
 ): boolean {
   while (boundary) {
-    if (boundary.getLocalFallback()) {
+    if (boundary.getFallback()) {
       return true
     }
     boundary = boundary.parent
@@ -868,31 +856,44 @@ export function hasSlotFallback(
 
 export function renderSlotFallback(
   boundary: SlotBoundaryContext | null | undefined,
+  scope?: EffectScope,
   ...args: any[]
 ): Block | undefined {
-  const [block, hasFallback] = renderSlotFallbackBlock(boundary || null, args)
+  const [block, hasFallback] = renderSlotFallbackBlock(
+    boundary || null,
+    scope,
+    args,
+  )
   return hasFallback ? block : undefined
 }
 
 function renderSlotFallbackBlock(
   boundary: SlotBoundaryContext | null,
+  scope: EffectScope | undefined,
   args: any[],
 ): [Block, boolean] {
   if (!boundary) {
     return [[], false]
   }
 
-  const localFallback = boundary.getLocalFallback()
+  const localFallback = boundary.getFallback()
   if (!localFallback) {
-    return renderSlotFallbackBlock(boundary.parent, args)
+    return renderSlotFallbackBlock(boundary.parent, scope, args)
   }
 
-  const local = withSlotFallbackBoundary(boundary, () => localFallback(...args))
+  const renderFallback = () =>
+    withOwnedSlotBoundary(getRedirectedBoundary(boundary), () =>
+      localFallback(...args),
+    )
+  const local = boundary.run(
+    () => (scope ? scope.run(renderFallback) : renderFallback()) || [],
+    scope,
+  )
   if (isValidBlock(local)) {
     return [local, true]
   }
 
-  const [inherited] = renderSlotFallbackBlock(boundary.parent, args)
+  const [inherited] = renderSlotFallbackBlock(boundary.parent, scope, args)
   return [
     resolveSlotFallbackCarrierOwner(local) ? [inherited, local] : inherited,
     true,
@@ -903,6 +904,7 @@ export interface SlotFallbackOutlet {
   boundary: SlotBoundaryContext
   activeFallback: Block | null
   fallbackScope?: EffectScope
+  lastEffectiveValid?: boolean
   pendingRecheck: boolean
   isRenderingFallback: boolean
   rerunRecheckAfterFallbackRender?: boolean
@@ -910,7 +912,6 @@ export interface SlotFallbackOutlet {
   getContent(): Block
   getParentNode(): ParentNode | null
   getAnchor(): Node | null
-  runWithRenderCtx<R>(fn: () => R): R
   isBusy?(): boolean
   isDisposed?(): boolean
   isContentValid?(): boolean
@@ -976,10 +977,7 @@ function renderSlotFallbackForOutlet(
   let renderedFallback: Block | undefined
   outlet.isRenderingFallback = true
   try {
-    renderedFallback =
-      outlet.runWithRenderCtx(
-        () => scope.run(() => renderSlotFallback(outlet.boundary)) || undefined,
-      ) || undefined
+    renderedFallback = renderSlotFallback(outlet.boundary, scope) || undefined
   } catch (err) {
     scope.stop()
     throw err
@@ -1115,9 +1113,12 @@ export function recheckSlotFallback(
     return
   }
 
-  const prevValid = outlet.activeFallback
-    ? isValidBlock(outlet.activeFallback)
-    : isSlotFallbackContentValid(outlet)
+  const prevValid =
+    outlet.lastEffectiveValid === undefined
+      ? outlet.activeFallback
+        ? isValidBlock(outlet.activeFallback)
+        : isSlotFallbackContentValid(outlet)
+      : outlet.lastEffectiveValid
   const contentValid = isSlotFallbackContentValid(outlet)
 
   if (contentValid) {
@@ -1151,6 +1152,7 @@ export function recheckSlotFallback(
   if (outlet.syncEffectiveOutput) {
     outlet.syncEffectiveOutput()
   }
+  outlet.lastEffectiveValid = nextValid
   if (prevValid !== nextValid) {
     outlet.notifyFallbackValidityChange()
   }
@@ -1266,22 +1268,29 @@ export class SlotFragment
   readonly rerunRecheckAfterFallbackRender = false
   private localFallback?: BlockFn
   private isUpdatingSlot = false
-  readonly slotFallbackBoundary: SlotBoundaryContext
+  private _slotFallbackBoundary?: SlotBoundaryContext
 
   constructor() {
     super(isHydrating || __DEV__ ? 'slot' : undefined, false, false)
-    const owner = this
-    this.slotFallbackBoundary = {
-      get parent() {
-        return owner.parentSlotBoundary
-      },
-      getLocalFallback: () => this.localFallback,
-      markDirty: () => markSlotFallbackDirty(this),
-    }
     if (!isHydrating) {
       this.insert = (parent, anchor) => this.insertSlot(parent, anchor)
     }
     this.remove = parent => this.removeSlot(parent)
+  }
+
+  private ensureSlotFallbackBoundary(): SlotBoundaryContext {
+    if (this._slotFallbackBoundary) {
+      return this._slotFallbackBoundary
+    }
+    const owner = this
+    return (this._slotFallbackBoundary = {
+      get parent() {
+        return owner.parentSlotBoundary
+      },
+      getFallback: () => this.localFallback,
+      run: (fn, scope) => this.runWithRenderCtx(fn, scope),
+      markDirty: () => markSlotFallbackDirty(this),
+    })
   }
 
   // SlotFragment propagates dirty selectively via recheck() (only when
@@ -1294,6 +1303,10 @@ export class SlotFragment
 
   get boundary(): SlotBoundaryContext {
     return this.slotFallbackBoundary
+  }
+
+  get slotFallbackBoundary(): SlotBoundaryContext {
+    return this.ensureSlotFallbackBoundary()
   }
 
   getEffectiveOutput(): Block {
@@ -1328,8 +1341,21 @@ export class SlotFragment
     const prevLocalFallback = this.localFallback
     this.localFallback = fallback
     const fallbackChanged = prevLocalFallback !== fallback
+    const fastSlotKey = key === undefined ? render : key
+
+    if (
+      !isHydrating &&
+      !fallback &&
+      !this.parentSlotBoundary &&
+      !this._slotFallbackBoundary
+    ) {
+      this.update(render, fastSlotKey)
+      return
+    }
+
+    const boundary = this.slotFallbackBoundary
     const slotRender = render
-      ? () => withOwnedSlotBoundary(this.slotFallbackBoundary, render)
+      ? () => withOwnedSlotBoundary(boundary, render)
       : () => []
     const slotKey = key === undefined ? slotRender : key
     this.isUpdatingSlot = true
@@ -1341,7 +1367,7 @@ export class SlotFragment
         withHydratingSlotBoundary(() => {
           const prev = isHydratingSlotFallbackActive()
           try {
-            if (hasSlotFallback(this.slotFallbackBoundary)) {
+            if (hasSlotFallback(boundary)) {
               setCurrentHydratingSlotFallbackActive(true)
             }
             this.update(slotRender, slotKey)
@@ -1352,7 +1378,7 @@ export class SlotFragment
             // takes over. If recheck resolves back to content, restore the
             // outer state before hydrate(); the surrounding finally still
             // restores nested callers when we leave this boundary.
-            if (!hasSlotFallback(this.slotFallbackBoundary) || contentValid) {
+            if (!hasSlotFallback(boundary) || contentValid) {
               setCurrentHydratingSlotFallbackActive(prev)
             }
             this.hydrate(!isValidBlock(this.getEffectiveOutput()), true)
@@ -1380,10 +1406,6 @@ export class SlotFragment
 
   getAnchor(): Node | null {
     return this.anchor || null
-  }
-
-  public override runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
-    return super.runWithRenderCtx(fn, scope)
   }
 
   isBusy(): boolean {
