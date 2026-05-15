@@ -304,18 +304,22 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
+    const isRevivingDeferredBranch =
+      isHydrating &&
+      isInDeferredHydrationBoundary() &&
+      !!render &&
+      this.anchorLabel !== 'slot' &&
+      !isValidBlock(this.nodes)
+
+    const reusingDeferredAnchor =
+      isRevivingDeferredBranch && !!this.anchor && !!this.anchor.parentNode
+
     // Deferred hydration can keep an empty wrapper fragment alive, then resolve
     // it to a real branch before hydration exits. Re-point the cursor at the
     // fragment-owned insertion anchor so the late branch inserts before that
     // anchor instead of consuming trailing hydrated siblings or the enclosing
     // slot boundary.
-    if (
-      isHydrating &&
-      isInDeferredHydrationBoundary() &&
-      render &&
-      this.anchorLabel !== 'slot' &&
-      !isValidBlock(this.nodes)
-    ) {
+    if (isRevivingDeferredBranch) {
       let slotEndAnchor: Node | null = null
       const anchor =
         this.anchor ||
@@ -330,7 +334,7 @@ export class DynamicFragment extends VaporFragment {
     this.renderBranch(render, transition, parent, key)
     setActiveSub(prevSub)
 
-    if (isHydrating && this.anchorLabel !== 'slot') {
+    if (isHydrating && this.anchorLabel !== 'slot' && !reusingDeferredAnchor) {
       this.hydrate(render == null)
     }
   }
