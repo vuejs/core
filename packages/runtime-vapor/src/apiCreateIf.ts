@@ -62,7 +62,7 @@ export function createIf(
       }
       ;(frag as DynamicFragment).update(
         ok ? b1 : b2,
-        keyed ? `${index}${ok ? 0 : 1}` : undefined,
+        keyed ? index * 2 + (ok ? 0 : 1) : undefined,
       )
     })
   }
