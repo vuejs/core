@@ -73,7 +73,7 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
-  Promise.resolve(renderComponentVNode(vnode))
+  Promise.resolve(renderComponentVNode(vnode, undefined, null))
     .then(buffer => unrollBuffer(buffer, stream))
     .then(() => resolveTeleports(context))
     .then(() => {
