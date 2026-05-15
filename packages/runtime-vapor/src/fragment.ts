@@ -1102,6 +1102,7 @@ export function syncActiveSlotFallback(outlet: SlotFallbackOutlet): void {
 export function disposeSlotFallback(outlet: SlotFallbackOutlet): void {
   clearSlotFallback(outlet)
   outlet.pendingRecheck = false
+  outlet.lastEffectiveValid = undefined
 }
 
 export function recheckSlotFallback(
