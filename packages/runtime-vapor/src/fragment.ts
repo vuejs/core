@@ -36,6 +36,7 @@ import {
   enterHydrationBoundary,
   isComment,
   isHydrating,
+  isInDeferredHydrationBoundary,
   locateEndAnchor,
   locateHydrationBoundaryClose,
   locateHydrationNode,
@@ -363,17 +364,22 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    // A non-slot fragment can render empty first during hydration, then flip
-    // to a real branch before hydration exits (for example inside an async
-    // component slot). Re-point the cursor at the fragment-owned insertion
-    // anchor so the late branch inserts before that anchor instead of
-    // consuming trailing hydrated siblings or the enclosing slot boundary.
-    if (
+    const isRevivingDeferredBranch =
       isHydrating &&
-      render &&
+      isInDeferredHydrationBoundary() &&
+      !!render &&
       this.anchorLabel !== 'slot' &&
       !isValidBlock(this.nodes)
-    ) {
+
+    const reusingDeferredAnchor =
+      isRevivingDeferredBranch && !!this.anchor && !!this.anchor.parentNode
+
+    // Deferred hydration can keep an empty wrapper fragment alive, then resolve
+    // it to a real branch before hydration exits. Re-point the cursor at the
+    // fragment-owned insertion anchor so the late branch inserts before that
+    // anchor instead of consuming trailing hydrated siblings or the enclosing
+    // slot boundary.
+    if (isRevivingDeferredBranch) {
       let slotEndAnchor: Node | null = null
       const anchor =
         this.anchor ||
@@ -388,7 +394,7 @@ export class DynamicFragment extends VaporFragment {
     this.renderBranch(render, transition, parent, key)
     setActiveSub(prevSub)
 
-    if (isHydrating && this.anchorLabel !== 'slot') {
+    if (isHydrating && this.anchorLabel !== 'slot' && !reusingDeferredAnchor) {
       this.hydrate(render == null)
     }
   }

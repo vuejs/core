@@ -27,7 +27,12 @@ import { isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
-import { hydrateNode, setIsHydratingEnabled } from '../src/dom/hydration'
+import {
+  hydrateNode,
+  setIsHydratingEnabled,
+  withDeferredHydrationBoundary,
+} from '../src/dom/hydration'
+import { DynamicFragment } from '../src/fragment'
 
 const formatHtml = (raw: string) => {
   return raw
@@ -5478,6 +5483,36 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toMatchInlineSnapshot(
         `"<h1>Updated async component</h1><!--async component-->"`,
       )
+
+      data.value.toggle = true
+      await nextTick()
+      expect(container.innerHTML).toMatchInlineSnapshot(
+        `"<h1>Async component</h1><!--async component-->"`,
+      )
+    })
+
+    test('deferred dynamic fragment reuses existing empty anchor when branch revives', async () => {
+      const container = document.createElement('div')
+      const anchor = document.createComment('if')
+      container.append(anchor)
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(anchor, () => {
+          const fragment = new DynamicFragment('if', false, false)
+          fragment.anchor = anchor
+          withDeferredHydrationBoundary(() => {
+            fragment.update(() => template('<span>foo</span>')())
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+      await nextTick()
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toBe('<span>foo</span><!--if-->')
+      expect(container.lastChild).toBe(anchor)
     })
 
     test('update async component (fragment root) after parent mount before async component resolve', async () => {
