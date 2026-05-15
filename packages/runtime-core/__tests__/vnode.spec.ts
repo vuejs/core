@@ -50,6 +50,12 @@ describe('vnode', () => {
     expect(vnode.type).toBe(Comment)
   })
 
+  test('show warn when create with void element', () => {
+    const vnode = createVNode('img', null, createVNode('p'))
+    expect("don't render child nodes in a void element").toHaveBeenWarned()
+    expect(vnode.type).toBe('img')
+  })
+
   test('create from an existing vnode', () => {
     const vnode1 = createVNode('p', { id: 'foo' })
     const vnode2 = createVNode(vnode1, { class: 'bar' }, 'baz')
