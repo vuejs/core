@@ -136,6 +136,17 @@ describe('compile', () => {
         expect(code).matchSnapshot()
       })
 
+      test('dynamic modifiers', () => {
+        const code = compile(`<div v-example.bar.[mods]="msg"></div>`, {
+          prefixIdentifiers: true,
+          bindingMetadata: {
+            msg: BindingTypes.SETUP_REF,
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).contains(`Object.assign({ bar: true }, _ctx.mods)`)
+      })
+
       test('modifiers w/o binding', () => {
         const code = compile(`<div v-example.foo-bar></div>`, {
           bindingMetadata: {

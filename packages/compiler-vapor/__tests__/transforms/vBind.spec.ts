@@ -289,6 +289,17 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setProp(n0, "fooBar", _ctx.id)')
   })
 
+  test('dynamic modifier should error', () => {
+    const onError = vi.fn()
+    compileWithVBind(`<div v-bind:foo.[mods]="id"/>`, { onError })
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+      }),
+    )
+  })
+
   test('.camel modifier w/ no expression', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:foo-bar.camel />`)
 

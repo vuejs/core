@@ -1,6 +1,5 @@
 import type { DirectiveTransform } from '../transform'
 import {
-  ConstantTypes,
   ElementTypes,
   type ExpressionNode,
   NodeTypes,
@@ -19,6 +18,7 @@ import {
 import { IS_REF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 import { camelize, getModifierPropName } from '@vue/shared'
+import { transformModifiers } from './transformElement'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -139,26 +139,13 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 
   // modelModifiers: { foo: true, "bar-baz": true }
   if (dir.modifiers.length && node.tagType === ElementTypes.COMPONENT) {
-    const modifiers = dir.modifiers
-      .map(m => m.content)
-      .map(m => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`)
-      .join(`, `)
     const modifiersKey = arg
       ? isStaticExp(arg)
         ? getModifierPropName(arg.content)
         : createCompoundExpression([arg, ' + "Modifiers"'])
       : `modelModifiers`
-    props.push(
-      createObjectProperty(
-        modifiersKey,
-        createSimpleExpression(
-          `{ ${modifiers} }`,
-          false,
-          dir.loc,
-          ConstantTypes.CAN_CACHE,
-        ),
-      ),
-    )
+
+    props.push(createObjectProperty(modifiersKey, transformModifiers(dir)))
   }
 
   return createTransformProps(props)

@@ -2,6 +2,7 @@ import {
   BindingTypes,
   type CompilerOptions,
   type ElementNode,
+  ErrorCodes,
   NodeTypes,
   type ObjectExpression,
   TO_HANDLER_KEY,
@@ -47,6 +48,20 @@ describe('compiler-dom: transform v-on', () => {
         arguments: [{ content: '_ctx.test' }, '["stop","prevent"]'],
       },
     })
+  })
+
+  it('should error on dynamic modifiers', () => {
+    const onError = vi.fn()
+    parseWithVOn(`<div @keyup.[key]="test"/>`, {
+      onError,
+      prefixIdentifiers: true,
+    })
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+      }),
+    )
   })
 
   it('should support multiple events and modifiers options w/ prefixIdentifiers: true', () => {

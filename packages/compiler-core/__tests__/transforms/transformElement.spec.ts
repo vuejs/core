@@ -397,6 +397,17 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test('v-bind dynamic modifier should error', () => {
+    const onError = vi.fn()
+    parseWithElementTransform(`<div v-bind.[mods]="obj" />`, { onError })
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+      }),
+    )
+  })
+
   test('v-bind="obj" after static prop', () => {
     const { root, node } = parseWithElementTransform(
       `<div id="foo" v-bind="obj" />`,
@@ -796,12 +807,13 @@ describe('compiler: element transform', () => {
 
   test('runtime directives', () => {
     const { root, node } = parseWithElementTransform(
-      `<div v-foo v-bar="x" v-baz:[arg].mod.mad="y" />`,
+      `<div v-foo v-bar="x" v-baz:[arg].mod.mad="y" v-baa.[{dyn:true}].[mid].boo="z" />`,
     )
     expect(root.helpers).toContain(RESOLVE_DIRECTIVE)
     expect(root.directives).toContain(`foo`)
     expect(root.directives).toContain(`bar`)
     expect(root.directives).toContain(`baz`)
+    expect(root.directives).toContain(`baa`)
 
     expect(node).toMatchObject({
       directives: {
@@ -840,33 +852,54 @@ describe('compiler: element transform', () => {
               },
               // modifiers
               {
-                type: NodeTypes.JS_OBJECT_EXPRESSION,
-                properties: [
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: '{ mod: true, mad: true }',
+              },
+            ],
+          },
+          {
+            type: NodeTypes.JS_ARRAY_EXPRESSION,
+            elements: [
+              `_directive_baa`,
+              // exp
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: `z`,
+                isStatic: false,
+              },
+              //arg
+              'void 0',
+              // modifiers
+              {
+                type: NodeTypes.JS_CALL_EXPRESSION,
+                callee: 'Object.assign',
+                arguments: [
+                  createObjectMatcher({}),
                   {
-                    type: NodeTypes.JS_PROPERTY,
-                    key: {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: `mod`,
-                      isStatic: true,
-                    },
-                    value: {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: `true`,
-                      isStatic: false,
-                    },
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: `{dyn:true}`,
                   },
                   {
-                    type: NodeTypes.JS_PROPERTY,
-                    key: {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: `mad`,
-                      isStatic: true,
-                    },
-                    value: {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: `true`,
-                      isStatic: false,
-                    },
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: `mid`,
+                  },
+                  {
+                    type: NodeTypes.JS_OBJECT_EXPRESSION,
+                    properties: [
+                      {
+                        type: NodeTypes.JS_PROPERTY,
+                        key: {
+                          type: NodeTypes.SIMPLE_EXPRESSION,
+                          content: `boo`,
+                          isStatic: true,
+                        },
+                        value: {
+                          type: NodeTypes.SIMPLE_EXPRESSION,
+                          content: `true`,
+                          isStatic: false,
+                        },
+                      },
+                    ],
                   },
                 ],
               },

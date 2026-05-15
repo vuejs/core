@@ -66,7 +66,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       key: arg ? arg : createSimpleExpression('modelValue', true),
       value: exp,
       model: true,
-      modelModifiers: dir.modifiers.map(m => m.content),
+      modelModifiers: dir.modifiers,
     }
   }
 

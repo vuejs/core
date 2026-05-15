@@ -5,6 +5,8 @@ import {
   type SimpleExpressionNode,
   createCompilerError,
   createSimpleExpression,
+  hasDynamicModifier,
+  hasStaticModifier,
 } from '@vue/compiler-dom'
 import { camelize, extend } from '@vue/shared'
 import type { DirectiveTransform, TransformContext } from '../transform'
@@ -34,10 +36,20 @@ export function normalizeBindShorthand(
 }
 
 export const transformVBind: DirectiveTransform = (dir, node, context) => {
-  const { loc, modifiers } = dir
+  const { loc } = dir
   let { exp } = dir
   let arg = dir.arg!
-  const modifiersString = modifiers.map(s => s.content)
+
+  if (hasDynamicModifier(dir)) {
+    context.options.onError(
+      createCompilerError(
+        ErrorCodes.X_DYNAMIC_DIRECTIVE_MODIFIER_NOT_SUPPORTED,
+        loc,
+        undefined,
+        ` v-bind only supports static modifiers.`,
+      ),
+    )
+  }
 
   if (!exp) exp = normalizeBindShorthand(arg, context)
   if (!exp.content.trim()) {
@@ -54,7 +66,7 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   if (arg.isStatic && isReservedProp(arg.content)) return
 
   let camel = false
-  if (modifiersString.includes('camel')) {
+  if (hasStaticModifier(dir, 'camel')) {
     if (arg.isStatic) {
       arg = extend({}, arg, { content: camelize(arg.content) })
     } else {
@@ -67,9 +79,9 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     value: exp,
     loc,
     runtimeCamelize: camel,
-    modifier: modifiersString.includes('prop')
+    modifier: hasStaticModifier(dir, 'prop')
       ? '.'
-      : modifiersString.includes('attr')
+      : hasStaticModifier(dir, 'attr')
         ? '^'
         : undefined,
   }

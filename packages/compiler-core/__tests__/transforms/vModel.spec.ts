@@ -525,6 +525,92 @@ describe('compiler: transform v-model', () => {
     })
   })
 
+  test('should generate modelModifiers for component v-model with dynamic modifiers', () => {
+    const root = parseWithVModel('<Comp v-model.trim.[bar]="foo" />', {
+      prefixIdentifiers: true,
+    })
+    const vnodeCall = (root.children[0] as ComponentNode)
+      .codegenNode as VNodeCall
+    // props
+    expect(vnodeCall.props).toMatchObject({
+      properties: [
+        { key: { content: `modelValue` } },
+        { key: { content: `onUpdate:modelValue` } },
+        {
+          key: { content: 'modelModifiers' },
+          value: {
+            arguments: [
+              {
+                properties: [
+                  {
+                    key: { content: 'trim' },
+                    value: { content: 'true', isStatic: false },
+                  },
+                ],
+              },
+              { content: '_ctx.bar', isStatic: false },
+            ],
+          },
+        },
+      ],
+    })
+    // should now include modelModifiers in dynamicPropNames because it's
+    // gonna change
+    expect(vnodeCall.dynamicProps).toBe(
+      `["modelValue", "onUpdate:modelValue", "modelModifiers"]`,
+    )
+  })
+
+  test('should preserve dynamic model modifier order', () => {
+    const root = parseWithVModel('<Comp v-model.[mods].trim="foo" />', {
+      prefixIdentifiers: true,
+    })
+    const vnodeCall = (root.children[0] as ComponentNode)
+      .codegenNode as VNodeCall
+
+    expect(vnodeCall.props).toMatchObject({
+      properties: [
+        { key: { content: `modelValue` } },
+        { key: { content: `onUpdate:modelValue` } },
+        {
+          key: { content: 'modelModifiers' },
+          value: {
+            callee: 'Object.assign',
+            arguments: [
+              { properties: [] },
+              { content: '_ctx.mods', isStatic: false },
+              {
+                properties: [
+                  {
+                    key: { content: 'trim' },
+                    value: { content: 'true', isStatic: false },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+    })
+  })
+
+  test('should generate quoted static model modifier names', () => {
+    const root = parseWithVModel('<Comp v-model.foo-bar="foo" />')
+    const vnodeCall = (root.children[0] as ComponentNode)
+      .codegenNode as VNodeCall
+
+    expect(vnodeCall.props).toMatchObject({
+      properties: [
+        { key: { content: `modelValue` } },
+        { key: { content: `onUpdate:modelValue` } },
+        {
+          key: { content: 'modelModifiers' },
+          value: { content: `{ "foo-bar": true }`, isStatic: false },
+        },
+      ],
+    })
+  })
+
   describe('errors', () => {
     test('missing expression', () => {
       const onError = vi.fn()

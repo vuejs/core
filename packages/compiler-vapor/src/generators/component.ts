@@ -314,8 +314,8 @@ function genStaticProps(
         const modifiersKey = key.isStatic
           ? [getModifierPropName(key.content)]
           : ['[', ...genExpression(key, context), ' + "Modifiers"]']
-        const modifiersVal = genDirectiveModifiers(modelModifiers)
-        args.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+        const modifiersVal = genDirectiveModifiers(modelModifiers, context)
+        args.push([...modifiersKey, `: () => (`, ...modifiersVal, `)`])
       }
     }
   }
@@ -382,8 +382,8 @@ function genDynamicProps(
                   ...genExpression(p.key, context),
                   ' + "Modifiers"]',
                 ] as CodeFragment[])
-            const modifiersVal = genDirectiveModifiers(modelModifiers)
-            entries.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+            const modifiersVal = genDirectiveModifiers(modelModifiers, context)
+            entries.push([...modifiersKey, `: () => (`, ...modifiersVal, `)`])
           }
 
           expr = genMulti(DELIMITERS_OBJECT_NEWLINE, ...entries)

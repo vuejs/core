@@ -1,6 +1,9 @@
 import {
+  type ExpressionNode,
+  type SimpleExpressionNode,
   createSimpleExpression,
   isSimpleIdentifier,
+  isStaticExp,
   toValidAssetId,
 } from '@vue/compiler-dom'
 import { extend } from '@vue/shared'
@@ -71,11 +74,8 @@ function genCustomDirectives(
         )
     const value = dir.exp && ['() => ', ...genExpression(dir.exp, context)]
     const argument = dir.arg && genExpression(dir.arg, context)
-    const modifiers = !!dir.modifiers.length && [
-      '{ ',
-      genDirectiveModifiers(dir.modifiers.map(m => m.content)),
-      ' }',
-    ]
+    const modifiers =
+      !!dir.modifiers.length && genDirectiveModifiers(dir.modifiers, context)
 
     return genMulti(
       DELIMITERS_ARRAY.concat('void 0') as CodeFragmentDelimiters,
@@ -87,13 +87,64 @@ function genCustomDirectives(
   }
 }
 
-export function genDirectiveModifiers(modifiers: string[]): string {
-  return modifiers
-    .map(
-      value =>
-        `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
-    )
-    .join(', ')
+export function genDirectiveModifiers(
+  modifiers: ExpressionNode[],
+  context: CodegenContext,
+): CodeFragment[] {
+  const staticMods: SimpleExpressionNode[] = []
+  const callArgs: CodeFragment[][] = []
+
+  for (let i = 0; i < modifiers.length; i++) {
+    const modifier = modifiers[i]
+    const isStatic = isStaticExp(modifier)
+
+    if (isStatic) {
+      staticMods.push(modifier)
+    }
+
+    if (
+      (!isStatic && (staticMods.length || i === 0)) ||
+      (isStatic && i === modifiers.length - 1)
+    ) {
+      callArgs.push(genStaticDirectiveModifiers(staticMods))
+    }
+
+    if (!isStatic) {
+      callArgs.push(
+        genExpression(modifier as unknown as SimpleExpressionNode, context),
+      )
+      staticMods.length = 0
+    }
+  }
+
+  if (staticMods.length === modifiers.length) {
+    return genStaticDirectiveModifiers(staticMods)
+  }
+
+  return callArgs.length !== 1
+    ? genCall('Object.assign', ...callArgs)
+    : callArgs[0]
+}
+
+function genStaticDirectiveModifiers(
+  modifiers: SimpleExpressionNode[],
+): CodeFragment[] {
+  if (!modifiers.length) {
+    return ['{}']
+  }
+
+  return [
+    '{ ',
+    modifiers
+      .map(({ content }) => {
+        const key = isSimpleIdentifier(content)
+          ? content
+          : JSON.stringify(content)
+        return `${key}: true`
+      })
+      .join(', '),
+    ' }',
+  ]
 }
 
 function filterCustomDirectives(

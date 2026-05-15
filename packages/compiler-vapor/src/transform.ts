@@ -5,6 +5,7 @@ import {
   type CompilerCompatOptions,
   type ElementNode,
   ElementTypes,
+  type ExpressionNode,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
@@ -52,7 +53,7 @@ export interface DirectiveTransformResult {
   handler?: boolean
   handlerModifiers?: SetEventIRNode['modifiers']
   model?: boolean
-  modelModifiers?: string[]
+  modelModifiers?: ExpressionNode[]
 }
 
 // A structural directive transform is technically also a NodeTransform;

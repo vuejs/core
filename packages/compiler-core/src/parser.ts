@@ -228,7 +228,7 @@ const tokenizer = new Tokenizer(stack, {
         rawName: raw,
         exp: undefined,
         arg: undefined,
-        modifiers: raw === '.' ? [createSimpleExpression('prop')] : [],
+        modifiers: raw === '.' ? [createSimpleExpression('prop', true)] : [],
         loc: getLoc(start),
       }
       if (name === 'pre') {
@@ -276,7 +276,32 @@ const tokenizer = new Tokenizer(stack, {
         setLocEnd(arg.loc, end)
       }
     } else {
-      const exp = createSimpleExpression(mod, true, getLoc(start, end))
+      const isStatic = mod[0] !== `[`
+      const exp = createExp(
+        isStatic ? mod : mod.slice(1, -1),
+        isStatic,
+        getLoc(start, end),
+        isStatic ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT,
+      )
+
+      if (!exp.ast && !exp.content.trim()) {
+        emitError(
+          isStatic
+            ? ErrorCodes.X_MISSING_DIRECTIVE_MODIFIER_NAME
+            : ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_MODIFIER_VALUE,
+          exp.loc.start.offset,
+        )
+        return
+      }
+
+      if (!isStatic && isInvalidDynamicDirectiveModifierValue(exp)) {
+        emitError(
+          ErrorCodes.X_INVALID_VALUE_IN_DYNAMIC_DIRECTIVE_MODIFIER,
+          exp.loc.start.offset + 1,
+        )
+        return
+      }
+
       ;(currentProp as DirectiveNode).modifiers.push(exp)
     }
   },
@@ -384,7 +409,7 @@ const tokenizer = new Tokenizer(stack, {
             __COMPAT__ &&
             currentProp.name === 'bind' &&
             (syncIndex = currentProp.modifiers.findIndex(
-              mod => mod.content === 'sync',
+              mod => (mod as SimpleExpressionNode).content === 'sync',
             )) > -1 &&
             checkCompatEnabled(
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
@@ -988,10 +1013,7 @@ function createExp(
       return exp
     }
     try {
-      const plugins = currentOptions.expressionPlugins
-      const options: BabelOptions = {
-        plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
-      }
+      const options = getBabelParserOptions()
       if (parseMode === ExpParseMode.Statements) {
         // v-on with multi-inline-statements, pad 1 char
         exp.ast = parse(` ${content} `, options).program
@@ -1007,6 +1029,53 @@ function createExp(
     }
   }
   return exp
+}
+
+const invalidDynamicDirectiveModifierBabelNodeTypes = [
+  'ArrayExpression',
+  'BigIntLiteral',
+  'BooleanLiteral',
+  'DecimalLiteral',
+  'NullLiteral',
+  'NumericLiteral',
+  'StringLiteral',
+  'TemplateLiteral',
+  'UnaryExpression',
+]
+
+const invalidDynamicDirectiveModifierSimpleValues = [
+  'true',
+  'false',
+  'null',
+  'undefined',
+]
+
+function getBabelParserOptions(): BabelOptions {
+  const plugins = currentOptions.expressionPlugins
+  return {
+    plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
+  }
+}
+
+function isInvalidDynamicDirectiveModifierValue(
+  exp: SimpleExpressionNode,
+): boolean {
+  if (invalidDynamicDirectiveModifierSimpleValues.includes(exp.content)) {
+    return true
+  }
+
+  let ast = exp.ast
+  if (!__BROWSER__ && ast === undefined && exp.content.trim()) {
+    try {
+      ast = parseExpression(`(${exp.content})`, getBabelParserOptions())
+    } catch {
+      return false
+    }
+  }
+
+  return !!(
+    ast && invalidDynamicDirectiveModifierBabelNodeTypes.includes(ast.type)
+  )
 }
 
 function emitError(code: ErrorCodes, index: number, message?: string) {
