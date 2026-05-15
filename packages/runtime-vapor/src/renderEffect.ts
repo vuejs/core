@@ -17,10 +17,12 @@ import { invokeArrayFns } from '@vue/shared'
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
   job: SchedulerJob
-  updateJob: SchedulerJob
+  updateJob?: SchedulerJob
+  render: () => void
 
-  constructor(public render: () => void) {
-    super()
+  constructor(render: () => void, noLifecycle = false) {
+    super(noLifecycle ? render : undefined)
+    this.render = render
     const instance = currentInstance as VaporComponentInstance | null
     if (__DEV__ && !__TEST__ && !this.subs && !isVaporComponent(instance)) {
       warn('renderEffect called without active EffectScope or Vapor instance.')
@@ -31,13 +33,9 @@ export class RenderEffect extends ReactiveEffect {
         this.run()
       }
     }
-    this.updateJob = () => {
-      instance!.isUpdating = false
-      instance!.u && invokeArrayFns(instance!.u)
-    }
 
     if (instance) {
-      if (__DEV__) {
+      if (__DEV__ && !noLifecycle) {
         this.onTrack = instance.rtc
           ? e => invokeArrayFns(instance.rtc!, e)
           : void 0
@@ -83,7 +81,14 @@ export class RenderEffect extends ReactiveEffect {
           instance.isUpdating = false
           throw err
         }
-        queuePostFlushCb(this.updateJob)
+        let updateJob = this.updateJob
+        if (!updateJob) {
+          updateJob = this.updateJob = () => {
+            instance.isUpdating = false
+            instance.u && invokeArrayFns(instance.u)
+          }
+        }
+        queuePostFlushCb(updateJob)
       } else {
         this.render()
       }
@@ -107,9 +112,6 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
   // in once slot, just run the function directly
   if (inOnceSlot) return fn()
 
-  const effect = new RenderEffect(fn)
-  if (noLifecycle) {
-    effect.fn = fn
-  }
+  const effect = new RenderEffect(fn, noLifecycle)
   effect.run()
 }
