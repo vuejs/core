@@ -477,6 +477,31 @@ describe('component: slots', () => {
       expect(outlet.pendingRecheck).toBe(false)
     })
 
+    test('removed slot fragment ignores queued fallback dirty notifications', () => {
+      const container = document.createElement('div')
+      const fallbackRuns = vi.fn()
+      const cleanup = vi.fn()
+      const frag = new SlotFragment()
+      frag.updateSlot(undefined, () => {
+        fallbackRuns()
+        onScopeDispose(cleanup)
+        return document.createTextNode('fallback')
+      })
+      insert(frag, container)
+      expect(container.innerHTML).toBe('fallback<!--slot-->')
+      expect(fallbackRuns).toHaveBeenCalledTimes(1)
+
+      remove(frag, container)
+      expect(container.innerHTML).toBe('')
+      expect(cleanup).toHaveBeenCalledTimes(1)
+
+      frag.boundary.markDirty()
+
+      expect(fallbackRuns).toHaveBeenCalledTimes(1)
+      expect(frag.fallbackBlock).toBe(null)
+      expect(cleanup).toHaveBeenCalledTimes(1)
+    })
+
     test('withHydratingSlotBoundary isolates fallback-active state between boundaries without local markers', () => {
       const start = document.createComment('[')
       const end = document.createComment(']')

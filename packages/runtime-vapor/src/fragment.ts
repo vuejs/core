@@ -1256,6 +1256,7 @@ export class SlotFragment
   extends DynamicFragment
   implements SlotFallbackOutlet
 {
+  private disposed = false
   forwarded = false
   parentSlotBoundary: SlotBoundaryContext | null = getCurrentSlotBoundary()
   // Custom elements with `shadowRoot: false` replace their native slot outlet
@@ -1315,6 +1316,7 @@ export class SlotFragment
   }
 
   private insertSlot(parent: ParentNode, anchor: Node | null): void {
+    this.disposed = false
     if (this.fallbackBlock) {
       insert(this.fallbackBlock, parent, anchor)
       mutateSlotFallbackCarrier(this.nodes, block =>
@@ -1326,6 +1328,7 @@ export class SlotFragment
   }
 
   private removeSlot(parent?: ParentNode): void {
+    this.disposed = true
     if (this.fallbackBlock) {
       mutateSlotFallbackCarrier(this.nodes, block => remove(block, parent))
     } else {
@@ -1411,6 +1414,10 @@ export class SlotFragment
 
   isBusy(): boolean {
     return this.isUpdatingSlot
+  }
+
+  isDisposed(): boolean {
+    return this.disposed
   }
 
   notifyFallbackValidityChange(): void {
