@@ -434,10 +434,14 @@ export const createFor = (
     const slotEndAnchor = getCurrentSlotEndAnchor()
     const slotFallbackRange = isHydratingSlotFallbackActive() && slotEndAnchor
 
+    const reuseBoundaryClose = (close: Node): void => {
+      parentAnchor = markHydrationAnchor(close)
+      exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+    }
+
     try {
       if (emptyLocalRange && newLength) {
-        parentAnchor = markHydrationAnchor(hydrationStart)
-        exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+        reuseBoundaryClose(hydrationStart)
         for (let i = 0; i < newLength; i++) {
           mount(source, i)
         }
@@ -495,8 +499,7 @@ export const createFor = (
           })
         } else {
           const close = locateHydrationBoundaryClose(currentHydrationNode!)
-          parentAnchor = markHydrationAnchor(close)
-          exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+          reuseBoundaryClose(close)
           if (__DEV__ && !isComment(parentAnchor, ']')) {
             throw new Error(
               `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,

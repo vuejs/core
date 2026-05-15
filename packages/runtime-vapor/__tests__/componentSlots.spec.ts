@@ -40,6 +40,7 @@ import { setElementText, setText } from '../src/dom/prop'
 import { type Block, type BlockFn, isValidBlock } from '../src/block'
 import {
   hydrateNode,
+  isHydrationAnchor,
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
@@ -546,12 +547,13 @@ describe('component: slots', () => {
       footer.textContent = 'footer'
       const host = document.createElement('div')
       host.append(start, end, footer)
+      let frag!: SlotFragment
 
       setIsHydratingEnabled(true)
       try {
         hydrateNode(start, () => {
           withHydratingSlotBoundary(() => {
-            const frag = new SlotFragment()
+            frag = new SlotFragment()
             frag.forwarded = true
             setCurrentHydrationNode(footer)
             frag.hydrate(true, true)
@@ -565,7 +567,87 @@ describe('component: slots', () => {
       expect(host.innerHTML).toBe(
         '<!--[--><!--]--><!--slot--><footer>footer</footer>',
       )
+      expect(frag.anchor).not.toBe(end)
+      expect(isHydrationAnchor(end)).toBe(true)
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('non-forwarded empty slot hydration reuses its close anchor', () => {
+      const start = document.createComment('[')
+      const end = document.createComment(']')
+      const host = document.createElement('div')
+      host.append(start, end)
+      let frag!: SlotFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            frag = new SlotFragment()
+            frag.hydrate(true, true)
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+
+      expect(frag.anchor).toBe(end)
+      expect(isHydrationAnchor(end)).toBe(true)
+    })
+
+    test('non-forwarded empty slot hydration cleans stale content before close anchor', () => {
+      const start = document.createComment('[')
+      const stale = document.createElement('span')
+      stale.textContent = 'stale'
+      const end = document.createComment(']')
+      const footer = document.createElement('footer')
+      footer.textContent = 'footer'
+      const host = document.createElement('div')
+      host.append(start, stale, end, footer)
+      let frag!: SlotFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            frag = new SlotFragment()
+            frag.hydrate(true, true)
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+
+      expect(host.innerHTML).toBe('<!--[--><!--]--><footer>footer</footer>')
+      expect(frag.anchor).toBe(end)
+      expect(isHydrationAnchor(end)).toBe(true)
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    test('slot fallback empty inner v-if hydrates before parent close anchor', async () => {
+      const start = document.createComment('[')
+      const end = document.createComment(']')
+      const host = document.createElement('div')
+      host.append(start, end)
+      let frag!: DynamicFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            withHydratingSlotFallbackActive(() => {
+              frag = new DynamicFragment('if', false, false)
+              frag.hydrate(true)
+            })
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<!--[--><!--if--><!--]-->')
+      expect(frag.anchor).toBe(end.previousSibling)
     })
 
     test('slot fallback outlet stops fallback scope when fallback body throws', async () => {
