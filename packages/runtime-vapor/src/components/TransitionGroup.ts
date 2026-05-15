@@ -1,4 +1,5 @@
 import {
+  type BaseTransitionProps,
   type ElementWithTransition,
   type TransitionGroupProps,
   type TransitionProps,
@@ -111,16 +112,17 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     const state = useTransitionState()
 
     // use proxy to keep props reference stable
-    let cssTransitionProps = resolveTransitionProps(props)
-    const propsProxy = new Proxy({} as typeof cssTransitionProps, {
+    let cssTransitionProps!: BaseTransitionProps<Element>
+    const propsProxy = new Proxy({} as BaseTransitionProps<Element>, {
       get(_, key) {
-        return cssTransitionProps[key as keyof typeof cssTransitionProps]
+        return cssTransitionProps[key as keyof BaseTransitionProps<Element>]
       },
     })
 
-    renderEffect(() => {
-      cssTransitionProps = resolveTransitionProps(props)
-    })
+    renderEffect(
+      () => (cssTransitionProps = resolveTransitionProps(props)),
+      true,
+    )
 
     let prevChildren: ResolvedTransitionBlock[]
     let slottedBlock: Block = []
