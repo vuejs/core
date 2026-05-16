@@ -19,6 +19,33 @@ describe('runtime-dom: props patching', () => {
     expect(el.getAttribute('id')).toBe(null)
   })
 
+  test('invokes multiple event handlers without array map indirection', () => {
+    const el = document.createElement('div')
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    const handlers = [fn1, fn2]
+    const mapSpy = vi.spyOn(handlers, 'map')
+
+    patchProp(el, 'onClick', null, handlers)
+    el.dispatchEvent(new Event('click'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(mapSpy).not.toHaveBeenCalled()
+  })
+
+  test('stops invoking later event handlers after stopImmediatePropagation', () => {
+    const el = document.createElement('div')
+    const fn1 = vi.fn((e: Event) => e.stopImmediatePropagation())
+    const fn2 = vi.fn()
+
+    patchProp(el, 'onClick', null, [fn1, fn2])
+    el.dispatchEvent(new Event('click'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).not.toHaveBeenCalled()
+  })
+
   test('value', () => {
     const el = document.createElement('input')
     patchProp(el, 'value', null, 'foo')
