@@ -6878,7 +6878,9 @@ describe('mismatch handling', () => {
       data,
     )
 
-    expect(container.innerHTML).toBe('<div><!----></div><!--dynamic-component-->')
+    expect(container.innerHTML).toBe(
+      '<div><!----></div><!--dynamic-component-->',
+    )
     expect(`Hydration node mismatch`).toHaveBeenWarned()
 
     data.value = { name: 'default', msg: 'updated' }

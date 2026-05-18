@@ -945,8 +945,7 @@ export function createPlainElement(
     resetInsertionState()
   }
 
-  const defaultSlot =
-    rawSlots && getSlot(rawSlots as RawSlots, 'default')
+  const defaultSlot = rawSlots && getSlot(rawSlots as RawSlots, 'default')
   const hasDynamicSlots = !!rawSlots && !!rawSlots.$
   const adoptHydrationChildren = !!defaultSlot
   const hydrationTemplate =
