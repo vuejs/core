@@ -7388,6 +7388,57 @@ describe('mismatch handling', () => {
       expect(container.innerHTML).toBe(`<!--foo--><span>updated</span>`)
     })
 
+    test('warns on static element tag mismatch', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<span>foo</span><span>after</span>`
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('<div>foo', false, true)() as HTMLElement
+        const n1 = template('<span>after', false, true)() as HTMLElement
+
+        expect(n0).toBe(container.firstChild)
+        expect(n1).toBe(container.lastChild)
+      })
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
+    test('warns on static first-node type mismatches', () => {
+      const cases = [
+        { server: `foo<span>after</span>`, client: '<div>foo' },
+        { server: `<!--foo--><span>after</span>`, client: '<div>foo' },
+        { server: `<div>foo</div><span>after</span>`, client: 'foo' },
+      ]
+
+      for (const { server, client } of cases) {
+        const container = document.createElement('div')
+        container.innerHTML = server
+
+        hydrateNode(container.firstChild!, () => {
+          template(client, false, true)()
+          template('<span>after', false, true)()
+        })
+      }
+
+      expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(3)
+    })
+
+    test('does not warn static first-node mismatch when parent allows children mismatch', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div data-allow-mismatch="children"><span>foo</span><span>after</span></div>`
+      const parent = container.firstChild as HTMLElement
+
+      hydrateNode(parent.firstChild!, () => {
+        const n0 = template('<div>foo', false, true)() as HTMLElement
+        const n1 = template('<span>after', false, true)() as HTMLElement
+
+        expect(n0).toBe(parent.firstChild)
+        expect(n1).toBe(parent.lastChild)
+      })
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
     test('multi-root static nodes', async () => {
       const container = document.createElement('div')
       container.innerHTML = `<!--[--><div>one</div><p>two</p><!--]--><span>after</span>`
