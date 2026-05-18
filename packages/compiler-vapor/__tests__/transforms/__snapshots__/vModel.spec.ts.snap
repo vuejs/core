@@ -14,6 +14,23 @@ exports[`compiler: vModel transform > component > component v-model should merge
 "
 `;
 
+exports[`compiler: vModel transform > component > v-model after dynamic bind keeps model getters 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createComponentWithFallback(_component_Comp, { $: [
+    () => (_ctx.obj),
+    {
+      modelValue: () => (_ctx.foo),
+      "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
+      modelModifiers: () => ({ trim: true })
+    }
+  ] }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
