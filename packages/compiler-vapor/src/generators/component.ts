@@ -69,7 +69,7 @@ export function genCreateComponent(
   const { root, props, slots, once } = operation
   const rawSlots = genRawSlots(slots, context)
   const [ids, handlers] = processInlineHandlers(props, context)
-  const rawProps = context.withId(() => genRawProps(props, context), ids)
+  const rawProps = context.withId(() => genRawProps(props, context, true), ids)
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
@@ -175,6 +175,7 @@ function processInlineHandlers(
 export function genRawProps(
   props: IRProps[],
   context: CodegenContext,
+  directStaticLiteralProps = false,
 ): CodeFragment[] | undefined {
   const staticProps = props[0]
   if (isArray(staticProps)) {
@@ -185,10 +186,16 @@ export function genRawProps(
       staticProps,
       context,
       genDynamicProps(props.slice(1), context),
+      directStaticLiteralProps,
     )
   } else if (props.length) {
     // all dynamic
-    return genStaticProps([], context, genDynamicProps(props, context))
+    return genStaticProps(
+      [],
+      context,
+      genDynamicProps(props, context),
+      directStaticLiteralProps,
+    )
   }
 }
 
@@ -196,6 +203,7 @@ function genStaticProps(
   props: IRPropsStatic,
   context: CodegenContext,
   dynamicProps?: CodeFragment[],
+  directStaticLiteralProps = false,
 ): CodeFragment[] {
   const args: CodeFragment[][] = []
 
@@ -285,7 +293,15 @@ function genStaticProps(
     }
 
     // normal (non-handler) props
-    args.push(genProp(prop, context, true))
+    args.push(
+      genProp(
+        prop,
+        context,
+        true,
+        true,
+        directStaticLiteralProps && isDirectStaticLiteralProp(prop),
+      ),
+    )
 
     // v-model on component: synthesize onUpdate:* and modifiers props, and
     // dedupe/merge with user provided @update:* handlers.
@@ -410,6 +426,7 @@ function genProp(
   context: CodegenContext,
   isStatic?: boolean,
   wrapHandler = true,
+  directStaticLiteral = false,
 ) {
   const values = genPropValue(prop.values, context)
   return [
@@ -424,9 +441,27 @@ function genProp(
           wrapHandler /* wrapInGetter */,
         )
       : isStatic
-        ? ['() => (', ...values, ')']
+        ? directStaticLiteral
+          ? values
+          : ['() => (', ...values, ')']
         : values),
   ]
+}
+
+/**
+ * Top-level raw props can carry literal values directly for static primitives.
+ * The runtime accepts both literal values and getter functions, but literals
+ * avoid re-evaluation overhead. Keep handlers, v-model, merged values, and
+ * dynamic expressions as getter sources to maintain reactivity and merge semantics.
+ */
+function isDirectStaticLiteralProp(prop: IRProp): boolean {
+  return (
+    prop.key.isStatic &&
+    prop.values.length === 1 &&
+    prop.values[0].isStatic &&
+    !prop.handler &&
+    !prop.model
+  )
 }
 
 function genRawSlots(slots: IRSlots[], context: CodegenContext) {
