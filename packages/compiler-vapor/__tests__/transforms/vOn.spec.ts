@@ -87,8 +87,9 @@ describe('v-on', () => {
       `<div v-on:[event]="handler"/>`,
     )
 
-    expect(helpers).contains('onBinding')
-    expect(helpers).contains('renderEffect')
+    expect(helpers).contains('setEventBinding')
+    expect(helpers).not.contains('on')
+    expect(helpers).not.contains('renderEffect')
     expect(ir.block.operation).toMatchObject([])
 
     expect(ir.block.effect[0].operations[0]).toMatchObject({
@@ -107,7 +108,9 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e))`)
+    expect(code).contains(
+      `_setEventBinding(n0, () => _ctx.event, e => _ctx.handler(e))`,
+    )
   })
 
   test('dynamic arg with prefixing', () => {
@@ -126,9 +129,11 @@ describe('v-on', () => {
       },
     )
 
-    expect(helpers).contains('onBinding')
+    expect(helpers).contains('setEventBinding')
     expect(code).matchSnapshot()
-    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e), {`)
+    expect(code).contains(
+      `_setEventBinding(n0, () => _ctx.event, e => _ctx.handler(e), {`,
+    )
     expect(code).contains('capture: true')
     expect(code).contains('once: true')
     expect(code).not.contains('effect: true')
@@ -142,8 +147,9 @@ describe('v-on', () => {
       },
     )
 
-    expect(helpers).contains('onBinding')
-    expect(helpers).contains('renderEffect')
+    expect(helpers).contains('setEventBinding')
+    expect(helpers).not.contains('on')
+    expect(helpers).not.contains('renderEffect')
     expect(ir.block.operation).toMatchObject([])
 
     expect(ir.block.effect[0].operations[0]).toMatchObject({
@@ -748,7 +754,7 @@ describe('v-on', () => {
     expect(code).contains(
       'n0.$evtkeyup = _withKeys(e => _ctx.foo(e), ["enter"])',
     )
-    expect(code).contains('_onBinding(n1, _ctx.event, _withKeys1')
+    expect(code).contains('_setEventBinding(n1, () => _ctx.event, _withKeys1')
     expect(code).contains('e => _ctx.bar(e), ["enter"]))')
   })
 

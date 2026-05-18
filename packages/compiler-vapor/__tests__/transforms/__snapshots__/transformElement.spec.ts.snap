@@ -669,12 +669,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: class 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), " bar", "foo"))
+  _setClassNameBinding(n0, () => (_ctx.isBar ? 1 : 0), " bar", "foo")
   return n0
 }"
 `;
@@ -833,56 +833,56 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > v-bind="obj" 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj]))
+  _setDynamicPropsBinding(n0, () => [_ctx.obj])
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj]))
+  _setDynamicPropsBinding(n0, () => [{ id: "foo" }, _ctx.obj])
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj, { id: "foo" }]))
+  _setDynamicPropsBinding(n0, () => [_ctx.obj, { id: "foo" }])
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }]))
+  _setDynamicPropsBinding(n0, () => [{ id: "foo" }, _ctx.obj, { class: "bar" }])
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-on="obj" 1`] = `
-"import { setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicEventsBinding as _setDynamicEventsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
+  _setDynamicEventsBinding(n0, () => _ctx.obj)
   return n0
 }"
 `;

@@ -127,6 +127,46 @@ describe('compiler: children transform', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('lowers mixed generated text binding without hiding segment display conversion', () => {
+    const { code, helpers } = compileWithElementTransform(
+      `<div>{{ a }} - {{ b }}</div>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).toContain(
+      `_setTextBinding(n0, () => _toDisplayString(_ctx.a) + " - " + _toDisplayString(_ctx.b))`,
+    )
+    expect(code).not.toContain(`_txt(`)
+    expect(code).not.toContain(`_renderEffect`)
+    expect(code).not.toContain(`_setText(`)
+    expect(Array.from(helpers)).containSubset([
+      'setTextBinding',
+      'toDisplayString',
+    ])
+    expect(helpers).not.contains('txt')
+    expect(helpers).not.contains('renderEffect')
+    expect(helpers).not.contains('setText')
+  })
+
+  test('does not lower generated text binding when expressions need declarations', () => {
+    const { code, helpers } = compileWithElementTransform(
+      `<div>{{ foo + foo }}</div>`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).toContain(`const x0 = _txt(n0)`)
+    expect(code).toContain(`const _foo = _ctx.foo`)
+    expect(code).toContain(`_setText(x0, _toDisplayString(_foo + _foo))`)
+    expect(code).not.toContain(`_setTextBinding(`)
+    expect(Array.from(helpers)).containSubset([
+      'txt',
+      'renderEffect',
+      'setText',
+      'toDisplayString',
+    ])
+    expect(helpers).not.contains('setTextBinding')
+  })
+
   test('anchor insertion in middle', () => {
     const { code } = compileWithElementTransform(
       `<div>

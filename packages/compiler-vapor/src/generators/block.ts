@@ -16,11 +16,7 @@ import {
   genMulti,
 } from './utils'
 import type { CodegenContext } from '../generate'
-import {
-  genEffects,
-  genOperationWithInsertionState,
-  genOperations,
-} from './operation'
+import { genOperationsAndEffects } from './operation'
 import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
 
@@ -92,17 +88,15 @@ export function genBlockContent(
     effectEnd: number,
     push: (...items: CodeFragment[]) => number,
   ) => {
-    while (operationIndex < operationEnd) {
-      push(
-        ...genOperationWithInsertionState(operation[operationIndex], context),
-      )
-      operationIndex++
-    }
-
-    if (effectIndex < effectEnd) {
-      push(...genEffects(effect.slice(effectIndex, effectEnd), context))
-      effectIndex = effectEnd
-    }
+    push(
+      ...genOperationsAndEffects(
+        operation.slice(operationIndex, operationEnd),
+        effect.slice(effectIndex, effectEnd),
+        context,
+      ),
+    )
+    operationIndex = operationEnd
+    effectIndex = effectEnd
   }
   const flushBeforeDynamic = (
     dynamic: IRDynamicInfo,
@@ -141,13 +135,19 @@ export function genBlockContent(
     }
   }
 
-  if (operationIndex < operation.length) {
-    push(...genOperations(operation.slice(operationIndex), context))
-  }
-  if (effectIndex < effect.length) {
-    push(...genEffects(effect.slice(effectIndex), context, genEffectsExtraFrag))
-  } else if (genEffectsExtraFrag) {
-    push(...genEffects([], context, genEffectsExtraFrag))
+  if (
+    operationIndex < operation.length ||
+    effectIndex < effect.length ||
+    genEffectsExtraFrag
+  ) {
+    push(
+      ...genOperationsAndEffects(
+        operation.slice(operationIndex),
+        effect.slice(effectIndex),
+        context,
+        genEffectsExtraFrag,
+      ),
+    )
   }
 
   push(NEWLINE, `return `)

@@ -49,3 +49,33 @@ export function genGetTextChild(
     `const x${oper.parent} = ${context.helper('txt')}(n${oper.parent})`,
   ]
 }
+
+export function genSetTextBinding(
+  oper: SetTextIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { helper } = context
+  const text = combineValues(oper.values, context)
+  return [
+    NEWLINE,
+    ...genCall(helper('setTextBinding'), `n${oper.element}`, [
+      '() => ',
+      ...text,
+    ]),
+  ]
+}
+
+export function genSetBlockTextBinding(
+  oper: SetTextIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { helper } = context
+  const text = combineValues(oper.values, context)
+  return [
+    NEWLINE,
+    ...genCall(helper('setBlockTextBinding'), `n${oper.element}`, [
+      '() => ',
+      ...text,
+    ]),
+  ]
+}

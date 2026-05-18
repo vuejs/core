@@ -11,7 +11,24 @@ import {
   watchPostEffect,
   watchSyncEffect,
 } from '@vue/runtime-dom'
-import { renderEffect, template } from '../src'
+import {
+  renderEffect,
+  setAttrBinding,
+  setBlockHtmlBinding,
+  setBlockTextBinding,
+  setClassBinding,
+  setClassNameBinding,
+  setDOMPropBinding,
+  setDynamicEventsBinding,
+  setDynamicPropsBinding,
+  setEventBinding,
+  setHtmlBinding,
+  setPropBinding,
+  setStyleBinding,
+  setTextBinding,
+  setValueBinding,
+  template,
+} from '../src'
 import { RenderEffect } from '../src/renderEffect'
 import { onEffectCleanup } from '@vue/reactivity'
 import { makeRender } from './_utils'
@@ -135,6 +152,207 @@ describe('renderEffect', () => {
     expect(dummy).toBe(2)
     await nextTick()
     expect(dummy).toBe(3)
+  })
+
+  test('setTextBinding updates text with render lifecycle', async () => {
+    const calls: string[] = []
+    const { instance, html } = define({
+      setup() {
+        const source = ref('one')
+        const update = () => (source.value = 'two')
+        onBeforeUpdate(() => calls.push(`beforeUpdate ${source.value}`))
+        onUpdated(() => calls.push(`updated ${source.value}`))
+        return { source, update }
+      },
+      render(ctx: any) {
+        const t0 = template('<div> </div>', 1)
+        const n0 = t0() as ParentNode
+        setTextBinding(n0, () => ctx.source)
+        return n0
+      },
+    }).render()
+
+    expect(html()).toBe('<div>one</div>')
+    expect(calls).toEqual([])
+
+    const { update } = instance?.setupState as any
+    update()
+    await nextTick()
+
+    expect(html()).toBe('<div>two</div>')
+    expect(calls).toEqual(['beforeUpdate two', 'updated two'])
+  })
+
+  test('setTextBinding getter runs with current instance and scope', async () => {
+    const source = ref('one')
+    const scope = new EffectScope()
+    let instanceSnap: GenericComponentInstance | null = null
+    let scopeSnap: EffectScope | undefined = undefined
+    const { instance, html } = define(() => {
+      const t0 = template('<div> </div>', 1)
+      const n0 = t0() as ParentNode
+      scope.run(() => {
+        setTextBinding(n0, () => {
+          instanceSnap = currentInstance
+          scopeSnap = getCurrentScope()
+          return source.value
+        })
+      })
+      return n0
+    }).render()
+
+    expect(html()).toBe('<div>one</div>')
+    expect(instanceSnap).toBe(instance)
+    expect(scopeSnap).toBe(scope)
+
+    source.value = 'two'
+    await nextTick()
+    expect(html()).toBe('<div>two</div>')
+    expect(instanceSnap).toBe(instance)
+    expect(scopeSnap).toBe(scope)
+    scope.stop()
+  })
+
+  test('DOM binding helpers update with their source values', async () => {
+    let input!: HTMLInputElement
+    let eventTarget!: HTMLButtonElement
+    let dynamicEventTarget!: HTMLButtonElement
+    const eventCalls: string[] = []
+    const { instance, html } = define({
+      setup() {
+        const source = ref('one')
+        const active = ref(true)
+        const color = ref('red')
+        const eventName = ref('click')
+        const events = ref<Record<string, () => void>>({
+          click: () => eventCalls.push(`dynamic ${source.value}`),
+        })
+        const update = () => {
+          source.value = 'two'
+          active.value = false
+          color.value = 'blue'
+          eventName.value = 'mouseover'
+          events.value = {
+            mouseover: () => eventCalls.push(`dynamic ${source.value}`),
+          }
+        }
+        return { source, active, color, eventName, events, update }
+      },
+      render(ctx: any) {
+        const root = document.createElement('div')
+        const attr = document.createElement('div')
+        const prop = document.createElement('div')
+        const domProp = document.createElement('div')
+        input = document.createElement('input')
+        const cls = document.createElement('div')
+        const clsName = document.createElement('div')
+        const style = document.createElement('div')
+        const html = document.createElement('div')
+        const blockText = document.createElement('div')
+        const blockHtml = document.createElement('div')
+        const dynamic = document.createElement('div')
+        eventTarget = document.createElement('button')
+        dynamicEventTarget = document.createElement('button')
+
+        root.append(
+          attr,
+          prop,
+          domProp,
+          input,
+          cls,
+          clsName,
+          style,
+          html,
+          blockText,
+          blockHtml,
+          dynamic,
+          eventTarget,
+          dynamicEventTarget,
+        )
+
+        setAttrBinding(attr, 'data-test', () => ctx.source)
+        setPropBinding(prop, 'id', () => ctx.source)
+        setDOMPropBinding(domProp, 'title', () => ctx.source)
+        setValueBinding(input, () => ctx.source)
+        setClassBinding(cls, () => ctx.source)
+        setClassNameBinding(clsName, () => (ctx.active ? 1 : 0), 'active')
+        setStyleBinding(style, () => ({ color: ctx.color }))
+        setHtmlBinding(html, () => `<span>${ctx.source}</span>`)
+        setBlockTextBinding(blockText, () => ctx.source)
+        setBlockHtmlBinding(blockHtml, () => `<span>${ctx.source}</span>`)
+        setDynamicPropsBinding(dynamic, () => [
+          { id: ctx.source, class: ctx.source },
+        ])
+        setEventBinding(
+          eventTarget,
+          () => ctx.eventName,
+          () => eventCalls.push(`event ${ctx.source}`),
+        )
+        setDynamicEventsBinding(dynamicEventTarget, () => ctx.events)
+
+        return root
+      },
+    }).render()
+
+    expect(html()).toBe(
+      '<div><div data-test="one"></div><div id="one"></div><div title="one"></div><input><div class="one"></div><div class="active"></div><div style="color: red;"></div><div><span>one</span></div><div>one</div><div><span>one</span></div><div id="one" class="one"></div><button></button><button></button></div>',
+    )
+    expect(input.value).toBe('one')
+    eventTarget.dispatchEvent(new Event('click'))
+    dynamicEventTarget.dispatchEvent(new Event('click'))
+    expect(eventCalls).toEqual(['event one', 'dynamic one'])
+
+    const { update } = instance?.setupState as any
+    update()
+    await nextTick()
+
+    expect(html()).toBe(
+      '<div><div data-test="two"></div><div id="two"></div><div title="two"></div><input><div class="two"></div><div class=""></div><div style="color: blue;"></div><div><span>two</span></div><div>two</div><div><span>two</span></div><div id="two" class="two"></div><button></button><button></button></div>',
+    )
+    expect(input.value).toBe('two')
+    eventTarget.dispatchEvent(new Event('click'))
+    dynamicEventTarget.dispatchEvent(new Event('click'))
+    eventTarget.dispatchEvent(new Event('mouseover'))
+    dynamicEventTarget.dispatchEvent(new Event('mouseover'))
+    expect(eventCalls).toEqual([
+      'event one',
+      'dynamic one',
+      'event two',
+      'dynamic two',
+    ])
+  })
+
+  test('setEventBinding preserves listener options across event name updates', async () => {
+    let button!: HTMLButtonElement
+    const calls: string[] = []
+    const { instance } = define({
+      setup() {
+        const eventName = ref('click')
+        const update = () => {
+          eventName.value = 'mouseover'
+        }
+        return { eventName, update }
+      },
+      render(ctx: any) {
+        button = document.createElement('button')
+        setEventBinding(
+          button,
+          () => ctx.eventName,
+          () => calls.push(ctx.eventName),
+          { once: true },
+        )
+        return button
+      },
+    }).render()
+
+    const { update } = instance?.setupState as any
+    update()
+    await nextTick()
+
+    button.dispatchEvent(new Event('click'))
+    button.dispatchEvent(new Event('mouseover'))
+    button.dispatchEvent(new Event('mouseover'))
+    expect(calls).toEqual(['mouseover'])
   })
 
   test('should run with the scheduling order', async () => {

@@ -25,7 +25,7 @@ describe('v-html', () => {
       },
     )
 
-    expect(helpers).contains('setHtml')
+    expect(helpers).contains('setHtmlBinding')
 
     expect(ir.block.operation).toMatchObject([])
     expect(ir.block.effect).toMatchObject([
@@ -57,13 +57,25 @@ describe('v-html', () => {
   test('work with dynamic component', () => {
     const { code } = compileWithVHtml(`<component :is="Comp" v-html="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockHtml(n0, _ctx.foo))')
+    expect(code).contains('setBlockHtmlBinding(n0, () => _ctx.foo)')
+  })
+
+  test('wrap object literal expression in binding getter', () => {
+    const { code } = compileWithVHtml(`<div v-html="{ foo: bar }"/>`)
+    expect(code).contains('_setHtmlBinding(n0, () => ({ foo: _ctx.bar }))')
+    expect(code).matchSnapshot()
+  })
+
+  test('wrap component object literal expression in binding getter', () => {
+    const { code } = compileWithVHtml(`<Comp v-html="{ foo: bar }"/>`)
+    expect(code).contains('_setBlockHtmlBinding(n0, () => ({ foo: _ctx.bar }))')
+    expect(code).matchSnapshot()
   })
 
   test('work with component', () => {
     const { code } = compileWithVHtml(`<Comp v-html="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockHtml(n0, _ctx.foo))')
+    expect(code).contains('setBlockHtmlBinding(n0, () => _ctx.foo)')
   })
 
   test('should raise error and ignore children when v-html is present', () => {
@@ -75,7 +87,7 @@ describe('v-html', () => {
       },
     )
 
-    expect(helpers).contains('setHtml')
+    expect(helpers).contains('setHtmlBinding')
 
     // children should have been removed
     expect([...ir.template.keys()]).toEqual(['<div>'])

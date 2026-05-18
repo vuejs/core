@@ -74,7 +74,8 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('_setProp(n0, "id", _ctx.id')
+    expect(code).not.contains('renderEffect')
+    expect(code).contains('_setPropBinding(n0, "id", () => _ctx.id')
   })
 
   test('no expression', () => {
@@ -104,7 +105,7 @@ describe('compiler v-bind', () => {
         ],
       },
     })
-    expect(code).contains('_setProp(n0, "id", _ctx.id)')
+    expect(code).contains('_setPropBinding(n0, "id", () => _ctx.id)')
   })
 
   test('no expression (shorthand)', () => {
@@ -126,7 +127,19 @@ describe('compiler v-bind', () => {
         ],
       },
     })
-    expect(code).contains('_setAttr(n0, "camel-case", _ctx.camelCase)')
+    expect(code).contains(
+      '_setAttrBinding(n0, "camel-case", () => _ctx.camelCase)',
+    )
+  })
+
+  test('does not lower prop binding when expressions need declarations', () => {
+    const { code } = compileWithVBind(`<div :id="foo + foo" />`)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('const _foo = _ctx.foo')
+    expect(code).contains('_renderEffect')
+    expect(code).contains('_setProp(n0, "id", _foo + _foo)')
+    expect(code).not.contains('_setPropBinding')
   })
 
   test('dynamic arg', () => {
@@ -286,7 +299,7 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('_setProp(n0, "fooBar", _ctx.id)')
+    expect(code).contains('_setPropBinding(n0, "fooBar", () => _ctx.id)')
   })
 
   test('.camel modifier w/ no expression', () => {
@@ -309,8 +322,8 @@ describe('compiler v-bind', () => {
         modifier: undefined,
       },
     })
-    expect(code).contains('renderEffect')
-    expect(code).contains('_setProp(n0, "fooBar", _ctx.fooBar)')
+    expect(code).not.contains('renderEffect')
+    expect(code).contains('_setPropBinding(n0, "fooBar", () => _ctx.fooBar)')
   })
 
   test('.camel modifier w/ dynamic arg', () => {
@@ -339,9 +352,9 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('renderEffect')
+    expect(code).not.contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo || "")]: _ctx.id }])`,
+      `_setDynamicPropsBinding(n0, () => [{ [_camelize(_ctx.foo || "")]: _ctx.id }])`,
     )
   })
 
@@ -396,8 +409,8 @@ describe('compiler v-bind', () => {
         modifier: '.',
       },
     })
-    expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id)')
+    expect(code).not.contains('renderEffect')
+    expect(code).contains('_setDOMPropBinding(n0, "fooBar", () => _ctx.id)')
   })
 
   test('.prop modifier w/ no expression', () => {
@@ -420,8 +433,8 @@ describe('compiler v-bind', () => {
         modifier: '.',
       },
     })
-    expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar)')
+    expect(code).not.contains('renderEffect')
+    expect(code).contains('_setDOMPropBinding(n0, "fooBar", () => _ctx.fooBar)')
   })
 
   test('.prop modifier w/ dynamic arg', () => {
@@ -449,9 +462,9 @@ describe('compiler v-bind', () => {
         ],
       ],
     })
-    expect(code).contains('renderEffect')
+    expect(code).not.contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }])`,
+      `_setDynamicPropsBinding(n0, () => [{ ["." + _ctx.fooBar]: _ctx.id }])`,
     )
   })
 
@@ -504,8 +517,8 @@ describe('compiler v-bind', () => {
         modifier: '.',
       },
     })
-    expect(code).contains('renderEffect')
-    expect(code).contains(' _setDOMProp(n0, "fooBar", _ctx.id)')
+    expect(code).not.contains('renderEffect')
+    expect(code).contains(' _setDOMPropBinding(n0, "fooBar", () => _ctx.id)')
   })
 
   test('.prop modifier (shorthand) w/ no expression', () => {
@@ -528,20 +541,20 @@ describe('compiler v-bind', () => {
         modifier: '.',
       },
     })
-    expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar)')
+    expect(code).not.contains('renderEffect')
+    expect(code).contains('_setDOMPropBinding(n0, "fooBar", () => _ctx.fooBar)')
   })
 
   test('.prop modifier w/ innerHTML', () => {
     const { code } = compileWithVBind(`<div :innerHTML.prop="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setHtml(n0, _ctx.foo)')
+    expect(code).contains('_setHtmlBinding(n0, () => _ctx.foo)')
   })
 
   test('.prop modifier (shorthand) w/ innerHTML', () => {
     const { code } = compileWithVBind(`<div .innerHTML="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setHtml(n0, _ctx.foo)')
+    expect(code).contains('_setHtmlBinding(n0, () => _ctx.foo)')
   })
 
   test('.prop modifier w/ textContent', () => {
@@ -559,25 +572,25 @@ describe('compiler v-bind', () => {
   test('.prop modifier w/ value', () => {
     const { code } = compileWithVBind(`<div :value.prop="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setValue(n0, _ctx.foo)')
+    expect(code).contains('_setValueBinding(n0, () => _ctx.foo)')
   })
 
   test('.prop modifier (shorthand) w/ value', () => {
     const { code } = compileWithVBind(`<div .value="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setValue(n0, _ctx.foo)')
+    expect(code).contains('_setValueBinding(n0, () => _ctx.foo)')
   })
 
   test('.prop modifier w/ progress value', () => {
     const { code } = compileWithVBind(`<progress :value.prop="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setDOMProp(n0, "value", _ctx.foo)')
+    expect(code).contains('_setDOMPropBinding(n0, "value", () => _ctx.foo)')
   })
 
   test('.prop modifier (shorthand) w/ progress value', () => {
     const { code } = compileWithVBind(`<progress .value="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setDOMProp(n0, "value", _ctx.foo)')
+    expect(code).contains('_setDOMPropBinding(n0, "value", () => _ctx.foo)')
   })
 
   test('.attr modifier', () => {
@@ -600,8 +613,8 @@ describe('compiler v-bind', () => {
         modifier: '^',
       },
     })
-    expect(code).contains('renderEffect')
-    expect(code).contains('_setAttr(n0, "foo-bar", _ctx.id)')
+    expect(code).not.contains('renderEffect')
+    expect(code).contains('_setAttrBinding(n0, "foo-bar", () => _ctx.id)')
   })
 
   test('.attr modifier w/ no expression', () => {
@@ -625,32 +638,32 @@ describe('compiler v-bind', () => {
       },
     })
 
-    expect(code).contains('renderEffect')
-    expect(code).contains('_setAttr(n0, "foo-bar", _ctx.fooBar)')
+    expect(code).not.contains('renderEffect')
+    expect(code).contains('_setAttrBinding(n0, "foo-bar", () => _ctx.fooBar)')
   })
 
   test('.attr modifier w/ innerHTML', () => {
     const { code } = compileWithVBind(`<div :innerHTML.attr="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setAttr(n0, "innerHTML", _ctx.foo)')
+    expect(code).contains('_setAttrBinding(n0, "innerHTML", () => _ctx.foo)')
   })
 
   test('.attr modifier w/ textContent', () => {
     const { code } = compileWithVBind(`<div :textContent.attr="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setAttr(n0, "textContent", _ctx.foo)')
+    expect(code).contains('_setAttrBinding(n0, "textContent", () => _ctx.foo)')
   })
 
   test('.attr modifier w/ value', () => {
     const { code } = compileWithVBind(`<div :value.attr="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setAttr(n0, "value", _ctx.foo)')
+    expect(code).contains('_setAttrBinding(n0, "value", () => _ctx.foo)')
   })
 
   test('.attr modifier w/ progress value', () => {
     const { code } = compileWithVBind(`<progress :value.attr="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setAttr(n0, "value", _ctx.foo)')
+    expect(code).contains('_setAttrBinding(n0, "value", () => _ctx.foo)')
   })
 
   test('attributes must be set as attribute', () => {
@@ -685,7 +698,7 @@ describe('compiler v-bind', () => {
       <div :innerHTML="foo"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setHtml(n0, _ctx.foo)')
+    expect(code).contains('_setHtmlBinding(n0, () => _ctx.foo)')
   })
 
   test(':textContext', () => {
@@ -701,7 +714,7 @@ describe('compiler v-bind', () => {
       <input :value="foo"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setValue(n0, _ctx.foo)')
+    expect(code).contains('_setValueBinding(n0, () => _ctx.foo)')
   })
 
   test(':value w/ progress', () => {
@@ -709,7 +722,7 @@ describe('compiler v-bind', () => {
       <progress :value="foo"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setProp(n0, "value", _ctx.foo)')
+    expect(code).contains('_setPropBinding(n0, "value", () => _ctx.foo)')
   })
 
   test(':class w/ svg elements', () => {
@@ -718,7 +731,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     // should pass isSVG: true to the helper
-    expect(code).contains('_setClass(n0, _ctx.cls, true))')
+    expect(code).contains('_setClassBinding(n0, () => _ctx.cls, true)')
   })
 
   test('constant boolean class and style bindings are emitted in template', () => {
@@ -784,7 +797,9 @@ describe('compiler v-bind', () => {
       <div :class="{ active: isActive }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains(
+      '_setClassNameBinding(n0, () => (_ctx.isActive ? 1 : 0)',
+    )
     expect(code).contains('"active"')
     expect(code).not.contains('{ active:')
   })
@@ -795,7 +810,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger")',
+      '_setClassNameBinding(n0, () => (_ctx.selected === _ctx.row.id ? 1 : 0), "danger")',
     )
   })
 
@@ -805,7 +820,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), "danger")',
+      '_setClassNameBinding(n0, () => (_ctx.selected === _ctx.row.id ? 0 : 1), "danger")',
     )
   })
 
@@ -815,7 +830,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo")`,
+      `_setClassNameBinding(n0, () => (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo")`,
     )
   })
 
@@ -824,7 +839,7 @@ describe('compiler v-bind', () => {
       <div class="foo" :class="{ bar: isBar }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
+    expect(code).contains('_setClassNameBinding(n0, () => (_ctx.isBar ? 1 : 0)')
     expect(code).contains('" bar", "foo"')
     expect(code).not.contains('{ bar:')
   })
@@ -835,7 +850,7 @@ describe('compiler v-bind', () => {
     `)
 
     expect(code).contains('const t0 = _template("<div>", 1)')
-    expect(code).contains('_setClassName(n0,')
+    expect(code).contains('_setClassNameBinding(n0,')
     expect(code).contains('"base"')
     expect(code).not.contains('class=\\"base')
   })
@@ -846,7 +861,7 @@ describe('compiler v-bind', () => {
     `)
 
     expect(code).contains('const t0 = _template("<div>", 1)')
-    expect(code).contains('_setClass(n0, ["base", _ctx.cls])')
+    expect(code).contains('_setClassBinding(n0, () => ["base", _ctx.cls])')
     expect(code).not.contains('class=base')
     expect(code).not.contains('_setClassName')
   })
@@ -857,7 +872,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.isBar ? 1 : 0), "bar", "", "foo")',
+      '_setClassNameBinding(n0, () => (_ctx.isBar ? 1 : 0), "bar", "", "foo")',
     )
   })
 
@@ -867,7 +882,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"], "", "tail")',
+      '_setClassNameBinding(n0, () => (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"], "", "tail")',
     )
   })
 
@@ -877,7 +892,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0)',
+      '_setClassNameBinding(n0, () => (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0)',
     )
     expect(code).contains('[" active", " foo"]')
     expect(code).not.contains('{ active:')
@@ -889,7 +904,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0) | (_ctx.active ? 2 : 0), [" danger", " is-active"], "foo")',
+      '_setClassNameBinding(n0, () => (_ctx.selected === _ctx.row.id ? 1 : 0) | (_ctx.active ? 2 : 0), [" danger", " is-active"], "foo")',
     )
     expect(code).not.contains('{ danger:')
   })
@@ -899,7 +914,9 @@ describe('compiler v-bind', () => {
       <div :class="{ 'foo bar': isActive }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains(
+      '_setClassNameBinding(n0, () => (_ctx.isActive ? 1 : 0)',
+    )
     expect(code).contains('"foo bar"')
     expect(code).not.contains("'foo bar':")
   })
@@ -909,7 +926,7 @@ describe('compiler v-bind', () => {
       <div class="bar" :class="{ bar: isBar }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
+    expect(code).contains('_setClassNameBinding(n0, () => (_ctx.isBar ? 1 : 0)')
     expect(code).contains('" bar", "bar"')
     expect(code).not.contains('{ bar:')
   })
@@ -919,7 +936,9 @@ describe('compiler v-bind', () => {
       <div class="foo" :class="{ 'foo bar': isActive }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains(
+      '_setClassNameBinding(n0, () => (_ctx.isActive ? 1 : 0)',
+    )
     expect(code).contains('" foo bar", "foo"')
     expect(code).not.contains("'foo bar':")
   })
@@ -930,7 +949,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setClassName(n0, (_ctx.ok ? 1 : 0), " baz", "foo bar")',
+      '_setClassNameBinding(n0, () => (_ctx.ok ? 1 : 0), " baz", "foo bar")',
     )
   })
 
@@ -940,7 +959,7 @@ describe('compiler v-bind', () => {
     )
     const { code } = compileWithVBind(`<div :class="{ ${entries} }"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClass(n0, {')
+    expect(code).contains('_setClassBinding(n0, () => ({')
     expect(code).not.contains('_setClassName')
   })
 
@@ -951,7 +970,7 @@ describe('compiler v-bind', () => {
     const { code } = compileWithVBind(`<div :class="{ ${entries} }"/>`)
     expect(code).contains('_setClassName')
     expect(code).contains('(_ctx.a30 ? 1073741824 : 0)')
-    expect(code).not.contains('_setClass(n0, {')
+    expect(code).not.contains('_setClassBinding(n0, () => ({')
   })
 
   test('computed object class key falls back to setClass', () => {
@@ -959,7 +978,9 @@ describe('compiler v-bind', () => {
       <div :class="{ [name]: active }"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClass(n0, { [_ctx.name]: _ctx.active })')
+    expect(code).contains(
+      '_setClassBinding(n0, () => ({ [_ctx.name]: _ctx.active })',
+    )
     expect(code).not.contains('_setClassName')
   })
 
@@ -968,7 +989,9 @@ describe('compiler v-bind', () => {
       <div :class="[foo, { danger: active }]"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setClass(n0, [_ctx.foo, { danger: _ctx.active }])')
+    expect(code).contains(
+      '_setClassBinding(n0, () => [_ctx.foo, { danger: _ctx.active }])',
+    )
     expect(code).not.contains('_setClassName')
   })
 
@@ -978,7 +1001,7 @@ describe('compiler v-bind', () => {
     `)
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setDynamicProps(n0, [{ class: ["foo", { bar: _ctx.isBar }] }, _ctx.mayBeHasClass])',
+      '_setDynamicPropsBinding(n0, () => [{ class: ["foo", { bar: _ctx.isBar }] }, _ctx.mayBeHasClass])',
     )
     expect(code).not.contains('_setClassName')
   })
@@ -988,7 +1011,7 @@ describe('compiler v-bind', () => {
       <svg :style="style"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setStyle(n0, _ctx.style))')
+    expect(code).contains('_setStyleBinding(n0, () => _ctx.style)')
   })
 
   test('v-bind w/ svg elements', () => {
@@ -996,7 +1019,7 @@ describe('compiler v-bind', () => {
       <svg v-bind="obj"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true))')
+    expect(code).contains('_setDynamicPropsBinding(n0, () => [_ctx.obj], true)')
   })
 
   test('number value', () => {

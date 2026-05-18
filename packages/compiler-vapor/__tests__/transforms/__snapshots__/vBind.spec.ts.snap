@@ -1,155 +1,155 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler v-bind > .attr modifier 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setAttrBinding as _setAttrBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "foo-bar", _ctx.id))
+  _setAttrBinding(n0, "foo-bar", () => _ctx.id)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ innerHTML 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setAttrBinding as _setAttrBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "innerHTML", _ctx.foo))
+  _setAttrBinding(n0, "innerHTML", () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ no expression 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setAttrBinding as _setAttrBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "foo-bar", _ctx.fooBar))
+  _setAttrBinding(n0, "foo-bar", () => _ctx.fooBar)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ progress value 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setAttrBinding as _setAttrBinding, template as _template } from 'vue';
 const t0 = _template("<progress>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "value", _ctx.foo))
+  _setAttrBinding(n0, "value", () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ textContent 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setAttrBinding as _setAttrBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "textContent", _ctx.foo))
+  _setAttrBinding(n0, "textContent", () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .attr modifier w/ value 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setAttrBinding as _setAttrBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "value", _ctx.foo))
+  _setAttrBinding(n0, "value", () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setProp(n0, "fooBar", _ctx.id))
+  _setPropBinding(n0, "fooBar", () => _ctx.id)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier w/ dynamic arg + prefixIdentifiers 1`] = `
-"import { camelize as _camelize, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { camelize as _camelize, setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo(_ctx.bar) || "")]: _ctx.id }]))
+  _setDynamicPropsBinding(n0, () => [{ [_camelize(_ctx.foo(_ctx.bar) || "")]: _ctx.id }])
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
-"import { camelize as _camelize, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { camelize as _camelize, setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ [_camelize(_ctx.foo || "")]: _ctx.id }]))
+  _setDynamicPropsBinding(n0, () => [{ [_camelize(_ctx.foo || "")]: _ctx.id }])
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .camel modifier w/ no expression 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setProp(n0, "fooBar", _ctx.fooBar))
+  _setPropBinding(n0, "fooBar", () => _ctx.fooBar)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) 1`] = `
-"import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDOMPropBinding as _setDOMPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
+  _setDOMPropBinding(n0, "fooBar", () => _ctx.id)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ innerHTML 1`] = `
-"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setHtmlBinding as _setHtmlBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setHtml(n0, _ctx.foo))
+  _setHtmlBinding(n0, () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ no expression 1`] = `
-"import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDOMPropBinding as _setDOMPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar))
+  _setDOMPropBinding(n0, "fooBar", () => _ctx.fooBar)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ progress value 1`] = `
-"import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDOMPropBinding as _setDOMPropBinding, template as _template } from 'vue';
 const t0 = _template("<progress>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo))
+  _setDOMPropBinding(n0, "value", () => _ctx.foo)
   return n0
 }"
 `;
@@ -166,78 +166,78 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ value 1`] = `
-"import { setValue as _setValue, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setValueBinding as _setValueBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setValue(n0, _ctx.foo))
+  _setValueBinding(n0, () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier 1`] = `
-"import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDOMPropBinding as _setDOMPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
+  _setDOMPropBinding(n0, "fooBar", () => _ctx.id)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ dynamic arg + prefixIdentifiers 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.foo(_ctx.bar)]: _ctx.id }]))
+  _setDynamicPropsBinding(n0, () => [{ ["." + _ctx.foo(_ctx.bar)]: _ctx.id }])
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ dynamic arg 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }]))
+  _setDynamicPropsBinding(n0, () => [{ ["." + _ctx.fooBar]: _ctx.id }])
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ innerHTML 1`] = `
-"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setHtmlBinding as _setHtmlBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setHtml(n0, _ctx.foo))
+  _setHtmlBinding(n0, () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ no expression 1`] = `
-"import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDOMPropBinding as _setDOMPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar))
+  _setDOMPropBinding(n0, "fooBar", () => _ctx.fooBar)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > .prop modifier w/ progress value 1`] = `
-"import { setDOMProp as _setDOMProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDOMPropBinding as _setDOMPropBinding, template as _template } from 'vue';
 const t0 = _template("<progress>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo))
+  _setDOMPropBinding(n0, "value", () => _ctx.foo)
   return n0
 }"
 `;
@@ -254,45 +254,45 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > .prop modifier w/ value 1`] = `
-"import { setValue as _setValue, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setValueBinding as _setValueBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setValue(n0, _ctx.foo))
+  _setValueBinding(n0, () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :class w/ svg elements 1`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassBinding as _setClassBinding, template as _template } from 'vue';
 const t0 = _template("<svg>", 1, 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClass(n0, _ctx.cls, true))
+  _setClassBinding(n0, () => _ctx.cls, true)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :innerHTML 1`] = `
-"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setHtmlBinding as _setHtmlBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setHtml(n0, _ctx.foo))
+  _setHtmlBinding(n0, () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :style w/ svg elements 1`] = `
-"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setStyleBinding as _setStyleBinding, template as _template } from 'vue';
 const t0 = _template("<svg>", 1, 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setStyle(n0, _ctx.style))
+  _setStyleBinding(n0, () => _ctx.style)
   return n0
 }"
 `;
@@ -309,34 +309,34 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > :value 1`] = `
-"import { setValue as _setValue, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setValueBinding as _setValueBinding, template as _template } from 'vue';
 const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setValue(n0, _ctx.foo))
+  _setValueBinding(n0, () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > :value w/ progress 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<progress>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setProp(n0, "value", _ctx.foo))
+  _setPropBinding(n0, "value", () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > array class falls back to setClass 1`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassBinding as _setClassBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClass(n0, [_ctx.foo, { danger: _ctx.active }]))
+  _setClassBinding(n0, () => [_ctx.foo, { danger: _ctx.active }])
   return n0
 }"
 `;
@@ -382,56 +382,56 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > basic 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setProp(n0, "id", _ctx.id))
+  _setPropBinding(n0, "id", () => _ctx.id)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > class with v-bind object falls back to dynamic props 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ class: ["foo", { bar: _ctx.isBar }] }, _ctx.mayBeHasClass]))
+  _setDynamicPropsBinding(n0, () => [{ class: ["foo", { bar: _ctx.isBar }] }, _ctx.mayBeHasClass])
   return n0
 }"
 `;
 
 exports[`compiler v-bind > className helper falls back when bit flags are exhausted 1`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassBinding as _setClassBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClass(n0, { c0: _ctx.a0, c1: _ctx.a1, c2: _ctx.a2, c3: _ctx.a3, c4: _ctx.a4, c5: _ctx.a5, c6: _ctx.a6, c7: _ctx.a7, c8: _ctx.a8, c9: _ctx.a9, c10: _ctx.a10, c11: _ctx.a11, c12: _ctx.a12, c13: _ctx.a13, c14: _ctx.a14, c15: _ctx.a15, c16: _ctx.a16, c17: _ctx.a17, c18: _ctx.a18, c19: _ctx.a19, c20: _ctx.a20, c21: _ctx.a21, c22: _ctx.a22, c23: _ctx.a23, c24: _ctx.a24, c25: _ctx.a25, c26: _ctx.a26, c27: _ctx.a27, c28: _ctx.a28, c29: _ctx.a29, c30: _ctx.a30, c31: _ctx.a31 }))
+  _setClassBinding(n0, () => ({ c0: _ctx.a0, c1: _ctx.a1, c2: _ctx.a2, c3: _ctx.a3, c4: _ctx.a4, c5: _ctx.a5, c6: _ctx.a6, c7: _ctx.a7, c8: _ctx.a8, c9: _ctx.a9, c10: _ctx.a10, c11: _ctx.a11, c12: _ctx.a12, c13: _ctx.a13, c14: _ctx.a14, c15: _ctx.a15, c16: _ctx.a16, c17: _ctx.a17, c18: _ctx.a18, c19: _ctx.a19, c20: _ctx.a20, c21: _ctx.a21, c22: _ctx.a22, c23: _ctx.a23, c24: _ctx.a24, c25: _ctx.a25, c26: _ctx.a26, c27: _ctx.a27, c28: _ctx.a28, c29: _ctx.a29, c30: _ctx.a30, c31: _ctx.a31 }))
   return n0
 }"
 `;
 
 exports[`compiler v-bind > className helper normalizes static and string class values 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.ok ? 1 : 0), " baz", "foo bar"))
+  _setClassNameBinding(n0, () => (_ctx.ok ? 1 : 0), " baz", "foo bar")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > computed object class key falls back to setClass 1`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassBinding as _setClassBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClass(n0, { [_ctx.name]: _ctx.active }))
+  _setClassBinding(n0, () => ({ [_ctx.name]: _ctx.active }))
   return n0
 }"
 `;
@@ -466,6 +466,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > does not lower prop binding when expressions need declarations 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setProp(n0, "id", _foo + _foo)
+  })
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > dynamic arg 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -496,34 +510,34 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > multiple simple object className helper 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"]))
+  _setClassNameBinding(n0, () => (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"])
   return n0
 }"
 `;
 
 exports[`compiler v-bind > no expression (shorthand) 1`] = `
-"import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setAttrBinding as _setAttrBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setAttr(n0, "camel-case", _ctx.camelCase))
+  _setAttrBinding(n0, "camel-case", () => _ctx.camelCase)
   return n0
 }"
 `;
 
 exports[`compiler v-bind > no expression 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setProp(n0, "id", _ctx.id))
+  _setPropBinding(n0, "id", () => _ctx.id)
   return n0
 }"
 `;
@@ -538,12 +552,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > object class with multi-token key 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), "foo bar"))
+  _setClassNameBinding(n0, () => (_ctx.isActive ? 1 : 0), "foo bar")
   return n0
 }"
 `;
@@ -559,12 +573,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > reverse ternary string className helper 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), "danger"))
+  _setClassNameBinding(n0, () => (_ctx.selected === _ctx.row.id ? 0 : 1), "danger")
   return n0
 }"
 `;
@@ -580,100 +594,100 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > simple object className helper 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), "active"))
+  _setClassNameBinding(n0, () => (_ctx.isActive ? 1 : 0), "active")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > static class after conditional uses className helper with suffix 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo"))
+  _setClassNameBinding(n0, () => (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > static class after multiple object className helper uses suffix 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"], "", "tail"))
+  _setClassNameBinding(n0, () => (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"], "", "tail")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > static class in reverse order uses className helper with suffix 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), "bar", "", "foo"))
+  _setClassNameBinding(n0, () => (_ctx.isBar ? 1 : 0), "bar", "", "foo")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > static class with multiple object className helper 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0) | (_ctx.active ? 2 : 0), [" danger", " is-active"], "foo"))
+  _setClassNameBinding(n0, () => (_ctx.selected === _ctx.row.id ? 1 : 0) | (_ctx.active ? 2 : 0), [" danger", " is-active"], "foo")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > static class with overlapping multi-token object class 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), " foo bar", "foo"))
+  _setClassNameBinding(n0, () => (_ctx.isActive ? 1 : 0), " foo bar", "foo")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > static class with overlapping object class 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), " bar", "bar"))
+  _setClassNameBinding(n0, () => (_ctx.isBar ? 1 : 0), " bar", "bar")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > static class with simple object className helper 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), " bar", "foo"))
+  _setClassNameBinding(n0, () => (_ctx.isBar ? 1 : 0), " bar", "foo")
   return n0
 }"
 `;
 
 exports[`compiler v-bind > ternary string className helper 1`] = `
-"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setClassNameBinding as _setClassNameBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger"))
+  _setClassNameBinding(n0, () => (_ctx.selected === _ctx.row.id ? 1 : 0), "danger")
   return n0
 }"
 `;
@@ -690,12 +704,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > v-bind w/ svg elements 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<svg>", 1, 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
+  _setDynamicPropsBinding(n0, () => [_ctx.obj], true)
   return n0
 }"
 `;

@@ -1,14 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-for > array de-structured value (with rest) 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
     const n2 = t0()
-    const x2 = _txt(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value[0] + _for_item0.value.slice(1) + _for_key0.value)))
+    _setTextBinding(n2, () => _toDisplayString(_for_item0.value[0] + _for_item0.value.slice(1) + _for_key0.value))
     return n2
   }, ([id, ...other], index) => (id))
   return n0
@@ -16,14 +15,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > array de-structured value 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
     const n2 = t0()
-    const x2 = _txt(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value[0] + _for_item0.value[1] + _for_key0.value)))
+    _setTextBinding(n2, () => _toDisplayString(_for_item0.value[0] + _for_item0.value[1] + _for_key0.value))
     return n2
   }, ([id, other], index) => (id))
   return n0
@@ -138,7 +136,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > nested v-for 1`] = `
-"import { setInsertionState as _setInsertionState, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { setInsertionState as _setInsertionState, toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<span> ")
 const t1 = _template("<div>")
 
@@ -148,8 +146,7 @@ export function render(_ctx) {
     _setInsertionState(n5, null, 0)
     const n2 = _createFor(() => (_for_item0.value), (_for_item1) => {
       const n4 = t0()
-      const x4 = _txt(n4)
-      _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value+_for_item0.value)))
+      _setTextBinding(n4, () => _toDisplayString(_for_item1.value+_for_item0.value))
       return n4
     }, undefined, 1)
     return n5
@@ -159,14 +156,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > object de-structured value (with rest) 1`] = `
-"import { getRestElement as _getRestElement, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { getRestElement as _getRestElement, toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
     const n2 = t0()
-    const x2 = _txt(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id + _getRestElement(_for_item0.value, ["id"]) + _for_key0.value)))
+    _setTextBinding(n2, () => _toDisplayString(_for_item0.value.id + _getRestElement(_for_item0.value, ["id"]) + _for_key0.value))
     return n2
   }, ({ id, ...other }, index) => (id))
   return n0
@@ -174,14 +170,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > object de-structured value 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<span> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
-    const x2 = _txt(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id) + _toDisplayString(_for_item0.value.value)))
+    _setTextBinding(n2, () => _toDisplayString(_for_item0.value.id) + _toDisplayString(_for_item0.value.value))
     return n2
   }, ({ id, value }) => (id))
   return n0
@@ -189,14 +184,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > object value, key and index 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0, _for_index0) => {
     const n2 = t0()
-    const x2 = _txt(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value + _for_key0.value + _for_index0.value)))
+    _setTextBinding(n2, () => _toDisplayString(_for_item0.value + _for_key0.value + _for_index0.value))
     return n2
   }, (value, key, index) => (key))
   return n0
@@ -276,14 +270,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > v-for aliases w/ complex expressions 1`] = `
-"import { getDefaultValue as _getDefaultValue, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { getDefaultValue as _getDefaultValue, toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
-    const x2 = _txt(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_getDefaultValue(_for_item0.value.foo, _ctx.bar) + _ctx.bar + _ctx.baz + _getDefaultValue(_for_item0.value.baz[0], _ctx.quux) + _ctx.quux)))
+    _setTextBinding(n2, () => _toDisplayString(_getDefaultValue(_for_item0.value.foo, _ctx.bar) + _ctx.bar + _ctx.baz + _getDefaultValue(_for_item0.value.baz[0], _ctx.quux) + _ctx.quux))
     return n2
   })
   return n0

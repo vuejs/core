@@ -62,6 +62,18 @@ const helpers = {
   setDOMProp: { name: 'setDOMProp', needKey: true },
 } as const satisfies Partial<Record<VaporHelper, HelperConfig>>
 
+const bindingHelpers = {
+  setHtml: 'setHtmlBinding',
+  setClass: 'setClassBinding',
+  setClassName: 'setClassNameBinding',
+  setStyle: 'setStyleBinding',
+  setValue: 'setValueBinding',
+  setAttr: 'setAttrBinding',
+  setProp: 'setPropBinding',
+  setDOMProp: 'setDOMPropBinding',
+  setDynamicProps: 'setDynamicPropsBinding',
+} as const satisfies Partial<Record<VaporHelper, VaporHelper>>
+
 // only the static key prop will reach here
 export function genSetProp(
   oper: SetPropIRNode,
@@ -89,6 +101,51 @@ export function genSetProp(
       `n${oper.element}`,
       resolvedHelper.needKey ? genExpression(key, context) : false,
       propValue,
+      resolvedHelper.isSVG && 'true',
+    ),
+  ]
+}
+
+export function canSetPropBinding(oper: SetPropIRNode): boolean {
+  const {
+    prop: { key, modifier },
+    tag,
+  } = oper
+  // `textContent` currently reuses setText(), whose target is not a generated
+  // text child here. Keep that case on the existing renderEffect path.
+  return getRuntimeHelper(tag, key.content, modifier).name !== 'setText'
+}
+
+export function genSetPropBinding(
+  oper: SetPropIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { helper } = context
+  const {
+    prop: { key, values, modifier },
+    tag,
+  } = oper
+  const resolvedHelper = getRuntimeHelper(tag, key.content, modifier)
+  if (
+    key.content === 'class' &&
+    !resolvedHelper.isSVG &&
+    resolvedHelper.name === 'setClass'
+  ) {
+    const className = genSetClassNameBinding(oper, context)
+    if (className) return className
+  }
+
+  const bindingHelper =
+    bindingHelpers[resolvedHelper.name as keyof typeof bindingHelpers]
+  if (!bindingHelper) return genSetProp(oper, context)
+
+  return [
+    NEWLINE,
+    ...genCall(
+      [helper(bindingHelper), null],
+      `n${oper.element}`,
+      resolvedHelper.needKey ? genExpression(key, context) : false,
+      genPropValueGetter(values, context),
       resolvedHelper.isSVG && 'true',
     ),
   ]
@@ -139,6 +196,41 @@ function genSetClassName(
       [helper('setClassName'), '""'],
       `n${oper.element}`,
       flags,
+      fragments,
+      info.prefix && JSON.stringify(info.prefix),
+      info.suffix && JSON.stringify(info.suffix),
+    ),
+  ]
+}
+
+function genSetClassNameBinding(
+  oper: SetPropIRNode,
+  context: CodegenContext,
+): CodeFragment[] | undefined {
+  const info = resolveClassName(oper.prop.values, context)
+  if (!info) return
+
+  const { helper } = context
+  const flags = genClassFlags(info.entries, context)
+  const classFragments = info.entries.map(entry =>
+    JSON.stringify(
+      !info.prefix && info.entries.length === 1
+        ? entry.className
+        : ` ${entry.className}`,
+    ),
+  )
+  const fragments =
+    classFragments.length === 1
+      ? classFragments[0]
+      : genMulti(DELIMITERS_ARRAY, ...classFragments)
+
+  return [
+    NEWLINE,
+    ...genCall(
+      // Use an empty prefix placeholder so suffix can be emitted alone.
+      [helper('setClassNameBinding'), '""'],
+      `n${oper.element}`,
+      ['() => ', ...flags],
       fragments,
       info.prefix && JSON.stringify(info.prefix),
       info.suffix && JSON.stringify(info.suffix),
@@ -339,13 +431,7 @@ export function genDynamicProps(
 ): CodeFragment[] {
   const { helper } = context
   const isSVG = isSVGTag(oper.tag)
-  const values = oper.props.map(props =>
-    Array.isArray(props)
-      ? genLiteralObjectProps(props, context) // static and dynamic arg props
-      : props.kind === IRDynamicPropsKind.ATTRIBUTE
-        ? genLiteralObjectProps([props], context) // dynamic arg props
-        : genExpression(props.value, context),
-  ) // v-bind=""
+  const values = genDynamicPropValues(oper, context)
   return [
     NEWLINE,
     ...genCall(
@@ -355,6 +441,37 @@ export function genDynamicProps(
       isSVG && 'true',
     ),
   ]
+}
+
+export function genDynamicPropsBinding(
+  oper: SetDynamicPropsIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { helper } = context
+  const isSVG = isSVGTag(oper.tag)
+  const values = genDynamicPropValues(oper, context)
+  return [
+    NEWLINE,
+    ...genCall(
+      [helper('setDynamicPropsBinding'), null],
+      `n${oper.element}`,
+      ['() => ', ...genMulti(DELIMITERS_ARRAY, ...values)],
+      isSVG && 'true',
+    ),
+  ]
+}
+
+function genDynamicPropValues(
+  oper: SetDynamicPropsIRNode,
+  context: CodegenContext,
+): CodeFragment[][] {
+  return oper.props.map(props =>
+    Array.isArray(props)
+      ? genLiteralObjectProps(props, context) // static and dynamic arg props
+      : props.kind === IRDynamicPropsKind.ATTRIBUTE
+        ? genLiteralObjectProps([props], context) // dynamic arg props
+        : genExpression(props.value, context),
+  ) // v-bind=""
 }
 
 function genLiteralObjectProps(
@@ -426,6 +543,24 @@ export function genPropValue(
     DELIMITERS_ARRAY,
     ...values.map(expr => genExpression(expr, context)),
   )
+}
+
+function genPropValueGetter(
+  values: SimpleExpressionNode[],
+  context: CodegenContext,
+): CodeFragment[] {
+  const value = genPropValue(values, context)
+  const singleValue = values.length === 1 && values[0]
+  if (singleValue) {
+    const content = singleValue.content.trim()
+    if (
+      content.charCodeAt(0) === 123 ||
+      (singleValue.ast && singleValue.ast.type === 'ObjectExpression')
+    ) {
+      return ['() => (', ...value, ')']
+    }
+  }
+  return ['() => ', ...value]
 }
 
 function getRuntimeHelper(

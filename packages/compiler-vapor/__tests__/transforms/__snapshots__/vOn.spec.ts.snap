@@ -36,51 +36,48 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > dynamic arg 1`] = `
-"import { onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setEventBinding as _setEventBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _onBinding(n0, _ctx.event, e => _ctx.handler(e)))
+  _setEventBinding(n0, () => _ctx.event, e => _ctx.handler(e))
   return n0
 }"
 `;
 
 exports[`v-on > dynamic arg with complex exp prefixing 1`] = `
-"import { onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setEventBinding as _setEventBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _onBinding(n0, _ctx.event(_ctx.foo), e => _ctx.handler(e)))
+  _setEventBinding(n0, () => _ctx.event(_ctx.foo), e => _ctx.handler(e))
   return n0
 }"
 `;
 
 exports[`v-on > dynamic arg with event options 1`] = `
-"import { onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setEventBinding as _setEventBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => {
-    
-    _onBinding(n0, _ctx.event, e => _ctx.handler(e), {
-      capture: true,
-      once: true
-    })
+  _setEventBinding(n0, () => _ctx.event, e => _ctx.handler(e), {
+    capture: true,
+    once: true
   })
   return n0
 }"
 `;
 
 exports[`v-on > dynamic arg with prefixing 1`] = `
-"import { onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setEventBinding as _setEventBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _onBinding(n0, _ctx.event, e => _ctx.handler(e)))
+  _setEventBinding(n0, () => _ctx.event, e => _ctx.handler(e))
   return n0
 }"
 `;
@@ -387,12 +384,12 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should transform click.middle 2`] = `
-"import { onBinding as _onBinding, withModifiers as _withModifiers, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setEventBinding as _setEventBinding, withModifiers as _withModifiers, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _onBinding(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), _withModifiers(e => _ctx.test(e), ["middle"])))
+  _setEventBinding(n0, () => (_ctx.event) === "click" ? "mouseup" : (_ctx.event), _withModifiers(e => _ctx.test(e), ["middle"]))
   return n0
 }"
 `;
@@ -410,12 +407,12 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should transform click.right 2`] = `
-"import { onBinding as _onBinding, withModifiers as _withModifiers, withKeys as _withKeys, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setEventBinding as _setEventBinding, withModifiers as _withModifiers, withKeys as _withKeys, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _onBinding(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _withKeys(_withModifiers(e => _ctx.test(e), ["right"]), ["right"])))
+  _setEventBinding(n0, () => (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _withKeys(_withModifiers(e => _ctx.test(e), ["right"]), ["right"]))
   return n0
 }"
 `;
@@ -433,12 +430,12 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > should wrap both for dynamic key event w/ left/right modifiers 1`] = `
-"import { onBinding as _onBinding, withModifiers as _withModifiers, withKeys as _withKeys, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setEventBinding as _setEventBinding, withModifiers as _withModifiers, withKeys as _withKeys, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _onBinding(n0, _ctx.e, _withKeys(_withModifiers(e => _ctx.test(e), ["left"]), ["left"])))
+  _setEventBinding(n0, () => _ctx.e, _withKeys(_withModifiers(e => _ctx.test(e), ["left"]), ["left"]))
   return n0
 }"
 `;
