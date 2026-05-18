@@ -24,7 +24,7 @@ export function render(_ctx) {
     {
       modelValue: () => (_ctx.foo),
       "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
-      modelModifiers: () => ({ trim: true })
+      modelModifiers: { trim: true }
     }
   ] }, null, true)
   return n0
@@ -39,7 +39,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp, {
     modelValue: () => (_ctx.foo),
     "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
-    modelModifiers: () => ({ trim: true, "bar-baz": true })
+    modelModifiers: { trim: true, "bar-baz": true }
   }, null, true)
   return n0
 }"
@@ -66,10 +66,10 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp, {
     foo: () => (_ctx.foo),
     "onUpdate:foo": () => _value => (_ctx.foo = _value),
-    fooModifiers: () => ({ trim: true }),
+    fooModifiers: { trim: true },
     bar: () => (_ctx.bar),
     "onUpdate:bar": () => _value => (_ctx.bar = _value),
-    barModifiers: () => ({ number: true })
+    barModifiers: { number: true }
   }, null, true)
   return n0
 }"
@@ -132,7 +132,7 @@ export function render(_ctx) {
   const n0 = _createComponentWithFallback(_component_Comp, {
     model: () => (_ctx.foo),
     "onUpdate:model": () => _value => (_ctx.foo = _value),
-    modelModifiers$: () => ({ trim: true })
+    modelModifiers$: { trim: true }
   }, null, true)
   return n0
 }"

@@ -331,7 +331,12 @@ function genStaticProps(
           ? [getModifierPropName(key.content)]
           : ['[', ...genExpression(key, context), ' + "Modifiers"]']
         const modifiersVal = genDirectiveModifiers(modelModifiers)
-        args.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+        args.push([
+          ...modifiersKey,
+          directStaticLiteralProps
+            ? `: { ${modifiersVal} }`
+            : `: () => ({ ${modifiersVal} })`,
+        ])
       }
     }
   }
@@ -452,10 +457,9 @@ function genProp(
 }
 
 /**
- * Top-level raw props can carry literal values directly for static primitives.
- * The runtime accepts both literal values and getter functions, but literals
- * avoid re-evaluation overhead. Keep handlers, v-model, merged values, and
- * dynamic expressions as getter sources to maintain reactivity and merge semantics.
+ * Static literal values are safe to emit directly because reading them cannot
+ * touch reactive state. Keep handlers, v-model values, and dynamic expressions
+ * as getter sources to preserve lazy access and merge semantics.
  */
 function isDirectStaticLiteralProp(prop: IRProp): boolean {
   return (
