@@ -1,5 +1,5 @@
 import type { ChildItem, InsertionParent } from '../insertionState'
-import { isComment, isHydrating, locateEndAnchor } from './hydration'
+import { isHydrating, nextLogicalSibling } from './hydration'
 
 /*@__NO_SIDE_EFFECTS__*/
 export function createElement(tagName: string): HTMLElement {
@@ -102,12 +102,7 @@ export function locateChildByLogicalIndex(
       return (parent.$llc = child)
     }
 
-    child = (
-      isComment(child, '[')
-        ? // fragment start: jump to the node after the matching end anchor
-          locateEndAnchor(child)!.nextSibling
-        : child.nextSibling
-    ) as ChildItem
+    child = nextLogicalSibling(child) as ChildItem
 
     fromIndex++
   }

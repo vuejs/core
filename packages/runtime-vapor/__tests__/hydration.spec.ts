@@ -5156,6 +5156,31 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('disabled teleport range should count as one logical child during hydration', async () => {
+      const data = ref({ msg: 'after' })
+
+      const { container } = await mountWithHydration(
+        '<div><!--teleport start--><span>teleported</span><!--teleport end--><p>after</p></div>',
+        `<div>
+          <teleport :to="undefined" :disabled="true">
+            <span>teleported</span>
+          </teleport>
+          <p>{{data.msg}}</p>
+        </div>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<div><!--teleport start--><span>teleported</span><!--teleport end--><p>after</p></div>',
+      )
+
+      data.value.msg = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<div><!--teleport start--><span>teleported</span><!--teleport end--><p>updated</p></div>',
+      )
+    })
+
     test('enabled teleport with null target', async () => {
       const { container } = await mountWithHydration(
         '<!--teleport start--><!--teleport end-->',

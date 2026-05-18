@@ -232,12 +232,12 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
   return node
 }
 
-export function locateNextNode(node: Node): Node | null {
+export function nextLogicalSibling(node: Node): Node | null {
   return isComment(node, '[')
-    ? _next(locateEndAnchor(node)!)
+    ? locateEndAnchor(node)!.nextSibling
     : isComment(node, 'teleport start')
-      ? _next(locateEndAnchor(node, 'teleport start', 'teleport end')!)
-      : _next(node)
+      ? locateEndAnchor(node, 'teleport start', 'teleport end')!.nextSibling
+      : node.nextSibling
 }
 
 function locateHydrationNodeImpl(consumeFragmentStart = false) {
@@ -305,9 +305,9 @@ export function locateHydrationBoundaryClose(
     if (isComment(node, ']')) {
       close = node
     } else {
-      let candidate = locateNextNode(node)
+      let candidate = nextLogicalSibling(node)
       while (candidate && !isComment(candidate, ']')) {
-        candidate = locateNextNode(candidate)
+        candidate = nextLogicalSibling(candidate)
       }
       close = candidate
     }
@@ -436,7 +436,7 @@ export function cleanupHydrationTail(node: Node, container?: ParentNode): void {
 
   let current: Node | null = node
   while (current && current.parentNode === container) {
-    const next = locateNextNode(current)
+    const next = nextLogicalSibling(current)
     removeHydrationNode(current)
     current = next
   }
@@ -493,7 +493,7 @@ function finalizeHydrationBoundary(close: Node | null): void {
     if (!isHydrationAnchor(cur)) {
       hasRemovableNode = true
     }
-    cur = locateNextNode(cur)
+    cur = nextLogicalSibling(cur)
   }
   if (!cur) return
   if (!hasRemovableNode) {
@@ -504,7 +504,7 @@ function finalizeHydrationBoundary(close: Node | null): void {
   warnHydrationChildrenMismatch((close as Node).parentElement)
 
   while (node && node !== close) {
-    const next = locateNextNode(node)
+    const next = nextLogicalSibling(node)
     if (!isHydrationAnchor(node)) {
       removeHydrationNode(node, close)
     }
