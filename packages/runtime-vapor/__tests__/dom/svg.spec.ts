@@ -25,7 +25,7 @@ describe('SVG support', () => {
               </foreignObject>
             </svg>
           </div>`,
-          true,
+          1,
         )
         return t0()
       },
@@ -46,7 +46,7 @@ describe('SVG support', () => {
       setup() {
         const t0 = template(
           '<div><svg id="f1"><foreignObject><div id="f2">hi</div></foreignObject></svg></div>',
-          true,
+          1,
         )
         const n2 = t0() as HTMLElement
         const n1 = child(n2) as HTMLElement

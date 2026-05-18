@@ -45,7 +45,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > dynamic slots name 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("foo", false, true)
+const t0 = _template("foo", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -88,7 +88,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > dynamic slots name w/ v-for and provide absent key 1`] = `
 "import { resolveComponent as _resolveComponent, createForSlots as _createForSlots, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("foo", false, true)
+const t0 = _template("foo", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -109,9 +109,9 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > dynamic slots name w/ v-if / v-else[-if] 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("condition slot", false, true)
-const t1 = _template("another condition", false, true)
-const t2 = _template("else condition", false, true)
+const t0 = _template("condition slot", 2)
+const t1 = _template("another condition", 2)
+const t2 = _template("else condition", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -234,7 +234,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > implicit default slot 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
+const t0 = _template("<div>", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -250,9 +250,9 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > named slots w/ implicit default slot 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("foo", false, true)
-const t1 = _template("bar", false, true)
-const t2 = _template("<span>", false, true)
+const t0 = _template("foo", 2)
+const t1 = _template("bar", 2)
+const t2 = _template("<span>", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -403,7 +403,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > slot + v-if / v-else[-if] should not cause error 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
@@ -561,9 +561,9 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > with whitespace: 'preserve' > implicit default slot 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template(" Header ", false, true)
-const t1 = _template(" ", false, true)
-const t2 = _template("<p>", false, true)
+const t0 = _template(" Header ", 2)
+const t1 = _template(" ", 2)
+const t2 = _template("<p>", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -584,8 +584,8 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > with whitespace: 'preserve' > named default slot + implicit whitespace content 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template(" Header ", false, true)
-const t1 = _template(" Default ", false, true)
+const t0 = _template(" Header ", 2)
+const t1 = _template(" Default ", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -605,8 +605,8 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > with whitespace: 'preserve' > should not generate whitespace only default slot 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template(" Header ", false, true)
-const t1 = _template(" Footer ", false, true)
+const t0 = _template(" Header ", 2)
+const t1 = _template(" Footer ", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -770,7 +770,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > withVaporCtx optimization > slot with only static elements should not have withVaporCtx 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div>static content", false, true)
+const t0 = _template("<div>static content", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -841,8 +841,8 @@ export function render(_ctx) {
 
 exports[`compiler: transform slot > withVaporCtx optimization > slot with v-if but no component should not have withVaporCtx 1`] = `
 "import { resolveComponent as _resolveComponent, createIf as _createIf, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div>content", false, true)
-const t1 = _template("<span>fallback", false, true)
+const t0 = _template("<div>content", 2)
+const t1 = _template("<span>fallback", 2)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")

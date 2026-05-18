@@ -434,7 +434,7 @@ describe('vdomInterop', () => {
           msg: String,
         },
         setup(props: any) {
-          const n0 = template('<div> </div>', true)() as any
+          const n0 = template('<div> </div>', 1)() as any
           const x0 = child(n0) as any
           renderEffect(() => {
             setText(x0, props.msg)
@@ -655,7 +655,7 @@ describe('vdomInterop', () => {
     test('apply v-show to vapor child', async () => {
       const VaporChild = defineVaporComponent({
         setup() {
-          return template('<div></div>', true)()
+          return template('<div></div>', 1)()
         },
       })
 
@@ -696,7 +696,7 @@ describe('vdomInterop', () => {
 
       const VaporChild = defineVaporComponent({
         setup() {
-          return template('<div></div>', true)()
+          return template('<div></div>', 1)()
         },
       })
 
@@ -3045,7 +3045,7 @@ describe('vdomInterop', () => {
           onDeactivated(() => hooks.deactivated())
           onUnmounted(() => hooks.unmounted())
 
-          const n0 = template('<input type="text">', true)() as any
+          const n0 = template('<input type="text">', 1)() as any
           applyTextModel(
             n0,
             () => msg.value,

@@ -177,7 +177,7 @@ describe('useVaporCssVars', () => {
             to: () => target,
           },
           {
-            default: () => template('<div></div>', true)(),
+            default: () => template('<div></div>', 1)(),
           },
         )
       },
@@ -215,7 +215,7 @@ describe('useVaporCssVars', () => {
               VaporTeleport,
               { to: () => target },
               {
-                default: () => template('<div></div>', true)(),
+                default: () => template('<div></div>', 1)(),
               },
             ),
           ),
@@ -261,8 +261,8 @@ describe('useVaporCssVars', () => {
                 default: () =>
                   createIf(
                     () => show.value,
-                    () => template('<div></div>', true)(),
-                    () => template('<span></span>', true)(),
+                    () => template('<div></div>', 1)(),
+                    () => template('<span></span>', 1)(),
                   ),
               },
             ),
@@ -306,10 +306,10 @@ describe('useVaporCssVars', () => {
           { to: () => target },
           {
             default: () => {
-              const n0 = template('<div></div>', true)()
+              const n0 = template('<div></div>', 1)()
               const n1 = createIf(
                 () => toggle.value,
-                () => template('<div></div>', true)(),
+                () => template('<div></div>', 1)(),
               )
               return [n0, n1]
             },
@@ -345,7 +345,7 @@ describe('useVaporCssVars', () => {
           VaporTeleport,
           { to: () => target, disabled: () => true },
           {
-            default: () => template('<div></div>', true)(),
+            default: () => template('<div></div>', 1)(),
           },
         )
       },
@@ -494,7 +494,7 @@ describe('useVaporCssVars', () => {
     const CE = defineVaporCustomElement({
       setup() {
         useVaporCssVars(() => state)
-        return template('<div>hello</div>', true)()
+        return template('<div>hello</div>', 1)()
       },
     })
 

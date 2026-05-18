@@ -13,7 +13,7 @@ export function render(_ctx) {
 
 exports[`compiler: text transform > constant text 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div>2 foo1 1 1 1", true)
+const t0 = _template("<div>2 foo1 1 1 1", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -49,7 +49,7 @@ export function render(_ctx) {
 
 exports[`compiler: text transform > materializes literal interpolation text for mixed plain template children 1`] = `
 "import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
-const t0 = _template("<span></span>", false, true)
+const t0 = _template("<span></span>", 2)
 const t1 = _template("")
 
 export function render(_ctx) {

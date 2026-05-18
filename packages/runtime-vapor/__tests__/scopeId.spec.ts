@@ -19,7 +19,7 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
-        return template('<div child></div>', true)()
+        return template('<div child></div>', 1)()
       },
     })
 
@@ -36,14 +36,14 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
-        return template('<div child></div>', true)()
+        return template('<div child></div>', 1)()
       },
     })
 
     const { html } = define({
       __scopeId: 'parent',
       setup() {
-        const t0 = template('<div parent></div>', true)
+        const t0 = template('<div parent></div>', 1)
         const n1 = t0() as any
         setInsertionState(n1)
         createComponent(Child)
@@ -57,7 +57,7 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
-        return template('<div child></div>', true)()
+        return template('<div child></div>', 1)()
       },
     })
 
@@ -81,7 +81,7 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
-        return template('<div child></div>', true)()
+        return template('<div child></div>', 1)()
       },
     })
 
@@ -107,7 +107,7 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
-        return template('<div child></div>', true)()
+        return template('<div child></div>', 1)()
       },
     })
 
@@ -121,7 +121,7 @@ describe('scopeId', () => {
     const { html } = define({
       __scopeId: 'app',
       setup() {
-        const t0 = template('<div app></div>', true)
+        const t0 = template('<div app></div>', 1)
         const n1 = t0() as any
         setInsertionState(n1)
         createComponent(Parent)
@@ -147,7 +147,7 @@ describe('scopeId', () => {
     const { html } = define({
       __scopeId: 'parent',
       setup() {
-        const t0 = template('<div parent></div>', true)
+        const t0 = template('<div parent></div>', 1)
         const n1 = t0() as any
         setInsertionState(n1)
         createDynamicComponent(() => 'button')
@@ -187,7 +187,7 @@ describe('scopeId', () => {
     const { html } = define({
       __scopeId: 'parent',
       setup() {
-        const t0 = template('<div parent></div>', true)
+        const t0 = template('<div parent></div>', 1)
         const n1 = t0() as any
         setInsertionState(n1)
         createComponent(Comp, null, null, true)
@@ -206,7 +206,7 @@ describe('scopeId', () => {
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
-        const n1 = template('<div child></div>', true)() as any
+        const n1 = template('<div child></div>', 1)() as any
         setInsertionState(n1)
         createSlot('default', null)
         return n1
@@ -216,7 +216,7 @@ describe('scopeId', () => {
     const Child2 = defineVaporComponent({
       __scopeId: 'child2',
       setup() {
-        return template('<span child2></span>', true)()
+        return template('<span child2></span>', 1)()
       },
     })
 
@@ -260,7 +260,7 @@ describe('scopeId', () => {
       __scopeId: 'wrapper',
       setup() {
         // <div><slot/></div>
-        const n1 = template('<div wrapper></div>', true)() as any
+        const n1 = template('<div wrapper></div>', 1)() as any
         setInsertionState(n1)
         createSlot('default', null, undefined, true /* noSlotted */)
         return n1
@@ -379,7 +379,7 @@ describe('scopeId', () => {
   test('nested components in vFor with slots', async () => {
     const Parent = defineVaporComponent({
       setup() {
-        const n1 = template('<div>', true)() as any
+        const n1 = template('<div>', 1)() as any
         setInsertionState(n1, null, 0)
         createSlot('default', null)
         return n1
@@ -388,7 +388,7 @@ describe('scopeId', () => {
 
     const Child = defineVaporComponent({
       setup() {
-        const n1 = template('<div>', true)() as any
+        const n1 = template('<div>', 1)() as any
         setInsertionState(n1, null, 0)
         createSlot('default', null)
         return n1
@@ -450,7 +450,7 @@ describe('vdom interop', () => {
     const VaporChild = defineVaporComponent({
       __scopeId: 'vapor-child',
       setup() {
-        return template('<button vapor-child></button>', true)()
+        return template('<button vapor-child></button>', 1)()
       },
     })
 
@@ -616,7 +616,7 @@ describe('vdom interop', () => {
     const VaporChild = defineVaporComponent({
       __scopeId: 'vapor-child',
       setup() {
-        return template('<button vapor-child></button>', true)()
+        return template('<button vapor-child></button>', 1)()
       },
     })
 
@@ -652,7 +652,7 @@ describe('vdom interop', () => {
     const VaporChild = defineVaporComponent({
       __scopeId: 'vapor-child',
       setup() {
-        return template('<button vapor-child></button>', true)()
+        return template('<button vapor-child></button>', 1)()
       },
     })
 
@@ -695,7 +695,7 @@ describe('vdom interop', () => {
     const VaporSlot = defineVaporComponent({
       __scopeId: 'vapor-slot',
       setup() {
-        const n1 = template('<div vapor-slot></div>', true)() as any
+        const n1 = template('<div vapor-slot></div>', 1)() as any
         setInsertionState(n1)
         createSlot('default', null)
         return n1

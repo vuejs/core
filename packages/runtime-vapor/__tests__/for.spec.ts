@@ -888,7 +888,7 @@ describe('createFor', () => {
           const n0 = createFor(
             () => arr.value,
             _for_item0 => {
-              const n2 = template('<span> </span>', true)() as any
+              const n2 = template('<span> </span>', 1)() as any
               const x2 = child(n2) as any
               renderEffect(() => setText(x2, toDisplayString(_for_item0.value)))
               return n2
@@ -1328,7 +1328,7 @@ describe('createFor', () => {
                 return n4
               },
               () => {
-                const n6 = template('<span> </span>', true)() as any
+                const n6 = template('<span> </span>', 1)() as any
                 const x6 = child(n6) as any
                 renderEffect(() =>
                   setText(x6, toDisplayString(_for_item0.value.text)),
@@ -1445,7 +1445,7 @@ describe('createFor', () => {
           const n0 = createFor(
             () => arr.value,
             _for_item0 => {
-              const n2 = template('<span> </span>', true)() as any
+              const n2 = template('<span> </span>', 1)() as any
               const x2 = child(n2) as any
               renderEffect(() => setText(x2, toDisplayString(_for_item0.value)))
               return n2
@@ -1463,7 +1463,7 @@ describe('createFor', () => {
           const n0 = createFor(
             () => arr.value,
             _for_item0 => {
-              const n2 = template('<span> </span>', true)() as any
+              const n2 = template('<span> </span>', 1)() as any
               const x2 = child(n2) as any
               renderEffect(() => setText(x2, toDisplayString(_for_item0.value)))
               return n2
@@ -1541,7 +1541,7 @@ describe('createFor', () => {
                 return n4
               },
               () => {
-                const n6 = template('<span> </span>', true)() as any
+                const n6 = template('<span> </span>', 1)() as any
                 const x6 = child(n6) as any
                 renderEffect(() =>
                   setText(x6, toDisplayString(_for_item0.value.text)),

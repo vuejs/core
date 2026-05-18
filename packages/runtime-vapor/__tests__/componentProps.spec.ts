@@ -673,7 +673,7 @@ describe('component: props', () => {
       let childRenderCount = 0
       const activeId = ref(0)
 
-      const t0 = template('<div></div>', true)
+      const t0 = template('<div></div>', 1)
       const Child = defineVaporComponent({
         props: ['active', 'tone'],
         setup(props: any) {

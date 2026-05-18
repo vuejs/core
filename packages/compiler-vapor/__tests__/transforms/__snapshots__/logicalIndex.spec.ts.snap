@@ -2,7 +2,7 @@
 
 exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > child with logicalIndex when prepend exists and insert anchor needed 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, next as _next, template as _template } from 'vue';
-const t0 = _template("<div><div></div><!><span>", true)
+const t0 = _template("<div><div></div><!><span>", 1)
 
 export function render(_ctx) {
   const _component_Comp1 = _resolveComponent("Comp1")
@@ -19,7 +19,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > multiple prepends affect logicalIndex 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, next as _next, template as _template } from 'vue';
-const t0 = _template("<div><div></div><!><span>", true)
+const t0 = _template("<div><div></div><!><span>", 1)
 
 export function render(_ctx) {
   const _component_Comp1 = _resolveComponent("Comp1")
@@ -39,8 +39,8 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > next with logicalIndex for insert anchor 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><div></div><!><div></div>", true)
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><div></div><!><div></div>", 1)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -59,8 +59,8 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > nthChild with logicalIndex 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><div></div><!><div></div><!><div><button>", true)
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><div></div><!><div></div><!><div><button>", 1)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -80,7 +80,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > append scenarios > multiple consecutive append 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><span>A", true)
+const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const _component_Comp1 = _resolveComponent("Comp1")
@@ -96,7 +96,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > append scenarios > only component (append with logicalIndex 0) 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -109,7 +109,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > append scenarios > single component append 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><span>A", true)
+const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -122,7 +122,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > insert scenarios > multiple consecutive insert in middle 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><span>A</span><!><p>B", true)
+const t0 = _template("<div><span>A</span><!><p>B", 1)
 
 export function render(_ctx) {
   const _component_Comp1 = _resolveComponent("Comp1")
@@ -139,7 +139,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > insert scenarios > single component insert in middle 1`] = `
 "import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><span>A</span><!><p>B", true)
+const t0 = _template("<div><span>A</span><!><p>B", 1)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -153,8 +153,8 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > key scenarios > key append 1`] = `
 "import { setInsertionState as _setInsertionState, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><span>A</span>", true)
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><span>A</span>", 1)
 
 export function render(_ctx) {
   const n2 = t1()
@@ -169,8 +169,8 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > key scenarios > key in middle 1`] = `
 "import { child as _child, next as _next, setInsertionState as _setInsertionState, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><span>A</span><!><span>B", true)
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><span>A</span><!><span>B", 1)
 
 export function render(_ctx) {
   const n3 = t1()
@@ -186,8 +186,8 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > key scenarios > key prepend 1`] = `
 "import { setInsertionState as _setInsertionState, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><span>A", true)
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n2 = t1()
@@ -202,7 +202,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > mixed scenarios > prepend + append 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><span>A", true)
+const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const _component_Comp1 = _resolveComponent("Comp1")
@@ -218,7 +218,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > mixed scenarios > prepend + insert + append 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, next as _next, template as _template } from 'vue';
-const t0 = _template("<div><span>A</span><!><p>B", true)
+const t0 = _template("<div><span>A</span><!><p>B", 1)
 
 export function render(_ctx) {
   const _component_Comp1 = _resolveComponent("Comp1")
@@ -238,7 +238,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > prepend scenarios > multiple consecutive prepend 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><span>A", true)
+const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const _component_Comp1 = _resolveComponent("Comp1")
@@ -254,7 +254,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > prepend scenarios > single component prepend 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div><span>A", true)
+const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -267,7 +267,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > slot scenarios > slot append 1`] = `
 "import { setInsertionState as _setInsertionState, createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div><span>A</span>", true)
+const t0 = _template("<div><span>A</span>", 1)
 
 export function render(_ctx) {
   const n1 = t0()
@@ -279,7 +279,7 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > slot scenarios > slot prepend 1`] = `
 "import { setInsertionState as _setInsertionState, createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div><span>A", true)
+const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n1 = t0()
@@ -292,7 +292,7 @@ export function render(_ctx) {
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-for scenarios > v-for append 1`] = `
 "import { setInsertionState as _setInsertionState, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div>")
-const t1 = _template("<div><span>A</span>", true)
+const t1 = _template("<div><span>A</span>", 1)
 
 export function render(_ctx) {
   const n3 = t1()
@@ -308,7 +308,7 @@ export function render(_ctx) {
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-for scenarios > v-for prepend 1`] = `
 "import { setInsertionState as _setInsertionState, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div>")
-const t1 = _template("<div><span>A", true)
+const t1 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n3 = t1()
@@ -323,8 +323,8 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if scenarios > v-if append 1`] = `
 "import { setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><span>A</span>", true)
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><span>A</span>", 1)
 
 export function render(_ctx) {
   const n3 = t1()
@@ -339,8 +339,8 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if scenarios > v-if insert 1`] = `
 "import { child as _child, next as _next, setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><span>A</span><!><p>B", true)
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><span>A</span><!><p>B", 1)
 
 export function render(_ctx) {
   const n4 = t1()
@@ -356,8 +356,8 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if scenarios > v-if prepend 1`] = `
 "import { setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>", false, true)
-const t1 = _template("<div><span>A", true)
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n3 = t1()
@@ -372,9 +372,9 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if/v-else-if/v-else scenarios > component + v-if/v-else + component 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>if", false, true)
-const t1 = _template("<div>else", false, true)
-const t2 = _template("<div>", true)
+const t0 = _template("<div>if", 2)
+const t1 = _template("<div>else", 2)
+const t2 = _template("<div>", 1)
 
 export function render(_ctx) {
   const _component_Comp1 = _resolveComponent("Comp1")
@@ -398,9 +398,9 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if/v-else-if/v-else scenarios > component followed by v-if/v-else 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>if", false, true)
-const t1 = _template("<div>else", false, true)
-const t2 = _template("<div><span>A", true)
+const t0 = _template("<div>if", 2)
+const t1 = _template("<div>else", 2)
+const t2 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -421,9 +421,9 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if/v-else-if/v-else scenarios > v-if with v-else should share same logicalIndex 1`] = `
 "import { child as _child, next as _next, setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>if", false, true)
-const t1 = _template("<div>else", false, true)
-const t2 = _template("<div><span>A</span><!><p>B", true)
+const t0 = _template("<div>if", 2)
+const t1 = _template("<div>else", 2)
+const t2 = _template("<div><span>A</span><!><p>B", 1)
 
 export function render(_ctx) {
   const n6 = t2()
@@ -442,10 +442,10 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if/v-else-if/v-else scenarios > v-if with v-else-if and v-else should share same logicalIndex 1`] = `
 "import { child as _child, next as _next, setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>if", false, true)
-const t1 = _template("<div>else-if", false, true)
-const t2 = _template("<div>else", false, true)
-const t3 = _template("<div><span>A</span><!><p>B", true)
+const t0 = _template("<div>if", 2)
+const t1 = _template("<div>else-if", 2)
+const t2 = _template("<div>else", 2)
+const t3 = _template("<div><span>A</span><!><p>B", 1)
 
 export function render(_ctx) {
   const n8 = t3()
@@ -467,9 +467,9 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if/v-else-if/v-else scenarios > v-if/v-else append 1`] = `
 "import { setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>if", false, true)
-const t1 = _template("<div>else", false, true)
-const t2 = _template("<div><span>A</span>", true)
+const t0 = _template("<div>if", 2)
+const t1 = _template("<div>else", 2)
+const t2 = _template("<div><span>A</span>", 1)
 
 export function render(_ctx) {
   const n5 = t2()
@@ -487,9 +487,9 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if/v-else-if/v-else scenarios > v-if/v-else followed by component 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createIf as _createIf, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
-const t0 = _template("<div>if", false, true)
-const t1 = _template("<div>else", false, true)
-const t2 = _template("<div><span>A</span>", true)
+const t0 = _template("<div>if", 2)
+const t1 = _template("<div>else", 2)
+const t2 = _template("<div><span>A</span>", 1)
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
@@ -510,9 +510,9 @@ export function render(_ctx) {
 
 exports[`compiler: logicalIndex > setInsertionState scenarios > v-if/v-else-if/v-else scenarios > v-if/v-else prepend 1`] = `
 "import { setInsertionState as _setInsertionState, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div>if", false, true)
-const t1 = _template("<div>else", false, true)
-const t2 = _template("<div><span>A", true)
+const t0 = _template("<div>if", 2)
+const t1 = _template("<div>else", 2)
+const t2 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n5 = t2()

@@ -2112,7 +2112,7 @@ describe('component: slots', () => {
     test('consecutive slots with insertion state', async () => {
       const { component: Child } = define({
         setup() {
-          const n2 = template('<div><div>baz</div></div>', true)() as any
+          const n2 = template('<div><div>baz</div></div>', 1)() as any
           setInsertionState(n2, 0)
           createSlot('default', null)
           setInsertionState(n2, 0)

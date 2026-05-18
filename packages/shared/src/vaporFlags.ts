@@ -24,3 +24,12 @@ export enum VaporBlockShape {
   SINGLE_ROOT = 1,
   MULTI_ROOT = 2,
 }
+
+/**
+ * Flags used by vapor template factories, shared between the compiler and the
+ * runtime.
+ */
+export enum TemplateFlags {
+  ROOT = 1,
+  STATIC = 1 << 1,
+}
