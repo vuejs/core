@@ -39,7 +39,7 @@ export function template(
       } else {
         // do not cache the adopted node in node because it contains child nodes
         // this avoids duplicate rendering of children
-        adopted = adoptTemplate(currentHydrationNode!, html)!
+        adopted = adoptTemplate(currentHydrationNode!, html, false, ns)!
       }
       if (root) (adopted as any).$root = true
       return adopted
