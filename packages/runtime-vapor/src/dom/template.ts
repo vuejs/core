@@ -4,6 +4,7 @@ import {
   currentHydrationNode,
   isHydrating,
   resolveHydrationTarget,
+  validateHydrationTarget,
 } from './hydration'
 import { type Namespace, Namespaces } from '@vue/shared'
 import { _child, createTextNode } from './node'
@@ -27,6 +28,12 @@ export function template(
       // never mutates their DOM afterwards.
       if (isStatic) {
         adopted = resolveHydrationTarget(currentHydrationNode!)
+        if (
+          (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+          html !== ''
+        ) {
+          validateHydrationTarget(adopted, html)
+        }
         node = adopted.cloneNode(true)
         advanceHydrationNode(adopted)
       } else {

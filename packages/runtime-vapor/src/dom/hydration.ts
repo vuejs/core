@@ -20,6 +20,8 @@ import {
 } from './node'
 import { remove } from '../block'
 
+const START_TAG_RE = /^<([^\s/>]+)/
+
 export let isHydratingEnabled = false
 
 export function setIsHydratingEnabled(value: boolean): void {
@@ -321,21 +323,7 @@ export function locateHydrationBoundaryClose(
 }
 
 function handleMismatch(node: Node, template: string): Node {
-  if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration node mismatch:\n- rendered on server:`,
-        node,
-        node.nodeType === 3
-          ? `(text)`
-          : isComment(node, '[[')
-            ? `(start of block node)`
-            : ``,
-        `\n- expected on client:`,
-        template,
-      )
-    logMismatchError()
-  }
+  warnHydrationNodeMismatch(node, template)
 
   // fragment
   if (isComment(node, '[')) {
@@ -371,6 +359,54 @@ function handleMismatch(node: Node, template: string): Node {
   }
   container.insertBefore(newNode, next)
   return newNode
+}
+
+export function validateHydrationTarget(node: Node, template: string): void {
+  let expectedType: number
+  if (template[0] !== '<') {
+    expectedType = 3
+  } else if (template[1] === '!') {
+    expectedType = 8
+  } else {
+    expectedType = 1
+  }
+
+  if (node.nodeType !== expectedType) {
+    warnHydrationNodeMismatch(node, template)
+    return
+  }
+
+  if (expectedType !== 1) {
+    return
+  }
+
+  const match = START_TAG_RE.exec(template)
+  const expectedTag = match && match[1]
+
+  if (
+    expectedTag &&
+    (node as Element).tagName.toLowerCase() !== expectedTag.toLowerCase()
+  ) {
+    warnHydrationNodeMismatch(node, template)
+  }
+}
+
+function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
+  if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration node mismatch:\n- rendered on server:`,
+        node,
+        node.nodeType === 3
+          ? `(text)`
+          : isComment(node, '[[')
+            ? `(start of block node)`
+            : ``,
+        `\n- expected on client:`,
+        expected,
+      )
+    logMismatchError()
+  }
 }
 
 let hasLoggedMismatchError = false
