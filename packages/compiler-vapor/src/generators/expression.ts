@@ -32,6 +32,7 @@ export function genExpression(
   context: CodegenContext,
   assignment?: string,
 ): CodeFragment[] {
+  node = context.getExpressionReplacement(node)
   const { content, ast, isStatic, loc } = node
 
   if (isStatic) {
@@ -230,10 +231,11 @@ function canPrefix(name: string) {
   return true
 }
 
-type DeclarationResult = {
+type ProcessedExpressionResult = {
   ids: Record<string, string>
   frag: CodeFragment[]
   varNames: string[]
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>
 }
 type DeclarationValue = {
   name: string
@@ -248,7 +250,11 @@ export function processExpressions(
   context: CodegenContext,
   expressions: SimpleExpressionNode[],
   shouldDeclare: boolean,
-): DeclarationResult {
+): ProcessedExpressionResult {
+  const expressionReplacements = new Map<
+    SimpleExpressionNode,
+    SimpleExpressionNode
+  >()
   // analyze variables
   const {
     seenVariable,
@@ -269,6 +275,7 @@ export function processExpressions(
     seenIdentifier,
     updatedVariable,
     reservedNames,
+    expressionReplacements,
   )
 
   // process duplicate expressions after identifier and member expression handling.
@@ -280,13 +287,17 @@ export function processExpressions(
     updatedVariable,
     expToVariableMap,
     reservedNames,
+    expressionReplacements,
   )
 
-  return genDeclarations(
-    [...varDeclarations, ...expDeclarations],
-    context,
-    shouldDeclare,
-  )
+  return {
+    ...genDeclarations(
+      [...varDeclarations, ...expDeclarations],
+      context,
+      shouldDeclare,
+    ),
+    expressionReplacements,
+  }
 }
 
 function analyzeExpressions(expressions: SimpleExpressionNode[]) {
@@ -385,6 +396,28 @@ function analyzeExpressions(expressions: SimpleExpressionNode[]) {
   }
 }
 
+function getProcessedExpression(
+  exp: SimpleExpressionNode,
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
+): SimpleExpressionNode {
+  return expressionReplacements.get(exp) || exp
+}
+
+function setExpressionReplacement(
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
+  exp: SimpleExpressionNode,
+  content: string,
+  ast: Node | null,
+): void {
+  expressionReplacements.set(
+    exp,
+    extend(
+      { ast },
+      createSimpleExpression(content, exp.isStatic, exp.loc, exp.constType),
+    ),
+  )
+}
+
 function processRepeatedVariables(
   context: CodegenContext,
   seenVariable: Record<string, number>,
@@ -396,6 +429,7 @@ function processRepeatedVariables(
   seenIdentifier: Set<string>,
   updatedVariable: Set<string>,
   reservedNames: Set<string>,
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
   const expToReplacementMap = new Map<
@@ -459,18 +493,22 @@ function processRepeatedVariables(
   }
 
   for (const [exp, replacements] of expToReplacementMap) {
+    let content = getProcessedExpression(exp, expressionReplacements).content
     replacements
       .flatMap(({ name, locs }) =>
         locs.map(({ start, end }) => ({ start, end, name })),
       )
       .sort((a, b) => b.end - a.end)
       .forEach(({ start, end, name }) => {
-        exp.content =
-          exp.content.slice(0, start - 1) + name + exp.content.slice(end - 1)
+        content = content.slice(0, start - 1) + name + content.slice(end - 1)
       })
 
-    // re-parse the expression
-    exp.ast = parseExp(context, exp.content)
+    setExpressionReplacement(
+      expressionReplacements,
+      exp,
+      content,
+      parseExp(context, content),
+    )
   }
 
   return declarations
@@ -538,6 +576,7 @@ function processRepeatedExpressions(
     Array<{ name: string; loc?: { start: number; end: number } }>
   >,
   reservedNames: Set<string>,
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>,
 ): DeclarationValue[] {
   const declarations: DeclarationValue[] = []
   const seenExp = expressions.reduce(
@@ -545,18 +584,19 @@ function processRepeatedExpressions(
       const vars = expToVariableMap.get(exp)
       if (!vars) return acc
 
+      const processed = getProcessedExpression(exp, expressionReplacements)
       const variables = vars.map(v => v.name)
       // only handle expressions that are not identifiers
       if (
-        exp.ast &&
-        exp.ast.type !== 'Identifier' &&
+        processed.ast &&
+        processed.ast.type !== 'Identifier' &&
         !(variables && variables.some(v => updatedVariable.has(v))) &&
         // skip expressions containing globally allowed identifiers
         // (e.g. Math.random(), Date.now() + foo) - they are not reactive
         // and may involve impure calls with side effects
         !variables.some(v => isGloballyAllowed(v))
       ) {
-        acc[exp.content] = (acc[exp.content] || 0) + 1
+        acc[processed.content] = (acc[processed.content] || 0) + 1
       }
       return acc
     },
@@ -579,7 +619,9 @@ function processRepeatedExpressions(
         if (!item.exps || !item.seenCount) continue
 
         const shouldRemove = [...item.exps].every(
-          node => node.content === content && item.seenCount === count,
+          node =>
+            getProcessedExpression(node, expressionReplacements).content ===
+              content && item.seenCount === count,
         )
         if (shouldRemove) {
           delVars[item.name] = item.rawName!
@@ -587,9 +629,14 @@ function processRepeatedExpressions(
           varDeclarations.splice(i, 1)
         }
       }
+      const matchedExpression = expressions.find(
+        exp =>
+          getProcessedExpression(exp, expressionReplacements).content ===
+          content,
+      )!
       const value = extend(
         {},
-        expressions.find(exp => exp.content === content)!,
+        getProcessedExpression(matchedExpression, expressionReplacements),
       )
       Object.keys(delVars).forEach(name => {
         value.content = value.content.replace(name, delVars[name])
@@ -606,20 +653,23 @@ function processRepeatedExpressions(
 
       // assume content equals to `foo + baz`
       expressions.forEach(exp => {
+        const processed = getProcessedExpression(exp, expressionReplacements)
         // foo + baz -> foo_baz
-        if (exp.content === content) {
-          exp.content = varName
-          // ast is no longer needed since it becomes an identifier.
-          exp.ast = null
+        if (processed.content === content) {
+          setExpressionReplacement(expressionReplacements, exp, varName, null)
         }
         // foo + foo + baz -> foo + foo_baz
-        else if (exp.content.includes(content)) {
-          exp.content = exp.content.replace(
+        else if (processed.content.includes(content)) {
+          const replacedContent = processed.content.replace(
             new RegExp(escapeRegExp(content), 'g'),
             varName,
           )
-          // re-parse the expression
-          exp.ast = parseExp(context, exp.content)
+          setExpressionReplacement(
+            expressionReplacements,
+            exp,
+            replacedContent,
+            parseExp(context, replacedContent),
+          )
         }
       })
     }
@@ -632,7 +682,7 @@ function genDeclarations(
   declarations: DeclarationValue[],
   context: CodegenContext,
   shouldDeclare: boolean,
-): DeclarationResult {
+) {
   const [frag, push] = buildCodeFragment()
   const ids: Record<string, string> = Object.create(null)
   const varNames = new Set<string>()
