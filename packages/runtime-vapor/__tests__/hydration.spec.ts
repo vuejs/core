@@ -7726,34 +7726,99 @@ describe('data-allow-mismatch', () => {
   //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   // })
   test('class mismatch', async () => {
-    await mountWithHydration(
-      `<div class="foo bar" data-allow-mismatch="class"></div>`,
-      `<div :class="data"></div>`,
-      ref('foo'),
+    const data = ref('foo')
+    const { container } = await mountWithHydration(
+      `<section><div class="bar" data-allow-mismatch="class"></div></section>`,
+      `<section><div :class="data"></div></section>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<section><div class="bar" data-allow-mismatch="class"></div></section>',
+    )
+
+    data.value = 'baz'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<section><div class="baz" data-allow-mismatch="class"></div></section>',
     )
     expect(`Hydration class mismatch`).not.toHaveBeenWarned()
   })
 
   test('style mismatch', async () => {
-    await mountWithHydration(
-      `<div style="color:red;" data-allow-mismatch="style"></div>`,
-      `<div :style="data"></div>`,
-      ref({ color: 'green' }),
+    const data = ref({ color: 'green' })
+    const { container } = await mountWithHydration(
+      `<section><div style="color:red;" data-allow-mismatch="style"></div></section>`,
+      `<section><div :style="data"></div></section>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<section><div style="color:red;" data-allow-mismatch="style"></div></section>',
+    )
+
+    data.value = { color: 'blue' }
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<section><div style="color: blue;" data-allow-mismatch="style"></div></section>',
+    )
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('style mismatch w/ v-show', async () => {
+    const data = ref(false)
+    const { container } = await mountWithHydration(
+      `<section><div style="color:red;" data-allow-mismatch="style"></div></section>`,
+      `<section><div v-show="data" style="color: red;"></div></section>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<section><div style="color:red;" data-allow-mismatch="style"></div></section>',
+    )
+
+    data.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<section><div style="color:red;" data-allow-mismatch="style"></div></section>',
+    )
+
+    data.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<section><div style="color: red; display: none;" data-allow-mismatch="style"></div></section>',
     )
     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
   })
 
   test('attr mismatch', async () => {
-    await mountWithHydration(
-      `<div data-allow-mismatch="attribute"></div>`,
-      `<div :id="data"></div>`,
-      ref('foo'),
+    const missing = ref('foo')
+    const { container: missingContainer } = await mountWithHydration(
+      `<section><div data-allow-mismatch="attribute"></div></section>`,
+      `<section><div :id="data"></div></section>`,
+      missing,
+    )
+    expect(missingContainer.innerHTML).toBe(
+      '<section><div data-allow-mismatch="attribute"></div></section>',
     )
 
-    await mountWithHydration(
-      `<div id="bar" data-allow-mismatch="attribute"></div>`,
-      `<div :id="data"></div>`,
-      ref('foo'),
+    missing.value = 'baz'
+    await nextTick()
+    expect(missingContainer.innerHTML).toBe(
+      '<section><div data-allow-mismatch="attribute" id="baz"></div></section>',
+    )
+
+    const mismatched = ref('foo')
+    const { container: mismatchedContainer } = await mountWithHydration(
+      `<section><div id="bar" data-allow-mismatch="attribute"></div></section>`,
+      `<section><div :id="data"></div></section>`,
+      mismatched,
+    )
+    expect(mismatchedContainer.innerHTML).toBe(
+      '<section><div id="bar" data-allow-mismatch="attribute"></div></section>',
+    )
+
+    mismatched.value = 'baz'
+    await nextTick()
+    expect(mismatchedContainer.innerHTML).toBe(
+      '<section><div id="baz" data-allow-mismatch="attribute"></div></section>',
     )
 
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
