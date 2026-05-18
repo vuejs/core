@@ -196,8 +196,8 @@ describe('compiler: element transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"),
-    class: () => ("bar")
+    id: "foo",
+    class: "bar"
   }`)
 
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -240,6 +240,23 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('static literal bind props', () => {
+      const { code } = compileWithElementTransform(`<Foo :literal="'bar'" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`literal: "bar"`)
+    })
+
+    test('dynamic non-literal prop values stay as getter sources', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo :foo="bar" :obj="{ a: 1 }" :fn="() => bar" @click="foo" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`foo: () => (_ctx.bar)`)
+      expect(code).contains(`obj: () => ({ a: 1 })`)
+      expect(code).contains(`fn: () => (() => _ctx.bar)`)
+      expect(code).contains(`onClick: () => _ctx.foo`)
+    })
+
     test('v-bind="obj"', () => {
       const { code, ir } = compileWithElementTransform(`<Foo v-bind="obj" />`)
       expect(code).toMatchSnapshot()
@@ -264,7 +281,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"),
+    id: "foo",
     $: [
       () => (_ctx.obj)
     ]
@@ -310,7 +327,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"),
+    id: "foo",
     $: [
       () => (_ctx.obj),
       { class: () => ("bar") }
@@ -611,7 +628,7 @@ describe('compiler: element transform', () => {
       expect(helpers).toContain('resolveComponent')
       expect(helpers).not.toContain('resolveDynamicComponent')
       expect(code).toContain(
-        '_createComponentWithFallback(_component_custom_input, { is: () => ("foo") }, null, true)',
+        '_createComponentWithFallback(_component_custom_input, { is: "foo" }, null, true)',
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -633,9 +650,8 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(
-        code.match(
-          /_createComponent\(_ctx\.Comp, \{ is: \(\) => \("Parent"\) \}\)/g,
-        )?.length,
+        code.match(/_createComponent\(_ctx\.Comp, \{ is: "Parent" \}\)/g)
+          ?.length,
       ).toBe(2)
     })
   })

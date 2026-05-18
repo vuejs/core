@@ -65,6 +65,21 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compiler: element transform > component > dynamic non-literal prop values stay as getter sources 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, {
+    foo: () => (_ctx.bar),
+    obj: () => ({ a: 1 }),
+    fn: () => (() => _ctx.bar),
+    onClick: () => _ctx.foo
+  }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > generate multi root component 1`] = `
 "import { createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("123", false, true)
@@ -208,14 +223,24 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compiler: element transform > component > static literal bind props 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { literal: "bar" }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > static props 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"),
-    class: () => ("bar")
+    id: "foo",
+    class: "bar"
   }, null, true)
   return n0
 }"
@@ -239,7 +264,7 @@ exports[`compiler: element transform > component > v-bind="obj" after static pro
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"),
+    id: "foo",
     $: [
       () => (_ctx.obj)
     ]
@@ -267,7 +292,7 @@ exports[`compiler: element transform > component > v-bind="obj" between static p
 export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"),
+    id: "foo",
     $: [
       () => (_ctx.obj),
       { class: () => ("bar") }
@@ -449,8 +474,8 @@ exports[`compiler: element transform > dynamic component > component keeps both 
 "import { createComponent as _createComponent } from 'vue';
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const n0 = _createComponent(_ctx.Comp, { is: () => ("Parent") })
-  const n1 = _createComponent(_ctx.Comp, { is: () => ("Parent") })
+  const n0 = _createComponent(_ctx.Comp, { is: "Parent" })
+  const n1 = _createComponent(_ctx.Comp, { is: "Parent" })
   return [n0, n1]
 }"
 `;
@@ -478,7 +503,7 @@ exports[`compiler: element transform > dynamic component > normal component with
 
 export function render(_ctx) {
   const _component_custom_input = _resolveComponent("custom-input")
-  const n0 = _createComponentWithFallback(_component_custom_input, { is: () => ("foo") }, null, true)
+  const n0 = _createComponentWithFallback(_component_custom_input, { is: "foo" }, null, true)
   return n0
 }"
 `;
@@ -488,7 +513,7 @@ exports[`compiler: element transform > dynamic component > normal component with
 
 export function render(_ctx) {
   const _component_custom_input = _resolveComponent("custom-input")
-  const n0 = _createComponentWithFallback(_component_custom_input, { is: () => ("foo") }, null, true)
+  const n0 = _createComponentWithFallback(_component_custom_input, { is: "foo" }, null, true)
   return n0
 }"
 `;
