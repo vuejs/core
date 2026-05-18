@@ -279,7 +279,7 @@ describe('createIf', () => {
       ),
     ).render()
 
-    expect(branch.$key).toBe('00')
+    expect(branch.$key).toBe(0)
   })
 
   // vapor custom directives have no lifecycle hooks.
