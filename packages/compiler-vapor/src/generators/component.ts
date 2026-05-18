@@ -368,7 +368,7 @@ function genDynamicProps(
               ] as CodeFragment[])
           entries.push([
             ...updateKey,
-            ': () => ',
+            ': ',
             ...genModelHandler(p.values[0], context),
           ])
 
@@ -383,12 +383,15 @@ function genDynamicProps(
                   ' + "Modifiers"]',
                 ] as CodeFragment[])
             const modifiersVal = genDirectiveModifiers(modelModifiers)
-            entries.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+            entries.push([...modifiersKey, `: { ${modifiersVal} }`])
           }
 
           expr = genMulti(DELIMITERS_OBJECT_NEWLINE, ...entries)
         } else {
-          expr = genMulti(DELIMITERS_OBJECT, genProp(p, context))
+          expr = genMulti(
+            DELIMITERS_OBJECT,
+            genProp(p, context, false, false /* wrapHandler */),
+          )
         }
       } else {
         expr = genExpression(p.value, context)
@@ -402,7 +405,12 @@ function genDynamicProps(
   }
 }
 
-function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
+function genProp(
+  prop: IRProp,
+  context: CodegenContext,
+  isStatic?: boolean,
+  wrapHandler = true,
+) {
   const values = genPropValue(prop.values, context)
   return [
     ...genPropKey(prop, context),
@@ -413,7 +421,7 @@ function genProp(prop: IRProp, context: CodegenContext, isStatic?: boolean) {
           prop.values,
           prop.handlerModifiers,
           true /* asComponentProp */,
-          true /* wrapInGetter */,
+          wrapHandler /* wrapInGetter */,
         )
       : isStatic
         ? ['() => (', ...values, ')']

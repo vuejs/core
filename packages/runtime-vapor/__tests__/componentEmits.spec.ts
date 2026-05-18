@@ -451,6 +451,57 @@ describe('component: emit', () => {
     expect(handler).toHaveBeenCalledTimes(1)
   })
 
+  test('should trigger once handler from dynamic source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('foo')
+        emit('foo')
+        return []
+      },
+    })
+
+    const handler = vi.fn()
+    render({
+      $: [
+        () => ({
+          onFooOnce: handler,
+        }),
+      ],
+    } as any)
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('v-model modifiers should work from dynamic source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('update:modelValue', '1')
+        emit('update:foo', '  two  ')
+        return []
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    render({
+      $: [
+        () => ({
+          modelValue: null,
+          modelModifiers: { number: true },
+          ['onUpdate:modelValue']: fn1,
+          foo: null,
+          fooModifiers: { trim: true },
+          ['onUpdate:foo']: fn2,
+        }),
+      ],
+    } as any)
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
   test('should re-queue when child emit mutates parent state during update', async () => {
     const show = ref(false)
     const calls: string[] = []

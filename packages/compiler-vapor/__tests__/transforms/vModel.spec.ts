@@ -252,7 +252,7 @@ describe('compiler: vModel transform', () => {
       expect(code).contains(
         `() => ({
       [_ctx.arg]: _ctx.foo,
-      ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)
+      ["onUpdate:" + _ctx.arg]: _value => (_ctx.foo = _value)
     })`,
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -350,13 +350,13 @@ describe('compiler: vModel transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contain(
-        '["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value)',
+        '["onUpdate:" + _ctx.foo]: _value => (_ctx.foo = _value)',
       )
-      expect(code).contain(`[_ctx.foo + "Modifiers"]: () => ({ trim: true })`)
+      expect(code).contain(`[_ctx.foo + "Modifiers"]: { trim: true }`)
       expect(code).contain(
-        '["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value)',
+        '["onUpdate:" + _ctx.bar]: _value => (_ctx.bar = _value)',
       )
-      expect(code).contain(`[_ctx.bar + "Modifiers"]: () => ({ number: true })`)
+      expect(code).contain(`[_ctx.bar + "Modifiers"]: { number: true }`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'Comp',

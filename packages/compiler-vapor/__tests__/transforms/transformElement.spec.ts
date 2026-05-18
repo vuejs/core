@@ -1096,6 +1096,8 @@ describe('compiler: element transform', () => {
       `<Foo @[foo-bar]="bar" @[baz]="qux" />`,
     )
     expect(code).toMatchSnapshot()
+    expect(code).contains('[_toHandlerKey(_ctx.foo-_ctx.bar)]: _ctx.bar')
+    expect(code).contains('[_toHandlerKey(_ctx.baz)]: _ctx.qux')
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
       tag: 'Foo',
@@ -1110,6 +1112,28 @@ describe('compiler: element transform', () => {
           kind: IRDynamicPropsKind.ATTRIBUTE,
           key: { content: 'baz' },
           values: [{ content: 'qux' }],
+          handler: true,
+        },
+      ],
+    })
+  })
+
+  test('component with dynamic event arguments and inline statement', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @[event]="bar($event)" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '[_toHandlerKey(_ctx.event)]: $event => (_ctx.bar($event))',
+    )
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        {
+          kind: IRDynamicPropsKind.ATTRIBUTE,
+          key: { content: 'event' },
+          values: [{ content: 'bar($event)' }],
           handler: true,
         },
       ],
