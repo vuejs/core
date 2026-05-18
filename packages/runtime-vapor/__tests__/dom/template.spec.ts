@@ -13,7 +13,7 @@ describe('api: template', () => {
   })
 
   test('create root element', () => {
-    const t = template('<div>', true)
+    const t = template('<div>', 1)
     const root = t()
     expect(root.$root).toBe(true)
   })

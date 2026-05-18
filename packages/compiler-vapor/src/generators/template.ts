@@ -1,5 +1,6 @@
 import type { CodegenContext } from '../generate'
 import { DynamicFlag, type IRDynamicInfo, type IRTemplate } from '../ir'
+import { TemplateFlags } from '@vue/shared'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
 import {
@@ -22,14 +23,10 @@ export function genTemplates(
       `" + $1 + "`,
     )
 
-    if (root) {
-      args += ', true'
-    } else if (isStatic || ns) {
-      args += ', false'
-    }
-
-    if (isStatic || ns) {
-      args += `, ${isStatic ? 'true' : 'false'}`
+    const flags =
+      (root ? TemplateFlags.ROOT : 0) | (isStatic ? TemplateFlags.STATIC : 0)
+    if (flags || ns) {
+      args += `, ${flags}`
     }
 
     if (ns) {

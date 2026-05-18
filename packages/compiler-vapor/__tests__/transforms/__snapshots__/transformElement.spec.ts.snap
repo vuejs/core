@@ -2,7 +2,7 @@
 
 exports[`compiler: element transform > MathML 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<math><mrow><mi>x", true, true, 2)
+const t0 = _template("<math><mrow><mi>x", 3, 2)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -12,7 +12,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > b in nested divs 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><div><b></b></div><div>", true, true)
+const t0 = _template("<div><div><b></b></div><div>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -22,7 +22,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
 "import { setProp as _setProp, template as _template } from 'vue';
-const t0 = _template("<input type=checkbox>", true)
+const t0 = _template("<input type=checkbox>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -82,7 +82,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > component > generate multi root component 1`] = `
 "import { createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("123", false, true)
+const t0 = _template("123", 2)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = _createComponent(_ctx.Comp)
@@ -555,7 +555,7 @@ exports[`compiler: element transform > invalid table nesting with dynamic child 
 "import { child as _child, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<tr><td> ")
 const t1 = _template("<table>")
-const t2 = _template("<div>", false, true)
+const t2 = _template("<div>", 2)
 
 export function render(_ctx) {
   const n2 = t1()
@@ -571,7 +571,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > multiple roots 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><span>", false, true)
+const t0 = _template("<div><span>", 2)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -609,7 +609,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > plain template element with static child 1`] = `
 "import { createPlainElement as _createPlainElement, insert as _insert, template as _template } from 'vue';
-const t0 = _template("<div>hi", false, true)
+const t0 = _template("<div>hi", 2)
 
 export function render(_ctx) {
   const n1 = _createPlainElement("template", null, null, true)
@@ -621,7 +621,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > plain template element with static text child 1`] = `
 "import { createPlainElement as _createPlainElement, insert as _insert, template as _template } from 'vue';
-const t0 = _template("hello", false, true)
+const t0 = _template("hello", 2)
 
 export function render(_ctx) {
   const n1 = _createPlainElement("template", null, null, true)
@@ -633,7 +633,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props + child 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=foo><span>", true, true)
+const t0 = _template("<div id=foo><span>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -643,7 +643,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props + children 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=foo><span><b></b></span><main><b></b><div><div><span></span><span>", true, true)
+const t0 = _template("<div id=foo><span><b></b></span><main><b></b><div><div><span></span><span>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -653,7 +653,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props merging: class 1`] = `
 "import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -664,7 +664,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
 "import { createInvoker as _createInvoker, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -677,7 +677,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > props merging: style 1`] = `
 "import { setStyle as _setStyle, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -688,7 +688,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > pure nested divs 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><div><div></div></div><div>", true, true)
+const t0 = _template("<div><div><div></div></div><div>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -698,7 +698,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > span in nested divs 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><div><span></div><div>", true, true)
+const t0 = _template("<div><div><span></div><div>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -708,7 +708,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > escapes double quotes in value 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div title=\\"say &quot;hello&quot;\\">", true, true)
+const t0 = _template("<div title=\\"say &quot;hello&quot;\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -718,7 +718,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > mixed quoting with boolean attribute 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div title=\\"has whitespace\\"inert data-targets=\\"foo>bar\\">", true, true)
+const t0 = _template("<div title=\\"has whitespace\\"inert data-targets=\\"foo>bar\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -728,7 +728,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > quoted when value contains < 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div data-expr=\\"a<b\\">", true, true)
+const t0 = _template("<div data-expr=\\"a<b\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -738,7 +738,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > quoted when value contains = 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div data-expr=\\"a=b\\">", true, true)
+const t0 = _template("<div data-expr=\\"a=b\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -748,7 +748,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > quoted when value contains > 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div data-expr=\\"a>b\\">", true, true)
+const t0 = _template("<div data-expr=\\"a>b\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -758,7 +758,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > quoted when value contains backtick 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div title=\\"foo\`bar\\">", true, true)
+const t0 = _template("<div title=\\"foo\`bar\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -768,7 +768,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > quoted when value contains single quote 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div title=\\"it's\\">", true, true)
+const t0 = _template("<div title=\\"it's\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -778,7 +778,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > quoted when value contains whitespace 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div title=\\"has whitespace\\">", true, true)
+const t0 = _template("<div title=\\"has whitespace\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -788,7 +788,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > space omitted after quoted attribute 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div title=\\"has whitespace\\"alt=\\"&quot;contains quotes&quot;\\"data-targets=\\"foo>bar\\">", true, true)
+const t0 = _template("<div title=\\"has whitespace\\"alt=\\"&quot;contains quotes&quot;\\"data-targets=\\"foo>bar\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -798,7 +798,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > unquoted when value has no special chars 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=foo class=bar>", true, true)
+const t0 = _template("<div id=foo class=bar>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -808,7 +808,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > svg 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<svg><circle r=40>", true, true, 1)
+const t0 = _template("<svg><circle r=40>", 3, 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -818,7 +818,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -829,7 +829,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -840,7 +840,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -851,7 +851,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -862,7 +862,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > v-on="obj" 1`] = `
 "import { setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()

@@ -71,7 +71,7 @@ describe('component', () => {
   it('should create a component with props', () => {
     const { component: Comp } = define({
       setup() {
-        return template('<div>', true)()
+        return template('<div>', 1)()
       },
     })
 
@@ -90,7 +90,7 @@ describe('component', () => {
       emits: ['foo'],
       setup() {
         onUpdated(updatedSyp)
-        return template('<div>', true)()
+        return template('<div>', 1)()
       },
     })
 
@@ -323,7 +323,7 @@ describe('component', () => {
 
     const { host } = define({
       setup() {
-        const n2 = template('<div></div>', true)()
+        const n2 = template('<div></div>', 1)()
         setInsertionState(n2 as any)
         createComponent(Comp)
         return n2
@@ -498,7 +498,7 @@ describe('component', () => {
     try {
       const { component: Child } = define({
         render() {
-          return template('<div> HI </div>', true)()
+          return template('<div> HI </div>', 1)()
         },
       })
 

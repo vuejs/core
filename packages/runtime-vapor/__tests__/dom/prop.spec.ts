@@ -714,7 +714,7 @@ describe('patchProp', () => {
     test('with dynamic component', async () => {
       const Comp = defineVaporComponent({
         setup() {
-          return template('<div>child</div>', true)()
+          return template('<div>child</div>', 1)()
         },
       })
       const value = ref('foo')
@@ -745,7 +745,7 @@ describe('patchProp', () => {
     test('with component', async () => {
       const Comp = defineVaporComponent({
         setup() {
-          return template('<div>child</div>', true)()
+          return template('<div>child</div>', 1)()
         },
       })
       const value = ref('foo')
@@ -806,7 +806,7 @@ describe('patchProp', () => {
     test('with dynamic component', async () => {
       const Comp = defineVaporComponent({
         setup() {
-          return template('<div>child</div>', true)()
+          return template('<div>child</div>', 1)()
         },
       })
       const value = ref('<p>foo</p>')
@@ -837,7 +837,7 @@ describe('patchProp', () => {
     test('with component', async () => {
       const Comp = defineVaporComponent({
         setup() {
-          return template('<div>child</div>', true)()
+          return template('<div>child</div>', 1)()
         },
       })
       const value = ref('<p>foo</p>')

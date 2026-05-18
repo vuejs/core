@@ -5350,7 +5350,7 @@ describe('Vapor Mode hydration', () => {
           return createComponent(
             VaporTeleport,
             { to: () => '#teleport-css-vars' },
-            { default: () => template('<span>content</span>', true)() },
+            { default: () => template('<span>content</span>', 1)() },
           )
         },
       })
@@ -6923,7 +6923,7 @@ describe('mismatch handling', () => {
       const svg = container.firstChild as SVGElement
 
       hydrateNode(svg.firstChild!, () => {
-        template('<circle></circle>', false, false, Namespaces.SVG)()
+        template('<circle></circle>', 1, Namespaces.SVG)()
       })
       expect(`Hydration node mismatch`).toHaveBeenWarned()
 
@@ -6943,7 +6943,7 @@ describe('mismatch handling', () => {
       const math = container.firstChild as MathMLElement
 
       hydrateNode(math.firstChild!, () => {
-        template('<mi></mi>', false, false, Namespaces.MATH_ML)()
+        template('<mi></mi>', 1, Namespaces.MATH_ML)()
       })
       expect(`Hydration node mismatch`).toHaveBeenWarned()
 
@@ -7357,7 +7357,7 @@ describe('mismatch handling', () => {
     const app = createVaporSSRApp({
       setup() {
         useVaporCssVars(() => ({ foo: 'red' }))
-        const n0 = template('<div></div>', true)() as any
+        const n0 = template('<div></div>', 1)() as any
         renderEffect(() => setStyle(n0, { color: 'var(--foo)' }))
         return n0
       },
@@ -7372,7 +7372,7 @@ describe('mismatch handling', () => {
     const app = createVaporSSRApp({
       setup() {
         useVaporCssVars(() => ({ foo: 'red' }))
-        const n0 = template('<div><div></div></div>', true)() as any
+        const n0 = template('<div><div></div></div>', 1)() as any
         const n1 = child(n0) as any
         renderEffect(() => setStyle(n1, { color: 'var(--foo)' }))
         return n0
@@ -7393,7 +7393,7 @@ describe('mismatch handling', () => {
     })
     const Child = defineVaporComponent({
       setup() {
-        const n0 = template('<div></div>', true)() as any
+        const n0 = template('<div></div>', 1)() as any
         renderEffect(() => setStyle(n0, { padding: '4px' }))
         return n0
       },
@@ -7432,7 +7432,7 @@ describe('mismatch handling', () => {
     })
     const Child = defineVaporComponent({
       setup() {
-        const n0 = template('<div></div>', true)() as any
+        const n0 = template('<div></div>', 1)() as any
         renderEffect(() => setStyle(n0, { padding: '4px' }))
         return n0
       },
@@ -7456,7 +7456,7 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('<div><span>foo', false, true)() as HTMLElement
+        const n0 = template('<div><span>foo', 2)() as HTMLElement
         const n1 = template('<span> </span>')() as HTMLElement
         const x1 = child(n1) as Text
 
@@ -7481,7 +7481,7 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('hello', false, true)() as Text
+        const n0 = template('hello', 2)() as Text
         const n1 = template('<span> </span>')() as HTMLElement
         const x1 = child(n1) as Text
 
@@ -7503,7 +7503,7 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('<!--foo-->', false, true)() as Comment
+        const n0 = template('<!--foo-->', 2)() as Comment
         const n1 = template('<span> </span>')() as HTMLElement
         const x1 = child(n1) as Text
 
@@ -7524,8 +7524,8 @@ describe('mismatch handling', () => {
       container.innerHTML = `<span>foo</span><span>after</span>`
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('<div>foo', false, true)() as HTMLElement
-        const n1 = template('<span>after', false, true)() as HTMLElement
+        const n0 = template('<div>foo', 2)() as HTMLElement
+        const n1 = template('<span>after', 2)() as HTMLElement
 
         expect(n0).toBe(container.firstChild)
         expect(n1).toBe(container.lastChild)
@@ -7546,8 +7546,8 @@ describe('mismatch handling', () => {
         container.innerHTML = server
 
         hydrateNode(container.firstChild!, () => {
-          template(client, false, true)()
-          template('<span>after', false, true)()
+          template(client, 2)()
+          template('<span>after', 2)()
         })
       }
 
@@ -7560,8 +7560,8 @@ describe('mismatch handling', () => {
       const parent = container.firstChild as HTMLElement
 
       hydrateNode(parent.firstChild!, () => {
-        const n0 = template('<div>foo', false, true)() as HTMLElement
-        const n1 = template('<span>after', false, true)() as HTMLElement
+        const n0 = template('<div>foo', 2)() as HTMLElement
+        const n1 = template('<span>after', 2)() as HTMLElement
 
         expect(n0).toBe(parent.firstChild)
         expect(n1).toBe(parent.lastChild)
@@ -7576,8 +7576,8 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('<div>one', false, true)() as HTMLElement
-        const n1 = template('<p>two', false, true)() as HTMLElement
+        const n0 = template('<div>one', 2)() as HTMLElement
+        const n1 = template('<p>two', 2)() as HTMLElement
         const n2 = template('<span> </span>')() as HTMLElement
         const x2 = child(n2) as Text
 
@@ -7603,7 +7603,7 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('', false, true)() as HTMLElement
+        const n0 = template('', 2)() as HTMLElement
         const n1 = template('<span> </span>')() as HTMLElement
         const x1 = child(n1) as Text
 
@@ -7621,7 +7621,7 @@ describe('mismatch handling', () => {
     test('stripped static template can be cloned after hydration', () => {
       const container = document.createElement('div')
       container.innerHTML = `<div>claimed</div>`
-      const t1 = template('', true, true)
+      const t1 = template('', 3)
       let hydrated: HTMLElement
 
       hydrateNode(container.firstChild!, () => {

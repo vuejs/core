@@ -13,7 +13,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > TSNonNullExpression 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -27,7 +27,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > cache variable used in both property shorthand and normal binding 1`] = `
 "import { setStyle as _setStyle, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -42,7 +42,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > dynamic key bindings with expressions 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -56,7 +56,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > dynamic property access 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -70,7 +70,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > dynamic property access with parentheses 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -105,7 +105,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > not cache variable and member expression with the same name 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -116,7 +116,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > not cache variable in function expression 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -127,7 +127,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > not cache variable only used in property shorthand 1`] = `
 "import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -155,7 +155,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > object property name substring cases 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -170,7 +170,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > optional chaining 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -474,7 +474,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > should not cache update expression 1`] = `
 "import { child as _child, txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> ", true)
+const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n1 = t0()
@@ -494,7 +494,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > cache expressions > variable name substring edge cases 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -528,7 +528,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > empty interpolation 3`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div>", true, true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -538,7 +538,7 @@ export function render(_ctx) {
 
 exports[`compiler: expression > empty interpolation 4`] = `
 "import { child as _child, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> ", true)
+const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n1 = t0()

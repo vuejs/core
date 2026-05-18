@@ -6,18 +6,15 @@ import {
   resolveHydrationTarget,
   validateHydrationTarget,
 } from './hydration'
-import { type Namespace, Namespaces } from '@vue/shared'
+import { type Namespace, Namespaces, TemplateFlags } from '@vue/shared'
 import { _child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
 /*@__NO_SIDE_EFFECTS__*/
-export function template(
-  html: string,
-  root?: boolean,
-  isStatic?: boolean,
-  ns?: Namespace,
-) {
+export function template(html: string, flags: number = 0, ns?: Namespace) {
+  const root = !!(flags & TemplateFlags.ROOT)
+  const isStatic = !!(flags & TemplateFlags.STATIC)
   let node: Node
   return (): Node & { $root?: true } => {
     if (isHydrating) {
