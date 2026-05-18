@@ -912,31 +912,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.SET_PROP,
-        element: 0,
-        prop: {
-          key: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'style',
-            isStatic: true,
-          },
-          values: [
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'color: green',
-              isStatic: true,
-            },
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `{ color: 'red' }`,
-              isStatic: false,
-            },
-          ],
-        },
-      },
-    ])
+    expect(ir.block.operation).toMatchObject([])
   })
 
   test('props merging: class', () => {

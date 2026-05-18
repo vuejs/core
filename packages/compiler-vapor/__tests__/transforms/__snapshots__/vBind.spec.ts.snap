@@ -436,6 +436,36 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > constant boolean class and style bindings are emitted in template 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div disabled class=active style=color:red;margin-top:4px;>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > constant false boolean bindings are omitted from template 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<button>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > constant folded class and style escape html entities 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div class=&amp;nbsp; style=--x:&amp;copy;>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > dynamic arg 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -515,6 +545,16 @@ const t0 = _template("<div>", 1)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setClassName(n0, (_ctx.isActive ? 1 : 0), "foo bar"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > pure static class stays in template without runtime setter 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div class=\\"foo bar\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
   return n0
 }"
 `;
@@ -635,6 +675,17 @@ const t0 = _template("<div>", 1)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger"))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > unsafe constant object style stays on runtime setter 1`] = `
+"import { setStyle as _setStyle, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setStyle(n0, { '--x': 'a;b' })
   return n0
 }"
 `;
