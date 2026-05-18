@@ -4,6 +4,7 @@ import {
   isHydrating as isVdomHydrating,
   warn,
 } from '@vue/runtime-dom'
+import { type Namespace, Namespaces } from '@vue/shared'
 import {
   insertionIndex,
   insertionParent,
@@ -130,6 +131,7 @@ export let adoptTemplate: (
   node: Node,
   template: string,
   adoptChildren?: boolean,
+  ns?: Namespace,
 ) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
@@ -213,6 +215,7 @@ function adoptTemplateImpl(
   node: Node,
   template: string,
   adoptChildren = false,
+  ns?: Namespace,
 ): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
     // empty text node in slot
@@ -235,7 +238,7 @@ function adoptTemplateImpl(
     (type === 1 &&
       !template.startsWith(`<` + (node as Element).tagName.toLowerCase()))
   ) {
-    node = handleMismatch(node, template, adoptChildren)
+    node = handleMismatch(node, template, adoptChildren, ns)
   }
 
   advanceHydrationNode(node)
@@ -334,6 +337,7 @@ function handleMismatch(
   node: Node,
   template: string,
   adoptChildren: boolean,
+  ns?: Namespace,
 ): Node {
   warnHydrationNodeMismatch(node, template)
 
@@ -359,8 +363,15 @@ function handleMismatch(
 
   // element node
   const t = createElement('template') as HTMLTemplateElement
-  t.innerHTML = template
-  const newNode = _child(t.content).cloneNode(true) as Element
+  let newNode: Element
+  if (ns) {
+    const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+    t.innerHTML = `<${tag}>${template}</${tag}>`
+    newNode = _child(_child(t.content) as ParentNode).cloneNode(true) as Element
+  } else {
+    t.innerHTML = template
+    newNode = _child(t.content).cloneNode(true) as Element
+  }
   if (adoptChildren && node.nodeType === 1 && !newNode.firstChild) {
     let child = node.firstChild
     while (child) {

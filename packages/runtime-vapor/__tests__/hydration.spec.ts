@@ -23,7 +23,7 @@ import {
   ref,
   withDirectives,
 } from '@vue/runtime-dom'
-import { isString } from '@vue/shared'
+import { Namespaces, isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
@@ -6914,6 +6914,47 @@ describe('mismatch handling', () => {
       '<div><b>updated</b><!----></div><!--dynamic-component-->',
     )
   })
+
+  test('SVG child mismatch preserves namespace', () => {
+    setIsHydratingEnabled(true)
+    try {
+      const container = document.createElement('div')
+      container.innerHTML = `<svg><rect></rect></svg>`
+      const svg = container.firstChild as SVGElement
+
+      hydrateNode(svg.firstChild!, () => {
+        template('<circle></circle>', false, false, Namespaces.SVG)()
+      })
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+      const circle = svg.firstChild as SVGElement
+      expect(circle.localName).toBe('circle')
+      expect(circle.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    } finally {
+      setIsHydratingEnabled(false)
+    }
+  })
+
+  test('MathML child mismatch preserves namespace', () => {
+    setIsHydratingEnabled(true)
+    try {
+      const container = document.createElement('div')
+      container.innerHTML = `<math><mn></mn></math>`
+      const math = container.firstChild as MathMLElement
+
+      hydrateNode(math.firstChild!, () => {
+        template('<mi></mi>', false, false, Namespaces.MATH_ML)()
+      })
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+      const mi = math.firstChild as MathMLElement
+      expect(mi.localName).toBe('mi')
+      expect(mi.namespaceURI).toBe('http://www.w3.org/1998/Math/MathML')
+    } finally {
+      setIsHydratingEnabled(false)
+    }
+  })
+
   test('v-if empty branch should remove stale branch before trailing sibling', async () => {
     const code = `
       <div>
