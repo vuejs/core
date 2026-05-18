@@ -40,8 +40,8 @@ import {
   locateEndAnchor,
   locateHydrationBoundaryClose,
   locateHydrationNode,
-  locateNextNode,
   markHydrationAnchor,
+  nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { isArray } from '@vue/shared'
@@ -559,7 +559,7 @@ export class DynamicFragment extends VaporFragment {
           !isComment(currentHydrationNode, ']')
         ) {
           const parentNode = getParentNode(currentHydrationNode)
-          const anchor = locateNextNode(currentHydrationNode)
+          const anchor = nextLogicalSibling(currentHydrationNode)
           // Empty branch against non-empty SSR output has no block node to
           // derive an insertion point from, so use the current hydration range.
           const reusableAnchor =
@@ -619,7 +619,7 @@ export class DynamicFragment extends VaporFragment {
         currentHydrationNode
       ) {
         const parentNode = getParentNode(currentHydrationNode)
-        const nextNode = locateNextNode(currentHydrationNode)
+        const nextNode = nextLogicalSibling(currentHydrationNode)
         if (parentNode) {
           this.nodes = []
           cleanupAndInsertRuntimeAnchor(

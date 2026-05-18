@@ -96,8 +96,8 @@ import {
   isComment,
   isHydrating,
   locateEndAnchor,
-  locateNextNode,
   markHydrationAnchor,
+  nextLogicalSibling,
   setCurrentHydrationNode,
   withDeferredHydrationBoundary,
 } from './dom/hydration'
@@ -893,7 +893,7 @@ export function createComponentWithFallback(
         return node as any as HTMLElement
       }
 
-      const nextAnchor = locateNextNode(currentHydrationNode)
+      const nextAnchor = nextLogicalSibling(currentHydrationNode)
       if (nextAnchor && isReusableNullComponentAnchor(nextAnchor)) {
         // Keep the cursor on the stale SSR node before `nextAnchor` so the
         // owning DynamicFragment can trim that range on hydrate exit and then
@@ -967,7 +967,7 @@ export function createPlainElement(
   if (rawSlots) {
     let nextNode: Node | null = null
     if (isHydrating) {
-      nextNode = locateNextNode(el)
+      nextNode = nextLogicalSibling(el)
       setCurrentHydrationNode(el.firstChild)
     }
     if (rawSlots.$) {
