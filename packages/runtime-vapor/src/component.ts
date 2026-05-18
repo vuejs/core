@@ -945,8 +945,17 @@ export function createPlainElement(
     resetInsertionState()
   }
 
+  const defaultSlot = rawSlots && getSlot(rawSlots as RawSlots, 'default')
+  const hasDynamicSlots = !!rawSlots && !!rawSlots.$
+  const adoptHydrationChildren = !!defaultSlot
+  const hydrationTemplate =
+    hasDynamicSlots && !defaultSlot ? `<${comp}><!></${comp}>` : `<${comp}/>`
   const el = isHydrating
-    ? (adoptTemplate(currentHydrationNode!, `<${comp}/>`) as HTMLElement)
+    ? (adoptTemplate(
+        currentHydrationNode!,
+        hydrationTemplate,
+        adoptHydrationChildren,
+      ) as HTMLElement)
     : createElement(comp)
 
   // mark single root
