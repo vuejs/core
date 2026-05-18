@@ -6824,6 +6824,69 @@ describe('mismatch handling', () => {
     expect(container.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
+  test('element mismatch should use client template static content', () => {
+    const container = document.createElement('div')
+    container.innerHTML =
+      '<span class="server-only">server text</span><i>after</i>'
+
+    setIsHydratingEnabled(true)
+    try {
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template(
+          '<div class="client-only">client text</div>',
+        )() as HTMLElement
+
+        expect(n0).toBe(container.firstChild)
+      })
+    } finally {
+      setIsHydratingEnabled(false)
+    }
+
+    expect(container.innerHTML).toBe(
+      '<div class="client-only">client text</div><i>after</i>',
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
+  test('dynamic component element mismatch should adopt slot children', async () => {
+    const data = ref('foo')
+    const { container } = await mountWithHydration(
+      '<span><b>foo</b></span>',
+      `<component :is="'div'"><b>{{ data }}</b></component>`,
+      data,
+    )
+
+    expect(container.innerHTML).toBe(
+      '<div><b>foo</b></div><!--dynamic-component-->',
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><b>bar</b></div><!--dynamic-component-->',
+    )
+  })
+  test('dynamic component element mismatch should not adopt named slot children', async () => {
+    const data = ref({ name: 'foo', msg: 'client' })
+    const { container } = await mountWithHydration(
+      '<span><b>stale</b></span>',
+      `<component :is="'div'">
+        <template v-slot:[data.name]>
+          <b>{{ data.msg }}</b>
+        </template>
+      </component>`,
+      data,
+    )
+
+    expect(container.innerHTML).toBe('<div><!----></div><!--dynamic-component-->')
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+    data.value = { name: 'default', msg: 'updated' }
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><b>updated</b><!----></div><!--dynamic-component-->',
+    )
+  })
   test('v-if empty branch should remove stale branch before trailing sibling', async () => {
     const code = `
       <div>

@@ -126,7 +126,11 @@ export function enterHydration(node: Node): () => void {
   }
 }
 
-export let adoptTemplate: (node: Node, template: string) => Node | null
+export let adoptTemplate: (
+  node: Node,
+  template: string,
+  adoptChildren?: boolean,
+) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
 type Anchor = Node & {
@@ -205,7 +209,11 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
  * Locate the first non-fragment-comment node and locate the next node
  * while handling potential fragments.
  */
-function adoptTemplateImpl(node: Node, template: string): Node | null {
+function adoptTemplateImpl(
+  node: Node,
+  template: string,
+  adoptChildren = false,
+): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
     // empty text node in slot
     if (
@@ -227,7 +235,7 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     (type === 1 &&
       !template.startsWith(`<` + (node as Element).tagName.toLowerCase()))
   ) {
-    node = handleMismatch(node, template)
+    node = handleMismatch(node, template, adoptChildren)
   }
 
   advanceHydrationNode(node)
@@ -322,7 +330,11 @@ export function locateHydrationBoundaryClose(
   return close
 }
 
-function handleMismatch(node: Node, template: string): Node {
+function handleMismatch(
+  node: Node,
+  template: string,
+  adoptChildren: boolean,
+): Node {
   warnHydrationNodeMismatch(node, template)
 
   // fragment
@@ -349,13 +361,13 @@ function handleMismatch(node: Node, template: string): Node {
   const t = createElement('template') as HTMLTemplateElement
   t.innerHTML = template
   const newNode = _child(t.content).cloneNode(true) as Element
-  // only carry over existing children/attrs when the original node is itself
-  // an element (the legacy element-vs-element mismatch case).
-  if (node.nodeType === 1) {
-    newNode.innerHTML = (node as Element).innerHTML
-    Array.from((node as Element).attributes).forEach(attr => {
-      newNode.setAttribute(attr.name, attr.value)
-    })
+  if (adoptChildren && node.nodeType === 1 && !newNode.firstChild) {
+    let child = node.firstChild
+    while (child) {
+      const nextChild = child.nextSibling
+      newNode.appendChild(child)
+      child = nextChild
+    }
   }
   container.insertBefore(newNode, next)
   return newNode
