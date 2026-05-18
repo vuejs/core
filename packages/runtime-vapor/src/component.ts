@@ -233,14 +233,9 @@ interface SharedInternalOptions {
 // In TypeScript, it is actually impossible to have a record type with only
 // specific properties that have a different type from the indexed type.
 // This makes our rawProps / rawSlots shape difficult to satisfy when calling
-// `createComponent` - luckily this is not user-facing, so we don't need to be
-// 100% strict. Here we use intentionally wider types to make `createComponent`
-// more ergonomic in tests and internal call sites, where we immediately cast
-// them into the stricter types.
-export type LooseRawProps = Record<
-  string,
-  (() => unknown) | DynamicPropsSource[]
-> & {
+// `createComponent` - luckily this is not user-facing, so we use intentionally
+// wider types to make `createComponent` ergonomic in tests and internal call sites.
+export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
 }
 

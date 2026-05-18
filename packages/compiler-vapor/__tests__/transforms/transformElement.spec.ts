@@ -306,7 +306,7 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(`[
     () => (_ctx.obj),
-    { id: () => ("foo") }
+    { id: "foo" }
   ]`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -330,7 +330,7 @@ describe('compiler: element transform', () => {
     id: "foo",
     $: [
       () => (_ctx.obj),
-      { class: () => ("bar") }
+      { class: "bar" }
     ]
   }`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -402,6 +402,18 @@ describe('compiler: element transform', () => {
           },
         ],
       })
+    })
+
+    test('v-on="obj" before static event keeps handler getters', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo v-on="obj" @foo="bar" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`[
+    () => (_toHandlers(_ctx.obj)),
+    { onFoo: () => _ctx.bar }
+  ]`)
+      expect(code).not.contains(`{ onFoo: _ctx.bar }`)
     })
 
     test('v-on expression is inline statement', () => {

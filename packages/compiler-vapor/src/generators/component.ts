@@ -185,7 +185,7 @@ export function genRawProps(
     return genStaticProps(
       staticProps,
       context,
-      genDynamicProps(props.slice(1), context),
+      genDynamicProps(props.slice(1), context, directStaticLiteralProps),
       directStaticLiteralProps,
     )
   } else if (props.length) {
@@ -193,7 +193,7 @@ export function genRawProps(
     return genStaticProps(
       [],
       context,
-      genDynamicProps(props, context),
+      genDynamicProps(props, context, directStaticLiteralProps),
       directStaticLiteralProps,
     )
   }
@@ -357,6 +357,7 @@ function genStaticProps(
 function genDynamicProps(
   props: IRProps[],
   context: CodegenContext,
+  directStaticLiteralProps = false,
 ): CodeFragment[] | undefined {
   const { helper } = context
   const frags: CodeFragment[][] = []
@@ -364,7 +365,9 @@ function genDynamicProps(
     let expr: CodeFragment[]
     if (isArray(p)) {
       if (p.length) {
-        frags.push(genStaticProps(p, context))
+        frags.push(
+          genStaticProps(p, context, undefined, directStaticLiteralProps),
+        )
       }
       continue
     } else {

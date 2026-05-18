@@ -280,7 +280,7 @@ export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
     () => (_ctx.obj),
-    { id: () => ("foo") }
+    { id: "foo" }
   ] }, null, true)
   return n0
 }"
@@ -295,7 +295,7 @@ export function render(_ctx) {
     id: "foo",
     $: [
       () => (_ctx.obj),
-      { class: () => ("bar") }
+      { class: "bar" }
     ]
   }, null, true)
   return n0
@@ -343,6 +343,19 @@ export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const n0 = _createComponentWithFallback(_component_Foo, { $: [
     () => (_toHandlers(_ctx.obj))
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-on="obj" before static event keeps handler getters 1`] = `
+"import { resolveComponent as _resolveComponent, toHandlers as _toHandlers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+
+export function render(_ctx) {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+    () => (_toHandlers(_ctx.obj)),
+    { onFoo: () => _ctx.bar }
   ] }, null, true)
   return n0
 }"

@@ -293,6 +293,20 @@ describe('compiler: vModel transform', () => {
       })
     })
 
+    test('v-model after dynamic bind keeps model getters', () => {
+      const { code } = compileWithVModel(
+        '<Comp v-bind="obj" v-model.trim="foo" />',
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`() => (_ctx.obj)`)
+      expect(code).contains(`modelValue: () => (_ctx.foo)`)
+      expect(code).contains(
+        `"onUpdate:modelValue": () => _value => (_ctx.foo = _value)`,
+      )
+      expect(code).contains(`modelModifiers: () => ({ trim: true })`)
+      expect(code).not.contains(`modelModifiers: { trim: true }`)
+    })
+
     test('v-model with arguments for component should generate modelModifiers', () => {
       const { code, ir } = compileWithVModel(
         '<Comp v-model:foo.trim="foo" v-model:bar.number="bar" />',
