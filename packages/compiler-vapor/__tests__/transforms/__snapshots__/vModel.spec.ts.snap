@@ -2,8 +2,7 @@
 
 exports[`compiler: vModel transform > component > component v-model should merge with explicit @update:modelValue 1`] = `
 "
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     modelValue: () => (counter.value),
     "onUpdate:modelValue": () => [
       _value => (counter.value = _value),
@@ -15,11 +14,10 @@ exports[`compiler: vModel transform > component > component v-model should merge
 `;
 
 exports[`compiler: vModel transform > component > v-model after dynamic bind keeps model getters 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { $: [
+  const n0 = _createAssetComponent("Comp", { $: [
     () => (_ctx.obj),
     {
       modelValue: () => (_ctx.foo),
@@ -32,11 +30,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     modelValue: () => (_ctx.foo),
     "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
     modelModifiers: { trim: true, "bar-baz": true }
@@ -46,11 +43,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model for component should work 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     modelValue: () => (_ctx.foo),
     "onUpdate:modelValue": () => _value => (_ctx.foo = _value)
   }, null, true)
@@ -59,11 +55,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model with arguments for component should generate modelModifiers 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     foo: () => (_ctx.foo),
     "onUpdate:foo": () => _value => (_ctx.foo = _value),
     fooModifiers: { trim: true },
@@ -76,11 +71,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model with arguments for component should work 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     bar: () => (_ctx.foo),
     "onUpdate:bar": () => _value => (_ctx.foo = _value)
   }, null, true)
@@ -89,11 +83,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model with dynamic arguments for component should generate modelModifiers  1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { $: [
+  const n0 = _createAssetComponent("Comp", { $: [
     () => ({
       [_ctx.foo]: _ctx.foo,
       ["onUpdate:" + _ctx.foo]: _value => (_ctx.foo = _value),
@@ -110,11 +103,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model with dynamic arguments for component should work 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { $: [
+  const n0 = _createAssetComponent("Comp", { $: [
     () => ({
       [_ctx.arg]: _ctx.foo,
       ["onUpdate:" + _ctx.arg]: _value => (_ctx.foo = _value)
@@ -125,11 +117,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > component > v-model:model with arguments for component should generate modelModifiers$ 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, {
+  const n0 = _createAssetComponent("Comp", {
     model: () => (_ctx.foo),
     "onUpdate:model": () => _value => (_ctx.foo = _value),
     modelModifiers$: { trim: true }

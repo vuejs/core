@@ -1,5 +1,5 @@
 import type { BlockIRNode, CoreHelper, IRDynamicInfo } from '../ir'
-import { isBlockOperation } from '../ir'
+import { IRNodeTypes, type OperationNode, isBlockOperation } from '../ir'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -46,9 +46,23 @@ export function genBlockContent(
   const [frag, push] = buildCodeFragment()
   const { dynamic, effect, operation, returns } = block
   const resetBlock = context.enterBlock(block)
+  const singleUseAssetComponentNames = root
+    ? collectSingleUseAssetComponents(block)
+    : undefined
+  const prevSingleUseAssetComponentNames = context.singleUseAssetComponentNames
+
+  if (singleUseAssetComponentNames) {
+    context.singleUseAssetComponentNames = singleUseAssetComponentNames
+  }
 
   if (root) {
     for (let name of context.ir.component) {
+      if (
+        singleUseAssetComponentNames &&
+        singleUseAssetComponentNames.has(name)
+      ) {
+        continue
+      }
       const id = toValidAssetId(name, 'component')
       const maybeSelfReference = name.endsWith('__self')
       if (maybeSelfReference) name = name.slice(0, -6)
@@ -141,6 +155,7 @@ export function genBlockContent(
   push(...returnsCode)
 
   resetBlock()
+  context.singleUseAssetComponentNames = prevSingleUseAssetComponentNames
   return frag
 
   function genResolveAssets(
@@ -153,6 +168,99 @@ export function genBlockContent(
         `const ${toValidAssetId(name, kind)} = `,
         ...genCall(context.helper(helper), JSON.stringify(name)),
       )
+    }
+  }
+}
+
+interface AssetComponentUsage {
+  count: number
+  root: boolean
+}
+
+function collectSingleUseAssetComponents(block: BlockIRNode): Set<string> {
+  const usageMap = new Map<string, AssetComponentUsage>()
+  const seenOperations = new Set<OperationNode>()
+
+  visitBlock(block, true)
+
+  const names = new Set<string>()
+
+  for (const [name, usage] of usageMap) {
+    if (usage.count === 1 && usage.root) {
+      names.add(name)
+    }
+  }
+
+  return names
+
+  function visitBlock(block: BlockIRNode, rootCandidate: boolean) {
+    visitDynamic(block.dynamic, rootCandidate)
+
+    for (const operation of block.operation) {
+      visitOperation(operation, rootCandidate)
+    }
+
+    for (const effect of block.effect) {
+      for (const operation of effect.operations) {
+        visitOperation(operation, false)
+      }
+    }
+  }
+
+  function visitDynamic(dynamic: IRDynamicInfo, rootCandidate: boolean) {
+    if (dynamic.operation) {
+      visitOperation(dynamic.operation, rootCandidate)
+    }
+
+    for (const child of dynamic.children) {
+      visitDynamic(child, rootCandidate)
+    }
+  }
+
+  function visitOperation(operation: OperationNode, rootCandidate: boolean) {
+    if (seenOperations.has(operation)) {
+      return
+    }
+    seenOperations.add(operation)
+
+    if (
+      operation.type === IRNodeTypes.CREATE_COMPONENT_NODE &&
+      operation.asset
+    ) {
+      const usage = usageMap.get(operation.tag) || {
+        count: 0,
+        root: false,
+      }
+      usage.count++
+      if (rootCandidate) {
+        usage.root = true
+      }
+      usageMap.set(operation.tag, usage)
+      return
+    }
+
+    switch (operation.type) {
+      case IRNodeTypes.IF:
+        visitBlock(operation.positive, false)
+        if (operation.negative) {
+          if (operation.negative.type === IRNodeTypes.IF) {
+            visitOperation(operation.negative, false)
+          } else {
+            visitBlock(operation.negative, false)
+          }
+        }
+        break
+      case IRNodeTypes.FOR:
+        visitBlock(operation.render, false)
+        break
+      case IRNodeTypes.KEY:
+        visitBlock(operation.block, false)
+        break
+      case IRNodeTypes.SLOT_OUTLET_NODE:
+        if (operation.fallback) {
+          visitBlock(operation.fallback, false)
+        }
+        break
     }
   }
 }

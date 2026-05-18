@@ -33,6 +33,7 @@ import {
   pushWarningContext,
   queuePostFlushCb,
   registerHMR,
+  resolveComponent,
   setCurrentInstance,
   setCurrentRenderingInstance,
   startMeasure,
@@ -863,6 +864,30 @@ export function isVaporComponent(
   value: unknown,
 ): value is VaporComponentInstance {
   return value instanceof VaporComponentInstance
+}
+
+/**
+ * Resolve an asset component by name before passing it to the fallback helper;
+ * a string passed directly to `createComponentWithFallback` is plain element
+ * fallback, not a component name.
+ */
+export function createAssetComponent(
+  name: string,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
+  isSingleRoot?: boolean,
+  once?: boolean,
+  maybeSelfReference?: boolean,
+  appContext?: GenericAppContext,
+): HTMLElement | VaporComponentInstance {
+  return createComponentWithFallback(
+    resolveComponent(name, maybeSelfReference) as VaporComponent | string,
+    rawProps,
+    rawSlots,
+    isSingleRoot,
+    once,
+    appContext,
+  )
 }
 
 /**

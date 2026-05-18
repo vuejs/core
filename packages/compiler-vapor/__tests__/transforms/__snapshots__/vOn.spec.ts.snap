@@ -13,23 +13,21 @@ export function render(_ctx) {
 `;
 
 exports[`v-on > component event should camelize kebab-case 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { onNameClick: () => _ctx.handleClick }, null, true)
+  const n0 = _createAssetComponent("Comp", { onNameClick: () => _ctx.handleClick }, null, true)
   return n0
 }"
 `;
 
 exports[`v-on > component event with special characters 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
   const _on_update_model = () => {}
   const _on_update_model1 = () => {}
-  const n0 = _createComponentWithFallback(_component_Foo, {
+  const n0 = _createAssetComponent("Foo", {
     "onUpdate:model": () => _on_update_model,
     onUpdateModel: () => _on_update_model1
   }, null, true)

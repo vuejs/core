@@ -24,6 +24,7 @@ export { setInsertionState } from './insertionState'
 export {
   createComponent,
   createComponentWithFallback,
+  createAssetComponent,
   createPlainElement,
   isVaporComponent,
   type FunctionalVaporComponent,

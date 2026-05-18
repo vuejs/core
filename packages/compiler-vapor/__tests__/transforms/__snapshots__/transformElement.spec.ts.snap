@@ -32,45 +32,49 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > cache v-on expression with unique handler name 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const _component_Bar = _resolveComponent("Bar")
   const _on_bar = $event => (_ctx.handleBar($event))
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar })
+  const n0 = _createAssetComponent("Foo", { onBar: () => _on_bar })
   const _on_bar1 = () => _ctx.handler
-  const n1 = _createComponentWithFallback(_component_Bar, { onBar: () => _on_bar1 })
+  const n1 = _createAssetComponent("Bar", { onBar: () => _on_bar1 })
   return [n0, n1]
 }"
 `;
 
 exports[`compiler: element transform > component > component vue vnode hooks 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onVnodeMounted: () => _ctx.handleMounted }, null, true)
+  const n0 = _createAssetComponent("Foo", { onVnodeMounted: () => _ctx.handleMounted }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > create single-use asset component with inline resolve 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", null, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > do not resolve component from non-script-setup bindings 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const _component_Example = _resolveComponent("Example")
-  const n0 = _createComponentWithFallback(_component_Example, null, null, true)
+  const n0 = _createAssetComponent("Example", null, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > dynamic non-literal prop values stay as getter sources 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, {
+  const n0 = _createAssetComponent("Foo", {
     foo: () => (_ctx.bar),
     obj: () => ({ a: 1 }),
     fn: () => (() => _ctx.bar),
@@ -100,32 +104,20 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compiler: element transform > component > import + resolve component 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
-
-export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, null, null, true)
-  return n0
-}"
-`;
-
 exports[`compiler: element transform > component > props merging: class 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { class: () => (["foo", { bar: _ctx.isBar }]) }, null, true)
+  const n0 = _createAssetComponent("Foo", { class: () => (["foo", { bar: _ctx.isBar }]) }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > props merging: event handlers 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [
+  const n0 = _createAssetComponent("Foo", { onClick: () => [
     _ctx.a,
     _ctx.b
   ] }, null, true)
@@ -134,13 +126,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > props merging: inline event handlers 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
   const _on_click = e => _ctx.a(e)
   const _on_click1 = e => _ctx.b(e)
-  const n0 = _createComponentWithFallback(_component_Foo, { onClick: () => [
+  const n0 = _createAssetComponent("Foo", { onClick: () => [
     _on_click,
     _on_click1
   ] }, null, true)
@@ -149,11 +140,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > props merging: style 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { style: () => (["color: green", { color: 'red' }]) }, null, true)
+  const n0 = _createAssetComponent("Foo", { style: () => (["color: green", { color: 'red' }]) }, null, true)
   return n0
 }"
 `;
@@ -182,11 +172,10 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compiler: element transform > component > resolve implicitly self-referencing component 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Example__self = _resolveComponent("Example", true)
-  const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)
+  const n0 = _createAssetComponent("Example", null, null, true, null, true)
   return n0
 }"
 `;
@@ -224,21 +213,19 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compiler: element transform > component > static literal bind props 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { literal: "bar" }, null, true)
+  const n0 = _createAssetComponent("Foo", { literal: "bar" }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > static props 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, {
+  const n0 = _createAssetComponent("Foo", {
     id: "foo",
     class: "bar"
   }, null, true)
@@ -247,11 +234,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-bind="obj" 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => (_ctx.obj)
   ] }, null, true)
   return n0
@@ -259,11 +245,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-bind="obj" after static prop 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, {
+  const n0 = _createAssetComponent("Foo", {
     id: "foo",
     $: [
       () => (_ctx.obj)
@@ -274,11 +259,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-bind="obj" before static prop 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => (_ctx.obj),
     { id: "foo" }
   ] }, null, true)
@@ -287,11 +271,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-bind="obj" between static props 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, {
+  const n0 = _createAssetComponent("Foo", {
     id: "foo",
     $: [
       () => (_ctx.obj),
@@ -315,33 +298,30 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compiler: element transform > component > v-on expression is a function call 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
   const _on_bar = $event => (_ctx.handleBar($event))
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
+  const n0 = _createAssetComponent("Foo", { onBar: () => _on_bar }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > v-on expression is inline statement 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
   const _on_bar = () => _ctx.handler
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
+  const n0 = _createAssetComponent("Foo", { onBar: () => _on_bar }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > v-on="obj" 1`] = `
-"import { resolveComponent as _resolveComponent, toHandlers as _toHandlers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => (_toHandlers(_ctx.obj))
   ] }, null, true)
   return n0
@@ -349,11 +329,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-on="obj" before static event keeps handler getters 1`] = `
-"import { resolveComponent as _resolveComponent, toHandlers as _toHandlers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => (_toHandlers(_ctx.obj)),
     { onFoo: () => _ctx.bar }
   ] }, null, true)
@@ -362,11 +341,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component dynamic event with once modifier 1`] = `
-"import { resolveComponent as _resolveComponent, toHandlerKey as _toHandlerKey, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { toHandlerKey as _toHandlerKey, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => ({ [_toHandlerKey(_ctx.foo) + "Once"]: _ctx.bar })
   ] }, null, true)
   return n0
@@ -374,51 +352,46 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component event with keys modifier 1`] = `
-"import { resolveComponent as _resolveComponent, withKeys as _withKeys, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { withKeys as _withKeys, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onKeyup: () => _withKeys(_ctx.bar, ["enter"]) }, null, true)
+  const n0 = _createAssetComponent("Foo", { onKeyup: () => _withKeys(_ctx.bar, ["enter"]) }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component event with multiple modifiers and event options 1`] = `
-"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { withModifiers as _withModifiers, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onFooCaptureOnce: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  const n0 = _createAssetComponent("Foo", { onFooCaptureOnce: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component event with nonKeys modifier 1`] = `
-"import { resolveComponent as _resolveComponent, withModifiers as _withModifiers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { withModifiers as _withModifiers, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onFoo: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  const n0 = _createAssetComponent("Foo", { onFoo: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component event with once modifier 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onFooOnce: () => _ctx.bar }, null, true)
+  const n0 = _createAssetComponent("Foo", { onFooOnce: () => _ctx.bar }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component with dynamic event arguments 1`] = `
-"import { resolveComponent as _resolveComponent, toHandlerKey as _toHandlerKey, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { toHandlerKey as _toHandlerKey, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: _ctx.bar }),
     () => ({ [_toHandlerKey(_ctx.baz)]: _ctx.qux })
   ] }, null, true)
@@ -427,11 +400,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component with dynamic event arguments and inline statement 1`] = `
-"import { resolveComponent as _resolveComponent, toHandlerKey as _toHandlerKey, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { toHandlerKey as _toHandlerKey, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => ({ [_toHandlerKey(_ctx.event)]: $event => (_ctx.bar($event)) })
   ] }, null, true)
   return n0
@@ -439,11 +411,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component with dynamic prop arguments 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }),
     () => ({ [_ctx.baz]: _ctx.qux })
   ] }, null, true)
@@ -512,21 +483,19 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > dynamic component > normal component with dynamic :is prop 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_custom_input = _resolveComponent("custom-input")
-  const n0 = _createComponentWithFallback(_component_custom_input, { is: "foo" }, null, true)
+  const n0 = _createAssetComponent("custom-input", { is: "foo" }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > dynamic component > normal component with is prop 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_custom_input = _resolveComponent("custom-input")
-  const n0 = _createComponentWithFallback(_component_custom_input, { is: "foo" }, null, true)
+  const n0 = _createAssetComponent("custom-input", { is: "foo" }, null, true)
   return n0
 }"
 `;

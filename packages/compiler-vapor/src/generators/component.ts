@@ -64,6 +64,15 @@ export function genCreateComponent(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
+  const singleUseAssetComponentNames = context.singleUseAssetComponentNames
+  const useAssetComponentHelper =
+    operation.asset &&
+    !operation.dynamic &&
+    context.block === context.ir.block &&
+    !!singleUseAssetComponentNames &&
+    singleUseAssetComponentNames.has(operation.tag)
+  const maybeSelfReference =
+    useAssetComponentHelper && operation.tag.endsWith('__self')
 
   const tag = genTag()
   const { root, props, slots, once } = operation
@@ -87,14 +96,17 @@ export function genCreateComponent(
         ? helper('createDynamicComponent')
         : operation.useCreateElement
           ? helper('createPlainElement')
-          : operation.asset
-            ? helper('createComponentWithFallback')
-            : helper('createComponent'),
+          : useAssetComponentHelper
+            ? helper('createAssetComponent')
+            : operation.asset
+              ? helper('createComponentWithFallback')
+              : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
       root ? 'true' : false,
       once && 'true',
+      maybeSelfReference && 'true',
     ),
     ...genDirectivesForElement(operation.id, context),
   ]
@@ -111,6 +123,11 @@ export function genCreateComponent(
       } else {
         return ['() => (', ...genExpression(operation.dynamic, context), ')']
       }
+    } else if (useAssetComponentHelper) {
+      const name = maybeSelfReference
+        ? operation.tag.slice(0, -6)
+        : operation.tag
+      return JSON.stringify(name)
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {

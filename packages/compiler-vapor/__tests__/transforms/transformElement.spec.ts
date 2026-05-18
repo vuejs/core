@@ -32,11 +32,15 @@ const compileWithElementTransform = makeCompile({
 
 describe('compiler: element transform', () => {
   describe('component', () => {
-    test('import + resolve component', () => {
+    test('create single-use asset component with inline resolve', () => {
       const { code, ir, helpers } = compileWithElementTransform(`<Foo/>`)
       expect(code).toMatchSnapshot()
-      expect(helpers).contains.all.keys('resolveComponent')
-      expect(helpers).contains.all.keys('createComponentWithFallback')
+      expect(code).not.toContain('_resolveComponent("Foo")')
+      expect(code).toContain(
+        'const n0 = _createAssetComponent("Foo", null, null, true)',
+      )
+      expect(helpers).not.toContain('resolveComponent')
+      expect(helpers).toContain('createAssetComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         id: 0,
@@ -47,13 +51,39 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('hoist repeated asset component resolve', () => {
+      const { code, helpers } = compileWithElementTransform(
+        `<Foo/><div><Foo/></div>`,
+      )
+      expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
+      expect(code).toContain('_createComponentWithFallback(_component_Foo')
+      expect(code).not.toContain('_createAssetComponent("Foo"')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createComponentWithFallback')
+      expect(helpers).not.toContain('createAssetComponent')
+    })
+
+    test('hoist asset component in nested block', () => {
+      const { code, helpers } = compileWithElementTransform(`<Foo v-if="ok"/>`)
+      expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
+      expect(code).toContain('_createComponentWithFallback(_component_Foo')
+      expect(code).not.toContain('_createAssetComponent("Foo"')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createComponentWithFallback')
+      expect(helpers).not.toContain('createAssetComponent')
+    })
+
     test('resolve implicitly self-referencing component', () => {
       const { code, helpers } = compileWithElementTransform(`<Example/>`, {
         filename: `/foo/bar/Example.vue?vue&type=template`,
       })
       expect(code).toMatchSnapshot()
-      expect(code).toContain('_resolveComponent("Example", true)')
-      expect(helpers).toContain('resolveComponent')
+      expect(code).not.toContain('_resolveComponent("Example", true)')
+      expect(code).toContain(
+        'const n0 = _createAssetComponent("Example", null, null, true, null, true)',
+      )
+      expect(helpers).toContain('createAssetComponent')
+      expect(helpers).not.toContain('resolveComponent')
     })
 
     test('resolve component from setup bindings', () => {
@@ -153,7 +183,10 @@ describe('compiler: element transform', () => {
         bindingMetadata,
       })
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveComponent')
+      expect(code).toContain(
+        '_createAssetComponent("Example", null, null, true)',
+      )
+      expect(helpers).toContain('createAssetComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         id: 0,
@@ -618,7 +651,7 @@ describe('compiler: element transform', () => {
         },
       )
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createAssetComponent')
       expect(helpers).not.toContain('resolveDynamicComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -637,10 +670,10 @@ describe('compiler: element transform', () => {
         },
       )
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createAssetComponent')
       expect(helpers).not.toContain('resolveDynamicComponent')
       expect(code).toContain(
-        '_createComponentWithFallback(_component_custom_input, { is: "foo" }, null, true)',
+        '_createAssetComponent("custom-input", { is: "foo" }, null, true)',
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,

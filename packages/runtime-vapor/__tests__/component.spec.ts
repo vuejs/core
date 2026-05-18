@@ -16,6 +16,7 @@ import {
   watchEffect,
 } from '@vue/runtime-dom'
 import {
+  createAssetComponent,
   createComponent,
   createIf,
   createTextNode,
@@ -82,6 +83,56 @@ describe('component', () => {
     }).render()
 
     expect(host.innerHTML).toBe('<div id="foo" class="bar"></div>')
+  })
+
+  it('should create an asset component', () => {
+    const { component: Child } = define({
+      setup() {
+        return template('<span>child</span>')()
+      },
+    })
+
+    const { host } = define({
+      components: { Child },
+      setup() {
+        return createAssetComponent('Child')
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>child</span>')
+  })
+
+  it('should fallback unresolved component to plain element', () => {
+    const { host } = define({
+      setup() {
+        return createAssetComponent('foo-bar', { id: 'foo' }, null, true)
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<foo-bar id="foo"></foo-bar>')
+    expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
+  })
+
+  it('should pass maybeSelfReference when creating asset component', () => {
+    const { host } = define({
+      props: ['nested'],
+      setup(props: any) {
+        if (props.nested) {
+          return template('<span>self</span>')()
+        }
+        return createAssetComponent(
+          'ImplicitSelf',
+          { nested: true },
+          null,
+          true,
+          undefined,
+          true,
+        )
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>self</span>')
+    expect(`Failed to resolve component: ImplicitSelf`).not.toHaveBeenWarned()
   })
 
   it('should not update Component if only changed props are declared emit listeners', async () => {
