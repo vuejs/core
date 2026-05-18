@@ -448,8 +448,12 @@ function genProp(
   ]
 }
 
-// Top-level raw props can carry literal values directly. Keep handlers,
-// v-model, merged values, and dynamic expressions as getter sources.
+/**
+ * Top-level raw props can carry literal values directly for static primitives.
+ * The runtime accepts both literal values and getter functions, but literals
+ * avoid re-evaluation overhead. Keep handlers, v-model, merged values, and
+ * dynamic expressions as getter sources to maintain reactivity and merge semantics.
+ */
 function isDirectStaticLiteralProp(prop: IRProp): boolean {
   return (
     prop.key.isStatic &&
