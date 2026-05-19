@@ -305,7 +305,7 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).contains(
         `_renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
-  const n1 = _createComponentWithFallback(_component_Child)`,
+  const n1 = _createAssetComponent("Child")`,
       )
     })
 
@@ -318,7 +318,7 @@ describe('compile', () => {
       expect(code).contains(
         `_renderEffect(() => _setProp(n1, "id", _ctx.useId()))
   _setInsertionState(n1, null, 0)
-  const n0 = _createComponentWithFallback(_component_Child)`,
+  const n0 = _createAssetComponent("Child")`,
       )
       expect(code).matchSnapshot()
     })

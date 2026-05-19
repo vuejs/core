@@ -51,6 +51,8 @@ export class CodegenContext {
 
   delegates: Set<string> = new Set<string>()
 
+  singleUseAssetComponentNames?: Set<string>
+
   identifiers: Record<string, (string | SimpleExpressionNode)[]> =
     Object.create(null)
 

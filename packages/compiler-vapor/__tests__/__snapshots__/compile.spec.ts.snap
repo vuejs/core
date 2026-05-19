@@ -26,15 +26,14 @@ export function render(_ctx) {
 `;
 
 exports[`compile > custom directive > component 1`] = `
-"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, withVaporCtx as _withVaporCtx, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, resolveDirective as _resolveDirective, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, withVaporDirectives as _withVaporDirectives, createIf as _createIf, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
-  const _component_Comp = _resolveComponent("Comp")
   const _directive_hello = _resolveDirective("hello")
   const _directive_test = _resolveDirective("test")
-  const n4 = _createComponentWithFallback(_component_Comp, null, {
+  const n4 = _createAssetComponent("Comp", null, {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (true), () => {
         const n3 = t0()
@@ -149,18 +148,17 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, template as _template } from 'vue';
+"import { setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, toDisplayString as _toDisplayString, setText as _setText, template as _template } from 'vue';
 const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", 2)
 const t1 = _template("<div> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
   const n2 = _child(n3, 1)
   _renderEffect(() => _setProp(n3, "id", _ctx.foo))
   _setInsertionState(n3, 0, 0)
-  const n1 = _createComponentWithFallback(_component_Comp)
+  const n1 = _createAssetComponent("Comp")
   _renderEffect(() => _setText(n2, _toDisplayString(_ctx.bar)))
   return [n0, n3]
 }"
@@ -238,47 +236,44 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > execution order > flushes parent props before creating child component 1`] = `
-"import { resolveComponent as _resolveComponent, setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const _component_Child = _resolveComponent("Child")
   const n1 = t0()
   _renderEffect(() => _setProp(n1, "id", _ctx.useId()))
   _setInsertionState(n1, null, 0)
-  const n0 = _createComponentWithFallback(_component_Child)
+  const n0 = _createAssetComponent("Child")
   return n1
 }"
 `;
 
 exports[`compile > execution order > flushes previous effects before creating child component 1`] = `
-"import { resolveComponent as _resolveComponent, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const _component_Child = _resolveComponent("Child")
   const n0 = t0()
   const x0 = _txt(n0)
   _renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
-  const n1 = _createComponentWithFallback(_component_Child)
+  const n1 = _createAssetComponent("Child")
   return [n0, n1]
 }"
 `;
 
 exports[`compile > execution order > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
-"import { resolveComponent as _resolveComponent, child as _child, next as _next, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { child as _child, next as _next, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 2)
 const t1 = _template("<div><div></div><!><div></div><!><div><button>", 1)
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
   const n6 = t1()
   const n5 = _next(_child(n6), 1)
   const n7 = _nthChild(n6, 3, 3)
   const p0 = _next(n7, 4)
   const n4 = _child(p0)
   _setInsertionState(n6, n5, 1)
-  const n0 = _createComponentWithFallback(_component_Comp)
+  const n0 = _createAssetComponent("Comp")
   _setInsertionState(n6, n7, 3)
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
@@ -290,17 +285,16 @@ export function render(_ctx) {
 `;
 
 exports[`compile > execution order > with insertionState 1`] = `
-"import { resolveComponent as _resolveComponent, child as _child, setInsertionState as _setInsertionState, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { child as _child, setInsertionState as _setInsertionState, createSlot as _createSlot, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div><div>", 1)
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
   const n3 = t0()
   const n1 = _child(n3)
   _setInsertionState(n1, null, 0)
   const n0 = _createSlot("default", null)
   _setInsertionState(n3, null, 1)
-  const n2 = _createComponentWithFallback(_component_Comp)
+  const n2 = _createAssetComponent("Comp")
   return n3
 }"
 `;
@@ -387,12 +381,11 @@ export function render(_ctx) {
 `;
 
 exports[`compile > expression parsing > v-slot 1`] = `
-"import { resolveComponent as _resolveComponent, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n1 = _createComponentWithFallback(_component_Comp, null, {
+  const n1 = _createAssetComponent("Comp", null, {
     "foo": (_slotProps0) => {
       const n0 = t0()
       _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.a + _slotProps0.b)))

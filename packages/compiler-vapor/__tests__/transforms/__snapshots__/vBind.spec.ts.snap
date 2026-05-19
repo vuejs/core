@@ -529,11 +529,10 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > number value 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
-  const n0 = _createComponentWithFallback(_component_Comp, { depth: () => (0) }, null, true)
+  const n0 = _createAssetComponent("Comp", { depth: () => (0) }, null, true)
   return n0
 }"
 `;
