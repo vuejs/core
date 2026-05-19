@@ -446,6 +446,9 @@ describe('Transition', () => {
     await nextTick()
 
     expect(host.innerHTML).toContain(
+      '<div class="v-leave-from v-leave-active">3</div>',
+    )
+    expect(host.innerHTML).toContain(
       '<div class="v-enter-from v-enter-active">22</div>',
     )
     expect(onBeforeEnter).toHaveBeenCalledTimes(1)
