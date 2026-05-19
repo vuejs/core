@@ -110,6 +110,10 @@ export function genChildren(
     const elementIndex = index + offset
     const logicalIndex =
       child.logicalIndex !== undefined ? String(child.logicalIndex) : undefined
+    // nthChild defaults the logical index to the element index at runtime, so
+    // the third argument is only needed when hydration uses a different index.
+    const nthChildLogicalIndex =
+      child.logicalIndex === elementIndex ? undefined : logicalIndex
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
     const variable =
@@ -125,7 +129,7 @@ export function genChildren(
             helper('nthChild'),
             from,
             String(elementIndex),
-            logicalIndex,
+            nthChildLogicalIndex,
           ),
         )
       }
@@ -148,7 +152,7 @@ export function genChildren(
             helper('nthChild'),
             from,
             String(elementIndex),
-            logicalIndex,
+            nthChildLogicalIndex,
           )
         }
         pushBlock(...init)
