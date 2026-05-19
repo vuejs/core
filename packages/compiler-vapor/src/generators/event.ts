@@ -28,9 +28,7 @@ export function genSetEvent(
   const { helper } = context
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
-  const name = genName()
   let handler: CodeFragment[] | undefined
-  const eventOptions = genEventOptions()
 
   if (delegate) {
     // key is static
@@ -47,6 +45,8 @@ export function genSetEvent(
     }
   }
 
+  const name = genName()
+  const eventOptions = genEventOptions()
   return [
     NEWLINE,
     ...genCall(
@@ -68,7 +68,9 @@ export function genSetEvent(
 
   function genDirectHandler(): CodeFragment[] {
     return modifiers.keys.length || modifiers.nonKeys.length
-      ? genEventHandler(context, [value], modifiers, false, false, true)
+      ? genEventHandler(context, [value], modifiers, {
+          modifierHelper: 'vapor',
+        })
       : genInvoker()
   }
 
@@ -123,6 +125,17 @@ export function genSetDynamicEvents(
   ]
 }
 
+interface GenEventHandlerOptions {
+  // Generate handler expressions suitable for passing as component props
+  // (avoid wrapping member expressions with invocation).
+  asComponentProp?: boolean
+  // Wrap the result in a getter function `() => ...`.
+  extraWrap?: boolean
+  // Direct delegated assignments use Vapor guard helpers because the guard
+  // helper owns the event invoker wrapper.
+  modifierHelper?: 'runtime' | 'vapor'
+}
+
 export function genEventHandler(
   context: CodegenContext,
   values: (SimpleExpressionNode | undefined)[] | undefined,
@@ -130,15 +143,14 @@ export function genEventHandler(
     nonKeys: string[]
     keys: string[]
   } = { nonKeys: [], keys: [] },
-  // when true, generate handler expressions suitable for passing as component
-  // props (avoid wrapping member expressions with invocation).
-  asComponentProp: boolean = false,
-  // when true, wrap the result in a getter function `() => ...`.
-  extraWrap: boolean = false,
-  // when true, the outermost key/modifier guard owns createInvoker for direct
-  // delegated handler assignment.
-  vaporGuardInvoker: boolean = false,
+  options: GenEventHandlerOptions = {},
 ): CodeFragment[] {
+  const {
+    asComponentProp = false,
+    extraWrap = false,
+    modifierHelper = 'runtime',
+  } = options
+  const useVaporModifierHelper = modifierHelper === 'vapor'
   let handlerExp: CodeFragment[] = []
   if (values) {
     values.forEach((value, index) => {
@@ -199,10 +211,10 @@ export function genEventHandler(
       context,
       handlerExp,
       nonKeys,
-      vaporGuardInvoker && !keys.length,
+      useVaporModifierHelper && !keys.length,
     )
   if (keys.length)
-    handlerExp = genWithKeys(context, handlerExp, keys, vaporGuardInvoker)
+    handlerExp = genWithKeys(context, handlerExp, keys, useVaporModifierHelper)
 
   if (extraWrap) handlerExp.unshift(`() => `)
   return handlerExp
@@ -212,10 +224,10 @@ function genWithModifiers(
   context: CodegenContext,
   handler: CodeFragment[],
   nonKeys: string[],
-  vaporGuardInvoker: boolean = false,
+  useVaporHelper: boolean = false,
 ): CodeFragment[] {
   return genCall(
-    context.helper(vaporGuardInvoker ? 'withVaporModifiers' : 'withModifiers'),
+    context.helper(useVaporHelper ? 'withVaporModifiers' : 'withModifiers'),
     handler,
     JSON.stringify(nonKeys),
   )
@@ -225,10 +237,10 @@ function genWithKeys(
   context: CodegenContext,
   handler: CodeFragment[],
   keys: string[],
-  vaporGuardInvoker: boolean = false,
+  useVaporHelper: boolean = false,
 ): CodeFragment[] {
   return genCall(
-    context.helper(vaporGuardInvoker ? 'withVaporKeys' : 'withKeys'),
+    context.helper(useVaporHelper ? 'withVaporKeys' : 'withKeys'),
     handler,
     JSON.stringify(keys),
   )

@@ -52,10 +52,8 @@ export function onBinding(
   } else {
     if (!handler) return
     const invoker = createEventInvoker(handler, currentInstance!)
-    addEventListener(el, event, invoker, options)
-    onEffectCleanup(() => {
-      el.removeEventListener(event, invoker, options)
-    })
+    const cleanup = addEventListener(el, event, invoker, options)
+    onEffectCleanup(cleanup)
   }
 }
 
