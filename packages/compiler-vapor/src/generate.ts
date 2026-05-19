@@ -23,6 +23,10 @@ import { buildNextIdMap, getNextId } from './transform'
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
 const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*)(\d+)$/
+const helperNameAliases: Record<string, string> = {
+  withVaporKeys: 'withKeys',
+  withVaporModifiers: 'withModifiers',
+}
 
 export class CodegenContext {
   options: Required<CodegenOptions>
@@ -36,17 +40,23 @@ export class CodegenContext {
       return this.helpers.get(name)!
     }
 
-    const base = `_${name}`
-    if (this.bindingNames.size === 0 || !this.bindingNames.has(base)) {
+    const base = `_${helperNameAliases[name] || name}`
+    if (this.isHelperNameAvailable(base)) {
       this.helpers.set(name, base)
       return base
     }
 
     const map = this.nextIdMap.get(base)
-    // start from 1 because "base" (no suffix) is already taken.
-    const alias = `${base}${getNextId(map, 1)}`
-    this.helpers.set(name, alias)
-    return alias
+    let next = 1
+    while (true) {
+      // start from 1 because "base" (no suffix) is already taken.
+      const alias = `${base}${getNextId(map, next)}`
+      if (this.isHelperNameAvailable(alias)) {
+        this.helpers.set(name, alias)
+        return alias
+      }
+      next++
+    }
   }
 
   delegates: Set<string> = new Set<string>()
@@ -114,6 +124,14 @@ export class CodegenContext {
   private templateVars: Map<number, string> = new Map()
   private nextIdMap: Map<string, Map<number, number>> = new Map()
   private lastIdMap: Map<string, number> = new Map()
+  private isHelperNameAvailable(name: string): boolean {
+    if (this.bindingNames.has(name)) return false
+    for (const alias of this.helpers.values()) {
+      if (alias === name) return false
+    }
+    return true
+  }
+
   private lastTIndex: number = -1
   private initNextIdMap(): void {
     if (this.bindingNames.size === 0) return

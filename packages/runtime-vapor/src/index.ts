@@ -56,6 +56,8 @@ export {
   delegateEvents,
   setDynamicEvents,
   createInvoker,
+  withVaporModifiers,
+  withVaporKeys,
 } from './dom/event'
 export { createIf } from './apiCreateIf'
 export { createKeyedFragment } from './apiCreateFragment'

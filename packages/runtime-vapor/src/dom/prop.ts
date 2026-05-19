@@ -56,9 +56,14 @@ type TargetElement = Element & {
   _value?: any
 }
 
-const hasFallthroughKey = (key: string) =>
-  (currentInstance as VaporComponentInstance).hasFallthrough &&
-  key in currentInstance!.attrs
+const hasFallthroughKey = (key: string) => {
+  const instance = currentInstance as VaporComponentInstance
+  return (
+    instance.hasFallthrough &&
+    instance.type.inheritAttrs !== false &&
+    key in instance.attrs
+  )
+}
 
 export function setProp(el: any, key: string, value: any): void {
   if (key in el) {
@@ -568,6 +573,9 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
+    if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
+      return
+    }
     onBinding(el, key[2].toLowerCase() + key.slice(3), value)
   } else if (
     // force hydrate v-bind with .prop modifiers

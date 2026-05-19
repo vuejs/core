@@ -4,10 +4,17 @@ import {
   ErrorCodes,
   callWithAsyncErrorHandling,
   currentInstance,
+  withKeys as withDomKeys,
+  withModifiers as withDomModifiers,
 } from '@vue/runtime-dom'
 
 type EventHandler = (...args: any[]) => any
 type EventHandlerValue = EventHandler | EventHandler[]
+type MaybeEventHandlerValue = EventHandlerValue | null | undefined
+const invokerCache = /*@__PURE__*/ new WeakMap<
+  EventHandlerValue,
+  WeakMap<object, EventHandler>
+>()
 
 export function addEventListener(
   el: Element,
@@ -29,7 +36,8 @@ export function on(
     handler.forEach(fn => on(el, event, fn, options))
   } else {
     if (!handler) return
-    addEventListener(el, event, handler, options)
+    const invoker = createEventInvoker(handler, currentInstance!)
+    addEventListener(el, event, invoker, options)
   }
 }
 
@@ -43,34 +51,30 @@ export function onBinding(
     handler.forEach(fn => onBinding(el, event, fn, options))
   } else {
     if (!handler) return
-    addEventListener(el, event, handler, options)
+    const invoker = createEventInvoker(handler, currentInstance!)
+    addEventListener(el, event, invoker, options)
     onEffectCleanup(() => {
-      el.removeEventListener(event, handler, options)
+      el.removeEventListener(event, invoker, options)
     })
   }
 }
 
-export function delegate(
-  el: any,
-  event: string,
-  handler: (e: Event) => any,
-): void {
+export function delegate(el: any, event: string, handler: EventHandler): void {
   const key = `$evt${event}`
   const existing = el[key]
+  const invoker = createInvoker(handler)
   if (existing) {
     if (isArray(existing)) {
-      existing.push(handler)
+      existing.push(invoker)
     } else {
-      el[key] = [existing, handler]
+      el[key] = [existing, invoker]
     }
   } else {
-    el[key] = handler
+    el[key] = invoker
   }
 }
 
-type DelegatedHandler = {
-  (...args: any[]): any
-}
+type DelegatedHandler = EventHandler
 
 /**
  * Event delegation borrowed from solid
@@ -133,13 +137,56 @@ export function setDynamicEvents(
   }
 }
 
-export function createInvoker(
-  handler: (...args: any[]) => any,
-): (...args: any[]) => any {
-  const i = currentInstance
+export function withVaporModifiers<
+  T extends (event: Event, ...args: unknown[]) => any,
+>(fn: T & { _withMods?: { [key: string]: T } }, modifiers: string[]): T {
+  return createInvoker(
+    withDomModifiers(fn, modifiers as Parameters<typeof withDomModifiers>[1]),
+  ) as T
+}
+
+export function withVaporKeys<T extends (event: KeyboardEvent) => any>(
+  fn: T & { _withKeys?: { [key: string]: T } },
+  modifiers: string[],
+): T {
+  return createInvoker(
+    typeof fn === 'function'
+      ? (withDomKeys(fn, modifiers) as EventHandler)
+      : fn,
+  ) as T
+}
+
+export function createInvoker(handler: MaybeEventHandlerValue): EventHandler {
+  const i = currentInstance!
+  if (!isCacheableEventHandler(handler)) {
+    return createEventInvoker(handler, i)
+  }
+  let cache = invokerCache.get(handler)
+  if (!cache) {
+    cache = new WeakMap()
+    invokerCache.set(handler, cache)
+  }
+  let invoker = cache.get(i)
+  if (!invoker) {
+    invoker = createEventInvoker(handler, i)
+    cache.set(i, invoker)
+  }
+  return invoker
+}
+
+function isCacheableEventHandler(
+  handler: MaybeEventHandlerValue,
+): handler is EventHandlerValue {
+  return typeof handler === 'function' || isArray(handler)
+}
+
+function createEventInvoker(
+  handler: MaybeEventHandlerValue,
+  i: typeof currentInstance,
+): EventHandler {
   return (...args: any[]) =>
     callWithAsyncErrorHandling(
-      handler,
+      handler as EventHandlerValue,
       i,
       ErrorCodes.NATIVE_EVENT_HANDLER,
       args,

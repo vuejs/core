@@ -287,9 +287,14 @@ describe('attribute fallthrough', () => {
   })
 
   it('explicit spreading with inheritAttrs: false', () => {
+    const click = vi.fn()
     const Parent = defineVaporComponent({
       setup() {
-        return createComponent(Child, { foo: () => 1, class: () => 'parent' })
+        return createComponent(Child, {
+          foo: () => 1,
+          class: () => 'parent',
+          onClick: () => click,
+        })
       },
     })
 
@@ -306,10 +311,12 @@ describe('attribute fallthrough', () => {
       },
     })
 
-    const { html } = define(Parent).render()
+    const { host, html } = define(Parent).render()
 
     // should merge parent/child classes
     expect(html()).toMatch(`<div class="child parent">1</div>`)
+    ;(host.children[0] as HTMLElement).click()
+    expect(click).toHaveBeenCalledTimes(1)
   })
 
   it('should warn when fallthrough fails on non-single-root', () => {
