@@ -51,6 +51,7 @@ export {
 } from './dom/prop'
 export {
   on,
+  onBinding,
   delegate,
   delegateEvents,
   setDynamicEvents,

@@ -87,7 +87,7 @@ describe('v-on', () => {
       `<div v-on:[event]="handler"/>`,
     )
 
-    expect(helpers).contains('on')
+    expect(helpers).contains('onBinding')
     expect(helpers).contains('renderEffect')
     expect(ir.block.operation).toMatchObject([])
 
@@ -107,6 +107,9 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
+    expect(code).contains(
+      `_onBinding(n0, _ctx.event, _createInvoker(e => _ctx.handler(e)))`,
+    )
   })
 
   test('dynamic arg with prefixing', () => {
@@ -117,6 +120,24 @@ describe('v-on', () => {
     expect(code).matchSnapshot()
   })
 
+  test('dynamic arg with event options', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div v-on:[event].capture.once="handler"/>`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(helpers).contains('onBinding')
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      `_onBinding(n0, _ctx.event, _createInvoker(e => _ctx.handler(e)), {`,
+    )
+    expect(code).contains('capture: true')
+    expect(code).contains('once: true')
+    expect(code).not.contains('effect: true')
+  })
+
   test('dynamic arg with complex exp prefixing', () => {
     const { ir, code, helpers } = compileWithVOn(
       `<div v-on:[event(foo)]="handler"/>`,
@@ -125,7 +146,7 @@ describe('v-on', () => {
       },
     )
 
-    expect(helpers).contains('on')
+    expect(helpers).contains('onBinding')
     expect(helpers).contains('renderEffect')
     expect(ir.block.operation).toMatchObject([])
 
