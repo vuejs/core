@@ -18,6 +18,8 @@ import {
 } from './prop'
 
 type TextNodeWithCache = Text & { $txt?: string }
+type MergedDynamicPropsSource = Record<string, any> | null | undefined
+type DynamicPropsGetter = () => MergedDynamicPropsSource
 
 // Binding helpers need RenderEffect's current instance, lifecycle hook and
 // scheduler wrapper. Implementing them with renderEffect(() => setX(getter()))
@@ -228,6 +230,34 @@ class DynamicPropsBindingEffect extends RenderEffect {
   }
 }
 
+class MergedDynamicPropsBindingEffect extends RenderEffect {
+  el: any
+  values: any[]
+  getter: DynamicPropsGetter
+  index: number
+  isSVG: boolean
+
+  constructor(
+    el: any,
+    before: MergedDynamicPropsSource,
+    getter: DynamicPropsGetter,
+    after: MergedDynamicPropsSource,
+    isSVG: boolean,
+  ) {
+    super(MergedDynamicPropsBindingEffect.prototype.renderMergedDynamicProps)
+    this.el = el
+    this.values = createMergedDynamicPropsValues(before, undefined, after)
+    this.getter = getter
+    this.index = before != null ? 1 : 0
+    this.isSVG = isSVG
+  }
+
+  renderMergedDynamicProps(): void {
+    this.values[this.index] = this.getter()
+    setDynamicProps(this.el, this.values, this.isSVG)
+  }
+}
+
 class EventBindingEffect extends RenderEffect {
   el: Element
   getter: () => string
@@ -412,6 +442,46 @@ export function setDynamicPropsBinding(
 
   const effect = new DynamicPropsBindingEffect(el, getter, isSVG)
   effect.run()
+}
+
+export function setMergedDynamicPropsBinding(
+  el: any,
+  before: MergedDynamicPropsSource,
+  getter: DynamicPropsGetter,
+  after?: MergedDynamicPropsSource,
+  isSVG?: boolean,
+): void {
+  if (inOnceSlot) {
+    setDynamicProps(
+      el,
+      createMergedDynamicPropsValues(before, getter(), after),
+      isSVG,
+    )
+    return
+  }
+
+  const effect = new MergedDynamicPropsBindingEffect(
+    el,
+    before,
+    getter,
+    after,
+    isSVG === true,
+  )
+  effect.run()
+}
+
+function createMergedDynamicPropsValues(
+  before: MergedDynamicPropsSource,
+  value: MergedDynamicPropsSource,
+  after: MergedDynamicPropsSource,
+): any[] {
+  return before != null
+    ? after != null
+      ? [before, value, after]
+      : [before, value]
+    : after != null
+      ? [value, after]
+      : [value]
 }
 
 export function setEventBinding(

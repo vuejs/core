@@ -45,6 +45,7 @@ export {
   setDynamicPropsBinding,
   setEventBinding,
   setHtmlBinding,
+  setMergedDynamicPropsBinding,
   setPropBinding,
   setStyleBinding,
   setTextBinding,

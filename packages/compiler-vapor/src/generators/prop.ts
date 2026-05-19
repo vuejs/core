@@ -9,11 +9,13 @@ import type { CodegenContext } from '../generate'
 import {
   IRDynamicPropsKind,
   type IRProp,
+  type IRProps,
+  type IRPropsDynamicAttribute,
   type SetDynamicPropsIRNode,
   type SetPropIRNode,
   type VaporHelper,
 } from '../ir'
-import { genExpression } from './expression'
+import { genExpression, genExpressionGetter } from './expression'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -48,6 +50,8 @@ export type HelperConfig = {
   isSVG?: boolean
   acceptRoot?: boolean
 }
+
+type DirectDynamicPropSource = IRProp[] | IRPropsDynamicAttribute
 
 // this should be kept in sync with runtime-vapor/src/dom/prop.ts
 const helpers = {
@@ -447,6 +451,9 @@ export function genDynamicPropsBinding(
   oper: SetDynamicPropsIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
+  const merged = genMergedDynamicPropsBinding(oper, context)
+  if (merged) return merged
+
   const { helper } = context
   const isSVG = isSVGTag(oper.tag)
   const values = genDynamicPropValues(oper, context)
@@ -459,6 +466,111 @@ export function genDynamicPropsBinding(
       isSVG && 'true',
     ),
   ]
+}
+
+function genMergedDynamicPropsBinding(
+  oper: SetDynamicPropsIRNode,
+  context: CodegenContext,
+): CodeFragment[] | undefined {
+  const sources = resolveMergedDynamicPropSources(oper.props)
+  if (!sources) {
+    return
+  }
+
+  const { helper } = context
+  const isSVG = isSVGTag(oper.tag)
+  const before = sources.before
+    ? genDirectDynamicPropSource(sources.before, context)
+    : 'null'
+  const after = sources.after
+    ? genDirectDynamicPropSource(sources.after, context)
+    : isSVG
+      ? 'null'
+      : false
+  return [
+    NEWLINE,
+    ...genCall(
+      [helper('setMergedDynamicPropsBinding'), null],
+      `n${oper.element}`,
+      before,
+      genDynamicPropSourceGetter(sources.getter, context),
+      after,
+      isSVG && 'true',
+    ),
+  ]
+}
+
+function resolveMergedDynamicPropSources(props: IRProps[]):
+  | {
+      before?: DirectDynamicPropSource
+      getter: IRProps
+      after?: DirectDynamicPropSource
+    }
+  | undefined {
+  if (props.length <= 1) return
+
+  let before: DirectDynamicPropSource | undefined
+  let getter: IRProps | undefined
+  let after: DirectDynamicPropSource | undefined
+  for (const prop of props) {
+    if (isDirectDynamicPropSource(prop)) {
+      if (getter) {
+        if (after) return
+        after = prop
+      } else {
+        if (before) return
+        before = prop
+      }
+    } else {
+      if (getter) return
+      getter = prop
+    }
+  }
+
+  return getter && (before || after) ? { before, getter, after } : undefined
+}
+
+function genDirectDynamicPropSource(
+  prop: DirectDynamicPropSource,
+  context: CodegenContext,
+): CodeFragment[] {
+  return genLiteralObjectProps(Array.isArray(prop) ? prop : [prop], context)
+}
+
+function genDynamicPropSourceGetter(
+  prop: IRProps,
+  context: CodegenContext,
+): CodeFragment[] {
+  if (Array.isArray(prop)) {
+    return ['() => (', ...genLiteralObjectProps(prop, context), ')']
+  } else if (prop.kind === IRDynamicPropsKind.ATTRIBUTE) {
+    return ['() => (', ...genLiteralObjectProps([prop], context), ')']
+  } else {
+    return genExpressionGetter(prop.value, context)
+  }
+}
+
+function isDirectDynamicPropSource(
+  prop: IRProps,
+): prop is DirectDynamicPropSource {
+  return Array.isArray(prop)
+    ? canUseDirectDynamicPropSource(prop)
+    : prop.kind === IRDynamicPropsKind.ATTRIBUTE &&
+        canUseDirectDynamicPropSource([prop])
+}
+
+function canUseDirectDynamicPropSource(props: IRProp[]): boolean {
+  return (
+    props.length > 0 &&
+    props.every(
+      prop =>
+        prop.key.isStatic &&
+        prop.values.length === 1 &&
+        prop.values[0].isStatic &&
+        !prop.handler &&
+        !prop.model,
+    )
+  )
 }
 
 function genDynamicPropValues(

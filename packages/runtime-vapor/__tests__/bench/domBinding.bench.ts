@@ -2,8 +2,7 @@ import { type Ref, effectScope } from '@vue/reactivity'
 import { nextTick, ref } from '@vue/runtime-dom'
 import { bench, describe } from 'vitest'
 import {
-  createInvoker,
-  on,
+  onBinding,
   renderEffect,
   setAttrBinding,
   setBlockHtmlBinding,
@@ -16,6 +15,7 @@ import {
   setDynamicPropsBinding,
   setEventBinding,
   setHtmlBinding,
+  setMergedDynamicPropsBinding,
   setPropBinding,
   setStyleBinding,
   setValueBinding,
@@ -240,21 +240,57 @@ describe('DOM binding effects', () => {
     },
   )
 
+  describe('setMergedDynamicProps', () => {
+    const arrayGetterPath: Setup = (el, source) => {
+      setDynamicPropsBinding(el, () => [
+        { id: 'static-id' },
+        { title: `title-${source.value}` },
+        { class: 'static-class' },
+      ])
+    }
+    const mergedSourcesPath: Setup = (el, source) => {
+      setMergedDynamicPropsBinding(
+        el,
+        { id: 'static-id' },
+        () => ({ title: `title-${source.value}` }),
+        { class: 'static-class' },
+      )
+    }
+
+    describe('update', () => {
+      bench('array getter helper', async () => {
+        await update(createDiv, arrayGetterPath)
+      })
+
+      bench('merged sources helper', async () => {
+        await update(createDiv, mergedSourcesPath)
+      })
+    })
+
+    describe('init', () => {
+      bench('array getter helper', () => {
+        init(createDiv, arrayGetterPath)
+      })
+
+      bench('merged sources helper', () => {
+        init(createDiv, mergedSourcesPath)
+      })
+    })
+  })
+
   benchBinding(
     'setEvent',
     createDiv,
     (el, source) => {
       renderEffect(() =>
-        on(el, source.value & 1 ? 'click' : 'mouseover', createInvoker(noop), {
-          effect: true,
-        }),
+        onBinding(el, source.value & 1 ? 'click' : 'mouseover', noop),
       )
     },
     (el, source) => {
       setEventBinding(
         el,
         () => (source.value & 1 ? 'click' : 'mouseover'),
-        createInvoker(noop),
+        noop,
       )
     },
   )

@@ -15,6 +15,7 @@ import {
   remove,
   renderEffect,
   setInsertionState,
+  setMergedDynamicPropsBinding,
   template,
   txt,
   vaporInteropPlugin,
@@ -1799,18 +1800,31 @@ describe('component: slots', () => {
               const n3 = template('<div> </div>')() as any
               const x3 = txt(n3) as any
               renderEffect(() => setText(x3, toDisplayString(count.value)))
+              setMergedDynamicPropsBinding(
+                n3,
+                { id: 'static-id' },
+                () => ({
+                  title: `title-${count.value}`,
+                  class: `count-${count.value}`,
+                }),
+                { class: 'after' },
+              )
               return n3
             },
           })
         },
       }).render()
 
-      expect(html()).toBe('<div>0</div><!--slot-->')
+      expect(html()).toBe(
+        '<div id="static-id" title="title-0" class="count-0 after">0</div><!--slot-->',
+      )
 
       // expect no changes due to v-once
       count.value++
       await nextTick()
-      expect(html()).toBe('<div>0</div><!--slot-->')
+      expect(html()).toBe(
+        '<div id="static-id" title="title-0" class="count-0 after">0</div><!--slot-->',
+      )
     })
   })
 

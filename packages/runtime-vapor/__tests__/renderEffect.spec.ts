@@ -23,6 +23,7 @@ import {
   setDynamicPropsBinding,
   setEventBinding,
   setHtmlBinding,
+  setMergedDynamicPropsBinding,
   setPropBinding,
   setStyleBinding,
   setTextBinding,
@@ -251,6 +252,7 @@ describe('renderEffect', () => {
         const blockText = document.createElement('div')
         const blockHtml = document.createElement('div')
         const dynamic = document.createElement('div')
+        const mergedDynamic = document.createElement('div')
         eventTarget = document.createElement('button')
         dynamicEventTarget = document.createElement('button')
 
@@ -266,6 +268,7 @@ describe('renderEffect', () => {
           blockText,
           blockHtml,
           dynamic,
+          mergedDynamic,
           eventTarget,
           dynamicEventTarget,
         )
@@ -283,6 +286,12 @@ describe('renderEffect', () => {
         setDynamicPropsBinding(dynamic, () => [
           { id: ctx.source, class: ctx.source },
         ])
+        setMergedDynamicPropsBinding(
+          mergedDynamic,
+          { id: 'static-id' },
+          () => ({ title: ctx.source, class: ctx.source }),
+          { class: 'static-class' },
+        )
         setEventBinding(
           eventTarget,
           () => ctx.eventName,
@@ -295,7 +304,7 @@ describe('renderEffect', () => {
     }).render()
 
     expect(html()).toBe(
-      '<div><div data-test="one"></div><div id="one"></div><div title="one"></div><input><div class="one"></div><div class="active"></div><div style="color: red;"></div><div><span>one</span></div><div>one</div><div><span>one</span></div><div id="one" class="one"></div><button></button><button></button></div>',
+      '<div><div data-test="one"></div><div id="one"></div><div title="one"></div><input><div class="one"></div><div class="active"></div><div style="color: red;"></div><div><span>one</span></div><div>one</div><div><span>one</span></div><div id="one" class="one"></div><div id="static-id" title="one" class="one static-class"></div><button></button><button></button></div>',
     )
     expect(input.value).toBe('one')
     eventTarget.dispatchEvent(new Event('click'))
@@ -307,7 +316,7 @@ describe('renderEffect', () => {
     await nextTick()
 
     expect(html()).toBe(
-      '<div><div data-test="two"></div><div id="two"></div><div title="two"></div><input><div class="two"></div><div class=""></div><div style="color: blue;"></div><div><span>two</span></div><div>two</div><div><span>two</span></div><div id="two" class="two"></div><button></button><button></button></div>',
+      '<div><div data-test="two"></div><div id="two"></div><div title="two"></div><input><div class="two"></div><div class=""></div><div style="color: blue;"></div><div><span>two</span></div><div>two</div><div><span>two</span></div><div id="two" class="two"></div><div id="static-id" title="two" class="two static-class"></div><button></button><button></button></div>',
     )
     expect(input.value).toBe('two')
     eventTarget.dispatchEvent(new Event('click'))
@@ -320,6 +329,84 @@ describe('renderEffect', () => {
       'event two',
       'dynamic two',
     ])
+  })
+
+  test('setMergedDynamicPropsBinding handles nullish source updates', async () => {
+    let el!: HTMLElement
+    const { instance } = define({
+      setup() {
+        const mode = ref<'value' | 'null' | 'undefined'>('value')
+        const setNull = () => {
+          mode.value = 'null'
+        }
+        const setValue = () => {
+          mode.value = 'value'
+        }
+        const setUndefined = () => {
+          mode.value = 'undefined'
+        }
+        return { mode, setNull, setValue, setUndefined }
+      },
+      render(ctx: any) {
+        el = document.createElement('div')
+        setMergedDynamicPropsBinding(
+          el,
+          { id: 'static-id', class: 'before', style: { color: 'red' } },
+          () =>
+            ctx.mode === 'value'
+              ? {
+                  title: 'live',
+                  'data-dyn': 'yes',
+                  class: 'dynamic',
+                  style: { backgroundColor: 'blue' },
+                }
+              : ctx.mode === 'null'
+                ? null
+                : undefined,
+          { class: 'after', style: { fontSize: '12px' } },
+        )
+        return el
+      },
+    }).render()
+
+    expect(el.id).toBe('static-id')
+    expect(el.title).toBe('live')
+    expect(el.dataset.dyn).toBe('yes')
+    expect(el.className).toBe('before dynamic after')
+    expect(el.style.color).toBe('red')
+    expect(el.style.backgroundColor).toBe('blue')
+    expect(el.style.fontSize).toBe('12px')
+
+    const { setNull, setValue, setUndefined } = instance?.setupState as any
+    setNull()
+    await nextTick()
+
+    expect(el.id).toBe('static-id')
+    expect(el.title).toBe('')
+    expect(el.dataset.dyn).toBe(undefined)
+    expect(el.className).toBe('before after')
+    expect(el.style.color).toBe('red')
+    expect(el.style.backgroundColor).toBe('')
+    expect(el.style.fontSize).toBe('12px')
+
+    setValue()
+    await nextTick()
+
+    expect(el.title).toBe('live')
+    expect(el.dataset.dyn).toBe('yes')
+    expect(el.className).toBe('before dynamic after')
+    expect(el.style.backgroundColor).toBe('blue')
+
+    setUndefined()
+    await nextTick()
+
+    expect(el.id).toBe('static-id')
+    expect(el.title).toBe('')
+    expect(el.dataset.dyn).toBe(undefined)
+    expect(el.className).toBe('before after')
+    expect(el.style.color).toBe('red')
+    expect(el.style.backgroundColor).toBe('')
+    expect(el.style.fontSize).toBe('12px')
   })
 
   test('setEventBinding preserves listener options across event name updates', async () => {
