@@ -50,7 +50,7 @@ export function genSetEvent(
   return [
     NEWLINE,
     ...genCall(
-      helper(delegate ? 'delegate' : 'on'),
+      helper(effect ? 'onBinding' : delegate ? 'delegate' : 'on'),
       `n${element}`,
       name,
       handler,
@@ -73,11 +73,10 @@ export function genSetEvent(
 
   function genEventOptions(): CodeFragment[] | undefined {
     let { options } = modifiers
-    if (!options.length && !effect) return
+    if (!options.length) return
 
     return genMulti(
       DELIMITERS_OBJECT_NEWLINE,
-      effect && ['effect: true'],
       ...options.map((option): CodeFragment[] => [`${option}: true`]),
     )
   }

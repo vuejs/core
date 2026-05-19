@@ -6,6 +6,9 @@ import {
   currentInstance,
 } from '@vue/runtime-dom'
 
+type EventHandler = (...args: any[]) => any
+type EventHandlerValue = EventHandler | EventHandler[]
+
 export function addEventListener(
   el: Element,
   event: string,
@@ -19,19 +22,31 @@ export function addEventListener(
 export function on(
   el: Element,
   event: string,
-  handler: (e: Event) => any | ((e: Event) => any)[],
-  options: AddEventListenerOptions & { effect?: boolean } = {},
+  handler: EventHandlerValue,
+  options: AddEventListenerOptions = {},
 ): void {
   if (isArray(handler)) {
     handler.forEach(fn => on(el, event, fn, options))
   } else {
     if (!handler) return
     addEventListener(el, event, handler, options)
-    if (options.effect) {
-      onEffectCleanup(() => {
-        el.removeEventListener(event, handler, options)
-      })
-    }
+  }
+}
+
+export function onBinding(
+  el: Element,
+  event: string,
+  handler: EventHandlerValue,
+  options: AddEventListenerOptions = {},
+): void {
+  if (isArray(handler)) {
+    handler.forEach(fn => onBinding(el, event, fn, options))
+  } else {
+    if (!handler) return
+    addEventListener(el, event, handler, options)
+    onEffectCleanup(() => {
+      el.removeEventListener(event, handler, options)
+    })
   }
 }
 
@@ -111,10 +126,10 @@ const delegatedEventHandler = (e: Event) => {
 
 export function setDynamicEvents(
   el: HTMLElement,
-  events: Record<string, (...args: any[]) => any>,
+  events: Record<string, EventHandlerValue>,
 ): void {
   for (const name in events) {
-    on(el, name, events[name], { effect: true })
+    onBinding(el, name, events[name])
   }
 }
 

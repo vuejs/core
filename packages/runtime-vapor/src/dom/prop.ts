@@ -14,7 +14,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { on } from './event'
+import { onBinding } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -568,7 +568,7 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    on(el, key[2].toLowerCase() + key.slice(3), value, { effect: true })
+    onBinding(el, key[2].toLowerCase() + key.slice(3), value)
   } else if (
     // force hydrate v-bind with .prop modifiers
     (forceHydrate = key[0] === '.')
