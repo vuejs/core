@@ -9,6 +9,7 @@ import {
   transformVFor,
   transformVIf,
   transformVOn,
+  transformVSlot,
 } from '../../src'
 import {
   type BindingMetadata,
@@ -21,6 +22,21 @@ const compileWithElementTransform = makeCompile({
     transformVIf,
     transformVFor,
     transformElement,
+    transformText,
+    transformChildren,
+  ],
+  directiveTransforms: {
+    bind: transformVBind,
+    on: transformVOn,
+  },
+})
+
+const compileWithElementAndSlotTransform = makeCompile({
+  nodeTransforms: [
+    transformVIf,
+    transformVFor,
+    transformElement,
+    transformVSlot,
     transformText,
     transformChildren,
   ],
@@ -71,6 +87,34 @@ describe('compiler: element transform', () => {
       expect(helpers).toContain('resolveComponent')
       expect(helpers).toContain('createComponentWithFallback')
       expect(helpers).not.toContain('createAssetComponent')
+    })
+
+    test('hoist asset component also used in component slot', () => {
+      const { code, helpers } = compileWithElementAndSlotTransform(
+        `<Child /><Parent><Child /></Parent>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(
+        'const _component_Child = _resolveComponent("Child")',
+      )
+      expect(code).toContain('_createComponentWithFallback(_component_Child)')
+      expect(code).not.toContain('_createAssetComponent("Child"')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createComponentWithFallback')
+    })
+
+    test('hoist asset component also used in conditional component slot', () => {
+      const { code, helpers } = compileWithElementAndSlotTransform(
+        `<Child /><Parent><template #default><Child v-if="ok" /></template></Parent>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(
+        'const _component_Child = _resolveComponent("Child")',
+      )
+      expect(code).toContain('_createComponentWithFallback(_component_Child)')
+      expect(code).not.toContain('_createAssetComponent("Child"')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createComponentWithFallback')
     })
 
     test('resolve implicitly self-referencing component', () => {
