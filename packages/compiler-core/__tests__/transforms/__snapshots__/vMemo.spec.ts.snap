@@ -1,23 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: v-memo transform > element v-for key expression prefixing + v-memo 1`] = `
-"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, isMemoSame as _isMemoSame, withMemo as _withMemo } from "vue"
-
-export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock("div", null, [
-    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.tableData, (data, __, ___, _cached) => {
-      const _memo = (_ctx.getLetter(data))
-      if (_cached && _cached.el && _cached.key === _ctx.getId(data) && _isMemoSame(_cached, _memo)) return _cached
-      const _item = (_openBlock(), _createElementBlock("span", {
-        key: _ctx.getId(data)
-      }))
-      _item.memo = _memo
-      return _item
-    }, _cache, 0), 128 /* KEYED_FRAGMENT */))
-  ]))
-}"
-`;
-
 exports[`compiler: v-memo transform > on component 1`] = `
 "import { resolveComponent as _resolveComponent, createVNode as _createVNode, withMemo as _withMemo, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
@@ -133,24 +115,6 @@ export function render(_ctx, _cache) {
           _createTextVNode("bar")
         ])), _cache, 0)
       : _withMemo([_ctx.x], () => (_openBlock(), _createBlock(_component_Comp, { key: 1 })), _cache, 1)
-  ]))
-}"
-`;
-
-exports[`compiler: v-memo transform > template v-for key expression prefixing + v-memo 1`] = `
-"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, isMemoSame as _isMemoSame, withMemo as _withMemo } from "vue"
-
-export function render(_ctx, _cache) {
-  return (_openBlock(), _createElementBlock("div", null, [
-    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.tableData, (data, __, ___, _cached) => {
-      const _memo = (_ctx.getLetter(data))
-      if (_cached && _cached.el && _cached.key === _ctx.getId(data) && _isMemoSame(_cached, _memo)) return _cached
-      const _item = (_openBlock(), _createElementBlock(_Fragment, {
-        key: _ctx.getId(data)
-      }, [], 64 /* STABLE_FRAGMENT */))
-      _item.memo = _memo
-      return _item
-    }, _cache, 0), 128 /* KEYED_FRAGMENT */))
   ]))
 }"
 `;
