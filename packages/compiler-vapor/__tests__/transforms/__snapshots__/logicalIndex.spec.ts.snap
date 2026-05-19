@@ -51,6 +51,26 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > nthChild keeps logicalIndex when it differs from element index 1`] = `
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, nthChild as _nthChild, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>", 2)
+const t1 = _template("<div><div></div><span></span><!><div><button>", 1)
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n4 = t1()
+  const n5 = _nthChild(n4, 2, 3)
+  _setInsertionState(n4, 0, 0)
+  const n0 = _createComponentWithFallback(_component_Comp)
+  _setInsertionState(n4, n5, 3)
+  const n1 = _createIf(() => (true), () => {
+    const n3 = t0()
+    return n3
+  }, null, 1, true)
+  return n4
+}"
+`;
+
 exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > nthChild with logicalIndex 1`] = `
 "import { child as _child, next as _next, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, nthChild as _nthChild, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div>", 2)
@@ -59,7 +79,7 @@ const t1 = _template("<div><div></div><!><div></div><!><div><button>", 1)
 export function render(_ctx) {
   const n5 = t1()
   const n4 = _next(_child(n5), 1)
-  const n6 = _nthChild(n5, 3, 3)
+  const n6 = _nthChild(n5, 3)
   _setInsertionState(n5, n4, 1)
   const n0 = _createAssetComponent("Comp")
   _setInsertionState(n5, n6, 3)

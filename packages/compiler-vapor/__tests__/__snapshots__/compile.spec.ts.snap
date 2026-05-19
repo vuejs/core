@@ -269,7 +269,7 @@ const t1 = _template("<div><div></div><!><div></div><!><div><button>", 1)
 export function render(_ctx) {
   const n6 = t1()
   const n5 = _next(_child(n6), 1)
-  const n7 = _nthChild(n6, 3, 3)
+  const n7 = _nthChild(n6, 3)
   const p0 = _next(n7, 4)
   const n4 = _child(p0)
   _setInsertionState(n6, n5, 1)
@@ -307,7 +307,7 @@ export function render(_ctx) {
   const n3 = t0()
   const n0 = _child(n3)
   const n1 = _next(n0, 1)
-  const n2 = _nthChild(n3, 3, 3)
+  const n2 = _nthChild(n3, 3)
   const x0 = _txt(n0)
   _setText(x0, _toDisplayString(_ctx.foo))
   _renderEffect(() => {
