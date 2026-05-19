@@ -11,10 +11,6 @@ import {
 type EventHandler = (...args: any[]) => any
 type EventHandlerValue = EventHandler | EventHandler[]
 type MaybeEventHandlerValue = EventHandlerValue | null | undefined
-const invokerCache = /*@__PURE__*/ new WeakMap<
-  EventHandlerValue,
-  WeakMap<object, EventHandler>
->()
 
 export function addEventListener(
   el: Element,
@@ -36,8 +32,7 @@ export function on(
     handler.forEach(fn => on(el, event, fn, options))
   } else {
     if (!handler) return
-    const invoker = createEventInvoker(handler, currentInstance!)
-    addEventListener(el, event, invoker, options)
+    addEventListener(el, event, createInvoker(handler), options)
   }
 }
 
@@ -51,8 +46,7 @@ export function onBinding(
     handler.forEach(fn => onBinding(el, event, fn, options))
   } else {
     if (!handler) return
-    const invoker = createEventInvoker(handler, currentInstance!)
-    const cleanup = addEventListener(el, event, invoker, options)
+    const cleanup = addEventListener(el, event, createInvoker(handler), options)
     onEffectCleanup(cleanup)
   }
 }
@@ -137,14 +131,19 @@ export function setDynamicEvents(
 
 export function withVaporModifiers<
   T extends (event: Event, ...args: unknown[]) => any,
->(fn: T & { _withMods?: { [key: string]: T } }, modifiers: string[]): T {
+>(fn: T, modifiers: string[]): T {
   return createInvoker(
-    withDomModifiers(fn, modifiers as Parameters<typeof withDomModifiers>[1]),
+    typeof fn === 'function'
+      ? withDomModifiers(
+          fn,
+          modifiers as Parameters<typeof withDomModifiers>[1],
+        )
+      : fn,
   ) as T
 }
 
 export function withVaporKeys<T extends (event: KeyboardEvent) => any>(
-  fn: T & { _withKeys?: { [key: string]: T } },
+  fn: T,
   modifiers: string[],
 ): T {
   return createInvoker(
@@ -156,32 +155,6 @@ export function withVaporKeys<T extends (event: KeyboardEvent) => any>(
 
 export function createInvoker(handler: MaybeEventHandlerValue): EventHandler {
   const i = currentInstance!
-  if (!isCacheableEventHandler(handler)) {
-    return createEventInvoker(handler, i)
-  }
-  let cache = invokerCache.get(handler)
-  if (!cache) {
-    cache = new WeakMap()
-    invokerCache.set(handler, cache)
-  }
-  let invoker = cache.get(i)
-  if (!invoker) {
-    invoker = createEventInvoker(handler, i)
-    cache.set(i, invoker)
-  }
-  return invoker
-}
-
-function isCacheableEventHandler(
-  handler: MaybeEventHandlerValue,
-): handler is EventHandlerValue {
-  return typeof handler === 'function' || isArray(handler)
-}
-
-function createEventInvoker(
-  handler: MaybeEventHandlerValue,
-  i: typeof currentInstance,
-): EventHandler {
   return (...args: any[]) =>
     callWithAsyncErrorHandling(
       handler as EventHandlerValue,

@@ -576,7 +576,7 @@ describe('error handling', () => {
     expect(fn).toHaveBeenCalledWith(err, 'native event handler')
   })
 
-  test('cached direct modifier invokers keep separate component boundaries', () => {
+  test('direct modifier invokers keep separate component boundaries', () => {
     const err = new Error('foo')
     const calls: string[] = []
     const onClick = () => {
