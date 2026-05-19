@@ -56,9 +56,16 @@ type TargetElement = Element & {
   _value?: any
 }
 
-const hasFallthroughKey = (key: string) =>
-  (currentInstance as VaporComponentInstance).hasFallthrough &&
-  key in currentInstance!.attrs
+const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
+  const instance = currentInstance! as VaporComponentInstance
+  return (
+    !isApplyingFallthroughProps &&
+    el.$root &&
+    instance.hasFallthrough &&
+    instance.type.inheritAttrs !== false &&
+    key in instance.attrs
+  )
+}
 
 export function setProp(el: any, key: string, value: any): void {
   if (key in el) {
@@ -74,7 +81,7 @@ export function setAttr(
   value: any,
   isSVG: boolean = false,
 ): void {
-  if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
+  if (shouldSkipFallthroughKey(el, key)) {
     return
   }
 
@@ -122,7 +129,7 @@ export function setDOMProp(
   forceHydrate: boolean = false,
   attrName?: string,
 ): void {
-  if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey(key)) {
+  if (shouldSkipFallthroughKey(el, key)) {
     return
   }
 
@@ -351,7 +358,7 @@ export function setValue(
   value: any,
   forceHydrate: boolean = false,
 ): void {
-  if (!isApplyingFallthroughProps && el.$root && hasFallthroughKey('value')) {
+  if (shouldSkipFallthroughKey(el, 'value')) {
     return
   }
 
@@ -568,6 +575,9 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
+    if (shouldSkipFallthroughKey(el, key)) {
+      return
+    }
     onBinding(el, key[2].toLowerCase() + key.slice(3), value)
   } else if (
     // force hydrate v-bind with .prop modifiers

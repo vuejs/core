@@ -82,7 +82,7 @@ export function genCreateComponent(
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
-      const handler = genEventHandler(context, [value], undefined, false, false)
+      const handler = genEventHandler(context, [value])
       return [...acc, `const ${name} = `, ...handler, NEWLINE]
     },
     [],
@@ -289,8 +289,7 @@ function genStaticProps(
           context,
           prop.values,
           prop.handlerModifiers,
-          true,
-          false,
+          { asComponentProp: true },
         )
         addHandler(keyName, keyFrag, handlerExp)
       } else {
@@ -300,8 +299,7 @@ function genStaticProps(
             context,
             [value],
             prop.handlerModifiers,
-            true,
-            false,
+            { asComponentProp: true },
           )
           addHandler(keyName, keyFrag, handlerExp)
         }
@@ -458,13 +456,10 @@ function genProp(
     ...genPropKey(prop, context),
     ': ',
     ...(prop.handler
-      ? genEventHandler(
-          context,
-          prop.values,
-          prop.handlerModifiers,
-          true /* asComponentProp */,
-          wrapHandler /* wrapInGetter */,
-        )
+      ? genEventHandler(context, prop.values, prop.handlerModifiers, {
+          asComponentProp: true,
+          extraWrap: wrapHandler,
+        })
       : isStatic
         ? directStaticLiteral
           ? values

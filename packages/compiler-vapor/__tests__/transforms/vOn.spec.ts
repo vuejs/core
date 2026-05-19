@@ -107,9 +107,7 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(
-      `_onBinding(n0, _ctx.event, _createInvoker(e => _ctx.handler(e)))`,
-    )
+    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e))`)
   })
 
   test('dynamic arg with prefixing', () => {
@@ -130,9 +128,7 @@ describe('v-on', () => {
 
     expect(helpers).contains('onBinding')
     expect(code).matchSnapshot()
-    expect(code).contains(
-      `_onBinding(n0, _ctx.event, _createInvoker(e => _ctx.handler(e)), {`,
-    )
+    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e), {`)
     expect(code).contains('capture: true')
     expect(code).contains('once: true')
     expect(code).not.contains('effect: true')
@@ -451,7 +447,7 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      `_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop","prevent"])), {
+      `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop","prevent"]), {
     capture: true,
     once: true
   })`,
@@ -509,8 +505,8 @@ describe('v-on', () => {
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))
-  n0.$evtkeyup = _createInvoker(_withKeys(e => _ctx.test(e), ["enter"]))`,
+      `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))
+  n0.$evtkeyup = _withKeys(e => _ctx.test(e), ["enter"])`,
     )
   })
 
@@ -710,6 +706,52 @@ describe('v-on', () => {
     ])
   })
 
+  test('should let runtime event helpers create invokers', () => {
+    const { code } = compileWithVOn(
+      `<div @click.stop="test" /><div @click.foo="a" @click.bar="b" />`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(code).contains(
+      '_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
+    )
+    expect(code).contains('_delegate(n1, "click", e => _ctx.a(e))')
+    expect(code).contains('_delegate(n1, "click", e => _ctx.b(e))')
+    expect(code).not.contains('_createInvoker')
+  })
+
+  test('should hide direct event invokers in modifier guards once', () => {
+    const { code } = compileWithVOn(`<input @keyup.self.enter="test" />`, {
+      prefixIdentifiers: true,
+    })
+
+    expect(code).contains(
+      'n0.$evtkeyup = _withKeys(_withModifiers(e => _ctx.test(e), ["self"]), ["enter"])',
+    )
+    expect(code).not.contains('_createInvoker(_withKeys')
+    expect(code).not.contains('_withKeys(_createInvoker')
+    expect(code).not.contains('_withModifiers(_createInvoker')
+  })
+
+  test('should avoid alias collisions between vapor and runtime guard helpers', () => {
+    const { code } = compileWithVOn(
+      `<input @keyup.enter="foo" /><input @[event].enter="bar" />`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(code).contains('withVaporKeys as _withKeys')
+    expect(code).contains('withKeys as _withKeys1')
+    expect(code).contains(
+      'n0.$evtkeyup = _withKeys(e => _ctx.foo(e), ["enter"])',
+    )
+    expect(code).contains('_onBinding(n1, _ctx.event, _withKeys1')
+    expect(code).contains('e => _ctx.bar(e), ["enter"]))')
+  })
+
   test('should not delegate .stop when have multiple events of same name', () => {
     const { code, helpers } = compileWithVOn(
       `<div @click="test" @click.stop="test" />`,
@@ -717,9 +759,9 @@ describe('v-on', () => {
     expect(helpers).not.contains('delegate')
     expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
-    expect(code).contains('_on(n0, "click", _createInvoker(e => _ctx.test(e)))')
+    expect(code).contains('_on(n0, "click", e => _ctx.test(e))')
     expect(code).contains(
-      '_on(n0, "click", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
+      '_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
     )
   })
 
@@ -732,10 +774,10 @@ describe('v-on', () => {
     expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["right"])))',
+      '_on(n0, "contextmenu", _withModifiers(e => _ctx.test(e), ["right"]))',
     )
     expect(code).contains(
-      '_on(n0, "contextmenu", _createInvoker(_withModifiers(e => _ctx.test(e), ["stop"])))',
+      '_on(n0, "contextmenu", _withModifiers(e => _ctx.test(e), ["stop"]))',
     )
   })
 
