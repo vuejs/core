@@ -10,7 +10,6 @@ import {
 
 type EventHandler = (...args: any[]) => any
 type EventHandlerValue = EventHandler | EventHandler[]
-type MaybeEventHandlerValue = EventHandlerValue | null | undefined
 
 export function addEventListener(
   el: Element,
@@ -153,11 +152,11 @@ export function withVaporKeys<T extends (event: KeyboardEvent) => any>(
   ) as T
 }
 
-export function createInvoker(handler: MaybeEventHandlerValue): EventHandler {
+export function createInvoker(handler: EventHandler): EventHandler {
   const i = currentInstance!
   return (...args: any[]) =>
     callWithAsyncErrorHandling(
-      handler as EventHandlerValue,
+      handler,
       i,
       ErrorCodes.NATIVE_EVENT_HANDLER,
       args,

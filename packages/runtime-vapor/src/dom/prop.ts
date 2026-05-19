@@ -57,7 +57,7 @@ type TargetElement = Element & {
 }
 
 const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
-  const instance = currentInstance as VaporComponentInstance
+  const instance = currentInstance! as VaporComponentInstance
   return (
     !isApplyingFallthroughProps &&
     el.$root &&
