@@ -71,33 +71,27 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             : undefined
           : keyProp.exp)
 
-      if (memo && keyExp && isDirKey) {
-        if (!__BROWSER__) {
-          keyProp.exp = keyExp = processExpression(
-            keyExp as SimpleExpressionNode,
-            context,
-          )
-        }
-      }
-      const keyProperty =
-        keyProp && keyExp ? createObjectProperty(`key`, keyExp) : null
+      const keyProperty = keyExp ? createObjectProperty(`key`, keyExp) : null
 
-      if (!__BROWSER__ && isTemplate) {
+      if (!__BROWSER__) {
         // #2085 / #5288 process :key and v-memo expressions need to be
         // processed on `<template v-for>`. In this case the node is discarded
         // and never traversed so its binding expressions won't be processed
         // by the normal transforms.
-        if (memo) {
+        if (isTemplate && memo) {
           memo.exp = processExpression(
             memo.exp! as SimpleExpressionNode,
             context,
           )
         }
-        if (keyProperty && keyProp!.type !== NodeTypes.ATTRIBUTE) {
-          keyProperty.value = processExpression(
-            keyProperty.value as SimpleExpressionNode,
-            context,
-          )
+        if (keyProperty && isDirKey) {
+          keyExp =
+            keyProp.exp =
+            keyProperty.value =
+              processExpression(
+                keyProperty.value as SimpleExpressionNode,
+                context,
+              )
         }
       }
 
