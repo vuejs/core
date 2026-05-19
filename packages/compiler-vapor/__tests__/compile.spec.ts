@@ -454,9 +454,13 @@ describe('compile', () => {
       expect(code).contains('const t4 = _template("<p>", 2)')
     })
 
-    test('should bump placeholder var (p*) on conflict', () => {
+    test('should bump placeholder cursor var (p*) on conflict', () => {
       const code = compile(
-        `<div><div><div><span :id="foo" /></div></div></div>`,
+        `<div>
+          <div>x</div>
+          <div><span>{{ foo }}</span></div>
+          <div><span>{{ foo }}</span></div>
+        </div>`,
         {
           bindingMetadata: {
             p0: BindingTypes.SETUP_REF,
@@ -467,10 +471,11 @@ describe('compile', () => {
       )
 
       expect(code).matchSnapshot()
-      expect(code).not.contains('const p0 = ')
-      expect(code).not.contains('const p2 = ')
-      expect(code).contains('const p1 = ')
-      expect(code).contains('const p3 = ')
+      expect(code).not.contains('let p0 = ')
+      expect(code).not.contains('let p2 = ')
+      expect(code).contains('let p1 = _next(_child(n2), 1)')
+      expect(code).contains('const n0 = _child(p1)')
+      expect(code).contains('const n1 = _child((p1 = _next(p1, 2)))')
     })
   })
 })
