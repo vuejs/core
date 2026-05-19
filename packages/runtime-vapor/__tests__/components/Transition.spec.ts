@@ -409,6 +409,49 @@ describe('Transition', () => {
     expect(host.innerHTML).not.toContain('<div>fallback</div>')
   })
 
+  test('slot fallback should trigger enter hooks when slot content becomes empty', async () => {
+    const onBeforeEnter = vi.fn()
+    const onEnter = vi.fn()
+    const data = ref({
+      show: true,
+      onBeforeEnter,
+      onEnter,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          @before-enter="data.onBeforeEnter"
+          @enter="data.onEnter"
+        >
+          <slot>
+            <div>22</div>
+          </slot>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <button @click="data.show = !data.show">Toggle</button>
+        <components.Child>
+          <div v-if="data.show">3</div>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+
+    host.querySelector('button')!.click()
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="v-enter-from v-enter-active">22</div>',
+    )
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(onEnter).toHaveBeenCalledTimes(1)
+  })
+
   test('dynamic default slot source should trigger enter hooks when toggled on', async () => {
     const onBeforeEnter = vi.fn()
     const onEnter = vi.fn()

@@ -1130,6 +1130,15 @@ function commitSlotFallback(
   outlet.activeFallback = block
   outlet.fallbackScope = scope
   ensureSlotFallbackOrderHook(outlet, block)
+  if (isTransitionEnabled) {
+    const transitionOutlet = outlet as SlotFallbackOutlet & TransitionOptions
+    if (transitionOutlet.$transition) {
+      transitionOutlet.$transition = applyTransitionHooks(
+        block,
+        transitionOutlet.$transition,
+      )
+    }
+  }
   insertActiveSlotFallback(outlet)
 }
 
