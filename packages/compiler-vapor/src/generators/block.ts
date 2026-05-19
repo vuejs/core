@@ -1,5 +1,10 @@
-import type { BlockIRNode, CoreHelper, IRDynamicInfo } from '../ir'
-import { IRNodeTypes, type OperationNode, isBlockOperation } from '../ir'
+import type { BlockIRNode, CoreHelper, IRDynamicInfo, IRSlots } from '../ir'
+import {
+  IRNodeTypes,
+  IRSlotType,
+  type OperationNode,
+  isBlockOperation,
+} from '../ir'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -181,6 +186,8 @@ function collectSingleUseAssetComponents(block: BlockIRNode): Set<string> {
   const usageMap = new Map<string, AssetComponentUsage>()
   const seenOperations = new Set<OperationNode>()
 
+  // createAssetComponent is only emitted from the root block. Nested blocks,
+  // including component slots, still need the hoisted resolveComponent binding.
   visitBlock(block, true)
 
   const names = new Set<string>()
@@ -223,19 +230,20 @@ function collectSingleUseAssetComponents(block: BlockIRNode): Set<string> {
     }
     seenOperations.add(operation)
 
-    if (
-      operation.type === IRNodeTypes.CREATE_COMPONENT_NODE &&
-      operation.asset
-    ) {
-      const usage = usageMap.get(operation.tag) || {
-        count: 0,
-        root: false,
+    if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
+      if (operation.asset) {
+        const usage = usageMap.get(operation.tag) || {
+          count: 0,
+          root: false,
+        }
+        usage.count++
+        if (rootCandidate) {
+          usage.root = true
+        }
+        usageMap.set(operation.tag, usage)
       }
-      usage.count++
-      if (rootCandidate) {
-        usage.root = true
-      }
-      usageMap.set(operation.tag, usage)
+
+      visitSlots(operation.slots)
       return
     }
 
@@ -261,6 +269,28 @@ function collectSingleUseAssetComponents(block: BlockIRNode): Set<string> {
           visitBlock(operation.fallback, false)
         }
         break
+    }
+  }
+
+  function visitSlots(slots: IRSlots[]) {
+    for (const slot of slots) {
+      switch (slot.slotType) {
+        case IRSlotType.STATIC:
+          for (const name in slot.slots) {
+            visitBlock(slot.slots[name], false)
+          }
+          break
+        case IRSlotType.DYNAMIC:
+        case IRSlotType.LOOP:
+          visitBlock(slot.fn, false)
+          break
+        case IRSlotType.CONDITIONAL:
+          visitSlots([slot.positive])
+          if (slot.negative) {
+            visitSlots([slot.negative])
+          }
+          break
+      }
     }
   }
 }

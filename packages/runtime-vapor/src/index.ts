@@ -51,10 +51,13 @@ export {
 } from './dom/prop'
 export {
   on,
+  onBinding,
   delegate,
   delegateEvents,
   setDynamicEvents,
   createInvoker,
+  withVaporModifiers,
+  withVaporKeys,
 } from './dom/event'
 export { createIf } from './apiCreateIf'
 export { createKeyedFragment } from './apiCreateFragment'

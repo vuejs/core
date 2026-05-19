@@ -270,8 +270,7 @@ export function render(_ctx) {
   const n6 = t1()
   const n5 = _next(_child(n6), 1)
   const n7 = _nthChild(n6, 3)
-  const p0 = _next(n7, 4)
-  const n4 = _child(p0)
+  const n4 = _child(_next(n7, 4))
   _setInsertionState(n6, n5, 1)
   const n0 = _createAssetComponent("Comp")
   _setInsertionState(n6, n7, 3)
@@ -459,17 +458,23 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compile > gen unique node variables > should bump placeholder var (p*) on conflict 1`] = `
-"import { child as _child, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div><div><div><span>", 1)
+exports[`compile > gen unique node variables > should bump placeholder cursor var (p*) on conflict 1`] = `
+"import { child as _child, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><div>x</div><div><span> </div><div><span> ", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const n1 = t0()
-  const p1 = _child(n1)
-  const p3 = _child(p1)
-  const n0 = _child(p3)
-  _renderEffect(() => _setProp(n0, "id", _ctx.foo))
-  return n1
+  const n2 = t0()
+  let p1 = _next(_child(n2), 1)
+  const n0 = _child(p1)
+  const n1 = _child((p1 = _next(p1, 2)))
+  const x0 = _txt(n0)
+  const x1 = _txt(n1)
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setText(x0, _toDisplayString(_foo))
+    _setText(x1, _toDisplayString(_foo))
+  })
+  return n2
 }"
 `;
 
