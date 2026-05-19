@@ -442,6 +442,24 @@ describe('renderEffect', () => {
     expect(calls).toEqual(['mouseover'])
   })
 
+  test('setEventBinding does not mutate listener options', () => {
+    const options = { once: true }
+    const button = document.createElement('button')
+    const scope = new EffectScope()
+
+    scope.run(() => {
+      setEventBinding(
+        button,
+        () => 'click',
+        () => {},
+        options,
+      )
+    })
+    scope.stop()
+
+    expect(options).toEqual({ once: true })
+  })
+
   test('should run with the scheduling order', async () => {
     const calls: string[] = []
 
