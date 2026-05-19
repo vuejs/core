@@ -156,7 +156,8 @@ function resolveClassName(
   let sawDynamic = false
   let sawSuffix = false
 
-  for (const value of values) {
+  for (const rawValue of values) {
+    const value = context.getExpressionReplacement(rawValue)
     const staticValue = getLiteralExpressionValue(value, true)
     if (staticValue != null) {
       const normalized = normalizeClass(staticValue)

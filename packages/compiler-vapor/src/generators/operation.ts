@@ -112,42 +112,49 @@ export function genEffects(
     ids,
     frag: declarationFrags,
     varNames,
+    expressionReplacements,
   } = processExpressions(context, expressions, shouldDeclare)
-  push(...declarationFrags)
-  for (let i = 0; i < effects.length; i++) {
-    const effect = effects[i]
-    operationsCount += effect.operations.length
-    const frags = context.withId(() => genEffect(effect, context), ids)
-    i > 0 && push(NEWLINE)
-    if (frag[frag.length - 1] === ')' && frags[0] === '(') {
-      push(';')
+  return context.withExpressionReplacements(expressionReplacements, () => {
+    push(...declarationFrags)
+    for (let i = 0; i < effects.length; i++) {
+      const effect = effects[i]
+      operationsCount += effect.operations.length
+      const frags = context.withId(() => genEffect(effect, context), ids)
+      i > 0 && push(NEWLINE)
+      if (frag[frag.length - 1] === ')' && frags[0] === '(') {
+        push(';')
+      }
+      push(...frags)
     }
-    push(...frags)
-  }
 
-  const newLineCount = frag.filter(frag => frag === NEWLINE).length
-  if (newLineCount > 1 || operationsCount > 1 || declarationFrags.length > 0) {
-    unshift(`{`, INDENT_START, NEWLINE)
-    push(INDENT_END, NEWLINE, '}')
-    if (!effects.length) {
-      unshift(NEWLINE)
+    const newLineCount = frag.filter(frag => frag === NEWLINE).length
+    if (
+      newLineCount > 1 ||
+      operationsCount > 1 ||
+      declarationFrags.length > 0
+    ) {
+      unshift(`{`, INDENT_START, NEWLINE)
+      push(INDENT_END, NEWLINE, '}')
+      if (!effects.length) {
+        unshift(NEWLINE)
+      }
     }
-  }
 
-  if (effects.length) {
-    unshift(NEWLINE, `${helper('renderEffect')}(() => `)
-    push(`)`)
-  }
+    if (effects.length) {
+      unshift(NEWLINE, `${helper('renderEffect')}(() => `)
+      push(`)`)
+    }
 
-  if (!shouldDeclare && varNames.length) {
-    unshift(NEWLINE, `let `, varNames.join(', '))
-  }
+    if (!shouldDeclare && varNames.length) {
+      unshift(NEWLINE, `let `, varNames.join(', '))
+    }
 
-  if (genExtraFrag) {
-    push(...context.withId(genExtraFrag, ids))
-  }
+    if (genExtraFrag) {
+      push(...context.withId(genExtraFrag, ids))
+    }
 
-  return frag
+    return frag
+  })
 }
 
 export function genEffect(
