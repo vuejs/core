@@ -1130,6 +1130,18 @@ function commitSlotFallback(
   outlet.activeFallback = block
   outlet.fallbackScope = scope
   ensureSlotFallbackOrderHook(outlet, block)
+  if (isTransitionEnabled) {
+    const transitionOutlet = outlet as SlotFallbackOutlet & TransitionOptions
+    if (transitionOutlet.$transition) {
+      // Match VDOM slot fallback branch identity so fallback enter does not
+      // early-remove the currently leaving slot content.
+      setBlockKey(block, '_fb')
+      transitionOutlet.$transition = applyTransitionHooks(
+        block,
+        transitionOutlet.$transition,
+      )
+    }
+  }
   insertActiveSlotFallback(outlet)
 }
 
