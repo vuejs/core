@@ -81,6 +81,22 @@ describe('compiler: logicalIndex', () => {
       expect(code).toMatchSnapshot()
     })
 
+    test('inline placeholder keeps logicalIndex when it differs from element index', () => {
+      // <div><Comp /><i /><b /><section><span>{{ msg }}</span></section></div>
+      // Comp is prepended and not part of the template, so the section is
+      // elementIndex=2 but logicalIndex=3.
+      const { code } = compileWithTransforms(`
+        <div>
+          <Comp />
+          <i />
+          <b />
+          <section><span>{{ msg }}</span></section>
+        </div>
+      `)
+      expect(code).toMatch(/const n\d+ = _child\(_nthChild\(n\d+, 2, 3\)\)/)
+      expect(code).toMatchSnapshot()
+    })
+
     test('child with logicalIndex when prepend exists and insert anchor needed', () => {
       // <div><Comp1 /><div /><Comp2 /><span /></div>
       // Comp1: 0 (prepend), div: 1, Comp2: 2 (insert), span: 3

@@ -15,6 +15,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > inline placeholder keeps logicalIndex when it differs from element index 1`] = `
+"import { setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div><i></i><b></b><section><span> ", 1)
+
+export function render(_ctx) {
+  const n2 = t0()
+  const n1 = _child(_nthChild(n2, 2, 3))
+  _setInsertionState(n2, 0, 0)
+  const n0 = _createAssetComponent("Comp")
+  const x1 = _txt(n1)
+  _renderEffect(() => _setText(x1, _toDisplayString(_ctx.msg)))
+  return n2
+}"
+`;
+
 exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > multiple prepends affect logicalIndex 1`] = `
 "import { setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, next as _next, template as _template } from 'vue';
 const t0 = _template("<div><div></div><!><span>", 1)
@@ -52,16 +67,15 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > nthChild keeps logicalIndex when it differs from element index 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, child as _child, nthChild as _nthChild, createIf as _createIf, template as _template } from 'vue';
+"import { setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, nthChild as _nthChild, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div>", 2)
 const t1 = _template("<div><div></div><span></span><!><div><button>", 1)
 
 export function render(_ctx) {
-  const _component_Comp = _resolveComponent("Comp")
   const n4 = t1()
   const n5 = _nthChild(n4, 2, 3)
   _setInsertionState(n4, 0, 0)
-  const n0 = _createComponentWithFallback(_component_Comp)
+  const n0 = _createAssetComponent("Comp")
   _setInsertionState(n4, n5, 3)
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
