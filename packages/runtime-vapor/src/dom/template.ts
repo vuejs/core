@@ -4,19 +4,17 @@ import {
   currentHydrationNode,
   isHydrating,
   resolveHydrationTarget,
+  validateHydrationTarget,
 } from './hydration'
-import { type Namespace, Namespaces } from '@vue/shared'
+import { type Namespace, Namespaces, TemplateFlags } from '@vue/shared'
 import { _child, createTextNode } from './node'
 
 let t: HTMLTemplateElement
 
 /*@__NO_SIDE_EFFECTS__*/
-export function template(
-  html: string,
-  root?: boolean,
-  isStatic?: boolean,
-  ns?: Namespace,
-) {
+export function template(html: string, flags: number = 0, ns?: Namespace) {
+  const root = !!(flags & TemplateFlags.ROOT)
+  const isStatic = !!(flags & TemplateFlags.STATIC)
   let node: Node
   return (): Node & { $root?: true } => {
     if (isHydrating) {
@@ -27,12 +25,18 @@ export function template(
       // never mutates their DOM afterwards.
       if (isStatic) {
         adopted = resolveHydrationTarget(currentHydrationNode!)
+        if (
+          (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+          html !== ''
+        ) {
+          validateHydrationTarget(adopted, html)
+        }
         node = adopted.cloneNode(true)
         advanceHydrationNode(adopted)
       } else {
         // do not cache the adopted node in node because it contains child nodes
         // this avoids duplicate rendering of children
-        adopted = adoptTemplate(currentHydrationNode!, html)!
+        adopted = adoptTemplate(currentHydrationNode!, html, false, ns)!
       }
       if (root) (adopted as any).$root = true
       return adopted

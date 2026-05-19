@@ -111,17 +111,18 @@ function setDisplay(target: Block, value: unknown): void {
         isHydrating
       ) {
         if (!value && el.style.display !== 'none') {
-          warnPropMismatch(
+          const hasMismatch = warnPropMismatch(
             el,
             'style',
             MismatchTypes.STYLE,
             `display: ${el.style.display}`,
             'display: none',
           )
-          logMismatchError()
-
-          el.style.display = 'none'
-          el[vShowOriginalDisplay] = ''
+          if (hasMismatch) {
+            logMismatchError()
+            el.style.display = 'none'
+            el[vShowOriginalDisplay] = ''
+          }
         }
       } else {
         el.style.display = value ? el[vShowOriginalDisplay]! : 'none'

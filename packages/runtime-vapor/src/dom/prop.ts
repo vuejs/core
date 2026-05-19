@@ -645,9 +645,10 @@ function classHasMismatch(
   }
 
   if (hasMismatch) {
-    warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)
-    logMismatchError()
-    return true
+    if (warnPropMismatch(el, 'class', MismatchTypes.CLASS, actual, expected)) {
+      logMismatchError()
+      return true
+    }
   }
 
   return false
@@ -688,9 +689,10 @@ function styleHasMismatch(
   }
 
   if (hasMismatch) {
-    warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)
-    logMismatchError()
-    return true
+    if (warnPropMismatch(el, 'style', MismatchTypes.STYLE, actual, expected)) {
+      logMismatchError()
+      return true
+    }
   }
 
   return false
@@ -733,9 +735,12 @@ function attributeHasMismatch(el: any, key: string, value: any): boolean {
   if (isValidHtmlOrSvgAttribute(el, key)) {
     const { actual, expected } = getAttributeMismatch(el, key, value)
     if (actual !== expected) {
-      warnPropMismatch(el, key, MismatchTypes.ATTRIBUTE, actual, expected)
-      logMismatchError()
-      return true
+      if (
+        warnPropMismatch(el, key, MismatchTypes.ATTRIBUTE, actual, expected)
+      ) {
+        logMismatchError()
+        return true
+      }
     }
   }
   return false

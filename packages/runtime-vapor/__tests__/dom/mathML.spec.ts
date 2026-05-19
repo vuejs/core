@@ -32,8 +32,7 @@ describe('MathML support', () => {
               </annotation-xml>
             </semantics>
           </math>`,
-          true,
-          true,
+          3,
           2,
         )
         const n0 = t0()
@@ -56,7 +55,7 @@ describe('MathML support', () => {
       setup() {
         const t0 = template(
           '<div><math id="f1"><annotation encoding="text/html"><a id="f2"></a></annotation></math></div>',
-          true,
+          1,
         )
 
         const n2 = t0() as HTMLElement

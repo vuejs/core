@@ -110,7 +110,7 @@ describe('api: createDynamicComponent', () => {
     const { html, mount } = define({
       setup() {
         const html = ref('hi')
-        const n1 = template('<div></div>', true)() as any
+        const n1 = template('<div></div>', 1)() as any
         setInsertionState(n1)
         const n0 = createComponentWithFallback(
           resolveDynamicComponent('button') as any,

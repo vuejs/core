@@ -16,6 +16,7 @@ import {
   watchEffect,
 } from '@vue/runtime-dom'
 import {
+  createAssetComponent,
   createComponent,
   createIf,
   createTextNode,
@@ -71,7 +72,7 @@ describe('component', () => {
   it('should create a component with props', () => {
     const { component: Comp } = define({
       setup() {
-        return template('<div>', true)()
+        return template('<div>', 1)()
       },
     })
 
@@ -84,13 +85,63 @@ describe('component', () => {
     expect(host.innerHTML).toBe('<div id="foo" class="bar"></div>')
   })
 
+  it('should create an asset component', () => {
+    const { component: Child } = define({
+      setup() {
+        return template('<span>child</span>')()
+      },
+    })
+
+    const { host } = define({
+      components: { Child },
+      setup() {
+        return createAssetComponent('Child')
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>child</span>')
+  })
+
+  it('should fallback unresolved component to plain element', () => {
+    const { host } = define({
+      setup() {
+        return createAssetComponent('foo-bar', { id: 'foo' }, null, true)
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<foo-bar id="foo"></foo-bar>')
+    expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
+  })
+
+  it('should pass maybeSelfReference when creating asset component', () => {
+    const { host } = define({
+      props: ['nested'],
+      setup(props: any) {
+        if (props.nested) {
+          return template('<span>self</span>')()
+        }
+        return createAssetComponent(
+          'ImplicitSelf',
+          { nested: true },
+          null,
+          true,
+          undefined,
+          true,
+        )
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>self</span>')
+    expect(`Failed to resolve component: ImplicitSelf`).not.toHaveBeenWarned()
+  })
+
   it('should not update Component if only changed props are declared emit listeners', async () => {
     const updatedSyp = vi.fn()
     const { component: Comp } = define({
       emits: ['foo'],
       setup() {
         onUpdated(updatedSyp)
-        return template('<div>', true)()
+        return template('<div>', 1)()
       },
     })
 
@@ -323,7 +374,7 @@ describe('component', () => {
 
     const { host } = define({
       setup() {
-        const n2 = template('<div></div>', true)()
+        const n2 = template('<div></div>', 1)()
         setInsertionState(n2 as any)
         createComponent(Comp)
         return n2
@@ -498,7 +549,7 @@ describe('component', () => {
     try {
       const { component: Child } = define({
         render() {
-          return template('<div> HI </div>', true)()
+          return template('<div> HI </div>', 1)()
         },
       })
 

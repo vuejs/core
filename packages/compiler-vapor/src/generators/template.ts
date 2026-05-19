@@ -1,5 +1,6 @@
 import type { CodegenContext } from '../generate'
 import { DynamicFlag, type IRDynamicInfo, type IRTemplate } from '../ir'
+import { TemplateFlags } from '@vue/shared'
 import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
 import {
@@ -22,14 +23,10 @@ export function genTemplates(
       `" + $1 + "`,
     )
 
-    if (root) {
-      args += ', true'
-    } else if (isStatic || ns) {
-      args += ', false'
-    }
-
-    if (isStatic || ns) {
-      args += `, ${isStatic ? 'true' : 'false'}`
+    const flags =
+      (root ? TemplateFlags.ROOT : 0) | (isStatic ? TemplateFlags.STATIC : 0)
+    if (flags || ns) {
+      args += `, ${flags}`
     }
 
     if (ns) {
@@ -113,6 +110,10 @@ export function genChildren(
     const elementIndex = index + offset
     const logicalIndex =
       child.logicalIndex !== undefined ? String(child.logicalIndex) : undefined
+    // nthChild defaults the logical index to the element index at runtime, so
+    // the third argument is only needed when hydration uses a different index.
+    const nthChildLogicalIndex =
+      child.logicalIndex === elementIndex ? undefined : logicalIndex
     // p for "placeholder" variables that are meant for possible reuse by
     // other access paths
     const variable =
@@ -128,7 +129,7 @@ export function genChildren(
             helper('nthChild'),
             from,
             String(elementIndex),
-            logicalIndex,
+            nthChildLogicalIndex,
           ),
         )
       }
@@ -151,7 +152,7 @@ export function genChildren(
             helper('nthChild'),
             from,
             String(elementIndex),
-            logicalIndex,
+            nthChildLogicalIndex,
           )
         }
         pushBlock(...init)

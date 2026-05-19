@@ -33,6 +33,7 @@ import {
   pushWarningContext,
   queuePostFlushCb,
   registerHMR,
+  resolveComponent,
   setCurrentInstance,
   setCurrentRenderingInstance,
   startMeasure,
@@ -96,8 +97,8 @@ import {
   isComment,
   isHydrating,
   locateEndAnchor,
-  locateNextNode,
   markHydrationAnchor,
+  nextLogicalSibling,
   setCurrentHydrationNode,
   withDeferredHydrationBoundary,
 } from './dom/hydration'
@@ -233,14 +234,9 @@ interface SharedInternalOptions {
 // In TypeScript, it is actually impossible to have a record type with only
 // specific properties that have a different type from the indexed type.
 // This makes our rawProps / rawSlots shape difficult to satisfy when calling
-// `createComponent` - luckily this is not user-facing, so we don't need to be
-// 100% strict. Here we use intentionally wider types to make `createComponent`
-// more ergonomic in tests and internal call sites, where we immediately cast
-// them into the stricter types.
-export type LooseRawProps = Record<
-  string,
-  (() => unknown) | DynamicPropsSource[]
-> & {
+// `createComponent` - luckily this is not user-facing, so we use intentionally
+// wider types to make `createComponent` ergonomic in tests and internal call sites.
+export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
 }
 
@@ -871,6 +867,30 @@ export function isVaporComponent(
 }
 
 /**
+ * Resolve an asset component by name before passing it to the fallback helper;
+ * a string passed directly to `createComponentWithFallback` is plain element
+ * fallback, not a component name.
+ */
+export function createAssetComponent(
+  name: string,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
+  isSingleRoot?: boolean,
+  once?: boolean,
+  maybeSelfReference?: boolean,
+  appContext?: GenericAppContext,
+): HTMLElement | VaporComponentInstance {
+  return createComponentWithFallback(
+    resolveComponent(name, maybeSelfReference) as VaporComponent | string,
+    rawProps,
+    rawSlots,
+    isSingleRoot,
+    once,
+    appContext,
+  )
+}
+
+/**
  * Used when a component cannot be resolved at compile time
  * and needs rely on runtime resolution - where it might fallback to a plain
  * element if the resolution fails.
@@ -893,7 +913,7 @@ export function createComponentWithFallback(
         return node as any as HTMLElement
       }
 
-      const nextAnchor = locateNextNode(currentHydrationNode)
+      const nextAnchor = nextLogicalSibling(currentHydrationNode)
       if (nextAnchor && isReusableNullComponentAnchor(nextAnchor)) {
         // Keep the cursor on the stale SSR node before `nextAnchor` so the
         // owning DynamicFragment can trim that range on hydrate exit and then
@@ -945,8 +965,17 @@ export function createPlainElement(
     resetInsertionState()
   }
 
+  const defaultSlot = rawSlots && getSlot(rawSlots as RawSlots, 'default')
+  const hasDynamicSlots = !!rawSlots && !!rawSlots.$
+  const adoptHydrationChildren = !!defaultSlot
+  const hydrationTemplate =
+    hasDynamicSlots && !defaultSlot ? `<${comp}><!></${comp}>` : `<${comp}/>`
   const el = isHydrating
-    ? (adoptTemplate(currentHydrationNode!, `<${comp}/>`) as HTMLElement)
+    ? (adoptTemplate(
+        currentHydrationNode!,
+        hydrationTemplate,
+        adoptHydrationChildren,
+      ) as HTMLElement)
     : createElement(comp)
 
   // mark single root
@@ -967,7 +996,7 @@ export function createPlainElement(
   if (rawSlots) {
     let nextNode: Node | null = null
     if (isHydrating) {
-      nextNode = locateNextNode(el)
+      nextNode = nextLogicalSibling(el)
       setCurrentHydrationNode(el.firstChild)
     }
     if (rawSlots.$) {

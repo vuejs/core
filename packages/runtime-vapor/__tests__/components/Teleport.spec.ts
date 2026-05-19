@@ -250,7 +250,7 @@ describe('renderer: VaporTeleport', () => {
       const { mount, component: Parent } = define({
         __hmrId: parentId,
         render() {
-          const n2 = template('<div><div>root</div></div>', true)() as any
+          const n2 = template('<div><div>root</div></div>', 1)() as any
           setInsertionState(n2, 0)
           createComp(
             VaporTeleport,
@@ -275,7 +275,7 @@ describe('renderer: VaporTeleport', () => {
 
       // rerender parent
       rerender(parentId, () => {
-        const n2 = template('<div><div>root 2</div></div>', true)() as any
+        const n2 = template('<div><div>root 2</div></div>', 1)() as any
         setInsertionState(n2, 0)
         createComp(
           VaporTeleport,
@@ -770,7 +770,7 @@ function runSharedTests(deferMode: boolean): void {
     const { host } = define({
       setup() {
         const _setTemplateRef = createTemplateRefSetter()
-        const n0 = template('<svg></svg>', false, false, 1)() as any
+        const n0 = template('<svg></svg>', 0, 1)() as any
         const n1 = createIf(
           () => svg.value,
           () => {
@@ -779,12 +779,7 @@ function runSharedTests(deferMode: boolean): void {
               { to: () => svg.value },
               {
                 default: () => {
-                  const n3 = template(
-                    '<circle></circle>',
-                    false,
-                    false,
-                    1,
-                  )() as any
+                  const n3 = template('<circle></circle>', 0, 1)() as any
                   _setTemplateRef(n3, circle, undefined, 'circle')
                   return n3
                 },
@@ -1864,8 +1859,8 @@ test('should reapply css vars when teleport root children are replaced', async (
         {
           default: () =>
             showAlt.value
-              ? template('<p>alt</p>', true)()
-              : template('<span>base</span>', true)(),
+              ? template('<p>alt</p>', 1)()
+              : template('<span>base</span>', 1)(),
         },
       )
     },

@@ -23,7 +23,7 @@ import {
   ref,
   withDirectives,
 } from '@vue/runtime-dom'
-import { isString } from '@vue/shared'
+import { Namespaces, isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
@@ -5156,6 +5156,31 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('disabled teleport range should count as one logical child during hydration', async () => {
+      const data = ref({ msg: 'after' })
+
+      const { container } = await mountWithHydration(
+        '<div><!--teleport start--><span>teleported</span><!--teleport end--><p>after</p></div>',
+        `<div>
+          <teleport :to="undefined" :disabled="true">
+            <span>teleported</span>
+          </teleport>
+          <p>{{data.msg}}</p>
+        </div>`,
+        data,
+      )
+
+      expect(container.innerHTML).toBe(
+        '<div><!--teleport start--><span>teleported</span><!--teleport end--><p>after</p></div>',
+      )
+
+      data.value.msg = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<div><!--teleport start--><span>teleported</span><!--teleport end--><p>updated</p></div>',
+      )
+    })
+
     test('enabled teleport with null target', async () => {
       const { container } = await mountWithHydration(
         '<!--teleport start--><!--teleport end-->',
@@ -5325,7 +5350,7 @@ describe('Vapor Mode hydration', () => {
           return createComponent(
             VaporTeleport,
             { to: () => '#teleport-css-vars' },
-            { default: () => template('<span>content</span>', true)() },
+            { default: () => template('<span>content</span>', 1)() },
           )
         },
       })
@@ -6824,6 +6849,112 @@ describe('mismatch handling', () => {
     expect(container.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
+  test('element mismatch should use client template static content', () => {
+    const container = document.createElement('div')
+    container.innerHTML =
+      '<span class="server-only">server text</span><i>after</i>'
+
+    setIsHydratingEnabled(true)
+    try {
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template(
+          '<div class="client-only">client text</div>',
+        )() as HTMLElement
+
+        expect(n0).toBe(container.firstChild)
+      })
+    } finally {
+      setIsHydratingEnabled(false)
+    }
+
+    expect(container.innerHTML).toBe(
+      '<div class="client-only">client text</div><i>after</i>',
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
+  test('dynamic component element mismatch should adopt slot children', async () => {
+    const data = ref('foo')
+    const { container } = await mountWithHydration(
+      '<span><b>foo</b></span>',
+      `<component :is="'div'"><b>{{ data }}</b></component>`,
+      data,
+    )
+
+    expect(container.innerHTML).toBe(
+      '<div><b>foo</b></div><!--dynamic-component-->',
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><b>bar</b></div><!--dynamic-component-->',
+    )
+  })
+  test('dynamic component element mismatch should not adopt named slot children', async () => {
+    const data = ref({ name: 'foo', msg: 'client' })
+    const { container } = await mountWithHydration(
+      '<span><b>stale</b></span>',
+      `<component :is="'div'">
+        <template v-slot:[data.name]>
+          <b>{{ data.msg }}</b>
+        </template>
+      </component>`,
+      data,
+    )
+
+    expect(container.innerHTML).toBe(
+      '<div><!----></div><!--dynamic-component-->',
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+    data.value = { name: 'default', msg: 'updated' }
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><b>updated</b><!----></div><!--dynamic-component-->',
+    )
+  })
+
+  test('SVG child mismatch preserves namespace', () => {
+    setIsHydratingEnabled(true)
+    try {
+      const container = document.createElement('div')
+      container.innerHTML = `<svg><rect></rect></svg>`
+      const svg = container.firstChild as SVGElement
+
+      hydrateNode(svg.firstChild!, () => {
+        template('<circle></circle>', 1, Namespaces.SVG)()
+      })
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+      const circle = svg.firstChild as SVGElement
+      expect(circle.localName).toBe('circle')
+      expect(circle.namespaceURI).toBe('http://www.w3.org/2000/svg')
+    } finally {
+      setIsHydratingEnabled(false)
+    }
+  })
+
+  test('MathML child mismatch preserves namespace', () => {
+    setIsHydratingEnabled(true)
+    try {
+      const container = document.createElement('div')
+      container.innerHTML = `<math><mn></mn></math>`
+      const math = container.firstChild as MathMLElement
+
+      hydrateNode(math.firstChild!, () => {
+        template('<mi></mi>', 1, Namespaces.MATH_ML)()
+      })
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+      const mi = math.firstChild as MathMLElement
+      expect(mi.localName).toBe('mi')
+      expect(mi.namespaceURI).toBe('http://www.w3.org/1998/Math/MathML')
+    } finally {
+      setIsHydratingEnabled(false)
+    }
+  })
+
   test('v-if empty branch should remove stale branch before trailing sibling', async () => {
     const code = `
       <div>
@@ -7226,7 +7357,7 @@ describe('mismatch handling', () => {
     const app = createVaporSSRApp({
       setup() {
         useVaporCssVars(() => ({ foo: 'red' }))
-        const n0 = template('<div></div>', true)() as any
+        const n0 = template('<div></div>', 1)() as any
         renderEffect(() => setStyle(n0, { color: 'var(--foo)' }))
         return n0
       },
@@ -7241,7 +7372,7 @@ describe('mismatch handling', () => {
     const app = createVaporSSRApp({
       setup() {
         useVaporCssVars(() => ({ foo: 'red' }))
-        const n0 = template('<div><div></div></div>', true)() as any
+        const n0 = template('<div><div></div></div>', 1)() as any
         const n1 = child(n0) as any
         renderEffect(() => setStyle(n1, { color: 'var(--foo)' }))
         return n0
@@ -7262,7 +7393,7 @@ describe('mismatch handling', () => {
     })
     const Child = defineVaporComponent({
       setup() {
-        const n0 = template('<div></div>', true)() as any
+        const n0 = template('<div></div>', 1)() as any
         renderEffect(() => setStyle(n0, { padding: '4px' }))
         return n0
       },
@@ -7301,7 +7432,7 @@ describe('mismatch handling', () => {
     })
     const Child = defineVaporComponent({
       setup() {
-        const n0 = template('<div></div>', true)() as any
+        const n0 = template('<div></div>', 1)() as any
         renderEffect(() => setStyle(n0, { padding: '4px' }))
         return n0
       },
@@ -7325,7 +7456,7 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('<div><span>foo', false, true)() as HTMLElement
+        const n0 = template('<div><span>foo', 2)() as HTMLElement
         const n1 = template('<span> </span>')() as HTMLElement
         const x1 = child(n1) as Text
 
@@ -7350,7 +7481,7 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('hello', false, true)() as Text
+        const n0 = template('hello', 2)() as Text
         const n1 = template('<span> </span>')() as HTMLElement
         const x1 = child(n1) as Text
 
@@ -7372,7 +7503,7 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('<!--foo-->', false, true)() as Comment
+        const n0 = template('<!--foo-->', 2)() as Comment
         const n1 = template('<span> </span>')() as HTMLElement
         const x1 = child(n1) as Text
 
@@ -7388,14 +7519,65 @@ describe('mismatch handling', () => {
       expect(container.innerHTML).toBe(`<!--foo--><span>updated</span>`)
     })
 
+    test('warns on static element tag mismatch', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<span>foo</span><span>after</span>`
+
+      hydrateNode(container.firstChild!, () => {
+        const n0 = template('<div>foo', 2)() as HTMLElement
+        const n1 = template('<span>after', 2)() as HTMLElement
+
+        expect(n0).toBe(container.firstChild)
+        expect(n1).toBe(container.lastChild)
+      })
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
+    test('warns on static first-node type mismatches', () => {
+      const cases = [
+        { server: `foo<span>after</span>`, client: '<div>foo' },
+        { server: `<!--foo--><span>after</span>`, client: '<div>foo' },
+        { server: `<div>foo</div><span>after</span>`, client: 'foo' },
+      ]
+
+      for (const { server, client } of cases) {
+        const container = document.createElement('div')
+        container.innerHTML = server
+
+        hydrateNode(container.firstChild!, () => {
+          template(client, 2)()
+          template('<span>after', 2)()
+        })
+      }
+
+      expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(3)
+    })
+
+    test('does not warn static first-node mismatch when parent allows children mismatch', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div data-allow-mismatch="children"><span>foo</span><span>after</span></div>`
+      const parent = container.firstChild as HTMLElement
+
+      hydrateNode(parent.firstChild!, () => {
+        const n0 = template('<div>foo', 2)() as HTMLElement
+        const n1 = template('<span>after', 2)() as HTMLElement
+
+        expect(n0).toBe(parent.firstChild)
+        expect(n1).toBe(parent.lastChild)
+      })
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
     test('multi-root static nodes', async () => {
       const container = document.createElement('div')
       container.innerHTML = `<!--[--><div>one</div><p>two</p><!--]--><span>after</span>`
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('<div>one', false, true)() as HTMLElement
-        const n1 = template('<p>two', false, true)() as HTMLElement
+        const n0 = template('<div>one', 2)() as HTMLElement
+        const n1 = template('<p>two', 2)() as HTMLElement
         const n2 = template('<span> </span>')() as HTMLElement
         const x2 = child(n2) as Text
 
@@ -7421,7 +7603,7 @@ describe('mismatch handling', () => {
       const msg = ref('after')
 
       hydrateNode(container.firstChild!, () => {
-        const n0 = template('', false, true)() as HTMLElement
+        const n0 = template('', 2)() as HTMLElement
         const n1 = template('<span> </span>')() as HTMLElement
         const x1 = child(n1) as Text
 
@@ -7439,7 +7621,7 @@ describe('mismatch handling', () => {
     test('stripped static template can be cloned after hydration', () => {
       const container = document.createElement('div')
       container.innerHTML = `<div>claimed</div>`
-      const t1 = template('', true, true)
+      const t1 = template('', 3)
       let hydrated: HTMLElement
 
       hydrateNode(container.firstChild!, () => {
@@ -7726,34 +7908,99 @@ describe('data-allow-mismatch', () => {
   //   expect(`Hydration node mismatch`).not.toHaveBeenWarned()
   // })
   test('class mismatch', async () => {
-    await mountWithHydration(
-      `<div class="foo bar" data-allow-mismatch="class"></div>`,
-      `<div :class="data"></div>`,
-      ref('foo'),
+    const data = ref('foo')
+    const { container } = await mountWithHydration(
+      `<section><div class="bar" data-allow-mismatch="class"></div></section>`,
+      `<section><div :class="data"></div></section>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<section><div class="bar" data-allow-mismatch="class"></div></section>',
+    )
+
+    data.value = 'baz'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<section><div class="baz" data-allow-mismatch="class"></div></section>',
     )
     expect(`Hydration class mismatch`).not.toHaveBeenWarned()
   })
 
   test('style mismatch', async () => {
-    await mountWithHydration(
-      `<div style="color:red;" data-allow-mismatch="style"></div>`,
-      `<div :style="data"></div>`,
-      ref({ color: 'green' }),
+    const data = ref({ color: 'green' })
+    const { container } = await mountWithHydration(
+      `<section><div style="color:red;" data-allow-mismatch="style"></div></section>`,
+      `<section><div :style="data"></div></section>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<section><div style="color:red;" data-allow-mismatch="style"></div></section>',
+    )
+
+    data.value = { color: 'blue' }
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<section><div style="color: blue;" data-allow-mismatch="style"></div></section>',
+    )
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('style mismatch w/ v-show', async () => {
+    const data = ref(false)
+    const { container } = await mountWithHydration(
+      `<section><div style="color:red;" data-allow-mismatch="style"></div></section>`,
+      `<section><div v-show="data" style="color: red;"></div></section>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<section><div style="color:red;" data-allow-mismatch="style"></div></section>',
+    )
+
+    data.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<section><div style="color:red;" data-allow-mismatch="style"></div></section>',
+    )
+
+    data.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<section><div style="color: red; display: none;" data-allow-mismatch="style"></div></section>',
     )
     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
   })
 
   test('attr mismatch', async () => {
-    await mountWithHydration(
-      `<div data-allow-mismatch="attribute"></div>`,
-      `<div :id="data"></div>`,
-      ref('foo'),
+    const missing = ref('foo')
+    const { container: missingContainer } = await mountWithHydration(
+      `<section><div data-allow-mismatch="attribute"></div></section>`,
+      `<section><div :id="data"></div></section>`,
+      missing,
+    )
+    expect(missingContainer.innerHTML).toBe(
+      '<section><div data-allow-mismatch="attribute"></div></section>',
     )
 
-    await mountWithHydration(
-      `<div id="bar" data-allow-mismatch="attribute"></div>`,
-      `<div :id="data"></div>`,
-      ref('foo'),
+    missing.value = 'baz'
+    await nextTick()
+    expect(missingContainer.innerHTML).toBe(
+      '<section><div data-allow-mismatch="attribute" id="baz"></div></section>',
+    )
+
+    const mismatched = ref('foo')
+    const { container: mismatchedContainer } = await mountWithHydration(
+      `<section><div id="bar" data-allow-mismatch="attribute"></div></section>`,
+      `<section><div :id="data"></div></section>`,
+      mismatched,
+    )
+    expect(mismatchedContainer.innerHTML).toBe(
+      '<section><div id="bar" data-allow-mismatch="attribute"></div></section>',
+    )
+
+    mismatched.value = 'baz'
+    await nextTick()
+    expect(mismatchedContainer.innerHTML).toBe(
+      '<section><div id="baz" data-allow-mismatch="attribute"></div></section>',
     )
 
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()

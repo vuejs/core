@@ -69,7 +69,7 @@ describe('defineVaporCustomElement', () => {
         },
       },
       setup(props: any) {
-        const n0 = template('<div> </div>', true)() as any
+        const n0 = template('<div> </div>', 1)() as any
         const x0 = txt(n0) as any
         renderEffect(() => setText(x0, toDisplayString(props.msg)))
         return n0
@@ -109,7 +109,7 @@ describe('defineVaporCustomElement', () => {
         props: ['value'],
         emits: ['update'],
         setup(props: any, { emit }: any) {
-          const n0 = template('<input type="number">', true)() as any
+          const n0 = template('<input type="number">', 1)() as any
           n0.$evtinput = () => {
             const num = (n0 as HTMLInputElement).valueAsNumber
             emit('update', Number.isNaN(num) ? null : num)
@@ -124,7 +124,7 @@ describe('defineVaporCustomElement', () => {
       const num = ref('12')
       const containerComp = defineVaporComponent({
         setup() {
-          const n1 = template('<div><div id="move"></div></div>', true)() as any
+          const n1 = template('<div><div id="move"></div></div>', 1)() as any
           setInsertionState(n1, 0, 0)
           createPlainElement('my-el-input', {
             value: () => num.value,
@@ -186,9 +186,9 @@ describe('defineVaporCustomElement', () => {
         value: null,
       },
       setup(props: any) {
-        const n0 = template('<div> </div>', true)() as any
+        const n0 = template('<div> </div>', 1)() as any
         const x0 = txt(n0) as any
-        const n1 = template('<div> </div>', true)() as any
+        const n1 = template('<div> </div>', 1)() as any
         const x1 = txt(n1) as any
 
         renderEffect(() => setText(x0, props.foo || ''))
@@ -384,7 +384,7 @@ describe('defineVaporCustomElement', () => {
           expect(props.foo).toBe('hello')
           expect(props.dataAge).toBe(5)
 
-          const n0 = template('<div> </div>', true)() as any
+          const n0 = template('<div> </div>', 1)() as any
           const x0 = txt(n0) as any
           renderEffect(() => setText(x0, `foo: ${props.foo}`))
           return n0
@@ -412,7 +412,7 @@ describe('defineVaporCustomElement', () => {
           expect(props.foo).toBe('hello')
           expect(props.post).toBe(obj)
 
-          const n0 = template(' ', true)() as any
+          const n0 = template(' ', 1)() as any
           renderEffect(() => setText(n0, JSON.stringify(props.post)))
           return n0
         },
@@ -429,7 +429,7 @@ describe('defineVaporCustomElement', () => {
     test('handle components with no props', async () => {
       const E = defineVaporCustomElement({
         setup() {
-          return template('<div>foo</div>', true)()
+          return template('<div>foo</div>', 1)()
         },
       })
       customElements.define('my-element-noprops', E)
@@ -545,7 +545,7 @@ describe('defineVaporCustomElement', () => {
         setup(props: any) {
           const n0 = template(
             '<div><span> </span><span> </span></div>',
-            true,
+            1,
           )() as any
           const n1 = child(n0) as any
           const n2 = next(n1) as any
@@ -578,7 +578,7 @@ describe('defineVaporCustomElement', () => {
   describe('attrs', () => {
     const E = defineVaporCustomElement({
       setup(_: any, { attrs }: any) {
-        const n0 = template('<div> </div>', true)() as any
+        const n0 = template('<div> </div>', 1)() as any
         const x0 = txt(n0) as any
         renderEffect(() => setText(x0, toDisplayString(attrs.foo)))
         return n0
@@ -632,7 +632,7 @@ describe('defineVaporCustomElement', () => {
       const E = defineVaporCustomElement(
         {
           setup() {
-            return template('<input tabindex="1">', true)()
+            return template('<input tabindex="1">', 1)()
           },
         },
         { shadowRootOptions: { delegatesFocus: true } },
@@ -649,7 +649,7 @@ describe('defineVaporCustomElement', () => {
     const CompDef = defineVaporComponent({
       setup(_, { emit }) {
         emit('created')
-        const n0 = template('<div></div>', true)() as any
+        const n0 = template('<div></div>', 1)() as any
         n0.$evtclick = () => {
           emit('my-click', 1)
         }
@@ -838,7 +838,7 @@ describe('defineVaporCustomElement', () => {
     const Consumer = defineVaporCustomElement({
       setup() {
         const foo = inject<Ref>('foo')!
-        const n0 = template('<div> </div>', true)() as any
+        const n0 = template('<div> </div>', 1)() as any
         const x0 = txt(n0) as any
         renderEffect(() => setText(x0, toDisplayString(foo.value)))
         return n0
@@ -906,7 +906,7 @@ describe('defineVaporCustomElement', () => {
         setup() {
           const fooA = inject<Ref>('fooA')!
           const fooB = inject<Ref>('fooB')!
-          const n0 = template('<div> </div>', true)() as any
+          const n0 = template('<div> </div>', 1)() as any
           const x0 = txt(n0) as any
           renderEffect(() => setText(x0, `${fooA.value} ${fooB.value}`))
           return n0
@@ -969,7 +969,7 @@ describe('defineVaporCustomElement', () => {
               inject<string>('inner'),
             )
 
-            const n0 = template('<div></div>', true)() as any
+            const n0 = template('<div></div>', 1)() as any
             setInsertionState(n0, null)
             createSlot('default', null)
             return n0
@@ -994,7 +994,7 @@ describe('defineVaporCustomElement', () => {
               inject<string>('outer'),
               inject<string>('inner'),
             )
-            const n0 = template('<div></div>', true)() as any
+            const n0 = template('<div></div>', 1)() as any
             setInsertionState(n0, null)
             createSlot('default', null)
             return n0
@@ -1015,7 +1015,7 @@ describe('defineVaporCustomElement', () => {
             inject<string>('outer'),
             inject<string>('inner'),
           )
-          const n0 = template('<div></div>', true)() as any
+          const n0 = template('<div></div>', 1)() as any
           return n0
         },
       })
@@ -1068,7 +1068,7 @@ describe('defineVaporCustomElement', () => {
         __hmrId: 'foo',
         styles: [`div { color: red; }`],
         setup() {
-          return template('<div>hello</div>', true)()
+          return template('<div>hello</div>', 1)()
         },
       } as any)
       const Foo = defineVaporCustomElement(def)
@@ -1348,7 +1348,7 @@ describe('defineVaporCustomElement', () => {
         {
           styles: [`div { color: red; }`],
           setup() {
-            return template('<div>hello</div>', true)()
+            return template('<div>hello</div>', 1)()
           },
         },
         { nonce: 'xxx' },
@@ -1372,7 +1372,7 @@ describe('defineVaporCustomElement', () => {
               props: ['msg'],
               styles: [`div { color: red }`],
               setup(props: any) {
-                const n0 = template('<div> </div>', true)() as any
+                const n0 = template('<div> </div>', 1)() as any
                 const x0 = txt(n0) as any
                 renderEffect(() => setText(x0, props.msg))
                 return n0
@@ -1427,7 +1427,7 @@ describe('defineVaporCustomElement', () => {
               props: ['msg'],
               setup(props: any) {
                 expect(typeof props.msg).toBe('string')
-                const n0 = template('<div> </div>', true)() as any
+                const n0 = template('<div> </div>', 1)() as any
                 const x0 = txt(n0) as any
                 renderEffect(() => setText(x0, props.msg))
                 return n0
@@ -1467,7 +1467,7 @@ describe('defineVaporCustomElement', () => {
       const AsyncComp = defineVaporComponent({
         props: { value: Object },
         setup(props: any) {
-          const n0 = template('<div> </div>', true)() as any
+          const n0 = template('<div> </div>', 1)() as any
           const x0 = txt(n0) as any
           renderEffect(() => setText(x0, props.value.x))
           return n0
@@ -1520,7 +1520,7 @@ describe('defineVaporCustomElement', () => {
               props: { n: Number },
               setup(props: any) {
                 expect(props.n).toBe(20)
-                const n0 = template('<div> </div>', true)() as any
+                const n0 = template('<div> </div>', 1)() as any
                 const x0 = txt(n0) as any
                 renderEffect(() => setText(x0, `${props.n},${typeof props.n}`))
                 return n0
@@ -2117,7 +2117,7 @@ describe('defineVaporCustomElement', () => {
             value.value++
           }
           expose({ foo })
-          const n0 = template('<div> </div>', true)() as any
+          const n0 = template('<div> </div>', 1)() as any
           const x0 = txt(n0) as any
           renderEffect(() => setText(x0, `${value.value}`))
           return n0
@@ -2152,7 +2152,7 @@ describe('defineVaporCustomElement', () => {
             value,
           })
 
-          const n0 = template('<div> </div>', true)() as any
+          const n0 = template('<div> </div>', 1)() as any
           const x0 = txt(n0) as any
           renderEffect(() => setText(x0, value.value))
           return n0
@@ -2184,7 +2184,7 @@ describe('defineVaporCustomElement', () => {
             value: 'hello',
           })
 
-          const n0 = template('<div> </div>', true)() as any
+          const n0 = template('<div> </div>', 1)() as any
           const x0 = txt(n0) as any
           renderEffect(() => setText(x0, props.value))
           return n0
@@ -2294,7 +2294,7 @@ describe('defineVaporCustomElement', () => {
       const E = defineVaporCustomElement(
         () => {
           const msg = inject('msg')
-          const n0 = template('<div> </div>', true)() as any
+          const n0 = template('<div> </div>', 1)() as any
           const x0 = txt(n0) as any
           renderEffect(() => setText(x0, msg as string))
           return n0
@@ -2318,7 +2318,7 @@ describe('defineVaporCustomElement', () => {
           defineVaporComponent({
             setup() {
               const msg = inject('msg')
-              const n0 = template('<div> </div>', true)() as any
+              const n0 = template('<div> </div>', 1)() as any
               const x0 = txt(n0) as any
               renderEffect(() => setText(x0, msg as string))
               return n0
@@ -2417,7 +2417,7 @@ describe('defineVaporCustomElement', () => {
             props: ['fooValue'],
             setup(props: any) {
               expect(props.fooValue).toBe('fooValue')
-              const n0 = template('<div> </div>', true)() as any
+              const n0 = template('<div> </div>', 1)() as any
               const x0 = txt(n0) as any
               renderEffect(() => setText(x0, props.fooValue))
               return n0

@@ -43,8 +43,8 @@ import {
   isComment,
   isHydrating,
   locateHydrationBoundaryClose,
-  locateNextNode,
   markHydrationAnchor,
+  nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
@@ -482,7 +482,7 @@ export const createFor = (
             nextNode = markHydrationAnchor(currentHydrationNode!)
             setCurrentHydrationNode(nextNode)
           } else {
-            nextNode = locateNextNode(currentHydrationNode!)
+            nextNode = nextLogicalSibling(currentHydrationNode!)
           }
           mount(source, i)
           if (nextNode) setCurrentHydrationNode(nextNode)

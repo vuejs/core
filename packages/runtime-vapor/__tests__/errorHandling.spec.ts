@@ -419,7 +419,7 @@ describe('error handling', () => {
         function onClick() {
           throw err
         }
-        const n0 = template('<button>throw Error</button>', true)() as any
+        const n0 = template('<button>throw Error</button>', 1)() as any
         n0.$evtclick = createInvoker(onClick)
         return n0
       },

@@ -50,8 +50,8 @@ import {
   cleanupHydrationTail,
   currentHydrationNode,
   isHydrating,
-  locateNextNode,
   markHydrationAnchor,
+  nextLogicalSibling,
   setCurrentHydrationNode,
 } from '../dom/hydration'
 
@@ -208,7 +208,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
         ensureForHydrationAnchorResolver()
         prevForHydrationContainer = currentForHydrationContainer
         currentForHydrationContainer = container
-        nextNode = locateNextNode(container)
+        nextNode = nextLogicalSibling(container)
         setCurrentHydrationNode(container.firstChild || container)
       }
       let block: Block = slottedBlock

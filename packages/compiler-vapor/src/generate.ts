@@ -51,8 +51,33 @@ export class CodegenContext {
 
   delegates: Set<string> = new Set<string>()
 
+  singleUseAssetComponentNames?: Set<string>
+
   identifiers: Record<string, (string | SimpleExpressionNode)[]> =
     Object.create(null)
+
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>[] = []
+
+  withExpressionReplacements<T>(
+    map: Map<SimpleExpressionNode, SimpleExpressionNode>,
+    fn: () => T,
+  ): T {
+    if (map.size === 0) return fn()
+    this.expressionReplacements.unshift(map)
+    try {
+      return fn()
+    } finally {
+      remove(this.expressionReplacements, map)
+    }
+  }
+
+  getExpressionReplacement(node: SimpleExpressionNode): SimpleExpressionNode {
+    for (const map of this.expressionReplacements) {
+      const replacement = map.get(node)
+      if (replacement) return replacement
+    }
+    return node
+  }
 
   seenInlineHandlerNames: Record<string, number> = Object.create(null)
 

@@ -64,12 +64,21 @@ export function genCreateComponent(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
+  const singleUseAssetComponentNames = context.singleUseAssetComponentNames
+  const useAssetComponentHelper =
+    operation.asset &&
+    !operation.dynamic &&
+    context.block === context.ir.block &&
+    !!singleUseAssetComponentNames &&
+    singleUseAssetComponentNames.has(operation.tag)
+  const maybeSelfReference =
+    useAssetComponentHelper && operation.tag.endsWith('__self')
 
   const tag = genTag()
   const { root, props, slots, once } = operation
   const rawSlots = genRawSlots(slots, context)
   const [ids, handlers] = processInlineHandlers(props, context)
-  const rawProps = context.withId(() => genRawProps(props, context), ids)
+  const rawProps = context.withId(() => genRawProps(props, context, true), ids)
 
   const inlineHandlers: CodeFragment[] = handlers.reduce<CodeFragment[]>(
     (acc, { name, value }: InlineHandler) => {
@@ -87,14 +96,17 @@ export function genCreateComponent(
         ? helper('createDynamicComponent')
         : operation.useCreateElement
           ? helper('createPlainElement')
-          : operation.asset
-            ? helper('createComponentWithFallback')
-            : helper('createComponent'),
+          : useAssetComponentHelper
+            ? helper('createAssetComponent')
+            : operation.asset
+              ? helper('createComponentWithFallback')
+              : helper('createComponent'),
       tag,
       rawProps,
       rawSlots,
       root ? 'true' : false,
       once && 'true',
+      maybeSelfReference && 'true',
     ),
     ...genDirectivesForElement(operation.id, context),
   ]
@@ -111,6 +123,11 @@ export function genCreateComponent(
       } else {
         return ['() => (', ...genExpression(operation.dynamic, context), ')']
       }
+    } else if (useAssetComponentHelper) {
+      const name = maybeSelfReference
+        ? operation.tag.slice(0, -6)
+        : operation.tag
+      return JSON.stringify(name)
     } else if (operation.asset) {
       return toValidAssetId(operation.tag, 'component')
     } else {
@@ -175,6 +192,7 @@ function processInlineHandlers(
 export function genRawProps(
   props: IRProps[],
   context: CodegenContext,
+  directStaticLiteralProps = false,
 ): CodeFragment[] | undefined {
   const staticProps = props[0]
   if (isArray(staticProps)) {
@@ -184,11 +202,17 @@ export function genRawProps(
     return genStaticProps(
       staticProps,
       context,
-      genDynamicProps(props.slice(1), context),
+      genDynamicProps(props.slice(1), context, directStaticLiteralProps),
+      directStaticLiteralProps,
     )
   } else if (props.length) {
     // all dynamic
-    return genStaticProps([], context, genDynamicProps(props, context))
+    return genStaticProps(
+      [],
+      context,
+      genDynamicProps(props, context, directStaticLiteralProps),
+      directStaticLiteralProps,
+    )
   }
 }
 
@@ -196,6 +220,7 @@ function genStaticProps(
   props: IRPropsStatic,
   context: CodegenContext,
   dynamicProps?: CodeFragment[],
+  directStaticLiteralProps = false,
 ): CodeFragment[] {
   const args: CodeFragment[][] = []
 
@@ -285,7 +310,15 @@ function genStaticProps(
     }
 
     // normal (non-handler) props
-    args.push(genProp(prop, context, true))
+    args.push(
+      genProp(
+        prop,
+        context,
+        true,
+        true,
+        directStaticLiteralProps && isDirectStaticLiteralProp(prop),
+      ),
+    )
 
     // v-model on component: synthesize onUpdate:* and modifiers props, and
     // dedupe/merge with user provided @update:* handlers.
@@ -315,7 +348,12 @@ function genStaticProps(
           ? [getModifierPropName(key.content)]
           : ['[', ...genExpression(key, context), ' + "Modifiers"]']
         const modifiersVal = genDirectiveModifiers(modelModifiers)
-        args.push([...modifiersKey, `: () => ({ ${modifiersVal} })`])
+        args.push([
+          ...modifiersKey,
+          directStaticLiteralProps
+            ? `: { ${modifiersVal} }`
+            : `: () => ({ ${modifiersVal} })`,
+        ])
       }
     }
   }
@@ -341,6 +379,7 @@ function genStaticProps(
 function genDynamicProps(
   props: IRProps[],
   context: CodegenContext,
+  directStaticLiteralProps = false,
 ): CodeFragment[] | undefined {
   const { helper } = context
   const frags: CodeFragment[][] = []
@@ -348,7 +387,9 @@ function genDynamicProps(
     let expr: CodeFragment[]
     if (isArray(p)) {
       if (p.length) {
-        frags.push(genStaticProps(p, context))
+        frags.push(
+          genStaticProps(p, context, undefined, directStaticLiteralProps),
+        )
       }
       continue
     } else {
@@ -410,6 +451,7 @@ function genProp(
   context: CodegenContext,
   isStatic?: boolean,
   wrapHandler = true,
+  directStaticLiteral = false,
 ) {
   const values = genPropValue(prop.values, context)
   return [
@@ -424,9 +466,26 @@ function genProp(
           wrapHandler /* wrapInGetter */,
         )
       : isStatic
-        ? ['() => (', ...values, ')']
+        ? directStaticLiteral
+          ? values
+          : ['() => (', ...values, ')']
         : values),
   ]
+}
+
+/**
+ * Static literal values are safe to emit directly because reading them cannot
+ * touch reactive state. Keep handlers, v-model values, and dynamic expressions
+ * as getter sources to preserve lazy access and merge semantics.
+ */
+function isDirectStaticLiteralProp(prop: IRProp): boolean {
+  return (
+    prop.key.isStatic &&
+    prop.values.length === 1 &&
+    prop.values[0].isStatic &&
+    !prop.handler &&
+    !prop.model
+  )
 }
 
 function genRawSlots(slots: IRSlots[], context: CodegenContext) {
