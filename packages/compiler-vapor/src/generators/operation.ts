@@ -88,7 +88,12 @@ export function genOperationsAndEffects(
       if (!hasDeclarations(processedExpressions)) {
         const [frag, push] = buildCodeFragment()
         push(...genOperations(binding.operations, context, withInsertionState))
-        push(...context.withId(binding.genBinding, processedExpressions.ids))
+        push(
+          ...context.withExpressionReplacements(
+            processedExpressions!.expressionReplacements,
+            () => context.withId(binding.genBinding, processedExpressions!.ids),
+          ),
+        )
         return frag
       }
     }

@@ -170,6 +170,19 @@ describe('v-on', () => {
     expect(code).matchSnapshot()
   })
 
+  test('dynamic arg falls back to onBinding when expressions need declarations', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div v-on:[event+event]="handler"/>`,
+    )
+
+    expect(helpers).contains('onBinding')
+    expect(helpers).contains('renderEffect')
+    expect(helpers).not.contains('setEventBinding')
+    expect(code).matchSnapshot()
+    expect(code).contains('const _event = _ctx.event')
+    expect(code).contains('_onBinding(n0, _event+_event, e => _ctx.handler(e))')
+  })
+
   test('should wrap as function if expression is inline statement', () => {
     const { code, ir, helpers } = compileWithVOn(`<div @click="i++"/>`)
 

@@ -46,6 +46,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > dynamic arg falls back to onBinding when expressions need declarations 1`] = `
+"import { onBinding as _onBinding, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => {
+    const _event = _ctx.event
+    _onBinding(n0, _event+_event, e => _ctx.handler(e))
+  })
+  return n0
+}"
+`;
+
 exports[`v-on > dynamic arg with complex exp prefixing 1`] = `
 "import { setEventBinding as _setEventBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)

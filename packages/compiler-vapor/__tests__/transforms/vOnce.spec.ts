@@ -122,6 +122,16 @@ describe('compiler: v-once', () => {
     ])
   })
 
+  test('with v-on object', () => {
+    const { ir, code } = compileWithOnce(`<div v-once v-on="obj" />`)
+
+    expect(code).toMatchSnapshot()
+    expect(ir.block.effect).lengthOf(0)
+    expect(code).contains('_setDynamicEvents(n0, _ctx.obj)')
+    expect(code).not.contains('_setDynamicEventsBinding')
+    expect(code).not.contains('_renderEffect')
+  })
+
   test('on component', () => {
     const { ir, code } = compileWithOnce(`<div><Comp :id="foo" v-once /></div>`)
     expect(code).toMatchSnapshot()
