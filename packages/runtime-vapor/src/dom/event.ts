@@ -10,6 +10,7 @@ import {
 
 type EventHandler = (...args: any[]) => any
 type EventHandlerValue = EventHandler | EventHandler[]
+type MaybeEventHandlerValue = EventHandlerValue | null | undefined
 
 export function addEventListener(
   el: Element,
@@ -130,7 +131,7 @@ export function setDynamicEvents(
 
 export function withVaporModifiers<
   T extends (event: Event, ...args: unknown[]) => any,
->(fn: T, modifiers: string[]): T {
+>(fn: T | null | undefined, modifiers: string[]): T {
   return createInvoker(
     typeof fn === 'function'
       ? withDomModifiers(
@@ -142,7 +143,7 @@ export function withVaporModifiers<
 }
 
 export function withVaporKeys<T extends (event: KeyboardEvent) => any>(
-  fn: T,
+  fn: T | null | undefined,
   modifiers: string[],
 ): T {
   return createInvoker(
@@ -152,11 +153,11 @@ export function withVaporKeys<T extends (event: KeyboardEvent) => any>(
   ) as T
 }
 
-export function createInvoker(handler: EventHandler): EventHandler {
+export function createInvoker(handler: MaybeEventHandlerValue): EventHandler {
   const i = currentInstance!
   return (...args: any[]) =>
     callWithAsyncErrorHandling(
-      handler,
+      handler as EventHandlerValue,
       i,
       ErrorCodes.NATIVE_EVENT_HANDLER,
       args,
