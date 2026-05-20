@@ -84,7 +84,7 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             context,
           )
         }
-        if (keyProperty && isDirKey) {
+        if ((isTemplate || memo) && keyProperty && isDirKey) {
           keyExp =
             keyProp.exp =
             keyProperty.value =

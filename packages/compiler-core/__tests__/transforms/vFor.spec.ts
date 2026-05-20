@@ -641,6 +641,26 @@ describe('compiler: v-for', () => {
       })
     })
 
+    test('element v-for key expression prefixing on simple expression', () => {
+      const {
+        node: { codegenNode },
+      } = parseWithForTransform(
+        '<div v-for="item in items" :key="itemKey">test</div>',
+        { prefixIdentifiers: true },
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: `"div"`,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `_ctx.itemKey`,
+          },
+        }),
+      })
+    })
+
     // #2085
     test('template v-for key expression prefixing', () => {
       const {
@@ -664,6 +684,26 @@ describe('compiler: v-for', () => {
               { content: `item` },
               `)`,
             ],
+          },
+        }),
+      })
+    })
+
+    test('template v-for key expression prefixing on simple expression', () => {
+      const {
+        node: { codegenNode },
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="itemKey">test</template>',
+        { prefixIdentifiers: true },
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: FRAGMENT,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `_ctx.itemKey`,
           },
         }),
       })
