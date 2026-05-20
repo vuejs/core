@@ -984,6 +984,44 @@ describe('vapor transition-group', () => {
     E2E_TIMEOUT,
   )
 
+  test(
+    'root slot component move',
+    async () => {
+      const btnSelector = '.root-slot-component-move > button'
+      const containerSelector = '.root-slot-component-move > div'
+
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<!--for--><!--slot--><!--transition-group-->`,
+        )
+
+      click(btnSelector)
+      await nextTick()
+      await nextFrame()
+      expect(html(containerSelector)).toContain(
+        `<div class="test group-enter-from group-enter-active">d</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test group-move" style="">a</div>` +
+          `<div class="test group-leave-from group-leave-active group-move" style="">c</div>` +
+          `<!--for--><!--slot--><!--transition-group-->`,
+      )
+
+      await transitionFinish()
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="test">d</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test" style="">a</div>`,
+        )
+    },
+    E2E_TIMEOUT,
+  )
+
   describe('interop', () => {
     test(
       'avoid set transition hooks for comment node',

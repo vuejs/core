@@ -42,7 +42,12 @@ import {
 import { resolveDynamicProps } from '../componentProps'
 import { isForBlock, setForHydrationAnchorResolver } from '../apiCreateFor'
 import { createComment, createElement, createTextNode } from '../dom/node'
-import { DynamicFragment, type VaporFragment, isFragment } from '../fragment'
+import {
+  DynamicFragment,
+  SlotFragment,
+  type VaporFragment,
+  isFragment,
+} from '../fragment'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
@@ -394,8 +399,19 @@ function getTransitionBlocks(
   if (block instanceof Element) {
     children.push(block)
   } else if (isVaporComponent(block)) {
-    if (onUpdateOwner) onUpdateOwner(block)
-    const blocks = getTransitionBlocks(block.block, onFragment, onUpdateOwner)
+    // A normal component child can move when parent-driven props update its
+    // root layout without re-running the surrounding v-for fragment.
+    // When the component root is a slot, the TransitionGroup children are the
+    // slotted blocks, so track the SlotFragment instead of the component.
+    const isRootSlot = block.block instanceof SlotFragment
+    if (onUpdateOwner && !isRootSlot) onUpdateOwner(block)
+    const blocks = getTransitionBlocks(
+      block.block,
+      onFragment,
+      // Only a root slot exposes nested blocks as TransitionGroup children.
+      // Other component internals should not trigger group move bookkeeping.
+      isRootSlot ? onUpdateOwner : undefined,
+    )
     inheritKey(blocks, block.$key)
     children.push(...blocks)
   } else if (isArray(block)) {
