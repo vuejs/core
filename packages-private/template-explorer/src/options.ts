@@ -22,6 +22,7 @@ export const defaultOptions: CompilerOptions = {
     setupConst: BindingTypes.SETUP_CONST,
     setupLet: BindingTypes.SETUP_LET,
     setupMaybeRef: BindingTypes.SETUP_MAYBE_REF,
+    setupComputed: BindingTypes.SETUP_COMPUTED,
     setupProp: BindingTypes.PROPS,
     vMySetupDir: BindingTypes.SETUP_CONST,
   },
