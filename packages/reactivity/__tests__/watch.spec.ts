@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import {
   EffectScope,
   type Ref,
@@ -212,5 +213,26 @@ describe('watch', () => {
     value.value = true
     value.value = true
     expect(value.value).toBe(false)
+  })
+
+  it('stop multiple watches by abort controller', async () => {
+    const controller = new AbortController()
+    const state = ref(0)
+    const cb1 = vi.fn()
+    const cb2 = vi.fn()
+    watch(state, cb1, { signal: controller.signal })
+    watch(state, cb2, { signal: controller.signal })
+
+    state.value++
+    await nextTick()
+    expect(cb1).toHaveBeenCalledTimes(1)
+    expect(cb2).toHaveBeenCalledTimes(1)
+
+    controller.abort()
+    state.value++
+    await nextTick()
+    // should not run callback
+    expect(cb1).toHaveBeenCalledTimes(1)
+    expect(cb2).toHaveBeenCalledTimes(1)
   })
 })
