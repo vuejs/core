@@ -16,7 +16,6 @@ import {
   isSameVNodeType,
   isVNode,
 } from '../vnode'
-import { warn } from '../warning'
 import {
   injectHook,
   onBeforeUnmount,
@@ -42,7 +41,10 @@ import {
   invalidateMount,
   queuePostRenderEffect,
 } from '../renderer'
-import { setTransitionHooks } from './BaseTransition'
+import {
+  locateFirstNonCommentChild,
+  setTransitionHooks,
+} from './BaseTransition'
 import type { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
@@ -282,13 +284,17 @@ const KeepAliveImpl: ComponentOptions = {
       }
 
       const children = slots.default()
-      const rawVNode = children[0]
+      let rawVNode = children[0]
       if (children.length > 1) {
-        if (__DEV__) {
-          warn(`KeepAlive should contain exactly one component child.`)
+        const { child, hasFound } = locateFirstNonCommentChild(
+          children,
+          `KeepAlive should contain exactly one component child.`,
+        )
+        rawVNode = child
+        if (!hasFound) {
+          current = null
+          return children
         }
-        current = null
-        return children
       } else if (
         !isVNode(rawVNode) ||
         (!(rawVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) &&
