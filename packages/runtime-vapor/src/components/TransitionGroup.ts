@@ -406,12 +406,12 @@ function getTransitionBlocks(
       children.push(...blocks)
     }
   } else if (isFragment(block)) {
+    if (onFragment) onFragment(block)
+    if (onUpdateOwner) onUpdateOwner(block)
     if (isInteropEnabled && block.vnode) {
       // vdom component
       children.push(block)
     } else {
-      if (onFragment) onFragment(block)
-      if (onUpdateOwner) onUpdateOwner(block)
       const blocks = getTransitionBlocks(block.nodes, onFragment, onUpdateOwner)
       inheritKey(blocks, block.$key)
       children.push(...blocks)

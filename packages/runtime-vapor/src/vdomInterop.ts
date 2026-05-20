@@ -820,13 +820,31 @@ function appendVnodeUpdatedHook(vnode: VNode, hook: () => void): void {
     : hook
 }
 
+function appendVnodeBeforeUpdateHook(vnode: VNode, hook: () => void): void {
+  const props = (vnode.props ||= {})
+  const existing = props.onVnodeBeforeUpdate
+  props.onVnodeBeforeUpdate = existing
+    ? isArray(existing)
+      ? [...existing, hook]
+      : [existing, hook]
+    : hook
+}
+
 function trackFragmentVNodeUpdates(frag: VaporFragment, vnode: VNode): void {
-  const refresh = () => {
+  const beforeUpdate = () => {
+    if (frag.onBeforeUpdate) {
+      for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
+        frag.onBeforeUpdate[i]()
+      }
+    }
+  }
+  const updated = () => {
     frag.nodes = resolveVNodeNodes(vnode)
     frag.validityPending = false
     if (frag.onUpdated) frag.onUpdated.forEach(m => m())
   }
-  appendVnodeUpdatedHook(vnode, refresh)
+  appendVnodeBeforeUpdateHook(vnode, beforeUpdate)
+  appendVnodeUpdatedHook(vnode, updated)
 }
 
 /**
