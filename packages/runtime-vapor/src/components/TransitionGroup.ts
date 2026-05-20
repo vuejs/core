@@ -13,7 +13,9 @@ import {
   hasCSSTransform,
   onBeforeUpdate,
   onUpdated,
+  queuePostFlushCb,
   resolveTransitionProps,
+  setCurrentInstance,
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
@@ -37,6 +39,7 @@ import {
   type VaporComponentOptions,
   isVaporComponent,
 } from '../component'
+import { resolveDynamicProps } from '../componentProps'
 import { isForBlock, setForHydrationAnchorResolver } from '../apiCreateFor'
 import { createComment, createElement, createTextNode } from '../dom/node'
 import { DynamicFragment, type VaporFragment, isFragment } from '../fragment'
@@ -44,6 +47,7 @@ import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
+import { watch } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
 import {
   adoptTemplate,
@@ -57,6 +61,20 @@ import {
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
+
+type TransitionGroupUpdateOwner = VaporFragment | VaporComponentInstance
+
+type TransitionGroupUpdateHookRef = {
+  beforeUpdate: () => void
+  updated: () => void
+}
+
+// Each owner installs its update callback once. The stored hook object lets
+// that callback keep pointing at the latest TransitionGroup update hooks.
+const transitionGroupUpdateOwnerMap = new WeakMap<
+  TransitionGroupUpdateOwner,
+  TransitionGroupUpdateHookRef
+>()
 
 let isForHydrationAnchorResolverRegistered = false
 let currentForHydrationContainer: ParentNode | undefined
@@ -124,10 +142,16 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       true,
     )
 
-    let prevChildren: ResolvedTransitionBlock[]
+    let prevChildren: ResolvedTransitionBlock[] = []
+    // Multiple child owners can update in the same flush (e.g. a VDOM child
+    // props update plus the surrounding v-for keyed diff). Keep the first
+    // position snapshot until the matching updated hook applies the move.
+    let isUpdatePending = false
     let slottedBlock: Block = []
 
-    onBeforeUpdate(() => {
+    const beforeUpdate = () => {
+      if (isUpdatePending) return
+      isUpdatePending = true
       prevChildren = []
       const children = getTransitionBlocks(slottedBlock)
       for (let i = 0; i < children.length; i++) {
@@ -145,9 +169,11 @@ const VaporTransitionGroupImpl = defineVaporComponent({
           positionMap.set(child, el.getBoundingClientRect())
         }
       }
-    })
+    }
 
-    onUpdated(() => {
+    const updated = () => {
+      if (!isUpdatePending) return
+      isUpdatePending = false
       if (!prevChildren.length) {
         return
       }
@@ -182,7 +208,10 @@ const VaporTransitionGroupImpl = defineVaporComponent({
         ),
       )
       prevChildren = []
-    })
+    }
+
+    onBeforeUpdate(beforeUpdate)
+    onUpdated(updated)
 
     const frag = new DynamicFragment('transition-group')
     let currentTag: string | undefined
@@ -221,6 +250,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
             propsProxy,
             state,
             instance,
+            { beforeUpdate, updated },
           )
           if (container) {
             if (!isHydrating) insert(block, container)
@@ -266,9 +296,14 @@ function applyGroupTransitionHooks(
   props: TransitionProps,
   state: TransitionState,
   instance: VaporComponentInstance,
+  updateHooks: TransitionGroupUpdateHookRef,
 ): ResolvedTransitionBlock[] {
   const fragments: VaporFragment[] = []
-  const children = getTransitionBlocks(block, frag => fragments.push(frag))
+  const children = getTransitionBlocks(
+    block,
+    frag => fragments.push(frag),
+    owner => trackTransitionGroupUpdate(owner, updateHooks),
+  )
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (isValidTransitionBlock(child)) {
@@ -286,10 +321,60 @@ function applyGroupTransitionHooks(
   // propagate hooks to inner fragments for reusing during insert new items
   fragments.forEach(frag => {
     const hooks = resolveTransitionHooks(frag, props, state, instance)
-    hooks.applyGroup = applyGroupTransitionHooks
+    hooks.applyGroup = (block, props, state, instance) =>
+      applyGroupTransitionHooks(block, props, state, instance, updateHooks)
     frag.$transition = hooks
   })
   return children
+}
+
+function trackTransitionGroupUpdate(
+  owner: TransitionGroupUpdateOwner,
+  updateHooks: TransitionGroupUpdateHookRef,
+): void {
+  const registeredHooks = transitionGroupUpdateOwnerMap.get(owner)
+  if (registeredHooks) {
+    registeredHooks.beforeUpdate = updateHooks.beforeUpdate
+    registeredHooks.updated = updateHooks.updated
+    return
+  }
+
+  transitionGroupUpdateOwnerMap.set(owner, updateHooks)
+  if (isFragment(owner)) {
+    ;(owner.onBeforeUpdate ||= []).push(() => updateHooks.beforeUpdate())
+    ;(owner.onUpdated ||= []).push(() => updateHooks.updated())
+  } else {
+    // A component child can update from parent-driven props without re-running
+    // the surrounding v-for fragment. Watch raw props directly instead of
+    // using component updated hooks, because child-local state updates should
+    // not trigger TransitionGroup move bookkeeping. This matches VDOM behavior.
+    let isPending = false
+    const flushUpdated = () => {
+      isPending = false
+      updateHooks.updated()
+    }
+    owner.scope.run(() => {
+      watch(
+        () => {
+          // Dynamic prop sources are resolved as child props, so the getter
+          // must run with the child instance while the watcher itself remains
+          // owned by the child scope for teardown.
+          const prev = setCurrentInstance(owner, owner.scope)
+          try {
+            return resolveDynamicProps(owner.rawProps)
+          } finally {
+            setCurrentInstance(...prev)
+          }
+        },
+        () => {
+          if (isPending) return
+          isPending = true
+          updateHooks.beforeUpdate()
+          queuePostFlushCb(flushUpdated)
+        },
+      )
+    })
+  }
 }
 
 function inheritKey(children: TransitionBlock[], key: any): void {
@@ -303,18 +388,20 @@ function inheritKey(children: TransitionBlock[], key: any): void {
 function getTransitionBlocks(
   block: Block,
   onFragment?: (frag: VaporFragment) => void,
+  onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
 ): ResolvedTransitionBlock[] {
   let children: ResolvedTransitionBlock[] = []
   if (block instanceof Element) {
     children.push(block)
   } else if (isVaporComponent(block)) {
-    const blocks = getTransitionBlocks(block.block, onFragment)
+    if (onUpdateOwner) onUpdateOwner(block)
+    const blocks = getTransitionBlocks(block.block, onFragment, onUpdateOwner)
     inheritKey(blocks, block.$key)
     children.push(...blocks)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       const b = block[i]
-      const blocks = getTransitionBlocks(b, onFragment)
+      const blocks = getTransitionBlocks(b, onFragment, onUpdateOwner)
       if (isForBlock(b)) blocks.forEach(block => (block.$key = b.key))
       children.push(...blocks)
     }
@@ -324,7 +411,8 @@ function getTransitionBlocks(
       children.push(block)
     } else {
       if (onFragment) onFragment(block)
-      const blocks = getTransitionBlocks(block.nodes, onFragment)
+      if (onUpdateOwner) onUpdateOwner(block)
+      const blocks = getTransitionBlocks(block.nodes, onFragment, onUpdateOwner)
       inheritKey(blocks, block.$key)
       children.push(...blocks)
     }
