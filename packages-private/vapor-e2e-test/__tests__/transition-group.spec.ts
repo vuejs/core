@@ -641,6 +641,43 @@ describe('vapor transition-group', () => {
       )
   })
 
+  test('same-key component move after prop change', async () => {
+    const btnSelector = '.same-key-component-move-after-prop-change > button'
+    const containerSelector = '.same-key-component-move-after-prop-change > div'
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item closed" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2"><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+
+    click(btnSelector)
+    await nextTick()
+    await nextFrame()
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed group-move" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+
+    await transitionFinish(350)
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+  })
+
   test('dynamic name', async () => {
     const btnSelector = '.dynamic-name button.toggleBtn'
     const btnChangeName = '.dynamic-name button.changeNameBtn'

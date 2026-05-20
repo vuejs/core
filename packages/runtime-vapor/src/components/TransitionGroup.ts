@@ -149,9 +149,10 @@ const VaporTransitionGroupImpl = defineVaporComponent({
 
     let prevChildren: ResolvedTransitionBlock[] = []
     // Multiple child owners can update in the same flush (e.g. a VDOM child
-    // props update plus the surrounding v-for keyed diff). Keep the first
-    // position snapshot until the matching updated hook applies the move.
+    // props update plus the surrounding v-for keyed diff). Keep the first old
+    // position snapshot, then apply moves after child render jobs have flushed.
     let isUpdatePending = false
+    let isUpdatedPending = false
     let slottedBlock: Block = []
 
     const beforeUpdate = () => {
@@ -176,7 +177,8 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       }
     }
 
-    const updated = () => {
+    const flushUpdated = () => {
+      isUpdatedPending = false
       if (!isUpdatePending) return
       isUpdatePending = false
       if (!prevChildren.length) {
@@ -213,6 +215,12 @@ const VaporTransitionGroupImpl = defineVaporComponent({
         ),
       )
       prevChildren = []
+    }
+
+    const updated = () => {
+      if (!isUpdatePending || isUpdatedPending) return
+      isUpdatedPending = true
+      queuePostFlushCb(flushUpdated)
     }
 
     onBeforeUpdate(beforeUpdate)
