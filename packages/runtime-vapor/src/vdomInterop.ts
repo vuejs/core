@@ -108,6 +108,7 @@ import {
   setInsertionState,
 } from './insertionState'
 import {
+  type DynamicFragment,
   type SlotBoundaryContext,
   type SlotFallbackOutlet,
   SlotFragment,
@@ -2450,13 +2451,37 @@ function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
 }
 
 const interopScopeIdRootMap = new WeakMap<VaporComponentInstance, Element>()
+const interopScopeIdFragmentMap = new WeakMap<
+  DynamicFragment,
+  VaporComponentInstance
+>()
+
+function trackInteropScopeIdFragment(
+  instance: VaporComponentInstance,
+  frag: DynamicFragment,
+): void {
+  if (interopScopeIdFragmentMap.get(frag) === instance) return
+  interopScopeIdFragmentMap.set(frag, instance)
+  ;(frag.onUpdated || (frag.onUpdated = [])).push(() => {
+    const state = vnodeHookStateMap.get(instance)
+    if (!state) return
+    syncVNodeEl(state.vnode, instance)
+    setInteropVnodeScopeId(
+      instance,
+      state.vnode,
+      instance.parent as ComponentInternalInstance | null,
+    )
+  })
+}
 
 function setInteropVnodeScopeId(
   instance: VaporComponentInstance,
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
 ): void {
-  const root = getRootElement(instance)
+  const root = getRootElement(instance, frag =>
+    trackInteropScopeIdFragment(instance, frag),
+  )
   if (!root) {
     interopScopeIdRootMap.delete(instance)
     return

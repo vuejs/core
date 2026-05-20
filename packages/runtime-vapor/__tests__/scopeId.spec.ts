@@ -7,6 +7,7 @@ import {
   renderSlot,
 } from '@vue/runtime-dom'
 import {
+  VaporTransition,
   createComponent,
   createDynamicComponent,
   createFor,
@@ -767,6 +768,70 @@ describe('vdom interop', () => {
     createApp(App).use(vaporInteropPlugin).mount(root)
 
     expect(root.innerHTML).toBe(`<!--v-if--><button vdom-parent=""></button>`)
+  })
+
+  test('vdom parent > vapor child applies scopeId to out-in transition delayed root', async () => {
+    const show = ref(true)
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      setTimeout(done, 0)
+    })
+    let interopVnode: any
+
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return createComponent(
+          VaporTransition,
+          {
+            mode: () => 'out-in',
+            onLeave: () => onLeave,
+          },
+          {
+            default: withVaporCtx(() =>
+              createIf(
+                () => show.value,
+                () => template('<div>A</div>', 1)(),
+                () => template('<section>B</section>', 1)(),
+              ),
+            ),
+          },
+        )
+      },
+    })
+
+    const VdomParent = {
+      __scopeId: 'vdom-parent',
+      setup() {
+        return () =>
+          h(VaporChild as any, {
+            onVnodeMounted(vnode: any) {
+              interopVnode = vnode
+            },
+          })
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(VdomParent)
+      },
+    }
+
+    const root = document.createElement('div')
+    createApp(App).use(vaporInteropPlugin).mount(root)
+
+    expect(root.innerHTML).toBe(`<div vdom-parent="">A</div><!--if-->`)
+    expect(interopVnode.el).toBe(root.firstChild)
+
+    show.value = false
+    await nextTick()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    expect(root.innerHTML).toBe(
+      `<section class="v-enter-from v-enter-active" vdom-parent="">B</section><!--if-->`,
+    )
+    expect(interopVnode.el).toBe(root.firstChild)
   })
 
   test('vdom parent > vapor child with updated multi-root dynamic fragment', async () => {
