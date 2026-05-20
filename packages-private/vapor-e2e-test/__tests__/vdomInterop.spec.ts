@@ -196,6 +196,44 @@ describe('vdom transition', () => {
     },
     E2E_TIMEOUT,
   )
+
+  test('keyed vapor component move after key change', async () => {
+    const btnSelector = '.trans-group-vapor-component-move > button'
+    const containerSelector = '.trans-group-vapor-component-move > div'
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item closed" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2"><div class="item-inner">item 2</div></div>` +
+          `</div>`,
+      )
+
+    click(btnSelector)
+    await nextTick()
+    await nextFrame()
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item closed group-leave-from group-leave-active" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item opened group-enter-from group-enter-active" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed group-move" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `</div>`,
+      )
+
+    await transitionFinish()
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `</div>`,
+      )
+  })
 })
 
 describe('vdom transition-group', () => {
