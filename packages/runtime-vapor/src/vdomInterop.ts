@@ -29,6 +29,7 @@ import {
   ensureRenderer,
   ensureValidVNode,
   ensureVaporSlotFallback,
+  getInheritedScopeIds,
   invokeDirectiveHook,
   isEmitListener,
   isKeepAlive,
@@ -221,7 +222,14 @@ const vaporInteropImpl: Omit<
     ))
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
-    ensureVNodeHookState(instance, vnode)
+    const vnodeHookState = ensureVNodeHookState(instance, vnode)
+    const applyScopeId = (vnode: VNode) =>
+      setInteropVnodeScopeId(
+        instance,
+        vnode,
+        instance.parent as ComponentInternalInstance | null,
+      )
+    vnodeHookState.postRootSyncHooks.push(applyScopeId)
 
     // copy the shape flag from the vdom component if inside a keep-alive
     if (parentComponent && isKeepAlive(parentComponent)) {
@@ -263,6 +271,7 @@ const vaporInteropImpl: Omit<
     }
 
     mountComponent(instance, container, selfAnchor)
+    if (!isHydrating) applyScopeId(vnodeHookState.vnode)
 
     simpleSetCurrentInstance(prev)
     return instance
@@ -296,6 +305,11 @@ const vaporInteropImpl: Omit<
       instance.rawSlotsRef!.value = normalizeInteropSlots(n2.children)
       queuePostFlushCb(() => {
         syncVNodeEl(n2, instance)
+        setInteropVnodeScopeId(
+          instance,
+          n2,
+          instance.parent as ComponentInternalInstance | null,
+        )
         if (!instance.isUpdating) {
           vnodeHookState.skipVnodeHooks = false
         }
@@ -2059,6 +2073,7 @@ function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
 interface VNodeHookState {
   vnode: VNode
   skipVnodeHooks: boolean
+  postRootSyncHooks: ((vnode: VNode) => void)[]
 }
 
 const vnodeHookStateMap = new WeakMap<VaporComponentInstance, VNodeHookState>()
@@ -2072,6 +2087,7 @@ function ensureVNodeHookState(
     state = {
       vnode,
       skipVnodeHooks: false,
+      postRootSyncHooks: [],
     }
     vnodeHookStateMap.set(instance, state)
     ;(instance.bu || (instance.bu = [])).push(() => {
@@ -2088,11 +2104,16 @@ function ensureVNodeHookState(
       }
     })
 
-    // Sync the outer component vnode before running any updated hooks so
-    // both component updated hooks and onVnodeUpdated see the latest root el.
-    ;(instance.u || (instance.u = [])).unshift(() =>
-      syncVNodeEl(state!.vnode, instance),
-    )
+    // Sync the outer component vnode before running any updated hooks. Hooks
+    // that depend on the latest root, like scoped CSS interop, run immediately
+    // after the sync and before component updated hooks / onVnodeUpdated.
+    ;(instance.u || (instance.u = [])).unshift(() => {
+      syncVNodeEl(state!.vnode, instance)
+      const hooks = state!.postRootSyncHooks
+      for (let i = 0; i < hooks.length; i++) {
+        hooks[i](state!.vnode)
+      }
+    })
     instance.u.push(() => {
       if (state!.skipVnodeHooks) {
         state!.skipVnodeHooks = false
@@ -2426,4 +2447,22 @@ function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
     configurable: true,
   })
   return rawSlots as RawSlots
+}
+
+function setInteropVnodeScopeId(
+  instance: VaporComponentInstance,
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+): void {
+  const root = getRootElement(instance)
+  if (!root) return
+
+  const scopeIds: string[] = []
+  if (vnode.scopeId) scopeIds.push(vnode.scopeId)
+  if (vnode.slotScopeIds) scopeIds.push(...vnode.slotScopeIds)
+  scopeIds.push(...getInheritedScopeIds(vnode, parentComponent))
+
+  for (let i = 0; i < scopeIds.length; i++) {
+    root.setAttribute(scopeIds[i], '')
+  }
 }
