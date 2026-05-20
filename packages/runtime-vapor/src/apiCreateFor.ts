@@ -98,6 +98,7 @@ export const createFor = (
   let isMounted = false
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
+  let newKeys: any[] | undefined
   let parent: ParentNode | undefined | null
   let parentAnchor: Node
   let pendingHydrationAnchor = false
@@ -132,9 +133,24 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
+    // Key expressions can depend on item fields, not just list shape. Evaluate
+    // them while the render effect is still the active subscriber so those deps
+    // can trigger keyed diff, then reuse the same keys below after
+    // setActiveSub() clears the active subscriber during patching.
+    newKeys = undefined
+    if (getKey) {
+      newKeys = new Array(newLength)
+      for (let i = 0; i < newLength; i++) {
+        newKeys[i] = getKey(...getItem(source, i))
+      }
+    }
 
     const prevSub = setActiveSub()
-
+    if (isMounted && frag.onBeforeUpdate) {
+      for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
+        frag.onBeforeUpdate[i]()
+      }
+    }
     if (!isMounted) {
       isMounted = true
       if (isHydrating) {
@@ -184,8 +200,7 @@ export const createFor = (
         if (__DEV__) {
           const keyToIndexMap: Map<any, number> = new Map()
           for (let i = 0; i < newLength; i++) {
-            const item = getItem(source, i)
-            const key = getKey(...item)
+            const key = newKeys![i]
             if (key != null) {
               if (keyToIndexMap.has(key)) {
                 warn(
@@ -214,7 +229,7 @@ export const createFor = (
         while (endOffset < commonLength) {
           const index = newLength - endOffset - 1
           const item = getItem(source, index)
-          const key = getKey(...item)
+          const key = newKeys![index]
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
           if (existingBlock.key !== key) break
           update(existingBlock, ...item)
@@ -228,7 +243,7 @@ export const createFor = (
 
         for (let i = 0; i < e1; i++) {
           const currentItem = getItem(source, i)
-          const currentKey = getKey(...currentItem)
+          const currentKey = newKeys![i]
           const oldBlock = oldBlocks[i]
           const oldKey = oldBlock.key
           if (oldKey === currentKey) {
@@ -245,7 +260,7 @@ export const createFor = (
 
         for (let i = e1; i < e3; i++) {
           const blockItem = getItem(source, i)
-          const blockKey = getKey(...blockItem)
+          const blockKey = newKeys![i]
           queuedBlocks[queuedBlocksLength++] = [i, blockItem, blockKey]
         }
 
@@ -381,7 +396,7 @@ export const createFor = (
     idx: number,
     anchor: Node | undefined = parentAnchor,
     [item, key, index] = getItem(source, idx),
-    key2 = getKey && getKey(item, key, index),
+    key2 = newKeys ? newKeys[idx] : getKey && getKey(item, key, index),
   ): ForBlock => {
     const itemRef = shallowRef(item)
     // avoid creating refs if the render fn doesn't need it
