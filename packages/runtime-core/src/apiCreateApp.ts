@@ -1,3 +1,4 @@
+import { effectScope } from '@vue/reactivity'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -29,6 +30,7 @@ import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { DefineComponent } from './apiDefineComponent'
+import type { EffectScope } from '@vue/reactivity'
 
 export interface App<HostElement = any> {
   version: string
@@ -92,6 +94,14 @@ export interface App<HostElement = any> {
    * @param fn - function to run with the app as active instance
    */
   runWithContext<T>(fn: () => T): T
+
+  /**
+   * The app-level effect scope. Can be used to explicitly register effects
+   * (e.g. `watch`, `computed`) that should be tied to the app lifecycle.
+   * Effects registered via `app.scope.run()` will be stopped when the app
+   * is unmounted.
+   */
+  readonly scope: EffectScope
 
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
@@ -264,6 +274,7 @@ export function createAppAPI<HostElement>(
       rootProps = null
     }
 
+    const scope = effectScope(true)
     const context = createAppContext()
     const installedPlugins = new WeakSet()
     const pluginCleanupFns: Array<() => any> = []
@@ -279,6 +290,10 @@ export function createAppAPI<HostElement>(
       _instance: null,
 
       version,
+
+      get scope() {
+        return scope
+      },
 
       get config() {
         return context.config
@@ -430,6 +445,7 @@ export function createAppAPI<HostElement>(
 
       unmount() {
         if (isMounted) {
+          scope.stop()
           callWithAsyncErrorHandling(
             pluginCleanupFns,
             app._instance,
