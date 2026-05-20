@@ -2076,10 +2076,13 @@ function baseCreateRenderer(
     }
 
     // single nodes
+    // #14031 skip transition hooks for persisted transitions (e.g. v-show),
+    // whose lifecycle is driven by the directive, not by mount/move
     const needTransition =
       moveType !== MoveType.REORDER &&
       shapeFlag & ShapeFlags.ELEMENT &&
-      transition
+      transition &&
+      !transition.persisted
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
         transition!.beforeEnter(el!)
