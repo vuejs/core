@@ -14,6 +14,8 @@ import {
   createSlot,
   defineVaporAsyncComponent,
   defineVaporComponent,
+  renderEffect,
+  setElementText,
   setInsertionState,
   template,
   vaporInteropPlugin,
@@ -652,6 +654,91 @@ describe('vdom interop', () => {
     expect(root.innerHTML).toBe(
       `<div vdom-slot-owner="" vdom-parent="">` +
         `<button vdom-slot-owner="" vdom-parent="" vdom-slot-owner-s=""></button>` +
+        `</div>`,
+    )
+  })
+
+  test('vdom slot owner > vapor slot content preserves slot scopeIds on same root update', async () => {
+    function mount(initialNoSlotted: boolean) {
+      const noSlotted = ref(initialNoSlotted)
+      const count = ref(0)
+      const VaporChild = defineVaporComponent({
+        props: {
+          count: Number,
+        },
+        setup(props: any) {
+          const n0 = template('<button></button>', 1)()
+          renderEffect(() => setElementText(n0, props.count))
+          return n0
+        },
+      })
+
+      const VdomSlotOwner = {
+        __scopeId: 'vdom-slot-owner',
+        setup(_props: unknown, { slots }: any) {
+          return () =>
+            h(
+              'div',
+              null,
+              renderSlot(slots, 'default', {}, undefined, noSlotted.value),
+            )
+        },
+      }
+
+      const VdomParent = {
+        __scopeId: 'vdom-parent',
+        setup() {
+          return () =>
+            h(VdomSlotOwner, null, {
+              default: () => h(VaporChild as any, { count: count.value }),
+            })
+        },
+      }
+
+      const App = {
+        setup() {
+          return () => h(VdomParent)
+        },
+      }
+
+      const root = document.createElement('div')
+      createApp(App).use(vaporInteropPlugin).mount(root)
+      return { count, noSlotted, root }
+    }
+
+    const noSlottedRoot = mount(true)
+
+    expect(noSlottedRoot.root.innerHTML).toBe(
+      `<div vdom-slot-owner="" vdom-parent="">` +
+        `<button vdom-slot-owner="" vdom-parent="">0</button>` +
+        `</div>`,
+    )
+
+    noSlottedRoot.noSlotted.value = false
+    noSlottedRoot.count.value++
+    await nextTick()
+
+    expect(noSlottedRoot.root.innerHTML).toBe(
+      `<div vdom-slot-owner="" vdom-parent="">` +
+        `<button vdom-slot-owner="" vdom-parent="">1</button>` +
+        `</div>`,
+    )
+
+    const slottedRoot = mount(false)
+
+    expect(slottedRoot.root.innerHTML).toBe(
+      `<div vdom-slot-owner="" vdom-parent="">` +
+        `<button vdom-slot-owner="" vdom-parent="" vdom-slot-owner-s="">0</button>` +
+        `</div>`,
+    )
+
+    slottedRoot.noSlotted.value = true
+    slottedRoot.count.value++
+    await nextTick()
+
+    expect(slottedRoot.root.innerHTML).toBe(
+      `<div vdom-slot-owner="" vdom-parent="">` +
+        `<button vdom-slot-owner="" vdom-parent="" vdom-slot-owner-s="">1</button>` +
         `</div>`,
     )
   })

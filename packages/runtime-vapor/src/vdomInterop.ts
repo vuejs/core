@@ -2449,13 +2449,21 @@ function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
   return rawSlots as RawSlots
 }
 
+const interopScopeIdRootMap = new WeakMap<VaporComponentInstance, Element>()
+
 function setInteropVnodeScopeId(
   instance: VaporComponentInstance,
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
 ): void {
   const root = getRootElement(instance)
-  if (!root) return
+  if (!root) {
+    interopScopeIdRootMap.delete(instance)
+    return
+  }
+  // VDOM applies scope ids when an element is mounted, not on same-root patch.
+  if (interopScopeIdRootMap.get(instance) === root) return
+  interopScopeIdRootMap.set(instance, root)
 
   const scopeIds: string[] = []
   if (vnode.scopeId) scopeIds.push(vnode.scopeId)
