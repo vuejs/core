@@ -356,15 +356,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > v-for on template with keyed child marks fragment block 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createKeyedFragment as _createKeyedFragment, createFor as _createFor, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createKeyedFragment as _createKeyedFragment, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = _createKeyedFragment(() => (_for_item0.value.id), () => {
       const n3 = t0()
-      const x3 = _txt(n3)
-      _renderEffect(() => _setText(x3, _toDisplayString(_for_item0.value.text)))
+      _setTextBinding(n3, () => _toDisplayString(_for_item0.value.text))
       return n3
     })
     return n2
@@ -374,15 +373,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > v-for on template with nested v-for child marks fragment block 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = _createFor(() => (_for_item0.value), (_for_item1) => {
       const n4 = t0()
-      const x4 = _txt(n4)
-      _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value)))
+      _setTextBinding(n4, () => _toDisplayString(_for_item1.value))
       return n4
     }, undefined, 8)
     return n2
