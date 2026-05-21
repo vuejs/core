@@ -123,7 +123,11 @@ export function genEffects(
     if (
       operation &&
       operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
-      operation.effect
+      operation.effect &&
+      // Keep ref-for on the render-effect path so v-for branches reuse the
+      // root/slot-owner scoped _setTemplateRef instead of allocating a setter
+      // and its tracking WeakMaps for each item.
+      !operation.refFor
     ) {
       return context.withExpressionReplacements(expressionReplacements, () =>
         context.withId(() => genSetTemplateRefBinding(operation, context), ids),

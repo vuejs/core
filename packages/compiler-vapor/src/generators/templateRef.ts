@@ -51,7 +51,6 @@ export function genSetTemplateRefBinding(
   context: CodegenContext,
 ): CodeFragment[] {
   const [refValue, refKey] = genRefValue(oper.value, context)
-  const wrapGetterBody = shouldWrapGetterBody(oper.value, context)
   const setter = context.inSlotBlock && setTemplateRefIdent
   if (context.inSlotBlock) {
     context.needsTemplateRefSetter = true
@@ -61,20 +60,12 @@ export function genSetTemplateRefBinding(
     ...genCall(
       [context.helper('setTemplateRefBinding'), 'undefined'],
       `n${oper.element}`,
-      wrapGetterBody ? ['() => (', ...refValue, ')'] : ['() => ', ...refValue],
+      ['() => ', ...refValue],
       ...(setter || oper.refFor || refKey
         ? [setter, oper.refFor && 'true', refKey]
         : []),
     ),
   ]
-}
-
-function shouldWrapGetterBody(
-  value: SimpleExpressionNode,
-  context: CodegenContext,
-): boolean {
-  const ast = context.getExpressionReplacement(value).ast
-  return !!ast && ast.type === 'ObjectExpression'
 }
 
 function genRefValue(

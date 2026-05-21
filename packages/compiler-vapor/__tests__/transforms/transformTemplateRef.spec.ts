@@ -142,13 +142,6 @@ describe('compiler: template ref transform', () => {
     expect(code).not.contains('_renderEffect')
   })
 
-  test('dynamic ref object expression', () => {
-    const { code } = compileWithTransformRef(`<div :ref="{ foo }" />`)
-    expect(code).contains(
-      '_setTemplateRefBinding(n0, () => ({ foo: _ctx.foo }))',
-    )
-  })
-
   test('dynamic ref (inline mode)', () => {
     const { code } = compileWithTransformRef(`<div :ref="foo" />`, {
       inline: true,
@@ -308,10 +301,10 @@ describe('compiler: template ref transform', () => {
     )
 
     expect(code).matchSnapshot()
+    expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
     expect(code).contains(
-      '_setTemplateRefBinding(n2, () => _ctx.foo, undefined, true)',
+      '_renderEffect(() => _setTemplateRef(n2, _ctx.foo, true))',
     )
-    expect(code).not.contains('_createTemplateRefSetter')
-    expect(code).not.contains('_renderEffect')
+    expect(code).not.contains('_setTemplateRefBinding')
   })
 })

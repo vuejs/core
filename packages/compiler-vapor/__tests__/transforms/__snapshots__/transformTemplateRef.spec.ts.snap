@@ -59,13 +59,14 @@ exports[`compiler: template ref transform > dynamic ref (inline mode) 1`] = `
 `;
 
 exports[`compiler: template ref transform > dynamic ref + v-for 1`] = `
-"import { setTemplateRefBinding as _setTemplateRefBinding, createFor as _createFor, template as _template } from 'vue';
+"import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
   const n0 = _createFor(() => ([1,2,3]), (_for_item0) => {
     const n2 = t0()
-    _setTemplateRefBinding(n2, () => _ctx.foo, undefined, true)
+    _renderEffect(() => _setTemplateRef(n2, _ctx.foo, true))
     return n2
   }, undefined, 12)
   return n0
