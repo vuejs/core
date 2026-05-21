@@ -14,6 +14,7 @@ import {
   prepend,
   remove,
   renderEffect,
+  setDynamicEventsBinding,
   setInsertionState,
   setMergedDynamicPropsBinding,
   template,
@@ -35,7 +36,7 @@ import {
   toDisplayString,
   useSlots,
 } from '@vue/runtime-dom'
-import { makeRender } from './_utils'
+import { compileToVaporRender, makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import { type Block, type BlockFn, isValidBlock } from '../src/block'
@@ -1825,6 +1826,52 @@ describe('component: slots', () => {
       expect(html()).toBe(
         '<div id="static-id" title="title-0" class="count-0 after">0</div><!--slot-->',
       )
+    })
+
+    test('v-on in v-once slot should not warn or update events', async () => {
+      const Child = defineVaporComponent({
+        render: compileToVaporRender(`<slot v-once />`, {
+          bindingMetadata: {},
+        }),
+      })
+
+      const calls: string[] = []
+      const events = ref<Record<string, () => void>>({
+        click: () => {
+          calls.push('click')
+        },
+      })
+      let button!: HTMLButtonElement
+
+      define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              button = template('<button></button>')() as HTMLButtonElement
+              setDynamicEventsBinding(button, () => events.value)
+              return button
+            },
+          })
+        },
+      }).render()
+
+      expect(
+        `onEffectCleanup() was called when there was no active effect`,
+      ).not.toHaveBeenWarned()
+
+      button.click()
+      expect(calls).toEqual(['click'])
+
+      events.value = {
+        mouseover: () => {
+          calls.push('mouseover')
+        },
+      }
+      await nextTick()
+
+      button.dispatchEvent(new Event('mouseover'))
+      button.click()
+      expect(calls).toEqual(['click', 'click'])
     })
   })
 

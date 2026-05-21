@@ -504,7 +504,10 @@ export function setDynamicEventsBinding(
   getter: () => Record<string, (...args: any[]) => any>,
 ): void {
   if (inOnceSlot) {
-    setDynamicEvents(el, getter())
+    const events = getter()
+    for (const name in events) {
+      on(el, name, events[name])
+    }
     return
   }
 
