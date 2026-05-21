@@ -791,7 +791,11 @@ function normalizeAnchor(node: Block): Node {
   if (node instanceof Node) {
     return node
   } else if (isArray(node)) {
-    return normalizeAnchor(node[0])
+    for (let i = 0; i < node.length; i++) {
+      const anchor = normalizeAnchor(node[i])
+      if (anchor) return anchor
+    }
+    return undefined!
   } else if (isVaporComponent(node)) {
     return normalizeAnchor(node.block!)
   } else {
@@ -804,7 +808,11 @@ function normalizeAnchor(node: Block): Node {
     const nodes = getEffectiveOutput
       ? getEffectiveOutput.call(node)
       : node.nodes
-    return isValidBlock(nodes) ? normalizeAnchor(nodes) : node.anchor!
+    // Empty ForFragment keeps its insertion carrier in `nodes`, even though it
+    // is not a valid content block.
+    return isValidBlock(nodes)
+      ? normalizeAnchor(nodes)
+      : node.anchor || normalizeAnchor(nodes)
   }
 }
 
