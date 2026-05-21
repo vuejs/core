@@ -1,5 +1,6 @@
 import { type Ref, effectScope } from '@vue/reactivity'
 import { nextTick, ref } from '@vue/runtime-dom'
+import { toDisplayString } from '@vue/shared'
 import { bench, describe } from 'vitest'
 import {
   onBinding,
@@ -18,7 +19,10 @@ import {
   setMergedDynamicPropsBinding,
   setPropBinding,
   setStyleBinding,
+  setTextBinding,
   setValueBinding,
+  template,
+  txt,
 } from '../../src'
 import {
   setAttr,
@@ -31,14 +35,17 @@ import {
   setHtml,
   setProp,
   setStyle,
+  setText,
   setValue,
 } from '../../src/dom/prop'
 
 const MANY_BINDINGS = 100
 const UPDATE_BATCH = 20
+const TEXT_UPDATE_BATCH = 100
 
 type Source = Ref<number>
 type Setup = (el: any, source: Source, index: number) => void
+type TextNodeWithCache = Text & { $txt?: string }
 
 function createDiv(): HTMLElement {
   return document.createElement('div')
@@ -46,6 +53,10 @@ function createDiv(): HTMLElement {
 
 function createInput(): HTMLInputElement {
   return document.createElement('input')
+}
+
+function createTextParent(): ParentNode {
+  return template('<div> </div>', 1)() as ParentNode
 }
 
 function noop(): void {}
@@ -108,7 +119,100 @@ function benchBinding(
   })
 }
 
+function initText(oldPath: boolean): void {
+  const scope = effectScope()
+  scope.run(() => {
+    const parent = createTextParent()
+    const source = ref(0)
+    if (oldPath) {
+      const text = txt(parent) as TextNodeWithCache
+      renderEffect(() => setText(text, toDisplayString(source.value)))
+    } else {
+      setTextBinding(parent, () => toDisplayString(source.value))
+    }
+  })
+  scope.stop()
+}
+
+async function updateText(oldPath: boolean): Promise<void> {
+  const scope = effectScope()
+  const source = ref(0)
+  try {
+    scope.run(() => {
+      const parent = createTextParent()
+      if (oldPath) {
+        const text = txt(parent) as TextNodeWithCache
+        renderEffect(() => setText(text, toDisplayString(source.value)))
+      } else {
+        setTextBinding(parent, () => toDisplayString(source.value))
+      }
+    })
+    for (let i = 1; i <= TEXT_UPDATE_BATCH; i++) {
+      source.value = i
+      await nextTick()
+    }
+  } finally {
+    scope.stop()
+  }
+}
+
+async function updateManyText(oldPath: boolean): Promise<void> {
+  const scope = effectScope()
+  const source = ref(0)
+  try {
+    scope.run(() => {
+      for (let i = 0; i < MANY_BINDINGS; i++) {
+        const parent = createTextParent()
+        if (oldPath) {
+          const text = txt(parent) as TextNodeWithCache
+          renderEffect(() => setText(text, toDisplayString(source.value + i)))
+        } else {
+          setTextBinding(parent, () => toDisplayString(source.value + i))
+        }
+      }
+    })
+    for (let i = 1; i <= UPDATE_BATCH; i++) {
+      source.value = i
+      await nextTick()
+    }
+  } finally {
+    scope.stop()
+  }
+}
+
 describe('DOM binding effects', () => {
+  describe('setText', () => {
+    describe('update', () => {
+      bench('txt + renderEffect + setText', async () => {
+        await updateText(true)
+      })
+
+      bench('setTextBinding', async () => {
+        await updateText(false)
+      })
+    })
+
+    describe('update many bindings', () => {
+      bench('txt + renderEffect + setText', async () => {
+        await updateManyText(true)
+      })
+
+      bench('setTextBinding', async () => {
+        await updateManyText(false)
+      })
+    })
+
+    describe('init', () => {
+      bench('txt + renderEffect + setText', () => {
+        initText(true)
+      })
+
+      bench('setTextBinding', () => {
+        initText(false)
+      })
+    })
+  })
+
   benchBinding(
     'setProp',
     createDiv,
