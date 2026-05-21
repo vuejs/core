@@ -45,7 +45,6 @@ export class CodegenContext {
 
   needsTemplateRefSetter: boolean = false
   staticTemplateRefHelperCandidate?: SetTemplateRefIRNode
-  staticTemplateRefBindingCandidate?: SetTemplateRefIRNode
   inSlotBlock: boolean = false
 
   helper = (name: CoreHelper | VaporHelper): string => {
@@ -228,8 +227,6 @@ export class CodegenContext {
     this.staticTemplateRefHelperCandidate = getStaticTemplateRefHelperCandidate(
       ir.block,
     )
-    this.staticTemplateRefBindingCandidate =
-      getStaticTemplateRefBindingCandidate(ir.block)
   }
 }
 
@@ -347,23 +344,6 @@ function getStaticTemplateRefHelperCandidate(
     !operation.effect &&
     !operation.refFor &&
     canUseStaticTemplateRefHelper(block, operation)
-  ) {
-    return operation
-  }
-}
-
-function getStaticTemplateRefBindingCandidate(
-  block: BlockIRNode,
-): SetTemplateRefIRNode | undefined {
-  if (block.effect.length || block.operation.length !== 1) return
-
-  const operation = block.operation[0]
-  if (
-    operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
-    !operation.effect &&
-    !operation.refFor &&
-    operation.value.isStatic &&
-    !canUseStaticTemplateRefHelper(block, operation)
   ) {
     return operation
   }

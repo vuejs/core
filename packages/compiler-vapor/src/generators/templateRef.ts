@@ -14,9 +14,6 @@ export function genSetTemplateRef(
   if (context.staticTemplateRefHelperCandidate === oper) {
     return genSetStaticTemplateRef(oper, refValue, refKey, context)
   }
-  if (context.staticTemplateRefBindingCandidate === oper) {
-    return genSetTemplateRefBinding(oper, context)
-  }
 
   context.needsTemplateRefSetter = true
   return [

@@ -101,8 +101,9 @@ describe('compiler: template ref transform', () => {
   test('component static ref', () => {
     const { code } = compileWithTransformRef(`<Foo ref="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setTemplateRefBinding(n0, () => "foo")')
-    expect(code).not.contains('_createTemplateRefSetter')
+    expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
+    expect(code).contains('_setTemplateRef(n0, "foo")')
+    expect(code).not.contains('_setTemplateRefBinding')
     expect(code).not.contains('_setStaticTemplateRef')
   })
 
@@ -263,5 +264,18 @@ describe('compiler: template ref transform', () => {
     expect(code).matchSnapshot()
     expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
     expect(code).contains('_setTemplateRef(n2, "foo", true)')
+  })
+
+  test('dynamic ref + v-for', () => {
+    const { code } = compileWithTransformRef(
+      `<div :ref="foo" v-for="item in [1,2,3]" />`,
+    )
+
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setTemplateRefBinding(n2, () => _ctx.foo, undefined, true)',
+    )
+    expect(code).not.contains('_createTemplateRefSetter')
+    expect(code).not.contains('_renderEffect')
   })
 })

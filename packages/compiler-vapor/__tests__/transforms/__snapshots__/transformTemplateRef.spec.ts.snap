@@ -1,11 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: template ref transform > component static ref 1`] = `
-"import { createAssetComponent as _createAssetComponent, setTemplateRefBinding as _setTemplateRefBinding } from 'vue';
+"import { createTemplateRefSetter as _createTemplateRefSetter, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
   const n0 = _createAssetComponent("Foo", null, null, true)
-  _setTemplateRefBinding(n0, () => "foo")
+  _setTemplateRef(n0, "foo")
   return n0
 }"
 `;
@@ -47,6 +48,20 @@ exports[`compiler: template ref transform > dynamic ref (inline mode) 1`] = `
   _setTemplateRefBinding(n0, () => foo, undefined, undefined, "foo")
   return n0
 "
+`;
+
+exports[`compiler: template ref transform > dynamic ref + v-for 1`] = `
+"import { setTemplateRefBinding as _setTemplateRefBinding, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => ([1,2,3]), (_for_item0) => {
+    const n2 = t0()
+    _setTemplateRefBinding(n2, () => _ctx.foo, undefined, true)
+    return n2
+  }, undefined, 12)
+  return n0
+}"
 `;
 
 exports[`compiler: template ref transform > dynamic ref 1`] = `
