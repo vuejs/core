@@ -6,12 +6,11 @@ import type {
 import type {
   BlockIRNode,
   CoreHelper,
-  IRDynamicInfo,
   RootIRNode,
   SetTemplateRefIRNode,
   VaporHelper,
 } from './ir'
-import { DynamicFlag, IRNodeTypes } from './ir'
+import { IRNodeTypes } from './ir'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -334,37 +333,15 @@ function genAssetImports({ ir }: CodegenContext) {
 function getStaticTemplateRefHelperCandidate(
   block: BlockIRNode,
 ): SetTemplateRefIRNode | undefined {
-  // setStaticTemplateRef skips dynamic setter hooks, so only use it for a
-  // single static template DOM ref in the root block.
-  if (block.effect.length || block.operation.length !== 1) return
+  if (block.operation.length !== 1) return
 
   const operation = block.operation[0]
   if (
     operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
     !operation.effect &&
     !operation.refFor &&
-    canUseStaticTemplateRefHelper(block, operation)
+    operation.value.isStatic
   ) {
     return operation
-  }
-}
-
-function canUseStaticTemplateRefHelper(
-  block: BlockIRNode,
-  operation: SetTemplateRefIRNode,
-): boolean {
-  const dynamic = findDynamicInfo(block.dynamic, operation.element)
-  return !!dynamic && !(dynamic.flags & DynamicFlag.NON_TEMPLATE)
-}
-
-function findDynamicInfo(
-  dynamic: IRDynamicInfo,
-  id: number,
-): IRDynamicInfo | undefined {
-  if (dynamic.id === id) return dynamic
-
-  for (const child of dynamic.children) {
-    const found = findDynamicInfo(child, id)
-    if (found) return found
   }
 }
