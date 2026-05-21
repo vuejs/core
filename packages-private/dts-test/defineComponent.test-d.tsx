@@ -3,6 +3,7 @@ import {
   type ComponentOptions,
   type ComponentPublicInstance,
   type PropType,
+  type Ref,
   type SetupContext,
   type Slots,
   type SlotsType,
@@ -12,6 +13,7 @@ import {
   h,
   reactive,
   ref,
+  shallowRef,
   withKeys,
   withModifiers,
 } from 'vue'
@@ -1173,6 +1175,37 @@ describe('componentOptions setup should be `SetupContext`', () => {
   expectType<ComponentOptions['setup']>(
     {} as (props: Record<string, any>, ctx: SetupContext) => any,
   )
+})
+
+describe('infer expose from `SetupContext`', () => {
+  // functional
+  const Baz = defineComponent(
+    <T,>(
+      props: { foo: T },
+      ctx: SetupContext<EmitsOptions, {}, { bar: Ref<T> }>,
+    ) => {
+      ctx.expose({ bar: shallowRef(props.foo) })
+      return () => <></>
+    },
+  )
+  const baz = new Baz({ foo: 1 })
+  expectType<IsAny<typeof baz.bar>>(false)
+  expectType<number>(baz.bar)
+
+  const Qux = defineComponent(
+    <T,>(
+      props: { foo: T },
+      ctx: {
+        expose: (exposed: { bar: Ref<T> }) => void
+      },
+    ) => {
+      ctx.expose({ bar: shallowRef(props.foo) })
+      return () => <></>
+    },
+  )
+  const qux = new Qux({ foo: 1 })
+  expectType<IsAny<typeof qux.bar>>(false)
+  expectType<number>(qux.bar)
 })
 
 describe('extract instance type', () => {
