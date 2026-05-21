@@ -106,47 +106,70 @@ export function insert(
   anchor: Node | null | 0 = null, // 0 means prepend
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (block instanceof Node) {
-    if (!isHydrating) {
-      // only apply transition on Element nodes
-      if (
-        isTransitionEnabled &&
-        block instanceof Element &&
-        (block as TransitionBlock).$transition &&
-        !(block as TransitionBlock).$transition!.disabled
-      ) {
-        performTransitionEnter(
-          block,
-          (block as TransitionBlock).$transition as TransitionHooks,
-          () => parent.insertBefore(block, anchor as Node),
-          parentSuspense,
-        )
-      } else {
-        parent.insertBefore(block, anchor)
-      }
-    }
-  } else if (isVaporComponent(block)) {
+    insertNode(block, parent, anchor, parentSuspense)
+    return
+  }
+
+  if (isVaporComponent(block)) {
+    anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
     if (block.isMounted && !block.isDeactivated) {
       insert(block.block!, parent, anchor)
     } else {
       mountComponent(block, parent, anchor)
     }
   } else if (isArray(block)) {
+    anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
     for (const b of block) {
       insert(b, parent, anchor)
     }
   } else {
-    if (block.anchor) {
-      insert(block.anchor, parent, anchor)
-      anchor = block.anchor
-    }
-    // fragment
-    if (block.insert) {
-      block.insert(parent, anchor, (block as TransitionBlock).$transition)
+    insertFragment(block, parent, anchor, parentSuspense)
+  }
+}
+
+export function insertNode(
+  block: Node,
+  parent: ParentNode & { $fc?: Node | null },
+  anchor: Node | null | 0 = null, // 0 means prepend
+  parentSuspense?: any, // TODO Suspense
+): void {
+  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
+  if (!isHydrating) {
+    // only apply transition on Element nodes
+    if (
+      isTransitionEnabled &&
+      block instanceof Element &&
+      (block as TransitionBlock).$transition &&
+      !(block as TransitionBlock).$transition!.disabled
+    ) {
+      performTransitionEnter(
+        block,
+        (block as TransitionBlock).$transition as TransitionHooks,
+        () => parent.insertBefore(block, anchor as Node),
+        parentSuspense,
+      )
     } else {
-      insert(block.nodes, parent, anchor, parentSuspense)
+      parent.insertBefore(block, anchor)
     }
+  }
+}
+
+export function insertFragment(
+  block: VaporFragment | DynamicFragment,
+  parent: ParentNode & { $fc?: Node | null },
+  anchor: Node | null | 0 = null, // 0 means prepend
+  parentSuspense?: any, // TODO Suspense
+): void {
+  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
+  if (block.anchor) {
+    insertNode(block.anchor, parent, anchor, parentSuspense)
+    anchor = block.anchor
+  }
+  if (block.insert) {
+    block.insert(parent, anchor, (block as TransitionBlock).$transition)
+  } else {
+    insert(block.nodes, parent, anchor, parentSuspense)
   }
 }
 
@@ -252,19 +275,7 @@ export function prepend(parent: ParentNode, ...blocks: Block[]): void {
 
 export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
-    if (
-      isTransitionEnabled &&
-      (block as TransitionBlock).$transition &&
-      block instanceof Element
-    ) {
-      performTransitionLeave(
-        block,
-        (block as TransitionBlock).$transition as TransitionHooks,
-        () => parent && parent.removeChild(block),
-      )
-    } else {
-      parent && parent.removeChild(block)
-    }
+    removeNode(block, parent)
   } else if (isVaporComponent(block)) {
     unmountComponent(block, parent)
   } else if (isArray(block)) {
@@ -272,16 +283,38 @@ export function remove(block: Block, parent?: ParentNode): void {
       remove(block[i], parent)
     }
   } else {
-    // fragment
-    if (block.remove) {
-      block.remove(parent, (block as TransitionBlock).$transition)
-    } else {
-      remove(block.nodes, parent)
-    }
-    if (block.anchor) remove(block.anchor, parent)
-    if ((block as DynamicFragment).scope) {
-      ;(block as DynamicFragment).scope!.stop()
-    }
+    removeFragment(block, parent)
+  }
+}
+
+export function removeNode(block: Node, parent?: ParentNode): void {
+  if (
+    isTransitionEnabled &&
+    (block as TransitionBlock).$transition &&
+    block instanceof Element
+  ) {
+    performTransitionLeave(
+      block,
+      (block as TransitionBlock).$transition as TransitionHooks,
+      () => parent && parent.removeChild(block),
+    )
+  } else {
+    parent && parent.removeChild(block)
+  }
+}
+
+export function removeFragment(
+  block: VaporFragment | DynamicFragment,
+  parent?: ParentNode,
+): void {
+  if (block.remove) {
+    block.remove(parent, (block as TransitionBlock).$transition)
+  } else {
+    remove(block.nodes, parent)
+  }
+  if (block.anchor) removeNode(block.anchor, parent)
+  if ((block as DynamicFragment).scope) {
+    ;(block as DynamicFragment).scope!.stop()
   }
 }
 
