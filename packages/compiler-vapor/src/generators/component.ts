@@ -672,10 +672,12 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     idMap[propsName] = null
   }
 
+  const exitSlotBlock = context.enterSlotBlock()
   let blockFn = context.withId(
     () => genBlock(oper, context, propsName ? [propsName] : []),
     idMap,
   )
+  exitSlotBlock()
   exitScope && exitScope()
 
   if (node.type === NodeTypes.ELEMENT) {

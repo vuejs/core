@@ -11,6 +11,14 @@ export function genSetTemplateRef(
   context: CodegenContext,
 ): CodeFragment[] {
   const [refValue, refKey] = genRefValue(oper.value, context)
+  if (context.staticTemplateRefHelperCandidate === oper) {
+    return genSetStaticTemplateRef(oper, refValue, refKey, context)
+  }
+  if (context.staticTemplateRefBindingCandidate === oper) {
+    return genSetTemplateRefBinding(oper, context)
+  }
+
+  context.needsTemplateRefSetter = true
   return [
     NEWLINE,
     ...genCall(
@@ -23,7 +31,50 @@ export function genSetTemplateRef(
   ]
 }
 
-function genRefValue(value: SimpleExpressionNode, context: CodegenContext) {
+function genSetStaticTemplateRef(
+  oper: SetTemplateRefIRNode,
+  refValue: CodeFragment[],
+  refKey: string | undefined,
+  context: CodegenContext,
+): CodeFragment[] {
+  return [
+    NEWLINE,
+    ...genCall(
+      context.helper('setStaticTemplateRef'),
+      `n${oper.element}`,
+      refValue,
+      oper.refFor && 'true',
+      refKey,
+    ),
+  ]
+}
+
+export function genSetTemplateRefBinding(
+  oper: SetTemplateRefIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const [refValue, refKey] = genRefValue(oper.value, context)
+  const setter = context.inSlotBlock && setTemplateRefIdent
+  if (context.inSlotBlock) {
+    context.needsTemplateRefSetter = true
+  }
+  return [
+    NEWLINE,
+    ...genCall(
+      [context.helper('setTemplateRefBinding'), 'undefined'],
+      `n${oper.element}`,
+      ['() => ', ...refValue],
+      ...(setter || oper.refFor || refKey
+        ? [setter, oper.refFor && 'true', refKey]
+        : []),
+    ),
+  ]
+}
+
+function genRefValue(
+  value: SimpleExpressionNode,
+  context: CodegenContext,
+): [CodeFragment[], string?] {
   // in inline mode there is no setupState object, so we can't use string
   // keys to set the ref. Instead, we need to transform it to pass the
   // actual ref instead.

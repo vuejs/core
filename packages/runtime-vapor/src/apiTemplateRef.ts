@@ -39,6 +39,7 @@ import {
   refCleanups,
   unsetRef,
 } from './refCleanup'
+import { renderEffect } from './renderEffect'
 
 export type NodeRef =
   | string
@@ -101,6 +102,34 @@ export function createTemplateRefSetter(): setRefFn {
     oldRefMap.set(el, oldRef)
     return oldRef
   }
+}
+
+export function setStaticTemplateRef(
+  el: RefEl,
+  ref: NodeRef,
+  refFor?: boolean,
+  refKey?: string,
+): NodeRef | undefined {
+  // Static refs are one-shot compiler output, so they don't need the dynamic
+  // setter's old-ref tracking or DynamicFragment update hooks.
+  return setRef(
+    currentInstance as VaporComponentInstance,
+    el,
+    ref,
+    undefined,
+    refFor,
+    refKey,
+  )
+}
+
+export function setTemplateRefBinding(
+  el: RefEl,
+  getter: () => any,
+  setter: setRefFn = createTemplateRefSetter(),
+  refFor?: boolean,
+  refKey?: string,
+): void {
+  renderEffect(() => setter(el, getter(), refFor, refKey))
 }
 
 /**
