@@ -66,6 +66,29 @@ describe('compiler: v-if', () => {
     expect(code).matchSnapshot()
   })
 
+  test('omits default single-root flags', () => {
+    const { code } = compileWithVIf(`<div v-if="ok" />`)
+
+    expect(code).contains(`const n0 = _createIf(() => (_ctx.ok), () => {`)
+    expect(code).not.contains(`}, null, 1)`)
+  })
+
+  test('packs once flag', () => {
+    const { code } = compileWithVIf(`<div v-if="ok" v-once />`)
+
+    expect(code).contains(`}, null, 17 /* BLOCK_SHAPE, ONCE */)`)
+    expect(code).not.contains(`}, null, 1, true)`)
+  })
+
+  test('packs branch index', () => {
+    const { code } = compileWithVIf(
+      `<div v-if="foo">foo</div><div v-else>bar</div>`,
+    )
+
+    expect(code).contains(`}, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)`)
+    expect(code).not.contains(`}, 5, null, 0)`)
+  })
+
   test('multiple v-if at root', () => {
     const { code, ir } = compileWithVIf(
       `<div v-if="foo">foo</div><div v-else-if="bar">bar</div><div v-if="baz">baz</div>`,

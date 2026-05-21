@@ -131,7 +131,7 @@ export function render(_ctx) {
       const n1 = _createIf(() => (_ctx.ok), () => {
         const n3 = _createComponentWithFallback(_component_Child)
         return n3
-      }, null, 1)
+      })
       return n1
     })
   })
