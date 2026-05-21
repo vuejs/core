@@ -91,13 +91,12 @@ export function render(_ctx) {
 `;
 
 exports[`static template marker > does not mark single-root element with ref 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, template as _template } from 'vue';
+"import { setStaticTemplateRef as _setStaticTemplateRef, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
-  const _setTemplateRef = _createTemplateRefSetter()
   const n0 = t0()
-  _setTemplateRef(n0, "el")
+  _setStaticTemplateRef(n0, "el")
   return n0
 }"
 `;

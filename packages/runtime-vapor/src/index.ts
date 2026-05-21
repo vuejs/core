@@ -68,7 +68,11 @@ export {
   getRestElement,
   getDefaultValue,
 } from './apiCreateFor'
-export { createTemplateRefSetter } from './apiTemplateRef'
+export {
+  createTemplateRefSetter,
+  setStaticTemplateRef,
+  setTemplateRefBinding,
+} from './apiTemplateRef'
 export { useVaporCssVars } from './helpers/useCssVars'
 export { setBlockKey } from './helpers/setKey'
 export { createDynamicComponent } from './apiCreateDynamicComponent'

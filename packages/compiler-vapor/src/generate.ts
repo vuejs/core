@@ -3,7 +3,14 @@ import type {
   BaseCodegenResult,
   SimpleExpressionNode,
 } from '@vue/compiler-dom'
-import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
+import type {
+  BlockIRNode,
+  CoreHelper,
+  RootIRNode,
+  SetTemplateRefIRNode,
+  VaporHelper,
+} from './ir'
+import { IRNodeTypes } from './ir'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -34,6 +41,10 @@ export class CodegenContext {
   bindingNames: Set<string> = new Set<string>()
 
   helpers: Map<string, string> = new Map()
+
+  needsTemplateRefSetter: boolean = false
+  staticTemplateRefHelperCandidate?: SetTemplateRefIRNode
+  inSlotBlock: boolean = false
 
   helper = (name: CoreHelper | VaporHelper): string => {
     if (this.helpers.has(name)) {
@@ -114,6 +125,12 @@ export class CodegenContext {
     const parent = this.block
     this.block = block
     return (): BlockIRNode => (this.block = parent)
+  }
+
+  enterSlotBlock() {
+    const parent = this.inSlotBlock
+    this.inSlotBlock = true
+    return (): boolean => (this.inSlotBlock = parent)
   }
 
   scopeLevel: number = 0
@@ -206,6 +223,9 @@ export class CodegenContext {
         : [],
     )
     this.initNextIdMap()
+    this.staticTemplateRefHelperCandidate = getStaticTemplateRefHelperCandidate(
+      ir.block,
+    )
   }
 }
 
@@ -238,13 +258,18 @@ export function generate(
   }
 
   push(INDENT_START)
-  if (ir.hasTemplateRef) {
-    push(
-      NEWLINE,
-      `const ${setTemplateRefIdent} = ${context.helper('createTemplateRefSetter')}()`,
-    )
+  // Pre-register to keep fallback template-ref helper ordering stable; remove it
+  // below when all refs lower to binding helpers.
+  const templateRefSetterHelper = ir.hasTemplateRef
+    ? context.helper('createTemplateRefSetter')
+    : undefined
+  const body = genBlockContent(ir.block, context, true)
+  if (context.needsTemplateRefSetter) {
+    push(NEWLINE, `const ${setTemplateRefIdent} = ${templateRefSetterHelper}()`)
+  } else if (templateRefSetterHelper) {
+    context.helpers.delete('createTemplateRefSetter')
   }
-  push(...genBlockContent(ir.block, context, true))
+  push(...body)
   push(INDENT_END, NEWLINE)
 
   if (!inline) {
@@ -303,4 +328,20 @@ function genAssetImports({ ir }: CodegenContext) {
     imports += `import ${name} from '${assetImport.path}';\n`
   }
   return imports
+}
+
+function getStaticTemplateRefHelperCandidate(
+  block: BlockIRNode,
+): SetTemplateRefIRNode | undefined {
+  if (block.operation.length !== 1) return
+
+  const operation = block.operation[0]
+  if (
+    operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
+    !operation.effect &&
+    !operation.refFor &&
+    operation.value.isStatic
+  ) {
+    return operation
+  }
 }

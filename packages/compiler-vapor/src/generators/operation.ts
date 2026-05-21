@@ -12,7 +12,7 @@ import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genDynamicProps, genSetProp } from './prop'
-import { genSetTemplateRef } from './templateRef'
+import { genSetTemplateRef, genSetTemplateRefBinding } from './templateRef'
 import { genGetTextChild, genSetText } from './text'
 import {
   type CodeFragment,
@@ -114,6 +114,26 @@ export function genEffects(
     varNames,
     expressionReplacements,
   } = processExpressions(context, expressions, shouldDeclare)
+  if (shouldDeclare && !declarationFrags.length && !varNames.length) {
+    const effect = effects.length === 1 ? effects[0] : undefined
+    const operation =
+      effect && effect.operations.length === 1
+        ? effect.operations[0]
+        : undefined
+    if (
+      operation &&
+      operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
+      operation.effect &&
+      // Keep ref-for on the render-effect path so v-for branches reuse the
+      // root/slot-owner scoped _setTemplateRef instead of allocating a setter
+      // and its tracking WeakMaps for each item.
+      !operation.refFor
+    ) {
+      return context.withExpressionReplacements(expressionReplacements, () =>
+        context.withId(() => genSetTemplateRefBinding(operation, context), ids),
+      )
+    }
+  }
   return context.withExpressionReplacements(expressionReplacements, () => {
     push(...declarationFrags)
     for (let i = 0; i < effects.length; i++) {
