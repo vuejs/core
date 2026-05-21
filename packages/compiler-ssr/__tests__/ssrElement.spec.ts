@@ -191,6 +191,20 @@ describe('ssr: element', () => {
         `)
     })
 
+    test('v-bind:arg (overloaded boolean)', () => {
+      expect(
+        getCompiledString(
+          `<div><span :hidden="false"></span><span :hidden="'until-found'"></span></div>`,
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<div><span\${
+            _ssrRenderDynamicAttr("hidden", false)
+          }></span><span\${
+            _ssrRenderDynamicAttr("hidden", 'until-found')
+          }></span></div>\`"
+      `)
+    })
+
     test('v-bind:[arg]', () => {
       expect(getCompiledString(`<div v-bind:[key]="value"></div>`))
         .toMatchInlineSnapshot(`
