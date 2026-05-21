@@ -427,23 +427,16 @@ export function createHydrationFunctions(
           slotScopeIds,
           optimized,
         )
-        let hasWarned = false
+        if (next && !isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
+          ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+            warn(
+              `Hydration children mismatch on`,
+              el,
+              `\nServer rendered element contains more child nodes than client vdom.`,
+            )
+          logMismatchError()
+        }
         while (next) {
-          if (!isMismatchAllowed(el, MismatchTypes.CHILDREN)) {
-            if (
-              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-              !hasWarned
-            ) {
-              warn(
-                `Hydration children mismatch on`,
-                el,
-                `\nServer rendered element contains more child nodes than client vdom.`,
-              )
-              hasWarned = true
-            }
-            logMismatchError()
-          }
-
           // The SSRed DOM contains more nodes than it should. Remove them.
           const cur = next
           next = next.nextSibling
@@ -567,7 +560,7 @@ export function createHydrationFunctions(
     optimized = optimized || !!parentVNode.dynamicChildren
     const children = parentVNode.children as VNode[]
     const l = children.length
-    let hasWarned = false
+    let hasCheckedMismatch = false
     for (let i = 0; i < l; i++) {
       const vnode = optimized
         ? children[i]
@@ -605,19 +598,17 @@ export function createHydrationFunctions(
         // because server rendered HTML won't contain a text node
         insert((vnode.el = createText('')), container)
       } else {
-        if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
-          if (
-            (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-            !hasWarned
-          ) {
-            warn(
-              `Hydration children mismatch on`,
-              container,
-              `\nServer rendered element contains fewer child nodes than client vdom.`,
-            )
-            hasWarned = true
+        if (!hasCheckedMismatch) {
+          hasCheckedMismatch = true
+          if (!isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
+            ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+              warn(
+                `Hydration children mismatch on`,
+                container,
+                `\nServer rendered element contains fewer child nodes than client vdom.`,
+              )
+            logMismatchError()
           }
-          logMismatchError()
         }
 
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
