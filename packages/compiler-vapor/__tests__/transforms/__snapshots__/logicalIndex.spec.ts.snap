@@ -61,7 +61,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, 1, true)
+  }, null, 17 /* BLOCK_SHAPE, ONCE */)
   return n5
 }"
 `;
@@ -80,7 +80,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, 1, true)
+  }, null, 17 /* BLOCK_SHAPE, ONCE */)
   return n4
 }"
 `;
@@ -100,7 +100,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, 1, true)
+  }, null, 17 /* BLOCK_SHAPE, ONCE */)
   return n5
 }"
 `;
@@ -344,7 +344,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  }, null, 1)
+  })
   return n3
 }"
 `;
@@ -361,7 +361,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  }, null, 1)
+  })
   return n4
 }"
 `;
@@ -377,7 +377,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  }, null, 1)
+  })
   return n3
 }"
 `;
@@ -399,7 +399,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = t1()
     return n5
-  }, 5, null, 0)
+  }, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   _setInsertionState(n7, null, 2)
   const n6 = _createAssetComponent("Comp2")
   return n7
@@ -423,7 +423,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = t1()
     return n5
-  }, 5, null, 0)
+  }, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   return n6
 }"
 `;
@@ -444,7 +444,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 5, null, 0)
+  }, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   return n6
 }"
 `;
@@ -469,7 +469,7 @@ export function render(_ctx) {
   }, () => {
     const n6 = t2()
     return n6
-  }, 5, null, 1), 5, null, 0)
+  }, 69 /* BLOCK_SHAPE, INDEX_SHIFT */), 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   return n8
 }"
 `;
@@ -489,7 +489,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 5, null, 0)
+  }, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   return n5
 }"
 `;
@@ -509,7 +509,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 5, null, 0)
+  }, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   _setInsertionState(n6, null, 2)
   const n5 = _createAssetComponent("Comp")
   return n6
@@ -531,7 +531,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 5, null, 0)
+  }, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   return n5
 }"
 `;

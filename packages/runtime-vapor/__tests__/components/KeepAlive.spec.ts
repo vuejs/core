@@ -249,9 +249,7 @@ describe('VaporKeepAlive', () => {
                 setRefB(n1, instanceB)
                 return n1
               },
-              undefined,
-              undefined,
-              0,
+              37,
             ),
         })
       },
@@ -310,9 +308,7 @@ describe('VaporKeepAlive', () => {
                 setRefB(n1, instanceB)
                 return n1
               },
-              undefined,
-              undefined,
-              0,
+              37,
             ),
         })
       },
@@ -444,9 +440,7 @@ describe('VaporKeepAlive', () => {
               () => toggle.value,
               () => renderItems(itemsA),
               () => renderItems(itemsB),
-              undefined,
-              undefined,
-              0,
+              37,
             ),
         })
       },
@@ -2519,9 +2513,7 @@ describe('VaporKeepAlive', () => {
                 () => toggle.value,
                 () => createComponent(Comp, { id: () => 'a' }),
                 () => createComponent(Comp, { id: () => 'b' }),
-                undefined,
-                undefined,
-                0,
+                37,
               ),
           },
         )
@@ -2607,9 +2599,7 @@ describe('VaporKeepAlive', () => {
                   () => toggle.value,
                   () => createComponent(Comp, { id: () => 'a' }),
                   () => createComponent(Comp, { id: () => 'b' }),
-                  undefined,
-                  undefined,
-                  0,
+                  37,
                 ),
             })
             return keepAlive
@@ -2676,9 +2666,7 @@ describe('VaporKeepAlive', () => {
                   () => toggle.value,
                   () => createComponent(Comp, { id: () => 'a' }),
                   () => createComponent(AsyncComp),
-                  undefined,
-                  undefined,
-                  0,
+                  37,
                 ),
             })
             return keepAlive
@@ -2724,9 +2712,7 @@ describe('VaporKeepAlive', () => {
                 () => toggle.value,
                 () => createComponent(Comp, { id: () => 'a' }),
                 () => createComponent(Comp, { id: () => 'b' }),
-                undefined,
-                undefined,
-                0,
+                37,
               ),
           },
         )
@@ -2775,9 +2761,7 @@ describe('VaporKeepAlive', () => {
               () => toggle.value,
               () => createComponent(Comp, { id: () => 'a' }),
               () => createComponent(Comp, { id: () => 'b' }),
-              undefined,
-              undefined,
-              0,
+              37,
             ),
         })
       },

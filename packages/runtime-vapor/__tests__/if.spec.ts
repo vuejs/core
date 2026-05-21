@@ -145,8 +145,7 @@ describe('createIf', () => {
           () => toggle.value,
           () => template('<p>foo</p>')(),
           () => template('<p>bar</p>')(),
-          undefined,
-          true,
+          21,
         )
       },
     }).render()
@@ -198,9 +197,7 @@ describe('createIf', () => {
         () => show.value,
         () => (branch = t0()),
         () => (branch = t1()),
-        undefined,
-        undefined,
-        0,
+        37,
       ),
     ).render()
 
@@ -234,9 +231,7 @@ describe('createIf', () => {
         () => show.value,
         () => (branch = t0()),
         () => (branch = t1()),
-        undefined,
-        undefined,
-        0,
+        37,
       ),
     ]).render()
 
@@ -270,9 +265,7 @@ describe('createIf', () => {
               () => show.value,
               () => (branch = t0()),
               () => (branch = t1()),
-              undefined,
-              undefined,
-              0,
+              37,
             ),
         },
         true,
