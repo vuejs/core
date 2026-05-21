@@ -214,7 +214,15 @@ function isFragmentBlock(block: BlockIRNode): boolean {
   const operation = child && child.operation
   if (!operation) return false
   return (
+    // <slot/>
     operation.type === IRNodeTypes.SLOT_OUTLET_NODE ||
+    // <template v-for> with a single v-for child
+    operation.type === IRNodeTypes.FOR ||
+    // <template v-for> with a single dynamic :key child
+    operation.type === IRNodeTypes.KEY ||
+    // <template v-for> with a single dynamic v-if child
+    (operation.type === IRNodeTypes.IF && !operation.once) ||
+    // <component :is="..."/>
     (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE &&
       !!operation.dynamic &&
       !operation.dynamic.isStatic)

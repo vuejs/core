@@ -342,6 +342,62 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > v-for on template with element and component v-if branches 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>hi")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createIf(() => (_for_item0.value.id===1), () => {
+      const n4 = t0()
+      return n4
+    }, () => {
+      const n6 = _createComponentWithFallback(_component_Comp)
+      return n6
+    }, 10, null, 0)
+    return n2
+  }, undefined, 16)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with keyed child marks fragment block 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createKeyedFragment as _createKeyedFragment, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createKeyedFragment(() => (_for_item0.value.id), () => {
+      const n3 = t0()
+      const x3 = _txt(n3)
+      _renderEffect(() => _setText(x3, _toDisplayString(_for_item0.value.text)))
+      return n3
+    })
+    return n2
+  }, undefined, 16)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with nested v-for child marks fragment block 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = _createFor(() => (_for_item0.value), (_for_item1) => {
+      const n4 = t0()
+      const x4 = _txt(n4)
+      _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value)))
+      return n4
+    }, undefined, 8)
+    return n2
+  }, undefined, 16)
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > v-for on template with single component child 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template(" ")

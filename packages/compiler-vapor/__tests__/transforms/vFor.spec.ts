@@ -4,10 +4,12 @@ import {
   IRNodeTypes,
   transformChildren,
   transformElement,
+  transformKey,
   transformSlotOutlet,
   transformText,
   transformVBind,
   transformVFor,
+  transformVIf,
   transformVOn,
 } from '../../src'
 import { NodeTypes } from '@vue/compiler-dom'
@@ -15,7 +17,9 @@ import { VaporVForFlags } from '@vue/shared'
 
 const compileWithVFor = makeCompile({
   nodeTransforms: [
+    transformVIf,
     transformVFor,
+    transformKey,
     transformSlotOutlet,
     transformText,
     transformElement,
@@ -502,5 +506,53 @@ describe('compiler: v-for', () => {
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
     ).toBe(true)
+  })
+
+  test('v-for on template with element and component v-if branches', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in items">
+        <div v-if="item.id===1">hi</div>
+        <Comp v-else></Comp>
+      </template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_FRAGMENT})`)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(false)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.IF,
+    })
+  })
+
+  test('v-for on template with nested v-for child marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="row in rows"><div v-for="item in row">{{ item }}</div></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_FRAGMENT})`)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.FOR,
+    })
+  })
+
+  test('v-for on template with keyed child marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in items"><div :key="item.id">{{ item.text }}</div></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_FRAGMENT})`)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.KEY,
+    })
   })
 })
