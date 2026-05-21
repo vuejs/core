@@ -52,6 +52,8 @@ import {
   DEFINE_EMITS,
   genRuntimeEmits,
   processDefineEmits,
+  processNestedDefineEmits,
+  replaceDefineEmits,
 } from './script/defineEmits'
 import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
@@ -628,7 +630,7 @@ export function compileScript(
 
           // defineEmits
           const isDefineEmits =
-            !isDefineProps && processDefineEmits(ctx, init, decl.id as LVal)
+            !isDefineProps && processNestedDefineEmits(ctx, init, decl.id as LVal)
           !isDefineEmits &&
             (processDefineSlots(ctx, init, decl.id as LVal) ||
               processDefineModel(ctx, init, decl.id as LVal))
@@ -656,11 +658,7 @@ export function compileScript(
               left--
             }
           } else if (isDefineEmits) {
-            ctx.s.overwrite(
-              startOffset + init.start!,
-              startOffset + init.end!,
-              '__emit',
-            )
+            replaceDefineEmits(ctx, init)
           } else {
             lastNonRemoved = i
           }
