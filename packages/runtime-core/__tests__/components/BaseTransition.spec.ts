@@ -254,6 +254,51 @@ describe('BaseTransition', () => {
       cbs.doneEnter[`<div></div>`]()
       expect(props.onAfterAppear).toHaveBeenCalledTimes(1)
     })
+
+    // #14031
+    test('w/ KeepAlive activate/deactivate should not call enter/leave hooks', async () => {
+      const { props } = mockProps({ persisted: true })
+      const { hooks } = mockPersistedHooks()
+      const which = ref<'A' | 'B'>('A')
+      const CompA = {
+        name: 'CompA',
+        render: () => h('div', { id: 'A', ...hooks }),
+      }
+      const CompB = {
+        name: 'CompB',
+        render: () => h('span', { id: 'B' }),
+      }
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return h(BaseTransition, props, () =>
+            h(KeepAlive, null, which.value === 'A' ? h(CompA) : h(CompB)),
+          )
+        },
+      }
+      render(h(App), root)
+
+      // initial mount: persisted, so no auto enter hooks
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+
+      // switch to B → A is deactivated (moved to storage). Since the
+      // transition on A's <div> is persisted, no leave hooks should fire.
+      which.value = 'B'
+      await nextTick()
+      expect(props.onBeforeLeave).not.toHaveBeenCalled()
+      expect(props.onLeave).not.toHaveBeenCalled()
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+
+      // switch back to A → A is activated (moved back from storage). The
+      // persisted transition still shouldn't auto-fire enter hooks.
+      which.value = 'A'
+      await nextTick()
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+    })
   })
 
   describe('toggle on-off', () => {
