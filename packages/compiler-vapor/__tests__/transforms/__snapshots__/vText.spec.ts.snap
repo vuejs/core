@@ -1,25 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`v-text > should convert v-text to setText 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  const x0 = _txt(n0)
-  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.str)))
+  _setTextBinding(n0, () => _toDisplayString(_ctx.str))
   return n0
 }"
 `;
 
 exports[`v-text > should raise error and ignore children when v-text is present 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  const x0 = _txt(n0)
-  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.test)))
+  _setTextBinding(n0, () => _toDisplayString(_ctx.test))
   return n0
 }"
 `;
@@ -35,21 +33,21 @@ export function render(_ctx) {
 `;
 
 exports[`v-text > work with component 1`] = `
-"import { createAssetComponent as _createAssetComponent, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
+"import { createAssetComponent as _createAssetComponent, toDisplayString as _toDisplayString, setBlockTextBinding as _setBlockTextBinding } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createAssetComponent("Comp", null, null, true)
-  _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
+  _setBlockTextBinding(n0, () => _toDisplayString(_ctx.foo))
   return n0
 }"
 `;
 
 exports[`v-text > work with dynamic component 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent, toDisplayString as _toDisplayString, setBlockTextBinding as _setBlockTextBinding } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, true)
-  _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
+  _setBlockTextBinding(n0, () => _toDisplayString(_ctx.foo))
   return n0
 }"
 `;

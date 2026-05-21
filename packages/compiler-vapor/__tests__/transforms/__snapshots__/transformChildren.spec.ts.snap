@@ -37,15 +37,29 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: children transform > does not lower generated text binding when expressions need declarations 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setText(x0, _toDisplayString(_foo + _foo))
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: children transform > efficient find 1`] = `
-"import { child as _child, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { child as _child, nthChild as _nthChild, toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<div><div>x</div><div>x</div><div> ", 1)
 
 export function render(_ctx) {
   const n1 = t0()
   const n0 = _nthChild(n1, 2)
-  const x0 = _txt(n0)
-  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  _setTextBinding(n0, () => _toDisplayString(_ctx.msg))
   return n1
 }"
 `;
@@ -93,7 +107,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: children transform > keep nested operation parent as node variable before sibling lookup 1`] = `
-"import { child as _child, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, next as _next, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { child as _child, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, next as _next, toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<div><section></section><section><span> ", 1)
 
 export function render(_ctx) {
@@ -102,9 +116,19 @@ export function render(_ctx) {
   const n2 = _child(_next(n1, 1))
   _setInsertionState(n1, null, 0)
   const n0 = _createAssetComponent("Comp")
-  const x2 = _txt(n2)
-  _renderEffect(() => _setText(x2, _toDisplayString(_ctx.msg)))
+  _setTextBinding(n2, () => _toDisplayString(_ctx.msg))
   return n3
+}"
+`;
+
+exports[`compiler: children transform > lowers mixed generated text binding without hiding segment display conversion 1`] = `
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
+const t0 = _template("<div> ", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setTextBinding(n0, () => _toDisplayString(_ctx.a) + " - " + _toDisplayString(_ctx.b))
+  return n0
 }"
 `;
 

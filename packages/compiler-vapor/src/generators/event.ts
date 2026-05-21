@@ -12,7 +12,7 @@ import {
   type SetDynamicEventsIRNode,
   type SetEventIRNode,
 } from '../ir'
-import { genExpression } from './expression'
+import { genExpression, genExpressionGetter } from './expression'
 import {
   type CodeFragment,
   DELIMITERS_OBJECT_NEWLINE,
@@ -27,7 +27,6 @@ export function genSetEvent(
 ): CodeFragment[] {
   const { helper } = context
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
-
   let handler: CodeFragment[] | undefined
 
   if (delegate) {
@@ -45,16 +44,14 @@ export function genSetEvent(
     }
   }
 
-  const name = genName()
-  const eventOptions = genEventOptions()
   return [
     NEWLINE,
     ...genCall(
       helper(effect ? 'onBinding' : delegate ? 'delegate' : 'on'),
       `n${element}`,
-      name,
+      genName(),
       genHandler(),
-      eventOptions,
+      genCurrentEventOptions(),
     ),
   ]
 
@@ -87,7 +84,7 @@ export function genSetEvent(
     }
   }
 
-  function genEventOptions(): CodeFragment[] | undefined {
+  function genCurrentEventOptions(): CodeFragment[] | undefined {
     let { options } = modifiers
     if (!options.length) return
 
@@ -110,6 +107,23 @@ export function genSetEvent(
   }
 }
 
+export function genSetEventBinding(
+  oper: SetEventIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { helper } = context
+  return [
+    NEWLINE,
+    ...genCall(
+      helper('setEventBinding'),
+      `n${oper.element}`,
+      ['() => ', ...genEventName(oper, context)],
+      genEventHandler(context, [oper.value], oper.modifiers),
+      genEventOptions(oper),
+    ),
+  ]
+}
+
 export function genSetDynamicEvents(
   oper: SetDynamicEventsIRNode,
   context: CodegenContext,
@@ -123,6 +137,49 @@ export function genSetDynamicEvents(
       genExpression(oper.event, context),
     ),
   ]
+}
+
+export function genSetDynamicEventsBinding(
+  oper: SetDynamicEventsIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { helper } = context
+  return [
+    NEWLINE,
+    ...genCall(
+      helper('setDynamicEventsBinding'),
+      `n${oper.element}`,
+      genExpressionGetter(oper.event, context),
+    ),
+  ]
+}
+
+function genEventName(
+  { key, keyOverride }: SetEventIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const expr = genExpression(key, context)
+  if (keyOverride) {
+    // TODO unit test
+    const find = JSON.stringify(keyOverride[0])
+    const replacement = JSON.stringify(keyOverride[1])
+    const wrapped: CodeFragment[] = ['(', ...expr, ')']
+    return [...wrapped, ` === ${find} ? ${replacement} : `, ...wrapped]
+  } else {
+    return expr
+  }
+}
+
+function genEventOptions({
+  modifiers,
+}: SetEventIRNode): CodeFragment[] | undefined {
+  const { options } = modifiers
+  if (!options.length) return
+
+  return genMulti(
+    DELIMITERS_OBJECT_NEWLINE,
+    ...options.map((option): CodeFragment[] => [`${option}: true`]),
+  )
 }
 
 interface GenEventHandlerOptions {

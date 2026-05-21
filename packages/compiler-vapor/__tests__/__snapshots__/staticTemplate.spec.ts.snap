@@ -1,14 +1,14 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`static template marker > does not dedupe static and dynamic templates with identical html 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<span>", 2)
 const t1 = _template("<span>")
 
 export function render(_ctx) {
   const n0 = t0()
   const n1 = t1()
-  _renderEffect(() => _setProp(n1, "foo", _ctx.foo))
+  _setPropBinding(n1, "foo", () => _ctx.foo)
   return [n0, n1]
 }"
 `;
@@ -68,24 +68,23 @@ export function render(_ctx) {
 `;
 
 exports[`static template marker > does not mark single-root element with dynamic props 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<span>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setProp(n0, "foo", _ctx.foo))
+  _setPropBinding(n0, "foo", () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`static template marker > does not mark single-root element with dynamic text content 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<span> ", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  const x0 = _txt(n0)
-  _renderEffect(() => _setText(x0, "hi " + _toDisplayString(_ctx.foo)))
+  _setTextBinding(n0, () => "hi " + _toDisplayString(_ctx.foo))
   return n0
 }"
 `;
@@ -103,24 +102,23 @@ export function render(_ctx) {
 `;
 
 exports[`static template marker > does not mark single-root element with v-html 1`] = `
-"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setHtmlBinding as _setHtmlBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setHtml(n0, _ctx.foo))
+  _setHtmlBinding(n0, () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`static template marker > does not mark single-root element with v-text 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  const x0 = _txt(n0)
-  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.foo)))
+  _setTextBinding(n0, () => _toDisplayString(_ctx.foo))
   return n0
 }"
 `;

@@ -14,7 +14,9 @@ import {
   prepend,
   remove,
   renderEffect,
+  setDynamicEventsBinding,
   setInsertionState,
+  setMergedDynamicPropsBinding,
   template,
   txt,
   vaporInteropPlugin,
@@ -34,7 +36,7 @@ import {
   toDisplayString,
   useSlots,
 } from '@vue/runtime-dom'
-import { makeRender } from './_utils'
+import { compileToVaporRender, makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import { type Block, type BlockFn, isValidBlock } from '../src/block'
@@ -1799,18 +1801,77 @@ describe('component: slots', () => {
               const n3 = template('<div> </div>')() as any
               const x3 = txt(n3) as any
               renderEffect(() => setText(x3, toDisplayString(count.value)))
+              setMergedDynamicPropsBinding(
+                n3,
+                { id: 'static-id' },
+                () => ({
+                  title: `title-${count.value}`,
+                  class: `count-${count.value}`,
+                }),
+                { class: 'after' },
+              )
               return n3
             },
           })
         },
       }).render()
 
-      expect(html()).toBe('<div>0</div><!--slot-->')
+      expect(html()).toBe(
+        '<div id="static-id" title="title-0" class="count-0 after">0</div><!--slot-->',
+      )
 
       // expect no changes due to v-once
       count.value++
       await nextTick()
-      expect(html()).toBe('<div>0</div><!--slot-->')
+      expect(html()).toBe(
+        '<div id="static-id" title="title-0" class="count-0 after">0</div><!--slot-->',
+      )
+    })
+
+    test('v-on in v-once slot should not warn or update events', async () => {
+      const Child = defineVaporComponent({
+        render: compileToVaporRender(`<slot v-once />`, {
+          bindingMetadata: {},
+        }),
+      })
+
+      const calls: string[] = []
+      const events = ref<Record<string, () => void>>({
+        click: () => {
+          calls.push('click')
+        },
+      })
+      let button!: HTMLButtonElement
+
+      define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              button = template('<button></button>')() as HTMLButtonElement
+              setDynamicEventsBinding(button, () => events.value)
+              return button
+            },
+          })
+        },
+      }).render()
+
+      expect(
+        `onEffectCleanup() was called when there was no active effect`,
+      ).not.toHaveBeenWarned()
+
+      button.click()
+      expect(calls).toEqual(['click'])
+
+      events.value = {
+        mouseover: () => {
+          calls.push('mouseover')
+        },
+      }
+      await nextTick()
+
+      button.dispatchEvent(new Event('mouseover'))
+      button.click()
+      expect(calls).toEqual(['click', 'click'])
     })
   })
 

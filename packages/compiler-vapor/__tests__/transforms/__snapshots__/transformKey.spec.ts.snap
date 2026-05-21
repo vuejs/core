@@ -13,14 +13,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: key > with dynamic key > basic key 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.ok), () => {
     const n1 = t0()
-    const x1 = _txt(n1)
-    _renderEffect(() => _setText(x1, _toDisplayString(_ctx.msg)))
+    _setTextBinding(n1, () => _toDisplayString(_ctx.msg))
     return n1
   })
   return n0

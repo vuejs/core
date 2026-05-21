@@ -1,13 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compile > bindings 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  const x0 = _txt(n0)
-  _renderEffect(() => _setText(x0, "count is " + _toDisplayString(_ctx.count) + "."))
+  _setTextBinding(n0, () => "count is " + _toDisplayString(_ctx.count) + ".")
   return n0
 }"
 `;
@@ -148,7 +147,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, toDisplayString as _toDisplayString, setText as _setText, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", 2)
 const t1 = _template("<div> ")
 
@@ -156,7 +155,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
   const n3 = t1()
   const n2 = _child(n3, 1)
-  _renderEffect(() => _setProp(n3, "id", _ctx.foo))
+  _setPropBinding(n3, "id", () => _ctx.foo)
   _setInsertionState(n3, 0, 0)
   const n1 = _createAssetComponent("Comp")
   _renderEffect(() => _setText(n2, _toDisplayString(_ctx.bar)))
@@ -236,12 +235,12 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > execution order > flushes parent props before creating child component 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = t0()
-  _renderEffect(() => _setProp(n1, "id", _ctx.useId()))
+  _setPropBinding(n1, "id", () => _ctx.useId())
   _setInsertionState(n1, null, 0)
   const n0 = _createAssetComponent("Child")
   return n1
@@ -249,20 +248,19 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > execution order > flushes previous effects before creating child component 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  const x0 = _txt(n0)
-  _renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
+  _setTextBinding(n0, () => "parent: " + _toDisplayString(_ctx.useId()))
   const n1 = _createAssetComponent("Child")
   return [n0, n1]
 }"
 `;
 
 exports[`compile > execution order > setInsertionState > next, child and nthChild should be above the setInsertionState 1`] = `
-"import { child as _child, next as _next, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, nthChild as _nthChild, createIf as _createIf, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { child as _child, next as _next, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, nthChild as _nthChild, createIf as _createIf, setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 2)
 const t1 = _template("<div><div></div><!><div></div><!><div><button>", 1)
 
@@ -278,7 +276,7 @@ export function render(_ctx) {
     const n3 = t0()
     return n3
   }, null, 1, true)
-  _renderEffect(() => _setProp(n4, "disabled", _ctx.foo))
+  _setPropBinding(n4, "disabled", () => _ctx.foo)
   return n6
 }"
 `;
@@ -410,13 +408,12 @@ export function render(_ctx) {
 `;
 
 exports[`compile > gen unique helper alias > should avoid conflicts with existing variable names 1`] = `
-"import { txt as _txt2, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding2, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  const x0 = _txt2(n0)
-  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.foo)))
+  _setTextBinding2(n0, () => _toDisplayString(_ctx.foo))
   return n0
 }"
 `;

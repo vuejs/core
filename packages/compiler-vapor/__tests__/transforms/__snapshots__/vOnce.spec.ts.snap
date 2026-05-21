@@ -123,3 +123,14 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler: v-once > with v-on object 1`] = `
+"import { setDynamicEvents as _setDynamicEvents, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setDynamicEvents(n0, _ctx.obj)
+  return n0
+}"
+`;

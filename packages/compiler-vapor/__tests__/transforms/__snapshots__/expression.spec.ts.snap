@@ -104,34 +104,34 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: expression > cache expressions > not cache variable and member expression with the same name 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setPropBinding as _setPropBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setProp(n0, "id", _ctx.bar + _ctx.obj.bar))
+  _setPropBinding(n0, "id", () => _ctx.bar + _ctx.obj.bar)
   return n0
 }"
 `;
 
 exports[`compiler: expression > cache expressions > not cache variable in function expression 1`] = `
-"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicPropsBinding as _setDynamicPropsBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ foo: bar => _ctx.foo = bar }]))
+  _setDynamicPropsBinding(n0, () => [{ foo: bar => _ctx.foo = bar }])
   return n0
 }"
 `;
 
 exports[`compiler: expression > cache expressions > not cache variable only used in property shorthand 1`] = `
-"import { setStyle as _setStyle, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setStyleBinding as _setStyleBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setStyle(n0, {color: _ctx.color}))
+  _setStyleBinding(n0, () => ({color: _ctx.color}))
   return n0
 }"
 `;

@@ -16,7 +16,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: logicalIndex > child/nthChild/next with logicalIndex > inline placeholder keeps logicalIndex when it differs from element index 1`] = `
-"import { setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, nthChild as _nthChild, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, nthChild as _nthChild, toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<div><i></i><b></b><section><span> ", 1)
 
 export function render(_ctx) {
@@ -24,8 +24,7 @@ export function render(_ctx) {
   const n1 = _child(_nthChild(n2, 2, 3))
   _setInsertionState(n2, 0, 0)
   const n0 = _createAssetComponent("Comp")
-  const x1 = _txt(n1)
-  _renderEffect(() => _setText(x1, _toDisplayString(_ctx.msg)))
+  _setTextBinding(n1, () => _toDisplayString(_ctx.msg))
   return n2
 }"
 `;

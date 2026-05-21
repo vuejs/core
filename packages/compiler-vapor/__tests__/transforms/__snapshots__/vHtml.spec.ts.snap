@@ -1,23 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`v-html > should convert v-html to innerHTML 1`] = `
-"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setHtmlBinding as _setHtmlBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _renderEffect(() => _setHtml(n0, _ctx.code))
+  _setHtmlBinding(n0, () => _ctx.code)
   return n0
 }"
 `;
 
 exports[`v-html > should raise error and ignore children when v-html is present 1`] = `
-"import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setHtmlBinding as _setHtmlBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setHtml(n0, _ctx.test))
+  _setHtmlBinding(n0, () => _ctx.test)
   return n0
 }"
 `;
@@ -34,21 +34,42 @@ export function render(_ctx) {
 `;
 
 exports[`v-html > work with component 1`] = `
-"import { createAssetComponent as _createAssetComponent, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
+"import { createAssetComponent as _createAssetComponent, setBlockHtmlBinding as _setBlockHtmlBinding } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createAssetComponent("Comp", null, null, true)
-  _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
+  _setBlockHtmlBinding(n0, () => _ctx.foo)
   return n0
 }"
 `;
 
 exports[`v-html > work with dynamic component 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent, setBlockHtmlBinding as _setBlockHtmlBinding } from 'vue';
 
 export function render(_ctx) {
   const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, true)
-  _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
+  _setBlockHtmlBinding(n0, () => _ctx.foo)
+  return n0
+}"
+`;
+
+exports[`v-html > wrap component object literal expression in binding getter 1`] = `
+"import { createAssetComponent as _createAssetComponent, setBlockHtmlBinding as _setBlockHtmlBinding } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", null, null, true)
+  _setBlockHtmlBinding(n0, () => ({ foo: _ctx.bar }))
+  return n0
+}"
+`;
+
+exports[`v-html > wrap object literal expression in binding getter 1`] = `
+"import { setHtmlBinding as _setHtmlBinding, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setHtmlBinding(n0, () => ({ foo: _ctx.bar }))
   return n0
 }"
 `;

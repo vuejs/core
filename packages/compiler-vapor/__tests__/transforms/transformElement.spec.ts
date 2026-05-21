@@ -857,7 +857,7 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicProps(n0, [_ctx.obj])')
+    expect(code).contains('_setDynamicPropsBinding(n0, () => [_ctx.obj])')
   })
 
   test('v-bind="obj" after static prop', () => {
@@ -893,7 +893,9 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj])')
+    expect(code).contains(
+      '_setMergedDynamicPropsBinding(n0, { id: "foo" }, () => _ctx.obj)',
+    )
   })
 
   test('v-bind="obj" before static prop', () => {
@@ -919,7 +921,9 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicProps(n0, [_ctx.obj, { id: "foo" }])')
+    expect(code).contains(
+      '_setMergedDynamicPropsBinding(n0, null, () => _ctx.obj, { id: "foo" })',
+    )
   })
 
   test('v-bind="obj" between static props', () => {
@@ -947,8 +951,29 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains(
-      '_setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }])',
+      '_setMergedDynamicPropsBinding(n0, { id: "foo" }, () => _ctx.obj, { class: "bar" })',
     )
+  })
+
+  test('v-bind="obj" between static props on svg', () => {
+    const { code } = compileWithElementTransform(
+      `<svg id="foo" v-bind="obj" class="bar" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_setMergedDynamicPropsBinding(n0, { id: "foo" }, () => _ctx.obj, { class: "bar" }, true)',
+    )
+  })
+
+  test('multiple v-bind expressions with static props', () => {
+    const { code } = compileWithElementTransform(
+      `<div id="foo" v-bind:[key]="foo" v-bind="bar" class="baz" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_setDynamicPropsBinding(n0, () => [{ id: "foo", [_ctx.key]: _ctx.foo }, _ctx.bar, { class: "baz" }])',
+    )
+    expect(code).not.contains('_setMergedDynamicPropsBinding')
   })
 
   test('props merging: event handlers', () => {
@@ -1074,7 +1099,7 @@ describe('compiler: element transform', () => {
         ],
       },
     ])
-    expect(code).contains('_setDynamicEvents(n0, _ctx.obj)')
+    expect(code).contains('_setDynamicEventsBinding(n0, () => _ctx.obj)')
   })
 
   test('component with dynamic prop arguments', () => {

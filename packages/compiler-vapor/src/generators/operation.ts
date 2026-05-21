@@ -3,17 +3,39 @@ import {
   IRNodeTypes,
   type InsertionStateTypes,
   type OperationNode,
+  type SetDynamicEventsIRNode,
+  type SetDynamicPropsIRNode,
+  type SetEventIRNode,
+  type SetHtmlIRNode,
+  type SetPropIRNode,
+  type SetTextIRNode,
   isBlockOperation,
 } from '../ir'
 import type { CodegenContext } from '../generate'
 import { genInsertNode, genPrependNode } from './dom'
-import { genSetDynamicEvents, genSetEvent } from './event'
+import {
+  genSetDynamicEvents,
+  genSetDynamicEventsBinding,
+  genSetEvent,
+  genSetEventBinding,
+} from './event'
 import { genFor } from './for'
-import { genSetHtml } from './html'
+import { genSetHtml, genSetHtmlBinding } from './html'
 import { genIf } from './if'
-import { genDynamicProps, genSetProp } from './prop'
+import {
+  canSetPropBinding,
+  genDynamicProps,
+  genDynamicPropsBinding,
+  genSetProp,
+  genSetPropBinding,
+} from './prop'
 import { genSetTemplateRef } from './templateRef'
-import { genGetTextChild, genSetText } from './text'
+import {
+  genGetTextChild,
+  genSetBlockTextBinding,
+  genSetText,
+  genSetTextBinding,
+} from './text'
 import {
   type CodeFragment,
   INDENT_END,
@@ -31,10 +53,58 @@ import { genKey, genSetBlockKey } from './key'
 export function genOperations(
   opers: OperationNode[],
   context: CodegenContext,
+  withInsertionState = true,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   for (const operation of opers) {
-    push(...genOperationWithInsertionState(operation, context))
+    push(
+      ...(withInsertionState
+        ? genOperationWithInsertionState(operation, context)
+        : genOperation(operation, context)),
+    )
+  }
+  return frag
+}
+
+export function genOperationsAndEffects(
+  opers: OperationNode[],
+  effects: IREffect[],
+  context: CodegenContext,
+  genExtraFrag?: () => CodeFragment[],
+  withInsertionState = true,
+): CodeFragment[] {
+  let processedExpressions: ProcessedExpressions | undefined
+  if (!genExtraFrag) {
+    const binding = resolveSingleOperationBinding(opers, effects, context)
+    if (binding) {
+      processedExpressions = processExpressions(
+        context,
+        effects[0].expressions,
+        true,
+      )
+      // Keep declaration-producing effects on the normal renderEffect path. The
+      // block getter form is valid but saves little after minification. Reuse the
+      // processed result in the fallback path so expression analysis only runs once.
+      if (!hasDeclarations(processedExpressions)) {
+        const [frag, push] = buildCodeFragment()
+        push(...genOperations(binding.operations, context, withInsertionState))
+        push(
+          ...context.withExpressionReplacements(
+            processedExpressions!.expressionReplacements,
+            () => context.withId(binding.genBinding, processedExpressions!.ids),
+          ),
+        )
+        return frag
+      }
+    }
+  }
+
+  const [frag, push] = buildCodeFragment()
+  push(...genOperations(opers, context, withInsertionState))
+  if (effects.length) {
+    push(...genEffects(effects, context, genExtraFrag, processedExpressions))
+  } else if (genExtraFrag) {
+    push(...genEffects([], context, genExtraFrag))
   }
   return frag
 }
@@ -102,18 +172,22 @@ export function genEffects(
   effects: IREffect[],
   context: CodegenContext,
   genExtraFrag?: () => CodeFragment[],
+  processedExpressions?: ProcessedExpressions,
 ): CodeFragment[] {
   const { helper } = context
   const expressions = effects.flatMap(effect => effect.expressions)
   const [frag, push, unshift] = buildCodeFragment()
   const shouldDeclare = genExtraFrag === undefined
   let operationsCount = 0
+  const processed =
+    processedExpressions ||
+    processExpressions(context, expressions, shouldDeclare)
   const {
     ids,
     frag: declarationFrags,
     varNames,
     expressionReplacements,
-  } = processExpressions(context, expressions, shouldDeclare)
+  } = processed
   return context.withExpressionReplacements(expressionReplacements, () => {
     push(...declarationFrags)
     for (let i = 0; i < effects.length; i++) {
@@ -155,6 +229,136 @@ export function genEffects(
 
     return frag
   })
+}
+
+type SingleOperationBindingLowering = {
+  operations: OperationNode[]
+  genBinding: () => CodeFragment[]
+}
+
+type ProcessedExpressions = ReturnType<typeof processExpressions>
+
+function hasDeclarations({ frag, varNames }: ProcessedExpressions): boolean {
+  return frag.length > 0 || varNames.length > 0
+}
+
+function resolveSingleOperationBinding(
+  opers: OperationNode[],
+  effects: IREffect[],
+  context: CodegenContext,
+): SingleOperationBindingLowering | undefined {
+  if (effects.length !== 1) return
+
+  const effect = effects[0]
+  if (effect.operations.length !== 1) return
+
+  switch (effect.operations[0].type) {
+    case IRNodeTypes.SET_PROP:
+      return resolveSetPropBinding(opers, effect.operations[0], context)
+    case IRNodeTypes.SET_DYNAMIC_PROPS:
+      return resolveDynamicPropsBinding(opers, effect.operations[0], context)
+    case IRNodeTypes.SET_HTML:
+      return resolveSetHtmlBinding(opers, effect.operations[0], context)
+    case IRNodeTypes.SET_TEXT:
+      return resolveSetTextBinding(opers, effect.operations[0], context)
+    case IRNodeTypes.SET_EVENT:
+      return resolveSetEventBinding(opers, effect.operations[0], context)
+    case IRNodeTypes.SET_DYNAMIC_EVENTS:
+      return resolveDynamicEventsBinding(opers, effect.operations[0], context)
+    default:
+      return
+  }
+}
+
+function resolveSetHtmlBinding(
+  opers: OperationNode[],
+  setHtml: SetHtmlIRNode,
+  context: CodegenContext,
+): SingleOperationBindingLowering | undefined {
+  return {
+    operations: opers,
+    genBinding: () => genSetHtmlBinding(setHtml, context),
+  }
+}
+
+function resolveSetPropBinding(
+  opers: OperationNode[],
+  setProp: SetPropIRNode,
+  context: CodegenContext,
+): SingleOperationBindingLowering | undefined {
+  if (!canSetPropBinding(setProp)) return
+
+  return {
+    operations: opers,
+    genBinding: () => genSetPropBinding(setProp, context),
+  }
+}
+
+function resolveDynamicPropsBinding(
+  opers: OperationNode[],
+  dynamicProps: SetDynamicPropsIRNode,
+  context: CodegenContext,
+): SingleOperationBindingLowering | undefined {
+  return {
+    operations: opers,
+    genBinding: () => genDynamicPropsBinding(dynamicProps, context),
+  }
+}
+
+function resolveSetEventBinding(
+  opers: OperationNode[],
+  setEvent: SetEventIRNode,
+  context: CodegenContext,
+): SingleOperationBindingLowering | undefined {
+  if (!setEvent.effect) return
+
+  return {
+    operations: opers,
+    genBinding: () => genSetEventBinding(setEvent, context),
+  }
+}
+
+function resolveDynamicEventsBinding(
+  opers: OperationNode[],
+  dynamicEvents: SetDynamicEventsIRNode,
+  context: CodegenContext,
+): SingleOperationBindingLowering | undefined {
+  return {
+    operations: opers,
+    genBinding: () => genSetDynamicEventsBinding(dynamicEvents, context),
+  }
+}
+
+function resolveSetTextBinding(
+  opers: OperationNode[],
+  setText: SetTextIRNode,
+  context: CodegenContext,
+): SingleOperationBindingLowering | undefined {
+  if (setText.isComponent) {
+    return {
+      operations: opers,
+      genBinding: () => genSetBlockTextBinding(setText, context),
+    }
+  }
+
+  if (opers.length === 0) return
+
+  const getTextChild = opers[opers.length - 1]
+  // Only generated text children can fold GET_TEXT_CHILD into setTextBinding.
+  // Existing non-generated text targets still need genSetText().
+  if (
+    getTextChild.type !== IRNodeTypes.GET_TEXT_CHILD ||
+    !setText.generated ||
+    setText.isComponent ||
+    setText.element !== getTextChild.parent
+  ) {
+    return
+  }
+
+  return {
+    operations: opers.slice(0, -1),
+    genBinding: () => genSetTextBinding(setText, context),
+  }
 }
 
 export function genEffect(

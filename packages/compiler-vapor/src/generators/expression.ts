@@ -118,6 +118,25 @@ export function genExpression(
   }
 }
 
+export function genExpressionGetter(
+  node: SimpleExpressionNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const expr = genExpression(node, context)
+  if (isObjectExpression(node)) {
+    return ['() => (', ...expr, ')']
+  }
+  return ['() => ', ...expr]
+}
+
+function isObjectExpression(node: SimpleExpressionNode): boolean {
+  const ast = node.ast
+  return (
+    node.content.trim().charCodeAt(0) === 123 ||
+    !!(ast && ast.type === 'ObjectExpression')
+  )
+}
+
 function genIdentifier(
   raw: string,
   context: CodegenContext,

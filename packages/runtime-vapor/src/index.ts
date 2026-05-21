@@ -35,6 +35,23 @@ export { createSlot, withVaporCtx } from './componentSlots'
 export { template } from './dom/template'
 export { createTextNode, child, nthChild, next, txt } from './dom/node'
 export {
+  setAttrBinding,
+  setBlockHtmlBinding,
+  setBlockTextBinding,
+  setClassBinding,
+  setClassNameBinding,
+  setDOMPropBinding,
+  setDynamicEventsBinding,
+  setDynamicPropsBinding,
+  setEventBinding,
+  setHtmlBinding,
+  setMergedDynamicPropsBinding,
+  setPropBinding,
+  setStyleBinding,
+  setTextBinding,
+  setValueBinding,
+} from './dom/bindingEffect'
+export {
   setText,
   setBlockText,
   setHtml,

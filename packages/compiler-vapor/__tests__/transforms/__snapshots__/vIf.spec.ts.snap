@@ -1,14 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-if > basic v-if 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
-    const x2 = _txt(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_ctx.msg)))
+    _setTextBinding(n2, () => _toDisplayString(_ctx.msg))
     return n2
   }, null, 1)
   return n0
@@ -16,7 +15,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > comment between branches 1`] = `
-"import { createIf as _createIf, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { createIf as _createIf, toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, template as _template } from 'vue';
 const t0 = _template("<div>", 2)
 const t1 = _template("<!--foo-->", 2)
 const t2 = _template("<p>", 2)
@@ -38,8 +37,7 @@ export function render(_ctx) {
     return [n10, n11]
   }, 10, null, 1), 5, null, 0)
   const n13 = t5()
-  const x13 = _txt(n13)
-  _renderEffect(() => _setText(x13, _toDisplayString(_ctx.text)))
+  _setTextBinding(n13, () => _toDisplayString(_ctx.text))
   return [n0, n13]
 }"
 `;
@@ -154,15 +152,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > template v-if (with v-for on same element) 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, createIf as _createIf, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createFor as _createFor, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.arr.length > 0), () => {
     const n2 = _createFor(() => (_ctx.arr), (_for_item0, _for_key0) => {
       const n4 = t0()
-      const x4 = _txt(n4)
-      _renderEffect(() => _setText(x4, "item: " + _toDisplayString(_for_item0.value)))
+      _setTextBinding(n4, () => "item: " + _toDisplayString(_for_item0.value))
       return n4
     }, (item, index) => (index), 8)
     return n2
@@ -191,7 +188,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > template v-if 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+"import { toDisplayString as _toDisplayString, setTextBinding as _setTextBinding, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div>", 2)
 const t1 = _template("hello", 2)
 const t2 = _template("<p> ")
@@ -201,8 +198,7 @@ export function render(_ctx) {
     const n2 = t0()
     const n3 = t1()
     const n4 = t2()
-    const x4 = _txt(n4)
-    _renderEffect(() => _setText(x4, _toDisplayString(_ctx.msg)))
+    _setTextBinding(n4, () => _toDisplayString(_ctx.msg))
     return [n2, n3, n4]
   }, null, 2)
   return n0
@@ -328,13 +324,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > v-on with v-if 1`] = `
-"import { setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, createIf as _createIf, template as _template } from 'vue';
+"import { setDynamicEventsBinding as _setDynamicEventsBinding, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<button>w/ v-if", 1)
 
 export function render(_ctx) {
   const n0 = _createIf(() => (true), () => {
     const n2 = t0()
-    _renderEffect(() => _setDynamicEvents(n2, { click: _ctx.clickEvent }))
+    _setDynamicEventsBinding(n2, () => ({ click: _ctx.clickEvent }))
     return n2
   }, null, 1, true)
   return n0

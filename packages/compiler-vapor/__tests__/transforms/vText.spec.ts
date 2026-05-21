@@ -22,7 +22,7 @@ describe('v-text', () => {
       },
     })
 
-    expect(helpers).contains('setText')
+    expect(helpers).contains('setTextBinding')
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.GET_TEXT_CHILD,
@@ -61,13 +61,17 @@ describe('v-text', () => {
   test('work with dynamic component', () => {
     const { code } = compileWithVText(`<component :is="Comp" v-text="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+    expect(code).contains(
+      'setBlockTextBinding(n0, () => _toDisplayString(_ctx.foo))',
+    )
   })
 
   test('work with component', () => {
     const { code } = compileWithVText(`<Comp v-text="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+    expect(code).contains(
+      'setBlockTextBinding(n0, () => _toDisplayString(_ctx.foo))',
+    )
   })
 
   test('work with plain template createElement path', () => {

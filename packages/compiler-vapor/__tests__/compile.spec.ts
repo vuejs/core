@@ -304,7 +304,7 @@ describe('compile', () => {
       })
       expect(code).matchSnapshot()
       expect(code).contains(
-        `_renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
+        `_setTextBinding(n0, () => "parent: " + _toDisplayString(_ctx.useId()))
   const n1 = _createAssetComponent("Child")`,
       )
     })
@@ -316,7 +316,7 @@ describe('compile', () => {
         },
       })
       expect(code).contains(
-        `_renderEffect(() => _setProp(n1, "id", _ctx.useId()))
+        `_setPropBinding(n1, "id", () => _ctx.useId())
   _setInsertionState(n1, null, 0)
   const n0 = _createAssetComponent("Child")`,
       )
@@ -337,6 +337,7 @@ describe('compile', () => {
         },
       )
       expect(code).matchSnapshot()
+      expect(code).not.contains('setTextBinding as _setTextBinding')
       expect(code).contains(
         `const n3 = _createComponentWithFallback(_component_Child)
     const x4 = _txt(n4)
@@ -386,13 +387,15 @@ describe('compile', () => {
     test('should avoid conflicts with existing variable names', () => {
       const code = compile(`<div>{{ foo }}</div>`, {
         bindingMetadata: {
-          _txt: BindingTypes.LITERAL_CONST,
-          _txt1: BindingTypes.SETUP_REF,
+          _setTextBinding: BindingTypes.LITERAL_CONST,
+          _setTextBinding1: BindingTypes.SETUP_REF,
         },
       })
       expect(code).matchSnapshot()
-      expect(code).contains('txt as _txt2')
-      expect(code).contains('const x0 = _txt2(n0)')
+      expect(code).contains('setTextBinding as _setTextBinding2')
+      expect(code).contains(
+        '_setTextBinding2(n0, () => _toDisplayString(_ctx.foo))',
+      )
     })
   })
 
