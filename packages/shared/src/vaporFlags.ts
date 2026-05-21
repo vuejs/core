@@ -10,13 +10,24 @@ export enum VaporVForFlags {
   FAST_REMOVE = 1,
   /**
    * v-for used on component - we can skip creating child scopes for each block
-   * because the component itself already has a scope.
+   * because the component itself already has a scope. This does not guarantee
+   * the item block is a VaporComponentInstance: component fallback paths may
+   * still return a DOM Node.
    */
   IS_COMPONENT = 1 << 1,
   /**
    * v-for inside v-once
    */
   ONCE = 1 << 2,
+  /**
+   * v-for item block is a single DOM Node.
+   */
+  IS_SINGLE_NODE = 1 << 3,
+  /**
+   * v-for item block is known to be a VaporFragment, so runtime can use
+   * fragment-specific insert/remove helpers.
+   */
+  IS_FRAGMENT = 1 << 4,
 }
 
 export enum VaporBlockShape {

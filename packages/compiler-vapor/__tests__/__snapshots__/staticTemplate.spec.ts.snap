@@ -131,7 +131,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, (item) => (item))
+  }, (item) => (item), 8)
   return n0
 }"
 `;

@@ -11,6 +11,7 @@ import {
   type ForIRNode,
   type IRDynamicInfo,
   type IREffect,
+  IRNodeTypes,
   isBlockOperation,
 } from '../ir'
 import {
@@ -145,6 +146,12 @@ export function genFor(
   if (component) {
     flags |= VaporVForFlags.IS_COMPONENT
   }
+  if (isFragmentBlock(render)) {
+    flags |= VaporVForFlags.IS_FRAGMENT
+  }
+  if (!component && isSingleNodeBlock(render)) {
+    flags |= VaporVForFlags.IS_SINGLE_NODE
+  }
   if (once) {
     flags |= VaporVForFlags.ONCE
   }
@@ -194,6 +201,39 @@ export function genFor(
     if (rawIndex) idMap[rawIndex] = null
     idToPathMap.forEach((_, id) => (idMap[id] = null))
     return idMap
+  }
+}
+
+function isSingleNodeBlock(block: BlockIRNode): boolean {
+  const child = getSingleReturnedChild(block)
+  return !!child && child.template != null
+}
+
+function isFragmentBlock(block: BlockIRNode): boolean {
+  const child = getSingleReturnedChild(block)
+  const operation = child && child.operation
+  if (!operation) return false
+  return (
+    // <slot/>
+    operation.type === IRNodeTypes.SLOT_OUTLET_NODE ||
+    // <template v-for> with a single v-for child
+    operation.type === IRNodeTypes.FOR ||
+    // <template v-for> with a single dynamic :key child
+    operation.type === IRNodeTypes.KEY ||
+    // <template v-for> with a single dynamic v-if child
+    (operation.type === IRNodeTypes.IF && !operation.once) ||
+    // <component :is="..."/>
+    (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE &&
+      !!operation.dynamic &&
+      !operation.dynamic.isStatic)
+  )
+}
+
+function getSingleReturnedChild(block: BlockIRNode): IRDynamicInfo | undefined {
+  if (block.returns.length !== 1) return
+  const id = block.returns[0]
+  for (const child of block.dynamic.children) {
+    if (child.id === id) return child
   }
 }
 
