@@ -40,8 +40,8 @@ enum TargetType {
   COLLECTION = 2,
 }
 
-function targetTypeMap(rawType: string) {
-  switch (rawType) {
+function targetTypeMap(value: Target) {
+  switch (toRawType(value)) {
     case 'Object':
     case 'Array':
       return TargetType.COMMON
@@ -51,14 +51,32 @@ function targetTypeMap(rawType: string) {
     case 'WeakSet':
       return TargetType.COLLECTION
     default:
+      // a custom `Symbol.toStringTag` changes the result of `toRawType`, so
+      // fall back to prototype checks to detect built-in types and subtypes.
+      if (
+        value instanceof Map ||
+        value instanceof Set ||
+        value instanceof WeakMap ||
+        value instanceof WeakSet
+      ) {
+        return TargetType.COLLECTION
+      }
+      if (value instanceof Array || isPlainObject(value)) {
+        return TargetType.COMMON
+      }
       return TargetType.INVALID
   }
+}
+
+function isPlainObject(value: Target) {
+  const proto = Object.getPrototypeOf(value)
+  return proto === Object.prototype || proto === null
 }
 
 function getTargetType(value: Target) {
   return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
     ? TargetType.INVALID
-    : targetTypeMap(toRawType(value))
+    : targetTypeMap(value)
 }
 
 // only unwrap nested ref
