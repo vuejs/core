@@ -92,18 +92,20 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
     } = []
     for (let i = 0; i < dynamicSources.length; i++) {
       const source = dynamicSources[i]
+      const value: Record<string, unknown> = {}
       if (isFunction(source)) {
-        const value = resolveFunctionSource(
+        const resolved = resolveFunctionSource(
           source as () => Record<string, unknown>,
         )
-        snapshotSources[i] = () => value
+        for (const key in resolved) {
+          value[key] = resolved[key]
+        }
       } else {
-        const value: Record<string, unknown> = {}
         for (const key in source) {
           value[key] = resolveSource(source[key])
         }
-        snapshotSources[i] = value
       }
+      snapshotSources[i] = value
     }
     const symbols = Object.getOwnPropertySymbols(dynamicSources)
     for (let i = 0; i < symbols.length; i++) {
