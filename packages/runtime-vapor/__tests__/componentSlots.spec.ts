@@ -2016,6 +2016,51 @@ describe('component: slots', () => {
       expect(html()).toBe('<span id="initial">child</span><!--slot-->')
     })
 
+    test('snapshots reused dynamic props objects on delayed v-once fallback child reads', async () => {
+      let reveal!: () => void
+      const raw = { label: 'initial' }
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, show.value ? props.label : 'hidden'))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<span>hidden</span>')
+
+      raw.label = 'updated'
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial</span>')
+    })
+
     test('snapshots delayed prop reads on v-once fallback child', async () => {
       let reveal!: () => void
       const label = ref('initial')

@@ -1512,6 +1512,8 @@ function renderVDOMSlot(
     const prev = currentInstance
     simpleSetCurrentInstance(instance)
     try {
+      const runInOnceScope = <T>(fn: () => T): T =>
+        once ? withOnceSlot(fn) : fn()
       const renderSlotContent = () => {
         runWithFragmentRenderCtx(frag, () =>
           withOwnedSlotBoundary(boundary, () => {
@@ -1519,15 +1521,13 @@ function renderVDOMSlot(
             let slotContentValid = false
 
             if (slotsRef.value) {
-              const renderSlotContent = () =>
+              slotContent = runInOnceScope(() =>
                 renderSlot(
                   slotsRef.value,
                   isFunction(name) ? name() : name,
                   props,
-                )
-              slotContent = once
-                ? withOnceSlot(renderSlotContent)
-                : renderSlotContent()
+                ),
+              )
 
               if (isVNode(slotContent)) {
                 if (slotContent.type === Fragment) {
@@ -1564,14 +1564,16 @@ function renderVDOMSlot(
                 // Forwarded slot fragments that resolve to an empty SSR range
                 // should stay on that range instead of re-entering it through
                 // generic Fragment hydration.
-                if (
-                  !hydrateForwardedEmptySlotFragment(
-                    hydratedContent,
-                    parentComponent,
-                  )
-                ) {
-                  hydrateVNode(hydratedContent, parentComponent as any)
-                }
+                runInOnceScope(() => {
+                  if (
+                    !hydrateForwardedEmptySlotFragment(
+                      hydratedContent,
+                      parentComponent,
+                    )
+                  ) {
+                    hydrateVNode(hydratedContent, parentComponent as any)
+                  }
+                })
                 setRenderedContent(hydratedContent)
               } else if (hydratedContent) {
                 frag.vnode = null
@@ -1605,16 +1607,18 @@ function renderVDOMSlot(
               if (prevRendered && !isVNode(prevRendered)) {
                 remove(prevRendered, currentParentNode)
               }
-              internals.p(
-                isVNode(prevRendered) ? prevRendered : null,
-                slotContent,
-                currentParentNode!,
-                currentAnchor,
-                parentComponent as any,
-                suspense,
-                undefined, // namespace
-                slotContent.slotScopeIds, // pass slotScopeIds for :slotted styles
-              )
+              runInOnceScope(() => {
+                internals.p(
+                  isVNode(prevRendered) ? prevRendered : null,
+                  slotContent,
+                  currentParentNode!,
+                  currentAnchor,
+                  parentComponent as any,
+                  suspense,
+                  undefined, // namespace
+                  slotContent.slotScopeIds, // pass slotScopeIds for :slotted styles
+                )
+              })
               setRenderedContent(slotContent)
               finishContentUpdate()
               return
