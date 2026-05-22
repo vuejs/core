@@ -15,6 +15,7 @@ import {
   type VaporComponentInstance,
   createComponentWithFallback,
   emptyContext,
+  normalizeRawSlots,
 } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
@@ -55,6 +56,7 @@ export function createDynamicComponent(
       ? new DynamicFragment('dynamic-component')
       : new DynamicFragment()
 
+  const normalizedRawSlots = normalizeRawSlots(rawSlots)
   const scopeOwner = getScopeOwner()
   const renderFn = () => {
     const value = getter()
@@ -85,7 +87,7 @@ export function createDynamicComponent(
       return createComponentWithFallback(
         withScopeOwner(scopeOwner, () => resolveDynamicComponent(value)),
         rawProps,
-        rawSlots,
+        normalizedRawSlots,
         isSingleRoot,
         once,
         appContext,

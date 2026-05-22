@@ -246,7 +246,7 @@ export type LooseRawSlots =
       $?: DynamicSlotSource[]
     })
 
-function normalizeRawSlots(
+export function normalizeRawSlots(
   rawSlots?: LooseRawSlots | null,
 ): RawSlots | null | undefined {
   return rawSlots && isFunction(rawSlots)
