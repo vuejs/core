@@ -52,6 +52,25 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compiler: element transform > component > constant bind props are direct raw prop values 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    size: 16,
+    disabled: false,
+    tabindex: 0,
+    nullable: null,
+    missing: undefined,
+    big: 1n,
+    label: "Save 1",
+    items: [1, 'two', false, null, undefined],
+    options: { placement: 'bottom', offset: 8, nested: { enabled: true } }
+  }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > create single-use asset component with inline resolve 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
@@ -76,7 +95,9 @@ exports[`compiler: element transform > component > dynamic non-literal prop valu
 export function render(_ctx) {
   const n0 = _createAssetComponent("Foo", {
     foo: () => (_ctx.bar),
-    obj: () => ({ a: 1 }),
+    obj: () => ({ a: _ctx.bar }),
+    handler: () => (_ctx.onClick),
+    formatter: () => (v => v.toFixed(2)),
     fn: () => (() => _ctx.bar),
     onClick: () => _ctx.foo
   }, null, true)
@@ -263,6 +284,19 @@ export function render(_ctx) {
   const n0 = _createAssetComponent("Foo", {
     id: "foo",
     class: "bar"
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported constant prop shapes stay as getter sources 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    computed: () => ({ [_ctx.foo]: 1 }),
+    spread: () => ({ ...{ foo: 1 } }),
+    list: () => ([1, ...[2]])
   }, null, true)
   return n0
 }"

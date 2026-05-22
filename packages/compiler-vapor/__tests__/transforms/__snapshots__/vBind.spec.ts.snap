@@ -532,7 +532,7 @@ exports[`compiler v-bind > number value 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createAssetComponent("Comp", { depth: () => (0) }, null, true)
+  const n0 = _createAssetComponent("Comp", { depth: 0 }, null, true)
   return n0
 }"
 `;

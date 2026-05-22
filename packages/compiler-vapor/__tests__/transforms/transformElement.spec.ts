@@ -323,15 +323,57 @@ describe('compiler: element transform', () => {
       expect(code).contains(`literal: "bar"`)
     })
 
+    test('constant bind props are direct raw prop values', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo
+          :size="16"
+          :disabled="false"
+          :tabindex="0"
+          :nullable="null"
+          :missing="undefined"
+          :big="1n"
+          :label="\`Save \${1}\`"
+          :items="[1, 'two', false, null, undefined]"
+          :options="{ placement: 'bottom', offset: 8, nested: { enabled: true } }"
+        />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`size: 16`)
+      expect(code).contains(`disabled: false`)
+      expect(code).contains(`tabindex: 0`)
+      expect(code).contains(`nullable: null`)
+      expect(code).contains(`missing: undefined`)
+      expect(code).contains(`big: 1n`)
+      expect(code).contains(`label: "Save 1"`)
+      expect(code).contains(`items: [1, 'two', false, null, undefined]`)
+      expect(code).contains(
+        `options: { placement: 'bottom', offset: 8, nested: { enabled: true } }`,
+      )
+    })
+
     test('dynamic non-literal prop values stay as getter sources', () => {
       const { code } = compileWithElementTransform(
-        `<Foo :foo="bar" :obj="{ a: 1 }" :fn="() => bar" @click="foo" />`,
+        `<Foo :foo="bar" :obj="{ a: bar }" :handler="onClick" :formatter="v => v.toFixed(2)" :fn="() => bar" @click="foo" />`,
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`foo: () => (_ctx.bar)`)
-      expect(code).contains(`obj: () => ({ a: 1 })`)
+      expect(code).contains(`obj: () => ({ a: _ctx.bar })`)
+      expect(code).contains(`handler: () => (_ctx.onClick)`)
+      expect(code).contains(`formatter: () => (v => v.toFixed(2))`)
       expect(code).contains(`fn: () => (() => _ctx.bar)`)
       expect(code).contains(`onClick: () => _ctx.foo`)
+    })
+
+    test('unsupported constant prop shapes stay as getter sources', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo :computed="{ [foo]: 1 }" :spread="{ ...{ foo: 1 } }" :list="[1, ...[2]]" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`computed: () => ({ [_ctx.foo]: 1 })`)
+      expect(code).contains(`spread: () => ({ ...{ foo: 1 } })`)
+      expect(code).contains(`list: () => ([1, ...[2]])`)
     })
 
     test('v-bind="obj"', () => {
