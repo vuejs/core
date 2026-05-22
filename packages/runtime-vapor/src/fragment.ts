@@ -92,6 +92,7 @@ export class VaporFragment<
   ) => void
 
   // hooks
+  onBeforeUpdate?: (() => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
 
   // render context

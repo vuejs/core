@@ -19,6 +19,7 @@ import {
 import {
   type Ref,
   nextTick,
+  onScopeDispose,
   reactive,
   readonly,
   ref,
@@ -831,6 +832,36 @@ describe('createFor', () => {
     list.value = null
     await nextTick()
     expect(host.innerHTML).toBe('<!--for-->')
+  })
+
+  test('should track key dependencies for keyed diff', async () => {
+    const list = ref([{ id: 1, opened: false }])
+    const calls: string[] = []
+
+    const { host } = define(() => {
+      return createFor(
+        () => list.value,
+        item => {
+          const label = `${item.value.id}-${item.value.opened}`
+          calls.push(`mount ${label}`)
+          onScopeDispose(() => calls.push(`unmount ${label}`))
+
+          const span = document.createElement('span')
+          span.textContent = label
+          return span
+        },
+        item => `${item.id}-${item.opened}`,
+      )
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>1-false</span><!--for-->')
+    expect(calls).toEqual(['mount 1-false'])
+
+    list.value[0].opened = true
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<span>1-true</span><!--for-->')
+    expect(calls).toEqual(['mount 1-false', 'unmount 1-false', 'mount 1-true'])
   })
 
   describe('readonly source', () => {
