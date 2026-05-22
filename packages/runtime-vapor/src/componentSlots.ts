@@ -47,6 +47,16 @@ import { setScopeId } from './scopeId'
  */
 export let inOnceSlot = false
 
+export function withOnceSlot<T>(fn: () => T): T {
+  const prev = inOnceSlot
+  try {
+    inOnceSlot = true
+    return fn()
+  } finally {
+    inOnceSlot = prev
+  }
+}
+
 /**
  * Current slot scopeIds for vdom interop
  */
@@ -209,6 +219,11 @@ export function createSlot(
   const scopeId =
     !(flags & VaporSlotFlags.NO_SLOTTED) && instance.type.__scopeId
   const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
+  const once = !!(flags & VaporSlotFlags.ONCE)
+  if (once && fallback) {
+    const originalFallback = fallback
+    fallback = (...args: any[]) => withOnceSlot(() => originalFallback(...args))
+  }
 
   let fragment: VaporFragment
   if (isRef(rawSlots._) && isInteropEnabled) {
@@ -219,6 +234,7 @@ export function createSlot(
       slotProps,
       instance,
       fallback,
+      once,
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()
@@ -227,7 +243,6 @@ export function createSlot(
     slotFragment.forwarded =
       currentSlotOwner != null && currentSlotOwner !== currentInstance
     const isDynamicName = isFunction(name)
-    const once = !!(flags & VaporSlotFlags.ONCE)
 
     const renderSlot = () => {
       const slotName = isFunction(name) ? name() : name
@@ -277,12 +292,9 @@ export function createSlot(
         cachedSlot = slot
         cachedBoundSlot = () => {
           const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
-          const prev = inOnceSlot
           try {
-            if (once) inOnceSlot = true
-            return slot(slotProps)
+            return once ? withOnceSlot(() => slot(slotProps)) : slot(slotProps)
           } finally {
-            inOnceSlot = prev
             setCurrentSlotScopeIds(prevSlotScopeIds)
           }
         }
