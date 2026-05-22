@@ -50,8 +50,8 @@ export enum VaporBlockShape {
  */
 export enum VaporIfFlags {
   /**
-   * Mask for bits 0-3. Runtime can pass the full flags value to
-   * decodeIfShape() because that helper masks out these low bits.
+   * Documents the packed true/false branch shape bits. Runtime decode shifts
+   * to the selected branch first, then masks with 0b11 for one VaporBlockShape.
    */
   BLOCK_SHAPE = 0b1111,
   /**
