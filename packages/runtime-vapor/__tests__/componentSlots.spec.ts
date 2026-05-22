@@ -34,6 +34,7 @@ import {
   toDisplayString,
   useSlots,
 } from '@vue/runtime-dom'
+import { VaporSlotFlags } from '@vue/shared'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
@@ -1780,13 +1781,7 @@ describe('component: slots', () => {
     test('work with v-once', async () => {
       const Child = defineVaporComponent({
         setup() {
-          return createSlot(
-            'default',
-            null,
-            undefined,
-            undefined,
-            true /* once */,
-          )
+          return createSlot('default', null, undefined, VaporSlotFlags.ONCE)
         },
       })
 

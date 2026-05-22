@@ -1,4 +1,5 @@
 import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
+import { VaporSlotFlags } from '@vue/shared'
 import {
   IRNodeTypes,
   transformChildren,
@@ -284,7 +285,7 @@ describe('compiler: transform <slot> outlets', () => {
       slotted: false,
     })
     expect(code).toMatchSnapshot()
-    expect(code).toContain('true')
+    expect(code).toContain(String(VaporSlotFlags.NO_SLOTTED))
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id: 0,
@@ -295,7 +296,7 @@ describe('compiler: transform <slot> outlets', () => {
       },
       props: [],
       fallback: undefined,
-      noSlotted: true,
+      flags: VaporSlotFlags.NO_SLOTTED,
     })
   })
 
@@ -315,7 +316,7 @@ describe('compiler: transform <slot> outlets', () => {
       },
       props: [],
       fallback: undefined,
-      noSlotted: false,
+      flags: 0,
     })
   })
 
@@ -334,7 +335,7 @@ describe('compiler: transform <slot> outlets', () => {
       },
       props: [],
       fallback: undefined,
-      noSlotted: false,
+      flags: 0,
     })
   })
 })

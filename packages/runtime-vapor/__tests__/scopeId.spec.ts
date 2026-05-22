@@ -6,6 +6,7 @@ import {
   ref,
   renderSlot,
 } from '@vue/runtime-dom'
+import { VaporSlotFlags } from '@vue/shared'
 import {
   VaporTransition,
   createComponent,
@@ -274,7 +275,7 @@ describe('scopeId', () => {
         // <div><slot/></div>
         const n1 = template('<div wrapper></div>', 1)() as any
         setInsertionState(n1)
-        createSlot('default', null, undefined, true /* noSlotted */)
+        createSlot('default', null, undefined, VaporSlotFlags.NO_SLOTTED)
         return n1
       },
     })

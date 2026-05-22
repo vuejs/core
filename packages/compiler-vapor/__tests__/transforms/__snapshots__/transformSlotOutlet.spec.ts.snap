@@ -4,7 +4,7 @@ exports[`compiler: transform <slot> outlets > default slot outlet 1`] = `
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null)
+  const n0 = _createSlot("default")
   return n0
 }"
 `;
@@ -52,7 +52,7 @@ exports[`compiler: transform <slot> outlets > dynamically named slot outlet 1`] 
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot(() => (_ctx.foo + _ctx.bar), null)
+  const n0 = _createSlot(() => (_ctx.foo + _ctx.bar))
   return n0
 }"
 `;
@@ -61,7 +61,7 @@ exports[`compiler: transform <slot> outlets > dynamically named slot outlet with
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot(() => (_ctx.name), null)
+  const n0 = _createSlot(() => (_ctx.name))
   return n0
 }"
 `;
@@ -71,7 +71,7 @@ exports[`compiler: transform <slot> outlets > error on unexpected custom directi
 
 export function render(_ctx) {
   const _directive_foo = _resolveDirective("foo")
-  const n0 = _createSlot("default", null)
+  const n0 = _createSlot("default")
   return n0
 }"
 `;
@@ -80,7 +80,7 @@ exports[`compiler: transform <slot> outlets > error on unexpected custom directi
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null)
+  const n0 = _createSlot("default")
   return n0
 }"
 `;
@@ -115,7 +115,7 @@ exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slott
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null, null, true)
+  const n0 = _createSlot("default", null, null, 1)
   return n0
 }"
 `;
@@ -124,7 +124,7 @@ exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slott
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null)
+  const n0 = _createSlot("default")
   return n0
 }"
 `;
@@ -133,7 +133,7 @@ exports[`compiler: transform <slot> outlets > slot outlet without scopeId should
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null)
+  const n0 = _createSlot("default")
   return n0
 }"
 `;
@@ -142,7 +142,7 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet 1`] =
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("foo", null)
+  const n0 = _createSlot("foo")
   return n0
 }"
 `;

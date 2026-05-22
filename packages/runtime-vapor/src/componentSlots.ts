@@ -1,4 +1,11 @@
-import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  NO,
+  VaporSlotFlags,
+  hasOwn,
+  isArray,
+  isFunction,
+} from '@vue/shared'
 import { type Block, type BlockFn, insert } from './block'
 import { rawPropsProxyHandlers, resolveFunctionSource } from './componentProps'
 import {
@@ -181,8 +188,7 @@ export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
-  noSlotted?: boolean,
-  once?: boolean,
+  flags: number = 0,
 ): Block {
   if (isInteropEnabled && isCollectingVdomSlotVNodes) {
     // A Vapor <slot/> cannot expose child vnode metadata without real slot
@@ -200,7 +206,8 @@ export function createSlot(
   const slotProps = rawProps
     ? new Proxy(rawProps, rawPropsProxyHandlers)
     : EMPTY_OBJ
-  const scopeId = !noSlotted && instance.type.__scopeId
+  const scopeId =
+    !(flags & VaporSlotFlags.NO_SLOTTED) && instance.type.__scopeId
   const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
 
   let fragment: VaporFragment
@@ -220,6 +227,7 @@ export function createSlot(
     slotFragment.forwarded =
       currentSlotOwner != null && currentSlotOwner !== currentInstance
     const isDynamicName = isFunction(name)
+    const once = !!(flags & VaporSlotFlags.ONCE)
 
     const renderSlot = () => {
       const slotName = isFunction(name) ? name() : name
