@@ -2061,6 +2061,45 @@ describe('component: slots', () => {
       expect(html()).toBe('<span>initial</span>')
     })
 
+    test('preserves function-valued props from dynamic sources on v-once fallback child', () => {
+      let calls = 0
+      const cb = () => {
+        calls++
+        return 'called'
+      }
+      const raw = { cb }
+      const GrandChild = defineVaporComponent({
+        props: ['cb'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() =>
+            setText(t0, `${typeof props.cb}:${props.cb === cb}`),
+          )
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>function:true</span><!--slot-->')
+      expect(calls).toBe(0)
+    })
+
     test('snapshots delayed prop reads on v-once fallback child', async () => {
       let reveal!: () => void
       const label = ref('initial')
@@ -2148,6 +2187,41 @@ describe('component: slots', () => {
       reveal()
       await nextTick()
       expect(html()).toBe('<span>initial:undefined</span><!--slot-->')
+    })
+
+    test('caches prototype-named attrs on v-once fallback child', () => {
+      const raw = Object.create(null)
+      Object.defineProperty(raw, '__proto__', {
+        value: 'initial',
+        enumerable: true,
+      })
+      const GrandChild = defineVaporComponent({
+        inheritAttrs: false,
+        setup(_: any, { attrs }: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, String(attrs.__proto__)))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial</span><!--slot-->')
     })
 
     test('snapshots delayed slot prop reads in v-once slot content', async () => {

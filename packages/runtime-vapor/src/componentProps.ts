@@ -78,7 +78,7 @@ export function resolveFunctionSource<T>(
 export function snapshotRawProps(rawProps: RawProps): RawProps {
   // Freeze the parent-provided raw source, not the child props proxy. This
   // keeps prop defaults lazy while preserving v-once input semantics.
-  const snapshot: RawProps = {}
+  const snapshot: RawProps = Object.create(null)
   for (const key in rawProps) {
     if (key !== '$') {
       snapshot[key] = resolveSource(rawProps[key])
@@ -92,7 +92,7 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
     } = []
     for (let i = 0; i < dynamicSources.length; i++) {
       const source = dynamicSources[i]
-      const value: Record<string, unknown> = {}
+      const value: Record<string, unknown> = Object.create(null)
       if (isFunction(source)) {
         const resolved = resolveFunctionSource(
           source as () => Record<string, unknown>,
@@ -100,12 +100,13 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
         for (const key in resolved) {
           value[key] = resolved[key]
         }
+        snapshotSources[i] = () => value
       } else {
         for (const key in source) {
           value[key] = resolveSource(source[key])
         }
+        snapshotSources[i] = value
       }
-      snapshotSources[i] = value
     }
     const symbols = Object.getOwnPropertySymbols(dynamicSources)
     for (let i = 0; i < symbols.length; i++) {
@@ -230,7 +231,9 @@ export function getPropsProxyHandlers(
     getter: T,
   ): T => {
     return ((instance: VaporComponentInstance, key: string | symbol) => {
-      const cache = instance.oncePropsCache || (instance.oncePropsCache = {})
+      const cache =
+        instance.oncePropsCache ||
+        (instance.oncePropsCache = Object.create(null))
       if (!hasOwn(cache, key)) {
         pauseTracking()
         try {
@@ -293,7 +296,8 @@ export function getPropsProxyHandlers(
   const getAttrKeys = (target: VaporComponentInstance) =>
     getKeysFromRawProps(target.rawProps).filter(isAttr)
   const getOnceAttrKeys = (target: VaporComponentInstance) => {
-    const cache = target.oncePropsCache || (target.oncePropsCache = {})
+    const cache =
+      target.oncePropsCache || (target.oncePropsCache = Object.create(null))
     if (!hasOwn(cache, onceAttrKeys)) {
       pauseTracking()
       try {
