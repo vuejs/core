@@ -75,6 +75,48 @@ export function resolveFunctionSource<T>(
   return source()
 }
 
+export function snapshotRawProps(rawProps: RawProps): RawProps {
+  // Freeze the parent-provided raw source, not the child props proxy. This
+  // keeps prop defaults lazy while preserving v-once input semantics.
+  const snapshot: RawProps = {}
+  for (const key in rawProps) {
+    if (key !== '$') {
+      snapshot[key] = resolveSource(rawProps[key])
+    }
+  }
+
+  const dynamicSources = rawProps.$
+  if (dynamicSources) {
+    const snapshotSources: DynamicPropsSource[] & {
+      [interopKey]?: boolean
+    } = []
+    for (let i = 0; i < dynamicSources.length; i++) {
+      const source = dynamicSources[i]
+      if (isFunction(source)) {
+        const value = resolveFunctionSource(
+          source as () => Record<string, unknown>,
+        )
+        snapshotSources[i] = () => value
+      } else {
+        const value: Record<string, unknown> = {}
+        for (const key in source) {
+          value[key] = resolveSource(source[key])
+        }
+        snapshotSources[i] = value
+      }
+    }
+    const symbols = Object.getOwnPropertySymbols(dynamicSources)
+    for (let i = 0; i < symbols.length; i++) {
+      ;(snapshotSources as any)[symbols[i]] = (dynamicSources as any)[
+        symbols[i]
+      ]
+    }
+    snapshot.$ = snapshotSources
+  }
+
+  return snapshot
+}
+
 function stabilizeDynamicSourceValue<T>(oldValue: T | undefined, value: T): T {
   if (!isPlainObject(oldValue) || !isPlainObject(value)) {
     return value
@@ -104,7 +146,6 @@ function stabilizeDynamicSourceValue<T>(oldValue: T | undefined, value: T): T {
 
 export function getPropsProxyHandlers(
   comp: VaporComponent,
-  once?: boolean,
 ): [
   ProxyHandler<VaporComponentInstance> | null,
   ProxyHandler<VaporComponentInstance>,
@@ -188,7 +229,7 @@ export function getPropsProxyHandlers(
   ): T => {
     return ((instance: VaporComponentInstance, key: string | symbol) => {
       const cache = instance.oncePropsCache || (instance.oncePropsCache = {})
-      if (!(key in cache)) {
+      if (!hasOwn(cache, key)) {
         pauseTracking()
         try {
           cache[key] = getter(instance, key)
@@ -201,9 +242,13 @@ export function getPropsProxyHandlers(
   }
 
   const getOnceProp = withOnceCache(getProp)
+  const getMaybeOnceProp = (
+    instance: VaporComponentInstance,
+    key: string | symbol,
+  ) => (instance.isOnce ? getOnceProp : getProp)(instance, key)
   const propsHandlers = propsOptions
     ? ({
-        get: (target, key) => (once ? getOnceProp : getProp)(target, key),
+        get: getMaybeOnceProp,
         has: (_, key) => isProp(key),
         ownKeys: () => Object.keys(propsOptions),
         getOwnPropertyDescriptor(target, key) {
@@ -211,7 +256,7 @@ export function getPropsProxyHandlers(
             return {
               configurable: true,
               enumerable: true,
-              get: () => (once ? getOnceProp : getProp)(target, key),
+              get: () => getMaybeOnceProp(target, key),
             }
           }
         },
@@ -242,18 +287,59 @@ export function getPropsProxyHandlers(
   const getOnceAttr = withOnceCache((instance, key) =>
     getAttr(instance.rawProps, key),
   )
+  const onceAttrKeys = Symbol()
+  const getAttrKeys = (target: VaporComponentInstance) =>
+    getKeysFromRawProps(target.rawProps).filter(isAttr)
+  const getOnceAttrKeys = (target: VaporComponentInstance) => {
+    const cache = target.oncePropsCache || (target.oncePropsCache = {})
+    if (!hasOwn(cache, onceAttrKeys)) {
+      pauseTracking()
+      try {
+        // Freeze both the attr key set and its initial values so direct
+        // delayed reads do not see attrs added after the once boundary.
+        const keys = getAttrKeys(target)
+        cache[onceAttrKeys] = keys
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i]
+          if (!hasOwn(cache, key)) {
+            cache[key] = getAttr(target.rawProps, key)
+          }
+        }
+      } finally {
+        resetTracking()
+      }
+    }
+    return cache[onceAttrKeys] as string[]
+  }
+  const getMaybeOnceAttrKeys = (target: VaporComponentInstance) =>
+    target.isOnce ? getOnceAttrKeys(target) : getAttrKeys(target)
+  const getMaybeOnceAttr = (
+    instance: VaporComponentInstance,
+    key: string | symbol,
+  ) =>
+    instance.isOnce
+      ? getOnceAttrKeys(instance).includes(key as string)
+        ? getOnceAttr(instance, key)
+        : undefined
+      : getAttr(instance.rawProps, key)
   const attrsHandlers = {
-    get: (target, key: string | symbol) =>
-      once ? getOnceAttr(target, key) : getAttr(target.rawProps, key),
-    has: (target, key: string | symbol) => hasAttr(target.rawProps, key),
-    ownKeys: target => getKeysFromRawProps(target.rawProps).filter(isAttr),
+    get: getMaybeOnceAttr,
+    has: (target, key: string | symbol) =>
+      target.isOnce
+        ? getOnceAttrKeys(target).includes(key as string)
+        : hasAttr(target.rawProps, key),
+    ownKeys: getMaybeOnceAttrKeys,
     getOwnPropertyDescriptor(target, key: string | symbol) {
-      if (isString(key) && hasAttr(target.rawProps, key)) {
+      if (
+        isString(key) &&
+        (target.isOnce
+          ? getOnceAttrKeys(target).includes(key)
+          : hasAttr(target.rawProps, key))
+      ) {
         return {
           configurable: true,
           enumerable: true,
-          get: () =>
-            once ? getOnceAttr(target, key) : getAttr(target.rawProps, key),
+          get: () => getMaybeOnceAttr(target, key),
         }
       }
     },

@@ -964,6 +964,7 @@ function createVDOMComponent(
   parentComponent: VaporComponentInstance | null,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
+  once?: boolean,
 ): VaporFragment {
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
@@ -1005,7 +1006,7 @@ function createVDOMComponent(
     rawProps as RawProps,
     rawSlots as RawSlots,
     parentComponent ? parentComponent.appContext : undefined,
-    undefined,
+    once,
   )
 
   if (isCollectingVdomSlotVNodes) {

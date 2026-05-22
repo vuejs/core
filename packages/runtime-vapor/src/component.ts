@@ -71,6 +71,7 @@ import {
   normalizePropsOptions,
   resolveDynamicProps,
   setupPropsValidation,
+  snapshotRawProps,
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
@@ -83,7 +84,9 @@ import {
   dynamicSlotsProxyHandlers,
   getScopeOwner,
   getSlot,
+  inOnceSlot,
   setCurrentSlotOwner,
+  withOnceSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -255,6 +258,11 @@ export function createComponent(
     emptyContext,
   managedMount = false,
 ): VaporComponentInstance {
+  // A component created while rendering a v-once slot should receive frozen
+  // parent inputs, but its own render effects should still be live.
+  const wasInOnceSlot = inOnceSlot
+  if (wasInOnceSlot) once = true
+
   if (isInteropEnabled && isCollectingVdomSlotVNodes) {
     if (component.__vapor) {
       // Vapor components cannot be represented as VDOM child metadata. Bail out
@@ -346,6 +354,7 @@ export function createComponent(
         currentInstance as any,
         rawProps,
         rawSlots,
+        once,
       )
       if (isCollectingVdomSlotVNodes) {
         // VDOM interop children already expose frag.vnode for collection. Do not
@@ -428,11 +437,16 @@ export function createComponent(
         component.__asyncHydrate &&
         !component.__asyncResolved
       ) {
+        const setup = () => setupComponent(instance, component)
         component.__asyncHydrate(
           currentHydrationNode as Element,
           instance,
-          () => setupComponent(instance, component),
+          // Async hydration re-enters setup later, so preserve the component
+          // boundary rule above when the delayed setup actually runs.
+          wasInOnceSlot ? () => withOnceSlot(setup, false) : setup,
         )
+      } else if (wasInOnceSlot) {
+        withOnceSlot(() => setupComponent(instance, component), false)
       } else {
         setupComponent(instance, component)
       }
@@ -706,6 +720,7 @@ export class VaporComponentInstance<
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes
   oncePropsCache?: Record<string | symbol, any>
+  isOnce: boolean
 
   // lifecycle hooks
   isMounted: boolean
@@ -778,6 +793,7 @@ export class VaporComponentInstance<
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)
+    this.isOnce = !!once
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
     this.expose = expose.bind(null, this) as any
@@ -801,10 +817,15 @@ export class VaporComponentInstance<
         false
 
     // init props
-    this.rawProps = rawProps || EMPTY_OBJ
-    this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)
+    // Snapshot raw parent inputs before creating proxies so delayed reads from
+    // v-once children cannot observe later parent updates.
+    this.rawProps =
+      this.isOnce && rawProps
+        ? snapshotRawProps(rawProps)
+        : rawProps || EMPTY_OBJ
+    this.hasFallthrough = hasFallthroughAttrs(comp, this.rawProps)
     if (rawProps || comp.props) {
-      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp, once)
+      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
       this.attrs = new Proxy(this, attrsHandlers)
       this.props = (
         comp.props
