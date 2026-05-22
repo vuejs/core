@@ -67,6 +67,14 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('emit single default slot as raw slot function', () => {
+      const { code } = compileWithElementAndSlotTransform(`<Card><div/></Card>`)
+      expect(code).toContain(
+        `const n1 = _createAssetComponent("Card", null, () => {`,
+      )
+      expect(code).not.toContain(`"default":`)
+    })
+
     test('hoist repeated asset component resolve', () => {
       const { code, helpers } = compileWithElementTransform(
         `<Foo/><div><Foo/></div>`,

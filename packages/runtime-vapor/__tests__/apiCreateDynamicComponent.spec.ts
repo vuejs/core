@@ -185,6 +185,20 @@ describe('api: createDynamicComponent', () => {
     )
   })
 
+  test('fallback with function rawSlots as default slot', () => {
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(
+          () => 'div',
+          null,
+          () => template('<span>hi</span>')(),
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div><span>hi</span></div><!--dynamic-component-->')
+  })
+
   test('compiled static key on dynamic component fallback', () => {
     const Comp = defineVaporComponent({
       setup() {

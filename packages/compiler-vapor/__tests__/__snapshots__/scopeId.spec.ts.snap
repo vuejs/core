@@ -5,11 +5,9 @@ exports[`scopeId compiler support > should wrap default slot 1`] = `
 const t0 = _template("<div>", 2)
 
 export function render(_ctx) {
-  const n1 = _createAssetComponent("Child", null, {
-    "default": () => {
-      const n0 = t0()
-      return n0
-    }
+  const n1 = _createAssetComponent("Child", null, () => {
+    const n0 = t0()
+    return n0
   }, true)
   return n1
 }"

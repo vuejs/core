@@ -18,7 +18,7 @@ function compile(template: string | RootNode, options: CompilerOptions = {}) {
 describe('scopeId compiler support', () => {
   test('should wrap default slot', () => {
     const code = compile(`<Child><div/></Child>`)
-    expect(code).toMatch(`"default": () => {`)
+    expect(code).toMatch(`_createAssetComponent("Child", null, () => {`)
     expect(code).toMatchSnapshot()
   })
 

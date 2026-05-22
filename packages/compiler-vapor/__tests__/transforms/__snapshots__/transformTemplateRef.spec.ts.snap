@@ -90,12 +90,10 @@ const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
-  const n1 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = t0()
-      _setTemplateRefBinding(n0, () => _ctx.refName, _setTemplateRef)
-      return n0
-    }
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    _setTemplateRefBinding(n0, () => _ctx.refName, _setTemplateRef)
+    return n0
   }, true)
   return n1
 }"
@@ -229,12 +227,10 @@ const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
-  const n1 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = t0()
-      _setTemplateRef(n0, "foo")
-      return n0
-    }
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    _setTemplateRef(n0, "foo")
+    return n0
   }, true)
   return n1
 }"
