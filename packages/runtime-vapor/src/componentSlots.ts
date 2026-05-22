@@ -7,7 +7,12 @@ import {
   isFunction,
 } from '@vue/shared'
 import { type Block, type BlockFn, insert } from './block'
-import { rawPropsProxyHandlers, resolveFunctionSource } from './componentProps'
+import {
+  type RawProps,
+  rawPropsProxyHandlers,
+  resolveFunctionSource,
+  snapshotRawProps,
+} from './componentProps'
 import {
   type GenericComponentInstance,
   currentInstance,
@@ -47,10 +52,10 @@ import { setScopeId } from './scopeId'
  */
 export let inOnceSlot = false
 
-export function withOnceSlot<T>(fn: () => T): T {
+export function withOnceSlot<T>(fn: () => T, value = true): T {
   const prev = inOnceSlot
   try {
-    inOnceSlot = true
+    inOnceSlot = value
     return fn()
   } finally {
     inOnceSlot = prev
@@ -213,13 +218,16 @@ export function createSlot(
 
   const instance = getScopeOwner()!
   const rawSlots = instance.rawSlots
-  const slotProps = rawProps
-    ? new Proxy(rawProps, rawPropsProxyHandlers)
-    : EMPTY_OBJ
   const scopeId =
     !(flags & VaporSlotFlags.NO_SLOTTED) && instance.type.__scopeId
   const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
   const once = !!(flags & VaporSlotFlags.ONCE)
+  const slotProps = rawProps
+    ? new Proxy(
+        once ? snapshotRawProps(rawProps as RawProps) : rawProps,
+        rawPropsProxyHandlers,
+      )
+    : EMPTY_OBJ
   if (once && fallback) {
     const originalFallback = fallback
     fallback = (...args: any[]) => withOnceSlot(() => originalFallback(...args))
@@ -257,12 +265,16 @@ export function createSlot(
           instance.parent.ce)
       ) {
         const el = createElement('slot')
-        renderEffect(() => {
+        const setSlotProps = () => {
           setDynamicProps(el, [
             slotProps,
             slotName !== 'default' ? { name: slotName } : {},
           ])
-        })
+        }
+        // Native slot outlets have no component boundary to snapshot props, so
+        // v-once applies here by skipping the reactive prop effect.
+        if (once) setSlotProps()
+        else renderEffect(setSlotProps)
         if (fallback) {
           withOwnedSlotBoundary(slotFragment.parentSlotBoundary, () => {
             const fallbackBlock = fallback()

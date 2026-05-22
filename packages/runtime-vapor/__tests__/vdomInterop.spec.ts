@@ -1406,6 +1406,77 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<span>1</span>')
     })
 
+    test('snapshots delayed slot prop reads inside v-once VDOM slot content', async () => {
+      let increment!: () => void
+      const label = ref('initial')
+      const VDomChild = defineComponent({
+        props: ['slotProps'],
+        setup(props: any) {
+          const count = ref(0)
+          increment = () => count.value++
+          return () => h('span', `${props.slotProps.label}:${count.value}`)
+        },
+      })
+      const VaporChild = defineVaporComponent(() =>
+        createSlot(
+          'default',
+          { label: () => label.value },
+          undefined,
+          VaporSlotFlags.ONCE,
+        ),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: (slotProps: any) => h(VDomChild, { slotProps }),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial:0</span>')
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>initial:1</span>')
+    })
+
+    test('preserves VDOM child updates inside v-once fallback', async () => {
+      let increment!: () => void
+      const label = ref('initial')
+      const VDomChild = defineComponent({
+        props: ['label'],
+        setup(props) {
+          const count = ref(0)
+          increment = () => count.value++
+          return () => h('span', `${props.label}:${count.value}`)
+        },
+      })
+      const VaporChild = defineVaporComponent(() =>
+        createSlot(
+          'default',
+          null,
+          () => createComponent(VDomChild as any, { label: () => label.value }),
+          VaporSlotFlags.ONCE,
+        ),
+      )
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial:0</span>')
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>initial:1</span>')
+    })
+
     test('preserves Vapor child updates inside v-once VDOM slot content', async () => {
       let increment!: () => void
       const VaporGrandChild = defineVaporComponent({
