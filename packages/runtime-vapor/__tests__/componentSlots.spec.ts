@@ -1807,6 +1807,37 @@ describe('component: slots', () => {
       await nextTick()
       expect(html()).toBe('<div>0</div><!--slot-->')
     })
+
+    test('applies v-once to fallback', async () => {
+      const count = ref(0)
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => {
+              const n3 = template('<div> </div>')() as any
+              const x3 = txt(n3) as any
+              renderEffect(() => setText(x3, toDisplayString(count.value)))
+              return n3
+            },
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>0</div><!--slot-->')
+
+      count.value++
+      await nextTick()
+      expect(html()).toBe('<div>0</div><!--slot-->')
+    })
   })
 
   describe('forwarded slot', () => {
