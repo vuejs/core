@@ -1509,6 +1509,44 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<span>1</span>')
     })
 
+    test('preserves VDOM child local props passed to Vapor descendants inside v-once slot content', async () => {
+      let increment!: () => void
+      const VaporGrandChild = defineVaporComponent({
+        props: ['count'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, String(props.count)))
+          return n0
+        },
+      })
+      const VDomChild = defineComponent({
+        setup() {
+          const count = ref(0)
+          increment = () => count.value++
+          return () => h(VaporGrandChild as any, { count: count.value })
+        },
+      })
+      const VaporChild = defineVaporComponent(() =>
+        createSlot('default', null, undefined, VaporSlotFlags.ONCE),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => h(VDomChild),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>0</span>')
+
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>1</span>')
+    })
+
     test('falls through to outlet fallback when vdom local fallback is invalidated or removed from VaporSlot', async () => {
       const mode = ref<'local' | 'empty' | 'none'>('local')
       const localText = ref('local fallback')
