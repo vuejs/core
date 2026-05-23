@@ -331,17 +331,19 @@ export const TeleportImpl = {
       props,
     } = vnode
 
-    let shouldRemove = doRemove || !isTeleportDisabled(props)
     // A deferred teleport inside a pending suspense may be unmounted before its
-    // content is ever mounted. Clear the queued mount effect and skip removing
-    // children because nothing has been mounted yet.
+    // content is ever mounted. Clear the queued mount effect and return early:
+    // children were never mounted, and target anchors were never inserted
+    // (mountToTarget hasn't run, so target is undefined). #14876
     const pendingMount = pendingMounts.get(vnode)
     if (pendingMount) {
       pendingMount.flags! |= SchedulerJobFlags.DISPOSED
       pendingMounts.delete(vnode)
-      shouldRemove = false
+      doRemove && hostRemove(anchor!)
+      return
     }
 
+    const shouldRemove = doRemove || !isTeleportDisabled(props)
     if (target) {
       hostRemove(targetStart!)
       hostRemove(targetAnchor!)
