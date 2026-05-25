@@ -21,14 +21,22 @@ export function genSlotOutlet(
   if (fallback) {
     fallbackArg = genBlock(fallback, context)
   }
+  const createSlot = helper('createSlot')
+  const rawPropsArg = genRawProps(oper.props, context)
+  const omitDefaultName =
+    name.isStatic &&
+    name.content === 'default' &&
+    !rawPropsArg &&
+    !fallbackArg &&
+    !flags
 
   push(
     NEWLINE,
     `const n${id} = `,
     ...genCall(
-      helper('createSlot'),
-      nameExpr,
-      genRawProps(oper.props, context),
+      createSlot,
+      omitDefaultName ? undefined : nameExpr,
+      rawPropsArg,
       fallbackArg,
       flags ? String(flags) : undefined,
     ),

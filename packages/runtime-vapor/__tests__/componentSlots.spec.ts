@@ -980,7 +980,7 @@ describe('component: slots', () => {
 
     test('plain slot without fallback does not enter fallback boundary', () => {
       let observedBoundary: SlotBoundaryContext | null | undefined
-      const Comp = defineVaporComponent(() => createSlot('default'))
+      const Comp = defineVaporComponent(() => createSlot())
 
       define(() =>
         createComponent(Comp, null, {

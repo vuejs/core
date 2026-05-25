@@ -147,7 +147,7 @@ export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n2 = _createComponentWithFallback(_component_Comp, null, _withVaporCtx(() => {
     const n1 = _createComponentWithFallback(_component_Comp, null, _withVaporCtx(() => {
-      const n0 = _createSlot("default")
+      const n0 = _createSlot()
       return n0
     }))
     return n1
@@ -161,7 +161,7 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag only 1`] = `
 
 export function render(_ctx) {
   const n1 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
-    const n0 = _createSlot("default")
+    const n0 = _createSlot()
     return n0
   }), true)
   return n1
@@ -173,7 +173,7 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag w/ template 1`]
 
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
-    const n0 = _createSlot("default")
+    const n0 = _createSlot()
     return n0
   }), true)
   return n2
@@ -186,7 +186,7 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-for 1`] = 
 export function render(_ctx) {
   const n3 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
     const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
-      const n2 = _createSlot("default")
+      const n2 = _createSlot()
       return n2
     }, undefined, 16)
     return n0
@@ -201,7 +201,7 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-if 1`] = `
 export function render(_ctx) {
   const n3 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
     const n0 = _createIf(() => (_ctx.ok), () => {
-      const n2 = _createSlot("default")
+      const n2 = _createSlot()
       return n2
     })
     return n0
@@ -713,7 +713,7 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with slot o
 
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
-    const n0 = _createSlot("default")
+    const n0 = _createSlot()
     return n0
   }), true)
   return n2
