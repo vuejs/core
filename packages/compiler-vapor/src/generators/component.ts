@@ -58,6 +58,7 @@ import {
 } from './for'
 import { genModelHandler } from './vModel'
 import { isBuiltInComponent } from '../utils'
+import type { Expression } from '@babel/types'
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -314,7 +315,7 @@ function genStaticProps(
         context,
         true,
         true,
-        directStaticLiteralProps && isDirectStaticLiteralProp(prop),
+        directStaticLiteralProps && isDirectStaticLiteralProp(prop, context),
       ),
     )
 
@@ -473,14 +474,86 @@ function genProp(
  * touch reactive state. Keep handlers, v-model values, and dynamic expressions
  * as getter sources to preserve lazy access and merge semantics.
  */
-function isDirectStaticLiteralProp(prop: IRProp): boolean {
+function isDirectStaticLiteralProp(
+  prop: IRProp,
+  context: CodegenContext,
+): boolean {
   return (
     prop.key.isStatic &&
     prop.values.length === 1 &&
-    prop.values[0].isStatic &&
     !prop.handler &&
-    !prop.model
+    !prop.model &&
+    isDirectConstantValue(prop.values[0], context)
   )
+}
+
+function isDirectConstantValue(
+  value: SimpleExpressionNode,
+  context: CodegenContext,
+): boolean {
+  value = context.getExpressionReplacement(value)
+  if (value.isStatic) return true
+
+  const ast = value.ast
+  if (ast === null) {
+    return (
+      value.content === 'true' ||
+      value.content === 'false' ||
+      value.content === 'null' ||
+      value.content === 'undefined'
+    )
+  }
+  if (!ast) return false
+  return isDirectConstantAst(ast as Expression)
+}
+
+function isDirectConstantAst(node: Expression): boolean {
+  switch (node.type) {
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
+    case 'Identifier':
+      return node.name === 'undefined'
+    case 'TemplateLiteral':
+      return node.expressions.every(expression =>
+        isDirectTemplateConstantAst(expression as Expression),
+      )
+    case 'ArrayExpression':
+      return node.elements.every(
+        element =>
+          element === null ||
+          (element.type !== 'SpreadElement' && isDirectConstantAst(element)),
+      )
+    case 'ObjectExpression':
+      return node.properties.every(
+        prop =>
+          prop.type === 'ObjectProperty' &&
+          !prop.computed &&
+          isDirectConstantAst(prop.value as Expression),
+      )
+  }
+  return false
+}
+
+function isDirectTemplateConstantAst(node: Expression): boolean {
+  switch (node.type) {
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
+    case 'Identifier':
+      return node.name === 'undefined'
+    case 'TemplateLiteral':
+      return node.expressions.every(expression =>
+        isDirectTemplateConstantAst(expression as Expression),
+      )
+  }
+  return false
 }
 
 function genRawSlots(slots: IRSlots[], context: CodegenContext) {
