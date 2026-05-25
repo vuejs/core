@@ -13,22 +13,31 @@ export function genSlotOutlet(
   const { id, name, fallback, flags } = oper
   const [frag, push] = buildCodeFragment()
 
-  const nameExpr = name.isStatic
-    ? genExpression(name, context)
-    : ['() => (', ...genExpression(name, context), ')']
-
   let fallbackArg: CodeFragment[] | undefined
   if (fallback) {
     fallbackArg = genBlock(fallback, context)
   }
+  const createSlot = helper('createSlot')
+  const rawPropsArg = genRawProps(oper.props, context)
+  const omitDefaultName =
+    name.isStatic &&
+    name.content === 'default' &&
+    !rawPropsArg &&
+    !fallbackArg &&
+    !flags
+  const nameArg = omitDefaultName
+    ? undefined
+    : name.isStatic
+      ? genExpression(name, context)
+      : ['() => (', ...genExpression(name, context), ')']
 
   push(
     NEWLINE,
     `const n${id} = `,
     ...genCall(
-      helper('createSlot'),
-      nameExpr,
-      genRawProps(oper.props, context),
+      createSlot,
+      nameArg,
+      rawPropsArg,
       fallbackArg,
       flags ? String(flags) : undefined,
     ),

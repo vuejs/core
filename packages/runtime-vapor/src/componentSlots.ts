@@ -200,7 +200,7 @@ export function withVaporCtx(fn: Function): BlockFn {
 }
 
 export function createSlot(
-  name: string | (() => string),
+  name: string | (() => string) = 'default',
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
   flags: number = 0,

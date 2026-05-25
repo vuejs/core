@@ -289,7 +289,7 @@ export function render(_ctx) {
   const n3 = t0()
   const n1 = _child(n3)
   _setInsertionState(n1, null, 0)
-  const n0 = _createSlot("default")
+  const n0 = _createSlot()
   _setInsertionState(n3, null, 1)
   const n2 = _createAssetComponent("Comp")
   return n3

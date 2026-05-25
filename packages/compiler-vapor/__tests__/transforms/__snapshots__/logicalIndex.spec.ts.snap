@@ -284,7 +284,7 @@ const t0 = _template("<div><span>A</span>", 1)
 export function render(_ctx) {
   const n1 = t0()
   _setInsertionState(n1, null, 1)
-  const n0 = _createSlot("default")
+  const n0 = _createSlot()
   return n1
 }"
 `;
@@ -296,7 +296,7 @@ const t0 = _template("<div><span>A", 1)
 export function render(_ctx) {
   const n1 = t0()
   _setInsertionState(n1, 0, 0)
-  const n0 = _createSlot("default")
+  const n0 = _createSlot()
   return n1
 }"
 `;
