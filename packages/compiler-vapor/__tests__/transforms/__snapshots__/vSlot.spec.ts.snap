@@ -149,7 +149,7 @@ export function render(_ctx) {
     "default": _withVaporCtx(() => {
       const n1 = _createComponentWithFallback(_component_Comp, null, {
         "default": _withVaporCtx(() => {
-          const n0 = _createSlot("default", null)
+          const n0 = _createSlot("default")
           return n0
         })
       })
@@ -166,7 +166,7 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag only 1`] = `
 export function render(_ctx) {
   const n1 = _createAssetComponent("Comp", null, {
     "default": _withVaporCtx(() => {
-      const n0 = _createSlot("default", null)
+      const n0 = _createSlot("default")
       return n0
     })
   }, true)
@@ -180,7 +180,7 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag w/ template 1`]
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {
     "default": _withVaporCtx(() => {
-      const n0 = _createSlot("default", null)
+      const n0 = _createSlot("default")
       return n0
     })
   }, true)
@@ -195,7 +195,7 @@ export function render(_ctx) {
   const n3 = _createAssetComponent("Comp", null, {
     "default": _withVaporCtx(() => {
       const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
-        const n2 = _createSlot("default", null)
+        const n2 = _createSlot("default")
         return n2
       }, undefined, 16)
       return n0
@@ -212,7 +212,7 @@ export function render(_ctx) {
   const n3 = _createAssetComponent("Comp", null, {
     "default": _withVaporCtx(() => {
       const n0 = _createIf(() => (_ctx.ok), () => {
-        const n2 = _createSlot("default", null)
+        const n2 = _createSlot("default")
         return n2
       })
       return n0
@@ -391,7 +391,7 @@ export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
   const n6 = t0()
   _setInsertionState(n6, null, 0)
-  const n0 = _createSlot("foo", null)
+  const n0 = _createSlot("foo")
   _setInsertionState(n6, null, 1)
   const n1 = _createIf(() => (true), () => {
     const n3 = _createComponentWithFallback(_component_Foo)
@@ -603,7 +603,7 @@ export function render(_ctx) {
       _withVaporCtx(() => (_createForSlots(_ctx.slots, (_, name) => ({
         name: name,
         fn: _withVaporCtx(() => {
-          const n0 = _createSlot(() => (name), null)
+          const n0 = _createSlot(() => (name))
           return n0
         })
       }))))
@@ -768,7 +768,7 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with slot o
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {
     "default": _withVaporCtx(() => {
-      const n0 = _createSlot("default", null)
+      const n0 = _createSlot("default")
       return n0
     })
   }, true)

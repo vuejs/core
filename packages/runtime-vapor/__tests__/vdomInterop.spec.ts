@@ -32,6 +32,7 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
+import { VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
 import { compile, makeInteropRender } from './_utils'
 import {
@@ -1276,6 +1277,274 @@ describe('vdomInterop', () => {
       msg.value = 'updated'
       await nextTick()
       expect(html()).toBe('<span>updated</span>')
+    })
+
+    test('applies v-once to VDOM slot content passed to Vapor', async () => {
+      const msg = ref('default slot')
+      const VaporChild = defineVaporComponent(() =>
+        createSlot('default', null, undefined, VaporSlotFlags.ONCE),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => h('span', msg.value),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>default slot</span>')
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>default slot</span>')
+    })
+
+    test('applies v-once to dynamic VDOM slot names passed to Vapor', async () => {
+      const slotName = ref('one')
+      const VaporChild = defineVaporComponent(() =>
+        createSlot(() => slotName.value, null, undefined, VaporSlotFlags.ONCE),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              one: () => h('span', 'one'),
+              two: () => h('span', 'two'),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>one</span>')
+
+      slotName.value = 'two'
+      await nextTick()
+      expect(html()).toBe('<span>one</span>')
+    })
+
+    test('applies v-once when VDOM slot availability changes', async () => {
+      const show = ref(true)
+      const VaporChild = defineVaporComponent(() =>
+        createSlot('default', null, undefined, VaporSlotFlags.ONCE),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(
+              VaporChild as any,
+              null,
+              show.value ? { default: () => h('span', 'one') } : {},
+            )
+        },
+      }).render()
+
+      expect(html()).toBe('<span>one</span>')
+
+      show.value = false
+      await nextTick()
+      expect(html()).toBe('<span>one</span>')
+    })
+
+    test('applies v-once to VDOM slot outlet fallback', async () => {
+      const msg = ref('fallback')
+      const VaporChild = defineVaporComponent(() =>
+        createSlot(
+          'default',
+          null,
+          () => {
+            const n0 = template('<span> </span>')() as any
+            const t0 = txt(n0) as any
+            renderEffect(() => setText(t0, msg.value))
+            return n0
+          },
+          VaporSlotFlags.ONCE,
+        ),
+      )
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>fallback</span>')
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>fallback</span>')
+    })
+
+    test('preserves VDOM child updates inside v-once slot content', async () => {
+      let increment!: () => void
+      const VDomChild = defineComponent({
+        setup() {
+          const count = ref(0)
+          increment = () => count.value++
+          return () => h('span', count.value)
+        },
+      })
+      const VaporChild = defineVaporComponent(() =>
+        createSlot('default', null, undefined, VaporSlotFlags.ONCE),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => h(VDomChild),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>0</span>')
+
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>1</span>')
+    })
+
+    test('snapshots delayed slot prop reads inside v-once VDOM slot content', async () => {
+      let increment!: () => void
+      const label = ref('initial')
+      const VDomChild = defineComponent({
+        props: ['slotProps'],
+        setup(props: any) {
+          const count = ref(0)
+          increment = () => count.value++
+          return () => h('span', `${props.slotProps.label}:${count.value}`)
+        },
+      })
+      const VaporChild = defineVaporComponent(() =>
+        createSlot(
+          'default',
+          { label: () => label.value },
+          undefined,
+          VaporSlotFlags.ONCE,
+        ),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: (slotProps: any) => h(VDomChild, { slotProps }),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial:0</span>')
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>initial:1</span>')
+    })
+
+    test('preserves VDOM child updates inside v-once fallback', async () => {
+      let increment!: () => void
+      const label = ref('initial')
+      const VDomChild = defineComponent({
+        props: ['label'],
+        setup(props) {
+          const count = ref(0)
+          increment = () => count.value++
+          return () => h('span', `${props.label}:${count.value}`)
+        },
+      })
+      const VaporChild = defineVaporComponent(() =>
+        createSlot(
+          'default',
+          null,
+          () => createComponent(VDomChild as any, { label: () => label.value }),
+          VaporSlotFlags.ONCE,
+        ),
+      )
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial:0</span>')
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>initial:1</span>')
+    })
+
+    test('preserves Vapor child updates inside v-once VDOM slot content', async () => {
+      let increment!: () => void
+      const VaporGrandChild = defineVaporComponent({
+        setup() {
+          const count = ref(0)
+          increment = () => count.value++
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, String(count.value)))
+          return n0
+        },
+      })
+      const VaporChild = defineVaporComponent(() =>
+        createSlot('default', null, undefined, VaporSlotFlags.ONCE),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => h(VaporGrandChild as any),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>0</span>')
+
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>1</span>')
+    })
+
+    test('preserves VDOM child local props passed to Vapor descendants inside v-once slot content', async () => {
+      let increment!: () => void
+      const VaporGrandChild = defineVaporComponent({
+        props: ['count'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, String(props.count)))
+          return n0
+        },
+      })
+      const VDomChild = defineComponent({
+        setup() {
+          const count = ref(0)
+          increment = () => count.value++
+          return () => h(VaporGrandChild as any, { count: count.value })
+        },
+      })
+      const VaporChild = defineVaporComponent(() =>
+        createSlot('default', null, undefined, VaporSlotFlags.ONCE),
+      )
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () => h(VDomChild),
+            })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>0</span>')
+
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>1</span>')
     })
 
     test('falls through to outlet fallback when vdom local fallback is invalidated or removed from VaporSlot', async () => {

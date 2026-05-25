@@ -73,3 +73,12 @@ export enum TemplateFlags {
   ROOT = 1,
   STATIC = 1 << 1,
 }
+
+/**
+ * Flags used by vapor slot outlets, shared between the compiler and the
+ * runtime.
+ */
+export enum VaporSlotFlags {
+  NO_SLOTTED = 1,
+  ONCE = 1 << 1,
+}

@@ -9,6 +9,7 @@ import {
   createIf,
   createSlot,
   createVaporApp,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   insert,
   prepend,
@@ -34,6 +35,7 @@ import {
   toDisplayString,
   useSlots,
 } from '@vue/runtime-dom'
+import { VaporSlotFlags } from '@vue/shared'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
@@ -1780,13 +1782,7 @@ describe('component: slots', () => {
     test('work with v-once', async () => {
       const Child = defineVaporComponent({
         setup() {
-          return createSlot(
-            'default',
-            null,
-            undefined,
-            undefined,
-            true /* once */,
-          )
+          return createSlot('default', null, undefined, VaporSlotFlags.ONCE)
         },
       })
 
@@ -1811,6 +1807,465 @@ describe('component: slots', () => {
       count.value++
       await nextTick()
       expect(html()).toBe('<div>0</div><!--slot-->')
+    })
+
+    test('applies v-once to fallback', async () => {
+      const count = ref(0)
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => {
+              const n3 = template('<div> </div>')() as any
+              const x3 = txt(n3) as any
+              renderEffect(() => setText(x3, toDisplayString(count.value)))
+              return n3
+            },
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<div>0</div>')
+
+      count.value++
+      await nextTick()
+      expect(html()).toBe('<div>0</div>')
+    })
+
+    test('preserves Vapor child updates inside v-once fallback', async () => {
+      let increment!: () => void
+      const normalLabel = ref('normal')
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const count = ref(0)
+          increment = () => count.value++
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, `${props.label}:${count.value}`))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return [
+            createComponent(GrandChild, { label: () => normalLabel.value }),
+            createComponent(Child),
+          ]
+        },
+      }).render()
+
+      expect(html()).toBe(
+        '<span>normal:0</span><span>initial:0</span><!--slot-->',
+      )
+
+      normalLabel.value = 'normal updated'
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe(
+        '<span>normal updated:0</span><span>initial:1</span><!--slot-->',
+      )
+    })
+
+    test('preserves async Vapor child updates inside v-once fallback', async () => {
+      let resolve!: (comp: any) => void
+      let increment!: () => void
+      const label = ref('initial')
+      const AsyncGrandChild = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r
+          }),
+      )
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () =>
+              createComponent(AsyncGrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<!--async component--><!--slot-->')
+
+      resolve(
+        defineVaporComponent({
+          props: ['label'],
+          setup(props: any) {
+            const count = ref(0)
+            increment = () => count.value++
+            const n0 = template('<span> </span>')() as any
+            const t0 = txt(n0) as any
+            renderEffect(() => setText(t0, `${props.label}:${count.value}`))
+            return n0
+          },
+        }),
+      )
+      await new Promise(r => setTimeout(r))
+      expect(html()).toBe(
+        '<span>initial:0</span><!--async component--><!--slot-->',
+      )
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe(
+        '<span>initial:1</span><!--async component--><!--slot-->',
+      )
+    })
+
+    test('caches v-once fallback child props with prototype names', async () => {
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['toString'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, props.toString))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { toString: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+
+      label.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+    })
+
+    test('freezes fallthrough attr keys on v-once fallback child', async () => {
+      const attrs = ref<Record<string, string>>({ id: 'initial' })
+      const GrandChild = defineVaporComponent({
+        setup() {
+          return template('<span>child</span>')()
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => attrs.value] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span id="initial">child</span><!--slot-->')
+
+      attrs.value = { id: 'updated', class: 'new' }
+      await nextTick()
+      expect(html()).toBe('<span id="initial">child</span><!--slot-->')
+    })
+
+    test('snapshots reused dynamic props objects on delayed v-once fallback child reads', async () => {
+      let reveal!: () => void
+      const raw = { label: 'initial' }
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, show.value ? props.label : 'hidden'))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<span>hidden</span>')
+
+      raw.label = 'updated'
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial</span>')
+    })
+
+    test('preserves function-valued props from dynamic sources on v-once fallback child', () => {
+      let calls = 0
+      const cb = () => {
+        calls++
+        return 'called'
+      }
+      const raw = { cb }
+      const GrandChild = defineVaporComponent({
+        props: ['cb'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() =>
+            setText(t0, `${typeof props.cb}:${props.cb === cb}`),
+          )
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>function:true</span><!--slot-->')
+      expect(calls).toBe(0)
+    })
+
+    test('snapshots delayed prop reads on v-once fallback child', async () => {
+      let reveal!: () => void
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, show.value ? props.label : 'hidden'))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<span>hidden</span>')
+
+      label.value = 'updated'
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial</span>')
+    })
+
+    test('snapshots delayed attr reads on v-once fallback child', async () => {
+      let reveal!: () => void
+      const parentAttrs = ref<Record<string, string>>({ title: 'initial' })
+      const GrandChild = defineVaporComponent({
+        inheritAttrs: false,
+        setup(_: any, { attrs }: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() =>
+            setText(
+              t0,
+              show.value ? `${attrs.title}:${String(attrs.class)}` : 'hidden',
+            ),
+          )
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => parentAttrs.value] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>hidden</span><!--slot-->')
+
+      parentAttrs.value = { title: 'updated', class: 'new' }
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial:undefined</span><!--slot-->')
+    })
+
+    test('caches prototype-named attrs on v-once fallback child', () => {
+      const raw = Object.create(null)
+      Object.defineProperty(raw, '__proto__', {
+        value: 'initial',
+        enumerable: true,
+      })
+      const GrandChild = defineVaporComponent({
+        inheritAttrs: false,
+        setup(_: any, { attrs }: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, String(attrs.__proto__)))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+    })
+
+    test('snapshots delayed slot prop reads in v-once slot content', async () => {
+      let increment!: () => void
+      const label = ref('initial')
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            { label: () => label.value },
+            undefined,
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: (slotProps: any) => {
+              const GrandChild = defineVaporComponent({
+                setup() {
+                  const count = ref(0)
+                  increment = () => count.value++
+                  const n0 = template('<span> </span>')() as any
+                  const t0 = txt(n0) as any
+                  renderEffect(() =>
+                    setText(t0, `${slotProps.label}:${count.value}`),
+                  )
+                  return n0
+                },
+              })
+              return createComponent(GrandChild)
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial:0</span><!--slot-->')
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>initial:1</span><!--slot-->')
     })
   })
 

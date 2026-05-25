@@ -85,7 +85,11 @@ import {
 } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
-import { currentSlotScopeIds, setCurrentSlotOwner } from './componentSlots'
+import {
+  currentSlotScopeIds,
+  setCurrentSlotOwner,
+  withOnceSlot,
+} from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { _next, createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -960,6 +964,7 @@ function createVDOMComponent(
   parentComponent: VaporComponentInstance | null,
   rawProps?: LooseRawProps | null,
   rawSlots?: LooseRawSlots | null,
+  once?: boolean,
 ): VaporFragment {
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
@@ -1001,7 +1006,7 @@ function createVDOMComponent(
     rawProps as RawProps,
     rawSlots as RawSlots,
     parentComponent ? parentComponent.appContext : undefined,
-    undefined,
+    once,
   )
 
   if (isCollectingVdomSlotVNodes) {
@@ -1365,6 +1370,7 @@ function renderVDOMSlot(
   props: Record<string, any>,
   parentComponent: VaporComponentInstance,
   fallback?: VaporSlot,
+  once?: boolean,
 ): VaporFragment {
   const suspense = currentParentSuspense || parentComponent.suspense
   const frag = new VaporFragment<Block>([])
@@ -1415,7 +1421,9 @@ function renderVDOMSlot(
     },
   }
   localFallback = fallback
-    ? () => fallback(internals, parentComponent)
+    ? once
+      ? () => withOnceSlot(() => fallback(internals, parentComponent))
+      : () => fallback(internals, parentComponent)
     : undefined
 
   const setRenderedContent = (rendered: VNode | Block | null): void => {
@@ -1504,18 +1512,20 @@ function renderVDOMSlot(
     const prev = currentInstance
     simpleSetCurrentInstance(instance)
     try {
-      renderEffect(() => {
+      const renderSlotContent = () => {
         runWithFragmentRenderCtx(frag, () =>
           withOwnedSlotBoundary(boundary, () => {
             let slotContent: VNode | Block | undefined
             let slotContentValid = false
 
             if (slotsRef.value) {
-              slotContent = renderSlot(
-                slotsRef.value,
-                isFunction(name) ? name() : name,
-                props,
-              )
+              const renderContent = () =>
+                renderSlot(
+                  slotsRef.value,
+                  isFunction(name) ? name() : name,
+                  props,
+                )
+              slotContent = once ? withOnceSlot(renderContent) : renderContent()
 
               if (isVNode(slotContent)) {
                 if (slotContent.type === Fragment) {
@@ -1639,7 +1649,8 @@ function renderVDOMSlot(
             finishContentUpdate()
           }),
         )
-      })
+      }
+      once ? renderSlotContent() : renderEffect(renderSlotContent)
     } finally {
       simpleSetCurrentInstance(prev)
     }

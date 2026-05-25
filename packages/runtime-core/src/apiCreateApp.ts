@@ -242,6 +242,7 @@ export interface VaporInteropInterface {
     parentComponent: any,
     props?: any,
     slots?: any,
+    once?: boolean,
   ) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (
@@ -250,6 +251,7 @@ export interface VaporInteropInterface {
     props: Record<string, any>,
     parentComponent: any, // VaporComponentInstance
     fallback?: any, // VaporSlot
+    once?: boolean,
   ) => any
   vdomMountVNode: (
     vnode: VNode,
