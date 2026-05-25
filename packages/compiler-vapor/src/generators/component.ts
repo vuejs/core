@@ -519,7 +519,7 @@ function isDirectConstantAst(node: Expression): boolean {
       return node.name === 'undefined'
     case 'TemplateLiteral':
       return node.expressions.every(expression =>
-        isDirectConstantAst(expression as Expression),
+        isDirectTemplateConstantAst(expression as Expression),
       )
     case 'ArrayExpression':
       return node.elements.every(
@@ -533,6 +533,24 @@ function isDirectConstantAst(node: Expression): boolean {
           prop.type === 'ObjectProperty' &&
           !prop.computed &&
           isDirectConstantAst(prop.value as Expression),
+      )
+  }
+  return false
+}
+
+function isDirectTemplateConstantAst(node: Expression): boolean {
+  switch (node.type) {
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
+    case 'Identifier':
+      return node.name === 'undefined'
+    case 'TemplateLiteral':
+      return node.expressions.every(expression =>
+        isDirectTemplateConstantAst(expression as Expression),
       )
   }
   return false

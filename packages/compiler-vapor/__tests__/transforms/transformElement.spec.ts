@@ -376,6 +376,16 @@ describe('compiler: element transform', () => {
       expect(code).contains(`list: () => ([1, ...[2]])`)
     })
 
+    test('template literal prop values with object and array interpolations stay as getter sources', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo :objLabel="\`\${{ __proto__: null }}\`" :arrLabel="\`\${[1]}\`" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`objLabel: () =>`)
+      expect(code).contains(`arrLabel: () =>`)
+    })
+
     test('v-bind="obj"', () => {
       const { code, ir } = compileWithElementTransform(`<Foo v-bind="obj" />`)
       expect(code).toMatchSnapshot()

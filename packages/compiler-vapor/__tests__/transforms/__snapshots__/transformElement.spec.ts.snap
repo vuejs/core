@@ -289,6 +289,18 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > template literal prop values with object and array interpolations stay as getter sources 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    objLabel: () => (\`\${{ __proto__: null }}\`),
+    arrLabel: () => (\`\${[1]}\`)
+  }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > unsupported constant prop shapes stay as getter sources 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
