@@ -40,7 +40,7 @@ exports[`compiler: transform <slot> outlets > default slot outlet with props 1`]
 
 export function render(_ctx) {
   const n0 = _createSlot("default", {
-    foo: () => ("bar"),
+    foo: "bar",
     baz: () => (_ctx.qux),
     fooBar: () => (_ctx.foo-_ctx.bar)
   })
@@ -152,7 +152,7 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet with 
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", {
-    foo: () => ("bar"),
+    foo: "bar",
     baz: () => (_ctx.qux)
   })
   return n0
@@ -164,7 +164,7 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet with 
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", {
-    foo: () => ("bar"),
+    foo: "bar",
     $: [
       () => (_ctx.obj),
       { baz: () => (_ctx.qux) }

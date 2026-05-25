@@ -953,7 +953,7 @@ describe('component: slots', () => {
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         insert(
-          createSlot('header', { title: () => src.value }),
+          createSlot('header', { prefix: 'static', title: () => src.value }),
           n0 as any as ParentNode,
         )
         return n0
@@ -964,18 +964,22 @@ describe('component: slots', () => {
           header: props => {
             const el = template('<h1></h1>')()
             renderEffect(() => {
-              setElementText(el, props.title)
+              setElementText(el, `${props.prefix}:${props.title}`)
             })
             return el
           },
         })
       }).render()
 
-      expect(host.innerHTML).toBe('<div><h1>header</h1><!--slot--></div>')
+      expect(host.innerHTML).toBe(
+        '<div><h1>static:header</h1><!--slot--></div>',
+      )
 
       src.value = 'footer'
       await nextTick()
-      expect(host.innerHTML).toBe('<div><h1>footer</h1><!--slot--></div>')
+      expect(host.innerHTML).toBe(
+        '<div><h1>static:footer</h1><!--slot--></div>',
+      )
     })
 
     test('plain slot without fallback does not enter fallback boundary', () => {

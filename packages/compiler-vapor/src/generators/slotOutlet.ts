@@ -18,7 +18,7 @@ export function genSlotOutlet(
     fallbackArg = genBlock(fallback, context)
   }
   const createSlot = helper('createSlot')
-  const rawPropsArg = genRawProps(oper.props, context)
+  const rawPropsArg = genRawProps(oper.props, context, true)
   const omitDefaultName =
     name.isStatic &&
     name.content === 'default' &&

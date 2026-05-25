@@ -92,6 +92,9 @@ describe('compiler: transform <slot> outlets', () => {
     const { ir, code } = compileWithSlotsOutlet(
       `<slot foo="bar" :baz="qux" :foo-bar="foo-bar" />`,
     )
+    expect(code).toContain(`foo: "bar"`)
+    expect(code).toContain(`baz: () => (_ctx.qux)`)
+    expect(code).toContain(`fooBar: () => (_ctx.foo-_ctx.bar)`)
     expect(code).toMatchSnapshot()
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
@@ -110,6 +113,8 @@ describe('compiler: transform <slot> outlets', () => {
     const { ir, code } = compileWithSlotsOutlet(
       `<slot name="foo" foo="bar" :baz="qux" />`,
     )
+    expect(code).toContain(`foo: "bar"`)
+    expect(code).toContain(`baz: () => (_ctx.qux)`)
     expect(code).toMatchSnapshot()
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
