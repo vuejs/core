@@ -355,7 +355,7 @@ export function render(_ctx) {
     }, () => {
       const n6 = _createComponentWithFallback(_component_Comp)
       return n6
-    }, 10, null, 0)
+    }, 42 /* BLOCK_SHAPE, INDEX_SHIFT */)
     return n2
   }, undefined, 16)
   return n0
