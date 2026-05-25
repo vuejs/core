@@ -249,8 +249,7 @@ export interface SlotOutletIRNode extends BaseIRNode, EffectBoundary {
   name: SimpleExpressionNode
   props: IRProps[]
   fallback?: BlockIRNode
-  noSlotted?: boolean
-  once?: boolean
+  flags: number
   parent?: number
   anchor?: number
   logicalIndex?: number

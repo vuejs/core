@@ -1278,6 +1278,49 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('v-if decodes packed branch shapes and keyed index during hydration', async () => {
+      const code = `<template>
+        <template v-if="data.ok"><span>foo</span>bar</template>
+        <template v-else><div>baz</div></template>
+      </template>`
+
+      const truthy = ref({ ok: true })
+      const { container: trueContainer } = await testHydration(
+        code,
+        undefined,
+        truthy,
+      )
+      expect(formatHtml(trueContainer.innerHTML)).toMatchInlineSnapshot(
+        `"
+<!--[--><span>foo</span>bar<!--]-->
+"`,
+      )
+
+      truthy.value.ok = false
+      await nextTick()
+      expect(formatHtml(trueContainer.innerHTML)).toMatchInlineSnapshot(
+        `"
+<!--[--><div>baz</div><!--]-->
+"`,
+      )
+
+      const falsy = ref({ ok: false })
+      const { container: falseContainer } = await testHydration(
+        code,
+        undefined,
+        falsy,
+      )
+      expect(formatHtml(falseContainer.innerHTML)).toMatchInlineSnapshot(
+        `"<div>baz</div><!--if-->"`,
+      )
+
+      falsy.value.ok = true
+      await nextTick()
+      expect(formatHtml(falseContainer.innerHTML)).toMatchInlineSnapshot(
+        `"<span>foo</span>bar<!--if-->"`,
+      )
+    })
+
     test('v-if on insertion parent', async () => {
       const data = ref(true)
       const { container } = await testHydration(

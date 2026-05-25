@@ -14,6 +14,7 @@ import {
   type CompilerOptions,
   compile as compileVapor,
 } from '@vue/compiler-vapor'
+import { VaporIfFlags } from '@vue/shared'
 
 export interface RenderContext {
   component: VaporComponent
@@ -149,6 +150,19 @@ export function makeInteropRender(): (comp: Component) => InteropRenderContext {
 }
 
 export { runtimeDom, runtimeVapor, VueServerRenderer }
+
+export function ifFlags(
+  blockShape: number,
+  once = false,
+  index?: number,
+): number {
+  return (
+    blockShape |
+    (once ? VaporIfFlags.ONCE : 0) |
+    (index === undefined ? 0 : (index + 1) << VaporIfFlags.INDEX_SHIFT)
+  )
+}
+
 export function compile(
   sfc: string,
   data: runtimeDom.Ref<any>,

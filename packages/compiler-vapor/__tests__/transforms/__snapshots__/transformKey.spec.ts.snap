@@ -125,7 +125,7 @@ export function render(_ctx) {
       return n5
     })
     return n4
-  }, null, 1), 5, null, 0)
+  }), 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   return n0
 }"
 `;
@@ -154,7 +154,7 @@ export function render(_ctx) {
       return n3
     })
     return n2
-  }, null, 1)
+  })
   return n0
 }"
 `;
