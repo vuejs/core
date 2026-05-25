@@ -212,7 +212,9 @@ function createInnerComp(
       // rawProps is shared and already contains fallthrough attrs.
       // so isSingleRoot should be undefined
       undefined,
-      undefined,
+      // The resolved inner component is the real input boundary for async
+      // components, so it must inherit the wrapper's v-once state.
+      parent.isOnce,
       parent.appContext,
     )
   } finally {

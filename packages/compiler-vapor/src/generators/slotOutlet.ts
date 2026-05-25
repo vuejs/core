@@ -10,7 +10,7 @@ export function genSlotOutlet(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { id, name, fallback, noSlotted, once } = oper
+  const { id, name, fallback, flags } = oper
   const [frag, push] = buildCodeFragment()
 
   const nameExpr = name.isStatic
@@ -28,10 +28,9 @@ export function genSlotOutlet(
     ...genCall(
       helper('createSlot'),
       nameExpr,
-      genRawProps(oper.props, context) || 'null',
+      genRawProps(oper.props, context),
       fallbackArg,
-      noSlotted && 'true', // noSlotted
-      once && 'true', // v-once
+      flags ? String(flags) : undefined,
     ),
   )
 

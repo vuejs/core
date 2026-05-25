@@ -1,5 +1,6 @@
 import type { MockedFunction } from 'vitest'
 import type { VaporElement } from '../src/apiDefineCustomElement'
+import { VaporSlotFlags } from '@vue/shared'
 import {
   type HMRRuntime,
   type Ref,
@@ -830,6 +831,35 @@ describe('defineVaporCustomElement', () => {
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot class="bar"></slot><!--slot--></div>`,
+      )
+    })
+
+    test('applies v-once to slot props', async () => {
+      const foo = ref('foo')
+      const E = defineVaporCustomElement({
+        setup() {
+          const n0 = template('<div></div>')() as any
+          setInsertionState(n0, null)
+          createSlot(
+            'default',
+            { class: () => foo.value },
+            undefined,
+            VaporSlotFlags.ONCE,
+          )
+          return [n0]
+        },
+      })
+      customElements.define('my-el-slot-props-once', E)
+      container.innerHTML = `<my-el-slot-props-once><span>hi</span></my-el-slot-props-once>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="foo"></slot><!--slot--></div>`,
+      )
+
+      foo.value = 'bar'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot class="foo"></slot><!--slot--></div>`,
       )
     })
   })

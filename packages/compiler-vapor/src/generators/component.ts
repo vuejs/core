@@ -560,6 +560,10 @@ function genRawSlots(slots: IRSlots[], context: CodegenContext) {
   if (!slots.length) return
   const staticSlots = slots[0]
   if (staticSlots.slotType === IRSlotType.STATIC) {
+    const defaultSlot = getSingleDefaultSlot(staticSlots)
+    if (defaultSlot && slots.length === 1) {
+      return genSlotBlockWithProps(defaultSlot, context)
+    }
     // single static slot
     return genStaticSlots(
       staticSlots,
@@ -573,6 +577,13 @@ function genRawSlots(slots: IRSlots[], context: CodegenContext) {
       slots,
     )
   }
+}
+
+function getSingleDefaultSlot({ slots }: IRSlotsStatic) {
+  const names = Object.keys(slots)
+  return names.length === 1 && names[0] === 'default'
+    ? slots.default
+    : undefined
 }
 
 function genStaticSlots(

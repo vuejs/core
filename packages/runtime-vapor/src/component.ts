@@ -71,6 +71,7 @@ import {
   normalizePropsOptions,
   resolveDynamicProps,
   setupPropsValidation,
+  snapshotRawProps,
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
@@ -83,7 +84,9 @@ import {
   dynamicSlotsProxyHandlers,
   getScopeOwner,
   getSlot,
+  inOnceSlot,
   setCurrentSlotOwner,
+  withOnceSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -240,8 +243,18 @@ export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
 }
 
-export type LooseRawSlots = Record<string, VaporSlot | DynamicSlotSource[]> & {
-  $?: DynamicSlotSource[]
+export type LooseRawSlots =
+  | VaporSlot
+  | (Record<string, VaporSlot | DynamicSlotSource[]> & {
+      $?: DynamicSlotSource[]
+    })
+
+export function normalizeRawSlots(
+  rawSlots?: LooseRawSlots | null,
+): RawSlots | null | undefined {
+  return rawSlots && isFunction(rawSlots)
+    ? { default: rawSlots }
+    : (rawSlots as RawSlots | null | undefined)
 }
 
 export function createComponent(
@@ -255,6 +268,11 @@ export function createComponent(
     emptyContext,
   managedMount = false,
 ): VaporComponentInstance {
+  // A component created while rendering a v-once slot should receive frozen
+  // parent inputs, but its own render effects should still be live.
+  const wasInOnceSlot = inOnceSlot
+  if (wasInOnceSlot) once = true
+
   if (isInteropEnabled && isCollectingVdomSlotVNodes) {
     if (component.__vapor) {
       // Vapor components cannot be represented as VDOM child metadata. Bail out
@@ -264,7 +282,6 @@ export function createComponent(
     const owner = getScopeOwner()
     if (owner) appContext = owner.appContext
   }
-
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationClose: Node | null = null
@@ -345,7 +362,8 @@ export function createComponent(
         component as any,
         currentInstance as any,
         rawProps,
-        rawSlots,
+        normalizeRawSlots(rawSlots),
+        once,
       )
       if (isCollectingVdomSlotVNodes) {
         // VDOM interop children already expose frag.vnode for collection. Do not
@@ -362,7 +380,7 @@ export function createComponent(
 
     // teleport
     if (isTeleportEnabled && isVaporTeleport(component)) {
-      const frag = component.process(rawProps!, rawSlots!)
+      const frag = component.process(rawProps!, normalizeRawSlots(rawSlots))
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
@@ -380,7 +398,7 @@ export function createComponent(
     const instance = new VaporComponentInstance(
       component,
       rawProps as RawProps,
-      rawSlots as RawSlots,
+      rawSlots,
       appContext,
       once,
     )
@@ -428,11 +446,16 @@ export function createComponent(
         component.__asyncHydrate &&
         !component.__asyncResolved
       ) {
+        const setup = () => setupComponent(instance, component)
         component.__asyncHydrate(
           currentHydrationNode as Element,
           instance,
-          () => setupComponent(instance, component),
+          // Async hydration re-enters setup later, so preserve the component
+          // boundary rule above when the delayed setup actually runs.
+          wasInOnceSlot ? () => withOnceSlot(setup, false) : setup,
         )
+      } else if (wasInOnceSlot) {
+        withOnceSlot(() => setupComponent(instance, component), false)
       } else {
         setupComponent(instance, component)
       }
@@ -706,6 +729,7 @@ export class VaporComponentInstance<
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes
   oncePropsCache?: Record<string | symbol, any>
+  isOnce: boolean
 
   // lifecycle hooks
   isMounted: boolean
@@ -755,7 +779,7 @@ export class VaporComponentInstance<
   constructor(
     comp: VaporComponent,
     rawProps?: RawProps | null,
-    rawSlots?: RawSlots | null,
+    rawSlots?: LooseRawSlots | null,
     appContext?: GenericAppContext,
     once?: boolean,
   ) {
@@ -778,6 +802,7 @@ export class VaporComponentInstance<
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)
+    this.isOnce = !!once
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
     this.expose = expose.bind(null, this) as any
@@ -801,10 +826,15 @@ export class VaporComponentInstance<
         false
 
     // init props
-    this.rawProps = rawProps || EMPTY_OBJ
-    this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)
+    // Snapshot raw parent inputs before creating proxies so delayed reads from
+    // v-once children cannot observe later parent updates.
+    this.rawProps =
+      this.isOnce && rawProps
+        ? snapshotRawProps(rawProps)
+        : rawProps || EMPTY_OBJ
+    this.hasFallthrough = hasFallthroughAttrs(comp, this.rawProps)
     if (rawProps || comp.props) {
-      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp, once)
+      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
       this.attrs = new Proxy(this, attrsHandlers)
       this.props = (
         comp.props
@@ -818,12 +848,13 @@ export class VaporComponentInstance<
     }
 
     // init slots
-    this.rawSlots = rawSlots || EMPTY_OBJ
+    const normalizedRawSlots = normalizeRawSlots(rawSlots)
+    this.rawSlots = normalizedRawSlots || EMPTY_OBJ
     this.slots = (
-      rawSlots
-        ? rawSlots.$
-          ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
-          : rawSlots
+      normalizedRawSlots
+        ? normalizedRawSlots.$
+          ? new Proxy(normalizedRawSlots, dynamicSlotsProxyHandlers)
+          : normalizedRawSlots
         : EMPTY_OBJ
     ) as Slots
 
@@ -956,6 +987,7 @@ export function createPlainElement(
   isSingleRoot?: boolean,
   once?: boolean,
 ): HTMLElement {
+  rawSlots = normalizeRawSlots(rawSlots)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationCursor: HydrationCursor | null = null

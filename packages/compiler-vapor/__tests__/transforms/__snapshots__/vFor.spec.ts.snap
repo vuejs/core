@@ -323,7 +323,7 @@ exports[`compiler: v-for > v-for on slot outlet marks fragment block 1`] = `
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
-    const n2 = _createSlot(() => (_for_item0.value.name), null)
+    const n2 = _createSlot(() => (_for_item0.value.name))
     return n2
   }, (item) => (item.id), 16)
   return n0
@@ -355,7 +355,7 @@ export function render(_ctx) {
     }, () => {
       const n6 = _createComponentWithFallback(_component_Comp)
       return n6
-    }, 10, null, 0)
+    }, 42 /* BLOCK_SHAPE, INDEX_SHIFT */)
     return n2
   }, undefined, 16)
   return n0

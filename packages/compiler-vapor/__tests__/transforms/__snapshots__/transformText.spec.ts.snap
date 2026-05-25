@@ -79,11 +79,9 @@ exports[`compiler: text transform > slot literal interpolation 1`] = `
 const t0 = _template("Hello")
 
 export function render(_ctx) {
-  const n1 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = t0()
-      return n0
-    }
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    return n0
   }, true)
   return n1
 }"

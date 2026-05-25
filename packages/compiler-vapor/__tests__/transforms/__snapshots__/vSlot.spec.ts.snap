@@ -145,17 +145,13 @@ exports[`compiler: transform slot > forwarded slots > <slot w/ nested component>
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
-  const n2 = _createComponentWithFallback(_component_Comp, null, {
-    "default": _withVaporCtx(() => {
-      const n1 = _createComponentWithFallback(_component_Comp, null, {
-        "default": _withVaporCtx(() => {
-          const n0 = _createSlot("default", null)
-          return n0
-        })
-      })
-      return n1
-    })
-  }, true)
+  const n2 = _createComponentWithFallback(_component_Comp, null, _withVaporCtx(() => {
+    const n1 = _createComponentWithFallback(_component_Comp, null, _withVaporCtx(() => {
+      const n0 = _createSlot("default")
+      return n0
+    }))
+    return n1
+  }), true)
   return n2
 }"
 `;
@@ -164,12 +160,10 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag only 1`] = `
 "import { createSlot as _createSlot, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n1 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createSlot("default", null)
-      return n0
-    })
-  }, true)
+  const n1 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createSlot("default")
+    return n0
+  }), true)
   return n1
 }"
 `;
@@ -178,12 +172,10 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag w/ template 1`]
 "import { createSlot as _createSlot, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createSlot("default", null)
-      return n0
-    })
-  }, true)
+  const n2 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createSlot("default")
+    return n0
+  }), true)
   return n2
 }"
 `;
@@ -192,15 +184,13 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-for 1`] = 
 "import { createSlot as _createSlot, createFor as _createFor, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n3 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
-        const n2 = _createSlot("default", null)
-        return n2
-      }, undefined, 16)
-      return n0
-    })
-  }, true)
+  const n3 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
+      const n2 = _createSlot("default")
+      return n2
+    }, undefined, 16)
+    return n0
+  }), true)
   return n3
 }"
 `;
@@ -209,15 +199,13 @@ exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-if 1`] = `
 "import { createSlot as _createSlot, createIf as _createIf, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n3 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createIf(() => (_ctx.ok), () => {
-        const n2 = _createSlot("default", null)
-        return n2
-      }, null, 1)
-      return n0
+  const n3 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createIf(() => (_ctx.ok), () => {
+      const n2 = _createSlot("default")
+      return n2
     })
-  }, true)
+    return n0
+  }), true)
   return n3
 }"
 `;
@@ -227,11 +215,9 @@ exports[`compiler: transform slot > implicit default slot 1`] = `
 const t0 = _template("<div>", 2)
 
 export function render(_ctx) {
-  const n1 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = t0()
-      return n0
-    }
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    return n0
   }, true)
   return n1
 }"
@@ -282,12 +268,10 @@ exports[`compiler: transform slot > nested component slot 1`] = `
 
 export function render(_ctx) {
   const _component_B = _resolveComponent("B")
-  const n1 = _createAssetComponent("A", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createComponentWithFallback(_component_B)
-      return n0
-    })
-  }, true)
+  const n1 = _createAssetComponent("A", null, _withVaporCtx(() => {
+    const n0 = _createComponentWithFallback(_component_B)
+    return n0
+  }), true)
   return n1
 }"
 `;
@@ -298,20 +282,16 @@ const t0 = _template(" ")
 
 export function render(_ctx) {
   const _component_Inner = _resolveComponent("Inner")
-  const n5 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx((_slotProps0) => {
-      const n1 = _createComponentWithFallback(_component_Inner, null, {
-        "default": (_slotProps1) => {
-          const n0 = t0()
-          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _slotProps1.bar + _ctx.baz)))
-          return n0
-        }
-      })
-      const n3 = t0()
-      _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0.foo + _ctx.bar + _ctx.baz)))
-      return [n1, n3]
+  const n5 = _createAssetComponent("Comp", null, _withVaporCtx((_slotProps0) => {
+    const n1 = _createComponentWithFallback(_component_Inner, null, (_slotProps1) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _slotProps1.bar + _ctx.baz)))
+      return n0
     })
-  }, true)
+    const n3 = t0()
+    _renderEffect(() => _setText(n3, " " + _toDisplayString(_slotProps0.foo + _ctx.bar + _ctx.baz)))
+    return [n1, n3]
+  }), true)
   return n5
 }"
 `;
@@ -358,12 +338,10 @@ exports[`compiler: transform slot > on-component default slot 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n1 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
-      return n0
-    }
+  const n1 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
+    return n0
   }, true)
   return n1
 }"
@@ -391,7 +369,7 @@ export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
   const n6 = t0()
   _setInsertionState(n6, null, 0)
-  const n0 = _createSlot("foo", null)
+  const n0 = _createSlot("foo")
   _setInsertionState(n6, null, 1)
   const n1 = _createIf(() => (true), () => {
     const n3 = _createComponentWithFallback(_component_Foo)
@@ -399,7 +377,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = _createComponentWithFallback(_component_Bar)
     return n5
-  }, 5, true, 0)
+  }, 21 /* BLOCK_SHAPE, ONCE */)
   return n6
 }"
 `;
@@ -409,12 +387,10 @@ exports[`compiler: transform slot > slot prop alias uses original key 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.msg)))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.msg)))
+    return n0
   }, true)
   return n2
 }"
@@ -425,12 +401,10 @@ exports[`compiler: transform slot > slot prop array rest destructuring 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.arr.slice(1)[0])))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.arr.slice(1)[0])))
+    return n0
   }, true)
   return n2
 }"
@@ -441,12 +415,10 @@ exports[`compiler: transform slot > slot prop computed key destructuring 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0[_ctx.key])))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0[_ctx.key])))
+    return n0
   }, true)
   return n2
 }"
@@ -457,12 +429,10 @@ exports[`compiler: transform slot > slot prop default value 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo, 1))))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo, 1))))
+    return n0
   }, true)
   return n2
 }"
@@ -473,12 +443,10 @@ exports[`compiler: transform slot > slot prop nested default value 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo[0], 1) + _getDefaultValue(_slotProps0.baz.qux, 2))))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo[0], 1) + _getDefaultValue(_slotProps0.baz.qux, 2))))
+    return n0
   }, true)
   return n2
 }"
@@ -489,12 +457,10 @@ exports[`compiler: transform slot > slot prop nested destructuring 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo.bar)))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo.bar)))
+    return n0
   }, true)
   return n2
 }"
@@ -505,12 +471,10 @@ exports[`compiler: transform slot > slot prop rest destructuring 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_getRestElement(_slotProps0, ["foo"]).bar)))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_getRestElement(_slotProps0, ["foo"]).bar)))
+    return n0
   }, true)
   return n2
 }"
@@ -521,12 +485,10 @@ exports[`compiler: transform slot > slot prop rest with computed keys preserved 
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": (_slotProps0) => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _getRestElement(_slotProps0, ["foo", _ctx.key]).other)))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _getRestElement(_slotProps0, ["foo", _ctx.key]).other)))
+    return n0
   }, true)
   return n2
 }"
@@ -603,7 +565,7 @@ export function render(_ctx) {
       _withVaporCtx(() => (_createForSlots(_ctx.slots, (_, name) => ({
         name: name,
         fn: _withVaporCtx(() => {
-          const n0 = _createSlot(() => (name), null)
+          const n0 = _createSlot(() => (name))
           return n0
         })
       }))))
@@ -619,17 +581,15 @@ const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_ChildComp = _resolveComponent("ChildComp")
-  const n5 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
-        const n3 = t0()
-        _setInsertionState(n3, null, 0)
-        const n2 = _createComponentWithFallback(_component_ChildComp)
-        return n3
-      }, undefined, 8)
-      return n0
-    })
-  }, true)
+  const n5 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+      const n3 = t0()
+      _setInsertionState(n3, null, 0)
+      const n2 = _createComponentWithFallback(_component_ChildComp)
+      return n3
+    }, undefined, 8)
+    return n0
+  }), true)
   return n5
 }"
 `;
@@ -640,17 +600,15 @@ const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_ChildComp = _resolveComponent("ChildComp")
-  const n5 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createIf(() => (_ctx.show), () => {
-        const n3 = t0()
-        _setInsertionState(n3, null, 0)
-        const n2 = _createComponentWithFallback(_component_ChildComp)
-        return n3
-      }, null, 1)
-      return n0
+  const n5 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createIf(() => (_ctx.show), () => {
+      const n3 = t0()
+      _setInsertionState(n3, null, 0)
+      const n2 = _createComponentWithFallback(_component_ChildComp)
+      return n3
     })
-  }, true)
+    return n0
+  }), true)
   return n5
 }"
 `;
@@ -660,12 +618,10 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with compon
 
 export function render(_ctx) {
   const _component_ChildComp = _resolveComponent("ChildComp")
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createComponentWithFallback(_component_ChildComp)
-      return n0
-    })
-  }, true)
+  const n2 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createComponentWithFallback(_component_ChildComp)
+    return n0
+  }), true)
   return n2
 }"
 `;
@@ -675,17 +631,15 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with custom
 const t0 = _template("<div>")
 
 export function render(_ctx) {
-  const n5 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createIf(() => (_ctx.show), () => {
-        const n3 = t0()
-        _setInsertionState(n3, null, 0)
-        const n2 = _createPlainElement("my-element")
-        return n3
-      }, null, 1)
-      return n0
+  const n5 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createIf(() => (_ctx.show), () => {
+      const n3 = t0()
+      _setInsertionState(n3, null, 0)
+      const n2 = _createPlainElement("my-element")
+      return n3
     })
-  }, true)
+    return n0
+  }), true)
   return n5
 }"
 `;
@@ -694,12 +648,10 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with custom
 "import { createPlainElement as _createPlainElement, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createPlainElement("my-element")
-      return n0
-    })
-  }, true)
+  const n2 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createPlainElement("my-element")
+    return n0
+  }), true)
   return n2
 }"
 `;
@@ -711,22 +663,20 @@ const t1 = _template("<div>")
 
 export function render(_ctx) {
   const _component_ChildComp = _resolveComponent("ChildComp")
-  const n8 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createIf(() => (_ctx.a), () => {
-        const n6 = t1()
-        _setInsertionState(n6, null, 0)
-        const n2 = _createIf(() => (_ctx.b), () => {
-          const n5 = t0()
-          _setInsertionState(n5, null, 0)
-          const n4 = _createComponentWithFallback(_component_ChildComp)
-          return n5
-        }, null, 1)
-        return n6
-      }, null, 1)
-      return n0
+  const n8 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createIf(() => (_ctx.a), () => {
+      const n6 = t1()
+      _setInsertionState(n6, null, 0)
+      const n2 = _createIf(() => (_ctx.b), () => {
+        const n5 = t0()
+        _setInsertionState(n5, null, 0)
+        const n4 = _createComponentWithFallback(_component_ChildComp)
+        return n5
+      })
+      return n6
     })
-  }, true)
+    return n0
+  }), true)
   return n8
 }"
 `;
@@ -736,11 +686,9 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with only s
 const t0 = _template("<div>static content", 2)
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = t0()
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    return n0
   }, true)
   return n2
 }"
@@ -751,12 +699,10 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with only t
 const t0 = _template(" ")
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = t0()
-      _renderEffect(() => _setText(n0, _toDisplayString(_ctx.message)))
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_ctx.message)))
+    return n0
   }, true)
   return n2
 }"
@@ -766,12 +712,10 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with slot o
 "import { createSlot as _createSlot, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createSlot("default", null)
-      return n0
-    })
-  }, true)
+  const n2 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createSlot("default")
+    return n0
+  }), true)
   return n2
 }"
 `;
@@ -781,18 +725,16 @@ exports[`compiler: transform slot > withVaporCtx optimization > slot with v-for 
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
-  const n4 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
-        const n2 = t0()
-        const x2 = _txt(n2)
-        _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
-        return n2
-      }, undefined, 8)
-      const x0 = _txt(n0)
-      _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
-      return n0
-    }
+  const n4 = _createAssetComponent("Comp", null, () => {
+    const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+      const n2 = t0()
+      const x2 = _txt(n2)
+      _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
+      return n2
+    }, undefined, 8)
+    const x0 = _txt(n0)
+    _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
+    return n0
   }, true)
   return n4
 }"
@@ -804,17 +746,15 @@ const t0 = _template("<div>content", 2)
 const t1 = _template("<span>fallback", 2)
 
 export function render(_ctx) {
-  const n7 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = _createIf(() => (_ctx.show), () => {
-        const n2 = t0()
-        return n2
-      }, () => {
-        const n4 = t1()
-        return n4
-      }, 5, null, 0)
-      return n0
-    }
+  const n7 = _createAssetComponent("Comp", null, () => {
+    const n0 = _createIf(() => (_ctx.show), () => {
+      const n2 = t0()
+      return n2
+    }, () => {
+      const n4 = t1()
+      return n4
+    }, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
+    return n0
   }, true)
   return n7
 }"
