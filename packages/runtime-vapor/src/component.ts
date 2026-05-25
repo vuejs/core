@@ -243,8 +243,18 @@ export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
 }
 
-export type LooseRawSlots = Record<string, VaporSlot | DynamicSlotSource[]> & {
-  $?: DynamicSlotSource[]
+export type LooseRawSlots =
+  | VaporSlot
+  | (Record<string, VaporSlot | DynamicSlotSource[]> & {
+      $?: DynamicSlotSource[]
+    })
+
+export function normalizeRawSlots(
+  rawSlots?: LooseRawSlots | null,
+): RawSlots | null | undefined {
+  return rawSlots && isFunction(rawSlots)
+    ? { default: rawSlots }
+    : (rawSlots as RawSlots | null | undefined)
 }
 
 export function createComponent(
@@ -272,7 +282,6 @@ export function createComponent(
     const owner = getScopeOwner()
     if (owner) appContext = owner.appContext
   }
-
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationClose: Node | null = null
@@ -353,7 +362,7 @@ export function createComponent(
         component as any,
         currentInstance as any,
         rawProps,
-        rawSlots,
+        normalizeRawSlots(rawSlots),
         once,
       )
       if (isCollectingVdomSlotVNodes) {
@@ -371,7 +380,7 @@ export function createComponent(
 
     // teleport
     if (isTeleportEnabled && isVaporTeleport(component)) {
-      const frag = component.process(rawProps!, rawSlots!)
+      const frag = component.process(rawProps!, normalizeRawSlots(rawSlots))
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
@@ -389,7 +398,7 @@ export function createComponent(
     const instance = new VaporComponentInstance(
       component,
       rawProps as RawProps,
-      rawSlots as RawSlots,
+      rawSlots,
       appContext,
       once,
     )
@@ -770,7 +779,7 @@ export class VaporComponentInstance<
   constructor(
     comp: VaporComponent,
     rawProps?: RawProps | null,
-    rawSlots?: RawSlots | null,
+    rawSlots?: LooseRawSlots | null,
     appContext?: GenericAppContext,
     once?: boolean,
   ) {
@@ -839,12 +848,13 @@ export class VaporComponentInstance<
     }
 
     // init slots
-    this.rawSlots = rawSlots || EMPTY_OBJ
+    const normalizedRawSlots = normalizeRawSlots(rawSlots)
+    this.rawSlots = normalizedRawSlots || EMPTY_OBJ
     this.slots = (
-      rawSlots
-        ? rawSlots.$
-          ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
-          : rawSlots
+      normalizedRawSlots
+        ? normalizedRawSlots.$
+          ? new Proxy(normalizedRawSlots, dynamicSlotsProxyHandlers)
+          : normalizedRawSlots
         : EMPTY_OBJ
     ) as Slots
 
@@ -977,6 +987,7 @@ export function createPlainElement(
   isSingleRoot?: boolean,
   once?: boolean,
 ): HTMLElement {
+  rawSlots = normalizeRawSlots(rawSlots)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationCursor: HydrationCursor | null = null

@@ -33,18 +33,16 @@ export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
   const _directive_hello = _resolveDirective("hello")
   const _directive_test = _resolveDirective("test")
-  const n4 = _createAssetComponent("Comp", null, {
-    "default": _withVaporCtx(() => {
-      const n0 = _createIf(() => (true), () => {
-        const n3 = t0()
-        _setInsertionState(n3, null, 0)
-        const n2 = _createComponentWithFallback(_component_Bar)
-        _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
-        return n3
-      }, null, 17 /* BLOCK_SHAPE, ONCE */)
-      return n0
-    })
-  }, true)
+  const n4 = _createAssetComponent("Comp", null, _withVaporCtx(() => {
+    const n0 = _createIf(() => (true), () => {
+      const n3 = t0()
+      _setInsertionState(n3, null, 0)
+      const n2 = _createComponentWithFallback(_component_Bar)
+      _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
+      return n3
+    }, null, 17 /* BLOCK_SHAPE, ONCE */)
+    return n0
+  }), true)
   _withVaporDirectives(n4, [[_directive_test]])
   return n4
 }"

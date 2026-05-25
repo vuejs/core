@@ -890,6 +890,33 @@ describe('vdomInterop', () => {
       expect(html()).toBe('default slot')
     })
 
+    test('function rawSlots are normalized before mounting vdom component', () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => h('div', null, slots.default!({ msg: 'default slot' }))
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            (props: { msg: string }) => document.createTextNode(props.msg),
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>default slot</div>')
+    })
+
     test('collects compiled vdom component vnodes without hydrating vapor slot content', () => {
       const data = ref({})
       const VDomTabs = compile(

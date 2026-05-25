@@ -589,6 +589,47 @@ describe('component', () => {
     }
   })
 
+  it('should treat function rawSlots as default slot', () => {
+    __DEV__ = false
+    try {
+      const { component: Child } = define({
+        render: compileToVaporRender(
+          `<span v-if="$slots.default"><slot /></span>`,
+          { bindingMetadata: {} },
+        ),
+      })
+
+      const { host } = define({
+        components: { Child },
+        setup() {
+          return createAssetComponent(
+            'Child',
+            null,
+            () => template('<button>slot</button>')(),
+            true,
+          )
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<span><button>slot</button></span>')
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  it('should render function rawSlots when asset fallback creates plain element', () => {
+    const { host } = define({
+      setup() {
+        return createAssetComponent('foo-bar', null, () =>
+          template('<span>slot</span>')(),
+        )
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<foo-bar><span>slot</span></foo-bar>')
+    expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
+  })
+
   it('warn if functional vapor component not return a block', () => {
     // @ts-expect-error
     define(() => {
