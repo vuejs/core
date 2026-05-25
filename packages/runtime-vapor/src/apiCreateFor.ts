@@ -14,7 +14,16 @@ import {
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
-import { type Block, insert, isValidBlock, remove } from './block'
+import {
+  type Block,
+  insert,
+  insertFragment,
+  insertNode,
+  isValidBlock,
+  remove,
+  removeFragment,
+  removeNode,
+} from './block'
 import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
 import {
@@ -34,13 +43,14 @@ import {
   isComment,
   isHydrating,
   locateHydrationBoundaryClose,
-  locateNextNode,
   markHydrationAnchor,
+  nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
   ForBlock,
   ForFragment,
+  type VaporFragment,
   getCurrentSlotEndAnchor,
   isHydratingSlotFallbackActive,
 } from './fragment'
@@ -98,6 +108,7 @@ export const createFor = (
   let isMounted = false
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
+  let newKeys: any[] | undefined
   let parent: ParentNode | undefined | null
   let parentAnchor: Node
   let pendingHydrationAnchor = false
@@ -109,6 +120,8 @@ export const createFor = (
   const instance = currentInstance!
   const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
+  const isSingleNode = !!(flags & VaporVForFlags.IS_SINGLE_NODE)
+  const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
 
   const slotOwner = currentSlotOwner
 
@@ -132,9 +145,24 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
+    // Key expressions can depend on item fields, not just list shape. Evaluate
+    // them while the render effect is still the active subscriber so those deps
+    // can trigger keyed diff, then reuse the same keys below after
+    // setActiveSub() clears the active subscriber during patching.
+    newKeys = undefined
+    if (getKey) {
+      newKeys = new Array(newLength)
+      for (let i = 0; i < newLength; i++) {
+        newKeys[i] = getKey(...getItem(source, i))
+      }
+    }
 
     const prevSub = setActiveSub()
-
+    if (isMounted && frag.onBeforeUpdate) {
+      for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
+        frag.onBeforeUpdate[i]()
+      }
+    }
     if (!isMounted) {
       isMounted = true
       if (isHydrating) {
@@ -184,8 +212,7 @@ export const createFor = (
         if (__DEV__) {
           const keyToIndexMap: Map<any, number> = new Map()
           for (let i = 0; i < newLength; i++) {
-            const item = getItem(source, i)
-            const key = getKey(...item)
+            const key = newKeys![i]
             if (key != null) {
               if (keyToIndexMap.has(key)) {
                 warn(
@@ -214,7 +241,7 @@ export const createFor = (
         while (endOffset < commonLength) {
           const index = newLength - endOffset - 1
           const item = getItem(source, index)
-          const key = getKey(...item)
+          const key = newKeys![index]
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
           if (existingBlock.key !== key) break
           update(existingBlock, ...item)
@@ -228,7 +255,7 @@ export const createFor = (
 
         for (let i = 0; i < e1; i++) {
           const currentItem = getItem(source, i)
-          const currentKey = getKey(...currentItem)
+          const currentKey = newKeys![i]
           const oldBlock = oldBlocks[i]
           const oldKey = oldBlock.key
           if (oldKey === currentKey) {
@@ -245,7 +272,7 @@ export const createFor = (
 
         for (let i = e1; i < e3; i++) {
           const blockItem = getItem(source, i)
-          const blockKey = getKey(...blockItem)
+          const blockKey = newKeys![i]
           queuedBlocks[queuedBlocksLength++] = [i, blockItem, blockKey]
         }
 
@@ -341,7 +368,7 @@ export const createFor = (
                 const block = mount(source, index, anchorNode, item, key)
                 moveLink(block, nextBlock.prev, nextBlock)
               } else if (action.block.next !== nextBlock) {
-                insert(action.block, parent!, anchorNode)
+                insertForBlock(action.block, anchorNode)
                 moveLink(action.block, nextBlock.prev, nextBlock)
               }
             } else if ('source' in action) {
@@ -354,7 +381,7 @@ export const createFor = (
                 ? normalizeAnchor(anchor.nodes)
                 : parentAnchor
               if (!anchorNode.parentNode) anchorNode = parentAnchor
-              insert(action.block, parent!, anchorNode)
+              insertForBlock(action.block, anchorNode)
               moveLink(action.block, blocksTail)
               blocksTail = action.block
             }
@@ -376,12 +403,30 @@ export const createFor = (
   const needKey = renderItem.length > 1
   const needIndex = renderItem.length > 2
 
+  type InsertForBlock = (block: ForBlock, anchor: Node | undefined) => void
+  // IS_COMPONENT means the item owns its own scope, not that block.nodes is
+  // guaranteed to be a VaporComponentInstance. Component fallback may produce a
+  // plain DOM node, so component-shaped blocks still use the generic block path.
+  const insertForBlock: InsertForBlock = isSingleNode
+    ? (block, anchor) => insertNode(block.nodes as Node, parent!, anchor)
+    : isFragment
+      ? (block, anchor) =>
+          insertFragment(block.nodes as VaporFragment, parent!, anchor)
+      : (block, anchor) => insert(block.nodes, parent!, anchor)
+
+  type RemoveForBlock = (block: ForBlock) => void
+  const removeForBlock: RemoveForBlock = isSingleNode
+    ? block => removeNode(block.nodes as Node, parent!)
+    : isFragment
+      ? block => removeFragment(block.nodes as VaporFragment, parent!)
+      : block => remove(block.nodes, parent!)
+
   const mount = (
     source: ResolvedSource,
     idx: number,
     anchor: Node | undefined = parentAnchor,
     [item, key, index] = getItem(source, idx),
-    key2 = getKey && getKey(item, key, index),
+    key2 = newKeys ? newKeys[idx] : getKey && getKey(item, key, index),
   ): ForBlock => {
     const itemRef = shallowRef(item)
     // avoid creating refs if the render fn doesn't need it
@@ -419,7 +464,7 @@ export const createFor = (
       applyTransitionHooks(block.nodes, frag.$transition)
     }
 
-    if (parent) insert(block.nodes, parent, anchor)
+    if (parent) insertForBlock(block, anchor)
 
     return block
   }
@@ -434,10 +479,14 @@ export const createFor = (
     const slotEndAnchor = getCurrentSlotEndAnchor()
     const slotFallbackRange = isHydratingSlotFallbackActive() && slotEndAnchor
 
+    const reuseBoundaryClose = (close: Node): void => {
+      parentAnchor = markHydrationAnchor(close)
+      exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+    }
+
     try {
       if (emptyLocalRange && newLength) {
-        parentAnchor = markHydrationAnchor(hydrationStart)
-        exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+        reuseBoundaryClose(hydrationStart)
         for (let i = 0; i < newLength; i++) {
           mount(source, i)
         }
@@ -448,7 +497,7 @@ export const createFor = (
             nextNode = markHydrationAnchor(currentHydrationNode!)
             setCurrentHydrationNode(nextNode)
           } else {
-            nextNode = locateNextNode(currentHydrationNode!)
+            nextNode = nextLogicalSibling(currentHydrationNode!)
           }
           mount(source, i)
           if (nextNode) setCurrentHydrationNode(nextNode)
@@ -495,8 +544,7 @@ export const createFor = (
           })
         } else {
           const close = locateHydrationBoundaryClose(currentHydrationNode!)
-          parentAnchor = markHydrationAnchor(close)
-          exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+          reuseBoundaryClose(close)
           if (__DEV__ && !isComment(parentAnchor, ']')) {
             throw new Error(
               `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
@@ -538,7 +586,7 @@ export const createFor = (
       block.scope!.stop()
     }
     if (doRemove) {
-      remove(block.nodes, parent!)
+      removeForBlock(block)
     }
   }
 
@@ -758,11 +806,28 @@ function normalizeAnchor(node: Block): Node {
   if (node instanceof Node) {
     return node
   } else if (isArray(node)) {
-    return normalizeAnchor(node[0])
+    for (let i = 0; i < node.length; i++) {
+      const anchor = normalizeAnchor(node[i])
+      if (anchor) return anchor
+    }
+    return undefined!
   } else if (isVaporComponent(node)) {
     return normalizeAnchor(node.block!)
   } else {
-    return normalizeAnchor(node.nodes!)
+    const getEffectiveOutput = (
+      node as VaporFragment & {
+        getEffectiveOutput?: () => Block
+      }
+    ).getEffectiveOutput
+    // SlotFragment may render active fallback while keeping carriers in nodes.
+    const nodes = getEffectiveOutput
+      ? getEffectiveOutput.call(node)
+      : node.nodes
+    // Empty ForFragment keeps its insertion carrier in `nodes`, even though it
+    // is not a valid content block.
+    return isValidBlock(nodes)
+      ? normalizeAnchor(nodes)
+      : node.anchor || normalizeAnchor(nodes)
   }
 }
 

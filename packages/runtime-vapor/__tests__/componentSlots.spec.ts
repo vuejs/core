@@ -9,6 +9,7 @@ import {
   createIf,
   createSlot,
   createVaporApp,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   insert,
   prepend,
@@ -34,12 +35,14 @@ import {
   toDisplayString,
   useSlots,
 } from '@vue/runtime-dom'
+import { VaporSlotFlags } from '@vue/shared'
 import { makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
-import { type Block, isValidBlock } from '../src/block'
+import { type Block, type BlockFn, isValidBlock } from '../src/block'
 import {
   hydrateNode,
+  isHydrationAnchor,
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
@@ -47,17 +50,19 @@ import {
   DynamicFragment,
   ForFragment,
   type SlotBoundaryContext,
-  SlotFallbackController,
+  type SlotFallbackOutlet,
   SlotFragment,
   VaporFragment,
   getCurrentSlotBoundary,
   getCurrentSlotEndAnchor,
   isHydratingSlotFallbackActive,
+  markSlotFallbackDirty,
+  recheckSlotFallback,
+  syncActiveSlotFallback,
   trackSlotBoundaryDirtying,
   withHydratingSlotBoundary,
   withHydratingSlotFallbackActive,
   withOwnedSlotBoundary,
-  withSlotFallbackBoundary,
 } from '../src/fragment'
 
 const define = makeRender<any>()
@@ -81,6 +86,36 @@ function renderWithSlots(slots: any): any {
 
   render()
   return instance
+}
+
+function createTestSlotFallbackOutlet(options: {
+  fallback?: BlockFn
+  content?: Block
+  parentNode?: ParentNode | null
+  anchor?: Node | null
+  isContentValid?: () => boolean
+  isDisposed?: () => boolean
+}): SlotFallbackOutlet {
+  let outlet!: SlotFallbackOutlet
+  const boundary: SlotBoundaryContext = {
+    parent: null,
+    getFallback: () => options.fallback,
+    run: fn => fn(),
+    markDirty: () => markSlotFallbackDirty(outlet),
+  }
+  outlet = {
+    boundary,
+    activeFallback: null,
+    pendingRecheck: false,
+    isRenderingFallback: false,
+    getContent: () => options.content || [],
+    getParentNode: () => options.parentNode || null,
+    getAnchor: () => options.anchor || null,
+    isDisposed: options.isDisposed,
+    isContentValid: options.isContentValid,
+    notifyFallbackValidityChange: vi.fn(),
+  }
+  return outlet
 }
 
 describe('component: slots', () => {
@@ -213,7 +248,8 @@ describe('component: slots', () => {
       const frag = new SlotFragment()
       frag.parentSlotBoundary = {
         parent: null,
-        getLocalFallback: () => inheritedFallback,
+        getFallback: () => inheritedFallback,
+        run: fn => fn(),
         markDirty: vi.fn(),
       }
 
@@ -228,7 +264,8 @@ describe('component: slots', () => {
     test('slot fragment local fallback renders nested slots against the parent boundary', () => {
       const parentBoundary = {
         parent: null,
-        getLocalFallback: () => () => document.createTextNode('outer fallback'),
+        getFallback: () => () => document.createTextNode('outer fallback'),
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
       const frag = new SlotFragment()
@@ -247,48 +284,12 @@ describe('component: slots', () => {
       expect(fallbackBoundary.parent).toBe(parentBoundary)
     })
 
-    test('withSlotFallbackBoundary reuses the same redirected boundary', () => {
-      const parentBoundaryA = {
-        parent: null,
-        getLocalFallback: () => undefined,
-        markDirty: vi.fn(),
-      }
-      const parentBoundaryB = {
-        parent: null,
-        getLocalFallback: () => undefined,
-        markDirty: vi.fn(),
-      }
-      let activeParent = parentBoundaryA
-      const boundary: SlotBoundaryContext = {
-        get parent() {
-          return activeParent
-        },
-        getLocalFallback: () => () => document.createTextNode('fallback'),
-        markDirty: vi.fn(),
-      }
-      let firstBoundary!: SlotBoundaryContext | null
-      let secondBoundary!: SlotBoundaryContext | null
-
-      withSlotFallbackBoundary(boundary, () => {
-        firstBoundary = getCurrentSlotBoundary()
-      })
-
-      activeParent = parentBoundaryB
-
-      withSlotFallbackBoundary(boundary, () => {
-        secondBoundary = getCurrentSlotBoundary()
-      })
-
-      expect(firstBoundary).toBe(secondBoundary)
-      expect(firstBoundary!.parent).toBe(parentBoundaryB)
-      expect(firstBoundary!.getLocalFallback()).toBeUndefined()
-    })
-
     test('slot fragment local fallback keeps itself as owner for nested fragments', () => {
       const container = document.createElement('div')
       const parentBoundary = {
         parent: null,
-        getLocalFallback: () => () => document.createTextNode('outer fallback'),
+        getFallback: () => () => document.createTextNode('outer fallback'),
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
       const frag = new SlotFragment()
@@ -322,8 +323,8 @@ describe('component: slots', () => {
       const frag = new SlotFragment()
       const parentBoundary = {
         parent: null,
-        getLocalFallback: () => () =>
-          document.createTextNode(ancestorText.value),
+        getFallback: () => () => document.createTextNode(ancestorText.value),
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
       frag.parentSlotBoundary = parentBoundary
@@ -368,6 +369,80 @@ describe('component: slots', () => {
       expect(container.innerHTML).toBe('fallback<!--for--><!--slot-->')
     })
 
+    test('slot fallback falls through while preserving local carrier', () => {
+      const container = document.createElement('div')
+      const anchor = document.createComment('slot')
+      const localCarrier = new DynamicFragment('if', false, false)
+      let outlet!: SlotFallbackOutlet
+      const parentBoundary: SlotBoundaryContext = {
+        parent: null,
+        getFallback: () => () => document.createTextNode('outlet fallback'),
+        run: fn => fn(),
+        markDirty: vi.fn(),
+      }
+      const boundary: SlotBoundaryContext = {
+        parent: parentBoundary,
+        getFallback: () => () => localCarrier,
+        run: fn => fn(),
+        markDirty: () => markSlotFallbackDirty(outlet),
+      }
+      outlet = {
+        boundary,
+        activeFallback: null,
+        pendingRecheck: false,
+        isRenderingFallback: false,
+        getContent: () => [],
+        getParentNode: () => container,
+        getAnchor: () => anchor,
+        isContentValid: () => false,
+        notifyFallbackValidityChange: vi.fn(),
+      }
+
+      container.append(anchor)
+      recheckSlotFallback(outlet)
+
+      expect(container.innerHTML).toBe('outlet fallback<!--if--><!--slot-->')
+    })
+
+    test('slot fallback falls through when local fallback is removed', () => {
+      const container = document.createElement('div')
+      const anchor = document.createComment('slot')
+      let localFallback: BlockFn | undefined = () =>
+        document.createTextNode('local fallback')
+      let outlet!: SlotFallbackOutlet
+      const parentBoundary: SlotBoundaryContext = {
+        parent: null,
+        getFallback: () => () => document.createTextNode('outlet fallback'),
+        run: fn => fn(),
+        markDirty: vi.fn(),
+      }
+      const boundary: SlotBoundaryContext = {
+        parent: parentBoundary,
+        getFallback: () => localFallback,
+        run: fn => fn(),
+        markDirty: () => markSlotFallbackDirty(outlet),
+      }
+      outlet = {
+        boundary,
+        activeFallback: null,
+        pendingRecheck: false,
+        isRenderingFallback: false,
+        getContent: () => [],
+        getParentNode: () => container,
+        getAnchor: () => anchor,
+        isContentValid: () => false,
+        notifyFallbackValidityChange: vi.fn(),
+      }
+
+      container.append(anchor)
+      recheckSlotFallback(outlet)
+      expect(container.innerHTML).toBe('local fallback<!--slot-->')
+
+      localFallback = undefined
+      recheckSlotFallback(outlet, true)
+      expect(container.innerHTML).toBe('outlet fallback<!--slot-->')
+    })
+
     test('slot fragment delays fallback activation until pending child validity resolves', () => {
       const container = document.createElement('div')
       const frag = new SlotFragment()
@@ -393,23 +468,41 @@ describe('component: slots', () => {
       expect(container.innerHTML).toBe('fallback<!--slot-->')
     })
 
-    test('slot fallback controller ignores dirty notifications after dispose', () => {
+    test('slot fallback outlet ignores dirty notifications after dispose', () => {
       let disposed = false
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => undefined,
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
+      const outlet = createTestSlotFallbackOutlet({
         isDisposed: () => disposed,
-        onValidityChange: vi.fn(),
       })
 
       disposed = true
-      controller.boundary.markDirty()
+      outlet.boundary.markDirty()
 
-      expect(controller.takePendingRecheck()).toBe(false)
+      expect(outlet.pendingRecheck).toBe(false)
+    })
+
+    test('removed slot fragment ignores queued fallback dirty notifications', () => {
+      const container = document.createElement('div')
+      const fallbackRuns = vi.fn()
+      const cleanup = vi.fn()
+      const frag = new SlotFragment()
+      frag.updateSlot(undefined, () => {
+        fallbackRuns()
+        onScopeDispose(cleanup)
+        return document.createTextNode('fallback')
+      })
+      insert(frag, container)
+      expect(container.innerHTML).toBe('fallback<!--slot-->')
+      expect(fallbackRuns).toHaveBeenCalledTimes(1)
+
+      remove(frag, container)
+      expect(container.innerHTML).toBe('')
+      expect(cleanup).toHaveBeenCalledTimes(1)
+
+      frag.boundary.markDirty()
+
+      expect(fallbackRuns).toHaveBeenCalledTimes(1)
+      expect(frag.fallbackBlock).toBe(null)
+      expect(cleanup).toHaveBeenCalledTimes(1)
     })
 
     test('withHydratingSlotBoundary isolates fallback-active state between boundaries without local markers', () => {
@@ -456,12 +549,13 @@ describe('component: slots', () => {
       footer.textContent = 'footer'
       const host = document.createElement('div')
       host.append(start, end, footer)
+      let frag!: SlotFragment
 
       setIsHydratingEnabled(true)
       try {
         hydrateNode(start, () => {
           withHydratingSlotBoundary(() => {
-            const frag = new SlotFragment()
+            frag = new SlotFragment()
             frag.forwarded = true
             setCurrentHydrationNode(footer)
             frag.hydrate(true, true)
@@ -475,33 +569,107 @@ describe('component: slots', () => {
       expect(host.innerHTML).toBe(
         '<!--[--><!--]--><!--slot--><footer>footer</footer>',
       )
+      expect(frag.anchor).not.toBe(end)
+      expect(isHydrationAnchor(end)).toBe(true)
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
-    test('slot fallback controller stops fallback scope when fallback body throws', async () => {
+    test('non-forwarded empty slot hydration reuses its close anchor', () => {
+      const start = document.createComment('[')
+      const end = document.createComment(']')
+      const host = document.createElement('div')
+      host.append(start, end)
+      let frag!: SlotFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            frag = new SlotFragment()
+            frag.hydrate(true, true)
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+
+      expect(frag.anchor).toBe(end)
+      expect(isHydrationAnchor(end)).toBe(true)
+    })
+
+    test('non-forwarded empty slot hydration cleans stale content before close anchor', () => {
+      const start = document.createComment('[')
+      const stale = document.createElement('span')
+      stale.textContent = 'stale'
+      const end = document.createComment(']')
+      const footer = document.createElement('footer')
+      footer.textContent = 'footer'
+      const host = document.createElement('div')
+      host.append(start, stale, end, footer)
+      let frag!: SlotFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            frag = new SlotFragment()
+            frag.hydrate(true, true)
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+
+      expect(host.innerHTML).toBe('<!--[--><!--]--><footer>footer</footer>')
+      expect(frag.anchor).toBe(end)
+      expect(isHydrationAnchor(end)).toBe(true)
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    test('slot fallback empty inner v-if hydrates before parent close anchor', async () => {
+      const start = document.createComment('[')
+      const end = document.createComment(']')
+      const host = document.createElement('div')
+      host.append(start, end)
+      let frag!: DynamicFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            withHydratingSlotFallbackActive(() => {
+              frag = new DynamicFragment('if', false, false)
+              frag.hydrate(true)
+            })
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<!--[--><!--if--><!--]-->')
+      expect(frag.anchor).toBe(end.previousSibling)
+    })
+
+    test('slot fallback outlet stops fallback scope when fallback body throws', async () => {
       const source = ref(0)
       const effectRuns = vi.fn()
       const cleanup = vi.fn()
       const err = new Error('fallback boom')
 
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => {
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => {
           onScopeDispose(cleanup)
           renderEffect(() => {
             effectRuns(source.value)
           })
           throw err
         },
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
       })
 
-      expect(() => controller.recheck()).toThrow(err)
-      expect(controller.getActiveFallback()).toBe(null)
+      expect(() => recheckSlotFallback(outlet)).toThrow(err)
+      expect(outlet.activeFallback).toBe(null)
       expect(cleanup).toHaveBeenCalledTimes(1)
       expect(effectRuns).toHaveBeenCalledTimes(1)
 
@@ -511,31 +679,25 @@ describe('component: slots', () => {
       expect(effectRuns).toHaveBeenCalledTimes(1)
     })
 
-    test('slot fallback controller does not accumulate order-sync hooks', async () => {
+    test('slot fallback outlet does not accumulate order-sync hooks', async () => {
       const fallback = new VaporFragment([
         document.createTextNode('a'),
         document.createTextNode('b'),
       ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => fallback,
       })
 
-      controller.recheck()
+      recheckSlotFallback(outlet)
       expect(fallback.onUpdated).toHaveLength(1)
 
-      controller.syncActiveFallback()
+      syncActiveSlotFallback(outlet)
       await nextTick()
 
       expect(fallback.onUpdated).toHaveLength(1)
     })
 
-    test('slot fallback controller re-syncs the whole carrier block order', async () => {
+    test('slot fallback outlet re-syncs the whole carrier block order', async () => {
       const container = document.createElement('div')
       const carrierA = document.createTextNode('x')
       const carrierB = document.createTextNode('y')
@@ -545,29 +707,26 @@ describe('component: slots', () => {
         document.createTextNode('a'),
         document.createTextNode('b'),
       ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [carrierA, carrierB],
-        getParentNode: () => container,
-        getAnchor: () => slotAnchor,
-        runWithRenderCtx: fn => fn(),
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => fallback,
+        content: [carrierA, carrierB],
+        parentNode: container,
+        anchor: slotAnchor,
         isContentValid: () => false,
-        onValidityChange: vi.fn(),
       })
 
       container.append(carrierA, marker, carrierB, slotAnchor)
-      controller.recheck()
+      recheckSlotFallback(outlet)
 
       expect(container.innerHTML).toBe('abx!y<!--slot-->')
 
-      controller.syncActiveFallback()
+      syncActiveSlotFallback(outlet)
       await nextTick()
 
       expect(container.innerHTML).toBe('abxy!<!--slot-->')
     })
 
-    test('slot fallback controller re-syncs carrier order when fallback ends with a fragment anchor', async () => {
+    test('slot fallback outlet re-syncs carrier order when fallback ends with a fragment anchor', async () => {
       const container = document.createElement('div')
       const carrierA = document.createTextNode('x')
       const carrierB = document.createTextNode('y')
@@ -579,50 +738,42 @@ describe('component: slots', () => {
         document.createTextNode('a'),
         trailingFragment,
       ])
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [carrierA, carrierB],
-        getParentNode: () => container,
-        getAnchor: () => slotAnchor,
-        runWithRenderCtx: fn => fn(),
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => fallback,
+        content: [carrierA, carrierB],
+        parentNode: container,
+        anchor: slotAnchor,
         isContentValid: () => false,
-        onValidityChange: vi.fn(),
       })
 
       container.append(carrierA, marker, carrierB, slotAnchor)
-      controller.recheck()
+      recheckSlotFallback(outlet)
 
       expect(container.innerHTML).toBe('ab<!--if-->x!y<!--slot-->')
 
-      controller.syncActiveFallback()
+      syncActiveSlotFallback(outlet)
       await nextTick()
 
       expect(container.innerHTML).toBe('ab<!--if-->xy!<!--slot-->')
     })
 
-    test('slot fallback controller defaults to idle when isBusy is omitted', () => {
+    test('slot fallback outlet defaults to idle when isBusy is omitted', () => {
       const fallback = document.createTextNode('fallback')
-      const controller = new SlotFallbackController({
-        getParentBoundary: () => null,
-        getLocalFallback: () => () => fallback,
-        getContent: () => [],
-        getParentNode: () => null,
-        getAnchor: () => null,
-        runWithRenderCtx: fn => fn(),
-        onValidityChange: vi.fn(),
+      const outlet = createTestSlotFallbackOutlet({
+        fallback: () => fallback,
       })
 
-      controller.boundary.markDirty()
+      outlet.boundary.markDirty()
 
-      expect(controller.getActiveFallback()).toBe(fallback)
+      expect(outlet.activeFallback).toBe(fallback)
     })
 
     test('vdom slot dirties parent boundary once when content stays valid', async () => {
       const text = ref('A')
       const boundary = {
         parent: null,
-        getLocalFallback: () => undefined,
+        getFallback: () => undefined,
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
       const instance = renderWithSlots({})
@@ -651,7 +802,8 @@ describe('component: slots', () => {
       const show = ref(true)
       const boundary = {
         parent: null,
-        getLocalFallback: () => undefined,
+        getFallback: () => undefined,
+        run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
       }
       const instance = renderWithSlots({})
@@ -676,6 +828,85 @@ describe('component: slots', () => {
 
       expect(host.innerHTML).toBe('fallback')
       expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+    })
+
+    test('vdom slot dirties parent boundary once when valid content becomes empty', async () => {
+      const show = ref(true)
+      const boundary = {
+        parent: null,
+        getFallback: () => undefined,
+        run: (fn: () => any) => fn(),
+        markDirty: vi.fn(),
+      }
+      const instance = renderWithSlots({})
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vapor = (app._context as any).vapor
+      const slotsRef = shallowRef({
+        default: () => (show.value ? [h('div', 'content')] : []),
+      })
+      const frag = withOwnedSlotBoundary(boundary, () =>
+        vapor.vdomSlot(slotsRef, 'default', {}, instance),
+      )
+      const host = document.createElement('div')
+
+      insert(frag, host)
+      boundary.markDirty.mockClear()
+
+      show.value = false
+      await nextTick()
+
+      expect(host.innerHTML).toBe('')
+      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+    })
+
+    test('vdom slot dirties parent boundary when nested fallback validity flips', async () => {
+      const showInnerFallback = ref(true)
+      const boundary = {
+        parent: null,
+        getFallback: () => undefined,
+        run: (fn: () => any) => fn(),
+        markDirty: vi.fn(),
+      }
+      const instance = renderWithSlots({})
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vapor = (app._context as any).vapor
+      const slotsRef = shallowRef({
+        default: () => [],
+      })
+      const renderInnerFallback = () => {
+        const child = new SlotFragment()
+        renderEffect(() => {
+          child.updateSlot(
+            showInnerFallback.value
+              ? () => template('inner fallback')()
+              : undefined,
+          )
+        })
+        return child
+      }
+      const frag = withOwnedSlotBoundary(boundary, () =>
+        vapor.vdomSlot(slotsRef, 'default', {}, instance, renderInnerFallback),
+      )
+      const host = document.createElement('div')
+
+      insert(frag, host)
+      boundary.markDirty.mockClear()
+
+      expect(host.innerHTML).toBe('inner fallback<!--slot-->')
+
+      showInnerFallback.value = false
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<!--slot-->')
+      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+
+      showInnerFallback.value = true
+      await nextTick()
+
+      expect(host.innerHTML).toBe('inner fallback<!--slot-->')
+      expect(boundary.markDirty).toHaveBeenCalledTimes(2)
     })
 
     test('vdom slot still renders vapor fallback when slot content resolves empty', () => {
@@ -722,7 +953,7 @@ describe('component: slots', () => {
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
         insert(
-          createSlot('header', { title: () => src.value }),
+          createSlot('header', { prefix: 'static', title: () => src.value }),
           n0 as any as ParentNode,
         )
         return n0
@@ -733,18 +964,38 @@ describe('component: slots', () => {
           header: props => {
             const el = template('<h1></h1>')()
             renderEffect(() => {
-              setElementText(el, props.title)
+              setElementText(el, `${props.prefix}:${props.title}`)
             })
             return el
           },
         })
       }).render()
 
-      expect(host.innerHTML).toBe('<div><h1>header</h1><!--slot--></div>')
+      expect(host.innerHTML).toBe(
+        '<div><h1>static:header</h1><!--slot--></div>',
+      )
 
       src.value = 'footer'
       await nextTick()
-      expect(host.innerHTML).toBe('<div><h1>footer</h1><!--slot--></div>')
+      expect(host.innerHTML).toBe(
+        '<div><h1>static:footer</h1><!--slot--></div>',
+      )
+    })
+
+    test('plain slot without fallback does not enter fallback boundary', () => {
+      let observedBoundary: SlotBoundaryContext | null | undefined
+      const Comp = defineVaporComponent(() => createSlot())
+
+      define(() =>
+        createComponent(Comp, null, {
+          default: () => {
+            observedBoundary = getCurrentSlotBoundary()
+            return template('content')()
+          },
+        }),
+      ).render()
+
+      expect(observedBoundary).toBe(null)
     })
 
     test('slot props should be isolated per fragment in v-for', async () => {
@@ -1535,13 +1786,7 @@ describe('component: slots', () => {
     test('work with v-once', async () => {
       const Child = defineVaporComponent({
         setup() {
-          return createSlot(
-            'default',
-            null,
-            undefined,
-            undefined,
-            true /* once */,
-          )
+          return createSlot('default', null, undefined, VaporSlotFlags.ONCE)
         },
       })
 
@@ -1566,6 +1811,465 @@ describe('component: slots', () => {
       count.value++
       await nextTick()
       expect(html()).toBe('<div>0</div><!--slot-->')
+    })
+
+    test('applies v-once to fallback', async () => {
+      const count = ref(0)
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => {
+              const n3 = template('<div> </div>')() as any
+              const x3 = txt(n3) as any
+              renderEffect(() => setText(x3, toDisplayString(count.value)))
+              return n3
+            },
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<div>0</div>')
+
+      count.value++
+      await nextTick()
+      expect(html()).toBe('<div>0</div>')
+    })
+
+    test('preserves Vapor child updates inside v-once fallback', async () => {
+      let increment!: () => void
+      const normalLabel = ref('normal')
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const count = ref(0)
+          increment = () => count.value++
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, `${props.label}:${count.value}`))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return [
+            createComponent(GrandChild, { label: () => normalLabel.value }),
+            createComponent(Child),
+          ]
+        },
+      }).render()
+
+      expect(html()).toBe(
+        '<span>normal:0</span><span>initial:0</span><!--slot-->',
+      )
+
+      normalLabel.value = 'normal updated'
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe(
+        '<span>normal updated:0</span><span>initial:1</span><!--slot-->',
+      )
+    })
+
+    test('preserves async Vapor child updates inside v-once fallback', async () => {
+      let resolve!: (comp: any) => void
+      let increment!: () => void
+      const label = ref('initial')
+      const AsyncGrandChild = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r
+          }),
+      )
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () =>
+              createComponent(AsyncGrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<!--async component--><!--slot-->')
+
+      resolve(
+        defineVaporComponent({
+          props: ['label'],
+          setup(props: any) {
+            const count = ref(0)
+            increment = () => count.value++
+            const n0 = template('<span> </span>')() as any
+            const t0 = txt(n0) as any
+            renderEffect(() => setText(t0, `${props.label}:${count.value}`))
+            return n0
+          },
+        }),
+      )
+      await new Promise(r => setTimeout(r))
+      expect(html()).toBe(
+        '<span>initial:0</span><!--async component--><!--slot-->',
+      )
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe(
+        '<span>initial:1</span><!--async component--><!--slot-->',
+      )
+    })
+
+    test('caches v-once fallback child props with prototype names', async () => {
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['toString'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, props.toString))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { toString: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+
+      label.value = 'updated'
+      await nextTick()
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+    })
+
+    test('freezes fallthrough attr keys on v-once fallback child', async () => {
+      const attrs = ref<Record<string, string>>({ id: 'initial' })
+      const GrandChild = defineVaporComponent({
+        setup() {
+          return template('<span>child</span>')()
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => attrs.value] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span id="initial">child</span><!--slot-->')
+
+      attrs.value = { id: 'updated', class: 'new' }
+      await nextTick()
+      expect(html()).toBe('<span id="initial">child</span><!--slot-->')
+    })
+
+    test('snapshots reused dynamic props objects on delayed v-once fallback child reads', async () => {
+      let reveal!: () => void
+      const raw = { label: 'initial' }
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, show.value ? props.label : 'hidden'))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<span>hidden</span>')
+
+      raw.label = 'updated'
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial</span>')
+    })
+
+    test('preserves function-valued props from dynamic sources on v-once fallback child', () => {
+      let calls = 0
+      const cb = () => {
+        calls++
+        return 'called'
+      }
+      const raw = { cb }
+      const GrandChild = defineVaporComponent({
+        props: ['cb'],
+        setup(props: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() =>
+            setText(t0, `${typeof props.cb}:${props.cb === cb}`),
+          )
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>function:true</span><!--slot-->')
+      expect(calls).toBe(0)
+    })
+
+    test('snapshots delayed prop reads on v-once fallback child', async () => {
+      let reveal!: () => void
+      const label = ref('initial')
+      const GrandChild = defineVaporComponent({
+        props: ['label'],
+        setup(props: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, show.value ? props.label : 'hidden'))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { label: () => label.value }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      let html!: () => string
+      __DEV__ = false
+      try {
+        ;({ html } = define({
+          setup() {
+            return createComponent(Child)
+          },
+        }).render())
+      } finally {
+        __DEV__ = true
+      }
+
+      expect(html()).toBe('<span>hidden</span>')
+
+      label.value = 'updated'
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial</span>')
+    })
+
+    test('snapshots delayed attr reads on v-once fallback child', async () => {
+      let reveal!: () => void
+      const parentAttrs = ref<Record<string, string>>({ title: 'initial' })
+      const GrandChild = defineVaporComponent({
+        inheritAttrs: false,
+        setup(_: any, { attrs }: any) {
+          const show = ref(false)
+          reveal = () => (show.value = true)
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() =>
+            setText(
+              t0,
+              show.value ? `${attrs.title}:${String(attrs.class)}` : 'hidden',
+            ),
+          )
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => parentAttrs.value] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>hidden</span><!--slot-->')
+
+      parentAttrs.value = { title: 'updated', class: 'new' }
+      reveal()
+      await nextTick()
+      expect(html()).toBe('<span>initial:undefined</span><!--slot-->')
+    })
+
+    test('caches prototype-named attrs on v-once fallback child', () => {
+      const raw = Object.create(null)
+      Object.defineProperty(raw, '__proto__', {
+        value: 'initial',
+        enumerable: true,
+      })
+      const GrandChild = defineVaporComponent({
+        inheritAttrs: false,
+        setup(_: any, { attrs }: any) {
+          const n0 = template('<span> </span>')() as any
+          const t0 = txt(n0) as any
+          renderEffect(() => setText(t0, String(attrs.__proto__)))
+          return n0
+        },
+      })
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            null,
+            () => createComponent(GrandChild, { $: [() => raw] }),
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial</span><!--slot-->')
+    })
+
+    test('snapshots delayed slot prop reads in v-once slot content', async () => {
+      let increment!: () => void
+      const label = ref('initial')
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot(
+            'default',
+            { label: () => label.value },
+            undefined,
+            VaporSlotFlags.ONCE,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: (slotProps: any) => {
+              const GrandChild = defineVaporComponent({
+                setup() {
+                  const count = ref(0)
+                  increment = () => count.value++
+                  const n0 = template('<span> </span>')() as any
+                  const t0 = txt(n0) as any
+                  renderEffect(() =>
+                    setText(t0, `${slotProps.label}:${count.value}`),
+                  )
+                  return n0
+                },
+              })
+              return createComponent(GrandChild)
+            },
+          })
+        },
+      }).render()
+
+      expect(html()).toBe('<span>initial:0</span><!--slot-->')
+
+      label.value = 'updated'
+      increment()
+      await nextTick()
+      expect(html()).toBe('<span>initial:1</span><!--slot-->')
     })
   })
 
@@ -1867,7 +2571,7 @@ describe('component: slots', () => {
     test('consecutive slots with insertion state', async () => {
       const { component: Child } = define({
         setup() {
-          const n2 = template('<div><div>baz</div></div>', true)() as any
+          const n2 = template('<div><div>baz</div></div>', 1)() as any
           setInsertionState(n2, 0)
           createSlot('default', null)
           setInsertionState(n2, 0)

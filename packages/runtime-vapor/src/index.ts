@@ -24,6 +24,7 @@ export { setInsertionState } from './insertionState'
 export {
   createComponent,
   createComponentWithFallback,
+  createAssetComponent,
   createPlainElement,
   isVaporComponent,
   type FunctionalVaporComponent,
@@ -50,10 +51,13 @@ export {
 } from './dom/prop'
 export {
   on,
+  onBinding,
   delegate,
   delegateEvents,
   setDynamicEvents,
   createInvoker,
+  withVaporModifiers,
+  withVaporKeys,
 } from './dom/event'
 export { createIf } from './apiCreateIf'
 export { createKeyedFragment } from './apiCreateFragment'
@@ -64,7 +68,11 @@ export {
   getRestElement,
   getDefaultValue,
 } from './apiCreateFor'
-export { createTemplateRefSetter } from './apiTemplateRef'
+export {
+  createTemplateRefSetter,
+  setStaticTemplateRef,
+  setTemplateRefBinding,
+} from './apiTemplateRef'
 export { useVaporCssVars } from './helpers/useCssVars'
 export { setBlockKey } from './helpers/setKey'
 export { createDynamicComponent } from './apiCreateDynamicComponent'

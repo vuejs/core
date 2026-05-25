@@ -1,3 +1,29 @@
+# [3.6.0-beta.12](https://github.com/vuejs/core/compare/v3.6.0-beta.11...v3.6.0-beta.12) (2026-05-15)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** align module field with browser esm build ([3212075](https://github.com/vuejs/core/commit/3212075f2b77612409e1cca969c18b4aae6598a0))
+* **compiler-vapor:** bind dynamic slot sources to owner ([6b1d317](https://github.com/vuejs/core/commit/6b1d3175eda535a0bc6df94e790d5900fae4417b))
+* **compiler-vapor:** preserve close tags across template abbreviation ([7660797](https://github.com/vuejs/core/commit/7660797f206e140b476920f697d9e22949aecedc))
+* **compiler-vapor:** preserve v-for selector source offsets ([#14816](https://github.com/vuejs/core/issues/14816)) ([211caf8](https://github.com/vuejs/core/commit/211caf8f926c3d16c33ba652d2df5beb3237535b))
+* **compiler-vapor:** track close tags during template abbreviation ([778614f](https://github.com/vuejs/core/commit/778614fd855d67983f087e1545179c798d8d1854))
+* **runtime-vapor:** avoid hydrating vapor slots during vdom collection ([#14793](https://github.com/vuejs/core/issues/14793)) ([1de6fc4](https://github.com/vuejs/core/commit/1de6fc418a1608cba46630a7ab186be0e1259821))
+* **runtime-vapor:** avoid retaining vdom interop from emits ([50d4d63](https://github.com/vuejs/core/commit/50d4d63a120ba64ecea8e780a2f7fc42a3d41b54))
+* **runtime-vapor:** coalesce v-for selector source updates ([#14817](https://github.com/vuejs/core/issues/14817)) ([2d8a0ce](https://github.com/vuejs/core/commit/2d8a0ce8d283ec1685b21f9e6beb0b4c3a1f2143))
+* **runtime-vapor:** normalize and expose VDOM slots in interop ([4466b94](https://github.com/vuejs/core/commit/4466b94438191038e9a74b39b33ead9df73d2ce3))
+* **runtime-vapor:** preserve anchors for deferred fragment hydration ([#14822](https://github.com/vuejs/core/issues/14822)) ([94767aa](https://github.com/vuejs/core/commit/94767aa482667405c0a0d4224278306e1f496dc6))
+* **runtime-vapor:** restore component context after setup errors ([e9866b9](https://github.com/vuejs/core/commit/e9866b96feae21f574c0574119048e34cb7d0751))
+* **runtime-vapor:** restore fallthrough prop state after errors ([e0c38e8](https://github.com/vuejs/core/commit/e0c38e86dbcf3ad20a9efacba98776bb9dff8d76))
+* **runtime-vapor:** restore render effect state after errors ([42bfc54](https://github.com/vuejs/core/commit/42bfc546ea9ba497d1713be6da22d990643043fb))
+* **server-renderer:** render unresolved tag fallback as element ([#14794](https://github.com/vuejs/core/issues/14794)) ([d9e0a5c](https://github.com/vuejs/core/commit/d9e0a5c79a04df1fc52107013e393e5385803590))
+
+
+### Performance Improvements
+
+* **runtime-vapor:** detach v-for item scopes ([#14811](https://github.com/vuejs/core/issues/14811)) ([4e77400](https://github.com/vuejs/core/commit/4e774009757859b064c2137edc2f293ddaa378ee))
+* **vapor:** add fast path for static class names ([#14803](https://github.com/vuejs/core/issues/14803)) ([1292bc4](https://github.com/vuejs/core/commit/1292bc491bd87c62a795475f83ad1839dccd5a0f))
+
 # [3.6.0-beta.11](https://github.com/vuejs/core/compare/v3.5.34...v3.6.0-beta.11) (2026-05-07)
 
 

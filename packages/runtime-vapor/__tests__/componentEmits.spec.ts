@@ -270,10 +270,10 @@ describe('component: emit', () => {
     const fn2 = vi.fn()
     render({
       modelValue: () => null,
-      modelModifiers: () => ({ number: true }),
+      modelModifiers: { number: true },
       ['onUpdate:modelValue']: () => fn1,
       foo: () => null,
-      fooModifiers: () => ({ number: true }),
+      fooModifiers: { number: true },
       ['onUpdate:foo']: () => fn2,
     })
     expect(fn1).toHaveBeenCalledTimes(1)
@@ -296,18 +296,14 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true }
-      },
+      modelModifiers: { trim: true },
       ['onUpdate:modelValue']() {
         return fn1
       },
       foo() {
         return null
       },
-      fooModifiers() {
-        return { trim: true }
-      },
+      fooModifiers: { trim: true },
       'onUpdate:foo'() {
         return fn2
       },
@@ -332,18 +328,14 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true, number: true }
-      },
+      modelModifiers: { trim: true, number: true },
       ['onUpdate:modelValue']() {
         return fn1
       },
       foo() {
         return null
       },
-      fooModifiers() {
-        return { trim: true, number: true }
-      },
+      fooModifiers: { trim: true, number: true },
       ['onUpdate:foo']() {
         return fn2
       },
@@ -366,9 +358,7 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true }
-      },
+      modelModifiers: { trim: true },
       ['onUpdate:modelValue']() {
         return fn
       },
@@ -449,6 +439,87 @@ describe('component: emit', () => {
     render(props as any)
 
     expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('should trigger once handler from dynamic source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('foo')
+        emit('foo')
+        return []
+      },
+    })
+
+    const handler = vi.fn()
+    render({
+      $: [
+        () => ({
+          onFooOnce: handler,
+        }),
+      ],
+    } as any)
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('v-model modifiers should work from dynamic source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('update:modelValue', '1')
+        emit('update:foo', '  two  ')
+        return []
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    render({
+      $: [
+        () => ({
+          modelValue: null,
+          modelModifiers: { number: true },
+          ['onUpdate:modelValue']: fn1,
+          foo: null,
+          fooModifiers: { trim: true },
+          ['onUpdate:foo']: fn2,
+        }),
+      ],
+    } as any)
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
+  test('v-model modifiers should work from static object source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('update:modelValue', '1')
+        emit('update:foo', '  two  ')
+        return []
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    render({
+      $: [
+        {
+          modelValue: null,
+          modelModifiers: { number: true },
+          ['onUpdate:modelValue']: () => fn1,
+          foo: null,
+          fooModifiers: { trim: true },
+          ['onUpdate:foo']: () => fn2,
+        },
+      ],
+    } as any)
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
   })
 
   test('should re-queue when child emit mutates parent state during update', async () => {

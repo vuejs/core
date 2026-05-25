@@ -721,6 +721,64 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setClass(n0, _ctx.cls, true))')
   })
 
+  test('constant boolean class and style bindings are emitted in template', () => {
+    const { code } = compileWithVBind(`
+      <div
+        :disabled="true"
+        :class="{ active: true, hidden: false }"
+        :style="{ color: 'red', marginTop: '4px' }"
+      />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      'const t0 = _template("<div disabled class=active style=color:red;margin-top:4px;>", 3)',
+    )
+  })
+
+  test('unsafe constant object style stays on runtime setter', () => {
+    const { code } = compileWithVBind(`
+      <div :style="{ '--x': 'a;b' }" />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('const t0 = _template("<div>", 1)')
+    expect(code).contains("_setStyle(n0, { '--x': 'a;b' })")
+    expect(code).not.contains('style=')
+  })
+
+  test('constant folded class and style escape html entities', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ '&amp;nbsp;': true }" :style="{ '--x': '&amp;copy' }" />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      'const t0 = _template("<div class=&amp;nbsp; style=--x:&amp;copy;>", 3)',
+    )
+  })
+
+  test('constant false boolean bindings are omitted from template', () => {
+    const { code } = compileWithVBind(`
+      <button :disabled="false" :hidden="null" :multiple="undefined" />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('const t0 = _template("<button>", 3)')
+  })
+
+  test('pure static class stays in template without runtime setter', () => {
+    const { code } = compileWithVBind(`
+      <div class=" foo  bar " />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      'const t0 = _template("<div class=\\"foo bar\\">", 3)',
+    )
+    expect(code).not.contains('_setClass')
+  })
+
   test('simple object className helper', () => {
     const { code } = compileWithVBind(`
       <div :class="{ active: isActive }"/>
@@ -769,6 +827,28 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
     expect(code).contains('" bar", "foo"')
     expect(code).not.contains('{ bar:')
+  })
+
+  test('mixed static and dynamic class keeps static class in runtime merge', () => {
+    const { code } = compileWithVBind(`
+      <div class="base" :class="{ active: ok, hidden: false, fixed: true }"/>
+    `)
+
+    expect(code).contains('const t0 = _template("<div>", 1)')
+    expect(code).contains('_setClassName(n0,')
+    expect(code).contains('"base"')
+    expect(code).not.contains('class=\\"base')
+  })
+
+  test('static class with unanalyzable dynamic class keeps runtime merge', () => {
+    const { code } = compileWithVBind(`
+      <div class="base" :class="cls"/>
+    `)
+
+    expect(code).contains('const t0 = _template("<div>", 1)')
+    expect(code).contains('_setClass(n0, ["base", _ctx.cls])')
+    expect(code).not.contains('class=base')
+    expect(code).not.contains('_setClassName')
   })
 
   test('static class in reverse order uses className helper with suffix', () => {
@@ -922,7 +1002,7 @@ describe('compiler v-bind', () => {
   test('number value', () => {
     const { code } = compileWithVBind(`<Comp :depth="0" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('{ depth: () => (0) }')
+    expect(code).contains('{ depth: 0 }')
   })
 
   test('with constant value', () => {

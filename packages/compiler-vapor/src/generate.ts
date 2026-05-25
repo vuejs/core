@@ -3,7 +3,14 @@ import type {
   BaseCodegenResult,
   SimpleExpressionNode,
 } from '@vue/compiler-dom'
-import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
+import type {
+  BlockIRNode,
+  CoreHelper,
+  RootIRNode,
+  SetTemplateRefIRNode,
+  VaporHelper,
+} from './ir'
+import { IRNodeTypes } from './ir'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -23,6 +30,10 @@ import { buildNextIdMap, getNextId } from './transform'
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
 const idWithTrailingDigitsRE = /^([A-Za-z_$][\w$]*)(\d+)$/
+const helperNameAliases: Record<string, string> = {
+  withVaporKeys: 'withKeys',
+  withVaporModifiers: 'withModifiers',
+}
 
 export class CodegenContext {
   options: Required<CodegenOptions>
@@ -31,28 +42,63 @@ export class CodegenContext {
 
   helpers: Map<string, string> = new Map()
 
+  needsTemplateRefSetter: boolean = false
+  staticTemplateRefHelperCandidate?: SetTemplateRefIRNode
+  inSlotBlock: boolean = false
+
   helper = (name: CoreHelper | VaporHelper): string => {
     if (this.helpers.has(name)) {
       return this.helpers.get(name)!
     }
 
-    const base = `_${name}`
-    if (this.bindingNames.size === 0 || !this.bindingNames.has(base)) {
+    const base = `_${helperNameAliases[name] || name}`
+    if (this.isHelperNameAvailable(base)) {
       this.helpers.set(name, base)
       return base
     }
 
     const map = this.nextIdMap.get(base)
-    // start from 1 because "base" (no suffix) is already taken.
-    const alias = `${base}${getNextId(map, 1)}`
-    this.helpers.set(name, alias)
-    return alias
+    let next = 1
+    while (true) {
+      // start from 1 because "base" (no suffix) is already taken.
+      const alias = `${base}${getNextId(map, next)}`
+      if (this.isHelperNameAvailable(alias)) {
+        this.helpers.set(name, alias)
+        return alias
+      }
+      next++
+    }
   }
 
   delegates: Set<string> = new Set<string>()
 
+  singleUseAssetComponentNames?: Set<string>
+
   identifiers: Record<string, (string | SimpleExpressionNode)[]> =
     Object.create(null)
+
+  expressionReplacements: Map<SimpleExpressionNode, SimpleExpressionNode>[] = []
+
+  withExpressionReplacements<T>(
+    map: Map<SimpleExpressionNode, SimpleExpressionNode>,
+    fn: () => T,
+  ): T {
+    if (map.size === 0) return fn()
+    this.expressionReplacements.unshift(map)
+    try {
+      return fn()
+    } finally {
+      remove(this.expressionReplacements, map)
+    }
+  }
+
+  getExpressionReplacement(node: SimpleExpressionNode): SimpleExpressionNode {
+    for (const map of this.expressionReplacements) {
+      const replacement = map.get(node)
+      if (replacement) return replacement
+    }
+    return node
+  }
 
   seenInlineHandlerNames: Record<string, number> = Object.create(null)
 
@@ -81,6 +127,12 @@ export class CodegenContext {
     return (): BlockIRNode => (this.block = parent)
   }
 
+  enterSlotBlock() {
+    const parent = this.inSlotBlock
+    this.inSlotBlock = true
+    return (): boolean => (this.inSlotBlock = parent)
+  }
+
   scopeLevel: number = 0
   enterScope(): [level: number, exit: () => number] {
     return [this.scopeLevel++, () => this.scopeLevel--] as const
@@ -89,6 +141,14 @@ export class CodegenContext {
   private templateVars: Map<number, string> = new Map()
   private nextIdMap: Map<string, Map<number, number>> = new Map()
   private lastIdMap: Map<string, number> = new Map()
+  private isHelperNameAvailable(name: string): boolean {
+    if (this.bindingNames.has(name)) return false
+    for (const alias of this.helpers.values()) {
+      if (alias === name) return false
+    }
+    return true
+  }
+
   private lastTIndex: number = -1
   private initNextIdMap(): void {
     if (this.bindingNames.size === 0) return
@@ -163,6 +223,9 @@ export class CodegenContext {
         : [],
     )
     this.initNextIdMap()
+    this.staticTemplateRefHelperCandidate = getStaticTemplateRefHelperCandidate(
+      ir.block,
+    )
   }
 }
 
@@ -195,13 +258,18 @@ export function generate(
   }
 
   push(INDENT_START)
-  if (ir.hasTemplateRef) {
-    push(
-      NEWLINE,
-      `const ${setTemplateRefIdent} = ${context.helper('createTemplateRefSetter')}()`,
-    )
+  // Pre-register to keep fallback template-ref helper ordering stable; remove it
+  // below when all refs lower to binding helpers.
+  const templateRefSetterHelper = ir.hasTemplateRef
+    ? context.helper('createTemplateRefSetter')
+    : undefined
+  const body = genBlockContent(ir.block, context, true)
+  if (context.needsTemplateRefSetter) {
+    push(NEWLINE, `const ${setTemplateRefIdent} = ${templateRefSetterHelper}()`)
+  } else if (templateRefSetterHelper) {
+    context.helpers.delete('createTemplateRefSetter')
   }
-  push(...genBlockContent(ir.block, context, true))
+  push(...body)
   push(INDENT_END, NEWLINE)
 
   if (!inline) {
@@ -260,4 +328,20 @@ function genAssetImports({ ir }: CodegenContext) {
     imports += `import ${name} from '${assetImport.path}';\n`
   }
   return imports
+}
+
+function getStaticTemplateRefHelperCandidate(
+  block: BlockIRNode,
+): SetTemplateRefIRNode | undefined {
+  if (block.operation.length !== 1) return
+
+  const operation = block.operation[0]
+  if (
+    operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
+    !operation.effect &&
+    !operation.refFor &&
+    operation.value.isStatic
+  ) {
+    return operation
+  }
 }

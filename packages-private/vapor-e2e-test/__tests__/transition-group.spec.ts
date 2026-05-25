@@ -603,6 +603,81 @@ describe('vapor transition-group', () => {
     E2E_TIMEOUT,
   )
 
+  test('keyed component move after key change', async () => {
+    const btnSelector = '.keyed-component-move-after-key-change > button'
+    const containerSelector = '.keyed-component-move-after-key-change > div'
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item closed" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2"><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+
+    click(btnSelector)
+    await nextTick()
+    await nextFrame()
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item closed group-leave-from group-leave-active" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item opened group-enter-from group-enter-active" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed group-move" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+
+    await transitionFinish()
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+  })
+
+  test('same-key component move after prop change', async () => {
+    const btnSelector = '.same-key-component-move-after-prop-change > button'
+    const containerSelector = '.same-key-component-move-after-prop-change > div'
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item closed" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2"><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+
+    click(btnSelector)
+    await nextTick()
+    await nextFrame()
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed group-move" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+
+    await transitionFinish(350)
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+  })
+
   test('dynamic name', async () => {
     const btnSelector = '.dynamic-name button.toggleBtn'
     const btnChangeName = '.dynamic-name button.changeNameBtn'
@@ -946,6 +1021,88 @@ describe('vapor transition-group', () => {
     E2E_TIMEOUT,
   )
 
+  test(
+    'root slot component move',
+    async () => {
+      const btnSelector = '.root-slot-component-move > button'
+      const containerSelector = '.root-slot-component-move > div'
+
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<!--for--><!--slot--><!--transition-group-->`,
+        )
+
+      click(btnSelector)
+      await nextTick()
+      await nextFrame()
+      expect(html(containerSelector)).toContain(
+        `<div class="test group-enter-from group-enter-active">d</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test group-move" style="">a</div>` +
+          `<div class="test group-leave-from group-leave-active group-move" style="">c</div>` +
+          `<!--for--><!--slot--><!--transition-group-->`,
+      )
+
+      await transitionFinish()
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="test">d</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test" style="">a</div>`,
+        )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'async root slot component move',
+    async () => {
+      const btnSelector = '.async-root-slot-component-move > button'
+      const containerSelector = '.async-root-slot-component-move > div'
+
+      await waitForInnerHTML(
+        containerSelector,
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>`,
+      )
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>` +
+            `<!--for--><!--slot--><!--async component--><!--transition-group-->`,
+        )
+
+      click(btnSelector)
+      await nextTick()
+      await nextFrame()
+      expect(html(containerSelector)).toContain(
+        `<div class="test group-enter-from group-enter-active">d</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test group-move" style="">a</div>` +
+          `<div class="test group-leave-from group-leave-active group-move" style="">c</div>` +
+          `<!--for--><!--slot--><!--async component--><!--transition-group-->`,
+      )
+
+      await transitionFinish()
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="test">d</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test" style="">a</div>`,
+        )
+    },
+    E2E_TIMEOUT,
+  )
+
   describe('interop', () => {
     test(
       'avoid set transition hooks for comment node',
@@ -1094,6 +1251,44 @@ describe('vapor transition-group', () => {
           `<div class="" style=""><div>b</div></div>` +
             `<div class="" style=""><div>c</div></div>` +
             `<div class=""><div>d</div></div>`,
+        )
+    })
+
+    test('keyed vdom component move after key change', async () => {
+      const btnSelector = '.keyed-vdom-component-move-after-key-change > button'
+      const containerSelector =
+        '.keyed-vdom-component-move-after-key-change > div'
+
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="item-wrapper">` +
+            `<div class="item closed" id="item-1"><div class="item-inner">item 1</div></div>` +
+            `<div class="item closed" id="item-2"><div class="item-inner">item 2</div></div>` +
+            `<!--for--></div><!--transition-group-->`,
+        )
+
+      click(btnSelector)
+      await nextTick()
+      await nextFrame()
+
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="item-wrapper">` +
+            `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+            `<div class="item closed group-move" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+            `<!--for--></div><!--transition-group-->`,
+        )
+
+      await transitionFinish(350)
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="item-wrapper">` +
+            `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+            `<div class="item closed" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+            `<!--for--></div><!--transition-group-->`,
         )
     })
   })

@@ -39,6 +39,7 @@ import {
   refCleanups,
   unsetRef,
 } from './refCleanup'
+import { renderEffect } from './renderEffect'
 
 export type NodeRef =
   | string
@@ -56,6 +57,13 @@ export type setRefFn = (
   refFor?: boolean,
   refKey?: string,
 ) => NodeRef | undefined
+
+function getTemplateRefUpdateFragment(el: RefEl): DynamicFragment | undefined {
+  if (isDynamicFragment(el)) return el
+  if (isVaporComponent(el) && isAsyncWrapper(el)) {
+    return el.block as DynamicFragment
+  }
+}
 
 function ensureCleanup(el: RefEl): RefCleanupState {
   let cleanupRef = refCleanups.get(el)
@@ -77,10 +85,8 @@ export function createTemplateRefSetter(): setRefFn {
 
   return (el, ref, refFor, refKey) => {
     // Re-apply refs after DynamicFragment updates.
-    if (isDynamicFragment(el) || (isVaporComponent(el) && isAsyncWrapper(el))) {
-      const frag = isDynamicFragment(el)
-        ? (el as DynamicFragment)
-        : ((el as VaporComponentInstance).block as DynamicFragment)
+    const frag = getTemplateRefUpdateFragment(el)
+    if (frag) {
       const doSet = () => {
         // KeepAlive clears refs on deactivation but keeps this fragment update
         // callback alive. Skip re-applying refs for async/offscreen updates
@@ -101,6 +107,36 @@ export function createTemplateRefSetter(): setRefFn {
     oldRefMap.set(el, oldRef)
     return oldRef
   }
+}
+
+export function setStaticTemplateRef(
+  el: RefEl,
+  ref: NodeRef,
+  refFor?: boolean,
+  refKey?: string,
+): NodeRef | undefined {
+  const instance = currentInstance as VaporComponentInstance
+  const oldRef = setRef(instance, el, ref, undefined, refFor, refKey)
+  const frag = getTemplateRefUpdateFragment(el)
+  if (frag) {
+    // Static refs do not need old-ref tracking, but async/dynamic component
+    // targets still need to re-apply the same ref after their fragment updates.
+    ;(frag.onUpdated ||= []).push(() => {
+      if (isVaporComponent(el) && el.isDeactivated) return
+      setRef(instance, el, ref, oldRef, refFor, refKey)
+    })
+  }
+  return oldRef
+}
+
+export function setTemplateRefBinding(
+  el: RefEl,
+  getter: () => any,
+  setter: setRefFn = createTemplateRefSetter(),
+  refFor?: boolean,
+  refKey?: string,
+): void {
+  renderEffect(() => setter(el, getter(), refFor, refKey))
 }
 
 /**

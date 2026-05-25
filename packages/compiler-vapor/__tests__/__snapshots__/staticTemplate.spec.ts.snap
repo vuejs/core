@@ -2,7 +2,7 @@
 
 exports[`static template marker > does not dedupe static and dynamic templates with identical html 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<span>", false, true)
+const t0 = _template("<span>", 2)
 const t1 = _template("<span>")
 
 export function render(_ctx) {
@@ -46,7 +46,7 @@ export function render(_ctx) {
 
 exports[`static template marker > does not mark single-root element with custom directive 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
@@ -57,7 +57,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 
 exports[`static template marker > does not mark single-root element with dynamic event handler 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<button>", true)
+const t0 = _template("<button>", 1)
 _delegateEvents("click")
 
 export function render(_ctx) {
@@ -69,7 +69,7 @@ export function render(_ctx) {
 
 exports[`static template marker > does not mark single-root element with dynamic props 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<span>", true)
+const t0 = _template("<span>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -80,7 +80,7 @@ export function render(_ctx) {
 
 exports[`static template marker > does not mark single-root element with dynamic text content 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<span> ", true)
+const t0 = _template("<span> ", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -91,20 +91,19 @@ export function render(_ctx) {
 `;
 
 exports[`static template marker > does not mark single-root element with ref 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+"import { setStaticTemplateRef as _setStaticTemplateRef, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
-  const _setTemplateRef = _createTemplateRefSetter()
   const n0 = t0()
-  _setTemplateRef(n0, "el")
+  _setStaticTemplateRef(n0, "el")
   return n0
 }"
 `;
 
 exports[`static template marker > does not mark single-root element with v-html 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -115,7 +114,7 @@ export function render(_ctx) {
 
 exports[`static template marker > does not mark single-root element with v-text 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div> ", true)
+const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -133,14 +132,14 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, (item) => (item))
+  }, (item) => (item), 8)
   return n0
 }"
 `;
 
 exports[`static template marker > keeps materialized createElement text path non-static 1`] = `
 "import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
-const t0 = _template("<span></span>", false, true)
+const t0 = _template("<span></span>", 2)
 const t1 = _template("")
 
 export function render(_ctx) {
@@ -156,8 +155,8 @@ export function render(_ctx) {
 
 exports[`static template marker > keeps multi-root split behavior 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<p>", false, true)
-const t1 = _template("<span>", false, true)
+const t0 = _template("<p>", 2)
+const t1 = _template("<span>", 2)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -181,7 +180,7 @@ export function render(_ctx) {
 
 exports[`static template marker > marks single-root static MathML root 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<math><mrow><mi>x", true, true, 2)
+const t0 = _template("<math><mrow><mi>x", 3, 2)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -191,7 +190,7 @@ export function render(_ctx) {
 
 exports[`static template marker > marks single-root static comment 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<!--foo-->", false, true)
+const t0 = _template("<!--foo-->", 2)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -201,7 +200,7 @@ export function render(_ctx) {
 
 exports[`static template marker > marks single-root static element 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div><span>foo", true, true)
+const t0 = _template("<div><span>foo", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -211,7 +210,7 @@ export function render(_ctx) {
 
 exports[`static template marker > marks single-root static svg root 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<svg><circle r=40>", true, true, 1)
+const t0 = _template("<svg><circle r=40>", 3, 1)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -221,7 +220,7 @@ export function render(_ctx) {
 
 exports[`static template marker > marks single-root static text 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("hello", false, true)
+const t0 = _template("hello", 2)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -231,9 +230,9 @@ export function render(_ctx) {
 
 exports[`static template marker > splits mixed-root into static single-root templates 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("A ", false, true)
-const t1 = _template("<span>foo", false, true)
-const t2 = _template(" B", false, true)
+const t0 = _template("A ", 2)
+const t1 = _template("<span>foo", 2)
+const t2 = _template(" B", 2)
 
 export function render(_ctx) {
   const n0 = t0()

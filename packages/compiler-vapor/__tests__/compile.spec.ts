@@ -1,4 +1,4 @@
-import { BindingTypes, type RootNode } from '@vue/compiler-dom'
+import { BindingTypes, type RootNode, parse } from '@vue/compiler-dom'
 import { type CompilerOptions, compile as _compile } from '../src'
 
 function compile(template: string | RootNode, options: CompilerOptions = {}) {
@@ -229,6 +229,43 @@ describe('compile', () => {
         `const _selector0 = _createSelector(() => _ctx.state.selected)`,
       )
     })
+
+    test('does not mutate cached member expressions on reused AST', () => {
+      const ast = parse(
+        `<button v-on="{ click: arr[0].click }">{{ arr[0].label }}</button>`,
+        { prefixIdentifiers: true },
+      )
+      const options = {
+        bindingMetadata: {
+          arr: BindingTypes.SETUP_CONST,
+        },
+      }
+
+      compile(ast, options)
+      expect(JSON.stringify(ast)).not.contains(`arr_0`)
+      const code = compile(ast, options)
+
+      expect(code).contains(`const _arr_0 = _ctx.arr[0]`)
+      expect(code).contains(`_setDynamicEvents(n0, { click: _arr_0.click })`)
+      expect(code).contains(`_setText(x0, _toDisplayString(_arr_0.label))`)
+      expect(code).not.contains(`_ctx.arr_0`)
+    })
+
+    test('applies cached member expressions to className specialization', () => {
+      const code = compile(
+        `<div :class="{ active: arr[0].active }"></div><span>{{ arr[0].label }}</span>`,
+        {
+          bindingMetadata: {
+            arr: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+
+      expect(code).contains(`const _arr_0 = _ctx.arr[0]`)
+      expect(code).contains(`_setClassName(n0, (_arr_0.active ? 1 : 0)`)
+      expect(code).contains(`_setText(x1, _toDisplayString(_arr_0.label))`)
+      expect(code).not.contains(`_ctx.arr[0].active`)
+    })
   })
 
   describe('custom directive', () => {
@@ -268,7 +305,7 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).contains(
         `_renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
-  const n1 = _createComponentWithFallback(_component_Child)`,
+  const n1 = _createAssetComponent("Child")`,
       )
     })
 
@@ -281,7 +318,7 @@ describe('compile', () => {
       expect(code).contains(
         `_renderEffect(() => _setProp(n1, "id", _ctx.useId()))
   _setInsertionState(n1, null, 0)
-  const n0 = _createComponentWithFallback(_component_Child)`,
+  const n0 = _createAssetComponent("Child")`,
       )
       expect(code).matchSnapshot()
     })
@@ -412,14 +449,18 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).not.contains('const t0 =')
       expect(code).not.contains('const t2 =')
-      expect(code).contains('const t1 = _template("<div>", false, true)')
-      expect(code).contains('const t3 = _template("<span>", false, true)')
-      expect(code).contains('const t4 = _template("<p>", false, true)')
+      expect(code).contains('const t1 = _template("<div>", 2)')
+      expect(code).contains('const t3 = _template("<span>", 2)')
+      expect(code).contains('const t4 = _template("<p>", 2)')
     })
 
-    test('should bump placeholder var (p*) on conflict', () => {
+    test('should bump placeholder cursor var (p*) on conflict', () => {
       const code = compile(
-        `<div><div><div><span :id="foo" /></div></div></div>`,
+        `<div>
+          <div>x</div>
+          <div><span>{{ foo }}</span></div>
+          <div><span>{{ foo }}</span></div>
+        </div>`,
         {
           bindingMetadata: {
             p0: BindingTypes.SETUP_REF,
@@ -430,10 +471,11 @@ describe('compile', () => {
       )
 
       expect(code).matchSnapshot()
-      expect(code).not.contains('const p0 = ')
-      expect(code).not.contains('const p2 = ')
-      expect(code).contains('const p1 = ')
-      expect(code).contains('const p3 = ')
+      expect(code).not.contains('let p0 = ')
+      expect(code).not.contains('let p2 = ')
+      expect(code).contains('let p1 = _next(_child(n2), 1)')
+      expect(code).contains('const n0 = _child(p1)')
+      expect(code).contains('const n1 = _child((p1 = _next(p1, 2)))')
     })
   })
 })

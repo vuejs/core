@@ -28,13 +28,7 @@ export function genSetEvent(
   const { helper } = context
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
-  const name = genName()
-  const handler = [
-    `${context.helper('createInvoker')}(`,
-    ...genEventHandler(context, [value], modifiers),
-    `)`,
-  ]
-  const eventOptions = genEventOptions()
+  let handler: CodeFragment[] | undefined
 
   if (delegate) {
     // key is static
@@ -43,20 +37,42 @@ export function genSetEvent(
     // we can generate optimized handler attachment code
     // e.g. n1.$evtclick = () => {}
     if (!context.block.operation.some(isSameDelegateEvent)) {
-      return [NEWLINE, `n${element}.$evt${key.content} = `, ...handler]
+      return [
+        NEWLINE,
+        `n${element}.$evt${key.content} = `,
+        ...genDirectHandler(),
+      ]
     }
   }
 
+  const name = genName()
+  const eventOptions = genEventOptions()
   return [
     NEWLINE,
     ...genCall(
-      helper(delegate ? 'delegate' : 'on'),
+      helper(effect ? 'onBinding' : delegate ? 'delegate' : 'on'),
       `n${element}`,
       name,
-      handler,
+      genHandler(),
       eventOptions,
     ),
   ]
+
+  function genHandler(): CodeFragment[] {
+    return (handler ||= genEventHandler(context, [value], modifiers))
+  }
+
+  function genInvoker(): CodeFragment[] {
+    return [`${helper('createInvoker')}(`, ...genHandler(), `)`]
+  }
+
+  function genDirectHandler(): CodeFragment[] {
+    return modifiers.keys.length || modifiers.nonKeys.length
+      ? genEventHandler(context, [value], modifiers, {
+          modifierHelper: 'vapor',
+        })
+      : genInvoker()
+  }
 
   function genName(): CodeFragment[] {
     const expr = genExpression(key, context)
@@ -73,11 +89,10 @@ export function genSetEvent(
 
   function genEventOptions(): CodeFragment[] | undefined {
     let { options } = modifiers
-    if (!options.length && !effect) return
+    if (!options.length) return
 
     return genMulti(
       DELIMITERS_OBJECT_NEWLINE,
-      effect && ['effect: true'],
       ...options.map((option): CodeFragment[] => [`${option}: true`]),
     )
   }
@@ -110,6 +125,17 @@ export function genSetDynamicEvents(
   ]
 }
 
+interface GenEventHandlerOptions {
+  // Generate handler expressions suitable for passing as component props
+  // (avoid wrapping member expressions with invocation).
+  asComponentProp?: boolean
+  // Wrap the result in a getter function `() => ...`.
+  extraWrap?: boolean
+  // Direct delegated assignments use Vapor guard helpers because the guard
+  // helper owns the event invoker wrapper.
+  modifierHelper?: 'runtime' | 'vapor'
+}
+
 export function genEventHandler(
   context: CodegenContext,
   values: (SimpleExpressionNode | undefined)[] | undefined,
@@ -117,12 +143,14 @@ export function genEventHandler(
     nonKeys: string[]
     keys: string[]
   } = { nonKeys: [], keys: [] },
-  // when true, generate handler expressions suitable for passing as component
-  // props (avoid wrapping member expressions with invocation).
-  asComponentProp: boolean = false,
-  // when true, wrap the result in a getter function `() => ...`.
-  extraWrap: boolean = false,
+  options: GenEventHandlerOptions = {},
 ): CodeFragment[] {
+  const {
+    asComponentProp = false,
+    extraWrap = false,
+    modifierHelper = 'runtime',
+  } = options
+  const useVaporModifierHelper = modifierHelper === 'vapor'
   let handlerExp: CodeFragment[] = []
   if (values) {
     values.forEach((value, index) => {
@@ -179,8 +207,14 @@ export function genEventHandler(
   if (handlerExp.length === 0) handlerExp = ['() => {}']
   const { keys, nonKeys } = modifiers
   if (nonKeys.length)
-    handlerExp = genWithModifiers(context, handlerExp, nonKeys)
-  if (keys.length) handlerExp = genWithKeys(context, handlerExp, keys)
+    handlerExp = genWithModifiers(
+      context,
+      handlerExp,
+      nonKeys,
+      useVaporModifierHelper && !keys.length,
+    )
+  if (keys.length)
+    handlerExp = genWithKeys(context, handlerExp, keys, useVaporModifierHelper)
 
   if (extraWrap) handlerExp.unshift(`() => `)
   return handlerExp
@@ -190,9 +224,10 @@ function genWithModifiers(
   context: CodegenContext,
   handler: CodeFragment[],
   nonKeys: string[],
+  useVaporHelper: boolean = false,
 ): CodeFragment[] {
   return genCall(
-    context.helper('withModifiers'),
+    context.helper(useVaporHelper ? 'withVaporModifiers' : 'withModifiers'),
     handler,
     JSON.stringify(nonKeys),
   )
@@ -202,8 +237,13 @@ function genWithKeys(
   context: CodegenContext,
   handler: CodeFragment[],
   keys: string[],
+  useVaporHelper: boolean = false,
 ): CodeFragment[] {
-  return genCall(context.helper('withKeys'), handler, JSON.stringify(keys))
+  return genCall(
+    context.helper(useVaporHelper ? 'withVaporKeys' : 'withKeys'),
+    handler,
+    JSON.stringify(keys),
+  )
 }
 
 function isConstantBinding(

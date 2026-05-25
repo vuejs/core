@@ -9,6 +9,7 @@ import {
   transformVFor,
   transformVIf,
   transformVOn,
+  transformVSlot,
 } from '../../src'
 import {
   type BindingMetadata,
@@ -30,13 +31,32 @@ const compileWithElementTransform = makeCompile({
   },
 })
 
+const compileWithElementAndSlotTransform = makeCompile({
+  nodeTransforms: [
+    transformVIf,
+    transformVFor,
+    transformElement,
+    transformVSlot,
+    transformText,
+    transformChildren,
+  ],
+  directiveTransforms: {
+    bind: transformVBind,
+    on: transformVOn,
+  },
+})
+
 describe('compiler: element transform', () => {
   describe('component', () => {
-    test('import + resolve component', () => {
+    test('create single-use asset component with inline resolve', () => {
       const { code, ir, helpers } = compileWithElementTransform(`<Foo/>`)
       expect(code).toMatchSnapshot()
-      expect(helpers).contains.all.keys('resolveComponent')
-      expect(helpers).contains.all.keys('createComponentWithFallback')
+      expect(code).not.toContain('_resolveComponent("Foo")')
+      expect(code).toContain(
+        'const n0 = _createAssetComponent("Foo", null, null, true)',
+      )
+      expect(helpers).not.toContain('resolveComponent')
+      expect(helpers).toContain('createAssetComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         id: 0,
@@ -47,13 +67,75 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('emit single default slot as raw slot function', () => {
+      const { code } = compileWithElementAndSlotTransform(`<Card><div/></Card>`)
+      expect(code).toContain(
+        `const n1 = _createAssetComponent("Card", null, () => {`,
+      )
+      expect(code).not.toContain(`"default":`)
+    })
+
+    test('hoist repeated asset component resolve', () => {
+      const { code, helpers } = compileWithElementTransform(
+        `<Foo/><div><Foo/></div>`,
+      )
+      expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
+      expect(code).toContain('_createComponentWithFallback(_component_Foo')
+      expect(code).not.toContain('_createAssetComponent("Foo"')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createComponentWithFallback')
+      expect(helpers).not.toContain('createAssetComponent')
+    })
+
+    test('hoist asset component in nested block', () => {
+      const { code, helpers } = compileWithElementTransform(`<Foo v-if="ok"/>`)
+      expect(code).toContain('const _component_Foo = _resolveComponent("Foo")')
+      expect(code).toContain('_createComponentWithFallback(_component_Foo')
+      expect(code).not.toContain('_createAssetComponent("Foo"')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createComponentWithFallback')
+      expect(helpers).not.toContain('createAssetComponent')
+    })
+
+    test('hoist asset component also used in component slot', () => {
+      const { code, helpers } = compileWithElementAndSlotTransform(
+        `<Child /><Parent><Child /></Parent>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(
+        'const _component_Child = _resolveComponent("Child")',
+      )
+      expect(code).toContain('_createComponentWithFallback(_component_Child)')
+      expect(code).not.toContain('_createAssetComponent("Child"')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createComponentWithFallback')
+    })
+
+    test('hoist asset component also used in conditional component slot', () => {
+      const { code, helpers } = compileWithElementAndSlotTransform(
+        `<Child /><Parent><template #default><Child v-if="ok" /></template></Parent>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(
+        'const _component_Child = _resolveComponent("Child")',
+      )
+      expect(code).toContain('_createComponentWithFallback(_component_Child)')
+      expect(code).not.toContain('_createAssetComponent("Child"')
+      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createComponentWithFallback')
+    })
+
     test('resolve implicitly self-referencing component', () => {
       const { code, helpers } = compileWithElementTransform(`<Example/>`, {
         filename: `/foo/bar/Example.vue?vue&type=template`,
       })
       expect(code).toMatchSnapshot()
-      expect(code).toContain('_resolveComponent("Example", true)')
-      expect(helpers).toContain('resolveComponent')
+      expect(code).not.toContain('_resolveComponent("Example", true)')
+      expect(code).toContain(
+        'const n0 = _createAssetComponent("Example", null, null, true, null, true)',
+      )
+      expect(helpers).toContain('createAssetComponent')
+      expect(helpers).not.toContain('resolveComponent')
     })
 
     test('resolve component from setup bindings', () => {
@@ -153,7 +235,10 @@ describe('compiler: element transform', () => {
         bindingMetadata,
       })
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveComponent')
+      expect(code).toContain(
+        '_createAssetComponent("Example", null, null, true)',
+      )
+      expect(helpers).toContain('createAssetComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         id: 0,
@@ -196,8 +281,8 @@ describe('compiler: element transform', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"),
-    class: () => ("bar")
+    id: "foo",
+    class: "bar"
   }`)
 
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -240,6 +325,75 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('static literal bind props', () => {
+      const { code } = compileWithElementTransform(`<Foo :literal="'bar'" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`literal: "bar"`)
+    })
+
+    test('constant bind props are direct raw prop values', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo
+          :size="16"
+          :disabled="false"
+          :tabindex="0"
+          :nullable="null"
+          :missing="undefined"
+          :big="1n"
+          :label="\`Save \${1}\`"
+          :items="[1, 'two', false, null, undefined]"
+          :options="{ placement: 'bottom', offset: 8, nested: { enabled: true } }"
+        />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`size: 16`)
+      expect(code).contains(`disabled: false`)
+      expect(code).contains(`tabindex: 0`)
+      expect(code).contains(`nullable: null`)
+      expect(code).contains(`missing: undefined`)
+      expect(code).contains(`big: 1n`)
+      expect(code).contains(`label: "Save 1"`)
+      expect(code).contains(`items: [1, 'two', false, null, undefined]`)
+      expect(code).contains(
+        `options: { placement: 'bottom', offset: 8, nested: { enabled: true } }`,
+      )
+    })
+
+    test('dynamic non-literal prop values stay as getter sources', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo :foo="bar" :obj="{ a: bar }" :handler="onClick" :formatter="v => v.toFixed(2)" :fn="() => bar" @click="foo" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`foo: () => (_ctx.bar)`)
+      expect(code).contains(`obj: () => ({ a: _ctx.bar })`)
+      expect(code).contains(`handler: () => (_ctx.onClick)`)
+      expect(code).contains(`formatter: () => (v => v.toFixed(2))`)
+      expect(code).contains(`fn: () => (() => _ctx.bar)`)
+      expect(code).contains(`onClick: () => _ctx.foo`)
+    })
+
+    test('unsupported constant prop shapes stay as getter sources', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo :computed="{ [foo]: 1 }" :spread="{ ...{ foo: 1 } }" :list="[1, ...[2]]" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`computed: () => ({ [_ctx.foo]: 1 })`)
+      expect(code).contains(`spread: () => ({ ...{ foo: 1 } })`)
+      expect(code).contains(`list: () => ([1, ...[2]])`)
+    })
+
+    test('template literal prop values with object and array interpolations stay as getter sources', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo :objLabel="\`\${{ __proto__: null }}\`" :arrLabel="\`\${[1]}\`" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`objLabel: () =>`)
+      expect(code).contains(`arrLabel: () =>`)
+    })
+
     test('v-bind="obj"', () => {
       const { code, ir } = compileWithElementTransform(`<Foo v-bind="obj" />`)
       expect(code).toMatchSnapshot()
@@ -264,7 +418,7 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"),
+    id: "foo",
     $: [
       () => (_ctx.obj)
     ]
@@ -289,7 +443,7 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
       expect(code).contains(`[
     () => (_ctx.obj),
-    { id: () => ("foo") }
+    { id: "foo" }
   ]`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -310,10 +464,10 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contains(`{
-    id: () => ("foo"),
+    id: "foo",
     $: [
       () => (_ctx.obj),
-      { class: () => ("bar") }
+      { class: "bar" }
     ]
   }`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -385,6 +539,18 @@ describe('compiler: element transform', () => {
           },
         ],
       })
+    })
+
+    test('v-on="obj" before static event keeps handler getters', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo v-on="obj" @foo="bar" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`[
+    () => (_toHandlers(_ctx.obj)),
+    { onFoo: () => _ctx.bar }
+  ]`)
+      expect(code).not.contains(`{ onFoo: _ctx.bar }`)
     })
 
     test('v-on expression is inline statement', () => {
@@ -589,7 +755,7 @@ describe('compiler: element transform', () => {
         },
       )
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createAssetComponent')
       expect(helpers).not.toContain('resolveDynamicComponent')
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -608,10 +774,10 @@ describe('compiler: element transform', () => {
         },
       )
       expect(code).toMatchSnapshot()
-      expect(helpers).toContain('resolveComponent')
+      expect(helpers).toContain('createAssetComponent')
       expect(helpers).not.toContain('resolveDynamicComponent')
       expect(code).toContain(
-        '_createComponentWithFallback(_component_custom_input, { is: () => ("foo") }, null, true)',
+        '_createAssetComponent("custom-input", { is: "foo" }, null, true)',
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -633,9 +799,8 @@ describe('compiler: element transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(
-        code.match(
-          /_createComponent\(_ctx\.Comp, \{ is: \(\) => \("Parent"\) \}\)/g,
-        )?.length,
+        code.match(/_createComponent\(_ctx\.Comp, \{ is: "Parent" \}\)/g)
+          ?.length,
       ).toBe(2)
     })
   })
@@ -896,31 +1061,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.SET_PROP,
-        element: 0,
-        prop: {
-          key: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'style',
-            isStatic: true,
-          },
-          values: [
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'color: green',
-              isStatic: true,
-            },
-            {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `{ color: 'red' }`,
-              isStatic: false,
-            },
-          ],
-        },
-      },
-    ])
+    expect(ir.block.operation).toMatchObject([])
   })
 
   test('props merging: class', () => {
@@ -1096,6 +1237,8 @@ describe('compiler: element transform', () => {
       `<Foo @[foo-bar]="bar" @[baz]="qux" />`,
     )
     expect(code).toMatchSnapshot()
+    expect(code).contains('[_toHandlerKey(_ctx.foo-_ctx.bar)]: _ctx.bar')
+    expect(code).contains('[_toHandlerKey(_ctx.baz)]: _ctx.qux')
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
       tag: 'Foo',
@@ -1110,6 +1253,28 @@ describe('compiler: element transform', () => {
           kind: IRDynamicPropsKind.ATTRIBUTE,
           key: { content: 'baz' },
           values: [{ content: 'qux' }],
+          handler: true,
+        },
+      ],
+    })
+  })
+
+  test('component with dynamic event arguments and inline statement', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<Foo @[event]="bar($event)" />`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '[_toHandlerKey(_ctx.event)]: $event => (_ctx.bar($event))',
+    )
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Foo',
+      props: [
+        {
+          kind: IRDynamicPropsKind.ATTRIBUTE,
+          key: { content: 'event' },
+          values: [{ content: 'bar($event)' }],
           handler: true,
         },
       ],
@@ -1229,7 +1394,7 @@ describe('compiler: element transform', () => {
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
     const expectedTemplate = '<svg><circle r=40>'
-    expect(code).contains(`_template("${expectedTemplate}", true, true, 1)`)
+    expect(code).contains(`_template("${expectedTemplate}", 3, 1)`)
     expect([...ir.template.keys()]).toMatchObject([expectedTemplate])
     expect(ir.template.entries[0].ns).toBe(1)
   })
@@ -1238,7 +1403,7 @@ describe('compiler: element transform', () => {
     const t = `<math><mrow><mi>x</mi></mrow></math>`
     const { code, ir } = compileWithElementTransform(t)
     expect(code).toMatchSnapshot()
-    expect(code).contains('_template("<math><mrow><mi>x", true, true, 2)')
+    expect(code).contains('_template("<math><mrow><mi>x", 3, 2)')
     expect([...ir.template.keys()]).toMatchObject(['<math><mrow><mi>x'])
     expect(ir.template.entries[0].ns).toBe(2)
   })

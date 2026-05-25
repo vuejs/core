@@ -12,7 +12,7 @@ import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genDynamicProps, genSetProp } from './prop'
-import { genSetTemplateRef } from './templateRef'
+import { genSetTemplateRef, genSetTemplateRefBinding } from './templateRef'
 import { genGetTextChild, genSetText } from './text'
 import {
   type CodeFragment,
@@ -112,42 +112,69 @@ export function genEffects(
     ids,
     frag: declarationFrags,
     varNames,
+    expressionReplacements,
   } = processExpressions(context, expressions, shouldDeclare)
-  push(...declarationFrags)
-  for (let i = 0; i < effects.length; i++) {
-    const effect = effects[i]
-    operationsCount += effect.operations.length
-    const frags = context.withId(() => genEffect(effect, context), ids)
-    i > 0 && push(NEWLINE)
-    if (frag[frag.length - 1] === ')' && frags[0] === '(') {
-      push(';')
+  if (shouldDeclare && !declarationFrags.length && !varNames.length) {
+    const effect = effects.length === 1 ? effects[0] : undefined
+    const operation =
+      effect && effect.operations.length === 1
+        ? effect.operations[0]
+        : undefined
+    if (
+      operation &&
+      operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
+      operation.effect &&
+      // Keep ref-for on the render-effect path so v-for branches reuse the
+      // root/slot-owner scoped _setTemplateRef instead of allocating a setter
+      // and its tracking WeakMaps for each item.
+      !operation.refFor
+    ) {
+      return context.withExpressionReplacements(expressionReplacements, () =>
+        context.withId(() => genSetTemplateRefBinding(operation, context), ids),
+      )
     }
-    push(...frags)
   }
-
-  const newLineCount = frag.filter(frag => frag === NEWLINE).length
-  if (newLineCount > 1 || operationsCount > 1 || declarationFrags.length > 0) {
-    unshift(`{`, INDENT_START, NEWLINE)
-    push(INDENT_END, NEWLINE, '}')
-    if (!effects.length) {
-      unshift(NEWLINE)
+  return context.withExpressionReplacements(expressionReplacements, () => {
+    push(...declarationFrags)
+    for (let i = 0; i < effects.length; i++) {
+      const effect = effects[i]
+      operationsCount += effect.operations.length
+      const frags = context.withId(() => genEffect(effect, context), ids)
+      i > 0 && push(NEWLINE)
+      if (frag[frag.length - 1] === ')' && frags[0] === '(') {
+        push(';')
+      }
+      push(...frags)
     }
-  }
 
-  if (effects.length) {
-    unshift(NEWLINE, `${helper('renderEffect')}(() => `)
-    push(`)`)
-  }
+    const newLineCount = frag.filter(frag => frag === NEWLINE).length
+    if (
+      newLineCount > 1 ||
+      operationsCount > 1 ||
+      declarationFrags.length > 0
+    ) {
+      unshift(`{`, INDENT_START, NEWLINE)
+      push(INDENT_END, NEWLINE, '}')
+      if (!effects.length) {
+        unshift(NEWLINE)
+      }
+    }
 
-  if (!shouldDeclare && varNames.length) {
-    unshift(NEWLINE, `let `, varNames.join(', '))
-  }
+    if (effects.length) {
+      unshift(NEWLINE, `${helper('renderEffect')}(() => `)
+      push(`)`)
+    }
 
-  if (genExtraFrag) {
-    push(...context.withId(genExtraFrag, ids))
-  }
+    if (!shouldDeclare && varNames.length) {
+      unshift(NEWLINE, `let `, varNames.join(', '))
+    }
 
-  return frag
+    if (genExtraFrag) {
+      push(...context.withId(genExtraFrag, ids))
+    }
+
+    return frag
+  })
 }
 
 export function genEffect(

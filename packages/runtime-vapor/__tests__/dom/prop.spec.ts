@@ -20,7 +20,14 @@ import {
   createComponent,
   isApplyingFallthroughProps,
 } from '../../src/component'
-import { ref, setCurrentInstance, svgNS, xlinkNS } from '@vue/runtime-dom'
+import {
+  effectScope,
+  nextTick,
+  ref,
+  setCurrentInstance,
+  svgNS,
+  xlinkNS,
+} from '@vue/runtime-dom'
 import { makeRender } from '../_utils'
 import {
   createDynamicComponent,
@@ -658,6 +665,35 @@ describe('patchProp', () => {
       expect(fallthroughSetCount).toBe(2)
     })
 
+    test('should clean dynamic event props on effect update and stop', async () => {
+      const el = document.createElement('button')
+      const active = ref(true)
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [active.value ? { onClick: handler } : {}])
+        })
+      })
+
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+
+      active.value = false
+      await nextTick()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+
+      active.value = true
+      await nextTick()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(2)
+
+      scope.stop()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(2)
+    })
+
     test('should restore fallthrough state when dynamic props throw', () => {
       const el = document.createElement('div')
       const attrs: Record<string, any> = {}
@@ -714,7 +750,7 @@ describe('patchProp', () => {
     test('with dynamic component', async () => {
       const Comp = defineVaporComponent({
         setup() {
-          return template('<div>child</div>', true)()
+          return template('<div>child</div>', 1)()
         },
       })
       const value = ref('foo')
@@ -745,7 +781,7 @@ describe('patchProp', () => {
     test('with component', async () => {
       const Comp = defineVaporComponent({
         setup() {
-          return template('<div>child</div>', true)()
+          return template('<div>child</div>', 1)()
         },
       })
       const value = ref('foo')
@@ -806,7 +842,7 @@ describe('patchProp', () => {
     test('with dynamic component', async () => {
       const Comp = defineVaporComponent({
         setup() {
-          return template('<div>child</div>', true)()
+          return template('<div>child</div>', 1)()
         },
       })
       const value = ref('<p>foo</p>')
@@ -837,7 +873,7 @@ describe('patchProp', () => {
     test('with component', async () => {
       const Comp = defineVaporComponent({
         setup() {
-          return template('<div>child</div>', true)()
+          return template('<div>child</div>', 1)()
         },
       })
       const value = ref('<p>foo</p>')

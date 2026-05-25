@@ -6,10 +6,13 @@ import {
   createIf,
   createSlot,
   createTemplateRefSetter,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   delegateEvents,
   insert,
   renderEffect,
+  setStaticTemplateRef,
+  setTemplateRefBinding,
   template,
 } from '../../src'
 import { compile, makeRender, runtimeDom, runtimeVapor } from '../_utils'
@@ -27,6 +30,7 @@ import { setElementText, setText } from '../../src/dom/prop'
 import type { VaporComponent } from '../../src/component'
 
 const define = makeRender()
+const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
 describe('api: template ref', () => {
   test('string ref mount', () => {
@@ -41,6 +45,26 @@ describe('api: template ref', () => {
       render() {
         const n0 = t0()
         createTemplateRefSetter()(n0 as Element, 'refKey')
+        return n0
+      },
+    })
+
+    const { host } = render()
+    expect(el.value).toBe(host.children[0])
+  })
+
+  test('static string ref helper mount', () => {
+    const t0 = template('<div ref="refKey"></div>')
+    const el = ref(null)
+    const { render } = define({
+      setup() {
+        return {
+          refKey: el,
+        }
+      },
+      render() {
+        const n0 = t0()
+        setStaticTemplateRef(n0 as Element, 'refKey')
         return n0
       },
     })
@@ -68,6 +92,35 @@ describe('api: template ref', () => {
         renderEffect(() => {
           setRef(n0 as Element, refKey.value)
         })
+        return n0
+      },
+    })
+    const { host } = render()
+    expect(fooEl.value).toBe(host.children[0])
+    expect(barEl.value).toBe(null)
+
+    refKey.value = 'bar'
+    await nextTick()
+    expect(barEl.value).toBe(host.children[0])
+    expect(fooEl.value).toBe(null)
+  })
+
+  it('string ref binding update', async () => {
+    const t0 = template('<div></div>')
+    const fooEl = ref(null)
+    const barEl = ref(null)
+    const refKey = ref('foo')
+
+    const { render } = define({
+      setup() {
+        return {
+          foo: fooEl,
+          bar: barEl,
+        }
+      },
+      render() {
+        const n0 = t0()
+        setTemplateRefBinding(n0 as Element, () => refKey.value)
         return n0
       },
     })
@@ -180,6 +233,33 @@ describe('api: template ref', () => {
         renderEffect(() => {
           setRef(n0 as Element, fn.value)
         })
+        return n0
+      },
+    })
+
+    const { host } = render()
+
+    expect(fn1.mock.calls).toHaveLength(1)
+    expect(fn1.mock.calls[0][0]).toBe(host.children[0])
+    expect(fn2.mock.calls).toHaveLength(0)
+
+    fn.value = fn2
+    await nextTick()
+    expect(fn1.mock.calls).toHaveLength(1)
+    expect(fn2.mock.calls).toHaveLength(1)
+    expect(fn2.mock.calls[0][0]).toBe(host.children[0])
+  })
+
+  it('function ref binding update', async () => {
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    const fn = ref(fn1)
+
+    const t0 = template('<div></div>')
+    const { render } = define({
+      render() {
+        const n0 = t0()
+        setTemplateRefBinding(n0 as Element, () => fn.value)
         return n0
       },
     })
@@ -644,6 +724,43 @@ describe('api: template ref', () => {
     expect(r.value).toBe(n)
   })
 
+  test('dynamic string ref binding inside slots', () => {
+    let childInstance: any
+    const { component: Child } = define({
+      setup() {
+        childInstance = currentInstance
+        return createSlot('default')
+      },
+    })
+
+    const r = ref()
+    const refName = ref('foo')
+    let n
+
+    const { render } = define({
+      setup() {
+        return {
+          foo: r,
+        }
+      },
+      render() {
+        const setRef = createTemplateRefSetter()
+        const n0 = createComponent(Child, null, {
+          default: () => {
+            n = document.createElement('div')
+            setTemplateRefBinding(n, () => refName.value, setRef)
+            return n
+          },
+        })
+        return n0
+      },
+    })
+
+    render()
+    expect(r.value).toBe(n)
+    expect(childInstance.refs.foo).toBeUndefined()
+  })
+
   test('inline ref inside slots', () => {
     const { component: Child } = define({
       setup() {
@@ -732,6 +849,122 @@ describe('api: template ref', () => {
     refKey.value.setMsg('changed')
     await nextTick()
     expect(html()).toBe('<div>changed</div><!--dynamic-component-->')
+  })
+
+  test('component static ref updates after async resolve', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const Child = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'async child' })
+        return template('<div>async child</div>')()
+      },
+    })
+    const foo = ref(null)
+
+    const { html } = define({
+      setup() {
+        return { foo }
+      },
+      render() {
+        const n0 = createComponent(AsyncChild)
+        setStaticTemplateRef(n0, 'foo')
+        return n0
+      },
+    }).render()
+
+    expect(foo.value).toBe(null)
+    expect(html()).toBe('<!--async component-->')
+
+    resolve!(Child)
+    await timeout()
+
+    expect(foo.value).toMatchObject({ name: 'async child' })
+    expect(html()).toBe('<div>async child</div><!--async component-->')
+  })
+
+  test('component static useTemplateRef updates after async resolve', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const Child = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'async child' })
+        return template('<div>async child</div>')()
+      },
+    })
+    let foo: ShallowRef
+
+    const { html } = define({
+      setup() {
+        foo = useTemplateRef('foo')
+      },
+      render() {
+        const n0 = createComponent(AsyncChild)
+        setStaticTemplateRef(n0, foo!, false, 'foo')
+        return n0
+      },
+    }).render()
+
+    expect(foo!.value).toBe(null)
+    expect(html()).toBe('<!--async component-->')
+
+    resolve!(Child)
+    await timeout()
+
+    expect(foo!.value).toMatchObject({ name: 'async child' })
+    expect(html()).toBe('<div>async child</div><!--async component-->')
+  })
+
+  test('component static ref updates when switching dynamic components', async () => {
+    const One = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'one' })
+        return template('<div>one</div>')()
+      },
+    })
+    const Two = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'two' })
+        return template('<div>two</div>')()
+      },
+    })
+
+    const views: VaporComponent[] = [One, Two]
+    const view = ref(0)
+    const foo = ref<any>(null)
+
+    const { html } = define({
+      setup() {
+        return { foo }
+      },
+      render() {
+        const n0 = createDynamicComponent(() => views[view.value]) as any
+        setStaticTemplateRef(n0, 'foo')
+        return n0
+      },
+    }).render()
+
+    await nextTick()
+    const one = foo.value
+    expect(one).toMatchObject({ name: 'one' })
+    expect(html()).toBe('<div>one</div><!--dynamic-component-->')
+
+    view.value = 1
+    await nextTick()
+
+    expect(foo.value).toMatchObject({ name: 'two' })
+    expect(foo.value).not.toBe(one)
+    expect(html()).toBe('<div>two</div><!--dynamic-component-->')
   })
 
   test('components that change their dynamics', async () => {

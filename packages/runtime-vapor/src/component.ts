@@ -33,6 +33,7 @@ import {
   pushWarningContext,
   queuePostFlushCb,
   registerHMR,
+  resolveComponent,
   setCurrentInstance,
   setCurrentRenderingInstance,
   startMeasure,
@@ -70,6 +71,7 @@ import {
   normalizePropsOptions,
   resolveDynamicProps,
   setupPropsValidation,
+  snapshotRawProps,
 } from './componentProps'
 import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
@@ -82,7 +84,9 @@ import {
   dynamicSlotsProxyHandlers,
   getScopeOwner,
   getSlot,
+  inOnceSlot,
   setCurrentSlotOwner,
+  withOnceSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -96,9 +100,10 @@ import {
   isComment,
   isHydrating,
   locateEndAnchor,
-  locateNextNode,
   markHydrationAnchor,
+  nextLogicalSibling,
   setCurrentHydrationNode,
+  withDeferredHydrationBoundary,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
 import type { TeleportFragment } from './components/Teleport'
@@ -232,19 +237,24 @@ interface SharedInternalOptions {
 // In TypeScript, it is actually impossible to have a record type with only
 // specific properties that have a different type from the indexed type.
 // This makes our rawProps / rawSlots shape difficult to satisfy when calling
-// `createComponent` - luckily this is not user-facing, so we don't need to be
-// 100% strict. Here we use intentionally wider types to make `createComponent`
-// more ergonomic in tests and internal call sites, where we immediately cast
-// them into the stricter types.
-export type LooseRawProps = Record<
-  string,
-  (() => unknown) | DynamicPropsSource[]
-> & {
+// `createComponent` - luckily this is not user-facing, so we use intentionally
+// wider types to make `createComponent` ergonomic in tests and internal call sites.
+export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
 }
 
-export type LooseRawSlots = Record<string, VaporSlot | DynamicSlotSource[]> & {
-  $?: DynamicSlotSource[]
+export type LooseRawSlots =
+  | VaporSlot
+  | (Record<string, VaporSlot | DynamicSlotSource[]> & {
+      $?: DynamicSlotSource[]
+    })
+
+export function normalizeRawSlots(
+  rawSlots?: LooseRawSlots | null,
+): RawSlots | null | undefined {
+  return rawSlots && isFunction(rawSlots)
+    ? { default: rawSlots }
+    : (rawSlots as RawSlots | null | undefined)
 }
 
 export function createComponent(
@@ -258,6 +268,11 @@ export function createComponent(
     emptyContext,
   managedMount = false,
 ): VaporComponentInstance {
+  // A component created while rendering a v-once slot should receive frozen
+  // parent inputs, but its own render effects should still be live.
+  const wasInOnceSlot = inOnceSlot
+  if (wasInOnceSlot) once = true
+
   if (isInteropEnabled && isCollectingVdomSlotVNodes) {
     if (component.__vapor) {
       // Vapor components cannot be represented as VDOM child metadata. Bail out
@@ -267,7 +282,6 @@ export function createComponent(
     const owner = getScopeOwner()
     if (owner) appContext = owner.appContext
   }
-
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationClose: Node | null = null
@@ -348,7 +362,8 @@ export function createComponent(
         component as any,
         currentInstance as any,
         rawProps,
-        rawSlots,
+        normalizeRawSlots(rawSlots),
+        once,
       )
       if (isCollectingVdomSlotVNodes) {
         // VDOM interop children already expose frag.vnode for collection. Do not
@@ -365,7 +380,7 @@ export function createComponent(
 
     // teleport
     if (isTeleportEnabled && isVaporTeleport(component)) {
-      const frag = component.process(rawProps!, rawSlots!)
+      const frag = component.process(rawProps!, normalizeRawSlots(rawSlots))
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
@@ -383,7 +398,7 @@ export function createComponent(
     const instance = new VaporComponentInstance(
       component,
       rawProps as RawProps,
-      rawSlots as RawSlots,
+      rawSlots,
       appContext,
       once,
     )
@@ -431,11 +446,16 @@ export function createComponent(
         component.__asyncHydrate &&
         !component.__asyncResolved
       ) {
+        const setup = () => setupComponent(instance, component)
         component.__asyncHydrate(
           currentHydrationNode as Element,
           instance,
-          () => setupComponent(instance, component),
+          // Async hydration re-enters setup later, so preserve the component
+          // boundary rule above when the delayed setup actually runs.
+          wasInOnceSlot ? () => withOnceSlot(setup, false) : setup,
         )
+      } else if (wasInOnceSlot) {
+        withOnceSlot(() => setupComponent(instance, component), false)
       } else {
         setupComponent(instance, component)
       }
@@ -709,6 +729,7 @@ export class VaporComponentInstance<
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes
   oncePropsCache?: Record<string | symbol, any>
+  isOnce: boolean
 
   // lifecycle hooks
   isMounted: boolean
@@ -758,7 +779,7 @@ export class VaporComponentInstance<
   constructor(
     comp: VaporComponent,
     rawProps?: RawProps | null,
-    rawSlots?: RawSlots | null,
+    rawSlots?: LooseRawSlots | null,
     appContext?: GenericAppContext,
     once?: boolean,
   ) {
@@ -781,6 +802,7 @@ export class VaporComponentInstance<
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)
+    this.isOnce = !!once
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
     this.expose = expose.bind(null, this) as any
@@ -804,10 +826,15 @@ export class VaporComponentInstance<
         false
 
     // init props
-    this.rawProps = rawProps || EMPTY_OBJ
-    this.hasFallthrough = hasFallthroughAttrs(comp, rawProps)
+    // Snapshot raw parent inputs before creating proxies so delayed reads from
+    // v-once children cannot observe later parent updates.
+    this.rawProps =
+      this.isOnce && rawProps
+        ? snapshotRawProps(rawProps)
+        : rawProps || EMPTY_OBJ
+    this.hasFallthrough = hasFallthroughAttrs(comp, this.rawProps)
     if (rawProps || comp.props) {
-      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp, once)
+      const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
       this.attrs = new Proxy(this, attrsHandlers)
       this.props = (
         comp.props
@@ -821,12 +848,13 @@ export class VaporComponentInstance<
     }
 
     // init slots
-    this.rawSlots = rawSlots || EMPTY_OBJ
+    const normalizedRawSlots = normalizeRawSlots(rawSlots)
+    this.rawSlots = normalizedRawSlots || EMPTY_OBJ
     this.slots = (
-      rawSlots
-        ? rawSlots.$
-          ? new Proxy(rawSlots, dynamicSlotsProxyHandlers)
-          : rawSlots
+      normalizedRawSlots
+        ? normalizedRawSlots.$
+          ? new Proxy(normalizedRawSlots, dynamicSlotsProxyHandlers)
+          : normalizedRawSlots
         : EMPTY_OBJ
     ) as Slots
 
@@ -870,6 +898,30 @@ export function isVaporComponent(
 }
 
 /**
+ * Resolve an asset component by name before passing it to the fallback helper;
+ * a string passed directly to `createComponentWithFallback` is plain element
+ * fallback, not a component name.
+ */
+export function createAssetComponent(
+  name: string,
+  rawProps?: LooseRawProps | null,
+  rawSlots?: LooseRawSlots | null,
+  isSingleRoot?: boolean,
+  once?: boolean,
+  maybeSelfReference?: boolean,
+  appContext?: GenericAppContext,
+): HTMLElement | VaporComponentInstance {
+  return createComponentWithFallback(
+    resolveComponent(name, maybeSelfReference) as VaporComponent | string,
+    rawProps,
+    rawSlots,
+    isSingleRoot,
+    once,
+    appContext,
+  )
+}
+
+/**
  * Used when a component cannot be resolved at compile time
  * and needs rely on runtime resolution - where it might fallback to a plain
  * element if the resolution fails.
@@ -892,7 +944,7 @@ export function createComponentWithFallback(
         return node as any as HTMLElement
       }
 
-      const nextAnchor = locateNextNode(currentHydrationNode)
+      const nextAnchor = nextLogicalSibling(currentHydrationNode)
       if (nextAnchor && isReusableNullComponentAnchor(nextAnchor)) {
         // Keep the cursor on the stale SSR node before `nextAnchor` so the
         // owning DynamicFragment can trim that range on hydrate exit and then
@@ -935,6 +987,7 @@ export function createPlainElement(
   isSingleRoot?: boolean,
   once?: boolean,
 ): HTMLElement {
+  rawSlots = normalizeRawSlots(rawSlots)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationCursor: HydrationCursor | null = null
@@ -944,8 +997,17 @@ export function createPlainElement(
     resetInsertionState()
   }
 
+  const defaultSlot = rawSlots && getSlot(rawSlots as RawSlots, 'default')
+  const hasDynamicSlots = !!rawSlots && !!rawSlots.$
+  const adoptHydrationChildren = !!defaultSlot
+  const hydrationTemplate =
+    hasDynamicSlots && !defaultSlot ? `<${comp}><!></${comp}>` : `<${comp}/>`
   const el = isHydrating
-    ? (adoptTemplate(currentHydrationNode!, `<${comp}/>`) as HTMLElement)
+    ? (adoptTemplate(
+        currentHydrationNode!,
+        hydrationTemplate,
+        adoptHydrationChildren,
+      ) as HTMLElement)
     : createElement(comp)
 
   // mark single root
@@ -966,7 +1028,7 @@ export function createPlainElement(
   if (rawSlots) {
     let nextNode: Node | null = null
     if (isHydrating) {
-      nextNode = locateNextNode(el)
+      nextNode = nextLogicalSibling(el)
       setCurrentHydrationNode(el.firstChild)
     }
     if (rawSlots.$) {
@@ -1018,11 +1080,17 @@ export function mountComponent(
       const reset =
         instance.restoreAsyncContext && instance.restoreAsyncContext()
       try {
-        handleSetupResult(setupResult, component, instance)
-        mountComponent(instance, parent, anchor)
         if (isHydrating) {
-          instance.deferredHydrationBoundary &&
-            instance.deferredHydrationBoundary()
+          withDeferredHydrationBoundary(() => {
+            handleSetupResult(setupResult, component, instance)
+            mountComponent(instance, parent, anchor)
+            if (instance.deferredHydrationBoundary) {
+              instance.deferredHydrationBoundary()
+            }
+          })
+        } else {
+          handleSetupResult(setupResult, component, instance)
+          mountComponent(instance, parent, anchor)
         }
       } finally {
         if (isHydrating) {

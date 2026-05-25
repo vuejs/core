@@ -252,7 +252,7 @@ describe('compiler: vModel transform', () => {
       expect(code).contains(
         `() => ({
       [_ctx.arg]: _ctx.foo,
-      ["onUpdate:" + _ctx.arg]: () => _value => (_ctx.foo = _value)
+      ["onUpdate:" + _ctx.arg]: _value => (_ctx.foo = _value)
     })`,
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -274,7 +274,8 @@ describe('compiler: vModel transform', () => {
         '<Comp v-model.trim.bar-baz="foo" />',
       )
       expect(code).toMatchSnapshot()
-      expect(code).contain(
+      expect(code).contain(`modelModifiers: { trim: true, "bar-baz": true }`)
+      expect(code).not.contain(
         `modelModifiers: () => ({ trim: true, "bar-baz": true })`,
       )
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -293,13 +294,29 @@ describe('compiler: vModel transform', () => {
       })
     })
 
+    test('v-model after dynamic bind keeps model getters', () => {
+      const { code } = compileWithVModel(
+        '<Comp v-bind="obj" v-model.trim="foo" />',
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`() => (_ctx.obj)`)
+      expect(code).contains(`modelValue: () => (_ctx.foo)`)
+      expect(code).contains(
+        `"onUpdate:modelValue": () => _value => (_ctx.foo = _value)`,
+      )
+      expect(code).contains(`modelModifiers: { trim: true }`)
+      expect(code).not.contains(`modelModifiers: () => ({ trim: true })`)
+    })
+
     test('v-model with arguments for component should generate modelModifiers', () => {
       const { code, ir } = compileWithVModel(
         '<Comp v-model:foo.trim="foo" v-model:bar.number="bar" />',
       )
       expect(code).toMatchSnapshot()
-      expect(code).contain(`fooModifiers: () => ({ trim: true })`)
-      expect(code).contain(`barModifiers: () => ({ number: true })`)
+      expect(code).contain(`fooModifiers: { trim: true }`)
+      expect(code).contain(`barModifiers: { number: true }`)
+      expect(code).not.contain(`fooModifiers: () => ({ trim: true })`)
+      expect(code).not.contain(`barModifiers: () => ({ number: true })`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'Comp',
@@ -327,7 +344,8 @@ describe('compiler: vModel transform', () => {
         '<Comp v-model:model.trim="foo" />',
       )
       expect(code).toMatchSnapshot()
-      expect(code).contain(`modelModifiers$: () => ({ trim: true })`)
+      expect(code).contain(`modelModifiers$: { trim: true }`)
+      expect(code).not.contain(`modelModifiers$: () => ({ trim: true })`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'Comp',
@@ -350,13 +368,13 @@ describe('compiler: vModel transform', () => {
       )
       expect(code).toMatchSnapshot()
       expect(code).contain(
-        '["onUpdate:" + _ctx.foo]: () => _value => (_ctx.foo = _value)',
+        '["onUpdate:" + _ctx.foo]: _value => (_ctx.foo = _value)',
       )
-      expect(code).contain(`[_ctx.foo + "Modifiers"]: () => ({ trim: true })`)
+      expect(code).contain(`[_ctx.foo + "Modifiers"]: { trim: true }`)
       expect(code).contain(
-        '["onUpdate:" + _ctx.bar]: () => _value => (_ctx.bar = _value)',
+        '["onUpdate:" + _ctx.bar]: _value => (_ctx.bar = _value)',
       )
-      expect(code).contain(`[_ctx.bar + "Modifiers"]: () => ({ number: true })`)
+      expect(code).contain(`[_ctx.bar + "Modifiers"]: { number: true }`)
       expect(ir.block.dynamic.children[0].operation).toMatchObject({
         type: IRNodeTypes.CREATE_COMPONENT_NODE,
         tag: 'Comp',

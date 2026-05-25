@@ -10,13 +10,16 @@ import {
   withDirectives,
 } from '../src'
 import { nextTick, ref } from '@vue/runtime-dom'
+import { VaporBlockShape } from '@vue/shared'
 import type { Mock } from 'vitest'
-import { makeRender } from './_utils'
+import { ifFlags, makeRender } from './_utils'
 import { unmountComponent } from '../src/component'
 import { setElementText } from '../src/dom/prop'
 import type { DynamicFragment } from '../src/fragment'
 
 const define = makeRender()
+const singleRootIfElse =
+  VaporBlockShape.SINGLE_ROOT | (VaporBlockShape.SINGLE_ROOT << 2)
 
 describe('createIf', () => {
   test('basic', async () => {
@@ -145,8 +148,7 @@ describe('createIf', () => {
           () => toggle.value,
           () => template('<p>foo</p>')(),
           () => template('<p>bar</p>')(),
-          undefined,
-          true,
+          ifFlags(singleRootIfElse, true),
         )
       },
     }).render()
@@ -198,9 +200,7 @@ describe('createIf', () => {
         () => show.value,
         () => (branch = t0()),
         () => (branch = t1()),
-        undefined,
-        undefined,
-        0,
+        ifFlags(singleRootIfElse, false, 0),
       ),
     ).render()
 
@@ -234,9 +234,7 @@ describe('createIf', () => {
         () => show.value,
         () => (branch = t0()),
         () => (branch = t1()),
-        undefined,
-        undefined,
-        0,
+        ifFlags(singleRootIfElse, false, 0),
       ),
     ]).render()
 
@@ -270,16 +268,14 @@ describe('createIf', () => {
               () => show.value,
               () => (branch = t0()),
               () => (branch = t1()),
-              undefined,
-              undefined,
-              0,
+              ifFlags(singleRootIfElse, false, 0),
             ),
         },
         true,
       ),
     ).render()
 
-    expect(branch.$key).toBe('00')
+    expect(branch.$key).toBe(0)
   })
 
   // vapor custom directives have no lifecycle hooks.

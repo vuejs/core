@@ -4,6 +4,7 @@ import VaporComp from './components/VaporComp.vue'
 import VaporCompA from '../transition/components/VaporCompA.vue'
 import VdomComp from '../transition/components/VdomComp.vue'
 import VaporSlot from '../transition/components/VaporSlot.vue'
+import VdomTransitionGroup from './components/VdomTransitionGroup.vue'
 
 const msg = ref('hello')
 const passSlot = ref(true)
@@ -67,5 +68,6 @@ const enterClick = () => items.value.push('d', 'e')
         </transition-group>
       </div>
     </div>
+    <VdomTransitionGroup />
   </div>
 </template>

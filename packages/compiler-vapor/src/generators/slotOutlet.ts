@@ -10,28 +10,36 @@ export function genSlotOutlet(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { id, name, fallback, noSlotted, once } = oper
+  const { id, name, fallback, flags } = oper
   const [frag, push] = buildCodeFragment()
-
-  const nameExpr = name.isStatic
-    ? genExpression(name, context)
-    : ['() => (', ...genExpression(name, context), ')']
 
   let fallbackArg: CodeFragment[] | undefined
   if (fallback) {
     fallbackArg = genBlock(fallback, context)
   }
+  const createSlot = helper('createSlot')
+  const rawPropsArg = genRawProps(oper.props, context, true)
+  const omitDefaultName =
+    name.isStatic &&
+    name.content === 'default' &&
+    !rawPropsArg &&
+    !fallbackArg &&
+    !flags
+  const nameArg = omitDefaultName
+    ? undefined
+    : name.isStatic
+      ? genExpression(name, context)
+      : ['() => (', ...genExpression(name, context), ')']
 
   push(
     NEWLINE,
     `const n${id} = `,
     ...genCall(
-      helper('createSlot'),
-      nameExpr,
-      genRawProps(oper.props, context) || 'null',
+      createSlot,
+      nameArg,
+      rawPropsArg,
       fallbackArg,
-      noSlotted && 'true', // noSlotted
-      once && 'true', // v-once
+      flags ? String(flags) : undefined,
     ),
   )
 

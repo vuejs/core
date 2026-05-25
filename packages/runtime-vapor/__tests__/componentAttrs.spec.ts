@@ -30,7 +30,7 @@ delegateEvents('click')
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
-    const t0 = template('<div>', true)
+    const t0 = template('<div>', 1)
     const { component: Child } = define({
       props: ['foo'],
       setup(props: any) {
@@ -92,7 +92,7 @@ describe('attribute fallthrough', () => {
       childUpdated()
       const n0 = template(
         '<div class="c2" style="font-weight: bold"></div>',
-        true,
+        1,
       )() as Element
       renderEffect(() => setElementText(n0, props.foo))
       return n0
@@ -148,7 +148,7 @@ describe('attribute fallthrough', () => {
       childUpdated()
       const n0 = template(
         '<div class="c2" style="font-weight: bold"></div>',
-        true,
+        1,
       )() as Element
       renderEffect(() => setElementText(n0, props.foo))
       return n0
@@ -222,7 +222,7 @@ describe('attribute fallthrough', () => {
         onUpdated(grandChildUpdated)
         const n0 = template(
           '<div class="c2" style="font-weight: bold"></div>',
-          true,
+          1,
         )() as Element
         renderEffect(() => {
           setProp(n0, 'id', props.id)
@@ -274,7 +274,7 @@ describe('attribute fallthrough', () => {
       props: ['foo'],
       inheritAttrs: false,
       setup(props) {
-        const n0 = template('<div></div>', true)() as Element
+        const n0 = template('<div></div>', 1)() as Element
         renderEffect(() => setElementText(n0, props.foo))
         return n0
       },
@@ -287,9 +287,14 @@ describe('attribute fallthrough', () => {
   })
 
   it('explicit spreading with inheritAttrs: false', () => {
+    const click = vi.fn()
     const Parent = defineVaporComponent({
       setup() {
-        return createComponent(Child, { foo: () => 1, class: () => 'parent' })
+        return createComponent(Child, {
+          foo: () => 1,
+          class: () => 'parent',
+          onClick: () => click,
+        })
       },
     })
 
@@ -297,7 +302,7 @@ describe('attribute fallthrough', () => {
       props: ['foo'],
       inheritAttrs: false,
       setup(props, { attrs }) {
-        const n0 = template('<div>', true)() as Element
+        const n0 = template('<div>', 1)() as Element
         renderEffect(() => {
           setElementText(n0, props.foo)
           setDynamicProps(n0, [{ class: 'child' }, attrs])
@@ -306,10 +311,12 @@ describe('attribute fallthrough', () => {
       },
     })
 
-    const { html } = define(Parent).render()
+    const { host, html } = define(Parent).render()
 
     // should merge parent/child classes
     expect(html()).toMatch(`<div class="child parent">1</div>`)
+    ;(host.children[0] as HTMLElement).click()
+    expect(click).toHaveBeenCalledTimes(1)
   })
 
   it('should warn when fallthrough fails on non-single-root', () => {
@@ -379,7 +386,7 @@ describe('attribute fallthrough', () => {
 
     const Child = defineVaporComponent({
       setup(_, { attrs }) {
-        const n0 = template('<div></div>', true)() as any
+        const n0 = template('<div></div>', 1)() as any
         n0.$evtclick = withModifiers(() => {}, ['prevent', 'stop'])
         renderEffect(() => setDynamicProps(n0, [attrs]))
         return n0
@@ -784,9 +791,9 @@ describe('attribute fallthrough', () => {
   })
 
   it('if block', async () => {
-    const t0 = template('<div>foo</div>', true)
-    const t1 = template('<div>bar</div>', true)
-    const t2 = template('<div>baz</div>', true)
+    const t0 = template('<div>foo</div>', 1)
+    const t1 = template('<div>bar</div>', 1)
+    const t2 = template('<div>baz</div>', 1)
     const { component: Child } = define({
       setup() {
         const n0 = createIf(
@@ -880,7 +887,7 @@ describe('attribute fallthrough', () => {
   })
 
   it('should not fallthrough if explicitly pass inheritAttrs: false', async () => {
-    const t0 = template('<div>', true)
+    const t0 = template('<div>', 1)
     const { component: Child } = define({
       props: ['foo'],
       inheritAttrs: false,
@@ -918,7 +925,7 @@ describe('attribute fallthrough', () => {
   })
 
   it('should pass through attrs in nested single root components', async () => {
-    const t0 = template('<div>', true)
+    const t0 = template('<div>', 1)
     const { component: Grandson } = define({
       props: ['custom-attr'],
       setup(_: any, { attrs }: any) {
@@ -973,7 +980,7 @@ describe('attribute fallthrough', () => {
     const parentClass = ref('parent')
     const childClass = ref('child')
 
-    const t0 = template('<div>', true /* root */)
+    const t0 = template('<div>', 1 /* root */)
     const Child = defineVaporComponent({
       setup() {
         const n = t0() as Element
@@ -1035,7 +1042,7 @@ describe('attribute fallthrough', () => {
     const parentStyle: Ref<string | null> = ref('font-size:12px')
     const childStyle = ref('font-weight:bold')
 
-    const t0 = template('<div>', true /* root */)
+    const t0 = template('<div>', 1 /* root */)
     const Child = defineVaporComponent({
       setup() {
         const n = t0() as Element
@@ -1141,7 +1148,7 @@ describe('attribute fallthrough', () => {
     const parentVal = ref('parent')
     const childVal = ref('child')
 
-    const t0 = template('<div>', true /* root */)
+    const t0 = template('<div>', 1 /* root */)
     const Child = defineVaporComponent({
       setup() {
         const n = t0()
@@ -1184,7 +1191,7 @@ describe('attribute fallthrough', () => {
   })
 
   it('empty string should not be passed to classList.add', async () => {
-    const t0 = template('<div>', true /* root */)
+    const t0 = template('<div>', 1 /* root */)
     const Child = defineVaporComponent({
       setup() {
         const n = t0() as Element

@@ -24,6 +24,7 @@ import {
   isHydrating,
   locateEndAnchor,
   setCurrentHydrationNode,
+  withDeferredHydrationBoundary,
 } from './dom/hydration'
 import type { TransitionOptions } from './block'
 import { _next } from './dom/node'
@@ -93,7 +94,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       performAsyncHydrate(
         el,
         instance,
-        () => hydrateNode(el, hydrate),
+        () => hydrateNode(el, () => withDeferredHydrationBoundary(hydrate)),
         getResolvedComp,
         load,
         hydrateStrategy,
@@ -211,7 +212,9 @@ function createInnerComp(
       // rawProps is shared and already contains fallthrough attrs.
       // so isSingleRoot should be undefined
       undefined,
-      undefined,
+      // The resolved inner component is the real input boundary for async
+      // components, so it must inherit the wrapper's v-once state.
+      parent.isOnce,
       parent.appContext,
     )
   } finally {

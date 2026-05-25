@@ -117,7 +117,7 @@ describe('v-text', () => {
 
     expect(code).matchSnapshot()
     // children should have been removed
-    expect(code).contains('template("<div> ", true)')
+    expect(code).contains('template("<div> ", 1)')
   })
 
   test('should raise error if has no expression', () => {

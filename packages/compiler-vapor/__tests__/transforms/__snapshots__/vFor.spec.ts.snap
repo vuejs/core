@@ -10,7 +10,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value[0] + _for_item0.value.slice(1) + _for_key0.value)))
     return n2
-  }, ([id, ...other], index) => (id))
+  }, ([id, ...other], index) => (id), 8)
   return n0
 }"
 `;
@@ -25,7 +25,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value[0] + _for_item0.value[1] + _for_key0.value)))
     return n2
-  }, ([id, other], index) => (id))
+  }, ([id, other], index) => (id), 8)
   return n0
 }"
 `;
@@ -42,7 +42,7 @@ export function render(_ctx) {
     n2.$evtclick = _createInvoker(() => (_ctx.remove(_for_item0.value)))
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
     return n2
-  }, (item) => (item.id))
+  }, (item) => (item.id), 8)
   return n0
 }"
 `;
@@ -57,7 +57,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _setText(x2, _toDisplayString(_for_item0.value.id + _for_item0.value.id))
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   return n0
 }"
 `;
@@ -74,7 +74,7 @@ export function render(_ctx) {
       _setClassName(n2, (_for_item0.value.id === _ctx.state.selected ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -92,7 +92,7 @@ export function render(_ctx) {
       _setClassName(n2, (_todo.completed ? 1 : 0) | (_todo === _ctx.editedTodo ? 2 : 0), [" completed", " editing"])
     })
     return n2
-  }, (todo) => (todo.id))
+  }, (todo) => (todo.id), 8)
   return n0
 }"
 `;
@@ -109,7 +109,7 @@ export function render(_ctx) {
       _setProp(n2, "index", _for_key0.value)
     })
     return n2
-  })
+  }, undefined, 8)
   return n0
 }"
 `;
@@ -130,7 +130,7 @@ export function render(_ctx) {
       _setProp(n2, "title", _ctx.active === _for_item0.value.id ? 'b' : '')
     })
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   n0.onReset(_selector0_0.reset)
   n0.onReset(_selector0_1.reset)
   return n0
@@ -151,9 +151,9 @@ export function render(_ctx) {
       const x4 = _txt(n4)
       _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value+_for_item0.value)))
       return n4
-    }, undefined, 1)
+    }, undefined, 9)
     return n5
-  })
+  }, undefined, 8)
   return n0
 }"
 `;
@@ -168,7 +168,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id + _getRestElement(_for_item0.value, ["id"]) + _for_key0.value)))
     return n2
-  }, ({ id, ...other }, index) => (id))
+  }, ({ id, ...other }, index) => (id), 8)
   return n0
 }"
 `;
@@ -183,7 +183,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id) + _toDisplayString(_for_item0.value.value)))
     return n2
-  }, ({ id, value }) => (id))
+  }, ({ id, value }) => (id), 8)
   return n0
 }"
 `;
@@ -198,7 +198,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value + _for_key0.value + _for_index0.value)))
     return n2
-  }, (value, key, index) => (key))
+  }, (value, key, index) => (key), 8)
   return n0
 }"
 `;
@@ -216,7 +216,7 @@ export function render(_ctx) {
       _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
     })
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -234,7 +234,7 @@ export function render(_ctx) {
       _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -252,7 +252,7 @@ export function render(_ctx) {
       _setClassName(n2, (_row.label === _row.id ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   return n0
 }"
 `;
@@ -269,7 +269,7 @@ export function render(_ctx) {
       _setClassName(n2, (_for_item0.value.id === _ctx.selected ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -285,7 +285,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_getDefaultValue(_for_item0.value.foo, _ctx.bar) + _ctx.bar + _ctx.baz + _getDefaultValue(_for_item0.value.baz[0], _ctx.quux) + _ctx.quux)))
     return n2
-  })
+  }, undefined, 8)
   return n0
 }"
 `;
@@ -306,6 +306,98 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > v-for on dynamic component marks fragment block 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, createFor as _createFor } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = _createDynamicComponent(() => (_ctx.view))
+    return n2
+  }, (item) => (item.id), 18)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on slot outlet marks fragment block 1`] = `
+"import { createSlot as _createSlot, createFor as _createFor } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = _createSlot(() => (_for_item0.value.name))
+    return n2
+  }, (item) => (item.id), 16)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on static dynamic component keeps component block 1`] = `
+"import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = _createComponentWithFallback(_resolveDynamicComponent("view"))
+    return n2
+  }, (item) => (item.id), 2)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with element and component v-if branches 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>hi")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createIf(() => (_for_item0.value.id===1), () => {
+      const n4 = t0()
+      return n4
+    }, () => {
+      const n6 = _createComponentWithFallback(_component_Comp)
+      return n6
+    }, 42 /* BLOCK_SHAPE, INDEX_SHIFT */)
+    return n2
+  }, undefined, 16)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with keyed child marks fragment block 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createKeyedFragment as _createKeyedFragment, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createKeyedFragment(() => (_for_item0.value.id), () => {
+      const n3 = t0()
+      const x3 = _txt(n3)
+      _renderEffect(() => _setText(x3, _toDisplayString(_for_item0.value.text)))
+      return n3
+    })
+    return n2
+  }, undefined, 16)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with nested v-for child marks fragment block 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = _createFor(() => (_for_item0.value), (_for_item1) => {
+      const n4 = t0()
+      const x4 = _txt(n4)
+      _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value)))
+      return n4
+    }, undefined, 8)
+    return n2
+  }, undefined, 16)
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > v-for on template with single component child 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template(" ")
@@ -322,6 +414,28 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > v-for single node flag is not set for fragment item blocks 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+const t1 = _template("<span> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = t0()
+    const n3 = t1()
+    const x2 = _txt(n2)
+    const x3 = _txt(n3)
+    _renderEffect(() => {
+      const _item = _for_item0.value
+      _setText(x2, _toDisplayString(_item))
+      _setText(x3, _toDisplayString(_item))
+    })
+    return [n2, n3]
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > w/o value 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div>item")
@@ -330,7 +444,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
     return n2
-  })
+  }, undefined, 8)
   return n0
 }"
 `;

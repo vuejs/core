@@ -4,6 +4,7 @@ import {
   isHydrating as isVdomHydrating,
   warn,
 } from '@vue/runtime-dom'
+import { type Namespace, Namespaces } from '@vue/shared'
 import {
   insertionIndex,
   insertionParent,
@@ -20,6 +21,8 @@ import {
 } from './node'
 import { remove } from '../block'
 
+const START_TAG_RE = /^<([^\s/>]+)/
+
 export let isHydratingEnabled = false
 
 export function setIsHydratingEnabled(value: boolean): void {
@@ -35,6 +38,21 @@ function setIsHydrating(value: boolean) {
     return isHydrating
   } finally {
     isHydrating = value
+  }
+}
+
+let deferredHydrationBoundaryDepth = 0
+
+export function isInDeferredHydrationBoundary(): boolean {
+  return deferredHydrationBoundaryDepth > 0
+}
+
+export function withDeferredHydrationBoundary<T>(fn: () => T): T {
+  deferredHydrationBoundaryDepth++
+  try {
+    return fn()
+  } finally {
+    deferredHydrationBoundaryDepth--
   }
 }
 
@@ -109,7 +127,12 @@ export function enterHydration(node: Node): () => void {
   }
 }
 
-export let adoptTemplate: (node: Node, template: string) => Node | null
+export let adoptTemplate: (
+  node: Node,
+  template: string,
+  adoptChildren?: boolean,
+  ns?: Namespace,
+) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
 type Anchor = Node & {
@@ -188,7 +211,12 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
  * Locate the first non-fragment-comment node and locate the next node
  * while handling potential fragments.
  */
-function adoptTemplateImpl(node: Node, template: string): Node | null {
+function adoptTemplateImpl(
+  node: Node,
+  template: string,
+  adoptChildren = false,
+  ns?: Namespace,
+): Node | null {
   if (!(template[0] === '<' && template[1] === '!')) {
     // empty text node in slot
     if (
@@ -210,19 +238,19 @@ function adoptTemplateImpl(node: Node, template: string): Node | null {
     (type === 1 &&
       !template.startsWith(`<` + (node as Element).tagName.toLowerCase()))
   ) {
-    node = handleMismatch(node, template)
+    node = handleMismatch(node, template, adoptChildren, ns)
   }
 
   advanceHydrationNode(node)
   return node
 }
 
-export function locateNextNode(node: Node): Node | null {
+export function nextLogicalSibling(node: Node): Node | null {
   return isComment(node, '[')
-    ? _next(locateEndAnchor(node)!)
+    ? locateEndAnchor(node)!.nextSibling
     : isComment(node, 'teleport start')
-      ? _next(locateEndAnchor(node, 'teleport start', 'teleport end')!)
-      : _next(node)
+      ? locateEndAnchor(node, 'teleport start', 'teleport end')!.nextSibling
+      : node.nextSibling
 }
 
 function locateHydrationNodeImpl(consumeFragmentStart = false) {
@@ -290,9 +318,9 @@ export function locateHydrationBoundaryClose(
     if (isComment(node, ']')) {
       close = node
     } else {
-      let candidate = locateNextNode(node)
+      let candidate = nextLogicalSibling(node)
       while (candidate && !isComment(candidate, ']')) {
-        candidate = locateNextNode(candidate)
+        candidate = nextLogicalSibling(candidate)
       }
       close = candidate
     }
@@ -305,22 +333,13 @@ export function locateHydrationBoundaryClose(
   return close
 }
 
-function handleMismatch(node: Node, template: string): Node {
-  if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
-    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      warn(
-        `Hydration node mismatch:\n- rendered on server:`,
-        node,
-        node.nodeType === 3
-          ? `(text)`
-          : isComment(node, '[[')
-            ? `(start of block node)`
-            : ``,
-        `\n- expected on client:`,
-        template,
-      )
-    logMismatchError()
-  }
+function handleMismatch(
+  node: Node,
+  template: string,
+  adoptChildren: boolean,
+  ns?: Namespace,
+): Node {
+  warnHydrationNodeMismatch(node, template)
 
   // fragment
   if (isComment(node, '[')) {
@@ -344,18 +363,73 @@ function handleMismatch(node: Node, template: string): Node {
 
   // element node
   const t = createElement('template') as HTMLTemplateElement
-  t.innerHTML = template
-  const newNode = _child(t.content).cloneNode(true) as Element
-  // only carry over existing children/attrs when the original node is itself
-  // an element (the legacy element-vs-element mismatch case).
-  if (node.nodeType === 1) {
-    newNode.innerHTML = (node as Element).innerHTML
-    Array.from((node as Element).attributes).forEach(attr => {
-      newNode.setAttribute(attr.name, attr.value)
-    })
+  let newNode: Element
+  if (ns) {
+    const tag = ns === Namespaces.SVG ? 'svg' : 'math'
+    t.innerHTML = `<${tag}>${template}</${tag}>`
+    newNode = _child(_child(t.content) as ParentNode).cloneNode(true) as Element
+  } else {
+    t.innerHTML = template
+    newNode = _child(t.content).cloneNode(true) as Element
+  }
+  if (adoptChildren && node.nodeType === 1 && !newNode.firstChild) {
+    let child = node.firstChild
+    while (child) {
+      const nextChild = child.nextSibling
+      newNode.appendChild(child)
+      child = nextChild
+    }
   }
   container.insertBefore(newNode, next)
   return newNode
+}
+
+export function validateHydrationTarget(node: Node, template: string): void {
+  let expectedType: number
+  if (template[0] !== '<') {
+    expectedType = 3
+  } else if (template[1] === '!') {
+    expectedType = 8
+  } else {
+    expectedType = 1
+  }
+
+  if (node.nodeType !== expectedType) {
+    warnHydrationNodeMismatch(node, template)
+    return
+  }
+
+  if (expectedType !== 1) {
+    return
+  }
+
+  const match = START_TAG_RE.exec(template)
+  const expectedTag = match && match[1]
+
+  if (
+    expectedTag &&
+    (node as Element).tagName.toLowerCase() !== expectedTag.toLowerCase()
+  ) {
+    warnHydrationNodeMismatch(node, template)
+  }
+}
+
+function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
+  if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Hydration node mismatch:\n- rendered on server:`,
+        node,
+        node.nodeType === 3
+          ? `(text)`
+          : isComment(node, '[[')
+            ? `(start of block node)`
+            : ``,
+        `\n- expected on client:`,
+        expected,
+      )
+    logMismatchError()
+  }
 }
 
 let hasLoggedMismatchError = false
@@ -421,7 +495,7 @@ export function cleanupHydrationTail(node: Node, container?: ParentNode): void {
 
   let current: Node | null = node
   while (current && current.parentNode === container) {
-    const next = locateNextNode(current)
+    const next = nextLogicalSibling(current)
     removeHydrationNode(current)
     current = next
   }
@@ -478,7 +552,7 @@ function finalizeHydrationBoundary(close: Node | null): void {
     if (!isHydrationAnchor(cur)) {
       hasRemovableNode = true
     }
-    cur = locateNextNode(cur)
+    cur = nextLogicalSibling(cur)
   }
   if (!cur) return
   if (!hasRemovableNode) {
@@ -489,7 +563,7 @@ function finalizeHydrationBoundary(close: Node | null): void {
   warnHydrationChildrenMismatch((close as Node).parentElement)
 
   while (node && node !== close) {
-    const next = locateNextNode(node)
+    const next = nextLogicalSibling(node)
     if (!isHydrationAnchor(node)) {
       removeHydrationNode(node, close)
     }

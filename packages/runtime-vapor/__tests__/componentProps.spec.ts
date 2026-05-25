@@ -15,6 +15,7 @@ import {
   renderEffect,
   template,
 } from '../src'
+import { resolveDynamicProps } from '../src/componentProps'
 import { makeRender } from './_utils'
 import { setElementText } from '../src/dom/prop'
 
@@ -673,7 +674,7 @@ describe('component: props', () => {
       let childRenderCount = 0
       const activeId = ref(0)
 
-      const t0 = template('<div></div>', true)
+      const t0 = template('<div></div>', 1)
       const Child = defineVaporComponent({
         props: ['active', 'tone'],
         setup(props: any) {
@@ -766,13 +767,13 @@ describe('component: props', () => {
       const { host } = define({
         setup() {
           return createComponent(Child, {
-            id: () => 'static',
+            id: 'static',
             $: [
               () => {
                 sourceCallCount++
                 return obj.value
               },
-              { class: () => 'bar' },
+              { class: 'bar' },
             ],
           })
         },
@@ -786,6 +787,43 @@ describe('component: props', () => {
 
       expect(host.innerHTML).toBe('<div>static-2-bar</div>')
       expect(sourceCallCount).toBe(2)
+    })
+
+    test('static object source direct values are exposed as attrs', () => {
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        setup(_: any, { attrs }: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            setElementText(n0, `${attrs.id}-${attrs.class}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [{ id: 'foo', class: 'bar' }],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div id="foo" class="bar">foo-bar</div>')
+    })
+
+    test('resolveDynamicProps supports direct values in static object sources', () => {
+      expect(
+        resolveDynamicProps({
+          id: 'foo',
+          class: 'base',
+          $: [() => ({ class: 'dynamic' }), { class: 'bar', title: 'baz' }],
+        }),
+      ).toEqual({
+        id: 'foo',
+        class: ['base', 'dynamic', 'bar'],
+        title: 'baz',
+      })
     })
   })
 })

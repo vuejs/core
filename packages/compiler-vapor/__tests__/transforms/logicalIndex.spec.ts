@@ -57,8 +57,43 @@ describe('compiler: logicalIndex', () => {
           </div>
         </div>
       `)
-      // nthChild(parent, elementIndex=3, logicalIndex=3) for the anchor
-      expect(code).toContain('_nthChild(n5, 3, 3)')
+      // nthChild(parent, elementIndex=3) for the anchor
+      expect(code).toContain('_nthChild(n5, 3)')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('nthChild keeps logicalIndex when it differs from element index', () => {
+      // <div><Comp /><div /><span /><div v-if="true" /><div><button :disabled="foo" /></div></div>
+      // Comp is prepended and not part of the template, so the v-if append
+      // anchor is elementIndex=2 but logicalIndex=3.
+      const { code } = compileWithTransforms(`
+        <div>
+          <Comp />
+          <div />
+          <span />
+          <div v-if="true" />
+          <div>
+            <button :disabled="foo" />
+          </div>
+        </div>
+      `)
+      expect(code).toMatch(/_nthChild\(n\d+, 2, 3\)/)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('inline placeholder keeps logicalIndex when it differs from element index', () => {
+      // <div><Comp /><i /><b /><section><span>{{ msg }}</span></section></div>
+      // Comp is prepended and not part of the template, so the section is
+      // elementIndex=2 but logicalIndex=3.
+      const { code } = compileWithTransforms(`
+        <div>
+          <Comp />
+          <i />
+          <b />
+          <section><span>{{ msg }}</span></section>
+        </div>
+      `)
+      expect(code).toMatch(/const n\d+ = _child\(_nthChild\(n\d+, 2, 3\)\)/)
       expect(code).toMatchSnapshot()
     })
 

@@ -40,6 +40,7 @@ import { renderEffect } from '../renderEffect'
 import {
   DynamicFragment,
   ForFragment,
+  SlotFragment,
   type VaporFragment,
   isFragment,
 } from '../fragment'
@@ -326,8 +327,15 @@ function applyResolvedTransitionHooks(
     }
   }
 
-  // delegate to TransitionGroup's apply logic for list children
-  if (hooks.applyGroup && block instanceof ForFragment) {
+  // Delegate list/root-slot wrappers back to TransitionGroup's apply logic.
+  // Other fragment shapes, such as keyed v-if branches, still need normal
+  // enter/leave hooks for their resolved single child.
+  if (
+    hooks.applyGroup &&
+    (block instanceof ForFragment ||
+      block instanceof SlotFragment ||
+      (isVaporComponent(block) && block.block instanceof SlotFragment))
+  ) {
     hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
     return { hooks }
   }

@@ -20,13 +20,18 @@ import {
   camelize,
   capitalize,
   extend,
+  includeBooleanAttr,
   isAlwaysCloseTag,
   isBlockTag,
+  isBooleanAttr,
   isBuiltInDirective,
   isFormattingTag,
   isInlineTag,
   isVoidTag,
   makeMap,
+  normalizeClass,
+  normalizeStyle,
+  stringifyStyle,
 } from '@vue/shared'
 import type {
   DirectiveTransformResult,
@@ -54,6 +59,7 @@ import {
 } from '../utils'
 import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
 import { normalizeBindShorthand } from './vBind'
+import type { Expression, ObjectExpression, ObjectProperty } from '@babel/types'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -431,6 +437,26 @@ function transformNativeElement(
     // tracks if previous attribute was quoted, allowing space omission
     // e.g. `class="foo"id="bar"` is valid, `class=foo id=bar` needs space
     let prevWasQuoted = false
+    const appendTemplateProp = (
+      key: string,
+      value: string = '',
+      generated: boolean = false,
+    ) => {
+      if (!prevWasQuoted) template += ` `
+      template += key
+
+      if (value) {
+        const escapedValue = generated
+          ? escapeGeneratedAttrValue(value)
+          : value.replace(/"/g, '&quot;')
+        template += (prevWasQuoted = NEEDS_QUOTES_RE.test(value))
+          ? `="${escapedValue}"`
+          : `=${escapedValue}`
+      } else {
+        prevWasQuoted = false
+      }
+    }
+
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       // handling asset imports
@@ -444,23 +470,67 @@ function transformNativeElement(
         // with string concatenation in the generator, see genTemplates
         template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
         prevWasQuoted = true
+      } else if (key.isStatic && !prop.modifier && isBooleanAttr(key.content)) {
+        if (
+          values.length === 1 &&
+          (values[0].isStatic || values[0].content === "''") &&
+          !dynamicKeys.includes(key.content)
+        ) {
+          const value = values[0].content === "''" ? '' : values[0].content
+          appendTemplateProp(key.content, value)
+        } else {
+          const include = foldBooleanAttrValue(values)
+          if (include != null) {
+            if (include) {
+              appendTemplateProp(key.content)
+            }
+          } else {
+            dynamicProps.push(key.content)
+            context.registerEffect(
+              values,
+              {
+                type: IRNodeTypes.SET_PROP,
+                element: context.reference(),
+                prop,
+                tag,
+              },
+              getEffectIndex,
+            )
+          }
+        }
+      } else if (key.isStatic && !prop.modifier && hasBoundValue(values)) {
+        let foldedValue: string | undefined
+        if (key.content === 'class') {
+          foldedValue = foldClassValues(values)
+        } else if (key.content === 'style') {
+          foldedValue = foldStyleValues(values)
+        }
+
+        if (foldedValue != null) {
+          if (foldedValue) {
+            appendTemplateProp(key.content, foldedValue, true)
+          }
+        } else {
+          dynamicProps.push(key.content)
+          context.registerEffect(
+            values,
+            {
+              type: IRNodeTypes.SET_PROP,
+              element: context.reference(),
+              prop,
+              tag,
+            },
+            getEffectIndex,
+          )
+        }
       } else if (
         key.isStatic &&
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content)
       ) {
-        if (!prevWasQuoted) template += ` `
         const value = values[0].content === "''" ? '' : values[0].content
-        template += key.content
-
-        if (value) {
-          template += (prevWasQuoted = NEEDS_QUOTES_RE.test(value))
-            ? `="${value.replace(/"/g, '&quot;')}"`
-            : `=${value}`
-        } else {
-          prevWasQuoted = false
-        }
+        appendTemplateProp(key.content, value)
       } else {
         dynamicProps.push(key.content)
         context.registerEffect(
@@ -499,6 +569,197 @@ function transformNativeElement(
   if (staticKey) {
     context.registerOperation(createSetBlockKey(context.reference(), staticKey))
   }
+}
+
+interface ConstantValue {
+  value: unknown
+}
+
+function escapeGeneratedAttrValue(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+}
+
+function foldBooleanAttrValue(
+  values: SimpleExpressionNode[],
+): boolean | undefined {
+  if (values.length !== 1) return
+
+  const evaluated = evaluateConstantExpression(values[0])
+  if (!evaluated) return
+
+  const value = evaluated.value
+  if (value === true || value === false || value == null) {
+    return includeBooleanAttr(value)
+  }
+}
+
+function foldStyleValues(values: SimpleExpressionNode[]): string | undefined {
+  const evaluatedValues: unknown[] = []
+  for (const value of values) {
+    const evaluated = evaluateConstantExpression(value)
+    if (!evaluated || !isStaticStyleValue(evaluated.value)) {
+      return
+    }
+    evaluatedValues.push(evaluated.value)
+  }
+
+  const normalized = normalizeStyle(
+    evaluatedValues.length === 1 ? evaluatedValues[0] : evaluatedValues,
+  )
+  return stringifyStyle(normalized)
+}
+
+function isStaticStyleValue(value: unknown): boolean {
+  if (typeof value === 'string') {
+    return true
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+  for (const key in value as Record<string, unknown>) {
+    const propValue = (value as Record<string, unknown>)[key]
+    if (!isSafeStylePropertyName(key) || !isSafeStylePropertyValue(propValue)) {
+      return false
+    }
+  }
+  return true
+}
+
+function isSafeStylePropertyName(key: string): boolean {
+  return !!key && !/[;:]/.test(key)
+}
+
+function isSafeStylePropertyValue(value: unknown): boolean {
+  return (
+    typeof value === 'number' ||
+    (typeof value === 'string' && !value.includes(';'))
+  )
+}
+
+function hasBoundValue(values: SimpleExpressionNode[]): boolean {
+  return values.some(value => !value.isStatic && value.content !== "''")
+}
+
+function foldClassValues(values: SimpleExpressionNode[]): string | undefined {
+  let templateValue = ''
+  let changed = false
+
+  for (const value of values) {
+    const evaluated = evaluateConstantExpression(value)
+    if (evaluated) {
+      const normalized = normalizeClass(evaluated.value)
+      if (normalized) {
+        templateValue = appendClass(templateValue, normalized)
+      } else {
+        changed = true
+      }
+      continue
+    }
+
+    return
+  }
+
+  return changed || templateValue ? templateValue : undefined
+}
+
+function appendClass(base: string, value: string): string {
+  return base ? (value ? `${base} ${value}` : base) : value
+}
+
+function getObjectPropertyName(prop: ObjectProperty): string | undefined {
+  const key = prop.key
+  if (key.type === 'Identifier') {
+    return key.name
+  } else if (key.type === 'StringLiteral') {
+    return key.value
+  } else if (key.type === 'NumericLiteral') {
+    return String(key.value)
+  }
+}
+
+function evaluateConstantExpression(
+  node: SimpleExpressionNode,
+): ConstantValue | undefined {
+  if (node.isStatic) {
+    return { value: node.content }
+  }
+
+  const ast = node.ast
+  if (ast === null) {
+    if (node.content === 'true') {
+      return { value: true }
+    } else if (node.content === 'false') {
+      return { value: false }
+    } else if (node.content === 'null') {
+      return { value: null }
+    } else if (node.content === 'undefined') {
+      return { value: undefined }
+    }
+  }
+  if (!ast) return
+  return evaluateConstantAst(ast as Expression)
+}
+
+function evaluateConstantAst(node: Expression): ConstantValue | undefined {
+  switch (node.type) {
+    case 'StringLiteral':
+      return { value: node.value }
+    case 'NumericLiteral':
+      return { value: node.value }
+    case 'BooleanLiteral':
+      return { value: node.value }
+    case 'NullLiteral':
+      return { value: null }
+    case 'Identifier':
+      return node.name === 'undefined' ? { value: undefined } : undefined
+    case 'UnaryExpression':
+      if (node.operator === 'void') {
+        return { value: undefined }
+      } else if (node.operator === '-') {
+        const value = evaluateConstantAst(node.argument)
+        return value && typeof value.value === 'number'
+          ? { value: -value.value }
+          : undefined
+      }
+      return
+    case 'TemplateLiteral':
+      return evaluateTemplateLiteral(node)
+    case 'ObjectExpression':
+      return evaluateObjectExpression(node)
+  }
+}
+
+function evaluateTemplateLiteral(node: Expression): ConstantValue | undefined {
+  if (node.type !== 'TemplateLiteral') return
+
+  let value = ''
+  for (const [index, quasi] of node.quasis.entries()) {
+    value += quasi.value.cooked || ''
+    const expression = node.expressions[index]
+    if (expression) {
+      const evaluated = evaluateConstantAst(expression as Expression)
+      if (!evaluated) return
+      value += evaluated.value
+    }
+  }
+  return { value }
+}
+
+function evaluateObjectExpression(
+  node: ObjectExpression,
+): ConstantValue | undefined {
+  const value: Record<string, unknown> = {}
+  for (const prop of node.properties) {
+    if (prop.type !== 'ObjectProperty' || prop.computed) {
+      return
+    }
+    const key = getObjectPropertyName(prop)
+    if (key == null) return
+    const evaluated = evaluateConstantAst(prop.value as Expression)
+    if (!evaluated) return
+    value[key] = evaluated.value
+  }
+  return { value }
 }
 
 function resolveStaticKey(
