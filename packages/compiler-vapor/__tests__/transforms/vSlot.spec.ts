@@ -128,7 +128,9 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_slotProps0.foo + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -232,7 +234,9 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_slotProps0.msg`)
   })
 
@@ -242,7 +246,9 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_slotProps0.foo.bar`)
   })
 
@@ -252,7 +258,9 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_slotProps0[_ctx.key]`)
   })
 
@@ -262,7 +270,9 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_getRestElement(_slotProps0`)
   })
 
@@ -272,7 +282,9 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_slotProps0.arr.slice(1)`)
   })
 
@@ -282,7 +294,9 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_getDefaultValue(_slotProps0.foo, 1)`)
   })
 
@@ -292,7 +306,9 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_getDefaultValue(_slotProps0.foo[0], 1)`)
     expect(code).contains(`_getDefaultValue(_slotProps0.baz.qux, 2)`)
   })
@@ -303,7 +319,9 @@ describe('compiler: transform slot', () => {
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains(`"default": (_slotProps0) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
+    )
     expect(code).contains(`_getRestElement(_slotProps0, ["foo", _ctx.key])`)
   })
 
@@ -356,8 +374,12 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`"default": _withVaporCtx((_slotProps0) =>`)
-    expect(code).contains(`"default": (_slotProps1) =>`)
+    expect(code).contains(
+      `_createAssetComponent("Comp", null, _withVaporCtx((_slotProps0) =>`,
+    )
+    expect(code).contains(
+      `_createComponentWithFallback(_component_Inner, null, (_slotProps1) =>`,
+    )
     expect(code).contains(`_slotProps0.foo + _slotProps1.bar + _ctx.baz`)
     expect(code).contains(`_slotProps0.foo + _ctx.bar + _ctx.baz`)
 

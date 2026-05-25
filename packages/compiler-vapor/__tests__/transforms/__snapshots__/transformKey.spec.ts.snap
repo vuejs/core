@@ -58,14 +58,12 @@ exports[`compiler: key > with dynamic key > component slot + key 1`] = `
 const t0 = _template("<div>foo", 2)
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, {
-    "default": () => {
-      const n0 = _createKeyedFragment(() => (_ctx.id), () => {
-        const n1 = t0()
-        return n1
-      })
-      return n0
-    }
+  const n2 = _createAssetComponent("Comp", null, () => {
+    const n0 = _createKeyedFragment(() => (_ctx.id), () => {
+      const n1 = t0()
+      return n1
+    })
+    return n0
   }, true)
   return n2
 }"
@@ -127,7 +125,7 @@ export function render(_ctx) {
       return n5
     })
     return n4
-  }, null, 1), 5, null, 0)
+  }), 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
   return n0
 }"
 `;
@@ -156,7 +154,7 @@ export function render(_ctx) {
       return n3
     })
     return n2
-  }, null, 1)
+  })
   return n0
 }"
 `;

@@ -11,13 +11,15 @@ import {
 import { ShapeFlags } from '@vue/shared'
 import { insert, isBlock } from './block'
 import {
+  type LooseRawSlots,
   type VaporComponentInstance,
   createComponentWithFallback,
   emptyContext,
+  normalizeRawSlots,
 } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
-import { type RawSlots, getScopeOwner } from './componentSlots'
+import { getScopeOwner } from './componentSlots'
 import {
   insertionAnchor,
   insertionParent,
@@ -38,7 +40,7 @@ import { enableKeepAlive } from './keepAlive'
 export function createDynamicComponent(
   getter: () => any,
   rawProps?: RawProps | null,
-  rawSlots?: RawSlots | null,
+  rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
 ): VaporFragment {
@@ -54,6 +56,7 @@ export function createDynamicComponent(
       ? new DynamicFragment('dynamic-component')
       : new DynamicFragment()
 
+  const normalizedRawSlots = normalizeRawSlots(rawSlots)
   const scopeOwner = getScopeOwner()
   const renderFn = () => {
     const value = getter()
@@ -84,7 +87,7 @@ export function createDynamicComponent(
       return createComponentWithFallback(
         withScopeOwner(scopeOwner, () => resolveDynamicComponent(value)),
         rawProps,
-        rawSlots,
+        normalizedRawSlots,
         isSingleRoot,
         once,
         appContext,

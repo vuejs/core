@@ -19,7 +19,7 @@ import {
   type IRProps,
   type VaporDirectiveNode,
 } from '../ir'
-import { camelize, extend } from '@vue/shared'
+import { VaporSlotFlags, camelize, extend } from '@vue/shared'
 import { newBlock } from './utils'
 import { buildProps } from './transformElement'
 
@@ -100,6 +100,14 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
 
   return () => {
     exitBlock && exitBlock()
+    let flags = 0
+    if (context.options.scopeId && !context.options.slotted) {
+      flags |= VaporSlotFlags.NO_SLOTTED
+    }
+    if (context.inVOnce) {
+      flags |= VaporSlotFlags.ONCE
+    }
+
     context.dynamic.operation = {
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id,
@@ -107,8 +115,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       name: slotName,
       props: irProps,
       fallback,
-      noSlotted: !!(context.options.scopeId && !context.options.slotted),
-      once: context.inVOnce,
+      flags,
     }
   }
 }

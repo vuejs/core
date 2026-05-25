@@ -1,6 +1,18 @@
-import { EMPTY_OBJ, NO, hasOwn, isArray, isFunction } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  NO,
+  VaporSlotFlags,
+  hasOwn,
+  isArray,
+  isFunction,
+} from '@vue/shared'
 import { type Block, type BlockFn, insert } from './block'
-import { rawPropsProxyHandlers, resolveFunctionSource } from './componentProps'
+import {
+  type RawProps,
+  rawPropsProxyHandlers,
+  resolveFunctionSource,
+  snapshotRawProps,
+} from './componentProps'
 import {
   type GenericComponentInstance,
   currentInstance,
@@ -39,6 +51,16 @@ import { setScopeId } from './scopeId'
  * When true, renderEffect should skip creating reactive effect.
  */
 export let inOnceSlot = false
+
+export function withOnceSlot<T>(fn: () => T, value = true): T {
+  const prev = inOnceSlot
+  try {
+    inOnceSlot = value
+    return fn()
+  } finally {
+    inOnceSlot = prev
+  }
+}
 
 /**
  * Current slot scopeIds for vdom interop
@@ -181,8 +203,7 @@ export function createSlot(
   name: string | (() => string),
   rawProps?: LooseRawProps | null,
   fallback?: VaporSlot,
-  noSlotted?: boolean,
-  once?: boolean,
+  flags: number = 0,
 ): Block {
   if (isInteropEnabled && isCollectingVdomSlotVNodes) {
     // A Vapor <slot/> cannot expose child vnode metadata without real slot
@@ -197,11 +218,20 @@ export function createSlot(
 
   const instance = getScopeOwner()!
   const rawSlots = instance.rawSlots
-  const slotProps = rawProps
-    ? new Proxy(rawProps, rawPropsProxyHandlers)
-    : EMPTY_OBJ
-  const scopeId = !noSlotted && instance.type.__scopeId
+  const scopeId =
+    !(flags & VaporSlotFlags.NO_SLOTTED) && instance.type.__scopeId
   const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
+  const once = !!(flags & VaporSlotFlags.ONCE)
+  const slotProps = rawProps
+    ? new Proxy(
+        once ? snapshotRawProps(rawProps as RawProps) : rawProps,
+        rawPropsProxyHandlers,
+      )
+    : EMPTY_OBJ
+  if (once && fallback) {
+    const originalFallback = fallback
+    fallback = (...args: any[]) => withOnceSlot(() => originalFallback(...args))
+  }
 
   let fragment: VaporFragment
   if (isRef(rawSlots._) && isInteropEnabled) {
@@ -212,6 +242,7 @@ export function createSlot(
       slotProps,
       instance,
       fallback,
+      once,
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()
@@ -234,12 +265,16 @@ export function createSlot(
           instance.parent.ce)
       ) {
         const el = createElement('slot')
-        renderEffect(() => {
+        const setSlotProps = () => {
           setDynamicProps(el, [
             slotProps,
             slotName !== 'default' ? { name: slotName } : {},
           ])
-        })
+        }
+        // Native slot outlets have no component boundary to snapshot props, so
+        // v-once applies here by skipping the reactive prop effect.
+        if (once) setSlotProps()
+        else renderEffect(setSlotProps)
         if (fallback) {
           withOwnedSlotBoundary(slotFragment.parentSlotBoundary, () => {
             const fallbackBlock = fallback()
@@ -269,12 +304,9 @@ export function createSlot(
         cachedSlot = slot
         cachedBoundSlot = () => {
           const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
-          const prev = inOnceSlot
           try {
-            if (once) inOnceSlot = true
-            return slot(slotProps)
+            return once ? withOnceSlot(() => slot(slotProps)) : slot(slotProps)
           } finally {
-            inOnceSlot = prev
             setCurrentSlotScopeIds(prevSlotScopeIds)
           }
         }
