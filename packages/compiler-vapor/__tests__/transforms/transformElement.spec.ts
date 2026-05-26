@@ -394,6 +394,35 @@ describe('compiler: element transform', () => {
       expect(code).contains(`arrLabel: () =>`)
     })
 
+    test('object literal v-bind props are expanded', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo v-bind="{ foo: bar, baz: 1, id: 'x', formatter: v => v + 1 }" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`foo: () => (_ctx.bar)`)
+      expect(code).contains(`baz: 1`)
+      expect(code).contains(`id: "x"`)
+      expect(code).contains(`formatter: () => (v => v + 1)`)
+      expect(code).not.contains(`$: [`)
+    })
+
+    test('unsupported object literal v-bind shapes stay as dynamic sources', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo v-bind="{ [foo]: 1, ...obj }" />`,
+      )
+      const { code: protoCode } = compileWithElementTransform(
+        `<Foo v-bind="{ __proto__: foo }" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`$: [`)
+      expect(code).contains(`() => ({ [_ctx.foo]: 1, ..._ctx.obj })`)
+      expect(protoCode).toMatchSnapshot()
+      expect(protoCode).contains(`$: [`)
+      expect(protoCode).contains(`() => ({ __proto__: _ctx.foo })`)
+    })
+
     test('v-bind="obj"', () => {
       const { code, ir } = compileWithElementTransform(`<Foo v-bind="obj" />`)
       expect(code).toMatchSnapshot()

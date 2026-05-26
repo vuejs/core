@@ -9,9 +9,11 @@ import {
   type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
+  advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
   hasSingleChild,
+  isSimpleIdentifier,
   isSingleIfBlock,
   isStaticArgOf,
   isValidHTMLNesting,
@@ -57,9 +59,14 @@ import {
   isStaticExpression,
   resolveExpression,
 } from '../utils'
-import { IMPORT_EXP_END, IMPORT_EXP_START } from '../generators/utils'
+import {
+  IMPORT_EXP_END,
+  IMPORT_EXP_START,
+  getParserOptions,
+} from '../generators/utils'
 import { normalizeBindShorthand } from './vBind'
 import type { Expression, ObjectExpression, ObjectProperty } from '@babel/types'
+import { parseExpression } from '@babel/parser'
 
 export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
@@ -823,12 +830,18 @@ export function buildProps(
       if (prop.name === 'bind') {
         // v-bind="obj"
         if (prop.exp) {
-          dynamicExpr.push(prop.exp)
           pushMergeArg()
-          dynamicArgs.push({
-            kind: IRDynamicPropsKind.EXPRESSION,
-            value: prop.exp,
-          })
+          const objectLiteralProps =
+            isComponent && resolveObjectLiteralBindProps(prop.exp, context)
+          if (objectLiteralProps) {
+            dynamicArgs.push(objectLiteralProps)
+          } else {
+            dynamicExpr.push(prop.exp)
+            dynamicArgs.push({
+              kind: IRDynamicPropsKind.EXPRESSION,
+              value: prop.exp,
+            })
+          }
         } else {
           context.options.onError(
             createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc),
@@ -904,6 +917,61 @@ export function buildProps(
 
   const irProps = dedupeProperties(results)
   return [false, irProps]
+}
+
+function resolveObjectLiteralBindProps(
+  exp: SimpleExpressionNode,
+  context: TransformContext<ElementNode>,
+): IRPropsStatic | undefined {
+  const ast = exp.ast
+  if (!ast || ast.type !== 'ObjectExpression') return
+
+  const props: IRPropsStatic = []
+  for (const property of ast.properties) {
+    if (property.type !== 'ObjectProperty' || property.computed) {
+      return
+    }
+
+    const key = getObjectPropertyName(property)
+    if (key == null || key === '__proto__') return
+
+    props.push({
+      key: createSimpleExpression(key, true),
+      values: [
+        resolveExpression(
+          createObjectBindSubExpression(
+            exp,
+            property.value as Expression,
+            context,
+          ),
+          true,
+        ),
+      ],
+    })
+  }
+  return props
+}
+
+function createObjectBindSubExpression(
+  source: SimpleExpressionNode,
+  node: Expression,
+  context: TransformContext<ElementNode>,
+): SimpleExpressionNode {
+  const start = node.start == null ? 0 : node.start - 1
+  const end = node.end == null ? source.content.length : node.end - 1
+  const content = source.content.slice(start, end)
+  const expression = createSimpleExpression(content, false, {
+    start: advancePositionWithClone(source.loc.start, source.content, start),
+    end: advancePositionWithClone(source.loc.start, source.content, end),
+    source: content,
+  })
+  expression.ast = isSimpleIdentifier(content)
+    ? null
+    : parseExpression(
+        `(${content})`,
+        getParserOptions(context.options.expressionPlugins),
+      )
+  return expression
 }
 
 function transformProp(

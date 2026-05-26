@@ -156,6 +156,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > object literal v-bind props are expanded 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    foo: () => (_ctx.bar),
+    baz: 1,
+    id: "x",
+    formatter: () => (v => v + 1)
+  }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > props merging: class 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
@@ -306,6 +320,28 @@ export function render(_ctx) {
     spread: () => ({ ...{ foo: 1 } }),
     list: () => ([1, ...[2]])
   }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ [_ctx.foo]: 1, ..._ctx.obj })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 2`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ __proto__: _ctx.foo })
+  ] }, null, true)
   return n0
 }"
 `;
