@@ -112,6 +112,51 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(false)
   })
 
+  // #10483
+  test('observing object with custom Symbol.toStringTag', () => {
+    const original = { [Symbol.toStringTag]: 'Custom', foo: 1 }
+    const observed = reactive(original)
+
+    expect(isReactive(observed)).toBe(true)
+
+    let dummy
+    effect(() => (dummy = observed.foo))
+    expect(dummy).toBe(1)
+    observed.foo = 2
+    expect(dummy).toBe(2)
+  })
+
+  // #10483
+  test('observing collection subtypes with custom Symbol.toStringTag', () => {
+    class CustomMap extends Map {
+      get [Symbol.toStringTag]() {
+        return 'CustomMap'
+      }
+    }
+    const cmap = reactive(new CustomMap())
+    expect(isReactive(cmap)).toBe(true)
+
+    let dummy
+    effect(() => (dummy = cmap.has('key')))
+    expect(dummy).toBe(false)
+    cmap.set('key', 'value')
+    expect(dummy).toBe(true)
+
+    class CustomArray extends Array {
+      get [Symbol.toStringTag]() {
+        return 'CustomArray'
+      }
+    }
+    const carr = reactive(new CustomArray())
+    expect(isReactive(carr)).toBe(true)
+
+    let len
+    effect(() => (len = carr.length))
+    expect(len).toBe(0)
+    carr.push(1)
+    expect(len).toBe(1)
+  })
+
   // #8647
   test('observing Set with reactive initial value', () => {
     const observed = reactive({})
