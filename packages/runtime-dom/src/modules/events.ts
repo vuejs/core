@@ -119,17 +119,19 @@ function createInvoker(
         originalStop.call(e)
         ;(e as any)._stopped = true
       }
-      for (let i = 0; i < value.length; i++) {
+      const handlers = value.slice()
+      const args = [e]
+      for (let i = 0; i < handlers.length; i++) {
         if ((e as any)._stopped) {
           break
         }
-        const handler = value[i]
+        const handler = handlers[i]
         if (handler) {
           callWithAsyncErrorHandling(
             handler,
             instance,
             ErrorCodes.NATIVE_EVENT_HANDLER,
-            [e],
+            args,
           )
         }
       }

@@ -2,22 +2,24 @@ import { bench, describe } from 'vitest'
 import { patchProp } from '../src/patchProp'
 
 describe('runtime-dom events', () => {
+  const singleEl = document.createElement('button')
+  let singleCount = 0
+  patchProp(singleEl, 'onClick', null, () => singleCount++)
+
+  const multipleEl = document.createElement('button')
+  let multipleCount = 0
+  patchProp(multipleEl, 'onClick', null, [
+    () => multipleCount++,
+    () => multipleCount++,
+    () => multipleCount++,
+    () => multipleCount++,
+  ])
+
   bench('dispatch click with single handler', () => {
-    const el = document.createElement('button')
-    let count = 0
-    patchProp(el, 'onClick', null, () => count++)
-    el.dispatchEvent(new Event('click'))
+    singleEl.dispatchEvent(new Event('click'))
   })
 
   bench('dispatch click with multiple handlers', () => {
-    const el = document.createElement('button')
-    let count = 0
-    patchProp(el, 'onClick', null, [
-      () => count++,
-      () => count++,
-      () => count++,
-      () => count++,
-    ])
-    el.dispatchEvent(new Event('click'))
+    multipleEl.dispatchEvent(new Event('click'))
   })
 })
