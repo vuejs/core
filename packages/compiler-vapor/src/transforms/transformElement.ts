@@ -23,6 +23,7 @@ import {
   camelize,
   capitalize,
   extend,
+  getModifierPropName,
   includeBooleanAttr,
   isAlwaysCloseTag,
   isBlockTag,
@@ -1093,6 +1094,10 @@ function hasComponentObjectLiteralBindConflict(
       key = getStaticBindKey(prop)
     } else if (prop.name === 'on') {
       key = getStaticHandlerKey(prop)
+    } else if (prop.name === 'model') {
+      if (hasComponentModelKey(keys, prop)) {
+        return true
+      }
     }
 
     if (key && hasComponentKey(keys, key)) {
@@ -1100,6 +1105,24 @@ function hasComponentObjectLiteralBindConflict(
     }
   }
   return false
+}
+
+function hasComponentModelKey(
+  keys: Set<string>,
+  prop: VaporDirectiveNode,
+): boolean {
+  const { arg } = prop
+  if (arg && (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic)) {
+    return true
+  }
+
+  const key = arg ? arg.content : 'modelValue'
+  return (
+    hasComponentKey(keys, key) ||
+    hasComponentKey(keys, `onUpdate:${camelize(key)}`) ||
+    (prop.modifiers.length > 0 &&
+      hasComponentKey(keys, getModifierPropName(key)))
+  )
 }
 
 function hasNativeObjectLiteralBindConflict(

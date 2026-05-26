@@ -13,6 +13,21 @@ exports[`compiler: vModel transform > component > component v-model should merge
 "
 `;
 
+exports[`compiler: vModel transform > component > object literal v-bind after v-model stays dynamic to preserve merge order 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", {
+    foo: () => (_ctx.foo),
+    "onUpdate:foo": () => _value => (_ctx.foo = _value),
+    $: [
+      () => ({ foo: _ctx.bar })
+    ]
+  }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: vModel transform > component > v-model after dynamic bind keeps model getters 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
@@ -23,6 +38,21 @@ export function render(_ctx) {
       modelValue: () => (_ctx.foo),
       "onUpdate:modelValue": () => _value => (_ctx.foo = _value),
       modelModifiers: { trim: true }
+    }
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model after object literal v-bind keeps model generated props 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", { $: [
+    () => ({ foo: _ctx.bar }),
+    {
+      foo: () => (_ctx.foo),
+      "onUpdate:foo": () => _value => (_ctx.foo = _value)
     }
   ] }, null, true)
   return n0
