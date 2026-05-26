@@ -407,12 +407,67 @@ describe('compiler: element transform', () => {
       expect(code).not.contains(`$: [`)
     })
 
+    test('object literal v-bind preserves dynamic source merge order', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo :[name]="value" v-bind="{ foo: bar }" />`,
+      )
+      const { code: beforeCode } = compileWithElementTransform(
+        `<Foo v-bind="{ foo: bar }" :[name]="value" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`$: [
+    () => ({ [_ctx.name]: _ctx.value }),
+    { foo: () => (_ctx.bar) }
+  ]`)
+      expect(beforeCode).toMatchSnapshot()
+      expect(beforeCode).contains(`foo: () => (_ctx.bar),
+    $: [
+      () => ({ [_ctx.name]: _ctx.value })
+    ]`)
+    })
+
+    test('object literal v-bind joins existing static component props', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo id="x" v-bind="{ foo: bar }" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`id: "x"`)
+      expect(code).contains(`foo: () => (_ctx.bar)`)
+      expect(code).not.contains(`$: [`)
+    })
+
     test('unsupported object literal v-bind shapes stay as dynamic sources', () => {
       const { code } = compileWithElementTransform(
         `<Foo v-bind="{ [foo]: 1, ...obj }" />`,
       )
       const { code: protoCode } = compileWithElementTransform(
         `<Foo v-bind="{ __proto__: foo }" />`,
+      )
+      const { code: reservedCode } = compileWithElementTransform(
+        `<Foo v-bind="{ key: foo }" />`,
+      )
+      const { code: duplicateCode } = compileWithElementTransform(
+        `<Foo v-bind="{ foo: a, foo: b }" />`,
+      )
+      const { code: methodCode } = compileWithElementTransform(
+        `<Foo v-bind="{ foo() {} }" />`,
+      )
+      const { code: conflictCode } = compileWithElementTransform(
+        `<Foo foo="x" v-bind="{ foo: bar }" />`,
+      )
+      const { code: staticBindConflictCode } = compileWithElementTransform(
+        `<Foo :foo="a" v-bind="{ foo: b }" />`,
+      )
+      const { code: camelizedConflictCode } = compileWithElementTransform(
+        `<Foo foo-bar="x" v-bind="{ fooBar: bar }" />`,
+      )
+      const { code: vnodeHookConflictCode } = compileWithElementTransform(
+        `<Foo @vue:mounted="a" v-bind="{ onVnodeMounted: b }" />`,
+      )
+      const { code: clickRightConflictCode } = compileWithElementTransform(
+        `<Foo @click.right="a" v-bind="{ onContextmenu: b }" />`,
       )
 
       expect(code).toMatchSnapshot()
@@ -421,6 +476,37 @@ describe('compiler: element transform', () => {
       expect(protoCode).toMatchSnapshot()
       expect(protoCode).contains(`$: [`)
       expect(protoCode).contains(`() => ({ __proto__: _ctx.foo })`)
+      expect(reservedCode).toMatchSnapshot()
+      expect(reservedCode).contains(`$: [`)
+      expect(reservedCode).contains(`() => ({ key: _ctx.foo })`)
+      expect(duplicateCode).toMatchSnapshot()
+      expect(duplicateCode).contains(`$: [`)
+      expect(duplicateCode).contains(`() => ({ foo: _ctx.a, foo: _ctx.b })`)
+      expect(methodCode).toMatchSnapshot()
+      expect(methodCode).contains(`$: [`)
+      expect(methodCode).contains(`() => ({ foo() {} })`)
+      expect(conflictCode).toMatchSnapshot()
+      expect(conflictCode).contains(`foo: "x"`)
+      expect(conflictCode).contains(`$: [
+      () => ({ foo: _ctx.bar })
+    ]`)
+      expect(staticBindConflictCode).toMatchSnapshot()
+      expect(staticBindConflictCode).contains(`$: [
+      () => ({ foo: _ctx.b })
+    ]`)
+      expect(camelizedConflictCode).toMatchSnapshot()
+      expect(camelizedConflictCode).contains(`"foo-bar": "x"`)
+      expect(camelizedConflictCode).contains(`$: [
+      () => ({ fooBar: _ctx.bar })
+    ]`)
+      expect(vnodeHookConflictCode).toMatchSnapshot()
+      expect(vnodeHookConflictCode).contains(`$: [
+      () => ({ onVnodeMounted: _ctx.b })
+    ]`)
+      expect(clickRightConflictCode).toMatchSnapshot()
+      expect(clickRightConflictCode).contains(`$: [
+      () => ({ onContextmenu: _ctx.b })
+    ]`)
     })
 
     test('v-bind="obj"', () => {
@@ -583,12 +669,27 @@ describe('compiler: element transform', () => {
       expect(code).not.contains(`$: [`)
     })
 
+    test('object literal v-on joins existing static component props', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo id="x" v-on="{ click: onClick }" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`id: "x"`)
+      expect(code).contains(`onClick: () => (_ctx.onClick)`)
+      expect(code).not.contains(`_toHandlers`)
+      expect(code).not.contains(`$: [`)
+    })
+
     test('unsupported object literal v-on shapes stay as dynamic sources', () => {
       const { code } = compileWithElementTransform(
         `<Foo v-on="{ [event]: onClick, ...listeners }" />`,
       )
       const { code: protoCode } = compileWithElementTransform(
         `<Foo v-on="{ __proto__: onClick }" />`,
+      )
+      const { code: duplicateCode } = compileWithElementTransform(
+        `<Foo v-on="{ click: onClick, Click: onClick2 }" />`,
       )
 
       expect(code).toMatchSnapshot()
@@ -602,6 +703,12 @@ describe('compiler: element transform', () => {
       expect(protoCode).contains(`$: [`)
       expect(protoCode).contains(
         `() => (_toHandlers({ __proto__: _ctx.onClick }))`,
+      )
+      expect(duplicateCode).toMatchSnapshot()
+      expect(duplicateCode).contains(`_toHandlers`)
+      expect(duplicateCode).contains(`$: [`)
+      expect(duplicateCode).contains(
+        `() => (_toHandlers({ click: _ctx.onClick, Click: _ctx.onClick2 }))`,
       )
     })
 
@@ -982,6 +1089,79 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains('_setDynamicProps(n0, [_ctx.obj])')
+  })
+
+  test('object literal v-bind prop is lowered to setProp', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div v-bind="{ id: foo }" />`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`_setProp(n0, "id", _ctx.foo)`)
+    expect(code).not.contains(`_setDynamicProps`)
+    expect(ir.block.effect).toMatchObject([
+      {
+        expressions: [{ content: 'foo' }],
+        operations: [
+          {
+            type: IRNodeTypes.SET_PROP,
+            element: 0,
+            prop: {
+              key: { content: 'id' },
+              values: [{ content: 'foo' }],
+            },
+          },
+        ],
+      },
+    ])
+  })
+
+  test('constant object literal v-bind props are lowered to template attrs', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div v-bind="{ id: 'foo', disabled: true }" />`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(`_template("<div id=foo disabled>", 3)`)
+    expect(code).not.contains(`_renderEffect`)
+    expect(code).not.contains(`_setDynamicProps`)
+    expect(ir.block.effect).lengthOf(0)
+  })
+
+  test('order-sensitive object literal v-bind props stay dynamic', () => {
+    const { code } = compileWithElementTransform(
+      `<div id="foo" v-bind="{ id: bar }" />`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `_setDynamicProps(n0, [{ id: "foo" }, { id: _ctx.bar }])`,
+    )
+  })
+
+  test('unsafe native object literal v-bind props stay dynamic', () => {
+    const { code: eventCode } = compileWithElementTransform(
+      `<div v-bind="{ onClick: click }" />`,
+    )
+    const { code: prefixCode } = compileWithElementTransform(
+      `<input v-bind="{ '.value': value }" />`,
+    )
+    const { code: unsafeNameCode } = compileWithElementTransform(
+      `<div v-bind="{ 'foo bar': 'x' }" />`,
+    )
+
+    expect(eventCode).toMatchSnapshot()
+    expect(eventCode).contains(
+      `_setDynamicProps(n0, [{ onClick: _ctx.click }])`,
+    )
+    expect(prefixCode).toMatchSnapshot()
+    expect(prefixCode).contains(
+      `_setDynamicProps(n0, [{ '.value': _ctx.value }])`,
+    )
+    expect(unsafeNameCode).toMatchSnapshot()
+    expect(unsafeNameCode).contains(
+      `_setDynamicProps(n0, [{ 'foo bar': 'x' }])`,
+    )
   })
 
   test('v-bind="obj" after static prop', () => {

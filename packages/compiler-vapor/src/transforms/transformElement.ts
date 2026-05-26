@@ -17,6 +17,7 @@ import {
   isSingleIfBlock,
   isStaticArgOf,
   isValidHTMLNesting,
+  resolveModifiers,
 } from '@vue/compiler-dom'
 import {
   camelize,
@@ -29,6 +30,7 @@ import {
   isBuiltInDirective,
   isFormattingTag,
   isInlineTag,
+  isOn,
   isVoidTag,
   makeMap,
   normalizeClass,
@@ -410,6 +412,7 @@ const dynamicKeys = ['indeterminate']
 // or any of " ' ` = < or >.
 // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
 const NEEDS_QUOTES_RE = /[\s"'`=<>]/
+const UNSAFE_ATTR_NAME_RE = /[\u0000-\u0020"'<=/>]/
 
 function transformNativeElement(
   node: PlainElementNode,
@@ -826,18 +829,42 @@ export function buildProps(
     }
   }
 
+  function pushStaticObjectLiteralProps(props: IRPropsStatic) {
+    if (dynamicArgs.length) {
+      pushMergeArg()
+      dynamicArgs.push(props)
+    } else {
+      results.push(...props.map(toDirectiveResult))
+    }
+  }
+
   for (const prop of props) {
     if (prop.type === NodeTypes.DIRECTIVE && !prop.arg) {
       if (prop.name === 'bind') {
         // v-bind="obj"
         if (prop.exp) {
-          pushMergeArg()
-          const objectLiteralProps =
-            isComponent && resolveObjectLiteralProps(prop.exp, context)
+          const objectLiteralProps = isComponent
+            ? resolveComponentObjectLiteralBindProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
+            : resolveNativeObjectLiteralBindProps(
+                prop.exp,
+                context,
+                props,
+                prop,
+              )
           if (objectLiteralProps) {
-            dynamicArgs.push(objectLiteralProps)
+            if (isComponent) {
+              pushStaticObjectLiteralProps(objectLiteralProps)
+            } else {
+              results.push(...objectLiteralProps.map(toDirectiveResult))
+            }
           } else {
             dynamicExpr.push(prop.exp)
+            pushMergeArg()
             dynamicArgs.push({
               kind: IRDynamicPropsKind.EXPRESSION,
               value: prop.exp,
@@ -853,16 +880,17 @@ export function buildProps(
         // v-on="obj"
         if (prop.exp) {
           if (isComponent) {
-            pushMergeArg()
-            const objectLiteralProps = resolveObjectLiteralProps(
+            const objectLiteralProps = resolveComponentObjectLiteralOnProps(
               prop.exp,
               context,
-              toHandlerKey,
+              props,
+              prop,
             )
             if (objectLiteralProps) {
-              dynamicArgs.push(objectLiteralProps)
+              pushStaticObjectLiteralProps(objectLiteralProps)
             } else {
               dynamicExpr.push(prop.exp)
+              pushMergeArg()
               dynamicArgs.push({
                 kind: IRDynamicPropsKind.EXPRESSION,
                 value: prop.exp,
@@ -933,11 +961,13 @@ function resolveObjectLiteralProps(
   exp: SimpleExpressionNode,
   context: TransformContext<ElementNode>,
   keyTransform?: (key: string) => string,
+  isValidKey?: (key: string) => boolean,
 ): IRPropsStatic | undefined {
   const ast = exp.ast
   if (!ast || ast.type !== 'ObjectExpression') return
 
   const props: IRPropsStatic = []
+  const knownKeys = new Set<string>()
   for (const property of ast.properties) {
     if (property.type !== 'ObjectProperty' || property.computed) {
       return
@@ -945,7 +975,10 @@ function resolveObjectLiteralProps(
 
     let key = getObjectPropertyName(property)
     if (key == null || key === '__proto__') return
+    if (isValidKey && !isValidKey(key)) return
     if (keyTransform) key = keyTransform(key)
+    if (knownKeys.has(key)) return
+    knownKeys.add(key)
 
     props.push({
       key: createSimpleExpression(key, true),
@@ -962,6 +995,219 @@ function resolveObjectLiteralProps(
     })
   }
   return props
+}
+
+function resolveComponentObjectLiteralBindProps(
+  exp: SimpleExpressionNode,
+  context: TransformContext<ElementNode>,
+  nodeProps: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+): IRPropsStatic | undefined {
+  const props = resolveObjectLiteralProps(
+    exp,
+    context,
+    undefined,
+    isSafeObjectLiteralBindKey,
+  )
+  if (
+    !props ||
+    hasComponentObjectLiteralBindConflict(nodeProps, currentProp, props)
+  ) {
+    return
+  }
+  return props
+}
+
+function resolveNativeObjectLiteralBindProps(
+  exp: SimpleExpressionNode,
+  context: TransformContext<ElementNode>,
+  nodeProps: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+): IRPropsStatic | undefined {
+  const props = resolveObjectLiteralProps(
+    exp,
+    context,
+    undefined,
+    isSafeNativeObjectLiteralBindKey,
+  )
+  if (
+    !props ||
+    hasNativeObjectLiteralBindConflict(nodeProps, currentProp, props)
+  ) {
+    return
+  }
+  return props
+}
+
+function resolveComponentObjectLiteralOnProps(
+  exp: SimpleExpressionNode,
+  context: TransformContext<ElementNode>,
+  nodeProps: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+): IRPropsStatic | undefined {
+  const props = resolveObjectLiteralProps(exp, context, toHandlerKey)
+  if (
+    !props ||
+    hasComponentObjectLiteralBindConflict(nodeProps, currentProp, props)
+  ) {
+    return
+  }
+  return props
+}
+
+function isSafeNativeObjectLiteralBindKey(key: string): boolean {
+  return (
+    key !== '' &&
+    !UNSAFE_ATTR_NAME_RE.test(key) &&
+    isSafeObjectLiteralBindKey(key) &&
+    !isOn(key) &&
+    key.charCodeAt(0) !== 46 /* . */ &&
+    key.charCodeAt(0) !== 94 /* ^ */
+  )
+}
+
+function isSafeObjectLiteralBindKey(key: string): boolean {
+  return !isReservedProp(key)
+}
+
+function hasComponentObjectLiteralBindConflict(
+  props: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+  objectLiteralProps: IRPropsStatic,
+): boolean {
+  const keys = createComponentConflictKeySet(
+    objectLiteralProps.map(prop => prop.key.content),
+  )
+  for (const prop of props) {
+    if (prop === currentProp) continue
+
+    let key: string | undefined
+    if (prop.type === NodeTypes.ATTRIBUTE) {
+      key = prop.name
+    } else if (prop.name === 'bind') {
+      if (!prop.arg) {
+        const bindKeys = getObjectLiteralKeys(prop.exp)
+        if (bindKeys && hasComponentKeyOverlap(keys, bindKeys)) return true
+        continue
+      }
+      key = getStaticBindKey(prop)
+    } else if (prop.name === 'on') {
+      key = getStaticHandlerKey(prop)
+    }
+
+    if (key && hasComponentKey(keys, key)) {
+      return true
+    }
+  }
+  return false
+}
+
+function hasNativeObjectLiteralBindConflict(
+  props: (VaporDirectiveNode | AttributeNode)[],
+  currentProp: VaporDirectiveNode,
+  objectLiteralProps: IRPropsStatic,
+): boolean {
+  const keys = new Set(objectLiteralProps.map(prop => prop.key.content))
+  for (const prop of props) {
+    if (prop === currentProp) continue
+
+    let key: string | undefined
+    if (prop.type === NodeTypes.ATTRIBUTE) {
+      key = prop.name
+    } else if (prop.name === 'bind') {
+      if (!prop.arg) return true
+      key = getStaticBindKey(prop)
+      if (!key) return true
+    }
+
+    if (key && keys.has(key)) {
+      return true
+    }
+  }
+  return false
+}
+
+function getStaticBindKey(prop: VaporDirectiveNode): string | undefined {
+  const { arg } = prop
+  if (!arg || arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) return
+
+  let key = arg.content
+  if (isReservedProp(key)) return
+  if (prop.modifiers.some(modifier => modifier.content === 'camel')) {
+    key = camelize(key)
+  }
+  return key
+}
+
+function getStaticHandlerKey(prop: VaporDirectiveNode): string | undefined {
+  const { arg } = prop
+  if (!arg || arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) return
+
+  let key = arg.content
+  if (key.startsWith('vue:')) {
+    key = `vnode-${key.slice(4)}`
+  }
+
+  const { nonKeyModifiers, eventOptionModifiers } = resolveModifiers(
+    `on${key}`,
+    prop.modifiers,
+    null,
+    prop.loc,
+  )
+  if (key.toLowerCase() === 'click') {
+    if (nonKeyModifiers.includes('middle')) {
+      key = 'mouseup'
+    }
+    if (nonKeyModifiers.includes('right')) {
+      key = 'contextmenu'
+    }
+  }
+
+  key = toHandlerKey(camelize(key))
+  const optionPostfix = eventOptionModifiers.map(capitalize).join('')
+  if (optionPostfix) key += optionPostfix
+  return key
+}
+
+function getObjectLiteralKeys(
+  exp: SimpleExpressionNode | undefined,
+): Set<string> | undefined {
+  const ast = exp && exp.ast
+  if (!ast || ast.type !== 'ObjectExpression') return
+
+  const keys = new Set<string>()
+  for (const property of ast.properties) {
+    if (property.type !== 'ObjectProperty' || property.computed) {
+      return
+    }
+    const key = getObjectPropertyName(property)
+    if (key == null) return
+    keys.add(key)
+  }
+  return keys
+}
+
+function createComponentConflictKeySet(keys: string[]): Set<string> {
+  const normalized = new Set<string>()
+  for (const key of keys) {
+    normalized.add(key)
+    normalized.add(camelize(key))
+  }
+  return normalized
+}
+
+function hasComponentKey(keys: Set<string>, key: string): boolean {
+  return keys.has(key) || keys.has(camelize(key))
+}
+
+function hasComponentKeyOverlap(
+  left: Set<string>,
+  right: Set<string>,
+): boolean {
+  for (const key of right) {
+    if (hasComponentKey(left, key)) return true
+  }
+  return false
 }
 
 function createObjectBindSubExpression(
@@ -1062,6 +1308,13 @@ function resolveDirectiveResult(prop: DirectiveTransformResult): IRProp {
   return extend({}, prop, {
     value: undefined,
     values: [prop.value],
+  })
+}
+
+function toDirectiveResult(prop: IRProp): DirectiveTransformResult {
+  return extend({}, prop, {
+    values: undefined,
+    value: prop.values[0],
   })
 }
 
