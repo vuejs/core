@@ -2076,18 +2076,21 @@ function baseCreateRenderer(
     }
 
     // single nodes
-    // #14031 skip transition hooks for persisted transitions (e.g. v-show),
-    // whose lifecycle is driven by the directive, not by mount/move
     const needTransition =
       moveType !== MoveType.REORDER &&
       shapeFlag & ShapeFlags.ELEMENT &&
-      transition &&
-      !transition.persisted
+      transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
-        transition!.beforeEnter(el!)
-        hostInsert(el!, container, anchor)
-        queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        // #14031 for persisted transitions (e.g. v-show) the directive owns the
+        // enter lifecycle, so skip the transition hooks and just relocate.
+        if (transition!.persisted) {
+          hostInsert(el!, container, anchor)
+        } else {
+          transition!.beforeEnter(el!)
+          hostInsert(el!, container, anchor)
+          queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        }
       } else {
         const { leave, delayLeave, afterLeave } = transition!
         const remove = () => {
@@ -2104,10 +2107,16 @@ function baseCreateRenderer(
           if (el!._isLeaving) {
             el![leaveCbKey](true /* cancelled */)
           }
-          leave(el!, () => {
+          // #14031 for persisted transitions the directive owns the leave
+          // lifecycle, so skip `leave()` / `afterLeave` and just relocate.
+          if (transition!.persisted) {
             remove()
-            afterLeave && afterLeave()
-          })
+          } else {
+            leave(el!, () => {
+              remove()
+              afterLeave && afterLeave()
+            })
+          }
         }
         if (delayLeave) {
           delayLeave(el!, remove, performLeave)
