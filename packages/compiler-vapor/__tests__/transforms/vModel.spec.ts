@@ -308,6 +308,32 @@ describe('compiler: vModel transform', () => {
       expect(code).not.contains(`modelModifiers: () => ({ trim: true })`)
     })
 
+    test('v-model after object literal v-bind keeps model generated props', () => {
+      const { code } = compileWithVModel(
+        '<Comp v-bind="{ foo: bar }" v-model:foo="foo" />',
+      )
+
+      expect(code).contains(`() => ({ foo: _ctx.bar })`)
+      expect(code).contains(`foo: () => (_ctx.foo)`)
+      expect(code).contains(
+        `"onUpdate:foo": () => _value => (_ctx.foo = _value)`,
+      )
+      expect(code).toMatchSnapshot()
+    })
+
+    test('object literal v-bind after v-model stays dynamic to preserve merge order', () => {
+      const { code } = compileWithVModel(
+        '<Comp v-model:foo="foo" v-bind="{ foo: bar }" />',
+      )
+
+      expect(code).contains(`foo: () => (_ctx.foo)`)
+      expect(code).contains(
+        `"onUpdate:foo": () => _value => (_ctx.foo = _value)`,
+      )
+      expect(code).contains(`() => ({ foo: _ctx.bar })`)
+      expect(code).toMatchSnapshot()
+    })
+
     test('v-model with arguments for component should generate modelModifiers', () => {
       const { code, ir } = compileWithVModel(
         '<Comp v-model:foo.trim="foo" v-model:bar.number="bar" />',
