@@ -681,6 +681,24 @@ describe('compiler: element transform', () => {
       expect(code).not.contains(`$: [`)
     })
 
+    test('object literal v-on conflicts with existing component handlers stay dynamic', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo v-on="{ click: a }" @click="b" />`,
+      )
+      const { code: bindCode } = compileWithElementTransform(
+        `<Foo v-on="{ click: a }" v-bind="{ onClick: b }" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`_toHandlers`)
+      expect(code).contains(`() => (_toHandlers({ click: _ctx.a }))`)
+      expect(code).contains(`{ onClick: () => _ctx.b }`)
+      expect(bindCode).toMatchSnapshot()
+      expect(bindCode).contains(`_toHandlers`)
+      expect(bindCode).contains(`() => (_toHandlers({ click: _ctx.a }))`)
+      expect(bindCode).contains(`{ onClick: () => (_ctx.b) }`)
+    })
+
     test('unsupported object literal v-on shapes stay as dynamic sources', () => {
       const { code } = compileWithElementTransform(
         `<Foo v-on="{ [event]: onClick, ...listeners }" />`,
@@ -1111,6 +1129,26 @@ describe('compiler: element transform', () => {
               values: [{ content: 'foo' }],
             },
           },
+        ],
+      },
+    ])
+  })
+
+  test('object literal v-bind before dynamic key tracks the original source', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<div v-bind="{ id: foo }" :[name]="bar" />`,
+    )
+
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `_setDynamicProps(n0, [{ id: _ctx.foo }, { [_ctx.name]: _ctx.bar }])`,
+    )
+    expect(ir.block.effect).toMatchObject([
+      {
+        expressions: [
+          { content: '{ id: foo }' },
+          { content: 'name' },
+          { content: 'bar' },
         ],
       },
     ])

@@ -208,6 +208,30 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > object literal v-on conflicts with existing component handlers stay dynamic 1`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ click: _ctx.a })),
+    { onClick: () => _ctx.b }
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-on conflicts with existing component handlers stay dynamic 2`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ click: _ctx.a })),
+    { onClick: () => (_ctx.b) }
+  ] }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > object literal v-on handlers are expanded 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
@@ -881,6 +905,17 @@ export function render(_ctx) {
   const n0 = t0()
   const n1 = t0()
   return [n0, n1]
+}"
+`;
+
+exports[`compiler: element transform > object literal v-bind before dynamic key tracks the original source 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ id: _ctx.foo }, { [_ctx.name]: _ctx.bar }]))
+  return n0
 }"
 `;
 
