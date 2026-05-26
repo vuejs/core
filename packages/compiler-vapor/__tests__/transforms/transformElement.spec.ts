@@ -570,6 +570,41 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('object literal v-on handlers are expanded', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo v-on="{ click: onClick, input: onInput, 'foo-bar': onFooBar }" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`onClick: () => (_ctx.onClick)`)
+      expect(code).contains(`onInput: () => (_ctx.onInput)`)
+      expect(code).contains(`"onFoo-bar": () => (_ctx.onFooBar)`)
+      expect(code).not.contains(`_toHandlers`)
+      expect(code).not.contains(`$: [`)
+    })
+
+    test('unsupported object literal v-on shapes stay as dynamic sources', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo v-on="{ [event]: onClick, ...listeners }" />`,
+      )
+      const { code: protoCode } = compileWithElementTransform(
+        `<Foo v-on="{ __proto__: onClick }" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`_toHandlers`)
+      expect(code).contains(`$: [`)
+      expect(code).contains(
+        `() => (_toHandlers({ [_ctx.event]: _ctx.onClick, ..._ctx.listeners }))`,
+      )
+      expect(protoCode).toMatchSnapshot()
+      expect(protoCode).contains(`_toHandlers`)
+      expect(protoCode).contains(`$: [`)
+      expect(protoCode).contains(
+        `() => (_toHandlers({ __proto__: _ctx.onClick }))`,
+      )
+    })
+
     test('v-on="obj" before static event keeps handler getters', () => {
       const { code } = compileWithElementTransform(
         `<Foo v-on="obj" @foo="bar" />`,

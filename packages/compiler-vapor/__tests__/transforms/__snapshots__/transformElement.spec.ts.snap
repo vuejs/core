@@ -170,6 +170,19 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > object literal v-on handlers are expanded 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    onClick: () => (_ctx.onClick),
+    onInput: () => (_ctx.onInput),
+    "onFoo-bar": () => (_ctx.onFooBar)
+  }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > props merging: class 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
@@ -341,6 +354,28 @@ exports[`compiler: element transform > component > unsupported object literal v-
 export function render(_ctx) {
   const n0 = _createAssetComponent("Foo", { $: [
     () => ({ __proto__: _ctx.foo })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-on shapes stay as dynamic sources 1`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ [_ctx.event]: _ctx.onClick, ..._ctx.listeners }))
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-on shapes stay as dynamic sources 2`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ __proto__: _ctx.onClick }))
   ] }, null, true)
   return n0
 }"

@@ -34,6 +34,7 @@ import {
   normalizeClass,
   normalizeStyle,
   stringifyStyle,
+  toHandlerKey,
 } from '@vue/shared'
 import type {
   DirectiveTransformResult,
@@ -832,7 +833,7 @@ export function buildProps(
         if (prop.exp) {
           pushMergeArg()
           const objectLiteralProps =
-            isComponent && resolveObjectLiteralBindProps(prop.exp, context)
+            isComponent && resolveObjectLiteralProps(prop.exp, context)
           if (objectLiteralProps) {
             dynamicArgs.push(objectLiteralProps)
           } else {
@@ -852,13 +853,22 @@ export function buildProps(
         // v-on="obj"
         if (prop.exp) {
           if (isComponent) {
-            dynamicExpr.push(prop.exp)
             pushMergeArg()
-            dynamicArgs.push({
-              kind: IRDynamicPropsKind.EXPRESSION,
-              value: prop.exp,
-              handler: true,
-            })
+            const objectLiteralProps = resolveObjectLiteralProps(
+              prop.exp,
+              context,
+              toHandlerKey,
+            )
+            if (objectLiteralProps) {
+              dynamicArgs.push(objectLiteralProps)
+            } else {
+              dynamicExpr.push(prop.exp)
+              dynamicArgs.push({
+                kind: IRDynamicPropsKind.EXPRESSION,
+                value: prop.exp,
+                handler: true,
+              })
+            }
           } else {
             context.registerEffect(
               [prop.exp],
@@ -919,9 +929,10 @@ export function buildProps(
   return [false, irProps]
 }
 
-function resolveObjectLiteralBindProps(
+function resolveObjectLiteralProps(
   exp: SimpleExpressionNode,
   context: TransformContext<ElementNode>,
+  keyTransform?: (key: string) => string,
 ): IRPropsStatic | undefined {
   const ast = exp.ast
   if (!ast || ast.type !== 'ObjectExpression') return
@@ -932,8 +943,9 @@ function resolveObjectLiteralBindProps(
       return
     }
 
-    const key = getObjectPropertyName(property)
+    let key = getObjectPropertyName(property)
     if (key == null || key === '__proto__') return
+    if (keyTransform) key = keyTransform(key)
 
     props.push({
       key: createSimpleExpression(key, true),
