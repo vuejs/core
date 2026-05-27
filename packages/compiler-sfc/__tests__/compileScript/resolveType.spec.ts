@@ -1733,6 +1733,65 @@ describe('resolveType', () => {
       })
     })
 
+    test('global type file with top-level exports is also importable', () => {
+      const files = {
+        '/globalTypes.d.ts': `export interface Foo { bar: string }`,
+      }
+      const { props, deps } = resolve(
+        `
+        import type { Foo } from './globalTypes'
+        defineProps<Foo>()
+        `,
+        files,
+        { globalTypeFiles: ['/globalTypes.d.ts'] },
+      )
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toContain('/globalTypes.d.ts')
+    })
+
+    test(
+      'global type file with top-level exports is importable ' +
+        'after global-scope load',
+      () => {
+        const files = {
+          '/globalTypes.d.ts': `export interface Foo { bar: string }`,
+        }
+        // Reference an unknown name in the first compilation so that
+        // resolution falls back to the global scope, which loads
+        // `/globalTypes.d.ts` with `asGlobal=true` and caches the result.
+        // This mirrors the dev-server order in which one SFC triggers
+        // global-scope loading before another SFC imports from the
+        // same file. The compile itself fails on the unknown reference,
+        // but the cache is populated as a side effect before that error
+        // is thrown.
+        try {
+          resolve(
+            `defineProps<UnknownGlobal>()`,
+            files,
+            { globalTypeFiles: ['/globalTypes.d.ts'] },
+            '/PrimeGlobal.vue',
+          )
+        } catch {}
+
+        const { props, deps } = resolve(
+          `
+          import type { Foo } from './globalTypes'
+          defineProps<Foo>()
+          `,
+          files,
+          { globalTypeFiles: ['/globalTypes.d.ts'] },
+          '/Importer.vue',
+          false /* do not invalidate cache */,
+        )
+        expect(props).toStrictEqual({
+          bar: ['String'],
+        })
+        expect(deps && [...deps]).toContain('/globalTypes.d.ts')
+      },
+    )
+
     // #9871
     test('shared generics with different args', () => {
       const files = {
