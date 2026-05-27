@@ -88,8 +88,10 @@ export class VaporFragment<
   ) => void
 
   // hooks
-  onBeforeUpdate?: (() => void)[]
   onBeforeInsert?: ((nodes: Block) => void)[]
+  // Return true to keep the branch scope alive after removing its DOM.
+  onBeforeRemove?: ((scope: EffectScope) => boolean)[]
+  onBeforeUpdate?: (() => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
 
   // render context
@@ -300,29 +302,18 @@ export class DynamicFragment extends VaporFragment {
     const parent = isHydrating ? null : this.anchor.parentNode
     // teardown previous branch
     if (this.current !== undefined) {
-      if (this.scope && isKeepAliveEnabled) {
+      const scope = this.scope
+      if (scope) {
         let retainScope = false
-        const keepAliveCtx = this.keepAliveCtx
-
-        // if keepAliveCtx exists and processShapeFlag returns a cache key,
-        // cache the scope and retain it.
-        if (keepAliveCtx) {
-          const cacheKey = this.keyed
-            ? withCurrentCacheKey(this.current, () =>
-                keepAliveCtx.processShapeFlag(this.nodes),
-              )
-            : keepAliveCtx.processShapeFlag(this.nodes)
-          if (cacheKey !== false) {
-            keepAliveCtx.cacheScope(cacheKey, this.current, this.scope)
-            retainScope = true
+        const onBeforeRemove = this.onBeforeRemove
+        if (onBeforeRemove) {
+          for (let i = 0; i < onBeforeRemove.length; i++) {
+            retainScope = onBeforeRemove[i](scope) || retainScope
           }
         }
-
         if (!retainScope) {
-          this.scope.stop()
+          scope.stop()
         }
-      } else if (this.scope) {
-        this.scope.stop()
       }
       const mode = transition && transition.mode
 
