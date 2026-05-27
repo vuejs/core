@@ -44,7 +44,7 @@ import {
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { isArray } from '@vue/shared'
+import { EMPTY_ARR, isArray } from '@vue/shared'
 import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import { setBlockKey } from './helpers/setKey'
@@ -62,13 +62,15 @@ import {
   isVaporTransition,
 } from './transition'
 
+const EMPTY_BLOCK = EMPTY_ARR as unknown as Block[]
+
 export class VaporFragment<
   T extends Block = Block,
 > implements TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks | undefined
   nodes: T
-  vnode?: VNode | null = null
+  vnode?: VNode | null
   anchor?: Node
   parentComponent?: GenericComponentInstance | null
   // Interop fragments can be visible to outer slot boundaries before their
@@ -83,7 +85,7 @@ export class VaporFragment<
     transitionHooks?: TransitionHooks,
   ) => void
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
-  hydrate?: (...args: any[]) => void
+  hydrate?(...args: any[]): void
   setRef?: (
     instance: VaporComponentInstance,
     ref: NodeRef,
@@ -189,13 +191,12 @@ function getDynamicCloseOwner(
   nodes: Block,
   currentSlotEndAnchor: Node | null,
 ): CloseAnchorOwner {
-  const valid = isValidBlock(nodes)
-
   // Slot fragments own the close marker unless this is an empty forwarded slot.
   // Empty forwarded slots must leave the close marker to the parent boundary
   // and create their runtime anchor after it.
   if (isSlot) {
-    return !forwardedSlot || valid
+    if (!forwardedSlot) return CloseAnchorOwner.Self
+    return isValidBlock(nodes)
       ? CloseAnchorOwner.Self
       : CloseAnchorOwner.ParentAfter
   }
@@ -211,9 +212,9 @@ function getDynamicCloseOwner(
   // its own runtime anchor instead of reusing the parent slot's end anchor.
   if (
     anchorLabel === 'if' &&
-    !valid &&
     currentSlotEndAnchor &&
-    isHydratingSlotFallbackActive()
+    isHydratingSlotFallbackActive() &&
+    !isValidBlock(nodes)
   ) {
     return CloseAnchorOwner.ParentBefore
   }
@@ -251,9 +252,10 @@ export class DynamicFragment extends VaporFragment {
     anchorLabel?: string,
     keyed: boolean = false,
     locate: boolean = true,
+    trackSlotBoundary: boolean = true,
   ) {
-    super([])
-    this.keyed = keyed
+    super(EMPTY_BLOCK)
+    if (keyed) this.keyed = true
     if (
       isTransitionEnabled &&
       currentInstance &&
@@ -269,13 +271,7 @@ export class DynamicFragment extends VaporFragment {
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
       if (__DEV__) this.anchorLabel = anchorLabel
     }
-    this.registerSlotBoundaryDirty()
-  }
-
-  protected registerSlotBoundaryDirty(): void {
-    const boundary = this.inheritedSlotBoundary
-    if (!boundary) return
-    ;(this.onUpdated || (this.onUpdated = [])).push(() => boundary.markDirty())
+    if (trackSlotBoundary) trackSlotBoundaryDirtying(this)
   }
 
   update(render?: BlockFn, key: any = render): void {
@@ -294,7 +290,13 @@ export class DynamicFragment extends VaporFragment {
       // leave keep overwriting the pending branch instead of reviving stale
       // keys when the deferred render finally runs.
       this.current = key
-      this.pending = { render, key }
+      const pending = this.pending
+      if (pending) {
+        pending.render = render
+        pending.key = key
+      } else {
+        this.pending = { render, key }
+      }
       return
     }
 
@@ -484,7 +486,7 @@ export class DynamicFragment extends VaporFragment {
       }
     } else {
       this.scope = undefined
-      this.nodes = []
+      this.nodes = EMPTY_BLOCK
     }
 
     if (parent && this.onUpdated) {
@@ -492,7 +494,8 @@ export class DynamicFragment extends VaporFragment {
     }
   }
 
-  hydrate = (isEmpty = false, isSlot = false): void => {
+  // Keep this as a prototype method to avoid per-instance closure allocation.
+  hydrate(isEmpty = false, isSlot = false): void {
     // early return allows tree-shaking of hydration logic when not used
     if (!isHydrating) return
 
@@ -574,7 +577,7 @@ export class DynamicFragment extends VaporFragment {
               ? anchor
               : null
           if (parentNode) {
-            this.nodes = []
+            this.nodes = EMPTY_BLOCK
             if (reusableAnchor) {
               reuseAnchor(reusableAnchor)
             } else {
@@ -602,7 +605,7 @@ export class DynamicFragment extends VaporFragment {
         getParentNode(this.nodes)
       ) {
         const anchor = this.nodes
-        this.nodes = []
+        this.nodes = EMPTY_BLOCK
         reuseAnchor(anchor)
         return
       }
@@ -622,7 +625,7 @@ export class DynamicFragment extends VaporFragment {
         const parentNode = getParentNode(currentHydrationNode)
         const nextNode = nextLogicalSibling(currentHydrationNode)
         if (parentNode) {
-          this.nodes = []
+          this.nodes = EMPTY_BLOCK
           cleanupAndInsertRuntimeAnchor(
             parentNode,
             nextNode,
@@ -634,7 +637,9 @@ export class DynamicFragment extends VaporFragment {
       }
 
       const currentSlotEndAnchor = getCurrentSlotEndAnchor()
-      const forwardedSlot = (this as any as SlotFragment).forwarded
+      const forwardedSlot = isSlot
+        ? (this as any as SlotFragment).forwarded
+        : false
       const slotAnchor = isSlot ? currentSlotEndAnchor : null
 
       // Reuse SSR `<!--]-->` as anchor.
@@ -1330,7 +1335,7 @@ export class SlotFragment
   private _slotFallbackBoundary?: SlotBoundaryContext
 
   constructor() {
-    super(isHydrating || __DEV__ ? 'slot' : undefined, false, false)
+    super(isHydrating || __DEV__ ? 'slot' : undefined, false, false, false)
     if (!isHydrating) {
       this.insert = (parent, anchor) => this.insertSlot(parent, anchor)
     }
@@ -1351,10 +1356,6 @@ export class SlotFragment
       markDirty: () => markSlotFallbackDirty(this),
     })
   }
-
-  // SlotFragment propagates dirty selectively via recheck() (only when
-  // validity flips), so skip the default auto-register from DynamicFragment.
-  protected registerSlotBoundaryDirty(): void {}
 
   get fallbackBlock(): Block | null {
     return this.activeFallback
