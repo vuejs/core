@@ -67,6 +67,7 @@ export function createIf(
       ;(frag as DynamicFragment).update(
         ok ? b1 : b2,
         keyed ? keyBase + (ok ? 0 : 1) : undefined,
+        isNoScopeBranch(flags, ok),
       )
     })
   }
@@ -93,7 +94,7 @@ export function createIf(
   return frag
 }
 
-// The compiler packs the true/false branch shapes into one integer:
+// The compiler packs the true/false branch shapes into the low bits:
 //   packed = trueShape | (falseShape << 2)
 //
 // Each branch shape fits in 2 bits:
@@ -110,8 +111,14 @@ export function createIf(
 // - true branch:  shift by 0, then keep the low 2 bits -> 0b10
 // - false branch: shift by 2, then keep the low 2 bits -> 0b01
 //
-// `0b11` is the binary mask for the low 2 bits (decimal `3`).
-// `value & 0b11` clears everything except the active branch shape.
+// `0b11` clears everything except the active branch shape; no-scope and index
+// metadata live in higher bits and are decoded separately.
 function decodeIfShape(shape: number, ok: boolean): VaporBlockShape {
   return ((shape >> (ok ? 0 : 2)) & 0b11) as VaporBlockShape
+}
+
+function isNoScopeBranch(flags: number, ok: boolean): boolean {
+  return !!(
+    flags & (ok ? VaporIfFlags.TRUE_NO_SCOPE : VaporIfFlags.FALSE_NO_SCOPE)
+  )
 }

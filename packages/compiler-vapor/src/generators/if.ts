@@ -67,15 +67,23 @@ function genIfFlags(
   }
 
   return __DEV__
-    ? `${flags} /* ${genIfFlagNames(once, index)} */`
+    ? `${flags} /* ${genIfFlagNames(once, index, blockShape)} */`
     : String(flags)
 }
 
 function genIfFlagNames(
   once: boolean | undefined,
   index: number | undefined,
+  blockShape: number,
 ): string {
   const names = ['BLOCK_SHAPE']
+
+  if (blockShape & VaporIfFlags.TRUE_NO_SCOPE) {
+    names.push('TRUE_NO_SCOPE')
+  }
+  if (blockShape & VaporIfFlags.FALSE_NO_SCOPE) {
+    names.push('FALSE_NO_SCOPE')
+  }
 
   if (once) {
     names.push('ONCE')

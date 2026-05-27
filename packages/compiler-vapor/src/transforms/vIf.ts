@@ -3,6 +3,7 @@ import {
   ElementTypes,
   ErrorCodes,
   NodeTypes,
+  type TemplateChildNode,
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
@@ -14,11 +15,12 @@ import {
 import {
   type BlockIRNode,
   DynamicFlag,
+  type IRDynamicInfo,
   IRNodeTypes,
   type IfIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { VaporBlockShape, extend } from '@vue/shared'
+import { VaporBlockShape, VaporIfFlags, extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
 import { getBlockShape, isStaticExpression } from '../utils'
@@ -43,6 +45,9 @@ export function processIf(
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
   const forceMultiRoot = shouldForceMultiRoot(context)
+  // Nested dynamic units are owned by an enclosing branch scope, so only mark
+  // root-block branches with the compiler-proven no-scope flag.
+  const allowNoScope = context.block === context.root.block
   if (dir.name === 'if') {
     const id = context.reference()
     context.dynamic.flags |= DynamicFlag.INSERT
@@ -54,7 +59,12 @@ export function processIf(
         type: IRNodeTypes.IF,
         id,
         ...context.effectBoundary(),
-        blockShape: encodeIfBlockShape(branch, forceMultiRoot),
+        blockShape: encodeIfBlockShape(
+          branch,
+          forceMultiRoot,
+          undefined,
+          allowNoScope,
+        ),
         condition: dir.exp!,
         positive: branch,
         index: context.root.nextIfIndex(),
@@ -139,12 +149,15 @@ export function processIf(
         lastIfNode.negative.blockShape = encodeIfBlockShape(
           lastIfNode.negative.positive,
           forceMultiRoot,
+          undefined,
+          allowNoScope,
         )
       }
       lastIfNode.blockShape = encodeIfBlockShape(
         lastIfNode.positive,
         forceMultiRoot,
         lastIfNode.negative,
+        allowNoScope,
       )
     }
   }
@@ -166,20 +179,99 @@ function encodeIfBlockShape(
   positive: BlockIRNode,
   forceMultiRoot: boolean = false,
   negative?: BlockIRNode | IfIRNode,
+  allowNoScope: boolean = true,
 ): number {
   // Pack the true/false branch shapes into one integer so runtime `createIf()`
   // can decode the selected branch with a single bit-mask operation.
   if (forceMultiRoot) {
     return VaporBlockShape.MULTI_ROOT | (VaporBlockShape.MULTI_ROOT << 2)
   }
-  return getBlockShape(positive) | (getNegativeBlockShape(negative) << 2)
+
+  const positiveNoScope = allowNoScope && canSkipIfBranchScope(positive)
+  const negativeNoScope =
+    allowNoScope &&
+    negative &&
+    negative.type !== IRNodeTypes.IF &&
+    canSkipIfBranchScope(negative)
+
+  return (
+    getBlockShape(positive) |
+    (getNegativeIfBranchShape(negative) << 2) |
+    (positiveNoScope ? VaporIfFlags.TRUE_NO_SCOPE : 0) |
+    (negativeNoScope ? VaporIfFlags.FALSE_NO_SCOPE : 0)
+  )
 }
 
-function getNegativeBlockShape(negative?: BlockIRNode | IfIRNode) {
+function getNegativeIfBranchShape(
+  negative?: BlockIRNode | IfIRNode,
+): VaporBlockShape {
   if (!negative) return VaporBlockShape.EMPTY
   return negative.type === IRNodeTypes.IF
     ? VaporBlockShape.SINGLE_ROOT
     : getBlockShape(negative)
+}
+
+function canSkipIfBranchScope(block: BlockIRNode): boolean {
+  if (block.effect.length || block.operation.length) {
+    return false
+  }
+  if (!isStaticBranch(block.node)) {
+    return false
+  }
+
+  if (
+    block.returns.length === 0 ||
+    block.dynamic.children.length !== block.returns.length
+  ) {
+    return false
+  }
+
+  return block.returns.every(id => {
+    const returned = findReturnedDynamic(block, id)
+    return !!(
+      returned &&
+      returned.template != null &&
+      !returned.operation &&
+      !returned.hasDynamicChild &&
+      !(returned.flags & (DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE))
+    )
+  })
+}
+
+function findReturnedDynamic(
+  block: BlockIRNode,
+  id: number,
+): IRDynamicInfo | undefined {
+  return block.dynamic.children.find(child => child.id === id)
+}
+
+function isStaticBranch(node: BlockIRNode['node']): boolean {
+  if (
+    node.type !== NodeTypes.ELEMENT ||
+    node.tagType !== ElementTypes.TEMPLATE ||
+    node.children.length === 0
+  ) {
+    return false
+  }
+  return node.children.every(child => isStaticTemplateNode(child))
+}
+
+function isStaticTemplateNode(node: TemplateChildNode): boolean {
+  if (node.type === NodeTypes.TEXT || node.type === NodeTypes.COMMENT) {
+    return true
+  }
+  if (
+    node.type !== NodeTypes.ELEMENT ||
+    node.tagType !== ElementTypes.ELEMENT
+  ) {
+    return false
+  }
+  for (const prop of node.props) {
+    if (prop.type === NodeTypes.DIRECTIVE || prop.name === 'ref') {
+      return false
+    }
+  }
+  return node.children.every(child => isStaticTemplateNode(child))
 }
 
 // SSR renders `v-if` inside `<template v-for>` always output <!--[-->...<!--]-->.
