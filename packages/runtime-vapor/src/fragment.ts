@@ -359,30 +359,32 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    const isRevivingDeferredBranch =
-      isHydrating &&
-      isInDeferredHydrationBoundary() &&
-      !!render &&
-      this.anchorLabel !== 'slot' &&
-      !isValidBlock(this.nodes)
+    let reusingDeferredAnchor = false
+    if (isHydrating) {
+      const isRevivingDeferredBranch =
+        isInDeferredHydrationBoundary() &&
+        !!render &&
+        this.anchorLabel !== 'slot' &&
+        !isValidBlock(this.nodes)
 
-    const reusingDeferredAnchor =
-      isRevivingDeferredBranch && !!this.anchor && !!this.anchor.parentNode
+      reusingDeferredAnchor =
+        isRevivingDeferredBranch && !!this.anchor && !!this.anchor.parentNode
 
-    // Deferred hydration can keep an empty wrapper fragment alive, then resolve
-    // it to a real branch before hydration exits. Re-point the cursor at the
-    // fragment-owned insertion anchor so the late branch inserts before that
-    // anchor instead of consuming trailing hydrated siblings or the enclosing
-    // slot boundary.
-    if (isRevivingDeferredBranch) {
-      let slotEndAnchor: Node | null = null
-      const anchor =
-        this.anchor ||
-        (currentHydrationNode === (slotEndAnchor = getCurrentSlotEndAnchor())
-          ? slotEndAnchor
-          : null)
-      if (anchor) {
-        setCurrentHydrationNode(markHydrationAnchor(anchor))
+      // Deferred hydration can keep an empty wrapper fragment alive, then resolve
+      // it to a real branch before hydration exits. Re-point the cursor at the
+      // fragment-owned insertion anchor so the late branch inserts before that
+      // anchor instead of consuming trailing hydrated siblings or the enclosing
+      // slot boundary.
+      if (isRevivingDeferredBranch) {
+        let slotEndAnchor: Node | null = null
+        const anchor =
+          this.anchor ||
+          (currentHydrationNode === (slotEndAnchor = getCurrentSlotEndAnchor())
+            ? slotEndAnchor
+            : null)
+        if (anchor) {
+          setCurrentHydrationNode(markHydrationAnchor(anchor))
+        }
       }
     }
 
