@@ -2339,13 +2339,20 @@ function baseCreateRenderer(
           // #13153 move kept-alive node before v-show transition leave finishes
           // it needs to call the leaving callback to ensure element's `display`
           // is `none`
+          const wasLeaving = el!._isLeaving || !!el![leaveCbKey]
           if (el!._isLeaving) {
             el![leaveCbKey](true /* cancelled */)
           }
-          leave(el!, () => {
+          // #14031 without a pending leave, persisted transitions should skip
+          // directive-owned leave hooks and just relocate.
+          if (transition!.persisted && !wasLeaving) {
             remove()
-            afterLeave && afterLeave()
-          })
+          } else {
+            leave(el!, () => {
+              remove()
+              afterLeave && afterLeave()
+            })
+          }
         }
         if (delayLeave) {
           delayLeave(el!, remove, performLeave)
@@ -2890,6 +2897,13 @@ export function performTransitionEnter(
   parentSuspense: SuspenseBoundary | null,
   force: boolean = false,
 ): void {
+  // #14031 if there is no pending v-show leave, the persisted transition
+  // lifecycle is directive-owned, so activating a kept-alive node only
+  // relocates it.
+  if (force && transition.persisted && !el[leaveCbKey]) {
+    insert()
+    return
+  }
   if (force || needTransition(parentSuspense, transition)) {
     transition.beforeEnter(el)
     insert()

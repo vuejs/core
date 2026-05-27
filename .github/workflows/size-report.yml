@@ -22,7 +22,7 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
@@ -31,7 +31,7 @@ jobs:
           cache: true
 
       - name: Download Size Data
-        uses: dawidd6/action-download-artifact@v19
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
@@ -39,18 +39,18 @@ jobs:
 
       - name: Read PR Number
         id: pr-number
-        uses: juliangruber/read-file-action@v1
+        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
         with:
           path: temp/size/number.txt
 
       - name: Read base branch
         id: pr-base
-        uses: juliangruber/read-file-action@v1
+        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
         with:
           path: temp/size/base.txt
 
       - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v19
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
           branch: ${{ steps.pr-base.outputs.content }}
           workflow: size-data.yml
@@ -64,12 +64,13 @@ jobs:
 
       - name: Read Size Report
         id: size-report
-        uses: juliangruber/read-file-action@v1
+        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
         with:
           path: ./size-report.md
 
       - name: Create Comment
-        uses: actions-cool/maintain-one-comment@v3
+        # The original action repository is blocked by GitHub, so use its backup pinned to a commit.
+        uses: actions-cool/maintain-one-comment-backup@fbbc22ad1809c1bcf46f19b58397b6254773588c # backup for v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ steps.pr-number.outputs.content }}

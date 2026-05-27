@@ -2176,6 +2176,53 @@ describe('SSR hydration', () => {
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
 
+    test('children mismatch is checked once when removing excess nodes', () => {
+      const hasAttribute = vi.spyOn(Element.prototype, 'hasAttribute')
+
+      try {
+        const { container } = mountWithHydration(
+          `<div><span>foo</span><span>bar</span><span>baz</span></div>`,
+          () => h('div', [h('span', 'foo')]),
+        )
+        const el = container.firstChild as Element
+        const allowMismatchCheckCount = hasAttribute.mock.calls.filter(
+          ([key], i) =>
+            key === 'data-allow-mismatch' &&
+            hasAttribute.mock.contexts[i] === el,
+        ).length
+
+        expect(container.innerHTML).toBe('<div><span>foo</span></div>')
+        expect(`Hydration children mismatch`).toHaveBeenWarnedTimes(1)
+        expect(allowMismatchCheckCount).toBe(1)
+      } finally {
+        hasAttribute.mockRestore()
+      }
+    })
+
+    test('children mismatch is checked once when mounting missing nodes', () => {
+      const hasAttribute = vi.spyOn(Element.prototype, 'hasAttribute')
+
+      try {
+        const { container } = mountWithHydration(`<div></div>`, () =>
+          h('div', [h('span', 'foo'), h('span', 'bar'), h('span', 'baz')]),
+        )
+        const el = container.firstChild as Element
+        const allowMismatchCheckCount = hasAttribute.mock.calls.filter(
+          ([key], i) =>
+            key === 'data-allow-mismatch' &&
+            hasAttribute.mock.contexts[i] === el,
+        ).length
+
+        expect(container.innerHTML).toBe(
+          '<div><span>foo</span><span>bar</span><span>baz</span></div>',
+        )
+        expect(`Hydration children mismatch`).toHaveBeenWarnedTimes(1)
+        expect(allowMismatchCheckCount).toBe(1)
+      } finally {
+        hasAttribute.mockRestore()
+      }
+    })
+
     test('complete mismatch', () => {
       const { container } = mountWithHydration(
         `<div><span>foo</span><span>bar</span></div>`,

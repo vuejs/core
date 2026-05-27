@@ -1839,7 +1839,7 @@ describe('e2e: Transition', () => {
         await click('#toggleBtn')
         await transitionFinish()
         expect(await html('#container')).toBe('<!--v-if-->')
-        expect(unmountSpy).toBeCalledTimes(1)
+        expect(unmountSpy).toHaveBeenCalledTimes(1)
         expect(await storageContainer!.evaluate(x => x.innerHTML)).toBe(``)
       },
       E2E_TIMEOUT,
@@ -1849,7 +1849,7 @@ describe('e2e: Transition', () => {
     test(
       'move kept-alive node before v-show transition leave finishes',
       async () => {
-        await page().evaluate(() => {
+        await page().evaluate(duration => {
           const { createApp, ref } = (window as any).Vue
           const show = ref(true)
           createApp({
@@ -1875,7 +1875,7 @@ describe('e2e: Transition', () => {
                       return { show }
                     },
                     template: `
-                      <Transition name="test">
+                      <Transition name="test" :duration="${duration * 4}">
                         <div v-show="show" >
                           <h2>{{ show ? "I should show" : "I shouldn't show " }}</h2>
                         </div>
@@ -1900,7 +1900,7 @@ describe('e2e: Transition', () => {
               },
             },
           }).mount('#app')
-        })
+        }, duration)
 
         expect(await html('#container')).toBe(
           `<div><h2>I should show</h2></div>` +
@@ -1936,7 +1936,7 @@ describe('e2e: Transition', () => {
             `<button id="changeShowBtn">false</button>`,
         )
 
-        await transitionFinish()
+        await transitionFinish(duration * 4 + buffer)
         expect(await html('#container')).toBe(
           `<div class="" style="display: none;"><h2>I shouldn't show </h2></div>` +
             `<h2>This is page1</h2>` +

@@ -8,16 +8,18 @@ catalog:
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
   'vite': npm:@voidzero-dev/vite-plus-core@latest
-  '@vitejs/plugin-vue': ^6.0.6
+  '@vitejs/plugin-vue': ^6.0.7
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
 
 allowBuilds:
+  '@parcel/watcher': true
   '@swc/core': true
   'esbuild': true
   'puppeteer': true
   'simple-git-hooks': true
   'unrs-resolver': true
+  'vue-demi': true
 
 dedupePeers: true
 
@@ -28,3 +30,5 @@ peerDependencyRules:
     '@typescript-eslint/parser>eslint': '^9.0.0'
     '@typescript-eslint/type-utils>eslint': '^9.0.0'
     '@typescript-eslint/utils>eslint': '^9.0.0'
+
+minimumReleaseAge: 1440

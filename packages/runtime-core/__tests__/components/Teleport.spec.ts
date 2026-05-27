@@ -289,6 +289,60 @@ describe('renderer: teleport', () => {
       expect(target.innerHTML).toBe(``)
     })
 
+    // #14876
+    test('should not mount discarded teleport with component child after deferred updates', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId4-component'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const phase = ref(0)
+
+      const Inner = {
+        render: () => h('div', 'inner'),
+      }
+
+      const Step1 = {
+        setup() {
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          showTeleport.value = false
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId4-component', defer: true },
+                  h(Inner),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+              ]
+            : [h('div', 'done')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+    })
+
     test('should not mount discarded disabled teleport after deferred updates', async () => {
       const root = document.createElement('div')
       const target = document.createElement('div')
