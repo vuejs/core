@@ -224,6 +224,45 @@ describe('createIf', () => {
     expect(frag.scope).toBeUndefined()
   })
 
+  test('should keep branch scope for no-scope branch with fallthrough attrs', async () => {
+    const show = ref(true)
+    const id = ref('a')
+    const t0 = template('<div>foo</div>')
+    let frag!: DynamicFragment
+    const Child = defineVaporComponent({
+      setup() {
+        return (frag = createIf(
+          () => show.value,
+          () => t0(),
+          undefined,
+          singleRootNoScope,
+        ) as DynamicFragment)
+      },
+    })
+
+    const { host } = define(() =>
+      createComponent(Child, { id: () => id.value }, null, true),
+    ).render()
+
+    expect(host.innerHTML).toBe('<div id="a">foo</div><!--if-->')
+    expect(frag.scope).toBeUndefined()
+    expect((frag as any).attrs).toBeUndefined()
+    expect((frag as any).hasFallthroughAttrs).toBe(true)
+
+    id.value = 'b'
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="b">foo</div><!--if-->')
+
+    show.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="b">foo</div><!--if-->')
+    expect(frag.scope).toBeDefined()
+  })
+
   test('should skip branch scope for compiler-proven static multi-root branch', async () => {
     const show = ref(true)
     const t0 = template('<div>foo</div>')

@@ -1294,7 +1294,7 @@ function handleSetupResult(
     const root = getRootElement(
       instance.block,
       // attach attrs to root dynamic fragments for applying during each update
-      frag => (frag.attrs = instance.attrs),
+      frag => registerDynamicFragmentFallthroughAttrs(frag, instance.attrs),
       false,
     )
     if (root) {
@@ -1327,4 +1327,26 @@ function handleSetupResult(
 export function getCurrentScopeId(): string | undefined {
   const scopeOwner = getScopeOwner()
   return scopeOwner ? scopeOwner.type.__scopeId : undefined
+}
+
+function registerDynamicFragmentFallthroughAttrs(
+  frag: DynamicFragment,
+  attrs: Record<string, any>,
+): void {
+  frag.hasFallthroughAttrs = true
+  ;(frag.onBeforeInsert || (frag.onBeforeInsert = [])).push(nodes => {
+    if (nodes instanceof Element) {
+      // ensure render effect is cleaned up when branch scope is stopped
+      frag.scope!.run(() => {
+        renderEffect(() => applyFallthroughProps(nodes, attrs))
+      })
+    } else if (
+      __DEV__ &&
+      // preventing attrs fallthrough on slots
+      // consistent with VDOM slots behavior
+      (frag.anchorLabel === 'slot' || (isArray(nodes) && nodes.length))
+    ) {
+      warnExtraneousAttributes(attrs)
+    }
+  })
 }

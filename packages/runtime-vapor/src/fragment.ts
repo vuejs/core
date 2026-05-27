@@ -21,13 +21,8 @@ import {
   currentInstance,
   queuePostFlushCb,
   setCurrentInstance,
-  warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import {
-  type VaporComponentInstance,
-  applyFallthroughProps,
-  isVaporComponent,
-} from './component'
+import { type VaporComponentInstance, isVaporComponent } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
   advanceHydrationNode,
@@ -45,7 +40,6 @@ import {
   setCurrentHydrationNode,
 } from './dom/hydration'
 import { EMPTY_ARR, isArray } from '@vue/shared'
-import { renderEffect } from './renderEffect'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import { setBlockKey } from './helpers/setKey'
 import {
@@ -95,6 +89,7 @@ export class VaporFragment<
 
   // hooks
   onBeforeUpdate?: (() => void)[]
+  onBeforeInsert?: ((nodes: Block) => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
 
   // render context
@@ -245,9 +240,8 @@ export class DynamicFragment extends VaporFragment {
   anchorLabel?: string
   keyed?: boolean
   inTransition?: boolean
-
-  // fallthrough attrs
-  attrs?: Record<string, any>
+  // Fallthrough attrs hooks register branch-owned effects on insert.
+  hasFallthroughAttrs?: true
   constructor(
     anchorLabel?: string,
     keyed: boolean = false,
@@ -421,7 +415,7 @@ export class DynamicFragment extends VaporFragment {
       const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx : null
       // A compiler-proven static branch can skip its own EffectScope, but attrs
       // fallthrough still registers branch-owned cleanup.
-      const useScope = !noScope || !!this.attrs
+      const useScope = !noScope || !!this.hasFallthroughAttrs
       if (useScope) {
         // try to reuse the kept-alive scope
         const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
@@ -473,26 +467,10 @@ export class DynamicFragment extends VaporFragment {
       }
 
       if (parent) {
-        // apply fallthrough props during update
-        if (this.attrs) {
-          if (this.nodes instanceof Element) {
-            // ensure render effect is cleaned up when scope is stopped
-            this.scope!.run(() => {
-              renderEffect(() =>
-                applyFallthroughProps(this.nodes as Element, this.attrs!),
-              )
-            })
-          } else if (
-            __DEV__ &&
-            // preventing attrs fallthrough on slots
-            // consistent with VDOM slots behavior
-            (this.anchorLabel === 'slot' ||
-              (isArray(this.nodes) && this.nodes.length))
-          ) {
-            warnExtraneousAttributes(this.attrs)
-          }
+        const onBeforeInsert = this.onBeforeInsert
+        if (onBeforeInsert) {
+          onBeforeInsert.forEach(hook => hook(this.nodes))
         }
-
         insert(this.nodes, parent, this.anchor)
 
         // For out-in transition, call cacheBlock after renderBranch completes
