@@ -110,10 +110,25 @@ export class VaporFragment<
 
   protected runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
     const prevInstance = setCurrentInstance(this.renderInstance, scope)
+    const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx || null : null
+    // When ambient fragment context already matches, only instance/scope needs
+    // restoring. This keeps ordinary branch renders on the cheap path.
+    if (
+      currentSlotOwner === this.slotOwner &&
+      currentSlotBoundary === this.inheritedSlotBoundary &&
+      (!isKeepAliveEnabled || currentKeepAliveCtx === keepAliveCtx)
+    ) {
+      try {
+        return fn()
+      } finally {
+        setCurrentInstance(...prevInstance)
+      }
+    }
+
     const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
     let prevKeepAliveCtx: VaporKeepAliveContext | null = null
     if (isKeepAliveEnabled) {
-      prevKeepAliveCtx = setCurrentKeepAliveCtx(this.keepAliveCtx || null)
+      prevKeepAliveCtx = setCurrentKeepAliveCtx(keepAliveCtx)
     }
     const prevBoundary = setCurrentSlotBoundary(this.inheritedSlotBoundary)
     try {
