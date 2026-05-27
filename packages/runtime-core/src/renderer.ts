@@ -2082,9 +2082,10 @@ function baseCreateRenderer(
       transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
-        // #14031 for persisted transitions (e.g. v-show) the directive owns the
-        // enter lifecycle, so skip the transition hooks and just relocate.
-        if (transition!.persisted) {
+        // #14031 if there is no pending v-show leave, the persisted
+        // transition lifecycle is directive-owned, so activating a kept-alive
+        // node only relocates it.
+        if (transition!.persisted && !el![leaveCbKey]) {
           hostInsert(el!, container, anchor)
         } else {
           transition!.beforeEnter(el!)
@@ -2104,12 +2105,13 @@ function baseCreateRenderer(
           // #13153 move kept-alive node before v-show transition leave finishes
           // it needs to call the leaving callback to ensure element's `display`
           // is `none`
+          const wasLeaving = el!._isLeaving || !!el![leaveCbKey]
           if (el!._isLeaving) {
             el![leaveCbKey](true /* cancelled */)
           }
-          // #14031 for persisted transitions the directive owns the leave
-          // lifecycle, so skip `leave()` / `afterLeave` and just relocate.
-          if (transition!.persisted) {
+          // #14031 without a pending leave, persisted transitions should skip
+          // directive-owned leave hooks and just relocate.
+          if (transition!.persisted && !wasLeaving) {
             remove()
           } else {
             leave(el!, () => {
