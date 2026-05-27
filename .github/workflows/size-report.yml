@@ -75,7 +75,8 @@ jobs:
           path: ./size-report.md
 
       - name: Create Comment
-        uses: actions-cool/maintain-one-comment@909842216bc8e8658364c572ec52100f4c2cc50a # v3.0.0
+        # The original action repository is blocked by GitHub, so use its backup pinned to a commit.
+        uses: actions-cool/maintain-one-comment-backup@fbbc22ad1809c1bcf46f19b58397b6254773588c # backup for v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ steps.pr-number.outputs.content }}
