@@ -275,7 +275,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, 17 /* BLOCK_SHAPE, ONCE */)
+  }, null, 49 /* BLOCK_SHAPE, TRUE_NO_SCOPE, ONCE */)
   _renderEffect(() => _setProp(n4, "disabled", _ctx.foo))
   return n6
 }"

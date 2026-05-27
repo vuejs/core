@@ -119,7 +119,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 21 /* BLOCK_SHAPE, ONCE */)
+  }, 85 /* BLOCK_SHAPE, FALSE_NO_SCOPE, ONCE */)
   return n0
 }"
 `;
