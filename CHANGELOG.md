@@ -1,3 +1,23 @@
+## [3.5.35](https://github.com/vuejs/core/compare/v3.5.34...v3.5.35) (2026-05-27)
+
+
+### Bug Fixes
+
+* **compiler-core:** avoid double processing v-for keys with v-memo ([#14861](https://github.com/vuejs/core/issues/14861)) ([34a0ded](https://github.com/vuejs/core/commit/34a0ded4d27289a8f227462bd35b6341a4b51831)), closes [#14859](https://github.com/vuejs/core/issues/14859)
+* **compiler-sfc:** resolve top-level exports from files registered as global types ([#14805](https://github.com/vuejs/core/issues/14805)) ([3d077f2](https://github.com/vuejs/core/commit/3d077f26e33510f2ba001d14142ba76a1414dfff)), closes [nuxt/nuxt#33694](https://github.com/nuxt/nuxt/issues/33694)
+* **deps:** update dependency postcss to ^8.5.15 ([#14878](https://github.com/vuejs/core/issues/14878)) ([6e2bf14](https://github.com/vuejs/core/commit/6e2bf14df30333e0bc5438478780d6c7b2d7b231))
+* **runtime-core:** avoid repeated hydration mismatch checks ([#14857](https://github.com/vuejs/core/issues/14857)) ([170fc95](https://github.com/vuejs/core/commit/170fc95eb64b97024dcb3df770557065e2919aa8)), closes [#14855](https://github.com/vuejs/core/issues/14855)
+* **runtime-core:** skip idle persisted transition hooks in keep-alive moves ([#14865](https://github.com/vuejs/core/issues/14865)) ([80fc139](https://github.com/vuejs/core/commit/80fc139f90513943f1d0da20d353feec8a9ec894)), closes [#14031](https://github.com/vuejs/core/issues/14031)
+* **server-renderer:** propagate sync errors from `ssrRenderSuspense` ([#14804](https://github.com/vuejs/core/issues/14804)) ([4760997](https://github.com/vuejs/core/commit/47609975e294fbcc8017b6d68c9be38fa5508f36)), closes [nuxt/nuxt#28162](https://github.com/nuxt/nuxt/issues/28162)
+* **teleport:** skip child unmount when pending mount discarded ([#14876](https://github.com/vuejs/core/issues/14876)) ([#14877](https://github.com/vuejs/core/issues/14877)) ([584beb1](https://github.com/vuejs/core/commit/584beb1262d1247d41ed3b463c485c57022fa922))
+
+
+### Performance Improvements
+
+* **reactivity:** skip type checks for cached proxies ([#14860](https://github.com/vuejs/core/issues/14860)) ([5734fe9](https://github.com/vuejs/core/commit/5734fe97f6e42d7abb1893c8bc38a17f7deb00b1))
+* **runtime-dom:** optimize array event handler dispatch ([#14828](https://github.com/vuejs/core/issues/14828)) ([bb18dc8](https://github.com/vuejs/core/commit/bb18dc8e567ce22f1e5dfbc6b16c1003b48c2785))
+* **server-renderer:** avoid materializing iterables in ssrRenderList ([#14821](https://github.com/vuejs/core/issues/14821)) ([1b7a2cc](https://github.com/vuejs/core/commit/1b7a2cc15c501a4b1e4be61874879381af59b74f))
+
 ## [3.5.34](https://github.com/vuejs/core/compare/v3.5.33...v3.5.34) (2026-05-06)
 
 
