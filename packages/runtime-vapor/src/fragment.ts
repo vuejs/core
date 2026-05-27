@@ -472,20 +472,17 @@ export class DynamicFragment extends VaporFragment {
           onBeforeInsert.forEach(hook => hook(this.nodes))
         }
         insert(this.nodes, parent, this.anchor)
-
-        // For out-in transition, call cacheBlock after renderBranch completes
-        // because KeepAlive's onUpdated fires before the deferred rendering finishes
-        if (keepAliveCtx && transition && transition.mode === 'out-in') {
-          keepAliveCtx.cacheBlock()
-        }
       }
     } else {
       this.scope = undefined
       this.nodes = EMPTY_BLOCK
     }
 
-    if (parent && this.onUpdated) {
-      this.onUpdated.forEach(hook => hook(this.nodes))
+    if (parent) {
+      const onUpdated = this.onUpdated
+      if (onUpdated) {
+        onUpdated.forEach(hook => hook(this.nodes))
+      }
     }
   }
 
