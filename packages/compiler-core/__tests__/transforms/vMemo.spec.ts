@@ -44,6 +44,16 @@ describe('compiler: v-memo transform', () => {
     ).toMatchSnapshot()
   })
 
+  test('on v-for w/ compound key expression', () => {
+    expect(
+      compile(
+        `<div v-for="{ x, y } in list" :key="get(x)" v-memo="[x, y === z]">
+          <span>foobar</span>
+        </div>`,
+      ),
+    ).toMatchSnapshot()
+  })
+
   test('on template v-for', () => {
     expect(
       compile(
@@ -54,10 +64,12 @@ describe('compiler: v-memo transform', () => {
     ).toMatchSnapshot()
   })
 
-  test('element v-for key expression prefixing + v-memo', () => {
+  test('on template v-for w/ compound key expression', () => {
     expect(
       compile(
-        `<span v-for="data of tableData" :key="getId(data)" v-memo="getLetter(data)"></span>`,
+        `<template v-for="{ x, y } in list" :key="get(x)" v-memo="[x, y === z]">
+          <span>foobar</span>
+        </template>`,
       ),
     ).toMatchSnapshot()
   })
