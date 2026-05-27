@@ -1334,7 +1334,7 @@ function registerDynamicFragmentFallthroughAttrs(
   attrs: Record<string, any>,
 ): void {
   frag.hasFallthroughAttrs = true
-  ;(frag.onBeforeInsert || (frag.onBeforeInsert = [])).push(nodes => {
+  ;(frag.onBeforeInsert ||= []).push(nodes => {
     if (nodes instanceof Element) {
       // ensure render effect is cleaned up when branch scope is stopped
       frag.scope!.run(() => {
