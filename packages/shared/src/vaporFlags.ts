@@ -42,11 +42,13 @@ export enum VaporBlockShape {
  * - bits 0-1: true branch VaporBlockShape
  * - bits 2-3: false branch VaporBlockShape
  * - bit 4: v-once
- * - bits 5+: branch index + 1 for keyed dynamic fragments
+ * - bit 5: true branch does not need EffectScope
+ * - bit 6: false branch does not need EffectScope
+ * - bits 7+: branch index + 1 for keyed dynamic fragments
  *
  * Examples:
  * - v-once, true single-root, no false branch: 1 | ONCE = 17
- * - keyed index 0, true/false single-root: 1 | (1 << 2) | (1 << 5) = 37
+ * - keyed index 0, true/false single-root: 1 | (1 << 2) | (1 << 7) = 133
  */
 export enum VaporIfFlags {
   /**
@@ -59,10 +61,20 @@ export enum VaporIfFlags {
    */
   ONCE = 1 << 4,
   /**
+   * The compiler proved that the true branch does not create branch-owned
+   * effects or disposers.
+   */
+  TRUE_NO_SCOPE = 1 << 5,
+  /**
+   * The compiler proved that the false branch does not create branch-owned
+   * effects or disposers.
+   */
+  FALSE_NO_SCOPE = 1 << 6,
+  /**
    * Shift for keyed branch index. The encoded value is index + 1, so decoded
    * zero means "not keyed" and source index 0 still round-trips.
    */
-  INDEX_SHIFT = 5,
+  INDEX_SHIFT = 7,
 }
 
 /**

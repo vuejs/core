@@ -5,6 +5,7 @@ import {
   transformChildren,
   transformComment,
   transformElement,
+  transformTemplateRef,
   transformText,
   transformVFor,
   transformVIf,
@@ -12,7 +13,15 @@ import {
   transformVText,
 } from '../../src'
 import { ErrorCodes, NodeTypes, type RootNode } from '@vue/compiler-dom'
-import { VaporBlockShape } from '@vue/shared'
+import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
+
+const singleRootNoScope =
+  VaporBlockShape.SINGLE_ROOT | VaporIfFlags.TRUE_NO_SCOPE
+const singleRootIfElseNoScope =
+  VaporBlockShape.SINGLE_ROOT |
+  (VaporBlockShape.SINGLE_ROOT << 2) |
+  VaporIfFlags.TRUE_NO_SCOPE |
+  VaporIfFlags.FALSE_NO_SCOPE
 
 const compileWithVIf = makeCompile({
   nodeTransforms: [
@@ -20,6 +29,7 @@ const compileWithVIf = makeCompile({
     transformVIf,
     transformVFor,
     transformText,
+    transformTemplateRef,
     transformElement,
     transformComment,
     transformChildren,
@@ -66,11 +76,29 @@ describe('compiler: v-if', () => {
     expect(code).matchSnapshot()
   })
 
-  test('omits default single-root flags', () => {
-    const { code } = compileWithVIf(`<div v-if="ok" />`)
+  test('omits default single-root flags when branch needs scope', () => {
+    const { code } = compileWithVIf(`<div v-if="ok">{{ msg }}</div>`)
 
     expect(code).contains(`const n0 = _createIf(() => (_ctx.ok), () => {`)
     expect(code).not.contains(`}, null, 1)`)
+  })
+
+  test('marks pure static single-root branch as no-scope', () => {
+    const { code } = compileWithVIf(`<div v-if="ok">static</div>`)
+
+    expect(code).contains(
+      `}, null, ${singleRootNoScope} /* BLOCK_SHAPE, TRUE_NO_SCOPE */)`,
+    )
+  })
+
+  test('marks pure static multi-root branch as no-scope', () => {
+    const { code } = compileWithVIf(
+      `<template v-if="ok"><div>one</div><p>two</p></template>`,
+    )
+
+    expect(code).contains(
+      `}, null, ${VaporBlockShape.MULTI_ROOT | VaporIfFlags.TRUE_NO_SCOPE} /* BLOCK_SHAPE, TRUE_NO_SCOPE */)`,
+    )
   })
 
   test('packs once flag', () => {
@@ -85,8 +113,28 @@ describe('compiler: v-if', () => {
       `<div v-if="foo">foo</div><div v-else>bar</div>`,
     )
 
-    expect(code).contains(`}, 37 /* BLOCK_SHAPE, INDEX_SHIFT */)`)
+    expect(code).contains(
+      `}, ${singleRootIfElseNoScope | (1 << VaporIfFlags.INDEX_SHIFT)} /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */)`,
+    )
     expect(code).not.contains(`}, 5, null, 0)`)
+  })
+
+  test('does not mark scoped branches as no-scope', () => {
+    const cases = [
+      `<div v-if="ok">{{ msg }}</div>`,
+      `<div v-if="ok" :class="foo"></div>`,
+      `<div v-if="ok" @click="foo"></div>`,
+      `<Comp v-if="ok" />`,
+      `<div v-if="ok" ref="el"></div>`,
+      `<template v-if="ok"><div/>{{ msg }}</template>`,
+      `<div v-if="ok"><span v-if="bar" /></div>`,
+    ]
+
+    for (const source of cases) {
+      const { code } = compileWithVIf(source)
+      expect(code.includes('NO_SCOPE'), source).toBe(false)
+      expect(code.includes(`, ${singleRootNoScope} /*`), source).toBe(false)
+    }
   })
 
   test('multiple v-if at root', () => {
@@ -161,6 +209,9 @@ describe('compiler: v-if', () => {
     const { code, ir } = compileWithVIf(`<template v-if="foo">hello</template>`)
 
     expect(code).toMatchSnapshot()
+    expect(code).contains(
+      `}, null, ${singleRootNoScope} /* BLOCK_SHAPE, TRUE_NO_SCOPE */)`,
+    )
     expect(code).toContain('_template("hello", 2)')
     expect([...ir.template.keys()]).toMatchObject(['hello'])
   })
@@ -187,7 +238,7 @@ describe('compiler: v-if', () => {
     expect([...ir.template.keys()]).toMatchObject(['<div>hi', '<div>ho'])
     expect(
       (ir.block.dynamic.children[0].operation as IfIRNode).blockShape,
-    ).toBe(VaporBlockShape.MULTI_ROOT)
+    ).toBe(VaporBlockShape.MULTI_ROOT | VaporIfFlags.TRUE_NO_SCOPE)
   })
 
   test('template v-if (with v-for inside)', () => {
@@ -257,7 +308,12 @@ describe('compiler: v-if', () => {
     ])
     expect(
       (ir.block.dynamic.children[0].operation as IfIRNode).blockShape,
-    ).toBe(VaporBlockShape.MULTI_ROOT | (VaporBlockShape.SINGLE_ROOT << 2))
+    ).toBe(
+      VaporBlockShape.MULTI_ROOT |
+        (VaporBlockShape.SINGLE_ROOT << 2) |
+        VaporIfFlags.TRUE_NO_SCOPE |
+        VaporIfFlags.FALSE_NO_SCOPE,
+    )
   })
 
   test('dedupe same template', () => {
@@ -421,12 +477,14 @@ describe('compiler: v-if', () => {
     const op = ir.block.dynamic.children[0].operation as IfIRNode
     const nested = op.negative as IfIRNode
     const innermost = nested.negative as IfIRNode
-    const singleOrSingle =
-      VaporBlockShape.SINGLE_ROOT | (VaporBlockShape.SINGLE_ROOT << 2)
+    const noScopeOrSingle =
+      VaporBlockShape.SINGLE_ROOT |
+      (VaporBlockShape.SINGLE_ROOT << 2) |
+      VaporIfFlags.TRUE_NO_SCOPE
 
-    expect(op.blockShape).toBe(singleOrSingle)
-    expect(nested.blockShape).toBe(singleOrSingle)
-    expect(innermost.blockShape).toBe(singleOrSingle)
+    expect(op.blockShape).toBe(noScopeOrSingle)
+    expect(nested.blockShape).toBe(noScopeOrSingle)
+    expect(innermost.blockShape).toBe(singleRootIfElseNoScope)
   })
 
   test('v-if + v-if / v-else[-if]', () => {

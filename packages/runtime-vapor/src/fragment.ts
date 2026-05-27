@@ -241,7 +241,7 @@ export class DynamicFragment extends VaporFragment {
   anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
-  pending?: { render?: BlockFn; key: any }
+  pending?: { render?: BlockFn; key: any; noScope: boolean }
   anchorLabel?: string
   keyed?: boolean
   inTransition?: boolean
@@ -274,7 +274,7 @@ export class DynamicFragment extends VaporFragment {
     if (trackSlotBoundary) trackSlotBoundaryDirtying(this)
   }
 
-  update(render?: BlockFn, key: any = render): void {
+  update(render?: BlockFn, key: any = render, noScope: boolean = false): void {
     if (key === this.current) {
       // On initial hydration, `key === current` means `render` is empty,
       // so this fragment hydrates as empty content.
@@ -294,8 +294,9 @@ export class DynamicFragment extends VaporFragment {
       if (pending) {
         pending.render = render
         pending.key = key
+        pending.noScope = noScope
       } else {
-        this.pending = { render, key }
+        this.pending = { render, key, noScope }
       }
       return
     }
@@ -304,8 +305,8 @@ export class DynamicFragment extends VaporFragment {
     const prevSub = setActiveSub()
     const parent = isHydrating ? null : this.anchor.parentNode
     // teardown previous branch
-    if (this.scope) {
-      if (isKeepAliveEnabled) {
+    if (this.current !== undefined) {
+      if (this.scope && isKeepAliveEnabled) {
         let retainScope = false
         const keepAliveCtx = this.keepAliveCtx
 
@@ -326,7 +327,7 @@ export class DynamicFragment extends VaporFragment {
         if (!retainScope) {
           this.scope.stop()
         }
-      } else {
+      } else if (this.scope) {
         this.scope.stop()
       }
       const mode = transition && transition.mode
@@ -349,9 +350,15 @@ export class DynamicFragment extends VaporFragment {
             const pending = this.pending
             if (pending) {
               this.pending = undefined
-              this.renderBranch(pending.render, transition, parent, pending.key)
+              this.renderBranch(
+                pending.render,
+                transition,
+                parent,
+                pending.key,
+                pending.noScope,
+              )
             } else {
-              this.renderBranch(render, transition, parent, key)
+              this.renderBranch(render, transition, parent, key, noScope)
             }
           } finally {
             setCurrentInstance(...prevInstance)
@@ -394,7 +401,7 @@ export class DynamicFragment extends VaporFragment {
       }
     }
 
-    this.renderBranch(render, transition, parent, key)
+    this.renderBranch(render, transition, parent, key, noScope)
     setActiveSub(prevSub)
 
     if (isHydrating && this.anchorLabel !== 'slot' && !reusingDeferredAnchor) {
@@ -407,22 +414,32 @@ export class DynamicFragment extends VaporFragment {
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
     key: any,
+    noScope: boolean = false,
   ): void {
     this.current = key
     if (render) {
       const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx : null
-      // try to reuse the kept-alive scope
-      const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
-      if (scope) {
-        this.scope = scope
+      // A compiler-proven static branch can skip its own EffectScope, but attrs
+      // fallthrough still registers branch-owned cleanup.
+      const useScope = !noScope || !!this.attrs
+      if (useScope) {
+        // try to reuse the kept-alive scope
+        const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
+        if (scope) {
+          this.scope = scope
+        } else {
+          this.scope = new EffectScope()
+        }
       } else {
-        this.scope = new EffectScope()
+        this.scope = undefined
       }
 
       const renderBranch = () => {
         try {
           this.nodes = this.runWithRenderCtx(
-            () => this.scope!.run(render) || [],
+            () =>
+              (useScope ? this.scope!.run(render) : render()) || EMPTY_BLOCK,
+            this.scope,
           )
         } finally {
           // propagate the fragment key onto freshly rendered nodes.
@@ -460,7 +477,7 @@ export class DynamicFragment extends VaporFragment {
         if (this.attrs) {
           if (this.nodes instanceof Element) {
             // ensure render effect is cleaned up when scope is stopped
-            this.scope.run(() => {
+            this.scope!.run(() => {
               renderEffect(() =>
                 applyFallthroughProps(this.nodes as Element, this.attrs!),
               )
