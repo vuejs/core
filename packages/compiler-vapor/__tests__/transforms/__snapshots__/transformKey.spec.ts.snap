@@ -125,7 +125,7 @@ export function render(_ctx) {
       return n5
     })
     return n4
-  }), 37 /* BLOCK_SHAPE, INDEX_SHIFT */)
+  }), 165 /* BLOCK_SHAPE, TRUE_NO_SCOPE, INDEX_SHIFT */)
   return n0
 }"
 `;
