@@ -848,8 +848,8 @@ export function getRestElement(val: any, keys: string[]): any {
   return res
 }
 
-export function getDefaultValue(val: any, defaultVal: any): any {
-  return val === undefined ? defaultVal : val
+export function getDefaultValue(val: any, getDefaultVal: () => any): any {
+  return val === undefined ? getDefaultVal() : val
 }
 
 export function isForBlock(block: Block): block is ForBlock {

@@ -543,6 +543,7 @@ describe('createFor', () => {
 
   test('de-structured value (default value)', async () => {
     const list = ref<any[]>([{ name: '1' }, { name: '2' }, { name: '3' }])
+    const getDefault = vi.fn(() => '0')
 
     const { host } = define(() => {
       const n1 = createFor(
@@ -550,7 +551,7 @@ describe('createFor', () => {
         (item, _key, index) => {
           const span = document.createElement('li')
           renderEffect(() => {
-            span.innerHTML = getDefaultValue(item.value.x, '0')
+            span.innerHTML = getDefaultValue(item.value.x, getDefault)
             // index should be undefined if source is not an object
             expect(index.value).toBe(undefined)
           })
@@ -562,11 +563,13 @@ describe('createFor', () => {
     }).render()
 
     expect(host.innerHTML).toBe('<li>0</li><li>0</li><li>0</li><!--for-->')
+    expect(getDefault).toHaveBeenCalledTimes(3)
 
     // change
     list.value[0].x = 5
     await nextTick()
     expect(host.innerHTML).toBe('<li>5</li><li>0</li><li>0</li><!--for-->')
+    expect(getDefault).toHaveBeenCalledTimes(3)
 
     // clear
     list.value = []

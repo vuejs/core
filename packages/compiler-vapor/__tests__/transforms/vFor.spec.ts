@@ -401,9 +401,11 @@ describe('compiler: v-for', () => {
       </div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain(`_getDefaultValue(_for_item0.value.foo, _ctx.bar)`)
     expect(code).toContain(
-      `_getDefaultValue(_for_item0.value.baz[0], _ctx.quux)`,
+      `_getDefaultValue(_for_item0.value.foo, () => (_ctx.bar))`,
+    )
+    expect(code).toContain(
+      `_getDefaultValue(_for_item0.value.baz[0], () => (_ctx.quux))`,
     )
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.FOR,
