@@ -1,6 +1,7 @@
 import {
   VaporTransitionGroup,
   createComponent,
+  createFor,
   createIf,
   defineVaporAsyncComponent,
   defineVaporComponent,
@@ -8,7 +9,7 @@ import {
   template,
   withVaporCtx,
 } from '../../src'
-import { nextTick } from '@vue/runtime-dom'
+import { nextTick, ref } from '@vue/runtime-dom'
 import { makeRender } from '../_utils'
 
 const define = makeRender()
@@ -151,5 +152,29 @@ describe('TransitionGroup', () => {
     expect(child.block.nodes.$key).toBe('foo')
     expect(child.block.nodes.block.$key).toBe('foo')
     expect(child.block.nodes.block.$transition).toBeDefined()
+  })
+
+  test('inherits v-for item key when applying transition hooks to new items', async () => {
+    const items = ref([1])
+    let list: any
+
+    define({
+      setup() {
+        list = createFor(
+          () => items.value,
+          item => template(`<div></div>`)(),
+          item => item,
+        )
+        return createComponent(VaporTransitionGroup, null, {
+          default: withVaporCtx(() => list),
+        })
+      },
+    }).render()
+
+    items.value = [1, 2]
+    await nextTick()
+
+    expect(list.nodes[0][1].nodes.$key).toBe(2)
+    expect(list.nodes[0][1].nodes.$transition).toBeDefined()
   })
 })

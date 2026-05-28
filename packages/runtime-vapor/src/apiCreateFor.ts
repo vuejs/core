@@ -62,6 +62,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
+import { setBlockKey } from './helpers/setKey'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -461,6 +462,7 @@ export const createFor = (
 
     // apply transition for new nodes
     if (isTransitionEnabled && frag.$transition) {
+      if (frag.$transition.applyGroup) setBlockKey(block.nodes, block.key)
       applyTransitionHooks(block.nodes, frag.$transition)
     }
 
