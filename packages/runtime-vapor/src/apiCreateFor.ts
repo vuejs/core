@@ -119,8 +119,9 @@ export const createFor = (
 
   const frag = new ForFragment(oldBlocks)
   const instance = currentInstance!
-  const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
+  const canUseFastRemove =
+    !!(flags & VaporVForFlags.FAST_REMOVE) && !isComponent
   const isSingleNode = !!(flags & VaporVForFlags.IS_SINGLE_NODE)
   const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
 
