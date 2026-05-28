@@ -160,12 +160,13 @@ export const createFor = (
     }
 
     const prevSub = setActiveSub()
-    if (isMounted && frag.onBeforeUpdate) {
+    const wasMounted = isMounted
+    if (wasMounted && frag.onBeforeUpdate) {
       for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
         frag.onBeforeUpdate[i]()
       }
     }
-    if (!isMounted) {
+    if (!wasMounted) {
       isMounted = true
       if (isHydrating) {
         hydrateList(source, newLength)
@@ -399,7 +400,7 @@ export const createFor = (
     frag.nodes = [(oldBlocks = newBlocks)]
     if (parentAnchor) frag.nodes.push(parentAnchor)
 
-    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+    if (wasMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
     setActiveSub(prevSub)
   }
 
