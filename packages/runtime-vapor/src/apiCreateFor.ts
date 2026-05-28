@@ -764,11 +764,15 @@ function normalizeSource(source: any): ResolvedSource {
   } else if (isString(source)) {
     values = source.split('')
   } else if (typeof source === 'number') {
-    if (__DEV__ && !Number.isInteger(source)) {
-      warn(`The v-for range expect an integer value but got ${source}.`)
+    if (__DEV__ && (!Number.isInteger(source) || source < 0)) {
+      warn(
+        `The v-for range expects a positive integer value but got ${source}.`,
+      )
+      values = []
+    } else {
+      values = new Array(source)
+      for (let i = 0; i < source; i++) values[i] = i + 1
     }
-    values = new Array(source)
-    for (let i = 0; i < source; i++) values[i] = i + 1
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
       values = Array.from(source as Iterable<any>)

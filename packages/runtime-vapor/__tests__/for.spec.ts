@@ -247,6 +247,46 @@ describe('createFor', () => {
     expect(host.innerHTML).toBe('<!--for-->')
   })
 
+  test('non-integer number source warns and renders empty', () => {
+    const { host } = define(() => {
+      return createFor(
+        () => 3.1,
+        item => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.innerHTML = `${item.value}`
+          })
+          return span
+        },
+      )
+    }).render()
+
+    expect(host.innerHTML).toBe('<!--for-->')
+    expect(
+      `The v-for range expects a positive integer value but got 3.1.`,
+    ).toHaveBeenWarned()
+  })
+
+  test('negative number source warns and renders empty', () => {
+    const { host } = define(() => {
+      return createFor(
+        () => -1,
+        item => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.innerHTML = `${item.value}`
+          })
+          return span
+        },
+      )
+    }).render()
+
+    expect(host.innerHTML).toBe('<!--for-->')
+    expect(
+      `The v-for range expects a positive integer value but got -1.`,
+    ).toHaveBeenWarned()
+  })
+
   test('object source', async () => {
     const initial = () => ({ a: 1, b: 2, c: 3 })
     const data = ref<Record<string, number>>(initial())
