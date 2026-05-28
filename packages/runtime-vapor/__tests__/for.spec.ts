@@ -311,6 +311,55 @@ describe('createFor', () => {
     expect(host.innerHTML).toBe('<!--for-->')
   })
 
+  test('unkeyed object source updates key and index aliases', async () => {
+    const data = ref<Record<string, number>>({ a: 1 })
+
+    const { host } = define(() => {
+      return createFor(
+        () => data.value,
+        (item, key, index) => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.innerHTML = `${key.value}${index.value}. ${item.value}`
+          })
+          return span
+        },
+      )
+    }).render()
+
+    expect(host.innerHTML).toBe('<li>a0. 1</li><!--for-->')
+
+    data.value = { b: 2 }
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<li>b0. 2</li><!--for-->')
+  })
+
+  test('keyed object source updates key and index aliases when reusing a block', async () => {
+    const data = ref<Record<string, number>>({ a: 1, c: 3 })
+
+    const { host } = define(() => {
+      return createFor(
+        () => data.value,
+        (item, key, index) => {
+          const span = document.createElement('li')
+          renderEffect(() => {
+            span.innerHTML = `${key.value}${index.value}. ${item.value}`
+          })
+          return span
+        },
+        item => item,
+      )
+    }).render()
+
+    expect(host.innerHTML).toBe('<li>a0. 1</li><li>c1. 3</li><!--for-->')
+
+    data.value = { b: 1, d: 4 }
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<li>b0. 1</li><li>d1. 4</li><!--for-->')
+  })
+
   test('de-structured value', async () => {
     const list = ref([{ name: '1' }, { name: '2' }, { name: '3' }])
     function reverse() {

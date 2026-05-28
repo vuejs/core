@@ -202,7 +202,8 @@ export const createFor = (
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
         for (let i = 0; i < commonLength; i++) {
-          update((newBlocks[i] = oldBlocks[i]), getItem(source, i)[0])
+          const item = getItem(source, i)
+          update((newBlocks[i] = oldBlocks[i]), ...item)
         }
         for (let i = oldLength; i < newLength; i++) {
           mount(source, i)
@@ -261,7 +262,7 @@ export const createFor = (
           const oldBlock = oldBlocks[i]
           const oldKey = oldBlock.key
           if (oldKey === currentKey) {
-            update((newBlocks[i] = oldBlock), currentItem[0])
+            update((newBlocks[i] = oldBlock), ...currentItem)
           } else {
             queuedBlocks[queuedBlocksLength++] = [i, currentItem, currentKey]
             oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldKey, i]
