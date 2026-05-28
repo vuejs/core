@@ -10,6 +10,7 @@ import {
   shallowRef,
   toReactive,
   toReadonly,
+  triggerRef,
   watch,
 } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
@@ -200,14 +201,20 @@ export const createFor = (
       } else if (!getKey) {
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
+        let shouldTriggerSameItems = oldLength === newLength
         for (let i = 0; i < commonLength; i++) {
-          update((newBlocks[i] = oldBlocks[i]), getItem(source, i)[0])
+          if (update((newBlocks[i] = oldBlocks[i]), getItem(source, i)[0])) {
+            shouldTriggerSameItems = false
+          }
         }
         for (let i = oldLength; i < newLength; i++) {
           mount(source, i)
         }
         for (let i = newLength; i < oldLength; i++) {
           unmount(oldBlocks[i])
+        }
+        if (shouldTriggerSameItems) {
+          triggerSameItemObjectRefs(newBlocks)
         }
       } else {
         if (__DEV__) {
@@ -238,6 +245,7 @@ export const createFor = (
         let endOffset = 0
         let queuedBlocksLength = 0
         let oldKeyIndexPairsLength = 0
+        let shouldTriggerSameItems = oldLength === newLength
 
         while (endOffset < commonLength) {
           const index = newLength - endOffset - 1
@@ -245,10 +253,13 @@ export const createFor = (
           const key = newKeys![index]
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
           if (existingBlock.key !== key) break
-          update(existingBlock, ...item)
+          if (update(existingBlock, ...item)) {
+            shouldTriggerSameItems = false
+          }
           newBlocks[index] = existingBlock
           endOffset++
         }
+        if (endOffset !== commonLength) shouldTriggerSameItems = false
 
         const e1 = commonLength - endOffset
         const e2 = oldLength - endOffset
@@ -391,9 +402,11 @@ export const createFor = (
             block.prevAnchor = block.next = block.prev = undefined
           }
         }
+        if (shouldTriggerSameItems) {
+          triggerSameItemObjectRefs(newBlocks)
+        }
       }
     }
-
     frag.nodes = [(oldBlocks = newBlocks)]
     if (parentAnchor) frag.nodes.push(parentAnchor)
 
@@ -572,7 +585,8 @@ export const createFor = (
     newKey?: any,
     newIndex?: any,
   ) => {
-    if (newItem !== itemRef.value) {
+    const itemChanged = newItem !== itemRef.value
+    if (itemChanged) {
       itemRef.value = newItem
     }
     if (keyRef && newKey !== undefined && newKey !== keyRef.value) {
@@ -580,6 +594,14 @@ export const createFor = (
     }
     if (indexRef && newIndex !== undefined && newIndex !== indexRef.value) {
       indexRef.value = newIndex
+    }
+    return itemChanged
+  }
+
+  function triggerSameItemObjectRefs(blocks: ForBlock[]): void {
+    for (let i = 0; i < blocks.length; i++) {
+      const itemRef = blocks[i].itemRef
+      if (isObject(itemRef.value)) triggerRef(itemRef)
     }
   }
 
