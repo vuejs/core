@@ -20,6 +20,7 @@ import {
   type Ref,
   nextTick,
   onScopeDispose,
+  onUnmounted,
   reactive,
   readonly,
   ref,
@@ -1728,6 +1729,34 @@ describe('createFor', () => {
         '<em>C</em><!--dynamic-component-->' +
           '<i>A</i><!--dynamic-component--><!--for-->',
       )
+    })
+
+    test('component blocks are unmounted when clearing with fast remove', async () => {
+      const items = ref([1, 2])
+      const unmounted = vi.fn()
+      const Child = defineVaporComponent({
+        setup() {
+          onUnmounted(unmounted)
+          return template('<span>child</span>')()
+        },
+      })
+
+      const { html } = define(() => {
+        return createFor(
+          () => items.value,
+          () => createComponent(Child),
+          undefined,
+          VaporVForFlags.FAST_REMOVE | VaporVForFlags.IS_COMPONENT,
+        )
+      }).render()
+
+      expect(html()).toBe('<span>child</span><span>child</span><!--for-->')
+
+      items.value = []
+      await nextTick()
+
+      expect(html()).toBe('<!--for-->')
+      expect(unmounted).toHaveBeenCalledTimes(2)
     })
 
     test('slot fallback fragments can be reordered and removed', async () => {
