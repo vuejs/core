@@ -319,10 +319,10 @@ export function parseValueDestructure(
               ) {
                 isDynamic = true
                 helper = context.helper('getDefaultValue')
-                helperArgs = rawValue.slice(
+                helperArgs = `() => (${rawValue.slice(
                   child.right.start! - 1,
                   child.right.end! - 1,
-                )
+                )})`
               }
             }
             map.set(id.name, { path, dynamic: isDynamic, helper, helperArgs })

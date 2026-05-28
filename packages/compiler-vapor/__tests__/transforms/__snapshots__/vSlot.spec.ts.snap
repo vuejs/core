@@ -431,7 +431,7 @@ const t0 = _template(" ")
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
     const n0 = t0()
-    _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo, 1))))
+    _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo, () => (1)))))
     return n0
   }, true)
   return n2
@@ -445,7 +445,7 @@ const t0 = _template(" ")
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, (_slotProps0) => {
     const n0 = t0()
-    _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo[0], 1) + _getDefaultValue(_slotProps0.baz.qux, 2))))
+    _renderEffect(() => _setText(n0, _toDisplayString(_getDefaultValue(_slotProps0.foo[0], () => (1)) + _getDefaultValue(_slotProps0.baz.qux, () => (2)))))
     return n0
   }, true)
   return n2

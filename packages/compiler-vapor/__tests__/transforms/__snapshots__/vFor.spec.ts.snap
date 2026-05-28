@@ -283,7 +283,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     const x2 = _txt(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_getDefaultValue(_for_item0.value.foo, _ctx.bar) + _ctx.bar + _ctx.baz + _getDefaultValue(_for_item0.value.baz[0], _ctx.quux) + _ctx.quux)))
+    _renderEffect(() => _setText(x2, _toDisplayString(_getDefaultValue(_for_item0.value.foo, () => (_ctx.bar)) + _ctx.bar + _ctx.baz + _getDefaultValue(_for_item0.value.baz[0], () => (_ctx.quux)) + _ctx.quux)))
     return n2
   }, undefined, 8)
   return n0

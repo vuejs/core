@@ -297,7 +297,7 @@ describe('compiler: transform slot', () => {
     expect(code).contains(
       `_createAssetComponent("Comp", null, (_slotProps0) =>`,
     )
-    expect(code).contains(`_getDefaultValue(_slotProps0.foo, 1)`)
+    expect(code).contains(`_getDefaultValue(_slotProps0.foo, () => (1))`)
   })
 
   test('slot prop nested default value', () => {
@@ -309,8 +309,8 @@ describe('compiler: transform slot', () => {
     expect(code).contains(
       `_createAssetComponent("Comp", null, (_slotProps0) =>`,
     )
-    expect(code).contains(`_getDefaultValue(_slotProps0.foo[0], 1)`)
-    expect(code).contains(`_getDefaultValue(_slotProps0.baz.qux, 2)`)
+    expect(code).contains(`_getDefaultValue(_slotProps0.foo[0], () => (1))`)
+    expect(code).contains(`_getDefaultValue(_slotProps0.baz.qux, () => (2))`)
   })
 
   test('slot prop rest with computed keys preserved', () => {
