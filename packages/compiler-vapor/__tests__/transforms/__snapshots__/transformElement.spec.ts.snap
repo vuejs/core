@@ -126,32 +126,32 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compiler: element transform > component > hoist asset component also used in component slot 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")
   const n0 = _createComponentWithFallback(_component_Child)
-  const n2 = _createAssetComponent("Parent", null, _withVaporCtx(() => {
+  const n2 = _createAssetComponent("Parent", null, () => {
     const n1 = _createComponentWithFallback(_component_Child)
     return n1
-  }))
+  })
   return [n0, n2]
 }"
 `;
 
 exports[`compiler: element transform > component > hoist asset component also used in conditional component slot 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, withVaporCtx as _withVaporCtx, createAssetComponent as _createAssetComponent } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")
   const n0 = _createComponentWithFallback(_component_Child)
-  const n5 = _createAssetComponent("Parent", null, _withVaporCtx(() => {
+  const n5 = _createAssetComponent("Parent", null, () => {
     const n1 = _createIf(() => (_ctx.ok), () => {
       const n3 = _createComponentWithFallback(_component_Child)
       return n3
     })
     return n1
-  }))
+  })
   return [n0, n5]
 }"
 `;

@@ -17,7 +17,6 @@ import {
   setHtml,
   setInsertionState,
   template,
-  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 
@@ -276,9 +275,7 @@ describe('api: createDynamicComponent', () => {
       components: { Foo },
       setup() {
         return createComponent(Child, null, {
-          default: withVaporCtx(() =>
-            createDynamicComponent(() => current.value),
-          ),
+          default: () => createDynamicComponent(() => current.value),
         })
       },
     }).render()

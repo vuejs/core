@@ -77,14 +77,14 @@ import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setDynamicProps } from './dom/prop'
 import {
-  type DynamicSlotSource,
+  type LooseRawSlots,
   type RawSlots,
   type StaticSlots,
-  type VaporSlot,
   dynamicSlotsProxyHandlers,
   getScopeOwner,
   getSlot,
   inOnceSlot,
+  normalizeRawSlots,
   setCurrentSlotOwner,
   withOnceSlot,
 } from './componentSlots'
@@ -241,20 +241,6 @@ interface SharedInternalOptions {
 // wider types to make `createComponent` ergonomic in tests and internal call sites.
 export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
-}
-
-export type LooseRawSlots =
-  | VaporSlot
-  | (Record<string, VaporSlot | DynamicSlotSource[]> & {
-      $?: DynamicSlotSource[]
-    })
-
-export function normalizeRawSlots(
-  rawSlots?: LooseRawSlots | null,
-): RawSlots | null | undefined {
-  return rawSlots && isFunction(rawSlots)
-    ? { default: rawSlots }
-    : (rawSlots as RawSlots | null | undefined)
 }
 
 export function createComponent(
@@ -852,9 +838,7 @@ export class VaporComponentInstance<
     this.rawSlots = normalizedRawSlots || EMPTY_OBJ
     this.slots = (
       normalizedRawSlots
-        ? normalizedRawSlots.$
-          ? new Proxy(normalizedRawSlots, dynamicSlotsProxyHandlers)
-          : normalizedRawSlots
+        ? new Proxy(normalizedRawSlots, dynamicSlotsProxyHandlers)
         : EMPTY_OBJ
     ) as Slots
 

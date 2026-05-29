@@ -79,12 +79,77 @@ export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
 }
 
+export type LooseRawSlots =
+  | VaporSlot
+  | (Record<string, VaporSlot | DynamicSlotSource[]> & {
+      $?: DynamicSlotSource[]
+    })
+
 export type StaticSlots = Record<string, VaporSlot>
 
 export type VaporSlot = BlockFn
 export type DynamicSlot = { name: string; fn: VaporSlot }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
+
+const rawSlotsOwnerMap = new WeakMap<RawSlots, VaporComponentInstance | null>()
+const rawSlotWrappersCache = new WeakMap<
+  RawSlots,
+  Map<
+    string,
+    {
+      slot: VaporSlot
+      wrapped: VaporSlot
+    }
+  >
+>()
+
+export function normalizeRawSlots(
+  rawSlots?: LooseRawSlots | null,
+): RawSlots | null | undefined {
+  if (!rawSlots) return rawSlots
+  const normalized = isFunction(rawSlots)
+    ? ({ default: rawSlots } as RawSlots)
+    : (rawSlots as RawSlots)
+  if (!rawSlotsOwnerMap.has(normalized)) {
+    rawSlotsOwnerMap.set(normalized, getScopeOwner())
+  }
+  return normalized
+}
+
+function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
+  if (!rawSlotsOwnerMap.has(slots)) {
+    return fn()
+  }
+  const prevOwner = setCurrentSlotOwner(rawSlotsOwnerMap.get(slots) || null)
+  try {
+    return fn()
+  } finally {
+    setCurrentSlotOwner(prevOwner)
+  }
+}
+
+function getOwnedSlot(
+  slots: RawSlots,
+  key: string,
+  slot: VaporSlot,
+): VaporSlot {
+  if (!rawSlotsOwnerMap.has(slots)) {
+    return slot
+  }
+  let wrappers = rawSlotWrappersCache.get(slots)
+  if (!wrappers) {
+    rawSlotWrappersCache.set(slots, (wrappers = new Map()))
+  }
+  const cached = wrappers.get(key)
+  if (cached && cached.slot === slot) {
+    return cached.wrapped
+  }
+  const wrapped = ((...args: any[]) =>
+    withSlotOwner(slots, () => slot(...args))) as VaporSlot
+  wrappers.set(key, { slot, wrapped })
+  return wrapped
+}
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   get: getSlot,
@@ -106,7 +171,9 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
       keys = keys.filter(k => k !== '$')
       for (const source of dynamicSources) {
         if (isFunction(source)) {
-          const slot = resolveFunctionSource(source)
+          const slot = withSlotOwner(target, () =>
+            resolveFunctionSource(source),
+          )
           if (slot) {
             if (isArray(slot)) {
               for (const s of slot) keys.push(String(s.name))
@@ -130,27 +197,31 @@ export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
   const dynamicSources = target.$
   if (dynamicSources) {
     let i = dynamicSources.length
-    let source
+    let source: DynamicSlotSource
     while (i--) {
       source = dynamicSources[i]
       if (isFunction(source)) {
-        const slot = resolveFunctionSource(source)
+        const slot = withSlotOwner(target, () =>
+          resolveFunctionSource(source as DynamicSlotFn),
+        )
         if (slot) {
           if (isArray(slot)) {
             for (let j = slot.length - 1; j >= 0; j--) {
-              if (String(slot[j].name) === key) return slot[j].fn
+              if (String(slot[j].name) === key) {
+                return getOwnedSlot(target, key, slot[j].fn)
+              }
             }
           } else if (String(slot.name) === key) {
-            return slot.fn
+            return getOwnedSlot(target, key, slot.fn)
           }
         }
       } else if (hasOwn(source, key)) {
-        return source[key]
+        return getOwnedSlot(target, key, source[key])
       }
     }
   }
   if (hasOwn(target, key)) {
-    return target[key]
+    return getOwnedSlot(target, key, target[key])
   }
 }
 
@@ -178,25 +249,6 @@ export function setCurrentSlotOwner(
  */
 export function getScopeOwner(): VaporComponentInstance | null {
   return (currentSlotOwner || currentInstance) as VaporComponentInstance | null
-}
-
-/**
- * Wrap a slot function to track the slot owner.
- *
- * This ensures:
- * 1. createSlot gets rawSlots from the correct instance (slot owner)
- * 2. elements inherit the slot owner's scopeId
- */
-export function withVaporCtx(fn: Function): BlockFn {
-  const owner = getScopeOwner()
-  return (...args: any[]) => {
-    const prevOwner = setCurrentSlotOwner(owner)
-    try {
-      return fn(...args)
-    } finally {
-      setCurrentSlotOwner(prevOwner)
-    }
-  }
 }
 
 export function createSlot(

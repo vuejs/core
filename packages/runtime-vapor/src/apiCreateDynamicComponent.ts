@@ -11,15 +11,17 @@ import {
 import { ShapeFlags } from '@vue/shared'
 import { insert, isBlock } from './block'
 import {
-  type LooseRawSlots,
   type VaporComponentInstance,
   createComponentWithFallback,
   emptyContext,
-  normalizeRawSlots,
 } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
-import { getScopeOwner } from './componentSlots'
+import {
+  type LooseRawSlots,
+  getScopeOwner,
+  normalizeRawSlots,
+} from './componentSlots'
 import {
   insertionAnchor,
   insertionParent,

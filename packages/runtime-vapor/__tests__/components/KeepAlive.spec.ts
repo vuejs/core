@@ -35,7 +35,6 @@ import {
   setText,
   template,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '../../src'
 
 const define = makeRender()
@@ -285,10 +284,10 @@ describe('VaporKeepAlive', () => {
     const Comp = defineVaporComponent({
       setup() {
         return createComponent(VaporKeepAlive, null, {
-          default: withVaporCtx(() => {
+          default: () => {
             const n0 = createSlot('default', null)
             return n0
-          }),
+          },
         })
       },
     })
@@ -415,7 +414,7 @@ describe('VaporKeepAlive', () => {
     const ReusableKeepAlive = defineVaporComponent({
       setup() {
         return createComponent(VaporKeepAlive, null, {
-          default: withVaporCtx(() => createSlot('default', null)),
+          default: () => createSlot('default', null),
         })
       },
     })
