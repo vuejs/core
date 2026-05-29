@@ -165,10 +165,9 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
     }
   },
   ownKeys(target) {
-    let keys = Object.keys(target)
+    const keys = new Set(Object.keys(target).filter(k => k !== '$'))
     const dynamicSources = target.$
     if (dynamicSources) {
-      keys = keys.filter(k => k !== '$')
       for (const source of dynamicSources) {
         if (isFunction(source)) {
           const slot = withSlotOwner(target, () =>
@@ -176,17 +175,17 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
           )
           if (slot) {
             if (isArray(slot)) {
-              for (const s of slot) keys.push(String(s.name))
+              for (const s of slot) keys.add(String(s.name))
             } else {
-              keys.push(String(slot.name))
+              keys.add(String(slot.name))
             }
           }
         } else {
-          keys.push(...Object.keys(source))
+          for (const key of Object.keys(source)) keys.add(key)
         }
       }
     }
-    return keys
+    return [...keys]
   },
   set: NO,
   deleteProperty: NO,

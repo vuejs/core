@@ -88,6 +88,7 @@ import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import {
   currentSlotScopeIds,
+  dynamicSlotsProxyHandlers,
   getSlot,
   setCurrentSlotOwner,
   withOnceSlot,
@@ -680,6 +681,15 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
       return wrapped
     }
     return slot
+  },
+  ownKeys(target) {
+    return Array.from(dynamicSlotsProxyHandlers.ownKeys!(target)).filter(
+      key => isString(key) && !isInternalSlotKey(key),
+    )
+  },
+  getOwnPropertyDescriptor(target, key) {
+    if (!isString(key) || isInternalSlotKey(key)) return
+    return dynamicSlotsProxyHandlers.getOwnPropertyDescriptor!(target, key)
   },
 }
 
@@ -2441,7 +2451,7 @@ function normalizeInteropSlotValue(value: unknown): VNode[] {
 }
 
 const isInternalSlotKey = (key: string): boolean =>
-  key === '_' || key === '_ctx' || key === '$stable'
+  key === '_' || key === '_ctx' || key === '$stable' || key === '$'
 
 const interopSlotsSourceHandlers: ProxyHandler<ShallowRef<Slots>> = {
   get(target, key: any) {

@@ -889,6 +889,46 @@ describe('vdomInterop', () => {
       expect(html()).toBe('default slot')
     })
 
+    test('does not expose Vapor dynamic slots marker to vdom slots', () => {
+      const keys: string[][] = []
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => {
+            keys.push(Object.keys(slots))
+            return renderSlot(slots, 'default')
+          }
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => document.createTextNode('static slot'),
+              $: [
+                () => ({
+                  name: 'default',
+                  fn: () => document.createTextNode('dynamic slot'),
+                }),
+              ],
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('dynamic slot')
+      expect(keys).toEqual([['default']])
+    })
+
     test('function rawSlots are normalized before mounting vdom component', () => {
       const VDomChild = defineComponent({
         setup(_, { slots }) {
