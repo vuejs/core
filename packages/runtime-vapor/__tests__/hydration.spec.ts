@@ -23,10 +23,17 @@ import {
   ref,
   withDirectives,
 } from '@vue/runtime-dom'
+import { BindingTypes } from '@vue/compiler-dom'
 import { Namespaces, isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
-import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
+import {
+  VueServerRenderer,
+  compile,
+  compileToVaporRender,
+  runtimeDom,
+  runtimeVapor,
+} from './_utils'
 import {
   hydrateNode,
   setIsHydratingEnabled,
@@ -438,6 +445,49 @@ describe('Vapor Mode hydration', () => {
         ref({ beforeMount }),
       )
       expect(beforeMount).toHaveBeenCalledTimes(1)
+    })
+
+    test('dynamic child component root preserves inherited scopeId after hydration update', async () => {
+      const showAlt = ref(false)
+      const Child = defineVaporComponent({
+        __scopeId: 'child',
+        render: compileToVaporRender(
+          `<section v-if="showAlt">alt</section><div v-else>base</div>`,
+          {
+            bindingMetadata: {
+              showAlt: BindingTypes.SETUP_REF,
+            },
+            scopeId: 'child',
+          },
+        ),
+        setup() {
+          return { showAlt }
+        },
+      })
+
+      const Parent = defineVaporComponent({
+        __scopeId: 'parent',
+        setup() {
+          return createComponent(Child)
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = `<div child="" parent="">base</div>`
+
+      createVaporSSRApp(Parent).mount(container)
+
+      expect(container.innerHTML).toBe(
+        `<div child="" parent="">base</div><!--if-->`,
+      )
+
+      showAlt.value = true
+      await nextTick()
+
+      expect(container.innerHTML).toBe(
+        `<section child="" parent="">alt</section><!--if-->`,
+      )
     })
 
     test('basic component', async () => {

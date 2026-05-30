@@ -86,6 +86,14 @@ function applyInheritedScopeIdToRoot(
   return root
 }
 
+export function trackComponentScopeId(instance: VaporComponentInstance): void {
+  const { parent, scopeId } = instance
+  if (!parent || !scopeId) return
+  getRootElement(instance, frag =>
+    trackInheritedScopeIdFragment(instance, frag),
+  )
+}
+
 export function setComponentScopeId(instance: VaporComponentInstance): void {
   const { parent, scopeId } = instance
   if (!parent || !scopeId) return

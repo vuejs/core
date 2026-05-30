@@ -138,7 +138,11 @@ import {
   isCollectingVdomSlotVNodes,
   isInteropEnabled,
 } from './vdomInteropState'
-import { setComponentScopeId, setScopeId } from './scopeId'
+import {
+  setComponentScopeId,
+  setScopeId,
+  trackComponentScopeId,
+} from './scopeId'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
 export { currentInstance } from '@vue/runtime-dom'
@@ -1131,6 +1135,10 @@ export function mountComponent(
   if (!isHydrating) {
     insert(instance.block, parent, anchor)
     setComponentScopeId(instance)
+  } else {
+    // Hydrated roots already have SSR scope attrs. Track dynamic roots so
+    // client-only branch switches keep inherited scope ids.
+    trackComponentScopeId(instance)
   }
   if (instance.m) queuePostFlushCb(instance.m!)
   if (
