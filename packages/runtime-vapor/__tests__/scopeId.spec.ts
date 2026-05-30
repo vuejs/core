@@ -7,6 +7,7 @@ import {
   renderSlot,
 } from '@vue/runtime-dom'
 import { VaporSlotFlags } from '@vue/shared'
+import { BindingTypes } from '@vue/compiler-dom'
 import {
   VaporTransition,
   createComponent,
@@ -23,7 +24,7 @@ import {
   vaporInteropPlugin,
   withVaporCtx,
 } from '../src'
-import { makeRender } from './_utils'
+import { compileToVaporRender, makeRender } from './_utils'
 
 const define = makeRender()
 
@@ -43,6 +44,39 @@ describe('scopeId', () => {
       },
     }).render()
     expect(html()).toBe(`<div child="" parent=""></div>`)
+  })
+
+  test('should attach scopeId to updated dynamic child component root', async () => {
+    const showAlt = ref(false)
+    const Child = defineVaporComponent({
+      __scopeId: 'child',
+      render: compileToVaporRender(
+        `<section v-if="showAlt">alt</section><div v-else>base</div>`,
+        {
+          bindingMetadata: {
+            showAlt: BindingTypes.SETUP_REF,
+          },
+          scopeId: 'child',
+        },
+      ),
+      setup() {
+        return { showAlt }
+      },
+    })
+
+    const { html } = define({
+      __scopeId: 'parent',
+      setup() {
+        return createComponent(Child)
+      },
+    }).render()
+
+    expect(html()).toBe(`<div child="" parent="">base</div><!--if-->`)
+
+    showAlt.value = true
+    await nextTick()
+
+    expect(html()).toBe(`<section child="" parent="">alt</section><!--if-->`)
   })
 
   test('should attach scopeId to child component with insertion state', () => {
