@@ -5,7 +5,7 @@ import {
   isVaporComponent,
 } from './component'
 import { getInheritedScopeIds } from '@vue/runtime-dom'
-import { type DynamicFragment, isFragment } from './fragment'
+import { type DynamicFragment, isDynamicFragment, isFragment } from './fragment'
 import type { Block } from './block'
 import { isInteropEnabled } from './vdomInteropState'
 
@@ -21,8 +21,28 @@ export function setScopeId(block: Block, scopeIds: string[]): void {
       setScopeId(b, scopeIds)
     }
   } else if (isFragment(block)) {
+    if (isDynamicFragment(block)) {
+      trackScopeIdFragment(block, scopeIds)
+    }
     setScopeId(block.nodes, scopeIds)
   }
+}
+
+const trackedScopeIdFragments = new WeakMap<DynamicFragment, Set<string>>()
+
+function trackScopeIdFragment(frag: DynamicFragment, scopeIds: string[]): void {
+  // Static scope ids applied to a dynamic fragment must follow future branches,
+  // e.g. dynamic slot outlets swapping their rendered slot content.
+  const key = scopeIds.join(' ')
+  let trackedScopeIds = trackedScopeIdFragments.get(frag)
+  if (!trackedScopeIds) {
+    trackedScopeIds = new Set()
+    trackedScopeIdFragments.set(frag, trackedScopeIds)
+  } else if (trackedScopeIds.has(key)) {
+    return
+  }
+  trackedScopeIds.add(key)
+  ;(frag.onBeforeInsert ||= []).push(nodes => setScopeId(nodes, scopeIds))
 }
 
 const trackedInheritedScopeIdFragments = new WeakMap<

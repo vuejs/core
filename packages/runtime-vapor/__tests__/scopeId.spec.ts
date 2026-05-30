@@ -24,7 +24,7 @@ import {
   vaporInteropPlugin,
   withVaporCtx,
 } from '../src'
-import { compileToVaporRender, makeRender } from './_utils'
+import { compile, compileToVaporRender, makeRender } from './_utils'
 
 const define = makeRender()
 
@@ -357,6 +357,35 @@ describe('scopeId', () => {
         `<!--slot--><!--slot-->` +
         `</div>`,
     )
+  })
+
+  test(':slotted on dynamic slot outlet update', async () => {
+    const data = ref({ slotName: 'one' })
+    const Child = compile(
+      `<template><slot :name="data.slotName" /></template>`,
+      data,
+    )
+    Child.__scopeId = 'child'
+
+    const Parent = compile(
+      `<template>
+        <components.Child>
+          <template #one><div>one</div></template>
+          <template #two><section>two</section></template>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+
+    const { html } = define(Parent).render()
+
+    expect(html()).toBe(`<div child-s="">one</div><!--slot-->`)
+
+    data.value = { slotName: 'two' }
+    await nextTick()
+
+    expect(html()).toBe(`<section child-s="">two</section><!--slot-->`)
   })
 
   test('nested components with slots', async () => {
