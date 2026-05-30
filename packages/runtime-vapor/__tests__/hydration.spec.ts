@@ -2395,6 +2395,48 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('dynamic slot outlet update preserves slotted scope id', async () => {
+      const data = ref({ slotName: 'one' })
+      const childCode = `<template><slot :name="data.slotName" /></template>`
+      const appCode = `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <template #one><div>one</div></template>
+          <template #two><section>two</section></template>
+        </components.Child>
+      </template>`
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = `<!--[--><div child-s="">one</div><!--]-->`
+
+      const clientComponents: Record<string, any> = {}
+      clientComponents.Child = compile(childCode, data, clientComponents, {
+        vapor: true,
+        ssr: false,
+      })
+      clientComponents.Child.__scopeId = 'child'
+      const ClientApp = compile(appCode, data, clientComponents, {
+        vapor: true,
+        ssr: false,
+      })
+      createVaporSSRApp(ClientApp).mount(container)
+
+      expect(formatHtml(container.innerHTML)).toContain(
+        `<div child-s="">one</div>`,
+      )
+
+      data.value = { slotName: 'two' }
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toContain(
+        `<section child-s="">two</section>`,
+      )
+    })
+
     test('named slot', async () => {
       const { data, container } = await testHydration(
         `<template>

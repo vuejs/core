@@ -36,6 +36,7 @@ import {
 import {
   SlotFragment,
   type VaporFragment,
+  isDynamicFragment,
   withOwnedSlotBoundary,
 } from './fragment'
 import { createElement } from './dom/node'
@@ -44,7 +45,7 @@ import {
   isCollectingVdomSlotVNodes,
   isInteropEnabled,
 } from './vdomInteropState'
-import { setScopeId } from './scopeId'
+import { setScopeId, trackScopeIdFragment } from './scopeId'
 
 /**
  * Flag to indicate if we are executing a once slot.
@@ -331,6 +332,11 @@ export function createSlot(
   } else {
     if (fragment.insert) {
       ;(fragment as VaporFragment).hydrate!()
+    }
+    // Hydrated slot roots already have SSR scope attrs. Only register tracking
+    // so future client-inserted slot branches receive the same ids.
+    if (slotScopeIds && isDynamicFragment(fragment)) {
+      trackScopeIdFragment(fragment, slotScopeIds)
     }
     exitHydrationCursor(hydrationCursor)
   }

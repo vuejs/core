@@ -30,7 +30,10 @@ export function setScopeId(block: Block, scopeIds: string[]): void {
 
 const trackedScopeIdFragments = new WeakMap<DynamicFragment, Set<string>>()
 
-function trackScopeIdFragment(frag: DynamicFragment, scopeIds: string[]): void {
+export function trackScopeIdFragment(
+  frag: DynamicFragment,
+  scopeIds: string[],
+): void {
   // Static scope ids applied to a dynamic fragment must follow future branches,
   // e.g. dynamic slot outlets swapping their rendered slot content.
   const key = scopeIds.join(' ')
