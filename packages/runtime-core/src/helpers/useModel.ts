@@ -65,18 +65,19 @@ export function useModel(
           return
         }
         const rawProps = i.vnode!.props
-        if (
-          !(
-            rawProps &&
-            // check if parent has passed v-model
-            (name in rawProps ||
-              camelizedName in rawProps ||
-              hyphenatedName in rawProps) &&
-            (`onUpdate:${name}` in rawProps ||
-              `onUpdate:${camelizedName}` in rawProps ||
-              `onUpdate:${hyphenatedName}` in rawProps)
-          )
-        ) {
+        // Reuse the parent v-model check below when deciding whether an extra
+        // forced update is needed to resync parent-controlled state.
+        const hasVModel = !!(
+          rawProps &&
+          // check if parent has passed v-model
+          (name in rawProps ||
+            camelizedName in rawProps ||
+            hyphenatedName in rawProps) &&
+          (`onUpdate:${name}` in rawProps ||
+            `onUpdate:${camelizedName}` in rawProps ||
+            `onUpdate:${hyphenatedName}` in rawProps)
+        )
+        if (!hasVModel) {
           // no v-model, local update
           localValue = value
           trigger()
@@ -97,7 +98,8 @@ export function useModel(
           // value before parent updates are flushed, the parent render can be
           // deduped as having no prop change. Force a local update so DOM state
           // such as an input's value is synchronized back to the current model.
-          (prevSetValue !== EMPTY_OBJ &&
+          (hasVModel &&
+            prevSetValue !== EMPTY_OBJ &&
             hasChanged(value, prevSetValue) &&
             !hasChanged(emittedValue, localValue))
         ) {
