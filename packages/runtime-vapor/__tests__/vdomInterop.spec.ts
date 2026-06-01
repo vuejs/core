@@ -225,6 +225,77 @@ describe('vdomInterop', () => {
       )
       expect(onUpdated).toHaveBeenCalled()
     })
+
+    test('mounts vnode slot content after active fallback without reusing invalid vnode content', async () => {
+      const show = ref(false)
+      const childRef = ref<any>(null)
+      const mounted = vi.fn()
+      const unmounted = vi.fn()
+
+      const VDomChild = defineComponent({
+        setup() {
+          onMounted(mounted)
+          onUnmounted(unmounted)
+          return () => h('div', 'child')
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createSlot('default', null, () =>
+            template('<span>fallback</span>')(),
+          ) as any
+        },
+      })
+
+      const Parent = defineComponent({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () =>
+                show.value ? [h(VDomChild, { ref: childRef })] : [],
+            })
+        },
+      })
+
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      const root = document.createElement('div')
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+      expect(childRef.value).toBe(null)
+      expect(mounted).not.toHaveBeenCalled()
+      expect(unmounted).not.toHaveBeenCalled()
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<div>child</div>')
+      expect(childRef.value).not.toBe(null)
+      expect(mounted).toHaveBeenCalledTimes(1)
+      expect(unmounted).not.toHaveBeenCalled()
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+      expect(childRef.value).toBe(null)
+      expect(mounted).toHaveBeenCalledTimes(1)
+      expect(unmounted).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<div>child</div>')
+      expect(childRef.value).not.toBe(null)
+      expect(mounted).toHaveBeenCalledTimes(2)
+      expect(unmounted).toHaveBeenCalledTimes(1)
+
+      app.unmount()
+      expect(childRef.value).toBe(null)
+      expect(unmounted).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('props', () => {
