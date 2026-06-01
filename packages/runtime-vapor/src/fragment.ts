@@ -1022,6 +1022,8 @@ export function recheckSlotFallback(
   const fallback = state.activeFallback
   const fallbackValid = fallback ? isValidBlock(fallback) : false
   const contentValid = state.isContentValid()
+  // This tracks the validity of the currently exposed branch, whether it is
+  // slot content or fallback.
   const prevNodesValid =
     state.lastNodesValid === undefined
       ? fallback
@@ -1034,6 +1036,8 @@ export function recheckSlotFallback(
     return
   }
 
+  // Content wins over fallback. If fallback was mounted, content may need to
+  // be inserted back because it can be invalid while fallback is active.
   if (contentValid) {
     const content = state.getContent()
     const hadFallback = !!fallback
@@ -1045,26 +1049,24 @@ export function recheckSlotFallback(
       }
     }
   } else if (fallback) {
-    const fallbackStayedValid = prevNodesValid && fallbackValid
-    if (fallbackStayedValid) {
-      if (force) {
+    // With an active fallback, `prevNodesValid` tells whether it could already
+    // be in the DOM. Previously invalid fallback is inserted only after it
+    // becomes valid.
+    if (prevNodesValid) {
+      if (!fallbackValid && !hasSlotFallback(state.boundary.parent)) {
+        // No parent fallback can replace it, so invalid fallback leaves the
+        // slot empty.
+        const parentNode = state.getParentNode()
+        if (parentNode) {
+          detachBlock(fallback, parentNode)
+        }
+      } else if (force) {
         renderAndCommitSlotFallback(state, true)
       }
-    } else if (
-      prevNodesValid &&
-      !fallbackValid &&
-      !hasSlotFallback(state.boundary.parent)
-    ) {
-      const parentNode = state.getParentNode()
-      if (parentNode) {
-        detachBlock(fallback, parentNode)
-      }
-    } else if (!prevNodesValid && fallbackValid) {
+    } else if (fallbackValid) {
       insertActiveSlotFallback(state)
     } else if (force) {
       renderAndCommitSlotFallback(state, true)
-    } else {
-      insertActiveSlotFallback(state)
     }
   } else {
     renderAndCommitSlotFallback(state, false)
