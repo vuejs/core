@@ -44,9 +44,9 @@ import { isForBlock, setForHydrationAnchorResolver } from '../apiCreateFor'
 import { createComment, createElement, createTextNode } from '../dom/node'
 import {
   DynamicFragment,
-  SlotFragment,
   type VaporFragment,
   isFragment,
+  isSlotFragment,
 } from '../fragment'
 import {
   type DefineVaporComponent,
@@ -410,8 +410,8 @@ function getTransitionBlocks(
     // A normal component child can move when parent-driven props update its
     // root layout without re-running the surrounding v-for fragment.
     // When the component root is a slot, the TransitionGroup children are the
-    // slotted blocks, so track the SlotFragment instead of the component.
-    const isRootSlot = block.block instanceof SlotFragment
+    // slotted blocks, so track the slot fragment instead of the component.
+    const isRootSlot = block.block && isSlotFragment(block.block)
     if (onUpdateOwner && !isRootSlot) onUpdateOwner(block)
     const blocks = getTransitionBlocks(
       block.block,

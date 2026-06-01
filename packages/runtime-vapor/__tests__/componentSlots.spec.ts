@@ -1191,9 +1191,17 @@ describe('component: slots', () => {
       )
     })
 
-    test('plain slot without fallback does not enter fallback boundary', () => {
+    test('plain slot without fallback uses dynamic fragment', () => {
+      let slotBlock!: Block
       let observedBoundary: SlotBoundaryContext | null | undefined
-      const Comp = defineVaporComponent(() => createSlot())
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot(
+          'default',
+          null,
+          undefined,
+          VaporSlotFlags.SLOT_ROOT,
+        ))
+      })
 
       define(() =>
         createComponent(Comp, null, {
@@ -1204,7 +1212,22 @@ describe('component: slots', () => {
         }),
       ).render()
 
+      expect(slotBlock).toBeInstanceOf(DynamicFragment)
+      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
       expect(observedBoundary).toBe(null)
+    })
+
+    test('slot with fallback uses slot fragment', () => {
+      let slotBlock!: Block
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot('default', null, () =>
+          template('fallback')(),
+        ))
+      })
+
+      define(() => createComponent(Comp, null, {})).render()
+
+      expect(slotBlock).toBeInstanceOf(SlotFragment)
     })
 
     test('slot props should be isolated per fragment in v-for', async () => {

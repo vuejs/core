@@ -34,8 +34,10 @@ import {
   isHydrating,
 } from './dom/hydration'
 import {
+  DynamicFragment,
   SlotFragment,
   type VaporFragment,
+  getCurrentSlotBoundary,
   withOwnedSlotBoundary,
 } from './fragment'
 import { createElement } from './dom/node'
@@ -248,10 +250,37 @@ export function createSlot(
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()
-    const slotFragment = (fragment = new SlotFragment(slotRoot))
-    // mark the slot as forwarded
-    slotFragment.forwarded =
-      currentSlotOwner != null && currentSlotOwner !== currentInstance
+    const isCustomElementSlot = !!(
+      (instance as GenericComponentInstance).ce ||
+      (instance.parent && isAsyncWrapper(instance.parent) && instance.parent.ce)
+    )
+    const needsSlotFragment =
+      isHydrating ||
+      !!fallback ||
+      !!getCurrentSlotBoundary() ||
+      isCustomElementSlot
+    const slotFragment = needsSlotFragment
+      ? new SlotFragment(slotRoot)
+      : undefined
+    let dynamicFragment: DynamicFragment | undefined
+    if (slotFragment) {
+      fragment = slotFragment
+      if (isHydrating) {
+        // Hydration uses forwarded slots to decide close marker ownership.
+        slotFragment.forwarded =
+          currentSlotOwner != null && currentSlotOwner !== currentInstance
+      }
+    } else {
+      // Fast path: plain slots without fallback/boundary semantics only need a
+      // DynamicFragment. SlotFragment is reserved for fallback owners.
+      dynamicFragment = new DynamicFragment(
+        __DEV__ ? 'slot' : undefined,
+        false,
+        false,
+      )
+      dynamicFragment.isSlot = true
+      fragment = dynamicFragment
+    }
     const isDynamicName = isFunction(name)
 
     const renderSlot = () => {
@@ -260,12 +289,7 @@ export function createSlot(
       // in custom element mode, render <slot/> as actual slot outlets
       // because in shadowRoot: false mode the slot element gets
       // replaced by injected content
-      if (
-        (instance as GenericComponentInstance).ce ||
-        (instance.parent &&
-          isAsyncWrapper(instance.parent) &&
-          instance.parent.ce)
-      ) {
+      if (isCustomElementSlot) {
         const el = createElement('slot')
         const setSlotProps = () => {
           setDynamicProps(el, [
@@ -278,12 +302,12 @@ export function createSlot(
         if (once) setSlotProps()
         else renderEffect(setSlotProps)
         if (fallback) {
-          withOwnedSlotBoundary(slotFragment.parentSlotBoundary, () => {
+          withOwnedSlotBoundary(slotFragment!.parentSlotBoundary, () => {
             const fallbackBlock = fallback()
             // Keep the live fallback block on the SlotFragment itself. The
             // native slot outlet is temporary and gets removed by CE slot
             // replacement, but the fragment remains Vapor's long-lived owner.
-            slotFragment.customElementFallback = fallbackBlock
+            slotFragment!.customElementFallback = fallbackBlock
             insert(fallbackBlock, el)
           })
         }
@@ -293,9 +317,15 @@ export function createSlot(
 
       const slot = getSlot(rawSlots, slotName)
       if (slot) {
-        slotFragment.updateSlot(getBoundSlot(slot), fallback)
-      } else {
+        if (slotFragment) {
+          slotFragment.updateSlot(getBoundSlot(slot), fallback)
+        } else {
+          dynamicFragment!.update(getBoundSlot(slot))
+        }
+      } else if (slotFragment) {
         slotFragment.updateSlot(undefined, fallback)
+      } else {
+        dynamicFragment!.update()
       }
     }
 

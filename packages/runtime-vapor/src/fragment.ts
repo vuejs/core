@@ -254,6 +254,7 @@ export class DynamicFragment extends VaporFragment {
   pending?: { render?: BlockFn; key: any; noScope: boolean }
   anchorLabel?: string
   keyed?: boolean
+  isSlot?: boolean
   inTransition?: boolean
   // Fallthrough attrs hooks register branch-owned effects on insert.
   hasFallthroughAttrs?: true
@@ -292,7 +293,7 @@ export class DynamicFragment extends VaporFragment {
     if (key === this.current) {
       // On initial hydration, `key === current` means `render` is empty,
       // so this fragment hydrates as empty content.
-      if (isHydrating && this.anchorLabel !== 'slot') this.hydrate(true)
+      if (isHydrating && !this.isSlot) this.hydrate(true)
       return
     }
 
@@ -384,7 +385,7 @@ export class DynamicFragment extends VaporFragment {
       const isRevivingDeferredBranch =
         isInDeferredHydrationBoundary() &&
         !!render &&
-        this.anchorLabel !== 'slot' &&
+        !this.isSlot &&
         !isValidBlock(this.nodes)
 
       reusingDeferredAnchor =
@@ -418,7 +419,7 @@ export class DynamicFragment extends VaporFragment {
     )
     setActiveSub(prevSub)
 
-    if (isHydrating && this.anchorLabel !== 'slot' && !reusingDeferredAnchor) {
+    if (isHydrating && !this.isSlot && !reusingDeferredAnchor) {
       this.hydrate(render == null)
     }
   }
@@ -1144,6 +1145,7 @@ function isReusableDynamicFragmentAnchor(
 }
 
 export class SlotFragment extends DynamicFragment implements SlotFallbackState {
+  isSlot = true
   private disposed = false
   forwarded = false
   parentSlotBoundary: SlotBoundaryContext | null = getCurrentSlotBoundary()
@@ -1229,30 +1231,15 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   ): void {
     const prevLocalFallback = this.localFallback
     this.localFallback = fallback
-    const fallbackChanged = prevLocalFallback !== fallback
-    const fastSlotKey = key === undefined ? render : key
-
-    if (
-      !isHydrating &&
-      !fallback &&
-      !this.parentSlotBoundary &&
-      !this._slotFallbackBoundary
-    ) {
-      this.update(render, fastSlotKey)
-      this.content = this.nodes
-      return
-    }
-
     const boundary = this.slotFallbackBoundary
     const slotRender = render
       ? () => withOwnedSlotBoundary(boundary, render)
       : () => []
-    const slotKey = key === undefined ? slotRender : key
     this.isUpdatingSlot = true
     this.pendingRecheck = false
 
     try {
-      const shouldForce = fallbackChanged
+      const shouldForce = prevLocalFallback !== fallback
       if (isHydrating) {
         withHydratingSlotBoundary(() => {
           const prev = isHydratingSlotFallbackActive()
@@ -1260,7 +1247,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
             if (hasSlotFallback(boundary)) {
               setCurrentHydratingSlotFallbackActive(true)
             }
-            this.updateContent(slotRender, slotKey)
+            this.updateContent(slotRender, key)
             const contentValid = isValidBlock(this.content)
             recheckSlotFallback(this, shouldForce)
             // Updates run under the temporary fallback-active marker so empty
@@ -1277,7 +1264,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
           }
         })
       } else {
-        this.updateContent(slotRender, slotKey)
+        this.updateContent(slotRender, key)
         recheckSlotFallback(this, shouldForce)
       }
     } finally {
@@ -1329,4 +1316,8 @@ export function isDynamicFragment(
   val: NonNullable<unknown>,
 ): val is DynamicFragment {
   return val instanceof DynamicFragment
+}
+
+export function isSlotFragment(val: unknown): val is DynamicFragment {
+  return val instanceof DynamicFragment && !!val.isSlot
 }

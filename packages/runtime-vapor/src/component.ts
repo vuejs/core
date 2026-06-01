@@ -1344,7 +1344,7 @@ function registerDynamicFragmentFallthroughAttrs(
       __DEV__ &&
       // preventing attrs fallthrough on slots
       // consistent with VDOM slots behavior
-      (frag.anchorLabel === 'slot' || (isArray(nodes) && nodes.length))
+      (frag.isSlot || (isArray(nodes) && nodes.length))
     ) {
       warnExtraneousAttributes(attrs)
     }
