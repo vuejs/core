@@ -21,7 +21,7 @@ import {
   setStyle,
   template,
 } from '../src'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 import { stringifyStyle } from '@vue/shared'
 import { setElementText } from '../src/dom/prop'
 
@@ -833,6 +833,58 @@ describe('attribute fallthrough', () => {
       },
     }).render()
     expect(host.innerHTML).toBe('<div id="a">foo</div><!--if-->')
+  })
+
+  it('should fallthrough attrs on v-else-if component root branch', async () => {
+    const loading = ref(false)
+    const Child = compile(
+      `<script setup vapor>
+        defineProps({
+          loading: {
+            type: Boolean,
+            default: false
+          }
+        })
+      </script>
+      <template>
+        <div v-if="loading" class="simple-button">
+          loading === true
+        </div>
+        <div v-else-if="loading === false" class="simple-button">
+          loading === false
+        </div>
+      </template>`,
+      loading,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const loading = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <Child :loading="loading" class="custom-btn" />
+      </template>`,
+      loading,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+
+    expect(host.innerHTML).toBe(
+      '<div class="simple-button custom-btn"> loading === false </div><!--if--><!--if-->',
+    )
+
+    loading.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<div class="simple-button custom-btn"> loading === true </div><!--if-->',
+    )
+
+    loading.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<div class="simple-button custom-btn"> loading === false </div><!--if--><!--if-->',
+    )
   })
 
   it('should not allow attrs to fallthrough on component with multiple roots', async () => {

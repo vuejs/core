@@ -1333,18 +1333,33 @@ function registerDynamicFragmentFallthroughAttrs(
   frag: DynamicFragment,
   attrs: Record<string, any>,
 ): void {
+  // avoid registering duplicate hooks
+  if (frag.hasFallthroughAttrs) return
+
   frag.hasFallthroughAttrs = true
   ;(frag.onBeforeInsert ||= []).push(nodes => {
-    if (nodes instanceof Element) {
+    // Nested dynamic fragments need their own fallthrough hook.
+    const root =
+      nodes instanceof Element
+        ? nodes
+        : getRootElement(
+            nodes,
+            childFrag =>
+              registerDynamicFragmentFallthroughAttrs(childFrag, attrs),
+            false,
+          )
+
+    if (root) {
       // ensure render effect is cleaned up when branch scope is stopped
       frag.scope!.run(() => {
-        renderEffect(() => applyFallthroughProps(nodes, attrs))
+        renderEffect(() => applyFallthroughProps(root, attrs))
       })
     } else if (
       __DEV__ &&
       // preventing attrs fallthrough on slots
       // consistent with VDOM slots behavior
-      (frag.anchorLabel === 'slot' || (isArray(nodes) && nodes.length))
+      ((nodes instanceof DynamicFragment && nodes.anchorLabel === 'slot') ||
+        (isArray(nodes) && nodes.length))
     ) {
       warnExtraneousAttributes(attrs)
     }
