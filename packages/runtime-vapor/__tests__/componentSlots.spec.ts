@@ -800,7 +800,7 @@ describe('component: slots', () => {
             frag = new SlotFragment()
             frag.forwarded = true
             setCurrentHydrationNode(footer)
-            frag.hydrate(true, true)
+            frag.hydrate(true)
           })
         })
       } finally {
@@ -828,7 +828,7 @@ describe('component: slots', () => {
         hydrateNode(start, () => {
           withHydratingSlotBoundary(() => {
             frag = new SlotFragment()
-            frag.hydrate(true, true)
+            frag.hydrate(true)
           })
         })
       } finally {
@@ -855,7 +855,7 @@ describe('component: slots', () => {
         hydrateNode(start, () => {
           withHydratingSlotBoundary(() => {
             frag = new SlotFragment()
-            frag.hydrate(true, true)
+            frag.hydrate(true)
           })
         })
       } finally {
