@@ -515,7 +515,7 @@ export class DynamicFragment extends VaporFragment {
   }
 
   // Keep this as a prototype method to avoid per-instance closure allocation.
-  hydrate(isEmpty = false, isSlot = false): void {
+  hydrate(isEmpty = false): void {
     // early return allows tree-shaking of hydration logic when not used
     if (!isHydrating) return
 
@@ -576,7 +576,7 @@ export class DynamicFragment extends VaporFragment {
           }
         }
         if (
-          !isSlot &&
+          !this.isSlot &&
           this.anchorLabel &&
           currentHydrationNode &&
           !isHydratingSlotFallbackActive() &&
@@ -657,17 +657,17 @@ export class DynamicFragment extends VaporFragment {
       }
 
       const currentSlotEndAnchor = getCurrentSlotEndAnchor()
-      const forwardedSlot = isSlot
+      const forwardedSlot = this.isSlot
         ? (this as any as SlotFragment).forwarded
         : false
-      const slotAnchor = isSlot ? currentSlotEndAnchor : null
+      const slotAnchor = this.isSlot ? currentSlotEndAnchor : null
 
       // Reuse SSR `<!--]-->` as anchor.
       // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
       // Non-forwarded slots always own the closing `<!--]-->`, even when empty.
       // Forwarded slots only own it when they rendered valid content.
       const closeOwner = getDynamicCloseOwner(
-        isSlot,
+        !!this.isSlot,
         forwardedSlot,
         this.anchorLabel,
         this.nodes,
@@ -1282,7 +1282,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
             if (!hasSlotFallback(boundary) || contentValid) {
               setCurrentHydratingSlotFallbackActive(prev)
             }
-            this.hydrate(!isValidBlock(this.nodes), true)
+            this.hydrate(!isValidBlock(this.nodes))
           } finally {
             setCurrentHydratingSlotFallbackActive(prev)
           }

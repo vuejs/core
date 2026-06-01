@@ -74,6 +74,7 @@ import {
   remove,
 } from './block'
 import {
+  EMPTY_ARR,
   EMPTY_OBJ,
   NOOP,
   ShapeFlags,
@@ -158,6 +159,9 @@ import {
   isSuspenseEnabled,
   setParentSuspense,
 } from './suspense'
+
+const EMPTY_BLOCK = EMPTY_ARR as unknown as Block[]
+const EMPTY_VNODES = EMPTY_ARR as unknown as VNode[]
 
 function filterReservedProps(props: VNode['props']): VNode['props'] {
   const filtered: VNode['props'] = {}
@@ -860,7 +864,7 @@ function mountVNode(
 ): VaporFragment {
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
-  const frag = new VaporFragment<Block>([])
+  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
   frag.vnode = vnode
   frag.$key = vnode.key
   let validityPending = !isHydrating
@@ -972,7 +976,7 @@ function createVDOMComponent(
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
-  const frag = new VaporFragment<Block>([])
+  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
   const vnode = (frag.vnode = createVNode(
     comp,
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
@@ -1374,13 +1378,13 @@ function renderVDOMSlot(
   slotRoot?: boolean,
 ): VaporFragment {
   const suspense = currentParentSuspense || parentComponent.suspense
-  const frag = new VaporFragment<Block>([])
+  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
   let validityPending = !isHydrating
   const instance = currentInstance
 
   let isMounted = false
   const contentState = {
-    nodes: [] as Block,
+    nodes: EMPTY_BLOCK as Block,
     valid: false,
     rendered: null as VNode | Block | null,
   }
@@ -1421,7 +1425,7 @@ function renderVDOMSlot(
       frag.nodes = fallbackState.activeFallback || contentState.nodes
     },
     notifyFallbackValidityChange: () => {
-      if (!isContentUpdateRecheck && inheritedBoundary) {
+      if (slotRoot && !isContentUpdateRecheck && inheritedBoundary) {
         inheritedBoundary.markDirty()
       }
     },
@@ -1442,21 +1446,21 @@ function renderVDOMSlot(
       contentState.nodes = rendered
       contentState.valid = isValidBlock(rendered)
     } else {
-      contentState.nodes = []
+      contentState.nodes = EMPTY_BLOCK
       contentState.valid = false
     }
     validityPending = false
   }
 
   const notifyUpdated = (): void => {
-    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+    if (isMounted && frag.onUpdated) {
+      frag.onUpdated.forEach(u => u())
+    }
   }
 
   const notifyBeforeUpdate = (): void => {
     if (isMounted && frag.onBeforeUpdate) {
-      for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
-        frag.onBeforeUpdate[i]()
-      }
+      frag.onBeforeUpdate.forEach(bu => bu())
     }
   }
 
@@ -1765,7 +1769,9 @@ function createFallback(
         internals,
         () => {
           const children = fallback()
-          return children == null ? [] : normalizeInteropSlotValue(children)
+          return children == null
+            ? EMPTY_VNODES
+            : normalizeInteropSlotValue(children)
         },
         parentComponent,
       )
@@ -1778,7 +1784,7 @@ function createFallback(
   }
 }
 
-const renderEmptyVNodes = (): VNodeArrayChildren => []
+const renderEmptyVNodes = (): VNodeArrayChildren => EMPTY_VNODES
 
 // Interop slot rendering only needs to restore slot-owner / keep-alive /
 // boundary context here. Reusing VaporFragment.runWithRenderCtx() also
@@ -1878,19 +1884,19 @@ function renderVaporSlot(
   }
   try {
     if (!vnode.vs || !vnode.vs.slot) {
-      return []
+      return EMPTY_BLOCK
     }
     const slotState = resolveInteropVaporSlotState(vnode)
     // Most of the interop setup is shared, but slots that start with a local
     // VDOM fallback still need to let an inner SlotFragment own the active
     // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
     // fallback blocks that can later resolve to an empty vnode list.
-    const frag = new VaporFragment<Block>([])
+    const frag = new VaporFragment<Block>(EMPTY_BLOCK)
     let validityPending = !isHydrating
     frag.isBlockValid = () =>
       validityPending ? true : isValidBlock(frag.nodes)
     const inheritedBoundary = frag.inheritedSlotBoundary
-    let contentNodes: Block = []
+    let contentNodes: Block = EMPTY_BLOCK
     let isResolvingContent = false
     let localFallback!: BlockFn
     let outletFallback!: BlockFn
@@ -1997,7 +2003,7 @@ function renderVaporSlot(
         if (hasInteropFallback && resolvedContent instanceof SlotFragment) {
           return resolvedContent
         }
-        contentNodes = resolvedContent || []
+        contentNodes = resolvedContent || EMPTY_BLOCK
         recheckSlotFallback(fallbackState, takePendingRecheck())
         return resolvedContent
       }
@@ -2194,12 +2200,12 @@ function createVNodeChildrenFragment(
 ): VaporFragment {
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
-  const frag = new VaporFragment<Block>([])
+  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
   let contentValid = false
   let validityPending = !isHydrating
   frag.isBlockValid = () => (validityPending ? true : contentValid)
   let currentVNode: VNode | null = null
-  let currentChildren: VNode[] = []
+  let currentChildren: VNode[] = EMPTY_VNODES
   let currentParentNode: ParentNode | null = null
   let currentAnchor: Node | null = null
   let isMounted = false
@@ -2210,7 +2216,7 @@ function createVNodeChildrenFragment(
     const prevValid = validityPending ? true : contentValid
     contentValid = !!ensureValidVNode(children)
     if (children.length === 0) {
-      frag.nodes = []
+      frag.nodes = EMPTY_BLOCK
     } else if (children.length === 1) {
       frag.nodes = resolveVNodeNodes(children[0])
     } else {
@@ -2471,7 +2477,7 @@ const interopSlotsSourceHandlers: ProxyHandler<ShallowRef<Slots>> = {
     const slots = target.value
     return slots
       ? Object.keys(slots).filter(key => !isInternalSlotKey(key))
-      : []
+      : EMPTY_ARR
   },
   getOwnPropertyDescriptor(target, key: any) {
     const slots = target.value
