@@ -243,6 +243,7 @@ export function createSlot(
       instance,
       fallback,
       once,
+      !!(flags & VaporSlotFlags.SLOT_ROOT),
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()
@@ -278,7 +279,7 @@ export function createSlot(
         if (fallback) {
           withOwnedSlotBoundary(slotFragment.parentSlotBoundary, () => {
             const fallbackBlock = fallback()
-            // Keep the live fallback owner on the SlotFragment itself. The
+            // Keep the live fallback block on the SlotFragment itself. The
             // native slot outlet is temporary and gets removed by CE slot
             // replacement, but the fragment remains Vapor's long-lived owner.
             slotFragment.customElementFallback = fallbackBlock

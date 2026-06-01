@@ -1,4 +1,5 @@
 import {
+  VaporDynamicComponentFlags,
   camelize,
   extend,
   getModifierPropName,
@@ -49,7 +50,7 @@ import {
 } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
-import { genBlock } from './block'
+import { genBlock, markSlotRootOperations } from './block'
 import {
   type DestructureMap,
   type DestructureMapValue,
@@ -76,7 +77,15 @@ export function genCreateComponent(
     useAssetComponentHelper && operation.tag.endsWith('__self')
 
   const tag = genTag()
-  const { root, props, slots, once } = operation
+  const { root, props, slots, once, slotRoot } = operation
+  const isRuntimeDynamicComponent = !!(
+    operation.dynamic && !operation.dynamic.isStatic
+  )
+  const dynamicComponentFlags = isRuntimeDynamicComponent
+    ? (root ? VaporDynamicComponentFlags.SINGLE_ROOT : 0) |
+      (once ? VaporDynamicComponentFlags.ONCE : 0) |
+      (slotRoot ? VaporDynamicComponentFlags.SLOT_ROOT : 0)
+    : 0
   const rawSlots = genRawSlots(slots, context)
   const [ids, handlers] = processInlineHandlers(props, context)
   const rawProps = context.withId(() => genRawProps(props, context, true), ids)
@@ -93,7 +102,7 @@ export function genCreateComponent(
     ...inlineHandlers,
     `const n${operation.id} = `,
     ...genCall(
-      operation.dynamic && !operation.dynamic.isStatic
+      isRuntimeDynamicComponent
         ? helper('createDynamicComponent')
         : operation.useCreateElement
           ? helper('createPlainElement')
@@ -105,9 +114,15 @@ export function genCreateComponent(
       tag,
       rawProps,
       rawSlots,
-      root ? 'true' : false,
-      once && 'true',
-      maybeSelfReference && 'true',
+      isRuntimeDynamicComponent
+        ? dynamicComponentFlags
+          ? String(dynamicComponentFlags)
+          : false
+        : root
+          ? 'true'
+          : false,
+      isRuntimeDynamicComponent ? false : once && 'true',
+      isRuntimeDynamicComponent ? false : maybeSelfReference && 'true',
     ),
     ...genDirectivesForElement(operation.id, context),
   ]
@@ -757,6 +772,7 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
   }
 
   const exitSlotBlock = context.enterSlotBlock()
+  markSlotRootOperations(oper)
   let blockFn = context.withId(
     () => genBlock(oper, context, propsName ? [propsName] : []),
     idMap,

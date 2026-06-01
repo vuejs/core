@@ -22,7 +22,7 @@ import {
   template,
 } from '../src'
 import { makeRender } from './_utils'
-import { stringifyStyle } from '@vue/shared'
+import { VaporDynamicComponentFlags, stringifyStyle } from '@vue/shared'
 import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
@@ -1120,7 +1120,7 @@ describe('attribute fallthrough', () => {
               return n0
             },
           },
-          true,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
         )
         return n1
       },

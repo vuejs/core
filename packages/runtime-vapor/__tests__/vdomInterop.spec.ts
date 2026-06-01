@@ -32,7 +32,7 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
-import { VaporSlotFlags } from '@vue/shared'
+import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
 import { compile, makeInteropRender } from './_utils'
 import {
@@ -566,7 +566,7 @@ describe('vdomInterop', () => {
                 return input
               },
             },
-            true,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
           )
         },
       })
@@ -4187,7 +4187,7 @@ describe('vdomInterop', () => {
               {
                 default: () => template('<span>teleported</span>')(),
               },
-              true,
+              VaporDynamicComponentFlags.SINGLE_ROOT,
             )
           },
         })
@@ -4267,7 +4267,7 @@ describe('vdomInterop', () => {
       }
     })
 
-    test('keeps slot fallback before carrier anchor after teleport move and fallback update', async () => {
+    test('keeps slot fallback before slot anchor after teleport move and fallback update', async () => {
       const targetA = document.createElement('div')
       targetA.id = 'interop-slot-fallback-target-a'
       const targetB = document.createElement('div')
@@ -4740,7 +4740,7 @@ describe('vdomInterop', () => {
                   () => h(VDomAsyncChild as any),
                   null,
                   null,
-                  true,
+                  VaporDynamicComponentFlags.SINGLE_ROOT,
                 ),
               fallback: () => template('loading')(),
             },
@@ -4773,7 +4773,7 @@ describe('vdomInterop', () => {
               default: () => template('<span>resolved</span>')(),
               fallback: () => template('<span>fallback</span>')(),
             },
-            true,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
           )
         },
       })

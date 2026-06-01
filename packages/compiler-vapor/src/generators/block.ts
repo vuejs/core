@@ -1,4 +1,12 @@
-import type { BlockIRNode, CoreHelper, IRDynamicInfo, IRSlots } from '../ir'
+import type {
+  BlockIRNode,
+  CoreHelper,
+  CreateComponentIRNode,
+  ForIRNode,
+  IRDynamicInfo,
+  IRSlots,
+  IfIRNode,
+} from '../ir'
 import {
   IRNodeTypes,
   IRSlotType,
@@ -23,6 +31,7 @@ import {
 } from './operation'
 import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
+import { VaporSlotFlags } from '@vue/shared'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -174,6 +183,71 @@ export function genBlockContent(
         ...genCall(context.helper(helper), JSON.stringify(name)),
       )
     }
+  }
+}
+
+export function markSlotRootOperations(block: BlockIRNode): void {
+  for (let i = 0; i < block.returns.length; i++) {
+    const child = findReturnedDynamic(block, block.returns[i])
+    const operation = child && child.operation
+    if (!operation) continue
+
+    if (operation.type === IRNodeTypes.IF) {
+      markSlotRootIf(operation)
+    } else if (operation.type === IRNodeTypes.FOR) {
+      markSlotRootFor(operation)
+    } else if (operation.type === IRNodeTypes.SLOT_OUTLET_NODE) {
+      markSlotRootSlotOutlet(operation)
+    } else if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
+      markSlotRootComponent(operation)
+    }
+  }
+}
+
+function markSlotRootIf(operation: IfIRNode): void {
+  if (!operation.once) {
+    operation.slotRoot = true
+  }
+  markSlotRootOperations(operation.positive)
+
+  const negative = operation.negative
+  if (!negative) return
+  if (negative.type === IRNodeTypes.IF) {
+    markSlotRootIf(negative)
+  } else {
+    markSlotRootOperations(negative)
+  }
+}
+
+function markSlotRootFor(operation: ForIRNode): void {
+  if (!operation.once) {
+    operation.slotRoot = true
+  }
+  markSlotRootOperations(operation.render)
+}
+
+function markSlotRootSlotOutlet(
+  operation: Extract<OperationNode, { type: IRNodeTypes.SLOT_OUTLET_NODE }>,
+): void {
+  operation.flags |= VaporSlotFlags.SLOT_ROOT
+  if (operation.fallback) {
+    markSlotRootOperations(operation.fallback)
+  }
+}
+
+function markSlotRootComponent(operation: CreateComponentIRNode): void {
+  if (!operation.once && operation.dynamic && !operation.dynamic.isStatic) {
+    operation.slotRoot = true
+  }
+}
+
+function findReturnedDynamic(
+  block: BlockIRNode,
+  id: number,
+): IRDynamicInfo | undefined {
+  for (let i = 0; i < block.dynamic.children.length; i++) {
+    const child = block.dynamic.children[i]
+    if (child.id === id) return child
   }
 }
 

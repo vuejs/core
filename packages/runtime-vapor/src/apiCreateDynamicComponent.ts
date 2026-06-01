@@ -8,7 +8,7 @@ import {
   resolveDynamicComponent,
   setCurrentRenderingInstance,
 } from '@vue/runtime-dom'
-import { ShapeFlags } from '@vue/shared'
+import { ShapeFlags, VaporDynamicComponentFlags } from '@vue/shared'
 import { insert, isBlock } from './block'
 import {
   type LooseRawSlots,
@@ -41,9 +41,11 @@ export function createDynamicComponent(
   getter: () => any,
   rawProps?: RawProps | null,
   rawSlots?: LooseRawSlots | null,
-  isSingleRoot?: boolean,
-  once?: boolean,
+  flags: number = 0,
 ): VaporFragment {
+  const isSingleRoot = !!(flags & VaporDynamicComponentFlags.SINGLE_ROOT)
+  const once = !!(flags & VaporDynamicComponentFlags.ONCE)
+  const slotRoot = !!(flags & VaporDynamicComponentFlags.SLOT_ROOT)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()
@@ -53,8 +55,8 @@ export function createDynamicComponent(
 
   const frag =
     isHydrating || __DEV__
-      ? new DynamicFragment('dynamic-component')
-      : new DynamicFragment()
+      ? new DynamicFragment('dynamic-component', false, true, slotRoot)
+      : new DynamicFragment(undefined, false, true, slotRoot)
 
   const normalizedRawSlots = normalizeRawSlots(rawSlots)
   const scopeOwner = getScopeOwner()

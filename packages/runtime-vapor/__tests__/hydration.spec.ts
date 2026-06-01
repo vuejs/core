@@ -3523,7 +3523,17 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>baz</div><!--if--><!--for--><!--]-->
+        <!--[--><div>baz</div><!--]-->
+        "
+      `,
+      )
+
+      data.items[0].show = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--if--><!--for--><!--]-->
         "
       `,
       )
@@ -3696,9 +3706,9 @@ describe('Vapor Mode hydration', () => {
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-      	"<div>
-      	<!--[-->foo<!--]-->
-      	<!--slot--></div>"
+        "<div>
+        <!--[-->foo<!--]-->
+        </div>"
       `,
       )
 
@@ -3706,9 +3716,9 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-      	"<div>
-      	<!--[-->foo1<!--]-->
-      	<!--slot--></div>"
+        "<div>
+        <!--[-->foo1<!--]-->
+        </div>"
       `,
       )
     })
@@ -10791,7 +10801,7 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><section>outlet fallback</section><!--v-if--><!--v-if--><!--]-->
+      <!--[--><section>outlet fallback</section><!--]-->
       <!--]-->
       "
     `,
@@ -10803,7 +10813,7 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><section>updated outlet fallback</section><!--v-if--><!--v-if--><!--]-->
+      <!--[--><section>updated outlet fallback</section><!--]-->
       <!--]-->
       "
     `,
@@ -11023,7 +11033,7 @@ describe('VDOM interop', () => {
       `
         "
         <!--[-->
-        <!--[--><div>foo</div><p>bar</p><!--if--><!--]-->
+        <!--[--><div>foo</div><!--if--><p>bar</p><!--]-->
         <i>tail</i><!--]-->
         "
       `,
@@ -11068,7 +11078,7 @@ describe('VDOM interop', () => {
         "
         <!--[--><div>
         <!--[-->foo<!--]-->
-        <!--slot--></div><!--]-->
+        </div><!--]-->
         "
       `,
     )
@@ -11082,7 +11092,7 @@ describe('VDOM interop', () => {
         "
         <!--[--><div>
         <!--[-->bar<!--]-->
-        <!--slot--></div><!--]-->
+        </div><!--]-->
         "
       `,
     )
@@ -11137,7 +11147,7 @@ describe('VDOM interop', () => {
       "<div>
       <!--[-->
       <!--[--><span>foo</span><!--if--><!--if--><!--if--><!--]-->
-      <!--slot--><!--]-->
+      <!--]-->
       </div>"
     `)
   })

@@ -11,9 +11,15 @@ export function genIf(
   isNested = false,
 ): CodeFragment[] {
   const { helper } = context
-  const { condition, positive, negative, once, index, blockShape } = oper
+  const { condition, positive, negative, once, slotRoot, index, blockShape } =
+    oper
   const [frag, push] = buildCodeFragment()
-  const flags = genIfFlags(blockShape, once, negative ? index : undefined)
+  const flags = genIfFlags(
+    blockShape,
+    once,
+    slotRoot,
+    negative ? index : undefined,
+  )
 
   const conditionExpr: CodeFragment[] = [
     '() => (',
@@ -49,9 +55,13 @@ export function genIf(
 function genIfFlags(
   blockShape: number,
   once: boolean | undefined,
+  slotRoot: boolean | undefined,
   index: number | undefined,
 ): string | false {
   let flags = blockShape
+  if (slotRoot) {
+    flags |= VaporIfFlags.SLOT_ROOT
+  }
   if (once) {
     flags |= VaporIfFlags.ONCE
   } else if (index !== undefined) {
@@ -67,12 +77,13 @@ function genIfFlags(
   }
 
   return __DEV__
-    ? `${flags} /* ${genIfFlagNames(once, index, blockShape)} */`
+    ? `${flags} /* ${genIfFlagNames(once, slotRoot, index, blockShape)} */`
     : String(flags)
 }
 
 function genIfFlagNames(
   once: boolean | undefined,
+  slotRoot: boolean | undefined,
   index: number | undefined,
   blockShape: number,
 ): string {
@@ -87,7 +98,11 @@ function genIfFlagNames(
 
   if (once) {
     names.push('ONCE')
-  } else if (index !== undefined) {
+  }
+  if (slotRoot) {
+    names.push('SLOT_ROOT')
+  }
+  if (!once && index !== undefined) {
     names.push('INDEX_SHIFT')
   }
 

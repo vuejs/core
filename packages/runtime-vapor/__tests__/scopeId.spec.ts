@@ -6,7 +6,7 @@ import {
   ref,
   renderSlot,
 } from '@vue/runtime-dom'
-import { VaporSlotFlags } from '@vue/shared'
+import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import {
   VaporTransition,
   createComponent,
@@ -176,7 +176,12 @@ describe('scopeId', () => {
     const Comp = defineVaporComponent({
       __scopeId: 'child',
       setup() {
-        return createDynamicComponent(() => 'button', null, null, true)
+        return createDynamicComponent(
+          () => 'button',
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
       },
     })
     const { html } = define({
@@ -194,7 +199,12 @@ describe('scopeId', () => {
     const Comp = defineVaporComponent({
       __scopeId: 'child',
       setup() {
-        return createDynamicComponent(() => 'button', null, null, true)
+        return createDynamicComponent(
+          () => 'button',
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
       },
     })
     const { html } = define({
@@ -1000,7 +1010,12 @@ describe('vdom interop', () => {
     const VaporChild = defineVaporComponent({
       __scopeId: 'vapor-child',
       setup() {
-        return createDynamicComponent(() => 'button', null, null, true)
+        return createDynamicComponent(
+          () => 'button',
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
       },
     })
 

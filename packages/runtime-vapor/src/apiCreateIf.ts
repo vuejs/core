@@ -52,10 +52,11 @@ export function createIf(
     const index = flags >> VaporIfFlags.INDEX_SHIFT
     const keyed = index > 0
     const keyBase = keyed ? (index - 1) * 2 : 0
+    const trackSlotBoundary = !!(flags & VaporIfFlags.SLOT_ROOT)
     frag =
       isHydrating || __DEV__
-        ? new DynamicFragment('if', keyed, false)
-        : new DynamicFragment(undefined, keyed, false)
+        ? new DynamicFragment('if', keyed, false, trackSlotBoundary)
+        : new DynamicFragment(undefined, keyed, false, trackSlotBoundary)
     renderEffect(() => {
       const ok = condition()
       if (isHydrating) {

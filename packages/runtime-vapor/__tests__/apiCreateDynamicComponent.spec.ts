@@ -4,6 +4,7 @@ import {
   nextTick,
   resolveDynamicComponent,
 } from '@vue/runtime-dom'
+import { VaporDynamicComponentFlags } from '@vue/shared'
 import {
   type VaporComponentInstance,
   createComponent,
@@ -78,7 +79,13 @@ describe('api: createDynamicComponent', () => {
 
     const { html } = define({
       setup() {
-        return createDynamicComponent(() => val.value, null, null, true, true)
+        return createDynamicComponent(
+          () => val.value,
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT |
+            VaporDynamicComponentFlags.ONCE,
+        )
       },
     }).render()
 
@@ -98,8 +105,8 @@ describe('api: createDynamicComponent', () => {
           () => val.value,
           { id: () => id.value },
           null,
-          true,
-          true,
+          VaporDynamicComponentFlags.SINGLE_ROOT |
+            VaporDynamicComponentFlags.ONCE,
         )
       },
     }).render()
@@ -243,7 +250,12 @@ describe('api: createDynamicComponent', () => {
   test('compiled static key on dynamic component fallback', () => {
     const Comp = defineVaporComponent({
       setup() {
-        const n0 = createDynamicComponent(() => 'div', null, null, true)
+        const n0 = createDynamicComponent(
+          () => 'div',
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
         setBlockKey(n0, 'foo')
         return n0
       },

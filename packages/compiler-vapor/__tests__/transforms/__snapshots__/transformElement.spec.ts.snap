@@ -149,7 +149,7 @@ export function render(_ctx) {
     const n1 = _createIf(() => (_ctx.ok), () => {
       const n3 = _createComponentWithFallback(_component_Child)
       return n3
-    })
+    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n1
   }))
   return [n0, n5]
@@ -814,7 +814,7 @@ exports[`compiler: element transform > dynamic component > dynamic binding 1`] =
 "import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, 1)
   return n0
 }"
 `;
@@ -823,7 +823,7 @@ exports[`compiler: element transform > dynamic component > dynamic binding short
 "import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.is), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.is), null, null, 1)
   return n0
 }"
 `;
