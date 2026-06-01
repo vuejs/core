@@ -43,7 +43,7 @@ import {
   VaporSlotFlags,
   VaporVForFlags,
 } from '@vue/shared'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import { type Block, type BlockFn, isValidBlock } from '../src/block'
@@ -1036,6 +1036,49 @@ describe('component: slots', () => {
 
       expect(host.innerHTML).toBe('fallback')
       expect(boundary.markDirty).not.toHaveBeenCalled()
+    })
+
+    test('compiled slot does not reinsert active fallback while content stays invalid', async () => {
+      const data = ref('first')
+      const Child = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+      )
+      const Parent = compile(
+        `<script setup>
+          const data = _data
+          const components = _components
+        </script>
+        <template>
+          <components.Child>
+            <template v-if="data === 'first'" #default>
+              <div v-if="data === 'first-valid'">first</div>
+            </template>
+            <template v-else #default>
+              <p v-if="data === 'second-valid'">second</p>
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(Parent)
+      app.mount(root)
+
+      const fallback = root.querySelector('span')!
+      const insertBefore = vi.spyOn(Node.prototype, 'insertBefore')
+
+      data.value = 'second'
+      await nextTick()
+
+      expect(root.innerHTML).toContain('<span>fallback</span>')
+      expect(
+        insertBefore.mock.calls.some(([node]) => node === fallback),
+      ).toBe(false)
+
+      insertBefore.mockRestore()
+      app.unmount()
     })
 
     test('vdom slot dirties parent boundary when content validity changes', async () => {

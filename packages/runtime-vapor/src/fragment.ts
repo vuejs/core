@@ -1045,7 +1045,12 @@ export function recheckSlotFallback(
       }
     }
   } else if (fallback) {
-    if (
+    const fallbackStayedValid = prevNodesValid && fallbackValid
+    if (fallbackStayedValid) {
+      if (force) {
+        renderAndCommitSlotFallback(state, true)
+      }
+    } else if (
       prevNodesValid &&
       !fallbackValid &&
       !hasSlotFallback(state.boundary.parent)
