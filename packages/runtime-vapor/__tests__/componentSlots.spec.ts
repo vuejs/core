@@ -627,6 +627,11 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(markDirty).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(2)
     })
 
     test('slot boundary dirtying tracks root v-for updates', async () => {
@@ -654,6 +659,11 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(markDirty).toHaveBeenCalledTimes(1)
+
+      items.value = [1]
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(2)
     })
 
     test('root vapor slot validity change dirties parent boundary', async () => {
@@ -693,6 +703,11 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(markDirty).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(2)
     })
 
     test('slot fallback state ignores dirty notifications after dispose', () => {
@@ -917,7 +932,7 @@ describe('component: slots', () => {
       expect(state.activeFallback).toBe(fallback)
     })
 
-    test('vdom slot dirties parent boundary once when content stays valid', async () => {
+    test('vdom slot does not dirty parent boundary when content stays valid', async () => {
       const text = ref('A')
       const boundary = {
         parent: null,
@@ -952,7 +967,7 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(host.innerHTML).toContain('<div>B</div>')
-      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+      expect(boundary.markDirty).not.toHaveBeenCalled()
     })
 
     test('vdom slot ignores non-root updates inside slot boundary', async () => {
@@ -985,7 +1000,7 @@ describe('component: slots', () => {
       expect(boundary.markDirty).not.toHaveBeenCalled()
     })
 
-    test('vdom slot dirties parent boundary once when switching from valid content to local fallback', async () => {
+    test('vdom slot does not dirty parent boundary when local fallback keeps output valid', async () => {
       const show = ref(true)
       const boundary = {
         parent: null,
@@ -1020,10 +1035,10 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(host.innerHTML).toBe('fallback')
-      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+      expect(boundary.markDirty).not.toHaveBeenCalled()
     })
 
-    test('vdom slot dirties parent boundary once when valid content becomes empty', async () => {
+    test('vdom slot dirties parent boundary when content validity changes', async () => {
       const show = ref(true)
       const boundary = {
         parent: null,
@@ -1059,6 +1074,12 @@ describe('component: slots', () => {
 
       expect(host.innerHTML).toBe('')
       expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      await nextTick()
+
+      expect(host.innerHTML).toContain('<div>content</div>')
+      expect(boundary.markDirty).toHaveBeenCalledTimes(2)
     })
 
     test('vdom slot dirties parent boundary when nested fallback validity flips', async () => {

@@ -298,6 +298,15 @@ export class DynamicFragment extends VaporFragment {
     }
 
     const transition = isTransitionEnabled ? this.$transition : undefined
+    const wasMounted = this.current !== undefined
+    if (wasMounted) {
+      const onBeforeUpdate = this.onBeforeUpdate
+      if (onBeforeUpdate) {
+        for (let i = 0; i < onBeforeUpdate.length; i++) {
+          onBeforeUpdate[i]()
+        }
+      }
+    }
     // currently leaving: defer mounting the next branch until
     // the leave finishes.
     if (transition && transition.state.isLeaving) {
@@ -319,7 +328,6 @@ export class DynamicFragment extends VaporFragment {
     const instance = currentInstance
     const prevSub = setActiveSub()
     const parent = !isHydrating && shouldInsert ? this.anchor.parentNode : null
-    const wasMounted = this.current !== undefined
     // teardown previous branch
     if (wasMounted) {
       const scope = this.scope
@@ -788,11 +796,21 @@ function getRedirectedBoundary(
 }
 
 // Dynamic children (`v-if`, `v-for`, interop fragments) created under a slot
-// boundary dirty the boundary on later updates.
+// boundary dirty the boundary only when their rendered validity changes.
 export function trackSlotBoundaryDirtying(fragment: VaporFragment): void {
   const boundary = currentSlotBoundary
   if (!boundary) return
-  ;(fragment.onUpdated ||= []).push(() => boundary.markDirty())
+  let prevValid = isValidBlock(fragment)
+  ;(fragment.onBeforeUpdate ||= []).push(() => {
+    prevValid = isValidBlock(fragment)
+  })
+  ;(fragment.onUpdated ||= []).push(() => {
+    const valid = isValidBlock(fragment)
+    if (valid !== prevValid) {
+      boundary.markDirty()
+    }
+    prevValid = valid
+  })
 }
 
 export function hasSlotFallback(
@@ -971,6 +989,21 @@ function commitSlotFallback(
   insertActiveSlotFallback(state)
 }
 
+function renderAndCommitSlotFallback(
+  state: SlotFallbackState,
+  hadFallback: boolean,
+): void {
+  const result = renderSlotFallbackState(state)
+  clearSlotFallback(state)
+  if (result) {
+    commitSlotFallback(state, result.block, result.scope, !hadFallback)
+    if (state.pendingRecheck) {
+      state.pendingRecheck = false
+      recheckSlotFallback(state, true)
+    }
+  }
+}
+
 export function disposeSlotFallback(state: SlotFallbackState): void {
   clearSlotFallback(state)
   state.pendingRecheck = false
@@ -1011,9 +1044,8 @@ export function recheckSlotFallback(
         insert(content, parentNode, state.getAnchor())
       }
     }
-  } else {
+  } else if (fallback) {
     if (
-      fallback &&
       prevNodesValid &&
       !fallbackValid &&
       !hasSlotFallback(state.boundary.parent)
@@ -1022,22 +1054,15 @@ export function recheckSlotFallback(
       if (parentNode) {
         detachBlock(fallback, parentNode)
       }
-    } else if (fallback && !prevNodesValid && fallbackValid) {
+    } else if (!prevNodesValid && fallbackValid) {
       insertActiveSlotFallback(state)
-    } else if (force || !fallback) {
-      const hadFallback = !!fallback
-      const result = renderSlotFallbackState(state)
-      clearSlotFallback(state)
-      if (result) {
-        commitSlotFallback(state, result.block, result.scope, !hadFallback)
-        if (state.pendingRecheck) {
-          state.pendingRecheck = false
-          recheckSlotFallback(state, true)
-        }
-      }
+    } else if (force) {
+      renderAndCommitSlotFallback(state, true)
     } else {
       insertActiveSlotFallback(state)
     }
+  } else {
+    renderAndCommitSlotFallback(state, false)
   }
 
   const nextFallback = state.activeFallback
@@ -1221,7 +1246,6 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
     // can return to the DOM.
     this.update(render, key, false, !this.activeFallback)
     this.content = this.nodes
-    this.nodes = this.activeFallback || this.content
   }
 
   updateSlot(
@@ -1234,7 +1258,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
     const boundary = this.slotFallbackBoundary
     const slotRender = render
       ? () => withOwnedSlotBoundary(boundary, render)
-      : () => []
+      : () => EMPTY_BLOCK
     this.isUpdatingSlot = true
     this.pendingRecheck = false
 

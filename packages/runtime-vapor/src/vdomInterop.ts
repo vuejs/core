@@ -1235,13 +1235,6 @@ function ensureRendererBridge(
   return bridge
 }
 
-function trackSlotVNodeUpdates(frag: VaporFragment, vnode: VNode): void {
-  trackSlotVNodeUpdatesWithRefresh(vnode, () => {
-    frag.nodes = resolveVNodeNodes(vnode)
-    if (frag.onUpdated) frag.onUpdated.forEach(m => m())
-  })
-}
-
 function hasValidVNodeContent(vnode: VNode): boolean {
   return !!ensureValidVNode(
     vnode.type === Fragment && isArray(vnode.children)
@@ -1350,10 +1343,12 @@ function hydrateForwardedEmptySlotFragment(
 function trackSlotVNodeUpdatesWithRefresh(
   vnode: VNode,
   refresh: () => void,
+  beforeUpdate?: () => void,
 ): void {
   const onUpdated = () => refresh()
 
   const track = (node: VNode) => {
+    if (beforeUpdate) appendVnodeBeforeUpdateHook(node, beforeUpdate)
     appendVnodeUpdatedHook(node, onUpdated)
     if (node.type === Fragment && isArray(node.children)) {
       node.children.forEach(child => {
@@ -1380,9 +1375,7 @@ function renderVDOMSlot(
 ): VaporFragment {
   const suspense = currentParentSuspense || parentComponent.suspense
   const frag = new VaporFragment<Block>([])
-  if (slotRoot) trackSlotBoundaryDirtying(frag)
   let validityPending = !isHydrating
-  frag.isBlockValid = () => (validityPending ? true : isValidBlock(frag.nodes))
   const instance = currentInstance
 
   let isMounted = false
@@ -1399,6 +1392,12 @@ function renderVDOMSlot(
   let isContentUpdateRecheck = false
   let localFallback: BlockFn | undefined
   let fallbackState!: SlotFallbackState
+  frag.isBlockValid = () => {
+    if (validityPending) return true
+    return fallbackState.activeFallback
+      ? isValidBlock(fallbackState.activeFallback)
+      : contentState.valid
+  }
   const boundary: SlotBoundaryContext = {
     get parent() {
       return inheritedBoundary
@@ -1427,6 +1426,7 @@ function renderVDOMSlot(
       }
     },
   }
+  if (slotRoot) trackSlotBoundaryDirtying(frag)
   localFallback = fallback
     ? once
       ? () => withOnceSlot(() => fallback(internals, parentComponent))
@@ -1450,6 +1450,14 @@ function renderVDOMSlot(
 
   const notifyUpdated = (): void => {
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+  }
+
+  const notifyBeforeUpdate = (): void => {
+    if (isMounted && frag.onBeforeUpdate) {
+      for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
+        frag.onBeforeUpdate[i]()
+      }
+    }
   }
 
   const recheckAfterContentUpdate = (forceFallbackRecheck = false): void => {
@@ -1521,6 +1529,7 @@ function renderVDOMSlot(
     simpleSetCurrentInstance(instance)
     try {
       const renderSlotContent = () => {
+        notifyBeforeUpdate()
         runWithFragmentRenderCtx(frag, () =>
           withOwnedSlotBoundary(boundary, () => {
             let slotContent: VNode | Block | undefined
@@ -1566,7 +1575,15 @@ function renderVDOMSlot(
               if (isVNode(hydratedContent)) {
                 frag.vnode = hydratedContent
                 frag.$key = getVNodeKey(hydratedContent)
-                trackSlotVNodeUpdates(frag, hydratedContent)
+                const refreshSlotVNode = () => {
+                  frag.nodes = resolveVNodeNodes(hydratedContent)
+                  if (frag.onUpdated) frag.onUpdated.forEach(m => m())
+                }
+                trackSlotVNodeUpdatesWithRefresh(
+                  hydratedContent,
+                  refreshSlotVNode,
+                  slotRoot ? notifyBeforeUpdate : undefined,
+                )
                 // Forwarded slot fragments that resolve to an empty SSR range
                 // should stay on that range instead of re-entering it through
                 // generic Fragment hydration.
@@ -1595,7 +1612,7 @@ function renderVDOMSlot(
             if (isVNode(slotContent)) {
               frag.vnode = slotContent
               frag.$key = getVNodeKey(slotContent)
-              trackSlotVNodeUpdatesWithRefresh(slotContent, () => {
+              const refreshSlotVNode = () => {
                 const prevValid = contentState.valid
                 const prevOutput = frag.nodes
                 setRenderedContent(slotContent)
@@ -1606,7 +1623,12 @@ function renderVDOMSlot(
                 ) {
                   notifyUpdated()
                 }
-              })
+              }
+              trackSlotVNodeUpdatesWithRefresh(
+                slotContent,
+                refreshSlotVNode,
+                slotRoot ? notifyBeforeUpdate : undefined,
+              )
               const prevRendered = contentState.rendered
               const prevIsVNode = isVNode(prevRendered)
               const prevVNode =
