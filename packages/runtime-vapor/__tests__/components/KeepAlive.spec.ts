@@ -14,7 +14,7 @@ import {
   vModelText,
   withDirectives,
 } from 'vue'
-import { VaporBlockShape } from '@vue/shared'
+import { VaporBlockShape, VaporVForFlags } from '@vue/shared'
 import type { LooseRawProps, VaporComponent } from '../../src/component'
 import { ifFlags, makeRender } from '../_utils'
 import { VaporKeepAlive } from '../../src/components/KeepAlive'
@@ -432,6 +432,7 @@ describe('VaporKeepAlive', () => {
               return n0
             },
             item => item,
+            VaporVForFlags.SLOT_ROOT,
           ),
       })
 
@@ -473,9 +474,7 @@ describe('VaporKeepAlive', () => {
 
     toggle.value = true
     await nextTick()
-    expect(html()).toBe(
-      '<div>fallback</div><!--for--><!--slot--><!--if--><!--slot-->',
-    )
+    expect(html()).toBe('<div>fallback</div><!--slot--><!--if--><!--slot-->')
 
     itemsA.value = [3]
     await nextTick()
