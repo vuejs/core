@@ -1073,9 +1073,9 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(root.innerHTML).toContain('<span>fallback</span>')
-      expect(
-        insertBefore.mock.calls.some(([node]) => node === fallback),
-      ).toBe(false)
+      expect(insertBefore.mock.calls.some(([node]) => node === fallback)).toBe(
+        false,
+      )
 
       insertBefore.mockRestore()
       app.unmount()
