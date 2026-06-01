@@ -1599,6 +1599,12 @@ function renderVDOMSlot(
                 ) {
                   hydrateVNode(hydratedContent, parentComponent as any)
                 }
+                // Remember the slot outlet insertion point outside the hydrated VNode range.
+                // The hydrated content itself may be removed by later VDOM patches before the
+                // fallback is inserted.
+                const hydratedEnd = hydratedContent.anchor as Node
+                currentParentNode = hydratedEnd.parentNode as ParentNode
+                currentAnchor = hydratedEnd.nextSibling
                 setRenderedContent(hydratedContent)
               } else if (hydratedContent) {
                 frag.vnode = null
@@ -1699,8 +1705,10 @@ function renderVDOMSlot(
   frag.hydrate = () => {
     if (!isHydrating) return
     scope.run(render)
-    currentAnchor = getCurrentSlotEndAnchor() || currentHydrationNode
-    currentParentNode = currentAnchor!.parentNode as ParentNode
+    if (!currentParentNode) {
+      currentAnchor = getCurrentSlotEndAnchor() || currentHydrationNode
+      currentParentNode = currentAnchor!.parentNode as ParentNode
+    }
     isMounted = true
   }
 

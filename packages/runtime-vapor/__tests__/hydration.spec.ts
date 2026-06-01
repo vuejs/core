@@ -10528,6 +10528,42 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate compiled VDOM slot content can switch to vapor fallback', async () => {
+    const data = ref({ show: true })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild>
+          <div v-if="data.show">content</div>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><slot><span>fallback</span></slot></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>content</div><!--]-->
+      "
+    `)
+
+    data.value.show = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toBe('<span>fallback</span>')
+
+    data.value.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toBe('<div>content</div>')
+  })
+
   test('hydrate VDOM slot content can mount after hydrating as empty', async () => {
     const data = reactive({
       show: false,
