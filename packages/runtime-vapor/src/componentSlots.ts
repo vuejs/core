@@ -222,6 +222,7 @@ export function createSlot(
     !(flags & VaporSlotFlags.NO_SLOTTED) && instance.type.__scopeId
   const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
   const once = !!(flags & VaporSlotFlags.ONCE)
+  const slotRoot = !!(flags & VaporSlotFlags.SLOT_ROOT)
   const slotProps = rawProps
     ? new Proxy(
         once ? snapshotRawProps(rawProps as RawProps) : rawProps,
@@ -243,11 +244,11 @@ export function createSlot(
       instance,
       fallback,
       once,
-      !!(flags & VaporSlotFlags.SLOT_ROOT),
+      slotRoot,
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()
-    const slotFragment = (fragment = new SlotFragment())
+    const slotFragment = (fragment = new SlotFragment(slotRoot))
     // mark the slot as forwarded
     slotFragment.forwarded =
       currentSlotOwner != null && currentSlotOwner !== currentInstance

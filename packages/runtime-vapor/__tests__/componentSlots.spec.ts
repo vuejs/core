@@ -656,6 +656,45 @@ describe('component: slots', () => {
       expect(markDirty).toHaveBeenCalledTimes(1)
     })
 
+    test('root vapor slot validity change dirties parent boundary', async () => {
+      const markDirty = vi.fn()
+      const show = ref(true)
+      const boundary: SlotBoundaryContext = {
+        parent: null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() =>
+        withOwnedSlotBoundary(boundary, () =>
+          createSlot('default', null, undefined, VaporSlotFlags.SLOT_ROOT),
+        ),
+      )
+
+      define(() =>
+        createComponent(Child, null, {
+          $: [
+            () =>
+              show.value
+                ? {
+                    name: 'default',
+                    fn: withVaporCtx(() => document.createTextNode('content')),
+                  }
+                : {
+                    name: 'default',
+                    fn: withVaporCtx(() => []),
+                  },
+          ],
+        }),
+      ).render()
+      markDirty.mockClear()
+
+      show.value = false
+      await nextTick()
+
+      expect(markDirty).toHaveBeenCalledTimes(1)
+    })
+
     test('slot fallback state ignores dirty notifications after dispose', () => {
       let disposed = false
       const state = createTestSlotFallbackState({
@@ -1038,7 +1077,7 @@ describe('component: slots', () => {
         default: () => [],
       })
       const renderInnerFallback = () => {
-        const child = new SlotFragment()
+        const child = new SlotFragment(true)
         renderEffect(() => {
           child.updateSlot(
             showInnerFallback.value

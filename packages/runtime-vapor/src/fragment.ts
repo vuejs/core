@@ -1159,9 +1159,11 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   private localFallback?: BlockFn
   private isUpdatingSlot = false
   private _slotFallbackBoundary?: SlotBoundaryContext
+  private notifyParent: boolean
 
-  constructor() {
+  constructor(notifyParent: boolean = false) {
     super(isHydrating || __DEV__ ? 'slot' : undefined, false, false, false)
+    this.notifyParent = notifyParent
     if (!isHydrating) {
       this.insert = (parent, anchor) => this.insertSlot(parent, anchor)
     }
@@ -1313,7 +1315,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   }
 
   notifyFallbackValidityChange(): void {
-    if (this.parentSlotBoundary) {
+    if (this.notifyParent && this.parentSlotBoundary) {
       this.parentSlotBoundary.markDirty()
     }
   }
