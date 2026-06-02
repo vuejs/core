@@ -5,9 +5,16 @@ import {
   isVaporComponent,
 } from './component'
 import { getInheritedScopeIds } from '@vue/runtime-dom'
-import { type DynamicFragment, isDynamicFragment, isFragment } from './fragment'
+import {
+  type DynamicFragment,
+  type InteropFragment,
+  type VaporFragment,
+  isFragment,
+  isInteropFragment,
+} from './fragment'
 import type { Block } from './block'
 import { isInteropEnabled } from './vdomInteropState'
+import { getScopeOwner } from './componentSlots'
 
 export function setScopeId(block: Block, scopeIds: string[]): void {
   if (block instanceof Element) {
@@ -21,31 +28,74 @@ export function setScopeId(block: Block, scopeIds: string[]): void {
       setScopeId(b, scopeIds)
     }
   } else if (isFragment(block)) {
-    if (isDynamicFragment(block)) {
-      trackScopeIdFragment(block, scopeIds)
-    }
+    trackScopeIdFragment(block, scopeIds, false)
     setScopeId(block.nodes, scopeIds)
   }
 }
 
-const trackedScopeIdFragments = new WeakMap<DynamicFragment, Set<string>>()
+const trackedScopeIdFragments = new WeakMap<VaporFragment, Set<string>>()
 
 export function trackScopeIdFragment(
-  frag: DynamicFragment,
+  frag: VaporFragment,
   scopeIds: string[],
+  recursive = true,
 ): void {
-  // Static scope ids applied to a dynamic fragment must follow future branches,
-  // e.g. dynamic slot outlets swapping their rendered slot content.
+  // VDOM interop fragments apply scope ids through their backing VNode instead
+  // of the fragment insert hook.
+  if (isInteropEnabled && isInteropFragment(frag)) {
+    setInteropFragmentScopeIds(frag, scopeIds)
+  } else if (trackFragmentScopeIds(frag, scopeIds)) {
+    ;(frag.onBeforeInsert ||= []).push(nodes => setScopeId(nodes, scopeIds))
+  }
+  if (recursive) {
+    trackScopeIdsInBlock(frag.nodes, scopeIds)
+  }
+}
+
+function trackFragmentScopeIds(
+  frag: VaporFragment,
+  scopeIds: string[],
+): boolean {
   const key = scopeIds.join(' ')
   let trackedScopeIds = trackedScopeIdFragments.get(frag)
   if (!trackedScopeIds) {
     trackedScopeIds = new Set()
     trackedScopeIdFragments.set(frag, trackedScopeIds)
   } else if (trackedScopeIds.has(key)) {
-    return
+    return false
   }
   trackedScopeIds.add(key)
-  ;(frag.onBeforeInsert ||= []).push(nodes => setScopeId(nodes, scopeIds))
+  return true
+}
+
+function setInteropFragmentScopeIds(
+  frag: InteropFragment,
+  scopeIds: string[],
+): void {
+  const vnode = frag.vnode
+  if (!vnode) return
+  const existing = vnode.slotScopeIds
+  if (!existing) {
+    vnode.slotScopeIds = scopeIds
+    return
+  }
+  for (let i = 0; i < scopeIds.length; i++) {
+    if (!existing.includes(scopeIds[i])) {
+      existing.push(scopeIds[i])
+    }
+  }
+}
+
+function trackScopeIdsInBlock(block: Block, scopeIds: string[]): void {
+  if (isVaporComponent(block)) {
+    trackScopeIdsInBlock(block.block, scopeIds)
+  } else if (isArray(block)) {
+    for (const b of block) {
+      trackScopeIdsInBlock(b, scopeIds)
+    }
+  } else if (isFragment(block)) {
+    trackScopeIdFragment(block, scopeIds)
+  }
 }
 
 const trackedInheritedScopeIdFragments = new WeakMap<
@@ -114,4 +164,8 @@ export function setComponentScopeId(instance: VaporComponentInstance): void {
       root.setAttribute(inheritedScopeIds[i], '')
     }
   }
+}
+export function getCurrentScopeId(): string | undefined {
+  const scopeOwner = getScopeOwner()
+  return scopeOwner ? scopeOwner.type.__scopeId : undefined
 }

@@ -1343,6 +1343,14 @@ export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
   return val instanceof VaporFragment
 }
 
+export type InteropFragment<T extends Block = Block> = VaporFragment<T> & {
+  vnode: VNode | null
+}
+
+export function isInteropFragment(val: unknown): val is InteropFragment {
+  return val instanceof VaporFragment && val.vnode !== undefined
+}
+
 export function isDynamicFragment(
   val: NonNullable<unknown>,
 ): val is DynamicFragment {

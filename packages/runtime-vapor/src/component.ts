@@ -139,6 +139,7 @@ import {
   isInteropEnabled,
 } from './vdomInteropState'
 import {
+  getCurrentScopeId,
   setComponentScopeId,
   setScopeId,
   trackComponentScopeId,
@@ -1296,11 +1297,6 @@ function handleSetupResult(
   if (__DEV__) {
     popWarningContext()
   }
-}
-
-export function getCurrentScopeId(): string | undefined {
-  const scopeOwner = getScopeOwner()
-  return scopeOwner ? scopeOwner.type.__scopeId : undefined
 }
 
 // Attach fallthrough attrs to the single root element. When the root is a

@@ -57,12 +57,12 @@ import {
   type VaporComponent,
   VaporComponentInstance,
   createComponent,
-  getCurrentScopeId,
   getRootElement,
   isVaporComponent,
   mountComponent,
   unmountComponent,
 } from './component'
+import { getCurrentScopeId, setScopeId } from './scopeId'
 import type { LooseRawSlots } from './componentSlots'
 import {
   type Block,
@@ -873,8 +873,7 @@ function createVNodeFragment(vnode: VNode): {
   frag: VaporFragment<Block>
   syncNodes: () => void
 } {
-  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
-  frag.vnode = vnode
+  const frag = createInteropFragment(EMPTY_BLOCK, vnode)
   frag.$key = vnode.key
   let validityPending = !isHydrating
   const syncNodes = () => {
@@ -1393,7 +1392,7 @@ function renderVDOMSlot(
   slotRoot?: boolean,
 ): VaporFragment {
   const suspense = currentParentSuspense || parentComponent.suspense
-  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
+  const frag = createInteropFragment()
   let validityPending = !isHydrating
   const instance = currentInstance
 
@@ -1916,11 +1915,12 @@ function renderVaporSlot(
       return EMPTY_BLOCK
     }
     const slotState = resolveInteropVaporSlotState(vnode)
+    const scopeIds = getInteropVaporSlotScopeIds(vnode, parentComponent)
     // Most of the interop setup is shared, but slots that start with a local
     // VDOM fallback still need to let an inner SlotFragment own the active
     // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
     // fallback blocks that can later resolve to an empty vnode list.
-    const frag = new VaporFragment<Block>(EMPTY_BLOCK)
+    const frag = createInteropFragment()
     let validityPending = !isHydrating
     frag.isBlockValid = () =>
       validityPending ? true : isValidBlock(frag.nodes)
@@ -2029,6 +2029,9 @@ function renderVaporSlot(
       const finalizeResolvedContent = (
         resolvedContent: Block | undefined,
       ): Block | undefined => {
+        if (resolvedContent && scopeIds) {
+          setScopeId(resolvedContent, scopeIds)
+        }
         if (hasInteropFallback && resolvedContent instanceof SlotFragment) {
           return resolvedContent
         }
@@ -2229,7 +2232,7 @@ function createVNodeChildrenFragment(
 ): VaporFragment {
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
-  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
+  const frag = createInteropFragment()
   let contentValid = false
   let validityPending = !isHydrating
   frag.isBlockValid = () => (validityPending ? true : contentValid)
@@ -2574,12 +2577,40 @@ function setInteropVnodeScopeId(
   if (interopScopeIdRootMap.get(instance) === root) return
   interopScopeIdRootMap.set(instance, root)
 
-  const scopeIds: string[] = []
-  if (vnode.scopeId) scopeIds.push(vnode.scopeId)
-  if (vnode.slotScopeIds) scopeIds.push(...vnode.slotScopeIds)
-  scopeIds.push(...getInheritedScopeIds(vnode, parentComponent))
+  const scopeIds = getInteropVnodeScopeIds(vnode, parentComponent)
+  if (!scopeIds) return
 
   for (let i = 0; i < scopeIds.length; i++) {
     root.setAttribute(scopeIds[i], '')
   }
+}
+
+function getInteropVnodeScopeIds(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+): string[] | undefined {
+  const scopeIds: string[] = []
+  if (vnode.scopeId) scopeIds.push(vnode.scopeId)
+  if (vnode.slotScopeIds) scopeIds.push(...vnode.slotScopeIds)
+  scopeIds.push(...getInheritedScopeIds(vnode, parentComponent))
+  return scopeIds.length ? scopeIds : undefined
+}
+
+function getInteropVaporSlotScopeIds(
+  vnode: VNode,
+  parentComponent: ComponentInternalInstance | null,
+): string[] | undefined {
+  const scopeIds: string[] = []
+  if (vnode.slotScopeIds) scopeIds.push(...vnode.slotScopeIds)
+  scopeIds.push(...getInheritedScopeIds(vnode, parentComponent))
+  return scopeIds.length ? scopeIds : undefined
+}
+
+function createInteropFragment(
+  nodes: Block = EMPTY_BLOCK,
+  vnode: VNode | null = null,
+): VaporFragment<Block> {
+  const frag = new VaporFragment<Block>(nodes)
+  frag.vnode = vnode
+  return frag
 }
