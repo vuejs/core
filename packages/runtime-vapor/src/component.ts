@@ -41,7 +41,7 @@ import {
   warn,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import { type Block, findBlockNode, insert, isBlock, remove } from './block'
+import { type Block, findBlockBoundary, insert, isBlock, remove } from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -486,7 +486,8 @@ export function createComponent(
         if (
           instance.block &&
           hydrationClose &&
-          findBlockNode(instance.block).nextNode === hydrationClose.nextSibling
+          findBlockBoundary(instance.block).nextNode ===
+            hydrationClose.nextSibling
         ) {
           setCurrentHydrationNode(hydrationClose)
         }

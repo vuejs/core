@@ -20,7 +20,7 @@ import {
   warn,
   watch,
 } from '@vue/runtime-dom'
-import { type Block, findBlockNode, move, remove } from '../block'
+import { type Block, findBlockBoundary, move, remove } from '../block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
@@ -136,7 +136,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
           if (cached !== current) {
             // Cached blocks may contain interop children whose VDOM teardown
             // is owned by remove(), not scope.stop().
-            const parentNode = findBlockNode(cached).parentNode
+            const parentNode = findBlockBoundary(cached).parentNode
             if (parentNode) remove(cached, parentNode as ParentNode)
           }
         })
@@ -281,7 +281,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       if (cached && (!current || cached !== current)) {
         unsetShapeFlag(cached)
         // A pruned branch may still be leaving and not yet be in storageContainer.
-        const parentNode = findBlockNode(cached).parentNode
+        const parentNode = findBlockBoundary(cached).parentNode
         if (parentNode) remove(cached, parentNode as ParentNode)
       } else if (current) {
         unsetShapeFlag(current)

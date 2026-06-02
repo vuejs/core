@@ -9,7 +9,7 @@ import {
   type BlockFn,
   type TransitionOptions,
   type VaporTransitionHooks,
-  findBlockNode,
+  findBlockBoundary,
   insert,
   isValidBlock,
   remove,
@@ -729,7 +729,7 @@ export class DynamicFragment extends VaporFragment {
         parentNode = currentSlotEndAnchor.parentNode
         nextNode = currentSlotEndAnchor
       } else {
-        const node = findBlockNode(this.nodes)
+        const node = findBlockBoundary(this.nodes)
         parentNode = node.parentNode
         nextNode = node.nextNode
       }
