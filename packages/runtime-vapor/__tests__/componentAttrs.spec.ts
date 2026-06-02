@@ -1081,6 +1081,67 @@ describe('attribute fallthrough', () => {
     expect(`Extraneous non-props attributes (id)`).toHaveBeenWarned()
   })
 
+  it('should not apply attrs to dynamic branch inside multi-root component', async () => {
+    const ok = ref(false)
+
+    const t0 = template('<div>one</div>', 1)
+    const t1 = template('<span>two</span>')
+
+    const { component: Child } = define({
+      setup() {
+        return [
+          createIf(
+            () => ok.value,
+            () => t0(),
+          ),
+          t1(),
+        ]
+      },
+    })
+
+    const { host } = define(() =>
+      createComponent(Child, { class: () => 'x' }),
+    ).render()
+
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+
+    ok.value = true
+    await nextTick()
+
+    expect((host.querySelector('div') as HTMLElement).className).toBe('')
+  })
+
+  it('should warn for initially active multi-root dynamic root branch', async () => {
+    const ok = ref(true)
+
+    const t0 = template('<div>one</div>')
+    const t1 = template('<span>two</span>')
+    const t2 = template('<p>three</p>', 1)
+
+    const { component: Child } = define({
+      setup() {
+        return createIf(
+          () => ok.value,
+          () => [t0(), t1()],
+          () => t2(),
+        )
+      },
+    })
+
+    const { host } = define(() =>
+      createComponent(Child, { class: () => 'x' }),
+    ).render()
+
+    expect((host.querySelector('div') as HTMLElement).className).toBe('')
+    expect((host.querySelector('span') as HTMLElement).className).toBe('')
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+
+    ok.value = false
+    await nextTick()
+
+    expect((host.querySelector('p') as HTMLElement).className).toBe('x')
+  })
+
   it('should not allow attrs to fallthrough on component with single comment root', async () => {
     const t0 = template('<!--comment-->')
     const { component: Child } = define({
