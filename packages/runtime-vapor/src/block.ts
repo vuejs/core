@@ -334,7 +334,7 @@ export function normalizeBlock(block: Block): Node[] {
   return nodes
 }
 
-export function findBlockNode(block: Block): {
+export function findBlockBoundary(block: Block): {
   parentNode: Node | null
   nextNode: Node | null
 } {
