@@ -27,9 +27,12 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
-  devRender(instance)
-  popWarningContext()
-  setCurrentInstance(...prev)
+  try {
+    devRender(instance)
+  } finally {
+    popWarningContext()
+    setCurrentInstance(...prev)
+  }
   insert(instance.block, parent, anchor)
 }
 
@@ -49,15 +52,19 @@ export function hmrReload(
   unmountComponent(instance, parent)
   const parentInstance = instance.parent as VaporComponentInstance | null
   const prev = setCurrentInstance(parentInstance)
-  const newInstance = createComponent(
-    newComp,
-    instance.rawProps,
-    instance.rawSlots,
-    instance.isSingleRoot,
-    undefined,
-    instance.appContext,
-  )
-  setCurrentInstance(...prev)
+  let newInstance: VaporComponentInstance
+  try {
+    newInstance = createComponent(
+      newComp,
+      instance.rawProps,
+      instance.rawSlots,
+      instance.isSingleRoot,
+      undefined,
+      instance.appContext,
+    )
+  } finally {
+    setCurrentInstance(...prev)
+  }
   mountComponent(newInstance, parent, anchor)
 
   updateParentBlockOnHmrReload(parentInstance, instance, newInstance)

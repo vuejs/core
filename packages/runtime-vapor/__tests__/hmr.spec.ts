@@ -2,6 +2,7 @@ import {
   type HMRRuntime,
   computed,
   createApp,
+  currentInstance,
   h,
   inject,
   nextTick,
@@ -9,9 +10,12 @@ import {
   onDeactivated,
   onMounted,
   onUnmounted,
+  popWarningContext,
   provide,
   ref,
+  setCurrentInstance,
   toDisplayString,
+  warn,
 } from '@vue/runtime-dom'
 import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
 import {
@@ -210,6 +214,82 @@ describe('hot module replacement', () => {
 
     await nextTick()
     expect(root.innerHTML).toBe(`<div>app-injected</div>`)
+  })
+
+  test('failed rerender restores current instance and warning context', () => {
+    const root = document.createElement('div')
+    const id = 'test-rerender-restore-context'
+    const warnHandler = vi.fn()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const Comp = defineVaporComponent({
+      __hmrId: id,
+      render: () => template('ok')(),
+    })
+    createRecord(id, Comp as any)
+
+    const app = createVaporApp(Comp)
+    app.config.warnHandler = warnHandler
+    app.mount(root)
+    expect(currentInstance).toBe(null)
+
+    rerender(id, () => {
+      throw new Error('hmr rerender error')
+    })
+    warnHandler.mockClear()
+
+    const leakedInstance = currentInstance
+    setCurrentInstance(null, undefined)
+    warn('after failed hmr')
+    popWarningContext()
+    errorSpy.mockRestore()
+
+    expect(
+      '[HMR] Something went wrong during Vue component hot-reload.',
+    ).toHaveBeenWarned()
+    expect('[Vue warn]: after failed hmr').toHaveBeenWarned()
+    expect(leakedInstance).toBe(null)
+    expect(warnHandler).not.toHaveBeenCalled()
+  })
+
+  test('failed reload restores current instance', () => {
+    const root = document.createElement('div')
+    const childId = 'test-reload-restore-context-child'
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: () => template('old')(),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      render: () => createComponent(Child),
+    })
+
+    createVaporApp(Parent).mount(root)
+    expect(currentInstance).toBe(null)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      setup() {
+        throw new Error('hmr reload error')
+      },
+      render: () => template('new')(),
+    })
+
+    const leakedInstance = currentInstance
+    setCurrentInstance(null, undefined)
+    errorSpy.mockRestore()
+
+    expect(
+      '[Vue warn]: Unhandled error during execution of setup function',
+    ).toHaveBeenWarned()
+    expect(
+      '[HMR] Something went wrong during Vue component hot-reload.',
+    ).toHaveBeenWarned()
+    expect(leakedInstance).toBe(null)
   })
 
   test('reload KeepAlive slot', async () => {
