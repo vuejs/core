@@ -1339,6 +1339,7 @@ function registerDynamicFragmentFallthroughAttrs(
             false,
           )
 
+    // slot should warn instead of receiving fallthrough attrs.
     if (root && !hasSlotFragment) {
       // ensure render effect is cleaned up when branch scope is stopped
       frag.scope!.run(() => {
