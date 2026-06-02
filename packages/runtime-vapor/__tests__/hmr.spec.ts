@@ -26,7 +26,6 @@ import {
   setText,
   template,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '@vue/runtime-vapor'
 import { BindingTypes } from '@vue/compiler-core'
 import type { VaporComponent } from '../src/component'
@@ -1030,9 +1029,9 @@ describe('hot module replacement', () => {
           Foo,
           {},
           {
-            default: withVaporCtx(() => {
+            default: () => {
               return createSlot('default')
-            }),
+            },
           },
         )
       },
@@ -1047,7 +1046,7 @@ describe('hot module replacement', () => {
           Parent,
           {},
           {
-            default: withVaporCtx(() => {
+            default: () => {
               return createComponent(
                 Foo,
                 {},
@@ -1055,7 +1054,7 @@ describe('hot module replacement', () => {
                   default: () => template('foo')(),
                 },
               )
-            }),
+            },
           },
         ),
     }

@@ -23,7 +23,6 @@ import {
   renderEffect,
   template,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 import { setElementText, setText } from '../src/dom/prop'
@@ -395,7 +394,7 @@ describe('api: provide/inject', () => {
     const { host } = define({
       setup() {
         return createComponent(Parent, null, {
-          default: withVaporCtx(() => createComponent(Child)),
+          default: () => createComponent(Child),
         })
       },
     }).render()
@@ -435,13 +434,12 @@ describe('api: provide/inject', () => {
             onLeave: () => onLeave,
           },
           {
-            default: withVaporCtx(() =>
+            default: () =>
               createIf(
                 () => toggle.value,
                 () => createComponent(ChildA),
                 () => createComponent(ChildB),
               ),
-            ),
           },
         )
       },

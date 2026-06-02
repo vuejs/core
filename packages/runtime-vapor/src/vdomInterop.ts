@@ -54,7 +54,6 @@ import {
 import { effectScope } from '@vue/reactivity'
 import {
   type LooseRawProps,
-  type LooseRawSlots,
   type VaporComponent,
   VaporComponentInstance,
   createComponent,
@@ -64,6 +63,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
+import type { LooseRawSlots } from './componentSlots'
 import {
   type Block,
   type BlockFn,
@@ -82,11 +82,14 @@ import {
   isFunction,
   isObject,
   isReservedProp,
+  isString,
 } from '@vue/shared'
 import { type RawProps, rawPropsProxyHandlers } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import {
   currentSlotScopeIds,
+  dynamicSlotsProxyHandlers,
+  getSlot,
   setCurrentSlotOwner,
   withOnceSlot,
 } from './componentSlots'
@@ -650,7 +653,10 @@ const vaporSlotWrappersCache = new WeakMap<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
-    const slot = target[key]
+    const slot =
+      isString(key) && !isInternalSlotKey(key)
+        ? getSlot(target, key)
+        : target[key]
     if (isFunction(slot)) {
       slot.__vapor = true
       let wrappers = vaporSlotWrappersCache.get(target)
@@ -675,6 +681,15 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
       return wrapped
     }
     return slot
+  },
+  ownKeys(target) {
+    return Array.from(dynamicSlotsProxyHandlers.ownKeys!(target)).filter(
+      key => isString(key) && !isInternalSlotKey(key),
+    )
+  },
+  getOwnPropertyDescriptor(target, key) {
+    if (!isString(key) || isInternalSlotKey(key)) return
+    return dynamicSlotsProxyHandlers.getOwnPropertyDescriptor!(target, key)
   },
 }
 
@@ -1012,7 +1027,7 @@ function createVDOMComponent(
   if (isCollectingVdomSlotVNodes) {
     collectedVdomSlotVNodes.set(
       frag,
-      createCollectedVDOMSlotVNode(component, rawProps, wrapper.slots),
+      createCollectedVDOMSlotVNode(component, rawProps, wrapper.rawSlots),
     )
   }
 
@@ -1048,9 +1063,9 @@ function createVDOMComponent(
     })
 
     instance.slots =
-      wrapper.slots === EMPTY_OBJ
+      wrapper.rawSlots === EMPTY_OBJ
         ? EMPTY_OBJ
-        : new Proxy(wrapper.slots, vaporSlotsProxyHandler)
+        : new Proxy(wrapper.rawSlots, vaporSlotsProxyHandler)
   }
 
   let rawRef: VNodeNormalizedRef | null = null
@@ -2436,7 +2451,7 @@ function normalizeInteropSlotValue(value: unknown): VNode[] {
 }
 
 const isInternalSlotKey = (key: string): boolean =>
-  key === '_' || key === '_ctx' || key === '$stable'
+  key === '_' || key === '_ctx' || key === '$stable' || key === '$'
 
 const interopSlotsSourceHandlers: ProxyHandler<ShallowRef<Slots>> = {
   get(target, key: any) {

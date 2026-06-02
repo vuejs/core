@@ -9,7 +9,6 @@ import {
   defineVaporComponent,
   renderEffect,
   template,
-  withVaporCtx,
 } from '@vue/runtime-vapor'
 import { setElementText } from '../src/dom/prop'
 
@@ -900,13 +899,12 @@ describe('api: defineAsyncComponent', () => {
     const { html } = define({
       setup() {
         return createComponent(VaporKeepAlive, null, {
-          default: withVaporCtx(() =>
+          default: () =>
             createIf(
               () => toggle.value,
               () => createComponent(Foo),
               () => createComponent(Bar),
             ),
-          ),
         })
       },
     }).render()
@@ -950,7 +948,7 @@ describe('api: defineAsyncComponent', () => {
           VaporKeepAlive,
           { include: () => 'Foo' },
           {
-            default: withVaporCtx(() => createComponent(Foo)),
+            default: () => createComponent(Foo),
           },
         )
       },

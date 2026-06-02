@@ -21,7 +21,6 @@ import {
   setInsertionState,
   template,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '../src'
 import { makeRender } from './_utils'
 
@@ -240,11 +239,11 @@ describe('scopeId', () => {
           Child,
           null,
           {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = template('<div parent></div>')()
               const n1 = createComponent(Child2)
               return [n0, n1]
-            }),
+            },
           },
           true,
         )
@@ -288,10 +287,10 @@ describe('scopeId', () => {
           Wrapper,
           null,
           {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = createSlot('default', null)
               return n0
-            }),
+            },
           },
           true,
         )
@@ -341,12 +340,12 @@ describe('scopeId', () => {
           Child,
           null,
           {
-            default: withVaporCtx(() => {
+            default: () => {
               const n2 = createComponent(
                 Child,
                 null,
                 {
-                  default: withVaporCtx(() => {
+                  default: () => {
                     const n1 = createComponent(
                       Child,
                       null,
@@ -359,12 +358,12 @@ describe('scopeId', () => {
                       true,
                     )
                     return n1
-                  }),
+                  },
                 },
                 true,
               )
               return n2
-            }),
+            },
           },
           true,
         )
@@ -416,7 +415,7 @@ describe('scopeId', () => {
           Parent,
           null,
           {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = createFor(
                 () => count.value,
                 _for_item0 => {
@@ -436,7 +435,7 @@ describe('scopeId', () => {
                 2,
               )
               return n0
-            }),
+            },
           },
           true,
         )
@@ -787,13 +786,12 @@ describe('vdom interop', () => {
             onLeave: () => onLeave,
           },
           {
-            default: withVaporCtx(() =>
+            default: () =>
               createIf(
                 () => show.value,
                 () => template('<div>A</div>', 1)(),
                 () => template('<section>B</section>', 1)(),
               ),
-            ),
           },
         )
       },
@@ -1158,11 +1156,11 @@ describe('vdom interop', () => {
           VaporSlot,
           null,
           {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = template('<div vapor-parent></div>')()
               const n1 = createComponent(VdomChild)
               return [n0, n1]
-            }),
+            },
           },
           true,
         )

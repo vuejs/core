@@ -7,7 +7,6 @@ import {
   defineVaporComponent,
   setBlockKey,
   template,
-  withVaporCtx,
 } from '../../src'
 import { nextTick, ref } from '@vue/runtime-dom'
 import { makeRender } from '../_utils'
@@ -30,7 +29,7 @@ describe('TransitionGroup', () => {
         setBlockKey(child, 'foo')
         child.block.$key = undefined
         return createComponent(VaporTransitionGroup, null, {
-          default: withVaporCtx(() => child),
+          default: () => child,
         })
       },
     }).render()
@@ -50,7 +49,7 @@ describe('TransitionGroup', () => {
         setBlockKey(frag, 'foo')
         frag.nodes.$key = undefined
         return createComponent(VaporTransitionGroup, null, {
-          default: withVaporCtx(() => frag),
+          default: () => frag,
         })
       },
     }).render()
@@ -77,7 +76,7 @@ describe('TransitionGroup', () => {
         child.block[0].$key = undefined
         child.block[1].$key = undefined
         return createComponent(VaporTransitionGroup, null, {
-          default: withVaporCtx(() => child),
+          default: () => child,
         })
       },
     }).render()
@@ -105,7 +104,7 @@ describe('TransitionGroup', () => {
         child = createComponent(Child)
         setBlockKey(child, 'foo')
         return createComponent(VaporTransitionGroup, null, {
-          default: withVaporCtx(() => child),
+          default: () => child,
         })
       },
     }).render()
@@ -136,7 +135,7 @@ describe('TransitionGroup', () => {
         child = createComponent(AsyncChild)
         setBlockKey(child, 'foo')
         return createComponent(VaporTransitionGroup, null, {
-          default: withVaporCtx(() => child),
+          default: () => child,
         })
       },
     }).render()
@@ -166,7 +165,7 @@ describe('TransitionGroup', () => {
           item => item,
         )
         return createComponent(VaporTransitionGroup, null, {
-          default: withVaporCtx(() => list),
+          default: () => list,
         })
       },
     }).render()
