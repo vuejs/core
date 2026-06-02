@@ -125,6 +125,48 @@ describe('attribute fallthrough', () => {
     expect(node.style.fontWeight).toBe('bold')
   })
 
+  it('should only allow whitelisted fallthrough on functional component dynamic root branch', async () => {
+    const show = ref(false)
+    const parentClass = ref('c0')
+
+    const t0 = template('<div class="c2">off</div>', 1)
+    const t1 = template('<div class="c2">on</div>', 1)
+    const { component: Child } = define(() => {
+      return createIf(
+        () => show.value,
+        () => t1(),
+        () => t0(),
+      )
+    })
+
+    const { host } = define(() =>
+      createComponent(Child, {
+        foo: () => 'bar',
+        id: () => 'test',
+        class: () => parentClass.value,
+      }),
+    ).render()
+
+    const assertRoot = (text: string) => {
+      const node = host.children[0] as HTMLElement
+      expect(node.textContent).toBe(text)
+      expect(node.getAttribute('id')).toBe(null)
+      expect(node.getAttribute('foo')).toBe(null)
+      expect(node.classList.contains('c2')).toBe(true)
+      expect(node.classList.contains(parentClass.value)).toBe(true)
+    }
+
+    assertRoot('off')
+
+    show.value = true
+    await nextTick()
+    assertRoot('on')
+
+    parentClass.value = 'c1'
+    await nextTick()
+    assertRoot('on')
+  })
+
   it('should allow all attrs on functional component with declared props', async () => {
     const click = vi.fn()
     const childUpdated = vi.fn()
@@ -365,6 +407,40 @@ describe('attribute fallthrough', () => {
 
     document.body.appendChild(target)
     define(Parent).render()
+
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+  })
+
+  it('should warn when fallthrough fails on dynamic teleport root branch', async () => {
+    const show = ref(false)
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+
+    const fallback = template('<div>fallback</div>', 1)
+    const teleported = template('<div>teleported</div>')
+    const { component: Child } = define(() =>
+      createIf(
+        () => show.value,
+        () =>
+          createComponent(
+            VaporTeleport,
+            { to: () => target },
+            {
+              default: () => teleported(),
+            },
+          ),
+        () => fallback(),
+      ),
+    )
+
+    const { host } = define(() =>
+      createComponent(Child, { class: () => 'parent' }),
+    ).render()
+
+    expect((host.children[0] as HTMLElement).className).toBe('parent')
+
+    show.value = true
+    await nextTick()
 
     expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
   })
@@ -934,6 +1010,41 @@ describe('attribute fallthrough', () => {
     show.value = true
     await nextTick()
     const span = host.querySelector('span') as HTMLElement
+    expect(span.className).toBe('')
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+  })
+
+  it('should not fallthrough attrs into initially active nested slot branch', async () => {
+    const show = ref(true)
+    const Child = compile(
+      `<script setup vapor>
+        defineProps({
+          show: Boolean
+        })
+      </script>
+      <template>
+        <div v-if="!show">fallback</div>
+        <slot v-else-if="show" />
+      </template>`,
+      show,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const show = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <Child :show="show" class="custom-btn">
+          <span>slot</span>
+        </Child>
+      </template>`,
+      show,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    const span = host.querySelector('span') as HTMLElement
+
     expect(span.className).toBe('')
     expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
   })

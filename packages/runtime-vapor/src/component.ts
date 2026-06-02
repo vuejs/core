@@ -1275,32 +1275,14 @@ function handleSetupResult(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    const root = getRootElement(
-      instance.block,
-      // attach attrs to root dynamic fragments for applying during each update
-      frag => registerDynamicFragmentFallthroughAttrs(frag, instance.attrs),
-      false,
-    )
-    if (root) {
-      renderEffect(() => {
-        const attrs =
-          isFunction(component) &&
-          !(isTransitionEnabled ? isVaporTransition(component) : false)
-            ? getFunctionalFallthrough(instance.attrs)
-            : instance.attrs
-        if (attrs) applyFallthroughProps(root, attrs)
-      })
-    } else if (
-      __DEV__ &&
-      ((!instance.accessedAttrs &&
-        isArray(instance.block) &&
-        instance.block.length) ||
-        // preventing attrs fallthrough on Teleport
-        // consistent with VDOM Teleport behavior
-        (isTeleportEnabled && isTeleportFragment(instance.block)))
-    ) {
-      warnExtraneousAttributes(instance.attrs)
-    }
+    const getFallthroughAttrs =
+      isFunction(component) &&
+      !(isTransitionEnabled ? isVaporTransition(component) : false)
+        ? () => getFunctionalFallthrough(instance.attrs)
+        : () => instance.attrs
+    // attach attrs to the root element, or to root dynamic fragments so they
+    // can be (re-)applied during each branch update
+    applyFallthroughAttrs(instance.block, instance, getFallthroughAttrs)
   }
 
   if (__DEV__) {
@@ -1313,45 +1295,72 @@ export function getCurrentScopeId(): string | undefined {
   return scopeOwner ? scopeOwner.type.__scopeId : undefined
 }
 
+// Attach fallthrough attrs to the single root element. When the root is a
+// dynamic fragment (e.g. v-if), the attrs are (re-)applied on each branch
+// update via its insert hook. Slots and teleports warn instead of receiving
+// the attrs, consistent with VDOM behavior.
+function applyFallthroughAttrs(
+  block: Block,
+  instance: VaporComponentInstance,
+  getFallthroughAttrs: () => Record<string, any> | undefined,
+  scope?: EffectScope,
+): void {
+  let hasSlotFragment = false
+  const root = getRootElement(
+    block,
+    frag => {
+      if (frag.isSlot) {
+        hasSlotFragment = true
+      } else {
+        // Nested dynamic fragments need their own fallthrough hook.
+        registerDynamicFragmentFallthroughAttrs(
+          frag,
+          instance,
+          getFallthroughAttrs,
+        )
+      }
+    },
+    false,
+  )
+
+  if (root && !hasSlotFragment) {
+    const applyEffect = () =>
+      renderEffect(() => {
+        const attrs = getFallthroughAttrs()
+        if (attrs) applyFallthroughProps(root, attrs)
+      })
+    // ensure the render effect is cleaned up when the branch scope is stopped
+    scope ? scope.run(applyEffect) : applyEffect()
+  } else if (
+    __DEV__ &&
+    (hasSlotFragment ||
+      (isTeleportEnabled && containsTeleportFragment(block)) ||
+      (!instance.accessedAttrs && isArray(block) && block.length))
+  ) {
+    warnExtraneousAttributes(instance.attrs)
+  }
+}
+
+function containsTeleportFragment(block: Block): boolean {
+  if (isTeleportFragment(block)) return true
+  if (isArray(block)) {
+    return block.some(
+      child => !(child instanceof Comment) && containsTeleportFragment(child),
+    )
+  }
+  return isFragment(block) && containsTeleportFragment(block.nodes)
+}
+
 function registerDynamicFragmentFallthroughAttrs(
   frag: DynamicFragment,
-  attrs: Record<string, any>,
+  instance: VaporComponentInstance,
+  getFallthroughAttrs: () => Record<string, any> | undefined,
 ): void {
   // avoid registering duplicate hooks
   if (frag.hasFallthroughAttrs) return
 
   frag.hasFallthroughAttrs = true
-  ;(frag.onBeforeInsert ||= []).push(nodes => {
-    // Nested dynamic fragments need their own fallthrough hook.
-    let hasSlotFragment = nodes instanceof DynamicFragment && !!nodes.isSlot
-    const root =
-      nodes instanceof Element
-        ? nodes
-        : getRootElement(
-            nodes,
-            childFrag => {
-              if (childFrag.isSlot) {
-                hasSlotFragment = true
-              } else {
-                registerDynamicFragmentFallthroughAttrs(childFrag, attrs)
-              }
-            },
-            false,
-          )
-
-    // slot should warn instead of receiving fallthrough attrs.
-    if (root && !hasSlotFragment) {
-      // ensure render effect is cleaned up when branch scope is stopped
-      frag.scope!.run(() => {
-        renderEffect(() => applyFallthroughProps(root, attrs))
-      })
-    } else if (
-      __DEV__ &&
-      // preventing attrs fallthrough on slots
-      // consistent with VDOM slots behavior
-      (hasSlotFragment || (isArray(nodes) && nodes.length))
-    ) {
-      warnExtraneousAttributes(attrs)
-    }
-  })
+  ;(frag.onBeforeInsert ||= []).push(nodes =>
+    applyFallthroughAttrs(nodes, instance, getFallthroughAttrs, frag.scope!),
+  )
 }
