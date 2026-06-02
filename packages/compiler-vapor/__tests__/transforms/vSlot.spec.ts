@@ -375,7 +375,7 @@ describe('compiler: transform slot', () => {
     expect(code).toMatchSnapshot()
 
     expect(code).contains(
-      `_createAssetComponent("Comp", null, _withVaporCtx((_slotProps0) =>`,
+      `_createAssetComponent("Comp", null, (_slotProps0) =>`,
     )
     expect(code).contains(
       `_createComponentWithFallback(_component_Inner, null, (_slotProps1) =>`,
@@ -825,8 +825,8 @@ describe('compiler: transform slot', () => {
     })
   })
 
-  describe('withVaporCtx optimization', () => {
-    test('slot with only static elements should not have withVaporCtx', () => {
+  describe('slot owner context', () => {
+    test('slot with only static elements should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -838,7 +838,7 @@ describe('compiler: transform slot', () => {
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with component should have withVaporCtx', () => {
+    test('slot with component should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -846,11 +846,11 @@ describe('compiler: transform slot', () => {
           </template>
         </Comp>
       `)
-      expect(code).toContain('withVaporCtx')
+      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with slot outlet should have withVaporCtx', () => {
+    test('slot with slot outlet should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -858,11 +858,11 @@ describe('compiler: transform slot', () => {
           </template>
         </Comp>
       `)
-      expect(code).toContain('withVaporCtx')
+      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('dynamic slot source with slot outlet should have withVaporCtx', () => {
+    test('dynamic slot source with slot outlet should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template v-for="(_, name) in slots" #[name]>
@@ -871,12 +871,13 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).toContain(`$: [
-      _withVaporCtx(() => (_createForSlots`)
-      expect(code).toContain(`fn: _withVaporCtx(() =>`)
+      () => (_createForSlots`)
+      expect(code).toContain(`fn: () =>`)
+      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with component inside v-if should have withVaporCtx', () => {
+    test('slot with component inside v-if should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -886,11 +887,11 @@ describe('compiler: transform slot', () => {
           </template>
         </Comp>
       `)
-      expect(code).toContain('withVaporCtx')
+      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with component inside v-for should have withVaporCtx', () => {
+    test('slot with component inside v-for should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -900,11 +901,11 @@ describe('compiler: transform slot', () => {
           </template>
         </Comp>
       `)
-      expect(code).toContain('withVaporCtx')
+      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with nested v-if containing component should have withVaporCtx', () => {
+    test('slot with nested v-if containing component should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -916,11 +917,11 @@ describe('compiler: transform slot', () => {
           </template>
         </Comp>
       `)
-      expect(code).toContain('withVaporCtx')
+      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with only text interpolation should not have withVaporCtx', () => {
+    test('slot with only text interpolation should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -932,7 +933,7 @@ describe('compiler: transform slot', () => {
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with v-if but no component should not have withVaporCtx', () => {
+    test('slot with v-if but no component should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -945,7 +946,7 @@ describe('compiler: transform slot', () => {
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with v-for but no component should not have withVaporCtx', () => {
+    test('slot with v-for but no component should not need withVaporCtx', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -957,7 +958,7 @@ describe('compiler: transform slot', () => {
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with custom element should have withVaporCtx', () => {
+    test('slot with custom element should not need withVaporCtx', () => {
       const { code } = compileWithSlots(
         `
         <Comp>
@@ -970,11 +971,11 @@ describe('compiler: transform slot', () => {
           isCustomElement: tag => tag.startsWith('my-'),
         },
       )
-      expect(code).toContain('withVaporCtx')
+      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with custom element inside v-if should have withVaporCtx', () => {
+    test('slot with custom element inside v-if should not need withVaporCtx', () => {
       const { code } = compileWithSlots(
         `
         <Comp>
@@ -989,7 +990,7 @@ describe('compiler: transform slot', () => {
           isCustomElement: tag => tag.startsWith('my-'),
         },
       )
-      expect(code).toContain('withVaporCtx')
+      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
   })

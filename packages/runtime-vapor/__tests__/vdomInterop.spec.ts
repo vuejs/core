@@ -63,7 +63,6 @@ import {
   template,
   txt,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '../src'
 
 const define = makeInteropRender()
@@ -961,6 +960,46 @@ describe('vdomInterop', () => {
       expect(html()).toBe('default slot')
     })
 
+    test('does not expose Vapor dynamic slots marker to vdom slots', () => {
+      const keys: string[][] = []
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => {
+            keys.push(Object.keys(slots))
+            return renderSlot(slots, 'default')
+          }
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createComponent(
+            VDomChild as any,
+            null,
+            {
+              default: () => document.createTextNode('static slot'),
+              $: [
+                () => ({
+                  name: 'default',
+                  fn: () => document.createTextNode('dynamic slot'),
+                }),
+              ],
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('dynamic slot')
+      expect(keys).toEqual([['default']])
+    })
+
     test('function rawSlots are normalized before mounting vdom component', () => {
       const VDomChild = defineComponent({
         setup(_, { slots }) {
@@ -1682,7 +1721,7 @@ describe('vdomInterop', () => {
             VDomInnerSlot as any,
             null,
             {
-              bar: withVaporCtx(() => createSlot('bar', null)),
+              bar: () => createSlot('bar', null),
             },
             true,
           )
@@ -1785,12 +1824,11 @@ describe('vdomInterop', () => {
         const slots = useSlots()
         return createComponent(Inner, null, {
           $: [
-            withVaporCtx(() =>
+            () =>
               createForSlots(slots, (_slot, name) => ({
                 name,
-                fn: withVaporCtx(() => createSlot(name)),
-              })),
-            ) as any,
+                fn: () => createSlot(name),
+              })) as any,
           ],
         })
       })
@@ -1849,13 +1887,13 @@ describe('vdomInterop', () => {
             VDomChild as any,
             null,
             {
-              default: withVaporCtx((props: any) => {
+              default: (props: any) => {
                 const span = document.createElement('span')
                 renderEffect(() => {
                   span.textContent = props.msg
                 })
                 return span
-              }),
+              },
             },
             true,
           )
@@ -3535,7 +3573,7 @@ describe('vdomInterop', () => {
       const App = defineVaporComponent({
         setup() {
           return createComponent(VaporKeepAlive, null, {
-            default: withVaporCtx(() =>
+            default: () =>
               createIf(
                 () => show.value,
                 () =>
@@ -3543,16 +3581,14 @@ describe('vdomInterop', () => {
                     VDomComp as any,
                     null,
                     {
-                      default: withVaporCtx(() =>
+                      default: () =>
                         createSlot('default', null, () =>
                           createComponent(VaporFallback as any),
                         ),
-                      ),
                     },
                     true,
                   ),
               ),
-            ),
           })
         },
       })
@@ -3617,9 +3653,9 @@ describe('vdomInterop', () => {
             () => show.value,
             () =>
               createComponent(VDomCommentWrapper as any, null, {
-                default: withVaporCtx(() =>
+                default: () =>
                   createComponent(VaporKeepAlive, null, {
-                    default: withVaporCtx(() =>
+                    default: () =>
                       createComponent(
                         VaporTeleport,
                         { to: () => '#keepalive-teleport-target' },
@@ -3627,9 +3663,7 @@ describe('vdomInterop', () => {
                           default: () => template('<input>')(),
                         },
                       ),
-                    ),
                   }),
-                ),
               }),
           )
         },
@@ -3667,9 +3701,9 @@ describe('vdomInterop', () => {
             () => show.value,
             () =>
               createComponent(VDomCommentWrapper as any, null, {
-                default: withVaporCtx(() =>
+                default: () =>
                   createComponent(VaporKeepAlive, null, {
-                    default: withVaporCtx(() =>
+                    default: () =>
                       createComponent(
                         VaporTeleport,
                         {
@@ -3680,9 +3714,7 @@ describe('vdomInterop', () => {
                           default: () => template('<input>')(),
                         },
                       ),
-                    ),
                   }),
-                ),
               }),
           )
         },
@@ -3725,9 +3757,9 @@ describe('vdomInterop', () => {
             () => show.value,
             () =>
               createComponent(VDomCommentWrapper as any, null, {
-                default: withVaporCtx(() =>
+                default: () =>
                   createComponent(VaporKeepAlive, null, {
-                    default: withVaporCtx(() =>
+                    default: () =>
                       createComponent(
                         VaporTeleport,
                         { to: () => to.value },
@@ -3735,9 +3767,7 @@ describe('vdomInterop', () => {
                           default: () => template('<input>')(),
                         },
                       ),
-                    ),
                   }),
-                ),
               }),
           )
         },
@@ -3781,7 +3811,7 @@ describe('vdomInterop', () => {
       const NestedKeepAlive = defineVaporComponent({
         setup() {
           return createComponent(VaporKeepAlive, null, {
-            default: withVaporCtx(() => createSlot('default')),
+            default: () => createSlot('default'),
           })
         },
       })
@@ -3792,9 +3822,9 @@ describe('vdomInterop', () => {
             () => show.value,
             () =>
               createComponent(VDomCommentWrapper as any, null, {
-                default: withVaporCtx(() =>
+                default: () =>
                   createComponent(NestedKeepAlive, null, {
-                    default: withVaporCtx(() =>
+                    default: () =>
                       createComponent(
                         VaporTeleport,
                         { to: () => '#nested-keepalive-teleport-target' },
@@ -3802,9 +3832,7 @@ describe('vdomInterop', () => {
                           default: () => template('<input>')(),
                         },
                       ),
-                    ),
                   }),
-                ),
               }),
           )
         },
@@ -3839,7 +3867,7 @@ describe('vdomInterop', () => {
       const VaporChild = defineVaporComponent({
         setup() {
           return createComponent(VaporKeepAlive, null, {
-            default: withVaporCtx(() =>
+            default: () =>
               createComponent(
                 VaporTeleport,
                 {
@@ -3849,7 +3877,6 @@ describe('vdomInterop', () => {
                   default: () => template('<input>')(),
                 },
               ),
-            ),
           })
         },
       })
@@ -4366,16 +4393,15 @@ describe('vdomInterop', () => {
                 to: () => to.value,
               },
               {
-                default: withVaporCtx(() =>
+                default: () =>
                   createComponent(
                     VDomSlotOutlet as any,
                     null,
                     {
-                      default: withVaporCtx(() => createSlot('default')),
+                      default: () => createSlot('default'),
                     },
                     true,
                   ),
-                ),
               },
             )
           },
@@ -4589,9 +4615,7 @@ describe('vdomInterop', () => {
                   VaporAsyncChild,
                   null,
                   {
-                    default: withVaporCtx(() =>
-                      template('<span>slot content</span>')(),
-                    ),
+                    default: () => template('<span>slot content</span>')(),
                   },
                   true,
                 ),

@@ -20,7 +20,6 @@ import {
   template,
   txt,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '../src'
 import {
   type Ref,
@@ -362,14 +361,13 @@ describe('component: slots', () => {
       )
       const { host } = define(() =>
         createComponent(Child, null, {
-          default: withVaporCtx(() =>
+          default: () =>
             createIf(
               () => show.value,
               () => document.createTextNode('content'),
               undefined,
               keyedSlotRootIfShape,
             ),
-          ),
         }),
       ).render()
 
@@ -388,14 +386,13 @@ describe('component: slots', () => {
       )
       const { host } = define(() =>
         createComponent(Child, null, {
-          default: withVaporCtx(() =>
+          default: () =>
             createFor(
               () => items.value,
               item => document.createTextNode(item.value),
               undefined,
               slotRootForFlags,
             ),
-          ),
         }),
       ).render()
 
@@ -414,7 +411,7 @@ describe('component: slots', () => {
       )
       const { host } = define(() =>
         createComponent(Child, null, {
-          default: withVaporCtx(() =>
+          default: () =>
             createDynamicComponent(
               () => current.value,
               null,
@@ -422,7 +419,6 @@ describe('component: slots', () => {
               VaporDynamicComponentFlags.SINGLE_ROOT |
                 VaporDynamicComponentFlags.SLOT_ROOT,
             ),
-          ),
         }),
       ).render()
 
@@ -688,11 +684,11 @@ describe('component: slots', () => {
               show.value
                 ? {
                     name: 'default',
-                    fn: withVaporCtx(() => document.createTextNode('content')),
+                    fn: () => document.createTextNode('content'),
                   }
                 : {
                     name: 'default',
-                    fn: withVaporCtx(() => []),
+                    fn: () => [],
                   },
           ],
         }),
@@ -1458,33 +1454,30 @@ describe('component: slots', () => {
     test('dynamic slot source inside forwarded slot should preserve owner', async () => {
       const msg = ref('late')
       const Leaf = defineVaporComponent(() => createSlot('late', null))
-      const SlotHost = defineVaporComponent(() => createSlot('default', null))
+      const Carrier = defineVaporComponent(() => createSlot('default', null))
       const Root = defineVaporComponent(() => {
         const slots = useSlots()
-        return createComponent(SlotHost, null, {
-          default: withVaporCtx(() =>
+        return createComponent(Carrier, null, {
+          default: () =>
             createComponent(Leaf, null, {
               $: [
-                // required wrapped in withVaporCtx to preserve owner when create dynamic slot source
-                withVaporCtx(() =>
+                () =>
                   createForSlots(slots, (_slot, name) => ({
                     name,
-                    fn: withVaporCtx(() => createSlot(name)),
+                    fn: () => createSlot(name),
                   })),
-                ) as any,
               ],
             }),
-          ),
         })
       })
 
       const { host } = define(() =>
         createComponent(Root, null, {
-          late: withVaporCtx(() => {
+          late: () => {
             const n0 = template('<span></span>')()
             renderEffect(() => setElementText(n0, msg.value))
             return n0
-          }),
+          },
         }),
       ).render()
 
@@ -2602,9 +2595,9 @@ describe('component: slots', () => {
             Child,
             null,
             {
-              foo: withVaporCtx(() => {
+              foo: () => {
                 return createSlot('foo', null)
-              }),
+              },
             },
             true,
           )
@@ -2647,10 +2640,10 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            foo: withVaporCtx(() => {
+            foo: () => {
               const n0 = createSlot('foo', null)
               return n0
-            }),
+            },
           })
           const n3 = createSlot('default', null)
           return [n2, n3]
@@ -2698,12 +2691,12 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = createSlot('default', null, () => {
                 return template('<!-- <div></div> -->')()
               })
               return n0
-            }),
+            },
           })
           return n2
         },
@@ -2736,7 +2729,7 @@ describe('component: slots', () => {
             Child,
             null,
             {
-              default: withVaporCtx(() => {
+              default: () => {
                 const n0 = createIf(
                   () => props.show,
                   () => {
@@ -2752,7 +2745,7 @@ describe('component: slots', () => {
                   keyedSlotRootIfShape,
                 )
                 return n0
-              }),
+              },
             },
             true,
           )
@@ -2799,7 +2792,7 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = createSlot('default', null, () => {
                 const n2 = createIf(
                   () => show.value,
@@ -2813,7 +2806,7 @@ describe('component: slots', () => {
                 return n2
               })
               return n0
-            }),
+            },
           })
           return n2
         },
@@ -2847,7 +2840,7 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: withVaporCtx(() => {
+            default: () => {
               const n0 = createSlot('default', null, () => {
                 const n2 = createFor(
                   () => items.value,
@@ -2865,7 +2858,7 @@ describe('component: slots', () => {
                 return n2
               })
               return n0
-            }),
+            },
           })
           return n2
         },
@@ -2954,14 +2947,14 @@ describe('component: slots', () => {
               targetComponent,
               null,
               {
-                foo: withVaporCtx(() => {
+                foo: () => {
                   return fallbackText
                     ? createSlot('foo', null, () => {
                         const n2 = template(`<div>${fallbackText}</div>`)()
                         return n2
                       })
                     : createSlot('foo', null)
-                }),
+                },
               },
               true,
             )
@@ -3345,7 +3338,7 @@ describe('component: slots', () => {
               VdomSlotWithDynamicFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -3377,7 +3370,7 @@ describe('component: slots', () => {
               VdomSlotWithCountingFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -3413,7 +3406,7 @@ describe('component: slots', () => {
               VdomSlotWithTextFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -3460,16 +3453,15 @@ describe('component: slots', () => {
                   to: () => to.value,
                 },
                 {
-                  default: withVaporCtx(() =>
+                  default: () =>
                     createComponent(
                       VdomSlotWithReactiveFallback,
                       null,
                       {
-                        foo: withVaporCtx(() => createSlot('foo', null)),
+                        foo: () => createSlot('foo', null),
                       },
                       true,
                     ),
-                  ),
                 },
               )
             },
@@ -3522,7 +3514,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -3555,7 +3547,7 @@ describe('component: slots', () => {
               VdomSlotWithReactiveFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -3595,12 +3587,11 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createIf(
                     () => false,
                     () => template('<span>content</span>')(),
                   ),
-                ),
               },
               true,
             )
@@ -3644,12 +3635,11 @@ describe('component: slots', () => {
               VdomForwardedSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createIf(
                     () => false,
                     () => template('<span>content</span>')(),
                   ),
-                ),
               },
               true,
             )
@@ -3687,14 +3677,13 @@ describe('component: slots', () => {
               VdomSlotWithLocalFallback,
               null,
               {
-                bar: withVaporCtx(() =>
+                bar: () =>
                   createIf(
                     () => showContent.value,
                     () => template('<span>content</span>')(),
                     undefined,
                     slotRootIfShape,
                   ),
-                ),
               },
               true,
             )
@@ -3707,9 +3696,7 @@ describe('component: slots', () => {
               OuterVaporSlot,
               null,
               {
-                foo: withVaporCtx(() =>
-                  createComponent(NestedInteropContainer, null, null),
-                ),
+                foo: () => createComponent(NestedInteropContainer, null, null),
               },
               true,
             )
@@ -3746,7 +3733,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -3790,7 +3777,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createComponent(Content, null, null)),
+                foo: () => createComponent(Content, null, null),
               },
               true,
             )
@@ -3843,7 +3830,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createComponent(Content, null, null)),
+                foo: () => createComponent(Content, null, null),
               },
               true,
             )
@@ -3888,7 +3875,7 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -3938,23 +3925,21 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createComponent(
                     NestedSlotContainer,
                     null,
                     {
-                      bar: withVaporCtx(() =>
+                      bar: () =>
                         createIf(
                           () => showInner.value,
                           () => template('<i>inner</i>')(),
                           undefined,
                           slotRootIfShape,
                         ),
-                      ),
                     },
                     true,
                   ),
-                ),
               },
               true,
             )
@@ -4009,23 +3994,21 @@ describe('component: slots', () => {
               VdomSlotWithOptionalFallback,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createComponent(
                     NestedSlotContainer,
                     null,
                     {
-                      bar: withVaporCtx(() =>
+                      bar: () =>
                         createIf(
                           () => showInner.value,
                           () => template('<i>inner</i>')(),
                           undefined,
                           slotRootIfShape,
                         ),
-                      ),
                     },
                     true,
                   ),
-                ),
               },
               true,
             )
@@ -4135,7 +4118,7 @@ describe('component: slots', () => {
               NestedVdomSlot,
               null,
               {
-                bar: withVaporCtx(() => createSlot('bar', null)),
+                bar: () => createSlot('bar', null),
               },
               true,
             )
@@ -4312,7 +4295,7 @@ describe('component: slots', () => {
               InnerVdomSlot,
               null,
               {
-                bar: withVaporCtx(() => createSlot('bar', null)),
+                bar: () => createSlot('bar', null),
               },
               true,
             )
@@ -4325,7 +4308,7 @@ describe('component: slots', () => {
               OuterVdomSlot,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -4400,7 +4383,7 @@ describe('component: slots', () => {
               InnerVdomSlot,
               null,
               {
-                bar: withVaporCtx(() => createSlot('bar', null)),
+                bar: () => createSlot('bar', null),
               },
               true,
             )
@@ -4413,7 +4396,7 @@ describe('component: slots', () => {
               OuterVdomSlot,
               null,
               {
-                foo: withVaporCtx(() => createSlot('foo', null)),
+                foo: () => createSlot('foo', null),
               },
               true,
             )
@@ -4586,12 +4569,11 @@ describe('component: slots', () => {
               VdomSlot,
               null,
               {
-                foo: withVaporCtx(() =>
+                foo: () =>
                   createIf(
                     () => true,
                     () => template('<span>content</span>')(),
                   ),
-                ),
               },
               true,
             )

@@ -5,6 +5,7 @@ import {
   type TransitionProps,
   TransitionPropsValidators,
   type TransitionState,
+  type VShowElement,
   baseApplyTranslation,
   callPendingCbs,
   currentInstance,
@@ -17,6 +18,7 @@ import {
   resolveTransitionProps,
   setCurrentInstance,
   useTransitionState,
+  vShowHidden,
   warn,
 } from '@vue/runtime-dom'
 import { extend, isArray } from '@vue/shared'
@@ -166,7 +168,11 @@ const VaporTransitionGroupImpl = defineVaporComponent({
           isValidTransitionBlock(child) && child.$transition
             ? getTransitionElement(child)
             : undefined
-        if (el) {
+        if (
+          el &&
+          // Hidden v-show nodes have no previous layout box to animate from.
+          !(el as VShowElement)[vShowHidden]
+        ) {
           prevChildren.push(child)
           // disabled transition during enter, so the children will be
           // inserted into the correct position immediately. this prevents
