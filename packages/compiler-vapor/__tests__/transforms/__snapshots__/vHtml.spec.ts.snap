@@ -47,7 +47,7 @@ exports[`v-html > work with dynamic component 1`] = `
 "import { createDynamicComponent as _createDynamicComponent, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, 1)
   _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
   return n0
 }"

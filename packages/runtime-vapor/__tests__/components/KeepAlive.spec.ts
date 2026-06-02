@@ -14,7 +14,7 @@ import {
   vModelText,
   withDirectives,
 } from 'vue'
-import { VaporBlockShape } from '@vue/shared'
+import { VaporBlockShape, VaporVForFlags } from '@vue/shared'
 import type { LooseRawProps, VaporComponent } from '../../src/component'
 import { ifFlags, makeRender } from '../_utils'
 import { VaporKeepAlive } from '../../src/components/KeepAlive'
@@ -35,7 +35,6 @@ import {
   setText,
   template,
   vaporInteropPlugin,
-  withVaporCtx,
 } from '../../src'
 
 const define = makeRender()
@@ -285,10 +284,10 @@ describe('VaporKeepAlive', () => {
     const Comp = defineVaporComponent({
       setup() {
         return createComponent(VaporKeepAlive, null, {
-          default: withVaporCtx(() => {
+          default: () => {
             const n0 = createSlot('default', null)
             return n0
-          }),
+          },
         })
       },
     })
@@ -415,7 +414,7 @@ describe('VaporKeepAlive', () => {
     const ReusableKeepAlive = defineVaporComponent({
       setup() {
         return createComponent(VaporKeepAlive, null, {
-          default: withVaporCtx(() => createSlot('default', null)),
+          default: () => createSlot('default', null),
         })
       },
     })
@@ -432,6 +431,7 @@ describe('VaporKeepAlive', () => {
               return n0
             },
             item => item,
+            VaporVForFlags.SLOT_ROOT,
           ),
       })
 
@@ -473,9 +473,7 @@ describe('VaporKeepAlive', () => {
 
     toggle.value = true
     await nextTick()
-    expect(html()).toBe(
-      '<div>fallback</div><!--for--><!--slot--><!--if--><!--slot-->',
-    )
+    expect(html()).toBe('<div>fallback</div><!--slot--><!--if--><!--slot-->')
 
     itemsA.value = [3]
     await nextTick()

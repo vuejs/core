@@ -95,6 +95,7 @@ export interface IfIRNode extends BaseIRNode, EffectBoundary {
   positive: BlockIRNode
   negative?: BlockIRNode | IfIRNode
   once?: boolean
+  slotRoot?: boolean
   index?: number
   parent?: number
   anchor?: number
@@ -115,6 +116,7 @@ export interface ForIRNode extends BaseIRNode, IRFor, EffectBoundary {
   keyProp?: SimpleExpressionNode
   render: BlockIRNode
   once: boolean
+  slotRoot?: boolean
   component: boolean
   onlyChild: boolean
   parent?: number
@@ -235,6 +237,7 @@ export interface CreateComponentIRNode extends BaseIRNode, EffectBoundary {
   asset: boolean
   root: boolean
   once: boolean
+  slotRoot?: boolean
   dynamic?: SimpleExpressionNode
   useCreateElement: boolean
   parent?: number

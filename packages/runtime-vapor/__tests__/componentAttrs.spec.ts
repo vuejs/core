@@ -22,7 +22,7 @@ import {
   template,
 } from '../src'
 import { compile, makeRender } from './_utils'
-import { stringifyStyle } from '@vue/shared'
+import { VaporDynamicComponentFlags, stringifyStyle } from '@vue/shared'
 import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
@@ -836,7 +836,10 @@ describe('attribute fallthrough', () => {
   })
 
   it('should fallthrough attrs on v-else-if component root branch', async () => {
-    const loading = ref(false)
+    const data = ref({
+      loading: false,
+      id: 'foo',
+    })
     const Child = compile(
       `<script setup vapor>
         defineProps({
@@ -854,37 +857,85 @@ describe('attribute fallthrough', () => {
           loading === false
         </div>
       </template>`,
-      loading,
+      data,
     )
     const Parent = compile(
       `<script setup vapor>
-        const loading = _data
+        const data = _data
         const Child = _components.Child
       </script>
       <template>
-        <Child :loading="loading" class="custom-btn" />
+        <Child :loading="data.loading" :id="data.id" class="custom-btn" />
       </template>`,
-      loading,
+      data,
       { Child },
     )
 
     const { host } = define(Parent).render()
 
-    expect(host.innerHTML).toBe(
-      '<div class="simple-button custom-btn"> loading === false </div><!--if--><!--if-->',
+    const root = () => host.querySelector('.simple-button') as HTMLElement
+    const assertRoot = (text: string) => {
+      const el = root()
+      expect(el.classList.contains('simple-button')).toBe(true)
+      expect(el.classList.contains('custom-btn')).toBe(true)
+      expect(el.id).toBe(data.value.id)
+      expect(el.textContent!.trim()).toBe(text)
+    }
+
+    assertRoot('loading === false')
+
+    data.value.id = 'bar'
+    await nextTick()
+    assertRoot('loading === false')
+
+    data.value.loading = true
+    await nextTick()
+    assertRoot('loading === true')
+
+    data.value.loading = false
+    await nextTick()
+    assertRoot('loading === false')
+  })
+
+  it('should not fallthrough attrs into nested slot branch', async () => {
+    const show = ref(false)
+    const Child = compile(
+      `<script setup vapor>
+        defineProps({
+          show: Boolean
+        })
+      </script>
+      <template>
+        <div v-if="!show">fallback</div>
+        <slot v-else-if="show" />
+      </template>`,
+      show,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const show = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <Child :show="show" class="custom-btn">
+          <span>slot</span>
+        </Child>
+      </template>`,
+      show,
+      { Child },
     )
 
-    loading.value = true
-    await nextTick()
-    expect(host.innerHTML).toBe(
-      '<div class="simple-button custom-btn"> loading === true </div><!--if-->',
+    const { host } = define(Parent).render()
+
+    expect((host.querySelector('div') as HTMLElement).className).toBe(
+      'custom-btn',
     )
 
-    loading.value = false
+    show.value = true
     await nextTick()
-    expect(host.innerHTML).toBe(
-      '<div class="simple-button custom-btn"> loading === false </div><!--if--><!--if-->',
-    )
+    const span = host.querySelector('span') as HTMLElement
+    expect(span.className).toBe('')
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
   })
 
   it('should not allow attrs to fallthrough on component with multiple roots', async () => {
@@ -1172,7 +1223,7 @@ describe('attribute fallthrough', () => {
               return n0
             },
           },
-          true,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
         )
         return n1
       },

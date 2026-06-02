@@ -48,7 +48,7 @@ exports[`v-text > work with dynamic component 1`] = `
 "import { createDynamicComponent as _createDynamicComponent, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, 1)
   _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
   return n0
 }"

@@ -77,14 +77,14 @@ import { type RenderEffect, renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setDynamicProps } from './dom/prop'
 import {
-  type DynamicSlotSource,
+  type LooseRawSlots,
   type RawSlots,
   type StaticSlots,
-  type VaporSlot,
   dynamicSlotsProxyHandlers,
   getScopeOwner,
   getSlot,
   inOnceSlot,
+  normalizeRawSlots,
   setCurrentSlotOwner,
   withOnceSlot,
 } from './componentSlots'
@@ -241,20 +241,6 @@ interface SharedInternalOptions {
 // wider types to make `createComponent` ergonomic in tests and internal call sites.
 export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
-}
-
-export type LooseRawSlots =
-  | VaporSlot
-  | (Record<string, VaporSlot | DynamicSlotSource[]> & {
-      $?: DynamicSlotSource[]
-    })
-
-export function normalizeRawSlots(
-  rawSlots?: LooseRawSlots | null,
-): RawSlots | null | undefined {
-  return rawSlots && isFunction(rawSlots)
-    ? { default: rawSlots }
-    : (rawSlots as RawSlots | null | undefined)
 }
 
 export function createComponent(
@@ -852,9 +838,7 @@ export class VaporComponentInstance<
     this.rawSlots = normalizedRawSlots || EMPTY_OBJ
     this.slots = (
       normalizedRawSlots
-        ? normalizedRawSlots.$
-          ? new Proxy(normalizedRawSlots, dynamicSlotsProxyHandlers)
-          : normalizedRawSlots
+        ? new Proxy(normalizedRawSlots, dynamicSlotsProxyHandlers)
         : EMPTY_OBJ
     ) as Slots
 
@@ -1339,17 +1323,23 @@ function registerDynamicFragmentFallthroughAttrs(
   frag.hasFallthroughAttrs = true
   ;(frag.onBeforeInsert ||= []).push(nodes => {
     // Nested dynamic fragments need their own fallthrough hook.
+    let hasSlotFragment = nodes instanceof DynamicFragment && !!nodes.isSlot
     const root =
       nodes instanceof Element
         ? nodes
         : getRootElement(
             nodes,
-            childFrag =>
-              registerDynamicFragmentFallthroughAttrs(childFrag, attrs),
+            childFrag => {
+              if (childFrag.isSlot) {
+                hasSlotFragment = true
+              } else {
+                registerDynamicFragmentFallthroughAttrs(childFrag, attrs)
+              }
+            },
             false,
           )
 
-    if (root) {
+    if (root && !hasSlotFragment) {
       // ensure render effect is cleaned up when branch scope is stopped
       frag.scope!.run(() => {
         renderEffect(() => applyFallthroughProps(root, attrs))
@@ -1358,8 +1348,7 @@ function registerDynamicFragmentFallthroughAttrs(
       __DEV__ &&
       // preventing attrs fallthrough on slots
       // consistent with VDOM slots behavior
-      ((nodes instanceof DynamicFragment && nodes.anchorLabel === 'slot') ||
-        (isArray(nodes) && nodes.length))
+      (hasSlotFragment || (isArray(nodes) && nodes.length))
     ) {
       warnExtraneousAttributes(attrs)
     }

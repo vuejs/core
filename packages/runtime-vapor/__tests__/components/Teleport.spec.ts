@@ -21,7 +21,6 @@ import {
   template,
   useVaporCssVars,
   vaporInteropPlugin,
-  withVaporCtx,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
 import { makeRender } from '../_utils'
@@ -1462,9 +1461,9 @@ function runSharedTests(deferMode: boolean): void {
           () => show.value,
           () =>
             createComponent(Comp1 as any, null, {
-              default: withVaporCtx(() =>
+              default: () =>
                 createComponent(Comp2 as any, null, {
-                  default: withVaporCtx(() =>
+                  default: () =>
                     createComponent(
                       VaporTeleport,
                       {
@@ -1474,9 +1473,7 @@ function runSharedTests(deferMode: boolean): void {
                         default: () => template('<input>')(),
                       },
                     ),
-                  ),
                 }),
-              ),
             }),
         )
         return [n0, n1]
