@@ -65,6 +65,13 @@ export function hmrReload(
   }
   mountComponent(newInstance, parent, anchor)
 
+  if (!parentInstance) {
+    const app = instance.appContext.app
+    if (app && app._instance === instance) {
+      app._instance = newInstance
+    }
+  }
+
   updateParentBlockOnHmrReload(parentInstance, instance, newInstance)
   updateParentTeleportOnHmrReload(instance, newInstance)
 }

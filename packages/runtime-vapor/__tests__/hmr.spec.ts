@@ -216,6 +216,44 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toBe(`<div>app-injected</div>`)
   })
 
+  test('reload root vapor component should update app instance for unmount', async () => {
+    const root = document.createElement('div')
+    const appId = 'test-root-reload-app-unmount'
+    const oldUnmountSpy = vi.fn()
+    const newUnmountSpy = vi.fn()
+
+    const App = defineVaporComponent({
+      __hmrId: appId,
+      setup() {
+        onUnmounted(oldUnmountSpy)
+      },
+      render: () => template(`<div>old</div>`)(),
+    })
+    createRecord(appId, App as any)
+
+    const app = createVaporApp(App)
+    app.mount(root)
+    expect(root.innerHTML).toBe(`<div>old</div>`)
+
+    reload(appId, {
+      __vapor: true,
+      __hmrId: appId,
+      setup() {
+        onUnmounted(newUnmountSpy)
+      },
+      render: () => template(`<div>new</div>`)(),
+    })
+
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>new</div>`)
+    expect(oldUnmountSpy).toHaveBeenCalledTimes(1)
+
+    app.unmount()
+    await nextTick()
+    expect(root.innerHTML).toBe(``)
+    expect(newUnmountSpy).toHaveBeenCalledTimes(1)
+  })
+
   test('failed rerender restores current instance and warning context', () => {
     const root = document.createElement('div')
     const id = 'test-rerender-restore-context'
