@@ -45,6 +45,7 @@ export function genFor(
     id,
     component,
     onlyChild,
+    slotRoot,
   } = oper
 
   const rawValue = value && value.content
@@ -154,6 +155,9 @@ export function genFor(
   }
   if (once) {
     flags |= VaporVForFlags.ONCE
+  }
+  if (slotRoot) {
+    flags |= VaporVForFlags.SLOT_ROOT
   }
 
   const onResetCalls: CodeFragment[] = []

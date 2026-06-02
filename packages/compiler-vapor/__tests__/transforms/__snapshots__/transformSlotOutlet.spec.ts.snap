@@ -48,6 +48,25 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform <slot> outlets > does not mark non-root fallback v-if as slot root 1`] = `
+"import { setInsertionState as _setInsertionState, createIf as _createIf, createSlot as _createSlot, template as _template } from 'vue';
+const t0 = _template("<span>", 2)
+const t1 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, () => {
+    const n5 = t1()
+    _setInsertionState(n5, null, 0)
+    const n2 = _createIf(() => (_ctx.ok), () => {
+      const n4 = t0()
+      return n4
+    })
+    return n5
+  })
+  return n0
+}"
+`;
+
 exports[`compiler: transform <slot> outlets > dynamically named slot outlet 1`] = `
 "import { createSlot as _createSlot } from 'vue';
 
@@ -105,6 +124,57 @@ const t0 = _template("<div>", 3)
 export function render(_ctx) {
   const n0 = _createSlot("foo", { foo: () => (_ctx.bar) }, () => {
     const n2 = t0()
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > nested root v-for fallback 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, createIf as _createIf, createSlot as _createSlot, template as _template } from 'vue';
+const t0 = _template("<span> ")
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, () => {
+    const n2 = _createIf(() => (_ctx.ok), () => {
+      const n4 = _createFor(() => (_ctx.items), (_for_item0) => {
+        const n6 = t0()
+        const x6 = _txt(n6)
+        _renderEffect(() => _setText(x6, _toDisplayString(_for_item0.value)))
+        return n6
+      }, undefined, 40)
+      const x4 = _txt(n4)
+      _renderEffect(() => _setText(x4, _toDisplayString(_ctx.item)))
+      return n4
+    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > root dynamic component fallback 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, () => {
+    const n2 = _createDynamicComponent(() => (_ctx.view), null, null, 5)
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > root v-if fallback 1`] = `
+"import { createIf as _createIf, createSlot as _createSlot, template as _template } from 'vue';
+const t0 = _template("<span>", 3)
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, () => {
+    const n2 = _createIf(() => (_ctx.ok), () => {
+      const n4 = t0()
+      return n4
+    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n2
   })
   return n0

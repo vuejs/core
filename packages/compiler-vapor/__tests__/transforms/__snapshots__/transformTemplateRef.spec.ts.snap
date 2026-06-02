@@ -44,7 +44,7 @@ exports[`compiler: template ref transform > dynamic component static ref 1`] = `
 "import { createDynamicComponent as _createDynamicComponent, setStaticTemplateRef as _setStaticTemplateRef } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1)
   _setStaticTemplateRef(n0, "foo")
   return n0
 }"

@@ -40,9 +40,9 @@ import { renderEffect } from '../renderEffect'
 import {
   DynamicFragment,
   ForFragment,
-  SlotFragment,
   type VaporFragment,
   isFragment,
+  isSlotFragment,
 } from '../fragment'
 import {
   currentHydrationNode,
@@ -333,8 +333,8 @@ function applyResolvedTransitionHooks(
   if (
     hooks.applyGroup &&
     (block instanceof ForFragment ||
-      block instanceof SlotFragment ||
-      (isVaporComponent(block) && block.block instanceof SlotFragment))
+      isSlotFragment(block) ||
+      (isVaporComponent(block) && isSlotFragment(block.block)))
   ) {
     hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
     return { hooks }

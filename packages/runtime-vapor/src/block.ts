@@ -22,6 +22,7 @@ import {
 } from './fragment'
 import { isTeleportEnabled, isTeleportFragment } from './teleport'
 import { isTransitionEnabled } from './transition'
+import { isInteropEnabled } from './vdomInteropState'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
@@ -78,25 +79,13 @@ export function isValidBlock(block: Block | null | undefined): boolean {
   } else if (isArray(block)) {
     return block.length > 0 && block.some(isValidBlock)
   } else {
-    const isBlockValid = (
-      block as VaporFragment & {
-        isBlockValid?: () => boolean
-      }
-    ).isBlockValid
-    if (isBlockValid) {
-      return isBlockValid.call(block)
+    if (isInteropEnabled && block.isBlockValid) {
+      return block.isBlockValid()
     }
     if (block.validityPending) {
       return true
     }
-    const getEffectiveOutput = (
-      block as VaporFragment & {
-        getEffectiveOutput?: () => Block
-      }
-    ).getEffectiveOutput
-    return isValidBlock(
-      getEffectiveOutput ? getEffectiveOutput.call(block) : block.nodes,
-    )
+    return isValidBlock(block.nodes)
   }
 }
 

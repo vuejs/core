@@ -28,6 +28,11 @@ export enum VaporVForFlags {
    * fragment-specific insert/remove helpers.
    */
   IS_FRAGMENT = 1 << 4,
+  /**
+   * v-for sits on a slot content/fallback root chain and can change slot
+   * validity.
+   */
+  SLOT_ROOT = 1 << 5,
 }
 
 export enum VaporBlockShape {
@@ -44,11 +49,12 @@ export enum VaporBlockShape {
  * - bit 4: v-once
  * - bit 5: true branch does not need EffectScope
  * - bit 6: false branch does not need EffectScope
- * - bits 7+: branch index + 1 for keyed dynamic fragments
+ * - bit 7: v-if sits on a slot content/fallback root chain
+ * - bits 8+: branch index + 1 for keyed dynamic fragments
  *
  * Examples:
  * - v-once, true single-root, no false branch: 1 | ONCE = 17
- * - keyed index 0, true/false single-root: 1 | (1 << 2) | (1 << 7) = 133
+ * - keyed index 0, true/false single-root: 1 | (1 << 2) | (1 << 8) = 261
  */
 export enum VaporIfFlags {
   /**
@@ -71,10 +77,15 @@ export enum VaporIfFlags {
    */
   FALSE_NO_SCOPE = 1 << 6,
   /**
+   * v-if sits on a slot content/fallback root chain and can change slot
+   * validity.
+   */
+  SLOT_ROOT = 1 << 7,
+  /**
    * Shift for keyed branch index. The encoded value is index + 1, so decoded
    * zero means "not keyed" and source index 0 still round-trips.
    */
-  INDEX_SHIFT = 7,
+  INDEX_SHIFT = 8,
 }
 
 /**
@@ -93,4 +104,11 @@ export enum TemplateFlags {
 export enum VaporSlotFlags {
   NO_SLOTTED = 1,
   ONCE = 1 << 1,
+  SLOT_ROOT = 1 << 2,
+}
+
+export enum VaporDynamicComponentFlags {
+  SINGLE_ROOT = 1,
+  ONCE = 1 << 1,
+  SLOT_ROOT = 1 << 2,
 }

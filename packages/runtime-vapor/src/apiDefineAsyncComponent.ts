@@ -121,6 +121,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         frag!.update(() => createInnerComp(resolvedComp!, instance))
         return frag
       }
+      frag.validityPending = true
 
       const onError = (err: Error) => {
         setPendingRequest(null)
@@ -136,6 +137,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         return load()
           .then(() => {
             resolvedComp = getResolvedComp()
+            frag.validityPending = false
             if (resolvedComp) {
               frag.update(() => createInnerComp(resolvedComp!, instance))
             }
@@ -143,6 +145,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           })
           .catch(err => {
             onError(err)
+            frag.validityPending = false
             if (errorComponent) {
               frag.update(() =>
                 createInnerComp(
@@ -185,6 +188,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           render = () => createComponent(loadingComponent)
         }
 
+        frag.validityPending = !render && !error.value
         frag.update(render)
         // Manually trigger cacheBlock for KeepAlive
         if (isKeepAliveEnabled && frag.keepAliveCtx) {

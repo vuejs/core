@@ -117,7 +117,7 @@ export const createFor = (
     parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   }
 
-  const frag = new ForFragment(oldBlocks)
+  const frag = new ForFragment(oldBlocks, !!(flags & VaporVForFlags.SLOT_ROOT))
   const instance = currentInstance!
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
   const canUseFastRemove =
@@ -823,16 +823,8 @@ function normalizeAnchor(node: Block): Node {
   } else if (isVaporComponent(node)) {
     return normalizeAnchor(node.block!)
   } else {
-    const getEffectiveOutput = (
-      node as VaporFragment & {
-        getEffectiveOutput?: () => Block
-      }
-    ).getEffectiveOutput
-    // SlotFragment may render active fallback while keeping carriers in nodes.
-    const nodes = getEffectiveOutput
-      ? getEffectiveOutput.call(node)
-      : node.nodes
-    // Empty ForFragment keeps its insertion carrier in `nodes`, even though it
+    const nodes = node.nodes
+    // Empty ForFragment keeps its insertion anchor in `nodes`, even though it
     // is not a valid content block.
     return isValidBlock(nodes)
       ? normalizeAnchor(nodes)

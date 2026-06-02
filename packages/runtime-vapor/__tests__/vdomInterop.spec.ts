@@ -32,7 +32,7 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
-import { VaporSlotFlags } from '@vue/shared'
+import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
 import { compile, makeInteropRender } from './_utils'
 import {
@@ -223,6 +223,77 @@ describe('vdomInterop', () => {
         true,
       )
       expect(onUpdated).toHaveBeenCalled()
+    })
+
+    test('mounts vnode slot content after active fallback without reusing invalid vnode content', async () => {
+      const show = ref(false)
+      const childRef = ref<any>(null)
+      const mounted = vi.fn()
+      const unmounted = vi.fn()
+
+      const VDomChild = defineComponent({
+        setup() {
+          onMounted(mounted)
+          onUnmounted(unmounted)
+          return () => h('div', 'child')
+        },
+      })
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createSlot('default', null, () =>
+            template('<span>fallback</span>')(),
+          ) as any
+        },
+      })
+
+      const Parent = defineComponent({
+        setup() {
+          return () =>
+            h(VaporChild as any, null, {
+              default: () =>
+                show.value ? [h(VDomChild, { ref: childRef })] : [],
+            })
+        },
+      })
+
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      const root = document.createElement('div')
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+      expect(childRef.value).toBe(null)
+      expect(mounted).not.toHaveBeenCalled()
+      expect(unmounted).not.toHaveBeenCalled()
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<div>child</div>')
+      expect(childRef.value).not.toBe(null)
+      expect(mounted).toHaveBeenCalledTimes(1)
+      expect(unmounted).not.toHaveBeenCalled()
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+      expect(childRef.value).toBe(null)
+      expect(mounted).toHaveBeenCalledTimes(1)
+      expect(unmounted).toHaveBeenCalledTimes(1)
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<div>child</div>')
+      expect(childRef.value).not.toBe(null)
+      expect(mounted).toHaveBeenCalledTimes(2)
+      expect(unmounted).toHaveBeenCalledTimes(1)
+
+      app.unmount()
+      expect(childRef.value).toBe(null)
+      expect(unmounted).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -565,7 +636,7 @@ describe('vdomInterop', () => {
                 return input
               },
             },
-            true,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
           )
         },
       })
@@ -4214,7 +4285,7 @@ describe('vdomInterop', () => {
               {
                 default: () => template('<span>teleported</span>')(),
               },
-              true,
+              VaporDynamicComponentFlags.SINGLE_ROOT,
             )
           },
         })
@@ -4294,7 +4365,7 @@ describe('vdomInterop', () => {
       }
     })
 
-    test('keeps slot fallback before carrier anchor after teleport move and fallback update', async () => {
+    test('keeps slot fallback before slot anchor after teleport move and fallback update', async () => {
       const targetA = document.createElement('div')
       targetA.id = 'interop-slot-fallback-target-a'
       const targetB = document.createElement('div')
@@ -4764,7 +4835,7 @@ describe('vdomInterop', () => {
                   () => h(VDomAsyncChild as any),
                   null,
                   null,
-                  true,
+                  VaporDynamicComponentFlags.SINGLE_ROOT,
                 ),
               fallback: () => template('loading')(),
             },
@@ -4797,7 +4868,7 @@ describe('vdomInterop', () => {
               default: () => template('<span>resolved</span>')(),
               fallback: () => template('<span>fallback</span>')(),
             },
-            true,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
           )
         },
       })

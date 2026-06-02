@@ -1,4 +1,4 @@
-import { NOOP, toDisplayString } from '@vue/shared'
+import { NOOP, VaporDynamicComponentFlags, toDisplayString } from '@vue/shared'
 import {
   setDynamicProp as _setDynamicProp,
   setAttr,
@@ -756,7 +756,12 @@ describe('patchProp', () => {
       const value = ref('foo')
       const { html } = define({
         setup() {
-          const n1 = createDynamicComponent(() => Comp, null, null, true)
+          const n1 = createDynamicComponent(
+            () => Comp,
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
           renderEffect(() => setBlockText(n1, toDisplayString(value)))
           return n1
         },
@@ -769,7 +774,12 @@ describe('patchProp', () => {
       const value = ref('foo')
       const { html } = define({
         setup() {
-          const n1 = createDynamicComponent(() => 'button', null, null, true)
+          const n1 = createDynamicComponent(
+            () => 'button',
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
           renderEffect(() => setBlockText(n1, toDisplayString(value)))
           return n1
         },
@@ -848,7 +858,12 @@ describe('patchProp', () => {
       const value = ref('<p>foo</p>')
       const { html } = define({
         setup() {
-          const n1 = createDynamicComponent(() => Comp, null, null, true)
+          const n1 = createDynamicComponent(
+            () => Comp,
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
           renderEffect(() => setBlockHtml(n1, value.value))
           return n1
         },
@@ -861,7 +876,12 @@ describe('patchProp', () => {
       const value = ref('<p>foo</p>')
       const { html } = define({
         setup() {
-          const n1 = createDynamicComponent(() => 'button', null, null, true)
+          const n1 = createDynamicComponent(
+            () => 'button',
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
           renderEffect(() => setBlockHtml(n1, value.value))
           return n1
         },

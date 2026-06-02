@@ -594,6 +594,28 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('marks root v-if slot content as slot root', () => {
+    const { code } = compileWithSlots(`<Comp><span v-if="show"/></Comp>`)
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('does not mark non-root v-if slot content as slot root', () => {
+    const { code } = compileWithSlots(
+      `<Comp><div><span v-if="show"/></div></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('marks root slot outlet fallback as slot root', () => {
+    const { code } = compileWithSlots(
+      `<Comp><slot><span v-if="show"/></slot></Comp>`,
+    )
+
+    expect(code).toMatchSnapshot()
+  })
+
   describe('forwarded slots', () => {
     test('<slot> tag only', () => {
       const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
