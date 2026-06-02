@@ -1310,12 +1310,27 @@ function applyFallthroughAttrs(
   scope?: EffectScope,
 ): void {
   let hasSlotFragment = false
+  let dynamicFragments: DynamicFragment[] | undefined
   const root = getRootElement(
     block,
     frag => {
       if (frag.isSlot) {
         hasSlotFragment = true
       } else {
+        ;(dynamicFragments ||= []).push(frag)
+      }
+    },
+    false,
+  )
+
+  const dynamicRoot = root ? undefined : getSingleDynamicRootChain(block)
+  const fragmentsToRegister = root
+    ? dynamicFragments
+    : dynamicRoot && dynamicRoot.fragments
+  if (fragmentsToRegister) {
+    for (const frag of fragmentsToRegister) {
+      // slot fragments warn instead of inheriting attrs, skip them
+      if (!frag.isSlot) {
         // Nested dynamic fragments need their own fallthrough hook.
         registerDynamicFragmentFallthroughAttrs(
           frag,
@@ -1323,9 +1338,8 @@ function applyFallthroughAttrs(
           getFallthroughAttrs,
         )
       }
-    },
-    false,
-  )
+    }
+  }
 
   if (root && !hasSlotFragment) {
     const applyEffect = () =>
@@ -1338,10 +1352,56 @@ function applyFallthroughAttrs(
   } else if (
     __DEV__ &&
     (hasSlotFragment ||
+      (dynamicRoot && dynamicRoot.hasNonSingleRoot) ||
       (isTeleportEnabled && containsTeleportFragment(block)) ||
       (!instance.accessedAttrs && isArray(block) && block.length))
   ) {
     warnExtraneousAttributes(instance.attrs)
+  }
+}
+
+interface DynamicRootChain {
+  fragments: DynamicFragment[]
+  hasNonSingleRoot: boolean
+}
+
+// Resolve the chain of dynamic fragments leading to a single root candidate.
+// Used when getRootElement finds no element root, so fallthrough attrs are
+// registered only for true single-root components rather than for any dynamic
+// fragment seen during traversal. Dynamic root branches that are currently
+// non-single-root still keep the outer fragment hook for future branch updates,
+// but report hasNonSingleRoot so the current render can warn.
+function getSingleDynamicRootChain(block: Block): DynamicRootChain | undefined {
+  if (block instanceof DynamicFragment) {
+    const { nodes } = block
+    const nested = getSingleDynamicRootChain(nodes)
+    return {
+      fragments: nested ? [block, ...nested.fragments] : [block],
+      hasNonSingleRoot: nested
+        ? nested.hasNonSingleRoot
+        : isArray(nodes) && nodes.some(child => !(child instanceof Comment)),
+    }
+  }
+
+  if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
+    return getSingleDynamicRootChain(block.nodes)
+  }
+
+  if (isArray(block)) {
+    let singleRoot: DynamicRootChain | undefined
+    let hasComment = false
+    for (const child of block) {
+      if (child instanceof Comment) {
+        hasComment = true
+        continue
+      }
+      const childRoot = getSingleDynamicRootChain(child)
+      if (!childRoot || singleRoot) {
+        return
+      }
+      singleRoot = childRoot
+    }
+    return hasComment ? singleRoot : undefined
   }
 }
 
