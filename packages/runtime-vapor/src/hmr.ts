@@ -4,7 +4,7 @@ import {
   pushWarningContext,
   setCurrentInstance,
 } from '@vue/runtime-dom'
-import { type Block, insert, normalizeBlock, remove } from './block'
+import { type Block, findBlockNode, insert, remove } from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
@@ -19,9 +19,8 @@ import { isFragment } from './fragment'
 import { isKeepAliveEnabled } from './keepAlive'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
-  const normalized = normalizeBlock(instance.block)
-  const parent = normalized[0].parentNode!
-  const anchor = normalized[normalized.length - 1].nextSibling
+  const { parentNode, nextNode: anchor } = findBlockNode(instance.block)
+  const parent = parentNode as ParentNode
   // reset scope to avoid stale effects
   instance.scope.reset()
   remove(instance.block, parent)
@@ -46,9 +45,8 @@ export function hmrReload(
     instance.parent.hmrRerender!()
     return
   }
-  const normalized = normalizeBlock(instance.block)
-  const parent = normalized[0].parentNode!
-  const anchor = normalized[normalized.length - 1].nextSibling
+  const { parentNode, nextNode: anchor } = findBlockNode(instance.block)
+  const parent = parentNode as ParentNode
   unmountComponent(instance, parent)
   const parentInstance = instance.parent as VaporComponentInstance | null
   const prev = setCurrentInstance(parentInstance)
@@ -75,7 +73,7 @@ export function hmrReload(
  * dev only
  * update parentInstance.block to ensure that the correct parent and
  * anchor are found during parentInstance HMR rerender/reload, as
- * `normalizeBlock` relies on the current instance.block
+ * `findBlockNode` relies on the current instance.block
  */
 function updateParentBlockOnHmrReload(
   parentInstance: VaporComponentInstance | null,
@@ -96,7 +94,7 @@ function updateParentBlockOnHmrReload(
  * during root component HMR reload, since the old component will be unmounted
  * and a new one will be mounted, we need to update the teleport's nodes
  * to ensure that the correct parent and anchor are found during parentInstance
- * HMR rerender/reload, as `normalizeBlock` relies on the current instance.block
+ * HMR rerender/reload, as `findBlockNode` relies on the current instance.block
  */
 export function updateParentTeleportOnHmrReload(
   instance: VaporComponentInstance,
