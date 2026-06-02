@@ -81,7 +81,8 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
   const snapshot: RawProps = Object.create(null)
   for (const key in rawProps) {
     if (key !== '$') {
-      snapshot[key] = resolveSource(rawProps[key])
+      const value = resolveSource(rawProps[key])
+      snapshot[key] = () => value
     }
   }
 
@@ -103,7 +104,8 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
         snapshotSources[i] = () => value
       } else {
         for (const key in source) {
-          value[key] = resolveSource(source[key])
+          const resolved = resolveSource(source[key])
+          value[key] = () => resolved
         }
         snapshotSources[i] = value
       }

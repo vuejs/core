@@ -593,6 +593,31 @@ describe('component: props', () => {
     expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
   })
 
+  test('v-once preserves function-valued props', () => {
+    const cb = vi.fn(() => 'called')
+    const resolved: unknown[] = []
+    const Child = defineVaporComponent({
+      props: ['cb'],
+      setup(props: any) {
+        resolved.push(props.cb)
+        return []
+      },
+    })
+
+    define({
+      setup() {
+        return [
+          createComponent(Child, { cb: () => cb }, null, true, true),
+          createComponent(Child, { $: [{ cb: () => cb }] }, null, true, true),
+        ]
+      },
+    }).render()
+
+    expect(resolved[0]).toBe(cb)
+    expect(resolved[1]).toBe(cb)
+    expect(cb).not.toHaveBeenCalled()
+  })
+
   describe('dynamic props source caching', () => {
     test('v-bind object should be cached when child accesses multiple props', () => {
       let sourceCallCount = 0
