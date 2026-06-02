@@ -441,6 +441,41 @@ describe('component: emit', () => {
     expect(handler).toHaveBeenCalledTimes(1)
   })
 
+  test('v-once should not execute handlers during lookup', () => {
+    const Child = defineVaporComponent({
+      setup(_, { emit }) {
+        emit('click', 1)
+        return []
+      },
+    })
+    const staticHandler = vi.fn()
+    const objectSourceHandler = vi.fn()
+
+    define({
+      setup() {
+        return [
+          createComponent(
+            Child,
+            { onClick: () => staticHandler },
+            null,
+            true,
+            true,
+          ),
+          createComponent(
+            Child,
+            { $: [{ onClick: () => objectSourceHandler }] },
+            null,
+            true,
+            true,
+          ),
+        ]
+      },
+    }).render()
+
+    expect(staticHandler.mock.calls).toEqual([[1]])
+    expect(objectSourceHandler.mock.calls).toEqual([[1]])
+  })
+
   test('should trigger once handler from dynamic source', () => {
     const { render } = define({
       setup(_, { emit }) {
