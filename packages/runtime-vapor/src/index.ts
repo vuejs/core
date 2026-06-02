@@ -31,7 +31,7 @@ export {
   type VaporComponentInstance,
 } from './component'
 export { renderEffect } from './renderEffect'
-export { createSlot, withVaporCtx } from './componentSlots'
+export { createSlot } from './componentSlots'
 export { template } from './dom/template'
 export { createTextNode, child, nthChild, next, txt } from './dom/node'
 export {

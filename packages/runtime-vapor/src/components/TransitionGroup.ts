@@ -5,6 +5,7 @@ import {
   type TransitionProps,
   TransitionPropsValidators,
   type TransitionState,
+  type VShowElement,
   baseApplyTranslation,
   callPendingCbs,
   currentInstance,
@@ -17,6 +18,7 @@ import {
   resolveTransitionProps,
   setCurrentInstance,
   useTransitionState,
+  vShowHidden,
   warn,
 } from '@vue/runtime-dom'
 import { extend, isArray } from '@vue/shared'
@@ -44,9 +46,9 @@ import { isForBlock, setForHydrationAnchorResolver } from '../apiCreateFor'
 import { createComment, createElement, createTextNode } from '../dom/node'
 import {
   DynamicFragment,
-  SlotFragment,
   type VaporFragment,
   isFragment,
+  isSlotFragment,
 } from '../fragment'
 import {
   type DefineVaporComponent,
@@ -166,7 +168,11 @@ const VaporTransitionGroupImpl = defineVaporComponent({
           isValidTransitionBlock(child) && child.$transition
             ? getTransitionElement(child)
             : undefined
-        if (el) {
+        if (
+          el &&
+          // Hidden v-show nodes have no previous layout box to animate from.
+          !(el as VShowElement)[vShowHidden]
+        ) {
           prevChildren.push(child)
           // disabled transition during enter, so the children will be
           // inserted into the correct position immediately. this prevents
@@ -410,8 +416,8 @@ function getTransitionBlocks(
     // A normal component child can move when parent-driven props update its
     // root layout without re-running the surrounding v-for fragment.
     // When the component root is a slot, the TransitionGroup children are the
-    // slotted blocks, so track the SlotFragment instead of the component.
-    const isRootSlot = block.block instanceof SlotFragment
+    // slotted blocks, so track the slot fragment instead of the component.
+    const isRootSlot = block.block && isSlotFragment(block.block)
     if (onUpdateOwner && !isRootSlot) onUpdateOwner(block)
     const blocks = getTransitionBlocks(
       block.block,

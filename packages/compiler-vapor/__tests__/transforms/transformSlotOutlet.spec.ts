@@ -7,6 +7,8 @@ import {
   transformSlotOutlet,
   transformText,
   transformVBind,
+  transformVFor,
+  transformVIf,
   transformVOn,
   transformVShow,
 } from '../../src'
@@ -15,6 +17,8 @@ import { makeCompile } from './_utils'
 const compileWithSlotsOutlet = makeCompile({
   nodeTransforms: [
     transformText,
+    transformVIf,
+    transformVFor,
     transformSlotOutlet,
     transformElement,
     transformChildren,
@@ -237,6 +241,36 @@ describe('compiler: transform <slot> outlets', () => {
         returns: [2],
       },
     })
+  })
+
+  test('root v-if fallback', () => {
+    const { code } = compileWithSlotsOutlet(`<slot><span v-if="ok"/></slot>`)
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('nested root v-for fallback', () => {
+    const { code } = compileWithSlotsOutlet(
+      `<slot><template v-if="ok"><span v-for="item in items">{{ item }}</span></template></slot>`,
+    )
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('does not mark non-root fallback v-if as slot root', () => {
+    const { code } = compileWithSlotsOutlet(
+      `<slot><div><span v-if="ok"/></div></slot>`,
+    )
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('root dynamic component fallback', () => {
+    const { code } = compileWithSlotsOutlet(
+      `<slot><component :is="view" /></slot>`,
+    )
+
+    expect(code).toMatchSnapshot()
   })
 
   test('error on unexpected custom directive on <slot>', () => {

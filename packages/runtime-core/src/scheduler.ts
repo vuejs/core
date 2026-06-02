@@ -294,6 +294,7 @@ function flushJobs(seen?: CountMap) {
 
     flushIndex = 0
     jobsLength = 0
+    jobs.length = 0
 
     flushPostFlushCbs(seen)
 

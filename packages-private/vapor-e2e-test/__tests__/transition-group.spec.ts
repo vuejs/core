@@ -603,6 +603,61 @@ describe('vapor transition-group', () => {
     E2E_TIMEOUT,
   )
 
+  test(
+    'v-show enter does not also run move transition',
+    async () => {
+      const btnSelector =
+        '.v-show-enter-does-not-also-run-move-transition > button'
+      const containerSelector =
+        '.v-show-enter-does-not-also-run-move-transition > div'
+
+      click(btnSelector)
+      await nextTick()
+      await nextFrame()
+
+      const items = Array.from(
+        css(containerSelector)
+          .element()
+          .querySelectorAll<HTMLElement>('.show-item'),
+      ).map(node => ({
+        text: node.textContent!.trim(),
+        classes: Array.from(node.classList),
+      }))
+
+      expect(items).toStrictEqual([
+        {
+          text: 'c',
+          classes: ['test', 'show-item', 'group-move'],
+        },
+        {
+          text: 'a',
+          classes: ['test', 'show-item', 'group-move'],
+        },
+        {
+          text: 'b',
+          classes: [
+            'test',
+            'show-item',
+            'group-enter-from',
+            'group-enter-active',
+          ],
+        },
+        {
+          text: 'd',
+          classes: [
+            'test',
+            'show-item',
+            'group-enter-from',
+            'group-enter-active',
+          ],
+        },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
   test('keyed component move after key change', async () => {
     const btnSelector = '.keyed-component-move-after-key-change > button'
     const containerSelector = '.keyed-component-move-after-key-change > div'

@@ -51,9 +51,9 @@ export function render(_ctx) {
       }, () => {
         const n13 = t1()
         return n13
-      }, 389 /* BLOCK_SHAPE, INDEX_SHIFT */)
+      }, 773 /* BLOCK_SHAPE, INDEX_SHIFT */)
       return n14
-    }, 261 /* BLOCK_SHAPE, INDEX_SHIFT */), 133 /* BLOCK_SHAPE, INDEX_SHIFT */)
+    }, 645 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */), 389 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */)
     return [n0, n3, n7]
   }, true)
   return n16
@@ -102,7 +102,7 @@ export function render(_ctx) {
     const n0 = _createIf(() => (_ctx.show), () => {
       const n2 = t0()
       return n2
-    })
+    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n0
   }, true)
   return n3
