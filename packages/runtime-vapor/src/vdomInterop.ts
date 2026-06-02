@@ -841,17 +841,34 @@ function trackFragmentVNodeUpdates(
 ): void {
   const beforeUpdate = () => {
     if (frag.onBeforeUpdate) {
-      for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
-        frag.onBeforeUpdate[i]()
-      }
+      frag.onBeforeUpdate.forEach(bu => bu())
     }
   }
   const updated = () => {
     syncNodes()
-    if (frag.onUpdated) frag.onUpdated.forEach(m => m())
+    if (frag.onUpdated) {
+      frag.onUpdated.forEach(u => u())
+    }
   }
   appendVnodeBeforeUpdateHook(vnode, beforeUpdate)
   appendVnodeUpdatedHook(vnode, updated)
+}
+
+function createVNodeFragment(vnode: VNode): {
+  frag: VaporFragment<Block>
+  syncNodes: () => void
+} {
+  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
+  frag.vnode = vnode
+  frag.$key = vnode.key
+  let validityPending = !isHydrating
+  const syncNodes = () => {
+    frag.nodes = resolveVNodeNodes(vnode)
+    validityPending = false
+  }
+  frag.isBlockValid = () => (validityPending ? true : isValidBlock(frag.nodes))
+  trackFragmentVNodeUpdates(frag, vnode, syncNodes)
+  return { frag, syncNodes }
 }
 
 /**
@@ -864,16 +881,7 @@ function mountVNode(
 ): VaporFragment {
   const suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
-  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
-  frag.vnode = vnode
-  frag.$key = vnode.key
-  let validityPending = !isHydrating
-  const syncNodes = () => {
-    frag.nodes = resolveVNodeNodes(vnode)
-    validityPending = false
-  }
-  frag.isBlockValid = () => (validityPending ? true : isValidBlock(frag.nodes))
-  trackFragmentVNodeUpdates(frag, vnode, syncNodes)
+  const { frag, syncNodes } = createVNodeFragment(vnode)
 
   let isMounted = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
@@ -976,19 +984,11 @@ function createVDOMComponent(
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
-  const frag = new VaporFragment<Block>(EMPTY_BLOCK)
-  const vnode = (frag.vnode = createVNode(
+  const vnode = createVNode(
     comp,
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
-  ))
-  frag.$key = vnode.key
-  let validityPending = !isHydrating
-  const syncNodes = () => {
-    frag.nodes = resolveVNodeNodes(vnode)
-    validityPending = false
-  }
-  frag.isBlockValid = () => (validityPending ? true : isValidBlock(frag.nodes))
-  trackFragmentVNodeUpdates(frag, vnode, syncNodes)
+  )
+  const { frag, syncNodes } = createVNodeFragment(vnode)
 
   if (
     !isCollectingVdomSlotVNodes &&
@@ -1272,6 +1272,7 @@ function isSlotOutletOnlyVNode(vnode: VNode): boolean {
 function hydrateForwardedEmptySlotFragment(
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
+  contentValid: boolean,
 ): boolean {
   if (vnode.type !== Fragment || !isArray(vnode.children)) {
     return false
@@ -1287,7 +1288,6 @@ function hydrateForwardedEmptySlotFragment(
       : null
   const slotEndAnchor = getCurrentSlotEndAnchor() || inheritedEmptySlotEndAnchor
   const slotStartAnchor = slotEndAnchor && slotEndAnchor.previousSibling
-  const contentValid = hasValidVNodeContent(vnode)
   // Case 2: this forwarded fragment still owns an empty `<!--[--><!--]-->`
   // range, but the resolved content remains empty. Reuse that range as-is so
   // later updates patch inside the existing SSR anchors.
@@ -1437,14 +1437,19 @@ function renderVDOMSlot(
       : () => fallback(internals, parentComponent)
     : undefined
 
-  const setRenderedContent = (rendered: VNode | Block | null): void => {
+  const setRenderedContent = (
+    rendered: VNode | Block | null,
+    knownValid?: boolean,
+  ): void => {
     contentState.rendered = rendered
     if (isVNode(rendered)) {
       contentState.nodes = resolveVNodeNodes(rendered)
-      contentState.valid = hasValidVNodeContent(rendered)
+      contentState.valid =
+        knownValid === undefined ? hasValidVNodeContent(rendered) : knownValid
     } else if (rendered) {
       contentState.nodes = rendered
-      contentState.valid = isValidBlock(rendered)
+      contentState.valid =
+        knownValid === undefined ? isValidBlock(rendered) : knownValid
     } else {
       contentState.nodes = EMPTY_BLOCK
       contentState.valid = false
@@ -1595,6 +1600,7 @@ function renderVDOMSlot(
                   !hydrateForwardedEmptySlotFragment(
                     hydratedContent,
                     parentComponent,
+                    slotContentValid,
                   )
                 ) {
                   hydrateVNode(hydratedContent, parentComponent as any)
@@ -1605,11 +1611,11 @@ function renderVDOMSlot(
                 const hydratedEnd = hydratedContent.anchor as Node
                 currentParentNode = hydratedEnd.parentNode as ParentNode
                 currentAnchor = hydratedEnd.nextSibling
-                setRenderedContent(hydratedContent)
+                setRenderedContent(hydratedContent, slotContentValid)
               } else if (hydratedContent) {
                 frag.vnode = null
                 frag.$key = undefined
-                setRenderedContent(hydratedContent as Block)
+                setRenderedContent(hydratedContent as Block, slotContentValid)
               } else {
                 frag.vnode = null
                 frag.$key = undefined
@@ -1659,7 +1665,7 @@ function renderVDOMSlot(
                 undefined, // namespace
                 slotContent.slotScopeIds, // pass slotScopeIds for :slotted styles
               )
-              setRenderedContent(slotContent)
+              setRenderedContent(slotContent, slotContentValid)
               finishContentUpdate()
               return
             }
@@ -1674,7 +1680,7 @@ function renderVDOMSlot(
                 remove(prevRendered, currentParentNode!)
               }
               insert(slotContent, currentParentNode!, currentAnchor)
-              setRenderedContent(slotContent)
+              setRenderedContent(slotContent, slotContentValid)
               finishContentUpdate()
               return
             }
