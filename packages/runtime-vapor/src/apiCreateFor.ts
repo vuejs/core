@@ -469,7 +469,11 @@ export const createFor = (
       applyTransitionHooks(block.nodes, frag.$transition)
     }
 
-    if (parent) insertForBlock(block, anchor)
+    if (parent) {
+      const onBeforeInsert = frag.onBeforeInsert
+      if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(block.nodes))
+      insertForBlock(block, anchor)
+    }
 
     return block
   }

@@ -191,7 +191,10 @@ export class TeleportFragment extends VaporFragment {
     // teardown previous nodes
     remove(this.nodes, this.mountContainer!)
     // mount new nodes
-    insert((this.nodes = children), this.mountContainer!, this.mountAnchor!)
+    this.nodes = children
+    const onBeforeInsert = this.onBeforeInsert
+    if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(this.nodes))
+    insert(children, this.mountContainer!, this.mountAnchor!)
     this.bindChildren(this.nodes)
     updateCssVars(this)
   }
@@ -210,6 +213,8 @@ export class TeleportFragment extends VaporFragment {
         MoveType.REORDER,
       )
     } else {
+      const onBeforeInsert = this.onBeforeInsert
+      if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(this.nodes))
       insert(
         this.nodes,
         (this.mountContainer = parent),

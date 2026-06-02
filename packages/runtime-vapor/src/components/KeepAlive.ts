@@ -33,7 +33,12 @@ import {
 import { ShapeFlags, invokeArrayFns, isArray } from '@vue/shared'
 import { createElement } from '../dom/node'
 import { unsetRef } from '../refCleanup'
-import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
+import {
+  type VaporFragment,
+  isDynamicFragment,
+  isFragment,
+  isInteropFragment,
+} from '../fragment'
 import type { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
 import {
@@ -529,10 +534,6 @@ function getInnerBlock(block: Block): InnerBlockResult {
     return getInnerBlock(block.nodes)
   }
   return [undefined, false]
-}
-
-function isInteropFragment(block: Block): block is VaporFragment {
-  return !!(isFragment(block) && block.vnode)
 }
 
 function getInstanceFromCache(

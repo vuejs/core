@@ -38,6 +38,7 @@ import {
   SlotFragment,
   type VaporFragment,
   getCurrentSlotBoundary,
+  isInteropFragment,
   withOwnedSlotBoundary,
 } from './fragment'
 import { createElement } from './dom/node'
@@ -46,7 +47,7 @@ import {
   isCollectingVdomSlotVNodes,
   isInteropEnabled,
 } from './vdomInteropState'
-import { setScopeId } from './scopeId'
+import { setScopeId, trackScopeIdFragment } from './scopeId'
 
 /**
  * Flag to indicate if we are executing a once slot.
@@ -412,8 +413,13 @@ export function createSlot(
 
     if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
   } else {
-    if (fragment.insert) {
-      ;(fragment as VaporFragment).hydrate!()
+    if (isInteropEnabled && isInteropFragment(fragment)) {
+      fragment.hydrate!()
+    }
+    // Hydrated slot roots already have SSR scope attrs. Only register tracking
+    // so future client-inserted slot branches receive the same ids.
+    if (slotScopeIds) {
+      trackScopeIdFragment(fragment, slotScopeIds)
     }
     exitHydrationCursor(hydrationCursor)
   }

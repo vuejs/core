@@ -48,6 +48,9 @@ export function renderSlot(
   if (vaporSlot) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
     ret.vs = { slot: vaporSlot, fallback }
+    if (!noSlotted && ret.scopeId) {
+      ret.slotScopeIds = [ret.scopeId + '-s']
+    }
     return ret
   }
 

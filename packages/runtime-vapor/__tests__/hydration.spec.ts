@@ -23,10 +23,17 @@ import {
   ref,
   withDirectives,
 } from '@vue/runtime-dom'
+import { BindingTypes } from '@vue/compiler-dom'
 import { Namespaces, isString } from '@vue/shared'
 import type { VaporComponentInstance } from '../src/component'
 import type { TeleportFragment } from '../src/components/Teleport'
-import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from './_utils'
+import {
+  VueServerRenderer,
+  compile,
+  compileToVaporRender,
+  runtimeDom,
+  runtimeVapor,
+} from './_utils'
 import {
   hydrateNode,
   setIsHydratingEnabled,
@@ -438,6 +445,49 @@ describe('Vapor Mode hydration', () => {
         ref({ beforeMount }),
       )
       expect(beforeMount).toHaveBeenCalledTimes(1)
+    })
+
+    test('dynamic child component root preserves inherited scopeId after hydration update', async () => {
+      const showAlt = ref(false)
+      const Child = defineVaporComponent({
+        __scopeId: 'child',
+        render: compileToVaporRender(
+          `<section v-if="showAlt">alt</section><div v-else>base</div>`,
+          {
+            bindingMetadata: {
+              showAlt: BindingTypes.SETUP_REF,
+            },
+            scopeId: 'child',
+          },
+        ),
+        setup() {
+          return { showAlt }
+        },
+      })
+
+      const Parent = defineVaporComponent({
+        __scopeId: 'parent',
+        setup() {
+          return createComponent(Child)
+        },
+      })
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = `<div child="" parent="">base</div>`
+
+      createVaporSSRApp(Parent).mount(container)
+
+      expect(container.innerHTML).toBe(
+        `<div child="" parent="">base</div><!--if-->`,
+      )
+
+      showAlt.value = true
+      await nextTick()
+
+      expect(container.innerHTML).toBe(
+        `<section child="" parent="">alt</section><!--if-->`,
+      )
     })
 
     test('basic component', async () => {
@@ -2392,6 +2442,142 @@ describe('Vapor Mode hydration', () => {
         <!--[--><span>bar</span><!--]-->
         "
       `,
+      )
+    })
+
+    test('dynamic slot outlet update preserves slotted scope id', async () => {
+      const data = ref({ slotName: 'one' })
+      const childCode = `<template><slot :name="data.slotName" /></template>`
+      const appCode = `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <template #one><div>one</div></template>
+          <template #two><section>two</section></template>
+        </components.Child>
+      </template>`
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = `<!--[--><div child-s="">one</div><!--]-->`
+
+      const clientComponents: Record<string, any> = {}
+      clientComponents.Child = compile(childCode, data, clientComponents, {
+        vapor: true,
+        ssr: false,
+      })
+      clientComponents.Child.__scopeId = 'child'
+      const ClientApp = compile(appCode, data, clientComponents, {
+        vapor: true,
+        ssr: false,
+      })
+      createVaporSSRApp(ClientApp).mount(container)
+
+      expect(formatHtml(container.innerHTML)).toContain(
+        `<div child-s="">one</div>`,
+      )
+
+      data.value = { slotName: 'two' }
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toContain(
+        `<section child-s="">two</section>`,
+      )
+    })
+
+    test('v-for slot content added after mount preserves slotted scope id', async () => {
+      const data = ref(0)
+      const childCode = `<template><slot /></template>`
+      const appCode = `<script setup vapor>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <div v-for="i in data">item</div>
+          <i>tail</i>
+        </components.Child>
+      </template>`
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = `<!--[--><!--[--><!--]--><i child-s="">tail</i><!--]-->`
+
+      const clientComponents: Record<string, any> = {}
+      clientComponents.Child = compile(childCode, data, clientComponents, {
+        vapor: true,
+        ssr: false,
+      })
+      clientComponents.Child.__scopeId = 'child'
+      const ClientApp = compile(appCode, data, clientComponents, {
+        vapor: true,
+        ssr: false,
+      })
+      createVaporSSRApp(ClientApp).mount(container)
+
+      expect(formatHtml(container.innerHTML)).toContain(
+        `<i child-s="">tail</i>`,
+      )
+
+      data.value++
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toContain(
+        `<div child-s="">item</div>`,
+      )
+    })
+
+    test('vdom slot owner vapor slot content added after mount preserves slotted scope id', async () => {
+      const show = ref(false)
+      const childCode = `<template><div><slot /></div></template>`
+      const appCode = `<script setup vapor>
+        const show = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <button v-if="show">item</button>
+        </components.Child>
+      </template>`
+
+      const ssrComponents: Record<string, any> = {}
+      ssrComponents.Child = compile(childCode, show, ssrComponents, {
+        vapor: false,
+        ssr: true,
+      })
+      ssrComponents.Child.__scopeId = 'child'
+      const ServerApp = compile(appCode, show, ssrComponents, {
+        vapor: true,
+        ssr: true,
+      })
+      const serverHtml = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(ServerApp),
+      )
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = serverHtml
+
+      const clientComponents: Record<string, any> = {}
+      clientComponents.Child = compile(childCode, show, clientComponents, {
+        vapor: false,
+        ssr: false,
+      })
+      clientComponents.Child.__scopeId = 'child'
+      const ClientApp = compile(appCode, show, clientComponents, {
+        vapor: true,
+        ssr: false,
+      })
+      createVaporSSRApp(ClientApp)
+        .use(runtimeVapor.vaporInteropPlugin)
+        .mount(container)
+
+      show.value = true
+      await nextTick()
+
+      expect(formatHtml(container.innerHTML)).toContain(
+        `<button child-s="">item</button>`,
       )
     })
 
