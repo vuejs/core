@@ -442,6 +442,49 @@ describe('api: defineAsyncComponent', () => {
     expect(serializeInner(root)).toBe('resolved')
   })
 
+  test('should not call errorHandler after unmount (timeout)', async () => {
+    const Foo = defineAsyncComponent({
+      loader: () => new Promise(() => {}),
+      timeout: 50,
+    })
+
+    const show = ref(true)
+    const root = nodeOps.createElement('div')
+    const handler = vi.fn()
+    const app = createApp({
+      render: () => (show.value ? h(Foo) : null),
+    })
+    app.config.errorHandler = handler
+    app.mount(root)
+
+    show.value = false
+    await nextTick()
+
+    await timeout(60)
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  test('should not call errorHandler after unmount (loader error)', async () => {
+    const Foo = defineAsyncComponent({
+      loader: () => Promise.reject(new Error('load failed')),
+    })
+
+    const show = ref(true)
+    const root = nodeOps.createElement('div')
+    const handler = vi.fn()
+    const app = createApp({
+      render: () => (show.value ? h(Foo) : null),
+    })
+    app.config.errorHandler = handler
+    app.mount(root)
+
+    show.value = false
+    await nextTick()
+
+    await timeout()
+    expect(handler).not.toHaveBeenCalled()
+  })
+
   test('with suspense', async () => {
     let resolve: (comp: Component) => void
     const Foo = defineAsyncComponent(
