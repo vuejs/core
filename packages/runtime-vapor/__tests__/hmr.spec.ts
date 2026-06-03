@@ -16,6 +16,7 @@ import {
   setCurrentInstance,
   toDisplayString,
   warn,
+  watchEffect,
 } from '@vue/runtime-dom'
 import { compileToVaporRender as compileToFunction, makeRender } from './_utils'
 import {
@@ -181,6 +182,42 @@ describe('hot module replacement', () => {
     expect(root.innerHTML).toBe(`<div>1</div>`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('reload child should preserve parent setup effects', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-reload-child-preserve-parent-effects'
+    const parentCount = ref(0)
+    const spy = vi.fn()
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: () => template('<div>old</div>')(),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      setup() {
+        watchEffect(() => spy(parentCount.value))
+      },
+      render: () => createComponent(Child),
+    })
+
+    createVaporApp(Parent).mount(root)
+    expect(root.innerHTML).toBe(`<div>old</div>`)
+    expect(spy).toHaveBeenLastCalledWith(0)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      render: () => template('<div>new</div>')(),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>new</div>`)
+
+    parentCount.value++
+    await nextTick()
+    expect(spy).toHaveBeenLastCalledWith(1)
   })
 
   test('reload root vapor component should preserve appContext provide/inject', async () => {

@@ -44,9 +44,9 @@ export class RenderEffect extends ReactiveEffect {
           : void 0
       }
 
-      // register effect for vapor custom element update
-      if (instance.type.ce) {
-        ;(instance.renderEffects || (instance.renderEffects = [])).push(this)
+      // register effect for vapor custom element update and dev HMR cleanup
+      if (instance.type.ce || __DEV__) {
+        ;(instance.renderEffects ||= []).push(this)
       }
       job.i = instance
     }

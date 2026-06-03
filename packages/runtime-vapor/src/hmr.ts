@@ -16,8 +16,10 @@ import {
 export function hmrRerender(instance: VaporComponentInstance): void {
   const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
   const parent = parentNode as ParentNode
-  // reset scope to avoid stale effects
-  instance.scope.reset()
+  if (instance.renderEffects) {
+    instance.renderEffects.forEach(e => e.stop())
+    instance.renderEffects.length = 0
+  }
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)

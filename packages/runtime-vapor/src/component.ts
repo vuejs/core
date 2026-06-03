@@ -708,7 +708,7 @@ export class VaporComponentInstance<
   restoreAsyncContext?: () => void | (() => void)
   deferredHydrationBoundary?: () => void
 
-  // for vapor custom element
+  // for vapor custom element and hmr rerender
   renderEffects?: RenderEffect[]
 
   hasFallthrough: boolean
