@@ -766,6 +766,84 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(2)
   })
 
+  test('reload multiple children under same vapor parent should rerender parent once', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-child-reload-same-vapor-parent'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: () => template('<div>old</div>')(),
+    })
+    createRecord(childId, Child as any)
+
+    let parentRenderCount = 0
+    const Parent = defineVaporComponent({
+      render() {
+        parentRenderCount++
+        return [createComponent(Child), createComponent(Child)]
+      },
+    })
+
+    createVaporApp(Parent).mount(root)
+    expect(root.innerHTML).toBe(`<div>old</div><div>old</div>`)
+    expect(parentRenderCount).toBe(1)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      render: () => template('<div>new</div>')(),
+    })
+    await nextTick()
+
+    expect(root.innerHTML).toBe(`<div>new</div><div>new</div>`)
+    expect(parentRenderCount).toBe(2)
+  })
+
+  test('reload vapor child under dirty ancestor should not rerender stale owner', async () => {
+    const root = document.createElement('div')
+    const id = 'test-child-reload-dirty-ancestor'
+
+    let Child: any
+    const Wrapper = defineVaporComponent({
+      render() {
+        return createComponent(Child, { nested: () => true })
+      },
+    })
+
+    Child = defineVaporComponent({
+      __hmrId: id,
+      props: ['nested'],
+      setup(props: any) {
+        return { nested: props.nested }
+      },
+      render: compileToFunction(
+        `<div>old {{ nested ? 'nested' : 'root' }}</div><Wrapper v-if="!nested" />`,
+      ),
+    })
+    Child.components = { Wrapper }
+    createRecord(id, Child)
+
+    createVaporApp(Child, { nested: () => false }).mount(root)
+    expect(root.textContent).toBe(`old rootold nested`)
+
+    const NewChild: any = {
+      __vapor: true,
+      __hmrId: id,
+      props: ['nested'],
+      setup(props: any) {
+        return { nested: props.nested }
+      },
+      render: compileToFunction(
+        `<div>new {{ nested ? 'nested' : 'root' }}</div><Wrapper v-if="!nested" />`,
+      ),
+    }
+    NewChild.components = { Wrapper }
+    reload(id, NewChild)
+    await nextTick()
+
+    expect(root.textContent).toBe(`new rootnew nested`)
+  })
+
   test('static el reference', async () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
@@ -1608,6 +1686,44 @@ describe('hot module replacement', () => {
 
       await nextTick()
       expect(root.innerHTML).toBe('<div>bar</div>')
+      expect(parentRenderCount).toBe(2)
+    })
+
+    test('reload multiple vapor children under same vdom parent should rerender parent once', async () => {
+      const id = 'multiple-vapor-children-under-vdom-parent'
+      const Child = {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>foo</div>')()
+        },
+      }
+      createRecord(id, Child)
+
+      let parentRenderCount = 0
+      const Parent = {
+        render() {
+          parentRenderCount++
+          return [h(Child as any), h(Child as any)]
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div><div>foo</div>')
+      expect(parentRenderCount).toBe(1)
+
+      reload(id, {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>bar</div>')()
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div><div>bar</div>')
       expect(parentRenderCount).toBe(2)
     })
 
