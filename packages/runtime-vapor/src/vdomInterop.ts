@@ -91,7 +91,6 @@ import {
   currentSlotScopeIds,
   dynamicSlotsProxyHandlers,
   getSlot,
-  setCurrentSlotOwner,
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
@@ -128,6 +127,7 @@ import {
   isFragment,
   markSlotFallbackDirty,
   recheckSlotFallback,
+  runWithFragmentCtx,
   trackSlotBoundaryDirtying,
   withHydratingSlotBoundary,
   withHydratingSlotFallbackActive,
@@ -1421,7 +1421,7 @@ function renderVDOMSlot(
       return inheritedBoundary
     },
     getFallback: (): BlockFn | undefined => localFallback,
-    run: fn => runWithFragmentRenderCtx(frag, fn),
+    run: fn => runWithFragmentCtx(frag, fn),
     markDirty: () => markSlotFallbackDirty(fallbackState),
   }
   fallbackState = {
@@ -1553,7 +1553,7 @@ function renderVDOMSlot(
     try {
       const renderSlotContent = () => {
         notifyBeforeUpdate()
-        runWithFragmentRenderCtx(frag, () =>
+        runWithFragmentCtx(frag, () =>
           withOwnedSlotBoundary(boundary, () => {
             let slotContent: VNode | Block | undefined
             let slotContentValid = false
@@ -1814,26 +1814,6 @@ function createFallback(
 
 const renderEmptyVNodes = (): VNodeArrayChildren => EMPTY_VNODES
 
-// Interop slot rendering only needs to restore slot-owner / keep-alive /
-// boundary context here. Reusing VaporFragment.runWithRenderCtx() also
-// changes component-instance and effect ownership, which makes forwarded
-// VDOM fallback cleanup follow a different lifecycle.
-function runWithFragmentRenderCtx<R>(fragment: VaporFragment, fn: () => R): R {
-  const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
-  let prevKeepAliveCtx = null
-  if (isKeepAliveEnabled) {
-    prevKeepAliveCtx = setCurrentKeepAliveCtx(fragment.keepAliveCtx || null)
-  }
-  try {
-    return withOwnedSlotBoundary(fragment.inheritedSlotBoundary, fn)
-  } finally {
-    if (isKeepAliveEnabled) {
-      setCurrentKeepAliveCtx(prevKeepAliveCtx)
-    }
-    setCurrentSlotOwner(prevSlotOwner)
-  }
-}
-
 type InteropSlotFallback = {
   (): any
   __vdom?: boolean
@@ -1957,7 +1937,7 @@ function renderVaporSlot(
       },
       getFallback: () =>
         slotState.outletFallback.value ? outletFallback : undefined,
-      run: fn => runWithFragmentRenderCtx(frag, fn),
+      run: fn => runWithFragmentCtx(frag, fn),
       markDirty: markInteropFallbackDirty,
     }
     const localFallbackBoundary: SlotBoundaryContext = {
@@ -1966,7 +1946,7 @@ function renderVaporSlot(
       },
       getFallback: () =>
         slotState.localFallback.value ? localFallback : undefined,
-      run: fn => runWithFragmentRenderCtx(frag, fn),
+      run: fn => runWithFragmentCtx(frag, fn),
       markDirty: markInteropFallbackDirty,
     }
     fallbackState = {
@@ -2045,7 +2025,7 @@ function renderVaporSlot(
         if (isHydrating) {
           resolvedContent = withHydratingSlotBoundary(() =>
             finalizeResolvedContent(
-              runWithFragmentRenderCtx(frag, () => {
+              runWithFragmentCtx(frag, () => {
                 const renderSlot = () =>
                   withOwnedSlotBoundary(localFallbackBoundary, () =>
                     invokeVaporSlot(vnode),
@@ -2058,7 +2038,7 @@ function renderVaporSlot(
           )
         } else {
           resolvedContent = finalizeResolvedContent(
-            runWithFragmentRenderCtx(frag, () =>
+            runWithFragmentCtx(frag, () =>
               withOwnedSlotBoundary(localFallbackBoundary, () =>
                 invokeVaporSlot(vnode),
               ),
@@ -2272,7 +2252,7 @@ function createVNodeChildrenFragment(
     simpleSetCurrentInstance(parentComponent)
     try {
       renderEffect(() => {
-        runWithFragmentRenderCtx(frag, () => {
+        runWithFragmentCtx(frag, () => {
           const nextChildren = render()
           if (isHydrating) {
             nextChildren.forEach(vnode => hydrateVNode(vnode, parentComponent))

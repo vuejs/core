@@ -108,37 +108,40 @@ export class VaporFragment<
 
   protected runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
     const prevInstance = setCurrentInstance(this.renderInstance, scope)
-    const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx || null : null
-    // When ambient fragment context already matches, only instance/scope needs
-    // restoring. This keeps ordinary branch renders on the cheap path.
-    if (
-      currentSlotOwner === this.slotOwner &&
-      currentSlotBoundary === this.inheritedSlotBoundary &&
-      (!isKeepAliveEnabled || currentKeepAliveCtx === keepAliveCtx)
-    ) {
-      try {
-        return fn()
-      } finally {
-        setCurrentInstance(...prevInstance)
-      }
-    }
-
-    const prevSlotOwner = setCurrentSlotOwner(this.slotOwner)
-    let prevKeepAliveCtx: VaporKeepAliveContext | null = null
-    if (isKeepAliveEnabled) {
-      prevKeepAliveCtx = setCurrentKeepAliveCtx(keepAliveCtx)
-    }
-    const prevBoundary = setCurrentSlotBoundary(this.inheritedSlotBoundary)
     try {
-      return fn()
+      return runWithFragmentCtx(this, fn)
     } finally {
-      setCurrentSlotBoundary(prevBoundary)
-      if (isKeepAliveEnabled) {
-        setCurrentKeepAliveCtx(prevKeepAliveCtx)
-      }
-      setCurrentSlotOwner(prevSlotOwner)
       setCurrentInstance(...prevInstance)
     }
+  }
+}
+
+export function runWithFragmentCtx<R>(fragment: VaporFragment, fn: () => R): R {
+  const keepAliveCtx = isKeepAliveEnabled ? fragment.keepAliveCtx || null : null
+  // When ambient fragment context already matches, no ambient state needs
+  // restoring. This keeps ordinary branch renders on the cheap path.
+  if (
+    currentSlotOwner === fragment.slotOwner &&
+    currentSlotBoundary === fragment.inheritedSlotBoundary &&
+    (!isKeepAliveEnabled || currentKeepAliveCtx === keepAliveCtx)
+  ) {
+    return fn()
+  }
+
+  const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
+  let prevKeepAliveCtx: VaporKeepAliveContext | null = null
+  if (isKeepAliveEnabled) {
+    prevKeepAliveCtx = setCurrentKeepAliveCtx(keepAliveCtx)
+  }
+  const prevBoundary = setCurrentSlotBoundary(fragment.inheritedSlotBoundary)
+  try {
+    return fn()
+  } finally {
+    setCurrentSlotBoundary(prevBoundary)
+    if (isKeepAliveEnabled) {
+      setCurrentKeepAliveCtx(prevKeepAliveCtx)
+    }
+    setCurrentSlotOwner(prevSlotOwner)
   }
 }
 
