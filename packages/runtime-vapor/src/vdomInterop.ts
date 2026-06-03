@@ -190,7 +190,7 @@ const vaporInteropImpl: Omit<
     onBeforeMount,
     onVnodeBeforeMount,
   ) {
-    let selfAnchor = (vnode.anchor = createTextNode())
+    const selfAnchor = (vnode.anchor = createTextNode())
     if (isHydrating) {
       // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
       queuePostFlushCb(() => container.insertBefore(selfAnchor, anchor))
@@ -339,7 +339,7 @@ const vaporInteropImpl: Omit<
           // to dispose the vapor-returned block tree so nested interop state
           // (for example forwarded VDOM slots or nested KeepAlive cleanup)
           // does not stay subscribed.
-          const blockContainer = shouldUseCurrentParent(instance.block)
+          const blockContainer = needsHostParentForRemove(instance.block)
             ? ((anchor && anchor.parentNode) as ParentNode)
             : undefined
           remove(instance.block, blockContainer)
@@ -358,7 +358,7 @@ const vaporInteropImpl: Omit<
       // to remove its current block and reach nested Teleport cleanup.
       const blockContainer =
         container ||
-        (shouldUseCurrentParent(vnode.vb)
+        (needsHostParentForRemove(vnode.vb)
           ? ((anchor && anchor.parentNode) as ParentNode)
           : undefined)
       remove(vnode.vb, blockContainer)
@@ -829,20 +829,14 @@ function removeAttachedNodes(block: Block, parent: ParentNode): void {
   }
 }
 
-function appendVnodeUpdatedHook(vnode: VNode, hook: () => void): void {
+function appendVnodeHook(
+  vnode: VNode,
+  key: 'onVnodeBeforeUpdate' | 'onVnodeUpdated',
+  hook: () => void,
+): void {
   const props = (vnode.props ||= {})
-  const existing = props.onVnodeUpdated
-  props.onVnodeUpdated = existing
-    ? isArray(existing)
-      ? [...existing, hook]
-      : [existing, hook]
-    : hook
-}
-
-function appendVnodeBeforeUpdateHook(vnode: VNode, hook: () => void): void {
-  const props = (vnode.props ||= {})
-  const existing = props.onVnodeBeforeUpdate
-  props.onVnodeBeforeUpdate = existing
+  const existing = props[key]
+  props[key] = existing
     ? isArray(existing)
       ? [...existing, hook]
       : [existing, hook]
@@ -865,8 +859,8 @@ function trackFragmentVNodeUpdates(
       frag.onUpdated.forEach(u => u())
     }
   }
-  appendVnodeBeforeUpdateHook(vnode, beforeUpdate)
-  appendVnodeUpdatedHook(vnode, updated)
+  appendVnodeHook(vnode, 'onVnodeBeforeUpdate', beforeUpdate)
+  appendVnodeHook(vnode, 'onVnodeUpdated', updated)
 }
 
 function createVNodeFragment(vnode: VNode): {
@@ -1366,8 +1360,8 @@ function trackSlotVNodeUpdatesWithRefresh(
   const onUpdated = () => refresh()
 
   const track = (node: VNode) => {
-    if (beforeUpdate) appendVnodeBeforeUpdateHook(node, beforeUpdate)
-    appendVnodeUpdatedHook(node, onUpdated)
+    if (beforeUpdate) appendVnodeHook(node, 'onVnodeBeforeUpdate', beforeUpdate)
+    appendVnodeHook(node, 'onVnodeUpdated', onUpdated)
     if (node.type === Fragment && isArray(node.children)) {
       node.children.forEach(child => {
         if (isVNode(child)) track(child)
@@ -1735,15 +1729,19 @@ function renderVDOMSlot(
   return frag
 }
 
-function shouldUseCurrentParent(block: Block): boolean {
+// VDOM fragment unmount can ask Vapor to dispose a block with doRemove=false,
+// leaving no container from the renderer. Most blocks clean up without it, but
+// nested KeepAlive branches need the current host parent to remove their live
+// block and let deeper cleanup such as Teleport teardown run.
+function needsHostParentForRemove(block: Block): boolean {
   if (isVaporComponent(block)) {
-    return isKeepAlive(block) || shouldUseCurrentParent(block.block)
+    return isKeepAlive(block) || needsHostParentForRemove(block.block)
   }
   if (isArray(block)) {
-    return block.some(shouldUseCurrentParent)
+    return block.some(needsHostParentForRemove)
   }
   if (isFragment(block)) {
-    return shouldUseCurrentParent(block.nodes)
+    return needsHostParentForRemove(block.nodes)
   }
   return false
 }
