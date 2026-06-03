@@ -371,6 +371,7 @@ describe('renderer: VaporTeleport', () => {
           return [n0]
         },
       })
+      await nextTick()
       expect(root.innerHTML).toBe(
         '<!--teleport start--><!--teleport end--><div>root</div>',
       )

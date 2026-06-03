@@ -325,6 +325,9 @@ describe('hot module replacement', () => {
       '[Vue warn]: Unhandled error during execution of setup function',
     ).toHaveBeenWarned()
     expect(
+      '[Vue warn]: Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
+    expect(
       '[HMR] Something went wrong during Vue component hot-reload.',
     ).toHaveBeenWarned()
     expect(leakedInstance).toBe(null)
@@ -662,9 +665,7 @@ describe('hot module replacement', () => {
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
   })
 
-  // TODO: renderEffect not re-run after child reload
-  // it requires parent rerender to align with vdom
-  test.todo('reload: avoid infinite recursion', async () => {
+  test('reload child through parent rerender', async () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
     const childId = 'test-child-6930'
@@ -711,13 +712,17 @@ describe('hot module replacement', () => {
     reload(childId, {
       __hmrId: childId,
       __vapor: true,
-      setup() {
+      setup(_, { expose }) {
         onMounted(mountSpy)
         const count = ref(1)
+        expose({
+          count,
+        })
         return { count }
       },
       render: compileToFunction(`<div @click="count++">{{ count }}</div>`),
     })
+    await nextTick()
     await nextTick()
     expect(root.innerHTML).toBe(`<div>1</div><div>1</div>1`)
     expect(unmountSpy).toHaveBeenCalledTimes(2)
@@ -1531,6 +1536,44 @@ describe('hot module replacement', () => {
   })
 
   describe('switch vapor/vdom modes', () => {
+    test('reload vapor child under vdom parent should rerender parent', async () => {
+      const id = 'vapor-child-under-vdom-parent'
+      const Child = {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>foo</div>')()
+        },
+      }
+      createRecord(id, Child)
+
+      let parentRenderCount = 0
+      const Parent = {
+        render() {
+          parentRenderCount++
+          return h(Child as any)
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>foo</div>')
+      expect(parentRenderCount).toBe(1)
+
+      reload(id, {
+        __vapor: true,
+        __hmrId: id,
+        render() {
+          return template('<div>bar</div>')()
+        },
+      })
+
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>bar</div>')
+      expect(parentRenderCount).toBe(2)
+    })
+
     test('vapor -> vdom', async () => {
       const id = 'vapor-to-vdom'
       const Comp = {

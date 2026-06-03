@@ -170,16 +170,6 @@ export class TeleportFragment extends VaporFragment {
     if (this.parentComponent && this.parentComponent.ut) {
       this.registerUpdateCssVars(block)
     }
-
-    if (__DEV__) {
-      if (isVaporComponent(block)) {
-        block.parentTeleport = this
-      } else if (isArray(block)) {
-        block.forEach(
-          node => isVaporComponent(node) && (node.parentTeleport = this),
-        )
-      }
-    }
   }
 
   private handleChildrenUpdate(children: Block): void {
