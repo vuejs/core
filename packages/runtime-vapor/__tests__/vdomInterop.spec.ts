@@ -1416,6 +1416,44 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<span>updated</span>')
     })
 
+    test('keeps normalized VDOM slot identity stable across Vapor updates', async () => {
+      const tick = ref(0)
+      const slot = () => h('span', 'default slot')
+      const observedSlots: unknown[] = []
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          const slots = useSlots()
+          renderEffect(() => {
+            observedSlots.push(slots.default)
+          })
+          return createSlot('default', null)
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(
+              VaporChild as any,
+              { tick: tick.value },
+              {
+                default: slot,
+              },
+            )
+        },
+      }).render()
+
+      expect(html()).toBe('<span>default slot</span>')
+      expect(observedSlots).toHaveLength(1)
+
+      tick.value++
+      await nextTick()
+
+      expect(observedSlots).toHaveLength(2)
+      expect(observedSlots[1]).toBe(observedSlots[0])
+    })
+
     test('applies v-once to VDOM slot content passed to Vapor', async () => {
       const msg = ref('default slot')
       const VaporChild = defineVaporComponent(() =>

@@ -2448,7 +2448,36 @@ function normalizeInteropSlots(rawSlots: any): any {
   return normalized
 }
 
+type InteropSlotCacheEntry = {
+  noCtx?: Slot
+  ctx?: WeakMap<ComponentInternalInstance, Slot>
+}
+const interopSlotCache = new WeakMap<Function, InteropSlotCacheEntry>()
+
 function normalizeInteropSlot(
+  rawSlot: Function,
+  ctx: ComponentInternalInstance | null | undefined,
+): Slot {
+  let cache = interopSlotCache.get(rawSlot)
+  if (!cache) {
+    interopSlotCache.set(rawSlot, (cache = {}))
+  }
+  if (ctx) {
+    let ctxCache = cache.ctx
+    if (!ctxCache) {
+      cache.ctx = ctxCache = new WeakMap()
+    }
+    const cached = ctxCache.get(ctx)
+    if (cached) return cached
+    const normalized = createNormalizedInteropSlot(rawSlot, ctx)
+    ctxCache.set(ctx, normalized)
+    return normalized
+  }
+  if (cache.noCtx) return cache.noCtx
+  return (cache.noCtx = createNormalizedInteropSlot(rawSlot, ctx))
+}
+
+function createNormalizedInteropSlot(
   rawSlot: Function,
   ctx: ComponentInternalInstance | null | undefined,
 ): Slot {
