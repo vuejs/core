@@ -1754,7 +1754,9 @@ export const vaporInteropPlugin: Plugin = app => {
   }
   setInteropEnabled()
   const internals = ensureRenderer().internals
-  app._context.vapor = extend(vaporInteropImpl, {
+  // Keep the shared base implementation immutable; renderer-bound methods must
+  // be per-app so installing the plugin cannot overwrite another app's bridge.
+  app._context.vapor = extend({}, vaporInteropImpl, {
     vdomMount: createVDOMComponent.bind(null, internals),
     vdomUnmount: internals.umt,
     vdomSlot: renderVDOMSlot.bind(null, internals),
