@@ -143,7 +143,13 @@ function reload(id: string, newComp: HMRComponent): void {
   // create a snapshot which avoids the set being mutated during updates
   const instances = [...record.instances]
 
-  if (isVapor && newComp.__vapor && !instances.some(i => i.ceReload)) {
+  if (
+    isVapor &&
+    newComp.__vapor &&
+    // VDOM parents need the VDOM HMR path to remount dirty Vapor children.
+    !instances.some(instance => instance.parent && !instance.parent.vapor) &&
+    !instances.some(i => i.ceReload)
+  ) {
     // For multiple instances with the same __hmrId, remove styles first before reload
     // to avoid the second instance's style removal deleting the first instance's
     // newly added styles (since hmrReload is synchronous)

@@ -106,7 +106,6 @@ import {
   withDeferredHydrationBoundary,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
-import type { TeleportFragment } from './components/Teleport'
 import {
   isTeleportEnabled,
   isTeleportFragment,
@@ -749,7 +748,6 @@ export class VaporComponentInstance<
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void
-  parentTeleport?: TeleportFragment | null
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
