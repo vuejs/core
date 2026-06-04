@@ -18,6 +18,33 @@ describe('runtime-dom: node-ops', () => {
     expect(option2.selected).toBe(true)
   })
 
+  // #6272
+  test('children of a <template> element are inserted into its content', () => {
+    const el = nodeOps.createElement('template') as HTMLTemplateElement
+    const child = nodeOps.createElement('span')
+    nodeOps.insert(child, el)
+
+    expect(el.childNodes.length).toBe(0)
+    expect(el.content.childNodes.length).toBe(1)
+    expect(el.content.firstChild).toBe(child)
+
+    const anchor = child
+    const before = nodeOps.createElement('div')
+    nodeOps.insert(before, el, anchor)
+    expect(el.content.firstChild).toBe(before)
+    expect(el.content.childNodes.length).toBe(2)
+  })
+
+  // #6272
+  test('rendered <template> element retains its content', () => {
+    const root = document.createElement('div')
+    render(h('template', null, [h('span', 'hi')]), root)
+    const template = root.firstChild as HTMLTemplateElement
+    expect(template.tagName).toBe('TEMPLATE')
+    expect(template.content.childNodes.length).toBe(1)
+    expect(template.innerHTML).toBe('<span>hi</span>')
+  })
+
   test('create custom elements', () => {
     const spyCreateElement = vi.spyOn(document, 'createElement')
 
