@@ -2598,7 +2598,7 @@ describe('compiler: parse', () => {
           errors: [],
         },
         {
-          // CDATA at the root, with no enclosing element on the stack
+          // invalid root-level CDATA should report a parser error
           code: '<![CDATA[cdata]]>',
           errors: [
             {
