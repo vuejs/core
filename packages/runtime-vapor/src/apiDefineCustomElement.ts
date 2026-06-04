@@ -1,11 +1,6 @@
 import { shallowReactive } from '@vue/reactivity'
 import { extend, isPlainObject } from '@vue/shared'
-import {
-  createComponent,
-  createVaporApp,
-  createVaporSSRApp,
-  defineVaporComponent,
-} from '.'
+import { createVaporApp, createVaporSSRApp, defineVaporComponent } from '.'
 import {
   type ComponentObjectPropsOptions,
   type CreateAppFunction,
@@ -17,10 +12,11 @@ import {
   VueElementBase,
   warn,
 } from '@vue/runtime-dom'
-import type {
-  VaporComponent,
-  VaporComponentInstance,
-  VaporComponentOptions,
+import {
+  type VaporComponent,
+  type VaporComponentInstance,
+  type VaporComponentOptions,
+  createComponent,
 } from './component'
 import type { Block } from './block'
 import { withHydration } from './dom/hydration'
@@ -335,7 +331,7 @@ export class VaporElement extends VueElementBase<
   }
 
   private _createComponent() {
-    this._def.ce = instance => {
+    const ce = (instance: VaporComponentInstance) => {
       this._app!._ceComponent = this._instance = instance
       // For shadowRoot: false, _renderSlots is called synchronously after mount
       // in _mount() to ensure correct lifecycle order
@@ -353,6 +349,8 @@ export class VaporElement extends VueElementBase<
       undefined,
       undefined,
       this._app!._context,
+      false,
+      ce,
     )
   }
 }
