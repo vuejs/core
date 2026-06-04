@@ -65,8 +65,6 @@ export function useModel(
           return
         }
         const rawProps = i.vnode!.props
-        // Reuse the parent v-model check below when deciding whether an extra
-        // forced update is needed to resync parent-controlled state.
         const hasVModel = !!(
           rawProps &&
           // check if parent has passed v-model
@@ -89,19 +87,18 @@ export function useModel(
         // updates and there will be no prop sync. However the local input state
         // may be out of sync, so we need to force an update here.
         if (
-          (hasChanged(value, emittedValue) &&
-            hasChanged(value, prevSetValue) &&
+          hasChanged(value, prevSetValue) &&
+          ((hasChanged(value, emittedValue) &&
             !hasChanged(emittedValue, prevEmittedValue)) ||
-          // #13524: browsers differ in when they flush microtasks between
-          // event listeners. If a v-model listener emits an intermediate value
-          // and a following listener restores the model to its previous prop
-          // value before parent updates are flushed, the parent render can be
-          // deduped as having no prop change. Force a local update so DOM state
-          // such as an input's value is synchronized back to the current model.
-          (hasVModel &&
-            prevSetValue !== EMPTY_OBJ &&
-            hasChanged(value, prevSetValue) &&
-            !hasChanged(emittedValue, localValue))
+            // #13524: browsers differ in when they flush microtasks between
+            // event listeners. If a v-model listener emits an intermediate value
+            // and a following listener restores the model to its previous prop
+            // value before parent updates are flushed, the parent render can be
+            // deduped as having no prop change. Force a local update so DOM state
+            // such as an input's value is synchronized back to the current model.
+            (hasVModel &&
+              prevSetValue !== EMPTY_OBJ &&
+              !hasChanged(emittedValue, localValue)))
         ) {
           trigger()
         }
