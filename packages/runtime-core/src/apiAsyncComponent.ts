@@ -241,7 +241,10 @@ export function defineAsyncComponent<
           }
         })
         .catch(err => {
-          if (instance.isUnmounted) return
+          if (instance.isUnmounted) {
+            pendingRequest = null
+            return
+          }
           onError(err)
           error.value = err
         })
