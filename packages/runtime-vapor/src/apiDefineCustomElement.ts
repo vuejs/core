@@ -255,23 +255,8 @@ export class VaporElement extends VueElementBase<
   }
 
   protected _unmount(): void {
-    if (__TEST__) {
-      try {
-        this._app!.unmount()
-      } catch (error) {
-        // In test environment, ignore errors caused by accessing Node
-        // after the test environment has been torn down
-        if (
-          error instanceof ReferenceError &&
-          error.message.includes('Node is not defined')
-        ) {
-          // Ignore this error in tests
-        } else {
-          throw error
-        }
-      }
-    } else {
-      this._app!.unmount()
+    if (this._app) {
+      this._app.unmount()
     }
     if (this._instance && this._instance.ce) {
       this._instance.ce = undefined
