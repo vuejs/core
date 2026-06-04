@@ -43,7 +43,16 @@ const templateContainer = doc && /*@__PURE__*/ doc.createElement('template')
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
-    parent.insertBefore(child, anchor || null)
+    // #6272 children of a literal <template> element must be inserted into its
+    // content document fragment, otherwise they are not rendered by the browser
+    if ((parent as Element).tagName === 'TEMPLATE') {
+      ;(parent as HTMLTemplateElement).content.insertBefore(
+        child,
+        anchor || null,
+      )
+    } else {
+      parent.insertBefore(child, anchor || null)
+    }
   },
 
   remove: child => {
