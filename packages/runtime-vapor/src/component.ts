@@ -708,9 +708,6 @@ export class VaporComponentInstance<
   restoreAsyncContext?: () => void | (() => void)
   deferredHydrationBoundary?: () => void
 
-  // for vapor custom element and hmr rerender
-  renderEffects?: RenderEffect[]
-
   hasFallthrough: boolean
 
   // for keep-alive
@@ -751,6 +748,8 @@ export class VaporComponentInstance<
   propsOptions?: NormalizedPropsOptions
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
+  // for HMR rerender
+  renderEffects?: RenderEffect[]
 
   /**
    * dev only flag to track whether $attrs was used during render.
