@@ -23,6 +23,9 @@ export interface Target {
   [ReactiveFlags.RAW]?: any
 }
 
+// non-extensible targets opted out via markRaw (SKIP flag can't be defined on them)
+const rawSet: WeakSet<object> = new WeakSet<object>()
+
 export const reactiveMap: WeakMap<Target, any> = new WeakMap<Target, any>()
 export const shallowReactiveMap: WeakMap<Target, any> = new WeakMap<
   Target,
@@ -284,8 +287,12 @@ function createReactiveObject(
   ) {
     return target
   }
-  // only specific value types can be observed.
-  if (target[ReactiveFlags.SKIP] || !Object.isExtensible(target)) {
+  // skip frozen targets and anything opted out via markRaw.
+  if (
+    target[ReactiveFlags.SKIP] ||
+    rawSet.has(target) ||
+    Object.isFrozen(target)
+  ) {
     return target
   }
   // target already has corresponding Proxy
@@ -418,8 +425,13 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  if (!hasOwn(value, ReactiveFlags.SKIP) && Object.isExtensible(value)) {
-    def(value, ReactiveFlags.SKIP, true)
+  if (!hasOwn(value, ReactiveFlags.SKIP)) {
+    if (Object.isExtensible(value)) {
+      def(value, ReactiveFlags.SKIP, true)
+    } else {
+      // SKIP can't be defined on a non-extensible target; track it via rawSet.
+      rawSet.add(value)
+    }
   }
   return value
 }
