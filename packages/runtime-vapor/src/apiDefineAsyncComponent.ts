@@ -185,7 +185,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           render = () =>
             createComponent(errorComponent, { error: () => error.value })
         } else if (loadingComponent && !delayed.value) {
-          render = () => createComponent(loadingComponent)
+          render = () => createInnerComp(loadingComponent, instance)
         }
 
         frag.validityPending = !render && !error.value

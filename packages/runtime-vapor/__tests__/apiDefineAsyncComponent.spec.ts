@@ -5,8 +5,10 @@ import { makeRender } from './_utils'
 import {
   VaporKeepAlive,
   createIf,
+  createSlot,
   createTemplateRefSetter,
   defineVaporComponent,
+  insert,
   renderEffect,
   template,
 } from '@vue/runtime-vapor'
@@ -138,6 +140,50 @@ describe('api: defineAsyncComponent', () => {
     toggle.value = true
     await nextTick()
     expect(html()).toBe('resolved<!--async component--><!--if-->')
+  })
+
+  test('passes props and slots to loading component', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const Foo = defineVaporAsyncComponent({
+      loader: () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+      loadingComponent: defineVaporComponent({
+        props: ['msg'],
+        setup(props: any) {
+          const n0 = template('<div><span></span></div>')() as HTMLDivElement
+          const label = n0.firstChild as HTMLSpanElement
+          renderEffect(() => {
+            setElementText(label, `loading:${props.msg}`)
+          })
+          insert(createSlot('default'), n0)
+          return n0
+        },
+      }),
+      delay: 0,
+    })
+
+    const msg = ref('foo')
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Foo,
+          { msg: () => msg.value },
+          {
+            default: () => template('<i>slot</i>')(),
+          },
+        )
+      },
+    }).render()
+
+    expect(html()).toBe(
+      '<div><span>loading:foo</span><i>slot</i><!--slot--></div><!--async component-->',
+    )
+
+    resolve!(() => template('resolved')())
+    await timeout()
+    expect(html()).toBe('resolved<!--async component-->')
   })
 
   test('error without error component', async () => {
