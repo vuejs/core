@@ -215,10 +215,6 @@ export interface VaporComponentOptions<
   name?: string
   vapor?: boolean
   components?: Record<string, VaporComponent>
-  /**
-   * @internal custom element interception hook
-   */
-  ce?: (instance: VaporComponentInstance) => void
 }
 
 interface SharedInternalOptions {
@@ -257,6 +253,7 @@ export function createComponent(
     currentInstance.appContext) ||
     emptyContext,
   managedMount = false,
+  ce?: (instance: VaporComponentInstance) => void,
 ): VaporComponentInstance {
   // A component created while rendering a v-once slot should receive frozen
   // parent inputs, but its own render effects should still be live.
@@ -391,6 +388,7 @@ export function createComponent(
       rawSlots,
       appContext,
       once,
+      ce,
     )
 
     // handle currentKeepAliveCtx for component boundary isolation
@@ -771,6 +769,7 @@ export class VaporComponentInstance<
     rawSlots?: LooseRawSlots | null,
     appContext?: GenericAppContext,
     once?: boolean,
+    ce?: (instance: VaporComponentInstance) => void,
   ) {
     this.vapor = true
     this.uid = nextUid()
@@ -848,8 +847,8 @@ export class VaporComponentInstance<
     this.scopeId = getCurrentScopeId()
 
     // apply custom element special handling
-    if (comp.ce) {
-      comp.ce(this)
+    if (ce) {
+      ce(this)
     }
 
     if (__DEV__) {
