@@ -106,15 +106,23 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   // Static content here can only come from compiled templates.
   // As long as the user only uses trusted templates, this is safe.
   insertStaticContent(content, parent, anchor, namespace, start, end) {
-    // <parent> before | first ... last | anchor </parent>
-    const before = anchor ? anchor.previousSibling : parent.lastChild
+    // #6272 when the parent is a literal <template> element, static content
+    // must be inserted into its content document fragment, mirroring `insert`.
+    // Otherwise the nodes land outside the template's content and the browser
+    // never renders them.
+    const target: Node =
+      (parent as Element).tagName === 'TEMPLATE'
+        ? (parent as HTMLTemplateElement).content
+        : parent
+    // <target> before | first ... last | anchor </target>
+    const before = anchor ? anchor.previousSibling : target.lastChild
     // #5308 can only take cached path if:
     // - has a single root node
     // - nextSibling info is still available
     if (start && (start === end || start.nextSibling)) {
       // cached
       while (true) {
-        parent.insertBefore(start!.cloneNode(true), anchor)
+        target.insertBefore(start!.cloneNode(true), anchor)
         if (start === end || !(start = start!.nextSibling)) break
       }
     } else {
@@ -136,13 +144,13 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
         }
         template.removeChild(wrapper)
       }
-      parent.insertBefore(template, anchor)
+      target.insertBefore(template, anchor)
     }
     return [
       // first
-      before ? before.nextSibling! : parent.firstChild!,
+      before ? before.nextSibling! : target.firstChild!,
       // last
-      anchor ? anchor.previousSibling! : parent.lastChild!,
+      anchor ? anchor.previousSibling! : target.lastChild!,
     ]
   },
 }

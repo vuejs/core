@@ -149,6 +149,46 @@ describe('runtime-dom: node-ops', () => {
       expect(nodes[1]).toBe(parent.childNodes[parent.childNodes.length - 2])
     })
 
+    // #6272 static content under a <template> must land in its content fragment
+    test('fresh insertion into a <template> parent uses its content', () => {
+      const content = `<div>one</div><div>two</div>three`
+      const parent = document.createElement('template') as HTMLTemplateElement
+      const [first, last] = nodeOps.insertStaticContent!(
+        content,
+        parent,
+        null,
+        undefined,
+      )
+      // nothing should be appended to the template element itself
+      expect(parent.childNodes.length).toBe(0)
+      expect(parent.content.childNodes.length).toBe(3)
+      expect(parent.innerHTML).toBe(content)
+      expect(first).toBe(parent.content.firstChild)
+      expect(last).toBe(parent.content.lastChild)
+    })
+
+    test('cached insertion into a <template> parent uses its content', () => {
+      const content = `<div>one</div><div>two</div>three`
+      const parent = document.createElement('template') as HTMLTemplateElement
+
+      const cached = document.createElement('div')
+      cached.innerHTML = content
+
+      const [first, last] = nodeOps.insertStaticContent!(
+        content,
+        parent,
+        null,
+        undefined,
+        cached.firstChild,
+        cached.lastChild,
+      )
+      expect(parent.childNodes.length).toBe(0)
+      expect(parent.content.childNodes.length).toBe(3)
+      expect(parent.innerHTML).toBe(content)
+      expect(first).toBe(parent.content.firstChild)
+      expect(last).toBe(parent.content.lastChild)
+    })
+
     test('The math elements should keep their MathML namespace', async () => {
       let root = document.createElement('div') as any
 
