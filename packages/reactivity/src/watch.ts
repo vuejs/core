@@ -12,7 +12,7 @@ import {
 } from '@vue/shared'
 import { warn } from './warning'
 import type { ComputedRef } from './computed'
-import { ReactiveFlags } from './constants'
+import { isRawMarked } from './reactive'
 import {
   type DebuggerOptions,
   EffectFlags,
@@ -333,7 +333,7 @@ export function traverse(
   depth: number = Infinity,
   seen?: Map<unknown, number>,
 ): unknown {
-  if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
+  if (depth <= 0 || !isObject(value) || isRawMarked(value)) {
     return value
   }
 

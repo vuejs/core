@@ -26,6 +26,17 @@ export interface Target {
 // non-extensible targets opted out via markRaw (SKIP flag can't be defined on them)
 const rawSet: WeakSet<object> = new WeakSet<object>()
 
+/**
+ * Internal: true if the value has opted out of reactivity via markRaw,
+ * either through the SKIP flag or through the rawSet fallback.
+ */
+export function isRawMarked(value: unknown): boolean {
+  return (
+    !!value &&
+    (!!(value as Target)[ReactiveFlags.SKIP] || rawSet.has(value as object))
+  )
+}
+
 export const reactiveMap: WeakMap<Target, any> = new WeakMap<Target, any>()
 export const shallowReactiveMap: WeakMap<Target, any> = new WeakMap<
   Target,
@@ -288,11 +299,7 @@ function createReactiveObject(
     return target
   }
   // skip frozen targets and anything opted out via markRaw.
-  if (
-    target[ReactiveFlags.SKIP] ||
-    rawSet.has(target) ||
-    Object.isFrozen(target)
-  ) {
+  if (isRawMarked(target) || Object.isFrozen(target)) {
     return target
   }
   // target already has corresponding Proxy

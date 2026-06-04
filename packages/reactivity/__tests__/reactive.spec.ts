@@ -317,6 +317,16 @@ describe('reactivity/reactive', () => {
     expect(isReactive(reactive({ inner: markRaw(sealed) }).inner)).toBe(false)
   })
 
+  test('deep traverse should skip markRaw non-extensible targets', async () => {
+    const { traverse } = await import('../src/watch')
+    const sealed = Object.seal({ inner: { a: 1 } })
+    const marked = markRaw(sealed)
+    const seen = new Map()
+    traverse(marked, Infinity, seen)
+    // SKIP-flag markRaw stops here; the rawSet fallback must do the same.
+    expect(seen.has(marked.inner)).toBe(false)
+  })
+
   test('markRaw should not redefine on an marked object', () => {
     const obj = markRaw({ foo: 1 })
     const raw = markRaw(obj)
