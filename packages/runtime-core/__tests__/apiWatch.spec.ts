@@ -316,7 +316,7 @@ describe('api: watch', () => {
     const spy = vi.fn()
     watch([], spy, { immediate: true })
     expect(spy).toHaveBeenCalledTimes(1)
-    expect(spy).toHaveBeenCalledWith([], [], expect.anything())
+    expect(spy).toHaveBeenCalledWith([], [], expect.any(Function))
   })
 
   it('watching multiple sources: readonly array', async () => {
