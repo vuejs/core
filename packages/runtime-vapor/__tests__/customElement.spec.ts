@@ -148,6 +148,7 @@ describe('defineVaporCustomElement', () => {
       await nextTick()
       myInputEl.removeAttribute('value')
       await nextTick()
+      await nextTick()
       expect(inputEl.value).toBe('')
     })
 
@@ -220,13 +221,49 @@ describe('defineVaporCustomElement', () => {
       // change attr
       e.setAttribute('foo', 'changed')
       await nextTick()
+      await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div>changed</div><div>bye</div>')
 
       e.setAttribute('baz-qux', 'changed')
       await nextTick()
+      await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
         '<div>changed</div><div>changed</div>',
       )
+    })
+
+    test('updates nested child component when prop changes', async () => {
+      const Child = defineVaporComponent({
+        props: {
+          msg: String,
+        },
+        setup(props: any) {
+          const n0 = template('<span> </span>', 1)() as any
+          const x0 = txt(n0) as any
+          renderEffect(() => setText(x0, props.msg))
+          return n0
+        },
+      })
+      const E = defineVaporCustomElement({
+        props: {
+          msg: String,
+        },
+        setup(props: any) {
+          const n0 = template('<div></div>', 1)() as any
+          setInsertionState(n0)
+          createComponent(Child, { msg: () => props.msg })
+          return n0
+        },
+      })
+      customElements.define('my-el-props-nested-child-update', E)
+      container.innerHTML = `<my-el-props-nested-child-update msg="one"></my-el-props-nested-child-update>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe('<div><span>one</span></div>')
+
+      e.setAttribute('msg', 'two')
+      await nextTick()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div><span>two</span></div>')
     })
 
     test('props via properties', async () => {
@@ -283,6 +320,7 @@ describe('defineVaporCustomElement', () => {
       // change prop then attr
       e.bar = { x: 'bar3' }
       e.setAttribute('foo', 'foo3')
+      await nextTick()
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div>foo3</div><div>bar3</div>')
       expect(e.getAttribute('foo')).toBe('foo3')
@@ -341,15 +379,18 @@ describe('defineVaporCustomElement', () => {
 
       e.setAttribute('bar', '')
       await nextTick()
+      await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean 12345 string`)
 
       e.setAttribute('foo-bar', '2e1')
+      await nextTick()
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
         `20 number true boolean 12345 string`,
       )
 
       e.setAttribute('baz', '2e1')
+      await nextTick()
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean 2e1 string`)
     })
@@ -439,7 +480,7 @@ describe('defineVaporCustomElement', () => {
       expect(el.shadowRoot!.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
     })
 
-    test('set number value in dom property', () => {
+    test('set number value in dom property', async () => {
       const E = defineVaporCustomElement({
         props: {
           'max-age': Number,
@@ -457,6 +498,7 @@ describe('defineVaporCustomElement', () => {
       container.appendChild(el)
       el.maxAge = 50
       expect(el.maxAge).toBe(50)
+      await nextTick()
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
     })
 
@@ -592,6 +634,7 @@ describe('defineVaporCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div foo="hello">hello</div>')
 
       e.setAttribute('foo', 'changed')
+      await nextTick()
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div foo="changed">changed</div>')
     })
@@ -1434,6 +1477,7 @@ describe('defineVaporCustomElement', () => {
       // attr
       e1.setAttribute('msg', 'attr')
       await nextTick()
+      await nextTick()
       expect((e1 as any).msg).toBe('attr')
       expect(e1.shadowRoot!.innerHTML).toBe(
         `<style>div { color: red }</style><div>attr</div>`,
@@ -1443,6 +1487,7 @@ describe('defineVaporCustomElement', () => {
       expect(`msg` in e1).toBe(true)
       ;(e1 as any).msg = 'prop'
       expect(e1.getAttribute('msg')).toBe('prop')
+      await nextTick()
       expect(e1.shadowRoot!.innerHTML).toBe(
         `<style>div { color: red }</style><div>prop</div>`,
       )
@@ -1486,9 +1531,11 @@ describe('defineVaporCustomElement', () => {
       expect(e2.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
 
       e1.msg = 'world'
+      await nextTick()
       expect(e1.shadowRoot!.innerHTML).toBe(`<div>world</div>`)
 
       e2.msg = 'hello'
+      await nextTick()
       expect(e2.shadowRoot!.innerHTML).toBe(`<div>hello</div>`)
     })
 
@@ -2492,6 +2539,7 @@ describe('defineVaporCustomElement', () => {
     const e = container.childNodes[0] as VaporElement
     expect(e.shadowRoot!.innerHTML).toBe(`true,boolean`)
     e.removeAttribute('boo')
+    await nextTick()
     await nextTick()
     expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
   })

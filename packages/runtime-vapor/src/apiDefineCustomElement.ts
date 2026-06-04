@@ -1,3 +1,4 @@
+import { shallowReactive } from '@vue/reactivity'
 import { extend, isPlainObject } from '@vue/shared'
 import {
   createComponent,
@@ -204,7 +205,7 @@ export class VaporElement extends VueElementBase<
     props: Record<string, any> | undefined = {},
     createAppFn: CreateAppFunction<ParentNode, VaporComponent> = createVaporApp,
   ) {
-    super(def, props, createAppFn)
+    super(def, shallowReactive(props), createAppFn)
   }
 
   protected _needsHydration(): boolean {
@@ -250,11 +251,11 @@ export class VaporElement extends VueElementBase<
   }
 
   protected _update(): void {
-    if (!this._app) return
-    // update component by re-running all its render effects
-    const renderEffects = (this._instance! as VaporComponentInstance)
-      .renderEffects
-    if (renderEffects) renderEffects.forEach(e => e.run())
+    // Unlike VDOM custom elements, Vapor does not synchronously patch the root
+    // component in _update(). CE props are reactive, so property writes update
+    // in the next scheduler flush. Attribute writes are delivered by
+    // MutationObserver first; compared with VDOM CE, which patches inside
+    // _update(), they become visible one tick later.
   }
 
   protected _unmount(): void {
