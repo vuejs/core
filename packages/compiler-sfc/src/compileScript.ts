@@ -393,22 +393,6 @@ export function compileScript(
         const imported = getImportedName(specifier)
         const source = node.source.value
 
-        // rewrite defineVaporAsyncComponent import to defineAsyncComponent
-        // in SSR + Vapor mode
-        if (
-          vapor &&
-          ssr &&
-          specifier.type === 'ImportSpecifier' &&
-          source === 'vue' &&
-          imported === 'defineVaporAsyncComponent'
-        ) {
-          ctx.s.overwrite(
-            specifier.start! + startOffset,
-            specifier.end! + startOffset,
-            `defineAsyncComponent as ${local}`,
-          )
-        }
-
         const existing = ctx.userImports[local]
         if (source === 'vue' && MACROS.includes(imported)) {
           if (local === imported) {
