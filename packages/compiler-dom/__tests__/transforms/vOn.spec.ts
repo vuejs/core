@@ -93,6 +93,40 @@ describe('compiler-dom: transform v-on', () => {
     })
   })
 
+  it('should preserve nullish dynamic event names with event options', () => {
+    const {
+      props: [prop],
+    } = parseWithVOn(`<div @[event].once="test"/>`, {
+      prefixIdentifiers: true,
+    })
+    expect(prop).toMatchObject({
+      key: {
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          `(`,
+          {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              `_${helperNameMap[TO_HANDLER_KEY]}(`,
+              { content: `_ctx.event` },
+              `)`,
+            ],
+          },
+          `) && (`,
+          {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              `_${helperNameMap[TO_HANDLER_KEY]}(`,
+              { content: `_ctx.event` },
+              `)`,
+            ],
+          },
+          `) + "Once"`,
+        ],
+      },
+    })
+  })
+
   it('should wrap keys guard for keyboard events or dynamic events', () => {
     const {
       props: [prop],

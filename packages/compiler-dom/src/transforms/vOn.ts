@@ -144,7 +144,13 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       const modifierPostfix = eventOptionModifiers.map(capitalize).join('')
       key = isStaticExp(key)
         ? createSimpleExpression(`${key.content}${modifierPostfix}`, true)
-        : createCompoundExpression([`(`, key, `) + "${modifierPostfix}"`])
+        : createCompoundExpression([
+            `(`,
+            key,
+            `) && (`,
+            key,
+            `) + "${modifierPostfix}"`,
+          ])
     }
 
     return {
