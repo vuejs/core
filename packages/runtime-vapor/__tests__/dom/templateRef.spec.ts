@@ -1520,46 +1520,6 @@ describe('api: template ref', () => {
       __DEV__ = true
     }
   })
-
-  // TODO: can not reproduce in Vapor
-  // // #2078
-  // test('handling multiple merged refs', async () => {
-  //   const Foo = {
-  //     render: () => h('div', 'foo'),
-  //   }
-  //   const Bar = {
-  //     render: () => h('div', 'bar'),
-  //   }
-
-  //   const viewRef = shallowRef<any>(Foo)
-  //   const elRef1 = ref()
-  //   const elRef2 = ref()
-
-  //   const App = {
-  //     render() {
-  //       if (!viewRef.value) {
-  //         return null
-  //       }
-  //       const view = h(viewRef.value, { ref: elRef1 })
-  //       return h(view, { ref: elRef2 })
-  //     },
-  //   }
-  //   const root = nodeOps.createElement('div')
-  //   render(h(App), root)
-
-  //   expect(serializeInner(elRef1.value.$el)).toBe('foo')
-  //   expect(elRef1.value).toBe(elRef2.value)
-
-  //   viewRef.value = Bar
-  //   await nextTick()
-  //   expect(serializeInner(elRef1.value.$el)).toBe('bar')
-  //   expect(elRef1.value).toBe(elRef2.value)
-
-  //   viewRef.value = null
-  //   await nextTick()
-  //   expect(elRef1.value).toBeNull()
-  //   expect(elRef1.value).toBe(elRef2.value)
-  // })
 })
 
 describe('interop: template ref', () => {
