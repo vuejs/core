@@ -21,6 +21,12 @@ describe('compiler: v-memo transform', () => {
     expect(compile(`<div v-memo="[x]"></div>`)).toMatchSnapshot()
   })
 
+  test('on normal element with key', () => {
+    expect(
+      compile(`<div :key="updateKey" v-memo="[updateKey]"></div>`),
+    ).toContain(`key: _ctx.updateKey`)
+  })
+
   test('on component', () => {
     expect(compile(`<Comp v-memo="[x]"></Comp>`)).toMatchSnapshot()
   })
