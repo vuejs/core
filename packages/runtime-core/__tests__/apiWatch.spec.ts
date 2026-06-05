@@ -312,6 +312,13 @@ describe('api: watch', () => {
     expect(called).toBe(true)
   })
 
+  it('watching multiple sources: empty array and immediate: true', () => {
+    const cb = vi.fn()
+    watch([], cb, { immediate: true })
+
+    expect(cb).toHaveBeenCalledWith([], [], expect.any(Function))
+  })
+
   it('watching multiple sources: readonly array', async () => {
     const state = reactive({ count: 1 })
     const status = ref(false)

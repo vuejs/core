@@ -243,6 +243,7 @@ export function watch(
       if (
         deep ||
         forceTrigger ||
+        immediateFirstRun ||
         (isMultiSource
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
           : hasChanged(newValue, oldValue))
