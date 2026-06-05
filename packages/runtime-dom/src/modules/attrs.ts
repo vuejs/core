@@ -66,7 +66,7 @@ export function compatCoerceAttr(
           : 'true'
     if (
       v2CoercedValue &&
-      compatUtils.softAssertCompatEnabled(
+      compatUtils.checkCompatEnabled(
         DeprecationTypes.ATTR_ENUMERATED_COERCION,
         instance,
         key,

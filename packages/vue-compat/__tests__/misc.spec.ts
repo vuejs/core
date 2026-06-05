@@ -296,3 +296,35 @@ test('ATTR_ENUMERATED_COERCION, coercing "false"', () => {
     )('spellcheck', 'false', 'false'),
   ).toHaveBeenWarned()
 })
+
+test('ATTR_ENUMERATED_COERCION disabled', () => {
+  Vue.configureCompat({
+    ATTR_ENUMERATED_COERCION: false,
+  })
+
+  const vm = new Vue({
+    template: `<div :draggable="null" :spellcheck="false" contenteditable="foo" />`,
+  }).$mount()
+
+  expect(vm.$el.hasAttribute('draggable')).toBe(false)
+  expect(vm.$el.getAttribute('spellcheck')).toBe('false')
+  expect(vm.$el.getAttribute('contenteditable')).toBe('foo')
+  expect(
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('draggable', null, 'false'),
+  ).not.toHaveBeenWarned()
+  expect(
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('spellcheck', false, 'false'),
+  ).not.toHaveBeenWarned()
+  expect(
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('contenteditable', 'foo', 'true'),
+  ).not.toHaveBeenWarned()
+})
