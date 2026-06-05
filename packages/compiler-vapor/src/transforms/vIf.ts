@@ -23,7 +23,7 @@ import {
 import { VaporBlockShape, VaporIfFlags, extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
-import { getBlockShape, isStaticExpression } from '../utils'
+import { getBlockShape, isInTransition, isStaticExpression } from '../utils'
 
 export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -116,14 +116,17 @@ export function processIf(
       )
     }
 
-    // TODO ignore comments if the v-if is direct child of <transition> (PR #3622)
-    if (__DEV__ && context.root.comment.length) {
-      node = wrapTemplate(node, ['else-if', 'else'])
-      context.node = node = extend({}, node, {
-        children: [...context.comment, ...node.children],
-      })
+    const comments = context.comment
+    if (comments.length) {
+      // #3619 ignore comments if the v-if is direct child of <transition>
+      if (__DEV__ && !isInTransition(context)) {
+        node = wrapTemplate(node, ['else-if', 'else'])
+        context.node = node = extend({}, node, {
+          children: [...comments, ...node.children],
+        })
+      }
+      comments.length = 0
     }
-    context.root.comment = []
 
     const [branch, onExit] = createIfBranch(node, context)
 
