@@ -706,6 +706,23 @@ describe('v-on', () => {
     ])
   })
 
+  test('should allow disabling event delegation', () => {
+    const { code, ir, helpers } = compileWithVOn(`<div @click="test"/>`, {
+      eventDelegation: false,
+    })
+
+    expect(code).toMatchSnapshot()
+    expect(helpers).not.contains('delegate')
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).contains('_on(n0, "click", e => _ctx.test(e))')
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_EVENT,
+        delegate: false,
+      },
+    ])
+  })
+
   test('should let runtime event helpers create invokers', () => {
     const { code } = compileWithVOn(
       `<div @click.stop="test" /><div @click.foo="a" @click.bar="b" />`,

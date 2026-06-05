@@ -97,6 +97,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   // - no handlers for the same static event on this element that use .stop
   // - is a delegatable event
   const delegate =
+    context.options.eventDelegation &&
     arg.isStatic &&
     !eventOptionModifiers.length &&
     !hasStopHandlerForStaticEvent(node, arg.content) &&
