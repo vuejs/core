@@ -683,6 +683,64 @@ describe('v-on', () => {
     )
   })
 
+  test('should prioritize right over middle for click event normalization', () => {
+    const { code, ir } = compileWithVOn(
+      `<div @click.middle.right="test"/><div @click.right.middle="test"/>`,
+    )
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_EVENT,
+        key: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'contextmenu',
+          isStatic: true,
+        },
+        modifiers: { nonKeys: ['middle', 'right'] },
+        keyOverride: undefined,
+      },
+      {
+        type: IRNodeTypes.SET_EVENT,
+        key: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'contextmenu',
+          isStatic: true,
+        },
+        modifiers: { nonKeys: ['right', 'middle'] },
+        keyOverride: undefined,
+      },
+    ])
+    expect(code).toContain('$evtcontextmenu')
+    expect(code).not.toContain('$evtmouseup')
+
+    const { code: code2, ir: ir2 } = compileWithVOn(
+      `<div @[event].middle.right="test"/><div @[event].right.middle="test"/>`,
+    )
+    expect(ir2.block.effect.map(effect => effect.operations[0])).toMatchObject([
+      {
+        type: IRNodeTypes.SET_EVENT,
+        key: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'event',
+          isStatic: false,
+        },
+        modifiers: { nonKeys: ['middle', 'right'] },
+        keyOverride: ['click', 'contextmenu'],
+      },
+      {
+        type: IRNodeTypes.SET_EVENT,
+        key: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'event',
+          isStatic: false,
+        },
+        modifiers: { nonKeys: ['right', 'middle'] },
+        keyOverride: ['click', 'contextmenu'],
+      },
+    ])
+    expect(code2).toContain('=== "click" ? "contextmenu"')
+    expect(code2).not.toContain('"mouseup"')
+  })
+
   test('should not prefix member expression', () => {
     const { code } = compileWithVOn(`<div @click="foo.bar"/>`, {
       prefixIdentifiers: true,

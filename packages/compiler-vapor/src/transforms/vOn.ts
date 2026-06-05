@@ -52,17 +52,13 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   const isStaticClick = arg.isStatic && arg.content.toLowerCase() === 'click'
 
   // normalize click.right and click.middle since they don't actually fire
-  if (nonKeyModifiers.includes('middle')) {
-    if (keyOverride) {
-      // TODO error here
-    }
-    if (!isStaticClick && !arg.isStatic) {
-      keyOverride = ['click', 'mouseup']
-    }
-  }
   if (nonKeyModifiers.includes('right')) {
     if (!isStaticClick && !arg.isStatic) {
       keyOverride = ['click', 'contextmenu']
+    }
+  } else if (nonKeyModifiers.includes('middle')) {
+    if (!isStaticClick && !arg.isStatic) {
+      keyOverride = ['click', 'mouseup']
     }
   }
   arg = normalizeStaticEventArg(arg, nonKeyModifiers)
@@ -129,11 +125,10 @@ function normalizeStaticEventArg(
   let normalized = arg
   const isStaticClick = arg.content.toLowerCase() === 'click'
 
-  if (nonKeyModifiers.includes('middle') && isStaticClick) {
-    normalized = extend({}, normalized, { content: 'mouseup' })
-  }
   if (nonKeyModifiers.includes('right') && isStaticClick) {
     normalized = extend({}, normalized, { content: 'contextmenu' })
+  } else if (nonKeyModifiers.includes('middle') && isStaticClick) {
+    normalized = extend({}, normalized, { content: 'mouseup' })
   }
 
   return normalized
