@@ -1,3 +1,36 @@
+# [3.6.0-beta.14](https://github.com/vuejs/core/compare/v3.6.0-beta.13...v3.6.0-beta.14) (2026-06-05)
+
+
+### Bug Fixes
+
+* **custom-element:** avoid retaining custom element hooks on shared definitions ([cb1f10b](https://github.com/vuejs/core/commit/cb1f10b5e6f5049e76b51702f9bdc4fcb94d808d))
+* **hmr:** align child component HMR reload with parent rerender ([e251b37](https://github.com/vuejs/core/commit/e251b379c12afd015f9a311b3744ccaf35906384))
+* **hmr:** dedupe HMR parent reloads ([9a7c040](https://github.com/vuejs/core/commit/9a7c040dca1638bbfd4b93a8fd09acfe6792a7bf))
+* **runtime-vapor:** align error component creation in async wrapper ([c8f5fd7](https://github.com/vuejs/core/commit/c8f5fd7eea59f8f83e9f20a994a76f28c07ed473))
+* **runtime-vapor:** avoid fallthrough attrs in multi-root dynamic branches ([#14906](https://github.com/vuejs/core/issues/14906)) ([f247167](https://github.com/vuejs/core/commit/f247167c201de75b85b0ba59d87fae58ad56e416))
+* **runtime-vapor:** avoid fast remove for component v-for ([8f6b772](https://github.com/vuejs/core/commit/8f6b772a9e2c541fc9d70ed245825ce33e95a917))
+* **runtime-vapor:** avoid mutating shared interop bridge ([30b2b99](https://github.com/vuejs/core/commit/30b2b998fdfa11d92f629f630edf6abffe6b4ce3))
+* **runtime-vapor:** pass props and slots to loadingComponent ([6385534](https://github.com/vuejs/core/commit/6385534815eff4dc7929a6f6198e5b4d0619047e))
+* **runtime-vapor:** preserve fallthrough attrs on nested dynamic fragments ([#14904](https://github.com/vuejs/core/issues/14904)) ([58e6d0b](https://github.com/vuejs/core/commit/58e6d0b05c3f4c311e7f1e2452c5df3e275a67ab))
+* **runtime-vapor:** preserve scope id on dynamic root updates ([#14892](https://github.com/vuejs/core/issues/14892)) ([5c8103d](https://github.com/vuejs/core/commit/5c8103db49027a47cfd94c81542fab1798210c30))
+* **runtime-vapor:** preserve setup effects during hmr rerender ([e8fc5d4](https://github.com/vuejs/core/commit/e8fc5d4d936c1f9e344e1e0e00475cf0e0f5df00))
+* **runtime-vapor:** preserve v-once raw prop getter shape ([#14907](https://github.com/vuejs/core/issues/14907)) ([db712e2](https://github.com/vuejs/core/commit/db712e2fc147cc58cc9018226355f33e9e89b133))
+* **runtime-vapor:** render invalid v-for number ranges as empty ([f9ca837](https://github.com/vuejs/core/commit/f9ca837c74ba86b8eccffe6040c8479e88310fc2))
+* **runtime-vapor:** restore hmr context on errors ([cd1a226](https://github.com/vuejs/core/commit/cd1a226b52cf6bafcd0c3a98c561479debed8b55))
+* **runtime-vapor:** skip v-for updated hooks on initial mount ([9691bc5](https://github.com/vuejs/core/commit/9691bc5a8d772ef02ce0096c9254283757b35ce2))
+* **runtime-vapor:** update app instance on root hmr reload ([5179a96](https://github.com/vuejs/core/commit/5179a96bc476aae1ffce5fbd4e5c8c9add2b4798))
+* **runtime-vapor:** update custom element children from reactive props ([a6a3181](https://github.com/vuejs/core/commit/a6a3181c1ef497c128ad2bb3f80c6ef3c19efe20))
+* **runtime-vapor:** update v-for object aliases when reusing blocks ([172a954](https://github.com/vuejs/core/commit/172a954c021f132417c256c9b17452b805f1ab50))
+* **scheduler:** reset job queue length after flush ([#14905](https://github.com/vuejs/core/issues/14905)) ([6b2bf08](https://github.com/vuejs/core/commit/6b2bf08ea67f3d98f6ff061b8334ebb8514a72af)), closes [#14903](https://github.com/vuejs/core/issues/14903)
+* **transition:** avoid move transition for hidden v-show group children ([#14896](https://github.com/vuejs/core/issues/14896)) ([2479652](https://github.com/vuejs/core/commit/247965241bd96a4ab0d1f9ddc1d0a66cb0517683))
+* **vapor:** expose async component alias for SSR runtime ([9f6a215](https://github.com/vuejs/core/commit/9f6a215b8aabccc72036cbe65905cc5ed58776d3))
+* **vFor:** avoid eager evaluation of destructure defaults ([42444be](https://github.com/vuejs/core/commit/42444be6b6aa95e59907cb49b9fd96993df90076))
+
+
+### Performance Improvements
+
+* **runtime-vapor:** cache normalized interop slot wrappers ([3ad548e](https://github.com/vuejs/core/commit/3ad548e0d8b174e2af66655a704c9474e62fbcb5))
+
 # [3.6.0-beta.13](https://github.com/vuejs/core/compare/v3.5.35...v3.6.0-beta.13) (2026-05-28)
 
 
