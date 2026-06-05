@@ -589,24 +589,6 @@ function _createVNode(
     type = convertLegacyComponent(type, currentRenderingInstance)
   }
 
-  // class & style normalization.
-  if (props) {
-    // for reactive or proxy objects, we need to clone it to enable mutation.
-    props = guardReactiveProps(props)!
-    let { class: klass, style } = props
-    if (klass && !isString(klass)) {
-      props.class = normalizeClass(klass)
-    }
-    if (isObject(style)) {
-      // reactive state objects need to be cloned since they are likely to be
-      // mutated
-      if (isProxy(style) && !isArray(style)) {
-        style = extend({}, style)
-      }
-      props.style = normalizeStyle(style)
-    }
-  }
-
   // encode the vnode type information into a bitmap
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
@@ -619,6 +601,26 @@ function _createVNode(
           : isFunction(type)
             ? ShapeFlags.FUNCTIONAL_COMPONENT
             : 0
+
+  // class & style normalization.
+  if (props) {
+    // for reactive or proxy objects, we need to clone it to enable mutation.
+    props = guardReactiveProps(props)!
+    let { class: klass, style } = props
+    if (klass && !isString(klass)) {
+      props.class = normalizeClass(klass)
+    }
+    // Only normalize style for non-component VNodes.
+    // For components, style might be a declared prop (not a CSS style attribute).
+    if (isObject(style) && !(shapeFlag & ShapeFlags.COMPONENT)) {
+      // reactive state objects need to be cloned since they are likely to be
+      // mutated
+      if (isProxy(style) && !isArray(style)) {
+        style = extend({}, style)
+      }
+      props.style = normalizeStyle(style)
+    }
+  }
 
   if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
