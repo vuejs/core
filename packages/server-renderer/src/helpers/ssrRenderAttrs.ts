@@ -43,9 +43,13 @@ export function ssrRenderAttrs(
     // force as attribute
     if (key.startsWith('^')) key = key.slice(1)
     if (key === 'class') {
-      ret += ` class="${ssrRenderClass(value)}"`
+      if (value != null) {
+        ret += ` class="${ssrRenderClass(value)}"`
+      }
     } else if (key === 'style') {
-      ret += ` style="${ssrRenderStyle(value)}"`
+      if (value != null) {
+        ret += ` style="${ssrRenderStyle(value)}"`
+      }
     } else if (key === 'className') {
       // className should not go through ssrRenderClass which normalizes non-string
       // values into strings. it should coerce directly into strings

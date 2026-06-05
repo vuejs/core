@@ -133,6 +133,19 @@ describe('ssr: renderClass', () => {
     ).toBe(` class="foo bar"`)
   })
 
+  test('ignore nullish class values via renderProps', () => {
+    expect(
+      ssrRenderAttrs({
+        class: undefined,
+      }),
+    ).toBe(``)
+    expect(
+      ssrRenderAttrs({
+        class: null,
+      }),
+    ).toBe(``)
+  })
+
   test('standalone', () => {
     expect(ssrRenderClass(`foo`)).toBe(`foo`)
     expect(ssrRenderClass([`foo`, `bar`])).toBe(`foo bar`)
@@ -169,6 +182,19 @@ describe('ssr: renderStyle', () => {
         },
       }),
     ).toBe(` style="color:red;--a:2;-webkit-line-clamp:1;"`)
+  })
+
+  test('ignore nullish style values via renderProps', () => {
+    expect(
+      ssrRenderAttrs({
+        style: undefined,
+      }),
+    ).toBe(``)
+    expect(
+      ssrRenderAttrs({
+        style: null,
+      }),
+    ).toBe(``)
   })
 
   test('standalone', () => {
