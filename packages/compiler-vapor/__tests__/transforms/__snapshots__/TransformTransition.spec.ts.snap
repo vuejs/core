@@ -32,10 +32,11 @@ exports[`compiler: transition > the v-if/else-if/else branches in Transition sho
 "import { VaporTransition as _VaporTransition, setInsertionState as _setInsertionState, createIf as _createIf, createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("<div>hey", 2)
 const t1 = _template("<p>", 2)
-const t2 = _template("<div>")
+const t2 = _template("<!-- this should not be ignored -->", 2)
+const t3 = _template("<div>")
 
 export function render(_ctx) {
-  const n16 = _createComponent(_VaporTransition, null, () => {
+  const n17 = _createComponent(_VaporTransition, null, () => {
     const n0 = _createIf(() => (_ctx.a), () => {
       const n2 = t0()
       return n2
@@ -43,20 +44,21 @@ export function render(_ctx) {
       const n5 = t0()
       return n5
     }, () => {
-      const n14 = t2()
-      _setInsertionState(n14, 0, 0)
+      const n15 = t3()
+      _setInsertionState(n15, null, 0)
       const n9 = _createIf(() => (_ctx.c), () => {
         const n11 = t1()
         return n11
       }, () => {
-        const n13 = t1()
-        return n13
-      }, 773 /* BLOCK_SHAPE, INDEX_SHIFT */)
-      return n14
+        const n13 = t2()
+        const n14 = t1()
+        return [n13, n14]
+      }, 777 /* BLOCK_SHAPE, INDEX_SHIFT */)
+      return n15
     }, 645 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */), 389 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */)
-    return [n0, n3, n7]
+    return n0
   }, true)
-  return n16
+  return n17
 }"
 `;
 

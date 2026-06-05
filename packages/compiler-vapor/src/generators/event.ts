@@ -77,7 +77,6 @@ export function genSetEvent(
   function genName(): CodeFragment[] {
     const expr = genExpression(key, context)
     if (keyOverride) {
-      // TODO unit test
       const find = JSON.stringify(keyOverride[0])
       const replacement = JSON.stringify(keyOverride[1])
       const wrapped: CodeFragment[] = ['(', ...expr, ')']

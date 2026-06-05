@@ -1,5 +1,6 @@
 import { makeCompile } from './_utils'
 import {
+  compile,
   transformChildren,
   transformElement,
   transformKey,
@@ -268,8 +269,8 @@ describe('compiler: transition', () => {
   })
 
   test('the v-if/else-if/else branches in Transition should ignore comments', () => {
-    expect(
-      compileWithElementTransform(`
+    const { code } = compile(
+      `
     <transition>
       <div v-if="a">hey</div>
       <!-- this should be ignored -->
@@ -281,7 +282,11 @@ describe('compiler: transition', () => {
         <p v-else/>
       </div>
     </transition>
-    `).code,
-    ).toMatchSnapshot()
+    `,
+      { prefixIdentifiers: true },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).not.toContain('this should be ignored')
+    expect(code).toContain('this should not be ignored')
   })
 })
