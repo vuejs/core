@@ -175,7 +175,6 @@ export function genFor(
       blockFn,
       genCallback(keyProp),
       flags ? String(flags) : undefined,
-      // todo: hydrationNode
     ),
     ...onResetCalls,
   ]
