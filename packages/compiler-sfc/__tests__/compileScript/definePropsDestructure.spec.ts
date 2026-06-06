@@ -108,6 +108,79 @@ describe('sfc reactive props destructure', () => {
     assertCode(content)
   })
 
+  test('var declaration shadowing in nested block', () => {
+    const { content } = compile(`<script setup lang="ts">
+const { foo = "a" } = defineProps<{ foo?: string }>();
+let bar: string | undefined;
+function init() {
+  {
+    var foo = "b";
+  }
+  bar = foo;
+}
+init();
+</script>`)
+    expect(content).toMatch(`var foo = "b"`)
+    expect(content).toMatch(`bar = foo`)
+    expect(content).not.toMatch(`bar = __props.foo`)
+    assertCode(content)
+  })
+
+  test('var declaration shadowing before declaration in nested block', () => {
+    const { content } = compile(`<script setup lang="ts">
+const { foo = "a" } = defineProps<{ foo?: string }>();
+let bar: string | undefined;
+function init() {
+  bar = foo;
+  {
+    var foo = "b";
+  }
+}
+init();
+</script>`)
+    expect(content).toMatch(`bar = foo`)
+    expect(content).toMatch(`var foo = "b"`)
+    expect(content).not.toMatch(`bar = __props.foo`)
+    assertCode(content)
+  })
+
+  test('var declaration shadowing before declaration in for loop', () => {
+    const { content } = compile(`<script setup lang="ts">
+const { foo = "a" } = defineProps<{ foo?: string }>();
+let bar: string | undefined;
+function init() {
+  bar = foo;
+  for (var foo = "b"; false;) {}
+}
+init();
+</script>`)
+    expect(content).toMatch(`bar = foo`)
+    expect(content).toMatch(`for (var foo = "b"; false;)`)
+    expect(content).not.toMatch(`bar = __props.foo`)
+    assertCode(content)
+  })
+
+  test('var declaration shadowing does not cross function scope', () => {
+    const { content } = compile(`<script setup lang="ts">
+const { foo = "a" } = defineProps<{ foo?: string }>();
+let bar: string | undefined;
+function init() {
+  function nested() {
+    {
+      var foo = "b";
+    }
+    return foo;
+  }
+  bar = foo;
+  nested();
+}
+init();
+</script>`)
+    expect(content).toMatch(`return foo`)
+    expect(content).toMatch(`bar = __props.foo`)
+    assertCode(content)
+  })
+
   test('default values w/ array runtime declaration', () => {
     const { content } = compile(`
       <script setup>
