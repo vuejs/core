@@ -432,7 +432,6 @@ function transformNativeElement(
   template += `<${tag}`
   if (scopeId) template += ` ${scopeId}`
 
-  const dynamicProps: string[] = []
   if (propsResult[0] /* dynamic props */) {
     const [, dynamicArgs, expressions] = propsResult
     context.registerEffect(
@@ -471,6 +470,7 @@ function transformNativeElement(
 
     for (const prop of propsResult[1]) {
       const { key, values } = prop
+      let foldedValue: string | boolean | undefined
       // handling asset imports
       if (
         context.imports.some(imported =>
@@ -482,59 +482,6 @@ function transformNativeElement(
         // with string concatenation in the generator, see genTemplates
         template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
         prevWasQuoted = true
-      } else if (key.isStatic && !prop.modifier && isBooleanAttr(key.content)) {
-        if (
-          values.length === 1 &&
-          (values[0].isStatic || values[0].content === "''") &&
-          !dynamicKeys.includes(key.content)
-        ) {
-          const value = values[0].content === "''" ? '' : values[0].content
-          appendTemplateProp(key.content, value)
-        } else {
-          const include = foldBooleanAttrValue(values)
-          if (include != null) {
-            if (include) {
-              appendTemplateProp(key.content)
-            }
-          } else {
-            dynamicProps.push(key.content)
-            context.registerEffect(
-              values,
-              {
-                type: IRNodeTypes.SET_PROP,
-                element: context.reference(),
-                prop,
-                tag,
-              },
-              getEffectIndex,
-            )
-          }
-        }
-      } else if (key.isStatic && !prop.modifier && hasBoundValue(values)) {
-        let foldedValue: string | undefined
-        if (key.content === 'class') {
-          foldedValue = foldClassValues(values)
-        } else if (key.content === 'style') {
-          foldedValue = foldStyleValues(values)
-        }
-
-        if (foldedValue != null) {
-          if (foldedValue) {
-            appendTemplateProp(key.content, foldedValue, true)
-          }
-        } else {
-          dynamicProps.push(key.content)
-          context.registerEffect(
-            values,
-            {
-              type: IRNodeTypes.SET_PROP,
-              element: context.reference(),
-              prop,
-              tag,
-            },
-            getEffectIndex,
-          )
-        }
       } else if (
         key.isStatic &&
         values.length === 1 &&
@@ -543,8 +490,30 @@ function transformNativeElement(
       ) {
         const value = values[0].content === "''" ? '' : values[0].content
         appendTemplateProp(key.content, value)
+      } else if (
+        key.isStatic &&
+        !prop.modifier &&
+        isBooleanAttr(key.content) &&
+        (foldedValue = foldBooleanAttrValue(values)) != null
+      ) {
+        if (foldedValue) {
+          appendTemplateProp(key.content)
+        }
+      } else if (
+        key.isStatic &&
+        !prop.modifier &&
+        hasBoundValue(values) &&
+        (foldedValue =
+          key.content === 'class'
+            ? foldClassValues(values)
+            : key.content === 'style'
+              ? foldStyleValues(values)
+              : undefined) != null
+      ) {
+        if (foldedValue) {
+          appendTemplateProp(key.content, foldedValue, true)
+        }
       } else {
-        dynamicProps.push(key.content)
         context.registerEffect(
           values,
           {
