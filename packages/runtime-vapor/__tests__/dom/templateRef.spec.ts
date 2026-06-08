@@ -212,6 +212,39 @@ describe('api: template ref', () => {
     expect('Invalid template ref type:').not.toHaveBeenWarned()
   })
 
+  it('dynamic direct refs with ref_keys clear the old ref', async () => {
+    const t0 = template('<div></div>')
+    const refKey = ref<'foo' | 'bar'>('foo')
+    let tRefs!: Record<'foo' | 'bar', ShallowRef>
+
+    const { render } = define({
+      setup() {
+        tRefs = {
+          foo: useTemplateRef('foo'),
+          bar: useTemplateRef('bar'),
+        }
+      },
+      render() {
+        const n0 = t0()
+        const setRef = createTemplateRefSetter()
+        renderEffect(() => {
+          const key = refKey.value
+          setRef(n0 as Element, tRefs[key], false, key)
+        })
+        return n0
+      },
+    })
+    const { host } = render()
+    expect(tRefs.foo.value).toBe(host.children[0])
+    expect(tRefs.bar.value).toBe(null)
+
+    refKey.value = 'bar'
+    await nextTick()
+
+    expect(tRefs.foo.value).toBe(null)
+    expect(tRefs.bar.value).toBe(host.children[0])
+  })
+
   it('string ref unmount', async () => {
     const t0 = template('<div></div>')
     const el = ref(null)
