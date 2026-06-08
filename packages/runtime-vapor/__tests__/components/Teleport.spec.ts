@@ -1741,6 +1741,33 @@ test('should not duplicate main-view anchors when keyed list reorders teleport r
   expect(countAnchors('end')).toBe(2)
 })
 
+test('should not move target children when keyed list reorders enabled teleport roots', async () => {
+  const target = document.createElement('div')
+  const items = ref([
+    { id: 'one', text: 'one' },
+    { id: 'two', text: 'two' },
+  ])
+
+  define(() =>
+    createFor(
+      () => items.value,
+      item =>
+        createComponent(
+          VaporTeleport,
+          { to: () => target },
+          { default: () => template(item.value.text)() },
+        ),
+      item => item.id,
+    ),
+  ).render()
+
+  const insertSpy = vi.spyOn(target, 'insertBefore')
+  items.value = [items.value[1], items.value[0]]
+  await nextTick()
+
+  expect(insertSpy).not.toHaveBeenCalled()
+})
+
 test('should delay child setup until teleport target becomes available', async () => {
   const version = ref('one')
   const target = ref<any>('#missing-teleport-target')
