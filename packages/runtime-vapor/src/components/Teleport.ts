@@ -321,6 +321,9 @@ export class TeleportFragment extends VaporFragment {
   insert = (container: ParentNode, anchor: Node | null): void => {
     if (isHydrating) return
 
+    const wasMountedInTarget =
+      this.mountState.location === TeleportMountLocation.Target
+
     // Re-inserting an already-mounted teleport should move existing anchors
     // instead of creating a second placeholder in the main view.
     if (!this.placeholder) {
@@ -329,9 +332,14 @@ export class TeleportFragment extends VaporFragment {
         : createTextNode()
     }
 
+    // Reorder still needs to move the main-view anchors. When enabled
+    // content is already in target, skip the props update so target children
+    // are not re-inserted.
     insert(this.placeholder, container, anchor)
     insert(this.anchor!, container, anchor)
-    this.handlePropsUpdate()
+    if (!wasMountedInTarget) {
+      this.handlePropsUpdate()
+    }
   }
 
   dispose = (): void => {
