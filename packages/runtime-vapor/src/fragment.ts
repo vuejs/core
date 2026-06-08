@@ -67,7 +67,6 @@ export class VaporFragment<
   nodes: T
   vnode?: VNode | null
   anchor?: Node
-  parentComponent?: GenericComponentInstance | null
   // Async component fragments are valid while waiting for resolved output.
   validityPending?: boolean
   isBlockValid?: () => boolean
