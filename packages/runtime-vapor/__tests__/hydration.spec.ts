@@ -5467,7 +5467,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect('Invalid Teleport target').toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
       )
     })
 
@@ -5510,7 +5510,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect('Invalid Teleport target on mount').toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
       )
     })
 

@@ -61,15 +61,11 @@ const enum TeleportMountLocation {
   None,
   Main,
   Target,
-  Hidden,
 }
 
 type TeleportMountState =
   | {
       location: TeleportMountLocation.None
-    }
-  | {
-      location: TeleportMountLocation.Hidden
     }
   | {
       location: TeleportMountLocation.Main | TeleportMountLocation.Target
@@ -203,13 +199,6 @@ export class TeleportFragment extends VaporFragment {
       return
     }
 
-    if (mountState.location === TeleportMountLocation.Hidden) {
-      remove(this.nodes)
-      this.mountState = { location: TeleportMountLocation.None }
-      this.nodes = children
-      return
-    }
-
     // teardown previous nodes
     remove(this.nodes, mountState.container)
     // mount new nodes
@@ -281,9 +270,6 @@ export class TeleportFragment extends VaporFragment {
 
       this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
     } else {
-      if (this.mountState.location === TeleportMountLocation.Main) {
-        this.hideMainViewChildren()
-      }
       if (__DEV__) {
         warn(
           `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
@@ -292,19 +278,6 @@ export class TeleportFragment extends VaporFragment {
         )
       }
     }
-  }
-
-  private hideMainViewChildren(): void {
-    if (!this.placeholder || !this.anchor) return
-
-    let node = this.placeholder.nextSibling
-    while (node && node !== this.anchor) {
-      const next = node.nextSibling
-      parentNode(node)!.removeChild(node)
-      node = next
-    }
-
-    this.mountState = { location: TeleportMountLocation.Hidden }
   }
 
   private handlePropsUpdate(): void {
@@ -370,11 +343,7 @@ export class TeleportFragment extends VaporFragment {
     // remove nodes
     const mountState = this.mountState
     if (this.nodes && mountState.location !== TeleportMountLocation.None) {
-      if (mountState.location === TeleportMountLocation.Hidden) {
-        remove(this.nodes)
-      } else {
-        remove(this.nodes, mountState.container)
-      }
+      remove(this.nodes, mountState.container)
       this.nodes = []
     }
 

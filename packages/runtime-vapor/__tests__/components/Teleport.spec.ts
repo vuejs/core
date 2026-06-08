@@ -1202,56 +1202,6 @@ function runSharedTests(deferMode: boolean): void {
     expect(target.innerHTML).toBe('<div>teleported</div>')
   })
 
-  test('should move hidden inline children when target becomes available', async () => {
-    const root = document.createElement('div')
-    const target = ref<any>(null)
-    const disabled = ref(true)
-    const beforeEnter = vi.fn()
-
-    const { mount } = define({
-      setup() {
-        return createComponent(
-          VaporTeleport,
-          {
-            to: () => target.value,
-            disabled: () => disabled.value,
-          },
-          {
-            default: () =>
-              createComponent(
-                VaporTransition,
-                {
-                  onBeforeEnter: () => beforeEnter,
-                },
-                {
-                  default: () => template('<div>teleported</div>')(),
-                },
-              ),
-          },
-        )
-      },
-    }).create()
-
-    mount(root)
-    expect(root.innerHTML).toBe(
-      '<!--teleport start--><div>teleported</div><!--teleport end-->',
-    )
-    expect(beforeEnter).toHaveBeenCalledTimes(0)
-
-    disabled.value = false
-    await nextTick()
-    expect('Invalid Teleport target: null').toHaveBeenWarned()
-    expect('Invalid Teleport target on mount').toHaveBeenWarned()
-    expect(root.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
-    expect(beforeEnter).toHaveBeenCalledTimes(0)
-
-    const targetEl = document.createElement('div')
-    target.value = targetEl
-    await nextTick()
-    expect(targetEl.innerHTML).toBe('<div>teleported</div>')
-    expect(beforeEnter).toHaveBeenCalledTimes(0)
-  })
-
   test(`the dir hooks of the Teleport's children should be called correctly`, async () => {
     const target = document.createElement('div')
     const root = document.createElement('div')
