@@ -164,7 +164,7 @@ export class TeleportFragment extends VaporFragment {
   private registerUpdateCssVars(block: Block) {
     if (isFragment(block)) {
       ;(block.onUpdated || (block.onUpdated = [])).push(() =>
-        updateCssVars(this),
+        this.updateCssVars(),
       )
       this.registerUpdateCssVars(block.nodes)
     } else if (isVaporComponent(block)) {
@@ -202,7 +202,7 @@ export class TeleportFragment extends VaporFragment {
     if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(this.nodes))
     insert(children, mountState.container, mountState.anchor)
     this.bindChildren(this.nodes)
-    updateCssVars(this)
+    this.updateCssVars()
   }
 
   private mount(
@@ -227,7 +227,7 @@ export class TeleportFragment extends VaporFragment {
       insert(this.nodes, parent, anchor)
     }
     this.mountState = { location, container: parent, anchor }
-    updateCssVars(this)
+    this.updateCssVars()
   }
 
   private mountToTarget(): void {
@@ -501,9 +501,39 @@ export class TeleportFragment extends VaporFragment {
     }
 
     if (target || disabled) {
-      updateCssVars(this)
+      this.updateCssVars()
     }
     advanceHydrationNode(this.anchor!)
+  }
+
+  private updateCssVars(): void {
+    const ctx = this.scopeOwner
+    if (ctx && ctx.ut) {
+      let node: Node | null | undefined
+      let anchor: Node | null | undefined
+      if (this.mountState.location === TeleportMountLocation.Main) {
+        node = this.placeholder
+        anchor = this.anchor
+      } else if (this.mountState.location === TeleportMountLocation.Target) {
+        node = this.targetStart
+        anchor = this.targetAnchor
+      } else {
+        return
+      }
+      while (node && node !== anchor) {
+        if (node.nodeType === 1)
+          (node as Element).setAttribute('data-v-owner', String(ctx.uid))
+        node = node.nextSibling
+      }
+      // Avoid collecting the owner's css vars dependencies into the active
+      // Teleport effect, or later css vars updates would re-run Teleport itself.
+      pauseTracking()
+      try {
+        ctx.ut()
+      } finally {
+        resetTracking()
+      }
+    }
   }
 }
 
@@ -529,31 +559,4 @@ function locateTeleportEndAnchor(
     node = node.nextSibling as Node
   }
   return null
-}
-
-function updateCssVars(frag: TeleportFragment) {
-  const ctx = frag.scopeOwner
-  if (ctx && ctx.ut) {
-    let node, anchor
-    if (frag.isDisabled) {
-      node = frag.placeholder
-      anchor = frag.anchor
-    } else {
-      node = frag.targetStart
-      anchor = frag.targetAnchor
-    }
-    while (node && node !== anchor) {
-      if (node.nodeType === 1)
-        (node as Element).setAttribute('data-v-owner', String(ctx.uid))
-      node = node.nextSibling
-    }
-    // Avoid collecting the owner's css vars dependencies into the active
-    // Teleport effect, or later css vars updates would re-run Teleport itself.
-    pauseTracking()
-    try {
-      ctx.ut()
-    } finally {
-      resetTracking()
-    }
-  }
 }
