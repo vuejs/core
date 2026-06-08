@@ -57,6 +57,26 @@ const VaporTeleportImpl = {
   },
 }
 
+const enum TeleportMountLocation {
+  None,
+  Main,
+  Target,
+  Hidden,
+}
+
+type TeleportMountState =
+  | {
+      location: TeleportMountLocation.None
+    }
+  | {
+      location: TeleportMountLocation.Hidden
+    }
+  | {
+      location: TeleportMountLocation.Main | TeleportMountLocation.Target
+      container: ParentNode
+      anchor: Node | null
+    }
+
 export class TeleportFragment extends VaporFragment {
   /**
    * @internal marker for duck typing to avoid direct instanceof check
@@ -68,7 +88,6 @@ export class TeleportFragment extends VaporFragment {
   private resolvedProps?: TeleportProps
   private rawSlots?: RawSlots | null
   isDisabled?: boolean
-  private isMounted = false
   private childrenInitialized = false
   private readonly ownerInstance =
     currentInstance as VaporComponentInstance | null
@@ -79,8 +98,9 @@ export class TeleportFragment extends VaporFragment {
   targetStart?: Node | null
 
   placeholder?: Node
-  mountContainer?: ParentNode | null
-  mountAnchor?: Node | null
+  private mountState: TeleportMountState = {
+    location: TeleportMountLocation.None,
+  }
 
   private mountToTargetJob?: SchedulerJob
 
@@ -173,45 +193,56 @@ export class TeleportFragment extends VaporFragment {
   }
 
   private handleChildrenUpdate(children: Block): void {
-    if (isHydrating || !this.parent || !this.mountContainer) {
+    const mountState = this.mountState
+    if (
+      isHydrating ||
+      !this.parent ||
+      mountState.location === TeleportMountLocation.None
+    ) {
+      this.nodes = children
+      return
+    }
+
+    if (mountState.location === TeleportMountLocation.Hidden) {
+      remove(this.nodes)
+      this.mountState = { location: TeleportMountLocation.None }
       this.nodes = children
       return
     }
 
     // teardown previous nodes
-    remove(this.nodes, this.mountContainer!)
+    remove(this.nodes, mountState.container)
     // mount new nodes
     this.nodes = children
     const onBeforeInsert = this.onBeforeInsert
     if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(this.nodes))
-    insert(children, this.mountContainer!, this.mountAnchor!)
+    insert(children, mountState.container, mountState.anchor)
     this.bindChildren(this.nodes)
     updateCssVars(this)
   }
 
-  private mount(parent: ParentNode, anchor: Node | null) {
+  private mount(
+    parent: ParentNode,
+    anchor: Node | null,
+    location: TeleportMountLocation.Main | TeleportMountLocation.Target,
+  ) {
     // don't apply transitions during move teleports
     // algin with Vue DOM teleport behavior
-    if (isTransitionEnabled && this.$transition && !this.isMounted) {
+    if (
+      isTransitionEnabled &&
+      this.$transition &&
+      this.mountState.location === TeleportMountLocation.None
+    ) {
       applyTransitionHooks(this.nodes, this.$transition)
     }
-    if (this.isMounted) {
-      move(
-        this.nodes,
-        (this.mountContainer = parent),
-        (this.mountAnchor = anchor),
-        MoveType.REORDER,
-      )
+    if (this.mountState.location !== TeleportMountLocation.None) {
+      move(this.nodes, parent, anchor, MoveType.REORDER)
     } else {
       const onBeforeInsert = this.onBeforeInsert
       if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(this.nodes))
-      insert(
-        this.nodes,
-        (this.mountContainer = parent),
-        (this.mountAnchor = anchor),
-      )
-      this.isMounted = true
+      insert(this.nodes, parent, anchor)
     }
+    this.mountState = { location, container: parent, anchor }
     updateCssVars(this)
   }
 
@@ -248,28 +279,32 @@ export class TeleportFragment extends VaporFragment {
         ).add(target)
       }
 
-      this.mount(target, this.targetAnchor!)
-    } else if (__DEV__) {
-      warn(
-        `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
-        target,
-        `(${typeof target})`,
-      )
+      this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
+    } else {
+      if (this.mountState.location === TeleportMountLocation.Main) {
+        this.hideMainViewChildren()
+      }
+      if (__DEV__) {
+        warn(
+          `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
+          target,
+          `(${typeof target})`,
+        )
+      }
     }
   }
 
-  private clearMainViewChildren(): void {
+  private hideMainViewChildren(): void {
     if (!this.placeholder || !this.anchor) return
 
     let node = this.placeholder.nextSibling
     while (node && node !== this.anchor) {
       const next = node.nextSibling
-      remove(node, parentNode(node)!)
+      parentNode(node)!.removeChild(node)
       node = next
     }
 
-    this.isMounted = false
-    this.mountContainer = null
+    this.mountState = { location: TeleportMountLocation.Hidden }
   }
 
   private handlePropsUpdate(): void {
@@ -279,21 +314,10 @@ export class TeleportFragment extends VaporFragment {
     // mount into main container
     if (this.isDisabled) {
       this.ensureChildrenInitialized()
-      this.mount(this.parent, this.anchor!)
+      this.mount(this.parent, this.anchor!, TeleportMountLocation.Main)
     }
     // mount into target container
     else {
-      // Align with initial enabled-null-target hydration: once Teleport leaves
-      // disabled mode, its children should no longer stay mounted inline in the
-      // main view if there is no valid target to move them into.
-      if (
-        this.placeholder &&
-        this.anchor &&
-        this.placeholder.nextSibling !== this.anchor
-      ) {
-        this.clearMainViewChildren()
-      }
-
       if (
         isTeleportDeferred(this.resolvedProps!) ||
         // force defer when the parent is not connected to the DOM,
@@ -344,12 +368,17 @@ export class TeleportFragment extends VaporFragment {
     }
 
     // remove nodes
-    if (this.nodes && this.mountContainer) {
-      remove(this.nodes, this.mountContainer)
+    const mountState = this.mountState
+    if (this.nodes && mountState.location !== TeleportMountLocation.None) {
+      if (mountState.location === TeleportMountLocation.Hidden) {
+        remove(this.nodes)
+      } else {
+        remove(this.nodes, mountState.container)
+      }
       this.nodes = []
     }
 
-    this.isMounted = false
+    this.mountState = { location: TeleportMountLocation.None }
 
     // remove anchors
     if (this.targetStart) {
@@ -362,8 +391,6 @@ export class TeleportFragment extends VaporFragment {
     }
 
     this.target = undefined
-    this.mountContainer = undefined
-    this.mountAnchor = undefined
   }
 
   remove = (_parent?: ParentNode): void => {
@@ -406,10 +433,12 @@ export class TeleportFragment extends VaporFragment {
     if (!isHydrating) return
     let nextNode = this.placeholder!.nextSibling!
     setCurrentHydrationNode(nextNode)
-    this.mountAnchor = this.anchor = markHydrationAnchor(
-      locateTeleportEndAnchor(nextNode)!,
-    )
-    this.mountContainer = parentNode(this.anchor)
+    this.anchor = markHydrationAnchor(locateTeleportEndAnchor(nextNode)!)
+    this.mountState = {
+      location: TeleportMountLocation.Main,
+      container: parentNode(this.anchor)!,
+      anchor: this.anchor,
+    }
     if (target) {
       this.hydrateTargetAnchors(target, targetNode)
     } else {
@@ -423,9 +452,13 @@ export class TeleportFragment extends VaporFragment {
     if (!isHydrating) return
     target.appendChild((this.targetStart = createTextNode('')))
     target.appendChild(
-      (this.mountAnchor = this.targetAnchor =
-        markHydrationAnchor(createTextNode(''))),
+      (this.targetAnchor = markHydrationAnchor(createTextNode(''))),
     )
+    this.mountState = {
+      location: TeleportMountLocation.Target,
+      container: target as ParentNode,
+      anchor: this.targetAnchor,
+    }
 
     if (!isMismatchAllowed(target as Element, MismatchTypes.CHILDREN)) {
       if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
@@ -461,9 +494,12 @@ export class TeleportFragment extends VaporFragment {
         this.anchor = markHydrationAnchor(
           locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
         )
-        this.mountContainer = target
         this.hydrateTargetAnchors(target as TeleportTargetElement, targetNode)
-        this.mountAnchor = this.targetAnchor
+        this.mountState = {
+          location: TeleportMountLocation.Target,
+          container: target,
+          anchor: this.targetAnchor || null,
+        }
 
         if (targetNode) {
           setCurrentHydrationNode(targetNode.nextSibling)
