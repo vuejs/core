@@ -12,6 +12,18 @@ export function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: v-memo transform > on element with :key but without v-for 1`] = `
+"import { createTextVNode as _createTextVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, withMemo as _withMemo } from "vue"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, [
+    _withMemo([_ctx.y], () => (_openBlock(), _createElementBlock("div", { key: _ctx.x }, [
+      _createTextVNode("foo")
+    ])), _cache, 0)
+  ]))
+}"
+`;
+
 exports[`compiler: v-memo transform > on normal element 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock, withMemo as _withMemo } from "vue"
 

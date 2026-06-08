@@ -34,6 +34,10 @@ describe('compiler: v-memo transform', () => {
     ).toMatchSnapshot()
   })
 
+  test('on element with :key but without v-for', () => {
+    expect(compile(`<div :key="x" v-memo="[y]">foo</div>`)).toMatchSnapshot()
+  })
+
   test('on v-for', () => {
     expect(
       compile(

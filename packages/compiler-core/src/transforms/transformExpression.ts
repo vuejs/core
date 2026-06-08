@@ -55,6 +55,7 @@ export const transformExpression: NodeTransform = (node, context) => {
   } else if (node.type === NodeTypes.ELEMENT) {
     // handle directives on element
     const memo = findDir(node, 'memo')
+    const hasFor = findDir(node, 'for')
     for (let i = 0; i < node.props.length; i++) {
       const dir = node.props[i]
       // do not process for v-on & v-for since they are special handled
@@ -68,8 +69,10 @@ export const transformExpression: NodeTransform = (node, context) => {
           exp.type === NodeTypes.SIMPLE_EXPRESSION &&
           !(dir.name === 'on' && arg) &&
           // key has been processed in transformFor(vMemo + vFor)
+          // only skip when both v-memo and v-for are present
           !(
             memo &&
+            hasFor &&
             arg &&
             arg.type === NodeTypes.SIMPLE_EXPRESSION &&
             arg.content === 'key'
