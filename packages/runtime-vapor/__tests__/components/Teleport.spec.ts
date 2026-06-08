@@ -1930,3 +1930,49 @@ test('should reapply css vars when teleport root children are replaced', async (
 
   expect(teleported.style.getPropertyValue('--color')).toBe('blue')
 })
+
+test('should reapply css vars when invalid target keeps children in main view', async () => {
+  const state = reactive({ color: 'red' })
+  const disabled = ref(true)
+  const showAlt = ref(false)
+
+  const { host } = define({
+    setup() {
+      useVaporCssVars(() => state)
+      return createComponent(
+        VaporTeleport,
+        {
+          to: () => '#missing-teleport-target',
+          disabled: () => disabled.value,
+        },
+        {
+          default: () =>
+            showAlt.value
+              ? template('<p>alt</p>', 1)()
+              : template('<span>base</span>', 1)(),
+        },
+      )
+    },
+  }).render()
+  await nextTick()
+
+  expect((host.firstElementChild as HTMLElement).tagName).toBe('SPAN')
+
+  disabled.value = false
+  await nextTick()
+  expect('Failed to locate Teleport target').toHaveBeenWarned()
+  expect('Invalid Teleport target').toHaveBeenWarned()
+
+  showAlt.value = true
+  await nextTick()
+
+  const teleported = host.firstElementChild as HTMLElement
+  expect(teleported.tagName).toBe('P')
+  expect(teleported.getAttribute('data-v-owner')).toBeTruthy()
+  expect(teleported.style.getPropertyValue('--color')).toBe('red')
+
+  state.color = 'blue'
+  await nextTick()
+
+  expect(teleported.style.getPropertyValue('--color')).toBe('blue')
+})
