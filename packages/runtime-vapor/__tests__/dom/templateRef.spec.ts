@@ -173,6 +173,49 @@ describe('api: template ref', () => {
     expect(barEl.value).not.toBe(null)
   })
 
+  it('dynamic component ref binding handles component and ref key switching together', async () => {
+    const One = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'one' })
+        return template('<div>one</div>')()
+      },
+    })
+    const Two = defineVaporComponent({
+      setup(_, { expose }) {
+        expose({ name: 'two' })
+        return template('<div>two</div>')()
+      },
+    })
+
+    const views = [One, Two]
+    const view = ref(0)
+    const refKey = ref<'foo' | 'bar'>('foo')
+    const foo = ref<any>(null)
+    const bar = ref<any>(null)
+
+    const { render } = define({
+      setup() {
+        return { foo, bar }
+      },
+      render() {
+        const n0 = createDynamicComponent(() => views[view.value])
+        setTemplateRefBinding(n0, () => refKey.value)
+        return n0
+      },
+    })
+
+    render()
+    expect(foo.value).toMatchObject({ name: 'one' })
+    expect(bar.value).toBe(null)
+
+    view.value = 1
+    refKey.value = 'bar'
+    await nextTick()
+
+    expect(foo.value).toBe(null)
+    expect(bar.value).toMatchObject({ name: 'two' })
+  })
+
   it('dynamic ref can be null or undefined without warning', async () => {
     const t0 = template('<div></div>')
     const el = ref(null)
