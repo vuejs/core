@@ -58,6 +58,14 @@ export type setRefFn = (
   refKey?: string,
 ) => NodeRef | undefined
 
+interface TemplateRefState {
+  oldRef?: NodeRef
+  ref: NodeRef
+  refFor?: boolean
+  refKey?: string
+  registered?: boolean
+}
+
 function getTemplateRefUpdateFragment(el: RefEl): DynamicFragment | undefined {
   if (isDynamicFragment(el)) return el
   if (isVaporComponent(el) && isAsyncWrapper(el)) {
@@ -80,33 +88,69 @@ function ensureCleanup(el: RefEl): RefCleanupState {
 
 export function createTemplateRefSetter(): setRefFn {
   const instance = currentInstance as VaporComponentInstance
-  const oldRefMap = new WeakMap<RefEl, NodeRef | undefined>()
-  const setRefMap = new WeakMap<DynamicFragment, () => void>()
+  const stateMap = new WeakMap<RefEl, TemplateRefState>()
 
   return (el, ref, refFor, refKey) => {
-    // Re-apply refs after DynamicFragment updates.
-    const frag = getTemplateRefUpdateFragment(el)
-    if (frag) {
-      const doSet = () => {
-        // KeepAlive clears refs on deactivation but keeps this fragment update
-        // callback alive. Skip re-applying refs for async/offscreen updates
-        // until the component is activated again.
-        if (isVaporComponent(el) && el.isDeactivated) return
-        oldRefMap.set(
-          el,
-          setRef(instance, el, ref, oldRefMap.get(el), refFor, refKey),
-        )
-      }
-      const prevSet = setRefMap.get(frag)
-      if (prevSet && frag.onUpdated) remove(frag.onUpdated, prevSet)
-      ;(frag.onUpdated || (frag.onUpdated = [])).push(doSet)
-      setRefMap.set(frag, doSet)
+    let state = stateMap.get(el)
+    if (!state) {
+      stateMap.set(el, (state = { ref }))
     }
-
-    const oldRef = setRef(instance, el, ref, oldRefMap.get(el), refFor, refKey)
-    oldRefMap.set(el, oldRef)
-    return oldRef
+    return setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
   }
+}
+
+function createSingleTemplateRefSetter(): setRefFn {
+  const instance = currentInstance as VaporComponentInstance
+  let state: TemplateRefState | undefined
+
+  return (el, ref, refFor, refKey) => {
+    if (!state) {
+      state = { ref }
+    }
+    return setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
+  }
+}
+
+function setTemplateRefWithState(
+  instance: VaporComponentInstance,
+  el: RefEl,
+  state: TemplateRefState,
+  ref: NodeRef,
+  refFor?: boolean,
+  refKey?: string,
+): NodeRef | undefined {
+  state.ref = ref
+  state.refFor = refFor
+  state.refKey = refKey
+
+  // Re-apply refs after DynamicFragment updates.
+  const frag = getTemplateRefUpdateFragment(el)
+  if (frag && !state.registered) {
+    state.registered = true
+    ;(frag.onUpdated ||= []).push(() => {
+      // KeepAlive clears refs on deactivation but keeps this fragment update
+      // callback alive. Skip re-applying refs for async/offscreen updates
+      // until the component is activated again.
+      if (isVaporComponent(el) && el.isDeactivated) return
+      state.oldRef = setRef(
+        instance,
+        el,
+        state.ref,
+        state.oldRef,
+        state.refFor,
+        state.refKey,
+      )
+    })
+  }
+
+  return (state.oldRef = setRef(
+    instance,
+    el,
+    ref,
+    state.oldRef,
+    refFor,
+    refKey,
+  ))
 }
 
 export function setStaticTemplateRef(
@@ -132,7 +176,7 @@ export function setStaticTemplateRef(
 export function setTemplateRefBinding(
   el: RefEl,
   getter: () => any,
-  setter: setRefFn = createTemplateRefSetter(),
+  setter: setRefFn = createSingleTemplateRefSetter(),
   refFor?: boolean,
   refKey?: string,
 ): void {
