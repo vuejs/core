@@ -60,10 +60,11 @@ export type setRefFn = (
 
 interface TemplateRefState {
   oldRef?: NodeRef
+  oldRefKey?: string
   ref: NodeRef
   refFor?: boolean
   refKey?: string
-  registered?: boolean
+  registeredFrag?: DynamicFragment
 }
 
 function getTemplateRefUpdateFragment(el: RefEl): DynamicFragment | undefined {
@@ -125,8 +126,8 @@ function setTemplateRefWithState(
 
   // Re-apply refs after DynamicFragment updates.
   const frag = getTemplateRefUpdateFragment(el)
-  if (frag && !state.registered) {
-    state.registered = true
+  if (frag && state.registeredFrag !== frag) {
+    state.registeredFrag = frag
     ;(frag.onUpdated ||= []).push(() => {
       // KeepAlive clears refs on deactivation but keeps this fragment update
       // callback alive. Skip re-applying refs for async/offscreen updates
@@ -139,18 +140,24 @@ function setTemplateRefWithState(
         state.oldRef,
         state.refFor,
         state.refKey,
+        state.oldRefKey,
       )
+      state.oldRefKey = state.oldRef != null ? state.refKey : undefined
     })
   }
 
-  return (state.oldRef = setRef(
+  const oldRef = setRef(
     instance,
     el,
     ref,
     state.oldRef,
     refFor,
     refKey,
-  ))
+    state.oldRefKey,
+  )
+  state.oldRef = oldRef
+  state.oldRefKey = oldRef != null ? refKey : undefined
+  return oldRef
 }
 
 export function setStaticTemplateRef(
@@ -193,6 +200,7 @@ function setRef(
   oldRef?: NodeRef,
   refFor = false,
   refKey?: string,
+  oldRefKey?: string,
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
 
@@ -239,7 +247,8 @@ function setRef(
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
-      if (canSetRef(oldRef)) oldRef.value = null
+      if (canSetRef(oldRef, oldRefKey)) oldRef.value = null
+      if (oldRefKey) refs[oldRefKey] = null
     } else if (isFunction(oldRef) && isDynamicFragment(el)) {
       callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
         null,
