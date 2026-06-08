@@ -230,30 +230,32 @@ export class TeleportFragment extends VaporFragment {
     this.updateCssVars()
   }
 
-  private mountToTarget(): void {
+  private prepareTargetAnchors(target: ParentNode): void {
+    if (
+      // initial mount into target
+      !this.targetAnchor ||
+      // target changed
+      parentNode(this.targetAnchor) !== target
+    ) {
+      // clean up old anchors from previous target when target changes
+      if (this.targetStart) {
+        remove(this.targetStart, parentNode(this.targetStart)!)
+      }
+      if (this.targetAnchor) {
+        remove(this.targetAnchor, parentNode(this.targetAnchor)!)
+      }
+      insert((this.targetStart = createTextNode('')), target)
+      insert((this.targetAnchor = createTextNode('')), target)
+    }
+  }
+
+  private prepareTarget(): ParentNode | null {
     const target = (this.target = resolveTeleportTarget(
       this.resolvedProps!,
       querySelector,
     ))
     if (target) {
-      if (
-        // initial mount into target
-        !this.targetAnchor ||
-        // target changed
-        parentNode(this.targetAnchor) !== target
-      ) {
-        // clean up old anchors from previous target when target changes
-        if (this.targetStart) {
-          remove(this.targetStart, parentNode(this.targetStart)!)
-        }
-        if (this.targetAnchor) {
-          remove(this.targetAnchor, parentNode(this.targetAnchor)!)
-        }
-        insert((this.targetStart = createTextNode('')), target)
-        insert((this.targetAnchor = createTextNode('')), target)
-      }
-
-      this.ensureChildrenInitialized()
+      this.prepareTargetAnchors(target)
 
       // track CE teleport targets
       const scopeOwner = this.scopeOwner
@@ -263,7 +265,38 @@ export class TeleportFragment extends VaporFragment {
           (scopeOwner.ce!._teleportTargets = new Set())
         ).add(target)
       }
+    }
+    return target
+  }
 
+  private queueTargetUpdate(): void {
+    // Reuse one queued mount job per Teleport instance so repeated
+    // updates in the same flush don't enqueue duplicate target mounts.
+    // If the previous job was disposed during unmount, recreate it.
+    if (
+      !this.mountToTargetJob ||
+      this.mountToTargetJob.flags! & SchedulerJobFlags.DISPOSED
+    ) {
+      this.mountToTargetJob = () => {
+        this.mountToTargetJob = undefined
+        // State may have changed before the post-flush job runs.
+        if (!this.anchor) return
+        if (this.isDisabled) {
+          if (!this.targetAnchor) {
+            this.prepareTarget()
+          }
+        } else {
+          this.mountToTarget()
+        }
+      }
+    }
+    queuePostFlushCb(this.mountToTargetJob)
+  }
+
+  private mountToTarget(): void {
+    const target = this.prepareTarget()
+    if (target) {
+      this.ensureChildrenInitialized()
       this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
     } else {
       if (__DEV__) {
@@ -284,6 +317,16 @@ export class TeleportFragment extends VaporFragment {
     if (this.isDisabled) {
       this.ensureChildrenInitialized()
       this.mount(this.parent, this.anchor!, TeleportMountLocation.Main)
+      if (!this.targetAnchor) {
+        if (
+          isTeleportDeferred(this.resolvedProps!) ||
+          !this.parent!.isConnected
+        ) {
+          this.queueTargetUpdate()
+        } else {
+          this.prepareTarget()
+        }
+      }
     }
     // mount into target container
     else {
@@ -293,21 +336,7 @@ export class TeleportFragment extends VaporFragment {
         // typically due to an early insertion caused by setInsertionState.
         !this.parent!.isConnected
       ) {
-        // Reuse one queued mount job per Teleport instance so repeated
-        // updates in the same flush don't enqueue duplicate target mounts.
-        // If the previous job was disposed during unmount, recreate it.
-        if (
-          !this.mountToTargetJob ||
-          this.mountToTargetJob.flags! & SchedulerJobFlags.DISPOSED
-        ) {
-          this.mountToTargetJob = () => {
-            this.mountToTargetJob = undefined
-            // State may have changed before the post-flush job runs.
-            if (this.isDisabled || !this.anchor) return
-            this.mountToTarget()
-          }
-        }
-        queuePostFlushCb(this.mountToTargetJob)
+        this.queueTargetUpdate()
       } else {
         this.mountToTarget()
       }

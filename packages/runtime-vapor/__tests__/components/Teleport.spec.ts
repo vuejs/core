@@ -80,6 +80,49 @@ describe('renderer: VaporTeleport', () => {
       )
     })
 
+    test('deferred disabled teleports preserve later target order when enabled out of order', async () => {
+      const disabled1 = ref(true)
+      const disabled2 = ref(true)
+
+      const { host } = define({
+        setup() {
+          return [
+            createComp(
+              VaporTeleport,
+              {
+                to: () => '#deferred-disabled-target',
+                defer: () => true,
+                disabled: () => disabled1.value,
+              },
+              { default: () => template('<div>one</div>')() },
+            ),
+            createComp(
+              VaporTeleport,
+              {
+                to: () => '#deferred-disabled-target',
+                defer: () => true,
+                disabled: () => disabled2.value,
+              },
+              { default: () => template('<div>two</div>')() },
+            ),
+            template('<div id="deferred-disabled-target"></div>')(),
+          ]
+        },
+      }).render()
+
+      await nextTick()
+      const target = host.querySelector('#deferred-disabled-target')!
+      expect(target.innerHTML).toBe('')
+
+      disabled2.value = false
+      await nextTick()
+      expect(target.innerHTML).toBe('<div>two</div>')
+
+      disabled1.value = false
+      await nextTick()
+      expect(target.innerHTML).toBe('<div>one</div><div>two</div>')
+    })
+
     test.todo('defer mode should work inside suspense', () => {})
 
     test('update before mounted with defer', async () => {
@@ -1119,6 +1162,45 @@ function runSharedTests(deferMode: boolean): void {
     expect(root.innerHTML).toBe(
       '<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>',
     )
+    expect(target.innerHTML).toBe('<div>one</div><div>two</div>')
+  })
+
+  test('multiple disabled teleports preserve target order when enabled out of order', async () => {
+    const target = document.createElement('div')
+    const disabled1 = ref(true)
+    const disabled2 = ref(true)
+
+    define({
+      setup() {
+        return [
+          createComponent(
+            VaporTeleport,
+            {
+              to: () => target,
+              disabled: () => disabled1.value,
+            },
+            { default: () => template('<div>one</div>')() },
+          ),
+          createComponent(
+            VaporTeleport,
+            {
+              to: () => target,
+              disabled: () => disabled2.value,
+            },
+            { default: () => template('<div>two</div>')() },
+          ),
+        ]
+      },
+    }).render()
+
+    expect(target.innerHTML).toBe('')
+
+    disabled2.value = false
+    await nextTick()
+    expect(target.innerHTML).toBe('<div>two</div>')
+
+    disabled1.value = false
+    await nextTick()
     expect(target.innerHTML).toBe('<div>one</div><div>two</div>')
   })
 
