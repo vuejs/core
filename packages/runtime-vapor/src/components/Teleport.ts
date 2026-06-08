@@ -80,7 +80,6 @@ export class TeleportFragment extends VaporFragment {
    */
   readonly __isTeleportFragment = true
   anchor?: Node
-  private rawProps?: LooseRawProps
   private resolvedProps?: TeleportProps
   private rawSlots?: RawSlots | null
   isDisabled?: boolean
@@ -102,7 +101,6 @@ export class TeleportFragment extends VaporFragment {
 
   constructor(props: LooseRawProps, slots?: RawSlots | null) {
     super([])
-    this.rawProps = props
     this.rawSlots = slots
     this.parentComponent = getScopeOwner()
     this.anchor = isHydrating
@@ -111,17 +109,16 @@ export class TeleportFragment extends VaporFragment {
         ? createComment('teleport end')
         : createTextNode()
 
+    const propsProxy = new Proxy(
+      props,
+      rawPropsProxyHandlers,
+    ) as any as TeleportProps
+
     renderEffect(() => {
       const prevTo = this.resolvedProps && this.resolvedProps.to
       const wasDisabled = this.isDisabled
       // access the props to trigger tracking
-      this.resolvedProps = extend(
-        {},
-        new Proxy(
-          this.rawProps!,
-          rawPropsProxyHandlers,
-        ) as any as TeleportProps,
-      )
+      this.resolvedProps = extend({}, propsProxy)
 
       this.isDisabled = isTeleportDisabled(this.resolvedProps!)
       if (
