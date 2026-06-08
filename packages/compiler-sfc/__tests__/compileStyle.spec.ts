@@ -63,6 +63,14 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`h1 { color: red; .foo { color: red; } }`)).toMatch(
       `h1 {\n&[data-v-test] { color: red;\n}\n.foo[data-v-test] { color: red;`,
     )
+    // #13159
+    expect(compileScoped(`.base { :deep(.foo) { color: red; } }`))
+      .toMatchInlineSnapshot(`
+      ".base {
+      &[data-v-test] .foo { color: red;
+      }
+      }"
+    `)
   })
 
   test('nesting selector with atrule and comment', () => {

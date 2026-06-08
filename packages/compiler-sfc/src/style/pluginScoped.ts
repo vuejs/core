@@ -326,6 +326,10 @@ function rewriteSelector(
 
   if (shouldInject) {
     const idToAdd = slotted ? id + '-s' : id
+    if (!node && (rule as any).__deep && rule.parent?.type === 'rule') {
+      node = selectorParser.nesting()
+      selector.prepend(node)
+    }
     selector.insertAfter(
       // If node is null it means we need to inject [id] at the start
       // insertAfter can handle `null` here
