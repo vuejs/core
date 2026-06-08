@@ -134,6 +134,45 @@ describe('api: template ref', () => {
     expect(fooEl.value).toBe(null)
   })
 
+  it('dynamic component ref binding keeps a stable update hook', async () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template('<div>child</div>')()
+      },
+    })
+    const fooEl = ref(null)
+    const barEl = ref(null)
+    const refKey = ref('foo')
+    let frag: any
+
+    const { render } = define({
+      setup() {
+        return {
+          foo: fooEl,
+          bar: barEl,
+        }
+      },
+      render() {
+        const n0 = createDynamicComponent(() => Child)
+        frag = n0
+        setTemplateRefBinding(n0, () => refKey.value)
+        return n0
+      },
+    })
+    render()
+    const updateHook = frag.onUpdated![0]
+
+    expect(frag.onUpdated).toHaveLength(1)
+
+    refKey.value = 'bar'
+    await nextTick()
+
+    expect(frag.onUpdated).toHaveLength(1)
+    expect(frag.onUpdated![0]).toBe(updateHook)
+    expect(fooEl.value).toBe(null)
+    expect(barEl.value).not.toBe(null)
+  })
+
   it('dynamic ref can be null or undefined without warning', async () => {
     const t0 = template('<div></div>')
     const el = ref(null)
