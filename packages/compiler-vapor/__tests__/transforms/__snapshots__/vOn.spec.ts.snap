@@ -260,6 +260,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > should allow disabling event delegation 1`] = `
+"import { on as _on, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _on(n0, "click", e => _ctx.test(e))
+  return n0
+}"
+`;
+
 exports[`v-on > should delegate event 1`] = `
 "import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div>", 1)

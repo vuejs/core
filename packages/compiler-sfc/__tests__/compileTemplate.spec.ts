@@ -555,6 +555,20 @@ test('template-only vapor compile keeps built-in render args for $slots', () => 
   expect(result.code).toContain(`_createIf(() => ($slots.default)`)
 })
 
+test('passes vapor event delegation option to template compiler', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<button @click="onClick" />`,
+    vapor: true,
+    compilerOptions: {
+      eventDelegation: false,
+    },
+  })
+
+  expect(result.code).toContain(`_on(n0, "click", e => _ctx.onClick(e))`)
+  expect(result.code).not.toContain(`_delegateEvents("click")`)
+})
+
 test('returns single-root metadata for root control flow when vapor is enabled', () => {
   const result = compile({
     filename: 'example.vue',
