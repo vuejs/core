@@ -22,12 +22,7 @@ import {
   parentNode,
   querySelector,
 } from '../dom/node'
-import {
-  type LooseRawProps,
-  type VaporComponentInstance,
-  currentInstance,
-  isVaporComponent,
-} from '../component'
+import { type LooseRawProps, isVaporComponent } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
@@ -43,7 +38,7 @@ import {
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
-import { type RawSlots, getScopeOwner } from '../componentSlots'
+import type { RawSlots } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
 import { enableTeleport } from '../teleport'
 
@@ -84,8 +79,6 @@ export class TeleportFragment extends VaporFragment {
   private rawSlots?: RawSlots | null
   isDisabled?: boolean
   private childrenInitialized = false
-  private readonly ownerInstance =
-    currentInstance as VaporComponentInstance | null
   private readonly childrenScope = getCurrentScope()
 
   target?: ParentNode | null
@@ -102,7 +95,6 @@ export class TeleportFragment extends VaporFragment {
   constructor(props: LooseRawProps, slots?: RawSlots | null) {
     super([])
     this.rawSlots = slots
-    this.parentComponent = getScopeOwner()
     this.anchor = isHydrating
       ? undefined
       : __DEV__
@@ -134,9 +126,14 @@ export class TeleportFragment extends VaporFragment {
     return this.anchor ? parentNode(this.anchor) : null
   }
 
+  get scopeOwner(): GenericComponentInstance | null {
+    return (this.slotOwner ||
+      this.renderInstance) as GenericComponentInstance | null
+  }
+
   private initChildren(): void {
     const prevInstance = setCurrentInstance(
-      this.ownerInstance,
+      this.renderInstance,
       this.childrenScope,
     )
     try {
@@ -180,7 +177,8 @@ export class TeleportFragment extends VaporFragment {
   private bindChildren(block: Block): void {
     // register updateCssVars to nested fragments's update hooks so that
     // it will be called when root fragment changed
-    if (this.parentComponent && this.parentComponent.ut) {
+    const scopeOwner = this.scopeOwner
+    if (scopeOwner && scopeOwner.ut) {
       this.registerUpdateCssVars(block)
     }
   }
@@ -258,10 +256,11 @@ export class TeleportFragment extends VaporFragment {
       this.ensureChildrenInitialized()
 
       // track CE teleport targets
-      if (this.parentComponent && this.parentComponent.isCE) {
+      const scopeOwner = this.scopeOwner
+      if (scopeOwner && scopeOwner.isCE) {
         ;(
-          this.parentComponent.ce!._teleportTargets ||
-          (this.parentComponent.ce!._teleportTargets = new Set())
+          scopeOwner.ce!._teleportTargets ||
+          (scopeOwner.ce!._teleportTargets = new Set())
         ).add(target)
       }
 
@@ -533,7 +532,7 @@ function locateTeleportEndAnchor(
 }
 
 function updateCssVars(frag: TeleportFragment) {
-  const ctx = frag.parentComponent as GenericComponentInstance
+  const ctx = frag.scopeOwner
   if (ctx && ctx.ut) {
     let node, anchor
     if (frag.isDisabled) {
