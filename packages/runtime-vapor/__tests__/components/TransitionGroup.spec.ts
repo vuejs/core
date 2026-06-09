@@ -176,4 +176,34 @@ describe('TransitionGroup', () => {
     expect(list.nodes[0][1].nodes.$key).toBe(2)
     expect(list.nodes[0][1].nodes.$transition).toBeDefined()
   })
+
+  test('restores disabled transition hooks when no move transform is available', async () => {
+    const items = ref([1, 2])
+    let list: any
+
+    define({
+      setup() {
+        list = createFor(
+          () => items.value,
+          item => {
+            const el = template(`<div></div>`)()
+            el.textContent = String(item.value)
+            return el
+          },
+          item => item,
+        )
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => list,
+        })
+      },
+    }).render()
+
+    const first = list.nodes[0][0].nodes
+
+    items.value = [2, 1]
+    await nextTick()
+    await nextTick()
+
+    expect(first.$transition.disabled).toBe(false)
+  })
 })

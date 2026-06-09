@@ -187,28 +187,28 @@ const VaporTransitionGroupImpl = defineVaporComponent({
       isUpdatedPending = false
       if (!isUpdatePending) return
       isUpdatePending = false
-      if (!prevChildren.length) {
-        return
-      }
+      if (!prevChildren.length) return
+
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
       const firstChild = getFirstConnectedChild(prevChildren)
-      if (
-        !firstChild ||
-        !hasCSSTransform(
+      const hasMove = !!(
+        firstChild &&
+        hasCSSTransform(
           firstChild as ElementWithTransition,
           firstChild.parentNode as Node,
           moveClass,
         )
-      ) {
+      )
+      prevChildren.forEach(child => {
+        child.$transition!.disabled = false
+        if (hasMove) callPendingCbs(child)
+      })
+      if (!hasMove) {
         prevChildren = []
         return
       }
 
-      prevChildren.forEach(callPendingCbs)
-      prevChildren.forEach(child => {
-        child.$transition!.disabled = false
-        recordPosition(child)
-      })
+      prevChildren.forEach(recordPosition)
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
