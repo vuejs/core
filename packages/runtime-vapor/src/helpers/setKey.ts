@@ -3,6 +3,7 @@ import { isKeepAlive } from '@vue/runtime-dom'
 import type { Block } from '../block'
 import { isVaporComponent } from '../component'
 import { isKeepAliveEnabled } from '../keepAlive'
+import { isInteropEnabled } from '../vdomInteropState'
 
 export function setBlockKey(
   block: (Block & { $key?: any }) | null | undefined,
@@ -26,7 +27,7 @@ export function setBlockKey(
     }
   } else {
     block.$key = key
-    if (block.vnode) block.vnode.key = key
+    if (isInteropEnabled && block.vnode) block.vnode.key = key
     setBlockKey(block.nodes, key)
   }
 }
