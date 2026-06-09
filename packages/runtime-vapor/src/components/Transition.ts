@@ -650,7 +650,7 @@ export function getVNodeKey(
   return children.length === 1 ? children[0].key : undefined
 }
 
-export function getTransitionElementFromVNode(
+function getTransitionElementFromVNode(
   vnode: VNode | undefined,
 ): Element | undefined {
   if (!vnode) return
@@ -724,11 +724,19 @@ function applyPendingVShows(
   }
 
   onBeforeMount(() => {
-    // Flush the deferred initial v-show writes right before mount so the
-    // DOM is still not inserted, but transition hooks are already ready.
-    for (const pending of pendingVShows) {
-      pending.setDisplay()
-    }
+    // Flush the deferred initial v-show display writes before mount so hooks are
+    // ready, then run enter after DOM insertion but before mounted state flips.
+    let enterCbs: (() => void)[] | undefined
+    pendingVShows.forEach(pending => {
+      const enterCb = pending.apply()
+      if (enterCb) {
+        ;(enterCbs ||= []).push(enterCb)
+      }
+    })
     pendingVShows.length = 0
+    if (enterCbs) {
+      const cbs = enterCbs
+      queuePostFlushCb(() => cbs.forEach(cb => cb()), -1)
+    }
   })
 }
