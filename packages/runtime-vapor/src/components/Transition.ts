@@ -196,6 +196,10 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
   })
 
 const transitionTypeMap = new WeakMap<ResolvedTransitionBlock, any>()
+const inheritedTransitionBaseKeyMap = new WeakMap<
+  ResolvedTransitionBlock,
+  any
+>()
 
 function getTransitionType(block: ResolvedTransitionBlock): any {
   const type = transitionTypeMap.get(block)
@@ -628,8 +632,12 @@ function inheritTransitionKey(
   if (key === undefined || start === children.length) return
   for (let i = start; i < children.length; i++) {
     const child = children[i]
-    child.$key =
-      String(key) + String(child.$key != null ? child.$key : i - start)
+    let baseKey = inheritedTransitionBaseKeyMap.get(child)
+    if (baseKey === undefined) {
+      baseKey = child.$key != null ? child.$key : i - start
+      inheritedTransitionBaseKeyMap.set(child, baseKey)
+    }
+    child.$key = String(key) + String(baseKey)
   }
 }
 

@@ -150,6 +150,35 @@ describe('Transition', () => {
     expect(child.block[2].$key).toBe('foo1')
   })
 
+  test('keeps inherited group keys stable across repeated resolutions', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return [
+          document.createComment('anchor'),
+          template(`<div>a</div>`)() as any,
+          template(`<div>b</div>`)() as any,
+        ]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        child.block[1].$key = undefined
+        child.block[2].$key = undefined
+        return child
+      },
+    }).render()
+
+    resolveTransitionBlocks(child)
+    resolveTransitionBlocks(child)
+
+    expect(child.block[1].$key).toBe('foo0')
+    expect(child.block[2].$key).toBe('foo1')
+  })
+
   test('allows empty transition content', async () => {
     const App = compile(`<template><Transition /></template>`, ref({}))
     const { host } = define(App as any).render()
