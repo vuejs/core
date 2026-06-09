@@ -196,10 +196,19 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
   })
 
 const transitionTypeMap = new WeakMap<ResolvedTransitionBlock, any>()
-const inheritedTransitionBaseKeyMap = new WeakMap<
+const inheritedTransitionKeyMap = new WeakMap<
   ResolvedTransitionBlock,
-  any
+  InheritedTransitionKeyRecord
 >()
+
+type InheritedTransitionKeyRecord = {
+  generation: number
+  rawBaseKey: any
+  inheritedKey: string
+}
+
+let transitionKeyGeneration = 0
+let currentTransitionKeyGeneration = 0
 
 function getTransitionType(block: ResolvedTransitionBlock): any {
   const type = transitionTypeMap.get(block)
@@ -465,8 +474,14 @@ function resolveTransitionChildren(
   options: ResolveTransitionBlocksOptions,
 ): ResolvedTransitionBlock[] {
   const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(block, options, children)
-  return children
+  const prevGeneration = currentTransitionKeyGeneration
+  currentTransitionKeyGeneration = ++transitionKeyGeneration
+  try {
+    collectTransitionBlocks(block, options, children)
+    return children
+  } finally {
+    currentTransitionKeyGeneration = prevGeneration
+  }
 }
 
 function collectTransitionBlocks(
@@ -629,15 +644,30 @@ function inheritTransitionKey(
   start: number,
   key: any,
 ): void {
-  if (key === undefined || start === children.length) return
+  if (key == null || start === children.length) return
   for (let i = start; i < children.length; i++) {
     const child = children[i]
-    let baseKey = inheritedTransitionBaseKeyMap.get(child)
-    if (baseKey === undefined) {
+    let record = inheritedTransitionKeyMap.get(child)
+    let baseKey
+    // Match VDOM parentKey + (child.key ?? index) composition, while reusing
+    // the raw base key across resolutions to avoid repeating prefixes.
+    if (record && record.generation === currentTransitionKeyGeneration) {
       baseKey = child.$key != null ? child.$key : i - start
-      inheritedTransitionBaseKeyMap.set(child, baseKey)
+    } else {
+      if (!record || !Object.is(child.$key, record.inheritedKey)) {
+        record = {
+          generation: currentTransitionKeyGeneration,
+          rawBaseKey: child.$key != null ? child.$key : i - start,
+          inheritedKey: '',
+        }
+        inheritedTransitionKeyMap.set(child, record)
+      } else {
+        record.generation = currentTransitionKeyGeneration
+      }
+      baseKey = record.rawBaseKey
     }
-    child.$key = String(key) + String(baseKey)
+    record.inheritedKey = String(key) + String(baseKey)
+    child.$key = record.inheritedKey
   }
 }
 

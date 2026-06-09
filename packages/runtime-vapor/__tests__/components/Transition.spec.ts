@@ -179,6 +179,56 @@ describe('Transition', () => {
     expect(child.block[2].$key).toBe('foo1')
   })
 
+  test('treats null group owner key as absent', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return [
+          template(`<div>a</div>`)() as any,
+          template(`<div>b</div>`)() as any,
+        ]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, null)
+        return child
+      },
+    }).render()
+
+    resolveTransitionBlocks(child)
+
+    expect(child.block[0].$key).toBeUndefined()
+    expect(child.block[1].$key).toBeUndefined()
+  })
+
+  test('composes nested group key prefixes', () => {
+    const data = ref({ items: [{ key: 'bar' }] })
+    const Child = compile(
+      `<template>
+        <span></span>
+        <div v-for="item in data.items" :key="item.key">child</div>
+      </template>`,
+      data,
+    )
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        return child
+      },
+    }).render()
+
+    const resolved = resolveTransitionBlocks(child)
+
+    expect(resolved[0].$key).toBe('foo0')
+    expect(resolved[1].$key).toBe('foobar')
+  })
+
   test('allows empty transition content', async () => {
     const App = compile(`<template><Transition /></template>`, ref({}))
     const { host } = define(App as any).render()
