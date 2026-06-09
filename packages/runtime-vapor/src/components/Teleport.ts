@@ -73,7 +73,7 @@ export class TeleportFragment extends VaporFragment {
    * @internal marker for duck typing to avoid direct instanceof check
    * which prevents tree-shaking of TeleportFragment
    */
-  readonly __isTeleportFragment = true
+  readonly __tf = true
   anchor?: Node
   private resolvedProps?: TeleportProps
   private rawSlots?: RawSlots | null

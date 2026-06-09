@@ -62,6 +62,11 @@ const EMPTY_BLOCK = EMPTY_ARR as unknown as Block[]
 export class VaporFragment<
   T extends Block = Block,
 > implements TransitionOptions {
+  /**
+   * @internal marker for duck typing to avoid direct instanceof check
+   * which prevents tree-shaking of VaporFragment
+   */
+  readonly __vf = true
   $key?: any
   $transition?: VaporTransitionHooks | undefined
   nodes: T
@@ -249,6 +254,11 @@ function queueAnchorInsert(
 }
 
 export class DynamicFragment extends VaporFragment {
+  /**
+   * @internal marker for duck typing to avoid direct instanceof check
+   * which prevents tree-shaking of DynamicFragment
+   */
+  readonly __df = true
   // @ts-expect-error - assigned in hydrate()
   anchor: Node
   scope: EffectScope | undefined
@@ -1341,8 +1351,8 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   }
 }
 
-export function isFragment(val: NonNullable<unknown>): val is VaporFragment {
-  return val instanceof VaporFragment
+export function isFragment(val: unknown): val is VaporFragment {
+  return !!(val && (val as any).__vf)
 }
 
 export type InteropFragment<T extends Block = Block> = VaporFragment<T> & {
@@ -1350,15 +1360,13 @@ export type InteropFragment<T extends Block = Block> = VaporFragment<T> & {
 }
 
 export function isInteropFragment(val: unknown): val is InteropFragment {
-  return val instanceof VaporFragment && val.vnode !== undefined
+  return isFragment(val) && val.vnode !== undefined
 }
 
-export function isDynamicFragment(
-  val: NonNullable<unknown>,
-): val is DynamicFragment {
-  return val instanceof DynamicFragment
+export function isDynamicFragment(val: unknown): val is DynamicFragment {
+  return !!(val && (val as any).__df)
 }
 
 export function isSlotFragment(val: unknown): val is DynamicFragment {
-  return val instanceof DynamicFragment && !!val.isSlot
+  return isDynamicFragment(val) && !!val.isSlot
 }

@@ -126,7 +126,7 @@ import type {
   DefineVaporComponent,
   VaporRenderResult,
 } from './apiDefineComponent'
-import { DynamicFragment, isFragment } from './fragment'
+import { DynamicFragment, isDynamicFragment, isFragment } from './fragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import {
   isSuspenseEnabled,
@@ -1204,7 +1204,7 @@ export function getRootElement(
   }
 
   if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
-    if (block instanceof DynamicFragment && onDynamicFragment) {
+    if (isDynamicFragment(block) && onDynamicFragment) {
       onDynamicFragment(block)
     }
     const { nodes } = block
@@ -1369,7 +1369,7 @@ interface DynamicRootChain {
 // non-single-root still keep the outer fragment hook for future branch updates,
 // but report hasNonSingleRoot so the current render can warn.
 function getSingleDynamicRootChain(block: Block): DynamicRootChain | undefined {
-  if (block instanceof DynamicFragment) {
+  if (isDynamicFragment(block)) {
     const { nodes } = block
     const nested = getSingleDynamicRootChain(nodes)
     return {

@@ -18,5 +18,5 @@ export function isVaporTeleport(value: unknown): value is VaporTeleportLike {
 }
 
 export function isTeleportFragment(value: unknown): value is TeleportFragment {
-  return !!(value && (value as any).__isTeleportFragment)
+  return !!(value && (value as any).__tf)
 }
