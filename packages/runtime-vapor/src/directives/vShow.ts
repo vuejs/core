@@ -11,7 +11,7 @@ import { isVaporComponent } from '../component'
 import type { Block, TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
 import { isHydrating, logMismatchError } from '../dom/hydration'
-import { DynamicFragment, VaporFragment, isFragment } from '../fragment'
+import { isDynamicFragment, isFragment } from '../fragment'
 
 export interface PendingVShow {
   target: Block
@@ -39,13 +39,13 @@ export function applyVShow(target: Block, source: () => any): void {
     return applyVShow(target[0], source)
   }
 
-  if (target instanceof DynamicFragment) {
+  if (isDynamicFragment(target)) {
     const update = target.update
     target.update = (render, key) => {
       update.call(target, render, key)
       setDisplay(target, source())
     }
-  } else if (target instanceof VaporFragment && target.insert) {
+  } else if (isFragment(target) && target.insert) {
     const insert = target.insert
     target.insert = (parent, anchor) => {
       insert.call(target, parent, anchor)
