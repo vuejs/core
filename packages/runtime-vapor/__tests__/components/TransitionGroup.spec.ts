@@ -177,6 +177,31 @@ describe('TransitionGroup', () => {
     expect(list.nodes[0][1].nodes.$transition).toBeDefined()
   })
 
+  test('preserves unique keys for multi-root v-for items', () => {
+    const items = ref([1])
+    let list: any
+
+    define({
+      setup() {
+        list = createFor(
+          () => items.value,
+          () => [template(`<div></div>`)(), template(`<span></span>`)()],
+          item => item,
+        )
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => list,
+        })
+      },
+    }).render()
+
+    const nodes = list.nodes[0][0].nodes
+
+    expect(nodes[0].$key).toBe('1:0')
+    expect(nodes[1].$key).toBe('1:1')
+    expect(nodes[0].$transition).toBeDefined()
+    expect(nodes[1].$transition).toBeDefined()
+  })
+
   test('restores disabled transition hooks when no move transform is available', async () => {
     const items = ref([1, 2])
     let list: any
