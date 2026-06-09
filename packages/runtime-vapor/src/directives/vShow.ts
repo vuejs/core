@@ -15,7 +15,7 @@ import { DynamicFragment, VaporFragment, isFragment } from '../fragment'
 
 export interface PendingVShow {
   target: Block
-  setDisplay: () => void
+  apply: () => (() => void) | undefined
 }
 
 export let currentPendingVShows: PendingVShow[] | null = null
@@ -61,7 +61,7 @@ export function applyVShow(target: Block, source: () => any): void {
       // enter through the transition-aware branch.
       currentPendingVShows.push({
         target,
-        setDisplay: () => setDisplay(target, value),
+        apply: () => setDisplay(target, value, true),
       })
       return
     }
@@ -69,16 +69,20 @@ export function applyVShow(target: Block, source: () => any): void {
   })
 }
 
-function setDisplay(target: Block, value: unknown): void {
+function setDisplay(
+  target: Block,
+  value: unknown,
+  deferEnter = false,
+): (() => void) | undefined {
   if (isVaporComponent(target)) {
-    return setDisplay(target.block, value)
+    return setDisplay(target.block, value, deferEnter)
   }
   if (isArray(target)) {
     if (target.length === 0) return
-    if (target.length === 1) return setDisplay(target[0], value)
+    if (target.length === 1) return setDisplay(target[0], value, deferEnter)
   }
   if (isFragment(target)) {
-    return setDisplay(target.nodes, value)
+    return setDisplay(target.nodes, value, deferEnter)
   }
 
   if (target instanceof Element) {
@@ -93,6 +97,9 @@ function setDisplay(target: Block, value: unknown): void {
       if (value) {
         $transition.beforeEnter(target)
         el.style.display = el[vShowOriginalDisplay]!
+        if (deferEnter) {
+          return () => $transition.enter(target)
+        }
         $transition.enter(target)
       } else {
         // during initial render, the element is not yet inserted into the

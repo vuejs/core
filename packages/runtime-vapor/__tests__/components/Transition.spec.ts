@@ -205,6 +205,32 @@ describe('Transition', () => {
     expect(onAppear).toHaveBeenCalledTimes(1)
   })
 
+  test('direct child with initial shown v-show should call appear after insertion', async () => {
+    const calls: boolean[] = []
+    const data = ref({
+      show: true,
+      onBeforeAppear: (el: Element) => calls.push(el.isConnected),
+      onAppear: (el: Element) => calls.push(el.isConnected),
+    })
+    const App = compile(
+      `<template>
+        <Transition
+          appear
+          @before-appear="data.onBeforeAppear"
+          @appear="data.onAppear"
+        >
+          <div v-show="data.show">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+
+    await nextTick()
+
+    expect(calls).toEqual([false, true])
+  })
+
   test('direct slot child with initial hidden v-show should not trigger appear hooks', async () => {
     const { data, onBeforeAppear, onAppear } = createAppearTestState(false)
     const Child = compile(`<template><slot /></template>`, data)
