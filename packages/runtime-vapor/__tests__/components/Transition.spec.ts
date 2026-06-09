@@ -4,7 +4,10 @@ import {
   setBlockKey,
   template,
 } from '../../src'
-import { resolveTransitionBlock } from '../../src/components/Transition'
+import {
+  resolveTransitionBlock,
+  resolveTransitionBlocks,
+} from '../../src/components/Transition'
 import { nextTick, ref } from 'vue'
 import { compile, makeInteropRender, makeRender } from '../_utils'
 
@@ -117,6 +120,34 @@ describe('Transition', () => {
 
     const resolved = resolveTransitionBlock(child)!
     expect(resolved.$key).toBe(child.uid)
+  })
+
+  test('collects group leaves with component key prefixes', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return [
+          document.createComment('anchor'),
+          template(`<div>a</div>`)() as any,
+          template(`<div>b</div>`)() as any,
+        ]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        child.block[1].$key = undefined
+        child.block[2].$key = undefined
+        return child
+      },
+    }).render()
+
+    const resolved = resolveTransitionBlocks(child)
+    expect(resolved).toEqual([child.block[1], child.block[2]])
+    expect(child.block[1].$key).toBe('foo0')
+    expect(child.block[2].$key).toBe('foo1')
   })
 
   test('allows empty transition content', async () => {

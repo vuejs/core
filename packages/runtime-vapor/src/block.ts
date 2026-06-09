@@ -28,7 +28,8 @@ export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
   props: TransitionProps
   instance: VaporComponentInstance
-  // mark transition hooks as disabled
+  // Temporarily skips enter/move during TransitionGroup FLIP measurement.
+  // Leave transitions intentionally ignore this flag.
   disabled?: boolean
   // TransitionGroup sets this to handle applying hooks to list children
   applyGroup?: (
