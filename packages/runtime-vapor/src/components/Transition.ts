@@ -546,8 +546,10 @@ function collectArrayTransitionBlocks(
       const start = children.length
       collectTransitionBlocks(c, options, children)
       if (c instanceof ForBlock) {
+        const count = children.length - start
         for (let j = start; j < children.length; j++) {
-          children[j].$key = c.key
+          children[j].$key =
+            c.key != null && count > 1 ? `${c.key}:${j - start}` : c.key
         }
       }
     }
