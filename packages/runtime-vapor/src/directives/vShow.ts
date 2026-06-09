@@ -41,15 +41,17 @@ export function applyVShow(target: Block, source: () => any): void {
 
   if (isDynamicFragment(target)) {
     const update = target.update
-    target.update = (render, key) => {
-      update.call(target, render, key)
+    target.update = (...args) => {
+      const res = update.call(target, ...args)
       setDisplay(target, source())
+      return res
     }
   } else if (isFragment(target) && target.insert) {
     const insert = target.insert
-    target.insert = (parent, anchor) => {
-      insert.call(target, parent, anchor)
+    target.insert = (...args) => {
+      const res = insert.call(target, ...args)
       setDisplay(target, source())
+      return res
     }
   }
 
