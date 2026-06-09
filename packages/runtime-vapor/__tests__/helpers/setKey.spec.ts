@@ -7,6 +7,7 @@ import {
   template,
 } from '../../src'
 import { makeRender } from '../_utils'
+import { setInteropEnabled } from '../../src/vdomInteropState'
 
 const define = makeRender()
 
@@ -39,6 +40,7 @@ describe('helpers: setBlockKey', () => {
   })
 
   test('syncs interop fragment vnode.key', () => {
+    setInteropEnabled()
     const frag = new VaporFragment(template(`<div></div>`)() as any)
     frag.vnode = h('div', { key: 'old' })
 

@@ -201,7 +201,7 @@ function getTransitionType(block: ResolvedTransitionBlock): any {
   const type = transitionTypeMap.get(block)
   if (type !== undefined) return type
   if (block instanceof Element) return block.localName
-  if (isFragment(block) && block.vnode) {
+  if (isInteropEnabled && isFragment(block) && block.vnode) {
     const children = getTransitionRawChildren([block.vnode])
     if (children.length === 1) return children[0].type
   }
@@ -669,7 +669,10 @@ export function getTransitionElementFromVNode(
 export function isValidTransitionBlock(
   block: Block,
 ): block is ResolvedTransitionBlock {
-  return !!(block instanceof Element || (isFragment(block) && block.vnode))
+  return !!(
+    block instanceof Element ||
+    (isInteropEnabled && isFragment(block) && block.vnode)
+  )
 }
 
 export function getTransitionElement(
