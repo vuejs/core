@@ -1,7 +1,8 @@
 import { getComponentName } from '@vue/runtime-dom'
-import type { Block } from './block'
+import type { Block, BlockFn } from './block'
 import type { VaporTransitionHooks } from './block'
 import type { VaporComponent } from './component'
+import type { DynamicFragment } from './fragment'
 
 // Transition hooks registry for tree-shaking
 // These are registered by Transition component when it's used
@@ -9,24 +10,39 @@ type ApplyTransitionHooksFn = (
   block: Block,
   hooks: VaporTransitionHooks,
 ) => VaporTransitionHooks
-type ApplyTransitionLeaveHooksFn = (
-  block: Block,
-  enterHooks: VaporTransitionHooks,
-  afterLeaveCb: () => void,
-) => void
+type DeferBranchUpdateDuringLeaveFn = (
+  frag: DynamicFragment,
+  render: BlockFn | undefined,
+  key: any,
+  noScope: boolean,
+) => boolean
+type RemoveBranchWithLeaveFn = (
+  frag: DynamicFragment,
+  transition: VaporTransitionHooks,
+  parent: ParentNode | null,
+  render: BlockFn | undefined,
+  key: any,
+  noScope: boolean,
+) => boolean
 
 export let applyTransitionHooks: ApplyTransitionHooksFn
-export let applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn
+// Branch-switch scheduling for DynamicFragment.update(): defer the incoming
+// branch while a leave is in progress, and apply leave hooks (plus the
+// deferred re-render for out-in) when tearing down the outgoing branch.
+export let deferBranchUpdateDuringLeave: DeferBranchUpdateDuringLeaveFn
+export let removeBranchWithLeave: RemoveBranchWithLeaveFn
 
 export let isTransitionEnabled = false
 
 export function registerTransitionHooks(
   applyHooks: ApplyTransitionHooksFn,
-  applyLeaveHooks: ApplyTransitionLeaveHooksFn,
+  deferBranchUpdate: DeferBranchUpdateDuringLeaveFn,
+  removeBranch: RemoveBranchWithLeaveFn,
 ): void {
   isTransitionEnabled = true
   applyTransitionHooks = applyHooks
-  applyTransitionLeaveHooks = applyLeaveHooks
+  deferBranchUpdateDuringLeave = deferBranchUpdate
+  removeBranchWithLeave = removeBranch
 }
 
 export const displayName = 'VaporTransition'

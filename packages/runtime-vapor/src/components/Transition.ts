@@ -18,15 +18,19 @@ import {
   onBeforeMount,
   queuePostFlushCb,
   resolveTransitionProps,
+  setCurrentInstance,
   useTransitionState,
   warn,
 } from '@vue/runtime-dom'
 import { computed } from '@vue/reactivity'
-import type {
-  Block,
-  TransitionBlock,
-  TransitionOptions,
-  VaporTransitionHooks,
+import {
+  type Block,
+  type BlockFn,
+  type TransitionBlock,
+  type TransitionOptions,
+  type VaporTransitionHooks,
+  isValidBlock,
+  remove,
 } from '../block'
 import { displayName, registerTransitionHooks } from '../transition'
 import {
@@ -71,7 +75,8 @@ export const ensureTransitionHooksRegistered = (): void => {
     registered = true
     registerTransitionHooks(
       applyTransitionHooksImpl,
-      applyTransitionLeaveHooksImpl,
+      deferBranchUpdateDuringLeaveImpl,
+      removeBranchWithLeaveImpl,
     )
   }
 }
@@ -448,6 +453,82 @@ function applyTransitionLeaveHooksImpl(
       enterHooks.delayedLeave = delayedLeaveCb
     }
   }
+}
+
+function deferBranchUpdateDuringLeaveImpl(
+  frag: DynamicFragment,
+  render: BlockFn | undefined,
+  key: any,
+  noScope: boolean,
+): boolean {
+  const transition = frag.$transition!
+  if (!transition.state.isLeaving) return false
+  // Track the latest target key immediately so repeated updates during
+  // leave keep overwriting the pending branch instead of reviving stale
+  // keys when the deferred render finally runs.
+  frag.current = key
+  const pending = frag.pending
+  if (pending) {
+    pending.render = render
+    pending.key = key
+    pending.noScope = noScope
+  } else {
+    frag.pending = { render, key, noScope }
+  }
+  return true
+}
+
+function removeBranchWithLeaveImpl(
+  frag: DynamicFragment,
+  transition: VaporTransitionHooks,
+  parent: ParentNode | null,
+  render: BlockFn | undefined,
+  key: any,
+  noScope: boolean,
+): boolean {
+  const mode = transition.mode
+  if (
+    mode &&
+    // in-out only works when there is an incoming branch to trigger
+    // delayedLeave; otherwise the current branch should leave immediately.
+    (mode !== 'in-out' || (mode === 'in-out' && render)) &&
+    // out-in only needs to defer when the current branch actually has
+    // a rendered child to leave before mounting the next one.
+    (mode !== 'out-in' || isValidBlock(frag.nodes))
+  ) {
+    const instance = currentInstance
+    applyTransitionLeaveHooksImpl(frag.nodes, transition, () => {
+      // By the time this deferred out-in branch runs, the renderEffect
+      // has finished and currentInstance may have changed, so restore
+      // the captured instance.
+      const prevInstance = setCurrentInstance(instance)
+      try {
+        const pending = frag.pending
+        if (pending) {
+          frag.pending = undefined
+          frag.renderBranch(
+            pending.render,
+            transition,
+            parent,
+            pending.key,
+            pending.noScope,
+            true,
+          )
+        } else {
+          frag.renderBranch(render, transition, parent, key, noScope, true)
+        }
+      } finally {
+        setCurrentInstance(...prevInstance)
+      }
+    })
+    if (mode === 'out-in') {
+      // out-in owns the removal here so update() can return before
+      // rendering; the next branch mounts from the afterLeave callback.
+      parent && remove(frag.nodes, parent)
+      return true
+    }
+  }
+  return false
 }
 
 export function resolveTransitionBlock(
