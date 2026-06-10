@@ -37,10 +37,9 @@ import {
   DynamicFragment,
   SlotFragment,
   type VaporFragment,
-  getCurrentSlotBoundary,
   isInteropFragment,
-  withOwnedSlotBoundary,
 } from './fragment'
+import { getCurrentSlotBoundary, withOwnedSlotBoundary } from './slotBoundary'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 import {

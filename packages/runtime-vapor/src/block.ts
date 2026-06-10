@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { EMPTY_ARR, isArray } from '@vue/shared'
 import {
   type VaporComponentInstance,
   isVaporComponent,
@@ -60,6 +60,8 @@ export type Block =
   | VaporComponentInstance
   | Block[]
 export type BlockFn = (...args: any[]) => Block
+
+export const EMPTY_BLOCK: Block[] = EMPTY_ARR as unknown as Block[]
 
 export function isBlock(val: NonNullable<unknown>): val is Block {
   return (

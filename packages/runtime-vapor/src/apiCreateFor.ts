@@ -47,13 +47,11 @@ import {
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
+import { ForBlock, ForFragment, type VaporFragment } from './fragment'
 import {
-  ForBlock,
-  ForFragment,
-  type VaporFragment,
   getCurrentSlotEndAnchor,
   isHydratingSlotFallbackActive,
-} from './fragment'
+} from './dom/hydrateFragment'
 import {
   type ChildItem,
   insertionAnchor,
