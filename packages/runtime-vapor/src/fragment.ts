@@ -208,17 +208,24 @@ export class DynamicFragment extends VaporFragment {
   pending?: { render?: BlockFn; key: any; noScope: boolean }
   anchorLabel?: string
   keyed?: boolean
+  // pure marker consumed by the isSlotFragment predicate; the core update
+  // pipeline never reads it.
   isSlot?: boolean
   inTransition?: boolean
   // Fallthrough attrs hooks register branch-owned effects on insert.
   hasFallthroughAttrs?: true
+  // Whether update() claims the SSR anchor itself during hydration.
+  // SlotFragment opts out: updateSlot owns its hydration timing.
+  readonly autoHydrate: boolean
   constructor(
     anchorLabel?: string,
     keyed: boolean = false,
     locate: boolean = true,
     trackSlotBoundary: boolean = false,
+    autoHydrate: boolean = true,
   ) {
     super(EMPTY_BLOCK)
+    this.autoHydrate = autoHydrate
     if (keyed) this.keyed = true
     if (
       isTransitionEnabled &&
@@ -238,16 +245,13 @@ export class DynamicFragment extends VaporFragment {
     if (trackSlotBoundary) trackSlotBoundaryDirtying(this)
   }
 
-  update(
-    render?: BlockFn,
-    key: any = render,
-    noScope: boolean = false,
-    shouldInsert: boolean = true,
-  ): void {
+  update(render?: BlockFn, key: any = render, noScope: boolean = false): void {
     if (key === this.current) {
       // On initial hydration, `key === current` means `render` is empty,
       // so this fragment hydrates as empty content.
-      if (isHydrating && !this.isSlot) hydrateDynamicFragmentAnchor(this, true)
+      if (isHydrating && this.autoHydrate) {
+        hydrateDynamicFragmentAnchor(this, true)
+      }
       return
     }
 
@@ -271,7 +275,7 @@ export class DynamicFragment extends VaporFragment {
     }
 
     const prevSub = setActiveSub()
-    const parent = !isHydrating && shouldInsert ? this.anchor.parentNode : null
+    const parent = !isHydrating ? this.getBranchParent() : null
     // teardown previous branch
     if (wasMounted) {
       const scope = this.scope
@@ -312,9 +316,15 @@ export class DynamicFragment extends VaporFragment {
     )
     setActiveSub(prevSub)
 
-    if (isHydrating && !this.isSlot && !reusingDeferredAnchor) {
+    if (isHydrating && this.autoHydrate && !reusingDeferredAnchor) {
       hydrateDynamicFragmentAnchor(this, render == null)
     }
+  }
+
+  // Where update() removes the previous branch from and inserts the next one
+  // into. Returning null keeps the branch out of the DOM.
+  protected getBranchParent(): ParentNode | null {
+    return this.anchor.parentNode
   }
 
   renderBranch(
@@ -415,7 +425,14 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   private notifyParent: boolean
 
   constructor(notifyParent: boolean = false) {
-    super(isHydrating || __DEV__ ? 'slot' : undefined, false, false, false)
+    // updateSlot owns hydration timing, so opt out of autoHydrate.
+    super(
+      isHydrating || __DEV__ ? 'slot' : undefined,
+      false,
+      false,
+      false,
+      false,
+    )
     this.notifyParent = notifyParent
     if (!isHydrating) {
       this.insert = (parent, anchor) => this.insertSlot(parent, anchor)
@@ -465,12 +482,16 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
     disposeSlotFallback(this)
   }
 
-  private updateContent(render: BlockFn | undefined, key: any): void {
-    this.nodes = this.content
+  protected getBranchParent(): ParentNode | null {
     // When fallback is active, recompute content without inserting it. The
     // content may still be invalid, so recheckSlotFallback decides whether it
     // can return to the DOM.
-    this.update(render, key, false, !this.activeFallback)
+    return this.activeFallback ? null : super.getBranchParent()
+  }
+
+  private updateContent(render: BlockFn | undefined, key: any): void {
+    this.nodes = this.content
+    this.update(render, key)
     this.content = this.nodes
   }
 
