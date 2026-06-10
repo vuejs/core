@@ -20,6 +20,7 @@ import type {
   TSTypeAnnotation,
   TSTypeElement,
   TSTypeLiteral,
+  TSTypeParameter,
   TSTypeQuery,
   TSTypeReference,
   TemplateLiteral,
@@ -1321,8 +1322,59 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
   )
 
   recordTypes(ctx, body, scope)
+  recordScriptSetupGenericTypes(ctx, scope)
 
   return (ctx.scope = scope)
+}
+
+function recordScriptSetupGenericTypes(
+  ctx: TypeResolveContext,
+  scope: TypeScope,
+) {
+  if (!('descriptor' in ctx)) {
+    return
+  }
+  const scriptSetup = ctx.descriptor.scriptSetup
+  if (!scriptSetup) {
+    return
+  }
+  const generic = scriptSetup.attrs.generic
+  if (typeof generic !== 'string') {
+    return
+  }
+
+  let typeParameters: TSTypeParameter[] | undefined
+  try {
+    const genericAst = babelParse(`type __VUE_Generic<${generic}> = any`, {
+      plugins: resolveParserPlugins(
+        scriptSetup.lang || 'ts',
+        ctx.options.babelParserPlugins,
+      ),
+      sourceType: 'module',
+    }).program.body[0]
+    if (
+      genericAst.type === 'TSTypeAliasDeclaration' &&
+      genericAst.typeParameters
+    ) {
+      typeParameters = genericAst.typeParameters.params
+    }
+  } catch {
+    return
+  }
+
+  if (!typeParameters) {
+    return
+  }
+  for (const param of typeParameters) {
+    // Defaults do not constrain generic specializations, so they are not safe
+    // for runtime props inference.
+    const type = param.constraint
+    if (param.name && type) {
+      const node = type as ScopeTypeNode
+      node._ownerScope = scope
+      scope.types[param.name] = node
+    }
+  }
 }
 
 function moduleDeclToScope(

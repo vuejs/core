@@ -341,6 +341,27 @@ return { props, get x() { return x } }
 }"
 `;
 
+exports[`defineProps > w/ script setup generic constraint 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import type { Inputs } from './props'
+
+export default /*@__PURE__*/_defineComponent({
+  __name: 'Input',
+  props: {
+    type: { type: String, required: true },
+    value: { type: [String, Number], required: true }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+
+
+return {  }
+}
+
+})"
+`;
+
 exports[`defineProps > w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Test {}

@@ -45,6 +45,42 @@ const bar = 1
   props: propsModel,`)
   })
 
+  // #8468
+  test('w/ script setup generic constraint', () => {
+    const files: Record<string, string> = {
+      '/props.ts': `
+type Text = { type: 'text', value: string }
+type NumberInput = { type: 'number', value: number }
+export type Inputs = Text | NumberInput
+`,
+    }
+    const { content, bindings } = compile(
+      `<script setup lang="ts" generic="P extends Inputs">
+import type { Inputs } from './props'
+defineProps<P>()
+</script>`,
+      {
+        fs: {
+          fileExists(file) {
+            return !!files[file]
+          },
+          readFile(file) {
+            return files[file]
+          },
+        },
+      },
+      { filename: '/Input.vue' },
+    )
+
+    assertCode(content)
+    expect(content).toMatch(`type: { type: String, required: true }`)
+    expect(content).toMatch(`value: { type: [String, Number], required: true }`)
+    expect(bindings).toStrictEqual({
+      type: BindingTypes.PROPS,
+      value: BindingTypes.PROPS,
+    })
+  })
+
   // #4764
   test('w/ leading code', () => {
     const { content } = compile(`
