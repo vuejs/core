@@ -52,22 +52,24 @@ import {
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
+import { DynamicFragment, SlotFragment, VaporFragment } from '../src/fragment'
 import {
-  DynamicFragment,
   type SlotBoundaryContext,
-  type SlotFallbackState,
-  SlotFragment,
-  VaporFragment,
   getCurrentSlotBoundary,
-  getCurrentSlotEndAnchor,
-  isHydratingSlotFallbackActive,
+  trackSlotBoundaryDirtying,
+  withOwnedSlotBoundary,
+} from '../src/slotBoundary'
+import {
+  type SlotFallbackState,
   markSlotFallbackDirty,
   recheckSlotFallback,
-  trackSlotBoundaryDirtying,
+} from '../src/slotFragment'
+import {
+  getCurrentSlotEndAnchor,
+  isHydratingSlotFallbackActive,
   withHydratingSlotBoundary,
   withHydratingSlotFallbackActive,
-  withOwnedSlotBoundary,
-} from '../src/fragment'
+} from '../src/dom/hydrateFragment'
 
 const define = makeRender<any>()
 const keyedIfShape =

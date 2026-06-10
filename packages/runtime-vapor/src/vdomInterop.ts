@@ -116,23 +116,29 @@ import {
 } from './insertionState'
 import {
   type DynamicFragment,
-  type SlotBoundaryContext,
-  type SlotFallbackState,
   SlotFragment,
   VaporFragment,
-  disposeSlotFallback,
-  getCurrentSlotEndAnchor,
-  hasSlotFallback,
-  insertActiveSlotFallback,
   isFragment,
+  runWithFragmentCtx,
+} from './fragment'
+import {
+  type SlotBoundaryContext,
+  hasSlotFallback,
+  trackSlotBoundaryDirtying,
+  withOwnedSlotBoundary,
+} from './slotBoundary'
+import {
+  type SlotFallbackState,
+  disposeSlotFallback,
+  insertActiveSlotFallback,
   markSlotFallbackDirty,
   recheckSlotFallback,
-  runWithFragmentCtx,
-  trackSlotBoundaryDirtying,
+} from './slotFragment'
+import {
+  getCurrentSlotEndAnchor,
   withHydratingSlotBoundary,
   withHydratingSlotFallbackActive,
-  withOwnedSlotBoundary,
-} from './fragment'
+} from './dom/hydrateFragment'
 import type { NodeRef } from './apiTemplateRef'
 import {
   ensureTransitionHooksRegistered,
