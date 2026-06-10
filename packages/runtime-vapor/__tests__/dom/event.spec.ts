@@ -109,6 +109,24 @@ describe('dom event', () => {
     expect(handler).toHaveBeenCalled()
   })
 
+  test('delegate skips disabled direct handlers', () => {
+    const handler = vi.fn()
+
+    const Comp = defineVaporComponent({
+      setup() {
+        const button = template('<button disabled></button>')() as any
+        button.$evtclick = handler
+        return button
+      },
+    })
+
+    const { host } = define(Comp).render()
+    const button = host.querySelector('button')!
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(handler).not.toHaveBeenCalled()
+  })
+
   test('delegate', () => {
     const handler = vi.fn()
     const el = renderWithElement(el => {
