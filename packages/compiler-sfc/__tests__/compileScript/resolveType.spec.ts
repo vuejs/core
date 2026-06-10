@@ -925,6 +925,19 @@ describe('resolveType', () => {
       })
     })
 
+    test('generic type /w conditional property', () => {
+      expect(
+        resolve(`
+        type Props<T extends boolean> = {
+          checked: T extends true ? boolean : never
+        }
+        defineProps<Props<boolean>>()
+      `).props,
+      ).toStrictEqual({
+        checked: ['Boolean'],
+      })
+    })
+
     test('generic from external-file', () => {
       const files = {
         '/foo.ts': 'export type P<T> = { foo: T }',

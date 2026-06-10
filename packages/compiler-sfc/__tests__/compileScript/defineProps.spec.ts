@@ -81,6 +81,29 @@ defineProps<P>()
     })
   })
 
+  // #13787
+  test('w/ boolean props in generic component', () => {
+    const { content } = compile(
+      `<script setup lang="ts" generic="TMultiple extends boolean">
+type Nullable<T> = T | null
+type Props<T extends boolean> = {
+  primitive: boolean
+  wrapped: Nullable<boolean>
+  multiple: T
+  checked: T extends true ? boolean : never
+}
+defineProps<Props<TMultiple>>()
+</script>`,
+    )
+
+    expect(content).toMatch(`primitive: { type: Boolean, required: true }`)
+    expect(content).toMatch(
+      `wrapped: { type: [Boolean, null], required: true }`,
+    )
+    expect(content).toMatch(`multiple: { type: Boolean, required: true }`)
+    expect(content).toMatch(`checked: { type: Boolean, required: true }`)
+  })
+
   // #4764
   test('w/ leading code', () => {
     const { content } = compile(`

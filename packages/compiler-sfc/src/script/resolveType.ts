@@ -2001,6 +2001,18 @@ export function inferRuntimeType(
           typeParameters,
         ).filter(t => t !== UNKNOWN_TYPE)
       }
+      case 'TSConditionalType': {
+        const types = flattenTypes(
+          ctx,
+          [node.trueType, node.falseType].filter(
+            t => t.type !== 'TSNeverKeyword',
+          ),
+          scope,
+          isKeyOf,
+          typeParameters,
+        )
+        return types.length ? types : [UNKNOWN_TYPE]
+      }
       case 'TSMappedType': {
         // only support { [K in keyof T]: T[K] }
         const { typeAnnotation, typeParameter } = node
