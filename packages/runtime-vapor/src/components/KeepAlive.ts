@@ -362,6 +362,23 @@ const VaporKeepAliveImpl = defineVaporComponent({
     })
 
     const keepAliveCtx: VaporKeepAliveContext = {
+      acquireBranchScope(key) {
+        return deleteScope(key)
+      },
+      runBranchRender(frag, fn) {
+        const run = () => {
+          try {
+            fn()
+          } finally {
+            // mark shapeFlag before mounting.
+            // This must run before leaving the keyed cache-key context so
+            // creating components inside the branch can still resolve the
+            // same cache key during initial mount.
+            processShapeFlag(frag.nodes)
+          }
+        }
+        frag.keyed ? withCurrentCacheKey(frag.current, run) : run()
+      },
       processShapeFlag,
       cacheBlock,
       cacheScope(cacheKey, scopeLookupKey, scope) {
@@ -375,15 +392,13 @@ const VaporKeepAliveImpl = defineVaporComponent({
         }
 
         // cacheKey is used for cleanup in pruneCacheEntry.
-        // scopeLookupKey is still needed for getScope() before a new block
-        // exists, but keyed branches may resolve to the same effective cacheKey.
+        // scopeLookupKey is still needed for acquireBranchScope() before a new
+        // block exists, but keyed branches may resolve to the same effective
+        // cacheKey.
         keptAliveScopes.set(cacheKey, scope)
         if (scopeLookupKey !== cacheKey) {
           keptAliveScopes.set(scopeLookupKey, scope)
         }
-      },
-      getScope(key) {
-        return deleteScope(key)
       },
     }
 

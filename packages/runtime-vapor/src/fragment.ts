@@ -49,7 +49,6 @@ import {
   currentKeepAliveCtx,
   isKeepAliveEnabled,
   setCurrentKeepAliveCtx,
-  withCurrentCacheKey,
 } from './keepAlive'
 import {
   applyTransitionHooks,
@@ -334,7 +333,8 @@ export class DynamicFragment extends VaporFragment {
       const useScope = !noScope || !!this.hasFallthroughAttrs
       if (useScope) {
         // try to reuse the kept-alive scope
-        const scope = keepAliveCtx && keepAliveCtx.getScope(this.current)
+        const scope =
+          keepAliveCtx && keepAliveCtx.acquireBranchScope(this.current)
         if (scope) {
           this.scope = scope
         } else {
@@ -365,22 +365,12 @@ export class DynamicFragment extends VaporFragment {
           if (isTransitionEnabled && transition) {
             this.$transition = applyTransitionHooks(this.nodes, transition)
           }
-
-          // call processShapeFlag to mark shapeFlag before mounting.
-          // This must run before leaving the keyed cache-key context so
-          // creating components inside the branch can still resolve the
-          // same cache key during initial mount.
-          if (keepAliveCtx) {
-            keepAliveCtx.processShapeFlag(this.nodes)
-          }
         }
       }
 
-      if (keepAliveCtx && this.keyed) {
-        withCurrentCacheKey(key, renderBranch)
-      } else {
-        renderBranch()
-      }
+      keepAliveCtx
+        ? keepAliveCtx.runBranchRender(this, renderBranch)
+        : renderBranch()
 
       if (parent) {
         const onBeforeInsert = this.onBeforeInsert
