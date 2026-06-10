@@ -108,7 +108,7 @@ const delegatedEventHandler = (e: Event) => {
             if (e.cancelBubble) return
           }
         }
-      } else {
+      } else if (!node.disabled) {
         handlers(e)
         if (e.cancelBubble) return
       }
