@@ -626,6 +626,6 @@ export function isDynamicFragment(val: unknown): val is DynamicFragment {
   return !!(val && (val as any).__df)
 }
 
-export function isSlotFragment(val: unknown): val is DynamicFragment {
+export function isSlotFragment(val: unknown): val is SlotFragment {
   return isDynamicFragment(val) && !!val.isSlot
 }
