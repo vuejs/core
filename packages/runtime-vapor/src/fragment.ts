@@ -53,9 +53,10 @@ import {
 } from './keepAlive'
 import {
   applyTransitionHooks,
-  applyTransitionLeaveHooks,
+  deferBranchUpdateDuringLeave,
   isTransitionEnabled,
   isVaporTransition,
+  removeBranchWithLeave,
 } from './transition'
 
 export class VaporFragment<
@@ -203,6 +204,8 @@ export class DynamicFragment extends VaporFragment {
   anchor: Node
   scope: EffectScope | undefined
   current?: BlockFn
+  // Owned by the Transition module (deferBranchUpdateDuringLeave /
+  // removeBranchWithLeave); the core update pipeline never touches it.
   pending?: { render?: BlockFn; key: any; noScope: boolean }
   anchorLabel?: string
   keyed?: boolean
@@ -261,23 +264,13 @@ export class DynamicFragment extends VaporFragment {
     }
     // currently leaving: defer mounting the next branch until
     // the leave finishes.
-    if (transition && transition.state.isLeaving) {
-      // Track the latest target key immediately so repeated updates during
-      // leave keep overwriting the pending branch instead of reviving stale
-      // keys when the deferred render finally runs.
-      this.current = key
-      const pending = this.pending
-      if (pending) {
-        pending.render = render
-        pending.key = key
-        pending.noScope = noScope
-      } else {
-        this.pending = { render, key, noScope }
-      }
+    if (
+      transition &&
+      deferBranchUpdateDuringLeave(this, render, key, noScope)
+    ) {
       return
     }
 
-    const instance = currentInstance
     const prevSub = setActiveSub()
     const parent = !isHydrating && shouldInsert ? this.anchor.parentNode : null
     // teardown previous branch
@@ -295,49 +288,15 @@ export class DynamicFragment extends VaporFragment {
           scope.stop()
         }
       }
-      const mode = transition && transition.mode
-
       if (
-        mode &&
-        // in-out only works when there is an incoming branch to trigger
-        // delayedLeave; otherwise the current branch should leave immediately.
-        (mode !== 'in-out' || (mode === 'in-out' && render)) &&
-        // out-in only needs to defer when the current branch actually has
-        // a rendered child to leave before mounting the next one.
-        (mode !== 'out-in' || isValidBlock(this.nodes))
+        transition &&
+        removeBranchWithLeave(this, transition, parent, render, key, noScope)
       ) {
-        applyTransitionLeaveHooks(this.nodes, transition, () => {
-          // By the time this deferred out-in branch runs, the renderEffect
-          // has finished and currentInstance may have changed, so restore
-          // the captured instance.
-          const prevInstance = setCurrentInstance(instance)
-          try {
-            const pending = this.pending
-            if (pending) {
-              this.pending = undefined
-              this.renderBranch(
-                pending.render,
-                transition,
-                parent,
-                pending.key,
-                pending.noScope,
-                true,
-              )
-            } else {
-              this.renderBranch(render, transition, parent, key, noScope, true)
-            }
-          } finally {
-            setCurrentInstance(...prevInstance)
-          }
-        })
-        parent && remove(this.nodes, parent)
-        if (mode === 'out-in') {
-          setActiveSub(prevSub)
-          return
-        }
-      } else {
-        parent && remove(this.nodes, parent)
+        // out-in: the next branch mounts after the leave finishes.
+        setActiveSub(prevSub)
+        return
       }
+      parent && remove(this.nodes, parent)
     }
 
     const reusingDeferredAnchor = isHydrating
