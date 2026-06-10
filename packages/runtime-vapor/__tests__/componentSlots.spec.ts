@@ -66,6 +66,7 @@ import {
 } from '../src/slotFragment'
 import {
   getCurrentSlotEndAnchor,
+  hydrateDynamicFragmentAnchor,
   isHydratingSlotFallbackActive,
   withHydratingSlotBoundary,
   withHydratingSlotFallbackActive,
@@ -798,7 +799,7 @@ describe('component: slots', () => {
             frag = new SlotFragment()
             frag.forwarded = true
             setCurrentHydrationNode(footer)
-            frag.hydrate(true)
+            hydrateDynamicFragmentAnchor(frag, true)
           })
         })
       } finally {
@@ -826,7 +827,7 @@ describe('component: slots', () => {
         hydrateNode(start, () => {
           withHydratingSlotBoundary(() => {
             frag = new SlotFragment()
-            frag.hydrate(true)
+            hydrateDynamicFragmentAnchor(frag, true)
           })
         })
       } finally {
@@ -853,7 +854,7 @@ describe('component: slots', () => {
         hydrateNode(start, () => {
           withHydratingSlotBoundary(() => {
             frag = new SlotFragment()
-            frag.hydrate(true)
+            hydrateDynamicFragmentAnchor(frag, true)
           })
         })
       } finally {
@@ -879,7 +880,7 @@ describe('component: slots', () => {
           withHydratingSlotBoundary(() => {
             withHydratingSlotFallbackActive(() => {
               frag = new DynamicFragment('if', false, false)
-              frag.hydrate(true)
+              hydrateDynamicFragmentAnchor(frag, true)
             })
           })
         })
