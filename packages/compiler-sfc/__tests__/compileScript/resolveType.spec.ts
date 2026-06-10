@@ -153,6 +153,18 @@ describe('resolveType', () => {
     })
   })
 
+  test('leading intersection type with ignore', () => {
+    expect(
+      resolve(`
+    type Foo = { foo: number }
+    type Bar = { bar: boolean }
+    defineProps</* @vue-ignore */ Foo & Bar>()
+    `).props,
+    ).toStrictEqual({
+      bar: ['Boolean'],
+    })
+  })
+
   test('TSPropertySignature with ignore', () => {
     expect(
       resolve(`
