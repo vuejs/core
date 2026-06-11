@@ -26,7 +26,11 @@ import { type LooseRawProps, isVaporComponent } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
-import { VaporFragment, isFragment } from '../fragment'
+import {
+  RenderContextFragment,
+  isFragment,
+  runWithFragmentCtx,
+} from '../fragment'
 import {
   advanceHydrationNode,
   currentHydrationNode,
@@ -68,7 +72,7 @@ type TeleportMountState =
       anchor: Node | null
     }
 
-export class TeleportFragment extends VaporFragment {
+export class TeleportFragment extends RenderContextFragment {
   /**
    * @internal marker for duck typing to avoid direct instanceof check
    * which prevents tree-shaking of TeleportFragment
@@ -138,15 +142,17 @@ export class TeleportFragment extends VaporFragment {
     )
     try {
       this.childrenInitialized = true
+      // RenderEffect restores (renderInstance, childrenScope) on every run,
+      // so only the fragment context may need restoring here — on deferred
+      // init and slot re-runs, where new nodes capture the ambient context.
+      // The equality fast path keeps the synchronous first run free.
       renderEffect(() =>
-        this.runWithRenderCtx(
-          () =>
-            this.handleChildrenUpdate(
-              this.rawSlots && this.rawSlots.default
-                ? (this.rawSlots.default as BlockFn)()
-                : [],
-            ),
-          this.childrenScope,
+        runWithFragmentCtx(this, () =>
+          this.handleChildrenUpdate(
+            this.rawSlots && this.rawSlots.default
+              ? (this.rawSlots.default as BlockFn)()
+              : [],
+          ),
         ),
       )
       this.bindChildren(this.nodes)

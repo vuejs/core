@@ -95,6 +95,21 @@ export class VaporFragment<
   onBeforeUpdate?: (() => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
 
+  constructor(nodes: T) {
+    this.nodes = nodes
+  }
+}
+
+// Fragments whose content can (re-)render after the original synchronous
+// render window — branch switches, deferred teleport children, interop slot
+// re-renders — capture the ambient render context at construction so the
+// deferred render can restore it. Fragments that only hold externally
+// rendered content (ForFragment / ForBlock) stay on the lean base class:
+// the for pipeline restores its ambient context through closures instead,
+// once per v-for rather than once per item.
+export class RenderContextFragment<
+  T extends Block = Block,
+> extends VaporFragment<T> {
   // render context
   readonly renderInstance: GenericComponentInstance | null = currentInstance
   readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
@@ -103,7 +118,7 @@ export class VaporFragment<
     currentSlotBoundary
 
   constructor(nodes: T) {
-    this.nodes = nodes
+    super(nodes)
     if (isKeepAliveEnabled) {
       this.keepAliveCtx = currentKeepAliveCtx
     }
@@ -119,7 +134,10 @@ export class VaporFragment<
   }
 }
 
-export function runWithFragmentCtx<R>(fragment: VaporFragment, fn: () => R): R {
+export function runWithFragmentCtx<R>(
+  fragment: RenderContextFragment,
+  fn: () => R,
+): R {
   const keepAliveCtx = isKeepAliveEnabled ? fragment.keepAliveCtx || null : null
   // When ambient fragment context already matches, no ambient state needs
   // restoring. This keeps ordinary branch renders on the cheap path.
@@ -193,7 +211,7 @@ export class ForBlock extends VaporFragment {
   }
 }
 
-export class DynamicFragment extends VaporFragment {
+export class DynamicFragment extends RenderContextFragment {
   /**
    * @internal marker for duck typing to avoid direct instanceof check
    * which prevents tree-shaking of DynamicFragment
