@@ -23,7 +23,12 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    pool: 'threads',
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        execArgv: ['--expose-gc'],
+      },
+    },
     setupFiles: 'scripts/setup-vitest.ts',
     sequence: {
       hooks: 'list',
