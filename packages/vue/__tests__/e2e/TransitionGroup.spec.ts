@@ -300,6 +300,98 @@ describe('e2e: TransitionGroup', () => {
   )
 
   test(
+    'v-show enter does not also run move transition',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <transition-group name="show-group" tag="div" id="showGroup">
+                <div
+                  v-for="item in items"
+                  :key="item"
+                  :id="\`show-\${item}\`"
+                  v-show="visibleItems.includes(item)"
+                  class="show-item"
+                >
+                  {{ item }}
+                </div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const visibleItems = ref(['a', 'c'])
+            const click = () => (visibleItems.value = ['a', 'b', 'c'])
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                #showGroup {
+                  display: flex;
+                  gap: 5px;
+                }
+                #showGroup > .show-item {
+                  width: 100px;
+                  height: 20px;
+                }
+                .show-group-enter-active,
+                .show-group-move {
+                  transition: transform ${duration}ms ease;
+                }
+                .show-group-enter-from {
+                  transform: translateX(1000px);
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+
+            return { click, items, visibleItems }
+          },
+        }).mount('#app')
+      }, duration)
+
+      const duringTransition = await page().evaluate(() => {
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return Promise.resolve().then(() =>
+          Array.from(document.querySelectorAll('.show-item')).map(node => ({
+            text: node.textContent!.trim(),
+            classes: Array.from(node.classList),
+            inlineTransform: (node as HTMLElement).style.transform,
+          })),
+        )
+      })
+
+      expect(duringTransition).toStrictEqual([
+        {
+          text: 'a',
+          classes: ['show-item'],
+          inlineTransform: '',
+        },
+        {
+          text: 'b',
+          classes: [
+            'show-item',
+            'show-group-enter-from',
+            'show-group-enter-active',
+          ],
+          inlineTransform: '',
+        },
+        {
+          text: 'c',
+          classes: ['show-item', 'show-group-move'],
+          inlineTransform: '',
+        },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'move while entering',
     async () => {
       await page().evaluate(duration => {

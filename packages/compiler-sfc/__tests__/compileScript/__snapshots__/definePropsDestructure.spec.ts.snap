@@ -392,6 +392,108 @@ return { rest }
 }"
 `;
 
+exports[`sfc reactive props destructure > var declaration shadowing before declaration in for loop 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false, default: "a" }
+  },
+  setup(__props: any) {
+
+
+let bar: string | undefined;
+function init() {
+  bar = foo;
+  for (var foo = "b"; false;) {}
+}
+init();
+
+return () => {}
+}
+
+})"
+`;
+
+exports[`sfc reactive props destructure > var declaration shadowing before declaration in nested block 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false, default: "a" }
+  },
+  setup(__props: any) {
+
+
+let bar: string | undefined;
+function init() {
+  bar = foo;
+  {
+    var foo = "b";
+  }
+}
+init();
+
+return () => {}
+}
+
+})"
+`;
+
+exports[`sfc reactive props destructure > var declaration shadowing does not cross function scope 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false, default: "a" }
+  },
+  setup(__props: any) {
+
+
+let bar: string | undefined;
+function init() {
+  function nested() {
+    {
+      var foo = "b";
+    }
+    return foo;
+  }
+  bar = __props.foo;
+  nested();
+}
+init();
+
+return () => {}
+}
+
+})"
+`;
+
+exports[`sfc reactive props destructure > var declaration shadowing in nested block 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    foo: { type: String, required: false, default: "a" }
+  },
+  setup(__props: any) {
+
+
+let bar: string | undefined;
+function init() {
+  {
+    var foo = "b";
+  }
+  bar = foo;
+}
+init();
+
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc reactive props destructure > with TSInstantiationExpression 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 type Foo = <T extends string | number>(data: T) => void

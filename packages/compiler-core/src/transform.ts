@@ -123,6 +123,7 @@ export interface TransformContext
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
   cache(exp: JSChildNode, isVNode?: boolean, inVOnce?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
+  vForMemoKeyedNodes: WeakSet<ElementNode>
 
   // 2.x Compat only
   filters?: Set<string>
@@ -197,6 +198,7 @@ export function createTransformContext(
     imports: [],
     cached: [],
     constantCache: new WeakMap(),
+    vForMemoKeyedNodes: new WeakSet(),
     temps: 0,
     identifiers: Object.create(null),
     identifierScopes: Object.create(null),

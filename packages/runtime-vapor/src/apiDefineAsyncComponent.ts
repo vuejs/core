@@ -157,13 +157,19 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         delay,
         timeout,
         onError,
+        instance,
       )
 
       load()
         .then(() => {
+          if (instance.isUnmounted) return
           loaded.value = true
         })
         .catch(err => {
+          if (instance.isUnmounted) {
+            setPendingRequest(null)
+            return
+          }
           onError(err)
           error.value = err
         })

@@ -92,6 +92,9 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
                 keyProperty.value as SimpleExpressionNode,
                 context,
               )
+          if (memo) {
+            context.vForMemoKeyedNodes.add(node)
+          }
         }
       }
 
