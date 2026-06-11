@@ -31,11 +31,11 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
         ) {
           validateHydrationTarget(adopted, html)
         }
-        node = adopted.cloneNode(true)
+        // cache once for post-hydration CSR clones.
+        if (!node) node = adopted.cloneNode(true)
         advanceHydrationNode(adopted)
       } else {
-        // do not cache the adopted node in node because it contains child nodes
-        // this avoids duplicate rendering of children
+        // do not assign `adopted` to `node`, or CSR clones would duplicate children.
         adopted = adoptTemplate(currentHydrationNode!, html, false, ns)!
       }
       if (root) (adopted as any).$root = true
