@@ -19,6 +19,26 @@ import { SlotFragment } from './fragment'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
 import { setBlockKey } from './helpers/setKey'
 
+// Slot fallback resolution.
+//
+// Vapor has no component-level re-render: once slot content is rendered, the
+// only signal that its *validity* changed (e.g. a root v-if inside the slot
+// toggled) is a markDirty() notification delivered through the slot boundary
+// chain (slotBoundary.ts). The functions below form a state machine that
+// reacts to those notifications and decides which branch a slot exposes:
+// the content while it is valid, otherwise the nearest valid fallback up the
+// boundary chain.
+//
+// The machine is written against the duck-typed SlotFallbackState interface
+// because it has three hosts: SlotFragment (vapor slots) and the two interop
+// slot implementations in vdomInterop.ts, which keep their per-slot state in
+// closures.
+
+// View of a boundary used while rendering that boundary's own fallback. It
+// masks the local fallback (getFallback -> undefined) so slot outlets
+// *inside* the fallback body resolve against the parent chain instead of
+// recursively landing on the very fallback being rendered, while keeping the
+// owner's ambient slot / fragment context and dirty channel.
 function getRedirectedBoundary(
   boundary: SlotBoundaryContext,
 ): SlotBoundaryContext {
@@ -35,6 +55,15 @@ function getRedirectedBoundary(
   })
 }
 
+// Walks the boundary chain outward and renders the nearest fallback into
+// `scope`. Returns:
+// - a valid block: the innermost fallback that rendered valid output;
+// - an invalid block: every boundary providing a fallback rendered invalid
+//   output (e.g. a fallback whose root v-if is currently false). The inherited
+//   result wins when present; otherwise the local invalid block is kept. Their
+//   effects stay live in the shared scope, so the chosen fallback can become
+//   valid later;
+// - undefined: no boundary in the chain provides a fallback at all.
 function renderSlotFallback(
   boundary: SlotBoundaryContext | null,
   scope: EffectScope,
@@ -61,24 +90,50 @@ function renderSlotFallback(
   return inherited === undefined ? local : inherited
 }
 
+// Per-slot state the fallback machine operates on. Implemented by
+// SlotFragment and by the two interop slots in vdomInterop.ts.
 export interface SlotFallbackState {
+  // The slot's own resolution point; its parent chain supplies inherited
+  // fallbacks for forwarded slots.
   boundary: SlotBoundaryContext
+  // The committed fallback block, or null while content is exposed.
   activeFallback: Block | null
+  // Detached scope owning the active fallback's effects (see
+  // renderSlotFallbackState); stopped by clearSlotFallback.
   fallbackScope?: EffectScope
+  // Validity of the exposed branch as of the last recheck; undefined before
+  // the first recheck. Flips trigger notifyFallbackValidityChange.
   lastNodesValid?: boolean
+  // A dirty notification arrived while a fallback render or a host update
+  // was in flight; folded into the recheck that completes that operation.
   pendingRecheck: boolean
+  // Reentrancy guard, set while renderSlotFallback runs user fallback code.
   isRenderingFallback: boolean
 
   getContent(): Block
   getParentNode(): ParentNode | null
   getAnchor(): Node | null
+  // Whether the host is mid content update; rechecks must be deferred until
+  // the update's own recheck runs.
   isBusy(): boolean
   isDisposed(): boolean
   isContentValid(): boolean
+  // Points the host's exposed nodes at the winning branch
+  // (activeFallback || content).
   syncNodes(): void
+  // Reports an exposed-branch validity flip so an enclosing boundary can
+  // recheck its own fallback decision.
   notifyFallbackValidityChange(): void
 }
 
+// Takes a block's nodes out of the DOM without tearing the block down: no
+// scopes are stopped and no remove() hooks run, so it can be re-inserted
+// later (content parked while fallback shows, or an invalid fallback parked
+// until it becomes valid). Fragment anchors are detached along with their
+// block because the generic fragment insert() re-inserts them — except a
+// SlotFragment's anchor: insertSlot() never re-inserts it and the slot
+// locates itself through it (getParentNode/getAnchor), so it must stay in
+// the DOM as the slot's persistent position marker.
 function detachBlock(block: Block, parent: ParentNode): void {
   if (block instanceof Node) {
     if (block.parentNode === parent) {
@@ -104,6 +159,10 @@ function detachBlock(block: Block, parent: ParentNode): void {
   }
 }
 
+// Entry point for validity-change notifications (boundary.markDirty). While
+// user fallback code is rendering or the host is mid content update, the
+// notification is folded into pendingRecheck instead of recursing: the
+// in-flight operation ends with a recheck that subsumes it.
 export function markSlotFallbackDirty(state: SlotFallbackState): void {
   if (state.isDisposed()) {
     return
@@ -134,6 +193,10 @@ function clearSlotFallback(state: SlotFallbackState): void {
   }
 }
 
+// Renders the fallback into a dedicated detached scope: the fallback must
+// not die with whatever branch scope happens to be active when a recheck
+// fires, so its lifetime is managed manually (stopped by clearSlotFallback,
+// or right here when the render throws or yields nothing).
 function renderSlotFallbackState(
   state: SlotFallbackState,
 ): { block: Block; scope: EffectScope } | undefined {
@@ -172,6 +235,9 @@ export function insertActiveSlotFallback(state: SlotFallbackState): void {
   insert(fallback, parentNode, state.getAnchor())
 }
 
+// `detachContent` is true only on the first content -> fallback switch: the
+// (invalid) content gets parked outside the DOM while staying alive. When
+// replacing an already active fallback, the content is parked already.
 function commitSlotFallback(
   state: SlotFallbackState,
   block: Block,
@@ -207,6 +273,7 @@ function renderAndCommitSlotFallback(
   clearSlotFallback(state)
   if (result) {
     commitSlotFallback(state, result.block, result.scope, !hadFallback)
+    // drain notifications folded into this fallback render/update window
     if (state.pendingRecheck) {
       state.pendingRecheck = false
       recheckSlotFallback(state, true)
@@ -220,6 +287,11 @@ export function disposeSlotFallback(state: SlotFallbackState): void {
   state.lastNodesValid = undefined
 }
 
+// Reconciles which branch the slot exposes after something may have changed.
+// `force` means a fallback source may differ from what the active fallback
+// was rendered from (a boundary was dirtied, or the fallback prop changed),
+// so a kept fallback must be re-rendered rather than merely re-inserted;
+// without `force` only the insertion state is reconciled.
 export function recheckSlotFallback(
   state: SlotFallbackState,
   force: boolean = false,

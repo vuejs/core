@@ -440,6 +440,9 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   private localFallback?: BlockFn
   private isUpdatingSlot = false
   private _slotFallbackBoundary?: SlotBoundaryContext
+  // Set for slot-root outlets (a <slot> that is itself the root of enclosing
+  // slot content): their exposed validity *is* that content's validity, so
+  // flips must dirty the enclosing boundary.
   private notifyParent: boolean
 
   constructor(notifyParent: boolean = false) {
@@ -495,6 +498,8 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
     const nodes = this.nodes
     remove(nodes, parent)
     if (this.activeFallback === nodes) {
+      // the exposed fallback was just torn down by remove() above; null it
+      // so disposeSlotFallback does not remove it a second time
       this.activeFallback = null
     }
     disposeSlotFallback(this)
@@ -508,6 +513,11 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   }
 
   private updateContent(render: BlockFn | undefined, key: any): void {
+    // update() operates on this.nodes, but while fallback is active `nodes`
+    // points at the fallback block. Aim it at the content branch so the base
+    // pipeline re-renders content, then capture the result back; the
+    // subsequent recheckSlotFallback decides what `nodes` exposes
+    // (syncNodes).
     this.nodes = this.content
     this.update(render, key)
     this.content = this.nodes

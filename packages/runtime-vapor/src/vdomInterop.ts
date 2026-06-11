@@ -1929,6 +1929,9 @@ function renderVaporSlot(
         markSlotFallbackDirty(fallbackState)
         return
       }
+      // When the inner SlotFragment owns the fallback, a single vdom flush
+      // can dirty this slot multiple times; batch into one post-flush recheck
+      // so it observes the settled re-rendered content.
       if (ownedSlotFragmentDirtyQueued) {
         return
       }
