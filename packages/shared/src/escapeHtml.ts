@@ -1,18 +1,11 @@
-const escapeRE = /["'&<>]/
-
 export function escapeHtml(string: unknown): string {
   const str = '' + string
-  const match = escapeRE.exec(str)
-
-  if (!match) {
-    return str
-  }
 
   let html = ''
   let escaped: string
   let index: number
   let lastIndex = 0
-  for (index = match.index; index < str.length; index++) {
+  for (index = 0; index < str.length; index++) {
     switch (str.charCodeAt(index)) {
       case 34: // "
         escaped = '&quot;'
