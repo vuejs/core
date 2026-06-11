@@ -59,10 +59,10 @@ importers:
         version: 6.1.4
       '@vitest/coverage-v8':
         specifier: ^4.1.8
-        version: 4.1.8(@voidzero-dev/vite-plus-test@0.1.24)
+        version: 4.1.8(@voidzero-dev/vite-plus-test@0.1.22)
       '@vitest/ui':
         specifier: ^4.1.8
-        version: 4.1.8(@voidzero-dev/vite-plus-test@0.1.24)
+        version: 4.1.8(@voidzero-dev/vite-plus-test@0.1.22)
       '@vue/consolidate':
         specifier: 1.0.0
         version: 1.0.0
@@ -157,8 +157,8 @@ importers:
         specifier: ^0.1.22
         version: 0.1.22(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(@voidzero-dev/vite-plus-core@0.1.24)(jsdom@29.1.1)(sass@1.100.0)(typescript@5.6.3)
       vitest:
-        specifier: npm:@voidzero-dev/vite-plus-test@latest
-        version: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(@voidzero-dev/vite-plus-core@0.1.24)(jsdom@29.1.1)(sass@1.100.0)(typescript@5.6.3)'
+        specifier: npm:@voidzero-dev/vite-plus-test@0.1.22
+        version: '@voidzero-dev/vite-plus-test@0.1.22(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(@voidzero-dev/vite-plus-core@0.1.24)(jsdom@29.1.1)(sass@1.100.0)(typescript@5.6.3)'
 
   packages-private/benchmark:
     dependencies:
@@ -2152,37 +2152,6 @@ packages:
       jsdom:
         optional: true
 
-  '@voidzero-dev/vite-plus-test@0.1.24':
-    resolution: {integrity: sha512-9NiG6UadG0iOaPL1AMsO5sDKkx6MADHw4/mMOmHWZUhhUwqzfVtnnptMK37vD71e6KyR7yAscx19FrtOWWtjvA==}
-    engines: {node: ^20.0.0 || ^22.0.0 || >=24.0.0}
-    peerDependencies:
-      '@edge-runtime/vm': '*'
-      '@opentelemetry/api': ^1.9.0
-      '@types/node': ^20.0.0 || ^22.0.0 || >=24.0.0
-      '@vitest/coverage-istanbul': 4.1.8
-      '@vitest/coverage-v8': 4.1.8
-      '@vitest/ui': 4.1.8
-      happy-dom: '*'
-      jsdom: '*'
-      vite: ^6.0.0 || ^7.0.0 || ^8.0.0
-    peerDependenciesMeta:
-      '@edge-runtime/vm':
-        optional: true
-      '@opentelemetry/api':
-        optional: true
-      '@types/node':
-        optional: true
-      '@vitest/coverage-istanbul':
-        optional: true
-      '@vitest/coverage-v8':
-        optional: true
-      '@vitest/ui':
-        optional: true
-      happy-dom:
-        optional: true
-      jsdom:
-        optional: true
-
   '@voidzero-dev/vite-plus-win32-arm64-msvc@0.1.22':
     resolution: {integrity: sha512-/1JDhTu7SAIjpqJVAN3D3zmN/O8cCRwdn63Qs0ep5GzNYh3+TtVyw3xdUY7YHeyuSypgKlqnr6IPeMlNijOG/Q==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -3820,18 +3789,6 @@ packages:
     resolution: {integrity: sha512-si7QWI6zUMq56bESFvagtmzMdGOtoxfR+Sez11Mobfc7tm+VkUckk9bW2UeffTGVUbOksxmSw0AA2gs8g71NCQ==}
     engines: {node: '>=12'}
 
-  ws@8.20.0:
-    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
   ws@8.21.0:
     resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
     engines: {node: '>=10.0.0'}
@@ -4710,7 +4667,7 @@ snapshots:
       vite: '@voidzero-dev/vite-plus-core@0.1.24(@types/node@24.13.1)(sass@1.100.0)(typescript@5.6.3)'
       vue: link:packages/vue
 
-  '@vitest/coverage-v8@4.1.8(@voidzero-dev/vite-plus-test@0.1.24)':
+  '@vitest/coverage-v8@4.1.8(@voidzero-dev/vite-plus-test@0.1.22)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.1.8
@@ -4722,13 +4679,13 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(@voidzero-dev/vite-plus-core@0.1.24)(jsdom@29.1.1)(sass@1.100.0)(typescript@5.6.3)'
+      vitest: '@voidzero-dev/vite-plus-test@0.1.22(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(@voidzero-dev/vite-plus-core@0.1.24)(jsdom@29.1.1)(sass@1.100.0)(typescript@5.6.3)'
 
   '@vitest/pretty-format@4.1.8':
     dependencies:
       tinyrainbow: 3.1.0
 
-  '@vitest/ui@4.1.8(@voidzero-dev/vite-plus-test@0.1.24)':
+  '@vitest/ui@4.1.8(@voidzero-dev/vite-plus-test@0.1.22)':
     dependencies:
       '@vitest/utils': 4.1.8
       fflate: 0.8.2
@@ -4737,7 +4694,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.16
       tinyrainbow: 3.1.0
-      vitest: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(@voidzero-dev/vite-plus-core@0.1.24)(jsdom@29.1.1)(sass@1.100.0)(typescript@5.6.3)'
+      vitest: '@voidzero-dev/vite-plus-test@0.1.22(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(@voidzero-dev/vite-plus-core@0.1.24)(jsdom@29.1.1)(sass@1.100.0)(typescript@5.6.3)'
 
   '@vitest/utils@4.1.8':
     dependencies:
@@ -4802,54 +4759,11 @@ snapshots:
       tinyexec: 1.1.2
       tinyglobby: 0.2.16
       vite: '@voidzero-dev/vite-plus-core@0.1.24(@types/node@24.13.1)(sass@1.100.0)(typescript@5.6.3)'
-      ws: 8.20.0
+      ws: 8.21.0
     optionalDependencies:
       '@types/node': 24.13.1
-      '@vitest/coverage-v8': 4.1.8(@voidzero-dev/vite-plus-test@0.1.24)
-      '@vitest/ui': 4.1.8(@voidzero-dev/vite-plus-test@0.1.24)
-      jsdom: 29.1.1
-    transitivePeerDependencies:
-      - '@arethetypeswrong/core'
-      - '@tsdown/css'
-      - '@tsdown/exe'
-      - '@vitejs/devtools'
-      - bufferutil
-      - esbuild
-      - jiti
-      - less
-      - publint
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - terser
-      - tsx
-      - typescript
-      - unplugin-unused
-      - unrun
-      - utf-8-validate
-      - yaml
-
-  '@voidzero-dev/vite-plus-test@0.1.24(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(@voidzero-dev/vite-plus-core@0.1.24)(jsdom@29.1.1)(sass@1.100.0)(typescript@5.6.3)':
-    dependencies:
-      '@standard-schema/spec': 1.1.0
-      '@types/chai': 5.2.3
-      '@voidzero-dev/vite-plus-core': 0.1.24(@types/node@24.13.1)(sass@1.100.0)(typescript@5.6.3)
-      es-module-lexer: 1.7.0
-      obug: 2.1.1
-      pixelmatch: 7.2.0
-      pngjs: 7.0.0
-      sirv: 3.0.2
-      std-env: 4.1.0
-      tinybench: 2.9.0
-      tinyexec: 1.1.2
-      tinyglobby: 0.2.16
-      vite: '@voidzero-dev/vite-plus-core@0.1.24(@types/node@24.13.1)(sass@1.100.0)(typescript@5.6.3)'
-      ws: 8.20.0
-    optionalDependencies:
-      '@types/node': 24.13.1
-      '@vitest/coverage-v8': 4.1.8(@voidzero-dev/vite-plus-test@0.1.24)
-      '@vitest/ui': 4.1.8(@voidzero-dev/vite-plus-test@0.1.24)
+      '@vitest/coverage-v8': 4.1.8(@voidzero-dev/vite-plus-test@0.1.22)
+      '@vitest/ui': 4.1.8(@voidzero-dev/vite-plus-test@0.1.22)
       jsdom: 29.1.1
     transitivePeerDependencies:
       - '@arethetypeswrong/core'
@@ -4881,7 +4795,7 @@ snapshots:
 
   '@vue/compiler-core@3.6.0-beta.14':
     dependencies:
-      '@babel/parser': 7.29.3
+      '@babel/parser': 7.29.7
       '@vue/shared': 3.6.0-beta.14
       entities: 7.0.1
       estree-walker: 2.0.2
@@ -4894,7 +4808,7 @@ snapshots:
 
   '@vue/compiler-sfc@3.6.0-beta.14':
     dependencies:
-      '@babel/parser': 7.29.3
+      '@babel/parser': 7.29.7
       '@vue/compiler-core': 3.6.0-beta.14
       '@vue/compiler-dom': 3.6.0-beta.14
       '@vue/compiler-ssr': 3.6.0-beta.14
@@ -4912,7 +4826,7 @@ snapshots:
 
   '@vue/compiler-vapor@3.6.0-beta.14':
     dependencies:
-      '@babel/parser': 7.29.3
+      '@babel/parser': 7.29.7
       '@vue/compiler-dom': 3.6.0-beta.14
       '@vue/shared': 3.6.0-beta.14
       estree-walker: 2.0.2
@@ -6679,8 +6593,6 @@ snapshots:
       ansi-styles: 6.2.3
       string-width: 5.1.2
       strip-ansi: 7.2.0
-
-  ws@8.20.0: {}
 
   ws@8.21.0: {}
 
