@@ -73,13 +73,21 @@ const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
   .filter(p => {
     const pkgRoot = path.resolve(__dirname, '../packages', p)
-    if (fs.statSync(pkgRoot).isDirectory()) {
-      const pkg = JSON.parse(
-        fs.readFileSync(path.resolve(pkgRoot, 'package.json'), 'utf-8'),
-      )
-      return !pkg.private
+    const pkgPath = path.resolve(pkgRoot, 'package.json')
+    if (!fs.statSync(pkgRoot).isDirectory() || !fs.existsSync(pkgPath)) {
+      return false
     }
+
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+    return !pkg.private
   })
+
+const sortPackagesForPublishing = (/** @type {string[]} */ packageNames) => [
+  // Publish vue last so users cannot install the new entry package before
+  // the matching internal packages are available.
+  ...packageNames.filter(p => p !== 'vue'),
+  ...packageNames.filter(p => p === 'vue'),
+]
 
 const isCorePackage = (/** @type {string} */ pkgName) => {
   if (!pkgName) return
@@ -97,7 +105,7 @@ const isCorePackage = (/** @type {string} */ pkgName) => {
 const keepThePackageName = (/** @type {string} */ pkgName) => pkgName
 
 /** @type {string[]} */
-const skippedPackages = []
+const alreadyPublishedPackages = []
 
 /** @type {ReadonlyArray<import('semver').ReleaseType>} */
 const versionIncrements = [
@@ -124,6 +132,12 @@ const dryRun = async (
 const runIfNotDry = isDryRun ? dryRun : run
 const getPkgRoot = (/** @type {string} */ pkg) =>
   path.resolve(__dirname, '../packages/' + pkg)
+const getPkgManifest = (/** @type {string} */ pkg) =>
+  /** @type {Package} */ (
+    JSON.parse(
+      fs.readFileSync(path.resolve(getPkgRoot(pkg), 'package.json'), 'utf-8'),
+    )
+  )
 const step = (/** @type {string} */ msg) => console.log(pico.cyan(msg))
 
 async function main() {
@@ -252,10 +266,10 @@ async function main() {
     console.log(`\nDry run finished - run git diff to see package changes.`)
   }
 
-  if (skippedPackages.length) {
+  if (alreadyPublishedPackages.length) {
     console.log(
       pico.yellow(
-        `The following packages are skipped and NOT published:\n- ${skippedPackages.join(
+        `The following packages already existed on the registry and were skipped:\n- ${alreadyPublishedPackages.join(
           '\n- ',
         )}`,
       ),
@@ -412,7 +426,7 @@ async function publishPackages(version) {
     additionalPublishFlags.push('--provenance')
   }
 
-  for (const pkg of packages) {
+  for (const pkg of sortPackagesForPublishing(packages)) {
     await publishPackage(pkg, version, additionalPublishFlags)
   }
 }
@@ -423,9 +437,7 @@ async function publishPackages(version) {
  * @param {ReadonlyArray<string>} additionalFlags
  */
 async function publishPackage(pkgName, version, additionalFlags) {
-  if (skippedPackages.includes(pkgName)) {
-    return
-  }
+  const packageName = getPkgManifest(pkgName).name
 
   let releaseTag = null
   if (args.tag) {
@@ -438,7 +450,14 @@ async function publishPackage(pkgName, version, additionalFlags) {
     releaseTag = 'rc'
   }
 
-  step(`Publishing ${pkgName}...`)
+  if (!isDryRun && (await isPackagePublished(packageName, version))) {
+    const pkgVersion = `${packageName}@${version}`
+    console.log(pico.yellow(`Skipping already published: ${pkgVersion}`))
+    alreadyPublishedPackages.push(pkgVersion)
+    return
+  }
+
+  step(`Publishing ${packageName}...`)
   try {
     // Don't change the package manager here as we rely on pnpm to handle
     // workspace:* deps
@@ -457,14 +476,44 @@ async function publishPackage(pkgName, version, additionalFlags) {
         stdio: 'pipe',
       },
     )
-    console.log(pico.green(`Successfully published ${pkgName}@${version}`))
+    console.log(pico.green(`Successfully published ${packageName}@${version}`))
   } catch (/** @type {any} */ e) {
     if (e.message?.match(/previously published/)) {
-      console.log(pico.red(`Skipping already published: ${pkgName}`))
+      const pkgVersion = `${packageName}@${version}`
+      console.log(pico.red(`Skipping already published: ${pkgVersion}`))
+      alreadyPublishedPackages.push(pkgVersion)
     } else {
       throw e
     }
   }
+}
+
+async function isPackagePublished(
+  /** @type {string} */ packageName,
+  /** @type {string} */ version,
+) {
+  try {
+    await run(
+      'npm',
+      [
+        'view',
+        `${packageName}@${version}`,
+        'version',
+        ...(args.registry ? ['--registry', args.registry] : []),
+      ],
+      { stdio: 'pipe' },
+    )
+    return true
+  } catch (/** @type {any} */ e) {
+    if (isPackageNotFoundError(e)) {
+      return false
+    }
+    throw e
+  }
+}
+
+function isPackageNotFoundError(/** @type {Error} */ error) {
+  return /E404|No match found|No matching version|notarget/i.test(error.message)
 }
 
 async function publishOnly() {
