@@ -221,8 +221,9 @@ export function watch(
   if (once && cb) {
     const _cb = cb
     cb = (...args) => {
-      _cb(...args)
+      const res = _cb(...args)
       watchHandle()
+      return res
     }
   }
 
