@@ -242,6 +242,7 @@ export function watch(
       // watch(source, cb)
       const newValue = effect.run()
       if (
+        immediateFirstRun ||
         deep ||
         forceTrigger ||
         (isMultiSource
