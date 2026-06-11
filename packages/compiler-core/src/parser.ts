@@ -201,7 +201,7 @@ const tokenizer = new Tokenizer(stack, {
   ondirname(start, end) {
     const raw = getSlice(start, end)
     const name =
-      raw === '.' || raw === ':'
+      raw === '!' || raw === '.' || raw === ':'
         ? 'bind'
         : raw === '@'
           ? 'on'
@@ -226,7 +226,7 @@ const tokenizer = new Tokenizer(stack, {
         type: NodeTypes.DIRECTIVE,
         name,
         rawName: raw,
-        exp: undefined,
+        exp: raw === '!' ? createSimpleExpression('false') : undefined,
         arg: undefined,
         modifiers: raw === '.' ? [createSimpleExpression('prop')] : [],
         loc: getLoc(start),
