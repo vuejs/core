@@ -1,3 +1,5 @@
+## [3.5.38](https://github.com/vuejs/core/compare/v3.5.37...v3.5.38) (2026-06-11)
+
 ## [3.5.37](https://github.com/vuejs/core/compare/v3.5.36...v3.5.37) (2026-06-11)
 
 ## [3.5.36](https://github.com/vuejs/core/compare/v3.5.35...v3.5.36) (2026-06-11)
