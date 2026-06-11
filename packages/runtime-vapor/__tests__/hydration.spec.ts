@@ -7758,6 +7758,42 @@ describe('mismatch handling', () => {
       expect(container.innerHTML).toBe(`<!--foo--><span>updated</span>`)
     })
 
+    test('repeated adoptions clone the CSR cache only once', async () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<span>s</span><span>s</span><span>after</span>`
+      // factory created outside so it can be invoked again after hydration
+      const t0 = template('<span>s</span>', 2)
+      const msg = ref('after')
+
+      const cloneSpy = vi.spyOn(Node.prototype, 'cloneNode')
+      hydrateNode(container.firstChild!, () => {
+        const n0 = t0() as HTMLElement
+        // second adoption of the same factory, as in a static template
+        // repeated by v-for
+        const n1 = t0() as HTMLElement
+        const n2 = template('<span> </span>')() as HTMLElement
+        const x2 = child(n2) as Text
+
+        expect(n0).toBe(container.childNodes[0])
+        expect(n1).toBe(container.childNodes[1])
+        renderEffect(() => setText(x2, msg.value))
+      })
+      expect(cloneSpy).toHaveBeenCalledTimes(1)
+      cloneSpy.mockRestore()
+
+      // post-hydration CSR mount comes from the cached clone and is detached
+      const csr = t0() as HTMLElement
+      expect(csr.outerHTML).toBe('<span>s</span>')
+      expect(csr).not.toBe(container.childNodes[0])
+      expect(csr.parentNode).toBe(null)
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        `<span>s</span><span>s</span><span>updated</span>`,
+      )
+    })
+
     test('warns on static element tag mismatch', () => {
       const container = document.createElement('div')
       container.innerHTML = `<span>foo</span><span>after</span>`
