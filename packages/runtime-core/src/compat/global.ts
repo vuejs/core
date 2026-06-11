@@ -536,7 +536,7 @@ function installCompatMount(
         if (__DEV__) {
           for (let i = 0; i < container.attributes.length; i++) {
             const attr = container.attributes[i]
-            if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+            if (attr.name !== 'v-cloak' && /^(?:v-|:|@)/.test(attr.name)) {
               warnDeprecation(DeprecationTypes.GLOBAL_MOUNT_CONTAINER, null)
               break
             }
@@ -631,7 +631,11 @@ function defineReactive(obj: any, key: string, val: any) {
       Object.keys(val).forEach(key => {
         try {
           defineReactiveSimple(val, key, val[key])
-        } catch (e: any) {}
+        } catch (e: any) {
+          if (__DEV__) {
+            warn(`Failed making property "${key}" reactive:`, e)
+          }
+        }
       })
     }
   }

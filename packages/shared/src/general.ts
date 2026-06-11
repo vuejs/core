@@ -101,13 +101,13 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   }) as T
 }
 
-const camelizeRE = /-(\w)/g
+const camelizeRE = /-\w/g
 /**
  * @private
  */
 export const camelize: (str: string) => string = cacheStringFunction(
   (str: string): string => {
-    return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
+    return str.replace(camelizeRE, c => c.slice(1).toUpperCase())
   },
 )
 

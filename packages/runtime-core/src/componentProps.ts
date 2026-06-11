@@ -21,6 +21,7 @@ import {
   isOn,
   isReservedProp,
   isString,
+  isSymbol,
   makeMap,
   toRawType,
 } from '@vue/shared'
@@ -777,7 +778,7 @@ function getInvalidTypeMessage(
   if (
     expectedTypes.length === 1 &&
     isExplicable(expectedType) &&
-    !isBoolean(expectedType, receivedType)
+    isCoercible(expectedType, receivedType)
   ) {
     message += ` with value ${expectedValue}`
   }
@@ -793,7 +794,9 @@ function getInvalidTypeMessage(
  * dev only
  */
 function styleValue(value: unknown, type: string): string {
-  if (type === 'String') {
+  if (isSymbol(value)) {
+    return value.toString()
+  } else if (type === 'String') {
     return `"${value}"`
   } else if (type === 'Number') {
     return `${Number(value)}`
@@ -813,6 +816,9 @@ function isExplicable(type: string): boolean {
 /**
  * dev only
  */
-function isBoolean(...args: string[]): boolean {
-  return args.some(elem => elem.toLowerCase() === 'boolean')
+function isCoercible(...args: string[]): boolean {
+  return args.every(elem => {
+    const value = elem.toLowerCase()
+    return value !== 'boolean' && value !== 'symbol'
+  })
 }

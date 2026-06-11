@@ -56,9 +56,18 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { DEFINE_SLOTS, processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
+import {
+  getImportedName,
+  isCallOf,
+  isJS,
+  isLiteralNode,
+  isTS,
+} from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import { isImportUsed } from './script/importUsageCheck'
+import {
+  isImportUsed,
+  resolveTemplateVModelIdentifiers,
+} from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -168,32 +177,42 @@ export function compileScript(
     )
   }
 
-  const ctx = new ScriptCompileContext(sfc, options)
   const { script, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const isJSOrTS =
+    isJS(scriptLang, scriptSetupLang) || isTS(scriptLang, scriptSetupLang)
 
-  if (!scriptSetup) {
-    if (!script) {
-      throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
-    }
-    // normal <script> only
-    return processNormalScript(ctx, scopeId)
-  }
-
-  if (script && scriptLang !== scriptSetupLang) {
+  if (script && scriptSetup && scriptLang !== scriptSetupLang) {
     throw new Error(
       `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
         `language type.`,
     )
   }
 
-  if (scriptSetupLang && !ctx.isJS && !ctx.isTS) {
+  if (!scriptSetup) {
+    if (!script) {
+      throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
+    }
+
+    // normal <script> only
+    if (script.lang && !isJSOrTS) {
+      // do not process non js/ts script blocks
+      return script
+    }
+
+    const ctx = new ScriptCompileContext(sfc, options)
+    return processNormalScript(ctx, scopeId)
+  }
+
+  if (scriptSetupLang && !isJSOrTS) {
     // do not process non js/ts script blocks
     return scriptSetup
   }
+
+  const ctx = new ScriptCompileContext(sfc, options)
 
   // metadata that needs to be returned
   // const ctx.bindingMetadata: BindingMetadata = {}
@@ -744,6 +763,55 @@ export function compileScript(
     ctx.bindingMetadata[key] = setupBindings[key]
   }
 
+  // #11265, https://github.com/vitejs/rolldown-vite/issues/432
+  // 6.1 demote `const foo = reactive()` to `let` when used as v-model target.
+  // In non-inline template compilation, v-model assigns via `$setup.foo = $event`,
+  // which requires a SETUP_LET binding (getter + setter) to keep script state in sync.
+  // In inline mode, it generates `foo = $event`, which also requires `let`.
+  if (sfc.template && !sfc.template.src && sfc.template.ast) {
+    const vModelIds = resolveTemplateVModelIdentifiers(sfc)
+    if (vModelIds.size) {
+      const toDemote = new Set<string>()
+      for (const id of vModelIds) {
+        if (setupBindings[id] === BindingTypes.SETUP_REACTIVE_CONST) {
+          toDemote.add(id)
+        }
+      }
+
+      if (toDemote.size) {
+        for (const node of scriptSetupAst.body) {
+          if (
+            node.type === 'VariableDeclaration' &&
+            node.kind === 'const' &&
+            !node.declare
+          ) {
+            const demotedInDecl: string[] = []
+            for (const decl of node.declarations) {
+              if (decl.id.type === 'Identifier' && toDemote.has(decl.id.name)) {
+                demotedInDecl.push(decl.id.name)
+              }
+            }
+            if (demotedInDecl.length) {
+              ctx.s.overwrite(
+                node.start! + startOffset,
+                node.start! + startOffset + 'const'.length,
+                'let',
+              )
+              for (const id of demotedInDecl) {
+                setupBindings[id] = BindingTypes.SETUP_LET
+                ctx.bindingMetadata[id] = BindingTypes.SETUP_LET
+                warnOnce(
+                  `\`v-model\` cannot update a \`const\` reactive binding \`${id}\`. ` +
+                    `The compiler has transformed it to \`let\` to make the update work.`,
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   // 7. inject `useCssVars` calls
   if (
     sfc.cssVars.length &&
@@ -817,6 +885,8 @@ export function compileScript(
   let templateMap
   // 9. generate return statement
   let returned
+  // ensure props bindings register before compile template in inline mode
+  const propsDecl = genRuntimeProps(ctx)
   if (
     !options.inlineTemplate ||
     (!sfc.template && ctx.hasDefaultExportRender)
@@ -949,7 +1019,6 @@ export function compileScript(
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
 
-  const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
   const emitsDecl = genRuntimeEmits(ctx)

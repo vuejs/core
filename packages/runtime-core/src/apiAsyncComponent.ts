@@ -11,6 +11,7 @@ import { isFunction, isObject } from '@vue/shared'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
+import { onUnmounted } from './apiLifecycle'
 import { warn } from './warning'
 import { ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
@@ -43,7 +44,7 @@ export interface AsyncComponentOptions<T = any> {
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance },
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
@@ -123,28 +124,30 @@ export function defineAsyncComponent<
 
     __asyncHydrate(el, instance, hydrate) {
       let patched = false
+      ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
+      const performHydrate = () => {
+        // skip hydration if the component has been patched
+        if (patched) {
+          if (__DEV__) {
+            warn(
+              `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
+                `it was updated before lazy hydration performed.`,
+            )
+          }
+          return
+        }
+        hydrate()
+      }
       const doHydrate = hydrateStrategy
         ? () => {
-            const performHydrate = () => {
-              // skip hydration if the component has been patched
-              if (__DEV__ && patched) {
-                warn(
-                  `Skipping lazy hydration for component '${getComponentName(resolvedComp!)}': ` +
-                    `it was updated before lazy hydration performed.`,
-                )
-                return
-              }
-              hydrate()
-            }
             const teardown = hydrateStrategy(performHydrate, cb =>
               forEachElement(el, cb),
             )
             if (teardown) {
               ;(instance.bum || (instance.bum = [])).push(teardown)
             }
-            ;(instance.u || (instance.u = [])).push(() => (patched = true))
           }
-        : hydrate
+        : performHydrate
       if (resolvedComp) {
         doHydrate()
       } else {
@@ -199,14 +202,24 @@ export function defineAsyncComponent<
       const error = ref()
       const delayed = ref(!!delay)
 
+      let timeoutTimer: ReturnType<typeof setTimeout> | undefined
+      let delayTimer: ReturnType<typeof setTimeout> | undefined
+
+      onUnmounted(() => {
+        if (timeoutTimer != null) clearTimeout(timeoutTimer)
+        if (delayTimer != null) clearTimeout(delayTimer)
+      })
+
       if (delay) {
-        setTimeout(() => {
+        delayTimer = setTimeout(() => {
+          if (instance.isUnmounted) return
           delayed.value = false
         }, delay)
       }
 
       if (timeout != null) {
-        setTimeout(() => {
+        timeoutTimer = setTimeout(() => {
+          if (instance.isUnmounted) return
           if (!loaded.value && !error.value) {
             const err = new Error(
               `Async component timed out after ${timeout}ms.`,
@@ -219,6 +232,7 @@ export function defineAsyncComponent<
 
       load()
         .then(() => {
+          if (instance.isUnmounted) return
           loaded.value = true
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
@@ -227,6 +241,10 @@ export function defineAsyncComponent<
           }
         })
         .catch(err => {
+          if (instance.isUnmounted) {
+            pendingRequest = null
+            return
+          }
           onError(err)
           error.value = err
         })
@@ -239,7 +257,10 @@ export function defineAsyncComponent<
             error: error.value,
           })
         } else if (loadingComponent && !delayed.value) {
-          return createVNode(loadingComponent)
+          return createInnerComp(
+            loadingComponent as ConcreteComponent,
+            instance,
+          )
         }
       }
     },
