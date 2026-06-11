@@ -116,8 +116,9 @@ import {
 } from './insertionState'
 import {
   type DynamicFragment,
+  RenderContextFragment,
   SlotFragment,
-  VaporFragment,
+  type VaporFragment,
   isFragment,
   runWithFragmentCtx,
 } from './fragment'
@@ -2624,8 +2625,8 @@ function getInteropVaporSlotScopeIds(
 function createInteropFragment(
   nodes: Block = EMPTY_BLOCK,
   vnode: VNode | null = null,
-): VaporFragment<Block> {
-  const frag = new VaporFragment<Block>(nodes)
+): RenderContextFragment<Block> {
+  const frag = new RenderContextFragment<Block>(nodes)
   frag.vnode = vnode
   return frag
 }
