@@ -191,10 +191,23 @@ function innerResolveTypeElements(
   scope: TypeScope,
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  if (
-    node.leadingComments &&
-    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
-  ) {
+  if (hasVueIgnore(node)) {
+    if (
+      (node.type === 'TSIntersectionType' || node.type === 'TSUnionType') &&
+      node.types.length > 1
+    ) {
+      // Babel attaches comments before the first member to the parent node.
+      // Treat them as applying to the first member only.
+      return mergeElements(
+        [
+          { props: {} },
+          ...node.types
+            .slice(1)
+            .map(t => resolveTypeElements(ctx, t, scope, typeParameters)),
+        ],
+        node.type,
+      )
+    }
     return { props: {} }
   }
   switch (node.type) {
@@ -377,6 +390,13 @@ function typeElementsToMap(
     }
   }
   return res
+}
+
+function hasVueIgnore(node: Node): boolean {
+  return !!(
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  )
 }
 
 function mergeElements(
