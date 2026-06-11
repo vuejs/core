@@ -13,6 +13,7 @@ import { isFunction, isObject } from '@vue/shared'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
+import { onUnmounted } from './apiLifecycle'
 import { warn } from './warning'
 import { type Ref, ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
@@ -127,10 +128,12 @@ export function defineAsyncComponent<
         delay,
         timeout,
         onError,
+        instance,
       )
 
       load()
         .then(() => {
+          if (instance.isUnmounted) return
           loaded.value = true
           if (
             instance.parent &&
@@ -143,6 +146,10 @@ export function defineAsyncComponent<
           }
         })
         .catch(err => {
+          if (instance.isUnmounted) {
+            setPendingRequest(null)
+            return
+          }
           onError(err)
           error.value = err
         })
@@ -265,6 +272,7 @@ export const useAsyncComponentState = (
   delay: number | undefined,
   timeout: number | undefined,
   onError: (err: Error) => void,
+  instance: GenericComponentInstance | null = currentInstance,
 ): {
   loaded: Ref<boolean>
   error: Ref<Error | undefined>
@@ -274,14 +282,26 @@ export const useAsyncComponentState = (
   const error = ref()
   const delayed = ref(!!delay)
 
+  let timeoutTimer: ReturnType<typeof setTimeout> | undefined
+  let delayTimer: ReturnType<typeof setTimeout> | undefined
+
+  if (instance) {
+    onUnmounted(() => {
+      if (timeoutTimer != null) clearTimeout(timeoutTimer)
+      if (delayTimer != null) clearTimeout(delayTimer)
+    }, instance)
+  }
+
   if (delay) {
-    setTimeout(() => {
+    delayTimer = setTimeout(() => {
+      if (instance && instance.isUnmounted) return
       delayed.value = false
     }, delay)
   }
 
   if (timeout != null) {
-    setTimeout(() => {
+    timeoutTimer = setTimeout(() => {
+      if (instance && instance.isUnmounted) return
       if (!loaded.value && !error.value) {
         const err = new Error(`Async component timed out after ${timeout}ms.`)
         onError(err)
