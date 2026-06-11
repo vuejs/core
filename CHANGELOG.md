@@ -1,3 +1,19 @@
+## [3.5.36](https://github.com/vuejs/core/compare/v3.5.35...v3.5.36) (2026-06-11)
+
+
+### Bug Fixes
+
+* **compiler-core:** avoid crash on CDATA at the document root ([#14916](https://github.com/vuejs/core/issues/14916)) ([0ea17e2](https://github.com/vuejs/core/commit/0ea17e232f9a8f4a9acf57c6addc78cf4f279c13))
+* **compiler-core:** prefix dynamic keys on v-memo elements ([#14922](https://github.com/vuejs/core/issues/14922)) ([68e978e](https://github.com/vuejs/core/commit/68e978e3e71a8ae40701808e78966f2168c5907c)), closes [#14920](https://github.com/vuejs/core/issues/14920)
+* **compiler-sfc:** handle vue-ignore on leading intersection/union type ([#14950](https://github.com/vuejs/core/issues/14950)) ([0dcd225](https://github.com/vuejs/core/commit/0dcd225c01f211ebb8ce4dda8c8eac10539abf1a)), closes [#12254](https://github.com/vuejs/core/issues/12254)
+* **compiler-sfc:** respect var hoisting in props destructure ([48ad452](https://github.com/vuejs/core/commit/48ad452dd61926a59e358da3c74c5ef750ae21c4))
+* **reactivity:** preserve watch callback return value when wrapped for `once: true` ([#14902](https://github.com/vuejs/core/issues/14902)) ([450a8a8](https://github.com/vuejs/core/commit/450a8a8e45520f30fe8343c5016a777d888e53fc))
+* **runtime-core:** add dev warning for silent catch in compat mode and fix test description typo ([#14891](https://github.com/vuejs/core/issues/14891)) ([db3e117](https://github.com/vuejs/core/commit/db3e117025a7193291ed6676180a5a44bbe0ae76))
+* **runtime-core:** force model update when reverted before sync ([#14897](https://github.com/vuejs/core/issues/14897)) ([7f76378](https://github.com/vuejs/core/commit/7f76378b0d178a29113ee07d67faa48b637944e8)), closes [#13524](https://github.com/vuejs/core/issues/13524)
+* **runtime-core:** skip async component callbacks after unmount ([#14911](https://github.com/vuejs/core/issues/14911)) ([5300ead](https://github.com/vuejs/core/commit/5300ead57b3c14942d4c155ef5e485d5409e7f02))
+* **transition:** avoid move transition for hidden v-show group children ([#14895](https://github.com/vuejs/core/issues/14895)) ([c11f6ee](https://github.com/vuejs/core/commit/c11f6ee644412edf3eef6736991e895e4a3e1dde)), closes [#14894](https://github.com/vuejs/core/issues/14894)
+* **watch:** trigger immediate callback for empty sources ([#14914](https://github.com/vuejs/core/issues/14914)) ([1f2ca7e](https://github.com/vuejs/core/commit/1f2ca7e4837b1b0de0b91048fffdb03710c0b03e)), closes [#14898](https://github.com/vuejs/core/issues/14898)
+
 ## [3.5.35](https://github.com/vuejs/core/compare/v3.5.34...v3.5.35) (2026-05-27)
 
 
