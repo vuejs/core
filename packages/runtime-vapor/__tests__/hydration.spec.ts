@@ -7166,6 +7166,16 @@ describe('mismatch handling', () => {
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
   })
+  test('element mismatch with shared tag prefix should be detected', async () => {
+    const data = ref('foo')
+    const { container } = await mountWithHydration(
+      `<i>x</i>`,
+      `<ins :id="data">x</ins>`,
+      data,
+    )
+    expect(container.innerHTML).toBe('<ins id="foo">x</ins>')
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
   test('v-if block should replace server empty branch', async () => {
     const data = ref(true)
     const { container } = await mountWithHydration(
