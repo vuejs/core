@@ -42,7 +42,7 @@ import {
   isApplyingFallthroughProps,
   isVaporComponent,
 } from '../component'
-import { isHydrating, logMismatchError } from './hydration'
+import { isHydrating, isRecreatedNode, logMismatchError } from './hydration'
 import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
 
@@ -95,7 +95,7 @@ export function setAttr(
     ;(el as any)._falseValue = value
   }
 
-  if (isHydrating) {
+  if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       attributeHasMismatch(el, key, value)
     el[`$${key}`] = value
@@ -131,7 +131,7 @@ export function setDOMProp(
     return
   }
 
-  if (isHydrating) {
+  if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       attributeHasMismatch(el, key, value)
     if (!shouldForceHydrate(el, key) && !forceHydrate) {
@@ -189,7 +189,7 @@ export function setClass(
     setClassIncremental(el, value, isNormalized)
   } else {
     if (!isNormalized) value = normalizeClass(value)
-    if (isHydrating) {
+    if (isHydrating && !isRecreatedNode(el)) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         classHasMismatch(el, value, false)
       el.$cls = value
@@ -252,7 +252,7 @@ function setClassIncremental(
   const cacheKey = `$clsi${isApplyingFallthroughProps ? '$' : ''}`
   const normalizedValue = isNormalized ? value : normalizeClass(value)
 
-  if (isHydrating) {
+  if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       classHasMismatch(el, normalizedValue, true)
     el[cacheKey] = normalizedValue
@@ -308,7 +308,7 @@ export function setStyle(el: TargetElement, value: any): void {
     setStyleIncremental(el, value)
   } else {
     const normalizedValue = normalizeStyle(value)
-    if (isHydrating) {
+    if (isHydrating && !isRecreatedNode(el)) {
       if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
         if (shouldDeferCheckStyleMismatch(el)) {
           const instance = currentInstance as VaporComponentInstance
@@ -333,7 +333,7 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
 
-  if (isHydrating) {
+  if (isHydrating && !isRecreatedNode(el)) {
     if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
       if (shouldDeferCheckStyleMismatch(el)) {
         const instance = currentInstance as VaporComponentInstance
@@ -364,7 +364,7 @@ export function setValue(
   // non-string values will be stringified.
   el._value = value
 
-  if (isHydrating) {
+  if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       attributeHasMismatch(el, 'value', getClientText(el, value))
     if (!shouldForceHydrate(el, 'value') && !forceHydrate) {
@@ -390,7 +390,7 @@ export function setValue(
  * `toDisplayString`
  */
 export function setText(el: Text & { $txt?: string }, value: string): void {
-  if (isHydrating) {
+  if (isHydrating && !isRecreatedNode(el) && !isRecreatedNode(el.parentNode)) {
     const clientText = getClientText(el.parentNode!, value)
     if (el.nodeValue == clientText) {
       el.$txt = clientText
@@ -423,7 +423,7 @@ export function setElementText(
   value: unknown,
 ): void {
   value = toDisplayString(value)
-  if (isHydrating) {
+  if (isHydrating && !isRecreatedNode(el)) {
     let clientText = getClientText(el, value as string)
     if (el.textContent === clientText) {
       el.$txt = clientText
@@ -492,7 +492,7 @@ export function setHtml(el: TargetElement, value: any): void {
   // Align with vdom hydration: server-rendered innerHTML content is trusted
   // as-is in all builds; no write, no compare, no warning. Caching the
   // client value keeps the first post-hydration equal-value update a no-op.
-  if (isHydrating) {
+  if (isHydrating && !isRecreatedNode(el)) {
     el.$html = value
     return
   }
