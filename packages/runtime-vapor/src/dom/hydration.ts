@@ -238,14 +238,7 @@ function adoptTemplateImpl(
     node = resolveHydrationTarget(node)
   }
 
-  const type = node.nodeType
-  if (
-    // comment node
-    (type === 8 && !template.startsWith('<!')) ||
-    // element node
-    (type === 1 &&
-      !template.startsWith(`<` + (node as Element).tagName.toLowerCase()))
-  ) {
+  if (!matchesHydrationTarget(node, template)) {
     node = handleMismatch(node, template, adoptChildren, ns)
   }
 
@@ -404,32 +397,43 @@ function handleMismatch(
   return newNode
 }
 
-export function validateHydrationTarget(node: Node, template: string): void {
+/**
+ * Whether a server-rendered node can be adopted for the given client
+ * template: the node type must match the template's expected type, and
+ * element tags must match exactly — a prefix check is not enough
+ * (e.g. a server `<i>` must not be adopted for a client `<ins>`).
+ */
+function matchesHydrationTarget(node: Node, template: string): boolean {
   let expectedType: number
   if (template[0] !== '<') {
+    // text
     expectedType = 3
   } else if (template[1] === '!') {
+    // comment
     expectedType = 8
   } else {
+    // element
     expectedType = 1
   }
 
   if (node.nodeType !== expectedType) {
-    warnHydrationNodeMismatch(node, template)
-    return
+    return false
   }
 
   if (expectedType !== 1) {
-    return
+    return true
   }
 
   const match = START_TAG_RE.exec(template)
   const expectedTag = match && match[1]
+  return (
+    !expectedTag ||
+    (node as Element).tagName.toLowerCase() === expectedTag.toLowerCase()
+  )
+}
 
-  if (
-    expectedTag &&
-    (node as Element).tagName.toLowerCase() !== expectedTag.toLowerCase()
-  ) {
+export function validateHydrationTarget(node: Node, template: string): void {
+  if (!matchesHydrationTarget(node, template)) {
     warnHydrationNodeMismatch(node, template)
   }
 }
