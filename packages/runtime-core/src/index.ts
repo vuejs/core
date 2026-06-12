@@ -663,6 +663,7 @@ export {
   isValidHtmlOrSvgAttribute,
   getAttributeMismatch,
   isHydrating,
+  logMismatchError,
 } from './hydration'
 /**
  * @internal

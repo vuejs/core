@@ -24,6 +24,7 @@ import {
   isMismatchAllowed,
   isSetEqual,
   isValidHtmlOrSvgAttribute,
+  logMismatchError,
   mergeProps,
   patchStyle,
   queuePostFlushCb,
@@ -45,7 +46,6 @@ import {
 import {
   isHydrating,
   isRecreatedNode,
-  logMismatchError,
   warnHydrationTextMismatch,
 } from './hydration'
 import { type Block, normalizeBlock } from '../block'

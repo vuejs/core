@@ -1,6 +1,7 @@
 import {
   MismatchTypes,
   type VShowElement,
+  logMismatchError,
   vShowHidden,
   vShowOriginalDisplay,
   warn,
@@ -10,7 +11,7 @@ import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
 import type { Block, TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
-import { isHydrating, logMismatchError } from '../dom/hydration'
+import { isHydrating } from '../dom/hydration'
 import { isDynamicFragment, isFragment } from '../fragment'
 
 export interface PendingVShow {
