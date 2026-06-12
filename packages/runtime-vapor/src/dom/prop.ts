@@ -42,7 +42,12 @@ import {
   isApplyingFallthroughProps,
   isVaporComponent,
 } from '../component'
-import { isHydrating, isRecreatedNode, logMismatchError } from './hydration'
+import {
+  isHydrating,
+  isRecreatedNode,
+  logMismatchError,
+  warnHydrationTextMismatch,
+} from './hydration'
 import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
 
@@ -400,12 +405,7 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
     const parent = el.parentElement
     if (parent && !isMismatchAllowed(parent, MismatchTypes.TEXT)) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-        warn(
-          `Hydration text mismatch in`,
-          el.parentNode,
-          `\n  - rendered on server: ${JSON.stringify((el as Text).data)}` +
-            `\n  - expected on client: ${JSON.stringify(value)}`,
-        )
+        warnHydrationTextMismatch(el, value)
       logMismatchError()
     }
   }
