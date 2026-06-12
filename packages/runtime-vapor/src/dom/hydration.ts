@@ -422,8 +422,8 @@ function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
         node,
         node.nodeType === 3
           ? `(text)`
-          : isComment(node, '[[')
-            ? `(start of block node)`
+          : isComment(node, '[')
+            ? `(start of fragment)`
             : ``,
         `\n- expected on client:`,
         expected,
