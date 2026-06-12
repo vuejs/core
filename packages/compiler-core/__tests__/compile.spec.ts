@@ -1,4 +1,4 @@
-import { baseCompile as compile } from '../src'
+import { ErrorCodes, baseCompile as compile } from '../src'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
 
 describe('compiler: integration tests', () => {
@@ -261,5 +261,36 @@ describe('compiler: integration tests', () => {
     expect(
       consumer.originalPositionFor(getPositionInCode(code, `value + index`)),
     ).toMatchObject(getPositionInCode(source, `value + index`))
+  })
+
+  // When a <template> carries a structural directive that is invalid in its
+  // position, the directive transform reports a compiler error but leaves the
+  // node in the tree without a codegenNode. With a non-throwing `onError` the
+  // node still reaches codegen, which used to crash with an internal
+  // "Codegen node is missing" error. It should degrade to a placeholder instead.
+  describe('codegen does not crash on invalid structural directive', () => {
+    test.each([
+      `<template v-else>x</template>`,
+      `<template v-else-if="a">x</template>`,
+      `<template #slot>x</template>`,
+      `<div><template #slot>x</template></div>`,
+    ])('%s', source => {
+      const onError = vi.fn()
+      let code!: string
+      expect(() => {
+        code = compile(source, { onError }).code
+      }).not.toThrow()
+      expect(code).toContain(`return`)
+    })
+
+    test('still reports the underlying error', () => {
+      const onError = vi.fn()
+      expect(() =>
+        compile(`<template v-else>x</template>`, { onError }),
+      ).not.toThrow()
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF }),
+      )
+    })
   })
 })
