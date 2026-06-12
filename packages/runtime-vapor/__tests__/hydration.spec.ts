@@ -7166,6 +7166,19 @@ describe('mismatch handling', () => {
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
   })
+  test('v-if block should replace server empty branch', async () => {
+    const data = ref(true)
+    const { container } = await mountWithHydration(
+      `<div><span>a</span><!----></div>`,
+      `<div><span>a</span><p v-if="data">yes</p></div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe(
+      '<div><span>a</span><p>yes</p><!--if--></div>',
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
   test('fragment start mismatch warning labels the server node', () => {
     const container = document.createElement('div')
     container.innerHTML = '<!--[--><span>server</span><!--]-->'
