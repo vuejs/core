@@ -534,21 +534,64 @@ function removeHydrationNode(node: Node, close: Node | null = null): void {
   remove(node, parent)
 }
 
-export function cleanupHydrationTail(node: Node, container?: ParentNode): void {
+/**
+ * Removes unclaimed server-rendered nodes and reports a children mismatch.
+ * Trims `node` alone by default, the rest of `container`'s child list when
+ * `container` is given, or the logical siblings up to `close` when leaving a
+ * hydration boundary (which also moves the cursor onto `close`). Range cleanup
+ * keeps reused hydration anchors in place.
+ */
+export function cleanupHydrationTail(
+  node: Node,
+  container?: ParentNode,
+  close: Node | null = null,
+): void {
+  if (close) {
+    // A boundary only owns cleanup while the hydration cursor is still inside
+    // its SSR range. If nested hydration has already advanced past `close`,
+    // stop here so we don't delete sibling or parent-owned SSR nodes by
+    // mistake. When the range holds nothing but reused anchors, there is no
+    // mismatch to report either - just move the cursor onto `close`.
+    let cur: Node | null = node
+    let hasRemovableNode = false
+    while (cur && cur !== close) {
+      if (!isHydrationAnchor(cur)) {
+        hasRemovableNode = true
+      }
+      cur = nextLogicalSibling(cur)
+    }
+    if (!cur) return
+    if (!hasRemovableNode) {
+      setCurrentHydrationNode(close)
+      return
+    }
+  }
+
   const mismatchContainer = container || node.parentElement
   if (mismatchContainer instanceof Element) {
     warnHydrationChildrenMismatch(mismatchContainer)
   }
-  if (!container) {
+
+  if (!container && !close) {
     removeHydrationNode(node)
     return
   }
 
   let current: Node | null = node
-  while (current && current.parentNode === container) {
+  while (
+    current &&
+    current !== close &&
+    (!container || current.parentNode === container)
+  ) {
     const next = nextLogicalSibling(current)
-    removeHydrationNode(current)
+    if (!isHydrationAnchor(current)) {
+      removeHydrationNode(current, close)
+    }
     current = next
+  }
+
+  if (close) {
+    setCurrentHydrationNode(close)
   }
 }
 
@@ -593,46 +636,6 @@ export function resolveHydrationTarget(node: Node): Node {
   }
 }
 
-function finalizeHydrationBoundary(close: Node | null): void {
-  let node = currentHydrationNode
-
-  // Once the hydration cursor has already reached `close`, this scope has no
-  // unclaimed SSR nodes left to trim. Single-root paths commonly end up here,
-  // so there is no children-count mismatch to report for this boundary.
-  if (!close || !node || node === close) {
-    return
-  }
-
-  // This boundary only owns cleanup while the current cursor is still inside
-  // its SSR range. If nested hydration has already advanced past `close`, stop
-  // here so we don't delete sibling or parent-owned SSR nodes by mistake.
-  let cur: Node | null = node
-  let hasRemovableNode = false
-  while (cur && cur !== close) {
-    if (!isHydrationAnchor(cur)) {
-      hasRemovableNode = true
-    }
-    cur = nextLogicalSibling(cur)
-  }
-  if (!cur) return
-  if (!hasRemovableNode) {
-    setCurrentHydrationNode(close)
-    return
-  }
-
-  warnHydrationChildrenMismatch((close as Node).parentElement)
-
-  while (node && node !== close) {
-    const next = nextLogicalSibling(node)
-    if (!isHydrationAnchor(node)) {
-      removeHydrationNode(node, close)
-    }
-    node = next!
-  }
-
-  setCurrentHydrationNode(close)
-}
-
 function warnHydrationChildrenMismatch(container: Element | null): void {
   if (container && !isMismatchAllowed(container, MismatchTypes.CHILDREN)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
@@ -647,6 +650,12 @@ function warnHydrationChildrenMismatch(container: Element | null): void {
 
 export function enterHydrationBoundary(close: Node | null): () => void {
   return () => {
-    finalizeHydrationBoundary(close)
+    // Once the hydration cursor has already reached `close`, this scope has
+    // no unclaimed SSR nodes left to trim. Single-root paths commonly end up
+    // here, so there is no children-count mismatch to report.
+    const node = currentHydrationNode
+    if (close && node && node !== close) {
+      cleanupHydrationTail(node, undefined, close)
+    }
   }
 }
