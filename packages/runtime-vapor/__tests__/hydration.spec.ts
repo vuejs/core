@@ -3647,7 +3647,7 @@ describe('Vapor Mode hydration', () => {
       const { container } = await mountWithHydration(html, code, clientData)
 
       expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div>\n<!--[--><span>foo</span><span>bar</span><!--]-->\n<i>tail</i></div>"`,
       )
@@ -4431,7 +4431,7 @@ describe('Vapor Mode hydration', () => {
         `"<span>1</span><!--for--><p>tail</p>"`,
       )
       expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).toHaveBeenWarned()
 
       data.value.items.push(4)
@@ -5329,7 +5329,7 @@ describe('Vapor Mode hydration', () => {
         `<!--teleport start--><!--teleport end-->`,
       )
       expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(teleportContainer.innerHTML).toBe(
         `<!--teleport start anchor--><span>foo</span><!--teleport anchor-->`,
       )
@@ -5385,7 +5385,7 @@ describe('Vapor Mode hydration', () => {
       )
 
       expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(container.innerHTML).toBe(
         `<!--teleport start--><span>foo</span><!--teleport end-->`,
       )
@@ -6030,7 +6030,7 @@ describe('Vapor Mode hydration', () => {
       await new Promise(r => setTimeout(r))
 
       expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       	"<div>
       	<!--[--><span>bar</span><!--if--><!--]-->
@@ -6095,7 +6095,7 @@ describe('Vapor Mode hydration', () => {
       await new Promise(r => setTimeout(r))
 
       expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       	"<div>
       	<!--[--><span>bar</span><!--if--><i>tail</i><!--]-->
@@ -6154,7 +6154,7 @@ describe('Vapor Mode hydration', () => {
       await new Promise(r => setTimeout(r))
 
       expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       	"<div>
       	<!--[-->
@@ -7112,6 +7112,59 @@ describe('mismatch handling', () => {
       '<div class="client-only">client text</div><i>after</i>',
     )
     expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
+  test('element mismatch should apply dynamic props on recreated node', async () => {
+    const data = ref('client-id')
+    const { container } = await mountWithHydration(
+      `<span id="server-id">foo</span>`,
+      `<div :id="data">foo</div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe('<div id="client-id">foo</div>')
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    // recreated nodes never existed on the server, so no per-prop checks
+    expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+    // cache must reflect the written value so later updates are not skipped
+    data.value = 'updated-id'
+    await nextTick()
+    expect(container.innerHTML).toBe('<div id="updated-id">foo</div>')
+  })
+  test('element mismatch should apply dynamic class and style on recreated node', async () => {
+    const data = ref({ cls: 'foo', style: { color: 'red' } })
+    const { container } = await mountWithHydration(
+      `<span class="server">foo</span>`,
+      `<div :class="data.cls" :style="data.style">foo</div>`,
+      data,
+    )
+    const el = container.firstChild as HTMLElement
+    expect(el.className).toBe('foo')
+    expect(el.style.color).toBe('red')
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(`Hydration class mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  })
+  test('element mismatch should write dynamic text without text mismatch warning', async () => {
+    const data = ref('client text')
+    const { container } = await mountWithHydration(
+      `<p>server text</p>`,
+      `<div>{{ data }}</div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe('<div>client text</div>')
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+  })
+  test('element mismatch should apply dynamic props on recreated descendants', async () => {
+    const data = ref('child-id')
+    const { container } = await mountWithHydration(
+      `<p><b id="server">x</b></p>`,
+      `<div><span :id="data">x</span></div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe('<div><span id="child-id">x</span></div>')
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
   })
   test('fragment start mismatch warning labels the server node', () => {
     const container = document.createElement('div')
@@ -12144,7 +12197,7 @@ describe('VDOM interop', () => {
     createVaporSSRApp(ClientApp).mount(container)
 
     expect(`Hydration node mismatch`).toHaveBeenWarned()
-    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "

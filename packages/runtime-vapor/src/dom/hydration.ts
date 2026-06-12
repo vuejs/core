@@ -80,6 +80,7 @@ function performHydration<T>(
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
     ;(Node.prototype as any).$vha = undefined
+    ;(Node.prototype as any).$rcn = undefined
 
     isOptimized = true
   }
@@ -143,6 +144,13 @@ type Anchor = Node & {
   // cached matching fragment end to avoid repeated traversal on nested
   // comment fragments.
   $fe?: Anchor
+}
+
+type RecreatedNode = Node & {
+  // Set on nodes rebuilt by mismatch recovery. The server never rendered
+  // these nodes, so hydration-mode prop setters must write to them like a
+  // client-side mount instead of adopting them check-only.
+  $rcn?: 1
 }
 
 type CommentAnchor = Comment & Anchor
@@ -358,7 +366,10 @@ function handleMismatch(
 
   // fast path for text nodes
   if (template[0] !== '<') {
-    return container.insertBefore(createTextNode(template), next)
+    return container.insertBefore(
+      markRecreatedNode(createTextNode(template)),
+      next,
+    )
   }
 
   // element node
@@ -371,6 +382,15 @@ function handleMismatch(
   } else {
     t.innerHTML = template
     newNode = _child(t.content).cloneNode(true) as Element
+  }
+  markRecreatedNode(newNode)
+  if (newNode.nodeType === 1) {
+    // Mark template-born descendants before adopting server children below,
+    // so adopted server content keeps normal check-only hydration semantics.
+    const descendants = newNode.querySelectorAll('*')
+    for (let i = 0; i < descendants.length; i++) {
+      markRecreatedNode(descendants[i])
+    }
   }
   if (adoptChildren && node.nodeType === 1 && !newNode.firstChild) {
     let child = node.firstChild
@@ -508,6 +528,15 @@ export function markHydrationAnchor<T extends Node>(node: T): T {
 
 export function isHydrationAnchor(node: Node | null | undefined): boolean {
   return !!node && (node as Anchor).$vha === 1
+}
+
+function markRecreatedNode<T extends Node>(node: T): T {
+  ;(node as RecreatedNode).$rcn = 1
+  return node
+}
+
+export function isRecreatedNode(node: Node | null | undefined): boolean {
+  return !!node && (node as RecreatedNode).$rcn === 1
 }
 
 export function resolveHydrationTarget(node: Node): Node {
