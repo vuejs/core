@@ -2,6 +2,7 @@ import {
   MismatchTypes,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
+  logMismatchError,
   warn,
 } from '@vue/runtime-dom'
 import { type Namespace, Namespaces } from '@vue/shared'
@@ -481,16 +482,6 @@ function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
       )
     logMismatchError()
   }
-}
-
-let hasLoggedMismatchError = false
-export const logMismatchError = (): void => {
-  if (__TEST__ || hasLoggedMismatchError) {
-    return
-  }
-  // this error should show up in production
-  console.error('Hydration completed but contains mismatches.')
-  hasLoggedMismatchError = true
 }
 
 export function removeFragmentNodes(node: Node, endAnchor?: Node): void {

@@ -79,7 +79,7 @@ export enum DOMNodeTypes {
 }
 
 let hasLoggedMismatchError = false
-const logMismatchError = () => {
+export const logMismatchError = (): void => {
   if (__TEST__ || hasLoggedMismatchError) {
     return
   }
