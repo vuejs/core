@@ -438,6 +438,33 @@ export function validateHydrationTarget(node: Node, template: string): void {
   }
 }
 
+export function hydrateTextNode(node: Node, expected: string): boolean {
+  if (node.nodeType !== 3) {
+    return false
+  }
+  const text = node as Text
+  if (text.data === expected) {
+    return true
+  }
+  const parent = text.parentElement
+  if (parent && !isMismatchAllowed(parent, MismatchTypes.TEXT)) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warnHydrationTextMismatch(text, expected)
+    logMismatchError()
+  }
+  text.data = expected
+  return true
+}
+
+export function warnHydrationTextMismatch(node: Text, expected: string): void {
+  warn(
+    `Hydration text mismatch in`,
+    node.parentNode,
+    `\n  - rendered on server: ${JSON.stringify(node.data)}` +
+      `\n  - expected on client: ${JSON.stringify(expected)}`,
+  )
+}
+
 function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
   if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&

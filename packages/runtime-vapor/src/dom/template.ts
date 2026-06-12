@@ -2,6 +2,7 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  hydrateTextNode,
   isComment,
   isHydrating,
   resolveHydrationTarget,
@@ -31,11 +32,19 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
         !isComment(currentHydrationNode!, '')
       ) {
         adopted = resolveHydrationTarget(currentHydrationNode!)
-        if (
-          (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-          html !== ''
-        ) {
-          validateHydrationTarget(adopted, html)
+        if (html !== '') {
+          if (html[0] !== '<') {
+            // Static text normally matches, but patch the rare mismatch to
+            // align with vdom text hydration.
+            if (
+              !hydrateTextNode(adopted, html) &&
+              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__)
+            ) {
+              validateHydrationTarget(adopted, html)
+            }
+          } else if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
+            validateHydrationTarget(adopted, html)
+          }
         }
         // cache once for post-hydration CSR clones.
         if (!node) node = adopted.cloneNode(true)

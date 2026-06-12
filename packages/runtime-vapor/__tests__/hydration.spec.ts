@@ -7176,6 +7176,11 @@ describe('mismatch handling', () => {
     expect(container.innerHTML).toBe('<ins id="foo">x</ins>')
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
+  test('static text content mismatch should warn', async () => {
+    const { container } = await mountWithHydration(`server text`, `client text`)
+    expect(container.textContent).toBe('client text')
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+  })
   test('v-if block should replace server empty branch', async () => {
     const data = ref(true)
     const { container } = await mountWithHydration(
