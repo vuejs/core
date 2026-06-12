@@ -35,8 +35,10 @@ import {
   runtimeVapor,
 } from './_utils'
 import {
+  currentHydrationNode,
   hydrateNode,
   setIsHydratingEnabled,
+  validateHydrationTarget,
   withDeferredHydrationBoundary,
 } from '../src/dom/hydration'
 import { DynamicFragment } from '../src/fragment'
@@ -7110,6 +7112,25 @@ describe('mismatch handling', () => {
       '<div class="client-only">client text</div><i>after</i>',
     )
     expect(`Hydration node mismatch`).toHaveBeenWarned()
+  })
+  test('fragment start mismatch warning labels the server node', () => {
+    const container = document.createElement('div')
+    container.innerHTML = '<!--[--><span>server</span><!--]-->'
+    const warn = vi.spyOn(console, 'warn')
+
+    setIsHydratingEnabled(true)
+    try {
+      hydrateNode(container.firstChild!, () => {
+        validateHydrationTarget(currentHydrationNode!, '<div></div>')
+      })
+    } finally {
+      setIsHydratingEnabled(false)
+    }
+
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    expect(
+      warn.mock.calls.some(call => call.includes('(start of fragment)')),
+    ).toBe(true)
   })
   test('dynamic component element mismatch should adopt slot children', async () => {
     const data = ref('foo')
