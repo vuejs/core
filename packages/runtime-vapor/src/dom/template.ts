@@ -2,6 +2,7 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  isComment,
   isHydrating,
   resolveHydrationTarget,
   validateHydrationTarget,
@@ -23,7 +24,12 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       // markers, and hydration anchors before advancing the hydration
       // cursor, so they don't need to go through adoptTemplate. Vapor
       // never mutates their DOM afterwards.
-      if (isStatic) {
+      if (
+        isStatic &&
+        // SSR empty branches are empty comments. Let adoptTemplate() replace
+        // them when the client selected this static branch.
+        !isComment(currentHydrationNode!, '')
+      ) {
         adopted = resolveHydrationTarget(currentHydrationNode!)
         if (
           (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
