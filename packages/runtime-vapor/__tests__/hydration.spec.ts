@@ -5906,7 +5906,7 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration class mismatch`).toHaveBeenWarned()
       expect(container.innerHTML).toMatchInlineSnapshot(
-        `"<div class="foo bar">Async component</div><!--async component-->"`,
+        `"<div class="foo">Async component</div><!--async component-->"`,
       )
     })
 
@@ -7331,7 +7331,7 @@ describe('mismatch handling', () => {
       `<div :class="data"></div>`,
       ref('baz'),
     )
-    expect(root.innerHTML).toBe('<div class="foo bar baz"></div>')
+    expect(root.innerHTML).toBe('<div class="foo bar"></div>')
     expect(`Hydration class mismatch`).toHaveBeenWarned()
 
     // multiple root mismatch
@@ -7340,7 +7340,7 @@ describe('mismatch handling', () => {
       `<div :class="data"></div><span/>`,
       ref('foo'),
     )
-    expect(container.innerHTML).toBe('<div class="foo"></div><span></span>')
+    expect(container.innerHTML).toBe('<div class="foo bar"></div><span></span>')
     expect(`Hydration class mismatch`).toHaveBeenWarned()
   })
 
@@ -7372,7 +7372,7 @@ describe('mismatch handling', () => {
       `<div :style="data"></div>`,
       ref({ color: 'green' }),
     )
-    expect(root.innerHTML).toBe('<div style="color: green;"></div>')
+    expect(root.innerHTML).toBe('<div style="color:red;"></div>')
     expect(`Hydration style mismatch`).toHaveBeenWarned()
 
     // multiple root mismatch
@@ -7382,17 +7382,18 @@ describe('mismatch handling', () => {
       ref({ color: 'green' }),
     )
     expect(container.innerHTML).toBe(
-      '<div style="color: green;"></div><span></span>',
+      '<div style="color:red;"></div><span></span>',
     )
     expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
 
   test('style mismatch when no style attribute is present', async () => {
-    await mountWithHydration(
+    const { container } = await mountWithHydration(
       `<div></div>`,
       `<div :style="data"></div>`,
       ref({ color: 'red' }),
     )
+    expect(container.innerHTML).toBe('<div></div>')
     expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
   })
 
@@ -7460,18 +7461,20 @@ describe('mismatch handling', () => {
     )
 
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
-    await mountWithHydration(
+    const { container: missingAttr } = await mountWithHydration(
       `<div></div>`,
       `<div :id="data"></div>`,
       ref('foo'),
     )
+    expect(missingAttr.innerHTML).toBe('<div></div>')
     expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
 
-    await mountWithHydration(
+    const { container: changedAttr } = await mountWithHydration(
       `<div id="bar"></div>`,
       `<div :id="data"></div>`,
       ref('foo'),
     )
+    expect(changedAttr.innerHTML).toBe('<div id="bar"></div>')
     expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
   })
 
@@ -7639,6 +7642,26 @@ describe('mismatch handling', () => {
     })
     app.mount(container)
     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('css vars fallthrough mismatch when variable is missing', () => {
+    const container = document.createElement('div')
+    container.innerHTML = `<div style="padding: 4px;"></div>`
+    const app = createVaporSSRApp({
+      setup() {
+        useVaporCssVars(() => ({ foo: 'red' }))
+        return createComponent(Child)
+      },
+    })
+    const Child = defineVaporComponent({
+      setup() {
+        const n0 = template('<div></div>', 1)() as any
+        renderEffect(() => setStyle(n0, { padding: '4px' }))
+        return n0
+      },
+    })
+    app.mount(container)
+    expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
 
   // vapor directive does not have a created hook
