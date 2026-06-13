@@ -30,3 +30,6 @@ peerDependencyRules:
     '@typescript-eslint/utils>eslint': '^9.0.0'
 
 minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  # Renovate security update: esbuild@0.28.1
+  - esbuild@0.28.1
