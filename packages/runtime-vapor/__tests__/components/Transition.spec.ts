@@ -57,7 +57,7 @@ describe('Transition', () => {
     expect(resolved.$key).toBe('foo')
   })
 
-  test('falls back to component uid when explicit key is absent', () => {
+  test('keeps unkeyed child key undefined (shares leaving bucket by type)', () => {
     const Child = defineVaporComponent({
       setup() {
         return template(`<div>child</div>`)() as any
@@ -74,8 +74,11 @@ describe('Transition', () => {
 
     child.block.$key = undefined
 
+    // No explicit key: the resolved child must stay unkeyed so successive
+    // instances of the same component type share the leaving-cache bucket
+    // and earlyRemove can match the previous still-leaving instance.
     const resolved = resolveTransitionBlock(child)!
-    expect(resolved.$key).toBe(child.uid)
+    expect(resolved.$key).toBeUndefined()
   })
 
   test('preserves falsy explicit component key when resolving child', () => {
@@ -118,8 +121,12 @@ describe('Transition', () => {
 
     child.block.$key = null
 
+    // A null key counts as absent and must not fall back to uid; the resolved
+    // child keeps its nullish key (stable across same-type instances, so it
+    // shares the leaving bucket by type).
     const resolved = resolveTransitionBlock(child)!
-    expect(resolved.$key).toBe(child.uid)
+    expect(resolved.$key).toBeNull()
+    expect(resolved.$key).not.toBe(child.uid)
   })
 
   test('collects group leaves with component key prefixes', () => {
@@ -695,5 +702,47 @@ describe('Transition', () => {
 
     expect(host.textContent).toContain('B')
     expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+
+  test('unkeyed component child should early-remove the previous leaving instance on rapid toggle', async () => {
+    // Capture the leave `done` so the leave stays in progress while we toggle
+    // back on, exercising the earlyRemove path.
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: true,
+      onLeave: (_: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const Comp = compile(`<template><div class="c">comp</div></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition @leave="data.onLeave">
+          <components.Comp v-if="data.show" />
+        </Transition>
+      </template>`,
+      data,
+      { Comp },
+    )
+    const { host } = define(App as any).render()
+    expect(host.querySelectorAll('.c').length).toBe(1)
+
+    // start leaving; the captured `done` holds the leave open
+    data.value.show = false
+    await nextTick()
+    expect(host.querySelectorAll('.c').length).toBe(1)
+
+    // Re-enter while the previous instance is still leaving. The new instance
+    // has a different uid, but an unkeyed child must share the leaving-cache
+    // bucket by resolved type so earlyRemove force-removes the previous one
+    // instead of leaving both elements in the DOM.
+    data.value.show = true
+    await nextTick()
+    expect(host.querySelectorAll('.c').length).toBe(1)
+
+    // finishing the already early-removed leave must not strand a node
+    leaveDone && leaveDone()
+    await nextTick()
+    expect(host.querySelectorAll('.c').length).toBe(1)
   })
 })
