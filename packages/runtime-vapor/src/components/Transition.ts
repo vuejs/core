@@ -719,9 +719,15 @@ function inheritSingleComponentKey(
   block: VaporComponentInstance,
 ): void {
   if (!child) return
-  if (child.$key == null) {
-    // prefer explicit component key, otherwise fall back to uid.
-    child.$key = block.$key ?? block.uid
+  // Inherit an explicit component key onto the resolved child, but do NOT
+  // fall back to the component uid. An unkeyed child must keep its key
+  // undefined so successive instances of the same component type share the
+  // leaving-cache bucket (which is keyed by resolved type). This matches
+  // VDOM's null-key behavior and lets a re-entering instance early-remove
+  // the previous one that is still leaving. A uid fallback gives every
+  // instance a distinct key, permanently breaking earlyRemove on toggles.
+  if (child.$key == null && block.$key != null) {
+    child.$key = block.$key
   }
   transitionTypeMap.set(child, block.type)
 }
