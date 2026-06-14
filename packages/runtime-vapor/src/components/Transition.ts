@@ -524,6 +524,12 @@ function removeBranchWithLeaveImpl(
     if (mode === 'out-in') {
       // out-in owns the removal here so update() can return before
       // rendering; the next branch mounts from the afterLeave callback.
+      // Record the target key immediately (mirroring the defer path) so
+      // `current` no longer points at the outgoing branch. Otherwise a
+      // toggle back to the original key during the leave would hit the
+      // `key === current` early-return in update() and be dropped, leaving
+      // the deferred render to mount the stale branch.
+      frag.current = key
       parent && remove(frag.nodes, parent)
       return true
     }
