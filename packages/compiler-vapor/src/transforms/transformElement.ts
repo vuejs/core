@@ -69,6 +69,7 @@ import {
   getParserOptions,
 } from '../generators/utils'
 import { normalizeBindShorthand } from './vBind'
+import { ignoreVHtmlChildren } from './vHtml'
 import type { Expression, ObjectExpression, ObjectProperty } from '@babel/types'
 import { parseExpression } from '@babel/parser'
 
@@ -80,6 +81,10 @@ export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
 export const transformElement: NodeTransform = (node, context) => {
   let effectIndex = context.block.effect.length
   const getEffectIndex = () => effectIndex++
+
+  if (node.type === NodeTypes.ELEMENT && node.children.length) {
+    ignoreVHtmlChildren(node, context as TransformContext<ElementNode>, 'node')
+  }
 
   // If the element is a component, we need to isolate its slots context.
   // This ensures that slots defined for this component are not accidentally
