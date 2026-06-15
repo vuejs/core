@@ -510,6 +510,52 @@ describe('Transition', () => {
     expect(getTransitionOwner()?.$transition?.persisted).toBe(true)
   })
 
+  test('does not leak persisted from a v-show branch onto a non-v-show root', async () => {
+    let leaveCalls = 0
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      b: 1,
+      show: true,
+      onLeave: (_el: Element, done: () => void) => {
+        leaveCalls++
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition appear name="t" @leave="data.onLeave">
+          <template #default v-if="data.b === 1">
+            <div v-show="data.show">foo</div>
+          </template>
+          <template #default v-else-if="data.b === 2">
+            <span>bar</span>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    // visit the v-show branch (latches the runtime-derived persisted), then
+    // swap to a non-v-show root.
+    data.value.b = 2
+    await nextTick()
+    expect(host.querySelector('span')?.textContent).toBe('bar')
+    leaveCalls = 0
+
+    // structurally remove the non-v-show span. The leaked persisted=true would
+    // make performTransitionLeave skip the leave entirely (span vanishes,
+    // leaveCalls stays 0); with the fix the span leaves normally.
+    data.value.b = 3
+    await nextTick()
+    expect(leaveCalls).toBe(1)
+    const span = host.querySelector('span')!
+    expect(span.className).toContain('t-leave-active')
+
+    leaveDone && leaveDone()
+  })
+
   test('interop slot fallback should participate in out-in transition swaps', async () => {
     const data = ref({
       show: false,
