@@ -26,6 +26,7 @@ import {
   isValidHtmlOrSvgAttribute,
   logMismatchError,
   mergeProps,
+  parseEventName,
   patchStyle,
   queuePostFlushCb,
   shouldSetAsProp,
@@ -586,7 +587,8 @@ export function setDynamicProp(
     if (shouldSkipFallthroughKey(el, key)) {
       return
     }
-    onBinding(el, key[2].toLowerCase() + key.slice(3), value)
+    const [event, options] = parseEventName(key)
+    onBinding(el, event, value, options)
   } else if (
     // force hydrate v-bind with .prop modifiers
     (forceHydrate = key[0] === '.')

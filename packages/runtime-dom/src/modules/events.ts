@@ -49,7 +49,7 @@ export function patchEvent(
       ? sanitizeEventValue(nextValue, rawName)
       : (nextValue as EventValue)
   } else {
-    const [name, options] = parseName(rawName)
+    const [name, options] = parseEventName(rawName)
     if (nextValue) {
       // add
       const invoker = (invokers[rawName] = createInvoker(
@@ -69,7 +69,9 @@ export function patchEvent(
 
 const optionsModifierRE = /(?:Once|Passive|Capture)$/
 
-function parseName(name: string): [string, EventListenerOptions | undefined] {
+export function parseEventName(
+  name: string,
+): [string, EventListenerOptions | undefined] {
   let options: EventListenerOptions | undefined
   if (optionsModifierRE.test(name)) {
     options = {}

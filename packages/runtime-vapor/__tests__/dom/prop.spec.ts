@@ -694,6 +694,40 @@ describe('patchProp', () => {
       expect(handler).toHaveBeenCalledTimes(2)
     })
 
+    test('should parse dynamic event option modifiers like vdom', () => {
+      const el = document.createElement('button')
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onClickOnceCapture: handler }])
+        })
+      })
+
+      el.dispatchEvent(new Event('click'))
+      el.dispatchEvent(new Event('click'))
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
+    test('should parse dynamic event names like vdom', () => {
+      const el = document.createElement('button')
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onMyEventOnce: handler }])
+        })
+      })
+
+      el.dispatchEvent(new Event('my-event'))
+      el.dispatchEvent(new Event('my-event'))
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
     test('should restore fallthrough state when dynamic props throw', () => {
       const el = document.createElement('div')
       const attrs: Record<string, any> = {}
