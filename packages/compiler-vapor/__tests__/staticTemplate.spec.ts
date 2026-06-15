@@ -102,6 +102,17 @@ describe('static template marker', () => {
     expect(result.code).toMatchSnapshot()
   })
 
+  test('does not fold unsafe static attr names into template', () => {
+    const unsafeName = 'foo-\u0001bar'
+    const result = compileForStaticTemplateSnapshot(`<div ${unsafeName} />`)
+    expect(result.code).toContain('const t0 = _template("<div>", 1)')
+    expect(result.code).toContain('_setAttr(n0, "foo-\\u0001bar", "")')
+    expect(result.templates).toMatchObject([
+      { content: '<div>', root: true, static: false },
+    ])
+    expect(result.code).toMatchSnapshot()
+  })
+
   test('does not mark single-root element with dynamic event handler', () => {
     const result = compileForStaticTemplateSnapshot(
       '<button @click="foo"></button>',
