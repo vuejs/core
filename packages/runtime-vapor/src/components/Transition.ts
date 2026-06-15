@@ -20,6 +20,7 @@ import {
   resolveTransitionProps,
   setCurrentInstance,
   useTransitionState,
+  vShowOriginalDisplay,
   warn,
 } from '@vue/runtime-dom'
 import { computed } from '@vue/reactivity'
@@ -397,9 +398,16 @@ function applyResolvedTransitionHooks(
     instance,
     hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
-  // Dynamic slot updates replace the active hook object. Preserve any
-  // runtime-derived persisted state for slot/component-root v-show.
-  resolvedHooks.persisted = resolvedHooks.persisted || hooks.persisted
+  // Dynamic slot / branch swaps replace the active hook object. The previously
+  // derived persisted state (slot/component-root v-show, detected only at mount
+  // via applyPendingVShows) must carry forward when the new root is *also* a
+  // v-show root, but must NOT leak onto a non-v-show root — otherwise that
+  // root's structural removal would wrongly skip its leave animation. Gating
+  // the carry-forward on the current root's v-show marker keeps the latch tied
+  // to the live root; mount/non-appear paths are untouched because they never
+  // have a latched `hooks.persisted` to carry.
+  resolvedHooks.persisted =
+    resolvedHooks.persisted || (hooks.persisted && hasVShowMarker(child))
   resolvedHooks.delayedLeave = delayedLeave
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))
@@ -903,4 +911,18 @@ function applyPendingVShows(
       queuePostFlushCb(() => cbs.forEach(cb => cb()), -1)
     }
   })
+}
+
+// Whether the resolved root is (still) a v-show-persisted element. v-show's
+// setDisplay tags the leaf element with `vShowOriginalDisplay` on its first
+// run, which on branch/slot updates happens during render (before hooks are
+// applied), so it doubles as a "this root is persisted" marker without
+// re-running the mount-only applyPendingVShows derivation.
+function hasVShowMarker(block: Block | undefined): boolean {
+  if (!block) return false
+  if (block instanceof Element) return vShowOriginalDisplay in block
+  if (isVaporComponent(block)) return hasVShowMarker(block.block)
+  if (isArray(block)) return block.length === 1 && hasVShowMarker(block[0])
+  if (isFragment(block)) return hasVShowMarker(block.nodes)
+  return false
 }
