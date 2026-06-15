@@ -390,6 +390,13 @@ describe('patchProp', () => {
       setAttr(el, 'disabled', false)
       expect(el.getAttribute('disabled')).toBe('false')
     })
+
+    test('should set symbol attribute values', () => {
+      const el = document.createElement('div')
+      const symbol = Symbol('foo')
+      setAttr(el, 'data-foo', symbol)
+      expect(el.getAttribute('data-foo')).toBe(symbol.toString())
+    })
   })
 
   describe('setValue', () => {
@@ -530,6 +537,12 @@ describe('patchProp', () => {
       let res = setDynamicProp('^foo', 'bar')
       expect(res.getAttribute('foo')).toBe('bar')
       expect((res as any)['foo']).toBeUndefined()
+    })
+
+    test('should be able to set ^attr to symbol values', () => {
+      const symbol = Symbol('foo')
+      const res = setDynamicProp('^foo', symbol)
+      expect(res.getAttribute('foo')).toBe(symbol.toString())
     })
 
     test('should be able to set boolean prop', () => {
