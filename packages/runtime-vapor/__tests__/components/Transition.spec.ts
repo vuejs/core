@@ -556,6 +556,37 @@ describe('Transition', () => {
     leaveDone && leaveDone()
   })
 
+  test('does not early-remove across mixed number/string keys of equal value', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      k: 1,
+      onLeave: (_el: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition name="t" @leave="data.onLeave">
+          <div :key="data.k">{{ data.k }}</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    // 1 (number) -> '1' (string): same String($key) bucket, different raw key.
+    // The leaving number-keyed node must NOT be early-removed by the entering
+    // string-keyed node, so both coexist during the leave (matching VDOM's
+    // isSameVNodeType raw-key guard). Without the guard the leaving node is
+    // force-removed and only 1 element remains.
+    data.value.k = '1'
+    await nextTick()
+    expect(host.querySelectorAll('div').length).toBe(2)
+
+    leaveDone && leaveDone()
+  })
+
   test('interop slot fallback should participate in out-in transition swaps', async () => {
     const data = ref({
       show: false,
