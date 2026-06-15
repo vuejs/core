@@ -470,9 +470,12 @@ function transformNativeElement(
 
     for (const prop of propsResult[1]) {
       const { key, values } = prop
+      const canStringifyAttrName =
+        key.isStatic && !UNSAFE_ATTR_NAME_RE.test(key.content)
       let foldedValue: string | boolean | undefined
       // handling asset imports
       if (
+        canStringifyAttrName &&
         context.imports.some(imported =>
           values[0].content.includes(imported.exp.content),
         )
@@ -483,7 +486,7 @@ function transformNativeElement(
         template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
         prevWasQuoted = true
       } else if (
-        key.isStatic &&
+        canStringifyAttrName &&
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content)
@@ -491,7 +494,7 @@ function transformNativeElement(
         const value = values[0].content === "''" ? '' : values[0].content
         appendTemplateProp(key.content, value)
       } else if (
-        key.isStatic &&
+        canStringifyAttrName &&
         !prop.modifier &&
         isBooleanAttr(key.content) &&
         (foldedValue = foldBooleanAttrValue(values)) != null
@@ -500,7 +503,7 @@ function transformNativeElement(
           appendTemplateProp(key.content)
         }
       } else if (
-        key.isStatic &&
+        canStringifyAttrName &&
         !prop.modifier &&
         hasBoundValue(values) &&
         (foldedValue =
