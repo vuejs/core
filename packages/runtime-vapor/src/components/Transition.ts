@@ -630,6 +630,19 @@ function collectComponentTransitionBlocks(
           },
       children,
     )
+    // Tag the resolved children with the component type so the leaving cache
+    // buckets by component (mirroring single mode's inheritSingleComponentKey
+    // and VDOM's vnode.type bucketing) instead of the shared root tag name.
+    // Otherwise a leaving item cached via this group path under its tag name
+    // can't be matched by a re-entering item — which v-for resolves via the
+    // single path under the component type — so earlyRemove misses and two
+    // same-key instances are left in the DOM. Root-slot children belong to the
+    // parent, so they keep their own resolved type.
+    if (!isRootSlot) {
+      for (let i = start; i < children.length; i++) {
+        transitionTypeMap.set(children[i], block.type)
+      }
+    }
     inheritTransitionKey(children, start, block.$key)
     return
   }
