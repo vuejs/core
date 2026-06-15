@@ -165,7 +165,7 @@ export function genBlockContent(
   const returnsCode: CodeFragment[] =
     returnNodes.length > 1
       ? genMulti(DELIMITERS_ARRAY, ...returnNodes)
-      : [returnNodes[0] || 'null']
+      : [returnNodes[0] || '[]']
   push(...returnsCode)
 
   resetBlock()
