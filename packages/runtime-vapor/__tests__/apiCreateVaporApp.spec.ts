@@ -57,6 +57,26 @@ describe('api: createVaporApp', () => {
     expect(`already been mounted`).toHaveBeenWarned()
   })
 
+  test('mount should no-op when selector returns null', () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        return createTextNode('hello')
+      },
+    })
+    const app = createVaporApp(Comp)
+    let proxy: any
+
+    expect(() => {
+      proxy = app.mount('#not-exist-id')
+    }).not.toThrow()
+
+    expect(proxy).toBeUndefined()
+    expect(
+      'Failed to mount app: mount target selector "#not-exist-id" returned null.',
+    ).toHaveBeenWarned()
+    expect(app._container).toBeNull()
+  })
+
   test('unmount', () => {
     const Comp = defineVaporComponent({
       props: {
