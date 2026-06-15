@@ -193,7 +193,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.foo(_ctx.bar)]: _ctx.id }]))
+  _renderEffect(() => _setDynamicProps(n0, [{ ["." + (_ctx.foo(_ctx.bar) || "")]: _ctx.id }]))
   return n0
 }"
 `;
@@ -204,7 +204,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }]))
+  _renderEffect(() => _setDynamicProps(n0, [{ ["." + (_ctx.fooBar || "")]: _ctx.id }]))
   return n0
 }"
 `;

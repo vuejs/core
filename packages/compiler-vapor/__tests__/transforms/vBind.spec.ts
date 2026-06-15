@@ -451,7 +451,7 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }])`,
+      `_setDynamicProps(n0, [{ ["." + (_ctx.fooBar || "")]: _ctx.id }])`,
     )
   })
 
@@ -627,6 +627,36 @@ describe('compiler v-bind', () => {
 
     expect(code).contains('renderEffect')
     expect(code).contains('_setAttr(n0, "foo-bar", _ctx.fooBar)')
+  })
+
+  test('.attr modifier w/ dynamic arg', () => {
+    const { ir, code } = compileWithVBind(`<div v-bind:[fooBar].attr="id"/>`)
+
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      props: [
+        [
+          {
+            key: {
+              content: `fooBar`,
+              isStatic: false,
+            },
+            values: [
+              {
+                content: `id`,
+                isStatic: false,
+              },
+            ],
+            runtimeCamelize: false,
+            modifier: '^',
+          },
+        ],
+      ],
+    })
+    expect(code).contains('renderEffect')
+    expect(code).contains(
+      `_setDynamicProps(n0, [{ ["^" + (_ctx.fooBar || "")]: _ctx.id }])`,
+    )
   })
 
   test('.attr modifier w/ innerHTML', () => {

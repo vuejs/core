@@ -400,6 +400,8 @@ export function genPropKey(
   if (runtimeCamelize) {
     key.push(' || ""')
     key = genCall(helper('camelize'), key)
+  } else if (modifier) {
+    key = ['(', ...key, ' || ""', ')']
   }
   if (handler) {
     key = genCall(helper('toHandlerKey'), key)
