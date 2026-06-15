@@ -166,6 +166,13 @@ describe('compiler: vModel transform', () => {
 
       expect(code).toMatchSnapshot()
     })
+
+    test('non-identifier modifiers should be quoted', () => {
+      const { code } = compileWithVModel('<input v-model.foo-bar="model" />')
+
+      expect(code).contains(`{ "foo-bar": true }`)
+      expect(code).not.contains(`{ foo-bar: true }`)
+    })
   })
 
   test('should support member expression', () => {

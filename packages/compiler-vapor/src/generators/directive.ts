@@ -1,8 +1,4 @@
-import {
-  createSimpleExpression,
-  isSimpleIdentifier,
-  toValidAssetId,
-} from '@vue/compiler-dom'
+import { createSimpleExpression, toValidAssetId } from '@vue/compiler-dom'
 import { extend } from '@vue/shared'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
@@ -17,6 +13,7 @@ import {
 import { type DirectiveIRNode, IRNodeTypes, type OperationNode } from '../ir'
 import { genVShow } from './vShow'
 import { genVModel } from './vModel'
+import { genDirectiveModifiers } from './modifier'
 
 export function genBuiltinDirective(
   oper: DirectiveIRNode,
@@ -85,15 +82,6 @@ function genCustomDirectives(
       modifiers,
     )
   }
-}
-
-export function genDirectiveModifiers(modifiers: string[]): string {
-  return modifiers
-    .map(
-      value =>
-        `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
-    )
-    .join(', ')
 }
 
 function filterCustomDirectives(
