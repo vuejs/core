@@ -97,8 +97,10 @@ function prepareApp() {
 function postPrepareApp(app: App) {
   app.vapor = true
   const mount = app.mount
-  app.mount = (container, ...args: any[]) => {
+  app.mount = (container, ...args: any[]): any => {
     container = normalizeContainer(container) as ParentNode
+    if (!container) return
+
     const proxy = mount(container, ...args)
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
