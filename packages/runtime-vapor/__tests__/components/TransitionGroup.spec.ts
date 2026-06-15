@@ -9,7 +9,7 @@ import {
   template,
 } from '../../src'
 import { nextTick, ref } from '@vue/runtime-dom'
-import { makeRender } from '../_utils'
+import { compile, makeRender } from '../_utils'
 
 const define = makeRender()
 const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
@@ -230,5 +230,48 @@ describe('TransitionGroup', () => {
     await nextTick()
 
     expect(first.$transition.disabled).toBe(false)
+  })
+
+  test('re-adding a leaving keyed component item early-removes the previous instance', async () => {
+    let leaveDone: (() => void) | undefined
+    const Comp = compile(
+      `<template><div class="item">item</div></template>`,
+      ref({}),
+    )
+    const data = ref<any>({
+      list: [0],
+      onLeave: (_: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <TransitionGroup @leave="data.onLeave">
+          <components.Comp v-for="i in data.list" :key="i" />
+        </TransitionGroup>
+      </template>`,
+      data,
+      { Comp },
+    )
+    const { host } = define(App as any).render()
+    expect(host.querySelectorAll('.item').length).toBe(1)
+
+    // remove the item -> @leave is held open by the captured done callback
+    data.value.list = []
+    await nextTick()
+    expect(host.querySelectorAll('.item').length).toBe(1)
+
+    // re-add the same key while the previous instance is still leaving. The
+    // component child must bucket the leaving cache by component type in both
+    // the leaving (group) path and the re-entering (v-for single) path so
+    // earlyRemove matches and force-removes the previous instance instead of
+    // leaving two elements in the DOM.
+    data.value.list = [0]
+    await nextTick()
+    expect(host.querySelectorAll('.item').length).toBe(1)
+
+    leaveDone && leaveDone()
+    await nextTick()
+    expect(host.querySelectorAll('.item').length).toBe(1)
   })
 })
