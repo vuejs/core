@@ -745,4 +745,27 @@ describe('Transition', () => {
     await nextTick()
     expect(host.querySelectorAll('.c').length).toBe(1)
   })
+
+  test('static single-element child should react to transition prop changes', async () => {
+    const data = ref({ name: 'a', show: true })
+    const App = compile(
+      `<template>
+        <Transition :name="data.name">
+          <div v-show="data.show">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    const el = host.querySelector('div')!
+
+    // change the transition name reactively before any toggle
+    data.value.name = 'b'
+    await nextTick()
+
+    // leaving should use the updated name, not the setup-time one
+    data.value.show = false
+    await nextTick()
+    expect(el.className).toBe('b-leave-from b-leave-active')
+  })
 })
