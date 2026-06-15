@@ -7,6 +7,7 @@ import {
   isArray,
   isOn,
   isString,
+  isSymbol,
   normalizeClass,
   normalizeCssVarValue,
   normalizeStyle,
@@ -118,7 +119,7 @@ export function setAttr(
       }
     } else {
       if (value != null) {
-        el.setAttribute(key, value)
+        el.setAttribute(key, isSymbol(value) ? String(value) : value)
       } else {
         el.removeAttribute(key)
       }
