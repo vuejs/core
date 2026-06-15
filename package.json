@@ -20,7 +20,7 @@
     "test-unit": "vitest --project unit*",
     "test-e2e": "node scripts/build.js vue -f global -d && vitest --project e2e",
     "test-dts": "run-s build-dts test-dts-only",
-    "test-dts-only": "tsc -p packages-private/dts-built-test/tsconfig.json && tsc -p ./packages-private/dts-test/tsconfig.test.json",
+    "test-dts-only": "tsc -p packages-private/dts-built-test/tsconfig.json && tsc -p ./packages-private/dts-test/tsconfig.test.json && tsc -p ./packages-private/dts-test/tsconfig.exactOptionalPropertyTypes.json",
     "test-coverage": "vitest run --project unit* --coverage",
     "prebench": "node scripts/build.js -pf esm-browser reactivity",
     "prebench-compare": "node scripts/build.js -pf esm-browser reactivity",
