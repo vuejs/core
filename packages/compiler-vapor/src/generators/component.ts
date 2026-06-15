@@ -46,8 +46,8 @@ import {
   isSimpleIdentifier,
   toValidAssetId,
 } from '@vue/compiler-dom'
+import { genDirectivesForElement } from './directive'
 import { genEventHandler } from './event'
-import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { findReturnedDynamic, genBlock, markSlotRootOperations } from './block'
 import {
   type DestructureMap,
@@ -56,6 +56,7 @@ import {
   parseValueDestructure,
 } from './for'
 import { genModelHandler } from './vModel'
+import { genDirectiveModifiers } from './modifier'
 import { isBuiltInComponent } from '../utils'
 import type { Expression } from '@babel/types'
 
