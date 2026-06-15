@@ -64,8 +64,8 @@ importers:
         specifier: ^1.0.2
         version: 1.0.2
       '@types/node':
-        specifier: ^24.13.1
-        version: 24.13.1
+        specifier: ^24.13.2
+        version: 24.13.2
       '@types/semver':
         specifier: ^7.7.1
         version: 7.7.1
@@ -124,8 +124,8 @@ importers:
         specifier: 13.0.3
         version: 13.0.3
       npm-run-all2:
-        specifier: ^9.0.1
-        version: 9.0.1
+        specifier: ^9.0.2
+        version: 9.0.2
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
@@ -182,10 +182,10 @@ importers:
         version: 8.61.0(eslint@10.4.1)(typescript@5.6.3)
       vite:
         specifier: 'catalog:'
-        version: 8.0.16(@types/node@24.13.1)(esbuild@0.28.0)(sass@1.100.0)(yaml@2.9.0)
+        version: 8.0.16(@types/node@24.13.2)(esbuild@0.28.0)(sass@1.101.0)(yaml@2.9.0)
       vitest:
         specifier: ^4.1.8
-        version: 4.1.8(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16)
+        version: 4.1.8(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16)
 
   packages-private/dts-built-test:
     dependencies:
@@ -228,7 +228,7 @@ importers:
         version: 6.0.7(vite@8.0.16)(vue@packages+vue)
       vite:
         specifier: 'catalog:'
-        version: 8.0.16(@types/node@24.13.1)(esbuild@0.28.0)(sass@1.100.0)(yaml@2.9.0)
+        version: 8.0.16(@types/node@24.13.2)(esbuild@0.28.0)(sass@1.101.0)(yaml@2.9.0)
 
   packages-private/template-explorer:
     dependencies:
@@ -246,7 +246,7 @@ importers:
         version: 6.0.7(vite@8.0.16)(vue@packages+vue)
       vite:
         specifier: 'catalog:'
-        version: 8.0.16(@types/node@24.13.1)(esbuild@0.28.0)(sass@1.100.0)(yaml@2.9.0)
+        version: 8.0.16(@types/node@24.13.2)(esbuild@0.28.0)(sass@1.101.0)(yaml@2.9.0)
       vue:
         specifier: workspace:*
         version: link:../../packages/vue
@@ -340,8 +340,8 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4
       sass:
-        specifier: ^1.100.0
-        version: 1.100.0
+        specifier: ^1.101.0
+        version: 1.101.0
 
   packages/compiler-ssr:
     dependencies:
@@ -1339,11 +1339,11 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@types/node@24.12.4':
-    resolution: {integrity: sha512-GUUEShf+PBCGW2KaXwcIt3Yk+e3pkKwWKb9GSyM9WQVE+ep2jzmHdGsHzu4wgcZy5fN9FBdVzjpBQsYlpfpgLA==}
-
   '@types/node@24.13.1':
     resolution: {integrity: sha512-RSpUJGmvsJ1ZeBehQZFhIdpsz+bIpES0nIQXko4Ybq+N+kX6XvOq3Jo+iJ82FWLdblFq85AsMikd3m35jgezYg==}
+
+  '@types/node@24.13.2':
+    resolution: {integrity: sha512-fRa09kZTgu8o71KFcDjUFuc7F+dEbZYZmkI0mg5YBTRs0yMKjYHsq/c0urDKeDb+D5qVgXOdFcuu+DZPKOITwA==}
 
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
@@ -2657,8 +2657,8 @@ packages:
     resolution: {integrity: sha512-tdt4aFn9QamlhdN3HV2D2ccpBwO5/fyjjbXUxYA6uBjyekMZcZvDq0aSj9t5Jo+tih6AYFnt/cuIRn9013e0Uw==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
 
-  npm-run-all2@9.0.1:
-    resolution: {integrity: sha512-ZtK8WXZBUA9x0XD6nxYdFLe86FxpkCTq2LiQxzX0LeXQY/vyAigQZXjjj/xfTwgV4Yqe/vYNIq2W09lrHKTcuQ==}
+  npm-run-all2@9.0.2:
+    resolution: {integrity: sha512-+dd4SO2jAlLE06OzmJKzIe6QvvjXezcbmobnh8usR0a8BzQCABTdqTXqVPji0ICOhSQpIIrkGd7IzNl5iDaRSA==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0, npm: '>= 10'}
     hasBin: true
 
@@ -2741,9 +2741,9 @@ packages:
     resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
 
-  pidtree@0.6.0:
-    resolution: {integrity: sha512-eG2dWTVw5bzqGRztnHExczNxt5VGsE6OwTeCG3fdUf9KBsZzO3R5OIIIzWR+iZA0NtZ+RDVdaoE2dK1cn6jH4g==}
-    engines: {node: '>=0.10'}
+  pidtree@1.0.0:
+    resolution: {integrity: sha512-avfAvjB9Dd0wdj3rjJX//yS+G79OO0KrS5pJHFJENjYGX6N4SMgEDBBI/yFy0lloOYSaC6XQxzpOAMPfSYFV/Q==}
+    engines: {node: '>=18'}
     hasBin: true
 
   postcss-modules-extract-imports@3.1.0:
@@ -2951,8 +2951,8 @@ packages:
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
 
-  sass@1.100.0:
-    resolution: {integrity: sha512-B5j0rYMlinhhOo9tjQebMVVn0TfyXAF+wB3b2ggZUuJ/is/Y+7+JGjirAMxHZ9Z3hIP98NPfamlAkBHa1lAaXQ==}
+  sass@1.101.0:
+    resolution: {integrity: sha512-OL3GoQyoUdDt843DpVmDO6y2k1sc5IhUDSpu8XucEI+35neq5QivZ1iuegnpraEVTJXlQGK1gl27zKcTLEPbQw==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -2993,8 +2993,9 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.1:
-    resolution: {integrity: sha512-6j1W9l1iAs/4xYBI1SYOVZyFcCis9b4KCLQ8fgAGG07QvzaRLVVRQvAy85yNmmZSjYjg4MWh4gNvlPujU/5LpA==}
+  shell-quote@1.8.4:
+    resolution: {integrity: sha512-VsC6n6vz1ihYYyZZwX7YZSF5l5x36ca17OC+a69h94YqB7X6XLwf+5MOgynYir2SLFUbl8gIYvBo8K8RoNQ6bQ==}
+    engines: {node: '>= 0.4'}
 
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
@@ -3190,9 +3191,6 @@ packages:
     resolution: {integrity: sha512-y/2wiW+ceTYR2TSSptAhfnEtpLaQ4Ups5zrjB2d3kuVxHj16j/QJwPl5PvuGy9uARb39J0+iKxcRPvtpsx4A4A==}
     engines: {node: '>=0.8.0'}
     hasBin: true
-
-  undici-types@7.16.0:
-    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
   undici-types@7.18.2:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
@@ -4030,11 +4028,11 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@types/node@24.12.4':
-    dependencies:
-      undici-types: 7.16.0
-
   '@types/node@24.13.1':
+    dependencies:
+      undici-types: 7.18.2
+
+  '@types/node@24.13.2':
     dependencies:
       undici-types: 7.18.2
 
@@ -4046,7 +4044,7 @@ snapshots:
 
   '@types/serve-handler@6.1.4':
     dependencies:
-      '@types/node': 24.12.4
+      '@types/node': 24.13.1
 
   '@types/trusted-types@2.0.7': {}
 
@@ -4256,7 +4254,7 @@ snapshots:
   '@vitejs/plugin-vue@6.0.7(vite@8.0.16)(vue@packages+vue)':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.0.16(@types/node@24.13.1)(esbuild@0.28.0)(sass@1.100.0)(yaml@2.9.0)
+      vite: 8.0.16(@types/node@24.13.2)(esbuild@0.28.0)(sass@1.101.0)(yaml@2.9.0)
       vue: link:packages/vue
 
   '@vitest/coverage-v8@4.1.8(vitest@4.1.8)':
@@ -4271,7 +4269,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.8(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16)
+      vitest: 4.1.8(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16)
 
   '@vitest/eslint-plugin@1.6.19(@typescript-eslint/eslint-plugin@8.61.0)(eslint@10.4.1)(typescript@5.6.3)(vitest@4.1.8)':
     dependencies:
@@ -4281,7 +4279,7 @@ snapshots:
     optionalDependencies:
       '@typescript-eslint/eslint-plugin': 8.61.0(@typescript-eslint/parser@8.61.0)(eslint@10.4.1)(typescript@5.6.3)
       typescript: 5.6.3
-      vitest: 4.1.8(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16)
+      vitest: 4.1.8(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16)
     transitivePeerDependencies:
       - supports-color
 
@@ -4300,7 +4298,7 @@ snapshots:
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.0.16(@types/node@24.13.1)(esbuild@0.28.0)(sass@1.100.0)(yaml@2.9.0)
+      vite: 8.0.16(@types/node@24.13.2)(esbuild@0.28.0)(sass@1.101.0)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.8':
     dependencies:
@@ -5303,15 +5301,15 @@ snapshots:
 
   npm-normalize-package-bin@6.0.0: {}
 
-  npm-run-all2@9.0.1:
+  npm-run-all2@9.0.2:
     dependencies:
       ansi-styles: 6.2.3
       cross-spawn: 7.0.6
       memorystream: 0.3.1
       picomatch: 4.0.4
-      pidtree: 0.6.0
+      pidtree: 1.0.0
       read-package-json-fast: 6.0.0
-      shell-quote: 1.8.1
+      shell-quote: 1.8.4
       which: 7.0.0
 
   npm-run-path@4.0.1:
@@ -5380,7 +5378,7 @@ snapshots:
 
   picomatch@4.0.4: {}
 
-  pidtree@0.6.0: {}
+  pidtree@1.0.0: {}
 
   postcss-modules-extract-imports@3.1.0(postcss@8.5.15):
     dependencies:
@@ -5688,7 +5686,7 @@ snapshots:
 
   safe-buffer@5.2.1: {}
 
-  sass@1.100.0:
+  sass@1.101.0:
     dependencies:
       chokidar: 5.0.0
       immutable: 5.1.5
@@ -5747,7 +5745,7 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.1: {}
+  shell-quote@1.8.4: {}
 
   siginfo@2.0.0: {}
 
@@ -5917,8 +5915,6 @@ snapshots:
   uglify-js@3.19.1:
     optional: true
 
-  undici-types@7.16.0: {}
-
   undici-types@7.18.2: {}
 
   undici@7.25.0: {}
@@ -5970,7 +5966,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite@8.0.16(@types/node@24.13.1)(esbuild@0.28.0)(sass@1.100.0)(yaml@2.9.0):
+  vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.0)(sass@1.101.0)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
@@ -5978,13 +5974,13 @@ snapshots:
       rolldown: 1.0.3
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 24.13.1
+      '@types/node': 24.13.2
       esbuild: 0.28.0
       fsevents: 2.3.3
-      sass: 1.100.0
+      sass: 1.101.0
       yaml: 2.9.0
 
-  vitest@4.1.8(@types/node@24.13.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16):
+  vitest@4.1.8(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16):
     dependencies:
       '@vitest/expect': 4.1.8
       '@vitest/mocker': 4.1.8(vite@8.0.16)
@@ -6004,10 +6000,10 @@ snapshots:
       tinyexec: 1.2.2
       tinyglobby: 0.2.16
       tinyrainbow: 3.1.0
-      vite: 8.0.16(@types/node@24.13.1)(esbuild@0.28.0)(sass@1.100.0)(yaml@2.9.0)
+      vite: 8.0.16(@types/node@24.13.2)(esbuild@0.28.0)(sass@1.101.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 24.13.1
+      '@types/node': 24.13.2
       '@vitest/coverage-v8': 4.1.8(vitest@4.1.8)
       jsdom: 29.1.1
     transitivePeerDependencies:
