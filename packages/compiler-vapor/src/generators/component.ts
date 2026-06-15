@@ -43,6 +43,7 @@ import {
   type SimpleExpressionNode,
   createSimpleExpression,
   isMemberExpression,
+  isSimpleIdentifier,
   toValidAssetId,
 } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
@@ -57,6 +58,11 @@ import {
 import { genModelHandler } from './vModel'
 import { isBuiltInComponent } from '../utils'
 import type { Expression } from '@babel/types'
+
+function genStaticModifierPropKey(name: string): CodeFragment[] {
+  const key = getModifierPropName(name)
+  return [isSimpleIdentifier(key) ? key : JSON.stringify(key)]
+}
 
 export function genCreateComponent(
   operation: CreateComponentIRNode,
@@ -356,7 +362,7 @@ function genStaticProps(
       const { key, modelModifiers } = prop
       if (modelModifiers && modelModifiers.length) {
         const modifiersKey = key.isStatic
-          ? [getModifierPropName(key.content)]
+          ? genStaticModifierPropKey(key.content)
           : ['[', ...genExpression(key, context), ' + "Modifiers"]']
         const modifiersVal = genDirectiveModifiers(modelModifiers)
         args.push([
@@ -428,7 +434,7 @@ function genDynamicProps(
           const { modelModifiers } = p
           if (modelModifiers && modelModifiers.length) {
             const modifiersKey = p.key.isStatic
-              ? ([getModifierPropName(p.key.content)] as CodeFragment[])
+              ? genStaticModifierPropKey(p.key.content)
               : ([
                   '[',
                   ...genExpression(p.key, context),
