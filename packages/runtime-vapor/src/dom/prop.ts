@@ -1,4 +1,5 @@
 import {
+  EMPTY_OBJ,
   type NormalizedStyle,
   camelize,
   canSetValueDirectly,
@@ -537,7 +538,7 @@ function setHtmlToBlock(block: Block, value: any): void {
 }
 
 export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
-  const props = args.length > 1 ? mergeProps(...args) : args[0]
+  const props = args.length > 1 ? mergeProps(...args) : args[0] || EMPTY_OBJ
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
   const prevProps = el[cacheKey] as Record<string, any> | undefined
   const nextProps: Record<string, any> = Object.create(null)

@@ -627,6 +627,25 @@ describe('patchProp', () => {
       expect(el.getAttribute('foo')).toBeNull()
     })
 
+    test('should treat nullish dynamic props as empty props', () => {
+      const el = document.createElement('div')
+
+      setDynamicProps(el, [null])
+      setDynamicProps(el, [undefined])
+
+      setDynamicProps(el, [{ foo: 'val' }])
+      expect(el.getAttribute('foo')).toBe('val')
+
+      setDynamicProps(el, [null])
+      expect(el.getAttribute('foo')).toBeNull()
+
+      setDynamicProps(el, [{ bar: 'val' }])
+      expect(el.getAttribute('bar')).toBe('val')
+
+      setDynamicProps(el, [undefined])
+      expect(el.getAttribute('bar')).toBeNull()
+    })
+
     test('should reset old modifier props', () => {
       const el = document.createElement('div')
 
