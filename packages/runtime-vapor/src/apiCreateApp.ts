@@ -24,6 +24,7 @@ import { optimizePropertyLookup } from './dom/prop'
 import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
+const rootInstances = new WeakMap<App, VaporComponentInstance>()
 
 const mountApp: AppMountFn<ParentNode> = (app, container) => {
   optimizePropertyLookup()
@@ -48,6 +49,7 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     )
   mountComponent(instance, container)
   flushOnAppMount()
+  rootInstances.set(app, instance)
 
   return instance!
 }
@@ -73,12 +75,16 @@ const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
     mountComponent(instance, container)
     flushOnAppMount()
   })
+  rootInstances.set(app, instance!)
 
   return instance!
 }
 
 const unmountApp: AppUnmountFn = app => {
-  unmountComponent(app._instance as VaporComponentInstance, app._container)
+  const instance = ((__DEV__ && app._instance) ||
+    rootInstances.get(app)!) as VaporComponentInstance
+  unmountComponent(instance, app._container)
+  rootInstances.delete(app)
 }
 
 function prepareApp() {

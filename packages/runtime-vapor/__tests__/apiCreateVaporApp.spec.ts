@@ -100,6 +100,30 @@ describe('api: createVaporApp', () => {
     expect(root.innerHTML).toBe(``)
   })
 
+  test('unmount in non-dev mode', () => {
+    __DEV__ = false
+    try {
+      const Comp = defineVaporComponent({
+        setup() {
+          return createTextNode('ok')
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createVaporApp(Comp)
+
+      app.mount(root)
+      expect(root.innerHTML).toBe(`ok`)
+      expect(app._instance).toBeNull()
+
+      expect(() => app.unmount()).not.toThrow()
+      expect(root.innerHTML).toBe(``)
+      expect(app._instance).toBeNull()
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   test('provide', () => {
     const Root = define({
       setup() {
