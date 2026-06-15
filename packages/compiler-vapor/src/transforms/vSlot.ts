@@ -166,8 +166,8 @@ function transformTemplateSlot(
       },
     })
   } else if (vElse) {
-    const vIfSlot = slots[slots.length - 1] as IRSlotDynamic
-    if (vIfSlot.slotType === IRSlotType.CONDITIONAL) {
+    const vIfSlot = slots[slots.length - 1]
+    if (vIfSlot && vIfSlot.slotType === IRSlotType.CONDITIONAL) {
       let ifNode = vIfSlot
       while (
         ifNode.negative &&

@@ -549,6 +549,22 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('slot v-else missing adjacent v-if should report compiler error', () => {
+    const cases = [
+      `<Comp><template #foo v-else>foo</template></Comp>`,
+      `<Comp><template #foo v-else-if="ok">foo</template></Comp>`,
+    ]
+
+    for (const source of cases) {
+      const onError = vi.fn()
+      expect(() => compileWithSlots(source, { onError })).not.toThrow()
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError.mock.calls[0][0]).toMatchObject({
+        code: ErrorCodes.X_V_ELSE_NO_ADJACENT_IF,
+      })
+    }
+  })
+
   test('slot + v-if / v-else[-if] should not cause error', () => {
     const { code } = compileWithSlots(
       `<div>
