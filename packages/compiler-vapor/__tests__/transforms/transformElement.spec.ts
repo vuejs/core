@@ -1610,7 +1610,7 @@ describe('compiler: element transform', () => {
   test('empty template', () => {
     const { code } = compileWithElementTransform('')
     expect(code).toMatchSnapshot()
-    expect(code).contain('return null')
+    expect(code).contain('return []')
   })
 
   test('custom element', () => {

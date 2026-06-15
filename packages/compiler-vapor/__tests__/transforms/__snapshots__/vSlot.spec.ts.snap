@@ -31,7 +31,7 @@ export function render(_ctx) {
         ? {
           name: "default",
           fn: () => {
-            return null
+            return []
           }
         }
         : void 0)
@@ -252,7 +252,7 @@ export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
   const n2 = _createAssetComponent("Foo", null, {
     "header": _extend(() => {
-      return null
+      return []
     }, { _: 8 }),
     "default": () => {
       const n1 = _createComponentWithFallback(_component_Bar)
@@ -340,7 +340,7 @@ exports[`compiler: transform slot > quote slot name 1`] = `
 export function render(_ctx) {
   const n1 = _createAssetComponent("Comp", null, {
     "nav-bar-title-before": _extend(() => {
-      return null
+      return []
     }, { _: 8 })
   }, true)
   return n1
