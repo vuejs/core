@@ -294,10 +294,17 @@ const getTransitionHooksContext = (
     },
     earlyRemove: () => {
       const leavingNode = leavingNodes[key]
-      const el = leavingNode && getLeaveElement(leavingNode)
-      if (el && el[leaveCbKey]) {
-        // force early removal (not cancelled)
-        el[leaveCbKey]!()
+      // Mirror VDOM's isSameVNodeType raw-key guard. The type dimension is
+      // already isolated by the leaving-cache bucket, but the slot index is
+      // String($key), which coerces e.g. 1 and '1' into the same slot. Compare
+      // the raw keys so a number-keyed leaving node isn't force-removed by a
+      // string-keyed entering node (and vice versa).
+      if (leavingNode && leavingNode.$key === block.$key) {
+        const el = getLeaveElement(leavingNode)
+        if (el && el[leaveCbKey]) {
+          // force early removal (not cancelled)
+          el[leaveCbKey]!()
+        }
       }
     },
     cloneHooks: block => {
@@ -517,7 +524,7 @@ function removeBranchWithLeaveImpl(
     mode &&
     // in-out only works when there is an incoming branch to trigger
     // delayedLeave; otherwise the current branch should leave immediately.
-    (mode !== 'in-out' || (mode === 'in-out' && render)) &&
+    (mode !== 'in-out' || render) &&
     // out-in only needs to defer when the current branch actually has
     // a rendered child to leave before mounting the next one.
     (mode !== 'out-in' || isValidBlock(frag.nodes))
