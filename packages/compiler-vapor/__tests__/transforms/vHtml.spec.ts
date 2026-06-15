@@ -1,6 +1,7 @@
 import { BindingTypes, DOMErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
   IRNodeTypes,
+  compile,
   transformChildren,
   transformElement,
   transformVHtml,
@@ -111,6 +112,20 @@ describe('v-html', () => {
     expect(code).matchSnapshot()
     // children should have been removed
     expect(code).contains('template("<div>", 1)')
+  })
+
+  test('should ignore interpolation children when v-html is present', () => {
+    const onError = vi.fn()
+    const { code } = compile(`<div v-html="test">{{ msg }}</div>`, {
+      prefixIdentifiers: true,
+      onError,
+    })
+
+    expect(onError.mock.calls).toMatchObject([
+      [{ code: DOMErrorCodes.X_V_HTML_WITH_CHILDREN }],
+    ])
+    expect(code).matchSnapshot()
+    expect(code).contains(`_setHtml(n0, _ctx.test)`)
   })
 
   test('should raise error if has no expression', () => {
