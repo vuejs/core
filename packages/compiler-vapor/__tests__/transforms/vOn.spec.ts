@@ -208,6 +208,33 @@ describe('v-on', () => {
     )
   })
 
+  test('should handle setup-let assignment w/ inline: true', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div @click="x=y"/><div @click="x++"/><div @click="{ x } = y"/>`,
+      {
+        mode: 'module',
+        inline: true,
+        bindingMetadata: {
+          x: BindingTypes.SETUP_LET,
+          y: BindingTypes.SETUP_MAYBE_REF,
+        },
+      },
+    )
+
+    expect(code).matchSnapshot()
+    expect(helpers).contains('isRef')
+    expect(helpers).contains('unref')
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker(() => (_isRef(x) ? x.value = _unref(y) : x=_unref(y)))`,
+    )
+    expect(code).contains(
+      `n1.$evtclick = _createInvoker(() => (_isRef(x) ? x.value++ : x++))`,
+    )
+    expect(code).contains(
+      `n2.$evtclick = _createInvoker(() => ({ x } = _unref(y)))`,
+    )
+  })
+
   test('should handle multiple inline statement', () => {
     const { ir, code } = compileWithVOn(`<div @click="foo();bar()"/>`)
 

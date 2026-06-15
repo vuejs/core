@@ -16,7 +16,12 @@ import {
   isStaticProperty,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import type { Identifier, Node } from '@babel/types'
+import type {
+  AssignmentExpression,
+  Identifier,
+  Node,
+  UpdateExpression,
+} from '@babel/types'
 import type { CodegenContext } from '../generate'
 import { isConstantExpression } from '../utils'
 import {
@@ -34,6 +39,8 @@ export function genExpression(
 ): CodeFragment[] {
   node = context.getExpressionReplacement(node)
   const { content, ast, isStatic, loc } = node
+  const { options } = context
+  const { inline } = options
 
   if (isStatic) {
     return [[JSON.stringify(content), NewlineType.None, loc]]
@@ -69,19 +76,35 @@ export function genExpression(
   let hasMemberExpression = false
   if (ids.length) {
     const [frag, push] = buildCodeFragment()
+    let lastEnd = 0
     ids
       .sort((a, b) => a.start! - b.start!)
-      .forEach((id, i) => {
+      .forEach(id => {
         // range is offset by -1 due to the wrapping parens when parsed
-        const start = id.start! - 1
-        const end = id.end! - 1
-        const last = ids[i - 1]
-
-        const leadingText = content.slice(last ? last.end! - 1 : 0, start)
-        if (leadingText.length) push([leadingText, NewlineType.Unknown])
-        const source = content.slice(start, end)
+        const idStart = id.start! - 1
+        const idEnd = id.end! - 1
+        const source = content.slice(idStart, idEnd)
         const parentStack = parentStackMap.get(id)!
         const parent = parentStack[parentStack.length - 1]
+        let start = idStart
+        let end = idEnd
+
+        if (
+          inline &&
+          options.bindingMetadata &&
+          options.bindingMetadata[source] === BindingTypes.SETUP_LET &&
+          parent &&
+          parent.type === 'UpdateExpression' &&
+          parent.argument === id
+        ) {
+          start = parent.start! - 1
+          end = parent.end! - 1
+        }
+
+        if (start < lastEnd) return
+
+        const leadingText = content.slice(lastEnd, start)
+        if (leadingText.length) push([leadingText, NewlineType.Unknown])
 
         hasMemberExpression ||=
           parent &&
@@ -101,14 +124,16 @@ export function genExpression(
             id,
             parent,
             parentStack,
+            node,
           ),
         )
 
-        if (i === ids.length - 1 && end < content.length) {
-          push([content.slice(end), NewlineType.Unknown])
-        }
+        lastEnd = end
       })
 
+    if (lastEnd < content.length) {
+      push([content.slice(lastEnd), NewlineType.Unknown])
+    }
     if (assignment && hasMemberExpression) {
       push(` = ${assignment}`)
     }
@@ -126,6 +151,7 @@ function genIdentifier(
   id?: Identifier,
   parent?: Node,
   parentStack?: Node[],
+  sourceNode?: SimpleExpressionNode,
 ): CodeFragment[] {
   const { options, helper, identifiers } = context
   const { inline, bindingMetadata } = options
@@ -147,33 +173,73 @@ function genIdentifier(
   }
 
   let prefix: string | undefined
-  if (isStaticProperty(parent) && parent.shorthand) {
+  const type = bindingMetadata && bindingMetadata[raw]
+  // ({ x } = y)
+  const isDestructureAssignment =
+    parent && isInDestructureAssignment(parent, parentStack || [])
+  // x = y
+  const isAssignmentLVal =
+    parent && parent.type === 'AssignmentExpression' && parent.left === id
+  // x++
+  const isUpdateArg =
+    parent && parent.type === 'UpdateExpression' && parent.argument === id
+
+  if (
+    isStaticProperty(parent) &&
+    parent.shorthand &&
+    !(inline && type === BindingTypes.SETUP_LET && isDestructureAssignment)
+  ) {
     // property shorthand like { foo }, we need to add the key since
     // we rewrite the value
     prefix = `${raw}: `
   }
 
-  const type = bindingMetadata && bindingMetadata[raw]
   if (inline) {
     switch (type) {
       case BindingTypes.SETUP_LET:
-        name = raw = assignment
-          ? `_isRef(${raw}) ? (${raw}.value = ${assignment}) : (${raw} = ${assignment})`
-          : unref()
+        if (isAssignmentLVal) {
+          const { right, operator } = parent as AssignmentExpression
+          const source = sourceNode!
+          const sourceContent = source.content
+          const rightStart = right.start! - 1
+          const rightEnd = right.end! - 1
+          const rightContent = sourceContent.slice(rightStart, rightEnd)
+          const rightExp = createSimpleExpression(rightContent, false, {
+            start: advancePositionWithClone(
+              source.loc.start,
+              sourceContent,
+              rightStart,
+            ),
+            end: advancePositionWithClone(
+              source.loc.start,
+              sourceContent,
+              rightEnd,
+            ),
+            source: rightContent,
+          })
+          rightExp.ast = parseExp(context, rightContent)
+          return [
+            prefix,
+            `${helper('isRef')}(${raw}) ? ${raw}.value ${operator} `,
+            ...genExpression(rightExp, context),
+            ` : `,
+            [raw, NewlineType.None, loc, name],
+          ]
+        } else if (isUpdateArg) {
+          const { prefix: isPrefix, operator } = parent as UpdateExpression
+          const updatePrefix = isPrefix ? operator : ``
+          const updatePostfix = isPrefix ? `` : operator
+          raw = `${helper('isRef')}(${raw}) ? ${updatePrefix}${raw}.value${updatePostfix} : ${updatePrefix}${raw}${updatePostfix}`
+        } else if (!isDestructureAssignment) {
+          name = raw = assignment
+            ? `${helper('isRef')}(${raw}) ? (${raw}.value = ${assignment}) : (${raw} = ${assignment})`
+            : unref()
+        }
         break
       case BindingTypes.SETUP_REF:
         name = raw = withAssignment(`${raw}.value`)
         break
       case BindingTypes.SETUP_MAYBE_REF:
-        // ({ x } = y)
-        const isDestructureAssignment =
-          parent && isInDestructureAssignment(parent, parentStack || [])
-        // x = y
-        const isAssignmentLVal =
-          parent && parent.type === 'AssignmentExpression' && parent.left === id
-        // x++
-        const isUpdateArg =
-          parent && parent.type === 'UpdateExpression' && parent.argument === id
         // const binding that may or may not be ref
         // if it's not a ref, then assignments don't make sense -
         // so we ignore the non-ref assignment case and generate code

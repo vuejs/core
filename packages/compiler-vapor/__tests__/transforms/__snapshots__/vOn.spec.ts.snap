@@ -310,6 +310,18 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > should handle setup-let assignment w/ inline: true 1`] = `
+"
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  n0.$evtclick = _createInvoker(() => (_isRef(x) ? x.value = _unref(y) : x=_unref(y)))
+  n1.$evtclick = _createInvoker(() => (_isRef(x) ? x.value++ : x++))
+  n2.$evtclick = _createInvoker(() => ({ x } = _unref(y)))
+  return [n0, n1, n2]
+"
+`;
+
 exports[`v-on > should not delegate .stop when have multiple events of same name 1`] = `
 "import { on as _on, withModifiers as _withModifiers, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
