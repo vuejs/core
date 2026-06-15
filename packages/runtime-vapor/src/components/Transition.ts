@@ -189,14 +189,32 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       () => ((slots.default && slots.default()) || []) as any as Block,
     )
 
-    const { hooks, root } = applyResolvedTransitionHooks(children, {
+    let appliedHooks = {
       state,
       // use proxy to keep props reference stable
       props: propsProxy,
       instance: instance,
-    } as VaporTransitionHooks)
-    applyPendingVShows(hooks, root, pendingVShows)
-    if (shouldPerformAppear) performAppear(hooks)
+    } as VaporTransitionHooks
+    let isMounted = false
+    // Re-resolve hooks when reactive transition props (:name/:duration/event
+    // hooks/mode) change. The shared baseResolveTransitionHooks destructures
+    // props eagerly, so propsProxy alone can't keep an already-applied hooks
+    // closure live; re-applying rebinds the root element's (and any inner
+    // fragment's) $transition to fresh closures, mirroring VDOM's per-render
+    // re-resolve. Reusing appliedHooks preserves runtime state (persisted /
+    // delayedLeave) across re-resolves.
+    renderEffect(() => {
+      const { hooks, root } = applyResolvedTransitionHooks(
+        children,
+        appliedHooks,
+      )
+      appliedHooks = hooks
+      if (!isMounted) {
+        isMounted = true
+        applyPendingVShows(hooks, root, pendingVShows)
+        if (shouldPerformAppear) performAppear(hooks)
+      }
+    })
     return children
   })
 
