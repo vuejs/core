@@ -336,6 +336,10 @@ export { patchStyle } from './modules/style'
 /**
  * @internal
  */
+export { parseEventName } from './modules/events'
+/**
+ * @internal
+ */
 export { shouldSetAsProp, shouldSetAsPropForVueCE } from './patchProp'
 /**
  * @internal
