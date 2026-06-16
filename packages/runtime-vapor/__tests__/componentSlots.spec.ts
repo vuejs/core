@@ -1266,185 +1266,6 @@ describe('component: slots', () => {
       )
     })
 
-    test('plain slot without fallback uses dynamic fragment', () => {
-      let slotBlock!: Block
-      let observedBoundary: SlotBoundaryContext | null | undefined
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot(
-          'default',
-          null,
-          undefined,
-          VaporSlotFlags.SLOT_ROOT,
-        ))
-      })
-
-      define(() =>
-        createComponent(Comp, null, {
-          default: () => {
-            observedBoundary = getCurrentSlotBoundary()
-            return template('content')()
-          },
-        }),
-      ).render()
-
-      expect(slotBlock).toBeInstanceOf(DynamicFragment)
-      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-      expect(observedBoundary).toBe(null)
-    })
-
-    test('hydrated plain slot without fallback uses dynamic fragment', () => {
-      let slotBlock!: Block
-      const container = document.createElement('div')
-      container.innerHTML = '<!--[-->content<!--]-->'
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot('default'))
-      })
-
-      createVaporSSRApp(
-        defineVaporComponent(() =>
-          createComponent(Comp, null, {
-            default: () => template('content')(),
-          }),
-        ),
-      ).mount(container)
-
-      expect(slotBlock).toBeInstanceOf(DynamicFragment)
-      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-      expect(container.innerHTML).toBe('<!--[-->content<!--]-->')
-    })
-
-    test('slot with fallback and explicit empty slots uses dynamic fragment', () => {
-      let slotBlock!: Block
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot('default', null, () =>
-          template('fallback')(),
-        ))
-      })
-
-      define(() => createComponent(Comp, null, {})).render()
-
-      expect(slotBlock).toBeInstanceOf(DynamicFragment)
-      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-    })
-
-    test('slot with fallback and no slots uses dynamic fragment', () => {
-      let slotBlock!: Block
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot('default', null, () =>
-          template('fallback')(),
-        ))
-      })
-
-      const { host } = define(() => createComponent(Comp)).render()
-
-      expect(slotBlock).toBeInstanceOf(DynamicFragment)
-      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-      expect(host.innerHTML).toBe('fallback<!--slot-->')
-    })
-
-    test('hydrated slot with fallback and no slots uses dynamic fragment', () => {
-      let slotBlock!: Block
-      const container = document.createElement('div')
-      container.innerHTML = '<!--[-->fallback<!--]-->'
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot('default', null, () =>
-          template('fallback')(),
-        ))
-      })
-
-      createVaporSSRApp(
-        defineVaporComponent(() => createComponent(Comp)),
-      ).mount(container)
-
-      expect(slotBlock).toBeInstanceOf(DynamicFragment)
-      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-      expect(container.innerHTML).toBe('<!--[-->fallback<!--]-->')
-    })
-
-    test('stable slot with fallback uses dynamic fragment', () => {
-      let slotBlock!: Block
-      const slot = (() => template('<p>A</p>')()) as BlockFn
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot('default', null, () =>
-          template('fallback')(),
-        ))
-      })
-
-      const { host } = define(() =>
-        createComponent(Comp, null, {
-          default: slot,
-        }),
-      ).render()
-
-      expect(slotBlock).toBeInstanceOf(DynamicFragment)
-      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-      expect(host.innerHTML).toBe('<p>A</p><!--slot-->')
-    })
-
-    test('hydrated stable slot with fallback uses dynamic fragment', () => {
-      let slotBlock!: Block
-      const container = document.createElement('div')
-      container.innerHTML = '<!--[--><p>A</p><!--]-->'
-      const slot = (() => template('<p>A</p>')()) as BlockFn
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot('default', null, () =>
-          template('fallback')(),
-        ))
-      })
-
-      createVaporSSRApp(
-        defineVaporComponent(() =>
-          createComponent(Comp, null, {
-            default: slot,
-          }),
-        ),
-      ).mount(container)
-
-      expect(slotBlock).toBeInstanceOf(DynamicFragment)
-      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-      expect(container.innerHTML).toBe('<!--[--><p>A</p><!--]-->')
-    })
-
-    test('non-stable slot with fallback uses slot fragment', () => {
-      let slotBlock!: Block
-      const slot = (() => template('<p>A</p>')()) as BlockFn
-      ;(slot as any)._ = VaporSlotFlags.NON_STABLE
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot('default', null, () =>
-          template('fallback')(),
-        ))
-      })
-
-      define(() =>
-        createComponent(Comp, null, {
-          default: slot,
-        }),
-      ).render()
-
-      expect(slotBlock).toBeInstanceOf(SlotFragment)
-    })
-
-    test('stable component slot with fallback does not render fallback when component output is empty', () => {
-      let slotBlock!: Block
-      const Empty = defineVaporComponent(() => document.createComment('empty'))
-      const slot = (() => createComponent(Empty)) as BlockFn
-      const Comp = defineVaporComponent(() => {
-        return (slotBlock = createSlot('default', null, () =>
-          template('fallback')(),
-        ))
-      })
-
-      const { host } = define(() =>
-        createComponent(Comp, null, {
-          default: slot,
-        }),
-      ).render()
-
-      expect(slotBlock).toBeInstanceOf(DynamicFragment)
-      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-      expect(host.innerHTML).not.toContain('fallback')
-    })
-
     test('slot props should be isolated per fragment in v-for', async () => {
       const items = ref([0, 1, 2])
 
@@ -2734,6 +2555,230 @@ describe('component: slots', () => {
       increment()
       await nextTick()
       expect(html()).toBe('<span>initial:1</span><!--slot-->')
+    })
+
+    describe('slot fast path', () => {
+      describe('runtime', () => {
+        test('plain slot without fallback', () => {
+          let slotBlock!: Block
+          let observedBoundary: SlotBoundaryContext | null | undefined
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot(
+              'default',
+              null,
+              undefined,
+              VaporSlotFlags.SLOT_ROOT,
+            ))
+          })
+
+          define(() =>
+            createComponent(Comp, null, {
+              default: () => {
+                observedBoundary = getCurrentSlotBoundary()
+                return template('content')()
+              },
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(observedBoundary).toBe(null)
+        })
+
+        test('slot with fallback and explicit empty slots', () => {
+          let slotBlock!: Block
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          define(() => createComponent(Comp, null, {})).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+        })
+
+        test('slot with fallback and no slots', () => {
+          let slotBlock!: Block
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          const { host } = define(() => createComponent(Comp)).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.innerHTML).toBe('fallback<!--slot-->')
+        })
+
+        test('stable slot with fallback', () => {
+          let slotBlock!: Block
+          const slot = (() => template('<p>A</p>')()) as BlockFn
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          const { host } = define(() =>
+            createComponent(Comp, null, {
+              default: slot,
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.innerHTML).toBe('<p>A</p><!--slot-->')
+        })
+
+        test('non-stable slot with fallback uses slot fragment', () => {
+          let slotBlock!: Block
+          const slot = (() => template('<p>A</p>')()) as BlockFn
+          ;(slot as any)._ = VaporSlotFlags.NON_STABLE
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          define(() =>
+            createComponent(Comp, null, {
+              default: slot,
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(SlotFragment)
+        })
+
+        test('stable component slot with fallback does not render fallback when component output is empty', () => {
+          let slotBlock!: Block
+          // Component slot content counts as provided even when it renders
+          // invalid output, matching VDOM slot fallback semantics.
+          const Empty = defineVaporComponent(() =>
+            document.createComment('empty'),
+          )
+          const slot = (() => createComponent(Empty)) as BlockFn
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          const { host } = define(() =>
+            createComponent(Comp, null, {
+              default: slot,
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.innerHTML).not.toContain('fallback')
+        })
+      })
+
+      describe('hydration', () => {
+        test('plain slot without fallback', () => {
+          let slotBlock!: Block
+          const container = document.createElement('div')
+          container.innerHTML = '<!--[-->content<!--]-->'
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default'))
+          })
+
+          createVaporSSRApp(
+            defineVaporComponent(() =>
+              createComponent(Comp, null, {
+                default: () => template('content')(),
+              }),
+            ),
+          ).mount(container)
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(container.innerHTML).toBe('<!--[-->content<!--]-->')
+        })
+
+        test('slot with fallback and no slots', () => {
+          let slotBlock!: Block
+          const container = document.createElement('div')
+          container.innerHTML = '<!--[-->fallback<!--]-->'
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          createVaporSSRApp(
+            defineVaporComponent(() => createComponent(Comp)),
+          ).mount(container)
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(container.innerHTML).toBe('<!--[-->fallback<!--]-->')
+        })
+
+        test('stable slot with fallback', () => {
+          let slotBlock!: Block
+          const container = document.createElement('div')
+          container.innerHTML = '<!--[--><p>A</p><!--]-->'
+          const slot = (() => template('<p>A</p>')()) as BlockFn
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = createSlot('default', null, () =>
+              template('fallback')(),
+            ))
+          })
+
+          createVaporSSRApp(
+            defineVaporComponent(() =>
+              createComponent(Comp, null, {
+                default: slot,
+              }),
+            ),
+          ).mount(container)
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(container.innerHTML).toBe('<!--[--><p>A</p><!--]-->')
+        })
+
+        test('forwarded empty slot without consuming following sibling', () => {
+          let slotBlock!: Block
+          const Child = defineVaporComponent({
+            setup() {
+              return [
+                template('<main>content</main>')(),
+                (slotBlock = createSlot('footer')),
+                template('<p>after</p>')(),
+              ]
+            },
+          })
+          const Parent = defineVaporComponent({
+            setup() {
+              return createComponent(Child, null, {
+                footer: () => createSlot('footer'),
+              })
+            },
+          })
+          const container = document.createElement('div')
+          container.innerHTML =
+            '<!--[--><main>content</main><!--[--><!--]--><p>after</p><!--]-->'
+
+          createVaporSSRApp(
+            defineVaporComponent(() => createComponent(Parent)),
+          ).mount(container)
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(container.innerHTML).toBe(
+            '<!--[--><main>content</main><!--[--><!--]--><!--slot--><p>after</p><!--]-->',
+          )
+          expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+          expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        })
+      })
     })
   })
 
