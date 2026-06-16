@@ -47,7 +47,7 @@ function propGetter(rawProps: RawProps, key: string) {
     let i = dynamicSources.length
     while (i--) {
       const source = resolveSource(dynamicSources[i])
-      if (hasOwn(source, key))
+      if (source && hasOwn(source, key))
         // for props passed from VDOM component, no need to resolve
         return (isInteropEnabled && dynamicSources[interopKey]) ||
           (isOn(key) && isFunction(dynamicSources[i]))

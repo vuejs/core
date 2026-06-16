@@ -16,7 +16,7 @@ import {
   defineVaporComponent,
   template,
 } from '../src'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 
 const define = makeRender()
 
@@ -65,6 +65,23 @@ describe('component: emit', () => {
     expect(onFoo).not.toHaveBeenCalled()
     expect(onBar).toHaveBeenCalled()
     expect(onBaz).toHaveBeenCalled()
+  })
+
+  test('should ignore nullish object v-bind sources when emitting', () => {
+    const Child = defineVaporComponent({
+      emits: ['ready'],
+      setup(_, { emit }) {
+        emit('ready')
+        return []
+      },
+    })
+    const Parent = compile(
+      `<template><components.Child v-bind="data.attrs" /></template>`,
+      ref({ attrs: null }),
+      { Child },
+    )
+
+    expect(() => define(Parent).render()).not.toThrow()
   })
 
   test('trigger camelCase handler', () => {
