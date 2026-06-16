@@ -126,14 +126,6 @@ describe('compiler: transform slot', () => {
     expect(code).contains(`name: "default",`)
   })
 
-  test('empty default slot should be non-stable', () => {
-    const { code } = compileWithSlots(
-      `<Comp><template #default></template></Comp>`,
-    )
-
-    expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-  })
-
   test('on-component default slot', () => {
     const { ir, code } = compileWithSlots(
       `<Comp v-slot="{ foo }">{{ foo + bar }}</Comp>`,
@@ -576,65 +568,65 @@ describe('compiler: transform slot', () => {
     expect(code).contains(`"nav-bar-title-before"`)
   })
 
-  test('nested component slot', () => {
-    const { ir, code } = compileWithSlots(`<A><B/></A>`)
-    expect(code).toMatchSnapshot()
-    expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-    expect(ir.block.dynamic.children[0].operation).toMatchObject({
-      type: IRNodeTypes.CREATE_COMPONENT_NODE,
-      tag: 'A',
-      slots: [
-        {
-          slotType: IRSlotType.STATIC,
-          slots: {
-            default: {
-              type: IRNodeTypes.BLOCK,
-              dynamic: {
-                children: [
-                  {
-                    operation: {
-                      type: IRNodeTypes.CREATE_COMPONENT_NODE,
-                      tag: 'B',
-                      slots: [],
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        },
-      ],
+  describe('slot fast path', () => {
+    test('comment-only default slot is non-stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><template #default><!--foo--></template></Comp>`,
+      )
+
+      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
     })
-  })
 
-  test('marks root v-if slot content as slot root', () => {
-    const { code } = compileWithSlots(`<Comp><span v-if="show"/></Comp>`)
+    test('component root is stable', () => {
+      const { code } = compileWithSlots(`<A><B/></A>`)
 
-    expect(code).toMatchSnapshot()
-    expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-  })
+      expect(code).toMatchSnapshot()
+      expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
 
-  test('runtime dynamic component slot content should be non-stable', () => {
-    const { code } = compileWithSlots(`<Comp><component :is="view"/></Comp>`)
+    test('root v-if slot content is non-stable', () => {
+      const { code } = compileWithSlots(`<Comp><span v-if="show"/></Comp>`)
 
-    expect(code).toMatchSnapshot()
-    expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-  })
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
 
-  test('does not mark non-root v-if slot content as slot root', () => {
-    const { code } = compileWithSlots(
-      `<Comp><div><span v-if="show"/></div></Comp>`,
-    )
+    test('root v-for slot content is non-stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><span v-for="item in list"/></Comp>`,
+      )
 
-    expect(code).toMatchSnapshot()
-  })
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
 
-  test('marks root slot outlet fallback as slot root', () => {
-    const { code } = compileWithSlots(
-      `<Comp><slot><span v-if="show"/></slot></Comp>`,
-    )
+    test('runtime dynamic component root is non-stable', () => {
+      // Keep VDOM parity for <Comp><component :is="view" /></Comp>:
+      // fallback renders when view is null, unlike <Comp><Foo /></Comp> where
+      // the static component vnode is valid even if Foo renders empty output.
+      const { code } = compileWithSlots(`<Comp><component :is="view"/></Comp>`)
 
-    expect(code).toMatchSnapshot()
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
+
+    test('non-root v-if under stable template root is stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><div><span v-if="show"/></div></Comp>`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
+
+    test('root slot outlet fallback is non-stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><slot><span v-if="show"/></slot></Comp>`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
   })
 
   describe('forwarded slots', () => {

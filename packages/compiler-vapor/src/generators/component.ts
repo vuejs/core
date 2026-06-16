@@ -802,6 +802,11 @@ function hasStableSlotRoot(
           hasValidRoot = true
           continue
         }
+        // Align with VDOM fallback semantics:
+        // <component :is="view" /> renders fallback when view is null because
+        // the dynamic component root becomes a comment vnode. This differs from
+        // <Foo />, whose component vnode is valid slot content even if Foo
+        // renders null/comment.
         return false
       case IRNodeTypes.KEY:
         if (hasStableSlotRoot(operation.block, context)) {
