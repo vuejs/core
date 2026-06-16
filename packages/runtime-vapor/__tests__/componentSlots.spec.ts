@@ -10,6 +10,7 @@ import {
   createIf,
   createSlot,
   createVaporApp,
+  createVaporSSRApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
   insert,
@@ -41,6 +42,7 @@ import {
   VaporIfFlags,
   VaporSlotFlags,
   VaporVForFlags,
+  extend,
 } from '@vue/shared'
 import { compile, makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
@@ -78,6 +80,7 @@ const keyedIfShape =
 const slotRootIfShape = VaporBlockShape.SINGLE_ROOT | VaporIfFlags.SLOT_ROOT
 const keyedSlotRootIfShape = keyedIfShape | VaporIfFlags.SLOT_ROOT
 const slotRootForFlags = VaporVForFlags.SLOT_ROOT
+const nonStableSlot = { _: VaporSlotFlags.NON_STABLE } as const
 
 function renderWithSlots(slots: any): any {
   let instance: any
@@ -364,13 +367,16 @@ describe('component: slots', () => {
       )
       const { host } = define(() =>
         createComponent(Child, null, {
-          default: () =>
-            createIf(
-              () => show.value,
-              () => document.createTextNode('content'),
-              undefined,
-              keyedSlotRootIfShape,
-            ),
+          default: extend(
+            () =>
+              createIf(
+                () => show.value,
+                () => document.createTextNode('content'),
+                undefined,
+                keyedSlotRootIfShape,
+              ),
+            nonStableSlot,
+          ),
         }),
       ).render()
 
@@ -389,13 +395,16 @@ describe('component: slots', () => {
       )
       const { host } = define(() =>
         createComponent(Child, null, {
-          default: () =>
-            createFor(
-              () => items.value,
-              item => document.createTextNode(item.value),
-              undefined,
-              slotRootForFlags,
-            ),
+          default: extend(
+            () =>
+              createFor(
+                () => items.value,
+                item => document.createTextNode(item.value),
+                undefined,
+                slotRootForFlags,
+              ),
+            nonStableSlot,
+          ),
         }),
       ).render()
 
@@ -414,14 +423,17 @@ describe('component: slots', () => {
       )
       const { host } = define(() =>
         createComponent(Child, null, {
-          default: () =>
-            createDynamicComponent(
-              () => current.value,
-              null,
-              null,
-              VaporDynamicComponentFlags.SINGLE_ROOT |
-                VaporDynamicComponentFlags.SLOT_ROOT,
-            ),
+          default: extend(
+            () =>
+              createDynamicComponent(
+                () => current.value,
+                null,
+                null,
+                VaporDynamicComponentFlags.SINGLE_ROOT |
+                  VaporDynamicComponentFlags.SLOT_ROOT,
+              ),
+            nonStableSlot,
+          ),
         }),
       ).render()
 
@@ -1280,7 +1292,28 @@ describe('component: slots', () => {
       expect(observedBoundary).toBe(null)
     })
 
-    test('slot with fallback uses slot fragment', () => {
+    test('hydrated plain slot without fallback uses dynamic fragment', () => {
+      let slotBlock!: Block
+      const container = document.createElement('div')
+      container.innerHTML = '<!--[-->content<!--]-->'
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot('default'))
+      })
+
+      createVaporSSRApp(
+        defineVaporComponent(() =>
+          createComponent(Comp, null, {
+            default: () => template('content')(),
+          }),
+        ),
+      ).mount(container)
+
+      expect(slotBlock).toBeInstanceOf(DynamicFragment)
+      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+      expect(container.innerHTML).toBe('<!--[-->content<!--]-->')
+    })
+
+    test('slot with fallback and explicit empty slots uses dynamic fragment', () => {
       let slotBlock!: Block
       const Comp = defineVaporComponent(() => {
         return (slotBlock = createSlot('default', null, () =>
@@ -1290,7 +1323,126 @@ describe('component: slots', () => {
 
       define(() => createComponent(Comp, null, {})).render()
 
+      expect(slotBlock).toBeInstanceOf(DynamicFragment)
+      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+    })
+
+    test('slot with fallback and no slots uses dynamic fragment', () => {
+      let slotBlock!: Block
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot('default', null, () =>
+          template('fallback')(),
+        ))
+      })
+
+      const { host } = define(() => createComponent(Comp)).render()
+
+      expect(slotBlock).toBeInstanceOf(DynamicFragment)
+      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+      expect(host.innerHTML).toBe('fallback<!--slot-->')
+    })
+
+    test('hydrated slot with fallback and no slots uses dynamic fragment', () => {
+      let slotBlock!: Block
+      const container = document.createElement('div')
+      container.innerHTML = '<!--[-->fallback<!--]-->'
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot('default', null, () =>
+          template('fallback')(),
+        ))
+      })
+
+      createVaporSSRApp(
+        defineVaporComponent(() => createComponent(Comp)),
+      ).mount(container)
+
+      expect(slotBlock).toBeInstanceOf(DynamicFragment)
+      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+      expect(container.innerHTML).toBe('<!--[-->fallback<!--]-->')
+    })
+
+    test('stable slot with fallback uses dynamic fragment', () => {
+      let slotBlock!: Block
+      const slot = (() => template('<p>A</p>')()) as BlockFn
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot('default', null, () =>
+          template('fallback')(),
+        ))
+      })
+
+      const { host } = define(() =>
+        createComponent(Comp, null, {
+          default: slot,
+        }),
+      ).render()
+
+      expect(slotBlock).toBeInstanceOf(DynamicFragment)
+      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+      expect(host.innerHTML).toBe('<p>A</p><!--slot-->')
+    })
+
+    test('hydrated stable slot with fallback uses dynamic fragment', () => {
+      let slotBlock!: Block
+      const container = document.createElement('div')
+      container.innerHTML = '<!--[--><p>A</p><!--]-->'
+      const slot = (() => template('<p>A</p>')()) as BlockFn
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot('default', null, () =>
+          template('fallback')(),
+        ))
+      })
+
+      createVaporSSRApp(
+        defineVaporComponent(() =>
+          createComponent(Comp, null, {
+            default: slot,
+          }),
+        ),
+      ).mount(container)
+
+      expect(slotBlock).toBeInstanceOf(DynamicFragment)
+      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+      expect(container.innerHTML).toBe('<!--[--><p>A</p><!--]-->')
+    })
+
+    test('non-stable slot with fallback uses slot fragment', () => {
+      let slotBlock!: Block
+      const slot = (() => template('<p>A</p>')()) as BlockFn
+      ;(slot as any)._ = VaporSlotFlags.NON_STABLE
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot('default', null, () =>
+          template('fallback')(),
+        ))
+      })
+
+      define(() =>
+        createComponent(Comp, null, {
+          default: slot,
+        }),
+      ).render()
+
       expect(slotBlock).toBeInstanceOf(SlotFragment)
+    })
+
+    test('stable component slot with fallback does not render fallback when component output is empty', () => {
+      let slotBlock!: Block
+      const Empty = defineVaporComponent(() => document.createComment('empty'))
+      const slot = (() => createComponent(Empty)) as BlockFn
+      const Comp = defineVaporComponent(() => {
+        return (slotBlock = createSlot('default', null, () =>
+          template('fallback')(),
+        ))
+      })
+
+      const { host } = define(() =>
+        createComponent(Comp, null, {
+          default: slot,
+        }),
+      ).render()
+
+      expect(slotBlock).toBeInstanceOf(DynamicFragment)
+      expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+      expect(host.innerHTML).not.toContain('fallback')
     })
 
     test('slot props should be isolated per fragment in v-for', async () => {
@@ -1630,7 +1782,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createIf(
                 () => toggle.value,
                 () => {
@@ -1639,7 +1791,7 @@ describe('component: slots', () => {
                 undefined,
                 keyedSlotRootIfShape,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1669,7 +1821,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createIf(
                 () => toggle.value,
                 () => {
@@ -1678,7 +1830,7 @@ describe('component: slots', () => {
                 undefined,
                 keyedSlotRootIfShape,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1780,9 +1932,9 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return template('<!--comment-->')()
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1804,7 +1956,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createIf(
                 () => toggle.value,
                 () => {
@@ -1813,7 +1965,7 @@ describe('component: slots', () => {
                 undefined,
                 keyedSlotRootIfShape,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1844,7 +1996,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createIf(
                 () => outerShow.value,
                 () => {
@@ -1860,7 +2012,7 @@ describe('component: slots', () => {
                 undefined,
                 keyedSlotRootIfShape,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1905,7 +2057,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               const n2 = createFor(
                 () => items.value,
                 for_item0 => {
@@ -1920,7 +2072,7 @@ describe('component: slots', () => {
                 slotRootForFlags,
               )
               return n2
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -1953,7 +2105,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               const n2 = createFor(
                 () => items.value,
                 for_item0 => {
@@ -1968,7 +2120,7 @@ describe('component: slots', () => {
                 slotRootForFlags,
               )
               return n2
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -2005,7 +2157,7 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               return createFor(
                 () => items.value,
                 for_item0 => {
@@ -2026,7 +2178,7 @@ describe('component: slots', () => {
                 item => item.text,
                 slotRootForFlags,
               )
-            },
+            }, nonStableSlot),
           })
         },
       }).render()
@@ -2694,12 +2846,12 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               const n0 = createSlot('default', null, () => {
                 return template('<!-- <div></div> -->')()
               })
               return n0
-            },
+            }, nonStableSlot),
           })
           return n2
         },
@@ -2708,7 +2860,10 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: () => template('<!-- <div>App</div> -->')(),
+            default: extend(
+              () => template('<!-- <div>App</div> -->')(),
+              nonStableSlot,
+            ),
           })
         },
       }).render()
@@ -2795,7 +2950,7 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               const n0 = createSlot('default', null, () => {
                 const n2 = createIf(
                   () => show.value,
@@ -2809,7 +2964,7 @@ describe('component: slots', () => {
                 return n2
               })
               return n0
-            },
+            }, nonStableSlot),
           })
           return n2
         },
@@ -2818,7 +2973,10 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: () => template('<!-- <div>App</div> -->')(),
+            default: extend(
+              () => template('<!-- <div>App</div> -->')(),
+              nonStableSlot,
+            ),
           })
         },
       }).render()
@@ -2843,7 +3001,7 @@ describe('component: slots', () => {
       const Parent = defineVaporComponent({
         setup() {
           const n2 = createComponent(Child, null, {
-            default: () => {
+            default: extend(() => {
               const n0 = createSlot('default', null, () => {
                 const n2 = createFor(
                   () => items.value,
@@ -2861,7 +3019,7 @@ describe('component: slots', () => {
                 return n2
               })
               return n0
-            },
+            }, nonStableSlot),
           })
           return n2
         },
@@ -2870,7 +3028,10 @@ describe('component: slots', () => {
       const { html } = define({
         setup() {
           return createComponent(Parent, null, {
-            default: () => template('<!-- <div>App</div> -->')(),
+            default: extend(
+              () => template('<!-- <div>App</div> -->')(),
+              nonStableSlot,
+            ),
           })
         },
       }).render()
@@ -2950,14 +3111,14 @@ describe('component: slots', () => {
               targetComponent,
               null,
               {
-                foo: () => {
+                foo: extend(() => {
                   return fallbackText
                     ? createSlot('foo', null, () => {
                         const n2 = template(`<div>${fallbackText}</div>`)()
                         return n2
                       })
                     : createSlot('foo', null)
-                },
+                }, nonStableSlot),
               },
               true,
             )

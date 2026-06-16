@@ -140,18 +140,18 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > hoist asset component also used in conditional component slot 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, createAssetComponent as _createAssetComponent } from 'vue';
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
   const _component_Child = _resolveComponent("Child")
   const n0 = _createComponentWithFallback(_component_Child)
-  const n5 = _createAssetComponent("Parent", null, () => {
+  const n5 = _createAssetComponent("Parent", null, _extend(() => {
     const n1 = _createIf(() => (_ctx.ok), () => {
       const n3 = _createComponentWithFallback(_component_Child)
       return n3
     }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n1
-  })
+  }, { _: 8 }))
   return [n0, n5]
 }"
 `;

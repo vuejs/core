@@ -19,6 +19,7 @@ export {
 } from './apiDefineCustomElement'
 
 // compiler-use only
+export { extend } from '@vue/shared'
 export { insert, prepend, remove, type Block } from './block'
 export { setInsertionState } from './insertionState'
 export {
