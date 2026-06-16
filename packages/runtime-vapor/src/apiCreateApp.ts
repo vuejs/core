@@ -57,8 +57,16 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
 let _hydrateApp: CreateAppFunction<ParentNode, VaporComponent>
 
 const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
-  optimizePropertyLookup()
+  if (!container.hasChildNodes()) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Attempting to hydrate existing markup but container is empty. ` +
+          `Performing full mount instead.`,
+      )
+    return mountApp(app, container)
+  }
 
+  optimizePropertyLookup()
   let instance: VaporComponentInstance
   withHydration(container, () => {
     instance =

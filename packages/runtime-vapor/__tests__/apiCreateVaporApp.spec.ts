@@ -3,6 +3,7 @@ import {
   createComponent,
   createTextNode,
   createVaporApp,
+  createVaporSSRApp,
   defineVaporComponent,
   template,
   withVaporDirectives,
@@ -122,6 +123,23 @@ describe('api: createVaporApp', () => {
     } finally {
       __DEV__ = true
     }
+  })
+
+  test('ssr mount should fall back to full mount when container is empty', () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        return createTextNode('hello')
+      },
+    })
+
+    const root = document.createElement('div')
+    const app = createVaporSSRApp(Comp)
+
+    expect(() => app.mount(root)).not.toThrow()
+    expect(root.innerHTML).toBe(`hello`)
+    expect(
+      `Attempting to hydrate existing markup but container is empty. Performing full mount instead.`,
+    ).toHaveBeenWarned()
   })
 
   test('provide', () => {
