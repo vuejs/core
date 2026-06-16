@@ -1,5 +1,6 @@
 import {
   VaporDynamicComponentFlags,
+  VaporSlotFlags,
   camelize,
   extend,
   getModifierPropName,
@@ -8,8 +9,11 @@ import {
 } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import {
+  type BlockIRNode,
   type CreateComponentIRNode,
+  type IRDynamicInfo,
   IRDynamicPropsKind,
+  IRNodeTypes,
   type IRProp,
   type IRProps,
   type IRPropsStatic,
@@ -43,7 +47,7 @@ import {
 } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
 import { genDirectiveModifiers, genDirectivesForElement } from './directive'
-import { genBlock, markSlotRootOperations } from './block'
+import { findReturnedDynamic, genBlock, markSlotRootOperations } from './block'
 import {
   type DestructureMap,
   type DestructureMapValue,
@@ -655,7 +659,7 @@ function genBasicDynamicSlot(
   return genMulti(
     DELIMITERS_OBJECT_NEWLINE,
     ['name: ', ...genExpression(name, context)],
-    ['fn: ', ...genSlotBlockWithProps(fn, context)],
+    ['fn: ', ...genSlotBlockWithProps(fn, context, false)],
   )
 }
 
@@ -678,7 +682,7 @@ function genLoopSlot(
     ['name: ', ...context.withId(() => genExpression(name, context), idMap)],
     [
       'fn: ',
-      ...context.withId(() => genSlotBlockWithProps(fn, context), idMap),
+      ...context.withId(() => genSlotBlockWithProps(fn, context, false), idMap),
     ],
   )
   return [
@@ -718,7 +722,11 @@ function genConditionalSlot(
   ]
 }
 
-function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
+function genSlotBlockWithProps(
+  oper: SlotBlockIRNode,
+  context: CodegenContext,
+  emitNonStableFlag = true,
+) {
   let propsName: string | undefined
   let exitScope: (() => void) | undefined
   let depth: number | undefined
@@ -754,8 +762,71 @@ function genSlotBlockWithProps(oper: SlotBlockIRNode, context: CodegenContext) {
     () => genBlock(oper, context, propsName ? [propsName] : []),
     idMap,
   )
+  // Dynamic slot sources keep rawSlots.$, so runtime stays conservative.
+  if (emitNonStableFlag && !hasStableSlotRoot(oper, context)) {
+    blockFn = genCall(
+      context.helper('extend'),
+      blockFn,
+      `{ _: ${VaporSlotFlags.NON_STABLE} }`,
+    )
+  }
   exitSlotBlock()
   exitScope && exitScope()
 
   return blockFn
+}
+
+const commentOnlyTemplateRE = /^(?:<!--[\s\S]*?-->)+$/
+
+// A slot can skip fallback/boundary tracking only when its root shape is stable.
+// Components count as valid even if their own render result is a comment.
+function hasStableSlotRoot(
+  block: BlockIRNode,
+  context: CodegenContext,
+): boolean {
+  let hasValidRoot = false
+  for (let i = 0; i < block.returns.length; i++) {
+    const id = block.returns[i]
+    const child = findReturnedDynamic(block, id)
+    const operation = child && child.operation
+    if (!operation) {
+      if (child && isStableTemplateSlotRoot(child, context)) {
+        hasValidRoot = true
+      }
+      continue
+    }
+
+    switch (operation.type) {
+      case IRNodeTypes.CREATE_COMPONENT_NODE:
+        if (!operation.dynamic || operation.dynamic.isStatic) {
+          hasValidRoot = true
+          continue
+        }
+        // Align with VDOM fallback semantics:
+        // <component :is="view" /> renders fallback when view is null because
+        // the dynamic component root becomes a comment vnode. This differs from
+        // <Foo />, whose component vnode is valid slot content even if Foo
+        // renders null/comment.
+        return false
+      case IRNodeTypes.KEY:
+        if (hasStableSlotRoot(operation.block, context)) {
+          hasValidRoot = true
+          continue
+        }
+        return false
+      default:
+        return false
+    }
+  }
+  return hasValidRoot
+}
+
+function isStableTemplateSlotRoot(
+  child: IRDynamicInfo,
+  context: CodegenContext,
+): boolean {
+  if (child.template == null) return false
+  const content = context.ir.template.entries[child.template].content
+  // Preserved whitespace is a real text root; trim only for comment detection.
+  return content !== '' && !commentOnlyTemplateRE.test(content.trim())
 }

@@ -229,6 +229,7 @@ export class DynamicFragment extends RenderContextFragment {
   // pure marker consumed by the isSlotFragment predicate; the core update
   // pipeline never reads it.
   isSlot?: boolean
+  forwarded?: boolean
   inTransition?: boolean
   // Fallthrough attrs hooks register branch-owned effects on insert.
   hasFallthroughAttrs?: true

@@ -14,7 +14,12 @@ import {
   vModelText,
   withDirectives,
 } from 'vue'
-import { VaporBlockShape, VaporVForFlags } from '@vue/shared'
+import {
+  VaporBlockShape,
+  VaporSlotFlags,
+  VaporVForFlags,
+  extend,
+} from '@vue/shared'
 import type { LooseRawProps, VaporComponent } from '../../src/component'
 import { ifFlags, makeRender } from '../_utils'
 import { VaporKeepAlive } from '../../src/components/KeepAlive'
@@ -41,6 +46,7 @@ const define = makeRender()
 const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 const singleRootIfElse =
   VaporBlockShape.SINGLE_ROOT | (VaporBlockShape.SINGLE_ROOT << 2)
+const nonStableSlot = { _: VaporSlotFlags.NON_STABLE } as const
 
 describe('VaporKeepAlive', () => {
   let one: VaporComponent
@@ -421,18 +427,21 @@ describe('VaporKeepAlive', () => {
 
     const renderItems = (items: typeof itemsA) =>
       createComponent(SlotConsumer, null, {
-        default: () =>
-          createFor(
-            () => items.value,
-            item => {
-              const n0 = template('<span> </span>')() as any
-              const x0 = child(n0) as any
-              renderEffect(() => setText(x0, String(item.value)))
-              return n0
-            },
-            item => item,
-            VaporVForFlags.SLOT_ROOT,
-          ),
+        default: extend(
+          () =>
+            createFor(
+              () => items.value,
+              item => {
+                const n0 = template('<span> </span>')() as any
+                const x0 = child(n0) as any
+                renderEffect(() => setText(x0, String(item.value)))
+                return n0
+              },
+              item => item,
+              VaporVForFlags.SLOT_ROOT,
+            ),
+          nonStableSlot,
+        ),
       })
 
     const { html } = define({

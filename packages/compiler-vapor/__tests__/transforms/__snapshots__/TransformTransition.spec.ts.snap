@@ -29,14 +29,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transition > the v-if/else-if/else branches in Transition should ignore comments 1`] = `
-"import { VaporTransition as _VaporTransition, setInsertionState as _setInsertionState, createIf as _createIf, createComponent as _createComponent, template as _template } from 'vue';
+"import { VaporTransition as _VaporTransition, setInsertionState as _setInsertionState, createIf as _createIf, extend as _extend, createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("<div>hey", 2)
 const t1 = _template("<p>", 2)
 const t2 = _template("<!-- this should not be ignored -->", 2)
 const t3 = _template("<div>")
 
 export function render(_ctx) {
-  const n17 = _createComponent(_VaporTransition, null, () => {
+  const n17 = _createComponent(_VaporTransition, null, _extend(() => {
     const n0 = _createIf(() => (_ctx.a), () => {
       const n2 = t0()
       return n2
@@ -57,7 +57,7 @@ export function render(_ctx) {
       return n15
     }, 645 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */), 389 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n17
 }"
 `;
@@ -96,17 +96,17 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transition > work with v-if 1`] = `
-"import { VaporTransition as _VaporTransition, createIf as _createIf, createComponent as _createComponent, template as _template } from 'vue';
+"import { VaporTransition as _VaporTransition, createIf as _createIf, extend as _extend, createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("<h1>foo", 2)
 
 export function render(_ctx) {
-  const n3 = _createComponent(_VaporTransition, null, () => {
+  const n3 = _createComponent(_VaporTransition, null, _extend(() => {
     const n0 = _createIf(() => (_ctx.show), () => {
       const n2 = t0()
       return n2
     }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n3
 }"
 `;

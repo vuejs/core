@@ -241,7 +241,7 @@ function markSlotRootComponent(operation: CreateComponentIRNode): void {
   }
 }
 
-function findReturnedDynamic(
+export function findReturnedDynamic(
   block: BlockIRNode,
   id: number,
 ): IRDynamicInfo | undefined {

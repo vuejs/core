@@ -105,6 +105,9 @@ export enum VaporSlotFlags {
   NO_SLOTTED = 1,
   ONCE = 1 << 1,
   SLOT_ROOT = 1 << 2,
+  // Per-slot function metadata. The slot root can start invalid or become
+  // invalid, so fallback may be reachable and needs SlotFragment tracking.
+  NON_STABLE = 1 << 3,
 }
 
 export enum VaporDynamicComponentFlags {

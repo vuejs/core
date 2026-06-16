@@ -41,25 +41,6 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > does not mark non-root v-if slot content as slot root 1`] = `
-"import { setInsertionState as _setInsertionState, createIf as _createIf, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
-const t0 = _template("<span>", 2)
-const t1 = _template("<div>")
-
-export function render(_ctx) {
-  const n4 = _createAssetComponent("Comp", null, () => {
-    const n3 = t1()
-    _setInsertionState(n3, null, 0)
-    const n0 = _createIf(() => (_ctx.show), () => {
-      const n2 = t0()
-      return n2
-    })
-    return n3
-  }, true)
-  return n4
-}"
-`;
-
 exports[`compiler: transform slot > dynamic slots name 1`] = `
 "import { createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("foo", 2)
@@ -160,15 +141,15 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot w/ nested component> 1`] = `
-"import { resolveComponent as _resolveComponent, createSlot as _createSlot, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { resolveComponent as _resolveComponent, createSlot as _createSlot, extend as _extend, createComponentWithFallback as _createComponentWithFallback } from 'vue';
 
 export function render(_ctx) {
   const _component_Comp = _resolveComponent("Comp")
   const n2 = _createComponentWithFallback(_component_Comp, null, () => {
-    const n1 = _createComponentWithFallback(_component_Comp, null, () => {
+    const n1 = _createComponentWithFallback(_component_Comp, null, _extend(() => {
       const n0 = _createSlot("default", null, null, 4)
       return n0
-    })
+    }, { _: 8 }))
     return n1
   }, true)
   return n2
@@ -176,55 +157,55 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot> tag only 1`] = `
-"import { createSlot as _createSlot, createAssetComponent as _createAssetComponent } from 'vue';
+"import { createSlot as _createSlot, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n1 = _createAssetComponent("Comp", null, () => {
+  const n1 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createSlot("default", null, null, 4)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n1
 }"
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot> tag w/ template 1`] = `
-"import { createSlot as _createSlot, createAssetComponent as _createAssetComponent } from 'vue';
+"import { createSlot as _createSlot, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, () => {
+  const n2 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createSlot("default", null, null, 4)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n2
 }"
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-for 1`] = `
-"import { createSlot as _createSlot, createFor as _createFor, createAssetComponent as _createAssetComponent } from 'vue';
+"import { createSlot as _createSlot, createFor as _createFor, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n3 = _createAssetComponent("Comp", null, () => {
+  const n3 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createFor(() => (_ctx.b), (_for_item0) => {
       const n2 = _createSlot("default", null, null, 4)
       return n2
     }, undefined, 48)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n3
 }"
 `;
 
 exports[`compiler: transform slot > forwarded slots > <slot> tag w/ v-if 1`] = `
-"import { createSlot as _createSlot, createIf as _createIf, createAssetComponent as _createAssetComponent } from 'vue';
+"import { createSlot as _createSlot, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n3 = _createAssetComponent("Comp", null, () => {
+  const n3 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (_ctx.ok), () => {
       const n2 = _createSlot("default", null, null, 4)
       return n2
     }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n3
 }"
 `;
@@ -239,41 +220,6 @@ export function render(_ctx) {
     return n0
   }, true)
   return n1
-}"
-`;
-
-exports[`compiler: transform slot > marks root slot outlet fallback as slot root 1`] = `
-"import { createIf as _createIf, createSlot as _createSlot, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
-const t0 = _template("<span>", 2)
-
-export function render(_ctx) {
-  const n5 = _createAssetComponent("Comp", null, () => {
-    const n0 = _createSlot("default", null, () => {
-      const n2 = _createIf(() => (_ctx.show), () => {
-        const n4 = t0()
-        return n4
-      }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
-      return n2
-    }, 4)
-    return n0
-  }, true)
-  return n5
-}"
-`;
-
-exports[`compiler: transform slot > marks root v-if slot content as slot root 1`] = `
-"import { createIf as _createIf, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
-const t0 = _template("<span>", 2)
-
-export function render(_ctx) {
-  const n3 = _createAssetComponent("Comp", null, () => {
-    const n0 = _createIf(() => (_ctx.show), () => {
-      const n2 = t0()
-      return n2
-    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
-    return n0
-  }, true)
-  return n3
 }"
 `;
 
@@ -300,33 +246,20 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > nested component should not inherit parent slots 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
+"import { resolveComponent as _resolveComponent, extend as _extend, createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
   const _component_Bar = _resolveComponent("Bar")
   const n2 = _createAssetComponent("Foo", null, {
-    "header": () => {
+    "header": _extend(() => {
       return null
-    },
+    }, { _: 8 }),
     "default": () => {
       const n1 = _createComponentWithFallback(_component_Bar)
       return n1
     }
   }, true)
   return n2
-}"
-`;
-
-exports[`compiler: transform slot > nested component slot 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
-
-export function render(_ctx) {
-  const _component_B = _resolveComponent("B")
-  const n1 = _createAssetComponent("A", null, () => {
-    const n0 = _createComponentWithFallback(_component_B)
-    return n0
-  }, true)
-  return n1
 }"
 `;
 
@@ -402,13 +335,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > quote slot name 1`] = `
-"import { createAssetComponent as _createAssetComponent } from 'vue';
+"import { extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
   const n1 = _createAssetComponent("Comp", null, {
-    "nav-bar-title-before": () => {
+    "nav-bar-title-before": _extend(() => {
       return null
-    }
+    }, { _: 8 })
   }, true)
   return n1
 }"
@@ -436,6 +369,101 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > slot fast path > component root is stable 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const _component_B = _resolveComponent("B")
+  const n1 = _createAssetComponent("A", null, () => {
+    const n0 = _createComponentWithFallback(_component_B)
+    return n0
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: transform slot > slot fast path > non-root v-if under stable template root is stable 1`] = `
+"import { setInsertionState as _setInsertionState, createIf as _createIf, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<span>", 2)
+const t1 = _template("<div>")
+
+export function render(_ctx) {
+  const n4 = _createAssetComponent("Comp", null, () => {
+    const n3 = t1()
+    _setInsertionState(n3, null, 0)
+    const n0 = _createIf(() => (_ctx.show), () => {
+      const n2 = t0()
+      return n2
+    })
+    return n3
+  }, true)
+  return n4
+}"
+`;
+
+exports[`compiler: transform slot > slot fast path > root slot outlet fallback is non-stable 1`] = `
+"import { createIf as _createIf, createSlot as _createSlot, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<span>", 2)
+
+export function render(_ctx) {
+  const n5 = _createAssetComponent("Comp", null, _extend(() => {
+    const n0 = _createSlot("default", null, () => {
+      const n2 = _createIf(() => (_ctx.show), () => {
+        const n4 = t0()
+        return n4
+      }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
+      return n2
+    }, 4)
+    return n0
+  }, { _: 8 }), true)
+  return n5
+}"
+`;
+
+exports[`compiler: transform slot > slot fast path > root v-for slot content is non-stable 1`] = `
+"import { createFor as _createFor, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<span>")
+
+export function render(_ctx) {
+  const n3 = _createAssetComponent("Comp", null, _extend(() => {
+    const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+      const n2 = t0()
+      return n2
+    }, undefined, 40)
+    return n0
+  }, { _: 8 }), true)
+  return n3
+}"
+`;
+
+exports[`compiler: transform slot > slot fast path > root v-if slot content is non-stable 1`] = `
+"import { createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<span>", 2)
+
+export function render(_ctx) {
+  const n3 = _createAssetComponent("Comp", null, _extend(() => {
+    const n0 = _createIf(() => (_ctx.show), () => {
+      const n2 = t0()
+      return n2
+    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
+    return n0
+  }, { _: 8 }), true)
+  return n3
+}"
+`;
+
+exports[`compiler: transform slot > slot fast path > runtime dynamic component root is non-stable 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n1 = _createAssetComponent("Comp", null, _extend(() => {
+    const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 4)
+    return n0
+  }, { _: 8 }), true)
+  return n1
+}"
+`;
+
 exports[`compiler: transform slot > slot owner context > dynamic slot source with slot outlet should not need withVaporCtx 1`] = `
 "import { createSlot as _createSlot, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent } from 'vue';
 
@@ -456,12 +484,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > slot owner context > slot with component inside v-for should not need withVaporCtx 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_ChildComp = _resolveComponent("ChildComp")
-  const n5 = _createAssetComponent("Comp", null, () => {
+  const n5 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
       const n3 = t0()
       _setInsertionState(n3, null, 0)
@@ -469,18 +497,18 @@ export function render(_ctx) {
       return n3
     }, undefined, 40)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n5
 }"
 `;
 
 exports[`compiler: transform slot > slot owner context > slot with component inside v-if should not need withVaporCtx 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _component_ChildComp = _resolveComponent("ChildComp")
-  const n5 = _createAssetComponent("Comp", null, () => {
+  const n5 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (_ctx.show), () => {
       const n3 = t0()
       _setInsertionState(n3, null, 0)
@@ -488,7 +516,7 @@ export function render(_ctx) {
       return n3
     }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n5
 }"
 `;
@@ -507,11 +535,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > slot owner context > slot with custom element inside v-if should not need withVaporCtx 1`] = `
-"import { setInsertionState as _setInsertionState, createPlainElement as _createPlainElement, createIf as _createIf, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { setInsertionState as _setInsertionState, createPlainElement as _createPlainElement, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
-  const n5 = _createAssetComponent("Comp", null, () => {
+  const n5 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (_ctx.show), () => {
       const n3 = t0()
       _setInsertionState(n3, null, 0)
@@ -519,7 +547,7 @@ export function render(_ctx) {
       return n3
     }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n5
 }"
 `;
@@ -536,14 +564,36 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > slot owner context > slot with dynamic root and stable sibling should be non-stable 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<span> ")
+const t1 = _template("<i>tail", 2)
+
+export function render(_ctx) {
+  const n5 = _createAssetComponent("Comp", null, _extend(() => {
+    const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+      const n2 = t0()
+      const x2 = _txt(n2)
+      _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
+      return n2
+    }, undefined, 40)
+    const n3 = t1()
+    const x0 = _txt(n0)
+    _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
+    return [n0, n3]
+  }, { _: 8 }), true)
+  return n5
+}"
+`;
+
 exports[`compiler: transform slot > slot owner context > slot with nested v-if containing component should not need withVaporCtx 1`] = `
-"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<span>")
 const t1 = _template("<div>")
 
 export function render(_ctx) {
   const _component_ChildComp = _resolveComponent("ChildComp")
-  const n8 = _createAssetComponent("Comp", null, () => {
+  const n8 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (_ctx.a), () => {
       const n6 = t1()
       _setInsertionState(n6, null, 0)
@@ -556,7 +606,7 @@ export function render(_ctx) {
       return n6
     }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n8
 }"
 `;
@@ -589,23 +639,23 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform slot > slot owner context > slot with slot outlet should not need withVaporCtx 1`] = `
-"import { createSlot as _createSlot, createAssetComponent as _createAssetComponent } from 'vue';
+"import { createSlot as _createSlot, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const n2 = _createAssetComponent("Comp", null, () => {
+  const n2 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createSlot("default", null, null, 4)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n2
 }"
 `;
 
 exports[`compiler: transform slot > slot owner context > slot with v-for but no component should not need withVaporCtx 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
-  const n4 = _createAssetComponent("Comp", null, () => {
+  const n4 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
       const n2 = t0()
       const x2 = _txt(n2)
@@ -615,18 +665,18 @@ export function render(_ctx) {
     const x0 = _txt(n0)
     _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n4
 }"
 `;
 
 exports[`compiler: transform slot > slot owner context > slot with v-if but no component should not need withVaporCtx 1`] = `
-"import { createIf as _createIf, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+"import { createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>content", 2)
 const t1 = _template("<span>fallback", 2)
 
 export function render(_ctx) {
-  const n7 = _createAssetComponent("Comp", null, () => {
+  const n7 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (_ctx.show), () => {
       const n2 = t0()
       return n2
@@ -635,7 +685,7 @@ export function render(_ctx) {
       return n4
     }, 389 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */)
     return n0
-  }, true)
+  }, { _: 8 }), true)
   return n7
 }"
 `;
