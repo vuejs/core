@@ -6,6 +6,7 @@ import {
   type DirectiveNode,
   type ElementNode,
   ElementTypes,
+  type InTagCommentNode,
   type InterpolationNode,
   Namespaces,
   NodeTypes,
@@ -1169,6 +1170,70 @@ describe('compiler: parse', () => {
           source: '<div id=a class="c" inert style=\'\'></div>',
         },
       })
+    })
+
+    test('in-tag comments', () => {
+      const ast = baseParse(`<Comp
+        <!-- @vue-expect-error -->
+        :selected-id="selectedId"
+        <!-- note -->
+        disabled
+        @click="onClick"
+        <!-- tail -->
+      />`)
+      const element = ast.children[0] as ElementNode
+      const props = element.props
+
+      expect(element.children).toStrictEqual([])
+      expect(props.map(p => p.type)).toStrictEqual([
+        NodeTypes.IN_TAG_COMMENT,
+        NodeTypes.DIRECTIVE,
+        NodeTypes.IN_TAG_COMMENT,
+        NodeTypes.ATTRIBUTE,
+        NodeTypes.DIRECTIVE,
+        NodeTypes.IN_TAG_COMMENT,
+      ])
+
+      expect(props[0]).toMatchObject({
+        type: NodeTypes.IN_TAG_COMMENT,
+        content: ' @vue-expect-error ',
+        loc: {
+          source: '<!-- @vue-expect-error -->',
+        },
+      })
+      expect(props[2]).toMatchObject({
+        type: NodeTypes.IN_TAG_COMMENT,
+        content: ' note ',
+      })
+      expect(props[5]).toMatchObject({
+        type: NodeTypes.IN_TAG_COMMENT,
+        content: ' tail ',
+      })
+    })
+
+    test('in-tag comment can directly follow tag name', () => {
+      const ast = baseParse('<div<!-- note -->></div>')
+      const element = ast.children[0] as ElementNode
+
+      expect(element.tag).toBe('div')
+      expect(element.props).toHaveLength(1)
+      const comment = element.props[0] as InTagCommentNode
+      expect(comment).toMatchObject({
+        type: NodeTypes.IN_TAG_COMMENT,
+        content: ' note ',
+        loc: {
+          source: '<!-- note -->',
+        },
+      })
+      expect(element.children).toStrictEqual([])
+    })
+
+    test('in-tag comment emits EOF_IN_COMMENT when unterminated', () => {
+      const onError = vi.fn()
+      baseParse('<div <!-- note', { onError })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError.mock.calls[0][0].code).toBe(ErrorCodes.EOF_IN_COMMENT)
     })
 
     // https://github.com/vuejs/core/issues/4251

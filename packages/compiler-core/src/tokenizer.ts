@@ -125,6 +125,7 @@ export enum State {
   CDATASequence,
   InSpecialComment,
   InCommentLike,
+  InTagComment,
 
   // Special tags
   BeforeSpecialS, // Decide if we deal with `<script` or `<style`
@@ -199,6 +200,7 @@ export interface Callbacks {
   ondirmodifier(start: number, endIndex: number): void
 
   oncomment(start: number, endIndex: number): void
+  onintagcomment(start: number, endIndex: number): void
   oncdata(start: number, endIndex: number): void
 
   onprocessinginstruction(start: number, endIndex: number): void
@@ -331,6 +333,16 @@ export default class Tokenizer {
     return this.buffer.charCodeAt(this.index + 1)
   }
 
+  private isInTagCommentOpen(): boolean {
+    return (
+      !this.inSFCRoot &&
+      this.buffer.charCodeAt(this.index) === CharCodes.Lt &&
+      this.buffer.charCodeAt(this.index + 1) === CharCodes.ExclamationMark &&
+      this.buffer.charCodeAt(this.index + 2) === CharCodes.Dash &&
+      this.buffer.charCodeAt(this.index + 3) === CharCodes.Dash
+    )
+  }
+
   private stateText(c: number): void {
     if (c === CharCodes.Lt) {
       if (this.index > this.sectionStart) {
@@ -405,7 +417,7 @@ export default class Tokenizer {
     const isEnd = this.sequenceIndex === this.currentSequence.length
     const isMatch = isEnd
       ? // If we are at the end of the sequence, make sure the tag name has ended
-        isEndOfTagSection(c)
+        isEndOfTagSection(c) || this.isInTagCommentOpen()
       : // Otherwise, do a case-insensitive comparison
         (c | 0x20) === this.currentSequence[this.sequenceIndex]
 
@@ -545,6 +557,31 @@ export default class Tokenizer {
     }
   }
 
+  private startInTagComment(): void {
+    this.state = State.InTagComment
+    this.currentSequence = Sequences.CommentEnd
+    this.sequenceIndex = 0
+    this.sectionStart = this.index + 4
+    this.index += 3
+  }
+
+  private stateInTagComment(c: number): void {
+    if (c === this.currentSequence[this.sequenceIndex]) {
+      if (++this.sequenceIndex === this.currentSequence.length) {
+        this.cbs.onintagcomment(this.sectionStart, this.index - 2)
+        this.sequenceIndex = 0
+        this.sectionStart = this.index + 1
+        this.state = State.BeforeAttrName
+      }
+    } else if (this.sequenceIndex === 0) {
+      if (this.fastForwardTo(this.currentSequence[0])) {
+        this.sequenceIndex = 1
+      }
+    } else if (c !== this.currentSequence[this.sequenceIndex - 1]) {
+      this.sequenceIndex = 0
+    }
+  }
+
   private startSpecial(sequence: Uint8Array, offset: number) {
     this.enterRCDATA(sequence, offset)
     this.state = State.SpecialStartSequence
@@ -594,7 +631,10 @@ export default class Tokenizer {
     }
   }
   private stateInTagName(c: number): void {
-    if (isEndOfTagSection(c)) {
+    if (this.isInTagCommentOpen()) {
+      this.cbs.onopentagname(this.sectionStart, this.index)
+      this.startInTagComment()
+    } else if (isEndOfTagSection(c)) {
       this.handleTagName(c)
     }
   }
@@ -666,6 +706,8 @@ export default class Tokenizer {
       this.cbs.onopentagend(this.index)
       this.state = State.BeforeTagName
       this.sectionStart = this.index
+    } else if (this.isInTagCommentOpen()) {
+      this.startInTagComment()
     } else if (!isWhitespace(c)) {
       if ((__DEV__ || !__BROWSER__) && c === CharCodes.Eq) {
         this.cbs.onerr(
@@ -784,6 +826,9 @@ export default class Tokenizer {
       this.sectionStart = -1
       this.state = State.BeforeAttrName
       this.stateBeforeAttrName(c)
+    } else if (this.isInTagCommentOpen()) {
+      this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
+      this.startInTagComment()
     } else if (!isWhitespace(c)) {
       this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
       this.handleAttrStart(c)
@@ -1005,6 +1050,10 @@ export default class Tokenizer {
           this.stateInCommentLike(c)
           break
         }
+        case State.InTagComment: {
+          this.stateInTagComment(c)
+          break
+        }
         case State.InSpecialComment: {
           this.stateInSpecialComment(c)
           break
@@ -1141,6 +1190,8 @@ export default class Tokenizer {
       } else {
         this.cbs.oncomment(this.sectionStart, endIndex)
       }
+    } else if (this.state === State.InTagComment) {
+      // Let onend report EOF_IN_COMMENT without emitting an incomplete prop.
     } else if (
       this.state === State.InTagName ||
       this.state === State.BeforeAttrName ||

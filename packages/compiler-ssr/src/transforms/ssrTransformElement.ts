@@ -221,6 +221,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
 
     for (let i = 0; i < node.props.length; i++) {
       const prop = node.props[i]
+      if (prop.type === NodeTypes.IN_TAG_COMMENT) {
+        continue
+      }
       // ignore true-value/false-value on input
       if (node.tag === 'input' && isTrueFalseValue(prop)) {
         continue
@@ -336,7 +339,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             }
           }
         }
-      } else {
+      } else if (prop.type === NodeTypes.ATTRIBUTE) {
         // special case: value on <textarea>
         const name = prop.name
         if (node.tag === 'textarea' && name === 'value' && prop.value) {

@@ -53,7 +53,11 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
 
   function processOption(plainNode: PlainElementNode) {
     if (plainNode.tag === 'option') {
-      if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
+      if (
+        plainNode.props.findIndex(
+          p => p.type === NodeTypes.ATTRIBUTE && p.name === 'selected',
+        ) === -1
+      ) {
         const value = findValueBinding(plainNode)
         plainNode.ssrCodegenNode!.elements.push(
           createConditionalExpression(

@@ -301,8 +301,10 @@ const tokenizer = new Tokenizer(stack, {
     }
     // check duplicate attrs
     if (
-      currentOpenTag!.props.some(
-        p => (p.type === NodeTypes.DIRECTIVE ? p.rawName : p.name) === name,
+      currentOpenTag!.props.some(p =>
+        p.type === NodeTypes.ATTRIBUTE
+          ? p.name === name
+          : p.type === NodeTypes.DIRECTIVE && p.rawName === name,
       )
     ) {
       emitError(ErrorCodes.DUPLICATE_ATTRIBUTE, start)
@@ -419,6 +421,14 @@ const tokenizer = new Tokenizer(stack, {
     }
   },
 
+  onintagcomment(start, end) {
+    currentOpenTag!.props.push({
+      type: NodeTypes.IN_TAG_COMMENT,
+      content: getSlice(start, end),
+      loc: getLoc(start - 4, end + 3),
+    })
+  },
+
   onend() {
     const end = currentInput.length
     // EOF ERRORS
@@ -441,6 +451,9 @@ const tokenizer = new Tokenizer(stack, {
           } else {
             emitError(ErrorCodes.EOF_IN_COMMENT, end)
           }
+          break
+        case State.InTagComment:
+          emitError(ErrorCodes.EOF_IN_COMMENT, end)
           break
         case State.InTagName:
         case State.InSelfClosingTag:
@@ -768,10 +781,8 @@ const specialTemplateDir = new Set(['if', 'else', 'else-if', 'for', 'slot'])
 function isFragmentTemplate({ tag, props }: ElementNode): boolean {
   if (tag === 'template') {
     for (let i = 0; i < props.length; i++) {
-      if (
-        props[i].type === NodeTypes.DIRECTIVE &&
-        specialTemplateDir.has((props[i] as DirectiveNode).name)
-      ) {
+      const p = props[i]
+      if (p.type === NodeTypes.DIRECTIVE && specialTemplateDir.has(p.name)) {
         return true
       }
     }
@@ -814,6 +825,7 @@ function isComponent({ tag, props }: ElementNode): boolean {
       }
     } else if (
       __COMPAT__ &&
+      p.type === NodeTypes.DIRECTIVE &&
       // :is on plain element - only treat as component in compat mode
       p.name === 'bind' &&
       isStaticArgOf(p.arg, 'is') &&

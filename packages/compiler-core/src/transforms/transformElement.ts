@@ -488,7 +488,9 @@ export function buildProps(
   for (let i = 0; i < props.length; i++) {
     // static attribute
     const prop = props[i]
-    if (prop.type === NodeTypes.ATTRIBUTE) {
+    if (prop.type === NodeTypes.IN_TAG_COMMENT) {
+      continue
+    } else if (prop.type === NodeTypes.ATTRIBUTE) {
       const { loc, name, nameLoc, value } = prop
       let isStatic = true
       if (name === 'ref') {
@@ -537,7 +539,7 @@ export function buildProps(
           ),
         ),
       )
-    } else {
+    } else if (prop.type === NodeTypes.DIRECTIVE) {
       // directives
       const { name, arg, exp, loc, modifiers } = prop
       const isVBind = name === 'bind'

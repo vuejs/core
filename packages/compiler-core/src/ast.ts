@@ -58,6 +58,8 @@ export enum NodeTypes {
   JS_ASSIGNMENT_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
   JS_RETURN_STATEMENT,
+
+  IN_TAG_COMMENT,
 }
 
 export enum ElementTypes {
@@ -131,7 +133,7 @@ export interface BaseElementNode extends Node {
   ns: Namespace
   tag: string
   tagType: ElementTypes
-  props: Array<AttributeNode | DirectiveNode>
+  props: ElementPropNode[]
   children: TemplateChildNode[]
   isSelfClosing?: boolean
   innerLoc?: SourceLocation // only for SFC root level elements
@@ -209,6 +211,13 @@ export interface DirectiveNode extends Node {
    */
   forParseResult?: ForParseResult
 }
+
+export interface InTagCommentNode extends Node {
+  type: NodeTypes.IN_TAG_COMMENT
+  content: string
+}
+
+export type ElementPropNode = AttributeNode | DirectiveNode | InTagCommentNode
 
 /**
  * Static types have several levels.

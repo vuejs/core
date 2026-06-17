@@ -76,7 +76,7 @@ export function processSlotOutlet(
           nonNameProps.push(p)
         }
       }
-    } else {
+    } else if (p.type === NodeTypes.DIRECTIVE) {
       if (p.name === 'bind' && isStaticArgOf(p.arg, 'name')) {
         if (p.exp) {
           slotName = p.exp

@@ -1,7 +1,5 @@
 import { RESOLVE_FILTER } from '../runtimeHelpers'
 import {
-  type AttributeNode,
-  type DirectiveNode,
   type ExpressionNode,
   NodeTypes,
   type SimpleExpressionNode,
@@ -26,7 +24,7 @@ export const transformFilter: NodeTransform = (node, context) => {
     // simple expressions are possible at this stage
     rewriteFilter(node.content, context)
   } else if (node.type === NodeTypes.ELEMENT) {
-    node.props.forEach((prop: AttributeNode | DirectiveNode) => {
+    node.props.forEach(prop => {
       if (
         prop.type === NodeTypes.DIRECTIVE &&
         prop.name !== 'for' &&
