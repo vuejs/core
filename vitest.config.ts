@@ -1,4 +1,5 @@
 import { configDefaults, defineConfig } from 'vitest/config'
+import { playwright } from '@vitest/browser-playwright'
 import { entries } from './scripts/aliases.js'
 
 export default defineConfig({
@@ -85,6 +86,29 @@ export default defineConfig({
           environment: 'jsdom',
           isolate: true,
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+          exclude: [
+            'packages/vue/__tests__/e2e/Transition.spec.ts',
+            'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        define: {
+          __BROWSER__: true,
+        },
+        test: {
+          name: 'e2e-browser',
+          include: [
+            'packages/vue/__tests__/e2e/Transition.spec.ts',
+            'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',
+          ],
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            instances: [{ browser: 'chromium' }],
+          },
         },
       },
     ],

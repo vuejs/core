@@ -1,13 +1,10 @@
-import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
-import path from 'node:path'
-import { createApp, ref } from 'vue'
+import { E2E_TIMEOUT, setupBrowserE2E } from './e2eBrowserUtils'
 
 describe('e2e: TransitionGroup', () => {
-  const { page, html, nextFrame, timeout } = setupPuppeteer()
-  const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
+  const { page, reset, html, nextFrame, timeout } = setupBrowserE2E()
 
-  const duration = process.env.CI ? 200 : 50
-  const buffer = process.env.CI ? 20 : 5
+  const duration = 50
+  const buffer = 20
 
   const htmlWhenTransitionStart = () =>
     page().evaluate(() => {
@@ -20,7 +17,7 @@ describe('e2e: TransitionGroup', () => {
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
   beforeEach(async () => {
-    await page().goto(baseUrl)
+    await reset()
     await page().waitForSelector('#app')
   })
 
@@ -678,6 +675,7 @@ describe('e2e: TransitionGroup', () => {
   )
 
   test('warn unkeyed children', () => {
+    const { createApp, ref } = (window as any).Vue
     createApp({
       template: `
         <transition-group name="test">
@@ -694,6 +692,7 @@ describe('e2e: TransitionGroup', () => {
   })
 
   test('not warn unkeyed text children w/ whitespace preserve', () => {
+    const { createApp } = (window as any).Vue
     const app = createApp({
       template: `
         <transition-group name="test">
@@ -788,8 +787,8 @@ describe('e2e: TransitionGroup', () => {
           template: `
             <div id="container">
               <transition-group name="test">
-                <div class="test">foo</div>
-                <div class="test" v-if="show">bar</div>
+                <div key="1" class="test">foo</div>
+                <div key="2" class="test" v-if="show">bar</div>
               </transition-group>
             </div>
             <button id="toggleBtn" @click="click">button</button>
