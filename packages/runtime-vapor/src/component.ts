@@ -1015,15 +1015,26 @@ export function createPlainElement(
     let nextNode: Node | null = null
     if (isHydrating) {
       nextNode = nextLogicalSibling(el)
-      setCurrentHydrationNode(el.firstChild)
+      let child = el.firstChild
+      if (rawSlots.$ && !child) {
+        // SSR may omit default-slot nodes for dynamic native children.
+        // Seed a local anchor so the inner fragment can locate and reuse it.
+        child = el.appendChild(
+          markHydrationAnchor(__DEV__ ? createComment('') : createTextNode()),
+        )
+      }
+      setCurrentHydrationNode(child)
     }
     if (rawSlots.$) {
-      // Dynamic element children don't own an SSR slot-range anchor.
-      // Use an empty label so hydration treats this as a generic dynamic
-      // fragment instead of trying to reuse SlotFragment-style anchors.
+      // Dynamic element children don't own an SSR slot-range anchor, so flag
+      // this as a native-children fragment. Hydration keys off `nativeChildren`
+      // (not the label) to inject/reuse its own anchor instead of trying to
+      // reuse SlotFragment-style anchors. The hydrating label stays empty so
+      // the runtime anchor renders as `<!---->`.
       const frag = new DynamicFragment(
         isHydrating ? '' : __DEV__ ? 'slot' : undefined,
       )
+      frag.nativeChildren = true
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
     } else {

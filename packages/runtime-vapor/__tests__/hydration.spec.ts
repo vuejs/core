@@ -1289,6 +1289,104 @@ describe('Vapor Mode hydration', () => {
         `"<div><span>bar</span><!----></div><!--dynamic-component-->"`,
       )
     })
+
+    test('dynamic component fallback with non-default dynamic slot hydrates empty native children', async () => {
+      const data = ref({
+        name: 'other',
+        msg: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <component :is="'div'">
+            <template v-slot:[data.name]>
+              <span>{{ data.msg }}</span>
+            </template>
+          </component>
+        </template>`,
+        {},
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><!----></div><!--dynamic-component-->"`,
+      )
+    })
+
+    test('dynamic component fallback with dynamic slot removes stale default native children', async () => {
+      const code = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="'div'">
+          <template v-slot:[data.name]>
+            <span>{{ data.msg }}</span>
+            <em>stale</em>
+          </template>
+        </component>
+      </template>`
+      const serverData = ref({
+        name: 'default',
+        msg: 'foo',
+      })
+      const clientData = ref({
+        name: 'other',
+        msg: 'foo',
+      })
+      const serverComp = compile(
+        code,
+        serverData,
+        {},
+        { vapor: true, ssr: true },
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(serverComp),
+      )
+
+      const { container } = await mountWithHydration(html, code, clientData)
+
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><!----></div><!--dynamic-component-->"`,
+      )
+    })
+
+    test('dynamic component fallback with dynamic slot mounts default native children over empty SSR children', async () => {
+      const code = `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <component :is="'div'">
+          <template v-slot:[data.name]>
+            <span>{{ data.msg }}</span>
+          </template>
+        </component>
+      </template>`
+      const serverData = ref({
+        name: 'other',
+        msg: 'foo',
+      })
+      const clientData = ref({
+        name: 'default',
+        msg: 'foo',
+      })
+      const serverComp = compile(
+        code,
+        serverData,
+        {},
+        { vapor: true, ssr: true },
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(serverComp),
+      )
+
+      const { container } = await mountWithHydration(html, code, clientData)
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span>foo</span><!----></div><!--dynamic-component-->"`,
+      )
+    })
   })
 
   describe('if', () => {
