@@ -6,6 +6,7 @@ import {
   currentHydrationNode,
   enterHydrationBoundary,
   isComment,
+  isHydrationAnchor,
   isInDeferredHydrationBoundary,
   locateEndAnchor,
   locateHydrationBoundaryClose,
@@ -234,6 +235,7 @@ export type AnchorPlan =
       next: Node | null
       cleanupStart: Node
       cleanupUntil: Node | null
+      cleanupContainer?: ParentNode
     }
   // Insert a fresh runtime anchor right before the enclosing slot end anchor,
   // skipping insertion entirely if that anchor leaves the DOM before flush.
@@ -243,11 +245,31 @@ export function resolveDynamicAnchor(
   frag: DynamicFragment,
   isEmpty: boolean,
 ): AnchorPlan {
+  const anchorLabel = frag.anchorLabel
+  const isNativeChildren = !!frag.nativeChildren
+  // A fragment owns/manages its own dynamic anchor when it carries a label or
+  // is a native-children fragment. Both branches are explicit so a future
+  // truthiness check on the (possibly empty) label can't silently exclude one.
+  const ownsDynamicAnchor = anchorLabel !== undefined || isNativeChildren
+
+  // Native-children fragments get a runtime anchor injected by
+  // createPlainElement when SSR rendered no default-slot content. Whenever the
+  // cursor still points at that injected anchor — the branch stayed empty, or
+  // it revived and hydrated its content ahead of the anchor — adopt it directly
+  // instead of creating a second one.
+  if (
+    isNativeChildren &&
+    isHydrationAnchor(currentHydrationNode) &&
+    getParentNode(currentHydrationNode!)
+  ) {
+    return { kind: 'reuse', node: currentHydrationNode! }
+  }
+
   // reuse `<!---->` as anchor
   // `<div v-if="false"></div>` -> `<!---->`
   if (isEmpty) {
-    if (isComment(currentHydrationNode!, '')) {
-      return { kind: 'reuse', node: currentHydrationNode! }
+    if (currentHydrationNode && isComment(currentHydrationNode, '')) {
+      return { kind: 'reuse', node: currentHydrationNode }
     }
     if (
       frag.anchorLabel &&
@@ -269,19 +291,30 @@ export function resolveDynamicAnchor(
     }
     if (
       !frag.isSlot &&
-      frag.anchorLabel &&
+      ownsDynamicAnchor &&
       currentHydrationNode &&
       !isHydratingSlotFallbackActive() &&
       !isComment(currentHydrationNode, ']')
     ) {
       const parentNode = getParentNode(currentHydrationNode)
-      const anchor = nextLogicalSibling(currentHydrationNode)
       // Empty branch against non-empty SSR output has no block node to
       // derive an insertion point from, so use the current hydration range.
+      if (isNativeChildren && parentNode) {
+        return {
+          kind: 'create-cleanup',
+          parent: parentNode,
+          next: null,
+          cleanupStart: currentHydrationNode,
+          cleanupUntil: null,
+          cleanupContainer: parentNode,
+        }
+      }
+
+      const anchor = nextLogicalSibling(currentHydrationNode)
       const reusableAnchor =
         anchor &&
         anchor.nodeType === 8 &&
-        isReusableDynamicFragmentAnchor(anchor as Comment, frag.anchorLabel) &&
+        isReusableDynamicFragmentAnchor(anchor as Comment, anchorLabel!) &&
         getParentNode(anchor)
           ? anchor
           : null
@@ -305,10 +338,10 @@ export function resolveDynamicAnchor(
   // end up creating a detached runtime anchor and lose the parent/sibling
   // position needed for same-hydration branch flips.
   if (
-    frag.anchorLabel &&
+    ownsDynamicAnchor &&
     !isValidBlock(frag.nodes) &&
     frag.nodes instanceof Comment &&
-    isReusableDynamicFragmentAnchor(frag.nodes, frag.anchorLabel) &&
+    isReusableDynamicFragmentAnchor(frag.nodes, anchorLabel!) &&
     getParentNode(frag.nodes)
   ) {
     return { kind: 'reuse', node: frag.nodes, resetNodes: true }
@@ -320,7 +353,7 @@ export function resolveDynamicAnchor(
   // than from the detached block node, and let boundary cleanup trim the
   // SSR range before the next logical sibling.
   if (
-    frag.anchorLabel &&
+    ownsDynamicAnchor &&
     !isValidBlock(frag.nodes) &&
     frag.nodes instanceof Comment &&
     !getParentNode(frag.nodes) &&
@@ -418,7 +451,7 @@ export function executeAnchorPlan(
 
   const createRuntimeAnchor = (): Node =>
     (frag.anchor = markHydrationAnchor(
-      __DEV__ ? createComment(frag.anchorLabel!) : createTextNode(),
+      __DEV__ ? createComment(frag.anchorLabel ?? '') : createTextNode(),
     ))
 
   try {
@@ -446,7 +479,7 @@ export function executeAnchorPlan(
         if (plan.cleanupUntil) {
           exitHydrationBoundary = enterHydrationBoundary(plan.cleanupUntil)
         } else {
-          cleanupHydrationTail(plan.cleanupStart)
+          cleanupHydrationTail(plan.cleanupStart, plan.cleanupContainer)
           setCurrentHydrationNode(null)
         }
         queueAnchorInsert(plan.parent, plan.next, createRuntimeAnchor)

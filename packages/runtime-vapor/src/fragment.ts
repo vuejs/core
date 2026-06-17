@@ -230,6 +230,14 @@ export class DynamicFragment extends RenderContextFragment {
   // pipeline never reads it.
   isSlot?: boolean
   forwarded?: boolean
+  // Marks the generic dynamic fragment that createPlainElement creates for the
+  // default-slot children of a dynamic element resolved to a native tag
+  // (`rawSlots.$`). Unlike labeled control-flow fragments it has no
+  // SSR-provided anchor, so hydration injects and then reuses its own runtime
+  // anchor. Hydration logic must branch on this marker, never on
+  // `anchorLabel === ''` — the empty string is only this fragment's (empty)
+  // dev-mode comment text and must not double as a category signal.
+  nativeChildren?: boolean
   inTransition?: boolean
   // Fallthrough attrs hooks register branch-owned effects on insert.
   hasFallthroughAttrs?: true
