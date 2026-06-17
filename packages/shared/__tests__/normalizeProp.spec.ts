@@ -186,6 +186,18 @@ describe('stringifyStyle', () => {
     const expected = 'color:blue;font-size:14px;'
     expect(stringifyStyle(style)).toBe(expected)
   })
+
+  test('should ignore NaN and Infinity number values in style object', () => {
+    const style: any = {
+      color: 'blue',
+      width: NaN,
+      height: Infinity,
+      opacity: -Infinity,
+      fontSize: '14px',
+    }
+
+    expect(stringifyStyle(style)).toBe('color:blue;font-size:14px;')
+  })
 })
 
 describe('normalizeProps', () => {
