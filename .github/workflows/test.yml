@@ -62,6 +62,12 @@ jobs:
           path: ~/.cache/puppeteer
           key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
 
+      - name: Setup cache for Playwright browsers
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
       - name: Install pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
 
@@ -73,6 +79,7 @@ jobs:
 
       - run: pnpm install
       - run: node node_modules/puppeteer/install.mjs
+      - run: pnpm exec playwright install chromium
 
       - name: Run e2e tests
         run: pnpm run test-e2e
