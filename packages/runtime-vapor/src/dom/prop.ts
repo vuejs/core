@@ -142,7 +142,7 @@ export function setDOMProp(
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       attributeHasMismatch(el, key, value)
-    if (!shouldForceHydrate(el, key) && !forceHydrate) {
+    if (!forceHydrate && !shouldForceHydrate(el, key)) {
       return
     }
   }
@@ -311,6 +311,22 @@ function hasCssVars(style: CSSStyleDeclaration): boolean {
   return false
 }
 
+function checkHydrationStyleMismatch(
+  el: TargetElement,
+  value: any,
+  normalizedValue: string | NormalizedStyle | undefined,
+  isIncremental: boolean,
+): void {
+  if (shouldDeferCheckStyleMismatch(el)) {
+    const instance = currentInstance as VaporComponentInstance
+    queuePostFlushCb(() => {
+      styleHasMismatch(el, value, normalizedValue, isIncremental, instance)
+    })
+  } else {
+    styleHasMismatch(el, value, normalizedValue, isIncremental)
+  }
+}
+
 export function setStyle(el: TargetElement, value: any): void {
   if (el.$root) {
     setStyleIncremental(el, value)
@@ -318,14 +334,7 @@ export function setStyle(el: TargetElement, value: any): void {
     const normalizedValue = normalizeStyle(value)
     if (isHydrating && !isRecreatedNode(el)) {
       if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
-        if (shouldDeferCheckStyleMismatch(el)) {
-          const instance = currentInstance as VaporComponentInstance
-          queuePostFlushCb(() => {
-            styleHasMismatch(el, value, normalizedValue, false, instance)
-          })
-        } else {
-          styleHasMismatch(el, value, normalizedValue, false)
-        }
+        checkHydrationStyleMismatch(el, value, normalizedValue, false)
       }
       el.$sty = normalizedValue
       return
@@ -343,14 +352,7 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
 
   if (isHydrating && !isRecreatedNode(el)) {
     if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
-      if (shouldDeferCheckStyleMismatch(el)) {
-        const instance = currentInstance as VaporComponentInstance
-        queuePostFlushCb(() => {
-          styleHasMismatch(el, value, normalizedValue, true, instance)
-        })
-      } else {
-        styleHasMismatch(el, value, normalizedValue, true)
-      }
+      checkHydrationStyleMismatch(el, value, normalizedValue, true)
     }
     el[cacheKey] = normalizedValue
     return
@@ -375,7 +377,7 @@ export function setValue(
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       attributeHasMismatch(el, 'value', getClientText(el, value))
-    if (!shouldForceHydrate(el, 'value') && !forceHydrate) {
+    if (!forceHydrate && !shouldForceHydrate(el, 'value')) {
       return
     }
   }
