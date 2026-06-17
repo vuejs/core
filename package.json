@@ -18,7 +18,7 @@
     "format-check": "vp fmt --check",
     "test": "vp test",
     "test-unit": "vp test --project unit*",
-    "test-e2e": "node scripts/build.js -e vue -f global+esm-browser-vapor -d && vp test --project e2e",
+    "test-e2e": "node scripts/build.js -e vue -f global+esm-browser-vapor -d && vp test --project e2e --project e2e-browser",
     "test-e2e-vapor": "vp run prepare-e2e-vapor && VAPOR_E2E=1 vp test --project e2e-vapor",
     "prepare-e2e-vapor": "node scripts/build.js -e -f cjs+esm-bundler+esm-bundler-runtime && vp build packages-private/vapor-e2e-test",
     "test-dts": "run-s build-dts test-dts-only",

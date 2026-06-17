@@ -118,6 +118,35 @@ export default defineConfig({
           environment: 'jsdom',
           isolate: true,
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+          exclude: [
+            'packages/vue/__tests__/e2e/Transition.spec.ts',
+            'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        define: {
+          __BROWSER__: true,
+        },
+        test: {
+          name: 'e2e-browser',
+          include: [
+            'packages/vue/__tests__/e2e/Transition.spec.ts',
+            'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',
+          ],
+          browser: {
+            enabled: true,
+            provider: playwright({
+              launchOptions: {
+                args: process.env.CI
+                  ? ['--no-sandbox', '--disable-setuid-sandbox']
+                  : [],
+              },
+            }),
+            headless: true,
+            instances: [{ browser: 'chromium' }],
+          },
         },
       },
       // @ts-expect-error - https://github.com/vuejs/core/actions/runs/23430103557/job/68154030981
