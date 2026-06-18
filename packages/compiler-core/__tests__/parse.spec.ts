@@ -1224,18 +1224,12 @@ describe('compiler: parse', () => {
     })
 
     test('in-tag line comments are preserved regardless of comments option', () => {
-      const astOptionNoComment = baseParse(
-        `<div
-        // note
-      />`,
-        { comments: false },
-      )
-      const astOptionWithComments = baseParse(
-        `<div
-        // note
-      />`,
-        { comments: true },
-      )
+      const astOptionNoComment = baseParse(`<div\n  // note\n/>`, {
+        comments: false,
+      })
+      const astOptionWithComments = baseParse(`<div\n  // note\n/>`, {
+        comments: true,
+      })
 
       expect(astOptionNoComment.children).toHaveLength(1)
       expect(astOptionWithComments.children).toHaveLength(1)
