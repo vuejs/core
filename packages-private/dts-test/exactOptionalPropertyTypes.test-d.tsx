@@ -9,10 +9,20 @@ describe('exactOptionalPropertyTypes', () => {
     },
   })
 
+  const WithDefault = defineComponent({
+    props: {
+      foo: {
+        type: String,
+        default: 'foo',
+      },
+    },
+  })
+
   const props = defineProps<{
     foo?: string
   }>()
 
   expectType<JSX.Element>(<Child {...props} />)
   expectType<JSX.Element>(<Child foo={undefined} />)
+  expectType<JSX.Element>(<WithDefault foo={undefined} />)
 })

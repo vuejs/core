@@ -316,7 +316,7 @@ export type ComponentPublicInstance<
   $: ComponentInternalInstance
   $data: D
   $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> &
+    ? LooseOptional<Partial<Defaults>> &
         Omit<Prettify<LooseOptional<P>> & PublicProps, keyof Defaults>
     : Prettify<LooseOptional<P>> & PublicProps
   $attrs: Attrs
