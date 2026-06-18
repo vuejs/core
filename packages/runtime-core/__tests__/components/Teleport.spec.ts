@@ -799,6 +799,22 @@ describe('renderer: teleport', () => {
       expect(serializeInner(target)).toBe(`<div>one</div><div>two</div>`)
     })
 
+    test('multiple teleport with same target and prepend', () => {
+      const target = nodeOps.createElement('div')
+      const root = nodeOps.createElement('div')
+
+      render(
+        h('div', [
+          h(Teleport, { to: target }, h('div', 'one')),
+          h(Teleport, { to: target, prepend: true }, 'two'),
+          h(Teleport, { to: target, prepend: true }, h('span', 'three')),
+        ]),
+        root,
+      )
+
+      expect(serializeInner(target)).toBe(`<span>three</span>two<div>one</div>`)
+    })
+
     test('should work when using template ref as target', async () => {
       const root = nodeOps.createElement('div')
       const target = ref(null)

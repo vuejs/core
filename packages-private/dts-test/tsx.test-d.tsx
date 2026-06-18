@@ -108,6 +108,7 @@ expectType<JSX.Element>(<Fragment key="1" />)
 
 expectType<JSX.Element>(<Teleport to="#foo" />)
 expectType<JSX.Element>(<Teleport to="#foo" key="1" />)
+expectType<JSX.Element>(<Teleport to="#foo" prepend />)
 
 // @ts-expect-error
 ;<Teleport />

@@ -22,6 +22,7 @@ export interface TeleportProps {
   to: string | RendererElement | null | undefined
   disabled?: boolean
   defer?: boolean
+  prepend?: boolean
 }
 
 const pendingMounts = new WeakMap<VNode, SchedulerJob>()
@@ -35,6 +36,14 @@ const isTeleportDisabled = (props: VNode['props']): boolean =>
 
 const isTeleportDeferred = (props: VNode['props']): boolean =>
   props && (props.defer || props.defer === '')
+
+const isTeleportPrepended = (props: VNode['props']): boolean =>
+  props && (props.prepend || props.prepend === '')
+
+const getTargetFirstChild = (target: RendererElement): RendererNode | null => {
+  const children = target.children
+  return target.firstChild || (children && children[0]) || null
+}
 
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
@@ -131,7 +140,15 @@ export const TeleportImpl = {
     const mountToTarget = (vnode: TeleportVNode = n2) => {
       const disabled = isTeleportDisabled(vnode.props)
       const target = (vnode.target = resolveTarget(vnode.props, querySelector))
-      const targetAnchor = prepareAnchor(target, vnode, createText, insert)
+      const targetAnchor = prepareAnchor(
+        target,
+        vnode,
+        createText,
+        insert,
+        target && isTeleportPrepended(vnode.props)
+          ? getTargetFirstChild(target)
+          : null,
+      )
       if (target) {
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
         if (namespace !== 'svg' && isTargetSVG(target)) {
