@@ -1,4 +1,10 @@
-import { type Ref, isRef, onScopeDispose } from '@vue/reactivity'
+import {
+  type Ref,
+  isRef,
+  onScopeDispose,
+  pauseTracking,
+  resetTracking,
+} from '@vue/reactivity'
 import {
   type VaporComponentInstance,
   currentInstance,
@@ -250,17 +256,11 @@ function setRef(
       if (canSetRef(oldRef, oldRefKey)) oldRef.value = null
       if (oldRefKey) refs[oldRefKey] = null
     } else if (isFunction(oldRef) && isDynamicFragment(el)) {
-      callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
-        null,
-        refs,
-      ])
+      callFunctionRef(oldRef, instance, null, refs)
     }
   } else if (oldRef != null && isDynamicFragment(el)) {
     if (isFunction(oldRef)) {
-      callWithErrorHandling(oldRef, instance, ErrorCodes.FUNCTION_REF, [
-        null,
-        refs,
-      ])
+      callFunctionRef(oldRef, instance, null, refs)
     } else if (refFor) {
       // For dynamic ref-for branches, remove only this branch's previous value.
       unsetRef(el)
@@ -272,10 +272,7 @@ function setRef(
 
   if (isFunction(ref)) {
     const invokeRefSetter = (value?: Element | Record<string, any> | null) => {
-      callWithErrorHandling(ref, instance, ErrorCodes.FUNCTION_REF, [
-        value,
-        refs,
-      ])
+      callFunctionRef(ref, instance, value, refs)
     }
 
     invokeRefSetter(refValue)
@@ -364,6 +361,20 @@ function setRef(
     }
   }
   return ref
+}
+
+function callFunctionRef(
+  ref: Exclude<NodeRef, string | Ref>,
+  instance: VaporComponentInstance,
+  value: Element | Record<string, any> | null | undefined,
+  refs: Record<string, any>,
+): void {
+  pauseTracking()
+  try {
+    callWithErrorHandling(ref, instance, ErrorCodes.FUNCTION_REF, [value, refs])
+  } finally {
+    resetTracking()
+  }
 }
 
 const getRefValue = (el: RefEl) => {
