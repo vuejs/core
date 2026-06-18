@@ -285,13 +285,32 @@ function getValue(el: HTMLOptionElement | HTMLInputElement) {
   return '_value' in el ? (el as any)._value : el.value
 }
 
-// retrieve raw value for true-value and false-value set via :true-value or :false-value bindings
+// retrieve raw value for true-value and false-value set via :true-value,
+// :false-value, data-true-value or data-false-value bindings
 function getCheckboxValue(
   el: HTMLInputElement & { _trueValue?: any; _falseValue?: any },
   checked: boolean,
 ) {
   const key = checked ? '_trueValue' : '_falseValue'
-  return key in el ? el[key] : checked
+  if (key in el) {
+    return el[key]
+  }
+  const dataKey = checked ? 'data-true-value' : 'data-false-value'
+  return el.hasAttribute(dataKey) ? el.getAttribute(dataKey) : checked
+}
+
+function getSSRCheckboxValue(vnode: VNode): unknown {
+  const props = vnode.props
+  if (!props) {
+    return true
+  }
+  if ('true-value' in props) {
+    return props['true-value']
+  }
+  if ('data-true-value' in props) {
+    return props['data-true-value']
+  }
+  return true
 }
 
 export const vModelDynamic: ObjectDirective<
@@ -364,7 +383,7 @@ export function initVModelForSSR(): void {
       if (vnode.props && value.has(vnode.props.value)) {
         return { checked: true }
       }
-    } else if (value) {
+    } else if (looseEqual(value, getSSRCheckboxValue(vnode))) {
       return { checked: true }
     }
   }

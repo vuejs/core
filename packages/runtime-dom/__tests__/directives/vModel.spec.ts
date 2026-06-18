@@ -596,6 +596,44 @@ describe('vModel', () => {
     expect(data.value).toEqual('yes')
   })
 
+  it('should work with checkbox and data-true-value/data-false-value', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: 'yes' }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              type: 'checkbox',
+              'data-true-value': 'yes',
+              'data-false-value': 'no',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('input')
+    const data = root._vnode.component.data
+
+    expect(input.checked).toEqual(true)
+    expect(input.getAttribute('data-true-value')).toBe('yes')
+    expect(input.getAttribute('data-false-value')).toBe('no')
+
+    input.checked = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toEqual('no')
+
+    data.value = 'yes'
+    await nextTick()
+    expect(input.checked).toEqual(true)
+  })
+
   it('should work with checkbox and true-value/false-value with object values', async () => {
     const component = defineComponent({
       data() {

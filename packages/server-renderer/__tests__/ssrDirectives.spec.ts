@@ -432,6 +432,44 @@ describe('ssr: directives', () => {
           }),
         ),
       ).toBe(`<input type="checkbox" value="foo">`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', {
+                  type: 'checkbox',
+                  'data-true-value': 'yes',
+                  'data-false-value': 'no',
+                }),
+                [[vModelCheckbox, 'yes']],
+              )
+            },
+          }),
+        ),
+      ).toBe(
+        `<input type="checkbox" data-true-value="yes" data-false-value="no" checked>`,
+      )
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', {
+                  type: 'checkbox',
+                  'data-true-value': 'yes',
+                  'data-false-value': 'no',
+                }),
+                [[vModelCheckbox, 'no']],
+              )
+            },
+          }),
+        ),
+      ).toBe(
+        `<input type="checkbox" data-true-value="yes" data-false-value="no">`,
+      )
     })
   })
 
