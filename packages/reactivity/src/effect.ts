@@ -38,6 +38,17 @@ export interface ReactiveEffectRunner<T = any> {
 
 export let activeSub: Subscriber | undefined
 
+export function warnIfComputedCreatedInComputed(): void {
+  if (
+    __DEV__ &&
+    activeSub &&
+    (activeSub as any).__v_isRef === true &&
+    (activeSub as any).effect === activeSub
+  ) {
+    warn(`computed() should not be called inside a computed getter.`)
+  }
+}
+
 export enum EffectFlags {
   /**
    * ReactiveEffect only

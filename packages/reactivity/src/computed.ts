@@ -7,6 +7,7 @@ import {
   activeSub,
   batch,
   refreshComputed,
+  warnIfComputedCreatedInComputed,
 } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
@@ -209,6 +210,8 @@ export function computed<T>(
     getter = getterOrOptions.get
     setter = getterOrOptions.set
   }
+
+  warnIfComputedCreatedInComputed()
 
   const cRef = new ComputedRefImpl(getter, setter, isSSR)
 

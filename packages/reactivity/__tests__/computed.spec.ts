@@ -102,6 +102,17 @@ describe('reactivity/computed', () => {
     expect(c1.value).toBe(1)
   })
 
+  it('should warn when creating computed in computed getter', () => {
+    const c1 = computed(() => {
+      computed(() => 1)
+      return 1
+    })
+    c1.value
+    expect(
+      `computed() should not be called inside a computed getter.`,
+    ).toHaveBeenWarned()
+  })
+
   it('should trigger effect when chained', () => {
     const value = reactive({ foo: 0 })
     const getter1 = vi.fn(() => value.foo)
