@@ -66,6 +66,7 @@ export interface ObjectDirective<
   Modifiers extends string = string,
   Arg = any,
 > {
+  name?: string
   /**
    * @internal without this, ts-expect-error in directives.test-d.ts somehow
    * fails when running tsc, but passes in IDE and when testing against built

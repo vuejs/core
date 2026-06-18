@@ -25,6 +25,11 @@ describe('vmodel', () => {
 })
 
 describe('custom', () => {
+  expectType<ObjectDirective>({
+    name: 'focus',
+    mounted() {},
+  })
+
   expectType<{
     value: number
     oldValue: number | null

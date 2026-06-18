@@ -819,7 +819,6 @@ function propHasMismatch(
     // If `v-show=false`, `display: 'none'` should be added to expected
     if (vnode.dirs) {
       for (const { dir, value } of vnode.dirs) {
-        // @ts-expect-error only vShow has this internal name
         if (dir.name === 'show' && !value) {
           expectedMap.set('display', 'none')
         }
