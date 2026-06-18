@@ -257,8 +257,9 @@ export function renderComponentRoot(
   if (vnode.transition) {
     if (__DEV__ && !isElementRoot(root)) {
       warn(
-        `Component inside <Transition> renders non-element root node ` +
-          `that cannot be animated.`,
+        `Component inside <Transition> renders a non-element root node ` +
+          `that cannot be animated. Make sure the component renders a single ` +
+          `element root.`,
       )
     }
     setTransitionHooks(root, vnode.transition)

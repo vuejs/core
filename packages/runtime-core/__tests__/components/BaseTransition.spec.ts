@@ -183,6 +183,20 @@ describe('BaseTransition', () => {
     expect(props.onAfterEnter).toHaveBeenCalledTimes(1)
   })
 
+  test('warns when component root cannot be transitioned', () => {
+    const Child = {
+      render: () => [h('div'), h('div')],
+    }
+
+    mount({}, () => h(Child))
+
+    expect(
+      `Component inside <Transition> renders a non-element root node ` +
+        `that cannot be animated. Make sure the component renders a single ` +
+        `element root.`,
+    ).toHaveBeenWarned()
+  })
+
   describe('persisted: true', () => {
     // this is pretty much how v-show is implemented
     // (but using the directive API instead)
