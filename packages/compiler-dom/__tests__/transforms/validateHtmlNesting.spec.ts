@@ -19,6 +19,18 @@ describe('validate html nesting', () => {
     expect(err).toBeUndefined()
   })
 
+  // #13158
+  it('should not warn with customizable select elements', () => {
+    let err: CompilerError | undefined
+    compile(
+      `<select><button><selectedcontent></selectedcontent></button><option><span>Option</span></option></select>`,
+      {
+        onWarn: e => (err = e),
+      },
+    )
+    expect(err).toBeUndefined()
+  })
+
   // #13318
   it('should not warn when parent tag is template', () => {
     let err: CompilerError | undefined
@@ -96,6 +108,18 @@ describe('isValidHTMLNesting', () => {
     expect(isValidHTMLNesting('table', 'tfoot')).toBe(true)
     expect(isValidHTMLNesting('table', 'caption')).toBe(true)
     expect(isValidHTMLNesting('table', 'colgroup')).toBe(true)
+  })
+
+  test('customizable select', () => {
+    // valid
+    expect(isValidHTMLNesting('select', 'button')).toBe(true)
+    expect(isValidHTMLNesting('button', 'selectedcontent')).toBe(true)
+    expect(isValidHTMLNesting('option', 'span')).toBe(true)
+
+    // invalid
+    expect(isValidHTMLNesting('select', 'span')).toBe(false)
+    expect(isValidHTMLNesting('select', 'selectedcontent')).toBe(false)
+    expect(isValidHTMLNesting('div', 'selectedcontent')).toBe(false)
   })
 
   test('td', () => {

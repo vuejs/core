@@ -63,7 +63,7 @@ const onlyValidChildren: Record<string, Set<string>> = {
     'template',
   ]),
   optgroup: new Set(['option']),
-  select: new Set(['optgroup', 'option', 'hr']),
+  select: new Set(['button', 'optgroup', 'option', 'hr']),
   // table
   table: new Set(['caption', 'colgroup', 'tbody', 'tfoot', 'thead']),
   tr: new Set(['td', 'th']),
@@ -74,7 +74,6 @@ const onlyValidChildren: Record<string, Set<string>> = {
   // these elements can not have any children elements
   script: emptySet,
   iframe: emptySet,
-  option: emptySet,
   textarea: emptySet,
   style: emptySet,
   title: emptySet,
@@ -104,6 +103,7 @@ const onlyValidParents: Record<string, Set<string>> = {
   // li: new Set(["ul", "ol"]),
   summary: new Set(['details']),
   area: new Set(['map']),
+  selectedcontent: new Set(['button']),
 } as const
 
 /** maps element to set of elements that can not be it's children, others can */
