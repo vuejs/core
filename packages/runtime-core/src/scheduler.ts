@@ -95,11 +95,26 @@ function findInsertionIndex(
 /**
  * @internal for runtime-vapor only
  */
-export function queueJob(job: SchedulerJob, id?: number, isPre = false): void {
+export function queueJob(
+  job: SchedulerJob,
+  id?: number,
+  isPre = false,
+  order = 0,
+): void {
   if (
     queueJobWorker(
       job,
-      id === undefined ? (isPre ? -2 : Infinity) : isPre ? id * 2 : id * 2 + 1,
+      id === undefined
+        ? isPre
+          ? -2
+          : Infinity
+        : isPre
+          ? id * 2
+          : order
+            ? // `order / (order + 1)` is monotonic and always < 1, so it sorts
+              // same-component Vapor effects without changing component order.
+              id * 2 + 1 + order / (order + 1)
+            : id * 2 + 1,
       jobs,
       jobsLength,
       flushIndex,

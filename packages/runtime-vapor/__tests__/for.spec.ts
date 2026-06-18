@@ -93,6 +93,40 @@ describe('createFor', () => {
     expect(calls).toEqual(['render 1', 'render 2', 'render 3'])
   })
 
+  test('should not re-run stale item effect when parent if turns false same tick', async () => {
+    const show = ref(true)
+    const list = ref([{ text: 'foo' }])
+    const calls: string[] = []
+
+    const { host } = define(() => {
+      return createIf(
+        () => show.value,
+        () =>
+          createFor(
+            () => list.value,
+            item => {
+              const span = document.createElement('span')
+              renderEffect(() => {
+                calls.push(item.value.text)
+                span.textContent = item.value.text
+              })
+              return span
+            },
+          ),
+      )
+    }).render()
+
+    expect(calls).toEqual(['foo'])
+
+    calls.length = 0
+    list.value[0].text = 'bar'
+    show.value = false
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<!--if-->')
+    expect(calls).toEqual([])
+  })
+
   test('should stop DOM item scopes when list is disposed by an outer v-for item', async () => {
     const groups = ref([
       { id: 1, items: [1, 2] },

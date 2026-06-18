@@ -738,6 +738,9 @@ export class VaporComponentInstance<
   ec?: LifecycleHook // LifecycleHooks.ERROR_CAPTURED
   sp?: LifecycleHook<() => Promise<unknown>> // LifecycleHooks.SERVER_PREFETCH
 
+  // renderEffect creation counter for scheduler ordering.
+  effectCount = 0
+
   // dev only
   setupState?: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>
   devtoolsRawSetupState?: any
