@@ -91,6 +91,7 @@ export type VNodeRef =
       ref: Element | ComponentPublicInstance | null,
       refs: Record<string, any>,
     ) => void)
+  | VNodeRef[]
 
 export type VNodeNormalizedRefAtom = {
   /**
@@ -436,11 +437,11 @@ const createVNodeWithArgsTransform = (
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({
-  ref,
-  ref_key,
-  ref_for,
-}: VNodeProps): VNodeNormalizedRefAtom | null => {
+const normalizeSingleRef = (
+  ref: VNodeRef | undefined,
+  ref_key: VNodeProps['ref_key'],
+  ref_for: VNodeProps['ref_for'],
+): VNodeNormalizedRefAtom | null => {
   if (typeof ref === 'number') {
     ref = '' + ref
   }
@@ -452,6 +453,25 @@ const normalizeRef = ({
       : null
   ) as any
 }
+
+const normalizeRef = ({
+  ref,
+  ref_key,
+  ref_for,
+}: VNodeProps): VNodeNormalizedRefAtom | VNodeNormalizedRefAtom[] | null => {
+  if (isArray(ref)) {
+    return ref
+      .map(r => normalizeSingleRef(r, ref_key, ref_for))
+      .filter((r): r is VNodeNormalizedRefAtom => !!r)
+  }
+  return normalizeSingleRef(ref, ref_key, ref_for)
+}
+
+const mergeNormalizedRefs = (
+  ref: VNodeNormalizedRef,
+  extraRef: VNodeNormalizedRef,
+): VNodeNormalizedRefAtom[] =>
+  (isArray(ref) ? ref : [ref]).concat(isArray(extraRef) ? extraRef : [extraRef])
 
 function createBaseVNode(
   type: VNodeTypes | ClassComponent | typeof NULL_DYNAMIC_COMPONENT,
@@ -673,9 +693,7 @@ export function cloneVNode<T, U>(
           // if the vnode itself already has a ref, cloneVNode will need to merge
           // the refs so the single vnode can be set on multiple refs
           mergeRef && ref
-          ? isArray(ref)
-            ? ref.concat(normalizeRef(extraProps)!)
-            : [ref, normalizeRef(extraProps)!]
+          ? mergeNormalizedRefs(ref, normalizeRef(extraProps)!)
           : normalizeRef(extraProps)
         : ref,
     scopeId: vnode.scopeId,
@@ -881,6 +899,16 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
         }
       } else if (key === 'style') {
         ret.style = normalizeStyle([ret.style, toMerge.style])
+      } else if (key === 'ref') {
+        const existing = ret.ref
+        const incoming = toMerge.ref
+        if (incoming != null) {
+          ret.ref = existing
+            ? isArray(existing)
+              ? existing.concat(incoming)
+              : [existing, incoming]
+            : incoming
+        }
       } else if (isOn(key)) {
         const existing = ret[key]
         const incoming = toMerge[key]

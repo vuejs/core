@@ -485,6 +485,35 @@ describe('vnode', () => {
       )
     })
 
+    test('ref', () => {
+      const ref1 = ref()
+      const ref2 = ref()
+      const fn = vi.fn()
+
+      expect(mergeProps({ ref: ref1 }, { ref: ref2 })).toMatchObject({
+        ref: [ref1, ref2],
+      })
+      expect(
+        mergeProps({ ref: ref1 }, { ref: undefined }, { ref: fn }),
+      ).toMatchObject({
+        ref: [ref1, fn],
+      })
+    })
+
+    test('ref normalization', () => {
+      const mockInstance = { type: {} } as any
+      const ref1 = ref()
+      const ref2 = ref()
+
+      setCurrentRenderingInstance(mockInstance)
+      const vnode = createVNode('div', mergeProps({ ref: ref1 }, { ref: ref2 }))
+      expect(vnode.ref).toMatchObject([
+        { i: mockInstance, r: ref1, f: false },
+        { i: mockInstance, r: ref2, f: false },
+      ])
+      setCurrentRenderingInstance(null)
+    })
+
     test('default', () => {
       let props1: Data = { foo: 'c' }
       let props2: Data = { foo: {}, bar: ['cc'] }
