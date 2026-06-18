@@ -1703,6 +1703,7 @@ describe('e2e: Transition', () => {
         await click('#switchToA')
         await transitionFinish()
         await transitionFinish()
+        await transitionFinish()
         expect(await html('#container')).toBe('<div class="">CompA</div>')
 
         expect(onUnmountedSpyB).toBeCalledTimes(1)

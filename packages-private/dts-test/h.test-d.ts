@@ -25,7 +25,6 @@ describe('h inference w/ element', () => {
   h('div', { ref: 'foo' })
   h('div', { ref: ref(null) })
   h('div', { ref: _el => {} })
-  //  @ts-expect-error
   h('div', { ref: [] })
   //  @ts-expect-error
   h('div', { ref: {} })
