@@ -408,6 +408,7 @@ color: red
       expect(
         `::v-deep usage as a combinator has been deprecated.`,
       ).toHaveBeenWarned()
+      expect(`at test.css:1:1`).toHaveBeenWarned()
     })
 
     test('>>> (deprecated syntax)', () => {
@@ -419,6 +420,7 @@ color: red
       expect(
         `the >>> and /deep/ combinators have been deprecated.`,
       ).toHaveBeenWarned()
+      expect(`at test.css:1:1`).toHaveBeenWarned()
     })
 
     test('/deep/ (deprecated syntax)', () => {
@@ -430,6 +432,12 @@ color: red
       expect(
         `the >>> and /deep/ combinators have been deprecated.`,
       ).toHaveBeenWarned()
+      expect(`at test.css:1:1`).toHaveBeenWarned()
+    })
+
+    test('deprecated syntax warning includes line location', () => {
+      compileScoped(`.bar { color: red; }\n>>> .foo { color: red; }`)
+      expect(`at test.css:2:1`).toHaveBeenWarned()
     })
   })
 })

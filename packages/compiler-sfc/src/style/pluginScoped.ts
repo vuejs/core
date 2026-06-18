@@ -114,7 +114,7 @@ function rewriteSelector(
       n.spaces.before = n.spaces.after = ''
       warn(
         `the >>> and /deep/ combinators have been deprecated. ` +
-          `Use :deep() instead.`,
+          `Use :deep() instead.${formatRuleLocation(rule)}`,
       )
       return false
     }
@@ -207,7 +207,8 @@ function rewriteSelector(
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
             `${value} usage as a combinator has been deprecated. ` +
-              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`,
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.` +
+              formatRuleLocation(rule),
           )
 
           const prev = selector.at(selector.index(n) - 1)
@@ -342,6 +343,16 @@ function rewriteSelector(
 
 function isSpaceCombinator(node: selectorParser.Node) {
   return node.type === 'combinator' && /^\s+$/.test(node.value)
+}
+
+function formatRuleLocation(rule: Rule): string {
+  const start = rule.source?.start
+  if (!start) {
+    return ''
+  }
+  const file = rule.source?.input.file
+  const filename = file?.split(/[\\/]/).pop()
+  return `\n  at ${filename ? `${filename}:` : ''}${start.line}:${start.column}`
 }
 
 function isDeepSelector(node: selectorParser.Node): boolean {
