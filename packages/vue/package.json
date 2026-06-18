@@ -21,6 +21,7 @@
       "import": {
         "types": "./dist/vue.d.mts",
         "node": "./index.mjs",
+        "browser": "./dist/vue.esm-browser.js",
         "default": "./dist/vue.runtime.esm-bundler.js"
       },
       "require": {
