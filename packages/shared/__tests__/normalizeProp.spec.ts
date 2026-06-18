@@ -198,6 +198,15 @@ describe('stringifyStyle', () => {
 
     expect(stringifyStyle(style)).toBe('color:blue;font-size:14px;')
   })
+
+  test('should preserve CSS custom properties even when value is NaN', () => {
+    const style: any = {
+      width: NaN,
+      '--x': NaN,
+    }
+
+    expect(stringifyStyle(style)).toBe('--x:NaN;')
+  })
 })
 
 describe('normalizeProps', () => {
