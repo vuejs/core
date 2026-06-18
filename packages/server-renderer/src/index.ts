@@ -2,8 +2,9 @@ import { initDirectivesForSSR } from 'vue'
 initDirectivesForSSR()
 
 // public
-export type { SSRContext } from './render'
-export { renderToString } from './renderToString'
+export type { SSRBuffer, SSRBufferItem, SSRContext } from './render'
+export { createBuffer } from './render'
+export { renderToString, unrollBuffer } from './renderToString'
 export {
   renderToSimpleStream,
   renderToNodeStream,
