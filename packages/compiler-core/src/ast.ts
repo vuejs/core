@@ -58,8 +58,6 @@ export enum NodeTypes {
   JS_ASSIGNMENT_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
   JS_RETURN_STATEMENT,
-
-  IN_TAG_COMMENT,
 }
 
 export enum ElementTypes {
@@ -67,6 +65,10 @@ export enum ElementTypes {
   COMPONENT,
   SLOT,
   TEMPLATE,
+}
+
+export enum CommentTypes {
+  IN_TAG_LINE,
 }
 
 export interface Node {
@@ -107,6 +109,7 @@ export interface RootNode extends Node {
   type: NodeTypes.ROOT
   source: string
   children: TemplateChildNode[]
+  comments: RootCommentNode[]
   helpers: Set<symbol>
   components: string[]
   directives: string[]
@@ -133,7 +136,7 @@ export interface BaseElementNode extends Node {
   ns: Namespace
   tag: string
   tagType: ElementTypes
-  props: ElementPropNode[]
+  props: Array<AttributeNode | DirectiveNode>
   children: TemplateChildNode[]
   isSelfClosing?: boolean
   innerLoc?: SourceLocation // only for SFC root level elements
@@ -185,6 +188,13 @@ export interface CommentNode extends Node {
   content: string
 }
 
+export interface InTagCommentNode extends Node {
+  type: NodeTypes.COMMENT
+  kind: CommentTypes.IN_TAG_LINE
+  content: string
+  contentLoc: SourceLocation
+}
+
 export interface AttributeNode extends Node {
   type: NodeTypes.ATTRIBUTE
   name: string
@@ -212,12 +222,7 @@ export interface DirectiveNode extends Node {
   forParseResult?: ForParseResult
 }
 
-export interface InTagCommentNode extends Node {
-  type: NodeTypes.IN_TAG_COMMENT
-  content: string
-}
-
-export type ElementPropNode = AttributeNode | DirectiveNode | InTagCommentNode
+export type RootCommentNode = InTagCommentNode
 
 /**
  * Static types have several levels.
@@ -605,6 +610,7 @@ export function createRoot(
     type: NodeTypes.ROOT,
     source,
     children,
+    comments: [],
     helpers: new Set(),
     components: [],
     directives: [],

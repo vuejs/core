@@ -11,6 +11,22 @@ describe('compiler: integration tests', () => {
 </div>
 `.trim()
 
+  test('in-tag line comments do not affect codegen', () => {
+    const withComments = compile(
+      `
+<div
+  // before id
+  id="foo"
+><span
+  // before self closing
+/></div>
+`.trim(),
+    ).code
+    const withoutComments = compile(`<div id="foo"><span/></div>`).code
+
+    expect(withComments).toBe(withoutComments)
+  })
+
   interface Pos {
     line: number
     column: number

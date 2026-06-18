@@ -1,5 +1,4 @@
 import {
-  type AttributeNode,
   type BlockCodegenNode,
   type CacheExpression,
   type CallExpression,
@@ -303,7 +302,7 @@ export function findProp(
   name: string,
   dynamicOnly: boolean = false,
   allowEmpty: boolean = false,
-): AttributeNode | DirectiveNode | undefined {
+): ElementNode['props'][0] | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
@@ -312,7 +311,6 @@ export function findProp(
         return p
       }
     } else if (
-      p.type === NodeTypes.DIRECTIVE &&
       p.name === 'bind' &&
       (p.exp || allowEmpty) &&
       isStaticArgOf(p.arg, name)

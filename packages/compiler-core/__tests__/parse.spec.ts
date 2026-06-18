@@ -2,6 +2,7 @@ import type { ParserOptions } from '../src/options'
 import { ErrorCodes } from '../src/errors'
 import {
   type CommentNode,
+  CommentTypes,
   ConstantTypes,
   type DirectiveNode,
   type ElementNode,
@@ -1172,68 +1173,140 @@ describe('compiler: parse', () => {
       })
     })
 
-    test('in-tag comments', () => {
+    test('in-tag line comments', () => {
       const ast = baseParse(`<Comp
-        <!-- @vue-expect-error -->
+        // @vue-expect-error
         :selected-id="selectedId"
-        <!-- note -->
+        // note
         disabled
         @click="onClick"
-        <!-- tail -->
+        // tail
       />`)
       const element = ast.children[0] as ElementNode
       const props = element.props
 
       expect(element.children).toStrictEqual([])
       expect(props.map(p => p.type)).toStrictEqual([
-        NodeTypes.IN_TAG_COMMENT,
         NodeTypes.DIRECTIVE,
-        NodeTypes.IN_TAG_COMMENT,
         NodeTypes.ATTRIBUTE,
         NodeTypes.DIRECTIVE,
-        NodeTypes.IN_TAG_COMMENT,
+      ])
+      expect(ast.comments.map(comment => comment.content)).toStrictEqual([
+        ' @vue-expect-error',
+        ' note',
+        ' tail',
       ])
 
-      expect(props[0]).toMatchObject({
-        type: NodeTypes.IN_TAG_COMMENT,
-        content: ' @vue-expect-error ',
+      const comment = ast.comments[0] as InTagCommentNode
+      expect(comment).toMatchObject({
+        type: NodeTypes.COMMENT,
+        kind: CommentTypes.IN_TAG_LINE,
+        content: ' @vue-expect-error',
+        contentLoc: {
+          source: ' @vue-expect-error',
+        },
         loc: {
-          source: '<!-- @vue-expect-error -->',
+          source: '// @vue-expect-error',
         },
       })
-      expect(props[2]).toMatchObject({
-        type: NodeTypes.IN_TAG_COMMENT,
-        content: ' note ',
-      })
-      expect(props[5]).toMatchObject({
-        type: NodeTypes.IN_TAG_COMMENT,
-        content: ' tail ',
-      })
+      expect(comment.loc.end.offset).toBeLessThan(props[0].loc.start.offset)
     })
 
-    test('in-tag comment can directly follow tag name', () => {
-      const ast = baseParse('<div<!-- note -->></div>')
+    test('in-tag line comment after tag name whitespace', () => {
+      const ast = baseParse(`<div // note
+      ></div>`)
       const element = ast.children[0] as ElementNode
 
       expect(element.tag).toBe('div')
-      expect(element.props).toHaveLength(1)
-      const comment = element.props[0] as InTagCommentNode
+      expect(element.props).toHaveLength(0)
+      const comment = ast.comments[0] as InTagCommentNode
       expect(comment).toMatchObject({
-        type: NodeTypes.IN_TAG_COMMENT,
-        content: ' note ',
+        type: NodeTypes.COMMENT,
+        kind: CommentTypes.IN_TAG_LINE,
+        content: ' note',
         loc: {
-          source: '<!-- note -->',
+          source: '// note',
         },
       })
       expect(element.children).toStrictEqual([])
     })
 
-    test('in-tag comment emits EOF_IN_COMMENT when unterminated', () => {
-      const onError = vi.fn()
-      baseParse('<div <!-- note', { onError })
+    test('in-tag line comments are preserved regardless of comments option', () => {
+      const astOptionNoComment = baseParse(
+        `<div
+        // note
+      />`,
+        { comments: false },
+      )
+      const astOptionWithComments = baseParse(
+        `<div
+        // note
+      />`,
+        { comments: true },
+      )
 
-      expect(onError).toHaveBeenCalledTimes(1)
-      expect(onError.mock.calls[0][0].code).toBe(ErrorCodes.EOF_IN_COMMENT)
+      expect(astOptionNoComment.children).toHaveLength(1)
+      expect(astOptionWithComments.children).toHaveLength(1)
+      expect(astOptionNoComment.comments).toHaveLength(1)
+      expect(astOptionWithComments.comments).toHaveLength(1)
+    })
+
+    test('in-tag line comments do not apply inside tag names', () => {
+      const onError = vi.fn()
+      const ast = baseParse(
+        `<div// note
+      >`,
+        { onError },
+      )
+
+      expect(ast.comments).toHaveLength(0)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
+        }),
+      )
+    })
+
+    test('in-tag line comment before EOF reports EOF_IN_TAG', () => {
+      const onError = vi.fn()
+      const ast = baseParse('<div // note', { onError })
+
+      expect(ast.comments).toHaveLength(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.EOF_IN_TAG,
+        }),
+      )
+    })
+
+    test('line-comment-like text in attribute values is preserved', () => {
+      const ast = baseParse('<div id="a // ordinary text" />')
+      const element = ast.children[0] as ElementNode
+
+      expect(ast.comments).toHaveLength(0)
+      expect(element.props[0]).toMatchObject({
+        type: NodeTypes.ATTRIBUTE,
+        value: {
+          content: 'a // ordinary text',
+        },
+      })
+    })
+
+    test('line comments do not affect duplicate attribute checks', () => {
+      const onError = vi.fn()
+      baseParse(
+        `<div id="a"
+        // note
+        id="b"
+      />`,
+        { onError },
+      )
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.DUPLICATE_ATTRIBUTE,
+        }),
+      )
     })
 
     // https://github.com/vuejs/core/issues/4251

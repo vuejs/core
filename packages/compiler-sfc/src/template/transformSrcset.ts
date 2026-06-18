@@ -45,7 +45,7 @@ export const transformSrcset: NodeTransform = (
   if (node.type === NodeTypes.ELEMENT) {
     if (srcsetTags.includes(node.tag) && node.props.length) {
       node.props.forEach((attr, index) => {
-        if (attr.type === NodeTypes.ATTRIBUTE && attr.name === 'srcset') {
+        if (attr.name === 'srcset' && attr.type === NodeTypes.ATTRIBUTE) {
           if (!attr.value) return
           const value = attr.value.content
           if (!value) return
