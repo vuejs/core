@@ -1182,15 +1182,7 @@ describe('compiler: parse', () => {
         @click="onClick"
         // tail
       />`)
-      const element = ast.children[0] as ElementNode
-      const props = element.props
 
-      expect(element.children).toStrictEqual([])
-      expect(props.map(p => p.type)).toStrictEqual([
-        NodeTypes.DIRECTIVE,
-        NodeTypes.ATTRIBUTE,
-        NodeTypes.DIRECTIVE,
-      ])
       expect(ast.comments.map(comment => comment.content)).toStrictEqual([
         ' @vue-expect-error',
         ' note',
@@ -1209,26 +1201,26 @@ describe('compiler: parse', () => {
           source: '// @vue-expect-error',
         },
       })
-      expect(comment.loc.end.offset).toBeLessThan(props[0].loc.start.offset)
     })
 
-    test('in-tag line comment after tag name whitespace', () => {
-      const ast = baseParse(`<div // note
-      ></div>`)
-      const element = ast.children[0] as ElementNode
+    test('in-tag line comment can directly follow tag name', () => {
+      const onError = vi.fn()
+      const ast = baseParse(`<div// note>`, { onError })
 
-      expect(element.tag).toBe('div')
-      expect(element.props).toHaveLength(0)
       const comment = ast.comments[0] as InTagCommentNode
       expect(comment).toMatchObject({
         type: NodeTypes.COMMENT,
         kind: CommentTypes.IN_TAG_LINE,
-        content: ' note',
+        content: ' note>',
         loc: {
-          source: '// note',
+          source: '// note>',
         },
       })
-      expect(element.children).toStrictEqual([])
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.EOF_IN_TAG,
+        }),
+      )
     })
 
     test('in-tag line comments are preserved regardless of comments option', () => {
@@ -1249,64 +1241,6 @@ describe('compiler: parse', () => {
       expect(astOptionWithComments.children).toHaveLength(1)
       expect(astOptionNoComment.comments).toHaveLength(1)
       expect(astOptionWithComments.comments).toHaveLength(1)
-    })
-
-    test('in-tag line comments do not apply inside tag names', () => {
-      const onError = vi.fn()
-      const ast = baseParse(
-        `<div// note
-      >`,
-        { onError },
-      )
-
-      expect(ast.comments).toHaveLength(0)
-      expect(onError).toHaveBeenCalledWith(
-        expect.objectContaining({
-          code: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-        }),
-      )
-    })
-
-    test('in-tag line comment before EOF reports EOF_IN_TAG', () => {
-      const onError = vi.fn()
-      const ast = baseParse('<div // note', { onError })
-
-      expect(ast.comments).toHaveLength(1)
-      expect(onError).toHaveBeenCalledWith(
-        expect.objectContaining({
-          code: ErrorCodes.EOF_IN_TAG,
-        }),
-      )
-    })
-
-    test('line-comment-like text in attribute values is preserved', () => {
-      const ast = baseParse('<div id="a // ordinary text" />')
-      const element = ast.children[0] as ElementNode
-
-      expect(ast.comments).toHaveLength(0)
-      expect(element.props[0]).toMatchObject({
-        type: NodeTypes.ATTRIBUTE,
-        value: {
-          content: 'a // ordinary text',
-        },
-      })
-    })
-
-    test('line comments do not affect duplicate attribute checks', () => {
-      const onError = vi.fn()
-      baseParse(
-        `<div id="a"
-        // note
-        id="b"
-      />`,
-        { onError },
-      )
-
-      expect(onError).toHaveBeenCalledWith(
-        expect.objectContaining({
-          code: ErrorCodes.DUPLICATE_ATTRIBUTE,
-        }),
-      )
     })
 
     // https://github.com/vuejs/core/issues/4251

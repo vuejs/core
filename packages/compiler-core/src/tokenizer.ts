@@ -621,10 +621,7 @@ export default class Tokenizer {
     if (c === CharCodes.Slash && this.peek() === CharCodes.Slash) {
       this.cbs.onopentagname(this.sectionStart, this.index)
       this.sectionStart = -1
-      this.state = State.InSelfClosingTag
-      if (__DEV__ || !__BROWSER__) {
-        this.cbs.onerr(ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG, this.index)
-      }
+      this.startInTagLineComment()
     } else if (isEndOfTagSection(c)) {
       this.handleTagName(c)
     }
