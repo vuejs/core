@@ -20,6 +20,7 @@ import {
   defineComponent,
   h,
   nextTick,
+  onErrorCaptured,
   onMounted,
   onServerPrefetch,
   openBlock,
@@ -35,6 +36,7 @@ import {
 import type { HMRRuntime } from '../src/hmr'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
+import { resetHydrationMismatchState } from '../src/hydration'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
@@ -2672,6 +2674,97 @@ describe('SSR hydration', () => {
         () => h('div', { id: 'foo' }),
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    describe('hydration mismatch error handler', () => {
+      beforeEach(() => {
+        resetHydrationMismatchState()
+      })
+
+      test('app.config.errorHandler catches hydration mismatch', () => {
+        const container = document.createElement('div')
+        container.innerHTML = `<div><span>server</span></div>`
+
+        const handler = vi.fn<(err: unknown) => void>()
+        const App = defineComponent({
+          render() {
+            return h('div', [h('span', 'client')])
+          },
+        })
+        const app = createSSRApp(App)
+        app.config.errorHandler = handler
+        app.mount(container)
+
+        expect(handler).toHaveBeenCalledTimes(1)
+        expect(handler.mock.calls[0][0]).toBeInstanceOf(Error)
+        expect((handler.mock.calls[0][0] as Error).message).toBe(
+          'Hydration completed but contains mismatches.',
+        )
+        expect(`Hydration text content mismatch`).toHaveBeenWarned()
+      })
+
+      test('onErrorCaptured catches hydration mismatch', () => {
+        const container = document.createElement('div')
+        container.innerHTML = `<div><span>server</span></div>`
+
+        const handler = vi.fn<(err: unknown) => false>(() => false)
+        const Child = defineComponent({
+          render() {
+            return h('span', 'client')
+          },
+        })
+        const App = defineComponent({
+          setup() {
+            onErrorCaptured(handler)
+            return () => h('div', [h(Child)])
+          },
+        })
+        const app = createSSRApp(App)
+        app.mount(container)
+
+        expect(handler).toHaveBeenCalledTimes(1)
+        const err = handler.mock.calls[0][0]
+        expect(err).toBeInstanceOf(Error)
+        expect((err as Error).message).toBe(
+          'Hydration completed but contains mismatches.',
+        )
+        expect(`Hydration text content mismatch`).toHaveBeenWarned()
+      })
+
+      test('hydration mismatch error is only reported once', () => {
+        const container = document.createElement('div')
+        container.innerHTML = `<div><span>a</span><span>b</span></div>`
+
+        const handler = vi.fn()
+        const App = defineComponent({
+          render() {
+            return h('div', [h('span', 'x'), h('span', 'y')])
+          },
+        })
+        const app = createSSRApp(App)
+        app.config.errorHandler = handler
+        app.mount(container)
+
+        expect(handler).toHaveBeenCalledTimes(1)
+        expect(`Hydration text content mismatch`).toHaveBeenWarned()
+      })
+
+      test('no unhandled error warning when there is no consumer', () => {
+        const container = document.createElement('div')
+        container.innerHTML = `<div><span>server</span></div>`
+
+        const App = defineComponent({
+          render() {
+            return h('div', [h('span', 'client')])
+          },
+        })
+        createSSRApp(App).mount(container)
+
+        expect(`Hydration text content mismatch`).toHaveBeenWarned()
+        expect(
+          `Unhandled error during execution of hydration`,
+        ).not.toHaveBeenWarned()
+      })
     })
   })
 })
