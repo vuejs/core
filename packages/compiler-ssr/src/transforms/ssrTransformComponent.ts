@@ -34,6 +34,7 @@ import {
   createRoot,
   createSimpleExpression,
   createTransformContext,
+  findProp,
   getBaseTransformPreset,
   locStub,
   resolveComponentType,
@@ -96,21 +97,33 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     return
   }
 
-  const component = resolveComponentType(node, context, true /* ssr */)
+  let component = resolveComponentType(node, context, true /* ssr */)
   const isDynamicComponent =
     isObject(component) && component.callee === RESOLVE_DYNAMIC_COMPONENT
-  componentTypeMap.set(node, component)
 
   if (isSymbol(component)) {
     if (component === SUSPENSE) {
+      componentTypeMap.set(node, component)
       return ssrTransformSuspense(node, context)
     } else if (component === TRANSITION_GROUP) {
-      return ssrTransformTransitionGroup(node, context)
+      if (!findProp(node, 'tag')) {
+        // No explicit tag: let the runtime component receive fallthrough attrs
+        // so a parent-provided `tag` can still become the rendered root.
+        component = context.helperString(TRANSITION_GROUP)
+      } else {
+        componentTypeMap.set(node, component)
+        return ssrTransformTransitionGroup(node, context)
+      }
     } else if (component === TRANSITION) {
+      componentTypeMap.set(node, component)
       return ssrTransformTransition(node, context)
+    } else {
+      componentTypeMap.set(node, component)
+      return // other built-in components: fallthrough
     }
-    return // other built-in components: fallthrough
   }
+
+  componentTypeMap.set(node, component)
 
   // Build the fallback vnode-based branch for the component's slots.
   // We need to clone the node into a fresh copy and use the buildSlots' logic

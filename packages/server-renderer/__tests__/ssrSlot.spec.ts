@@ -234,6 +234,21 @@ describe('ssr: slot', () => {
     ).toBe(`<div><p>1</p><p>2</p></div>`)
   })
 
+  test('transition-group tag fallthrough from parent component', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<TransitionGroup><slot/></TransitionGroup>`,
+            },
+          },
+          template: `<one tag="div"><p v-for="i in 2">{{ i }}</p></one>`,
+        }),
+      ),
+    ).toBe(`<div><p>1</p><p>2</p></div>`)
+  })
+
   // #12438
   test('async component slot with v-if true', async () => {
     const Layout = defineAsyncComponent(() =>

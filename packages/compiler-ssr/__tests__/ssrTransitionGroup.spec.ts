@@ -8,14 +8,28 @@ describe('transition-group', () => {
       compile(`<transition-group><div v-for="i in list"/></transition-group>`)
         .code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { TransitionGroup: _TransitionGroup, withCtx: _withCtx, renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<!--[-->\`)
-        _ssrRenderList(_ctx.list, (i) => {
-          _push(\`<div></div>\`)
-        })
-        _push(\`<!--]-->\`)
+        _push(_ssrRenderComponent(_TransitionGroup, _attrs, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(\`<!--[-->\`)
+              _ssrRenderList(_ctx.list, (i) => {
+                _push(\`<div\${_scopeId}></div>\`)
+              })
+              _push(\`<!--]-->\`)
+            } else {
+              return [
+                (_openBlock(true), _createBlock(_Fragment, null, _renderList(_ctx.list, (i) => {
+                  return (_openBlock(), _createBlock("div"))
+                }), 256 /* UNKEYED_FRAGMENT */))
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }, _parent))
       }"
     `)
   })
@@ -133,20 +147,43 @@ describe('transition-group', () => {
             </transition-group>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
+      "const { TransitionGroup: _TransitionGroup, withCtx: _withCtx, renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createVNode: _createVNode, createCommentVNode: _createCommentVNode } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<!--[-->\`)
-        _ssrRenderList(10, (i) => {
-          _push(\`<div></div>\`)
-        })
-        _ssrRenderList(10, (i) => {
-          _push(\`<div></div>\`)
-        })
-        if (_ctx.ok) {
-          _push(\`<div>ok</div>\`)
-        }
-        _push(\`<!--]-->\`)
+        _push(_ssrRenderComponent(_TransitionGroup, _attrs, {
+          default: _withCtx((_, _push, _parent, _scopeId) => {
+            if (_push) {
+              _push(\`<!--[-->\`)
+              _ssrRenderList(10, (i) => {
+                _push(\`<div\${_scopeId}></div>\`)
+              })
+              _push(\`<!--]--><!--[-->\`)
+              _ssrRenderList(10, (i) => {
+                _push(\`<div\${_scopeId}></div>\`)
+              })
+              _push(\`<!--]-->\`)
+              if (_ctx.ok) {
+                _push(\`<div\${_scopeId}>ok</div>\`)
+              } else {
+                _push(\`<!---->\`)
+              }
+            } else {
+              return [
+                (_openBlock(), _createBlock(_Fragment, null, _renderList(10, (i) => {
+                  return _createVNode("div")
+                }), 64 /* STABLE_FRAGMENT */)),
+                (_openBlock(), _createBlock(_Fragment, null, _renderList(10, (i) => {
+                  return _createVNode("div")
+                }), 64 /* STABLE_FRAGMENT */)),
+                (_ctx.ok)
+                  ? (_openBlock(), _createBlock("div", { key: 0 }, "ok"))
+                  : _createCommentVNode("v-if", true)
+              ]
+            }
+          }),
+          _: 1 /* STABLE */
+        }, _parent))
       }"
     `)
   })
