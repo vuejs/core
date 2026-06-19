@@ -990,6 +990,77 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    // #9187
+    test('namespace import', () => {
+      const files = {
+        '/foo.ts': 'export type P = { foo: number }',
+      }
+      const { props, deps } = resolve(
+        `
+        import * as Types from './foo'
+        defineProps<Types.P>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('namespace import for emits', () => {
+      const files = {
+        '/foo.ts': `export type Emits = { (e: 'change'): void }`,
+      }
+      const { calls, deps } = resolve(
+        `
+        import * as Events from './foo'
+        defineEmits<Events.Emits>()
+      `,
+        files,
+      )
+      expect(calls).toHaveLength(1)
+      expect(calls![0].type).toBe('TSCallSignatureDeclaration')
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('namespace re-export', () => {
+      const files = {
+        '/foo.ts': 'export type P = { foo: number }',
+        '/bar.ts': `export * as Types from './foo'`,
+      }
+      const { props, deps } = resolve(
+        `
+        import { Types } from './bar'
+        defineProps<Types.P>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+      })
+      expect(deps && [...deps]).toStrictEqual(['/bar.ts', '/foo.ts'])
+    })
+
+    test('namespace re-export through export all', () => {
+      const files = {
+        '/foo.ts': 'export type P = { foo: number }',
+        '/bar.ts': `export * as Types from './foo'`,
+        '/baz.ts': `export * from './bar'`,
+      }
+      const { props, deps } = resolve(
+        `
+        import { Types } from './baz'
+        defineProps<Types.P>()
+      `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+      })
+      expect(deps && [...deps]).toStrictEqual(['/baz.ts', '/bar.ts', '/foo.ts'])
+    })
+
     // #10635
     test('relative tsx', () => {
       const files = {
@@ -2099,7 +2170,8 @@ function resolve(
     if (
       s.type === 'ExpressionStatement' &&
       s.expression.type === 'CallExpression' &&
-      (s.expression.callee as Identifier).name === 'defineProps'
+      ((s.expression.callee as Identifier).name === 'defineProps' ||
+        (s.expression.callee as Identifier).name === 'defineEmits')
     ) {
       target = s.expression.typeParameters!.params[0]
     }

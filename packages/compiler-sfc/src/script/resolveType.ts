@@ -111,7 +111,10 @@ interface WithScope {
 
 // scope types always has ownerScope attached
 type ScopeTypeNode = Node &
-  WithScope & { _ns?: TSModuleDeclaration & WithScope }
+  WithScope & {
+    _ns?: TSModuleDeclaration & WithScope
+    _namespaceScope?: TypeScope
+  }
 
 export class TypeScope {
   constructor(
@@ -830,8 +833,18 @@ function innerResolveTypeReference(
       }
     }
   } else {
-    let ns = innerResolveTypeReference(ctx, scope, name[0], node, onlyExported)
+    const [head, ...rest] = name
+    let ns = innerResolveTypeReference(ctx, scope, head, node, onlyExported)
     if (ns) {
+      if (ns._namespaceScope) {
+        return innerResolveTypeReference(
+          ctx,
+          ns._namespaceScope,
+          rest.length > 1 ? rest : rest[0],
+          node,
+          true,
+        )
+      }
       if (ns.type !== 'TSModuleDeclaration') {
         // namespace merged with other types, attached as _ns
         ns = ns._ns
@@ -954,7 +967,22 @@ function resolveTypeFromImport(
 ): ScopeTypeNode | undefined {
   const { source, imported } = scope.imports[name]
   const sourceScope = importSourceToScope(ctx, node, scope, source)
+  if (imported === '*') {
+    return createNamespaceReference(sourceScope)
+  }
   return resolveTypeReference(ctx, node, sourceScope, imported, true)
+}
+
+function createNamespaceReference(scope: TypeScope): ScopeTypeNode {
+  return {
+    type: 'TSTypeReference',
+    typeName: {
+      type: 'Identifier',
+      name: '*',
+    },
+    _ownerScope: scope,
+    _namespaceScope: scope,
+  }
 }
 
 function importSourceToScope(
@@ -1476,6 +1504,18 @@ function recordTypes(
                 // exporting local defined type
                 exportedTypes[exported] = types[local]
               }
+            } else if (
+              spec.type === 'ExportNamespaceSpecifier' &&
+              stmt.source
+            ) {
+              const exported = getId(spec.exported)
+              imports[exported] = {
+                source: stmt.source.value,
+                imported: '*',
+              }
+              exportedTypes[exported] = createNamespaceReference(
+                importSourceToScope(ctx, stmt.source, scope, stmt.source.value),
+              )
             }
           }
         }
