@@ -46,7 +46,7 @@ Please make sure to read the [Contributing Guide](https://github.com/vuejs/core/
 Thank you to all the people who already contributed to Vue!
 
 <a href="https://github.com/vuejs/core/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890&limit=500" /></a>
-
+heyyyyyyyyyy
 <sub>_Note: Showing the first 500 contributors only due to GitHub image size limitations_</sub>
 
 ## License
