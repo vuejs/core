@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict'
 import { parseSync } from 'oxc-parser'
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dts } from 'rolldown-plugin-dts'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -46,7 +46,7 @@ export default targetPackages.map(
         nativeMagicString: true,
       },
       external: resolveExternal(pkg),
-      plugins: [dts(), patchTypes(pkg), ...(pkg === 'vue' ? [copyMts()] : [])],
+      plugins: [dts(), patchTypes(pkg)],
       onwarn(warning, warn) {
         // during dts rolldown, everything is externalized by default
         if (
@@ -212,24 +212,6 @@ function patchTypes(pkg) {
             .join('\n')
       }
       return code
-    },
-  }
-}
-
-/**
- * According to https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-7.html#packagejson-exports-imports-and-self-referencing
- * the only way to correct provide types for both Node ESM and CJS is to have
- * two separate declaration files, so we need to copy vue.d.ts to vue.d.mts
- * upon build.
- *
- * @returns {import('rolldown').Plugin}
- */
-function copyMts() {
-  return {
-    name: 'copy-vue-mts',
-    writeBundle(_, bundle) {
-      assert('code' in bundle['vue.d.ts'])
-      writeFileSync('packages/vue/dist/vue.d.mts', bundle['vue.d.ts'].code)
     },
   }
 }
