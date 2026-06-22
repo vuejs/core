@@ -319,13 +319,8 @@ export function createSlot(
       ? new SlotFragment(slotRoot)
       : undefined
     let dynamicFragment: DynamicFragment | undefined
-    const isForwardedHydrationSlot =
-      isHydrating &&
-      currentSlotOwner != null &&
-      currentSlotOwner !== currentInstance
     if (slotFragment) {
       fragment = slotFragment
-      slotFragment.forwarded = isForwardedHydrationSlot
     } else {
       // Fast path: DynamicFragment is enough, but hydration still enters the
       // slot boundary so it can own the SSR close marker.
@@ -335,9 +330,14 @@ export function createSlot(
         false,
       )
       dynamicFragment.isSlot = true
-      dynamicFragment.forwarded = isForwardedHydrationSlot
       fragment = dynamicFragment
     }
+
+    if (isHydrating) {
+      ;(fragment as DynamicFragment).forwarded =
+        currentSlotOwner != null && currentSlotOwner !== currentInstance
+    }
+
     const isDynamicName = isFunction(name)
 
     const renderSlot = () => {
