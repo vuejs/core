@@ -342,9 +342,12 @@ export function recheckSlotFallback(
   }
 
   const nextFallback = state.activeFallback
-  const nextNodesValid = nextFallback
-    ? isValidBlock(nextFallback)
-    : state.isContentValid()
+  const nextNodesValid =
+    contentValid && !nextFallback
+      ? true
+      : nextFallback
+        ? isValidBlock(nextFallback)
+        : state.isContentValid()
   state.syncNodes()
   state.lastNodesValid = nextNodesValid
   if (prevNodesValid !== nextNodesValid) {
