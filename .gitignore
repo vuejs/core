@@ -13,3 +13,4 @@ dts-build/packages
 *.tgz
 packages-private/benchmark/reference
 **/__tests__/**/__screenshots__/**/*
+.vitest-attachements
