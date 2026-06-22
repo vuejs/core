@@ -16,8 +16,7 @@
   },
   "buildOptions": {
     "formats": [
-      "esm",
-      "esm-browser"
+      "esm"
     ],
     "prod": false,
     "enableNonBrowserBranches": true
