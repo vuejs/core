@@ -19,11 +19,14 @@ export class RenderEffect extends ReactiveEffect {
   job: SchedulerJob
   updateJob?: SchedulerJob
   render: () => void
+  // Creation order within the owning component.
+  order: number
 
   constructor(render: () => void, noLifecycle = false) {
     super(noLifecycle ? render : undefined)
     this.render = render
     const instance = currentInstance as VaporComponentInstance | null
+    this.order = instance ? instance.effectCount++ : 0
     if (__DEV__ && !__TEST__ && !this.subs && !isVaporComponent(instance)) {
       warn('renderEffect called without active EffectScope or Vapor instance.')
     }
@@ -103,7 +106,7 @@ export class RenderEffect extends ReactiveEffect {
   notify(): void {
     const flags = this.flags
     if (!(flags & EffectFlags.PAUSED)) {
-      queueJob(this.job, this.i ? this.i.uid : undefined)
+      queueJob(this.job, this.i ? this.i.uid : undefined, false, this.order)
     }
   }
 }

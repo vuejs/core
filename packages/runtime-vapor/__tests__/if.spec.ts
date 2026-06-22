@@ -13,7 +13,7 @@ import {
 import { nextTick, ref } from '@vue/runtime-dom'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 import type { Mock } from 'vitest'
-import { ifFlags, makeRender } from './_utils'
+import { compile, ifFlags, makeRender } from './_utils'
 import { setElementText } from '../src/dom/prop'
 import type { DynamicFragment } from '../src/fragment'
 
@@ -142,6 +142,53 @@ describe('createIf', () => {
     ok1.value = false
     await nextTick()
     expect(host.innerHTML).toBe('<!--if-->')
+  })
+
+  test('should not mount stale nested branch when parent if becomes false', async () => {
+    const data = ref<{
+      nodes: string[] | null
+      plainText: string | null
+    }>({
+      nodes: ['foo'],
+      plainText: 'foo',
+    })
+    const childSetup = vi.fn()
+    const Child = defineVaporComponent({
+      props: {
+        nodes: { type: Array, required: true },
+      },
+      setup() {
+        childSetup()
+        return template('<div>child</div>')()
+      },
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <template v-if="data.nodes">
+          <span v-if="data.plainText !== null">{{ data.plainText }}</span>
+          <Child v-else :nodes="data.nodes" />
+        </template>
+      </template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+
+    expect(host.innerHTML).toBe('<span>foo</span><!--if--><!--if-->')
+    expect(childSetup).not.toHaveBeenCalled()
+
+    data.value.plainText = null
+    data.value.nodes = null
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<!--if-->')
+    expect(childSetup).not.toHaveBeenCalled()
+    expect(`type check failed for prop "nodes"`).not.toHaveBeenWarned()
   })
 
   test('with v-once', async () => {
