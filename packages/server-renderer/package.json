@@ -18,7 +18,8 @@
     "formats": [
       "esm",
       "esm-browser"
-    ]
+    ],
+    "prod": false
   },
   "repository": {
     "type": "git",
