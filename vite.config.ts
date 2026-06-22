@@ -13,7 +13,6 @@ export default defineConfig({
     __GLOBAL__: false,
     __ESM_BUNDLER__: true,
     __ESM_BROWSER__: false,
-    __CJS__: true,
     __SSR__: true,
     __BENCHMARK__: false,
     __FEATURE_OPTIONS_API__: true,
