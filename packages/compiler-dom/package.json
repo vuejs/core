@@ -2,26 +2,16 @@
   "name": "@vue/compiler-dom",
   "version": "3.6.0-beta.17",
   "description": "@vue/compiler-dom",
-  "main": "index.js",
-  "module": "dist/compiler-dom.esm-bundler.js",
-  "types": "dist/compiler-dom.d.ts",
+  "type": "module",
   "unpkg": "dist/compiler-dom.global.js",
   "jsdelivr": "dist/compiler-dom.global.js",
   "files": [
-    "index.js",
     "dist"
   ],
   "exports": {
     ".": {
       "types": "./dist/compiler-dom.d.ts",
-      "node": {
-        "production": "./dist/compiler-dom.cjs.prod.js",
-        "development": "./dist/compiler-dom.cjs.js",
-        "default": "./index.js"
-      },
-      "module": "./dist/compiler-dom.esm-bundler.js",
-      "import": "./dist/compiler-dom.esm-bundler.js",
-      "require": "./index.js"
+      "default": "./dist/compiler-dom.js"
     },
     "./*": "./*"
   },
@@ -30,9 +20,8 @@
     "name": "VueCompilerDOM",
     "compat": true,
     "formats": [
-      "esm-bundler",
+      "esm",
       "esm-browser",
-      "cjs",
       "global"
     ]
   },
