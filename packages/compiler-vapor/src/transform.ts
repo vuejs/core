@@ -11,7 +11,9 @@ import {
   type TemplateChildNode,
   defaultOnError,
   defaultOnWarn,
+  findDir,
   getSelfName,
+  isCommentOrWhitespace,
   isVSlot,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
@@ -67,6 +69,14 @@ export type TransformOptions = HackOptions<BaseTransformOptions>
 
 const generatedVarRE = /^[nxr](\d+)$/
 
+interface ChildContextInfo {
+  node: AllNode
+  hasSingleRootChild: boolean
+  isLastEffectiveChild: boolean[]
+}
+
+const childContextInfoCache = new WeakMap<TransformContext, ChildContextInfo>()
+
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null
@@ -104,6 +114,8 @@ export class TransformContext<T extends AllNode = AllNode> {
   // whether this node is on the rightmost path of the tree
   // (all ancestors are also last effective children)
   isOnRightmostPath: boolean = true
+  // whether this node is the component/template root
+  isSingleRoot: boolean = false
   // If an ancestor in the same template must close explicitly, descendants
   // with matching tags must also close so the browser doesn't consume the
   // ancestor close tag for the descendant.
@@ -318,9 +330,11 @@ export class TransformContext<T extends AllNode = AllNode> {
       effectiveParent = effectiveParent.parent
     }
 
+    const childInfo = this.getChildContextInfo()
     // compute whether this node is effectively the last child
-    const isLastEffectiveChild = this.isEffectivelyLastChild(index)
+    const isLastEffectiveChild = childInfo.isLastEffectiveChild[index]
     const isOnRightmostPath = this.isOnRightmostPath && isLastEffectiveChild
+    const isSingleRoot = this.isSingleRootChild(childInfo)
 
     return Object.assign(Object.create(TransformContext.prototype), this, {
       node,
@@ -337,6 +351,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       effectiveParent,
       isLastEffectiveChild,
       isOnRightmostPath,
+      isSingleRoot,
       templateCloseTags: this.templateCloseTags,
       templateCloseBlocks: this.templateCloseBlocks,
     } satisfies Partial<TransformContext<T>>)
@@ -361,16 +376,99 @@ export class TransformContext<T extends AllNode = AllNode> {
     }
   }
 
-  private isEffectivelyLastChild(index: number): boolean {
-    const children = (this.node as ElementNode).children
-    if (!children) return true
+  private getChildContextInfo(): ChildContextInfo {
+    const node = this.node
+    if (node.type !== NodeTypes.ROOT && node.type !== NodeTypes.ELEMENT) {
+      return {
+        node,
+        hasSingleRootChild: true,
+        isLastEffectiveChild: [],
+      }
+    }
 
-    return children.every(
-      (c, i) =>
-        i <= index ||
-        (c.type === NodeTypes.ELEMENT && c.tagType === ElementTypes.COMPONENT),
+    const cached = childContextInfoCache.get(this)
+    if (cached && cached.node === node) {
+      return cached
+    }
+
+    const { children } = node
+    const isLastEffectiveChild = new Array<boolean>(children.length)
+    let hasFollowingEffectiveChild = false
+    for (let i = children.length - 1; i >= 0; i--) {
+      isLastEffectiveChild[i] = !hasFollowingEffectiveChild
+      if (!isComponentChild(children[i])) {
+        hasFollowingEffectiveChild = true
+      }
+    }
+
+    const childInfo = {
+      node,
+      hasSingleRootChild: hasSingleRootChild(children),
+      isLastEffectiveChild,
+    }
+    childContextInfoCache.set(this, childInfo)
+    return childInfo
+  }
+
+  private isSingleRootChild(childInfo: ChildContextInfo): boolean {
+    if (this.inVFor || !childInfo.hasSingleRootChild) {
+      return false
+    }
+
+    if (this.node.type === NodeTypes.ROOT) {
+      return true
+    }
+
+    return (
+      this.node.type === NodeTypes.ELEMENT &&
+      this.node.tagType === ElementTypes.TEMPLATE &&
+      !!this.parent &&
+      this.isSingleRoot
     )
   }
+}
+
+function hasSingleRootChild(children: TemplateChildNode[]): boolean {
+  let nonCommentChildren = 0
+  let hasEncounteredIf = false
+  let isSingleIfBlock = true
+
+  for (const child of children) {
+    if (isCommentOrWhitespace(child)) {
+      continue
+    }
+
+    nonCommentChildren++
+    if (isIfChild(child)) {
+      if (hasEncounteredIf) {
+        isSingleIfBlock = false
+      }
+      hasEncounteredIf = true
+    } else if (!hasEncounteredIf || !isElseChild(child)) {
+      isSingleIfBlock = false
+    }
+  }
+
+  return nonCommentChildren === 1 || isSingleIfBlock
+}
+
+function isComponentChild(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.ELEMENT && child.tagType === ElementTypes.COMPONENT
+  )
+}
+
+function isIfChild(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.IF ||
+    (child.type === NodeTypes.ELEMENT && !!findDir(child, 'if'))
+  )
+}
+
+function isElseChild(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.ELEMENT && !!findDir(child, /^else(-if)?$/, true)
+  )
 }
 
 const defaultOptions = {
