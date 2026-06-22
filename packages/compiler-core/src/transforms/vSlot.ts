@@ -315,9 +315,6 @@ export function buildSlots(
       children: TemplateChildNode[],
     ) => {
       const fn = buildSlotFn(props, undefined, children, loc)
-      if (__COMPAT__ && context.compatConfig) {
-        fn.isNonScopedSlot = true
-      }
       return createObjectProperty(`default`, fn)
     }
 

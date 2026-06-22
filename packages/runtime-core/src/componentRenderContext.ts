@@ -25,10 +25,6 @@ export function setCurrentRenderingInstance(
   const prev = currentRenderingInstance
   currentRenderingInstance = instance
   currentScopeId = (instance && instance.type.__scopeId) || null
-  // v2 pre-compiled components uses _scopeId instead of __scopeId
-  if (__COMPAT__ && !currentScopeId) {
-    currentScopeId = (instance && (instance.type as any)._scopeId) || null
-  }
   return prev
 }
 
@@ -60,7 +56,6 @@ export type ContextualRenderFn = {
   _n: boolean /* already normalized */
   _c: boolean /* compiled */
   _d: boolean /* disableTracking */
-  _ns: boolean /* nonScoped */
 }
 
 /**
@@ -70,7 +65,6 @@ export type ContextualRenderFn = {
 export function withCtx(
   fn: Function,
   ctx: ComponentInternalInstance | null = currentRenderingInstance,
-  isNonScopedSlot?: boolean, // __COMPAT__ only
 ): Function {
   if (!ctx) return fn
 
@@ -114,9 +108,5 @@ export function withCtx(
   renderFnWithContext._c = true
   // disable block tracking by default
   renderFnWithContext._d = true
-  // compat build only flag to distinguish scoped slots from non-scoped ones
-  if (__COMPAT__ && isNonScopedSlot) {
-    renderFnWithContext._ns = true
-  }
   return renderFnWithContext
 }

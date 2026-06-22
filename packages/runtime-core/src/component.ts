@@ -75,12 +75,6 @@ import type { SuspenseBoundary } from './components/Suspense'
 import type { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { endMeasure, startMeasure } from './profiling'
-import { convertLegacyRenderFn } from './compat/renderFn'
-import {
-  type CompatConfig,
-  globalCompatConfig,
-  validateCompatConfig,
-} from './compat/compatConfig'
 import type { SchedulerJob } from './scheduler'
 import type { LifecycleHooks } from './enums'
 
@@ -225,10 +219,6 @@ export interface ComponentInternalOptions {
    */
   __hmrId?: string
   /**
-   * Compat build only, for bailing out of certain compatibility behavior
-   */
-  __isBuiltIn?: boolean
-  /**
    * This one should be exposed so that devtools can make use of it
    */
   __file?: string
@@ -275,7 +265,6 @@ export interface FunctionalComponent<
   slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
   displayName?: string
-  compatConfig?: CompatConfig
 }
 
 export interface ClassComponent {
@@ -361,10 +350,6 @@ export type InternalRenderFunction = {
     $options: ComponentInternalInstance['ctx'],
   ): VNodeChild
   _rc?: boolean // isRuntimeCompiled
-
-  // __COMPAT__ only
-  _compatChecked?: boolean // v3 and already checked for v2 compat
-  _compatWrapped?: boolean // is wrapped for v2 compat
 }
 
 /**
@@ -1069,17 +1054,8 @@ export const isRuntimeOnly = (): boolean => !compile
 export function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean,
-  skipOptions?: boolean,
 ): void {
   const Component = instance.type as ComponentOptions
-
-  if (__COMPAT__) {
-    convertLegacyRenderFn(instance)
-
-    if (__DEV__ && Component.compatConfig) {
-      validateCompatConfig(Component.compatConfig)
-    }
-  }
 
   // template / render function normalization
   // could be already set when returned from setup()
@@ -1088,9 +1064,6 @@ export function finishComponentSetup(
     // is done by server-renderer
     if (!isSSR && compile && !Component.render) {
       const template =
-        (__COMPAT__ &&
-          instance.vnode.props &&
-          instance.vnode.props['inline-template']) ||
         Component.template ||
         (__FEATURE_OPTIONS_API__ && resolveMergedOptions(instance).template)
       if (template) {
@@ -1110,14 +1083,6 @@ export function finishComponentSetup(
           ),
           componentCompilerOptions,
         )
-        if (__COMPAT__) {
-          // pass runtime compat config into the compiler
-          finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
-          if (Component.compatConfig) {
-            // @ts-expect-error types are not compatible
-            extend(finalCompilerOptions.compatConfig, Component.compatConfig)
-          }
-        }
         Component.render = compile(template, finalCompilerOptions)
         if (__DEV__) {
           endMeasure(instance, `compile`)
@@ -1136,7 +1101,7 @@ export function finishComponentSetup(
   }
 
   // support for 2.x options
-  if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
+  if (__FEATURE_OPTIONS_API__) {
     const prevInstance = setCurrentInstance(instance)
     const prevSub = setActiveSub()
     try {

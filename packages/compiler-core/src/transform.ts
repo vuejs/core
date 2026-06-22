@@ -38,7 +38,6 @@ import {
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
 import { cacheStatic, getSingleElementRoot } from './transforms/cacheStatic'
-import type { CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
 //
@@ -83,10 +82,7 @@ export interface ImportItem {
 
 type IdentifierScopeType = 'local' | 'slot'
 
-export interface TransformContext
-  extends
-    Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
-    CompilerCompatOptions {
+export interface TransformContext extends Required<TransformOptions> {
   selfName: string | null
   root: RootNode
   helpers: Map<symbol, number>
@@ -124,9 +120,6 @@ export interface TransformContext
   cache(exp: JSChildNode, isVNode?: boolean, inVOnce?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
   vForMemoKeyedNodes: WeakSet<ElementNode>
-
-  // 2.x Compat only
-  filters?: Set<string>
 }
 
 export function getSelfName(filename: string): string | null {
@@ -159,7 +152,6 @@ export function createTransformContext(
     eventDelegation = true,
     onError = defaultOnError,
     onWarn = defaultOnWarn,
-    compatConfig,
   }: TransformOptions,
 ): TransformContext {
   const context: TransformContext = {
@@ -187,7 +179,6 @@ export function createTransformContext(
     eventDelegation,
     onError,
     onWarn,
-    compatConfig,
 
     // state
     root,
@@ -327,10 +318,6 @@ export function createTransformContext(
     },
   }
 
-  if (__COMPAT__) {
-    context.filters = new Set()
-  }
-
   function addId(id: string, type: IdentifierScopeType) {
     const { identifiers, identifierScopes } = context
     if (identifiers[id] === undefined) {
@@ -369,10 +356,6 @@ export function transform(root: RootNode, options: TransformOptions): void {
   root.temps = context.temps
   root.cached = context.cached
   root.transformed = true
-
-  if (__COMPAT__) {
-    root.filters = [...context.filters!]
-  }
 }
 
 function createRootCodegen(root: RootNode, context: TransformContext) {

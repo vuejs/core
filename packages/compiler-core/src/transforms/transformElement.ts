@@ -58,11 +58,6 @@ import {
 import { buildSlots } from './vSlot'
 import { getConstantType } from './cacheStatic'
 import { BindingTypes } from '../options'
-import {
-  CompilerDeprecationTypes,
-  checkCompatEnabled,
-  isCompatEnabled,
-} from '../compat/compatConfig'
 import { processExpression } from './transformExpression'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
@@ -235,14 +230,7 @@ export function resolveComponentType(
   const isExplicitDynamic = isComponentTag(tag)
   const isProp = findProp(node, 'is', false, true /* allow empty */)
   if (isProp) {
-    if (
-      isExplicitDynamic ||
-      (__COMPAT__ &&
-        isCompatEnabled(
-          CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-          context,
-        ))
-    ) {
+    if (isExplicitDynamic) {
       let exp: ExpressionNode | undefined
       if (isProp.type === NodeTypes.ATTRIBUTE) {
         exp = isProp.value && createSimpleExpression(isProp.value.content, true)
@@ -267,8 +255,7 @@ export function resolveComponentType(
     ) {
       // <button is="vue:xxx">
       // if not <component>, only is value that starts with "vue:" will be
-      // treated as component by the parse phase and reach here, unless it's
-      // compat mode where all is values are considered components
+      // treated as component by the parse phase and reach here
       tag = isProp.value!.content.slice(4)
     }
   }
@@ -548,13 +535,7 @@ export function buildProps(
       // skip is on <component>, or is="vue:xxx"
       if (
         name === 'is' &&
-        (isComponentTag(tag) ||
-          (value && value.content.startsWith('vue:')) ||
-          (__COMPAT__ &&
-            isCompatEnabled(
-              CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-              context,
-            )))
+        (isComponentTag(tag) || (value && value.content.startsWith('vue:')))
       ) {
         continue
       }
@@ -590,14 +571,7 @@ export function buildProps(
       // skip v-is and :is on <component>
       if (
         name === 'is' ||
-        (isVBind &&
-          isStaticArgOf(arg, 'is') &&
-          (isComponentTag(tag) ||
-            (__COMPAT__ &&
-              isCompatEnabled(
-                CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-                context,
-              ))))
+        (isVBind && isStaticArgOf(arg, 'is') && isComponentTag(tag))
       ) {
         continue
       }
@@ -625,51 +599,6 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
-            if (__COMPAT__) {
-              // have to merge early for compat build check
-              pushMergeArg()
-              // 2.x v-bind object order compat
-              if (__DEV__) {
-                const hasOverridableKeys = mergeArgs.some(arg => {
-                  if (arg.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-                    return arg.properties.some(({ key }) => {
-                      if (
-                        key.type !== NodeTypes.SIMPLE_EXPRESSION ||
-                        !key.isStatic
-                      ) {
-                        return true
-                      }
-                      return (
-                        key.content !== 'class' &&
-                        key.content !== 'style' &&
-                        !isOn(key.content)
-                      )
-                    })
-                  } else {
-                    // dynamic expression
-                    return true
-                  }
-                })
-                if (hasOverridableKeys) {
-                  checkCompatEnabled(
-                    CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
-                    context,
-                    loc,
-                  )
-                }
-              }
-
-              if (
-                isCompatEnabled(
-                  CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
-                  context,
-                )
-              ) {
-                mergeArgs.unshift(exp)
-                continue
-              }
-            }
-
             // #10696 in case a v-bind object contains ref
             pushRefVForMarker()
             pushMergeArg()
