@@ -21,7 +21,6 @@
     "compat": true,
     "formats": [
       "esm",
-      "esm-browser",
       "global"
     ]
   },
