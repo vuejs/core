@@ -229,6 +229,8 @@ export class DynamicFragment extends RenderContextFragment {
   // pure marker consumed by the isSlotFragment predicate; the core update
   // pipeline never reads it.
   isSlot?: boolean
+  // Hydration-only marker consumed by hydrateFragment: empty forwarded slots
+  // leave the SSR close marker to the parent slot boundary.
   forwarded?: boolean
   // Marks the generic dynamic fragment that createPlainElement creates for the
   // default-slot children of a dynamic element resolved to a native tag
