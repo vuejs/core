@@ -18,7 +18,6 @@
   "sideEffects": false,
   "buildOptions": {
     "name": "VueCompilerDOM",
-    "compat": true,
     "formats": [
       "esm",
       "global"

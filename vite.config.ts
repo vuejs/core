@@ -18,7 +18,6 @@ export default defineConfig({
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
     __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
-    __COMPAT__: true,
   },
   resolve: {
     alias: entries,
@@ -37,7 +36,6 @@ export default defineConfig({
       reporter: ['text', 'html'],
       include: ['packages/*/src/**'],
       exclude: [
-        'packages/vue-compat/**',
         'packages/vue/src/dev.ts',
         'packages/vue/src/runtime.ts',
         'packages/vue/src/runtime-with-vapor.ts',
@@ -77,7 +75,7 @@ export default defineConfig({
             'packages/server-renderer/__tests__/ssrRender.spec.ts',
             '**/e2e/**',
             '**/vapor-e2e-test/**',
-            'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**',
+            'packages/{vue,runtime-dom,runtime-vapor}/**',
           ],
         },
       },
@@ -87,9 +85,7 @@ export default defineConfig({
           name: 'unit-jsdom',
           setupFiles: 'scripts/setup-vitest.ts',
           environment: 'jsdom',
-          include: [
-            'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**/*.spec.ts',
-          ],
+          include: ['packages/{vue,runtime-dom,runtime-vapor}/**/*.spec.ts'],
           exclude: [...configDefaults.exclude, '**/e2e/**'],
         },
       },
@@ -278,7 +274,7 @@ export default defineConfig({
         },
       },
       {
-        files: ['packages/{vue,vue-compat,runtime-*}/**'],
+        files: ['packages/{vue,runtime-*}/**'],
         rules: {
           'no-restricted-globals': ['error', 'module', 'require'],
           'oxc/no-optional-chaining': 'error',

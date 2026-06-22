@@ -134,15 +134,12 @@ export function createConfigsForPackage({
     const isBrowserESMBuild = /esm-browser/.test(format)
     const isServerRenderer = name === 'server-renderer'
     const isGlobalBuild = /global/.test(format)
-    const isCompatPackage =
-      pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
-    const isCompatBuild = !!packageOptions.compat
     const isBrowserBuild =
       (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
       !packageOptions.enableNonBrowserBranches
 
     output.postBanner = banner
-    output.exports = isCompatPackage ? 'auto' : 'named'
+    output.exports = 'named'
     output.sourcemap = sourceMap
 
     output.externalLiveBindings = false
@@ -165,11 +162,6 @@ export function createConfigsForPackage({
       }
     }
 
-    // the compat build needs both default AND named exports.
-    // we use separate entries for esm vs. non-esm builds.
-    if (isCompatPackage && (isBrowserESMBuild || isBundlerESMBuild)) {
-      entryFile = `esm-${entryFile}`
-    }
     entryFile = 'src/' + entryFile
 
     function resolveDefine() {
@@ -188,9 +180,6 @@ export function createConfigsForPackage({
         __ESM_BROWSER__: String(isBrowserESMBuild),
         // need SSR-specific branches?
         __SSR__: String(isBundlerESMBuild || isServerRenderer),
-
-        // 2.x compat build
-        __COMPAT__: String(isCompatBuild),
 
         // feature flags
         __FEATURE_SUSPENSE__: `true`,
@@ -284,7 +273,7 @@ export function createConfigsForPackage({
         ]
       }
 
-      if (isGlobalBuild || isBrowserESMBuild || isCompatPackage || inlineDeps) {
+      if (isGlobalBuild || isBrowserESMBuild || inlineDeps) {
         if (!packageOptions.enableNonBrowserBranches) {
           // normal browser builds - non-browser only imports are tree-shaken,
           // they are only listed here to suppress warnings.
@@ -294,7 +283,7 @@ export function createConfigsForPackage({
         }
       } else {
         // Node / esm-bundler builds.
-        // externalize all direct deps unless it's the compat build.
+        // externalize all direct deps.
         return [
           ...Object.keys(pkg.dependencies || {}),
           ...Object.keys(pkg.peerDependencies || {}),

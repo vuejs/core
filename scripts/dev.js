@@ -60,7 +60,7 @@ for (const target of targets) {
   const pkg = require(`${pkgBasePath}/package.json`)
   const isVueEsmBrowserVapor =
     pkg.name === 'vue' && format === 'esm-browser-vapor'
-  const base = target === 'vue-compat' ? `vue` : target
+  const base = target
   const name = isVueEsmBrowserVapor ? `runtime-with-vapor.esm-browser` : postfix
   const outfile = resolve(
     __dirname,
@@ -161,7 +161,6 @@ for (const target of targets) {
         __ESM_BUNDLER__: String(format === 'esm' || format === 'esm-runtime'),
         __ESM_BROWSER__: String(format.includes('esm-browser')),
         __SSR__: String(format !== 'global'),
-        __COMPAT__: String(target === 'vue-compat'),
         __FEATURE_SUSPENSE__: `true`,
         __FEATURE_OPTIONS_API__: `true`,
         __FEATURE_PROD_DEVTOOLS__: `false`,
