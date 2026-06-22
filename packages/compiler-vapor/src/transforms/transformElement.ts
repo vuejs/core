@@ -6,15 +6,11 @@ import {
   ErrorCodes,
   NodeTypes,
   type PlainElementNode,
-  type RootNode,
   type SimpleExpressionNode,
-  type TemplateChildNode,
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
-  hasSingleChild,
   isSimpleIdentifier,
-  isSingleIfBlock,
   isStaticArgOf,
   isValidHTMLNesting,
   resolveModifiers,
@@ -136,7 +132,7 @@ export const transformElement: NodeTransform = (node, context) => {
       getEffectIndex,
     )
 
-    const singleRoot = isSingleRoot(context)
+    const singleRoot = context.isSingleRoot
 
     if (isComponent) {
       transformComponentElement(
@@ -275,35 +271,6 @@ export function isInSameTemplateAsParent(
       parent as TransformContext<ElementNode>,
     ) && isValidHTMLNesting(parentNode.tag, node.tag)
   )
-}
-
-function isSingleRoot(
-  context: TransformContext<RootNode | TemplateChildNode>,
-): boolean {
-  if (context.inVFor) {
-    return false
-  }
-
-  let { parent } = context
-  if (
-    parent &&
-    !(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))
-  ) {
-    return false
-  }
-  while (
-    parent &&
-    parent.parent &&
-    parent.node.type === NodeTypes.ELEMENT &&
-    parent.node.tagType === ElementTypes.TEMPLATE
-  ) {
-    parent = parent.parent
-    if (!(hasSingleChild(parent.node) || isSingleIfBlock(parent.node))) {
-      return false
-    }
-  }
-
-  return context.root === parent
 }
 
 function transformComponentElement(
