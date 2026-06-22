@@ -327,7 +327,14 @@ export function createConfigsForPackage({
       // runtime-vapor into non-vapor build graphs (e.g. server-renderer esm-browser).
       // this avoid MISSING_EXPORT errors for vapor-only exports.
       tsconfig: path.resolve(__dirname, '../tsconfig.rolldown.json'),
-      platform: isBundlerESMBuild ? 'neutral' : 'browser',
+      // node-targeted packages emit ESM imports for node builtins (e.g.
+      // `node:path`) instead of `require()`, so the single esm build runs in
+      // Node directly. Pure packages stay platform-neutral.
+      platform: isBundlerESMBuild
+        ? packageOptions.enableNonBrowserBranches || isServerRenderer
+          ? 'node'
+          : 'neutral'
+        : 'browser',
       resolve: {
         alias: entries,
       },
