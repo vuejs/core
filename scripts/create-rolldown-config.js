@@ -186,8 +186,6 @@ export function createConfigsForPackage({
         __GLOBAL__: String(isGlobalBuild),
         __ESM_BUNDLER__: String(isBundlerESMBuild),
         __ESM_BROWSER__: String(isBrowserESMBuild),
-        // CJS builds have been dropped; always false now.
-        __CJS__: `false`,
         // need SSR-specific branches?
         __SSR__: String(isBundlerESMBuild || isServerRenderer),
 

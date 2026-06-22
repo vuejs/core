@@ -160,7 +160,6 @@ for (const target of targets) {
         __GLOBAL__: String(format === 'global'),
         __ESM_BUNDLER__: String(format === 'esm' || format === 'esm-runtime'),
         __ESM_BROWSER__: String(format.includes('esm-browser')),
-        __CJS__: `false`,
         __SSR__: String(format !== 'global'),
         __COMPAT__: String(target === 'vue-compat'),
         __FEATURE_SUSPENSE__: `true`,

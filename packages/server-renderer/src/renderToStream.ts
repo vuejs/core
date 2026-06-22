@@ -13,7 +13,7 @@ import {
   cleanupContext,
   renderComponentVNode,
 } from './render'
-import type { Readable, Writable } from 'node:stream'
+import { Readable, type Writable } from 'node:stream'
 import { resolveTeleports } from './renderToString'
 
 const { isVNode } = ssrUtils
@@ -122,18 +122,15 @@ export function renderToNodeStream(
   input: App | VNode,
   context: SSRContext = {},
 ): Readable {
-  const stream: Readable = __CJS__
-    ? new (require('node:stream').Readable)({ read() {} })
-    : null
-
-  if (!stream) {
+  if (__ESM_BROWSER__) {
     throw new Error(
-      `ESM build of renderToStream() does not support renderToNodeStream(). ` +
+      `Browser build of renderToStream() does not support renderToNodeStream(). ` +
         `Use pipeToNodeWritable() with an existing Node.js Writable stream ` +
         `instance instead.`,
     )
   }
 
+  const stream = new Readable({ read() {} })
   return renderToSimpleStream(input, context, stream)
 }
 
