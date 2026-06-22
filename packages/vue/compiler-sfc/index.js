@@ -1,3 +1,3 @@
-module.exports = require('@vue/compiler-sfc')
+export * from '@vue/compiler-sfc'
 
-require('./register-ts.js')
+import './register-ts.js'

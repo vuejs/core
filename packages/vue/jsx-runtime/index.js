@@ -1,4 +1,4 @@
-const { h, Fragment } = require('vue')
+import { Fragment, h } from 'vue'
 
 function jsx(type, props, key) {
   const { children } = props
@@ -9,7 +9,4 @@ function jsx(type, props, key) {
   return h(type, props, children)
 }
 
-exports.jsx = jsx
-exports.jsxs = jsx
-exports.jsxDEV = jsx
-exports.Fragment = Fragment
+export { Fragment, jsx, jsx as jsxs, jsx as jsxDEV }
