@@ -1,4 +1,4 @@
-import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
+import { warn } from '@vue/runtime-core'
 import { canSetValueDirectly, includeBooleanAttr } from '@vue/shared'
 import { unsafeToTrustedHTML } from '../nodeOps'
 
@@ -63,27 +63,6 @@ export function patchDOMProp(
       // e.g. <img :width="null">
       value = 0
       needRemove = true
-    }
-  } else {
-    if (
-      __COMPAT__ &&
-      value === false &&
-      compatUtils.isCompatEnabled(
-        DeprecationTypes.ATTR_FALSE_VALUE,
-        parentComponent,
-      )
-    ) {
-      const type = typeof el[key]
-      if (type === 'string' || type === 'number') {
-        __DEV__ &&
-          compatUtils.warnDeprecation(
-            DeprecationTypes.ATTR_FALSE_VALUE,
-            parentComponent,
-            key,
-          )
-        value = type === 'number' ? 0 : ''
-        needRemove = true
-      }
     }
   }
 

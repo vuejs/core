@@ -1,12 +1,5 @@
-import {
-  type ComponentInternalInstance,
-  DeprecationTypes,
-  type Directive,
-  type LegacyConfig,
-  compatUtils,
-  getCurrentInstance,
-} from '@vue/runtime-core'
-import { hyphenate, isArray } from '@vue/shared'
+import type { Directive } from '@vue/runtime-core'
+import { hyphenate } from '@vue/shared'
 
 const systemModifiers = ['ctrl', 'shift', 'alt', 'meta'] as const
 type SystemModifiers = (typeof systemModifiers)[number]
@@ -92,25 +85,6 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
   fn: T & { _withKeys?: { [k: string]: T } },
   modifiers: string[],
 ): T => {
-  let globalKeyCodes: LegacyConfig['keyCodes']
-  let instance: ComponentInternalInstance | null = null
-  if (__COMPAT__) {
-    instance = getCurrentInstance()
-    if (
-      compatUtils.isCompatEnabled(DeprecationTypes.CONFIG_KEY_CODES, instance)
-    ) {
-      if (instance) {
-        globalKeyCodes = (instance.appContext.config as LegacyConfig).keyCodes
-      }
-    }
-    if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
-      compatUtils.warnDeprecation(
-        DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-        instance,
-      )
-    }
-  }
-
   const cache: { [k: string]: T } = fn._withKeys || (fn._withKeys = {})
   const cacheKey = modifiers.join('.')
 
@@ -130,32 +104,6 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
         )
       ) {
         return fn(event)
-      }
-
-      if (__COMPAT__) {
-        const keyCode = String(event.keyCode)
-        if (
-          compatUtils.isCompatEnabled(
-            DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-            instance,
-          ) &&
-          modifiers.some(mod => mod == keyCode)
-        ) {
-          return fn(event)
-        }
-        if (globalKeyCodes) {
-          for (const mod of modifiers) {
-            const codes = globalKeyCodes[mod]
-            if (codes) {
-              const matches = isArray(codes)
-                ? codes.some(code => String(code) === keyCode)
-                : String(codes) === keyCode
-              if (matches) {
-                return fn(event)
-              }
-            }
-          }
-        }
       }
     }) as T)
   )

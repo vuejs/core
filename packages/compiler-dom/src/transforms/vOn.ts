@@ -1,5 +1,4 @@
 import {
-  CompilerDeprecationTypes,
   type DirectiveTransform,
   type ExpressionNode,
   NodeTypes,
@@ -7,7 +6,6 @@ import {
   type SourceLocation,
   type TransformContext,
   transformOn as baseTransform,
-  checkCompatEnabled,
   createCallExpression,
   createCompoundExpression,
   createObjectProperty,
@@ -49,18 +47,7 @@ export const resolveModifiers = (
   for (let i = 0; i < modifiers.length; i++) {
     const modifier = modifiers[i].content
 
-    if (
-      __COMPAT__ &&
-      modifier === 'native' &&
-      context &&
-      checkCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
-        context,
-        loc,
-      )
-    ) {
-      eventOptionModifiers.push(modifier)
-    } else if (isEventOptionModifier(modifier)) {
+    if (isEventOptionModifier(modifier)) {
       // eventOptionModifiers: modifiers for addEventListener() options,
       // e.g. .passive & .capture
       eventOptionModifiers.push(modifier)

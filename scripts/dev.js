@@ -39,15 +39,16 @@ const {
 const format = rawFormat || 'global'
 const targets = positionals.length ? positionals : ['vue']
 
-const outputFormat = format.startsWith('global')
-  ? 'iife'
-  : format === 'cjs'
-    ? 'cjs'
-    : 'es'
+const outputFormat = format.startsWith('global') ? 'iife' : 'es'
 
-const postfix = format.endsWith('-runtime')
-  ? `runtime.${format.replace(/-runtime$/, '')}`
-  : format
+const postfix =
+  format === 'esm'
+    ? ''
+    : format === 'esm-runtime'
+      ? 'runtime'
+      : format.endsWith('-runtime')
+        ? `runtime.${format.replace(/-runtime$/, '')}`
+        : format
 
 const privatePackages = fs.readdirSync('packages-private')
 
@@ -59,19 +60,21 @@ for (const target of targets) {
   const pkg = require(`${pkgBasePath}/package.json`)
   const isVueEsmBrowserVapor =
     pkg.name === 'vue' && format === 'esm-browser-vapor'
+  const base = target
+  const name = isVueEsmBrowserVapor ? `runtime-with-vapor.esm-browser` : postfix
   const outfile = resolve(
     __dirname,
-    `${pkgBasePath}/dist/${target === 'vue-compat' ? `vue` : target}.${
-      isVueEsmBrowserVapor ? `runtime-with-vapor.esm-browser` : postfix
-    }.${prod ? `prod.` : ``}js`,
+    `${pkgBasePath}/dist/${base}${name ? `.${name}` : ``}.${
+      prod ? `prod.` : ``
+    }js`,
   )
   const relativeOutfile = relative(process.cwd(), outfile)
 
   let entryFile = 'index.ts'
   if (pkg.name === 'vue') {
-    if (format === 'esm-browser-vapor' || format === 'esm-bundler-runtime') {
+    if (format === 'esm-browser-vapor' || format === 'esm-runtime') {
       entryFile = 'runtime-with-vapor.ts'
-    } else if (format === 'esm-bundler') {
+    } else if (format === 'esm') {
       entryFile = 'index-with-vapor.ts'
     } else if (format.includes('runtime')) {
       entryFile = 'runtime.ts'
@@ -81,7 +84,7 @@ for (const target of targets) {
   /** @type {string[]} */
   let external = []
   if (!inlineDeps) {
-    if (format === 'cjs' || format.includes('esm-bundler')) {
+    if (format === 'esm' || format === 'esm-runtime') {
       external = [
         ...external,
         ...Object.keys(pkg.dependencies || {}),
@@ -111,7 +114,7 @@ for (const target of targets) {
         'then-pug',
         'then-jade',
       ]
-      if (format === 'cjs' || format.includes('esm-bundler')) {
+      if (format === 'esm' || format === 'esm-runtime') {
         external.push('fs', 'vm', 'crypto')
       }
     }
@@ -119,20 +122,17 @@ for (const target of targets) {
 
   /** @type {import('rolldown').Plugin[]} */
   const plugins = []
-  if (format !== 'cjs' && pkg.buildOptions?.enableNonBrowserBranches) {
+  if (pkg.buildOptions?.enableNonBrowserBranches) {
     plugins.push(polyfillNode())
   }
 
-  const platform = format === 'cjs' ? 'node' : 'browser'
-  const resolveOptions =
-    format === 'cjs'
-      ? undefined
-      : {
-          alias: {
-            // Alias built-in fs to a shim for browser builds.
-            fs: fsShimPath,
-          },
-        }
+  const platform = 'browser'
+  const resolveOptions = {
+    alias: {
+      // Alias built-in fs to a shim for browser builds.
+      fs: fsShimPath,
+    },
+  }
   /** @type {import('rolldown').WatchOptions} */
   const config = {
     input: resolve(__dirname, `${pkgBasePath}/src/${entryFile}`),
@@ -156,15 +156,11 @@ for (const target of targets) {
         __DEV__: prod ? `false` : `true`,
         __TEST__: `false`,
         __E2E_TEST__: `false`,
-        __BROWSER__: String(
-          format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches,
-        ),
+        __BROWSER__: String(!pkg.buildOptions?.enableNonBrowserBranches),
         __GLOBAL__: String(format === 'global'),
-        __ESM_BUNDLER__: String(format.includes('esm-bundler')),
+        __ESM_BUNDLER__: String(format === 'esm' || format === 'esm-runtime'),
         __ESM_BROWSER__: String(format.includes('esm-browser')),
-        __CJS__: String(format === 'cjs'),
         __SSR__: String(format !== 'global'),
-        __COMPAT__: String(target === 'vue-compat'),
         __FEATURE_SUSPENSE__: `true`,
         __FEATURE_OPTIONS_API__: `true`,
         __FEATURE_PROD_DEVTOOLS__: `false`,

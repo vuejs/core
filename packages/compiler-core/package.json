@@ -2,33 +2,21 @@
   "name": "@vue/compiler-core",
   "version": "3.6.0-beta.16",
   "description": "@vue/compiler-core",
-  "main": "index.js",
-  "module": "dist/compiler-core.esm-bundler.js",
-  "types": "dist/compiler-core.d.ts",
+  "type": "module",
   "files": [
-    "index.js",
     "dist"
   ],
   "exports": {
     ".": {
       "types": "./dist/compiler-core.d.ts",
-      "node": {
-        "production": "./dist/compiler-core.cjs.prod.js",
-        "development": "./dist/compiler-core.cjs.js",
-        "default": "./index.js"
-      },
-      "module": "./dist/compiler-core.esm-bundler.js",
-      "import": "./dist/compiler-core.esm-bundler.js",
-      "require": "./index.js"
+      "default": "./dist/compiler-core.js"
     },
     "./*": "./*"
   },
   "buildOptions": {
     "name": "VueCompilerCore",
-    "compat": true,
     "formats": [
-      "esm-bundler",
-      "cjs"
+      "esm"
     ]
   },
   "repository": {

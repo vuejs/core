@@ -992,7 +992,7 @@ function importSourceToScope(
       resolved = resolveExt(filename, fs)
     } else {
       // module or aliased import - use full TS resolution, only supported in Node
-      if (!__CJS__) {
+      if (__ESM_BROWSER__) {
         return ctx.error(
           `Type import from non-relative sources is not supported in the browser build.`,
           node,
@@ -1013,7 +1013,7 @@ function importSourceToScope(
       }
       resolved = resolveWithTS(scope.filename, source, ts, fs)
     }
-    if (!resolved && source[0] === '.' && __CJS__) {
+    if (!resolved && source[0] === '.' && !__ESM_BROWSER__) {
       if (!ts) {
         if (loadTS) ts = loadTS()
       }
@@ -1090,7 +1090,7 @@ function resolveWithTS(
   ts: typeof TS,
   fs: FS,
 ): string | undefined {
-  if (!__CJS__) return
+  if (__ESM_BROWSER__) return
 
   // 1. resolve tsconfig.json
   const configPath = ts.findConfigFile(containingFile, fs.fileExists)

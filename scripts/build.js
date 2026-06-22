@@ -5,17 +5,17 @@ Produces production builds and stitches together d.ts files.
 
 To specify the package to build, simply pass its name and the desired build
 formats to output (defaults to `buildOptions.formats` specified in that package,
-or ["esm-bundler", "cjs"]):
+or ["esm"]):
 
 ```
 # name supports fuzzy match. will build all packages with name containing "dom":
 nr build dom
 
 # specify the format to output
-nr build vue -f cjs
+nr build vue -f esm
 
 # to specify multiple formats, separate with "+":
-nr build vue -f esm-bundler+esm-browser
+nr build vue -f esm+esm-browser
 ```
 */
 
@@ -197,8 +197,18 @@ function createConfigsForTarget(target) {
         resolvedFormats = formats.filter(f => pkgFormats.includes(f))
       }
     }
-    if (!resolvedFormats.length) {
-      return
+    // When a single target is explicitly named (e.g. `build.js -f esm-browser
+    // reactivity`), honor the requested formats even if the package does not
+    // declare them. This lets tooling build on-demand bundles that are not part
+    // of the published output (e.g. reactivity's esm-browser bundle for
+    // benchmarks). Fuzzy/multi-target builds keep intersecting with declared
+    // formats so they don't accidentally emit unsupported formats.
+    if (!resolvedFormats || !resolvedFormats.length) {
+      if (!isNegation && targets.length === 1) {
+        resolvedFormats = formats
+      } else {
+        return
+      }
     }
   }
 
