@@ -510,24 +510,6 @@ importers:
         specifier: '*'
         version: 5.6.3
 
-  packages/vue-compat:
-    dependencies:
-      '@babel/parser':
-        specifier: 'catalog:'
-        version: 7.29.7
-      entities:
-        specifier: 'catalog:'
-        version: 7.0.1
-      estree-walker:
-        specifier: 'catalog:'
-        version: 2.0.2
-      source-map-js:
-        specifier: 'catalog:'
-        version: 1.2.1
-      vue:
-        specifier: workspace:*
-        version: link:../vue
-
 packages:
 
   '@antfu/utils@0.7.10':
@@ -3268,10 +3250,6 @@ packages:
   postcss-value-parser@4.2.0:
     resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
 
-  postcss@8.5.14:
-    resolution: {integrity: sha512-SoSL4+OSEtR99LHFZQiJLkT59C5B1amGO1NzTwj7TT1qCUgUO6hxOvzkOYxD+vMrXBM3XJIKzokoERdqQq/Zmg==}
-    engines: {node: ^10 || ^12 || >=14}
-
   postcss@8.5.19:
     resolution: {integrity: sha512-Mz8SaolMd8nB+G13WkORcxQKHZ/NE4xXevtkJHVuG+guo9/wYKlIMTKAqGdEmYOXR2ijPjTYNHssizdaVSUNdQ==}
     engines: {node: ^10 || ^12 || >=14}
@@ -4726,7 +4704,7 @@ snapshots:
       '@oxc-project/runtime': 0.129.0
       '@oxc-project/types': 0.129.0
       lightningcss: 1.32.0
-      postcss: 8.5.14
+      postcss: 8.5.19
     optionalDependencies:
       '@types/node': 24.13.3
       fsevents: 2.3.3
@@ -4738,7 +4716,7 @@ snapshots:
       '@oxc-project/runtime': 0.138.0
       '@oxc-project/types': 0.138.0
       lightningcss: 1.32.0
-      postcss: 8.5.14
+      postcss: 8.5.19
     optionalDependencies:
       '@types/node': 24.13.3
       fsevents: 2.3.3
@@ -4835,7 +4813,7 @@ snapshots:
       '@vue/shared': 3.6.0-beta.17
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.14
+      postcss: 8.5.19
       source-map-js: 1.2.1
 
   '@vue/compiler-ssr@3.6.0-beta.17':
@@ -5952,12 +5930,6 @@ snapshots:
 
   postcss-value-parser@4.2.0: {}
 
-  postcss@8.5.14:
-    dependencies:
-      nanoid: 3.3.12
-      picocolors: 1.1.1
-      source-map-js: 1.2.1
-
   postcss@8.5.19:
     dependencies:
       nanoid: 3.3.12
@@ -6487,7 +6459,7 @@ snapshots:
   vite@5.4.21(@types/node@24.13.3)(lightningcss@1.32.0)(sass@1.101.0):
     dependencies:
       esbuild: 0.21.5
-      postcss: 8.5.14
+      postcss: 8.5.19
       rollup: 4.60.3
     optionalDependencies:
       '@types/node': 24.13.3

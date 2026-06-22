@@ -140,6 +140,7 @@ export { MoveType } from './renderer'
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
 import { warn as _warn } from './warning'
+import { NOOP } from '@vue/shared'
 export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
 
 /** @internal */
@@ -452,54 +453,6 @@ const _ssrUtils: {
  * @internal
  */
 export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
-
-// 2.x COMPAT ------------------------------------------------------------------
-
-import { DeprecationTypes as _DeprecationTypes } from './compat/compatConfig'
-export type { CompatVue } from './compat/global'
-export type { LegacyConfig } from './compat/globalConfig'
-
-import { warnDeprecation } from './compat/compatConfig'
-import { createCompatVue } from './compat/global'
-import {
-  checkCompatEnabled,
-  isCompatEnabled,
-  softAssertCompatEnabled,
-} from './compat/compatConfig'
-import { resolveFilter as _resolveFilter } from './helpers/resolveAssets'
-import { NOOP } from '@vue/shared'
-
-/**
- * @internal only exposed in compat builds
- */
-export const resolveFilter: typeof _resolveFilter | null = __COMPAT__
-  ? _resolveFilter
-  : null
-
-const _compatUtils: {
-  warnDeprecation: typeof warnDeprecation
-  createCompatVue: typeof createCompatVue
-  isCompatEnabled: typeof isCompatEnabled
-  checkCompatEnabled: typeof checkCompatEnabled
-  softAssertCompatEnabled: typeof softAssertCompatEnabled
-} = {
-  warnDeprecation,
-  createCompatVue,
-  isCompatEnabled,
-  checkCompatEnabled,
-  softAssertCompatEnabled,
-}
-
-/**
- * @internal only exposed in compat builds.
- */
-export const compatUtils = (
-  __COMPAT__ ? _compatUtils : null
-) as typeof _compatUtils
-
-export const DeprecationTypes = (
-  __COMPAT__ ? _DeprecationTypes : null
-) as typeof _DeprecationTypes
 
 // VAPOR -----------------------------------------------------------------------
 

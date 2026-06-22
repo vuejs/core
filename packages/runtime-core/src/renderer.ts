@@ -101,8 +101,6 @@ import {
 } from './devtools'
 import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
-import { isCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes } from './compat/compatConfig'
 import type { VaporInteropInterface } from './apiCreateApp'
 import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
 import type { ComponentCustomElementInterface } from './component'
@@ -1316,17 +1314,8 @@ function baseCreateRenderer(
     namespace: ElementNamespace,
     optimized,
   ) => {
-    // 2.x compat may pre-create the component instance before actually
-    // mounting
-    const compatMountInstance =
-      __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
-    const instance: ComponentInternalInstance =
-      compatMountInstance ||
-      (initialVNode.component = createComponentInstance(
-        initialVNode,
-        parentComponent,
-        parentSuspense,
-      ))
+    const instance: ComponentInternalInstance = (initialVNode.component =
+      createComponentInstance(initialVNode, parentComponent, parentSuspense))
 
     if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)
@@ -1343,14 +1332,12 @@ function baseCreateRenderer(
     }
 
     // resolve props and slots for setup context
-    if (!(__COMPAT__ && compatMountInstance)) {
-      if (__DEV__) {
-        startMeasure(instance, `init`)
-      }
-      setupComponent(instance, false, optimized)
-      if (__DEV__) {
-        endMeasure(instance, `init`)
-      }
+    if (__DEV__) {
+      startMeasure(instance, `init`)
+    }
+    setupComponent(instance, false, optimized)
+    if (__DEV__) {
+      endMeasure(instance, `init`)
     }
 
     // avoid hydration for hmr updating
@@ -1522,12 +1509,6 @@ function baseCreateRenderer(
         ) {
           invokeVNodeHook(vnodeHook, parent, initialVNode)
         }
-        if (
-          __COMPAT__ &&
-          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-        ) {
-          instance.emit('hook:beforeMount')
-        }
         toggleRecurse(instance, true)
 
         if (el && hydrateNode) {
@@ -1620,16 +1601,6 @@ function baseCreateRenderer(
             parentSuspense,
           )
         }
-        if (
-          __COMPAT__ &&
-          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-        ) {
-          queuePostRenderEffect(
-            () => instance.emit('hook:mounted'),
-            undefined,
-            parentSuspense,
-          )
-        }
 
         // activated hook for keep-alive roots.
         // #1742 activated hook must be accessed after first render
@@ -1643,16 +1614,6 @@ function baseCreateRenderer(
         ) {
           instance.a &&
             queuePostRenderEffect(instance.a, undefined, parentSuspense)
-          if (
-            __COMPAT__ &&
-            isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-          ) {
-            queuePostRenderEffect(
-              () => instance.emit('hook:activated'),
-              undefined,
-              parentSuspense,
-            )
-          }
         }
         instance.isMounted = true
 
@@ -1716,12 +1677,6 @@ function baseCreateRenderer(
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
           invokeVNodeHook(vnodeHook, parent, next, vnode)
         }
-        if (
-          __COMPAT__ &&
-          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-        ) {
-          instance.emit('hook:beforeUpdate')
-        }
         toggleRecurse(instance, true)
 
         // render
@@ -1767,16 +1722,6 @@ function baseCreateRenderer(
         if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
           queuePostRenderEffect(
             () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
-            undefined,
-            parentSuspense,
-          )
-        }
-        if (
-          __COMPAT__ &&
-          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-        ) {
-          queuePostRenderEffect(
-            () => instance.emit('hook:updated'),
             undefined,
             parentSuspense,
           )
@@ -2610,13 +2555,6 @@ function baseCreateRenderer(
       invokeArrayFns(bum)
     }
 
-    if (
-      __COMPAT__ &&
-      isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-    ) {
-      instance.emit('hook:beforeDestroy')
-    }
-
     // stop effects in component scope
     scope.stop()
 
@@ -2634,16 +2572,6 @@ function baseCreateRenderer(
     // unmounted hook
     if (um) {
       queuePostRenderEffect(um, undefined, parentSuspense)
-    }
-    if (
-      __COMPAT__ &&
-      isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-    ) {
-      queuePostRenderEffect(
-        () => instance.emit('hook:destroyed'),
-        undefined,
-        parentSuspense,
-      )
     }
     queuePostRenderEffect(
       () => (instance.isUnmounted = true),

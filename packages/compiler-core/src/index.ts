@@ -77,11 +77,3 @@ export { transformVBindShorthand } from './transforms/transformVBindShorthand'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { getConstantType } from './transforms/cacheStatic'
 export { generateCodeFrame } from '@vue/shared'
-
-// v2 compat only
-export {
-  checkCompatEnabled,
-  warnDeprecation,
-  CompilerDeprecationTypes,
-  type CompilerCompatOptions,
-} from './compat/compatConfig'

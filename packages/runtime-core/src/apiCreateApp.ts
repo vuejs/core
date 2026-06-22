@@ -29,7 +29,6 @@ import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
 import { type SuspenseBoundary, type TransitionHooks, version } from '.'
-import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
@@ -573,15 +572,6 @@ export function createAppAPI<HostElement, Comp = Component>(
         }
       },
     })
-
-    if (__COMPAT__) {
-      installAppCompatProperties(
-        app,
-        context,
-        // vapor doesn't have compat mode so this is always passed
-        render!,
-      )
-    }
 
     return app
   }
