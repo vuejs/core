@@ -56,16 +56,15 @@ export function withOwnedSlotBoundary<R>(
 export function trackSlotBoundaryDirtying(fragment: VaporFragment): void {
   const boundary = currentSlotBoundary
   if (!boundary) return
-  let prevValid = isValidBlock(fragment)
+
+  let prevValid: boolean
   ;(fragment.onBeforeUpdate ||= []).push(() => {
     prevValid = isValidBlock(fragment)
   })
   ;(fragment.onUpdated ||= []).push(() => {
-    const valid = isValidBlock(fragment)
-    if (valid !== prevValid) {
+    if (isValidBlock(fragment) !== prevValid) {
       boundary.markDirty()
     }
-    prevValid = valid
   })
 }
 
