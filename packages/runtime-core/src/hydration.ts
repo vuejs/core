@@ -65,19 +65,19 @@ const logMismatchError = (
   }
   hasLoggedMismatchError = true
 
-  // Only route through handleError when there is an explicit consumer:
-  // without one, it would surface an "Unhandled error" warning on top of
-  // the per-mismatch warn() calls already produced at the call sites.
-  if (
-    instance &&
-    (instance.appContext.config.errorHandler || hasErrorCaptured(instance))
-  ) {
-    handleError(
-      new Error('Hydration completed but contains mismatches.'),
-      instance,
-      ErrorCodes.HYDRATION_MISMATCH,
-      false,
-    )
+  const err = new Error('Hydration completed but contains mismatches.')
+  const hasConsumer =
+    !!instance &&
+    (!!instance.appContext.config.errorHandler || hasErrorCaptured(instance))
+
+  if (hasConsumer) {
+    // Route through Vue's error handling pipeline so that
+    // onErrorCaptured and app.config.errorHandler can catch it.
+    handleError(err, instance, ErrorCodes.HYDRATION_MISMATCH, false)
+  } else if (!__TEST__) {
+    // Preserve the original default behavior: a production console.error
+    // so SSR apps that have not opted in still see the mismatch signal.
+    console.error(err.message)
   }
 }
 
