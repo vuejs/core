@@ -2,25 +2,16 @@
   "name": "@vue/compat",
   "version": "3.6.0-beta.16",
   "description": "Vue 3 compatibility build for Vue 2",
-  "main": "index.js",
-  "module": "dist/vue.runtime.esm-bundler.js",
+  "type": "module",
   "unpkg": "dist/vue.global.js",
   "jsdelivr": "dist/vue.global.js",
   "files": [
-    "index.js",
     "dist"
   ],
   "exports": {
     ".": {
-      "types": "./dist/vue.d.ts",
-      "node": {
-        "production": "./dist/vue.cjs.prod.js",
-        "development": "./dist/vue.cjs.js",
-        "default": "./index.js"
-      },
-      "module": "./dist/vue.esm-bundler.js",
-      "import": "./dist/vue.esm-bundler.js",
-      "require": "./index.js"
+      "types": "./dist/vue-compat.d.ts",
+      "default": "./dist/vue.js"
     },
     "./*": "./*"
   },
@@ -29,9 +20,8 @@
     "filename": "vue",
     "compat": true,
     "formats": [
-      "esm-bundler",
-      "esm-bundler-runtime",
-      "cjs",
+      "esm",
+      "esm-runtime",
       "global",
       "global-runtime",
       "esm-browser",
