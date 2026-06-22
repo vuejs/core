@@ -115,6 +115,55 @@ describe('compiler: expression', () => {
       expect(code).contains('_setProp(n2, "id", _foo + _foo_bar)')
     })
 
+    test('repeated expression replacement skips string literals', () => {
+      const { code } = compileWithExpression(`
+        <div :id="foo + bar"></div>
+        <div :id="foo + bar"></div>
+        <div :title="'foo + bar' + baz"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _foo_bar = _ctx.foo + _ctx.bar')
+      expect(code).contains(`_setProp(n2, "title", 'foo + bar' + _ctx.baz)`)
+      expect(code).not.contains(`'_foo_bar'`)
+    })
+
+    test('repeated expression replacement respects identifier boundaries', () => {
+      const { code } = compileWithExpression(`
+        <div :id="foo + bar"></div>
+        <div :id="foo + bar"></div>
+        <div :title="foo + barbaz"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('_setProp(n2, "title", _foo + _ctx.barbaz)')
+      expect(code).not.contains('_ctx.foo_barbaz')
+    })
+
+    test('overlapping repeated expressions avoid stale declarations', () => {
+      const { code } = compileWithExpression(`
+        <div :id="foo + bar"></div>
+        <div :id="foo + bar"></div>
+        <div :title="foo + bar + baz"></div>
+        <div :title="foo + bar + baz"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _foo_bar = _foo + _bar')
+      expect(code).contains('const _foo_bar_baz = _foo + _bar + _ctx.baz')
+      expect(code).contains('_setProp(n2, "title", _foo_bar_baz)')
+      expect(code).contains('_setProp(n3, "title", _foo_bar_baz)')
+    })
+
+    test('absorbed member expression declaration skips string literals', () => {
+      const { code } = compileWithExpression(`
+        <div :id="'foo_bar' + foo[bar] + baz"></div>
+        <div :id="'foo_bar' + foo[bar] + baz"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `const __foo_bar_foo_bar_baz = 'foo_bar' + _ctx.foo[_ctx.bar] + _ctx.baz`,
+      )
+      expect(code).not.contains(`'foo[bar]'`)
+    })
+
     test('repeated simple function calls', () => {
       const { code } = compileWithExpression(`
         <div :id="foo()"></div>
