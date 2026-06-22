@@ -19,7 +19,6 @@
     "name": "VueRuntimeDOM",
     "formats": [
       "esm",
-      "esm-browser",
       "global"
     ]
   },
