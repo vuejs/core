@@ -1606,7 +1606,7 @@ function renderVDOMSlot(
                 trackSlotVNodeUpdatesWithRefresh(
                   hydratedContent,
                   refreshSlotVNode,
-                  slotRoot ? notifyBeforeUpdate : undefined,
+                  notifyBeforeUpdate,
                 )
                 // Forwarded slot fragments that resolve to an empty SSR range
                 // should stay on that range instead of re-entering it through
@@ -1658,7 +1658,7 @@ function renderVDOMSlot(
               trackSlotVNodeUpdatesWithRefresh(
                 slotContent,
                 refreshSlotVNode,
-                slotRoot ? notifyBeforeUpdate : undefined,
+                notifyBeforeUpdate,
               )
               const prevRendered = contentState.rendered
               const prevIsVNode = isVNode(prevRendered)
@@ -2256,6 +2256,11 @@ function createVNodeChildrenFragment(
       frag.onUpdated.forEach(hook => hook())
     }
   }
+  const notifyBeforeUpdate = (): void => {
+    if (isMounted && frag.onBeforeUpdate) {
+      frag.onBeforeUpdate.forEach(hook => hook())
+    }
+  }
 
   const renderContent = () => {
     const prev = currentInstance
@@ -2264,6 +2269,7 @@ function createVNodeChildrenFragment(
       renderEffect(() => {
         runWithFragmentCtx(frag, () => {
           const nextChildren = render()
+          notifyBeforeUpdate()
           if (isHydrating) {
             nextChildren.forEach(vnode => hydrateVNode(vnode, parentComponent))
             currentChildren = nextChildren
@@ -2295,9 +2301,13 @@ function createVNodeChildrenFragment(
           } else if (!currentVNode) {
             currentChildren = nextChildren
             currentVNode = createVNode(Fragment, null, nextChildren)
-            trackSlotVNodeUpdatesWithRefresh(currentVNode, () => {
-              notifyUpdated(syncResolvedNodes(nextChildren))
-            })
+            trackSlotVNodeUpdatesWithRefresh(
+              currentVNode,
+              () => {
+                notifyUpdated(syncResolvedNodes(nextChildren))
+              },
+              notifyBeforeUpdate,
+            )
             if (nextChildren.length) {
               internals.mc(
                 nextChildren,
@@ -2312,9 +2322,13 @@ function createVNodeChildrenFragment(
             }
           } else {
             const nextVNode = createVNode(Fragment, null, nextChildren)
-            trackSlotVNodeUpdatesWithRefresh(nextVNode, () => {
-              notifyUpdated(syncResolvedNodes(nextChildren))
-            })
+            trackSlotVNodeUpdatesWithRefresh(
+              nextVNode,
+              () => {
+                notifyUpdated(syncResolvedNodes(nextChildren))
+              },
+              notifyBeforeUpdate,
+            )
             internals.pc(
               currentVNode,
               nextVNode,
@@ -2364,9 +2378,13 @@ function createVNodeChildrenFragment(
     if (!isMounted) {
       startRenderEffect()
       if (currentVNode) {
-        trackSlotVNodeUpdatesWithRefresh(currentVNode, () => {
-          notifyUpdated(syncResolvedNodes(currentChildren))
-        })
+        trackSlotVNodeUpdatesWithRefresh(
+          currentVNode,
+          () => {
+            notifyUpdated(syncResolvedNodes(currentChildren))
+          },
+          notifyBeforeUpdate,
+        )
       }
       if (currentChildren.length) {
         internals.mc(

@@ -204,8 +204,9 @@ describe('vdomInterop', () => {
       const host = document.createElement('div')
       app.mount(host)
 
-      const onUpdated = vi.fn()
-      frag.onUpdated = [onUpdated]
+      const calls: string[] = []
+      frag.onBeforeUpdate = [() => calls.push('beforeUpdate')]
+      frag.onUpdated = [() => calls.push('updated')]
 
       const getNodes = () =>
         (Array.isArray(frag.nodes) ? frag.nodes : [frag.nodes]).filter(Boolean)
@@ -222,7 +223,7 @@ describe('vdomInterop', () => {
       expect(getNodes().some((n: Node) => n instanceof HTMLDivElement)).toBe(
         true,
       )
-      expect(onUpdated).toHaveBeenCalled()
+      expect(calls).toEqual(['beforeUpdate', 'updated'])
     })
 
     test('mounts vnode slot content after active fallback without reusing invalid vnode content', async () => {
