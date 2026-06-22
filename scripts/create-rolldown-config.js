@@ -18,7 +18,7 @@ const consolidatePkg = require('@vue/consolidate/package.json')
 
 const packagesDir = path.resolve(__dirname, '../packages')
 
-/** @typedef {'cjs' | 'esm-bundler' | 'global' | 'global-runtime' | 'esm-browser' | 'esm-bundler-runtime' | 'esm-browser-runtime' | 'esm-browser-vapor'} PackageFormat */
+/** @typedef {'esm' | 'global' | 'global-runtime' | 'esm-browser' | 'esm-runtime' | 'esm-browser-runtime' | 'esm-browser-vapor'} PackageFormat */
 
 /**
  * @param {{
@@ -60,25 +60,21 @@ export function createConfigsForPackage({
 
   /** @type {Record<PackageFormat, import('rolldown').OutputOptions>} */
   const outputConfigs = {
-    'esm-bundler': {
-      file: resolve(`dist/${name}.esm-bundler.js`),
+    esm: {
+      file: resolve(`dist/${name}.js`),
       format: 'es',
     },
     'esm-browser': {
       file: resolve(`dist/${name}.esm-browser.js`),
       format: 'es',
     },
-    cjs: {
-      file: resolve(`dist/${name}.cjs.js`),
-      format: 'cjs',
-    },
     global: {
       file: resolve(`dist/${name}.global.js`),
       format: 'iife',
     },
     // runtime-only builds, for main "vue" package only
-    'esm-bundler-runtime': {
-      file: resolve(`dist/${name}.runtime.esm-bundler.js`),
+    'esm-runtime': {
+      file: resolve(`dist/${name}.runtime.js`),
       format: 'es',
     },
     'esm-browser-runtime': {
@@ -98,10 +94,9 @@ export function createConfigsForPackage({
   }
 
   /** @type {PackageFormat[]} */
-  const resolvedFormats = (
-    formats ||
-    packageOptions.formats || ['esm-bundler', 'cjs']
-  ).filter((/** @type {PackageFormat} */ format) => outputConfigs[format])
+  const resolvedFormats = (formats || packageOptions.formats || ['esm']).filter(
+    (/** @type {PackageFormat} */ format) => outputConfigs[format],
+  )
 
   const packageConfigs = prodOnly
     ? []
@@ -111,9 +106,6 @@ export function createConfigsForPackage({
     resolvedFormats.forEach(format => {
       if (packageOptions.prod === false) {
         return
-      }
-      if (format === 'cjs') {
-        packageConfigs.push(createProductionConfig(format))
       }
       if (
         format === 'esm-browser-vapor' ||
@@ -138,10 +130,9 @@ export function createConfigsForPackage({
     }
 
     const isProductionBuild = /\.prod\.js$/.test(String(output.file) || '')
-    const isBundlerESMBuild = /esm-bundler/.test(format)
+    const isBundlerESMBuild = format === 'esm' || format === 'esm-runtime'
     const isBrowserESMBuild = /esm-browser/.test(format)
     const isServerRenderer = name === 'server-renderer'
-    const isCJSBuild = format === 'cjs'
     const isGlobalBuild = /global/.test(format)
     const isCompatPackage =
       pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
@@ -152,9 +143,6 @@ export function createConfigsForPackage({
 
     output.postBanner = banner
     output.exports = isCompatPackage ? 'auto' : 'named'
-    if (isCJSBuild) {
-      output.esModule = true
-    }
     output.sourcemap = sourceMap
 
     output.externalLiveBindings = false
@@ -168,9 +156,9 @@ export function createConfigsForPackage({
 
     let entryFile = 'index.ts'
     if (pkg.name === 'vue') {
-      if (format === 'esm-browser-vapor' || format === 'esm-bundler-runtime') {
+      if (format === 'esm-browser-vapor' || format === 'esm-runtime') {
         entryFile = 'runtime-with-vapor.ts'
-      } else if (format === 'esm-bundler') {
+      } else if (format === 'esm') {
         entryFile = 'index-with-vapor.ts'
       } else if (format.includes('runtime')) {
         entryFile = 'runtime.ts'
@@ -198,10 +186,10 @@ export function createConfigsForPackage({
         __GLOBAL__: String(isGlobalBuild),
         __ESM_BUNDLER__: String(isBundlerESMBuild),
         __ESM_BROWSER__: String(isBrowserESMBuild),
-        // is targeting Node (SSR)?
-        __CJS__: String(isCJSBuild),
+        // CJS builds have been dropped; always false now.
+        __CJS__: `false`,
         // need SSR-specific branches?
-        __SSR__: String(isCJSBuild || isBundlerESMBuild || isServerRenderer),
+        __SSR__: String(isBundlerESMBuild || isServerRenderer),
 
         // 2.x compat build
         __COMPAT__: String(isCompatBuild),
@@ -322,12 +310,7 @@ export function createConfigsForPackage({
     }
 
     function resolveNodePlugins() {
-      const nodePlugins =
-        (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||
-        packageOptions.enableNonBrowserBranches
-          ? [...(format === 'cjs' ? [] : [polyfillNode()])]
-          : []
-      return nodePlugins
+      return packageOptions.enableNonBrowserBranches ? [polyfillNode()] : []
     }
 
     return {
@@ -337,15 +320,14 @@ export function createConfigsForPackage({
       external: resolveExternal(),
       transform: {
         define: resolveDefine(),
-        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
+        target: isServerRenderer ? 'es2019' : 'es2016',
       },
       // IMPORTANT: the root tsconfig maps `vue` -> `runtime-with-vapor.ts` for TS usage.
       // For bundling we want `vue` to resolve to the normal entry to avoid pulling
       // runtime-vapor into non-vapor build graphs (e.g. server-renderer esm-browser).
       // this avoid MISSING_EXPORT errors for vapor-only exports.
       tsconfig: path.resolve(__dirname, '../tsconfig.rolldown.json'),
-      platform:
-        format === 'cjs' ? 'node' : isBundlerESMBuild ? 'neutral' : 'browser',
+      platform: isBundlerESMBuild ? 'neutral' : 'browser',
       resolve: {
         alias: entries,
       },
@@ -369,13 +351,6 @@ export function createConfigsForPackage({
         nativeMagicString: true,
       },
     }
-  }
-
-  function createProductionConfig(/** @type {PackageFormat} */ format) {
-    return createConfig(format, {
-      file: resolve(`dist/${name}.${format}.prod.js`),
-      format: outputConfigs[format].format,
-    })
   }
 
   function createMinifiedConfig(/** @type {PackageFormat} */ format) {
