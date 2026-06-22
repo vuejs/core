@@ -260,6 +260,10 @@ export function createConfigsForPackage({
         '@babel/parser',
         'estree-walker',
         'entities/lib/decode.js',
+        // node-only import in server-renderer's renderToStream, tree-shaken out
+        // of browser builds — listed here to suppress UNRESOLVED_IMPORT warnings
+        // (which are fatal in stricter CI/Netlify builds).
+        'node:stream',
       ]
 
       // we are bundling forked consolidate.js in compiler-sfc which dynamically
