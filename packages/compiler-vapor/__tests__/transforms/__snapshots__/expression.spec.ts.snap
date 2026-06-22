@@ -25,6 +25,22 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: expression > cache expressions > absorbed member expression declaration skips string literals 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    const __foo_bar_foo_bar_baz = 'foo_bar' + _ctx.foo[_ctx.bar] + _ctx.baz
+    _setProp(n0, "id", __foo_bar_foo_bar_baz)
+    _setProp(n1, "id", __foo_bar_foo_bar_baz)
+  })
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler: expression > cache expressions > cache variable used in both property shorthand and normal binding 1`] = `
 "import { setStyle as _setStyle, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -182,6 +198,29 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: expression > cache expressions > overlapping repeated expressions avoid stale declarations 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  const n3 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    const _bar = _ctx.bar
+    const _foo_bar_baz = _foo + _bar + _ctx.baz
+    const _foo_bar = _foo + _bar
+    _setProp(n0, "id", _foo_bar)
+    _setProp(n1, "id", _foo_bar)
+    _setProp(n2, "title", _foo_bar_baz)
+    _setProp(n3, "title", _foo_bar_baz)
+  })
+  return [n0, n1, n2, n3]
+}"
+`;
+
 exports[`compiler: expression > cache expressions > repeated expression in expressions 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>")
@@ -196,6 +235,43 @@ export function render(_ctx) {
     _setProp(n0, "id", _foo_bar)
     _setProp(n1, "id", _foo_bar)
     _setProp(n2, "id", _foo + _foo_bar)
+  })
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compiler: expression > cache expressions > repeated expression replacement respects identifier boundaries 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    const _foo_bar = _foo + _ctx.bar
+    _setProp(n0, "id", _foo_bar)
+    _setProp(n1, "id", _foo_bar)
+    _setProp(n2, "title", _foo + _ctx.barbaz)
+  })
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compiler: expression > cache expressions > repeated expression replacement skips string literals 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _renderEffect(() => {
+    const _foo_bar = _ctx.foo + _ctx.bar
+    _setProp(n0, "id", _foo_bar)
+    _setProp(n1, "id", _foo_bar)
+    _setProp(n2, "title", 'foo + bar' + _ctx.baz)
   })
   return [n0, n1, n2]
 }"
