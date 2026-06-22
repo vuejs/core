@@ -26,7 +26,7 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import type { StaticSlots } from './componentSlots'
-import { SlotFragment, isFragment } from './fragment'
+import { isFragment, isSlotFragment } from './fragment'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
@@ -300,7 +300,7 @@ export class VaporElement extends VueElementBase<
       // current owner rather than a stale DOM snapshot.
       if (
         replacement.usedFallback &&
-        block instanceof SlotFragment &&
+        isSlotFragment(block) &&
         block.customElementFallback
       ) {
         this._updateFragmentNodes(block.customElementFallback, replacements)

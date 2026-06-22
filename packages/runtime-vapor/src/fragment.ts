@@ -24,11 +24,10 @@ import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
   type SlotBoundaryContext,
   currentSlotBoundary,
-  getCurrentSlotBoundary,
   hasSlotFallback,
   setCurrentSlotBoundary,
   trackSlotBoundaryDirtying,
-  withOwnedSlotBoundary,
+  withSlotBoundary,
 } from './slotBoundary'
 import {
   hydrateDynamicFragmentAnchor,
@@ -243,18 +242,13 @@ export class DynamicFragment extends RenderContextFragment {
   inTransition?: boolean
   // Fallthrough attrs hooks register branch-owned effects on insert.
   hasFallthroughAttrs?: true
-  // Whether update() claims the SSR anchor itself during hydration.
-  // SlotFragment opts out: updateSlot owns its hydration timing.
-  readonly autoHydrate: boolean
   constructor(
     anchorLabel?: string,
     keyed: boolean = false,
     locate: boolean = true,
     trackSlotBoundary: boolean = false,
-    autoHydrate: boolean = true,
   ) {
     super(EMPTY_BLOCK)
-    this.autoHydrate = autoHydrate
     if (keyed) this.keyed = true
     if (
       isTransitionEnabled &&
@@ -272,6 +266,12 @@ export class DynamicFragment extends RenderContextFragment {
       if (__DEV__) this.anchorLabel = anchorLabel
     }
     if (trackSlotBoundary) trackSlotBoundaryDirtying(this)
+  }
+
+  // Whether update() claims the SSR anchor itself during hydration.
+  // SlotFragment opts out: updateSlot owns its hydration timing.
+  protected get autoHydrate(): boolean {
+    return true
   }
 
   update(render?: BlockFn, key: any = render, noScope: boolean = false): void {
@@ -438,7 +438,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   isSlot = true
   private disposed = false
   forwarded = false
-  parentSlotBoundary: SlotBoundaryContext | null = getCurrentSlotBoundary()
+  readonly parentSlotBoundary: SlotBoundaryContext | null = currentSlotBoundary
   // Custom elements with `shadowRoot: false` replace their native slot outlet
   // after mount. Keep the live fallback block on the fragment so CE slot sync
   // can preserve block ownership after the outlet node is gone.
@@ -449,54 +449,32 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   isRenderingFallback = false
   private content: Block = EMPTY_BLOCK
   private localFallback?: BlockFn
-  private isUpdatingSlot = false
-  private _slotFallbackBoundary?: SlotBoundaryContext
-  // Set for slot-root outlets (a <slot> that is itself the root of enclosing
-  // slot content): their exposed validity *is* that content's validity, so
-  // flips must dirty the enclosing boundary.
-  private notifyParent: boolean
-
-  constructor(notifyParent: boolean = false) {
-    // updateSlot owns hydration timing, so opt out of autoHydrate.
-    super(
-      isHydrating || __DEV__ ? 'slot' : undefined,
-      false,
-      false,
-      false,
-      false,
-    )
-    this.notifyParent = notifyParent
+  private isUpdating = false
+  private ownBoundary?: SlotBoundaryContext
+  // Slot-root outlets expose their content validity to the enclosing boundary.
+  constructor(private readonly notifyParentBoundary: boolean = false) {
+    super(isHydrating || __DEV__ ? 'slot' : undefined, false, false, false)
     if (!isHydrating) {
       this.insert = (parent, anchor) => this.insertSlot(parent, anchor)
     }
     this.remove = parent => this.removeSlot(parent)
   }
 
-  private ensureSlotFallbackBoundary(): SlotBoundaryContext {
-    if (this._slotFallbackBoundary) {
-      return this._slotFallbackBoundary
+  // updateSlot owns hydration timing, so opt out of autoHydrate.
+  protected get autoHydrate(): boolean {
+    return false
+  }
+
+  get boundary(): SlotBoundaryContext {
+    if (this.ownBoundary) {
+      return this.ownBoundary
     }
-    const owner = this
-    return (this._slotFallbackBoundary = {
-      get parent() {
-        return owner.parentSlotBoundary
-      },
+    return (this.ownBoundary = {
+      parent: this.parentSlotBoundary,
       getFallback: () => this.localFallback,
       run: (fn, scope) => this.runWithRenderCtx(fn, scope),
       markDirty: () => markSlotFallbackDirty(this),
     })
-  }
-
-  get fallbackBlock(): Block | null {
-    return this.activeFallback
-  }
-
-  get boundary(): SlotBoundaryContext {
-    return this.slotFallbackBoundary
-  }
-
-  get slotFallbackBoundary(): SlotBoundaryContext {
-    return this.ensureSlotFallbackBoundary()
   }
 
   private insertSlot(parent: ParentNode, anchor: Node | null): void {
@@ -541,20 +519,21 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   ): void {
     const prevLocalFallback = this.localFallback
     this.localFallback = fallback
-    const boundary = this.slotFallbackBoundary
+    const boundary = this.boundary
     const slotRender = render
-      ? () => withOwnedSlotBoundary(boundary, render)
+      ? () => withSlotBoundary(boundary, render)
       : () => EMPTY_BLOCK
-    this.isUpdatingSlot = true
+    this.isUpdating = true
     this.pendingRecheck = false
 
     try {
       const shouldForce = prevLocalFallback !== fallback
       if (isHydrating) {
+        const boundaryHasFallback = hasSlotFallback(boundary)
         withHydratingSlotBoundary(() => {
           const prev = isHydratingSlotFallbackActive()
           try {
-            if (hasSlotFallback(boundary)) {
+            if (boundaryHasFallback) {
               setCurrentHydratingSlotFallbackActive(true)
             }
             this.updateContent(slotRender, key)
@@ -566,7 +545,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
             // outer state before hydrateDynamicFragmentAnchor(); the surrounding
             // finally still restores nested callers when we leave this
             // boundary.
-            if (!hasSlotFallback(boundary) || contentValid) {
+            if (!boundaryHasFallback || contentValid) {
               setCurrentHydratingSlotFallbackActive(prev)
             }
             hydrateDynamicFragmentAnchor(this, !isValidBlock(this.nodes))
@@ -580,7 +559,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
       }
     } finally {
       this.pendingRecheck = false
-      this.isUpdatingSlot = false
+      this.isUpdating = false
     }
   }
 
@@ -597,7 +576,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   }
 
   isBusy(): boolean {
-    return this.isUpdatingSlot
+    return this.isUpdating
   }
 
   isDisposed(): boolean {
@@ -613,7 +592,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
   }
 
   notifyFallbackValidityChange(): void {
-    if (this.notifyParent && this.parentSlotBoundary) {
+    if (this.notifyParentBoundary && this.parentSlotBoundary) {
       this.parentSlotBoundary.markDirty()
     }
   }
