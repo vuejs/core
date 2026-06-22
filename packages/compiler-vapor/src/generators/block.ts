@@ -56,6 +56,7 @@ export function genBlockContent(
   context: CodegenContext,
   root?: boolean,
   genEffectsExtraFrag?: () => CodeFragment[],
+  skippedEffectIndexes?: Set<number>,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   const { dynamic, effect, operation, returns } = block
@@ -109,7 +110,7 @@ export function genBlockContent(
     }
 
     if (effectIndex < effectEnd) {
-      push(...genEffects(effect.slice(effectIndex, effectEnd), context))
+      push(...genEffectRange(effectIndex, effectEnd))
       effectIndex = effectEnd
     }
   }
@@ -154,7 +155,7 @@ export function genBlockContent(
     push(...genOperations(operation.slice(operationIndex), context))
   }
   if (effectIndex < effect.length) {
-    push(...genEffects(effect.slice(effectIndex), context, genEffectsExtraFrag))
+    push(...genEffectRange(effectIndex, effect.length, genEffectsExtraFrag))
   } else if (genEffectsExtraFrag) {
     push(...genEffects([], context, genEffectsExtraFrag))
   }
@@ -171,6 +172,28 @@ export function genBlockContent(
   resetBlock()
   context.singleUseAssetComponentNames = prevSingleUseAssetComponentNames
   return frag
+
+  function genEffectRange(
+    start: number,
+    end: number,
+    genExtraFrag?: () => CodeFragment[],
+  ): CodeFragment[] {
+    if (!skippedEffectIndexes) {
+      return genEffects(effect.slice(start, end), context, genExtraFrag)
+    }
+
+    const effects: typeof effect = []
+    for (let i = start; i < end; i++) {
+      if (!skippedEffectIndexes.has(i)) {
+        effects.push(effect[i])
+      }
+    }
+
+    if (effects.length || genExtraFrag) {
+      return genEffects(effects, context, genExtraFrag)
+    }
+    return []
+  }
 
   function genResolveAssets(
     kind: 'component' | 'directive',
