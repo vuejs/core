@@ -13,7 +13,7 @@ import { isHydrating } from './dom/hydration'
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
-  withOwnedSlotBoundary,
+  withSlotBoundary,
 } from './slotBoundary'
 import { SlotFragment } from './fragment'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
@@ -46,9 +46,7 @@ function getRedirectedBoundary(
     return boundary.redirected
   }
   return (boundary.redirected = {
-    get parent() {
-      return boundary.parent
-    },
+    parent: boundary.parent,
     getFallback: () => undefined,
     run: (fn, scope) => boundary.run(fn, scope),
     markDirty: () => boundary.markDirty(),
@@ -78,9 +76,7 @@ function renderSlotFallback(
   }
 
   const renderFallback = () =>
-    withOwnedSlotBoundary(getRedirectedBoundary(boundary), () =>
-      localFallback(),
-    )
+    withSlotBoundary(getRedirectedBoundary(boundary), localFallback)
   const local = boundary.run(() => scope.run(renderFallback) || [], scope)
   if (isValidBlock(local)) {
     return local
@@ -99,7 +95,7 @@ export interface SlotFallbackState {
   // The committed fallback block, or null while content is exposed.
   activeFallback: Block | null
   // Detached scope owning the active fallback's effects (see
-  // renderSlotFallbackState); stopped by clearSlotFallback.
+  // renderFallbackInScope); stopped by clearSlotFallback.
   fallbackScope?: EffectScope
   // Validity of the exposed branch as of the last recheck; undefined before
   // the first recheck. Flips trigger notifyFallbackValidityChange.
@@ -167,11 +163,7 @@ export function markSlotFallbackDirty(state: SlotFallbackState): void {
   if (state.isDisposed()) {
     return
   }
-  if (state.isRenderingFallback) {
-    state.pendingRecheck = true
-    return
-  }
-  if (state.isBusy()) {
+  if (state.isRenderingFallback || state.isBusy()) {
     state.pendingRecheck = true
     return
   }
@@ -197,7 +189,7 @@ function clearSlotFallback(state: SlotFallbackState): void {
 // not die with whatever branch scope happens to be active when a recheck
 // fires, so its lifetime is managed manually (stopped by clearSlotFallback,
 // or right here when the render throws or yields nothing).
-function renderSlotFallbackState(
+function renderFallbackInScope(
   state: SlotFallbackState,
 ): { block: Block; scope: EffectScope } | undefined {
   const scope = new EffectScope(true)
@@ -269,7 +261,7 @@ function renderAndCommitSlotFallback(
   state: SlotFallbackState,
   hadFallback: boolean,
 ): void {
-  const result = renderSlotFallbackState(state)
+  const result = renderFallbackInScope(state)
   clearSlotFallback(state)
   if (result) {
     commitSlotFallback(state, result.block, result.scope, !hadFallback)
@@ -304,14 +296,9 @@ export function recheckSlotFallback(
   const fallback = state.activeFallback
   const fallbackValid = fallback ? isValidBlock(fallback) : false
   const contentValid = state.isContentValid()
-  // This tracks the validity of the currently exposed branch, whether it is
-  // slot content or fallback.
-  const prevNodesValid =
-    state.lastNodesValid === undefined
-      ? fallback
-        ? fallbackValid
-        : contentValid
-      : state.lastNodesValid
+  // Validity of the currently exposed branch (fallback if active, else content).
+  const exposedValid = fallback ? fallbackValid : contentValid
+  const prevNodesValid = state.lastNodesValid ?? exposedValid
   if (!force && contentValid && !fallback && prevNodesValid) {
     state.syncNodes()
     state.lastNodesValid = true

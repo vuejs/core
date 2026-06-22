@@ -25,10 +25,6 @@ export interface SlotBoundaryContext {
 
 export let currentSlotBoundary: SlotBoundaryContext | null = null
 
-export function getCurrentSlotBoundary(): SlotBoundaryContext | null {
-  return currentSlotBoundary
-}
-
 export function setCurrentSlotBoundary(
   b: SlotBoundaryContext | null,
 ): SlotBoundaryContext | null {
@@ -39,7 +35,7 @@ export function setCurrentSlotBoundary(
   }
 }
 
-export function withOwnedSlotBoundary<R>(
+export function withSlotBoundary<R>(
   boundary: SlotBoundaryContext | null,
   fn: () => R,
 ): R {

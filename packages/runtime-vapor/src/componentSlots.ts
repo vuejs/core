@@ -39,7 +39,7 @@ import {
   type VaporFragment,
   isInteropFragment,
 } from './fragment'
-import { getCurrentSlotBoundary, withOwnedSlotBoundary } from './slotBoundary'
+import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 import {
@@ -359,7 +359,7 @@ export function createSlot(
         if (once) setSlotProps()
         else renderEffect(setSlotProps)
         if (fallback) {
-          withOwnedSlotBoundary(slotFragment!.parentSlotBoundary, () => {
+          withSlotBoundary(slotFragment!.parentSlotBoundary, () => {
             const fallbackBlock = fallback()
             // Keep the live fallback block on the SlotFragment itself. The
             // native slot outlet is temporary and gets removed by CE slot
@@ -436,10 +436,6 @@ export function createSlot(
   return fragment
 }
 
-function isNonStableSlot(slot: VaporSlot | undefined): boolean {
-  return !!slot && slot._ === VaporSlotFlags.NON_STABLE
-}
-
 function shouldUseSlotFragment(
   rawSlots: RawSlots,
   name: string | (() => string),
@@ -450,7 +446,7 @@ function shouldUseSlotFragment(
   if (isCustomElementSlot) return true
 
   // Nested fallback resolution must preserve the boundary chain.
-  if (getCurrentSlotBoundary()) return true
+  if (currentSlotBoundary) return true
 
   // Without fallback, there is no fallback branch to track.
   if (!fallback) return false
@@ -466,5 +462,5 @@ function shouldUseSlotFragment(
   if (!slot) return false
 
   // Non-stable slot content can become invalid, making fallback reachable.
-  return isNonStableSlot(slot)
+  return slot._ === VaporSlotFlags.NON_STABLE
 }

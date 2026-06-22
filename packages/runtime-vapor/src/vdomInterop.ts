@@ -117,16 +117,17 @@ import {
 import {
   type DynamicFragment,
   RenderContextFragment,
-  SlotFragment,
+  type SlotFragment,
   type VaporFragment,
   isFragment,
+  isSlotFragment,
   runWithFragmentCtx,
 } from './fragment'
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
   trackSlotBoundaryDirtying,
-  withOwnedSlotBoundary,
+  withSlotBoundary,
 } from './slotBoundary'
 import {
   type SlotFallbackState,
@@ -1555,7 +1556,7 @@ function renderVDOMSlot(
       const renderSlotContent = () => {
         notifyBeforeUpdate()
         runWithFragmentCtx(frag, () =>
-          withOwnedSlotBoundary(boundary, () => {
+          withSlotBoundary(boundary, () => {
             let slotContent: VNode | Block | undefined
             let slotContentValid = false
 
@@ -2022,7 +2023,7 @@ function renderVaporSlot(
         if (resolvedContent && scopeIds) {
           setScopeId(resolvedContent, scopeIds)
         }
-        if (hasInteropFallback && resolvedContent instanceof SlotFragment) {
+        if (hasInteropFallback && isSlotFragment(resolvedContent)) {
           return resolvedContent
         }
         contentNodes = resolvedContent || EMPTY_BLOCK
@@ -2037,7 +2038,7 @@ function renderVaporSlot(
             finalizeResolvedContent(
               runWithFragmentCtx(frag, () => {
                 const renderSlot = () =>
-                  withOwnedSlotBoundary(localFallbackBoundary, () =>
+                  withSlotBoundary(localFallbackBoundary, () =>
                     invokeVaporSlot(vnode),
                   )
                 return hasSlotFallback(localFallbackBoundary)
@@ -2049,7 +2050,7 @@ function renderVaporSlot(
         } else {
           resolvedContent = finalizeResolvedContent(
             runWithFragmentCtx(frag, () =>
-              withOwnedSlotBoundary(localFallbackBoundary, () =>
+              withSlotBoundary(localFallbackBoundary, () =>
                 invokeVaporSlot(vnode),
               ),
             ),
@@ -2065,7 +2066,7 @@ function renderVaporSlot(
           onScopeDispose(() => dispose(), true)
         })
       }
-      if (hasInteropFallback && resolvedContent instanceof SlotFragment) {
+      if (hasInteropFallback && isSlotFragment(resolvedContent)) {
         ownedSlotFragment = resolvedContent
         trackInteropFallbackChanges(vnode.vs!.scope, slotState, () =>
           markInteropFallbackDirty(),
