@@ -134,9 +134,18 @@ export function createConfigsForPackage({
     const isBrowserESMBuild = /esm-browser/.test(format)
     const isServerRenderer = name === 'server-renderer'
     const isGlobalBuild = /global/.test(format)
+    // The bundler `esm` build of the compiler packages is consumed by Node
+    // tooling (e.g. @vitejs/plugin-vue's SFC/SSR template compilation), which
+    // relies on the non-browser branches (prefixIdentifiers, static
+    // stringification, full entity decoding). Their browser-targeted formats
+    // (global / esm-browser) still build with __BROWSER__=true.
+    const isNodeCompilerEsmBuild =
+      isBundlerESMBuild &&
+      (target === 'compiler-core' || target === 'compiler-dom')
     const isBrowserBuild =
       (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
-      !packageOptions.enableNonBrowserBranches
+      !packageOptions.enableNonBrowserBranches &&
+      !isNodeCompilerEsmBuild
 
     output.postBanner = banner
     output.exports = 'named'
