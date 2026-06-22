@@ -1601,7 +1601,7 @@ function renderVDOMSlot(
                 frag.$key = getVNodeKey(hydratedContent)
                 const refreshSlotVNode = () => {
                   frag.nodes = resolveVNodeNodes(hydratedContent)
-                  if (frag.onUpdated) frag.onUpdated.forEach(m => m())
+                  notifyUpdated()
                 }
                 trackSlotVNodeUpdatesWithRefresh(
                   hydratedContent,
