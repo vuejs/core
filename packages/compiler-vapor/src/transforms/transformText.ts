@@ -121,17 +121,7 @@ export const transformText: NodeTransform = (node, context) => {
 
 function processInterpolation(context: TransformContext<InterpolationNode>) {
   const parentNode = context.parent!.node
-  const children = parentNode.children
-  const nexts = children.slice(context.index)
-  const idx = nexts.findIndex(n => !isTextLike(n))
-  const nodes = (idx > -1 ? nexts.slice(0, idx) : nexts) as Array<TextLike>
-
-  // merge leading text
-  const prev = children[context.index - 1]
-  if (prev && prev.type === NodeTypes.TEXT) {
-    nodes.unshift(prev)
-  }
-  const values = processTextLikeChildren(nodes, context)
+  const values = processTextLikeChildren(collectAdjacentText(context), context)
 
   if (values.length === 0 && parentNode.type !== NodeTypes.ROOT) {
     return
@@ -174,6 +164,25 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
     element: id,
     values,
   })
+}
+
+function collectAdjacentText(
+  context: TransformContext<InterpolationNode>,
+): TextLike[] {
+  const children = context.parent!.node.children
+  const nodes: TextLike[] = []
+  // Include leading text that belongs to the same text run.
+  const prev = children[context.index - 1]
+  let index =
+    prev && prev.type === NodeTypes.TEXT ? context.index - 1 : context.index
+
+  for (; index < children.length; index++) {
+    const child = children[index]
+    if (!isTextLike(child)) break
+    nodes.push(child)
+  }
+
+  return nodes
 }
 
 function processTextContainer(
