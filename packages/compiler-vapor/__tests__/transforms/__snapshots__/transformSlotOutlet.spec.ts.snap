@@ -142,11 +142,11 @@ export function render(_ctx) {
         const x6 = _txt(n6)
         _renderEffect(() => _setText(x6, _toDisplayString(_for_item0.value)))
         return n6
-      }, undefined, 40)
+      }, undefined, 8)
       const x4 = _txt(n4)
       _renderEffect(() => _setText(x4, _toDisplayString(_ctx.item)))
       return n4
-    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
+    })
     return n2
   })
   return n0
@@ -158,7 +158,7 @@ exports[`compiler: transform <slot> outlets > root dynamic component fallback 1`
 
 export function render(_ctx) {
   const n0 = _createSlot("default", null, () => {
-    const n2 = _createDynamicComponent(() => (_ctx.view), null, null, 5)
+    const n2 = _createDynamicComponent(() => (_ctx.view), null, null, 1)
     return n2
   })
   return n0
@@ -174,7 +174,7 @@ export function render(_ctx) {
     const n2 = _createIf(() => (_ctx.ok), () => {
       const n4 = t0()
       return n4
-    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
+    })
     return n2
   })
   return n0
