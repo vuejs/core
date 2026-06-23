@@ -15,8 +15,8 @@ export interface SlotBoundaryContext {
   // setup finished.
   run<R>(fn: () => R, scope?: EffectScope): R
   // Notifies the owning slot that the validity of content rendered under
-  // this boundary may have changed; routes into the fallback state machine
-  // (markSlotFallbackDirty).
+  // this boundary may have changed; routes into the slot resolution state
+  // machine (markSlotResolutionDirty).
   markDirty: () => void
   // Cached fallback-masking view of this boundary, used while rendering its
   // own fallback (see getRedirectedBoundary in slotFragment.ts).

@@ -130,11 +130,11 @@ import {
   withSlotBoundary,
 } from './slotBoundary'
 import {
-  type SlotFallbackState,
-  disposeSlotFallback,
+  type SlotResolutionState,
+  disposeSlotResolution,
   insertActiveSlotFallback,
-  markSlotFallbackDirty,
-  recheckSlotFallback,
+  markSlotResolutionDirty,
+  recheckSlotResolution,
 } from './slotFragment'
 import {
   getCurrentSlotEndAnchor,
@@ -1411,11 +1411,11 @@ function renderVDOMSlot(
   const inheritedBoundary = frag.inheritedSlotBoundary
   let isContentUpdateRecheck = false
   let localFallback: BlockFn | undefined
-  let fallbackState!: SlotFallbackState
+  let slotResolutionState!: SlotResolutionState
   frag.isBlockValid = () => {
     if (validityPending) return true
-    return fallbackState.activeFallback
-      ? isValidBlock(fallbackState.activeFallback)
+    return slotResolutionState.activeFallback
+      ? isValidBlock(slotResolutionState.activeFallback)
       : contentState.valid
   }
   const boundary: SlotBoundaryContext = {
@@ -1424,9 +1424,9 @@ function renderVDOMSlot(
     },
     getFallback: (): BlockFn | undefined => localFallback,
     run: fn => runWithFragmentCtx(frag, fn),
-    markDirty: () => markSlotFallbackDirty(fallbackState),
+    markDirty: () => markSlotResolutionDirty(slotResolutionState),
   }
-  fallbackState = {
+  slotResolutionState = {
     boundary,
     activeFallback: null,
     pendingRecheck: false,
@@ -1438,9 +1438,9 @@ function renderVDOMSlot(
     isDisposed: () => disposed,
     isContentValid: () => contentState.valid,
     syncNodes: () => {
-      frag.nodes = fallbackState.activeFallback || contentState.nodes
+      frag.nodes = slotResolutionState.activeFallback || contentState.nodes
     },
-    notifyFallbackValidityChange: () => {
+    notifyExposedValidityChange: () => {
       if (slotRoot && !isContentUpdateRecheck && inheritedBoundary) {
         inheritedBoundary.markDirty()
       }
@@ -1485,17 +1485,19 @@ function renderVDOMSlot(
     }
   }
 
-  const recheckAfterContentUpdate = (forceFallbackRecheck = false): void => {
+  const recheckResolutionAfterContentUpdate = (
+    forceResolutionRecheck = false,
+  ): void => {
     isContentUpdateRecheck = true
     try {
-      recheckSlotFallback(fallbackState, forceFallbackRecheck)
+      recheckSlotResolution(slotResolutionState, forceResolutionRecheck)
     } finally {
       isContentUpdateRecheck = false
     }
   }
 
-  const finishContentUpdate = (forceFallbackRecheck = false): void => {
-    recheckAfterContentUpdate(forceFallbackRecheck)
+  const finishContentUpdate = (forceResolutionRecheck = false): void => {
+    recheckResolutionAfterContentUpdate(forceResolutionRecheck)
     notifyUpdated()
   }
 
@@ -1522,7 +1524,7 @@ function renderVDOMSlot(
         insert(contentState.rendered, parentNode, anchor)
       }
 
-      insertActiveSlotFallback(fallbackState)
+      insertActiveSlotFallback(slotResolutionState)
     }
 
     notifyUpdated()
@@ -1546,7 +1548,7 @@ function renderVDOMSlot(
     } else if (contentState.rendered) {
       remove(contentState.rendered, parentNode)
     }
-    disposeSlotFallback(fallbackState)
+    disposeSlotResolution(slotResolutionState)
   }
 
   const render = () => {
@@ -1648,7 +1650,7 @@ function renderVDOMSlot(
                 const prevValid = contentState.valid
                 const prevOutput = frag.nodes
                 setRenderedContent(slotContent)
-                recheckAfterContentUpdate()
+                recheckResolutionAfterContentUpdate()
                 if (
                   contentState.valid !== prevValid ||
                   !isSameResolvedOutput(prevOutput, frag.nodes)
@@ -1665,7 +1667,7 @@ function renderVDOMSlot(
               const prevIsVNode = isVNode(prevRendered)
               const prevVNode =
                 prevIsVNode &&
-                (!fallbackState.activeFallback || contentState.valid)
+                (!slotResolutionState.activeFallback || contentState.valid)
                   ? prevRendered
                   : null
               if (prevRendered && !prevIsVNode) {
@@ -1921,13 +1923,13 @@ function renderVaporSlot(
     let currentAnchor: Node | null = null
     let slotScope: ReturnType<typeof effectScope> | undefined
     let disposed = false
-    let fallbackState!: SlotFallbackState
+    let slotResolutionState!: SlotResolutionState
     let ownedSlotFragment: SlotFragment | undefined
     let ownedSlotFragmentDirtyQueued = false
-    const markInteropFallbackDirty = (): void => {
+    const markInteropSlotResolutionDirty = (): void => {
       const target = ownedSlotFragment
       if (!target) {
-        markSlotFallbackDirty(fallbackState)
+        markSlotResolutionDirty(slotResolutionState)
         return
       }
       // When the inner SlotFragment owns the fallback, a single vdom flush
@@ -1939,7 +1941,7 @@ function renderVaporSlot(
       ownedSlotFragmentDirtyQueued = true
       queuePostFlushCb(() => {
         ownedSlotFragmentDirtyQueued = false
-        markSlotFallbackDirty(target)
+        markSlotResolutionDirty(target)
       })
     }
     const outletFallbackBoundary: SlotBoundaryContext = {
@@ -1949,7 +1951,7 @@ function renderVaporSlot(
       getFallback: () =>
         slotState.outletFallback.value ? outletFallback : undefined,
       run: fn => runWithFragmentCtx(frag, fn),
-      markDirty: markInteropFallbackDirty,
+      markDirty: markInteropSlotResolutionDirty,
     }
     const localFallbackBoundary: SlotBoundaryContext = {
       get parent() {
@@ -1958,9 +1960,9 @@ function renderVaporSlot(
       getFallback: () =>
         slotState.localFallback.value ? localFallback : undefined,
       run: fn => runWithFragmentCtx(frag, fn),
-      markDirty: markInteropFallbackDirty,
+      markDirty: markInteropSlotResolutionDirty,
     }
-    fallbackState = {
+    slotResolutionState = {
       boundary: localFallbackBoundary,
       activeFallback: null,
       pendingRecheck: false,
@@ -1972,18 +1974,18 @@ function renderVaporSlot(
       isDisposed: () => disposed,
       isContentValid: () => isValidBlock(contentNodes),
       syncNodes: () => {
-        frag.nodes = fallbackState.activeFallback || contentNodes
+        frag.nodes = slotResolutionState.activeFallback || contentNodes
         validityPending = false
       },
-      notifyFallbackValidityChange: () => {
+      notifyExposedValidityChange: () => {
         if (inheritedBoundary) {
           inheritedBoundary.markDirty()
         }
       },
     }
     const takePendingRecheck = (): boolean => {
-      const shouldRecheck = fallbackState.pendingRecheck
-      fallbackState.pendingRecheck = false
+      const shouldRecheck = slotResolutionState.pendingRecheck
+      slotResolutionState.pendingRecheck = false
       return shouldRecheck
     }
 
@@ -1993,7 +1995,7 @@ function renderVaporSlot(
         currentParentNode = parentNode
       }
       disposed = true
-      disposeSlotFallback(fallbackState)
+      disposeSlotResolution(slotResolutionState)
       slotScope = undefined
       currentParentNode = null
       currentAnchor = null
@@ -2016,7 +2018,7 @@ function renderVaporSlot(
       )
       const hasInteropFallback =
         !!slotState.localFallback.value || !!slotState.outletFallback.value
-      fallbackState.pendingRecheck = false
+      slotResolutionState.pendingRecheck = false
       const finalizeResolvedContent = (
         resolvedContent: Block | undefined,
       ): Block | undefined => {
@@ -2027,7 +2029,7 @@ function renderVaporSlot(
           return resolvedContent
         }
         contentNodes = resolvedContent || EMPTY_BLOCK
-        recheckSlotFallback(fallbackState, takePendingRecheck())
+        recheckSlotResolution(slotResolutionState, takePendingRecheck())
         return resolvedContent
       }
       let resolvedContent: Block | undefined
@@ -2069,30 +2071,30 @@ function renderVaporSlot(
       if (hasInteropFallback && isSlotFragment(resolvedContent)) {
         ownedSlotFragment = resolvedContent
         trackInteropFallbackChanges(vnode.vs!.scope, slotState, () =>
-          markInteropFallbackDirty(),
+          markInteropSlotResolutionDirty(),
         )
         dispose()
         return resolvedContent
       }
 
-      fallbackState.pendingRecheck = false
+      slotResolutionState.pendingRecheck = false
       frag.insert = (parentNode, anchor) => {
         currentParentNode = parentNode
         currentAnchor = anchor
-        if (fallbackState.activeFallback) {
-          insertActiveSlotFallback(fallbackState)
+        if (slotResolutionState.activeFallback) {
+          insertActiveSlotFallback(slotResolutionState)
         } else {
           insert(frag.nodes, parentNode, anchor)
         }
       }
       frag.remove = parentNode => {
-        if (!fallbackState.activeFallback) {
+        if (!slotResolutionState.activeFallback) {
           remove(frag.nodes, parentNode)
         }
         dispose(parentNode)
       }
       trackInteropFallbackChanges(vnode.vs!.scope, slotState, () => {
-        recheckSlotFallback(fallbackState, true)
+        recheckSlotResolution(slotResolutionState, true)
       })
 
       if (isHydrating && currentHydrationNode) {

@@ -62,9 +62,9 @@ import {
   withSlotBoundary,
 } from '../src/slotBoundary'
 import {
-  type SlotFallbackState,
-  markSlotFallbackDirty,
-  recheckSlotFallback,
+  type SlotResolutionState,
+  markSlotResolutionDirty,
+  recheckSlotResolution,
 } from '../src/slotFragment'
 import {
   getCurrentSlotEndAnchor,
@@ -103,7 +103,7 @@ function renderWithSlots(slots: any): any {
   return instance
 }
 
-function createTestSlotFallbackState(options: {
+function createTestSlotResolutionState(options: {
   fallback?: BlockFn
   content?: Block
   parentNode?: ParentNode | null
@@ -111,13 +111,13 @@ function createTestSlotFallbackState(options: {
   isBusy?: () => boolean
   isContentValid?: () => boolean
   isDisposed?: () => boolean
-}): SlotFallbackState {
-  let state!: SlotFallbackState
+}): SlotResolutionState {
+  let state!: SlotResolutionState
   const boundary: SlotBoundaryContext = {
     parent: null,
     getFallback: () => options.fallback,
     run: fn => fn(),
-    markDirty: () => markSlotFallbackDirty(state),
+    markDirty: () => markSlotResolutionDirty(state),
   }
   state = {
     boundary,
@@ -132,7 +132,7 @@ function createTestSlotFallbackState(options: {
     isContentValid:
       options.isContentValid || (() => isValidBlock(options.content || [])),
     syncNodes: () => {},
-    notifyFallbackValidityChange: vi.fn(),
+    notifyExposedValidityChange: vi.fn(),
   }
   return state
 }
@@ -446,7 +446,7 @@ describe('component: slots', () => {
       const container = document.createElement('div')
       const anchor = document.createComment('slot')
       const showLocal = ref(false)
-      let state!: SlotFallbackState
+      let state!: SlotResolutionState
       const parentBoundary: SlotBoundaryContext = {
         parent: null,
         getFallback: () => () => document.createTextNode('parent fallback'),
@@ -463,7 +463,7 @@ describe('component: slots', () => {
             keyedSlotRootIfShape,
           ),
         run: fn => fn(),
-        markDirty: () => markSlotFallbackDirty(state),
+        markDirty: () => markSlotResolutionDirty(state),
       }
       state = {
         boundary,
@@ -477,11 +477,11 @@ describe('component: slots', () => {
         isDisposed: () => false,
         isContentValid: () => false,
         syncNodes: () => {},
-        notifyFallbackValidityChange: vi.fn(),
+        notifyExposedValidityChange: vi.fn(),
       }
 
       container.append(anchor)
-      recheckSlotFallback(state)
+      recheckSlotResolution(state)
 
       expect(container.innerHTML).toBe('parent fallback<!--slot-->')
 
@@ -496,7 +496,7 @@ describe('component: slots', () => {
       const anchor = document.createComment('slot')
       let localFallback: BlockFn | undefined = () =>
         document.createTextNode('local fallback')
-      let state!: SlotFallbackState
+      let state!: SlotResolutionState
       const parentBoundary: SlotBoundaryContext = {
         parent: null,
         getFallback: () => () => document.createTextNode('parent fallback'),
@@ -507,7 +507,7 @@ describe('component: slots', () => {
         parent: parentBoundary,
         getFallback: () => localFallback,
         run: fn => fn(),
-        markDirty: () => markSlotFallbackDirty(state),
+        markDirty: () => markSlotResolutionDirty(state),
       }
       state = {
         boundary,
@@ -521,15 +521,15 @@ describe('component: slots', () => {
         isDisposed: () => false,
         isContentValid: () => false,
         syncNodes: () => {},
-        notifyFallbackValidityChange: vi.fn(),
+        notifyExposedValidityChange: vi.fn(),
       }
 
       container.append(anchor)
-      recheckSlotFallback(state)
+      recheckSlotResolution(state)
       expect(container.innerHTML).toBe('local fallback<!--slot-->')
 
       localFallback = undefined
-      recheckSlotFallback(state, true)
+      recheckSlotResolution(state, true)
       expect(container.innerHTML).toBe('parent fallback<!--slot-->')
     })
 
@@ -718,9 +718,9 @@ describe('component: slots', () => {
       expect(markDirty).toHaveBeenCalledTimes(2)
     })
 
-    test('slot fallback state ignores dirty notifications after dispose', () => {
+    test('slot resolution state ignores dirty notifications after dispose', () => {
       let disposed = false
-      const state = createTestSlotFallbackState({
+      const state = createTestSlotResolutionState({
         isDisposed: () => disposed,
       })
 
@@ -730,7 +730,7 @@ describe('component: slots', () => {
       expect(state.pendingRecheck).toBe(false)
     })
 
-    test('removed slot fragment ignores queued fallback dirty notifications', () => {
+    test('removed slot fragment ignores queued resolution dirty notifications', () => {
       const container = document.createElement('div')
       const fallbackRuns = vi.fn()
       const cleanup = vi.fn()
@@ -902,13 +902,13 @@ describe('component: slots', () => {
       expect(frag.anchor).toBe(end.previousSibling)
     })
 
-    test('slot fallback state stops fallback scope when fallback body throws', async () => {
+    test('slot resolution state stops fallback scope when fallback body throws', async () => {
       const source = ref(0)
       const effectRuns = vi.fn()
       const cleanup = vi.fn()
       const err = new Error('fallback boom')
 
-      const state = createTestSlotFallbackState({
+      const state = createTestSlotResolutionState({
         fallback: () => {
           onScopeDispose(cleanup)
           renderEffect(() => {
@@ -918,7 +918,7 @@ describe('component: slots', () => {
         },
       })
 
-      expect(() => recheckSlotFallback(state)).toThrow(err)
+      expect(() => recheckSlotResolution(state)).toThrow(err)
       expect(state.activeFallback).toBe(null)
       expect(cleanup).toHaveBeenCalledTimes(1)
       expect(effectRuns).toHaveBeenCalledTimes(1)
@@ -929,9 +929,9 @@ describe('component: slots', () => {
       expect(effectRuns).toHaveBeenCalledTimes(1)
     })
 
-    test('slot fallback state rechecks when idle', () => {
+    test('slot resolution state rechecks when idle', () => {
       const fallback = document.createTextNode('fallback')
-      const state = createTestSlotFallbackState({
+      const state = createTestSlotResolutionState({
         fallback: () => fallback,
       })
 
