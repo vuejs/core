@@ -600,6 +600,22 @@ describe('compiler: transform slot', () => {
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
     })
 
+    test('stable root sibling keeps slot content stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><span/><div v-if="show"/></Comp>`,
+      )
+
+      expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
+
+    test('static component root sibling keeps slot content stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><Foo/><component :is="view"/></Comp>`,
+      )
+
+      expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
+
     test('root v-if slot content is non-stable', () => {
       const { code } = compileWithSlots(`<Comp><span v-if="show"/></Comp>`)
 
@@ -613,6 +629,30 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code).toMatchSnapshot()
+      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
+
+    test('all dynamic root slot content is non-stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><div v-if="a"/><p v-if="b"/></Comp>`,
+      )
+
+      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
+
+    test('root v-for with root v-if slot content is non-stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><div v-for="item in list"/><p v-if="ok"/></Comp>`,
+      )
+
+      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+    })
+
+    test('comment with dynamic root slot content is non-stable', () => {
+      const { code } = compileWithSlots(
+        `<Comp><!--foo--><div v-if="show"/></Comp>`,
+      )
+
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
     })
 
@@ -857,7 +897,7 @@ describe('compiler: transform slot', () => {
   })
 
   describe('slot owner context', () => {
-    test('slot with only static elements should not need withVaporCtx', () => {
+    test('slot with only static elements is stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -866,11 +906,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with component should not need withVaporCtx', () => {
+    test('slot with component is stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -879,11 +918,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with slot outlet should not need withVaporCtx', () => {
+    test('slot with slot outlet is non-stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -892,11 +930,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('dynamic slot source with slot outlet should not need withVaporCtx', () => {
+    test('dynamic slot source with slot outlet keeps dynamic slot function', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template v-for="(_, name) in slots" #[name]>
@@ -907,11 +944,10 @@ describe('compiler: transform slot', () => {
       expect(code).toContain(`$: [
       () => (_createForSlots`)
       expect(code).toContain(`fn: () =>`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with component inside v-if should not need withVaporCtx', () => {
+    test('slot with component inside v-if is non-stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -922,11 +958,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with component inside v-for should not need withVaporCtx', () => {
+    test('slot with component inside v-for is non-stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -937,11 +972,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with nested v-if containing component should not need withVaporCtx', () => {
+    test('slot with nested v-if containing component is non-stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -954,11 +988,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with only text interpolation should not need withVaporCtx', () => {
+    test('slot with only text interpolation is stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -967,11 +1000,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with v-if but no component should not need withVaporCtx', () => {
+    test('slot with v-if but no component is non-stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -981,11 +1013,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with v-for but no component should not need withVaporCtx', () => {
+    test('slot with v-for but no component is non-stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -994,11 +1025,10 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with dynamic root and stable sibling should be non-stable', () => {
+    test('slot with dynamic root and stable sibling is stable', () => {
       const { code } = compileWithSlots(`
         <Comp>
           <template #default>
@@ -1007,12 +1037,11 @@ describe('compiler: transform slot', () => {
           </template>
         </Comp>
       `)
-      expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
+      expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with custom element should not need withVaporCtx', () => {
+    test('slot with custom element is stable', () => {
       const { code } = compileWithSlots(
         `
         <Comp>
@@ -1026,11 +1055,10 @@ describe('compiler: transform slot', () => {
         },
       )
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
 
-    test('slot with custom element inside v-if should not need withVaporCtx', () => {
+    test('slot with custom element inside v-if is non-stable', () => {
       const { code } = compileWithSlots(
         `
         <Comp>
@@ -1046,7 +1074,6 @@ describe('compiler: transform slot', () => {
         },
       )
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('withVaporCtx')
       expect(code).toMatchSnapshot()
     })
   })

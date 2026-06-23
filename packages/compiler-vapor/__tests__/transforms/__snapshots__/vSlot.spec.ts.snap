@@ -464,7 +464,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > dynamic slot source with slot outlet should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > dynamic slot source with slot outlet keeps dynamic slot function 1`] = `
 "import { createSlot as _createSlot, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
@@ -483,7 +483,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with component inside v-for should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with component inside v-for is non-stable 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
@@ -502,7 +502,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with component inside v-if should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with component inside v-if is non-stable 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
@@ -521,7 +521,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with component should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with component is stable 1`] = `
 "import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
@@ -534,7 +534,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with custom element inside v-if should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with custom element inside v-if is non-stable 1`] = `
 "import { setInsertionState as _setInsertionState, createPlainElement as _createPlainElement, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
@@ -552,7 +552,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with custom element should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with custom element is stable 1`] = `
 "import { createPlainElement as _createPlainElement, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
@@ -564,13 +564,13 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with dynamic root and stable sibling should be non-stable 1`] = `
-"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+exports[`compiler: transform slot > slot owner context > slot with dynamic root and stable sibling is stable 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<span> ")
 const t1 = _template("<i>tail", 2)
 
 export function render(_ctx) {
-  const n5 = _createAssetComponent("Comp", null, _extend(() => {
+  const n5 = _createAssetComponent("Comp", null, () => {
     const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
       const n2 = t0()
       const x2 = _txt(n2)
@@ -581,12 +581,12 @@ export function render(_ctx) {
     const x0 = _txt(n0)
     _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
     return [n0, n3]
-  }, { _: 8 }), true)
+  }, true)
   return n5
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with nested v-if containing component should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with nested v-if containing component is non-stable 1`] = `
 "import { resolveComponent as _resolveComponent, setInsertionState as _setInsertionState, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<span>")
 const t1 = _template("<div>")
@@ -611,7 +611,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with only static elements should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with only static elements is stable 1`] = `
 "import { createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>static content", 2)
 
@@ -624,7 +624,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with only text interpolation should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with only text interpolation is stable 1`] = `
 "import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template(" ")
 
@@ -638,7 +638,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with slot outlet should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with slot outlet is non-stable 1`] = `
 "import { createSlot as _createSlot, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
@@ -650,7 +650,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with v-for but no component should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with v-for but no component is non-stable 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
@@ -670,7 +670,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: transform slot > slot owner context > slot with v-if but no component should not need withVaporCtx 1`] = `
+exports[`compiler: transform slot > slot owner context > slot with v-if but no component is non-stable 1`] = `
 "import { createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>content", 2)
 const t1 = _template("<span>fallback", 2)
