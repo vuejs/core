@@ -6,13 +6,9 @@ import type {
   IRDynamicInfo,
   IRSlots,
   IfIRNode,
+  OperationNode,
 } from '../ir'
-import {
-  IRNodeTypes,
-  IRSlotType,
-  type OperationNode,
-  isBlockOperation,
-} from '../ir'
+import { IRNodeTypes, IRSlotType, isBlockOperation } from '../ir'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -31,7 +27,6 @@ import {
 } from './operation'
 import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
-import { VaporSlotFlags } from '@vue/shared'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -219,8 +214,6 @@ export function markSlotRootOperations(block: BlockIRNode): void {
       markSlotRootIf(operation)
     } else if (operation.type === IRNodeTypes.FOR) {
       markSlotRootFor(operation)
-    } else if (operation.type === IRNodeTypes.SLOT_OUTLET_NODE) {
-      markSlotRootSlotOutlet(operation)
     } else if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
       markSlotRootComponent(operation)
     }
@@ -247,15 +240,6 @@ function markSlotRootFor(operation: ForIRNode): void {
     operation.slotRoot = true
   }
   markSlotRootOperations(operation.render)
-}
-
-function markSlotRootSlotOutlet(
-  operation: Extract<OperationNode, { type: IRNodeTypes.SLOT_OUTLET_NODE }>,
-): void {
-  operation.flags |= VaporSlotFlags.SLOT_ROOT
-  if (operation.fallback) {
-    markSlotRootOperations(operation.fallback)
-  }
 }
 
 function markSlotRootComponent(operation: CreateComponentIRNode): void {

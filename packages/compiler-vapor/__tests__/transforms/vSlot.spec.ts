@@ -696,6 +696,7 @@ describe('compiler: transform slot', () => {
 
       expect(code).toMatchSnapshot()
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+      expect(code).not.toContain('SLOT_ROOT')
     })
   })
 
@@ -703,6 +704,9 @@ describe('compiler: transform slot', () => {
     test('<slot> tag only', () => {
       const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+      expect(code).not.toContain(
+        `_createSlot("default", null, null, ${VaporSlotFlags.SLOT_ROOT})`,
+      )
       expect(code).toMatchSnapshot()
     })
 
