@@ -359,7 +359,7 @@ export function createSlot(
         if (once) setSlotProps()
         else renderEffect(setSlotProps)
         if (fallback) {
-          withSlotBoundary(slotFragment!.parentSlotBoundary, () => {
+          withSlotBoundary(slotFragment!.slotBoundary, () => {
             const fallbackBlock = fallback()
             // Keep the live fallback block on the SlotFragment itself. The
             // native slot outlet is temporary and gets removed by CE slot

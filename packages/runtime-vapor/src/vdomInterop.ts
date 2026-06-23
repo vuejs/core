@@ -1396,7 +1396,6 @@ function renderVDOMSlot(
   const suspense = currentParentSuspense || parentComponent.suspense
   const frag = createInteropFragment()
   let validityPending = !isHydrating
-  const instance = currentInstance
 
   let isMounted = false
   const contentState = {
@@ -1408,7 +1407,7 @@ function renderVDOMSlot(
   let currentAnchor: Node | null = null
   let disposed = false
   const scope = effectScope()
-  const inheritedBoundary = frag.inheritedSlotBoundary
+  const slotBoundary = frag.slotBoundary
   let isContentUpdateRecheck = false
   let localFallback: BlockFn | undefined
   let slotResolutionState!: SlotResolutionState
@@ -1420,7 +1419,7 @@ function renderVDOMSlot(
   }
   const boundary: SlotBoundaryContext = {
     get parent() {
-      return inheritedBoundary
+      return slotBoundary
     },
     getFallback: (): BlockFn | undefined => localFallback,
     run: fn => runWithFragmentCtx(frag, fn),
@@ -1441,8 +1440,8 @@ function renderVDOMSlot(
       frag.nodes = slotResolutionState.activeFallback || contentState.nodes
     },
     notifyExposedValidityChange: () => {
-      if (slotRoot && !isContentUpdateRecheck && inheritedBoundary) {
-        inheritedBoundary.markDirty()
+      if (slotRoot && !isContentUpdateRecheck && slotBoundary) {
+        slotBoundary.markDirty()
       }
     },
   }
@@ -1553,7 +1552,7 @@ function renderVDOMSlot(
 
   const render = () => {
     const prev = currentInstance
-    simpleSetCurrentInstance(instance)
+    simpleSetCurrentInstance(frag.renderInstance)
     try {
       const renderSlotContent = () => {
         notifyBeforeUpdate()
@@ -1914,7 +1913,7 @@ function renderVaporSlot(
     let validityPending = !isHydrating
     frag.isBlockValid = () =>
       validityPending ? true : isValidBlock(frag.nodes)
-    const inheritedBoundary = frag.inheritedSlotBoundary
+    const slotBoundary = frag.slotBoundary
     let contentNodes: Block = EMPTY_BLOCK
     let isResolvingContent = false
     let localFallback!: BlockFn
@@ -1946,7 +1945,7 @@ function renderVaporSlot(
     }
     const outletFallbackBoundary: SlotBoundaryContext = {
       get parent() {
-        return inheritedBoundary
+        return slotBoundary
       },
       getFallback: () =>
         slotState.outletFallback.value ? outletFallback : undefined,
@@ -1978,8 +1977,8 @@ function renderVaporSlot(
         validityPending = false
       },
       notifyExposedValidityChange: () => {
-        if (inheritedBoundary) {
-          inheritedBoundary.markDirty()
+        if (slotBoundary) {
+          slotBoundary.markDirty()
         }
       },
     }
@@ -2252,8 +2251,8 @@ function createVNodeChildrenFragment(
   }
 
   const notifyUpdated = (validityChanged = false): void => {
-    if (validityChanged && frag.inheritedSlotBoundary) {
-      frag.inheritedSlotBoundary.markDirty()
+    if (validityChanged && frag.slotBoundary) {
+      frag.slotBoundary.markDirty()
     }
     if (isMounted && frag.onUpdated) {
       frag.onUpdated.forEach(hook => hook())
@@ -2284,7 +2283,7 @@ function createVNodeChildrenFragment(
             // patching needs the boundary insertion point after that local
             // anchor; otherwise later fallback siblings patch in front of it.
             if (
-              frag.inheritedSlotBoundary &&
+              frag.slotBoundary &&
               currentAnchor &&
               isHydrationAnchor(currentAnchor) &&
               currentAnchor !== getCurrentSlotEndAnchor() &&
