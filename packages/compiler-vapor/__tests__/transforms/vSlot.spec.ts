@@ -689,14 +689,20 @@ describe('compiler: transform slot', () => {
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
     })
 
-    test('root slot outlet fallback is non-stable', () => {
+    test('ordinary slot outlet fallback does not track parent content', () => {
+      const { code } = compileWithSlots(`<slot><span v-if="show"/></slot>`)
+
+      expect(code).not.toContain('SLOT_ROOT')
+    })
+
+    test('forwarded root slot outlet fallback tracks root validity', () => {
       const { code } = compileWithSlots(
         `<Comp><slot><span v-if="show"/></slot></Comp>`,
       )
 
       expect(code).toMatchSnapshot()
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
-      expect(code).not.toContain('SLOT_ROOT')
+      expect(code).toContain('SLOT_ROOT')
     })
   })
 

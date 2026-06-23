@@ -1089,6 +1089,50 @@ describe('component: slots', () => {
       app.unmount()
     })
 
+    test('compiled forwarded slot fallback validity re-resolves inherited fallback', async () => {
+      const data = ref(false)
+      const Child = compile(
+        `<template><slot><span>child fallback</span></slot></template>`,
+        data,
+      )
+      const Parent = compile(
+        `<template>
+          <components.Child>
+            <slot>
+              <span v-if="data">parent fallback</span>
+            </slot>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const App = compile(
+        `<template>
+          <components.Parent>
+            <span v-if="data && false">content</span>
+          </components.Parent>
+        </template>`,
+        data,
+        { Parent },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe(
+        '<span>child fallback</span><!--slot--><!--slot-->',
+      )
+
+      data.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe(
+        '<span>parent fallback</span><!--if--><!--slot--><!--slot-->',
+      )
+
+      app.unmount()
+    })
+
     test('vdom slot dirties parent boundary when content validity changes', async () => {
       const show = ref(true)
       const boundary = {
