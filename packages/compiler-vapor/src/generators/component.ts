@@ -785,7 +785,7 @@ function genSlotBlockWithProps(
 
 const commentOnlyTemplateRE = /^(?:<!--[\s\S]*?-->)+$/
 
-// A slot can skip fallback/boundary tracking only when its root shape is stable.
+// A slot can skip fallback/boundary tracking when at least one root is stable.
 // Components count as valid even if their own render result is a comment.
 function hasStableSlotRoot(
   block: BlockIRNode,
@@ -813,16 +813,17 @@ function hasStableSlotRoot(
         // <component :is="view" /> renders fallback when view is null because
         // the dynamic component root becomes a comment vnode. This differs from
         // <Foo />, whose component vnode is valid slot content even if Foo
-        // renders null/comment.
-        return false
+        // renders null/comment. Keep scanning because a stable sibling can
+        // still make the whole slot content valid.
+        continue
       case IRNodeTypes.KEY:
         if (hasStableSlotRoot(operation.block, context)) {
           hasValidRoot = true
           continue
         }
-        return false
+        continue
       default:
-        return false
+        continue
     }
   }
   return hasValidRoot

@@ -3690,7 +3690,7 @@ describe('Vapor Mode hydration', () => {
         "
         <!--[-->
         <!--[--><!--]-->
-        <!--for--><i>tail</i><!--]-->
+        <i>tail</i><!--]-->
         "
       `,
       )
@@ -3703,8 +3703,8 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[-->
-        <!--[--><!--]-->
-        <span>foo</span><span>bar</span><!--for--><i>tail</i><!--]-->
+        <!--[--><span>foo</span><span>bar</span><!--]-->
+        <i>tail</i><!--]-->
         "
       `,
       )
@@ -3715,8 +3715,8 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[-->
-        <!--[--><!--]-->
-        <span>foo</span><span>bar</span><!--for--><i>tail2</i><!--]-->
+        <!--[--><span>foo</span><span>bar</span><!--]-->
+        <i>tail2</i><!--]-->
         "
       `,
       )
@@ -3857,14 +3857,14 @@ describe('Vapor Mode hydration', () => {
 
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-      	"
-      	<!--[-->
-      	<!--[-->
-      	<!--[--><!----><!--]-->
-      	<!--[--><!----><!--]-->
-      	<!--for--><!--]-->
-      	<i>tail</i><!--]-->
-      	"
+        "
+        <!--[-->
+        <!--[-->
+        <!--[--><!----><!--]-->
+        <!--[--><!----><!--]-->
+        <!--]-->
+        <i>tail</i><!--]-->
+        "
       `)
 
       data.items.push({ text: 'c', show: true })
@@ -3872,14 +3872,14 @@ describe('Vapor Mode hydration', () => {
 
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
-      	"
-      	<!--[-->
-      	<!--[-->
-      	<!--[--><!----><!--]-->
-      	<!--[--><!----><!--]-->
-      	<span>c</span><!--if--><!--for--><!--]-->
-      	<i>tail</i><!--]-->
-      	"
+        "
+        <!--[-->
+        <!--[-->
+        <!--[--><!----><!--]-->
+        <!--[--><!----><!--]-->
+        <span>c</span><!--if--><!--]-->
+        <i>tail</i><!--]-->
+        "
       `,
       )
 
@@ -3893,7 +3893,7 @@ describe('Vapor Mode hydration', () => {
         <!--[-->
         <!--[--><!----><!--]-->
         <!--[--><span>b</span><!----><!--]-->
-        <span>c</span><!--if--><!--for--><!--]-->
+        <span>c</span><!--if--><!--]-->
         <i>tail</i><!--]-->
         "
       `,
