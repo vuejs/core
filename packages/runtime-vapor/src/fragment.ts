@@ -37,10 +37,10 @@ import {
   withHydratingSlotBoundary,
 } from './dom/hydrateFragment'
 import {
-  type SlotFallbackState,
-  disposeSlotFallback,
-  markSlotFallbackDirty,
-  recheckSlotFallback,
+  type SlotResolutionState,
+  disposeSlotResolution,
+  markSlotResolutionDirty,
+  recheckSlotResolution,
 } from './slotFragment'
 import { setBlockKey } from './helpers/setKey'
 import {
@@ -434,7 +434,10 @@ export class DynamicFragment extends RenderContextFragment {
 // reads the base class binding at module evaluation time, and fragment.ts
 // sits inside a module cycle, so hoisting the class into another module can
 // hit the base class before it is initialized depending on entry order.
-export class SlotFragment extends DynamicFragment implements SlotFallbackState {
+export class SlotFragment
+  extends DynamicFragment
+  implements SlotResolutionState
+{
   isSlot = true
   private disposed = false
   forwarded = false
@@ -473,7 +476,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
       parent: this.parentSlotBoundary,
       getFallback: () => this.localFallback,
       run: (fn, scope) => this.runWithRenderCtx(fn, scope),
-      markDirty: () => markSlotFallbackDirty(this),
+      markDirty: () => markSlotResolutionDirty(this),
     })
   }
 
@@ -488,15 +491,15 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
     remove(nodes, parent)
     if (this.activeFallback === nodes) {
       // the exposed fallback was just torn down by remove() above; null it
-      // so disposeSlotFallback does not remove it a second time
+      // so disposeSlotResolution does not remove it a second time
       this.activeFallback = null
     }
-    disposeSlotFallback(this)
+    disposeSlotResolution(this)
   }
 
   protected getBranchParent(): ParentNode | null {
     // When fallback is active, recompute content without inserting it. The
-    // content may still be invalid, so recheckSlotFallback decides whether it
+    // content may still be invalid, so recheckSlotResolution decides whether it
     // can return to the DOM.
     return this.activeFallback ? null : super.getBranchParent()
   }
@@ -505,7 +508,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
     // update() operates on this.nodes, but while fallback is active `nodes`
     // points at the fallback block. Aim it at the content branch so the base
     // pipeline re-renders content, then capture the result back; the
-    // subsequent recheckSlotFallback decides what `nodes` exposes
+    // subsequent recheckSlotResolution decides what `nodes` exposes
     // (syncNodes).
     this.nodes = this.content
     this.update(render, key)
@@ -538,7 +541,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
             }
             this.updateContent(slotRender, key)
             const contentValid = isValidBlock(this.content)
-            recheckSlotFallback(this, shouldForce)
+            recheckSlotResolution(this, shouldForce)
             // Updates run under the temporary fallback-active marker so empty
             // inner branches can materialize their own anchors if fallback
             // takes over. If recheck resolves back to content, restore the
@@ -555,7 +558,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
         })
       } else {
         this.updateContent(slotRender, key)
-        recheckSlotFallback(this, shouldForce)
+        recheckSlotResolution(this, shouldForce)
       }
     } finally {
       this.pendingRecheck = false
@@ -591,7 +594,7 @@ export class SlotFragment extends DynamicFragment implements SlotFallbackState {
     this.nodes = this.activeFallback || this.content
   }
 
-  notifyFallbackValidityChange(): void {
+  notifyExposedValidityChange(): void {
     if (this.notifyParentBoundary && this.parentSlotBoundary) {
       this.parentSlotBoundary.markDirty()
     }
