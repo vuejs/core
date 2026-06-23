@@ -764,13 +764,16 @@ function genSlotBlockWithProps(
   }
 
   const exitSlotBlock = context.enterSlotBlock()
-  markSlotRootOperations(oper)
+  const hasStableRoot = hasStableSlotRoot(oper, context)
+  if (!hasStableRoot) {
+    markSlotRootOperations(oper)
+  }
   let blockFn = context.withId(
     () => genBlock(oper, context, propsName ? [propsName] : []),
     idMap,
   )
   // Dynamic slot sources keep rawSlots.$, so runtime stays conservative.
-  if (emitNonStableFlag && !hasStableSlotRoot(oper, context)) {
+  if (emitNonStableFlag && !hasStableRoot) {
     blockFn = genCall(
       context.helper('extend'),
       blockFn,

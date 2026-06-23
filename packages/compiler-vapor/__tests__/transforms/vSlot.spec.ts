@@ -1,5 +1,9 @@
 import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
-import { VaporSlotFlags } from '@vue/shared'
+import {
+  VaporDynamicComponentFlags,
+  VaporSlotFlags,
+  VaporVForFlags,
+} from '@vue/shared'
 import {
   IRNodeTypes,
   IRSlotType,
@@ -606,6 +610,7 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+      expect(code).not.toContain('SLOT_ROOT')
     })
 
     test('static component root sibling keeps slot content stable', () => {
@@ -614,6 +619,9 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+      expect(code).not.toContain(
+        `null, null, ${VaporDynamicComponentFlags.SLOT_ROOT})`,
+      )
     })
 
     test('root v-if slot content is non-stable', () => {
@@ -638,6 +646,7 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+      expect(code).toContain('SLOT_ROOT')
     })
 
     test('root v-for with root v-if slot content is non-stable', () => {
@@ -646,6 +655,10 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+      expect(code).toContain(
+        `, undefined, ${VaporVForFlags.IS_SINGLE_NODE | VaporVForFlags.SLOT_ROOT})`,
+      )
+      expect(code).toContain('SLOT_ROOT')
     })
 
     test('comment with dynamic root slot content is non-stable', () => {
@@ -654,6 +667,7 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code).toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+      expect(code).toContain('SLOT_ROOT')
     })
 
     test('runtime dynamic component root is non-stable', () => {
@@ -1038,6 +1052,9 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).not.toContain(`_: ${VaporSlotFlags.NON_STABLE}`)
+      expect(code).not.toContain(
+        `, undefined, ${VaporVForFlags.IS_SINGLE_NODE | VaporVForFlags.SLOT_ROOT})`,
+      )
       expect(code).toMatchSnapshot()
     })
 

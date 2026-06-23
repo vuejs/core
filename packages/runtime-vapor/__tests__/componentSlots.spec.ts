@@ -2674,6 +2674,72 @@ describe('component: slots', () => {
           expect(slotBlock).not.toBeInstanceOf(SlotFragment)
           expect(host.innerHTML).not.toContain('fallback')
         })
+
+        test('compiled stable sibling keeps fallback hidden when dynamic sibling becomes invalid', async () => {
+          const show = ref(true)
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            show,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <span>stable</span>
+                <div v-if="data">dynamic</div>
+              </components.Child>
+            </template>`,
+            show,
+            { Child },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toBe(
+            '<span>stable</span><div>dynamic</div><!--if--><!--slot-->',
+          )
+
+          show.value = false
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<span>stable</span><!--if--><!--slot-->')
+        })
+
+        test('compiled component root keeps fallback hidden when component output becomes invalid', async () => {
+          const show = ref(true)
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            show,
+          )
+          const Inner = compile(
+            `<script setup>
+              const props = defineProps(['show'])
+            </script>
+            <template>
+              <span v-if="props.show">inner</span>
+            </template>`,
+            show,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <components.Inner :show="data" />
+              </components.Child>
+            </template>`,
+            show,
+            { Child, Inner },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toBe('<span>inner</span><!--if--><!--slot-->')
+
+          show.value = false
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<!--if--><!--slot-->')
+        })
       })
 
       describe('hydration', () => {
