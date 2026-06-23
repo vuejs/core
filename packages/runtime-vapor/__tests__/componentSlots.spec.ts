@@ -1133,6 +1133,48 @@ describe('component: slots', () => {
       app.unmount()
     })
 
+    test('propagates root forwarded slot exposed validity', async () => {
+      const data = ref(true)
+      const Outer = compile(
+        `<template><slot><span>outer fallback</span></slot></template>`,
+        data,
+      )
+      const Parent = compile(
+        `<template>
+          <components.Outer>
+            <slot>
+              <span v-if="data">forwarded fallback</span>
+            </slot>
+          </components.Outer>
+        </template>`,
+        data,
+        { Outer },
+      )
+      const App = compile(
+        `<template>
+          <components.Parent>
+            <span v-if="false">content</span>
+          </components.Parent>
+        </template>`,
+        data,
+        { Parent },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toContain('<span>forwarded fallback</span>')
+      expect(root.innerHTML).not.toContain('outer fallback')
+
+      data.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toContain('<span>outer fallback</span>')
+      expect(root.innerHTML).not.toContain('forwarded fallback')
+
+      app.unmount()
+    })
+
     test('vdom slot dirties parent boundary when content validity changes', async () => {
       const show = ref(true)
       const boundary = {
