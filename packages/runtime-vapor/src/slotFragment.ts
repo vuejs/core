@@ -34,45 +34,45 @@ import { setBlockKey } from './helpers/setKey'
 // slot implementations in vdomInterop.ts, which keep their per-slot state in
 // closures.
 
-// Walks the boundary chain outward and renders the nearest fallback into
-// `scope`. Returns:
+// Walks the boundary chain outward and renders fallbacks into `scope`. Returns:
 // - a valid block: the innermost fallback that rendered valid output;
 // - an invalid block: every boundary providing a fallback rendered invalid
-//   output (e.g. a fallback whose root v-if is currently false). The inherited
-//   result wins when present; otherwise the local invalid block is kept. Their
-//   effects stay live in the shared scope, so the chosen fallback can become
-//   valid later;
+//   output (e.g. a fallback whose root v-if is currently false). The outermost
+//   invalid result is kept. Their effects stay live in the shared scope, so a
+//   fallback can become valid later;
 // - undefined: no boundary in the chain provides a fallback at all.
 function renderSlotFallback(
   boundary: SlotBoundaryContext | null,
   scope: EffectScope,
 ): Block | undefined {
-  if (!boundary) {
-    return undefined
+  let block: Block | undefined
+
+  while (boundary) {
+    const current = boundary
+    const localFallback = current.getFallback()
+
+    if (localFallback) {
+      const content = current.run(
+        () =>
+          withSlotBoundary(
+            {
+              ...current,
+              // Hide the local fallback while rendering it, so slot outlets inside
+              // the fallback don't resolve to the same fallback again.
+              getFallback: () => undefined,
+            },
+            localFallback,
+          ),
+        scope,
+      )
+      if (isValidBlock(content)) return content
+      block = content
+    }
+
+    boundary = current.parent
   }
 
-  const localFallback = boundary.getFallback()
-  if (!localFallback) {
-    return renderSlotFallback(boundary.parent, scope)
-  }
-
-  const renderFallback = () =>
-    withSlotBoundary(
-      {
-        ...boundary,
-        // Hide the local fallback while rendering it, so slot outlets inside
-        // the fallback don't resolve to the same fallback again.
-        getFallback: () => undefined,
-      },
-      localFallback,
-    )
-  const local = boundary.run(() => scope.run(renderFallback) || [], scope)
-  if (isValidBlock(local)) {
-    return local
-  }
-
-  const inherited = renderSlotFallback(boundary.parent, scope)
-  return inherited === undefined ? local : inherited
+  return block
 }
 
 // Per-slot state the slot resolution machine operates on. Implemented by

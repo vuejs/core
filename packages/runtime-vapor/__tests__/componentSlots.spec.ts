@@ -116,7 +116,7 @@ function createTestSlotResolutionState(options: {
   const boundary: SlotBoundaryContext = {
     parent: null,
     getFallback: () => options.fallback,
-    run: fn => fn(),
+    run: (fn, scope) => (scope ? scope.run(fn)! : fn()),
     markDirty: () => markSlotResolutionDirty(state),
   }
   state = {
