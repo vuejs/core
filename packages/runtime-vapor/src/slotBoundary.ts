@@ -18,9 +18,6 @@ export interface SlotBoundaryContext {
   // under this boundary may have changed; routes into the slot resolution
   // state machine (markSlotResolutionDirty).
   markDirty: () => void
-  // Cached fallback-masking view of this boundary, used while rendering its
-  // own fallback (see getRedirectedBoundary in slotFragment.ts).
-  redirected?: SlotBoundaryContext
 }
 
 export let currentSlotBoundary: SlotBoundaryContext | null = null

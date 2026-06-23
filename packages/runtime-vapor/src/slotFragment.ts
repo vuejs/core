@@ -34,25 +34,6 @@ import { setBlockKey } from './helpers/setKey'
 // slot implementations in vdomInterop.ts, which keep their per-slot state in
 // closures.
 
-// View of a boundary used while rendering that boundary's own fallback. It
-// masks the local fallback (getFallback -> undefined) so slot outlets
-// *inside* the fallback body resolve against the parent chain instead of
-// recursively landing on the very fallback being rendered, while keeping the
-// owner's ambient slot / fragment context and local resolution dirty channel.
-function getRedirectedBoundary(
-  boundary: SlotBoundaryContext,
-): SlotBoundaryContext {
-  if (boundary.redirected) {
-    return boundary.redirected
-  }
-  return (boundary.redirected = {
-    parent: boundary.parent,
-    getFallback: () => undefined,
-    run: (fn, scope) => boundary.run(fn, scope),
-    markDirty: () => boundary.markDirty(),
-  })
-}
-
 // Walks the boundary chain outward and renders the nearest fallback into
 // `scope`. Returns:
 // - a valid block: the innermost fallback that rendered valid output;
@@ -76,7 +57,15 @@ function renderSlotFallback(
   }
 
   const renderFallback = () =>
-    withSlotBoundary(getRedirectedBoundary(boundary), localFallback)
+    withSlotBoundary(
+      {
+        ...boundary,
+        // Hide the local fallback while rendering it, so slot outlets inside
+        // the fallback don't resolve to the same fallback again.
+        getFallback: () => undefined,
+      },
+      localFallback,
+    )
   const local = boundary.run(() => scope.run(renderFallback) || [], scope)
   if (isValidBlock(local)) {
     return local
