@@ -30,7 +30,7 @@ import { extend, isArray } from '@vue/shared'
 import {
   RenderContextFragment,
   isFragment,
-  runWithFragmentCtx,
+  runWithFragmentCtxOnly,
 } from '../fragment'
 import {
   advanceHydrationNode,
@@ -147,7 +147,7 @@ export class TeleportFragment extends RenderContextFragment {
       // init and slot re-runs, where new nodes capture the ambient context.
       // The equality fast path keeps the synchronous first run free.
       renderEffect(() =>
-        runWithFragmentCtx(this, () =>
+        runWithFragmentCtxOnly(this, () =>
           this.handleChildrenUpdate(
             this.rawSlots && this.rawSlots.default
               ? (this.rawSlots.default as BlockFn)()

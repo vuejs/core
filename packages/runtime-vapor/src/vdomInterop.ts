@@ -121,7 +121,8 @@ import {
   type VaporFragment,
   isFragment,
   isSlotFragment,
-  runWithFragmentCtx,
+  runWithFragmentCtxOnly,
+  runWithRenderCtx,
 } from './fragment'
 import {
   type SlotBoundaryContext,
@@ -1422,7 +1423,7 @@ function renderVDOMSlot(
       return slotBoundary
     },
     getFallback: (): BlockFn | undefined => localFallback,
-    run: fn => runWithFragmentCtx(frag, fn),
+    run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
     markDirty: () => markSlotResolutionDirty(slotResolutionState),
   }
   slotResolutionState = {
@@ -1556,7 +1557,7 @@ function renderVDOMSlot(
     try {
       const renderSlotContent = () => {
         notifyBeforeUpdate()
-        runWithFragmentCtx(frag, () =>
+        runWithFragmentCtxOnly(frag, () =>
           withSlotBoundary(boundary, () => {
             let slotContent: VNode | Block | undefined
             let slotContentValid = false
@@ -1949,7 +1950,7 @@ function renderVaporSlot(
       },
       getFallback: () =>
         slotState.outletFallback.value ? outletFallback : undefined,
-      run: fn => runWithFragmentCtx(frag, fn),
+      run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
       markDirty: markInteropSlotResolutionDirty,
     }
     const localFallbackBoundary: SlotBoundaryContext = {
@@ -1958,7 +1959,7 @@ function renderVaporSlot(
       },
       getFallback: () =>
         slotState.localFallback.value ? localFallback : undefined,
-      run: fn => runWithFragmentCtx(frag, fn),
+      run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
       markDirty: markInteropSlotResolutionDirty,
     }
     slotResolutionState = {
@@ -2037,7 +2038,7 @@ function renderVaporSlot(
         if (isHydrating) {
           resolvedContent = withHydratingSlotBoundary(() =>
             finalizeResolvedContent(
-              runWithFragmentCtx(frag, () => {
+              runWithFragmentCtxOnly(frag, () => {
                 const renderSlot = () =>
                   withSlotBoundary(localFallbackBoundary, () =>
                     invokeVaporSlot(vnode),
@@ -2050,7 +2051,7 @@ function renderVaporSlot(
           )
         } else {
           resolvedContent = finalizeResolvedContent(
-            runWithFragmentCtx(frag, () =>
+            runWithFragmentCtxOnly(frag, () =>
               withSlotBoundary(localFallbackBoundary, () =>
                 invokeVaporSlot(vnode),
               ),
@@ -2269,7 +2270,7 @@ function createVNodeChildrenFragment(
     simpleSetCurrentInstance(parentComponent)
     try {
       renderEffect(() => {
-        runWithFragmentCtx(frag, () => {
+        runWithFragmentCtxOnly(frag, () => {
           const nextChildren = render()
           notifyBeforeUpdate()
           if (isHydrating) {

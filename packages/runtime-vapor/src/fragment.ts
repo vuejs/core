@@ -123,16 +123,26 @@ export class RenderContextFragment<
   }
 
   protected runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
-    const prevInstance = setCurrentInstance(this.renderInstance, scope)
-    try {
-      return runWithFragmentCtx(this, fn)
-    } finally {
-      setCurrentInstance(...prevInstance)
-    }
+    return runWithRenderCtx(this, fn, scope)
   }
 }
 
-export function runWithFragmentCtx<R>(
+export function runWithRenderCtx<R>(
+  fragment: RenderContextFragment,
+  fn: () => R,
+  scope?: EffectScope,
+): R {
+  const prevInstance = setCurrentInstance(fragment.renderInstance, scope)
+  try {
+    return runWithFragmentCtxOnly(fragment, fn)
+  } finally {
+    setCurrentInstance(...prevInstance)
+  }
+}
+
+// Restores fragment-owned ambient state only. The caller must already have the
+// correct currentInstance / currentScope; use runWithRenderCtx for late renders.
+export function runWithFragmentCtxOnly<R>(
   fragment: RenderContextFragment,
   fn: () => R,
 ): R {

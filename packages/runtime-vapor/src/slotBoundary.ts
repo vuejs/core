@@ -11,8 +11,8 @@ export interface SlotBoundaryContext {
   parent: SlotBoundaryContext | null
   getFallback: () => BlockFn | undefined
   // Re-establishes the owning slot's ambient slot / fragment context around
-  // late renders such as fallback bodies, which run long after the slot's own
-  // setup finished.
+  // late renders such as fallback bodies, and runs them in the provided effect
+  // scope when one is provided.
   run<R>(fn: () => R, scope?: EffectScope): R
   // Notifies the owning slot that the validity of a dynamic branch rendered
   // under this boundary may have changed; routes into the slot resolution
