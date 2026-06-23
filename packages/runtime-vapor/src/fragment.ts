@@ -113,8 +113,7 @@ export class RenderContextFragment<
   readonly renderInstance: GenericComponentInstance | null = currentInstance
   readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
   readonly keepAliveCtx?: VaporKeepAliveContext | null
-  readonly inheritedSlotBoundary: SlotBoundaryContext | null =
-    currentSlotBoundary
+  readonly slotBoundary: SlotBoundaryContext | null = currentSlotBoundary
 
   constructor(nodes: T) {
     super(nodes)
@@ -142,7 +141,7 @@ export function runWithFragmentCtx<R>(
   // restoring. This keeps ordinary branch renders on the cheap path.
   if (
     currentSlotOwner === fragment.slotOwner &&
-    currentSlotBoundary === fragment.inheritedSlotBoundary &&
+    currentSlotBoundary === fragment.slotBoundary &&
     (!isKeepAliveEnabled || currentKeepAliveCtx === keepAliveCtx)
   ) {
     return fn()
@@ -153,7 +152,7 @@ export function runWithFragmentCtx<R>(
   if (isKeepAliveEnabled) {
     prevKeepAliveCtx = setCurrentKeepAliveCtx(keepAliveCtx)
   }
-  const prevBoundary = setCurrentSlotBoundary(fragment.inheritedSlotBoundary)
+  const prevBoundary = setCurrentSlotBoundary(fragment.slotBoundary)
   try {
     return fn()
   } finally {
@@ -441,7 +440,6 @@ export class SlotFragment
   isSlot = true
   private disposed = false
   forwarded = false
-  readonly parentSlotBoundary: SlotBoundaryContext | null = currentSlotBoundary
   // Custom elements with `shadowRoot: false` replace their native slot outlet
   // after mount. Keep the live fallback block on the fragment so CE slot sync
   // can preserve block ownership after the outlet node is gone.
@@ -469,11 +467,8 @@ export class SlotFragment
   }
 
   get boundary(): SlotBoundaryContext {
-    if (this.ownBoundary) {
-      return this.ownBoundary
-    }
-    return (this.ownBoundary = {
-      parent: this.parentSlotBoundary,
+    return (this.ownBoundary ||= {
+      parent: this.slotBoundary,
       getFallback: () => this.localFallback,
       run: (fn, scope) => this.runWithRenderCtx(fn, scope),
       markDirty: () => markSlotResolutionDirty(this),
@@ -595,8 +590,8 @@ export class SlotFragment
   }
 
   notifyExposedValidityChange(): void {
-    if (this.notifyParentBoundary && this.parentSlotBoundary) {
-      this.parentSlotBoundary.markDirty()
+    if (this.notifyParentBoundary && this.slotBoundary) {
+      this.slotBoundary.markDirty()
     }
   }
 }
