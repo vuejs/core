@@ -2784,6 +2784,92 @@ describe('component: slots', () => {
 
           expect(root.innerHTML).toBe('<!--if--><!--slot-->')
         })
+
+        test('recomputes validity for all-dynamic multi-root slot content', async () => {
+          const data = ref('both')
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            data,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <span v-if="data !== 'none' && data !== 'second'">first</span>
+                <div v-if="data !== 'none' && data !== 'first'">second</div>
+              </components.Child>
+            </template>`,
+            data,
+            { Child },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toContain('<span>first</span>')
+          expect(root.innerHTML).toContain('<div>second</div>')
+          expect(root.innerHTML).not.toContain('fallback')
+
+          data.value = 'first'
+          await nextTick()
+
+          expect(root.innerHTML).toContain('<span>first</span>')
+          expect(root.innerHTML).not.toContain('second')
+          expect(root.innerHTML).not.toContain('fallback')
+
+          data.value = 'none'
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+
+          data.value = 'second'
+          await nextTick()
+
+          expect(root.innerHTML).toContain('<div>second</div>')
+          expect(root.innerHTML).not.toContain('first')
+          expect(root.innerHTML).not.toContain('fallback')
+        })
+
+        test('recomputes validity for v-for and v-if slot roots', async () => {
+          const data = ref({ items: ['one'], show: true })
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            data,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <span v-for="item in data.items">{{ item }}</span>
+                <div v-if="data.show">tail</div>
+              </components.Child>
+            </template>`,
+            data,
+            { Child },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toContain('<span>one</span>')
+          expect(root.innerHTML).toContain('<div>tail</div>')
+          expect(root.innerHTML).not.toContain('fallback')
+
+          data.value = { items: [], show: true }
+          await nextTick()
+
+          expect(root.innerHTML).toContain('<div>tail</div>')
+          expect(root.innerHTML).not.toContain('fallback')
+
+          data.value = { items: [], show: false }
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+
+          data.value = { items: ['two'], show: false }
+          await nextTick()
+
+          expect(root.innerHTML).toContain('<span>two</span>')
+          expect(root.innerHTML).not.toContain('fallback')
+        })
       })
 
       describe('hydration', () => {
