@@ -1175,6 +1175,49 @@ describe('component: slots', () => {
       app.unmount()
     })
 
+    test('updates fallback body DOM without dirtying parent slot content', async () => {
+      const data = ref(false)
+      const Outer = compile(
+        `<template><slot><span>outer fallback</span></slot></template>`,
+        data,
+      )
+      const Child = compile(
+        `<template>
+          <slot>
+            <span>child fallback<i v-if="data"> detail</i></span>
+          </slot>
+        </template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <components.Outer>
+            <components.Child>
+              <span v-if="false">content</span>
+            </components.Child>
+          </components.Outer>
+        </template>`,
+        data,
+        { Outer, Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toContain('child fallback')
+      expect(root.innerHTML).not.toContain('outer fallback')
+      expect(root.innerHTML).not.toContain('<i>')
+
+      data.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toContain('child fallback')
+      expect(root.innerHTML).toContain('<i> detail</i>')
+      expect(root.innerHTML).not.toContain('outer fallback')
+
+      app.unmount()
+    })
+
     test('vdom slot dirties parent boundary when content validity changes', async () => {
       const show = ref(true)
       const boundary = {
