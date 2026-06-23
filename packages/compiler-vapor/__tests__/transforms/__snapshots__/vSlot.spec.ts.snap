@@ -576,7 +576,7 @@ export function render(_ctx) {
       const x2 = _txt(n2)
       _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
       return n2
-    }, undefined, 40)
+    }, undefined, 8)
     const n3 = t1()
     const x0 = _txt(n0)
     _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
