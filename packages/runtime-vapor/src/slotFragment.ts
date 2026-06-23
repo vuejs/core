@@ -38,7 +38,7 @@ import { setBlockKey } from './helpers/setKey'
 // masks the local fallback (getFallback -> undefined) so slot outlets
 // *inside* the fallback body resolve against the parent chain instead of
 // recursively landing on the very fallback being rendered, while keeping the
-// owner's ambient slot / fragment context and dirty channel.
+// owner's ambient slot / fragment context and local resolution dirty channel.
 function getRedirectedBoundary(
   boundary: SlotBoundaryContext,
 ): SlotBoundaryContext {
@@ -346,7 +346,9 @@ export function recheckSlotResolution(
     contentValid && !nextFallback
       ? true
       : nextFallback
-        ? isValidBlock(nextFallback)
+        ? nextFallback === fallback
+          ? fallbackValid
+          : isValidBlock(nextFallback)
         : state.isContentValid()
   state.syncNodes()
   state.lastNodesValid = nextNodesValid
