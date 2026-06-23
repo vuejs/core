@@ -14,9 +14,9 @@ export interface SlotBoundaryContext {
   // late renders such as fallback bodies, which run long after the slot's own
   // setup finished.
   run<R>(fn: () => R, scope?: EffectScope): R
-  // Notifies the owning slot that the validity of content rendered under
-  // this boundary may have changed; routes into the slot resolution state
-  // machine (markSlotResolutionDirty).
+  // Notifies the owning slot that the validity of a dynamic branch rendered
+  // under this boundary may have changed; routes into the slot resolution
+  // state machine (markSlotResolutionDirty).
   markDirty: () => void
   // Cached fallback-masking view of this boundary, used while rendering its
   // own fallback (see getRedirectedBoundary in slotFragment.ts).
