@@ -825,6 +825,24 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><div><span>loading</span></div></div>')
   })
 
+  // #6385
+  test('should fall back to full diff when the user patches a compiled slot', () => {
+    render(h('div', { id: 'placeholder' }), root)
+
+    render(
+      (openBlock(),
+      createElementBlock('div', { id: 'resolved' }, [
+        createTextVNode('hello '),
+        createElementVNode('button', null, '0', PatchFlags.TEXT),
+      ])),
+      root,
+    )
+
+    expect(inner(root)).toBe(
+      '<div id="resolved">hello <button>0</button></div>',
+    )
+  })
+
   // #3828
   test('patch Suspense in optimized mode w/ nested dynamic nodes', async () => {
     const show = ref(false)
