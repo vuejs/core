@@ -39,6 +39,7 @@ import {
   defaultOnWarn,
 } from './errors'
 import {
+  fnExpRE,
   forAliasRE,
   isAllWhitespace,
   isCoreComponent,
@@ -363,7 +364,13 @@ const tokenizer = new Tokenizer(stack, {
               expParseMode = ExpParseMode.Params
             } else if (
               currentProp.name === 'on' &&
-              currentAttrValue.includes(';')
+              currentAttrValue.includes(';') &&
+              // #14287: a single function expression handler is not a list of
+              // inline statements even if it contains `;` (e.g. inside its body
+              // or a string), so it must be parsed as an expression. Parsing it
+              // as statements would treat an anonymous `function () {}` as an
+              // illegal function declaration.
+              !fnExpRE.test(currentAttrValue)
             ) {
               expParseMode = ExpParseMode.Statements
             }

@@ -189,7 +189,7 @@ export const isMemberExpression: (
   context: TransformContext,
 ) => boolean = __BROWSER__ ? isMemberExpressionBrowser : isMemberExpressionNode
 
-const fnExpRE =
+export const fnExpRE: RegExp =
   /^\s*(?:async\s*)?(?:\([^)]*?\)|[\w$_]+)\s*(?::[^=]+)?=>|^\s*(?:async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 export const isFnExpressionBrowser: (exp: ExpressionNode) => boolean = exp =>

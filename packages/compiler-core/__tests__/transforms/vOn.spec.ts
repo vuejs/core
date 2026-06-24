@@ -369,6 +369,37 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  // #14287
+  test('should NOT wrap as function if expression is a function expression containing a semicolon', () => {
+    const { node } = parseWithVOn(`<div @click="function () { foo(';') }"/>`)
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `function () { foo(';') }`,
+          },
+        },
+      ],
+    })
+
+    const { node: node2 } = parseWithVOn(
+      `<div @click="$event => { foo(';') }"/>`,
+    )
+    expect((node2.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `$event => { foo(';') }`,
+          },
+        },
+      ],
+    })
+  })
+
   test('should NOT wrap as function if expression is complex member expression', () => {
     const { node } = parseWithVOn(`<div @click="a['b' + c]"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
