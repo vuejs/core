@@ -6,10 +6,7 @@ import {
 } from '@vue/compiler-core'
 import { transformVText } from '../../src/transforms/vText'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
-import {
-  createObjectMatcher,
-  genFlagText,
-} from '../../../compiler-core/__tests__/testUtils'
+import { createObjectMatcher } from '../../../compiler-core/__tests__/testUtils'
 import { PatchFlags } from '@vue/shared'
 import { DOMErrorCodes } from '../../src/errors'
 
@@ -36,7 +33,7 @@ describe('compiler: v-text transform', () => {
         },
       }),
       children: undefined,
-      patchFlag: genFlagText(PatchFlags.PROPS),
+      patchFlag: PatchFlags.PROPS,
       dynamicProps: `["textContent"]`,
     })
   })
@@ -57,7 +54,7 @@ describe('compiler: v-text transform', () => {
         },
       }),
       children: undefined, // <-- children should have been removed
-      patchFlag: genFlagText(PatchFlags.PROPS),
+      patchFlag: PatchFlags.PROPS,
       dynamicProps: `["textContent"]`,
     })
   })

@@ -37,10 +37,23 @@ export function processDefineOptions(
         (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
         prop.key.type === 'Identifier'
       ) {
-        if (prop.key.name === 'props') propsOption = prop
-        if (prop.key.name === 'emits') emitsOption = prop
-        if (prop.key.name === 'expose') exposeOption = prop
-        if (prop.key.name === 'slots') slotsOption = prop
+        switch (prop.key.name) {
+          case 'props':
+            propsOption = prop
+            break
+
+          case 'emits':
+            emitsOption = prop
+            break
+
+          case 'expose':
+            exposeOption = prop
+            break
+
+          case 'slots':
+            slotsOption = prop
+            break
+        }
       }
     }
   }

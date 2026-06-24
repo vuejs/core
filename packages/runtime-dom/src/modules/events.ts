@@ -1,8 +1,9 @@
-import { hyphenate, isArray } from '@vue/shared'
+import { NOOP, hyphenate, isArray, isFunction } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   ErrorCodes,
   callWithAsyncErrorHandling,
+  warn,
 } from '@vue/runtime-core'
 
 interface Invoker extends EventListener {
@@ -17,7 +18,7 @@ export function addEventListener(
   event: string,
   handler: EventListener,
   options?: EventListenerOptions,
-) {
+): void {
   el.addEventListener(event, handler, options)
 }
 
@@ -26,30 +27,37 @@ export function removeEventListener(
   event: string,
   handler: EventListener,
   options?: EventListenerOptions,
-) {
+): void {
   el.removeEventListener(event, handler, options)
 }
 
-const veiKey = Symbol('_vei')
+const veiKey: unique symbol = Symbol('_vei')
 
 export function patchEvent(
   el: Element & { [veiKey]?: Record<string, Invoker | undefined> },
   rawName: string,
   prevValue: EventValue | null,
-  nextValue: EventValue | null,
+  nextValue: EventValue | unknown,
   instance: ComponentInternalInstance | null = null,
-) {
+): void {
   // vei = vue event invokers
   const invokers = el[veiKey] || (el[veiKey] = {})
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch
-    existingInvoker.value = nextValue
+    existingInvoker.value = __DEV__
+      ? sanitizeEventValue(nextValue, rawName)
+      : (nextValue as EventValue)
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
       // add
-      const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
+      const invoker = (invokers[rawName] = createInvoker(
+        __DEV__
+          ? sanitizeEventValue(nextValue, rawName)
+          : (nextValue as EventValue),
+        instance,
+      ))
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
       // remove
@@ -78,7 +86,7 @@ function parseName(name: string): [string, EventListenerOptions | undefined] {
 // To avoid the overhead of repeatedly calling Date.now(), we cache
 // and use the same timestamp for all event listeners attached in the same tick.
 let cachedNow: number = 0
-const p = /*#__PURE__*/ Promise.resolve()
+const p = /*@__PURE__*/ Promise.resolve()
 const getNow = () =>
   cachedNow || (p.then(() => (cachedNow = 0)), (cachedNow = Date.now()))
 
@@ -104,30 +112,50 @@ function createInvoker(
     } else if (e._vts <= invoker.attached) {
       return
     }
-    callWithAsyncErrorHandling(
-      patchStopImmediatePropagation(e, invoker.value),
-      instance,
-      ErrorCodes.NATIVE_EVENT_HANDLER,
-      [e],
-    )
+    const value = invoker.value
+    if (isArray(value)) {
+      const originalStop = e.stopImmediatePropagation
+      e.stopImmediatePropagation = () => {
+        originalStop.call(e)
+        ;(e as any)._stopped = true
+      }
+      const handlers = value.slice()
+      const args = [e]
+      for (let i = 0; i < handlers.length; i++) {
+        if ((e as any)._stopped) {
+          break
+        }
+        const handler = handlers[i]
+        if (handler) {
+          callWithAsyncErrorHandling(
+            handler,
+            instance,
+            ErrorCodes.NATIVE_EVENT_HANDLER,
+            args,
+          )
+        }
+      }
+    } else {
+      callWithAsyncErrorHandling(
+        value,
+        instance,
+        ErrorCodes.NATIVE_EVENT_HANDLER,
+        [e],
+      )
+    }
   }
   invoker.value = initialValue
   invoker.attached = getNow()
   return invoker
 }
 
-function patchStopImmediatePropagation(
-  e: Event,
-  value: EventValue,
-): EventValue {
-  if (isArray(value)) {
-    const originalStop = e.stopImmediatePropagation
-    e.stopImmediatePropagation = () => {
-      originalStop.call(e)
-      ;(e as any)._stopped = true
-    }
-    return value.map(fn => (e: Event) => !(e as any)._stopped && fn && fn(e))
-  } else {
-    return value
+function sanitizeEventValue(value: unknown, propName: string): EventValue {
+  if (isFunction(value) || isArray(value)) {
+    return value as EventValue
   }
+  warn(
+    `Wrong type passed as event handler to ${propName} - did you forget @ or : ` +
+      `in front of your prop?\nExpected function or array of functions, received type ${typeof value}.`,
+  )
+  return NOOP
 }

@@ -5,7 +5,7 @@ exports[`TS annotations 1`] = `
 import { Foo, Bar, Baz, Qux, Fred } from './x'
     const a = 1
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -22,7 +22,7 @@ exports[`attribute expressions 1`] = `
 import { bar, baz } from './x'
     const cond = true
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -38,7 +38,7 @@ exports[`components 1`] = `
 import { FooBar, FooBaz, FooQux, foo } from './x'
     const fooBar: FooBar = 1
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -53,7 +53,7 @@ exports[`directive 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { vMyDir } from './x'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -66,29 +66,14 @@ return { get vMyDir() { return vMyDir } }
 
 exports[`dynamic arguments 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { FooBar, foo, bar, unused, baz } from './x'
+import { FooBar, foo, bar, unused, baz, msg } from './x'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
     
-return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { return bar }, get baz() { return baz } }
-}
-
-})"
-`;
-
-exports[`import namespace 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import * as Foo from './foo'
-    
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-      
-return { get Foo() { return Foo } }
+return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { return bar }, get baz() { return baz }, get msg() { return msg } }
 }
 
 })"
@@ -98,7 +83,7 @@ exports[`js template string interpolations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { VAR, VAR2, VAR3 } from './x'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -113,7 +98,7 @@ exports[`last tag 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { FooBaz, Last } from './x'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -128,7 +113,7 @@ exports[`namespace / dot component usage 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import * as Foo from './foo'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -143,7 +128,7 @@ exports[`property access (whitespace) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { Foo, Bar, Baz } from './foo'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -158,7 +143,7 @@ exports[`property access 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { Foo, Bar, Baz } from './foo'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -173,7 +158,7 @@ exports[`spread operator 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { Foo, Bar, Baz } from './foo'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -188,7 +173,7 @@ exports[`template ref 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { foo, bar, Baz } from './foo'
     
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -203,7 +188,7 @@ exports[`vue interpolations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { x, y, z, x$y } from './x'
   
-export default /*#__PURE__*/_defineComponent({
+export default /*@__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 

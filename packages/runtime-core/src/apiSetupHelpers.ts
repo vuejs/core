@@ -1,12 +1,9 @@
 import {
-  EMPTY_OBJ,
+  type IfAny,
   type LooseRequired,
   type Prettify,
   type UnionToIntersection,
-  camelize,
   extend,
-  hasChanged,
-  hyphenate,
   isArray,
   isFunction,
   isPromise,
@@ -15,13 +12,15 @@ import {
   type SetupContext,
   createSetupContext,
   getCurrentInstance,
+  isInSSRComponentSetup,
   setCurrentInstance,
+  setInSSRSetupState,
   unsetCurrentInstance,
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
+  ComponentOptionsBase,
   ComponentOptionsMixin,
-  ComponentOptionsWithoutProps,
   ComputedOptions,
   MethodOptions,
 } from './componentOptions'
@@ -29,13 +28,11 @@ import type {
   ComponentObjectPropsOptions,
   ComponentPropsOptions,
   ExtractPropTypes,
-  NormalizedProps,
   PropOptions,
 } from './componentProps'
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
-import { type Ref, customRef, ref } from '@vue/reactivity'
-import { watchSyncEffect } from '.'
+import type { Ref } from '@vue/reactivity'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -103,8 +100,10 @@ export type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
 }
 
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
-  ? [T[K]] extends [boolean | undefined]
-    ? K
+  ? T[K] extends boolean | undefined
+    ? T[K] extends never | undefined
+      ? never
+      : K
     : never
   : never
 
@@ -122,7 +121,7 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
  * const emit = defineEmits<{
  *   // <eventName>: <expected arguments>
  *   change: []
- *   update: [value: string] // named tuple syntax
+ *   update: [value: number] // named tuple syntax
  * }>()
  *
  * emit('change')
@@ -141,9 +140,11 @@ export function defineEmits<EE extends string = string>(
 export function defineEmits<E extends EmitsOptions = EmitsOptions>(
   emitOptions: E,
 ): EmitFn<E>
-export function defineEmits<
-  T extends ((...args: any[]) => any) | Record<string, any[]>,
->(): T extends (...args: any[]) => any ? T : ShortEmits<T>
+export function defineEmits<T extends ComponentTypeEmits>(): T extends (
+  ...args: any[]
+) => any
+  ? T
+  : ShortEmits<T>
 // implementation
 export function defineEmits() {
   if (__DEV__) {
@@ -151,6 +152,8 @@ export function defineEmits() {
   }
   return null as any
 }
+
+export type ComponentTypeEmits = ((...args: any[]) => any) | Record<string, any>
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
 
@@ -176,7 +179,7 @@ type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
  */
 export function defineExpose<
   Exposed extends Record<string, any> = Record<string, any>,
->(exposed?: Exposed) {
+>(exposed?: Exposed): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
   }
@@ -197,21 +200,55 @@ export function defineOptions<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
 >(
-  options?: ComponentOptionsWithoutProps<
+  options?: ComponentOptionsBase<
     {},
     RawBindings,
     D,
     C,
     M,
     Mixin,
-    Extends
-  > & { emits?: undefined; expose?: undefined; slots?: undefined },
+    Extends,
+    {}
+  > & {
+    /**
+     * props should be defined via defineProps().
+     */
+    props?: never
+    /**
+     * emits should be defined via defineEmits().
+     */
+    emits?: never
+    /**
+     * expose should be defined via defineExpose().
+     */
+    expose?: never
+    /**
+     * slots should be defined via defineSlots().
+     */
+    slots?: never
+  },
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
   }
 }
 
+/**
+ * Vue `<script setup>` compiler macro for providing type hints to IDEs for
+ * slot name and slot props type checking.
+ *
+ * Example usage:
+ * ```ts
+ * const slots = defineSlots<{
+ *   default(props: { msg: string }): any
+ * }>()
+ * ```
+ *
+ * This is only usable inside `<script setup>`, is compiled away in the
+ * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineslots}
+ */
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>,
 >(): StrictUnwrapSlotsType<SlotsType<S>> {
@@ -221,8 +258,16 @@ export function defineSlots<
   return null as any
 }
 
-export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
-  [ModelRef<T, M>, Record<M, true | undefined>]
+export type ModelRef<T, M extends PropertyKey = string, G = T, S = T> = Ref<
+  G,
+  S
+> &
+  [ModelRef<T, M, G, S>, Record<M, true | undefined>]
+
+export type DefineModelOptions<T = any, G = T, S = T> = {
+  get?: (v: T) => G
+  set?: (v: S) => any
+}
 
 /**
  * Vue `<script setup>` compiler macro for declaring a
@@ -234,7 +279,7 @@ export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
  * Otherwise the prop name will default to "modelValue". In both cases, you
  * can also pass an additional object which will be used as the prop's options.
  *
- * The the returned ref behaves differently depending on whether the parent
+ * The returned ref behaves differently depending on whether the parent
  * provided the corresponding v-model props or not:
  * - If yes, the returned ref's value will always be in sync with the parent
  *   prop.
@@ -257,27 +302,28 @@ export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
  * const count = defineModel<number>('count', { default: 0 })
  * ```
  */
-export function defineModel<T, M extends string | number | symbol = string>(
-  options: { required: true } & PropOptions<T> & UseModelOptions<T>,
-): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
-  options: { default: any } & PropOptions<T> & UseModelOptions<T>,
-): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
-  options?: PropOptions<T> & UseModelOptions<T>,
-): ModelRef<T | undefined, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
+  options: ({ default: any } | { required: true }) &
+    PropOptions<T> &
+    DefineModelOptions<T, G, S>,
+): ModelRef<T, M, G, S>
+
+export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
+  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+): ModelRef<T | undefined, M, G | undefined, S | undefined>
+
+export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: { required: true } & PropOptions<T> & UseModelOptions<T>,
-): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
+  options: ({ default: any } | { required: true }) &
+    PropOptions<T> &
+    DefineModelOptions<T, G, S>,
+): ModelRef<T, M, G, S>
+
+export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: { default: any } & PropOptions<T> & UseModelOptions<T>,
-): ModelRef<T, M>
-export function defineModel<T, M extends string | number | symbol = string>(
-  name: string,
-  options?: PropOptions<T> & UseModelOptions<T>,
-): ModelRef<T | undefined, M>
+  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+): ModelRef<T | undefined, M, G | undefined, S | undefined>
+
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
@@ -285,12 +331,22 @@ export function defineModel(): any {
 }
 
 type NotUndefined<T> = T extends undefined ? never : T
+type MappedOmit<T, K extends keyof any> = {
+  [P in keyof T as P extends K ? never : P]: T[P]
+}
 
 type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type NativeType = null | number | string | boolean | symbol | Function
+type NativeType =
+  | null
+  | undefined
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
 
 type InferDefault<P, T> =
   | ((props: P) => T & {})
@@ -300,19 +356,23 @@ type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
-> = Readonly<Omit<T, keyof Defaults>> & {
-  readonly [K in keyof Defaults]-?: K extends keyof T
-    ? Defaults[K] extends undefined
-      ? T[K]
-      : NotUndefined<T[K]>
-    : never
-} & {
-  readonly [K in BKeys]-?: K extends keyof Defaults
-    ? Defaults[K] extends undefined
-      ? boolean | undefined
-      : boolean
-    : boolean
-}
+> = T extends unknown
+  ? Readonly<MappedOmit<T, keyof Defaults>> & {
+      readonly [K in keyof Defaults as K extends keyof T
+        ? K
+        : never]-?: K extends keyof T
+        ? Defaults[K] extends undefined
+          ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
+          : NotUndefined<T[K]>
+        : never
+    } & {
+      readonly [K in BKeys]-?: K extends keyof Defaults
+        ? Defaults[K] extends undefined
+          ? boolean | undefined
+          : boolean
+        : boolean
+    }
+  : never
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
@@ -349,103 +409,17 @@ export function withDefaults<
 }
 
 export function useSlots(): SetupContext['slots'] {
-  return getContext().slots
+  return getContext('useSlots').slots
 }
 
 export function useAttrs(): SetupContext['attrs'] {
-  return getContext().attrs
+  return getContext('useAttrs').attrs
 }
 
-type UseModelOptions<T = any> = {
-  get?: (v: T) => any
-  set?: (v: T) => any
-}
-
-export function useModel<
-  M extends string | number | symbol,
-  T extends Record<string, any>,
-  K extends keyof T,
->(props: T, name: K, options?: UseModelOptions<T[K]>): ModelRef<T[K], M>
-export function useModel(
-  props: Record<string, any>,
-  name: string,
-  options: UseModelOptions = EMPTY_OBJ,
-): Ref {
+function getContext(calledFunctionName: string): SetupContext {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
-    warn(`useModel() called without active instance.`)
-    return ref() as any
-  }
-
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[name]) {
-    warn(`useModel() called with prop "${name}" which is not declared.`)
-    return ref() as any
-  }
-
-  const camelizedName = camelize(name)
-  const hyphenatedName = hyphenate(name)
-
-  const res = customRef((track, trigger) => {
-    let localValue: any
-    watchSyncEffect(() => {
-      const propValue = props[name]
-      if (hasChanged(localValue, propValue)) {
-        localValue = propValue
-        trigger()
-      }
-    })
-    return {
-      get() {
-        track()
-        return options.get ? options.get(localValue) : localValue
-      },
-      set(value) {
-        const rawProps = i.vnode!.props
-        if (
-          !(
-            rawProps &&
-            // check if parent has passed v-model
-            (name in rawProps ||
-              camelizedName in rawProps ||
-              hyphenatedName in rawProps) &&
-            (`onUpdate:${name}` in rawProps ||
-              `onUpdate:${camelizedName}` in rawProps ||
-              `onUpdate:${hyphenatedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
-        ) {
-          localValue = value
-          trigger()
-        }
-        i.emit(`update:${name}`, options.set ? options.set(value) : value)
-      },
-    }
-  })
-
-  const modifierKey =
-    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
-
-  // @ts-expect-error
-  res[Symbol.iterator] = () => {
-    let i = 0
-    return {
-      next() {
-        if (i < 2) {
-          return { value: i++ ? props[modifierKey] || {} : res, done: false }
-        } else {
-          return { done: true }
-        }
-      },
-    }
-  }
-
-  return res
-}
-
-function getContext(): SetupContext {
-  const i = getCurrentInstance()!
-  if (__DEV__ && !i) {
-    warn(`useContext() called without active instance.`)
+    warn(`${calledFunctionName}() called without active instance.`)
   }
   return i.setupContext || (i.setupContext = createSetupContext(i))
 }
@@ -455,7 +429,7 @@ function getContext(): SetupContext {
  */
 export function normalizePropsOrEmits(
   props: ComponentPropsOptions | EmitsOptions,
-) {
+): ComponentObjectPropsOptions | ObjectEmitsOptions {
   return isArray(props)
     ? props.reduce(
         (normalized, p) => ((normalized[p] = null), normalized),
@@ -503,7 +477,7 @@ export function mergeDefaults(
 export function mergeModels(
   a: ComponentPropsOptions | EmitsOptions,
   b: ComponentPropsOptions | EmitsOptions,
-) {
+): ComponentPropsOptions | EmitsOptions {
   if (!a || !b) return a || b
   if (isArray(a) && isArray(b)) return a.concat(b)
   return extend({}, normalizePropsOrEmits(a), normalizePropsOrEmits(b))
@@ -548,8 +522,9 @@ export function createPropsRestProxy(
  * ```
  * @internal
  */
-export function withAsyncContext(getAwaitable: () => any) {
+export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentInstance()!
+  const inSSRSetup = isInSSRComponentSetup
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -558,11 +533,44 @@ export function withAsyncContext(getAwaitable: () => any) {
   }
   let awaitable = getAwaitable()
   unsetCurrentInstance()
+  if (inSSRSetup) {
+    setInSSRSetupState(false)
+  }
+
+  const restore = () => {
+    setCurrentInstance(ctx)
+    if (inSSRSetup) {
+      setInSSRSetupState(true)
+    }
+  }
+
+  // Never restore a captured "prev" instance here: in concurrent async setup
+  // continuations it may belong to a sibling component and cause leaks.
+  // We only need to balance ctx.scope.on() from setCurrentInstance(ctx),
+  // then clear global currentInstance for user microtasks.
+  const cleanup = () => {
+    if (getCurrentInstance() !== ctx) ctx.scope.off()
+    unsetCurrentInstance()
+    if (inSSRSetup) {
+      setInSSRSetupState(false)
+    }
+  }
+
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      setCurrentInstance(ctx)
+      restore()
+      // Defer cleanup so the async function's catch continuation
+      // still runs with the restored instance.
+      Promise.resolve().then(() => Promise.resolve().then(cleanup))
       throw e
     })
   }
-  return [awaitable, () => setCurrentInstance(ctx)]
+  return [
+    awaitable,
+    () => {
+      restore()
+      // Keep instance for the current continuation, then cleanup.
+      Promise.resolve().then(cleanup)
+    },
+  ]
 }

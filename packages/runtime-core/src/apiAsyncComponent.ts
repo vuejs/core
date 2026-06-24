@@ -4,17 +4,20 @@ import {
   type ComponentOptions,
   type ConcreteComponent,
   currentInstance,
+  getComponentName,
   isInSSRComponentSetup,
 } from './component'
 import { isFunction, isObject } from '@vue/shared'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { type VNode, createVNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
+import { onUnmounted } from './apiLifecycle'
 import { warn } from './warning'
 import { ref } from '@vue/reactivity'
 import { ErrorCodes, handleError } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
-import { queueJob } from './scheduler'
+import { markAsyncBoundary } from './helpers/useId'
+import { type HydrationStrategy, forEachElement } from './hydrationStrategies'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
@@ -29,6 +32,7 @@ export interface AsyncComponentOptions<T = any> {
   delay?: number
   timeout?: number
   suspensible?: boolean
+  hydrate?: HydrationStrategy
   onError?: (
     error: Error,
     retry: () => void,
@@ -40,7 +44,7 @@ export interface AsyncComponentOptions<T = any> {
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance },
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
@@ -53,6 +57,7 @@ export function defineAsyncComponent<
     loadingComponent,
     errorComponent,
     delay = 200,
+    hydrate: hydrateStrategy,
     timeout, // undefined = never times out
     suspensible = true,
     onError: userOnError,
@@ -117,12 +122,46 @@ export function defineAsyncComponent<
 
     __asyncLoader: load,
 
+    __asyncHydrate(el, instance, hydrate) {
+      let patched = false
+      ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
+      const performHydrate = () => {
+        // skip hydration if the component has been patched
+        if (patched) {
+          if (__DEV__) {
+            warn(
+              `Skipping lazy hydration for component '${getComponentName(resolvedComp!) || resolvedComp!.__file}': ` +
+                `it was updated before lazy hydration performed.`,
+            )
+          }
+          return
+        }
+        hydrate()
+      }
+      const doHydrate = hydrateStrategy
+        ? () => {
+            const teardown = hydrateStrategy(performHydrate, cb =>
+              forEachElement(el, cb),
+            )
+            if (teardown) {
+              ;(instance.bum || (instance.bum = [])).push(teardown)
+            }
+          }
+        : performHydrate
+      if (resolvedComp) {
+        doHydrate()
+      } else {
+        load().then(() => !instance.isUnmounted && doHydrate())
+      }
+    },
+
     get __asyncResolved() {
       return resolvedComp
     },
 
     setup() {
       const instance = currentInstance!
+      markAsyncBoundary(instance)
 
       // already resolved
       if (resolvedComp) {
@@ -163,14 +202,24 @@ export function defineAsyncComponent<
       const error = ref()
       const delayed = ref(!!delay)
 
+      let timeoutTimer: ReturnType<typeof setTimeout> | undefined
+      let delayTimer: ReturnType<typeof setTimeout> | undefined
+
+      onUnmounted(() => {
+        if (timeoutTimer != null) clearTimeout(timeoutTimer)
+        if (delayTimer != null) clearTimeout(delayTimer)
+      })
+
       if (delay) {
-        setTimeout(() => {
+        delayTimer = setTimeout(() => {
+          if (instance.isUnmounted) return
           delayed.value = false
         }, delay)
       }
 
       if (timeout != null) {
-        setTimeout(() => {
+        timeoutTimer = setTimeout(() => {
+          if (instance.isUnmounted) return
           if (!loaded.value && !error.value) {
             const err = new Error(
               `Async component timed out after ${timeout}ms.`,
@@ -183,15 +232,19 @@ export function defineAsyncComponent<
 
       load()
         .then(() => {
+          if (instance.isUnmounted) return
           loaded.value = true
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
             // name is taken into account
-            instance.parent.effect.dirty = true
-            queueJob(instance.parent.update)
+            instance.parent.update()
           }
         })
         .catch(err => {
+          if (instance.isUnmounted) {
+            pendingRequest = null
+            return
+          }
           onError(err)
           error.value = err
         })
@@ -204,7 +257,10 @@ export function defineAsyncComponent<
             error: error.value,
           })
         } else if (loadingComponent && !delayed.value) {
-          return createVNode(loadingComponent)
+          return createInnerComp(
+            loadingComponent as ConcreteComponent,
+            instance,
+          )
         }
       }
     },

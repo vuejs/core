@@ -12,8 +12,6 @@ import {
   watchEffect,
 } from '@vue/runtime-test'
 
-// reference: https://vue-composition-api-rfc.netlify.com/api.html#setup
-
 describe('api: setup context', () => {
   it('should expose return values to template render context', () => {
     const Comp = defineComponent({

@@ -57,11 +57,11 @@ export interface NodeOp {
 let nodeId: number = 0
 let recordedNodeOps: NodeOp[] = []
 
-export function logNodeOp(op: NodeOp) {
+export function logNodeOp(op: NodeOp): void {
   recordedNodeOps.push(op)
 }
 
-export function resetOps() {
+export function resetOps(): void {
   recordedNodeOps = []
 }
 
@@ -128,7 +128,7 @@ function createComment(text: string): TestComment {
   return node
 }
 
-function setText(node: TestText, text: string) {
+function setText(node: TestText, text: string): void {
   logNodeOp({
     type: NodeOpTypes.SET_TEXT,
     targetNode: node,
@@ -137,7 +137,11 @@ function setText(node: TestText, text: string) {
   node.text = text
 }
 
-function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
+function insert(
+  child: TestNode,
+  parent: TestElement,
+  ref?: TestNode | null,
+): void {
   let refIndex
   if (ref) {
     refIndex = parent.children.indexOf(ref)
@@ -166,7 +170,7 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
   }
 }
 
-function remove(child: TestNode, logOp = true) {
+function remove(child: TestNode, logOp = true): void {
   const parent = child.parentNode
   if (parent) {
     if (logOp) {
@@ -188,7 +192,7 @@ function remove(child: TestNode, logOp = true) {
   }
 }
 
-function setElementText(el: TestElement, text: string) {
+function setElementText(el: TestElement, text: string): void {
   logNodeOp({
     type: NodeOpTypes.SET_ELEMENT_TEXT,
     targetNode: el,
@@ -228,11 +232,23 @@ function querySelector(): never {
   throw new Error('querySelector not supported in test renderer.')
 }
 
-function setScopeId(el: TestElement, id: string) {
+function setScopeId(el: TestElement, id: string): void {
   el.props[id] = ''
 }
 
-export const nodeOps = {
+export const nodeOps: {
+  insert: typeof insert
+  remove: typeof remove
+  createElement: typeof createElement
+  createText: typeof createText
+  createComment: typeof createComment
+  setText: typeof setText
+  setElementText: typeof setElementText
+  parentNode: typeof parentNode
+  nextSibling: typeof nextSibling
+  querySelector: typeof querySelector
+  setScopeId: typeof setScopeId
+} = {
   insert,
   remove,
   createElement,

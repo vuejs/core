@@ -1,5 +1,6 @@
 import {
   type BlockCodegenNode,
+  type CacheExpression,
   type CallExpression,
   type DirectiveNode,
   type ElementNode,
@@ -39,8 +40,9 @@ import {
 import { NOOP, isObject, isString } from '@vue/shared'
 import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
-import type { Expression } from '@babel/types'
+import type { Expression, Node } from '@babel/types'
 import { unwrapTSNode } from './babelUtils'
+import { isWhitespace } from './tokenizer'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -62,7 +64,7 @@ export function isCoreComponent(tag: string): symbol | void {
   }
 }
 
-const nonIdentifierRE = /^\d|[^\$\w]/
+const nonIdentifierRE = /^$|^\d|[^\$\w\xA0-\uFFFF]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
@@ -73,9 +75,12 @@ enum MemberExpLexState {
   inString,
 }
 
-const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
+export const validFirstIdentCharRE: RegExp = /[A-Za-z_$\xA0-\uFFFF]/
 const validIdentCharRE = /[\.\?\w$\xA0-\uFFFF]/
 const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
+
+const getExpSource = (exp: ExpressionNode): string =>
+  exp.type === NodeTypes.SIMPLE_EXPRESSION ? exp.content : exp.loc.source
 
 /**
  * Simple lexer to check if an expression is a member expression. This is
@@ -83,9 +88,11 @@ const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
  * inside square brackets), but it's ok since these are only used on template
  * expressions and false positives are invalid expressions in the first place.
  */
-export const isMemberExpressionBrowser = (path: string): boolean => {
+export const isMemberExpressionBrowser = (exp: ExpressionNode): boolean => {
   // remove whitespaces around . or [ first
-  path = path.trim().replace(whitespaceRE, s => s.trim())
+  const path = getExpSource(exp)
+    .trim()
+    .replace(whitespaceRE, s => s.trim())
 
   let state = MemberExpLexState.inMemberExp
   let stateStack: MemberExpLexState[] = []
@@ -152,13 +159,20 @@ export const isMemberExpressionBrowser = (path: string): boolean => {
   return !currentOpenBracketCount && !currentOpenParensCount
 }
 
-export const isMemberExpressionNode = __BROWSER__
-  ? (NOOP as any as (path: string, context: TransformContext) => boolean)
-  : (path: string, context: TransformContext): boolean => {
+export const isMemberExpressionNode: (
+  exp: ExpressionNode,
+  context: TransformContext,
+) => boolean = __BROWSER__
+  ? (NOOP as any)
+  : (exp, context) => {
       try {
-        let ret: Expression = parseExpression(path, {
-          plugins: context.expressionPlugins,
-        })
+        let ret: Node =
+          exp.ast ||
+          parseExpression(getExpSource(exp), {
+            plugins: context.expressionPlugins
+              ? [...context.expressionPlugins, 'typescript']
+              : ['typescript'],
+          })
         ret = unwrapTSNode(ret) as Expression
         return (
           ret.type === 'MemberExpression' ||
@@ -170,9 +184,52 @@ export const isMemberExpressionNode = __BROWSER__
       }
     }
 
-export const isMemberExpression = __BROWSER__
-  ? isMemberExpressionBrowser
-  : isMemberExpressionNode
+export const isMemberExpression: (
+  exp: ExpressionNode,
+  context: TransformContext,
+) => boolean = __BROWSER__ ? isMemberExpressionBrowser : isMemberExpressionNode
+
+const fnExpRE =
+  /^\s*(?:async\s*)?(?:\([^)]*?\)|[\w$_]+)\s*(?::[^=]+)?=>|^\s*(?:async\s+)?function(?:\s+[\w$]+)?\s*\(/
+
+export const isFnExpressionBrowser: (exp: ExpressionNode) => boolean = exp =>
+  fnExpRE.test(getExpSource(exp))
+
+export const isFnExpressionNode: (
+  exp: ExpressionNode,
+  context: TransformContext,
+) => boolean = __BROWSER__
+  ? (NOOP as any)
+  : (exp, context) => {
+      try {
+        let ret: Node =
+          exp.ast ||
+          parseExpression(getExpSource(exp), {
+            plugins: context.expressionPlugins
+              ? [...context.expressionPlugins, 'typescript']
+              : ['typescript'],
+          })
+        // parser may parse the exp as statements when it contains semicolons
+        if (ret.type === 'Program') {
+          ret = ret.body[0]
+          if (ret.type === 'ExpressionStatement') {
+            ret = ret.expression
+          }
+        }
+        ret = unwrapTSNode(ret) as Expression
+        return (
+          ret.type === 'FunctionExpression' ||
+          ret.type === 'ArrowFunctionExpression'
+        )
+      } catch (e) {
+        return false
+      }
+    }
+
+export const isFnExpression: (
+  exp: ExpressionNode,
+  context: TransformContext,
+) => boolean = __BROWSER__ ? isFnExpressionBrowser : isFnExpressionNode
 
 export function advancePositionWithClone(
   pos: Position,
@@ -216,8 +273,8 @@ export function advancePositionWithMutation(
   return pos
 }
 
-export function assert(condition: boolean, msg?: string) {
-  /* istanbul ignore if */
+export function assert(condition: boolean, msg?: string): void {
+  /* v8 ignore next 3 */
   if (!condition) {
     throw new Error(msg || `unexpected compiler condition`)
   }
@@ -287,6 +344,10 @@ export function isText(
   return node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
 }
 
+export function isVPre(p: ElementNode['props'][0]): p is DirectiveNode {
+  return p.type === NodeTypes.DIRECTIVE && p.name === 'pre'
+}
+
 export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
   return p.type === NodeTypes.DIRECTIVE && p.name === 'slot'
 }
@@ -330,7 +391,7 @@ export function injectProp(
   node: VNodeCall | RenderSlotCall,
   prop: Property,
   context: TransformContext,
-) {
+): void {
   let propsWithInjection: ObjectExpression | CallExpression | undefined
   /**
    * 1. mergeProps(...)
@@ -438,7 +499,12 @@ export function toValidAssetId(
 
 // Check if a node contains expressions that reference current context scope ids
 export function hasScopeRef(
-  node: TemplateChildNode | IfBranchNode | ExpressionNode | undefined,
+  node:
+    | TemplateChildNode
+    | IfBranchNode
+    | ExpressionNode
+    | CacheExpression
+    | undefined,
   ids: TransformContext['identifiers'],
 ): boolean {
   if (!node || Object.keys(ids).length === 0) {
@@ -481,6 +547,7 @@ export function hasScopeRef(
       return hasScopeRef(node.content, ids)
     case NodeTypes.TEXT:
     case NodeTypes.COMMENT:
+    case NodeTypes.JS_CACHE_EXPRESSION:
       return false
     default:
       if (__DEV__) {
@@ -491,7 +558,9 @@ export function hasScopeRef(
   }
 }
 
-export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
+export function getMemoedVNodeCall(
+  node: BlockCodegenNode | MemoExpression,
+): VNodeCall | RenderSlotCall {
   if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
     return node.arguments[1].returns as VNodeCall
   } else {
@@ -499,4 +568,24 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
   }
 }
 
-export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+export const forAliasRE: RegExp = /([\s\S]*?)\s+(?:in|of)\s+(\S[\s\S]*)/
+
+export function isAllWhitespace(str: string): boolean {
+  for (let i = 0; i < str.length; i++) {
+    if (!isWhitespace(str.charCodeAt(i))) {
+      return false
+    }
+  }
+  return true
+}
+
+export function isWhitespaceText(node: TemplateChildNode): boolean {
+  return (
+    (node.type === NodeTypes.TEXT && isAllWhitespace(node.content)) ||
+    (node.type === NodeTypes.TEXT_CALL && isWhitespaceText(node.content))
+  )
+}
+
+export function isCommentOrWhitespace(node: TemplateChildNode): boolean {
+  return node.type === NodeTypes.COMMENT || isWhitespaceText(node)
+}

@@ -11,7 +11,7 @@ export function createPropsDefaultThis(
   instance: ComponentInternalInstance,
   rawProps: Data,
   propKey: string,
-) {
+): object {
   return new Proxy(
     {},
     {

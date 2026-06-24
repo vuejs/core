@@ -44,6 +44,12 @@ attr
     expect(generateCodeFrame(source, attrStart, attrEnd)).toMatchSnapshot()
   })
 
+  test('invalid start and end', () => {
+    expect(generateCodeFrame(source, -Infinity, 0)).toMatchSnapshot()
+    expect(generateCodeFrame(source, 0, Infinity)).toMatchSnapshot()
+    expect(generateCodeFrame(source, Infinity, 0)).toMatchSnapshot()
+  })
+
   {
     const source = `
 <template>

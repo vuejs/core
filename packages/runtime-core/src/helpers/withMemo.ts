@@ -6,7 +6,7 @@ export function withMemo(
   render: () => VNode<any, any>,
   cache: any[],
   index: number,
-) {
+): VNode<any, any> {
   const cached = cache[index] as VNode | undefined
   if (cached && isMemoSame(cached, memo)) {
     return cached
@@ -15,10 +15,12 @@ export function withMemo(
 
   // shallow clone
   ret.memo = memo.slice()
+  ret.cacheIndex = index
+
   return (cache[index] = ret)
 }
 
-export function isMemoSame(cached: VNode, memo: any[]) {
+export function isMemoSame(cached: VNode, memo: any[]): boolean {
   const prev: any[] = cached.memo!
   if (prev.length != memo.length) {
     return false

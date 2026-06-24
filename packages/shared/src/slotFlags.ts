@@ -23,7 +23,7 @@ export enum SlotFlags {
 /**
  * Dev only
  */
-export const slotFlagsText = {
+export const slotFlagsText: Record<SlotFlags, string> = {
   [SlotFlags.STABLE]: 'STABLE',
   [SlotFlags.DYNAMIC]: 'DYNAMIC',
   [SlotFlags.FORWARDED]: 'FORWARDED',

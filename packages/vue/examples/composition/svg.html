@@ -1,39 +1,37 @@
 <script src="../../dist/vue.global.js"></script>
 <script>
-const { ref, reactive, computed, createApp } = Vue
+  const { ref, reactive, computed, createApp } = Vue
 
-// math helper...
-function valueToPoint (value, index, total) {
-  var x     = 0
-  var y     = -value * 0.8
-  var angle = Math.PI * 2 / total * index
-  var cos   = Math.cos(angle)
-  var sin   = Math.sin(angle)
-  var tx    = x * cos - y * sin + 100
-  var ty    = x * sin + y * cos + 100
-  return {
-    x: tx,
-    y: ty
-  }
-}
-
-const AxisLabel = {
-  template: '<text :x="point.x" :y="point.y">{{stat.label}}</text>',
-  props: {
-    stat: Object,
-    index: Number,
-    total: Number
-  },
-  setup(props) {
+  // math helper...
+  function valueToPoint(value, index, total) {
+    var x = 0
+    var y = -value * 0.8
+    var angle = ((Math.PI * 2) / total) * index
+    var cos = Math.cos(angle)
+    var sin = Math.sin(angle)
+    var tx = x * cos - y * sin + 100
+    var ty = x * sin + y * cos + 100
     return {
-      point: computed(() => valueToPoint(
-        +props.stat.value + 10,
-        props.index,
-        props.total
-      ))
+      x: tx,
+      y: ty,
     }
   }
-}
+
+  const AxisLabel = {
+    template: '<text :x="point.x" :y="point.y">{{stat.label}}</text>',
+    props: {
+      stat: Object,
+      index: Number,
+      total: Number,
+    },
+    setup(props) {
+      return {
+        point: computed(() =>
+          valueToPoint(+props.stat.value + 10, props.index, props.total),
+        ),
+      }
+    },
+  }
 </script>
 
 <!-- template for the polygraph component. -->
@@ -51,24 +49,26 @@ const AxisLabel = {
 </script>
 
 <script>
-const Polygraph = {
-  props: ['stats'],
-  template: '#polygraph-template',
-  setup(props) {
-    return {
-      points: computed(() => {
-        const total = props.stats.length
-        return props.stats.map((stat, i) => {
-          const point = valueToPoint(stat.value, i, total)
-          return point.x + ',' + point.y
-        }).join(' ')
-      })
-    }
-  },
-  components: {
-    AxisLabel
+  const Polygraph = {
+    props: ['stats'],
+    template: '#polygraph-template',
+    setup(props) {
+      return {
+        points: computed(() => {
+          const total = props.stats.length
+          return props.stats
+            .map((stat, i) => {
+              const point = valueToPoint(stat.value, i, total)
+              return point.x + ',' + point.y
+            })
+            .join(' ')
+        }),
+      }
+    },
+    components: {
+      AxisLabel,
+    },
   }
-}
 </script>
 
 <!-- demo root element -->
@@ -80,93 +80,99 @@ const Polygraph = {
   <!-- controls -->
   <div v-for="stat in stats">
     <label>{{stat.label}}</label>
-    <input type="range" v-model="stat.value" min="0" max="100">
+    <input type="range" v-model="stat.value" min="0" max="100" />
     <span>{{stat.value}}</span>
     <button @click="remove(stat)" class="remove">X</button>
   </div>
   <form id="add">
-    <input name="newlabel" v-model="newLabel">
+    <input name="newlabel" v-model="newLabel" />
     <button @click="add">Add a Stat</button>
   </form>
   <pre id="raw">{{ stats }}</pre>
 </div>
 
 <script>
-const globalStats = [
-  { label: 'A', value: 100 },
-  { label: 'B', value: 100 },
-  { label: 'C', value: 100 },
-  { label: 'D', value: 100 },
-  { label: 'E', value: 100 },
-  { label: 'F', value: 100 }
-]
+  const globalStats = [
+    { label: 'A', value: 100 },
+    { label: 'B', value: 100 },
+    { label: 'C', value: 100 },
+    { label: 'D', value: 100 },
+    { label: 'E', value: 100 },
+    { label: 'F', value: 100 },
+  ]
 
-createApp({
-  components: {
-    Polygraph
-  },
-  setup() {
-    const newLabel = ref('')
-    const stats = reactive(globalStats)
+  createApp({
+    components: {
+      Polygraph,
+    },
+    setup() {
+      const newLabel = ref('')
+      const stats = reactive(globalStats)
 
-    function add(e) {
-      e.preventDefault()
-      if (!newLabel.value) return
-      stats.push({
-        label: newLabel.value,
-        value: 100
-      })
-      newLabel.value = ''
-    }
-
-    function remove(stat) {
-      if (stats.length > 3) {
-        stats.splice(stats.indexOf(stat), 1)
-      } else {
-        alert('Can\'t delete more!')
+      function add(e) {
+        e.preventDefault()
+        if (!newLabel.value) return
+        stats.push({
+          label: newLabel.value,
+          value: 100,
+        })
+        newLabel.value = ''
       }
-    }
 
-    return {
-      newLabel,
-      stats,
-      add,
-      remove
-    }
-  }
-}).mount('#demo')
+      function remove(stat) {
+        if (stats.length > 3) {
+          stats.splice(stats.indexOf(stat), 1)
+        } else {
+          alert("Can't delete more!")
+        }
+      }
+
+      return {
+        newLabel,
+        stats,
+        add,
+        remove,
+      }
+    },
+  }).mount('#demo')
 </script>
 
 <style>
-body {
-    font-family: Helvetica Neue, Arial, sans-serif;
-}
+  body {
+    font-family:
+      Helvetica Neue,
+      Arial,
+      sans-serif;
+  }
 
-polygon {
+  polygon {
     fill: #42b983;
-    opacity: .75;
-}
+    opacity: 0.75;
+  }
 
-circle {
+  circle {
     fill: transparent;
     stroke: #999;
-}
+  }
 
-text {
-    font-family: Helvetica Neue, Arial, sans-serif;
+  text {
+    font-family:
+      Helvetica Neue,
+      Arial,
+      sans-serif;
     font-size: 10px;
     fill: #666;
-}
+  }
 
-label {
+  label {
     display: inline-block;
     margin-left: 10px;
     width: 20px;
-}
+  }
 
-#raw {
+  #raw {
     position: absolute;
     top: 0;
     left: 300px;
-}
+  }
 </style>

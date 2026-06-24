@@ -6,7 +6,6 @@ describe('sfc reactive props destructure', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      propsDestructure: true,
       ...options,
     })
   }
@@ -69,6 +68,119 @@ describe('sfc reactive props destructure', () => {
     })
   })
 
+  test('for-of loop variable shadowing', () => {
+    const { content } = compile(`
+      <script setup lang="ts">
+      interface Props {
+        msg: string;
+        input: string[];
+      }
+      const { msg, input } = defineProps<Props>();
+      for (const msg of input) {
+        console.log('MESSAGE', msg);
+      }
+      console.log('NOT FAIL', { msg });
+      </script>
+    `)
+    // inside loop: should use local variable
+    expect(content).toMatch(`for (const msg of __props.input)`)
+    expect(content).toMatch(`console.log('MESSAGE', msg)`)
+    // after loop: should restore to prop reference
+    expect(content).toMatch(`console.log('NOT FAIL', { msg: __props.msg })`)
+    assertCode(content)
+  })
+
+  test('regular for loop variable shadowing', () => {
+    const { content } = compile(`
+      <script setup lang="ts">
+      const { i, len } = defineProps<{ i: number; len: number }>();
+      for (let i = 0; i < len; i++) {
+        console.log('INDEX', i);
+      }
+      console.log('AFTER', { i });
+      </script>
+    `)
+    // inside loop: should use local variable
+    expect(content).toMatch(`for (let i = 0; i < __props.len; i++)`)
+    expect(content).toMatch(`console.log('INDEX', i)`)
+    // after loop: should restore to prop reference
+    expect(content).toMatch(`console.log('AFTER', { i: __props.i })`)
+    assertCode(content)
+  })
+
+  test('var declaration shadowing in nested block', () => {
+    const { content } = compile(`<script setup lang="ts">
+const { foo = "a" } = defineProps<{ foo?: string }>();
+let bar: string | undefined;
+function init() {
+  {
+    var foo = "b";
+  }
+  bar = foo;
+}
+init();
+</script>`)
+    expect(content).toMatch(`var foo = "b"`)
+    expect(content).toMatch(`bar = foo`)
+    expect(content).not.toMatch(`bar = __props.foo`)
+    assertCode(content)
+  })
+
+  test('var declaration shadowing before declaration in nested block', () => {
+    const { content } = compile(`<script setup lang="ts">
+const { foo = "a" } = defineProps<{ foo?: string }>();
+let bar: string | undefined;
+function init() {
+  bar = foo;
+  {
+    var foo = "b";
+  }
+}
+init();
+</script>`)
+    expect(content).toMatch(`bar = foo`)
+    expect(content).toMatch(`var foo = "b"`)
+    expect(content).not.toMatch(`bar = __props.foo`)
+    assertCode(content)
+  })
+
+  test('var declaration shadowing before declaration in for loop', () => {
+    const { content } = compile(`<script setup lang="ts">
+const { foo = "a" } = defineProps<{ foo?: string }>();
+let bar: string | undefined;
+function init() {
+  bar = foo;
+  for (var foo = "b"; false;) {}
+}
+init();
+</script>`)
+    expect(content).toMatch(`bar = foo`)
+    expect(content).toMatch(`for (var foo = "b"; false;)`)
+    expect(content).not.toMatch(`bar = __props.foo`)
+    assertCode(content)
+  })
+
+  test('var declaration shadowing does not cross function scope', () => {
+    const { content } = compile(`<script setup lang="ts">
+const { foo = "a" } = defineProps<{ foo?: string }>();
+let bar: string | undefined;
+function init() {
+  function nested() {
+    {
+      var foo = "b";
+    }
+    return foo;
+  }
+  bar = foo;
+  nested();
+}
+init();
+</script>`)
+    expect(content).toMatch(`return foo`)
+    expect(content).toMatch(`bar = __props.foo`)
+    assertCode(content)
+  })
+
   test('default values w/ array runtime declaration', () => {
     const { content } = compile(`
       <script setup>
@@ -79,7 +191,7 @@ describe('sfc reactive props destructure', () => {
     // function
     // functions need to be marked with a skip marker
     expect(content)
-      .toMatch(`props: /*#__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true
@@ -99,7 +211,7 @@ describe('sfc reactive props destructure', () => {
     // safely infer whether runtime type is Function (e.g. if the runtime decl
     // is imported, or spreads another object)
     expect(content)
-      .toMatch(`props: /*#__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+      .toMatch(`props: /*@__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true,
@@ -123,7 +235,7 @@ describe('sfc reactive props destructure', () => {
     })
 
     expect(content).toMatch(`
-  props: /*#__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
   foo: 1,
   "foo:bar": 'foo-bar'
 }),`)
@@ -199,6 +311,21 @@ describe('sfc reactive props destructure', () => {
   }`)
   })
 
+  test('with TSInstantiationExpression', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      type Foo = <T extends string | number>(data: T) => void
+      const { value } = defineProps<{ value: Foo }>()
+      const foo = value<123>
+      </script>
+    `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`const foo = __props.value<123>`)
+  })
+
   test('aliasing', () => {
     const { content, bindings } = compile(`
       <script setup>
@@ -265,6 +392,27 @@ describe('sfc reactive props destructure', () => {
     })
   })
 
+  test('rest spread non-inline', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      const { foo, ...rest } = defineProps(['foo', 'bar'])
+      </script>
+      <template>{{ rest.bar }}</template>
+    `,
+      { inlineTemplate: false },
+    )
+    expect(content).toMatch(
+      `const rest = _createPropsRestProxy(__props, ["foo"])`,
+    )
+    assertCode(content)
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
+      rest: BindingTypes.SETUP_REACTIVE_CONST,
+    })
+  })
+
   // #6960
   test('computed static key', () => {
     const { content, bindings } = compile(`
@@ -323,6 +471,22 @@ describe('sfc reactive props destructure', () => {
     expect(content).toMatch(`props: ['item'],`)
   })
 
+  test('handle function parameters with same name as destructured props', () => {
+    const { content } = compile(`
+    <script setup>
+    const { value } = defineProps()
+    function test(value) {
+      try {
+      } catch {
+      }
+    }
+    console.log(value)
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`console.log(__props.value)`)
+  })
+
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
     const { content } = compile(`
     <script setup>
@@ -358,14 +522,15 @@ describe('sfc reactive props destructure', () => {
       ).toThrow(`destructure cannot use computed key`)
     })
 
-    test('should error when used with withDefaults', () => {
-      expect(() =>
-        compile(
-          `<script setup lang="ts">
-          const { foo } = withDefaults(defineProps<{ foo: string }>(), { foo: 'foo' })
-          </script>`,
-        ),
-      ).toThrow(`withDefaults() is unnecessary when using destructure`)
+    test('should warn when used with withDefaults', () => {
+      compile(
+        `<script setup lang="ts">
+        const { foo } = withDefaults(defineProps<{ foo: string }>(), { foo: 'foo' })
+        </script>`,
+      )
+      expect(
+        `withDefaults() is unnecessary when using destructure`,
+      ).toHaveBeenWarned()
     })
 
     test('should error if destructure reference local vars', () => {

@@ -15,7 +15,7 @@ export function ssrTransformTransition(
   node: ComponentNode,
   context: TransformContext,
 ) {
-  return () => {
+  return (): void => {
     const appear = findProp(node, 'appear', false, true)
     wipMap.set(node, !!appear)
   }
@@ -24,7 +24,7 @@ export function ssrTransformTransition(
 export function ssrProcessTransition(
   node: ComponentNode,
   context: SSRTransformContext,
-) {
+): void {
   // #5351: filter out comment children inside transition
   node.children = node.children.filter(c => c.type !== NodeTypes.COMMENT)
 

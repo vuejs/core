@@ -36,7 +36,7 @@ export type LegacyConfig = {
 }
 
 // dev only
-export function installLegacyConfigWarnings(config: AppConfig) {
+export function installLegacyConfigWarnings(config: AppConfig): void {
   const legacyConfigOptions: Record<string, DeprecationTypes> = {
     silent: DeprecationTypes.CONFIG_SILENT,
     devtools: DeprecationTypes.CONFIG_DEVTOOLS,
@@ -62,7 +62,7 @@ export function installLegacyConfigWarnings(config: AppConfig) {
   })
 }
 
-export function installLegacyOptionMergeStrats(config: AppConfig) {
+export function installLegacyOptionMergeStrats(config: AppConfig): void {
   config.optionMergeStrategies = new Proxy({} as any, {
     get(target, key) {
       if (key in target) {

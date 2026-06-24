@@ -9,11 +9,13 @@ import {
   resolveTransitionProps,
   vtcKey,
 } from './Transition'
+import { type VShowElement, vShowHidden } from '../directives/vShow'
 import {
   type ComponentOptions,
   DeprecationTypes,
   Fragment,
   type SetupContext,
+  Text,
   type VNode,
   compatUtils,
   createVNode,
@@ -28,19 +30,39 @@ import {
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
-const positionMap = new WeakMap<VNode, DOMRect>()
-const newPositionMap = new WeakMap<VNode, DOMRect>()
+interface Position {
+  top: number
+  left: number
+}
+
+const positionMap = new WeakMap<VNode, Position>()
+const newPositionMap = new WeakMap<VNode, Position>()
 const moveCbKey = Symbol('_moveCb')
 const enterCbKey = Symbol('_enterCb')
+
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
   moveClass?: string
 }
 
-const TransitionGroupImpl: ComponentOptions = {
+/**
+ * Wrap logic that modifies TransitionGroup properties in a function
+ * so that it can be annotated as pure
+ */
+const decorate = (t: typeof TransitionGroupImpl) => {
+  // TransitionGroup does not support "mode" so we need to remove it from the
+  // props declarations, but direct delete operation is considered a side effect
+  delete t.props.mode
+  if (__COMPAT__) {
+    t.__isBuiltIn = true
+  }
+  return t
+}
+
+const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
   name: 'TransitionGroup',
 
-  props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
+  props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
     moveClass: String,
   }),
@@ -65,6 +87,7 @@ const TransitionGroupImpl: ComponentOptions = {
           moveClass,
         )
       ) {
+        prevChildren = []
         return
       }
 
@@ -75,7 +98,7 @@ const TransitionGroupImpl: ComponentOptions = {
       const movedChildren = prevChildren.filter(applyTranslation)
 
       // force reflow to put everything in position
-      forceReflow()
+      forceReflow(instance.vnode.el as Node)
 
       movedChildren.forEach(c => {
         const el = c.el as ElementWithTransition
@@ -86,7 +109,7 @@ const TransitionGroupImpl: ComponentOptions = {
           if (e && e.target !== el) {
             return
           }
-          if (!e || /transform$/.test(e.propertyName)) {
+          if (!e || e.propertyName.endsWith('transform')) {
             el.removeEventListener('transitionend', cb)
             ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
@@ -94,6 +117,7 @@ const TransitionGroupImpl: ComponentOptions = {
         })
         el.addEventListener('transitionend', cb)
       })
+      prevChildren = []
     })
 
     return () => {
@@ -112,7 +136,31 @@ const TransitionGroupImpl: ComponentOptions = {
         tag = 'span'
       }
 
-      prevChildren = children
+      prevChildren = []
+      if (children) {
+        for (let i = 0; i < children.length; i++) {
+          const child = children[i]
+          if (
+            child.el &&
+            child.el instanceof Element &&
+            // Hidden v-show nodes have no previous layout box to animate from.
+            !(child.el as VShowElement)[vShowHidden]
+          ) {
+            prevChildren.push(child)
+            setTransitionHooks(
+              child,
+              resolveTransitionHooks(
+                child,
+                cssTransitionProps,
+                state,
+                instance,
+              ),
+            )
+            positionMap.set(child, getPosition(child.el as HTMLElement))
+          }
+        }
+      }
+
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
@@ -122,39 +170,15 @@ const TransitionGroupImpl: ComponentOptions = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance),
           )
-        } else if (__DEV__) {
+        } else if (__DEV__ && child.type !== Text) {
           warn(`<TransitionGroup> children must be keyed.`)
-        }
-      }
-
-      if (prevChildren) {
-        for (let i = 0; i < prevChildren.length; i++) {
-          const child = prevChildren[i]
-          setTransitionHooks(
-            child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance),
-          )
-          positionMap.set(child, (child.el as Element).getBoundingClientRect())
         }
       }
 
       return createVNode(tag, null, children)
     }
   },
-}
-
-if (__COMPAT__) {
-  TransitionGroupImpl.__isBuiltIn = true
-}
-
-/**
- * TransitionGroup does not support "mode" so we need to remove it from the
- * props declarations, but direct delete operation is considered a side effect
- * and will make the entire transition feature non-tree-shakeable, so we do it
- * in a function and mark the function's invocation as pure.
- */
-const removeMode = (props: any) => delete props.mode
-/*#__PURE__*/ removeMode(TransitionGroupImpl.props)
+})
 
 export const TransitionGroup = TransitionGroupImpl as unknown as {
   new (): {
@@ -173,7 +197,7 @@ function callPendingCbs(c: VNode) {
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, (c.el as Element).getBoundingClientRect())
+  newPositionMap.set(c, getPosition(c.el as HTMLElement))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -182,10 +206,31 @@ function applyTranslation(c: VNode): VNode | undefined {
   const dx = oldPos.left - newPos.left
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
-    const s = (c.el as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
+    const el = c.el as HTMLElement
+    const s = el.style
+    const rect = el.getBoundingClientRect()
+    let scaleX = 1
+    let scaleY = 1
+    if (el.offsetWidth) scaleX = rect.width / el.offsetWidth
+    if (el.offsetHeight) scaleY = rect.height / el.offsetHeight
+    if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1
+    if (!Number.isFinite(scaleY) || scaleY === 0) scaleY = 1
+    // Avoid division noise when scale is effectively 1.
+    if (Math.abs(scaleX - 1) < 0.01) scaleX = 1
+    if (Math.abs(scaleY - 1) < 0.01) scaleY = 1
+    s.transform = s.webkitTransform = `translate(${dx / scaleX}px,${
+      dy / scaleY
+    }px)`
     s.transitionDuration = '0s'
     return c
+  }
+}
+
+function getPosition(el: HTMLElement): Position {
+  const rect = el.getBoundingClientRect()
+  return {
+    left: rect.left,
+    top: rect.top,
   }
 }
 

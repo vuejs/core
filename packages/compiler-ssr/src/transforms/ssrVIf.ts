@@ -2,6 +2,7 @@ import {
   type BlockStatement,
   type IfBranchNode,
   type IfNode,
+  type NodeTransform,
   NodeTypes,
   createBlockStatement,
   createCallExpression,
@@ -15,8 +16,8 @@ import {
 } from '../ssrCodegenTransform'
 
 // Plugin for the first transform pass, which simply constructs the AST node
-export const ssrTransformIf = createStructuralDirectiveTransform(
-  /^(if|else|else-if)$/,
+export const ssrTransformIf: NodeTransform = createStructuralDirectiveTransform(
+  /^(?:if|else|else-if)$/,
   processIf,
 )
 
@@ -26,7 +27,8 @@ export function ssrProcessIf(
   node: IfNode,
   context: SSRTransformContext,
   disableNestedFragments = false,
-) {
+  disableComment = false,
+): void {
   const [rootBranch] = node.branches
   const ifStatement = createIfStatement(
     rootBranch.condition!,
@@ -54,7 +56,7 @@ export function ssrProcessIf(
     }
   }
 
-  if (!currentIf.alternate) {
+  if (!currentIf.alternate && !disableComment) {
     currentIf.alternate = createBlockStatement([
       createCallExpression(`_push`, ['`<!---->`']),
     ])

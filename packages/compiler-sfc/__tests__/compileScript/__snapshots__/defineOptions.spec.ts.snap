@@ -2,7 +2,7 @@
 
 exports[`defineOptions() > basic usage 1`] = `
 "
-export default /*#__PURE__*/Object.assign({ name: 'FooApp' }, {
+export default /*@__PURE__*/Object.assign({ name: 'FooApp' }, {
   setup(__props, { expose: __expose }) {
   __expose();
 

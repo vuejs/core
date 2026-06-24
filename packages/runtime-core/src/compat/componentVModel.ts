@@ -1,5 +1,6 @@
 import { ShapeFlags, extend } from '@vue/shared'
 import type { ComponentInternalInstance, ComponentOptions } from '../component'
+import { createAppContext } from '../apiCreateApp'
 import { ErrorCodes, callWithErrorHandling } from '../errorHandling'
 import type { VNode } from '../vnode'
 import { popWarningContext, pushWarningContext } from '../warning'
@@ -13,7 +14,7 @@ export const compatModelEventPrefix = `onModelCompat:`
 
 const warnedTypes = new WeakSet()
 
-export function convertLegacyVModelProps(vnode: VNode) {
+export function convertLegacyVModelProps(vnode: VNode): void {
   const { type, shapeFlag, props, dynamicProps } = vnode
   const comp = type as ComponentOptions
   if (shapeFlag & ShapeFlags.COMPONENT && props && 'modelValue' in props) {
@@ -31,7 +32,14 @@ export function convertLegacyVModelProps(vnode: VNode) {
 
     if (__DEV__ && !warnedTypes.has(comp)) {
       pushWarningContext(vnode)
-      warnDeprecation(DeprecationTypes.COMPONENT_V_MODEL, { type } as any, comp)
+      warnDeprecation(
+        DeprecationTypes.COMPONENT_V_MODEL,
+        {
+          type,
+          appContext: (vnode.ctx && vnode.ctx.appContext) || createAppContext(),
+        } as any,
+        comp,
+      )
       popWarningContext()
       warnedTypes.add(comp)
     }
@@ -68,7 +76,7 @@ export function compatModelEmit(
   instance: ComponentInternalInstance,
   event: string,
   args: any[],
-) {
+): void {
   if (!isCompatEnabled(DeprecationTypes.COMPONENT_V_MODEL, instance)) {
     return
   }

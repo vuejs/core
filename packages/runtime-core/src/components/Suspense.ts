@@ -11,7 +11,11 @@ import {
   openBlock,
 } from '../vnode'
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
-import { type ComponentInternalInstance, handleSetupResult } from '../component'
+import {
+  type ComponentInternalInstance,
+  handleSetupResult,
+  unsetCurrentInstance,
+} from '../component'
 import type { Slots } from '../componentSlots'
 import {
   type ElementNamespace,
@@ -20,6 +24,7 @@ import {
   type RendererInternals,
   type RendererNode,
   type SetupRenderEffectFn,
+  queuePostRenderEffect,
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
@@ -36,6 +41,10 @@ export interface SuspenseProps {
   onResolve?: () => void
   onPending?: () => void
   onFallback?: () => void
+  /**
+   * Switch to fallback content if it takes longer than `timeout` milliseconds to render the new default content.
+   * A `timeout` value of `0` will cause the fallback content to be displayed immediately when default content is replaced.
+   */
   timeout?: string | number
   /**
    * Allow suspense to be captured by parent suspense
@@ -53,7 +62,7 @@ let suspenseId = 0
 /**
  * For testing only
  */
-export const resetSuspenseId = () => (suspenseId = 0)
+export const resetSuspenseId = (): number => (suspenseId = 0)
 
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
@@ -77,7 +86,7 @@ export const SuspenseImpl = {
     optimized: boolean,
     // platform-specific impl passed from renderer
     rendererInternals: RendererInternals,
-  ) {
+  ): void {
     if (n1 == null) {
       mountSuspense(
         n2,
@@ -91,6 +100,24 @@ export const SuspenseImpl = {
         rendererInternals,
       )
     } else {
+      // #8678 if the current suspense needs to be patched and parentSuspense has
+      // not been resolved. this means that both the current suspense and parentSuspense
+      // need to be patched. because parentSuspense's pendingBranch includes the
+      // current suspense, it will be processed twice:
+      //  1. current patch
+      //  2. mounting along with the pendingBranch of parentSuspense
+      // it is necessary to skip the current patch to avoid multiple mounts
+      // of inner components.
+      if (
+        parentSuspense &&
+        parentSuspense.deps > 0 &&
+        !n1.suspense!.isInFallback
+      ) {
+        n2.suspense = n1.suspense!
+        n2.suspense.vnode = n2
+        n2.el = n1.el
+        return
+      }
       patchSuspense(
         n1,
         n2,
@@ -104,9 +131,8 @@ export const SuspenseImpl = {
       )
     }
   },
-  hydrate: hydrateSuspense,
-  create: createSuspenseBoundary,
-  normalize: normalizeSuspenseChildren,
+  hydrate: hydrateSuspense as typeof hydrateSuspense,
+  normalize: normalizeSuspenseChildren as typeof normalizeSuspenseChildren,
 }
 
 // Force-casted public typing for h and TSX props inference
@@ -218,7 +244,7 @@ function patchSuspense(
   const { activeBranch, pendingBranch, isInFallback, isHydrating } = suspense
   if (pendingBranch) {
     suspense.pendingBranch = newBranch
-    if (isSameVNodeType(newBranch, pendingBranch)) {
+    if (isSameVNodeType(pendingBranch, newBranch)) {
       // same root type but content may have changed.
       patch(
         pendingBranch,
@@ -304,7 +330,7 @@ function patchSuspense(
           )
           setActiveBranch(suspense, newFallback)
         }
-      } else if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+      } else if (activeBranch && isSameVNodeType(activeBranch, newBranch)) {
         // toggled "back" to current active branch
         patch(
           activeBranch,
@@ -338,7 +364,7 @@ function patchSuspense(
       }
     }
   } else {
-    if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+    if (activeBranch && isSameVNodeType(activeBranch, newBranch)) {
       // root did not change, just normal patch
       patch(
         activeBranch,
@@ -401,6 +427,7 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   activeBranch: VNode | null
+  isFallbackMountPending: boolean
   pendingBranch: VNode | null
   deps: number
   pendingId: number
@@ -420,6 +447,7 @@ export interface SuspenseBoundary {
   registerDep(
     instance: ComponentInternalInstance,
     setupRenderEffect: SetupRenderEffectFn,
+    optimized: boolean,
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
 }
@@ -439,7 +467,7 @@ function createSuspenseBoundary(
   rendererInternals: RendererInternals,
   isHydrating = false,
 ): SuspenseBoundary {
-  /* istanbul ignore if */
+  /* v8 ignore start */
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
     // @ts-expect-error `console.info` cannot be null error
@@ -448,6 +476,7 @@ function createSuspenseBoundary(
       `<Suspense> is an experimental feature and its API will likely change.`,
     )
   }
+  /* v8 ignore stop */
 
   const {
     p: patch,
@@ -461,7 +490,7 @@ function createSuspenseBoundary(
   let parentSuspenseId: number | undefined
   const isSuspensible = isVNodeSuspensible(vnode)
   if (isSuspensible) {
-    if (parentSuspense?.pendingBranch) {
+    if (parentSuspense && parentSuspense.pendingBranch) {
       parentSuspenseId = parentSuspense.pendingId
       parentSuspense.deps++
     }
@@ -484,6 +513,7 @@ function createSuspenseBoundary(
     pendingId: suspenseId++,
     timeout: typeof timeout === 'number' ? timeout : -1,
     activeBranch: null,
+    isFallbackMountPending: false,
     pendingBranch: null,
     isInFallback: !isHydrating,
     isHydrating,
@@ -511,6 +541,7 @@ function createSuspenseBoundary(
         effects,
         parentComponent,
         container,
+        isInFallback,
       } = suspense
 
       // if there's a transition happening we need to wait it to finish.
@@ -522,21 +553,31 @@ function createSuspenseBoundary(
           activeBranch &&
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
+        let hasUpdatedAnchor = false
         if (delayEnter) {
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
               move(
                 pendingBranch!,
                 container,
-                anchor === initialAnchor ? next(activeBranch!) : anchor,
+                anchor === initialAnchor && !hasUpdatedAnchor
+                  ? next(activeBranch!)
+                  : anchor,
                 MoveType.ENTER,
               )
               queuePostFlushCb(effects)
+              // clear el reference from fallback vnode to allow GC after transition
+              if (isInFallback && vnode.ssFallback) {
+                vnode.ssFallback.el = null
+              }
             }
           }
         }
         // unmount current active tree
-        if (activeBranch) {
+        // #7966 when Suspense is wrapped in Transition, fallback may wait for
+        // afterLeave before mounting. In that window, activeBranch is still the
+        // leaving content, so avoid unmounting it again during resolve.
+        if (activeBranch && !suspense.isFallbackMountPending) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           // #8105 if `delayEnter` is true, it means that the mounting of
@@ -547,10 +588,15 @@ function createSuspenseBoundary(
           // (got `pendingBranch.el`).
           // Therefore, after the mounting of activeBranch is completed,
           // it is necessary to get the latest anchor.
-          if (parentNode(activeBranch.el!) !== suspense.hiddenContainer) {
+          if (parentNode(activeBranch.el!) === container) {
             anchor = next(activeBranch)
+            hasUpdatedAnchor = true
           }
           unmount(activeBranch, parentComponent, suspense, true)
+          // clear el reference from fallback vnode to allow GC
+          if (!delayEnter && isInFallback && vnode.ssFallback) {
+            queuePostRenderEffect(() => (vnode.ssFallback!.el = null), suspense)
+          }
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
@@ -558,6 +604,7 @@ function createSuspenseBoundary(
         }
       }
 
+      suspense.isFallbackMountPending = false
       setActiveBranch(suspense, pendingBranch!)
       suspense.pendingBranch = null
       suspense.isInFallback = false
@@ -613,6 +660,7 @@ function createSuspenseBoundary(
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {
+        suspense.isFallbackMountPending = false
         if (!suspense.isInFallback) {
           return
         }
@@ -634,6 +682,7 @@ function createSuspenseBoundary(
       const delayEnter =
         fallbackVNode.transition && fallbackVNode.transition.mode === 'out-in'
       if (delayEnter) {
+        suspense.isFallbackMountPending = true
         activeBranch!.transition!.afterLeave = mountFallback
       }
       suspense.isInFallback = true
@@ -661,7 +710,7 @@ function createSuspenseBoundary(
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
-    registerDep(instance, setupRenderEffect) {
+    registerDep(instance, setupRenderEffect, optimized) {
       const isInPendingSuspense = !!suspense.pendingBranch
       if (isInPendingSuspense) {
         suspense.deps++
@@ -681,6 +730,10 @@ function createSuspenseBoundary(
           ) {
             return
           }
+          // withAsyncContext defers cleanup to a later microtask, so currentInstance may
+          // still be set when Suspense re-enters another component's render path.
+          // Clear it first.
+          unsetCurrentInstance()
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance
@@ -709,6 +762,8 @@ function createSuspenseBoundary(
             optimized,
           )
           if (placeholder) {
+            // clean up placeholder reference
+            vnode.placeholder = null
             remove(placeholder)
           }
           updateHOCHostEl(instance, vnode.el)
@@ -796,10 +851,9 @@ function hydrateSuspense(
     suspense.resolve(false, true)
   }
   return result
-  /* eslint-enable no-restricted-globals */
 }
 
-function normalizeSuspenseChildren(vnode: VNode) {
+function normalizeSuspenseChildren(vnode: VNode): void {
   const { shapeFlag, children } = vnode
   const isSlotChildren = shapeFlag & ShapeFlags.SLOTS_CHILDREN
   vnode.ssContent = normalizeSuspenseSlot(
@@ -864,7 +918,14 @@ export function queueEffectWithSuspense(
 function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   suspense.activeBranch = branch
   const { vnode, parentComponent } = suspense
-  const el = (vnode.el = branch.el)
+  let el = branch.el
+  // if branch has no el after patch, it's a HOC wrapping async components
+  // drill and locate the placeholder comment node
+  while (!el && branch.component) {
+    branch = branch.component.subTree
+    el = branch.el
+  }
+  vnode.el = el
   // in case suspense is the root node of a component,
   // recursively update the HOC el
   if (parentComponent && parentComponent.subTree === vnode) {
@@ -874,5 +935,6 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 }
 
 function isVNodeSuspensible(vnode: VNode) {
-  return vnode.props?.suspensible != null && vnode.props.suspensible !== false
+  const suspensible = vnode.props && vnode.props.suspensible
+  return suspensible != null && suspensible !== false
 }
