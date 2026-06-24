@@ -1,3 +1,27 @@
+# [3.6.0-beta.17](https://github.com/vuejs/core/compare/v3.6.0-beta.16...v3.6.0-beta.17) (2026-06-24)
+
+
+### Bug Fixes
+
+* **compiler-vapor:** avoid non-stable slots for stable root siblings ([cc2d0c9](https://github.com/vuejs/core/commit/cc2d0c9ca47fa3b3a3895529ab0f0b6291cd5439))
+* **compiler-vapor:** avoid slot-root tracking for slot outlets ([de347ac](https://github.com/vuejs/core/commit/de347ac752a16664506b95d9a7057e1db16e0529))
+* **compiler-vapor:** avoid unsafe repeated expression replacements ([72988d0](https://github.com/vuejs/core/commit/72988d05539e878bdfcfb9501e1313299ddcb7fd))
+* **compiler-vapor:** keep stable slot roots on fast path ([3a9a0ee](https://github.com/vuejs/core/commit/3a9a0ee7eae64290131d0562586b199f92d5e147))
+* **compiler-vapor:** track forwarded slot fallback validity ([d5b4c53](https://github.com/vuejs/core/commit/d5b4c53529c09b2d4b7f200872e8660fc82ac207))
+* **runtime-vapor:** align slot validity for component roots ([b46322a](https://github.com/vuejs/core/commit/b46322a6082578199a4da2b132f3f5dbf9fe936d))
+* **runtime-vapor:** hydrate dynamic native element slots correctly ([#14972](https://github.com/vuejs/core/issues/14972)) ([cf5eefa](https://github.com/vuejs/core/commit/cf5eefa06be8ffdedb24652c3c4df5ae14eed9a6))
+* **runtime-vapor:** pair vdom interop update hooks ([bcaa753](https://github.com/vuejs/core/commit/bcaa753efe8435d1a40e543604d42c23209fc1ef))
+* **runtime-vapor:** pause tracking when invoking function refs ([#14986](https://github.com/vuejs/core/issues/14986)) ([90bd305](https://github.com/vuejs/core/commit/90bd305f6dc68c7e406b228e20563e451d24c87d))
+* **runtime-vapor:** preserve render effect creation order when updating ([#14984](https://github.com/vuejs/core/issues/14984)) ([3f22cc9](https://github.com/vuejs/core/commit/3f22cc9bfaeab880fcac6b4429f4af913096093d))
+* **runtime-vapor:** sync interop slot owner root after child updates ([975dd4d](https://github.com/vuejs/core/commit/975dd4d2247f7264e57fb6152427d5ba66dfb3c6))
+
+
+### Performance Improvements
+
+* **compiler-vapor:** avoid redundant text run slicing ([dd54ec1](https://github.com/vuejs/core/commit/dd54ec1de0cabf71276628d031f59d538700b058))
+* **compiler-vapor:** cache child context analysis ([ab1dfd5](https://github.com/vuejs/core/commit/ab1dfd58a569cd29acfa59fa9377c3a0878f8ac4))
+* **runtime-vapor:** avoid redundant slot content validity checks ([7f47f1e](https://github.com/vuejs/core/commit/7f47f1eb30e03862978844256f13388411d24462))
+
 # [3.6.0-beta.16](https://github.com/vuejs/core/compare/v3.6.0-beta.15...v3.6.0-beta.16) (2026-06-17)
 
 
