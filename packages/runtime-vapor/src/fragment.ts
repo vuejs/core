@@ -71,7 +71,7 @@ export class VaporFragment<
   nodes: T
   vnode?: VNode | null
   anchor?: Node
-  isBlockValid?: () => boolean
+  isBlockValid?: (componentAsValid?: boolean) => boolean
   insert?: (
     parent: ParentNode,
     anchor: Node | null,

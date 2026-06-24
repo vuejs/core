@@ -89,7 +89,7 @@ export function isValidBlock(
     )
   } else {
     if (isInteropEnabled && block.isBlockValid) {
-      return block.isBlockValid()
+      return block.isBlockValid(componentAsValid)
     }
     return isValidBlock(block.nodes, componentAsValid)
   }
