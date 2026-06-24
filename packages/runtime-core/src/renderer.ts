@@ -855,15 +855,8 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    // #6385 the old vnode may be a user-wrapped non-isomorphic block
-    const isFullDiffRequired = !(
-      dynamicChildren &&
-      n1.dynamicChildren &&
-      n1.dynamicChildren.length === dynamicChildren.length
-    )
-
     // HMR updated, force full diff
-    if (isFullDiffRequired || (__DEV__ && isHmrUpdating)) {
+    if (__DEV__ && isHmrUpdating) {
       patchFlag = 0
       optimized = false
       dynamicChildren = null
@@ -878,7 +871,27 @@ function baseCreateRenderer(
       hostSetElementText(el, '')
     }
 
-    if (isFullDiffRequired) {
+    // #6385 the old vnode may be a user-wrapped non-isomorphic block
+    if (
+      dynamicChildren &&
+      n1.dynamicChildren &&
+      n1.dynamicChildren.length === dynamicChildren.length
+    ) {
+      patchBlockChildren(
+        n1.dynamicChildren,
+        dynamicChildren,
+        el,
+        parentComponent,
+        parentSuspense,
+        resolveChildrenNamespace(n2, namespace),
+        slotScopeIds,
+      )
+      if (__DEV__) {
+        // necessary for HMR
+        traverseStaticChildren(n1, n2)
+      }
+    } else if (!optimized || dynamicChildren) {
+      // full diff
       patchChildren(
         n1,
         n2,
@@ -890,20 +903,8 @@ function baseCreateRenderer(
         slotScopeIds,
         false,
       )
-    } else {
-      patchBlockChildren(
-        n1.dynamicChildren!,
-        dynamicChildren!,
-        el,
-        parentComponent,
-        parentSuspense,
-        resolveChildrenNamespace(n2, namespace),
-        slotScopeIds,
-      )
-      if (__DEV__) {
-        // necessary for HMR
-        traverseStaticChildren(n1, n2)
-      }
+      optimized = false
+      dynamicChildren = null
     }
 
     if (patchFlag > 0) {
