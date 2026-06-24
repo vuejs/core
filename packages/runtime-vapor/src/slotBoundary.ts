@@ -1,5 +1,5 @@
 import type { EffectScope } from '@vue/reactivity'
-import { type BlockFn, isValidBlock } from './block'
+import { type BlockFn, isValidSlot } from './block'
 import type { VaporFragment } from './fragment'
 
 // A slot boundary is one slot outlet's fallback-resolution point. Forwarded
@@ -52,10 +52,10 @@ export function trackSlotBoundaryDirtying(fragment: VaporFragment): void {
 
   let prevValid: boolean
   ;(fragment.onBeforeUpdate ||= []).push(() => {
-    prevValid = isValidBlock(fragment)
+    prevValid = isValidSlot(fragment)
   })
   ;(fragment.onUpdated ||= []).push(() => {
-    if (isValidBlock(fragment) !== prevValid) {
+    if (isValidSlot(fragment) !== prevValid) {
       boundary.markDirty()
     }
   })

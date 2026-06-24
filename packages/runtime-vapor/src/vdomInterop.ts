@@ -70,6 +70,7 @@ import {
   type VaporTransitionHooks,
   insert,
   isValidBlock,
+  isValidSlot,
   move,
   remove,
 } from './block'
@@ -1415,7 +1416,7 @@ function renderVDOMSlot(
   frag.isBlockValid = () => {
     if (validityPending) return true
     return slotResolutionState.activeFallback
-      ? isValidBlock(slotResolutionState.activeFallback)
+      ? isValidSlot(slotResolutionState.activeFallback)
       : contentState.valid
   }
   const boundary: SlotBoundaryContext = {
@@ -1465,7 +1466,7 @@ function renderVDOMSlot(
     } else if (rendered) {
       contentState.nodes = rendered
       contentState.valid =
-        knownValid === undefined ? isValidBlock(rendered) : knownValid
+        knownValid === undefined ? isValidSlot(rendered) : knownValid
     } else {
       contentState.nodes = EMPTY_BLOCK
       contentState.valid = false
@@ -1586,7 +1587,7 @@ function renderVDOMSlot(
                   slotContentValid = true
                 }
               } else if (slotContent) {
-                slotContentValid = isValidBlock(slotContent)
+                slotContentValid = isValidSlot(slotContent)
               }
             }
 
@@ -1912,8 +1913,7 @@ function renderVaporSlot(
     // fallback blocks that can later resolve to an empty vnode list.
     const frag = createInteropFragment()
     let validityPending = !isHydrating
-    frag.isBlockValid = () =>
-      validityPending ? true : isValidBlock(frag.nodes)
+    frag.isBlockValid = () => (validityPending ? true : isValidSlot(frag.nodes))
     const slotBoundary = frag.slotBoundary
     let contentNodes: Block = EMPTY_BLOCK
     let isResolvingContent = false
@@ -1972,7 +1972,7 @@ function renderVaporSlot(
       getAnchor: () => currentAnchor,
       isBusy: () => isResolvingContent,
       isDisposed: () => disposed,
-      isContentValid: () => isValidBlock(contentNodes),
+      isContentValid: () => isValidSlot(contentNodes),
       syncNodes: () => {
         frag.nodes = slotResolutionState.activeFallback || contentNodes
         validityPending = false

@@ -4,7 +4,7 @@ import {
   type Block,
   type TransitionOptions,
   insert,
-  isValidBlock,
+  isValidSlot,
   remove,
   removeNode,
 } from './block'
@@ -65,7 +65,7 @@ function renderSlotFallback(
           ),
         scope,
       )
-      if (isValidBlock(content)) return content
+      if (isValidSlot(content)) return content
       block = content
     }
 
@@ -206,7 +206,7 @@ function renderFallbackInScope(
 
 export function insertActiveSlotFallback(state: SlotResolutionState): void {
   const fallback = state.activeFallback
-  if (isHydrating || !fallback || !isValidBlock(fallback)) {
+  if (isHydrating || !fallback || !isValidSlot(fallback)) {
     return
   }
   const parentNode = state.getParentNode()
@@ -283,7 +283,7 @@ export function recheckSlotResolution(
   }
 
   const fallback = state.activeFallback
-  const fallbackValid = fallback ? isValidBlock(fallback) : false
+  const fallbackValid = fallback ? isValidSlot(fallback) : false
   const contentValid = state.isContentValid()
   // Validity of the currently exposed branch (fallback if active, else content).
   const exposedValid = fallback ? fallbackValid : contentValid
@@ -337,7 +337,7 @@ export function recheckSlotResolution(
       : nextFallback
         ? nextFallback === fallback
           ? fallbackValid
-          : isValidBlock(nextFallback)
+          : isValidSlot(nextFallback)
         : state.isContentValid()
   state.syncNodes()
   state.lastNodesValid = nextNodesValid
