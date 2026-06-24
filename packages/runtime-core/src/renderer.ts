@@ -855,8 +855,8 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    // HMR updated, force full diff
     if (__DEV__ && isHmrUpdating) {
+      // HMR updated, force full diff
       patchFlag = 0
       optimized = false
       dynamicChildren = null
