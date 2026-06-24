@@ -1,4 +1,5 @@
 import { type ComponentInternalInstance, ssrContextKey } from 'vue'
+import { isArray, isPromise } from '@vue/shared'
 import {
   type PushFn,
   type SSRBufferItem,
@@ -39,5 +40,11 @@ export function ssrRenderTeleport(
   }
 
   targetBuffer.splice(bufferIndex, 0, teleportContent)
+  if (
+    isPromise(teleportContent) ||
+    (isArray(teleportContent) && teleportContent.hasAsync)
+  ) {
+    targetBuffer.hasAsync = true
+  }
   parentPush('<!--teleport end-->')
 }

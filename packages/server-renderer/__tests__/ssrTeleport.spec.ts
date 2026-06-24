@@ -178,47 +178,33 @@ describe('ssrRenderTeleport', () => {
     )
   })
 
-  test('teleport work w/ suspense', async () => {
+  test('teleport resolves nested async content inside suspense', async () => {
     const ctx: SSRContext = {}
 
-    const AsyncComp = defineAsyncComponent(() =>
+    const AsyncChild = defineAsyncComponent(() =>
       Promise.resolve({
-        render: () => h('div', 'content'),
+        render: () => h('span', 'async'),
       }),
     )
-
+    const Wrapper = {
+      render: () => h('div', h(AsyncChild)),
+    }
     const Comp = {
       template:
-        '<teleport to="#target"><Suspense><AsyncComp></AsyncComp></Suspense></teleport>',
-      components: { AsyncComp },
-      setup() {},
+        '<teleport to="#target"><Suspense><Wrapper /></Suspense></teleport>',
+      components: { Wrapper },
     }
-    let html = ''
-    let resolve: any
-    const p = new Promise(r => (resolve = r))
-    renderToSimpleStream(
+
+    const html = await renderToString(
       h({
         template: '<Comp />',
         components: { Comp },
       }),
       ctx,
-      {
-        push(chunk) {
-          if (chunk === null) {
-            resolve()
-          } else {
-            html += chunk
-          }
-        },
-        destroy(err) {
-          throw err
-        },
-      },
     )
-    await p
     expect(html).toBe('<!--teleport start--><!--teleport end-->')
     expect(ctx.teleports!['#target']).toBe(
-      `<div>content</div><!--teleport anchor-->`,
+      `<!--teleport start anchor--><div><span>async</span></div><!--teleport anchor-->`,
     )
   })
 })
