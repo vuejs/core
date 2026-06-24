@@ -1485,6 +1485,7 @@ function renderVDOMSlot(
   }
 
   const notifyUpdated = (): void => {
+    syncInteropRoot(parentComponent)
     if (isMounted && frag.onUpdated) {
       frag.onUpdated.forEach(u => u())
     }
@@ -2165,6 +2166,16 @@ function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
   }
 }
 
+function syncInteropRoot(instance: VaporComponentInstance): void {
+  const state = vnodeHookStateMap.get(instance)
+  if (!state) return
+  syncVNodeEl(state.vnode, instance)
+  const hooks = state.postRootSyncHooks
+  for (let i = 0; i < hooks.length; i++) {
+    hooks[i](state.vnode)
+  }
+}
+
 interface VNodeHookState {
   vnode: VNode
   skipVnodeHooks: boolean
@@ -2185,7 +2196,7 @@ function ensureVNodeHookState(
       postRootSyncHooks: [],
     }
     vnodeHookStateMap.set(instance, state)
-    ;(instance.bu || (instance.bu = [])).push(() => {
+    ;(instance.bu ||= []).push(() => {
       if (state!.skipVnodeHooks) return
       const vnodeHook =
         state!.vnode.props && state!.vnode.props.onVnodeBeforeUpdate
@@ -2202,13 +2213,7 @@ function ensureVNodeHookState(
     // Sync the outer component vnode before running any updated hooks. Hooks
     // that depend on the latest root, like scoped CSS interop, run immediately
     // after the sync and before component updated hooks / onVnodeUpdated.
-    ;(instance.u || (instance.u = [])).unshift(() => {
-      syncVNodeEl(state!.vnode, instance)
-      const hooks = state!.postRootSyncHooks
-      for (let i = 0; i < hooks.length; i++) {
-        hooks[i](state!.vnode)
-      }
-    })
+    ;(instance.u ||= []).unshift(() => syncInteropRoot(instance))
     instance.u.push(() => {
       if (state!.skipVnodeHooks) {
         state!.skipVnodeHooks = false
@@ -2603,16 +2608,7 @@ function trackInteropScopeIdFragment(
 ): void {
   if (interopScopeIdFragmentMap.get(frag) === instance) return
   interopScopeIdFragmentMap.set(frag, instance)
-  ;(frag.onUpdated || (frag.onUpdated = [])).push(() => {
-    const state = vnodeHookStateMap.get(instance)
-    if (!state) return
-    syncVNodeEl(state.vnode, instance)
-    setInteropVnodeScopeId(
-      instance,
-      state.vnode,
-      instance.parent as ComponentInternalInstance | null,
-    )
-  })
+  ;(frag.onUpdated ||= []).push(() => syncInteropRoot(instance))
 }
 
 function setInteropVnodeScopeId(
