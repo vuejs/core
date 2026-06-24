@@ -11009,6 +11009,61 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toBe('<div>content</div>')
   })
 
+  test('hydrate compiled VDOM slot child keeps owner root current after branch update', async () => {
+    const data = reactive({
+      child: 'span',
+      show: true,
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild v-if="data.show">
+          <components.VdomChild />
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template><slot /></template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <span v-if="data.child === 'span'">span</span>
+              <div v-else>div</div>
+            </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><span>span</span><!--]-->
+      "
+    `)
+
+    data.child = 'div'
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "
+      <!--[--><div>div</div><!--]-->
+      "
+    `)
+
+    data.show = false
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toBe('<!--v-if-->')
+
+    data.show = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toBe('<div>div</div>')
+  })
+
   test('hydrate VDOM slot content can mount after hydrating as empty', async () => {
     const data = reactive({
       show: false,
