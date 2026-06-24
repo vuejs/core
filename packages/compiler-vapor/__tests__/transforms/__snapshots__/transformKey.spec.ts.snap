@@ -5,7 +5,7 @@ exports[`compiler: key > with dynamic key > <component is/> + key 1`] = `
 
 export function render(_ctx) {
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
-    const n1 = _createDynamicComponent(() => (_ctx.view), null, null, 1)
+    const n1 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */)
     return n1
   })
   return n0
@@ -125,7 +125,7 @@ export function render(_ctx) {
       return n5
     })
     return n4
-  }), 293 /* BLOCK_SHAPE, TRUE_NO_SCOPE, INDEX_SHIFT */)
+  }), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   return n0
 }"
 `;
@@ -138,7 +138,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, (i) => (i), 8)
+  }, (i) => (i), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -163,7 +163,7 @@ exports[`compiler: key > with static key > <component is literal/> + key 1`] = `
 "import { createDynamicComponent as _createDynamicComponent, setBlockKey as _setBlockKey } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => ('div'), null, null, 1)
+  const n0 = _createDynamicComponent(() => ('div'), null, null, 1 /* SINGLE_ROOT */)
   _setBlockKey(n0, "1")
   return n0
 }"
@@ -173,7 +173,7 @@ exports[`compiler: key > with static key > <component is/> + key 1`] = `
 "import { createDynamicComponent as _createDynamicComponent, setBlockKey as _setBlockKey } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1)
+  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */)
   _setBlockKey(n0, "1")
   return n0
 }"

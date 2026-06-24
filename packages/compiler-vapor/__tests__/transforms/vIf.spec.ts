@@ -87,7 +87,7 @@ describe('compiler: v-if', () => {
     const { code } = compileWithVIf(`<div v-if="ok">static</div>`)
 
     expect(code).contains(
-      `}, null, ${singleRootNoScope} /* BLOCK_SHAPE, TRUE_NO_SCOPE */)`,
+      `}, null, ${singleRootNoScope} /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)`,
     )
   })
 
@@ -97,14 +97,14 @@ describe('compiler: v-if', () => {
     )
 
     expect(code).contains(
-      `}, null, ${VaporBlockShape.MULTI_ROOT | VaporIfFlags.TRUE_NO_SCOPE} /* BLOCK_SHAPE, TRUE_NO_SCOPE */)`,
+      `}, null, ${VaporBlockShape.MULTI_ROOT | VaporIfFlags.TRUE_NO_SCOPE} /* TRUE_MULTI_ROOT, TRUE_NO_SCOPE */)`,
     )
   })
 
   test('packs once flag', () => {
     const { code } = compileWithVIf(`<div v-if="ok" v-once />`)
 
-    expect(code).contains(`}, null, 17 /* BLOCK_SHAPE, ONCE */)`)
+    expect(code).contains(`}, null, 17 /* TRUE_SINGLE_ROOT, ONCE */)`)
     expect(code).not.contains(`}, null, 1, true)`)
   })
 
@@ -114,7 +114,7 @@ describe('compiler: v-if', () => {
     )
 
     expect(code).contains(
-      `}, ${singleRootIfElseNoScope | (1 << VaporIfFlags.INDEX_SHIFT)} /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */)`,
+      `}, ${singleRootIfElseNoScope | (1 << VaporIfFlags.INDEX_SHIFT)} /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_0 */)`,
     )
     expect(code).not.contains(`}, 5, null, 0)`)
   })
@@ -210,7 +210,7 @@ describe('compiler: v-if', () => {
 
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `}, null, ${singleRootNoScope} /* BLOCK_SHAPE, TRUE_NO_SCOPE */)`,
+      `}, null, ${singleRootNoScope} /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)`,
     )
     expect(code).toContain('_template("hello", 2)')
     expect([...ir.template.keys()]).toMatchObject(['hello'])

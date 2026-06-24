@@ -66,7 +66,7 @@ const t0 = _template("<div>", 1)
 export function render(_ctx) {
   const n1 = t0()
   _setInsertionState(n1, null, 0)
-  const n0 = _createSlot("default", null, null, 2)
+  const n0 = _createSlot("default", null, null, 2 /* ONCE */)
   return n1
 }"
 `;
@@ -89,7 +89,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, undefined, 12)
+  }, undefined, 12 /* IS_SINGLE_NODE, ONCE */)
   return n0
 }"
 `;
@@ -102,7 +102,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.expr), () => {
     const n2 = t0()
     return n2
-  }, null, 17 /* BLOCK_SHAPE, ONCE */)
+  }, null, 17 /* TRUE_SINGLE_ROOT, ONCE */)
   return n0
 }"
 `;
@@ -119,7 +119,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 85 /* BLOCK_SHAPE, FALSE_NO_SCOPE, ONCE */)
+  }, 85 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, FALSE_NO_SCOPE, ONCE */)
   return n0
 }"
 `;

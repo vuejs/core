@@ -142,7 +142,7 @@ export function render(_ctx) {
         const x6 = _txt(n6)
         _renderEffect(() => _setText(x6, _toDisplayString(_for_item0.value)))
         return n6
-      }, undefined, 8)
+      }, undefined, 8 /* IS_SINGLE_NODE */)
       const x4 = _txt(n4)
       _renderEffect(() => _setText(x4, _toDisplayString(_ctx.item)))
       return n4
@@ -158,7 +158,7 @@ exports[`compiler: transform <slot> outlets > root dynamic component fallback 1`
 
 export function render(_ctx) {
   const n0 = _createSlot("default", null, () => {
-    const n2 = _createDynamicComponent(() => (_ctx.view), null, null, 1)
+    const n2 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */)
     return n2
   })
   return n0
@@ -185,7 +185,7 @@ exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slott
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null, null, 1)
+  const n0 = _createSlot("default", null, null, 1 /* NO_SLOTTED */)
   return n0
 }"
 `;

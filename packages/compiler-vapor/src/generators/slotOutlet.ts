@@ -1,5 +1,6 @@
 import type { CodegenContext } from '../generate'
 import type { SlotOutletIRNode } from '../ir'
+import { VaporSlotFlags } from '@vue/shared'
 import { genBlock, markSlotRootOperations } from './block'
 import { genExpression } from './expression'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
@@ -43,9 +44,28 @@ export function genSlotOutlet(
       nameArg,
       rawPropsArg,
       fallbackArg,
-      flags ? String(flags) : undefined,
+      genSlotFlags(flags),
     ),
   )
 
   return frag
+}
+
+function genSlotFlags(flags: number): string | undefined {
+  if (!flags) {
+    return undefined
+  }
+
+  const names: string[] = []
+  if (flags & VaporSlotFlags.NO_SLOTTED) {
+    names.push('NO_SLOTTED')
+  }
+  if (flags & VaporSlotFlags.ONCE) {
+    names.push('ONCE')
+  }
+  if (flags & VaporSlotFlags.SLOT_ROOT) {
+    names.push('SLOT_ROOT')
+  }
+
+  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
 }

@@ -149,9 +149,9 @@ export function render(_ctx) {
     const n1 = _createIf(() => (_ctx.ok), () => {
       const n3 = _createComponentWithFallback(_component_Child)
       return n3
-    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
+    }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n1
-  }, { _: 8 }))
+  }, { _: 8 /* NON_STABLE */ }))
   return [n0, n5]
 }"
 `;
@@ -628,7 +628,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = _createComponent(_ctx.Comp)
     return n2
-  }, (item) => (item), 2)
+  }, (item) => (item), 2 /* IS_COMPONENT */)
   return n0
 }"
 `;
@@ -814,7 +814,7 @@ exports[`compiler: element transform > dynamic component > dynamic binding 1`] =
 "import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, 1)
+  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, 1 /* SINGLE_ROOT */)
   return n0
 }"
 `;
@@ -823,7 +823,7 @@ exports[`compiler: element transform > dynamic component > dynamic binding short
 "import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.is), null, null, 1)
+  const n0 = _createDynamicComponent(() => (_ctx.is), null, null, 1 /* SINGLE_ROOT */)
   return n0
 }"
 `;

@@ -47,8 +47,8 @@ export enum VaporBlockShape {
  * - bits 0-1: true branch VaporBlockShape
  * - bits 2-3: false branch VaporBlockShape
  * - bit 4: v-once
- * - bit 5: true branch does not need EffectScope
- * - bit 6: false branch does not need EffectScope
+ * - bit 5: true branch is static and can skip branch-owned EffectScope
+ * - bit 6: false branch is static and can skip branch-owned EffectScope
  * - bit 7: v-if sits on a slot content/fallback root chain
  * - bits 8+: branch index + 1 for keyed dynamic fragments
  *
@@ -67,13 +67,13 @@ export enum VaporIfFlags {
    */
   ONCE = 1 << 4,
   /**
-   * The compiler proved that the true branch does not create branch-owned
-   * effects or disposers.
+   * The compiler proved that the true branch only returns static template nodes,
+   * so runtime can skip creating a branch-owned EffectScope.
    */
   TRUE_NO_SCOPE = 1 << 5,
   /**
-   * The compiler proved that the false branch does not create branch-owned
-   * effects or disposers.
+   * The compiler proved that the false branch only returns static template
+   * nodes, so runtime can skip creating a branch-owned EffectScope.
    */
   FALSE_NO_SCOPE = 1 << 6,
   /**

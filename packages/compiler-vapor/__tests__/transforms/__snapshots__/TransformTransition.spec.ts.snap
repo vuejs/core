@@ -53,11 +53,11 @@ export function render(_ctx) {
         const n13 = t2()
         const n14 = t1()
         return [n13, n14]
-      }, 777 /* BLOCK_SHAPE, INDEX_SHIFT */)
+      }, 777 /* TRUE_SINGLE_ROOT, FALSE_MULTI_ROOT, KEYED_INDEX_2 */)
       return n15
-    }, 645 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */), 389 /* BLOCK_SHAPE, SLOT_ROOT, INDEX_SHIFT */)
+    }, 645 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, SLOT_ROOT, KEYED_INDEX_1 */), 389 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, SLOT_ROOT, KEYED_INDEX_0 */)
     return n0
-  }, { _: 8 }), true)
+  }, { _: 8 /* NON_STABLE */ }), true)
   return n17
 }"
 `;
@@ -104,9 +104,9 @@ export function render(_ctx) {
     const n0 = _createIf(() => (_ctx.show), () => {
       const n2 = t0()
       return n2
-    }, null, 129 /* BLOCK_SHAPE, SLOT_ROOT */)
+    }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n0
-  }, { _: 8 }), true)
+  }, { _: 8 /* NON_STABLE */ }), true)
   return n3
 }"
 `;

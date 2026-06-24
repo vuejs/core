@@ -141,25 +141,14 @@ export function genFor(
   }, idMap)
   exitScope()
 
-  let flags = 0
-  if (onlyChild) {
-    flags |= VaporVForFlags.FAST_REMOVE
-  }
-  if (component) {
-    flags |= VaporVForFlags.IS_COMPONENT
-  }
-  if (isFragmentBlock(render)) {
-    flags |= VaporVForFlags.IS_FRAGMENT
-  }
-  if (!component && isSingleNodeBlock(render)) {
-    flags |= VaporVForFlags.IS_SINGLE_NODE
-  }
-  if (once) {
-    flags |= VaporVForFlags.ONCE
-  }
-  if (slotRoot) {
-    flags |= VaporVForFlags.SLOT_ROOT
-  }
+  const flags = genForFlags(
+    onlyChild,
+    component,
+    isFragmentBlock(render),
+    !component && isSingleNodeBlock(render),
+    once,
+    slotRoot,
+  )
 
   const onResetCalls: CodeFragment[] = []
   for (let i = 0; i < selectorPatterns.length; i++) {
@@ -175,7 +164,7 @@ export function genFor(
       sourceExpr,
       blockFn,
       genCallback(keyProp),
-      flags ? String(flags) : undefined,
+      flags,
     ),
     ...onResetCalls,
   ]
@@ -206,6 +195,49 @@ export function genFor(
     idToPathMap.forEach((_, id) => (idMap[id] = null))
     return idMap
   }
+}
+
+function genForFlags(
+  onlyChild: boolean | undefined,
+  component: boolean | undefined,
+  isFragment: boolean,
+  isSingleNode: boolean,
+  once: boolean | undefined,
+  slotRoot: boolean | undefined,
+): string | undefined {
+  let flags = 0
+  const names: string[] = []
+
+  if (onlyChild) {
+    flags |= VaporVForFlags.FAST_REMOVE
+    names.push('FAST_REMOVE')
+  }
+  if (component) {
+    flags |= VaporVForFlags.IS_COMPONENT
+    names.push('IS_COMPONENT')
+  }
+  if (isFragment) {
+    flags |= VaporVForFlags.IS_FRAGMENT
+    names.push('IS_FRAGMENT')
+  }
+  if (isSingleNode) {
+    flags |= VaporVForFlags.IS_SINGLE_NODE
+    names.push('IS_SINGLE_NODE')
+  }
+  if (once) {
+    flags |= VaporVForFlags.ONCE
+    names.push('ONCE')
+  }
+  if (slotRoot) {
+    flags |= VaporVForFlags.SLOT_ROOT
+    names.push('SLOT_ROOT')
+  }
+
+  if (!flags) {
+    return undefined
+  }
+
+  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
 }
 
 function isSingleNodeBlock(block: BlockIRNode): boolean {

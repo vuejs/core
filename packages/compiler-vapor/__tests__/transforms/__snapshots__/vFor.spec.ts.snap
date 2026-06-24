@@ -10,7 +10,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value[0] + _for_item0.value.slice(1) + _for_key0.value)))
     return n2
-  }, ([id, ...other], index) => (id), 8)
+  }, ([id, ...other], index) => (id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -25,7 +25,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value[0] + _for_item0.value[1] + _for_key0.value)))
     return n2
-  }, ([id, other], index) => (id), 8)
+  }, ([id, other], index) => (id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -42,7 +42,7 @@ export function render(_ctx) {
     n2.$evtclick = _createInvoker(() => (_ctx.remove(_for_item0.value)))
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
     return n2
-  }, (item) => (item.id), 8)
+  }, (item) => (item.id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -57,7 +57,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _setText(x2, _toDisplayString(_for_item0.value.id + _for_item0.value.id))
     return n2
-  }, (row) => (row.id), 8)
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -74,7 +74,7 @@ export function render(_ctx) {
       _setClassName(n2, (_for_item0.value.id === _ctx.state.selected ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id), 8)
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -92,7 +92,7 @@ export function render(_ctx) {
       _setClassName(n2, (_todo.completed ? 1 : 0) | (_todo === _ctx.editedTodo ? 2 : 0), [" completed", " editing"])
     })
     return n2
-  }, (todo) => (todo.id), 8)
+  }, (todo) => (todo.id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -109,7 +109,7 @@ export function render(_ctx) {
       _setProp(n2, "index", _for_key0.value)
     })
     return n2
-  }, undefined, 8)
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -130,7 +130,7 @@ export function render(_ctx) {
       _setProp(n2, "title", _ctx.active === _for_item0.value.id ? 'b' : '')
     })
     return n2
-  }, (row) => (row.id), 8)
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
   n0.onReset(_selector0_0.reset)
   n0.onReset(_selector0_1.reset)
   return n0
@@ -151,9 +151,9 @@ export function render(_ctx) {
       const x4 = _txt(n4)
       _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value+_for_item0.value)))
       return n4
-    }, undefined, 9)
+    }, undefined, 9 /* FAST_REMOVE, IS_SINGLE_NODE */)
     return n5
-  }, undefined, 8)
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -168,7 +168,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id + _getRestElement(_for_item0.value, ["id"]) + _for_key0.value)))
     return n2
-  }, ({ id, ...other }, index) => (id), 8)
+  }, ({ id, ...other }, index) => (id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -183,7 +183,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id) + _toDisplayString(_for_item0.value.value)))
     return n2
-  }, ({ id, value }) => (id), 8)
+  }, ({ id, value }) => (id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -198,7 +198,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value + _for_key0.value + _for_index0.value)))
     return n2
-  }, (value, key, index) => (key), 8)
+  }, (value, key, index) => (key), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -216,7 +216,7 @@ export function render(_ctx) {
       _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
     })
     return n2
-  }, (row) => (row.id), 8)
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -234,7 +234,7 @@ export function render(_ctx) {
       _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id), 8)
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -252,7 +252,7 @@ export function render(_ctx) {
       _setClassName(n2, (_row.label === _row.id ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id), 8)
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -269,7 +269,7 @@ export function render(_ctx) {
       _setClassName(n2, (_for_item0.value.id === _ctx.selected ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id), 8)
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
   n0.onReset(_selector0.reset)
   return n0
 }"
@@ -285,7 +285,7 @@ export function render(_ctx) {
     const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_getDefaultValue(_for_item0.value.foo, () => (_ctx.bar)) + _ctx.bar + _ctx.baz + _getDefaultValue(_for_item0.value.baz[0], () => (_ctx.quux)) + _ctx.quux)))
     return n2
-  }, undefined, 8)
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
@@ -301,7 +301,7 @@ export function render(_ctx) {
     const n2 = _child(n3)
     _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
     return [n2, n3]
-  }, undefined, 2)
+  }, undefined, 2 /* IS_COMPONENT */)
   return n0
 }"
 `;
@@ -313,7 +313,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = _createDynamicComponent(() => (_ctx.view))
     return n2
-  }, (item) => (item.id), 18)
+  }, (item) => (item.id), 18 /* IS_COMPONENT, IS_FRAGMENT */)
   return n0
 }"
 `;
@@ -325,7 +325,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = _createSlot(() => (_for_item0.value.name))
     return n2
-  }, (item) => (item.id), 16)
+  }, (item) => (item.id), 16 /* IS_FRAGMENT */)
   return n0
 }"
 `;
@@ -337,7 +337,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = _createComponentWithFallback(_resolveDynamicComponent("view"))
     return n2
-  }, (item) => (item.id), 2)
+  }, (item) => (item.id), 2 /* IS_COMPONENT */)
   return n0
 }"
 `;
@@ -355,9 +355,9 @@ export function render(_ctx) {
     }, () => {
       const n6 = _createComponentWithFallback(_component_Comp)
       return n6
-    }, 266 /* BLOCK_SHAPE, INDEX_SHIFT */)
+    }, 266 /* TRUE_MULTI_ROOT, FALSE_MULTI_ROOT, KEYED_INDEX_0 */)
     return n2
-  }, undefined, 16)
+  }, undefined, 16 /* IS_FRAGMENT */)
   return n0
 }"
 `;
@@ -375,7 +375,7 @@ export function render(_ctx) {
       return n3
     })
     return n2
-  }, undefined, 16)
+  }, undefined, 16 /* IS_FRAGMENT */)
   return n0
 }"
 `;
@@ -391,9 +391,9 @@ export function render(_ctx) {
       const x4 = _txt(n4)
       _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value)))
       return n4
-    }, undefined, 8)
+    }, undefined, 8 /* IS_SINGLE_NODE */)
     return n2
-  }, undefined, 16)
+  }, undefined, 16 /* IS_FRAGMENT */)
   return n0
 }"
 `;
@@ -409,7 +409,7 @@ export function render(_ctx) {
     const n2 = _child(n3)
     _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
     return [n2, n3]
-  }, undefined, 2)
+  }, undefined, 2 /* IS_COMPONENT */)
   return n0
 }"
 `;
@@ -444,7 +444,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, undefined, 8)
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;

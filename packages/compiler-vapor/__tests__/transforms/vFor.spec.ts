@@ -40,7 +40,7 @@ describe('compiler: v-for', () => {
     expect(code).matchSnapshot()
     expect(helpers).contains('createFor')
     expect(code).toContain(
-      `}, (item) => (item.id), ${VaporVForFlags.IS_SINGLE_NODE})`,
+      `}, (item) => (item.id), ${VaporVForFlags.IS_SINGLE_NODE} /* IS_SINGLE_NODE */)`,
     )
     expect([...ir.template.keys()]).toEqual(['<div> '])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -435,7 +435,9 @@ describe('compiler: v-for', () => {
       `<Comp v-for="item in list">{{item}}</Comp>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_COMPONENT})`)
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
+    )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
     ).toBe(true)
@@ -449,7 +451,7 @@ describe('compiler: v-for', () => {
     expect(code).toContain(
       `}, (item) => (item.id), ${
         VaporVForFlags.IS_COMPONENT | VaporVForFlags.IS_FRAGMENT
-      })`,
+      } /* IS_COMPONENT, IS_FRAGMENT */)`,
     )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
@@ -469,7 +471,7 @@ describe('compiler: v-for', () => {
     )
     expect(code).matchSnapshot()
     expect(code).toContain(
-      `}, (item) => (item.id), ${VaporVForFlags.IS_COMPONENT})`,
+      `}, (item) => (item.id), ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
     )
   })
 
@@ -479,7 +481,7 @@ describe('compiler: v-for', () => {
     )
     expect(code).matchSnapshot()
     expect(code).toContain(
-      `}, (item) => (item.id), ${VaporVForFlags.IS_FRAGMENT})`,
+      `}, (item) => (item.id), ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
     )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
@@ -494,9 +496,7 @@ describe('compiler: v-for', () => {
       `<template v-for="item in list"><div>{{ item }}</div><span>{{ item }}</span></template>`,
     )
     expect(code).matchSnapshot()
-    expect(code).not.toContain(
-      `}, undefined, ${VaporVForFlags.IS_SINGLE_NODE})`,
-    )
+    expect(code).not.toContain('IS_SINGLE_NODE')
   })
 
   test('v-for on template with single component child', () => {
@@ -504,7 +504,9 @@ describe('compiler: v-for', () => {
       `<template v-for="item in list"><Comp>{{item}}</Comp></template>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_COMPONENT})`)
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
+    )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
     ).toBe(true)
@@ -518,7 +520,9 @@ describe('compiler: v-for', () => {
       </template>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_FRAGMENT})`)
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
     ).toBe(false)
@@ -535,7 +539,9 @@ describe('compiler: v-for', () => {
       `<template v-for="row in rows"><div v-for="item in row">{{ item }}</div></template>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_FRAGMENT})`)
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
         .children[0].operation,
@@ -549,7 +555,9 @@ describe('compiler: v-for', () => {
       `<template v-for="item in items"><div :key="item.id">{{ item.text }}</div></template>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain(`}, undefined, ${VaporVForFlags.IS_FRAGMENT})`)
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
         .children[0].operation,
