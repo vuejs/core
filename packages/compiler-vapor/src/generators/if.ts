@@ -87,12 +87,18 @@ function genIfFlagNames(
   index: number | undefined,
   blockShape: number,
 ): string {
-  const names = ['BLOCK_SHAPE']
+  const names = [`TRUE_${genBlockShapeName(blockShape)}`]
+  const falseShape = blockShape >> 2
+  const hasFalseBranch = (falseShape & 0b11) !== VaporBlockShape.EMPTY
+
+  if (hasFalseBranch) {
+    names.push(`FALSE_${genBlockShapeName(falseShape)}`)
+  }
 
   if (blockShape & VaporIfFlags.TRUE_NO_SCOPE) {
     names.push('TRUE_NO_SCOPE')
   }
-  if (blockShape & VaporIfFlags.FALSE_NO_SCOPE) {
+  if (hasFalseBranch && blockShape & VaporIfFlags.FALSE_NO_SCOPE) {
     names.push('FALSE_NO_SCOPE')
   }
 
@@ -103,8 +109,20 @@ function genIfFlagNames(
     names.push('SLOT_ROOT')
   }
   if (!once && index !== undefined) {
-    names.push('INDEX_SHIFT')
+    names.push(`KEYED_INDEX_${index}`)
   }
 
   return names.join(', ')
+}
+
+function genBlockShapeName(flags: number): string {
+  switch (flags & 0b11) {
+    case VaporBlockShape.EMPTY:
+      return 'EMPTY'
+    case VaporBlockShape.SINGLE_ROOT:
+      return 'SINGLE_ROOT'
+    case VaporBlockShape.MULTI_ROOT:
+      return 'MULTI_ROOT'
+  }
+  return 'UNKNOWN'
 }

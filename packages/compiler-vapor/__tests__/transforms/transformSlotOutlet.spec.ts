@@ -14,6 +14,8 @@ import {
 } from '../../src'
 import { makeCompile } from './_utils'
 
+const slotNoSlottedFlag = `${VaporSlotFlags.NO_SLOTTED} /* NO_SLOTTED */`
+
 const compileWithSlotsOutlet = makeCompile({
   nodeTransforms: [
     transformText,
@@ -325,7 +327,7 @@ describe('compiler: transform <slot> outlets', () => {
       slotted: false,
     })
     expect(code).toMatchSnapshot()
-    expect(code).toContain(String(VaporSlotFlags.NO_SLOTTED))
+    expect(code).toContain(slotNoSlottedFlag)
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.SLOT_OUTLET_NODE,
       id: 0,

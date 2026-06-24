@@ -86,10 +86,8 @@ export function genCreateComponent(
     operation.dynamic && !operation.dynamic.isStatic
   )
   const dynamicComponentFlags = isRuntimeDynamicComponent
-    ? (root ? VaporDynamicComponentFlags.SINGLE_ROOT : 0) |
-      (once ? VaporDynamicComponentFlags.ONCE : 0) |
-      (slotRoot ? VaporDynamicComponentFlags.SLOT_ROOT : 0)
-    : 0
+    ? genDynamicComponentFlags(root, once, slotRoot)
+    : false
   const rawSlots = genRawSlots(slots, context)
   const [ids, handlers] = processInlineHandlers(props, context)
   const rawProps = context.withId(() => genRawProps(props, context, true), ids)
@@ -118,13 +116,7 @@ export function genCreateComponent(
       tag,
       rawProps,
       rawSlots,
-      isRuntimeDynamicComponent
-        ? dynamicComponentFlags
-          ? String(dynamicComponentFlags)
-          : false
-        : root
-          ? 'true'
-          : false,
+      isRuntimeDynamicComponent ? dynamicComponentFlags : root ? 'true' : false,
       isRuntimeDynamicComponent ? false : once && 'true',
       isRuntimeDynamicComponent ? false : maybeSelfReference && 'true',
     ),
@@ -164,6 +156,34 @@ export function genCreateComponent(
       )
     }
   }
+}
+
+function genDynamicComponentFlags(
+  root: boolean | undefined,
+  once: boolean | undefined,
+  slotRoot: boolean | undefined,
+): string | false {
+  let flags = 0
+  const names: string[] = []
+
+  if (root) {
+    flags |= VaporDynamicComponentFlags.SINGLE_ROOT
+    names.push('SINGLE_ROOT')
+  }
+  if (once) {
+    flags |= VaporDynamicComponentFlags.ONCE
+    names.push('ONCE')
+  }
+  if (slotRoot) {
+    flags |= VaporDynamicComponentFlags.SLOT_ROOT
+    names.push('SLOT_ROOT')
+  }
+
+  if (!flags) {
+    return false
+  }
+
+  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
 }
 
 function getUniqueHandlerName(context: CodegenContext, name: string): string {
@@ -774,16 +794,33 @@ function genSlotBlockWithProps(
   )
   // Dynamic slot sources keep rawSlots.$, so runtime stays conservative.
   if (emitNonStableFlag && !hasStableRoot) {
-    blockFn = genCall(
-      context.helper('extend'),
-      blockFn,
-      `{ _: ${VaporSlotFlags.NON_STABLE} }`,
-    )
+    blockFn = genCall(context.helper('extend'), blockFn, [
+      `{ _: ${genSlotFlags(VaporSlotFlags.NON_STABLE)} }`,
+    ])
   }
   exitSlotBlock()
   exitScope && exitScope()
 
   return blockFn
+}
+
+function genSlotFlags(flags: number): string {
+  const names: string[] = []
+
+  if (flags & VaporSlotFlags.NO_SLOTTED) {
+    names.push('NO_SLOTTED')
+  }
+  if (flags & VaporSlotFlags.ONCE) {
+    names.push('ONCE')
+  }
+  if (flags & VaporSlotFlags.SLOT_ROOT) {
+    names.push('SLOT_ROOT')
+  }
+  if (flags & VaporSlotFlags.NON_STABLE) {
+    names.push('NON_STABLE')
+  }
+
+  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
 }
 
 const commentOnlyTemplateRE = /^(?:<!--[\s\S]*?-->)+$/

@@ -44,7 +44,7 @@ exports[`compiler: template ref transform > dynamic component static ref 1`] = `
 "import { createDynamicComponent as _createDynamicComponent, setStaticTemplateRef as _setStaticTemplateRef } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1)
+  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */)
   _setStaticTemplateRef(n0, "foo")
   return n0
 }"
@@ -68,7 +68,7 @@ export function render(_ctx) {
     const n2 = t0()
     _renderEffect(() => _setTemplateRef(n2, _ctx.foo, true))
     return n2
-  }, undefined, 12)
+  }, undefined, 12 /* IS_SINGLE_NODE, ONCE */)
   return n0
 }"
 `;
@@ -158,7 +158,7 @@ export function render(_ctx) {
     const n2 = t0()
     _setTemplateRef(n2, "foo", true)
     return n2
-  }, undefined, 12)
+  }, undefined, 12 /* IS_SINGLE_NODE, ONCE */)
   return n0
 }"
 `;
@@ -173,7 +173,7 @@ export function render(_ctx) {
     const n2 = t0()
     _setTemplateRef(n2, "foo")
     return n2
-  }, null, 17 /* BLOCK_SHAPE, ONCE */)
+  }, null, 17 /* TRUE_SINGLE_ROOT, ONCE */)
   return n0
 }"
 `;

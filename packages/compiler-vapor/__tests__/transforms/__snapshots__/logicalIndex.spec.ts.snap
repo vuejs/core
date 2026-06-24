@@ -61,7 +61,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, 49 /* BLOCK_SHAPE, TRUE_NO_SCOPE, ONCE */)
+  }, null, 49 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE, ONCE */)
   return n5
 }"
 `;
@@ -80,7 +80,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, 49 /* BLOCK_SHAPE, TRUE_NO_SCOPE, ONCE */)
+  }, null, 49 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE, ONCE */)
   return n4
 }"
 `;
@@ -100,7 +100,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
-  }, null, 49 /* BLOCK_SHAPE, TRUE_NO_SCOPE, ONCE */)
+  }, null, 49 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE, ONCE */)
   return n5
 }"
 `;
@@ -312,7 +312,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, (i) => (i), 8)
+  }, (i) => (i), 8 /* IS_SINGLE_NODE */)
   return n3
 }"
 `;
@@ -328,7 +328,7 @@ export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
-  }, (i) => (i), 8)
+  }, (i) => (i), 8 /* IS_SINGLE_NODE */)
   return n3
 }"
 `;
@@ -344,7 +344,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  }, null, 33 /* BLOCK_SHAPE, TRUE_NO_SCOPE */)
+  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)
   return n3
 }"
 `;
@@ -361,7 +361,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  }, null, 33 /* BLOCK_SHAPE, TRUE_NO_SCOPE */)
+  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)
   return n4
 }"
 `;
@@ -377,7 +377,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
-  }, null, 33 /* BLOCK_SHAPE, TRUE_NO_SCOPE */)
+  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)
   return n3
 }"
 `;
@@ -399,7 +399,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = t1()
     return n5
-  }, 357 /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */)
+  }, 357 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_0 */)
   _setInsertionState(n7, null, 2)
   const n6 = _createAssetComponent("Comp2")
   return n7
@@ -423,7 +423,7 @@ export function render(_ctx) {
   }, () => {
     const n5 = t1()
     return n5
-  }, 357 /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */)
+  }, 357 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_0 */)
   return n6
 }"
 `;
@@ -444,7 +444,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 357 /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */)
+  }, 357 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_0 */)
   return n6
 }"
 `;
@@ -469,7 +469,7 @@ export function render(_ctx) {
   }, () => {
     const n6 = t2()
     return n6
-  }, 613 /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */), 293 /* BLOCK_SHAPE, TRUE_NO_SCOPE, INDEX_SHIFT */)
+  }, 613 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_1 */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   return n8
 }"
 `;
@@ -489,7 +489,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 357 /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */)
+  }, 357 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_0 */)
   return n5
 }"
 `;
@@ -509,7 +509,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 357 /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */)
+  }, 357 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_0 */)
   _setInsertionState(n6, null, 2)
   const n5 = _createAssetComponent("Comp")
   return n6
@@ -531,7 +531,7 @@ export function render(_ctx) {
   }, () => {
     const n4 = t1()
     return n4
-  }, 357 /* BLOCK_SHAPE, TRUE_NO_SCOPE, FALSE_NO_SCOPE, INDEX_SHIFT */)
+  }, 357 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_0 */)
   return n5
 }"
 `;
