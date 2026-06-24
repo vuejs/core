@@ -879,12 +879,19 @@ function createVNodeFragment(vnode: VNode): {
 } {
   const frag = createInteropFragment(EMPTY_BLOCK, vnode)
   frag.$key = vnode.key
-  let validityPending = !isHydrating
+  // Optimistic slot validity: `frag.nodes` stays EMPTY_BLOCK until `syncNodes`
+  // runs (on insert), so report valid to keep a host boundary from mounting its
+  // fallback before the content exists. This keeps the common (valid) case free —
+  // an empty result is corrected later when the resolve path notifies the
+  // boundary to recheck; starting invalid would instead mount-then-teardown the
+  // fallback on every interop mount. Hydration starts resolved (SSR nodes exist).
+  let contentResolved = isHydrating
   const syncNodes = () => {
     frag.nodes = resolveVNodeNodes(vnode)
-    validityPending = false
+    contentResolved = true
   }
-  frag.isBlockValid = () => (validityPending ? true : isValidBlock(frag.nodes))
+  frag.isBlockValid = componentAsValid =>
+    contentResolved ? isValidBlock(frag.nodes, componentAsValid) : true
   trackFragmentVNodeUpdates(frag, vnode, syncNodes)
   return { frag, syncNodes }
 }
@@ -1397,7 +1404,10 @@ function renderVDOMSlot(
 ): VaporFragment {
   const suspense = currentParentSuspense || parentComponent.suspense
   const frag = createInteropFragment()
-  let validityPending = !isHydrating
+  // `isBlockValid` below reports VDOM-side validity (`contentState.valid`), not
+  // `isValidBlock(frag.nodes)`: `frag.nodes` tracks the active fallback when one
+  // is shown. (Optimism rationale: see createVNodeFragment.)
+  let contentResolved = isHydrating
 
   let isMounted = false
   const contentState = {
@@ -1413,10 +1423,10 @@ function renderVDOMSlot(
   let isContentUpdateRecheck = false
   let localFallback: BlockFn | undefined
   let slotResolutionState!: SlotResolutionState
-  frag.isBlockValid = () => {
-    if (validityPending) return true
+  frag.isBlockValid = componentAsValid => {
+    if (!contentResolved) return true
     return slotResolutionState.activeFallback
-      ? isValidSlot(slotResolutionState.activeFallback)
+      ? isValidBlock(slotResolutionState.activeFallback, componentAsValid)
       : contentState.valid
   }
   const boundary: SlotBoundaryContext = {
@@ -1471,7 +1481,7 @@ function renderVDOMSlot(
       contentState.nodes = EMPTY_BLOCK
       contentState.valid = false
     }
-    validityPending = false
+    contentResolved = true
   }
 
   const notifyUpdated = (): void => {
@@ -1912,8 +1922,10 @@ function renderVaporSlot(
     // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
     // fallback blocks that can later resolve to an empty vnode list.
     const frag = createInteropFragment()
-    let validityPending = !isHydrating
-    frag.isBlockValid = () => (validityPending ? true : isValidSlot(frag.nodes))
+    // Optimistic until content resolves into `frag.nodes`; see createVNodeFragment.
+    let contentResolved = isHydrating
+    frag.isBlockValid = componentAsValid =>
+      contentResolved ? isValidBlock(frag.nodes, componentAsValid) : true
     const slotBoundary = frag.slotBoundary
     let contentNodes: Block = EMPTY_BLOCK
     let isResolvingContent = false
@@ -1975,7 +1987,7 @@ function renderVaporSlot(
       isContentValid: () => isValidSlot(contentNodes),
       syncNodes: () => {
         frag.nodes = slotResolutionState.activeFallback || contentNodes
-        validityPending = false
+        contentResolved = true
       },
       notifyExposedValidityChange: () => {
         if (slotBoundary) {
@@ -2227,8 +2239,10 @@ function createVNodeChildrenFragment(
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const frag = createInteropFragment()
   let contentValid = false
-  let validityPending = !isHydrating
-  frag.isBlockValid = () => (validityPending ? true : contentValid)
+  // `isBlockValid` reports `contentValid` (VDOM-side `ensureValidVNode`), not
+  // `isValidBlock(frag.nodes)`. (Optimism rationale: see createVNodeFragment.)
+  let contentResolved = isHydrating
+  frag.isBlockValid = () => (contentResolved ? contentValid : true)
   let currentVNode: VNode | null = null
   let currentChildren: VNode[] = EMPTY_VNODES
   let currentParentNode: ParentNode | null = null
@@ -2238,7 +2252,7 @@ function createVNodeChildrenFragment(
   const scope = effectScope()
 
   const syncResolvedNodes = (children: VNode[] = currentChildren): boolean => {
-    const prevValid = validityPending ? true : contentValid
+    const prevValid = contentResolved ? contentValid : true
     contentValid = !!ensureValidVNode(children)
     if (children.length === 0) {
       frag.nodes = EMPTY_BLOCK
@@ -2247,7 +2261,7 @@ function createVNodeChildrenFragment(
     } else {
       frag.nodes = children.map(resolveVNodeNodes) as Block[]
     }
-    validityPending = false
+    contentResolved = true
     return prevValid !== contentValid
   }
 
@@ -2295,9 +2309,9 @@ function createVNodeChildrenFragment(
           } else if (!isMounted) {
             currentChildren = nextChildren
             currentVNode = createVNode(Fragment, null, nextChildren)
-            const wasPending = validityPending
+            const wasResolved = contentResolved
             const validityChanged = syncResolvedNodes(nextChildren)
-            if (!wasPending) {
+            if (wasResolved) {
               notifyUpdated(validityChanged)
             }
             return
