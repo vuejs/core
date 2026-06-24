@@ -47,14 +47,19 @@ import {
 import { compile, makeRender } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
-import { type Block, type BlockFn, isValidBlock } from '../src/block'
+import {
+  type Block,
+  type BlockFn,
+  isValidBlock,
+  isValidSlot,
+} from '../src/block'
 import {
   hydrateNode,
   isHydrationAnchor,
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
-import { DynamicFragment, SlotFragment, VaporFragment } from '../src/fragment'
+import { DynamicFragment, SlotFragment } from '../src/fragment'
 import {
   type SlotBoundaryContext,
   currentSlotBoundary,
@@ -130,7 +135,7 @@ function createTestSlotResolutionState(options: {
     isBusy: options.isBusy || (() => false),
     isDisposed: options.isDisposed || (() => false),
     isContentValid:
-      options.isContentValid || (() => isValidBlock(options.content || [])),
+      options.isContentValid || (() => isValidSlot(options.content || [])),
     syncNodes: () => {},
     notifyExposedValidityChange: vi.fn(),
   }
@@ -230,14 +235,6 @@ describe('component: slots', () => {
       const frag = new SlotFragment()
 
       frag.updateSlot(undefined, () => document.createTextNode('fallback'))
-
-      expect(isValidBlock(frag)).toBe(true)
-    })
-
-    test('slot fragment validityPending takes precedence over effective output', () => {
-      const frag = new SlotFragment()
-
-      frag.validityPending = true
 
       expect(isValidBlock(frag)).toBe(true)
     })
@@ -531,31 +528,6 @@ describe('component: slots', () => {
       localFallback = undefined
       recheckSlotResolution(state, true)
       expect(container.innerHTML).toBe('parent fallback<!--slot-->')
-    })
-
-    test('slot fragment delays fallback activation until pending child validity resolves', () => {
-      const container = document.createElement('div')
-      const frag = new SlotFragment()
-      let child!: VaporFragment
-
-      frag.updateSlot(
-        () => {
-          child = new VaporFragment([])
-          child.validityPending = true
-          trackSlotBoundaryDirtying(child)
-          return child
-        },
-        () => document.createTextNode('fallback'),
-      )
-      insert(frag, container)
-
-      expect(container.innerHTML).toBe('<!--slot-->')
-
-      child.validityPending = false
-      child.nodes = []
-      child.onUpdated!.forEach(hook => hook())
-
-      expect(container.innerHTML).toBe('fallback<!--slot-->')
     })
 
     test('slot boundary dirtying ignores non-root v-if updates', async () => {
@@ -2870,6 +2842,37 @@ describe('component: slots', () => {
           expect(root.innerHTML).toBe('<!--if--><!--slot-->')
         })
 
+        test('compiled root v-if component slot hides fallback when shown even if component output is empty', async () => {
+          const show = ref(false)
+          const Child = compile(
+            `<template><slot><span>fallback</span></slot></template>`,
+            show,
+          )
+          const Empty = compile(
+            `<template><span v-if="false">empty</span></template>`,
+            show,
+          )
+          const Parent = compile(
+            `<template>
+              <components.Child>
+                <components.Empty v-if="data" />
+              </components.Child>
+            </template>`,
+            show,
+            { Child, Empty },
+          )
+          const root = document.createElement('div')
+          const app = createVaporApp(Parent)
+          app.mount(root)
+
+          expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+
+          show.value = true
+          await nextTick()
+
+          expect(root.innerHTML).toBe('<!--if--><!--if--><!--slot-->')
+        })
+
         test('recomputes validity for all-dynamic multi-root slot content', async () => {
           const data = ref('both')
           const Child = compile(
@@ -4283,7 +4286,7 @@ describe('component: slots', () => {
         expect(mountSpy).toHaveBeenCalledTimes(1)
       })
 
-      test('vdom fallback added over valid forwarded vapor content should activate later when content becomes invalid', async () => {
+      test('vdom fallback added over forwarded vapor component content stays hidden when component output becomes invalid', async () => {
         const useFallback = ref(false)
         const showContent = ref(true)
         const mountSpy = vi.fn()
@@ -4336,7 +4339,7 @@ describe('component: slots', () => {
 
         showContent.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('<div>fallback</div>')
+        expect(root.innerHTML).toBe('<!--if-->')
         expect(mountSpy).toHaveBeenCalledTimes(1)
       })
 

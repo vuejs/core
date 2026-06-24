@@ -8,6 +8,7 @@ import {
   type VaporTransitionHooks,
   insert,
   isValidBlock,
+  isValidSlot,
   remove,
 } from './block'
 import {
@@ -70,8 +71,6 @@ export class VaporFragment<
   nodes: T
   vnode?: VNode | null
   anchor?: Node
-  // Async component fragments are valid while waiting for resolved output.
-  validityPending?: boolean
   isBlockValid?: () => boolean
   insert?: (
     parent: ParentNode,
@@ -545,7 +544,7 @@ export class SlotFragment
               setCurrentHydratingSlotFallbackActive(true)
             }
             this.updateContent(slotRender, key)
-            const contentValid = isValidBlock(this.content)
+            const contentValid = isValidSlot(this.content)
             recheckSlotResolution(this, shouldForce)
             // Updates run under the temporary fallback-active marker so empty
             // inner branches can materialize their own anchors if fallback
@@ -592,7 +591,7 @@ export class SlotFragment
   }
 
   isContentValid(): boolean {
-    return isValidBlock(this.content)
+    return isValidSlot(this.content)
   }
 
   syncNodes(): void {

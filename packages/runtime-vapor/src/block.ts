@@ -72,24 +72,33 @@ export function isBlock(val: NonNullable<unknown>): val is Block {
   )
 }
 
-export function isValidBlock(block: Block | null | undefined): boolean {
+export function isValidBlock(
+  block: Block | null | undefined,
+  componentAsValid: boolean = false,
+): boolean {
   if (!block) {
     return false
   } else if (block instanceof Node) {
     return !(block instanceof Comment)
   } else if (isVaporComponent(block)) {
-    return isValidBlock(block.block)
+    return componentAsValid || isValidBlock(block.block, componentAsValid)
   } else if (isArray(block)) {
-    return block.length > 0 && block.some(isValidBlock)
+    return (
+      block.length > 0 &&
+      block.some(block => isValidBlock(block, componentAsValid))
+    )
   } else {
     if (isInteropEnabled && block.isBlockValid) {
       return block.isBlockValid()
     }
-    if (block.validityPending) {
-      return true
-    }
-    return isValidBlock(block.nodes)
+    return isValidBlock(block.nodes, componentAsValid)
   }
+}
+
+// Slot validity follows VDOM fallback semantics: a component root counts as
+// provided content even when its rendered block is empty.
+export function isValidSlot(block: Block | null | undefined): boolean {
+  return isValidBlock(block, true)
 }
 
 export function insert(
