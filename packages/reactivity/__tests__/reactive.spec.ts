@@ -293,6 +293,41 @@ describe('reactivity/reactive', () => {
     expect(reactive(d)).toBe(d)
   })
 
+  test('non-observable values include a ref() suggestion', () => {
+    reactive(0 as any)
+    // assert the main message via the matcher so afterEach doesn't
+    // flag the warning as unexpected
+    expect('value cannot be made reactive: 0').toHaveBeenWarned()
+    // inspect the auto-spy from setup-vitest to verify the trailing
+    // suggestion argument — vi.mocked returns the same spy instance
+    const lastCall = vi.mocked(console.warn).mock.calls[
+      vi.mocked(console.warn).mock.calls.length - 1
+    ]
+    expect(lastCall[lastCall.length - 1]).toBe(
+      '\nDid you mean `ref()` instead? `ref()` wraps primitives and exposes reactivity via `.value`.',
+    )
+  })
+
+  test('readonly on a primitive includes the same ref() suggestion', () => {
+    readonly(0 as any)
+    expect('value cannot be made readonly: 0').toHaveBeenWarned()
+    const lastCall = vi.mocked(console.warn).mock.calls[
+      vi.mocked(console.warn).mock.calls.length - 1
+    ]
+    expect(lastCall[lastCall.length - 1]).toBe(
+      '\nDid you mean `ref()` instead? `ref()` wraps primitives and exposes reactivity via `.value`.',
+    )
+  })
+
+  test('no warning is emitted when the value is observable', () => {
+    reactive({})
+    reactive([])
+    readonly({})
+    // sanity check — no call to reactive/readonly on a primitive,
+    // so no warnings should fire and the auto-spy should be silent
+    expect(vi.mocked(console.warn)).not.toHaveBeenCalled()
+  })
+
   test('markRaw', () => {
     const obj = reactive({
       foo: { a: 1 },
