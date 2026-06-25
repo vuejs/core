@@ -132,6 +132,17 @@ export type UnwrapMixinsType<
 
 type EnsureNonVoid<T> = T extends void ? {} : T
 
+// preserve optional props for public consumers while still accepting undefined
+type LooseOptional<T> = IfAny<
+  T,
+  T,
+  T extends unknown
+    ? {
+        [K in keyof T]: {} extends Pick<T, K> ? T[K] | undefined : T[K]
+      }
+    : never
+>
+
 export type ComponentPublicInstanceConstructor<
   T extends ComponentPublicInstance<Props, RawBindings, D, C, M> =
     ComponentPublicInstance<any>,
@@ -305,8 +316,9 @@ export type ComponentPublicInstance<
   $: ComponentInternalInstance
   $data: D
   $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
-    : Prettify<P> & PublicProps
+    ? LooseOptional<Partial<Defaults>> &
+        Omit<Prettify<LooseOptional<P>> & PublicProps, keyof Defaults>
+    : Prettify<LooseOptional<P>> & PublicProps
   $attrs: Attrs
   $refs: Data & TypeRefs
   $slots: UnwrapSlotsType<S>
