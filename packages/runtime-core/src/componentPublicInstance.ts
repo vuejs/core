@@ -1,4 +1,5 @@
 import {
+  type Attrs,
   type Component,
   type ComponentInternalInstance,
   type Data,
@@ -132,13 +133,8 @@ export type UnwrapMixinsType<
 type EnsureNonVoid<T> = T extends void ? {} : T
 
 export type ComponentPublicInstanceConstructor<
-  T extends ComponentPublicInstance<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M
-  > = ComponentPublicInstance<any>,
+  T extends ComponentPublicInstance<Props, RawBindings, D, C, M> =
+    ComponentPublicInstance<any>,
   Props = any,
   RawBindings = any,
   D = any,
@@ -311,7 +307,7 @@ export type ComponentPublicInstance<
   $props: MakeDefaultsOptional extends true
     ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
     : Prettify<P> & PublicProps
-  $attrs: Data
+  $attrs: Attrs
   $refs: Data & TypeRefs
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
@@ -430,7 +426,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
-    let normalizedProps
     if (key[0] !== '$') {
       const n = accessCache![key]
       if (n !== undefined) {
@@ -448,15 +443,14 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       } else if (hasSetupBinding(setupState, key)) {
         accessCache![key] = AccessTypes.SETUP
         return setupState[key]
-      } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+      } else if (
+        __FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        hasOwn(data, key)
+      ) {
         accessCache![key] = AccessTypes.DATA
         return data[key]
-      } else if (
-        // only cache other properties when instance has declared (thus stable)
-        // props
-        (normalizedProps = instance.propsOptions[0]) &&
-        hasOwn(normalizedProps, key)
-      ) {
+      } else if (hasOwn(props, key)) {
         accessCache![key] = AccessTypes.PROPS
         return props![key]
       } else if (ctx !== EMPTY_OBJ && hasOwn(ctx, key)) {
@@ -545,7 +539,11 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     ) {
       warn(`Cannot mutate <script setup> binding "${key}" from Options API.`)
       return false
-    } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
+    } else if (
+      __FEATURE_OPTIONS_API__ &&
+      data !== EMPTY_OBJ &&
+      hasOwn(data, key)
+    ) {
       data[key] = value
       return true
     } else if (hasOwn(instance.props, key)) {
@@ -575,19 +573,23 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, appContext, propsOptions },
+      _: { data, setupState, accessCache, ctx, appContext, props, type },
     }: ComponentRenderContext,
     key: string,
   ) {
-    let normalizedProps
-    return (
-      !!accessCache![key] ||
-      (data !== EMPTY_OBJ && hasOwn(data, key)) ||
+    let cssModules
+    return !!(
+      accessCache![key] ||
+      (__FEATURE_OPTIONS_API__ &&
+        data !== EMPTY_OBJ &&
+        key[0] !== '$' &&
+        hasOwn(data, key)) ||
       hasSetupBinding(setupState, key) ||
-      ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
+      hasOwn(props, key) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
-      hasOwn(appContext.config.globalProperties, key)
+      hasOwn(appContext.config.globalProperties, key) ||
+      ((cssModules = type.__cssModules) && cssModules[key])
     )
   },
 

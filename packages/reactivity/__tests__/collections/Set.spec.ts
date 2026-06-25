@@ -1,4 +1,11 @@
-import { effect, isReactive, reactive, toRaw } from '../../src'
+import {
+  effect,
+  isReactive,
+  reactive,
+  readonly,
+  shallowReactive,
+  toRaw,
+} from '../../src'
 
 describe('reactivity/collections', () => {
   function coverCollectionFn(collection: Set<any>, fnName: string) {
@@ -401,6 +408,34 @@ describe('reactivity/collections', () => {
 
       set.delete(entry)
       expect(dummy).toBe(false)
+    })
+
+    it('should not add readonly versions of existing raw values', () => {
+      const rawValue = {}
+      const wrappedValue = readonly(rawValue)
+      const set = reactive(new Set([rawValue]))
+
+      expect(set.has(wrappedValue)).toBe(true)
+
+      set.add(wrappedValue)
+
+      expect(set.size).toBe(1)
+      expect(toRaw(set).has(rawValue)).toBe(true)
+      expect(toRaw(set).has(wrappedValue)).toBe(false)
+    })
+
+    it('should not add proxy versions of existing raw values to shallow sets', () => {
+      const rawValue = {}
+      const wrappedValue = reactive(rawValue)
+      const set = shallowReactive(new Set([rawValue]))
+
+      expect(set.has(wrappedValue)).toBe(true)
+
+      set.add(wrappedValue)
+
+      expect(set.size).toBe(1)
+      expect(toRaw(set).has(rawValue)).toBe(true)
+      expect(toRaw(set).has(wrappedValue)).toBe(false)
     })
 
     it('should warn when set contains both raw and reactive versions of the same object', () => {

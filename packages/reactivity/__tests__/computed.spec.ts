@@ -1012,6 +1012,17 @@ describe('reactivity/computed', () => {
     expect(cValue.value).toBe(1)
   })
 
+  test('should not recompute if computed does not track reactive data', async () => {
+    const spy = vi.fn()
+    const c1 = computed(() => spy())
+
+    c1.value
+    ref(0).value++ // update globalVersion
+    c1.value
+
+    expect(spy).toBeCalledTimes(1)
+  })
+
   test('computed should remain live after losing all subscribers', () => {
     const state = reactive({ a: 1 })
     const p = computed(() => state.a + 1)
