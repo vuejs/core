@@ -105,12 +105,20 @@ type MixinToOptionTypes<T> =
     any,
     any,
     any,
-    any,
+    infer LC,
     any,
     any,
     any
   >
-    ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
+    ? OptionTypesType<
+        P & {},
+        B & {},
+        D & {},
+        C & {},
+        M & {},
+        Defaults & {},
+        LC & {}
+      > &
         IntersectionMixin<Mixin> &
         IntersectionMixin<Extends>
     : never
@@ -131,6 +139,19 @@ export type UnwrapMixinsType<
 > = T extends OptionTypesType ? T[Type] : never
 
 type EnsureNonVoid<T> = T extends void ? {} : T
+
+// drop `string`/`number` index signatures, keeping only explicitly declared
+// keys. `components` is typed as `LC & Record<string, Component>`, so the
+// inferred local-component maps carry a `Record<string, Component>` index
+// signature; without removing it, `keyof`/`Omit` operate on `string` and
+// collapse every component to the wide `Component` type. (#13253)
+type OmitIndexSignature<T> = {
+  [K in keyof T as string extends K
+    ? never
+    : number extends K
+      ? never
+      : K]: T[K]
+}
 
 export type ComponentPublicInstanceConstructor<
   T extends ComponentPublicInstance<Props, RawBindings, D, C, M> =
@@ -242,6 +263,16 @@ export type CreateComponentPublicInstanceWithMixins<
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
     EnsureNonVoid<Defaults>,
+  // a component's own `components` override those registered in mixins/extends
+  // when names collide (matching the runtime merge). The inherited map has its
+  // index signature stripped so `Omit` operates on the declared component names
+  // instead of collapsing them to `Component`, and only the declared (literal)
+  // keys of `LC` are removed before merging the own components back in. (#13253)
+  PublicLC extends Record<string, Component> = Omit<
+    OmitIndexSignature<UnwrapMixinsType<PublicMixin, 'LC'>>,
+    keyof OmitIndexSignature<LC>
+  > &
+    LC,
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -266,7 +297,7 @@ export type CreateComponentPublicInstanceWithMixins<
     {},
     string,
     S,
-    LC,
+    PublicLC,
     Directives,
     Exposed,
     Provide

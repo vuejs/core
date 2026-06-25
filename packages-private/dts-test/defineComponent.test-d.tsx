@@ -691,6 +691,72 @@ describe('with mixins', () => {
   ;<MyComponent aP1={1} bP2={[1]} />
 })
 
+// #13253
+describe('with mixins: components inference', () => {
+  const Foo = defineComponent({ render: () => null })
+  const Bar = defineComponent({ render: () => null })
+  const MixinFoo = defineComponent({ components: { Foo } })
+  const MixinBar = defineComponent({ components: { Bar } })
+  const MixinExtendsFoo = defineComponent({ extends: MixinFoo })
+
+  // a component registered in a mixin is inferred on the consumer
+  defineComponent({
+    mixins: [MixinFoo],
+    render() {
+      const c = this.$options.components!
+      expectType<typeof Foo>(c.Foo)
+      // reverse direction guards against a vacuous never/any pass
+      expectType<typeof c.Foo>(Foo)
+      return null
+    },
+  })
+
+  // components from multiple mixins are merged
+  defineComponent({
+    mixins: [MixinFoo, MixinBar],
+    render() {
+      const c = this.$options.components!
+      expectType<typeof Foo>(c.Foo)
+      expectType<typeof Bar>(c.Bar)
+      return null
+    },
+  })
+
+  // components surface through an extends-chain
+  defineComponent({
+    mixins: [MixinExtendsFoo],
+    render() {
+      expectType<typeof Foo>(this.$options.components!.Foo)
+      return null
+    },
+  })
+
+  // a local component overrides a mixin component of the same name, matching
+  // the runtime merge (own wins) rather than intersecting the two
+  defineComponent({
+    mixins: [MixinFoo],
+    components: { Foo: Bar },
+    render() {
+      const c = this.$options.components!
+      expectType<typeof Bar>(c.Foo)
+      expectType<typeof c.Foo>(Bar)
+      return null
+    },
+  })
+
+  // declaring own components still preserves non-colliding inherited ones
+  defineComponent({
+    mixins: [MixinFoo],
+    components: { Bar },
+    render() {
+      const c = this.$options.components!
+      expectType<typeof Foo>(c.Foo)
+      expectType<typeof Bar>(c.Bar)
+      return null
+    },
+  })
+})
+
 describe('with extends', () => {
   const Base = defineComponent({
     props: {

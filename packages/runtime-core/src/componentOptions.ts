@@ -478,7 +478,7 @@ export type MergedComponentOptionsOverride = {
   errorCaptured?: MergedHook<ErrorCapturedHook>
 }
 
-export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
+export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults' | 'LC'
 
 export type OptionTypesType<
   P = {},
@@ -487,6 +487,7 @@ export type OptionTypesType<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   Defaults = {},
+  LC extends Record<string, Component> = {},
 > = {
   P: P
   B: B
@@ -494,6 +495,7 @@ export type OptionTypesType<
   C: C
   M: M
   Defaults: Defaults
+  LC: LC
 }
 
 enum OptionTypes {
