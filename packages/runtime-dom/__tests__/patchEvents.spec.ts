@@ -265,6 +265,30 @@ describe(`runtime-dom: events patching`, () => {
     expect(onOnce).toHaveBeenCalledTimes(1)
   })
 
+  test('should support preserved-case option modifier event names', async () => {
+    const el = document.createElement('div')
+
+    const onOnce = vi.fn()
+    const onPassive = vi.fn()
+    const onCapture = vi.fn()
+
+    patchProp(el, 'on:Once', null, onOnce)
+    patchProp(el, 'on:Passive', null, onPassive)
+    patchProp(el, 'on:Capture', null, onCapture)
+
+    el.dispatchEvent(new Event('Once'))
+    await timeout()
+    expect(onOnce).toHaveBeenCalledTimes(1)
+
+    el.dispatchEvent(new Event('Passive'))
+    await timeout()
+    expect(onPassive).toHaveBeenCalledTimes(1)
+
+    el.dispatchEvent(new Event('Capture'))
+    await timeout()
+    expect(onCapture).toHaveBeenCalledTimes(1)
+  })
+
   it('handles an unknown type', () => {
     const el = document.createElement('div')
     patchProp(el, 'onClick', null, 'test')
