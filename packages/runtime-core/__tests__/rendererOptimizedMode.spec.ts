@@ -826,20 +826,25 @@ describe('renderer: optimized mode', () => {
   })
 
   // #6385
-  test('should fall back to full diff when the user patches a compiled slot', () => {
+  test('should fully diff props when falling back from a non-isomorphic block', () => {
     render(h('div', { id: 'placeholder' }), root)
 
     render(
       (openBlock(),
-      createElementBlock('div', { id: 'resolved' }, [
-        createTextVNode('hello '),
-        createElementVNode('button', null, '0', PatchFlags.TEXT),
-      ])),
+      createElementBlock(
+        'div',
+        { class: 'resolved' },
+        [
+          createTextVNode('hello '),
+          createElementVNode('button', null, '0', PatchFlags.TEXT),
+        ],
+        PatchFlags.CLASS,
+      )),
       root,
     )
 
     expect(inner(root)).toBe(
-      '<div id="resolved">hello <button>0</button></div>',
+      '<div class="resolved">hello <button>0</button></div>',
     )
   })
 
