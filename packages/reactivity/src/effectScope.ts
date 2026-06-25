@@ -22,6 +22,7 @@ export class EffectScope {
   cleanups: (() => void)[] = []
 
   private _isPaused = false
+  private _warnOnRun = true
 
   /**
    * only assigned by undetached scope
@@ -40,13 +41,23 @@ export class EffectScope {
    */
   private index: number | undefined
 
+  readonly __v_skip = true
+  // TODO isolatedDeclarations ReactiveFlags.SKIP
+
   constructor(public detached = false) {
-    this.parent = activeEffectScope
     if (!detached && activeEffectScope) {
-      this.index =
-        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
-          this,
-        ) - 1
+      if (activeEffectScope.active) {
+        this.parent = activeEffectScope
+        this.index =
+          (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
+            this,
+          ) - 1
+      } else {
+        // The parent scope has already stopped, so this child must not become
+        // a detached live scope.
+        this._active = false
+        this._warnOnRun = false
+      }
     }
   }
 
@@ -98,7 +109,7 @@ export class EffectScope {
       } finally {
         activeEffectScope = currentEffectScope
       }
-    } else if (__DEV__) {
+    } else if (__DEV__ && this._warnOnRun) {
       warn(`cannot run an inactive effect scope.`)
     }
   }
@@ -121,7 +132,26 @@ export class EffectScope {
    */
   off(): void {
     if (this._on > 0 && --this._on === 0) {
-      activeEffectScope = this.prevScope
+      // Fast path: in the common LIFO case this scope is still at the top
+      // of the active chain, so we can restore the previous scope directly.
+      if (activeEffectScope === this) {
+        activeEffectScope = this.prevScope
+      } else {
+        // withAsyncContext() restores the current component scope for the
+        // current async continuation, then defers its cleanup to a microtask.
+        // If sibling continuations interleave (A restore -> B restore ->
+        // A cleanup), activeEffectScope is already B instead of this scope A
+        // when A's cleanup calls off(). Unlink A from the middle of the
+        // active chain so a stale scope doesn't remain globally reachable.
+        let current = activeEffectScope
+        while (current) {
+          if (current.prevScope === this) {
+            current.prevScope = this.prevScope
+            break
+          }
+          current = current.prevScope
+        }
+      }
       this.prevScope = undefined
     }
   }

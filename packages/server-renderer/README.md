@@ -1,6 +1,6 @@
 # @vue/server-renderer
 
-**Note: as of 3.2.13+, this package is included as a dependency of the main `vue` package and can be accessed as `vue/server-renderer`. This means you no longer need to explicitly install this package and ensure its version match that of `vue`'s. Just use the `vue/server-renderer` deep import instead.**
+**Note: as of 3.2.13+, this package is included as a dependency of the main `vue` package and can be accessed as `vue/server-renderer`. This means you no longer need to explicitly install this package and ensure its version matches that of `vue`'s. Just use the `vue/server-renderer` deep import instead.**
 
 ## Basic API
 
@@ -165,7 +165,7 @@ renderToSimpleStream(
     push(chunk) {
       if (chunk === null) {
         // done
-        console(`render complete: ${res}`)
+        console.log(`render complete: ${res}`)
       } else {
         res += chunk
       }

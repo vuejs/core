@@ -18,7 +18,6 @@ nr build core --formats cjs
 
 import fs from 'node:fs'
 import { parseArgs } from 'node:util'
-import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
@@ -163,7 +162,7 @@ async function build(target) {
     ? `packages-private`
     : `packages`
   const pkgDir = path.resolve(`${pkgBase}/${target}`)
-  const pkg = JSON.parse(readFileSync(`${pkgDir}/package.json`, 'utf-8'))
+  const pkg = JSON.parse(fs.readFileSync(`${pkgDir}/package.json`, 'utf-8'))
 
   // if this is a full build (no specific targets), ignore private packages
   if ((isRelease || !targets.length) && pkg.private) {
@@ -171,7 +170,7 @@ async function build(target) {
   }
 
   // if building a specific format, do not remove dist.
-  if (!formats && existsSync(`${pkgDir}/dist`)) {
+  if (!formats && fs.existsSync(`${pkgDir}/dist`)) {
     fs.rmSync(`${pkgDir}/dist`, { recursive: true })
   }
 
@@ -234,7 +233,7 @@ async function checkSize(target) {
  * @returns {Promise<void>}
  */
 async function checkFileSize(filePath) {
-  if (!existsSync(filePath)) {
+  if (!fs.existsSync(filePath)) {
     return
   }
   const file = fs.readFileSync(filePath)

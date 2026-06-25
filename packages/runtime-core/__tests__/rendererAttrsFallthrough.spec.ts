@@ -573,7 +573,7 @@ describe('attribute fallthrough', () => {
     const Child = {
       props: [],
       render() {
-        return openBlock(), createBlock('div')
+        return (openBlock(), createBlock('div'))
       },
     }
 
