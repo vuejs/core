@@ -13,7 +13,12 @@ import { camelize, toHandlerKey } from '@vue/shared'
 import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { hasScopeRef, isFnExpression, isMemberExpression } from '../utils'
+import {
+  hasScopeRef,
+  isFnExpression,
+  isMemberExpression,
+  isValidExpression,
+} from '../utils'
 import { TO_HANDLER_KEY } from '../runtimeHelpers'
 
 export interface VOnDirectiveNode extends DirectiveNode {
@@ -83,7 +88,8 @@ export const transformOn: DirectiveTransform = (
   if (exp) {
     const isMemberExp = isMemberExpression(exp, context)
     const isInlineStatement = !(isMemberExp || isFnExpression(exp, context))
-    const hasMultipleStatements = exp.content.includes(`;`)
+    const hasMultipleStatements =
+      exp.content.includes(`;`) && !isValidExpression(exp, context)
 
     // process the expression since it's been skipped
     if (!__BROWSER__ && context.prefixIdentifiers) {
