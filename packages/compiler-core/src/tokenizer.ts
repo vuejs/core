@@ -36,7 +36,7 @@ import {
   EntityDecoder,
   fromCodePoint,
   htmlDecodeTree,
-} from 'entities/lib/decode.js'
+} from 'entities/decode'
 
 export enum ParseMode {
   BASE,
@@ -296,14 +296,30 @@ export default class Tokenizer {
   public getPos(index: number): Position {
     let line = 1
     let column = index + 1
-    for (let i = this.newlines.length - 1; i >= 0; i--) {
-      const newlineIndex = this.newlines[i]
-      if (index > newlineIndex) {
-        line = i + 2
-        column = index - newlineIndex
-        break
+    const length = this.newlines.length
+    let j = -1
+    if (length > 100) {
+      let l = -1
+      let r = length
+      while (l + 1 < r) {
+        const m = (l + r) >>> 1
+        this.newlines[m] < index ? (l = m) : (r = m)
+      }
+      j = l
+    } else {
+      for (let i = length - 1; i >= 0; i--) {
+        if (index > this.newlines[i]) {
+          j = i
+          break
+        }
       }
     }
+
+    if (j >= 0) {
+      line = j + 2
+      column = index - this.newlines[j]
+    }
+
     return {
       column,
       line,
@@ -929,7 +945,7 @@ export default class Tokenizer {
     this.buffer = input
     while (this.index < this.buffer.length) {
       const c = this.buffer.charCodeAt(this.index)
-      if (c === CharCodes.NewLine) {
+      if (c === CharCodes.NewLine && this.state !== State.InEntity) {
         this.newlines.push(this.index)
       }
       switch (this.state) {

@@ -2271,6 +2271,11 @@ describe('compiler: parse', () => {
       expect(span.loc.start.offset).toBe(0)
       expect(span.loc.end.offset).toBe(27)
     })
+
+    test('correct loc when a line in attribute value ends with &', () => {
+      const [span] = baseParse(`<span v-if="foo &&\nbar"></span>`).children
+      expect(span.loc.end.line).toBe(2)
+    })
   })
 
   describe('decodeEntities option', () => {
@@ -2591,6 +2596,16 @@ describe('compiler: parse', () => {
         {
           code: '<template><svg><![CDATA[cdata]]></svg></template>',
           errors: [],
+        },
+        {
+          // invalid root-level CDATA should report a parser error
+          code: '<![CDATA[cdata]]>',
+          errors: [
+            {
+              type: ErrorCodes.CDATA_IN_HTML_CONTENT,
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
       ],
       DUPLICATE_ATTRIBUTE: [

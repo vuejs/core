@@ -1,13 +1,13 @@
 import puppeteer, {
   type Browser,
   type ClickOptions,
+  type LaunchOptions,
   type Page,
-  type PuppeteerLaunchOptions,
 } from 'puppeteer'
 
 export const E2E_TIMEOUT: number = 30 * 1000
 
-const puppeteerOptions: PuppeteerLaunchOptions = {
+const puppeteerOptions: LaunchOptions = {
   args: process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
   headless: true,
 }

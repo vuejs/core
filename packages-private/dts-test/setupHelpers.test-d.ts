@@ -33,6 +33,16 @@ describe('defineProps w/ type declaration', () => {
   expectType<boolean>(props.boolAndUndefined)
 })
 
+describe('defineProps w/ never prop', () => {
+  const props = defineProps<{
+    foo?: never
+    bar: number
+  }>()
+
+  expectType<never | undefined>(props.foo)
+  expectType<number>(props.bar)
+})
+
 describe('defineProps w/ generics', () => {
   function test<T extends boolean>() {
     const props = defineProps<{ foo: T; bar: string; x?: boolean }>()

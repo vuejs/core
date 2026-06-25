@@ -4,6 +4,7 @@
   labels: ['dependencies'],
   ignorePaths: ['**/__tests__/**'],
   rangeStrategy: 'bump',
+  minimumReleaseAge: '24 hours',
   packageRules: [
     {
       matchDepTypes: ['peerDependencies'],
@@ -56,6 +57,9 @@
     // ESM only
     'estree-walker',
 
+    // v8 is ESM-only and breaks compiler-core's CJS path
+    'entities',
+
     // pinned
     // https://github.com/vuejs/core/issues/10300#issuecomment-1940855364
     'lru-cache',
@@ -67,9 +71,5 @@
     // pinned
     // only used in example for e2e tests
     'marked',
-
-    // pinned, 5.0+ has exports issues
-    // https://github.com/vuejs/core/issues/11603
-    'entities',
   ],
 }

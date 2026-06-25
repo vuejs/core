@@ -29,7 +29,7 @@ import {
   setBlockTracking,
   withCtx,
 } from '@vue/runtime-test'
-import { PatchFlags, SlotFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags, toDisplayString } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
 
 describe('renderer: optimized mode', () => {
@@ -861,6 +861,114 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><div>true</div></div>')
   })
 
+  // #13305
+  test('patch Suspense nested in list nodes in optimized mode', async () => {
+    const deps: Promise<any>[] = []
+
+    const Item = {
+      props: {
+        someId: { type: Number, required: true },
+      },
+      async setup(props: any) {
+        const p = new Promise(resolve => setTimeout(resolve, 1))
+        deps.push(p)
+
+        await p
+        return () => (
+          openBlock(),
+          createElementBlock('li', null, [
+            createElementVNode(
+              'p',
+              null,
+              String(props.someId),
+              PatchFlags.TEXT,
+            ),
+          ])
+        )
+      },
+    }
+
+    const list = ref([1, 2, 3])
+    const App = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              createElementVNode(
+                'p',
+                null,
+                JSON.stringify(list.value),
+                PatchFlags.TEXT,
+              ),
+              createElementVNode('ol', null, [
+                (openBlock(),
+                createBlock(SuspenseImpl, null, {
+                  fallback: withCtx(() => [
+                    createElementVNode('li', null, 'Loading…'),
+                  ]),
+                  default: withCtx(() => [
+                    (openBlock(true),
+                    createElementBlock(
+                      Fragment,
+                      null,
+                      renderList(list.value, id => {
+                        return (
+                          openBlock(),
+                          createBlock(
+                            Item,
+                            {
+                              key: id,
+                              'some-id': id,
+                            },
+                            null,
+                            PatchFlags.PROPS,
+                            ['some-id'],
+                          )
+                        )
+                      }),
+                      PatchFlags.KEYED_FRAGMENT,
+                    )),
+                  ]),
+                  _: 1 /* STABLE */,
+                })),
+              ]),
+            ],
+            PatchFlags.STABLE_FRAGMENT,
+          )
+        )
+      },
+    }
+
+    const app = createApp(App)
+    app.mount(root)
+    expect(inner(root)).toBe(`<p>[1,2,3]</p>` + `<ol><li>Loading…</li></ol>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(inner(root)).toBe(
+      `<p>[1,2,3]</p>` +
+        `<ol>` +
+        `<li><p>1</p></li>` +
+        `<li><p>2</p></li>` +
+        `<li><p>3</p></li>` +
+        `</ol>`,
+    )
+
+    list.value = [3, 1, 2]
+    await nextTick()
+    expect(inner(root)).toBe(
+      `<p>[3,1,2]</p>` +
+        `<ol>` +
+        `<li><p>3</p></li>` +
+        `<li><p>1</p></li>` +
+        `<li><p>2</p></li>` +
+        `</ol>`,
+    )
+  })
+
   // #4183
   test('should not take unmount children fast path /w Suspense', async () => {
     const show = ref(true)
@@ -1293,5 +1401,63 @@ describe('renderer: optimized mode', () => {
     await nextTick()
     expect(inner(root)).toBe('<!--v-if-->')
     expect(beforeUnmountSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #12411
+  test('handle patch stable fragment with non-reactive v-for source', async () => {
+    const count = ref(0)
+    const foo: any = []
+    function updateFoo() {
+      for (let n = 0; n < 3; n++) {
+        foo[n] = n + 1 + '_foo'
+      }
+    }
+    const Comp = {
+      setup() {
+        return () => {
+          // <div>{{ count }}</div>
+          // <div v-for='item in foo'>{{ item }}</div>
+          return (
+            openBlock(),
+            createElementBlock(
+              Fragment,
+              null,
+              [
+                createElementVNode(
+                  'div',
+                  null,
+                  toDisplayString(count.value),
+                  PatchFlags.TEXT,
+                ),
+                (openBlock(),
+                createElementBlock(
+                  Fragment,
+                  null,
+                  renderList(foo, item => {
+                    return createElementVNode(
+                      'div',
+                      null,
+                      toDisplayString(item),
+                      PatchFlags.TEXT,
+                    )
+                  }),
+                  PatchFlags.STABLE_FRAGMENT,
+                )),
+              ],
+              PatchFlags.STABLE_FRAGMENT,
+            )
+          )
+        }
+      },
+    }
+
+    render(h(Comp), root)
+    expect(inner(root)).toBe('<div>0</div>')
+    updateFoo()
+    count.value++
+    await nextTick()
+    expect(inner(root)).toBe(
+      '<div>1</div><div>1_foo</div><div>2_foo</div><div>3_foo</div>',
+    )
   })
 })

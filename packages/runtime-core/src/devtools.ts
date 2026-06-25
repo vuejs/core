@@ -125,7 +125,7 @@ export const devtoolsComponentRemoved = (
 
 type DevtoolsComponentHook = (component: ComponentInternalInstance) => void
 
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 function createDevtoolsComponentHook(
   hook: DevtoolsHooks,
 ): DevtoolsComponentHook {
