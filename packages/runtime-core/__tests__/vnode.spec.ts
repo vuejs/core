@@ -14,7 +14,15 @@ import {
 } from '../src/vnode'
 import type { Data } from '../src/component'
 import { PatchFlags, ShapeFlags } from '@vue/shared'
-import { h, isReactive, reactive, ref, setBlockTracking, withCtx } from '../src'
+import {
+  Teleport,
+  h,
+  isReactive,
+  reactive,
+  ref,
+  setBlockTracking,
+  withCtx,
+} from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
@@ -154,11 +162,28 @@ describe('vnode', () => {
       )
     })
 
-    test('function', () => {
+    test('function on component', () => {
+      const slot = vi.fn()
+      const vnode = createVNode({}, null, slot)
+      expect(vnode.children).toMatchObject({ default: slot })
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.SLOTS_CHILDREN,
+      )
+    })
+
+    test('function on element', () => {
       const vnode = createVNode('p', null, () => 'foo')
       expect(vnode.children).toBe('foo')
       expect(vnode.shapeFlag).toBe(
         ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
+      )
+    })
+
+    test('function on Teleport', () => {
+      const vnode = createVNode(Teleport, { to: '#target' }, () => 'foo')
+      expect(vnode.children).toMatchObject([{ type: Text, children: 'foo' }])
+      expect(vnode.shapeFlag).toBe(
+        ShapeFlags.TELEPORT | ShapeFlags.ARRAY_CHILDREN,
       )
     })
 
