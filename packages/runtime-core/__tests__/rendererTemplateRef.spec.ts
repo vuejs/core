@@ -1,5 +1,8 @@
 import {
+  Fragment,
   KeepAlive,
+  createCommentVNode,
+  createVNode,
   defineAsyncComponent,
   defineComponent,
   h,
@@ -12,6 +15,7 @@ import {
   shallowRef,
   watch,
 } from '@vue/runtime-test'
+import { PatchFlags } from '@vue/shared'
 
 describe('api: template refs', () => {
   it('string ref mount', () => {
@@ -738,5 +742,36 @@ describe('api: template refs', () => {
     toggle.value = true
     await nextTick()
     expect(instanceRef.value.name).toBe('AsyncComp')
+  })
+
+  // #12680
+  it('$el of a component with a DEV_ROOT_FRAGMENT root (leading comment + single element) points to the element', () => {
+    const childRef = ref<any>(null)
+
+    // mimics what the compiler produces in dev for a template like
+    // `<!-- comment --><div>hello</div>`: a root fragment flagged as
+    // DEV_ROOT_FRAGMENT whose `el` is the fragment's text anchor.
+    const Child = {
+      render() {
+        return createVNode(
+          Fragment,
+          null,
+          [createCommentVNode('comment'), h('div', 'hello')],
+          PatchFlags.DEV_ROOT_FRAGMENT,
+        )
+      },
+    }
+
+    const Comp = {
+      render() {
+        return h(Child, { ref: childRef })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+
+    // $el should resolve to the real <div>, not the comment/anchor node
+    expect(childRef.value.$el.tag).toBe('div')
   })
 })

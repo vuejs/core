@@ -17,6 +17,7 @@ import {
   EMPTY_OBJ,
   type IfAny,
   NOOP,
+  PatchFlags,
   type Prettify,
   type UnionToIntersection,
   extend,
@@ -51,7 +52,8 @@ import {
 } from './componentOptions'
 import type { EmitFn, EmitsOptions } from './componentEmits'
 import type { SlotsType, UnwrapSlotsType } from './componentSlots'
-import { markAttrsAccessed } from './componentRenderUtils'
+import { filterSingleRoot, markAttrsAccessed } from './componentRenderUtils'
+import type { VNodeArrayChildren } from './vnode'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
@@ -363,7 +365,24 @@ export const publicPropertiesMap: PublicPropertiesMap =
   // due to type annotation
   /*@__PURE__*/ extend(Object.create(null), {
     $: i => i,
-    $el: i => i.vnode.el,
+    $el: i => {
+      // #12680: a DEV_ROOT_FRAGMENT (leading comment + single element) sets
+      // `vnode.el` to the fragment anchor, so resolve the real root element
+      if (
+        __DEV__ &&
+        i.subTree &&
+        i.subTree.patchFlag > 0 &&
+        i.subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+      ) {
+        const singleRoot = filterSingleRoot(
+          i.subTree.children as VNodeArrayChildren,
+        )
+        if (singleRoot && singleRoot.el) {
+          return singleRoot.el
+        }
+      }
+      return i.vnode.el
+    },
     $data: i => i.data,
     $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
     $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),
