@@ -10,7 +10,7 @@ import {
   isSet,
   remove,
 } from '@vue/shared'
-import { warn } from './warning'
+import { warn, warnWithSuggestion } from './warning'
 import type { ComputedRef } from './computed'
 import { ReactiveFlags } from './constants'
 import {
@@ -125,8 +125,16 @@ export function watch(
   const { immediate, deep, once, scheduler, augmentJob, call } = options
 
   const warnInvalidSource = (s: unknown) => {
-    ;(options.onWarn || warn)(
+    // Use warnWithSuggestion directly rather than forwarding to
+    // options.onWarn so the suggestion lands as the trailing argument
+    // (the runtime-core onWarn handler is a plain `(msg, ...args)`
+    // and would insert the suggestion in the middle of the args list).
+    // This specific warning loses the component trace in exchange for
+    // a more actionable message.
+    warnWithSuggestion(
       `Invalid watch source: `,
+      `Did you mean to use a ref or a getter? For example: ` +
+        `\`watch(() => value, cb)\` or \`watch(someRef, cb)\`.`,
       s,
       `A watch source can only be a getter/effect function, a ref, ` +
         `a reactive object, or an array of these types.`,
