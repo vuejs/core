@@ -78,6 +78,66 @@ export function warn(msg: string, ...args: any[]): void {
   isWarning = false
 }
 
+/**
+ * Like `warn()`, but appends a "Did you mean ..." suggestion on a separate
+ * visual line below the main warning. Use for warning sites that have a
+ * well-known fix the user can act on.
+ *
+ * Dev-only. No-op under `__DEV__` false. Works for both the default
+ * `console.warn` path and a user-supplied `app.config.warnHandler` (the
+ * suggestion is appended to the formatted message passed to the handler).
+ */
+export function warnWithSuggestion(
+  msg: string,
+  suggestion: string,
+  ...args: any[]
+): void {
+  if (!__DEV__) return
+  if (isWarning) return
+  isWarning = true
+
+  pauseTracking()
+
+  const instance = stack.length ? stack[stack.length - 1].component : null
+  const appWarnHandler = instance && instance.appContext.config.warnHandler
+  const trace = getComponentTrace()
+  // single leading newline keeps the suggestion on its own line in console
+  // and inside the warnHandler's pre-formatted message string.
+  const suffix = `\n${suggestion}`
+
+  if (appWarnHandler) {
+    callWithErrorHandling(
+      appWarnHandler,
+      instance,
+      ErrorCodes.APP_WARN_HANDLER,
+      [
+        // eslint-disable-next-line no-restricted-syntax
+        msg +
+          args.map(a => a.toString?.() ?? JSON.stringify(a)).join('') +
+          suffix,
+        instance && instance.proxy,
+        trace
+          .map(
+            ({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`,
+          )
+          .join('\n'),
+        trace,
+      ],
+    )
+  } else {
+    const warnArgs: any[] = [`[Vue warn]: ${msg}`, ...args]
+    if (trace.length && !__TEST__) {
+      /* v8 ignore next 2 */
+      warnArgs.push(`\n`, ...formatTrace(trace))
+    }
+    warnArgs.push(suffix)
+    console.warn(...warnArgs)
+  }
+
+  resetTracking()
+  isWarning = false
+}
+
 export function getComponentTrace(): ComponentTraceStack {
   let currentVNode: VNode | null = stack[stack.length - 1]
   if (!currentVNode) {
