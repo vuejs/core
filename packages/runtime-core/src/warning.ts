@@ -111,8 +111,8 @@ export function warnWithSuggestion(
       instance,
       ErrorCodes.APP_WARN_HANDLER,
       [
-        // eslint-disable-next-line no-restricted-syntax
         msg +
+          // eslint-disable-next-line no-restricted-syntax
           args.map(a => a.toString?.() ?? JSON.stringify(a)).join('') +
           suffix,
         instance && instance.proxy,

@@ -26,9 +26,10 @@ describe('findClosestMatch', () => {
     })
 
     test('counts a transposition as a single edit (Damerau extension)', () => {
-      // "Botton" -> "Button" via one adjacent-character transposition,
-      // distance = 1, well inside the distance threshold
-      expect(findClosestMatch('Botton', ['Button', 'Footer'])).toBe('Button')
+      // "Buttno" -> "Button" via one adjacent-character transposition
+      // ('on' -> 'no'): distance = 1 with the Damerau extension, but 2
+      // if scored as plain substitutions — so this exercises the branch.
+      expect(findClosestMatch('Buttno', ['Button', 'Footer'])).toBe('Button')
     })
 
     test('returns a candidate that qualifies via the similarity gate alone', () => {
