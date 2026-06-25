@@ -22,13 +22,13 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4.0.0
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: '.node-version'
           cache: pnpm
@@ -37,7 +37,7 @@ jobs:
         run: pnpm install
 
       - name: Download Size Data
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
@@ -45,18 +45,18 @@ jobs:
 
       - name: Read PR Number
         id: pr-number
-        uses: juliangruber/read-file-action@v1
+        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
         with:
           path: temp/size/number.txt
 
       - name: Read base branch
         id: pr-base
-        uses: juliangruber/read-file-action@v1
+        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
         with:
           path: temp/size/base.txt
 
       - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
           branch: ${{ steps.pr-base.outputs.content }}
           workflow: size-data.yml
@@ -66,16 +66,17 @@ jobs:
           if_no_artifact_found: warn
 
       - name: Prepare report
-        run: pnpm tsx scripts/size-report.ts > size-report.md
+        run: node scripts/size-report.js > size-report.md
 
       - name: Read Size Report
         id: size-report
-        uses: juliangruber/read-file-action@v1
+        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
         with:
           path: ./size-report.md
 
       - name: Create Comment
-        uses: actions-cool/maintain-one-comment@v3
+        # The original action repository is blocked by GitHub, so use its backup pinned to a commit.
+        uses: actions-cool/maintain-one-comment-backup@fbbc22ad1809c1bcf46f19b58397b6254773588c # backup for v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ steps.pr-number.outputs.content }}

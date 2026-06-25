@@ -1,5 +1,5 @@
 import { bench, describe } from 'vitest'
-import { ref } from '../src/index'
+import { ref } from '../dist/reactivity.esm-browser.prod'
 
 describe('ref', () => {
   bench('create ref', () => {

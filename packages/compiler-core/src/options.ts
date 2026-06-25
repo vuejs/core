@@ -20,8 +20,7 @@ export interface ErrorHandlingOptions {
 }
 
 export interface ParserOptions
-  extends ErrorHandlingOptions,
-    CompilerCompatOptions {
+  extends ErrorHandlingOptions, CompilerCompatOptions {
   /**
    * Base mode is platform agnostic and only parses HTML-like template syntax,
    * treating all tags the same way. Specific tag parsing behavior can be
@@ -52,6 +51,11 @@ export interface ParserOptions
    * e.g. elements that should preserve whitespace inside, e.g. `<pre>`
    */
   isPreTag?: (tag: string) => boolean
+  /**
+   * Elements that should ignore the first newline token per parinsg spec
+   * e.g. `<textarea>` and `<pre>`
+   */
+  isIgnoreNewlineTag?: (tag: string) => boolean
   /**
    * Platform-specific built-in components e.g. `<Transition>`
    */
@@ -212,7 +216,8 @@ interface SharedTransformCodegenOptions {
 }
 
 export interface TransformOptions
-  extends SharedTransformCodegenOptions,
+  extends
+    SharedTransformCodegenOptions,
     ErrorHandlingOptions,
     CompilerCompatOptions {
   /**

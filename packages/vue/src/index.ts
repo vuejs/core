@@ -13,9 +13,9 @@ import {
 } from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
 import {
-  EMPTY_OBJ,
   NOOP,
   extend,
+  genCacheKey,
   generateCodeFrame,
   isString,
 } from '@vue/shared'
@@ -25,19 +25,7 @@ if (__DEV__) {
   initDev()
 }
 
-const compileCache = new WeakMap<
-  CompilerOptions,
-  Record<string, RenderFunction>
->()
-
-function getCache(options?: CompilerOptions) {
-  let c = compileCache.get(options ?? EMPTY_OBJ)
-  if (!c) {
-    c = Object.create(null) as Record<string, RenderFunction>
-    compileCache.set(options ?? EMPTY_OBJ, c)
-  }
-  return c
-}
+const compileCache: Record<string, RenderFunction> = Object.create(null)
 
 function compileToFunction(
   template: string | HTMLElement,
@@ -52,9 +40,8 @@ function compileToFunction(
     }
   }
 
-  const key = template
-  const cache = getCache(options)
-  const cached = cache[key]
+  const key = genCacheKey(template, options)
+  const cached = compileCache[key]
   if (cached) {
     return cached
   }
@@ -111,7 +98,7 @@ function compileToFunction(
   // mark the function as runtime compiled
   ;(render as InternalRenderFunction)._rc = true
 
-  return (cache[key] = render)
+  return (compileCache[key] = render)
 }
 
 registerRuntimeCompiler(compileToFunction)

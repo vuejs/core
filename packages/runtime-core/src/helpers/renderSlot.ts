@@ -14,7 +14,7 @@ import {
   isVNode,
   openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
@@ -37,6 +37,7 @@ export function renderSlot(
       isAsyncWrapper(currentRenderingInstance!.parent) &&
       currentRenderingInstance!.parent.ce)
   ) {
+    const hasProps = Object.keys(props).length > 0
     // in custom element mode, render <slot/> as actual slot outlets
     // wrap it with a fragment because in shadowRoot: false mode the slot
     // element gets replaced by injected content
@@ -47,7 +48,7 @@ export function renderSlot(
         Fragment,
         null,
         [createVNode('slot', props, fallback && fallback())],
-        PatchFlags.STABLE_FRAGMENT,
+        hasProps ? PatchFlags.BAIL : PatchFlags.STABLE_FRAGMENT,
       )
     )
   }
@@ -72,15 +73,16 @@ export function renderSlot(
   }
   openBlock()
   const validSlotContent = slot && ensureValidVNode(slot(props))
+  const slotKey =
+    props.key ||
+    // slot content array of a dynamic conditional slot may have a branch
+    // key attached in the `createSlots` helper, respect that
+    (validSlotContent && (validSlotContent as any).key)
   const rendered = createBlock(
     Fragment,
     {
       key:
-        (props.key ||
-          // slot content array of a dynamic conditional slot may have a branch
-          // key attached in the `createSlots` helper, respect that
-          (validSlotContent && (validSlotContent as any).key) ||
-          `_${name}`) +
+        (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
         // #7256 force differentiate fallback content from actual content
         (!validSlotContent && fallback ? '_fb' : ''),
     },

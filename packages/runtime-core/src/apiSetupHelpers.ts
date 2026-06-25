@@ -12,7 +12,9 @@ import {
   type SetupContext,
   createSetupContext,
   getCurrentInstance,
+  isInSSRComponentSetup,
   setCurrentInstance,
+  setInSSRSetupState,
   unsetCurrentInstance,
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
@@ -98,8 +100,10 @@ export type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
 }
 
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
-  ? [T[K]] extends [boolean | undefined]
-    ? K
+  ? T[K] extends boolean | undefined
+    ? T[K] extends never | undefined
+      ? never
+      : K
     : never
   : never
 
@@ -149,9 +153,7 @@ export function defineEmits() {
   return null as any
 }
 
-export type ComponentTypeEmits =
-  | ((...args: any[]) => any)
-  | Record<string, any[]>
+export type ComponentTypeEmits = ((...args: any[]) => any) | Record<string, any>
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
 
@@ -231,6 +233,22 @@ export function defineOptions<
   }
 }
 
+/**
+ * Vue `<script setup>` compiler macro for providing type hints to IDEs for
+ * slot name and slot props type checking.
+ *
+ * Example usage:
+ * ```ts
+ * const slots = defineSlots<{
+ *   default(props: { msg: string }): any
+ * }>()
+ * ```
+ *
+ * This is only usable inside `<script setup>`, is compiled away in the
+ * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineslots}
+ */
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>,
 >(): StrictUnwrapSlotsType<SlotsType<S>> {
@@ -321,7 +339,14 @@ type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type NativeType = null | number | string | boolean | symbol | Function
+type NativeType =
+  | null
+  | undefined
+  | number
+  | string
+  | boolean
+  | symbol
+  | Function
 
 type InferDefault<P, T> =
   | ((props: P) => T & {})
@@ -331,21 +356,23 @@ type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
-> = Readonly<MappedOmit<T, keyof Defaults>> & {
-  readonly [K in keyof Defaults as K extends keyof T
-    ? K
-    : never]-?: K extends keyof T
-    ? Defaults[K] extends undefined
-      ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
-      : NotUndefined<T[K]>
-    : never
-} & {
-  readonly [K in BKeys]-?: K extends keyof Defaults
-    ? Defaults[K] extends undefined
-      ? boolean | undefined
-      : boolean
-    : boolean
-}
+> = T extends unknown
+  ? Readonly<MappedOmit<T, keyof Defaults>> & {
+      readonly [K in keyof Defaults as K extends keyof T
+        ? K
+        : never]-?: K extends keyof T
+        ? Defaults[K] extends undefined
+          ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
+          : NotUndefined<T[K]>
+        : never
+    } & {
+      readonly [K in BKeys]-?: K extends keyof Defaults
+        ? Defaults[K] extends undefined
+          ? boolean | undefined
+          : boolean
+        : boolean
+    }
+  : never
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
@@ -382,17 +409,17 @@ export function withDefaults<
 }
 
 export function useSlots(): SetupContext['slots'] {
-  return getContext().slots
+  return getContext('useSlots').slots
 }
 
 export function useAttrs(): SetupContext['attrs'] {
-  return getContext().attrs
+  return getContext('useAttrs').attrs
 }
 
-function getContext(): SetupContext {
+function getContext(calledFunctionName: string): SetupContext {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
-    warn(`useContext() called without active instance.`)
+    warn(`${calledFunctionName}() called without active instance.`)
   }
   return i.setupContext || (i.setupContext = createSetupContext(i))
 }
@@ -497,6 +524,7 @@ export function createPropsRestProxy(
  */
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentInstance()!
+  const inSSRSetup = isInSSRComponentSetup
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -505,11 +533,44 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   }
   let awaitable = getAwaitable()
   unsetCurrentInstance()
+  if (inSSRSetup) {
+    setInSSRSetupState(false)
+  }
+
+  const restore = () => {
+    setCurrentInstance(ctx)
+    if (inSSRSetup) {
+      setInSSRSetupState(true)
+    }
+  }
+
+  // Never restore a captured "prev" instance here: in concurrent async setup
+  // continuations it may belong to a sibling component and cause leaks.
+  // We only need to balance ctx.scope.on() from setCurrentInstance(ctx),
+  // then clear global currentInstance for user microtasks.
+  const cleanup = () => {
+    if (getCurrentInstance() !== ctx) ctx.scope.off()
+    unsetCurrentInstance()
+    if (inSSRSetup) {
+      setInSSRSetupState(false)
+    }
+  }
+
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      setCurrentInstance(ctx)
+      restore()
+      // Defer cleanup so the async function's catch continuation
+      // still runs with the restored instance.
+      Promise.resolve().then(() => Promise.resolve().then(cleanup))
       throw e
     })
   }
-  return [awaitable, () => setCurrentInstance(ctx)]
+  return [
+    awaitable,
+    () => {
+      restore()
+      // Keep instance for the current continuation, then cleanup.
+      Promise.resolve().then(cleanup)
+    },
+  ]
 }
