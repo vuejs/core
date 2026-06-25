@@ -52,7 +52,9 @@ export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> =
               ? P
               : T[K] extends null
                 ? any[]
-                : never
+                : T[K] extends any[]
+                  ? T[K]
+                  : never
           ) => any
         }
       : {}

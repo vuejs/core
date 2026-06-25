@@ -1398,12 +1398,12 @@ describe('function syntax w/ emits', () => {
     },
   )
 
-  defineComponent<
+  const NamedTupleEmit = defineComponent<
     {},
     {
       update: [value: string] // named tuple syntax
     }
-  >((props, ctx) => {
+  >((_props, ctx) => {
     ctx.emit('update', '123')
     // @ts-expect-error
     ctx.emit('update', 123)
@@ -1411,6 +1411,15 @@ describe('function syntax w/ emits', () => {
     ctx.emit('non-exist')
     return () => {}
   })
+  expectType<JSX.Element>(
+    <NamedTupleEmit
+      onUpdate={value => {
+        expectType<string>(value.toUpperCase())
+        // @ts-expect-error string payload should not expose number methods
+        value.toFixed()
+      }}
+    />,
+  )
 })
 
 describe('function syntax w/ runtime props', () => {
