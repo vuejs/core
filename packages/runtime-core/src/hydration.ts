@@ -19,7 +19,6 @@ import {
   ShapeFlags,
   def,
   getEscapedCssVarName,
-  hasOwn,
   includeBooleanAttr,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -676,10 +675,7 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     isFragment: boolean,
   ): Node | null => {
-    if (
-      !isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN) &&
-      !isMismatchAllowedForCommentNode(node, vnode)
-    ) {
+    if (!isNodeMismatchAllowed(node, vnode)) {
       ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warn(
           `Hydration node mismatch:\n- rendered on server:`,
@@ -983,7 +979,16 @@ function isMismatchAllowed(
       el = el.parentElement
     }
   }
-  const allowedAttr = el && el.getAttribute(allowMismatchAttr)
+  return isMismatchAllowedByAttr(
+    el && el.getAttribute(allowMismatchAttr),
+    allowedType,
+  )
+}
+
+function isMismatchAllowedByAttr(
+  allowedAttr: string | null,
+  allowedType: MismatchTypes,
+): boolean {
   if (allowedAttr == null) {
     return false
   } else if (allowedAttr === '') {
@@ -994,14 +999,32 @@ function isMismatchAllowed(
     if (allowedType === MismatchTypes.TEXT && list.includes('children')) {
       return true
     }
-    return allowedAttr.split(',').includes(MismatchTypeString[allowedType])
+    return list.includes(MismatchTypeString[allowedType])
   }
 }
 
-// data-allow-mismatch + v-if
-function isMismatchAllowedForCommentNode(
-  node: Node,
-  { props }: VNode,
-): boolean {
-  return isComment(node) && props != null && hasOwn(props, allowMismatchAttr)
+function isNodeMismatchAllowed(node: Node, vnode: VNode): boolean {
+  return (
+    isMismatchAllowed(node.parentElement, MismatchTypes.CHILDREN) ||
+    isMismatchAllowedByNode(node) ||
+    isMismatchAllowedByVNode(vnode)
+  )
+}
+
+function isMismatchAllowedByNode(node: Node): boolean {
+  return (
+    node.nodeType === DOMNodeTypes.ELEMENT &&
+    isMismatchAllowedByAttr(
+      (node as Element).getAttribute(allowMismatchAttr),
+      MismatchTypes.CHILDREN,
+    )
+  )
+}
+
+function isMismatchAllowedByVNode({ props }: VNode): boolean {
+  const allowedAttr = props && props[allowMismatchAttr]
+  return (
+    typeof allowedAttr === 'string' &&
+    isMismatchAllowedByAttr(allowedAttr, MismatchTypes.CHILDREN)
+  )
 }

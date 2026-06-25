@@ -2309,6 +2309,36 @@ describe('SSR hydration', () => {
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     })
 
+    test('comment mismatch (v-if branch removed)', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch=""><span>value</span></div>`,
+        () => createCommentVNode('v-if', true),
+      )
+      expect(container.innerHTML).toBe('<!--v-if-->')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('node mismatch (v-else branches)', () => {
+      const { container } = mountWithHydration(
+        `<span data-allow-mismatch="">server</span>`,
+        () => h('div', { 'data-allow-mismatch': '' }, 'client'),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="">client</div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('comment mismatch (v-if) only allows children mismatches', () => {
+      const { container } = mountWithHydration(`<!--v-if-->`, () =>
+        h('div', { 'data-allow-mismatch': 'class' }, [h('span', 'value')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="class"><span>value</span></div>',
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
     test('comment mismatch (text)', () => {
       const { container } = mountWithHydration(
         `<div data-allow-mismatch="children">foobar</div>`,
