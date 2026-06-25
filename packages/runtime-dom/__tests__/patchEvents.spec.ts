@@ -225,11 +225,11 @@ describe(`runtime-dom: events patching`, () => {
       }
     }
 
-    window.customElements.define('hello-world', TestCustomElement)
+    if (!window.customElements.get('hello-world')) {
+      window.customElements.define('hello-world', TestCustomElement)
+    }
 
-    const customElement = document.createElement('hello-world', {
-      is: 'hello-world',
-    })
+    const customElement = document.createElement('hello-world')
 
     const onOnce = vi.fn()
     const onPassive = vi.fn()
