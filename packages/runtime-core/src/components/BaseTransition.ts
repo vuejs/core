@@ -10,6 +10,7 @@ import {
   type VNode,
   type VNodeArrayChildren,
   cloneVNode,
+  createCommentVNode,
   isSameVNodeType,
 } from '../vnode'
 import { warn } from '../warning'
@@ -21,10 +22,11 @@ import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
+import { isHmrUpdating } from '../hmr'
 
 type Hook<T = () => void> = T | T[]
 
-const leaveCbKey: unique symbol = Symbol('_leaveCb')
+export const leaveCbKey: unique symbol = Symbol('_leaveCb')
 const enterCbKey: unique symbol = Symbol('_enterCb')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
@@ -154,11 +156,18 @@ const BaseTransitionImpl: ComponentOptions = {
     return () => {
       const children =
         slots.default && getTransitionRawChildren(slots.default(), true)
-      if (!children || !children.length) {
+      const child =
+        children && children.length
+          ? findNonCommentChild(children)
+          : // Keep explicit default-slot conditionals on the same transition path
+            // as regular v-if branches, which render a comment placeholder.
+            instance.subTree
+            ? createCommentVNode()
+            : undefined
+      if (!child) {
         return
       }
 
-      const child: VNode = findNonCommentChild(children)
       // there's no need to track reactivity for these props so use the raw
       // props for a bit better perf
       const rawProps = toRaw(props)
@@ -198,17 +207,16 @@ const BaseTransitionImpl: ComponentOptions = {
         setTransitionHooks(innerChild, enterHooks)
       }
 
-      const oldChild = instance.subTree
-      const oldInnerChild = oldChild && getInnerChild(oldChild)
+      let oldInnerChild = instance.subTree && getInnerChild(instance.subTree)
 
       // handle mode
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        !isSameVNodeType(innerChild, oldInnerChild) &&
+        !isSameVNodeType(oldInnerChild, innerChild) &&
         recursiveGetSubtree(instance).type !== Comment
       ) {
-        const leavingHooks = resolveTransitionHooks(
+        let leavingHooks = resolveTransitionHooks(
           oldInnerChild,
           rawProps,
           state,
@@ -228,6 +236,7 @@ const BaseTransitionImpl: ComponentOptions = {
               instance.update()
             }
             delete leavingHooks.afterLeave
+            oldInnerChild = undefined
           }
           return emptyPlaceholder(child)
         } else if (mode === 'in-out' && innerChild.type !== Comment) {
@@ -238,18 +247,27 @@ const BaseTransitionImpl: ComponentOptions = {
           ) => {
             const leavingVNodesCache = getLeavingNodesForType(
               state,
-              oldInnerChild,
+              oldInnerChild!,
             )
-            leavingVNodesCache[String(oldInnerChild.key)] = oldInnerChild
+            leavingVNodesCache[String(oldInnerChild!.key)] = oldInnerChild!
             // early removal callback
             el[leaveCbKey] = () => {
               earlyRemove()
               el[leaveCbKey] = undefined
               delete enterHooks.delayedLeave
+              oldInnerChild = undefined
             }
-            enterHooks.delayedLeave = delayedLeave
+            enterHooks.delayedLeave = () => {
+              delayedLeave()
+              delete enterHooks.delayedLeave
+              oldInnerChild = undefined
+            }
           }
+        } else {
+          oldInnerChild = undefined
         }
+      } else if (oldInnerChild) {
+        oldInnerChild = undefined
       }
 
       return child
@@ -391,6 +409,8 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
+      // prevent enter if leave is in progress
+      if (!isHmrUpdating && leavingVNodesCache[key] === vnode) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
@@ -404,7 +424,7 @@ export function resolveTransitionHooks(
         }
       }
       let called = false
-      const done = (el[enterCbKey] = (cancelled?) => {
+      el[enterCbKey] = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -416,7 +436,8 @@ export function resolveTransitionHooks(
           hooks.delayedLeave()
         }
         el[enterCbKey] = undefined
-      })
+      }
+      const done = el[enterCbKey]!.bind(null, false)
       if (hook) {
         callAsyncHook(hook, [el, done])
       } else {
@@ -434,7 +455,7 @@ export function resolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const done = (el[leaveCbKey] = (cancelled?) => {
+      el[leaveCbKey] = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -447,7 +468,8 @@ export function resolveTransitionHooks(
         if (leavingVNodesCache[key] === vnode) {
           delete leavingVNodesCache[key]
         }
-      })
+      }
+      const done = el[leaveCbKey]!.bind(null, false)
       leavingVNodesCache[key] = vnode
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
@@ -492,9 +514,8 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
     return vnode
   }
-  // #7121 ensure get the child component subtree in case
-  // it's been replaced during HMR
-  if (__DEV__ && vnode.component) {
+  // #7121,#12465 get the component subtree if it's been mounted
+  if (vnode.component) {
     return vnode.component.subTree
   }
 

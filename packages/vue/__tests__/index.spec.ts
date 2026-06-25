@@ -190,7 +190,7 @@ describe('compiler + runtime integration', () => {
     expect('[Vue warn]: invalid template option:').toHaveBeenWarned()
   })
 
-  it('should warn when template is is not found', () => {
+  it('should warn when template is not found', () => {
     const app = createApp({
       template: '#not-exist-id',
     })
