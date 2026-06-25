@@ -134,7 +134,9 @@ export function watch(
     ;(options.onWarn || warn)(
       `Invalid watch source: `,
       s,
-      `A watch source can only be a getter/effect function, a ref, ` +
+      // leading space keeps the explanation readable when the runtime-core
+      // `warn` joins args without separators before reaching warnHandler
+      ` A watch source can only be a getter/effect function, a ref, ` +
         `a reactive object, or an array of these types.`,
       `\nDid you mean to use a ref or a getter? For example: ` +
         `\`watch(() => value, cb)\` or \`watch(someRef, cb)\`.`,
