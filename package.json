@@ -81,7 +81,7 @@
     "conventional-changelog": "^7.2.1",
     "conventional-changelog-angular": "^8.3.1",
     "enquirer": "^2.4.1",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^10.5.0",
     "eslint-plugin-import-x": "^4.17.0",
