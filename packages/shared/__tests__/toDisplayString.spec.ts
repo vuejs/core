@@ -11,10 +11,26 @@ describe('toDisplayString', () => {
   })
 
   test('primitive values', () => {
+    expect(toDisplayString(0)).toBe('0')
     expect(toDisplayString(1)).toBe('1')
+    expect(toDisplayString(NaN)).toBe('NaN')
     expect(toDisplayString(true)).toBe('true')
     expect(toDisplayString(false)).toBe('false')
     expect(toDisplayString('hello')).toBe('hello')
+  })
+
+  test('primitive values in refs', () => {
+    expect(toDisplayString(ref(0))).toBe('0')
+    expect(toDisplayString(ref(1))).toBe('1')
+    expect(toDisplayString(ref(NaN))).toBe('NaN')
+    expect(toDisplayString(ref(true))).toBe('true')
+    expect(toDisplayString(ref(false))).toBe('false')
+    expect(toDisplayString(ref('hello'))).toBe('hello')
+  })
+
+  test('symbol values', () => {
+    expect(toDisplayString(Symbol('hello'))).toBe('Symbol(hello)')
+    expect(toDisplayString(ref(Symbol('hello')))).toBe('Symbol(hello)')
   })
 
   test('Object and Arrays', () => {

@@ -5,12 +5,10 @@
  * \/\*#\_\_PURE\_\_\*\/
  * So that rollup can tree-shake them if necessary.
  */
-export function makeMap(
-  str: string,
-  expectsLowerCase?: boolean,
-): (key: string) => boolean {
-  const set = new Set(str.split(','))
-  return expectsLowerCase
-    ? val => set.has(val.toLowerCase())
-    : val => set.has(val)
+
+/*@__NO_SIDE_EFFECTS__*/
+export function makeMap(str: string): (key: string) => boolean {
+  const map = Object.create(null)
+  for (const key of str.split(',')) map[key] = 1
+  return val => val in map
 }

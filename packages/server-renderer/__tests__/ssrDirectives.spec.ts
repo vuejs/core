@@ -2,7 +2,10 @@ import { renderToString } from '../src/renderToString'
 import {
   createApp,
   h,
+  mergeProps,
+  ref,
   resolveDirective,
+  unref,
   vModelCheckbox,
   vModelDynamic,
   vModelRadio,
@@ -257,6 +260,41 @@ describe('ssr: directives', () => {
           }),
         ),
       ).toBe(`<input type="radio" value="hello" checked>`)
+    })
+  })
+
+  describe('template with v-text / v-html', () => {
+    test('element with v-html', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<span v-html="foo"/>`,
+          }),
+        ),
+      ).toBe(`<span>hello</span>`)
+    })
+
+    test('textarea with v-text', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<textarea v-text="foo"/>`,
+          }),
+        ),
+      ).toBe(`<textarea>hello</textarea>`)
+    })
+
+    test('textarea with v-html', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<textarea v-html="foo"/>`,
+          }),
+        ),
+      ).toBe(`<textarea>hello</textarea>`)
     })
   })
 
@@ -541,5 +579,45 @@ describe('ssr: directives', () => {
         }),
       ),
     ).toBe(`<div id="foo-arg-true"></div>`)
+  })
+
+  // #7499
+  test('custom directive w/ getSSRProps (expose)', async () => {
+    let exposeVars: null | string | undefined = null
+    const useTestDirective = () => ({
+      vTest: {
+        getSSRProps({ instance }: any) {
+          if (instance) {
+            exposeVars = instance.x
+          }
+          return { id: exposeVars }
+        },
+      },
+    })
+    const { vTest } = useTestDirective()
+
+    const renderString = await renderToString(
+      createApp({
+        setup(props, { expose }) {
+          const x = ref('foo')
+          expose({ x })
+          const __returned__ = { useTestDirective, vTest, ref, x }
+          Object.defineProperty(__returned__, '__isScriptSetup', {
+            enumerable: false,
+            value: true,
+          })
+          return __returned__
+        },
+        ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(
+            `<div${ssrRenderAttrs(
+              mergeProps(_attrs!, ssrGetDirectiveProps(_ctx, unref(vTest))),
+            )}></div>`,
+          )
+        },
+      }),
+    )
+    expect(renderString).toBe(`<div id="foo"></div>`)
+    expect(exposeVars).toBe('foo')
   })
 })

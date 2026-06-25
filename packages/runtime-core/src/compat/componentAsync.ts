@@ -23,7 +23,9 @@ const normalizedAsyncComponentMap = new WeakMap<
   Component
 >()
 
-export function convertLegacyAsyncComponent(comp: LegacyAsyncComponent) {
+export function convertLegacyAsyncComponent(
+  comp: LegacyAsyncComponent,
+): Component {
   if (normalizedAsyncComponentMap.has(comp)) {
     return normalizedAsyncComponentMap.get(comp)!
   }
@@ -33,7 +35,7 @@ export function convertLegacyAsyncComponent(comp: LegacyAsyncComponent) {
   let resolve: (res: LegacyAsyncReturnValue) => void
   let reject: (reason?: any) => void
   const fallbackPromise = new Promise<Component>((r, rj) => {
-    ;(resolve = r), (reject = rj)
+    ;((resolve = r), (reject = rj))
   })
 
   const res = comp(resolve!, reject!)

@@ -43,7 +43,7 @@ describe('runtime-dom: v-on directive', () => {
   })
 
   test('it should support key modifiers and system modifiers', () => {
-    const keyNames = ['ctrl', 'shift', 'meta', 'alt']
+    const keyNames = ['ctrl', 'shift', 'meta', 'alt'] as const
 
     keyNames.forEach(keyName => {
       const el = document.createElement('div')
@@ -162,5 +162,17 @@ describe('runtime-dom: v-on directive', () => {
     triggerEvent(el1, 'click', e => (e.ctrlKey = true))
     triggerEvent(el2, 'click', e => (e.shiftKey = true))
     expect(fn).toBeCalledTimes(2)
+  })
+
+  it('withModifiers should handle null or undefined handler', () => {
+    expect(() => {
+      const handler1 = withModifiers(null as any, ['ctrl'])
+      expect(handler1).toBe(null)
+    }).not.toThrow()
+
+    expect(() => {
+      const handler2 = withModifiers(undefined as any, ['shift'])
+      expect(handler2).toBe(undefined)
+    }).not.toThrow()
   })
 })

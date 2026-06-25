@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, defineAsyncComponent, h } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 const components = {
@@ -111,15 +111,38 @@ describe('ssr: slot', () => {
   })
 
   test('transition slot', async () => {
+    const ReusableTransition = {
+      template: `<transition><slot/></transition>`,
+    }
+
+    const ReusableTransitionWithAppear = {
+      template: `<transition appear><slot/></transition>`,
+    }
+
     expect(
       await renderToString(
         createApp({
           components: {
-            one: {
-              template: `<transition><slot/></transition>`,
-            },
+            one: ReusableTransition,
           },
           template: `<one><div v-if="false">foo</div></one>`,
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(await renderToString(createApp(ReusableTransition))).toBe(`<!---->`)
+
+    expect(await renderToString(createApp(ReusableTransitionWithAppear))).toBe(
+      `<template><!----></template>`,
+    )
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: ReusableTransition,
+          },
+          template: `<one><slot/></one>`,
         }),
       ),
     ).toBe(`<!---->`)
@@ -128,13 +151,168 @@ describe('ssr: slot', () => {
       await renderToString(
         createApp({
           components: {
-            one: {
-              template: `<transition><slot/></transition>`,
-            },
+            one: ReusableTransitionWithAppear,
+          },
+          template: `<one><slot/></one>`,
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransition, null, {
+              default: () => null,
+            })
+          },
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransitionWithAppear, null, {
+              default: () => null,
+            })
+          },
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransitionWithAppear, null, {
+              default: () => [],
+            })
+          },
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransition, null, {
+              default: () => [],
+            })
+          },
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: ReusableTransition,
           },
           template: `<one><div v-if="true">foo</div></one>`,
         }),
       ),
     ).toBe(`<div>foo</div>`)
+  })
+
+  // #9933
+  test('transition-group slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<TransitionGroup tag="div"><slot/></TransitionGroup>`,
+            },
+          },
+          template: `<one><p v-for="i in 2">{{i}}</p></one>`,
+        }),
+      ),
+    ).toBe(`<div><p>1</p><p>2</p></div>`)
+  })
+
+  // #12438
+  test('async component slot with v-if true', async () => {
+    const Layout = defineAsyncComponent(() =>
+      Promise.resolve({
+        template: `<div><slot name="header">default header</slot></div>`,
+      }),
+    )
+    const LayoutLoader = {
+      setup(_: any, context: any) {
+        return () => h(Layout, {}, context.slots)
+      },
+    }
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            LayoutLoader,
+          },
+          template: `
+            <Suspense>
+              <LayoutLoader>
+                <template v-if="true" #header>
+                  new header
+                </template>
+              </LayoutLoader>
+            </Suspense>
+          `,
+        }),
+      ),
+    ).toBe(`<div><!--[--> new header <!--]--></div>`)
+  })
+
+  // #11326
+  test('dynamic component slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+            Wrap: {
+              template: `<div><slot/></div>`,
+            },
+          },
+          template: `<ButtonComp><Wrap><div v-if="false">hello</div></Wrap></ButtonComp>`,
+        }),
+      ),
+    ).toBe(`<button><!--[--><div><!--[--><!--]--></div><!--]--></button>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+            Wrap: {
+              template: `<div><slot/></div>`,
+            },
+          },
+          template: `<ButtonComp><Wrap><div v-if="true">hello</div></Wrap></ButtonComp>`,
+        }),
+      ),
+    ).toBe(
+      `<button><!--[--><div><!--[--><div>hello</div><!--]--></div><!--]--></button>`,
+    )
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            ButtonComp: {
+              template: `<component is="button"><slot/></component>`,
+            },
+          },
+          template: `<ButtonComp><template v-if="false">hello</template></ButtonComp>`,
+        }),
+      ),
+    ).toBe(`<button><!--[--><!--]--></button>`)
   })
 })

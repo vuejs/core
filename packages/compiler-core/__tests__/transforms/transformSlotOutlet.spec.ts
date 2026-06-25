@@ -389,4 +389,20 @@ describe('compiler: transform <slot> outlets', () => {
       },
     })
   })
+
+  test('dynamically named slot outlet with v-bind shorthand', () => {
+    const ast = parseWithSlots(`<slot :name />`)
+    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: RENDER_SLOT,
+      arguments: [
+        `$slots`,
+        {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `name`,
+          isStatic: false,
+        },
+      ],
+    })
+  })
 })

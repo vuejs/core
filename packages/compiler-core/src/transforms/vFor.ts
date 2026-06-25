@@ -1,4 +1,5 @@
 import {
+  type NodeTransform,
   type TransformContext,
   createStructuralDirectiveTransform,
 } from '../transform'
@@ -46,9 +47,9 @@ import {
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { PatchFlagNames, PatchFlags } from '@vue/shared'
+import { PatchFlags } from '@vue/shared'
 
-export const transformFor = createStructuralDirectiveTransform(
+export const transformFor: NodeTransform = createStructuralDirectiveTransform(
   'for',
   (node, dir, context) => {
     const { helper, removeHelper } = context
@@ -60,30 +61,40 @@ export const transformFor = createStructuralDirectiveTransform(
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
       const memo = findDir(node, 'memo')
-      const keyProp = findProp(node, `key`)
-      const keyExp =
+      const keyProp = findProp(node, `key`, false, true)
+      const isDirKey = keyProp && keyProp.type === NodeTypes.DIRECTIVE
+      let keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
-          ? createSimpleExpression(keyProp.value!.content, true)
-          : keyProp.exp!)
-      const keyProperty = keyProp ? createObjectProperty(`key`, keyExp!) : null
+          ? keyProp.value
+            ? createSimpleExpression(keyProp.value.content, true)
+            : undefined
+          : keyProp.exp)
 
-      if (!__BROWSER__ && isTemplate) {
+      const keyProperty = keyExp ? createObjectProperty(`key`, keyExp) : null
+
+      if (!__BROWSER__) {
         // #2085 / #5288 process :key and v-memo expressions need to be
         // processed on `<template v-for>`. In this case the node is discarded
         // and never traversed so its binding expressions won't be processed
         // by the normal transforms.
-        if (memo) {
+        if (isTemplate && memo) {
           memo.exp = processExpression(
             memo.exp! as SimpleExpressionNode,
             context,
           )
         }
-        if (keyProperty && keyProp!.type !== NodeTypes.ATTRIBUTE) {
-          keyProperty.value = processExpression(
-            keyProperty.value as SimpleExpressionNode,
-            context,
-          )
+        if ((isTemplate || memo) && keyProperty && isDirKey) {
+          keyExp =
+            keyProp.exp =
+            keyProperty.value =
+              processExpression(
+                keyProperty.value as SimpleExpressionNode,
+                context,
+              )
+          if (memo) {
+            context.vForMemoKeyedNodes.add(node)
+          }
         }
       }
 
@@ -101,8 +112,7 @@ export const transformFor = createStructuralDirectiveTransform(
         helper(FRAGMENT),
         undefined,
         renderExp,
-        fragmentFlag +
-          (__DEV__ ? ` /* ${PatchFlagNames[fragmentFlag]} */` : ``),
+        fragmentFlag,
         undefined,
         undefined,
         true /* isBlock */,
@@ -161,10 +171,7 @@ export const transformFor = createStructuralDirectiveTransform(
             helper(FRAGMENT),
             keyProperty ? createObjectExpression([keyProperty]) : undefined,
             node.children,
-            PatchFlags.STABLE_FRAGMENT +
-              (__DEV__
-                ? ` /* ${PatchFlagNames[PatchFlags.STABLE_FRAGMENT]} */`
-                : ``),
+            PatchFlags.STABLE_FRAGMENT,
             undefined,
             undefined,
             true,
@@ -211,7 +218,7 @@ export const transformFor = createStructuralDirectiveTransform(
           loop.body = createBlockStatement([
             createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
             createCompoundExpression([
-              `if (_cached`,
+              `if (_cached && _cached.el`,
               ...(keyExp ? [` && _cached.key === `, keyExp] : []),
               ` && ${context.helperString(
                 IS_MEMO_SAME,
@@ -224,8 +231,10 @@ export const transformFor = createStructuralDirectiveTransform(
           renderExp.arguments.push(
             loop as ForIteratorExpression,
             createSimpleExpression(`_cache`),
-            createSimpleExpression(String(context.cached++)),
+            createSimpleExpression(String(context.cached.length)),
           )
+          // increment cache count
+          context.cached.push(null)
         } else {
           renderExp.arguments.push(
             createFunctionExpression(
@@ -246,7 +255,7 @@ export function processFor(
   dir: DirectiveNode,
   context: TransformContext,
   processCodegen?: (forNode: ForNode) => (() => void) | undefined,
-) {
+): (() => void) | undefined {
   if (!dir.exp) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_FOR_NO_EXPRESSION, dir.loc),
@@ -293,7 +302,7 @@ export function processFor(
 
   const onExit = processCodegen && processCodegen(forNode)
 
-  return () => {
+  return (): void => {
     scopes.vFor--
     if (!__BROWSER__ && context.prefixIdentifiers) {
       value && removeIdentifiers(value)
@@ -307,7 +316,7 @@ export function processFor(
 export function finalizeForParseResult(
   result: ForParseResult,
   context: TransformContext,
-) {
+): void {
   if (result.finalized) return
 
   if (!__BROWSER__ && context.prefixIdentifiers) {

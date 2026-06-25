@@ -1,5 +1,10 @@
 import { parse } from '../src'
-import { baseCompile, createRoot } from '@vue/compiler-core'
+import {
+  ElementTypes,
+  NodeTypes,
+  baseCompile,
+  createRoot,
+} from '@vue/compiler-core'
 import { SourceMapConsumer } from 'source-map-js'
 
 describe('compiler:sfc', () => {
@@ -76,7 +81,7 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(script!.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
 
@@ -95,8 +100,8 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(template.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
-        expect(mapping.originalColumn - mapping.generatedColumn).toBe(2)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalColumn! - mapping.generatedColumn).toBe(2)
       })
     })
 
@@ -110,7 +115,7 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(custom!.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
   })
@@ -350,6 +355,32 @@ h1 { color: red }
     expect(descriptor.customBlocks[0].content).toBe(` <-& `)
   })
 
+  test('should accept parser options', () => {
+    const { errors, descriptor } = parse(`<template><hello/></template>`, {
+      templateParseOptions: {
+        isCustomElement: t => t === 'hello',
+      },
+    })
+    expect(errors.length).toBe(0)
+    expect(descriptor.template!.ast!.children[0]).toMatchObject({
+      type: NodeTypes.ELEMENT,
+      tag: 'hello',
+      tagType: ElementTypes.ELEMENT,
+    })
+
+    // test cache invalidation on different options
+    const { descriptor: d2 } = parse(`<template><hello/></template>`, {
+      templateParseOptions: {
+        isCustomElement: t => t !== 'hello',
+      },
+    })
+    expect(d2.template!.ast!.children[0]).toMatchObject({
+      type: NodeTypes.ELEMENT,
+      tag: 'hello',
+      tagType: ElementTypes.COMPONENT,
+    })
+  })
+
   describe('warnings', () => {
     function assertWarning(errors: Error[], msg: string) {
       expect(errors.some(e => e.message.match(msg))).toBe(true)
@@ -392,6 +423,16 @@ h1 { color: red }
       assertWarning(
         parse(`import { ref } from 'vue'`).errors,
         `At least one <template> or <script> is required in a single file component`,
+      )
+    })
+
+    test('should throw error if template functional is given', () => {
+      assertWarning(
+        parse(`<template functional></template>`).errors,
+        `<template functional> is no longer supported in Vue 3, since ` +
+          `functional components no longer have significant performance ` +
+          `difference from stateful ones. Just use a normal <template> ` +
+          `instead.`,
       )
     })
   })

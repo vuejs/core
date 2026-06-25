@@ -13,7 +13,7 @@ const { render, createApp } = createRenderer({
   patchProp,
   insert,
   remove,
-  createElement
+  createElement,
   // ...
 })
 

@@ -23,7 +23,8 @@ describe('defineModel()', () => {
     expect(content).toMatch(
       `const modelValue = _useModel(__props, "modelValue")`,
     )
-    expect(content).toMatch(`const c = _useModel(__props, "count")`)
+    expect(content).toMatch(`const c = _useModel(__props, 'count')`)
+    expect(content).toMatch(`const toString = _useModel(__props, 'toString')`)
     expect(content).toMatch(`return { modelValue, c, toString }`)
     expect(content).not.toMatch('defineModel')
 
@@ -33,6 +34,43 @@ describe('defineModel()', () => {
       c: BindingTypes.SETUP_REF,
       toString: BindingTypes.SETUP_REF,
     })
+  })
+
+  test('w/ template literal name', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      const x = defineModel(\`x\`, { default: 100 })
+      const y = defineModel(\`y\`, { default: 200 })
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch('"x": { default: 100 },')
+    expect(content).toMatch('"y": { default: 200 },')
+    expect(content).toMatch('emits: ["update:x", "update:y"],')
+    expect(content).toMatch('const x = _useModel(__props, `x`)')
+    expect(content).toMatch('const y = _useModel(__props, `y`)')
+    expect(content).not.toMatch('defineModel')
+
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.SETUP_REF,
+      y: BindingTypes.SETUP_REF,
+    })
+  })
+
+  test('w/ template literal name with expressions falls back to modelValue', () => {
+    const { content } = compile(
+      `
+      <script setup>
+      const name = 'x'
+      const m = defineModel(\`\${name}\`)
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue":')
+    expect(content).toMatch('_useModel(__props, "modelValue",')
   })
 
   test('w/ defineProps and defineEmits', () => {
@@ -46,7 +84,7 @@ describe('defineModel()', () => {
     `,
     )
     assertCode(content)
-    expect(content).toMatch(`props: /*#__PURE__*/_mergeModels({ foo: String }`)
+    expect(content).toMatch(`props: /*@__PURE__*/_mergeModels({ foo: String }`)
     expect(content).toMatch(`"modelValue": { default: 0 }`)
     expect(content).toMatch(`const count = _useModel(__props, "modelValue")`)
     expect(content).not.toMatch('defineModel')
@@ -67,11 +105,11 @@ describe('defineModel()', () => {
     `,
     )
     assertCode(content)
-    expect(content).toMatch(`props: /*#__PURE__*/_mergeModels(['foo', 'bar'], {
+    expect(content).toMatch(`props: /*@__PURE__*/_mergeModels(['foo', 'bar'], {
     "count": {},
     "countModifiers": {},
   })`)
-    expect(content).toMatch(`const count = _useModel(__props, "count")`)
+    expect(content).toMatch(`const count = _useModel(__props, 'count')`)
     expect(content).not.toMatch('defineModel')
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
@@ -104,11 +142,15 @@ describe('defineModel()', () => {
     )
 
     expect(content).toMatch(
-      `const modelValue = _useModel(__props, "modelValue")`,
+      `const modelValue = _useModel<boolean | string>(__props, "modelValue")`,
     )
-    expect(content).toMatch(`const count = _useModel(__props, "count")`)
-    expect(content).toMatch(`const disabled = _useModel(__props, "disabled")`)
-    expect(content).toMatch(`const any = _useModel(__props, "any")`)
+    expect(content).toMatch(`const count = _useModel<number>(__props, 'count')`)
+    expect(content).toMatch(
+      `const disabled = _useModel<number>(__props, 'disabled')`,
+    )
+    expect(content).toMatch(
+      `const any = _useModel<any | boolean>(__props, 'any')`,
+    )
 
     expect(bindings).toStrictEqual({
       modelValue: BindingTypes.SETUP_REF,
@@ -143,10 +185,10 @@ describe('defineModel()', () => {
       'emits: ["update:modelValue", "update:fn", "update:fnWithDefault", "update:str", "update:optional"]',
     )
     expect(content).toMatch(
-      `const modelValue = _useModel(__props, "modelValue")`,
+      `const modelValue = _useModel<boolean>(__props, "modelValue")`,
     )
-    expect(content).toMatch(`const fn = _useModel(__props, "fn")`)
-    expect(content).toMatch(`const str = _useModel(__props, "str")`)
+    expect(content).toMatch(`const fn = _useModel<() => void>(__props, 'fn')`)
+    expect(content).toMatch(`const str = _useModel<string>(__props, 'str')`)
     expect(bindings).toStrictEqual({
       modelValue: BindingTypes.SETUP_REF,
       fn: BindingTypes.SETUP_REF,
@@ -154,6 +196,34 @@ describe('defineModel()', () => {
       str: BindingTypes.SETUP_REF,
       optional: BindingTypes.SETUP_REF,
     })
+  })
+
+  test('w/ types, production mode, boolean + multiple types', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<boolean | string | {}>()
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue": { type: [Boolean, String, Object] }')
+  })
+
+  test('w/ types, production mode, function + runtime opts + multiple types', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<number | (() => number)>({ default: () => 1 })
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(
+      '"modelValue": { type: [Number, Function], ...{ default: () => 1 } }',
+    )
   })
 
   test('get / set transformers', () => {
@@ -171,7 +241,10 @@ describe('defineModel()', () => {
     assertCode(content)
     expect(content).toMatch(/"modelValue": {\s+required: true,?\s+}/m)
     expect(content).toMatch(
-      `_useModel(__props, "modelValue", { get(v) { return v - 1 }, set: (v) => { return v + 1 },  })`,
+      `_useModel(__props, "modelValue", {
+        get(v) { return v - 1 },
+        set: (v) => { return v + 1 },
+        })`,
     )
 
     const { content: content2 } = compile(
@@ -191,7 +264,46 @@ describe('defineModel()', () => {
       /"modelValue": {\s+default: 0,\s+required: true,?\s+}/m,
     )
     expect(content2).toMatch(
-      `_useModel(__props, "modelValue", { get(v) { return v - 1 }, set: (v) => { return v + 1 },  })`,
+      `_useModel(__props, "modelValue", {
+        get(v) { return v - 1 },
+        set: (v) => { return v + 1 },
+      })`,
     )
+  })
+
+  test('usage w/ props destructure', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x: number }>()
+      const modelValue = defineModel({
+        set: (v) => { return v + x }
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`set: (v) => { return v + __props.x }`)
+  })
+
+  test('w/ Boolean And Function types, production mode', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<boolean | string>()
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue": { type: [Boolean, String] }')
+    expect(content).toMatch('emits: ["update:modelValue"]')
+    expect(content).toMatch(
+      `const modelValue = _useModel<boolean | string>(__props, "modelValue")`,
+    )
+    expect(bindings).toStrictEqual({
+      modelValue: BindingTypes.SETUP_REF,
+    })
   })
 })

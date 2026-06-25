@@ -20,8 +20,7 @@ export interface ErrorHandlingOptions {
 }
 
 export interface ParserOptions
-  extends ErrorHandlingOptions,
-    CompilerCompatOptions {
+  extends ErrorHandlingOptions, CompilerCompatOptions {
   /**
    * Base mode is platform agnostic and only parses HTML-like template syntax,
    * treating all tags the same way. Specific tag parsing behavior can be
@@ -53,6 +52,11 @@ export interface ParserOptions
    */
   isPreTag?: (tag: string) => boolean
   /**
+   * Elements that should ignore the first newline token per parinsg spec
+   * e.g. `<textarea>` and `<pre>`
+   */
+  isIgnoreNewlineTag?: (tag: string) => boolean
+  /**
    * Platform-specific built-in components e.g. `<Transition>`
    */
   isBuiltInComponent?: (tag: string) => symbol | void
@@ -74,6 +78,7 @@ export interface ParserOptions
   delimiters?: [string, string]
   /**
    * Whitespace handling strategy
+   * @default 'condense'
    */
   whitespace?: 'preserve' | 'condense'
   /**
@@ -211,7 +216,8 @@ interface SharedTransformCodegenOptions {
 }
 
 export interface TransformOptions
-  extends SharedTransformCodegenOptions,
+  extends
+    SharedTransformCodegenOptions,
     ErrorHandlingOptions,
     CompilerCompatOptions {
   /**
@@ -249,7 +255,7 @@ export interface TransformOptions
    */
   prefixIdentifiers?: boolean
   /**
-   * Hoist static VNodes and props objects to `_hoisted_x` constants
+   * Cache static VNodes and props objects to `_hoisted_x` constants
    * @default false
    */
   hoistStatic?: boolean

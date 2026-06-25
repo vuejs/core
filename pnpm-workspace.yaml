@@ -1,2 +1,32 @@
 packages:
   - 'packages/*'
+  - 'packages-private/*'
+
+catalog:
+  '@babel/parser': ^7.29.7
+  '@babel/types': ^7.29.7
+  'entities': '^7.0.1'
+  'estree-walker': ^2.0.2
+  'magic-string': ^0.30.21
+  'source-map-js': ^1.2.1
+  'vite': ^8.0.16
+  '@vitejs/plugin-vue': ^6.0.7
+
+allowBuilds:
+  '@swc/core': true
+  'esbuild': true
+  'puppeteer': true
+  'simple-git-hooks': true
+  'unrs-resolver': true
+
+dedupePeers: true
+
+peerDependencyRules:
+  allowedVersions:
+    'typescript-eslint>eslint': '^9.0.0'
+    '@typescript-eslint/eslint-plugin>eslint': '^9.0.0'
+    '@typescript-eslint/parser>eslint': '^9.0.0'
+    '@typescript-eslint/type-utils>eslint': '^9.0.0'
+    '@typescript-eslint/utils>eslint': '^9.0.0'
+
+minimumReleaseAge: 1440

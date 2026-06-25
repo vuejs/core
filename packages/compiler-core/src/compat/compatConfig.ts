@@ -21,7 +21,7 @@ export enum CompilerDeprecationTypes {
   COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
   COMPILER_NATIVE_TEMPLATE = 'COMPILER_NATIVE_TEMPLATE',
   COMPILER_INLINE_TEMPLATE = 'COMPILER_INLINE_TEMPLATE',
-  COMPILER_FILTERS = 'COMPILER_FILTER',
+  COMPILER_FILTERS = 'COMPILER_FILTERS',
 }
 
 type DeprecationData = {
@@ -106,7 +106,7 @@ function getCompatValue(
 export function isCompatEnabled(
   key: CompilerDeprecationTypes,
   context: MergedParserOptions | TransformContext,
-) {
+): boolean {
   const mode = getCompatValue('MODE', context)
   const value = getCompatValue(key, context)
   // in v3 mode, only enable if explicitly set to true
@@ -132,7 +132,7 @@ export function warnDeprecation(
   context: MergedParserOptions | TransformContext,
   loc: SourceLocation | null,
   ...args: any[]
-) {
+): void {
   const val = getCompatValue(key, context)
   if (val === 'suppress-warning') {
     return

@@ -1,19 +1,24 @@
 import {
   type BindingMetadata,
+  type CodegenSourceMapGenerator,
   type CompilerError,
   type ElementNode,
   NodeTypes,
+  type ParserOptions,
+  type RawSourceMap,
   type RootNode,
   type SourceLocation,
   createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { type RawSourceMap, SourceMapGenerator } from 'source-map-js'
+import { SourceMapGenerator } from 'source-map-js'
 import type { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
 import type { ImportBinding } from './compileScript'
 import { isImportUsed } from './script/importUsageCheck'
+import type { LRUCache } from 'lru-cache'
+import { genCacheKey } from '@vue/shared'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -24,7 +29,7 @@ export interface SFCParseOptions {
   pad?: boolean | 'line' | 'space'
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
-  parseExpressions?: boolean
+  templateParseOptions?: ParserOptions
 }
 
 export interface SFCBlock {
@@ -95,26 +100,32 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-export const parseCache = createCache<SFCParseResult>()
+export const parseCache:
+  | Map<string, SFCParseResult>
+  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
-  {
+  options: SFCParseOptions = {},
+): SFCParseResult {
+  const sourceKey = genCacheKey(source, {
+    ...options,
+    compiler: { parse: options.compiler?.parse },
+  })
+  const cache = parseCache.get(sourceKey)
+  if (cache) {
+    return cache
+  }
+
+  const {
     sourceMap = true,
     filename = DEFAULT_FILENAME,
     sourceRoot = '',
     pad = false,
     ignoreEmpty = true,
     compiler = CompilerDOM,
-    parseExpressions = true,
-  }: SFCParseOptions = {},
-): SFCParseResult {
-  const sourceKey =
-    source + sourceMap + filename + sourceRoot + pad + compiler.parse
-  const cache = parseCache.get(sourceKey)
-  if (cache) {
-    return cache
-  }
+    templateParseOptions = {},
+  } = options
 
   const descriptor: SFCDescriptor = {
     filename,
@@ -132,7 +143,8 @@ export function parse(
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
-    prefixIdentifiers: parseExpressions,
+    prefixIdentifiers: true,
+    ...templateParseOptions,
     onError: e => {
       errors.push(e)
     },
@@ -214,7 +226,7 @@ export function parse(
   if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
     errors.push(
       new SyntaxError(
-        `At least one <template> or <script> is required in a single file component.`,
+        `At least one <template> or <script> is required in a single file component. ${descriptor.filename}`,
       ),
     )
   }
@@ -353,7 +365,7 @@ function generateSourceMap(
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/'),
-  })
+  }) as unknown as CodegenSourceMapGenerator
   map.setSourceContent(filename, source)
   map._sources.add(filename)
   generated.split(splitRE).forEach((line, index) => {
@@ -368,7 +380,6 @@ function generateSourceMap(
             generatedLine,
             generatedColumn: i,
             source: filename,
-            // @ts-expect-error
             name: null,
           })
         }
