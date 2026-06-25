@@ -302,8 +302,10 @@ export function isEmitListener(
   if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
     return true
   }
-
-  key = key.slice(2).replace(/Once$/, '')
+  key = key.slice(2)
+  // #8342 the `.once` modifier appends a `Once` suffix. Preserve the exact event
+  // name `once`, while still stripping the suffix from `onOnceOnce`.
+  key = key === 'Once' ? key : key.replace(/Once$/, '')
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
     hasOwn(options, hyphenate(key)) ||
