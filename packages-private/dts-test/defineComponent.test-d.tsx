@@ -691,6 +691,73 @@ describe('with mixins', () => {
   ;<MyComponent aP1={1} bP2={[1]} />
 })
 
+// #13254 emits declared in mixins/extends should be inferred on `$emit`
+describe('with mixins and emits inference', () => {
+  const MixinArray = defineComponent({
+    emits: ['bar'],
+  })
+  const MixinObject = defineComponent({
+    emits: {
+      baz: (n: number) => typeof n === 'number',
+    },
+  })
+  const Base = defineComponent({
+    emits: ['foo'],
+  })
+  // a mixin whose emits come from its own (nested) mixin
+  const MixinNested = defineComponent({
+    mixins: [MixinArray],
+  })
+
+  defineComponent({
+    extends: Base,
+    mixins: [MixinObject, MixinNested],
+    emits: ['click'],
+    created() {
+      // own emits
+      this.$emit('click')
+      // from extends
+      this.$emit('foo')
+      // from object mixin (with payload)
+      this.$emit('baz', 1)
+      // from array mixin
+      this.$emit('bar')
+      // from nested mixin (mixin of a mixin)
+      this.$emit('bar', 'anything')
+
+      // @ts-expect-error not a declared event
+      this.$emit('nope')
+      // @ts-expect-error wrong payload type for object mixin emit
+      this.$emit('baz', 'string')
+    },
+  })
+
+  // emits declared only in mixins, none on the component itself
+  defineComponent({
+    mixins: [MixinArray],
+    created() {
+      this.$emit('bar')
+      // @ts-expect-error not a declared event
+      this.$emit('nope')
+    },
+  })
+
+  // a component whose own emits are wide (`string[]`) keeps a wide `$emit` even
+  // when inheriting concrete events from a mixin — the wide signature already
+  // covers them and must not be narrowed away
+  const wideEmits: string[] = ['whatever']
+  defineComponent({
+    mixins: [MixinArray],
+    emits: wideEmits,
+    created() {
+      this.$emit('bar')
+      // any event name is still accepted because own emits are wide
+      this.$emit('anything')
+      this.$emit('whatever', 1, 2, 3)
+    },
+  })
+})
+
 describe('with extends', () => {
   const Base = defineComponent({
     props: {

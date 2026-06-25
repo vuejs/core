@@ -478,7 +478,7 @@ export type MergedComponentOptionsOverride = {
   errorCaptured?: MergedHook<ErrorCapturedHook>
 }
 
-export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
+export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'E' | 'Defaults'
 
 export type OptionTypesType<
   P = {},
@@ -486,6 +486,7 @@ export type OptionTypesType<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
+  E extends EmitsOptions = {},
   Defaults = {},
 > = {
   P: P
@@ -493,6 +494,7 @@ export type OptionTypesType<
   D: D
   C: C
   M: M
+  E: E
   Defaults: Defaults
 }
 

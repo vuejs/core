@@ -49,7 +49,7 @@ import {
   resolveMergedOptions,
   shouldCacheAccess,
 } from './componentOptions'
-import type { EmitFn, EmitsOptions } from './componentEmits'
+import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
@@ -110,10 +110,100 @@ type MixinToOptionTypes<T> =
     any,
     any
   >
-    ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
+    ? OptionTypesType<
+        P & {},
+        B & {},
+        D & {},
+        C & {},
+        M & {},
+        // #13254 emits are resolved through a separate, isolated inference
+        // (`ExtractEmitsOption`). Inferring the emits position in the
+        // conditional above destabilizes inference of props/data/etc.
+        ExtractEmitsOption<T>,
+        Defaults & {}
+      > &
         IntersectionMixin<Mixin> &
         IntersectionMixin<Extends>
     : never
+
+// Extract (and normalize) only the emits option of a single component. Kept as
+// a standalone conditional so inferring `E` does not interfere with the
+// inference of the other options in `MixinToOptionTypes`. (#13254)
+type ExtractEmitsOption<T> =
+  T extends ComponentOptionsBase<
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    infer E,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any
+  >
+    ? NormalizeEmitsOptions<E>
+    : {}
+
+// Normalize a single emits option into object form so emits coming from
+// multiple mixins/extends can be merged together via intersection. The array
+// form `['foo']` becomes `{ foo: (...args: any[]) => any }`. Wide `string[]`
+// and the default `EmitsOptions` (e.g. from `emits: []`) carry no event names
+// and contribute nothing.
+type NormalizeEmitsMember<E> = E extends string[]
+  ? string extends E[number]
+    ? {}
+    : { [K in E[number]]: (...args: any[]) => any }
+  : E extends ObjectEmitsOptions
+    ? ObjectEmitsOptions extends E
+      ? {}
+      : E
+    : {}
+
+// `defineComponent` widens object emits to a union such as
+// `string[] | { foo: ... }`, so distribute over members and intersect.
+export type NormalizeEmitsOptions<E> = UnionToIntersection<
+  NormalizeEmitsMember<E>
+>
+
+// Whether the component's own emits accept arbitrary event names — a wide
+// `string[]` (non-literal) or the generic `ObjectEmitsOptions`. `[E]` tuples
+// avoid distributing over the `string[] | { ... }` union that object emits
+// widen to, so only genuinely wide declarations match. (#13254)
+type IsWideEmits<E> = [E] extends [string[]]
+  ? string extends E[number]
+    ? true
+    : false
+  : string extends keyof E
+    ? true
+    : false
+
+// Merge emits inherited from mixins/extends with the component's own emits.
+// When no emits are inherited, the component's own emits are used as-is to
+// preserve the exact `$emit` behavior (e.g. `emits: []` rejecting all events).
+// When the component's own emits are wide (accept any event), that wide signature
+// is kept — it already covers the inherited events, and narrowing it to just the
+// inherited ones would be wrong. Otherwise concrete inherited event names are
+// intersected with the component's own. The `infer R extends EmitsOptions` guard
+// keeps the result provably assignable to `EmitsOptions` (UnionToIntersection is
+// otherwise opaque to the checker).
+export type ResolveMergedEmits<
+  MixinE,
+  E extends EmitsOptions,
+> = {} extends MixinE
+  ? E
+  : IsWideEmits<E> extends true
+    ? E
+    : MixinE & NormalizeEmitsOptions<E> extends infer R extends EmitsOptions
+      ? R
+      : E
 
 // ExtractMixin(map type) is used to resolve circularly references
 type ExtractMixin<T> = {
@@ -175,13 +265,19 @@ export type CreateComponentPublicInstance<
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
     EnsureNonVoid<Defaults>,
+  // emits declared in mixins/extends are merged with the component's own emits
+  // so that `$emit` is correctly typed (#13254)
+  PublicE extends EmitsOptions = ResolveMergedEmits<
+    UnwrapMixinsType<PublicMixin, 'E'>,
+    E
+  >,
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
   PublicD,
   PublicC,
   PublicM,
-  E,
+  PublicE,
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
@@ -242,13 +338,19 @@ export type CreateComponentPublicInstanceWithMixins<
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
     EnsureNonVoid<Defaults>,
+  // emits declared in mixins/extends are merged with the component's own emits
+  // so that `$emit` is correctly typed (#13254)
+  PublicE extends EmitsOptions = ResolveMergedEmits<
+    UnwrapMixinsType<PublicMixin, 'E'>,
+    E
+  >,
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
   PublicD,
   PublicC,
   PublicM,
-  E,
+  PublicE,
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,

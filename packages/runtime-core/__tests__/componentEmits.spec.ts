@@ -610,7 +610,7 @@ describe('component: emit', () => {
     const CompA = {
       render,
     }
-    const validateByMixin = vi.fn(() => true)
+    const validateByMixin = vi.fn((_n: number) => true)
     const validateByGlobalMixin = vi.fn(() => true)
 
     const mixin = {
