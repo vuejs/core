@@ -2673,5 +2673,52 @@ describe('SSR hydration', () => {
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
+
+    // #9033
+    test('force patch dynamic props when hydrating', () => {
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<div><div>server</div></div>`,
+          () => (
+            openBlock(),
+            createElementBlock('div', null, [
+              createElementVNode(
+                'div',
+                { innerHTML: 'client' },
+                null,
+                PatchFlags.PROPS,
+                ['innerHTML'],
+              ),
+            ])
+          ),
+        )
+        expect(container.innerHTML).toBe(`<div><div>client</div></div>`)
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('only patches declared dynamic props when hydrating', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="attribute" id="server" value="server"></div>`,
+        () =>
+          createVNode(
+            'div',
+            {
+              'data-allow-mismatch': 'attribute',
+              id: 'client',
+              value: 'client',
+            },
+            null,
+            PatchFlags.PROPS,
+            ['id'],
+          ),
+      )
+      const el = container.firstChild as Element
+
+      expect(el.getAttribute('id')).toBe('client')
+      expect(el.getAttribute('value')).toBe('server')
+    })
   })
 })
