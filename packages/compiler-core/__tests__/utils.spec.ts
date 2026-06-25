@@ -1,4 +1,9 @@
-import type { ExpressionNode, TransformContext } from '../src'
+import { babelParse, walkIdentifiers } from '@vue/compiler-sfc'
+import {
+  type ExpressionNode,
+  type TransformContext,
+  isReferencedIdentifier,
+} from '../src'
 import { type Position, createSimpleExpression } from '../src/ast'
 import {
   advancePositionWithClone,
@@ -114,4 +119,19 @@ test('toValidAssetId', () => {
   expect(toValidAssetId('test-测试-1', 'component')).toBe(
     '_component_test_2797935797_1',
   )
+})
+
+describe('isReferencedIdentifier', () => {
+  test('identifiers in function parameters should not be inferred as references', () => {
+    expect.assertions(4)
+    const ast = babelParse(`(({ title }) => [])`)
+    walkIdentifiers(
+      ast.program.body[0],
+      (node, parent, parentStack, isReference) => {
+        expect(isReference).toBe(false)
+        expect(isReferencedIdentifier(node, parent, parentStack)).toBe(false)
+      },
+      true,
+    )
+  })
 })

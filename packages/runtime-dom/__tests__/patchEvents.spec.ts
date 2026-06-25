@@ -43,6 +43,29 @@ describe(`runtime-dom: events patching`, () => {
     expect(fn2).toHaveBeenCalledTimes(1)
   })
 
+  it('should snapshot event handler arrays during dispatch', async () => {
+    const el = document.createElement('div')
+    const fn2 = vi.fn()
+    const fn3 = vi.fn()
+    const fn4 = vi.fn()
+    const handlers: Function[] = [
+      vi.fn(() => {
+        handlers[1] = fn3
+        handlers.push(fn4)
+      }),
+      fn2,
+    ]
+
+    patchProp(el, 'onClick', null, handlers)
+    el.dispatchEvent(new Event('click'))
+    await timeout()
+
+    expect(handlers[0]).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn3).not.toHaveBeenCalled()
+    expect(fn4).not.toHaveBeenCalled()
+  })
+
   it('should unassign event handler', async () => {
     const el = document.createElement('div')
     const fn = vi.fn()

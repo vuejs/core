@@ -10,6 +10,7 @@ import type {
 import { walk } from 'estree-walker'
 import {
   BindingTypes,
+  TS_NODE_TYPES,
   extractIdentifiers,
   isFunctionType,
   isInDestructureAssignment,
@@ -102,8 +103,9 @@ export function transformDestructuredProps(
     return
   }
 
-  const rootScope: Scope = {}
+  const rootScope: Scope = Object.create(null)
   const scopeStack: Scope[] = [rootScope]
+  const functionScopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
@@ -115,19 +117,26 @@ export function transformDestructuredProps(
     propsLocalToPublicMap[local] = key
   }
 
-  function pushScope() {
-    scopeStack.push((currentScope = Object.create(currentScope)))
+  function pushScope(isFunctionScope = false) {
+    const scope = (currentScope = Object.create(currentScope))
+    scopeStack.push(scope)
+    if (isFunctionScope) {
+      functionScopeStack.push(scope)
+    }
   }
 
-  function popScope() {
+  function popScope(isFunctionScope = false) {
     scopeStack.pop()
+    if (isFunctionScope) {
+      functionScopeStack.pop()
+    }
     currentScope = scopeStack[scopeStack.length - 1] || null
   }
 
-  function registerLocalBinding(id: Identifier) {
+  function registerLocalBinding(id: Identifier, scope = currentScope) {
     excludedIds.add(id)
-    if (currentScope) {
-      currentScope[id.name] = false
+    if (scope) {
+      scope[id.name] = false
     } else {
       ctx.error(
         'registerBinding called without active scope, something is wrong.',
@@ -147,11 +156,6 @@ export function transformDestructuredProps(
         if (stmt.declare || !stmt.id) continue
         registerLocalBinding(stmt.id)
       } else if (
-        (stmt.type === 'ForOfStatement' || stmt.type === 'ForInStatement') &&
-        stmt.left.type === 'VariableDeclaration'
-      ) {
-        walkVariableDeclaration(stmt.left)
-      } else if (
         stmt.type === 'ExportNamedDeclaration' &&
         stmt.declaration &&
         stmt.declaration.type === 'VariableDeclaration'
@@ -166,7 +170,13 @@ export function transformDestructuredProps(
     }
   }
 
-  function walkVariableDeclaration(stmt: VariableDeclaration, isRoot = false) {
+  function walkVariableDeclaration(
+    stmt: VariableDeclaration,
+    isRoot = false,
+    scope = stmt.kind === 'var'
+      ? functionScopeStack[functionScopeStack.length - 1]
+      : currentScope,
+  ) {
     if (stmt.declare) {
       return
     }
@@ -179,10 +189,40 @@ export function transformDestructuredProps(
           // are already passed in as knownProps
           excludedIds.add(id)
         } else {
-          registerLocalBinding(id)
+          registerLocalBinding(id, scope)
         }
       }
     }
+  }
+
+  function walkFunctionScopeVarDeclarations(
+    scopeNode: Program | BlockStatement,
+    isRoot = false,
+  ) {
+    const scope = functionScopeStack[functionScopeStack.length - 1]
+    walk(scopeNode, {
+      enter(node: Node, parent: Node | null) {
+        if (
+          parent &&
+          parent.type.startsWith('TS') &&
+          !TS_NODE_TYPES.includes(parent.type)
+        ) {
+          return this.skip()
+        }
+
+        if (
+          isFunctionType(node) ||
+          node.type === 'ClassDeclaration' ||
+          node.type === 'ClassExpression'
+        ) {
+          return this.skip()
+        }
+
+        if (node.type === 'VariableDeclaration' && node.kind === 'var') {
+          walkVariableDeclaration(node, isRoot && parent === scopeNode, scope)
+        }
+      },
+    })
   }
 
   function rewriteId(id: Identifier, parent: Node, parentStack: Node[]) {
@@ -231,6 +271,7 @@ export function transformDestructuredProps(
 
   // check root scope first
   const ast = ctx.scriptSetupAst!
+  walkFunctionScopeVarDeclarations(ast, true)
   walkScope(ast, true)
   walk(ast, {
     enter(node: Node, parent: Node | null) {
@@ -240,9 +281,7 @@ export function transformDestructuredProps(
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }
@@ -252,9 +291,10 @@ export function transformDestructuredProps(
 
       // function scopes
       if (isFunctionType(node)) {
-        pushScope()
+        pushScope(true)
         walkFunctionParams(node, registerLocalBinding)
         if (node.body.type === 'BlockStatement') {
+          walkFunctionScopeVarDeclarations(node.body)
           walkScope(node.body)
         }
         return
@@ -267,6 +307,23 @@ export function transformDestructuredProps(
           registerLocalBinding(node.param)
         }
         walkScope(node.body)
+        return
+      }
+
+      // for loops: loop variable should be scoped to the loop
+      if (
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
+      ) {
+        pushScope()
+        const varDecl = node.type === 'ForStatement' ? node.init : node.left
+        if (varDecl && varDecl.type === 'VariableDeclaration') {
+          walkVariableDeclaration(varDecl)
+        }
+        if (node.body.type === 'BlockStatement') {
+          walkScope(node.body)
+        }
         return
       }
 
@@ -290,9 +347,15 @@ export function transformDestructuredProps(
     },
     leave(node: Node, parent: Node | null) {
       parent && parentStack.pop()
-      if (
-        (node.type === 'BlockStatement' && !isFunctionType(parent!)) ||
-        isFunctionType(node)
+      if (isFunctionType(node)) {
+        popScope(true)
+      } else if (node.type === 'BlockStatement' && !isFunctionType(parent!)) {
+        popScope()
+      } else if (
+        node.type === 'CatchClause' ||
+        node.type === 'ForOfStatement' ||
+        node.type === 'ForInStatement' ||
+        node.type === 'ForStatement'
       ) {
         popScope()
       }

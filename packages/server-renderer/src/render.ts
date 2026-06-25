@@ -19,6 +19,7 @@ import {
   ShapeFlags,
   escapeHtml,
   escapeHtmlComment,
+  hasOwn,
   isArray,
   isFunction,
   isPromise,
@@ -35,6 +36,8 @@ const {
   setupComponent,
   renderComponentRoot,
   normalizeVNode,
+  pushWarningContext,
+  popWarningContext,
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
@@ -91,24 +94,29 @@ export function renderComponentVNode(
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
-  const instance = createComponentInstance(vnode, parentComponent, null)
+  const instance = (vnode.component = createComponentInstance(
+    vnode,
+    parentComponent,
+    null,
+  ))
+  if (__DEV__) pushWarningContext(vnode)
   const res = setupComponent(instance, true /* isSSR */)
+  if (__DEV__) popWarningContext()
   const hasAsyncSetup = isPromise(res)
-  const prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
+  let prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
-    let p: Promise<unknown> = hasAsyncSetup
-      ? (res as Promise<void>)
-      : Promise.resolve()
-    if (prefetches) {
-      p = p
-        .then(() =>
-          Promise.all(
+    const p: Promise<unknown> = Promise.resolve(res as Promise<void>)
+      .then(() => {
+        // instance.sp may be null until an async setup resolves, so evaluate it here
+        if (hasAsyncSetup) prefetches = instance.sp
+        if (prefetches) {
+          return Promise.all(
             prefetches.map(prefetch => prefetch.call(instance.proxy)),
-          ),
-        )
-        // Note: error display is already done by the wrapped lifecycle hook function.
-        .catch(NOOP)
-    }
+          )
+        }
+      })
+      // Note: error display is already done by the wrapped lifecycle hook function.
+      .catch(NOOP)
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
     return renderComponentSubTree(instance, slotScopeId)
@@ -119,6 +127,7 @@ function renderComponentSubTree(
   instance: ComponentInternalInstance,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
+  if (__DEV__) pushWarningContext(instance.vnode)
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {
@@ -208,6 +217,7 @@ function renderComponentSubTree(
       push(`<!---->`)
     }
   }
+  if (__DEV__) popWarningContext()
   return getBuffer()
 }
 
@@ -294,8 +304,20 @@ function renderElementVNode(
     openTag += ssrRenderAttrs(props, tag)
   }
 
+  const renderedScopeIds: string[] = []
+  const appendScopeId = (id: string) => {
+    if (
+      id &&
+      (!props || !hasOwn(props, id)) &&
+      !renderedScopeIds.includes(id)
+    ) {
+      openTag += ` ${id}`
+      renderedScopeIds.push(id)
+    }
+  }
+
   if (scopeId) {
-    openTag += ` ${scopeId}`
+    appendScopeId(scopeId)
   }
   // inherit parent chain scope id if this is the root node
   let curParent: ComponentInternalInstance | null = parentComponent
@@ -303,12 +325,15 @@ function renderElementVNode(
   while (curParent && curVnode === curParent.subTree) {
     curVnode = curParent.vnode
     if (curVnode.scopeId) {
-      openTag += ` ${curVnode.scopeId}`
+      appendScopeId(curVnode.scopeId)
     }
     curParent = curParent.parent
   }
   if (slotScopeId) {
-    openTag += ` ${slotScopeId}`
+    const slotScopeIdList = slotScopeId.trim().split(' ')
+    for (let i = 0; i < slotScopeIdList.length; i++) {
+      appendScopeId(slotScopeIdList[i])
+    }
   }
 
   push(openTag + `>`)

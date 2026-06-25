@@ -87,7 +87,7 @@ type LegacyScopedSlotsData = Array<
   | LegacyScopedSlotsData
 >
 
-export function legacyresolveScopedSlots(
+export function legacyResolveScopedSlots(
   fns: LegacyScopedSlotsData,
   raw?: Record<string, Slot>,
   // the following are added in 2.6
@@ -114,7 +114,7 @@ function mapKeyToName(slots: LegacyScopedSlotsData) {
   return slots as any
 }
 
-const staticCacheMap = /*#__PURE__*/ new WeakMap<
+const staticCacheMap = /*@__PURE__*/ new WeakMap<
   ComponentInternalInstance,
   any[]
 >()

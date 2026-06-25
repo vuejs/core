@@ -1,4 +1,4 @@
-import { isRef, ref } from '../src/ref'
+import { isRef, ref, shallowRef } from '../src/ref'
 import {
   isProxy,
   isReactive,
@@ -13,6 +13,7 @@ import {
 } from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
+import { targetMap } from '../src/dep'
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -111,6 +112,19 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(false)
   })
 
+  // #8647
+  test('observing Set with reactive initial value', () => {
+    const observed = reactive({})
+    const observedSet = reactive(new Set([observed]))
+
+    expect(observedSet.has(observed)).toBe(true)
+    expect(observedSet.size).toBe(1)
+
+    // expect nothing happens
+    observedSet.add(observed)
+    expect(observedSet.size).toBe(1)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
@@ -122,6 +136,28 @@ describe('reactivity/reactive', () => {
     delete observed.foo
     expect('foo' in observed).toBe(false)
     expect('foo' in original).toBe(false)
+  })
+
+  test('failed set operation should not trigger effects', () => {
+    const original: any = {}
+    Object.defineProperty(original, 'foo', {
+      value: 1,
+      writable: false,
+      configurable: true,
+    })
+    const observed = reactive(original)
+    let dummy
+    let run = 0
+    effect(() => {
+      run++
+      dummy = observed.foo
+    })
+
+    expect(() => {
+      observed.foo = 2
+    }).toThrow(TypeError)
+    expect(dummy).toBe(1)
+    expect(run).toBe(1)
   })
 
   test('original value change should reflect in observed value (Object)', () => {
@@ -194,8 +230,8 @@ describe('reactivity/reactive', () => {
   test('toRaw on object using reactive as prototype', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
-    const inherted = Object.create(observed)
-    expect(toRaw(inherted)).toBe(inherted)
+    const inherited = Object.create(observed)
+    expect(toRaw(inherited)).toBe(inherited)
   })
 
   test('toRaw on user Proxy wrapping reactive', () => {
@@ -293,6 +329,20 @@ describe('reactivity/reactive', () => {
     expect(() => markRaw(obj)).not.toThrowError()
   })
 
+  test('markRaw should not redefine on an marked object', () => {
+    const obj = markRaw({ foo: 1 })
+    const raw = markRaw(obj)
+    expect(raw).toBe(obj)
+    expect(() => markRaw(obj)).not.toThrowError()
+  })
+
+  test('should not markRaw object as reactive', () => {
+    const a = reactive({ a: 1 })
+    const b = reactive({ b: 2 }) as any
+    b.a = markRaw(toRaw(a))
+    expect(b.a === a).toBe(false)
+  })
+
   test('should not observe non-extensible objects', () => {
     const obj = reactive({
       foo: Object.preventExtensions({ a: 1 }),
@@ -381,5 +431,47 @@ describe('reactivity/reactive', () => {
       else expect(isReadonly(i)).toBe(true)
       count++
     }
+  })
+
+  // #11696
+  test('should use correct receiver on set handler for refs', () => {
+    const a = reactive(ref(1))
+    effect(() => a.value)
+    expect(() => {
+      a.value++
+    }).not.toThrow()
+  })
+
+  // #11979
+  test('should release property Dep instance if it no longer has subscribers', () => {
+    let obj = { x: 1 }
+    let a = reactive(obj)
+    const e = effect(() => a.x)
+    expect(targetMap.get(obj)?.get('x')).toBeTruthy()
+    e.effect.stop()
+    expect(targetMap.get(obj)?.get('x')).toBeFalsy()
+  })
+
+  test('should trigger reactivity when Map key is undefined', () => {
+    const map = reactive(new Map())
+    const c = computed(() => map.get(void 0))
+
+    expect(c.value).toBe(void 0)
+
+    map.set(void 0, 1)
+    expect(c.value).toBe(1)
+  })
+
+  test('should return true for reactive objects', () => {
+    expect(isReactive(reactive({}))).toBe(true)
+    expect(isReactive(readonly(reactive({})))).toBe(true)
+    expect(isReactive(ref({}).value)).toBe(true)
+    expect(isReactive(readonly(ref({})).value)).toBe(true)
+    expect(isReactive(shallowReactive({}))).toBe(true)
+  })
+
+  test('should return false for non-reactive objects', () => {
+    expect(isReactive(ref(true))).toBe(false)
+    expect(isReactive(shallowRef({}).value)).toBe(false)
   })
 })

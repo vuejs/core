@@ -7,6 +7,8 @@ import type {
   ImportSpecifier,
   Node,
   StringLiteral,
+  TSMethodSignature,
+  TSPropertySignature,
 } from '@babel/types'
 import path from 'path'
 
@@ -79,6 +81,22 @@ export function getId(node: Expression) {
       : null
 }
 
+export function getStringLiteralKey(
+  node: TSPropertySignature | TSMethodSignature,
+): string | null {
+  return node.computed
+    ? node.key.type === 'TemplateLiteral' && !node.key.expressions.length
+      ? node.key.quasis.map(q => q.value.cooked).join('')
+      : null
+    : node.key.type === 'Identifier'
+      ? node.key.name
+      : node.key.type === 'StringLiteral'
+        ? node.key.value
+        : node.key.type === 'NumericLiteral'
+          ? String(node.key.value)
+          : null
+}
+
 const identity = (str: string) => str
 const fileNameLowerCaseRegExp = /[^\u0130\u0131\u00DFa-z0-9\\/:\-_\. ]+/g
 const toLowerCase = (str: string) => str.toLowerCase()
@@ -91,7 +109,7 @@ function toFileNameLowerCase(x: string) {
 
 /**
  * We need `getCanonicalFileName` when creating ts module resolution cache,
- * but TS does not expose it directly. This implementation is repllicated from
+ * but TS does not expose it directly. This implementation is replicated from
  * the TS source code.
  */
 export function createGetCanonicalFileName(
@@ -122,14 +140,7 @@ export function getEscapedPropName(key: string): string {
   return propNameEscapeSymbolsRE.test(key) ? JSON.stringify(key) : key
 }
 
-export const cssVarNameEscapeSymbolsRE: RegExp =
-  /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
-
-export function getEscapedCssVarName(
-  key: string,
-  doubleEscape: boolean,
-): string {
-  return key.replace(cssVarNameEscapeSymbolsRE, s =>
-    doubleEscape ? `\\\\${s}` : `\\${s}`,
-  )
-}
+export const isJS = (...langs: (string | null | undefined)[]): boolean =>
+  langs.some(lang => lang === 'js' || lang === 'jsx')
+export const isTS = (...langs: (string | null | undefined)[]): boolean =>
+  langs.some(lang => lang === 'ts' || lang === 'tsx')

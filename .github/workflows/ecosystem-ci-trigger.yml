@@ -4,13 +4,18 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   trigger:
     runs-on: ubuntu-latest
     if: github.repository == 'vuejs/core' && github.event.issue.pull_request && startsWith(github.event.comment.body, '/ecosystem-ci run')
     steps:
       - name: Check user permission
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const user = context.payload.sender.login
@@ -45,7 +50,7 @@ jobs:
               throw new Error('not allowed')
             }
       - name: Get PR info
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         id: get-pr-data
         with:
           script: |
@@ -62,7 +67,7 @@ jobs:
               commit: pr.head.sha
             }
       - name: Trigger run
-        uses: actions/github-script@v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         id: trigger
         env:
           COMMENT: ${{ github.event.comment.body }}

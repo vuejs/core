@@ -43,22 +43,22 @@ const VOID_TAGS =
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
 export const isHTMLTag: (key: string) => boolean =
-  /*#__PURE__*/ makeMap(HTML_TAGS)
+  /*@__PURE__*/ makeMap(HTML_TAGS)
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
 export const isSVGTag: (key: string) => boolean =
-  /*#__PURE__*/ makeMap(SVG_TAGS)
+  /*@__PURE__*/ makeMap(SVG_TAGS)
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
 export const isMathMLTag: (key: string) => boolean =
-  /*#__PURE__*/ makeMap(MATH_TAGS)
+  /*@__PURE__*/ makeMap(MATH_TAGS)
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
 export const isVoidTag: (key: string) => boolean =
-  /*#__PURE__*/ makeMap(VOID_TAGS)
+  /*@__PURE__*/ makeMap(VOID_TAGS)

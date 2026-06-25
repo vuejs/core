@@ -6,7 +6,7 @@ const GLOBALS_ALLOWED =
   'Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,console,Error,Symbol'
 
 export const isGloballyAllowed: (key: string) => boolean =
-  /*#__PURE__*/ makeMap(GLOBALS_ALLOWED)
+  /*@__PURE__*/ makeMap(GLOBALS_ALLOWED)
 
 /** @deprecated use `isGloballyAllowed` instead */
 export const isGloballyWhitelisted: (key: string) => boolean = isGloballyAllowed

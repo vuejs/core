@@ -10,14 +10,29 @@ import {
   markRaw,
   nextTick,
   nodeOps,
+  onMounted,
   h as originalH,
   ref,
   render,
+  serialize,
   serializeInner,
+  useModel,
   withDirectives,
 } from '@vue/runtime-test'
-import { Fragment, createCommentVNode, createVNode } from '../../src/vnode'
+import {
+  Fragment,
+  createBlock,
+  createCommentVNode,
+  createTextVNode,
+  createVNode,
+  openBlock,
+} from '../../src/vnode'
+import { toDisplayString } from '@vue/shared'
 import { compile, createApp as createDOMApp, render as domRender } from 'vue'
+import type { HMRRuntime } from '../../src/hmr'
+
+declare var __VUE_HMR_RUNTIME__: HMRRuntime
+const { rerender, createRecord } = __VUE_HMR_RUNTIME__
 
 describe('renderer: teleport', () => {
   describe('eager mode', () => {
@@ -87,6 +102,353 @@ describe('renderer: teleport', () => {
           `</div>`,
       )
     })
+
+    test('update before mounted with defer', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const foo = ref('foo')
+      const Header = {
+        props: { foo: String },
+        setup(props: any) {
+          return () => h('div', props.foo)
+        },
+      }
+      const Footer = {
+        setup() {
+          foo.value = 'bar'
+          return () => h('div', 'Footer')
+        },
+      }
+      createDOMApp({
+        render() {
+          return show.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId', defer: true },
+                  h(Header, { foo: foo.value }),
+                ),
+                h(Footer),
+                h('div', { id: 'targetId' }),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div></div>"`)
+
+      show.value = true
+      await nextTick()
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><!--teleport end--><div>Footer</div><div id="targetId"><div>bar</div></div>"`,
+      )
+    })
+
+    test('should keep the mounted vnode as the patch base across deferred updates', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const disabled = ref(false)
+      const text = ref('A')
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          disabled.value = true
+          text.value = 'B'
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          disabled.value = false
+          text.value = 'C'
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return show.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId2', defer: true, disabled: disabled.value },
+                  h('div', text.value),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+                h('div', { id: 'targetId2' }),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><!--teleport end--><div>step2</div><div id="targetId2"><div>C</div></div>"`,
+      )
+    })
+
+    test('should handle disabled teleport updates before deferred mount', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId3'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const disabled = ref(false)
+
+      const Step = {
+        setup() {
+          disabled.value = true
+          return () => h('div', 'step')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId3', defer: true, disabled: disabled.value },
+                  h('div', 'teleported'),
+                ),
+                h(Step),
+              ]
+            : [h('div')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div></div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<!--teleport start--><div>teleported</div><!--teleport end--><div>step</div>"`,
+      )
+      expect(target.innerHTML).toBe(``)
+    })
+
+    test('should not mount discarded teleport after deferred updates', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId4'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          showTeleport.value = false
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId4', defer: true },
+                  h('div', 'teleported'),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+              ]
+            : [h('div', 'done')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+    })
+
+    // #14876
+    test('should not mount discarded teleport with component child after deferred updates', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId4-component'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const phase = ref(0)
+
+      const Inner = {
+        render: () => h('div', 'inner'),
+      }
+
+      const Step1 = {
+        setup() {
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          showTeleport.value = false
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId4-component', defer: true },
+                  h(Inner),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+              ]
+            : [h('div', 'done')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+    })
+
+    test('should not mount discarded disabled teleport after deferred updates', async () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      target.id = 'targetId5'
+      document.body.appendChild(root)
+      document.body.appendChild(target)
+
+      const showTeleport = ref(false)
+      const disabled = ref(false)
+      const phase = ref(0)
+
+      const Step1 = {
+        setup() {
+          disabled.value = true
+          phase.value = 1
+          return () => h('div', 'step1')
+        },
+      }
+
+      const Step2 = {
+        setup() {
+          showTeleport.value = false
+          return () => h('div', 'step2')
+        },
+      }
+
+      createDOMApp({
+        render() {
+          return showTeleport.value
+            ? [
+                h(
+                  Teleport,
+                  { to: '#targetId5', defer: true, disabled: disabled.value },
+                  h('div', 'teleported'),
+                ),
+                phase.value === 0 ? h(Step1) : h(Step2),
+              ]
+            : [h('div', 'done')]
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+
+      showTeleport.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toMatchInlineSnapshot(`"<div>done</div>"`)
+      expect(target.innerHTML).toBe(``)
+    })
+
+    // #13349
+    test('handle deferred teleport updates before and after mount', async () => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const show = ref(false)
+      const data2 = ref('2')
+      const data3 = ref('3')
+
+      const Comp = {
+        props: {
+          modelValue: {},
+          modelModifiers: {},
+        },
+        emits: ['update:modelValue'],
+        setup(props: any) {
+          const data2 = useModel(props, 'modelValue')
+          data2.value = '2+'
+          return () => h('span')
+        },
+      }
+
+      createDOMApp({
+        setup() {
+          setTimeout(() => (show.value = true), 5)
+          setTimeout(() => (data3.value = '3+'), 10)
+        },
+        render() {
+          return h(Fragment, null, [
+            h('span', { id: 'targetId001' }),
+            show.value
+              ? h(Fragment, null, [
+                  h(Teleport, { to: '#targetId001', defer: true }, [
+                    createTextVNode(String(data3.value)),
+                  ]),
+                  h(Comp, {
+                    modelValue: data2.value,
+                    'onUpdate:modelValue': (event: any) =>
+                      (data2.value = event),
+                  }),
+                ])
+              : createCommentVNode('v-if'),
+          ])
+        },
+      }).mount(root)
+
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<span id="targetId001"></span><!--v-if-->"`,
+      )
+
+      await new Promise(r => setTimeout(r, 10))
+      expect(root.innerHTML).toMatchInlineSnapshot(
+        `"<span id="targetId001">3+</span><!--teleport start--><!--teleport end--><span></span>"`,
+      )
+    })
   })
 
   function runSharedTests(deferMode: boolean) {
@@ -111,12 +473,10 @@ describe('renderer: teleport', () => {
         root,
       )
 
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>teleported</div>`)
     })
 
     test('should work with SVG', async () => {
@@ -142,8 +502,8 @@ describe('renderer: teleport', () => {
 
       await nextTick()
 
-      expect(root.innerHTML).toMatchInlineSnapshot(
-        `"<svg><circle></circle></svg><!--teleport start--><!--teleport end-->"`,
+      expect(root.innerHTML).toBe(
+        `<svg><circle></circle></svg><!--teleport start--><!--teleport end-->`,
       )
 
       expect(svg.value.namespaceURI).toBe('http://www.w3.org/2000/svg')
@@ -164,24 +524,63 @@ describe('renderer: teleport', () => {
         root,
       )
 
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(targetA)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
-      expect(serializeInner(targetB)).toMatchInlineSnapshot(`""`)
+      expect(serializeInner(targetA)).toBe(`<div>teleported</div>`)
+      expect(serializeInner(targetB)).toBe(``)
 
       target.value = targetB
       await nextTick()
 
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(targetA)).toMatchInlineSnapshot(`""`)
-      expect(serializeInner(targetB)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
+      expect(serializeInner(targetA)).toBe(``)
+      expect(serializeInner(targetB)).toBe(`<div>teleported</div>`)
+    })
+
+    test('move cached text nodes', async () => {
+      document.body.innerHTML = ''
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+
+      const to = ref('#teleport01')
+      const disabled = ref(true)
+
+      const App = defineComponent({
+        setup() {
+          return { to, disabled, deferMode }
+        },
+        template: `  
+          <div id="teleport01">
+            <Teleport :to="to" :defer="deferMode" :disabled="disabled">
+              static text
+            </Teleport>
+          </div>
+          <div id="teleport02"></div>
+        `,
+      })
+
+      domRender(h(App), root)
+      await nextTick()
+
+      const target1 = root.querySelector('#teleport01') as HTMLElement
+      const target2 = root.querySelector('#teleport02') as HTMLElement
+      expect(target1.innerHTML).toBe(
+        '<!--teleport start--> static text <!--teleport end-->',
       )
+      expect(target2.innerHTML).toBe('')
+
+      to.value = '#teleport02'
+      disabled.value = false
+
+      await nextTick()
+      expect(target1.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+      expect(target2.innerHTML).toContain('static text')
+
+      domRender(null, root)
+      root.remove()
     })
 
     test('should update children', async () => {
@@ -193,19 +592,50 @@ describe('renderer: teleport', () => {
         h(() => h(Teleport, { to: target }, children.value)),
         root,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>teleported</div>`)
 
       children.value = []
       await nextTick()
 
-      expect(serializeInner(target)).toMatchInlineSnapshot(`""`)
+      expect(serializeInner(target)).toBe(``)
 
       children.value = [createVNode(Text, null, 'teleported')]
       await nextTick()
 
-      expect(serializeInner(target)).toMatchInlineSnapshot(`"teleported"`)
+      expect(serializeInner(target)).toBe(`teleported`)
+    })
+
+    test('should traverse comment node after updating in optimize mode', async () => {
+      const target = nodeOps.createElement('div')
+      const root = nodeOps.createElement('div')
+      const count = ref(0)
+      let teleport
+
+      __DEV__ = false
+      render(
+        h(() => {
+          teleport =
+            (openBlock(),
+            createBlock(Teleport, { to: target }, [
+              createCommentVNode('comment in teleport'),
+            ]))
+          return h('div', null, [
+            createTextVNode(toDisplayString(count.value)),
+            teleport,
+          ])
+        }),
+        root,
+      )
+      const commentNode = teleport!.children[0].el
+      expect(serializeInner(root)).toBe(`<div>0</div>`)
+      expect(serializeInner(target)).toBe(`<!--comment in teleport-->`)
+      expect(serialize(commentNode)).toBe(`<!--comment in teleport-->`)
+
+      count.value = 1
+      await nextTick()
+      __DEV__ = true
+      expect(serializeInner(root)).toBe(`<div>1</div>`)
+      expect(teleport!.children[0].el).toBe(commentNode)
     })
 
     test('should remove children when unmounted', () => {
@@ -220,8 +650,8 @@ describe('renderer: teleport', () => {
           ]),
           root,
         )
-        expect(serializeInner(target)).toMatchInlineSnapshot(
-          props.disabled ? `""` : `"<div>teleported</div>"`,
+        expect(serializeInner(target)).toBe(
+          props.disabled ? `` : `<div>teleported</div>`,
         )
 
         render(null, root)
@@ -232,6 +662,34 @@ describe('renderer: teleport', () => {
       testUnmount({ to: target, disabled: false })
       testUnmount({ to: target, disabled: true })
       testUnmount({ to: null, disabled: true })
+    })
+
+    // #10747
+    test('should unmount correctly when using top level comment in teleport', async () => {
+      const target = nodeOps.createElement('div')
+      const root = nodeOps.createElement('div')
+      const count = ref(0)
+
+      __DEV__ = false
+      render(
+        h(() => {
+          return h('div', null, [
+            createTextVNode(toDisplayString(count.value)),
+            (openBlock(),
+            createBlock(Teleport, { to: target }, [
+              createCommentVNode('comment in teleport'),
+            ])),
+          ])
+        }),
+        root,
+      )
+
+      count.value = 1
+
+      await nextTick()
+      __DEV__ = true
+      render(null, root)
+      expect(root.children.length).toBe(0)
     })
 
     test('component with multi roots should be removed when unmounted', () => {
@@ -248,7 +706,7 @@ describe('renderer: teleport', () => {
         h(() => [h(Teleport, { to: target }, h(Comp)), h('div', 'root')]),
         root,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(`"<p></p><p></p>"`)
+      expect(serializeInner(target)).toBe(`<p></p><p></p>`)
 
       render(null, root)
       expect(serializeInner(target)).toBe('')
@@ -291,12 +749,10 @@ describe('renderer: teleport', () => {
         root,
       )
 
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>"`,
+      expect(serializeInner(root)).toBe(
+        `<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>one</div>two"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>one</div>two`)
 
       // update existing content
       render(
@@ -306,16 +762,14 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>one</div><div>two</div>three"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>one</div><div>two</div>three`)
 
       // toggling
       render(h('div', [null, h(Teleport, { to: target }, 'three')]), root)
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<div><!----><!--teleport start--><!--teleport end--></div>"`,
+      expect(serializeInner(root)).toBe(
+        `<div><!----><!--teleport start--><!--teleport end--></div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(`"three"`)
+      expect(serializeInner(target)).toBe(`three`)
 
       // toggle back
       render(
@@ -325,13 +779,11 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>"`,
+      expect(serializeInner(root)).toBe(
+        `<div><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--></div>`,
       )
       // should append
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"three<div>one</div><div>two</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`three<div>one</div><div>two</div>`)
 
       // toggle the other teleport
       render(
@@ -341,12 +793,10 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<div><!--teleport start--><!--teleport end--><!----></div>"`,
+      expect(serializeInner(root)).toBe(
+        `<div><!--teleport start--><!--teleport end--><!----></div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>one</div><div>two</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>one</div><div>two</div>`)
     })
 
     test('should work when using template ref as target', async () => {
@@ -368,14 +818,14 @@ describe('renderer: teleport', () => {
         },
       }
       render(h(App), root)
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<div></div><!--teleport start--><div>teleported</div><!--teleport end-->"`,
+      expect(serializeInner(root)).toBe(
+        `<div></div><!--teleport start--><div>teleported</div><!--teleport end-->`,
       )
 
       disabled.value = false
       await nextTick()
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<div><div>teleported</div></div><!--teleport start--><!--teleport end-->"`,
+      expect(serializeInner(root)).toBe(
+        `<div><div>teleported</div></div><!--teleport start--><!--teleport end-->`,
       )
     })
 
@@ -391,27 +841,23 @@ describe('renderer: teleport', () => {
       }
 
       render(renderWithDisabled(false), root)
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>teleported</div>`)
 
       render(renderWithDisabled(true), root)
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>`,
       )
       expect(serializeInner(target)).toBe(``)
 
       // toggle back
       render(renderWithDisabled(false), root)
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>teleported</div>`)
     })
 
     test('moving teleport while enabled', () => {
@@ -425,12 +871,10 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>teleported</div>`)
 
       render(
         h(Fragment, [
@@ -439,12 +883,10 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<div>root</div><!--teleport start--><!--teleport end-->"`,
+      expect(serializeInner(root)).toBe(
+        `<div>root</div><!--teleport start--><!--teleport end-->`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>teleported</div>`)
 
       render(
         h(Fragment, [
@@ -453,12 +895,10 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
+      expect(serializeInner(target)).toBe(`<div>teleported</div>`)
     })
 
     test('moving teleport while disabled', () => {
@@ -472,8 +912,8 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>`,
       )
       expect(serializeInner(target)).toBe('')
 
@@ -484,8 +924,8 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<div>root</div><!--teleport start--><div>teleported</div><!--teleport end-->"`,
+      expect(serializeInner(root)).toBe(
+        `<div>root</div><!--teleport start--><div>teleported</div><!--teleport end-->`,
       )
       expect(serializeInner(target)).toBe('')
 
@@ -496,8 +936,8 @@ describe('renderer: teleport', () => {
         ]),
         root,
       )
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><div>teleported</div><!--teleport end--><div>root</div>`,
       )
       expect(serializeInner(target)).toBe('')
     })
@@ -522,28 +962,28 @@ describe('renderer: teleport', () => {
         `),
       }
       render(h(App), root)
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div><span>false</span><!--v-if-->"`,
+      expect(serializeInner(target)).toBe(
+        `<div>teleported</div><span>false</span><!--v-if-->`,
       )
 
       disabled.value = true
       await nextTick()
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><div>teleported</div><span>true</span><span></span><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><div>teleported</div><span>true</span><span></span><!--teleport end--><div>root</div>`,
       )
       expect(serializeInner(target)).toBe(``)
 
       // toggle back
       disabled.value = false
       await nextTick()
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end--><div>root</div>"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end--><div>root</div>`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(
-        `"<div>teleported</div><span>false</span><!--v-if-->"`,
+      expect(serializeInner(target)).toBe(
+        `<div>teleported</div><span>false</span><!--v-if-->`,
       )
     })
 
@@ -570,18 +1010,18 @@ describe('renderer: teleport', () => {
       })
       app.mount(root)
 
-      expect(serializeInner(root)).toMatchInlineSnapshot(
-        `"<!--teleport start--><!--teleport end-->"`,
+      expect(serializeInner(root)).toBe(
+        `<!--teleport start--><!--teleport end-->`,
       )
-      expect(serializeInner(target)).toMatchInlineSnapshot(`"<div>foo</div>"`)
+      expect(serializeInner(target)).toBe(`<div>foo</div>`)
       await nextTick()
       expect(dir.mounted).toHaveBeenCalledTimes(1)
       expect(dir.unmounted).toHaveBeenCalledTimes(0)
 
       toggle.value = false
       await nextTick()
-      expect(serializeInner(root)).toMatchInlineSnapshot(`"<!---->"`)
-      expect(serializeInner(target)).toMatchInlineSnapshot(`""`)
+      expect(serializeInner(root)).toBe(`<!---->`)
+      expect(serializeInner(target)).toBe(``)
       expect(dir.mounted).toHaveBeenCalledTimes(1)
       expect(dir.unmounted).toHaveBeenCalledTimes(1)
     })
@@ -610,33 +1050,29 @@ describe('renderer: teleport', () => {
       render(h(App), root)
       disabled.value = false
       await nextTick()
-      expect(serializeInner(target1)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
-      expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
-      expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+      expect(serializeInner(target1)).toBe(`<div>teleported</div>`)
+      expect(serializeInner(target2)).toBe(``)
+      expect(serializeInner(target3)).toBe(``)
 
       disabled.value = true
       await nextTick()
       target.value = target2
       await nextTick()
-      expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
-      expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
-      expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+      expect(serializeInner(target1)).toBe(``)
+      expect(serializeInner(target2)).toBe(``)
+      expect(serializeInner(target3)).toBe(``)
 
       target.value = target3
       await nextTick()
-      expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
-      expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
-      expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+      expect(serializeInner(target1)).toBe(``)
+      expect(serializeInner(target2)).toBe(``)
+      expect(serializeInner(target3)).toBe(``)
 
       disabled.value = false
       await nextTick()
-      expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
-      expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
-      expect(serializeInner(target3)).toMatchInlineSnapshot(
-        `"<div>teleported</div>"`,
-      )
+      expect(serializeInner(target1)).toBe(``)
+      expect(serializeInner(target2)).toBe(``)
+      expect(serializeInner(target3)).toBe(`<div>teleported</div>`)
     })
 
     //#9071
@@ -654,19 +1090,19 @@ describe('renderer: teleport', () => {
       })
 
       domRender(h(App), root)
-      expect(root.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+      expect(root.innerHTML).toBe('<div>foo</div>')
 
       show.value = true
       await nextTick()
 
-      expect(root.innerHTML).toMatchInlineSnapshot(
-        '"<!--teleport start--><!--teleport end--><div>teleported</div>"',
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>teleported</div>',
       )
 
       show.value = false
       await nextTick()
 
-      expect(root.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+      expect(root.innerHTML).toBe('<div>foo</div>')
     })
 
     test('unmount previous sibling node inside target node', async () => {
@@ -693,17 +1129,17 @@ describe('renderer: teleport', () => {
       })
 
       domRender(h(App), root)
-      expect(root.innerHTML).toMatchInlineSnapshot('"<!--v-if-->"')
+      expect(root.innerHTML).toBe('<!--v-if-->')
 
       parentShow.value = true
       await nextTick()
-      expect(root.innerHTML).toMatchInlineSnapshot(
-        '"<!--teleport start--><!--teleport end--><div>foo</div>"',
+      expect(root.innerHTML).toBe(
+        '<!--teleport start--><!--teleport end--><div>foo</div>',
       )
 
       parentShow.value = false
       await nextTick()
-      expect(root.innerHTML).toMatchInlineSnapshot('"<!--v-if-->"')
+      expect(root.innerHTML).toBe('<!--v-if-->')
     })
 
     test('accessing template refs inside teleport', async () => {
@@ -728,4 +1164,56 @@ describe('renderer: teleport', () => {
       expect(tRefInMounted).toBe(target.children[1])
     })
   }
+
+  test('handle update and hmr rerender', async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+
+    const Comp = {
+      setup() {
+        const cls = ref('foo')
+        onMounted(() => {
+          // trigger update
+          cls.value = 'bar'
+        })
+        return { cls, target }
+      },
+      template: `
+        <Teleport :to="target">
+          <div :class="cls">
+            <div>
+              <slot></slot>
+            </div>
+          </div>
+        </Teleport>
+      `,
+    }
+
+    const appId = 'test-app-id'
+    const App = {
+      __hmrId: appId,
+      components: { Comp },
+      render() {
+        return originalH(Comp, null, { default: () => originalH('div', 'foo') })
+      },
+    }
+    createRecord(appId, App)
+
+    domRender(originalH(App), root)
+    expect(target.innerHTML).toBe(
+      '<div class="foo"><div><div>foo</div></div></div>',
+    )
+    await nextTick()
+    expect(target.innerHTML).toBe(
+      '<div class="bar"><div><div>foo</div></div></div>',
+    )
+
+    rerender(appId, () =>
+      originalH(Comp, null, { default: () => originalH('div', 'bar') }),
+    )
+    await nextTick()
+    expect(target.innerHTML).toBe(
+      '<div class="bar"><div><div>bar</div></div></div>',
+    )
+  })
 })

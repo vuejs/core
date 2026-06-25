@@ -8,7 +8,7 @@ interface EventRegistry {
   [event: string]: Function[] | undefined
 }
 
-const eventRegistryMap = /*#__PURE__*/ new WeakMap<
+const eventRegistryMap = /*@__PURE__*/ new WeakMap<
   ComponentInternalInstance,
   EventRegistry
 >()

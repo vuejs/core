@@ -11,9 +11,12 @@
 <script>
   const rootMargin = location.search.match(/rootMargin=(\d+)/)?.[1] ?? 0
   const isFragment = location.search.includes('?fragment')
+  const isVIf = location.search.includes('?v-if')
   if (isFragment) {
     document.getElementById('app').innerHTML =
       `<!--[--><!--[--><span>one</span><!--]--><button>0</button><span>two</span><!--]-->`
+  } else if (isVIf) {
+    document.getElementById('app').innerHTML = `<!---->`
   }
 
   window.isHydrated = false
@@ -24,6 +27,7 @@
     ref,
     onMounted,
     hydrateOnVisible,
+    createCommentVNode,
   } = Vue
 
   const Comp = {
@@ -39,7 +43,9 @@
           { onClick: () => count.value++ },
           count.value,
         )
-        if (isFragment) {
+        if (isVIf) {
+          return createCommentVNode('v-if', true)
+        } else if (isFragment) {
           return [[h('span', 'one')], button, h('span', 'two')]
         } else {
           return button
