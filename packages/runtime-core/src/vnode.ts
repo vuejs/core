@@ -854,6 +854,10 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
       }
     }
   } else if (isFunction(children)) {
+    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
+      normalizeChildren(vnode, { default: children })
+      return
+    }
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
