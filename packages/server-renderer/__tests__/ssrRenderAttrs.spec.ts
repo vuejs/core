@@ -144,6 +144,12 @@ describe('ssr: renderClass', () => {
     expect(ssrRenderClass(`"><script`)).toBe(`&quot;&gt;&lt;script`)
   })
 
+  test('overrides + duplicates', () => {
+    expect(
+      ssrRenderClass(['foo foo', { foo: true }, 'bar', { bar: false }]),
+    ).toBe('foo foo foo')
+  })
+
   test('className', () => {
     expect(
       ssrRenderAttrs({
