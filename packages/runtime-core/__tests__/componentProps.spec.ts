@@ -136,6 +136,32 @@ describe('component props', () => {
     expect(props).toBe(attrs)
   })
 
+  // #13182
+  test('functional component with rest params receives context', () => {
+    let args: any
+    const Comp: FunctionalComponent = (...rest) => {
+      args = rest
+      // actively exercise the slots access path so an empty or otherwise
+      // unusable context object cannot satisfy the assertions below
+      return rest[1].slots.default!()
+    }
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(Comp, { foo: 1 }, () => h('span')),
+      root,
+    )
+
+    // second argument must be the render context, not null
+    expect(args[1]).not.toBeNull()
+    expect(args[1]).toMatchObject({
+      attrs: { foo: 1 },
+    })
+    expect(typeof args[1].emit).toBe('function')
+    // the slot from the context was actually rendered
+    expect(serializeInner(root)).toBe('<span></span>')
+  })
+
   test('boolean casting', () => {
     let proxy: any
     const Comp = {

@@ -116,9 +116,18 @@ export function renderComponentRoot(
       if (__DEV__ && attrs === props) {
         markAttrsAccessed()
       }
+      // pass the context object unless the function declares exactly one
+      // parameter (just `props`). A rest-param function `(...args)` reports
+      // `length === 0`, so the previous `length > 1` check denied it
+      // attrs/slots/emit; only skip the context for the single-`props` case
+      // to keep that fast path allocation-free. (#13182)
       result = normalizeVNode(
-        render.length > 1
+        render.length === 1
           ? render(
+              __DEV__ ? shallowReadonly(props) : props,
+              null as any /* we know it doesn't need it */,
+            )
+          : render(
               __DEV__ ? shallowReadonly(props) : props,
               __DEV__
                 ? {
@@ -130,10 +139,6 @@ export function renderComponentRoot(
                     emit,
                   }
                 : { attrs, slots, emit },
-            )
-          : render(
-              __DEV__ ? shallowReadonly(props) : props,
-              null as any /* we know it doesn't need it */,
             ),
       )
       fallthroughAttrs = Component.props
