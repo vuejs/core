@@ -429,9 +429,10 @@ describe('component: emit', () => {
     expect(isEmitListener(options, 'onFooBar')).toBe(true)
     // PascalCase option
     expect(isEmitListener(options, 'onFooBaz')).toBe(true)
-    // #8342
-    expect(isEmitListener(options, 'onOnceOnce')).toBe(true)
+    // event name `once`
     expect(isEmitListener(options, 'onOnce')).toBe(true)
+    // event name `once` with `.once` modifier
+    expect(isEmitListener(options, 'onOnceOnce')).toBe(true)
   })
 
   test('does not emit after unmount', async () => {
