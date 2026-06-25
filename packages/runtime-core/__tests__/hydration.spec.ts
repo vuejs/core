@@ -2676,27 +2676,49 @@ describe('SSR hydration', () => {
 
     // #9033
     test('force patch dynamic props when hydrating', () => {
-      const timestamp = Date.now()
-      let timestampCur = 0
-      const { container } = mountWithHydration(
-        `<div><div>${timestamp}</div></div>`,
-        () => {
-          timestampCur = Date.now()
-          return (
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<div><div>server</div></div>`,
+          () => (
             openBlock(),
             createElementBlock('div', null, [
               createElementVNode(
                 'div',
-                { innerHTML: timestampCur },
+                { innerHTML: 'client' },
                 null,
-                8 /* PROPS */,
+                PatchFlags.PROPS,
                 ['innerHTML'],
               ),
             ])
-          )
-        },
+          ),
+        )
+        expect(container.innerHTML).toBe(`<div><div>client</div></div>`)
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('only patches declared dynamic props when hydrating', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="attribute" id="server" value="server"></div>`,
+        () =>
+          createVNode(
+            'div',
+            {
+              'data-allow-mismatch': 'attribute',
+              id: 'client',
+              value: 'client',
+            },
+            null,
+            PatchFlags.PROPS,
+            ['id'],
+          ),
       )
-      expect(container.innerHTML).toBe(`<div><div>${timestampCur}</div></div>`)
+      const el = container.firstChild as Element
+
+      expect(el.getAttribute('id')).toBe('client')
+      expect(el.getAttribute('value')).toBe('server')
     })
   })
 })

@@ -386,12 +386,18 @@ export function createHydrationFunctions(
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     // #7476 <input indeterminate>
-    // #9033 force patch dynamic props when hydrating
-    // e.g. <div v-html="timestamp" /> & (let timestamp = Date.now();)
-    const forcePatch = type === 'input' || type === 'option' || dynamicProps
+    const forcePatch = type === 'input' || type === 'option'
+    // #9033 force hydrate dynamic props.
+    // Keep separate from forcePatch, which also patches value-like keys.
+    const hasDynamicProps = !!dynamicProps
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.CACHED) {
+    if (
+      __DEV__ ||
+      forcePatch ||
+      hasDynamicProps ||
+      patchFlag !== PatchFlags.CACHED
+    ) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
@@ -489,6 +495,7 @@ export function createHydrationFunctions(
           __DEV__ ||
           __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ ||
           forcePatch ||
+          hasDynamicProps ||
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
