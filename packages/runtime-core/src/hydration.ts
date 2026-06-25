@@ -21,9 +21,11 @@ import {
   getEscapedCssVarName,
   includeBooleanAttr,
   isBooleanAttr,
+  isBooleanAttrValue,
   isKnownHtmlAttr,
   isKnownSvgAttr,
   isOn,
+  isOverloadedBooleanAttr,
   isRenderableAttrValue,
   isReservedProp,
   isString,
@@ -856,7 +858,10 @@ function propHasMismatch(
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
-    if (isBooleanAttr(key)) {
+    if (
+      isBooleanAttr(key) ||
+      (isOverloadedBooleanAttr(key) && isBooleanAttrValue(clientValue))
+    ) {
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
     } else if (clientValue == null) {
