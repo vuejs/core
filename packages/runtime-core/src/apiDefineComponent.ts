@@ -21,6 +21,7 @@ import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
   ExtractPropTypes,
+  SlotsToProps,
 } from './componentProps'
 import type {
   EmitsOptions,
@@ -71,7 +72,7 @@ export type DefineComponent<
   TypeEl extends Element = any,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstanceWithMixins<
-    Props,
+    Props & SlotsToProps<S>,
     RawBindings,
     D,
     C,
@@ -116,7 +117,7 @@ export type DefineSetupFnComponent<
   P extends Record<string, any>,
   E extends EmitsOptions = {},
   S extends SlotsType = SlotsType,
-  Props = P & EmitsToProps<E>,
+  Props = P & EmitsToProps<E> & SlotsToProps<S>,
   PP = PublicProps,
 > = new (
   props: Props & PP,
