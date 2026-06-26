@@ -19,6 +19,9 @@ async function toggle() {
 }
 
 async function fetchVersions(): Promise<string[]> {
+  if (!/^(@[a-zA-Z0-9-._]+\/)?[a-zA-Z0-9-._]+$/.test(props.pkg)) {
+    return []
+  }
   const res = await fetch(
     `https://data.jsdelivr.com/v1/package/npm/${props.pkg}`,
   )
