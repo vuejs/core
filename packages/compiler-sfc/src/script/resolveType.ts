@@ -1309,7 +1309,7 @@ function parseFile(
       firstBlock!.content
     if (secondBlock) {
       scriptContent +=
-        ' '.repeat(secondBlock.loc.start.offset - script!.loc.end.offset) +
+        ' '.repeat(secondBlock.loc.start.offset - firstBlock!.loc.end.offset) +
         secondBlock.content
     }
     const lang = script?.lang || scriptSetup?.lang

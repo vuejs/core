@@ -1964,6 +1964,33 @@ describe('resolveType', () => {
       })
     })
 
+    test('allowArbitraryExtensions with script setup before script', () => {
+      const files = {
+        '/foo.vue': `
+        <script setup lang="ts">
+        type Base = string
+        </script>
+        <script lang="ts">
+        export interface Foo {
+          foo: Base
+        }
+        </script>
+        `,
+      }
+
+      const { props } = resolve(
+        `
+        import type { Foo } from './foo.vue'
+        defineProps<Foo>()
+        `,
+        files,
+      )
+
+      expect(props).toStrictEqual({
+        foo: ['String'],
+      })
+    })
+
     // https://github.com/vuejs/router/issues/2611
     test('modular js extension', () => {
       const files = {
