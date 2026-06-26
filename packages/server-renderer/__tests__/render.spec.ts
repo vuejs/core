@@ -64,6 +64,8 @@ const pipeToWritable = (app: any, context?: any) => {
 testRender(`renderToString`, renderToString)
 testRender(`renderToNodeStream`, renderToStream)
 testRender(`pipeToNodeWritable`, pipeToWritable)
+testStreamCleanupOnRenderError(`renderToNodeStream`, renderToStream)
+testStreamCleanupOnRenderError(`pipeToNodeWritable`, pipeToWritable)
 
 function testRender(type: string, render: typeof renderToString) {
   describe(`ssr: ${type}`, () => {
@@ -1246,6 +1248,75 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div attr="attr">Functional Component</div>`)
+    })
+  })
+}
+
+function testStreamCleanupOnRenderError(
+  type: string,
+  render: typeof renderToString,
+) {
+  describe(`ssr: ${type} error cleanup`, () => {
+    test('stops sync SSR watchers if render throws', async () => {
+      const source = ref(0)
+      let runs = 0
+      const app = createSSRApp(
+        defineComponent(() => {
+          watchEffect(
+            () => {
+              source.value
+              runs++
+            },
+            { flush: 'sync' },
+          )
+
+          return () => {
+            throw new Error('boom')
+          }
+        }),
+      )
+
+      await expect(render(app)).rejects.toBe(``)
+
+      expect(
+        `Unhandled error during execution of render function`,
+      ).toHaveBeenWarned()
+      expect(runs).toBe(1)
+      source.value++
+      expect(runs).toBe(1)
+    })
+
+    test('stops async SSR watchers if render rejects', async () => {
+      const source = ref(0)
+      let runs = 0
+      const app = createSSRApp(
+        defineComponent({
+          async setup() {
+            watchEffect(
+              () => {
+                source.value
+                runs++
+              },
+              { flush: 'sync' },
+            )
+
+            await Promise.resolve()
+
+            return () => {
+              throw new Error('boom')
+            }
+          },
+        }),
+      )
+
+      await expect(render(app)).rejects.toBe(``)
+
+      expect(
+        `Unhandled error during execution of render function`,
+      ).toHaveBeenWarned()
+      expect(runs).toBe(1)
+      source.value++
+      expect(runs).toBe(1)
     })
   })
 }
