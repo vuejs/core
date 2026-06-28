@@ -390,7 +390,7 @@ export function buildSSRProps(
       mergePropsArgs.push(
         createCallExpression(context.helper(SSR_GET_DIRECTIVE_PROPS), [
           `_ctx`,
-          ...buildDirectiveArgs(dir, context).elements,
+          ...buildSSRDirectiveArgs(dir, context),
         ] as JSChildNode[]),
       )
     }
@@ -399,6 +399,21 @@ export function buildSSRProps(
   return mergePropsArgs.length > 1
     ? createCallExpression(context.helper(MERGE_PROPS), mergePropsArgs)
     : mergePropsArgs[0]
+}
+
+function buildSSRDirectiveArgs(
+  dir: DirectiveNode,
+  context: TransformContext,
+): JSChildNode[] {
+  const args = buildDirectiveArgs(dir, context).elements as JSChildNode[]
+  if (
+    dir.exp &&
+    dir.exp.type === NodeTypes.SIMPLE_EXPRESSION &&
+    !dir.exp.content.trim()
+  ) {
+    args[1] = createSimpleExpression(`void 0`, false, dir.exp.loc)
+  }
+  return args
 }
 
 function isTrueFalseValue(prop: DirectiveNode | AttributeNode) {
