@@ -44,13 +44,12 @@ import { isInteropEnabled } from '../vdomInteropState'
 import {
   type VaporKeepAliveContext,
   currentCacheKey,
-  setCurrentKeepAliveCtx,
   withCurrentCacheKey,
   withKeepAliveEnabled,
 } from '../keepAlive'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
-  ctx: {
+  ctx: VaporKeepAliveContext & {
     activate: (
       instance: VaporComponentInstance,
       parentNode: ParentNode,
@@ -61,7 +60,6 @@ export interface KeepAliveInstance extends VaporComponentInstance {
       comp: VaporComponent | VNode['type'] | VNode,
       key?: any,
     ) => VaporComponentInstance | VaporFragment | undefined
-    getStorageContainer: () => ParentNode
   }
 }
 
@@ -148,24 +146,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
         current = undefined
         rerender!()
       }
-    }
-
-    keepAliveInstance.ctx = {
-      getStorageContainer: () => storageContainer,
-      getCachedComponent: (comp, key) => {
-        if (isInteropEnabled && isVNode(comp)) {
-          return cache.get(comp.key ?? currentCacheKey ?? comp.type)
-        }
-        return cache.get(key ?? currentCacheKey ?? comp)
-      },
-      activate: (instance, parentNode, anchor) => {
-        current = instance
-        activate(instance, parentNode, anchor)
-      },
-      deactivate: instance => {
-        current = undefined
-        deactivate(instance, storageContainer)
-      },
     }
 
     const innerCacheBlock = (
@@ -361,7 +341,22 @@ const VaporKeepAliveImpl = defineVaporComponent({
       keptAliveScopes.clear()
     })
 
-    const keepAliveCtx: VaporKeepAliveContext = {
+    const keepAliveCtx: KeepAliveInstance['ctx'] = {
+      getStorageContainer: () => storageContainer,
+      getCachedComponent: (comp, key) => {
+        if (isInteropEnabled && isVNode(comp)) {
+          return cache.get(comp.key ?? currentCacheKey ?? comp.type)
+        }
+        return cache.get(key ?? currentCacheKey ?? comp)
+      },
+      activate: (instance, parentNode, anchor) => {
+        current = instance
+        activate(instance, parentNode, anchor)
+      },
+      deactivate: instance => {
+        current = undefined
+        deactivate(instance, storageContainer)
+      },
       acquireBranchScope(key) {
         return deleteScope(key)
       },
@@ -402,9 +397,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
       },
     }
 
-    const prevCtx = setCurrentKeepAliveCtx(keepAliveCtx)
+    keepAliveInstance.ctx = keepAliveCtx
     let children = slots.default()
-    setCurrentKeepAliveCtx(prevCtx)
     registerDynamicFragmentHooks(children, keepAliveCtx)
 
     if (isArray(children)) {
