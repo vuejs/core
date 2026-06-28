@@ -312,6 +312,21 @@ describe('ssr: element', () => {
       `)
     })
 
+    test('custom dir with empty expression', () => {
+      expect(getCompiledString(`<div v-xxx="">hello</div>`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, void 0))
+          }>hello</div>\`"
+      `)
+      expect(getCompiledString(`<div v-xxx:foo="">hello</div>`))
+        .toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx, void 0, "foo"))
+          }>hello</div>\`"
+      `)
+    })
+
     test('custom dir with normal attrs', () => {
       expect(getCompiledString(`<div class="foo" v-xxx />`))
         .toMatchInlineSnapshot(`

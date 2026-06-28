@@ -428,5 +428,19 @@ describe('ssr: components', () => {
         }"
       `)
     })
+
+    test('empty expression', () => {
+      expect(compile(`<foo v-xxx:foo="" />`).code).toMatchInlineSnapshot(`
+        "const { resolveComponent: _resolveComponent, resolveDirective: _resolveDirective, mergeProps: _mergeProps } = require("vue")
+        const { ssrGetDirectiveProps: _ssrGetDirectiveProps, ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          const _component_foo = _resolveComponent("foo")
+          const _directive_xxx = _resolveDirective("xxx")
+
+          _push(_ssrRenderComponent(_component_foo, _mergeProps(_attrs, _ssrGetDirectiveProps(_ctx, _directive_xxx, void 0, "foo")), null, _parent))
+        }"
+      `)
+    })
   })
 })
