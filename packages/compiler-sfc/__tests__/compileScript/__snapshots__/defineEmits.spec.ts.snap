@@ -15,6 +15,30 @@ return { myEmit }
 }"
 `;
 
+exports[`defineEmits > w/ enum member 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+enum Foo { Foo = 'foo', Bar = 'bar', Qux = 'qux' }
+    export type FooRef = Bar.Foo
+    
+    interface Emits {
+      (e: FooRef, value: string): void;
+      (e: Foo.Bar, value: string): void;
+    }
+    
+export default /*@__PURE__*/_defineComponent({
+  emits: ["foo", "bar"],
+  setup(__props, { expose: __expose, emit: __emit }) {
+  __expose();
+
+    enum Bar { Foo = Foo.Foo }
+    const emit = __emit
+    
+return { Foo, Bar, emit }
+}
+
+})"
+`;
+
 exports[`defineEmits > w/ runtime options 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
