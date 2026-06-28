@@ -809,10 +809,19 @@ export function normalizeVNode(child: VNodeChild): VNode {
 
 // optimized normalization for template-compiled render fns
 export function cloneIfMounted(child: VNode): VNode {
-  return (child.el === null && child.patchFlag !== PatchFlags.CACHED) ||
+  if (
+    (child.el === null && child.patchFlag !== PatchFlags.CACHED) ||
     child.memo
-    ? child
-    : cloneVNode(child)
+  ) {
+    return child
+  }
+  const cloned = cloneVNode(child)
+  // reset el so that the cloned vnode is treated as fresh during mount
+  // this is important in SSR mode where a non-null el causes the renderer
+  // to enter the hydration path instead of the normal mount path (#14635)
+  cloned.el = null
+  cloned.anchor = null
+  return cloned
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown): void {
