@@ -20,21 +20,23 @@ import {
 } from '@vue/runtime-dom'
 import type { VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  currentHydrationNode,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
   type SlotBoundaryContext,
   currentSlotBoundary,
-  hasSlotFallback,
   setCurrentSlotBoundary,
   trackSlotBoundaryDirtying,
   withSlotBoundary,
 } from './slotBoundary'
 import {
   hydrateDynamicFragmentAnchor,
-  isHydratingSlotFallbackActive,
   prepareDeferredHydrationAnchor,
-  setCurrentHydratingSlotFallbackActive,
+  startPendingSlotContent,
   withHydratingSlotBoundary,
 } from './dom/hydrateFragment'
 import {
@@ -526,28 +528,25 @@ export class SlotFragment
     try {
       const shouldForce = prevLocalFallback !== fallback
       if (isHydrating) {
-        const boundaryHasFallback = hasSlotFallback(boundary)
         withHydratingSlotBoundary(() => {
-          const prev = isHydratingSlotFallbackActive()
+          const fallbackStart = currentHydrationNode
+          let finish: ((contentValid: boolean) => void) | null = null
           try {
-            if (boundaryHasFallback) {
-              setCurrentHydratingSlotFallbackActive(true)
-            }
+            // SlotFragment only exists when fallback ownership can change.
+            // Delay empty content anchors until content/fallback is decided.
+            finish = startPendingSlotContent(fallbackStart)
             this.updateContent(slotRender, key)
             const contentValid = isValidSlot(this.content)
-            recheckSlotResolution(this, shouldForce)
-            // Updates run under the temporary fallback-active marker so empty
-            // inner branches can materialize their own anchors if fallback
-            // takes over. If recheck resolves back to content, restore the
-            // outer state before hydrateDynamicFragmentAnchor(); the surrounding
-            // finally still restores nested callers when we leave this
-            // boundary.
-            if (!boundaryHasFallback || contentValid) {
-              setCurrentHydratingSlotFallbackActive(prev)
+            if (finish) {
+              finish(contentValid)
+              finish = null
             }
+            recheckSlotResolution(this, shouldForce)
             hydrateDynamicFragmentAnchor(this, !isValidBlock(this.nodes))
           } finally {
-            setCurrentHydratingSlotFallbackActive(prev)
+            if (finish) {
+              finish(true)
+            }
           }
         })
       } else {

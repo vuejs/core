@@ -30,10 +30,17 @@ import { type DynamicFragment, isSlotFragment } from '../fragment'
 
 interface HydratingSlotBoundaryState {
   endAnchor: Node | null
-  fallbackActive: boolean
+  // Slot content is still resolving whether it should claim the SSR range.
+  pending: boolean
+  pendingAnchors: PendingSlotContentAnchor[] | null
 }
 
 let currentHydratingSlotBoundaryState: HydratingSlotBoundaryState | null = null
+
+interface PendingSlotContentAnchor {
+  onContent: () => void
+  onFallback: () => void
+}
 
 function setCurrentHydratingSlotBoundaryState(
   state: HydratingSlotBoundaryState | null,
@@ -63,7 +70,8 @@ export function withHydratingSlotBoundary<R>(fn: () => R): R {
   }
   const prevState = setCurrentHydratingSlotBoundaryState({
     endAnchor,
-    fallbackActive: false,
+    pending: false,
+    pendingAnchors: null,
   })
 
   try {
@@ -74,40 +82,66 @@ export function withHydratingSlotBoundary<R>(fn: () => R): R {
   }
 }
 
-// Tracks hydration while a slot boundary is resolving fallback through inner
-// empty control-flow fragments, e.g.
-// - `<slot><template v-if="false" /></slot>`
-// - `<slot><span v-for="item in items" /></slot>`.
-// We need a boundary-level marker because the inner empty fragment can hydrate
-// before slot render finishes deciding whether fallback will take over. While
-// active, empty inner fragments should create their own runtime anchor instead
-// of assuming SSR already provided the final insertion point.
-export function isHydratingSlotFallbackActive(): boolean {
-  return !!(
-    currentHydratingSlotBoundaryState &&
-    currentHydratingSlotBoundaryState.fallbackActive
-  )
-}
-
-export function setCurrentHydratingSlotFallbackActive(
-  active: boolean,
-): boolean {
-  try {
-    return isHydratingSlotFallbackActive()
-  } finally {
-    if (currentHydratingSlotBoundaryState) {
-      currentHydratingSlotBoundaryState.fallbackActive = active
+function resolvePendingSlotContentAnchors(
+  state: HydratingSlotBoundaryState,
+  contentValid: boolean,
+): void {
+  // Empty fragments rendered before the slot decision cannot know whether
+  // their anchor belongs to content SSR or needs to be created for fallback.
+  const pendingAnchors = state.pendingAnchors
+  if (!pendingAnchors) return
+  state.pendingAnchors = null
+  for (let i = 0; i < pendingAnchors.length; i++) {
+    const pendingAnchor = pendingAnchors[i]
+    if (contentValid) {
+      pendingAnchor.onContent()
+    } else {
+      pendingAnchor.onFallback()
     }
   }
 }
 
-export function withHydratingSlotFallbackActive<R>(fn: () => R): R {
-  const prevState = setCurrentHydratingSlotFallbackActive(true)
-  try {
-    return fn()
-  } finally {
-    setCurrentHydratingSlotFallbackActive(prevState)
+export function queuePendingSlotContentAnchor(
+  anchor: PendingSlotContentAnchor,
+): void {
+  const state = currentHydratingSlotBoundaryState
+  if (state && state.pending) {
+    ;(state.pendingAnchors ||= []).push(anchor)
   }
+}
+
+// Slot content with fallback is unresolved until it creates a valid node.
+// While unresolved, empty content branches must not consume fallback SSR anchors.
+export function startPendingSlotContent(
+  start: Node | null,
+): (contentValid: boolean) => void {
+  const state = currentHydratingSlotBoundaryState
+  if (!state) return () => {}
+  const prevPending = state.pending
+  state.pending = true
+  let active = true
+  return contentValid => {
+    if (!active) return
+    active = false
+    resolvePendingSlotContentAnchors(state, contentValid)
+    state.pending = prevPending
+    if (!contentValid) {
+      setCurrentHydrationNode(start)
+    }
+  }
+}
+
+export function resolvePendingSlotContent(): void {
+  const state = currentHydratingSlotBoundaryState
+  if (state && state.pending) {
+    resolvePendingSlotContentAnchors(state, true)
+    state.pending = false
+  }
+}
+
+export function isPendingSlotContent(): boolean {
+  const state = currentHydratingSlotBoundaryState
+  return !!(state && state.pending)
 }
 
 const enum CloseAnchorOwner {
@@ -140,18 +174,6 @@ function getDynamicCloseOwner(
     return CloseAnchorOwner.Self
   }
 
-  // Slot fallback can fall through an inner `v-if`. When the `if` resolves
-  // to an invalid block and the fallback is selected, the `if` still needs
-  // its own runtime anchor instead of reusing the parent slot's end anchor.
-  if (
-    anchorLabel === 'if' &&
-    currentSlotEndAnchor &&
-    isHydratingSlotFallbackActive() &&
-    !isValidBlock(nodes)
-  ) {
-    return CloseAnchorOwner.ParentBefore
-  }
-
   return CloseAnchorOwner.None
 }
 
@@ -159,12 +181,20 @@ function queueAnchorInsert(
   parentNode: Node,
   nextNode: Node | null,
   createAnchor: () => Node,
+  fallbackNextNode?: Node | null,
 ): void {
-  // Create the runtime anchor only after insertion is flushed so traversal
-  // cannot observe a detached anchor too early.
+  // Create the runtime anchor during the queued insertion so hydration
+  // traversal never observes it before it is in its final position.
   queuePostFlushCb(() => {
-    const anchor =
+    let anchor =
       nextNode && getParentNode(nextNode) === parentNode ? nextNode : null
+    if (
+      !anchor &&
+      fallbackNextNode &&
+      getParentNode(fallbackNextNode) === parentNode
+    ) {
+      anchor = fallbackNextNode
+    }
     parentNode.insertBefore(createAnchor(), anchor)
   })
 }
@@ -224,9 +254,22 @@ export function prepareDeferredHydrationAnchor(
 export type AnchorPlan =
   // Adopt an existing SSR comment node as the fragment anchor.
   | { kind: 'reuse'; node: Node; resetNodes?: boolean }
+  // Delay an empty slot-content anchor until content/fallback ownership is
+  // known. Fallback-owned content anchors are inserted before the slot end.
+  | {
+      kind: 'pending'
+      parent: Node
+      slotEnd: Node
+    }
   // Insert a fresh runtime anchor before `next` once insertion flushes.
   // `mark` keeps an SSR node structural so boundary cleanup preserves it.
-  | { kind: 'create'; parent: Node; next: Node | null; mark?: Node }
+  | {
+      kind: 'create'
+      parent: Node
+      next: Node | null
+      mark?: Node
+      fallbackNext?: Node | null
+    }
   // Trim unclaimed SSR content first, then insert a fresh runtime anchor.
   // Only arises for empty fragments, so the stale block reference is cleared.
   | {
@@ -268,6 +311,15 @@ export function resolveDynamicAnchor(
   // reuse `<!---->` as anchor
   // `<div v-if="false"></div>` -> `<!---->`
   if (isEmpty) {
+    if (isPendingSlotContent()) {
+      const slotEnd = getCurrentSlotEndAnchor()!
+      const node = currentHydrationNode || slotEnd
+      return {
+        kind: 'pending',
+        parent: getParentNode(node)!,
+        slotEnd,
+      }
+    }
     if (currentHydrationNode && isComment(currentHydrationNode, '')) {
       return { kind: 'reuse', node: currentHydrationNode }
     }
@@ -293,7 +345,6 @@ export function resolveDynamicAnchor(
       !frag.isSlot &&
       ownsDynamicAnchor &&
       currentHydrationNode &&
-      !isHydratingSlotFallbackActive() &&
       !isComment(currentHydrationNode, ']')
     ) {
       const parentNode = getParentNode(currentHydrationNode)
@@ -439,7 +490,18 @@ export function resolveDynamicAnchor(
     parentNode = node.parentNode
     nextNode = node.nextNode
   }
-  return { kind: 'create', parent: parentNode!, next: nextNode }
+  let fallbackNext: Node | null = null
+  if (
+    currentSlotEndAnchor &&
+    nextNode === currentHydrationNode &&
+    parentNode &&
+    getParentNode(currentSlotEndAnchor) === parentNode
+  ) {
+    // `nextNode` can be stale fallback DOM that slot cleanup removes before the
+    // queued anchor insertion flushes. Keep the anchor inside the slot range.
+    fallbackNext = currentSlotEndAnchor
+  }
+  return { kind: 'create', parent: parentNode!, next: nextNode, fallbackNext }
 }
 
 export function executeAnchorPlan(
@@ -469,9 +531,44 @@ export function executeAnchorPlan(
         }
         break
       }
+      case 'pending': {
+        const slotEnd = plan.slotEnd
+        queuePendingSlotContentAnchor({
+          onContent: () => {
+            // Content won: adopt the pending SSR anchor for this empty
+            // fragment and advance past it before hydrating following content.
+            const node = currentHydrationNode
+            if (
+              node &&
+              getParentNode(node) === plan.parent &&
+              node.nodeType === 8 &&
+              (isComment(node, '') ||
+                (frag.anchorLabel !== undefined &&
+                  isReusableDynamicFragmentAnchor(
+                    node as Comment,
+                    frag.anchorLabel,
+                  )))
+            ) {
+              frag.anchor = markHydrationAnchor(node)
+              advanceHydrationNode(node)
+            }
+          },
+          onFallback: () => {
+            // Match CSR by always creating the content fragment anchor, even
+            // when fallback wins and keeps the anchor detached from the DOM.
+            createRuntimeAnchor()
+          },
+        })
+        break
+      }
       case 'create': {
         if (plan.mark) markHydrationAnchor(plan.mark)
-        queueAnchorInsert(plan.parent, plan.next, createRuntimeAnchor)
+        queueAnchorInsert(
+          plan.parent,
+          plan.next,
+          createRuntimeAnchor,
+          plan.fallbackNext,
+        )
         break
       }
       case 'create-cleanup': {

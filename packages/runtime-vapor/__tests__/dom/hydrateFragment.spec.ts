@@ -3,8 +3,8 @@ import { hydrateNode, setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
   type AnchorPlan,
   resolveDynamicAnchor,
+  startPendingSlotContent,
   withHydratingSlotBoundary,
-  withHydratingSlotFallbackActive,
 } from '../../src/dom/hydrateFragment'
 
 function resolveWithCursor(cursor: Node, fn: () => AnchorPlan): AnchorPlan {
@@ -165,22 +165,29 @@ describe('resolveDynamicAnchor', () => {
     expect(create.mark).toBe(end)
   })
 
-  test('empty inner v-if under active slot fallback creates before the slot end', () => {
+  test('empty inner v-if under pending slot content creates before fallback', () => {
     const host = document.createElement('div')
     const start = document.createComment('[')
     const end = document.createComment(']')
     host.append(start, end)
 
     const plan = resolveWithCursor(start, () =>
-      withHydratingSlotBoundary(() =>
-        withHydratingSlotFallbackActive(() =>
-          resolveDynamicAnchor(new DynamicFragment('if', false, false), true),
-        ),
-      ),
+      withHydratingSlotBoundary(() => {
+        const finish = startPendingSlotContent(start)
+        try {
+          return resolveDynamicAnchor(
+            new DynamicFragment('if', false, false),
+            true,
+          )
+        } finally {
+          finish(false)
+        }
+      }),
     )
 
-    const before = expectKind(plan, 'create-before-slot-end')
-    expect(before.end).toBe(end)
+    const pending = expectKind(plan, 'pending')
+    expect(pending.parent).toBe(host)
+    expect(pending.slotEnd).toBe(end)
   })
 
   test('empty inner v-if that consumed the slot range creates before the slot end anchor', () => {

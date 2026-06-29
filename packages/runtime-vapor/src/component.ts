@@ -123,6 +123,7 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import { DynamicFragment, isDynamicFragment, isFragment } from './fragment'
+import { resolvePendingSlotContent } from './dom/hydrateFragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import {
   isSuspenseEnabled,
@@ -278,6 +279,7 @@ export function createComponent(
     }
   }
   if (isHydrating) {
+    resolvePendingSlotContent()
     hydrationCursor = enterHydrationCursor()
     if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
       hydrationClose = locateEndAnchor(currentHydrationNode!)
@@ -970,6 +972,7 @@ export function createPlainElement(
   const _insertionAnchor = insertionAnchor
   let hydrationCursor: HydrationCursor | null = null
   if (isHydrating) {
+    resolvePendingSlotContent()
     hydrationCursor = enterHydrationCursor()
   } else {
     resetInsertionState()
