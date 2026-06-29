@@ -282,6 +282,34 @@ return { props, get propsModel() { return propsModel } }
 }"
 `;
 
+exports[`defineProps > w/ generic boolean constraints 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Nullable<T> = T | null | undefined
+type Props<TMultiple extends boolean> = {
+  primitive: boolean
+  wrapped: Nullable<boolean>
+  multiple: TMultiple
+  checked: TMultiple extends true ? boolean : never
+}
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    primitive: { type: Boolean, required: true },
+    wrapped: { type: [Boolean, null], required: true, skipCheck: true },
+    multiple: { type: Boolean, required: true },
+    checked: { type: Boolean, required: true }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+
+
+return {  }
+}
+
+})"
+`;
+
 exports[`defineProps > w/ interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Props { x?: number }

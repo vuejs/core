@@ -20,6 +20,7 @@ import type {
   TSTypeAnnotation,
   TSTypeElement,
   TSTypeLiteral,
+  TSTypeParameter,
   TSTypeQuery,
   TSTypeReference,
   TemplateLiteral,
@@ -274,7 +275,13 @@ function innerResolveTypeElements(
           resolved.typeParameters.params.forEach((p, i) => {
             let param = typeParameters && typeParameters[p.name]
             if (!param) param = node.typeParameters!.params[i]
-            typeParams![p.name] = param
+            typeParams![p.name] = resolveGenericTypeParameter(
+              ctx,
+              param,
+              p,
+              scope,
+              typeParameters,
+            )
           })
         }
         return resolveTypeElements(
@@ -323,6 +330,11 @@ function innerResolveTypeElements(
         )
       }
     }
+    case 'TSTypeParameter':
+      if (node.constraint) {
+        return resolveTypeElements(ctx, node.constraint, scope, typeParameters)
+      }
+      break
     case 'TSImportType': {
       if (
         getId(node.argument) === 'vue' &&
@@ -1774,7 +1786,13 @@ export function inferRuntimeType(
               const typeParams: Record<string, Node> = Object.create(null)
               if (resolved.typeParameters) {
                 resolved.typeParameters.params.forEach((p, i) => {
-                  typeParams![p.name] = node.typeParameters!.params[i]
+                  typeParams![p.name] = resolveGenericTypeParameter(
+                    ctx,
+                    node.typeParameters!.params[i],
+                    p,
+                    scope,
+                    typeParameters,
+                  )
                 })
               }
               return inferRuntimeType(
@@ -1787,7 +1805,12 @@ export function inferRuntimeType(
             }
           }
 
-          return inferRuntimeType(ctx, resolved, resolved._ownerScope, isKeyOf)
+          return inferRuntimeType(
+            ctx,
+            resolved,
+            resolved._ownerScope || scope,
+            isKeyOf,
+          )
         }
         if (node.typeName.type === 'Identifier') {
           if (typeParameters && typeParameters[node.typeName.name]) {
@@ -1960,6 +1983,14 @@ export function inferRuntimeType(
 
       case 'TSUnionType':
         return flattenTypes(ctx, node.types, scope, isKeyOf, typeParameters)
+      case 'TSConditionalType':
+        return flattenTypes(
+          ctx,
+          [node.trueType, node.falseType],
+          scope,
+          isKeyOf,
+          typeParameters,
+        )
       case 'TSIntersectionType': {
         return flattenTypes(
           ctx,
@@ -2017,6 +2048,9 @@ export function inferRuntimeType(
       case 'TSSymbolKeyword':
         return ['Symbol']
 
+      case 'TSNeverKeyword':
+        return []
+
       case 'TSIndexedAccessType': {
         const types = resolveIndexType(ctx, node, scope)
         return flattenTypes(ctx, types, scope, isKeyOf)
@@ -2067,6 +2101,18 @@ export function inferRuntimeType(
         }
         break
       }
+
+      case 'TSTypeParameter':
+        if (node.constraint) {
+          return inferRuntimeType(
+            ctx,
+            node.constraint,
+            scope,
+            isKeyOf,
+            typeParameters,
+          )
+        }
+        break
     }
   } catch (e) {
     // always soft fail on failed runtime type inference
@@ -2074,6 +2120,43 @@ export function inferRuntimeType(
     ctx.silentOnExtendsFailure = prevSilent
   }
   return [UNKNOWN_TYPE] // no runtime check
+}
+
+function resolveGenericTypeParameter(
+  ctx: TypeResolveContext,
+  param: Node | undefined,
+  typeParam: TSTypeParameter,
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>,
+): Node {
+  if (
+    param &&
+    typeParam.constraint &&
+    isUnresolvableTypeReference(ctx, param, scope, typeParameters)
+  ) {
+    return typeParam
+  }
+  return param || typeParam
+}
+
+function isUnresolvableTypeReference(
+  ctx: TypeResolveContext,
+  node: Node,
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>,
+): boolean {
+  if (
+    node.type !== 'TSTypeReference' ||
+    node.typeName.type !== 'Identifier' ||
+    typeParameters?.[node.typeName.name]
+  ) {
+    return false
+  }
+  try {
+    return !resolveTypeReference(ctx, node, scope)
+  } catch {
+    return true
+  }
 }
 
 function flattenTypes(

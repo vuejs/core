@@ -230,7 +230,7 @@ function resolveRuntimePropsFromType(
     props.push({
       key,
       required: !e.optional,
-      type: type || [`null`],
+      type: type.length ? type : [`null`],
       skipCheck,
     })
   }

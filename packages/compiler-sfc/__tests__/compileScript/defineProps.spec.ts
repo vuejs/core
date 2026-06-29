@@ -237,6 +237,39 @@ const props = defineProps({ foo: String })
     })
   })
 
+  // #13787
+  test('w/ generic boolean constraints', () => {
+    const source = `<script setup lang="ts" generic="TMultiple extends boolean">
+type Nullable<T> = T | null | undefined
+type Props<TMultiple extends boolean> = {
+  primitive: boolean
+  wrapped: Nullable<boolean>
+  multiple: TMultiple
+  checked: TMultiple extends true ? boolean : never
+}
+defineProps<Props<TMultiple>>()
+</script>`
+
+    const { content, bindings } = compile(source)
+    assertCode(content)
+    expect(content).toMatch(`primitive: { type: Boolean, required: true }`)
+    expect(content).toMatch(
+      `wrapped: { type: [Boolean, null], required: true, skipCheck: true }`,
+    )
+    expect(content).toMatch(`multiple: { type: Boolean, required: true }`)
+    expect(content).toMatch(`checked: { type: Boolean, required: true }`)
+    expect(bindings).toStrictEqual({
+      primitive: BindingTypes.PROPS,
+      wrapped: BindingTypes.PROPS,
+      multiple: BindingTypes.PROPS,
+      checked: BindingTypes.PROPS,
+    })
+
+    const { content: prod } = compile(source, { isProd: true })
+    expect(prod).toMatch(`multiple: { type: Boolean }`)
+    expect(prod).toMatch(`checked: { type: Boolean }`)
+  })
+
   test('w/ interface', () => {
     const { content, bindings } = compile(`
     <script setup lang="ts">
