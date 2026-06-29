@@ -538,9 +538,10 @@ export function executeAnchorPlan(
             // Content won: adopt the pending SSR anchor for this empty
             // fragment and advance past it before hydrating following content.
             const node = currentHydrationNode
+            const nodeParent = node && getParentNode(node)
             if (
               node &&
-              getParentNode(node) === plan.parent &&
+              nodeParent === plan.parent &&
               node.nodeType === 8 &&
               (isComment(node, '') ||
                 (frag.anchorLabel !== undefined &&
@@ -551,6 +552,16 @@ export function executeAnchorPlan(
             ) {
               frag.anchor = markHydrationAnchor(node)
               advanceHydrationNode(node)
+            } else {
+              // Mismatch recovery can leave the cursor on fallback DOM instead
+              // of a reusable content anchor. Create this empty branch's
+              // runtime anchor before that DOM so later updates have a stable
+              // insertion point.
+              const anchor = node && nodeParent === plan.parent ? node : slotEnd
+              const parentNode = getParentNode(anchor)
+              if (parentNode) {
+                parentNode.insertBefore(createRuntimeAnchor(), anchor)
+              }
             }
           },
           onFallback: () => {

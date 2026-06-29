@@ -3845,6 +3845,88 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('slot content mismatch recovery keeps leading empty branch anchor', async () => {
+      const appCode = `<template>
+        <components.Child>
+          <template #default>
+            <template v-if="data.showPrefix">
+              <span>prefix</span>
+            </template>
+            <template v-if="data.showTail">
+              <i>{{ data.tail }}</i>
+            </template>
+          </template>
+        </components.Child>
+      </template>`
+      const childCode = `<template>
+        <slot><div>{{ data.fallback }}</div></slot>
+      </template>`
+      // SSR renders fallback, but the client slot content wins. The leading
+      // empty branch has no SSR content anchor to reuse, so hydration must
+      // create one before the recovered content for future branch updates.
+      const ssrData = ref({
+        showPrefix: false,
+        showTail: false,
+        tail: 'tail',
+        fallback: 'foo',
+      })
+      const clientData = ref({
+        showPrefix: false,
+        showTail: true,
+        tail: 'tail',
+        fallback: 'foo',
+      })
+      const ssrComponents: Record<string, any> = {}
+      ssrComponents.Child = compile(childCode, ssrData, ssrComponents, {
+        vapor: true,
+        ssr: true,
+      })
+      const SSRComp = compile(appCode, ssrData, ssrComponents, {
+        vapor: true,
+        ssr: true,
+      })
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const clientComponents: Record<string, any> = {}
+      clientComponents.Child = compile(
+        childCode,
+        clientData,
+        clientComponents,
+        {
+          vapor: true,
+        },
+      )
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const clientComp = compile(appCode, clientData, clientComponents, {
+        vapor: true,
+      })
+      const app = createVaporSSRApp(clientComp)
+      app.mount(container)
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!--if--><i>tail</i><!--if--><!--]-->
+        "
+      `,
+      )
+
+      clientData.value.showPrefix = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>prefix</span><!--if--><i>tail</i><!--if--><!--]-->
+        "
+      `,
+      )
+    })
+
     test('slot fallback from empty v-for branch', async () => {
       const data = reactive({
         items: [] as string[],
