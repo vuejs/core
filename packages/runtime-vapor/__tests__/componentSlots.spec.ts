@@ -74,9 +74,9 @@ import {
 import {
   getCurrentSlotEndAnchor,
   hydrateDynamicFragmentAnchor,
-  isHydratingSlotFallbackActive,
+  isPendingSlotContent,
+  startPendingSlotContent,
   withHydratingSlotBoundary,
-  withHydratingSlotFallbackActive,
 } from '../src/dom/hydrateFragment'
 
 const define = makeRender<any>()
@@ -727,7 +727,7 @@ describe('component: slots', () => {
       expect(cleanup).toHaveBeenCalledTimes(1)
     })
 
-    test('withHydratingSlotBoundary isolates fallback-active state between boundaries without local markers', () => {
+    test('withHydratingSlotBoundary isolates pending content state between boundaries without local markers', () => {
       const start = document.createComment('[')
       const end = document.createComment(']')
       const host = document.createElement('div')
@@ -742,24 +742,28 @@ describe('component: slots', () => {
 
           withHydratingSlotBoundary(() => {
             expect(getCurrentSlotEndAnchor()).toBe(end)
-            expect(isHydratingSlotFallbackActive()).toBe(false)
+            expect(isPendingSlotContent()).toBe(false)
 
-            withHydratingSlotFallbackActive(() => {
-              expect(isHydratingSlotFallbackActive()).toBe(true)
+            const finish = startPendingSlotContent(start)
+            try {
+              expect(isPendingSlotContent()).toBe(true)
 
               setCurrentHydrationNode(end)
               withHydratingSlotBoundary(() => {
                 expect(getCurrentSlotEndAnchor()).toBe(end)
-                expect(isHydratingSlotFallbackActive()).toBe(false)
+                expect(isPendingSlotContent()).toBe(false)
               })
-            })
+              expect(isPendingSlotContent()).toBe(true)
+            } finally {
+              finish(true)
+            }
 
             expect(getCurrentSlotEndAnchor()).toBe(end)
-            expect(isHydratingSlotFallbackActive()).toBe(false)
+            expect(isPendingSlotContent()).toBe(false)
           })
 
           expect(getCurrentSlotEndAnchor()).toBe(end)
-          expect(isHydratingSlotFallbackActive()).toBe(false)
+          expect(isPendingSlotContent()).toBe(false)
         })
       })
     })
@@ -848,7 +852,7 @@ describe('component: slots', () => {
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
 
-    test('slot fallback empty inner v-if hydrates before parent close anchor', async () => {
+    test('pending slot content empty inner v-if keeps detached anchor on fallback', async () => {
       const start = document.createComment('[')
       const end = document.createComment(']')
       const host = document.createElement('div')
@@ -859,10 +863,13 @@ describe('component: slots', () => {
       try {
         hydrateNode(start, () => {
           withHydratingSlotBoundary(() => {
-            withHydratingSlotFallbackActive(() => {
+            const finish = startPendingSlotContent(start)
+            try {
               frag = new DynamicFragment('if', false, false)
               hydrateDynamicFragmentAnchor(frag, true)
-            })
+            } finally {
+              finish(false)
+            }
           })
         })
       } finally {
@@ -870,8 +877,42 @@ describe('component: slots', () => {
       }
       await nextTick()
 
-      expect(host.innerHTML).toBe('<!--[--><!--if--><!--]-->')
-      expect(frag.anchor).toBe(end.previousSibling)
+      expect(host.innerHTML).toBe('<!--[--><!--]-->')
+      expect(frag.anchor.parentNode).toBeNull()
+    })
+
+    test('pending slot content empty inner branches adopt anchors in order', () => {
+      const start = document.createComment('[')
+      const first = document.createComment('')
+      const second = document.createComment('')
+      const end = document.createComment(']')
+      const host = document.createElement('div')
+      host.append(start, first, second, end)
+      let firstFrag!: DynamicFragment
+      let secondFrag!: DynamicFragment
+
+      setIsHydratingEnabled(true)
+      try {
+        hydrateNode(start, () => {
+          withHydratingSlotBoundary(() => {
+            const finish = startPendingSlotContent(start)
+            try {
+              firstFrag = new DynamicFragment('if', false, false)
+              hydrateDynamicFragmentAnchor(firstFrag, true)
+              secondFrag = new DynamicFragment('if', false, false)
+              hydrateDynamicFragmentAnchor(secondFrag, true)
+              finish(true)
+            } finally {
+              finish(true)
+            }
+          })
+        })
+      } finally {
+        setIsHydratingEnabled(false)
+      }
+
+      expect(firstFrag.anchor).toBe(first)
+      expect(secondFrag.anchor).toBe(second)
     })
 
     test('slot resolution state stops fallback scope when fallback body throws', async () => {
@@ -2073,14 +2114,16 @@ describe('component: slots', () => {
       }
 
       const items = ref([{ text: 'bar', show: false }])
+      let ifFrag!: DynamicFragment
+      let forFrag!: any
       const { html } = define({
         setup() {
           return createComponent(Child, null, {
             default: extend(() => {
-              return createFor(
+              forFrag = createFor(
                 () => items.value,
                 for_item0 => {
-                  return createIf(
+                  ifFrag = createIf(
                     () => for_item0.value.show,
                     () => {
                       const n5 = template('<span> </span>')() as any
@@ -2092,17 +2135,21 @@ describe('component: slots', () => {
                     },
                     undefined,
                     keyedSlotRootIfShape,
-                  )
+                  ) as DynamicFragment
+                  return ifFrag
                 },
                 item => item.text,
                 slotRootForFlags,
               )
+              return forFrag
             }, nonStableSlot),
           })
         },
       }).render()
 
       expect(html()).toBe('fallback<!--slot-->')
+      expect(ifFrag.anchor.parentNode).toBeNull()
+      expect((forFrag.nodes[1] as Node).parentNode).toBeNull()
 
       items.value[0].show = true
       await nextTick()

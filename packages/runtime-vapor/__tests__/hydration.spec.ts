@@ -3574,7 +3574,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>foo</div><!--if--><!--]-->
+        <!--[--><div>foo</div><!--]-->
         "
       `,
       )
@@ -3586,7 +3586,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>baz</div><!--if--><!--]-->
+        <!--[--><div>baz</div><!--]-->
         "
       `,
       )
@@ -3607,6 +3607,239 @@ describe('Vapor Mode hydration', () => {
         `
         "
         <!--[--><span>qux</span><!--if--><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('slot fallback leading empty branch keeps its own hydration anchor', async () => {
+      const data = reactive({
+        showSlot: false,
+        showFallbackPrefix: false,
+        fallback: 'foo',
+        slot: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-if="data.showSlot">
+                <span>{{ data.slot }}</span>
+              </template>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <slot>
+              <i v-if="data.showFallbackPrefix">prefix</i>
+              <div>{{ data.fallback }}</div>
+            </slot>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!----><div>foo</div><!--]-->
+        "
+      `,
+      )
+
+      data.showFallbackPrefix = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><i>prefix</i><!----><div>foo</div><!--]-->
+        "
+      `,
+      )
+
+      data.showSlot = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--if--><!--]-->
+        "
+      `,
+      )
+
+      data.showSlot = false
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><i>prefix</i><!--if--><div>foo</div><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('slot content hydrates over mismatched SSR fallback', async () => {
+      const appCode = `<template>
+        <components.Child>
+          <template #default>
+            <template v-if="data.showSlot">
+              <span>{{ data.slot }}</span>
+            </template>
+          </template>
+        </components.Child>
+      </template>`
+      const childCode = `<template>
+        <slot>
+          <div>{{ data.fallback }}</div>
+          <i>suffix</i>
+        </slot>
+      </template>`
+      const ssrData = ref({
+        showSlot: false,
+        fallback: 'foo',
+        slot: 'bar',
+      })
+      const clientData = ref({
+        showSlot: true,
+        fallback: 'foo',
+        slot: 'bar',
+      })
+      const ssrComponents: Record<string, any> = {}
+      ssrComponents.Child = compile(childCode, ssrData, ssrComponents, {
+        vapor: true,
+        ssr: true,
+      })
+      const SSRComp = compile(appCode, ssrData, ssrComponents, {
+        vapor: true,
+        ssr: true,
+      })
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      const clientComponents: Record<string, any> = {}
+      clientComponents.Child = compile(
+        childCode,
+        clientData,
+        clientComponents,
+        {
+          vapor: true,
+        },
+      )
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const clientComp = compile(appCode, clientData, clientComponents, {
+        vapor: true,
+      })
+      const app = createVaporSSRApp(clientComp)
+      app.mount(container)
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--if--><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('slot fallback trailing empty branch keeps fallback DOM intact', async () => {
+      const data = reactive({
+        showSlot: false,
+        showFallbackSuffix: false,
+        fallback: 'foo',
+        slot: 'bar',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-if="data.showSlot">
+                <span>{{ data.slot }}</span>
+              </template>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <slot>
+              <div>{{ data.fallback }}</div>
+              <i v-if="data.showFallbackSuffix">suffix</i>
+            </slot>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>foo</div><!----><!--]-->
+        "
+      `,
+      )
+
+      data.showFallbackSuffix = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><div>foo</div><i>suffix</i><!----><!--]-->
+        "
+      `,
+      )
+
+      data.showSlot = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>bar</span><!--if--><!--]-->
+        "
+      `,
+      )
+    })
+
+    test('valid slot content keeps leading empty branch anchor before fallback', async () => {
+      const data = reactive({
+        showPrefix: false,
+        tail: 'tail',
+        fallback: 'foo',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #default>
+              <template v-if="data.showPrefix">
+                <span>prefix</span>
+              </template>
+              <i>{{ data.tail }}</i>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><slot><div>{{ data.fallback }}</div></slot></template>`,
+        },
+        data,
+      )
+
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><!----><i>tail</i><!--]-->
+        "
+      `,
+      )
+
+      data.showPrefix = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>prefix</span><!----><i>tail</i><!--]-->
         "
       `,
       )
@@ -3634,7 +3867,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>foo</div><!--for--><!--]-->
+        <!--[--><div>foo</div><!--]-->
         "
       `,
       )
@@ -3646,7 +3879,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>baz</div><!--for--><!--]-->
+        <!--[--><div>baz</div><!--]-->
         "
       `,
       )
@@ -3777,7 +4010,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>foo</div><!--if--><!--for--><!--]-->
+        <!--[--><div>foo</div><!--]-->
         "
       `,
       )
@@ -3789,7 +4022,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "
-        <!--[--><div>baz</div><!--if--><!--for--><!--]-->
+        <!--[--><div>baz</div><!--]-->
         "
       `,
       )
@@ -11231,7 +11464,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--if--><!--]-->
+      <!--[--><div>foo</div><!--]-->
       "
     `,
     )
@@ -11243,7 +11476,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>baz</div><!--if--><!--]-->
+      <!--[--><div>baz</div><!--]-->
       "
     `,
     )
@@ -11264,6 +11497,73 @@ describe('VDOM interop', () => {
       `
       "
       <!--[--><span>qux</span><!--if--><!--]-->
+      "
+    `,
+    )
+  })
+
+  test('hydrate interop vapor slot fallback leading empty branch', async () => {
+    const data = reactive({
+      showSlot: false,
+      showFallbackPrefix: false,
+      fallback: 'foo',
+      slot: 'bar',
+    })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild />
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>
+            const data = _data
+            const components = _components
+          </script>
+          <template>
+            <components.VdomChild>
+              <template #default>
+                <template v-if="data.showSlot">
+                  <span>{{ data.slot }}</span>
+                </template>
+              </template>
+            </components.VdomChild>
+          </template>`,
+          vapor: true,
+        },
+        VdomChild: {
+          code: `<script setup>const data = _data</script>
+          <template>
+            <slot>
+              <i v-if="data.showFallbackPrefix">prefix</i>
+              <div>{{ data.fallback }}</div>
+            </slot>
+          </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><!----><div>foo</div><!--]-->
+      "
+    `,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+    data.showFallbackPrefix = true
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+      `
+      "
+      <!--[--><i>prefix</i><div>foo</div><!--]-->
       "
     `,
     )
@@ -11477,7 +11777,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
         "
-        <!--[--><div>foo</div><p>bar</p><!--if--><!--]-->
+        <!--[--><div>foo</div><p>bar</p><!--]-->
         "
       `,
     )
@@ -11490,7 +11790,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
         "
-        <!--[--><div>qux</div><p>quux</p><!--if--><!--]-->
+        <!--[--><div>qux</div><p>quux</p><!--]-->
         "
       `,
     )
@@ -11557,7 +11857,7 @@ describe('VDOM interop', () => {
       `
         "
         <!--[-->
-        <!--[--><div>foo</div><!----><!--if--><!--]-->
+        <!--[--><div>foo</div><!----><!--]-->
         <i>tail</i><!--]-->
         "
       `,
@@ -11569,7 +11869,7 @@ describe('VDOM interop', () => {
       `
         "
         <!--[-->
-        <!--[--><div>foo</div><!--if--><p>bar</p><!--]-->
+        <!--[--><div>foo</div><p>bar</p><!--]-->
         <i>tail</i><!--]-->
         "
       `,
@@ -12660,7 +12960,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--if--><!--]-->
+      <!--[--><div>foo</div><!--]-->
       "
     `,
     )
@@ -12672,7 +12972,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>baz</div><!--if--><!--]-->
+      <!--[--><div>baz</div><!--]-->
       "
     `,
     )

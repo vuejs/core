@@ -10,6 +10,7 @@ import {
 } from './hydration'
 import { type Namespace, Namespaces, TemplateFlags } from '@vue/shared'
 import { _child, createTextNode } from './node'
+import { resolvePendingSlotContent } from './hydrateFragment'
 
 let t: HTMLTemplateElement
 
@@ -20,6 +21,11 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   let node: Node
   return (): Node & { $root?: true } => {
     if (isHydrating) {
+      // Comment templates may be empty branch anchors. Only real DOM/text
+      // templates prove that slot content is valid.
+      if (!(html[0] === '<' && html[1] === '!')) {
+        resolvePendingSlotContent()
+      }
       let adopted: Node | null = null
       // static templates only need to skip fragment markers, teleport
       // markers, and hydration anchors before advancing the hydration
