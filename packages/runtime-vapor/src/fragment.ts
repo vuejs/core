@@ -16,14 +16,19 @@ import {
   type TransitionHooks,
   type VNode,
   currentInstance,
+  queuePostFlushCb,
   setCurrentInstance,
 } from '@vue/runtime-dom'
 import type { VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  advanceHydrationNode,
   currentHydrationNode,
+  isComment,
   isHydrating,
+  locateEndAnchor,
   locateHydrationNode,
+  markHydrationAnchor,
 } from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
@@ -34,6 +39,7 @@ import {
   withSlotBoundary,
 } from './slotBoundary'
 import {
+  getCurrentSlotEndAnchor,
   hydrateDynamicFragmentAnchor,
   prepareDeferredHydrationAnchor,
   startPendingSlotContent,
@@ -228,8 +234,8 @@ export class DynamicFragment extends RenderContextFragment {
   // pure marker consumed by the isSlotFragment predicate; the core update
   // pipeline never reads it.
   isSlot?: boolean
-  // Hydration-only marker consumed by hydrateFragment: empty forwarded slots
-  // leave the SSR close marker to the parent slot boundary.
+  // Hydration-only marker for forwarded slots. They restore their own content
+  // anchor but leave inherited fallback resolution to the receiver slot.
   forwarded?: boolean
   // Marks the generic dynamic fragment that createPlainElement creates for the
   // default-slot children of a dynamic element resolved to a native tag
@@ -447,6 +453,7 @@ export class SlotFragment
   customElementFallback?: Block
   activeFallback: Block | null = null
   fallbackScope?: EffectScope
+  lastNodesValid?: boolean
   pendingRecheck = false
   isRenderingFallback = false
   private content: Block = EMPTY_BLOCK
@@ -511,6 +518,28 @@ export class SlotFragment
     this.content = this.nodes
   }
 
+  private updateHydratingContent(
+    render: BlockFn | undefined,
+    key: any,
+  ): { contentStart: Node | null; contentValid: boolean } {
+    const contentStart = currentHydrationNode
+    let finish: ((contentValid: boolean) => void) | null = null
+    try {
+      finish = startPendingSlotContent(contentStart)
+      this.updateContent(render, key)
+      const contentValid = isValidSlot(this.content)
+      if (finish) {
+        finish(contentValid)
+        finish = null
+      }
+      return { contentStart, contentValid }
+    } finally {
+      if (finish) {
+        finish(true)
+      }
+    }
+  }
+
   updateSlot(
     render?: BlockFn,
     fallback?: BlockFn,
@@ -528,27 +557,64 @@ export class SlotFragment
     try {
       const shouldForce = prevLocalFallback !== fallback
       if (isHydrating) {
-        withHydratingSlotBoundary(() => {
-          const fallbackStart = currentHydrationNode
-          let finish: ((contentValid: boolean) => void) | null = null
-          try {
-            // SlotFragment only exists when fallback ownership can change.
-            // Delay empty content anchors until content/fallback is decided.
-            finish = startPendingSlotContent(fallbackStart)
-            this.updateContent(slotRender, key)
-            const contentValid = isValidSlot(this.content)
-            if (finish) {
-              finish(contentValid)
-              finish = null
+        // Forwarded content without local fallback must not run inherited
+        // fallback resolution itself. It only restores its own content anchor;
+        // the receiver slot boundary decides whether inherited fallback
+        // should run.
+        if (this.forwarded && !fallback) {
+          const { contentStart, contentValid } = this.updateHydratingContent(
+            slotRender,
+            key,
+          )
+          this.syncNodes()
+          this.lastNodesValid = contentValid
+          if (contentValid) {
+            const end =
+              contentStart && isComment(contentStart, '[')
+                ? locateEndAnchor(contentStart)
+                : null
+            if (end) {
+              this.anchor = markHydrationAnchor(end)
+              advanceHydrationNode(end)
+            } else {
+              hydrateDynamicFragmentAnchor(this, !isValidBlock(this.content))
             }
-            recheckSlotResolution(this, shouldForce)
-            hydrateDynamicFragmentAnchor(this, !isValidBlock(this.nodes))
-          } finally {
-            if (finish) {
-              finish(true)
+          } else {
+            // Empty forwarded content should not claim the receiver slot's SSR
+            // close marker. Queue its runtime anchor before that marker so
+            // fallback hydration can finish first and the final DOM matches CSR.
+            const anchor = (this.anchor = markHydrationAnchor(
+              __DEV__
+                ? createComment(this.anchorLabel ?? '')
+                : createTextNode(),
+            ))
+            const slotEnd = getCurrentSlotEndAnchor()
+            const parent = slotEnd && slotEnd.parentNode
+            if (parent) {
+              const previous = slotEnd.previousSibling
+              if (previous && isComment(previous, ']')) {
+                // When the receiver fallback is a fragment, the node right
+                // before the receiver slot end is the fallback fragment's SSR
+                // close. This forwarded slot does not own that marker, but
+                // boundary cleanup runs before the queued anchor is inserted,
+                // so mark it now.
+                markHydrationAnchor(previous)
+              }
+
+              queuePostFlushCb(() => {
+                if (slotEnd.parentNode === parent) {
+                  parent.insertBefore(anchor, slotEnd)
+                }
+              })
             }
           }
-        })
+        } else {
+          withHydratingSlotBoundary(() => {
+            this.updateHydratingContent(slotRender, key)
+            recheckSlotResolution(this, shouldForce)
+            hydrateDynamicFragmentAnchor(this, !isValidBlock(this.nodes))
+          })
+        }
       } else {
         this.updateContent(slotRender, key)
         recheckSlotResolution(this, shouldForce)
