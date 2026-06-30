@@ -792,10 +792,8 @@ describe('component: slots', () => {
       }
       await nextTick()
 
-      expect(host.innerHTML).toBe(
-        '<!--[--><!--]--><!--slot--><footer>footer</footer>',
-      )
-      expect(frag.anchor).not.toBe(end)
+      expect(host.innerHTML).toBe('<!--[--><!--]--><footer>footer</footer>')
+      expect(frag.anchor).toBe(end)
       expect(isHydrationAnchor(end)).toBe(true)
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })

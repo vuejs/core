@@ -1,5 +1,9 @@
 import { DynamicFragment, SlotFragment } from '../../src/fragment'
-import { hydrateNode, setIsHydratingEnabled } from '../../src/dom/hydration'
+import {
+  hydrateNode,
+  markHydrationAnchor,
+  setIsHydratingEnabled,
+} from '../../src/dom/hydration'
 import {
   type AnchorPlan,
   resolveDynamicAnchor,
@@ -144,10 +148,29 @@ describe('resolveDynamicAnchor', () => {
     expect(reuse.resetNodes).toBeUndefined()
   })
 
-  test('empty forwarded slot creates after the boundary close anchor', () => {
+  test('empty forwarded slot reuses the boundary close anchor', () => {
     const host = document.createElement('div')
     const start = document.createComment('[')
     const end = document.createComment(']')
+    host.append(start, end)
+
+    const plan = resolveWithCursor(start, () =>
+      withHydratingSlotBoundary(() => {
+        const frag = new SlotFragment()
+        frag.forwarded = true
+        return resolveDynamicAnchor(frag, true)
+      }),
+    )
+
+    const reuse = expectKind(plan, 'reuse')
+    expect(reuse.node).toBe(end)
+    expect(reuse.resetNodes).toBeUndefined()
+  })
+
+  test('empty forwarded slot creates after an already reused boundary close anchor', () => {
+    const host = document.createElement('div')
+    const start = document.createComment('[')
+    const end = markHydrationAnchor(document.createComment(']'))
     const footer = document.createElement('footer')
     host.append(start, end, footer)
 
@@ -162,7 +185,7 @@ describe('resolveDynamicAnchor', () => {
     const create = expectKind(plan, 'create')
     expect(create.parent).toBe(host)
     expect(create.next).toBe(footer)
-    expect(create.mark).toBe(end)
+    expect(create.mark).toBeUndefined()
   })
 
   test('empty inner v-if under pending slot content creates before fallback', () => {
@@ -190,7 +213,7 @@ describe('resolveDynamicAnchor', () => {
     expect(pending.slotEnd).toBe(end)
   })
 
-  test('empty inner v-if that consumed the slot range creates before the slot end anchor', () => {
+  test('empty inner v-if that consumed the slot range reuses the slot end anchor', () => {
     const host = document.createElement('div')
     const start = document.createComment('[')
     const end = document.createComment(']')
@@ -202,10 +225,27 @@ describe('resolveDynamicAnchor', () => {
       ),
     )
 
+    const reuse = expectKind(plan, 'reuse')
+    expect(reuse.node).toBe(end)
+    expect(reuse.resetNodes).toBeUndefined()
+  })
+
+  test('empty fragment creates after an already reused placeholder', () => {
+    const host = document.createElement('div')
+    const comment = markHydrationAnchor(document.createComment(''))
+    const footer = document.createElement('footer')
+    host.append(comment, footer)
+
+    const plan = resolveWithCursor(comment, () => {
+      const frag = new DynamicFragment('dynamic-component', false, false)
+      frag.nodes = comment
+      return resolveDynamicAnchor(frag, false)
+    })
+
     const create = expectKind(plan, 'create')
     expect(create.parent).toBe(host)
-    expect(create.next).toBe(end)
-    expect(create.mark).toBeUndefined()
+    expect(create.next).toBe(footer)
+    expect(create.resetNodes).toBe(true)
   })
 
   test('keyed fragment creates from its block boundary', () => {

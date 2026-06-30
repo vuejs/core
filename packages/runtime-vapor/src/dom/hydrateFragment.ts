@@ -20,13 +20,8 @@ import {
   createTextNode,
   parentNode as getParentNode,
 } from './node'
-import {
-  type Block,
-  EMPTY_BLOCK,
-  findBlockBoundary,
-  isValidBlock,
-} from '../block'
-import { type DynamicFragment, isSlotFragment } from '../fragment'
+import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
+import type { DynamicFragment } from '../fragment'
 
 interface HydratingSlotBoundaryState {
   endAnchor: Node | null
@@ -86,8 +81,8 @@ function resolvePendingSlotContentAnchors(
   state: HydratingSlotBoundaryState,
   contentValid: boolean,
 ): void {
-  // Empty fragments rendered before the slot decision cannot know whether
-  // their anchor belongs to content SSR or needs to be created for fallback.
+  // Empty fragments rendered before the slot decision wait until content wins
+  // before claiming the current SSR anchor candidate.
   const pendingAnchors = state.pendingAnchors
   if (!pendingAnchors) return
   state.pendingAnchors = null
@@ -144,39 +139,6 @@ export function isPendingSlotContent(): boolean {
   return !!(state && state.pending)
 }
 
-const enum CloseAnchorOwner {
-  None,
-  Self,
-  ParentBefore,
-  ParentAfter,
-}
-
-function getDynamicCloseOwner(
-  isSlot: boolean,
-  forwardedSlot: boolean,
-  anchorLabel: string | undefined,
-  nodes: Block,
-  currentSlotEndAnchor: Node | null,
-): CloseAnchorOwner {
-  // Slot fragments own the close marker unless this is an empty forwarded slot.
-  // Empty forwarded slots must leave the close marker to the parent boundary
-  // and create their runtime anchor after it.
-  if (isSlot) {
-    if (!forwardedSlot) return CloseAnchorOwner.Self
-    return isValidBlock(nodes)
-      ? CloseAnchorOwner.Self
-      : CloseAnchorOwner.ParentAfter
-  }
-
-  // SSR wraps multi-root `v-if` branches in a fragment range, so the closing
-  // `<!--]-->` belongs to the branch itself.
-  if (anchorLabel === 'if' && isArray(nodes) && nodes.length > 1) {
-    return CloseAnchorOwner.Self
-  }
-
-  return CloseAnchorOwner.None
-}
-
 function queueAnchorInsert(
   parentNode: Node,
   nextNode: Node | null,
@@ -199,17 +161,26 @@ function queueAnchorInsert(
   })
 }
 
-function isReusableDynamicFragmentAnchor(
-  node: Comment,
-  anchorLabel: string,
-): boolean {
+function isReusableAnchorCandidate(
+  node: Node | null,
+  anchorLabel?: string,
+): node is Comment {
   return (
-    isComment(node, anchorLabel) ||
-    (isComment(node, '') &&
-      (anchorLabel === 'dynamic-component' ||
-        anchorLabel === 'async component' ||
-        anchorLabel === 'keyed'))
+    !!node &&
+    (isComment(node, '') ||
+      isComment(node, ']') ||
+      (anchorLabel !== undefined && isComment(node, anchorLabel)))
   )
+}
+
+function reuseOrCreateAfterAnchor(
+  node: Node,
+  resetNodes?: boolean,
+): AnchorPlan {
+  const parent = getParentNode(node)
+  return isHydrationAnchor(node) && parent
+    ? { kind: 'create', parent, next: node.nextSibling, resetNodes }
+    : { kind: 'reuse', node, resetNodes }
 }
 
 export function prepareDeferredHydrationAnchor(
@@ -252,10 +223,10 @@ export function prepareDeferredHydrationAnchor(
  * performs all side effects.
  */
 export type AnchorPlan =
-  // Adopt an existing SSR comment node as the fragment anchor.
+  // Adopt an existing comment node as the fragment anchor.
   | { kind: 'reuse'; node: Node; resetNodes?: boolean }
-  // Delay an empty slot-content anchor until content/fallback ownership is
-  // known. Fallback-owned content anchors are inserted before the slot end.
+  // Delay an empty slot-content anchor until content/fallback is decided.
+  // If fallback wins, the content anchor is created detached.
   | {
       kind: 'pending'
       parent: Node
@@ -269,6 +240,7 @@ export type AnchorPlan =
       next: Node | null
       mark?: Node
       fallbackNext?: Node | null
+      resetNodes?: boolean
     }
   // Trim unclaimed SSR content first, then insert a fresh runtime anchor.
   // Only arises for empty fragments, so the stale block reference is cleared.
@@ -280,9 +252,6 @@ export type AnchorPlan =
       cleanupUntil: Node | null
       cleanupContainer?: ParentNode
     }
-  // Insert a fresh runtime anchor right before the enclosing slot end anchor,
-  // skipping insertion entirely if that anchor leaves the DOM before flush.
-  | { kind: 'create-before-slot-end'; end: Node }
 
 export function resolveDynamicAnchor(
   frag: DynamicFragment,
@@ -308,8 +277,8 @@ export function resolveDynamicAnchor(
     return { kind: 'reuse', node: currentHydrationNode! }
   }
 
-  // reuse `<!---->` as anchor
-  // `<div v-if="false"></div>` -> `<!---->`
+  // Empty fragments claim a current SSR anchor candidate directly. Later
+  // fragments that need the same candidate create a fresh anchor after it.
   if (isEmpty) {
     if (isPendingSlotContent()) {
       const slotEnd = getCurrentSlotEndAnchor()!
@@ -320,11 +289,11 @@ export function resolveDynamicAnchor(
         slotEnd,
       }
     }
-    if (currentHydrationNode && isComment(currentHydrationNode, '')) {
-      return { kind: 'reuse', node: currentHydrationNode }
+    if (isReusableAnchorCandidate(currentHydrationNode)) {
+      return reuseOrCreateAfterAnchor(currentHydrationNode)
     }
     if (
-      frag.anchorLabel &&
+      anchorLabel &&
       currentHydrationNode &&
       isComment(currentHydrationNode, 'teleport anchor')
     ) {
@@ -361,17 +330,13 @@ export function resolveDynamicAnchor(
         }
       }
 
-      const anchor = nextLogicalSibling(currentHydrationNode)
-      const reusableAnchor =
-        anchor &&
-        anchor.nodeType === 8 &&
-        isReusableDynamicFragmentAnchor(anchor as Comment, anchorLabel!) &&
-        getParentNode(anchor)
-          ? anchor
-          : null
       if (parentNode) {
-        if (reusableAnchor) {
-          return { kind: 'reuse', node: reusableAnchor, resetNodes: true }
+        const anchor = nextLogicalSibling(currentHydrationNode)
+        if (
+          isReusableAnchorCandidate(anchor, anchorLabel) &&
+          getParentNode(anchor)
+        ) {
+          return reuseOrCreateAfterAnchor(anchor, true)
         }
         return {
           kind: 'create-cleanup',
@@ -392,10 +357,10 @@ export function resolveDynamicAnchor(
     ownsDynamicAnchor &&
     !isValidBlock(frag.nodes) &&
     frag.nodes instanceof Comment &&
-    isReusableDynamicFragmentAnchor(frag.nodes, anchorLabel!) &&
+    isReusableAnchorCandidate(frag.nodes, anchorLabel) &&
     getParentNode(frag.nodes)
   ) {
-    return { kind: 'reuse', node: frag.nodes, resetNodes: true }
+    return reuseOrCreateAfterAnchor(frag.nodes, true)
   }
 
   // Empty dynamic fragments can also start from a detached runtime comment
@@ -424,72 +389,33 @@ export function resolveDynamicAnchor(
   }
 
   const currentSlotEndAnchor = getCurrentSlotEndAnchor()
-  const forwardedSlot = isSlotFragment(frag) ? frag.forwarded : false
   const slotAnchor = frag.isSlot ? currentSlotEndAnchor : null
 
-  // Reuse SSR `<!--]-->` as anchor.
   // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
-  // Non-forwarded slots always own the closing `<!--]-->`, even when empty.
-  // Forwarded slots only own it when they rendered valid content.
-  const closeOwner = getDynamicCloseOwner(
-    !!frag.isSlot,
-    forwardedSlot,
-    frag.anchorLabel,
-    frag.nodes,
-    currentSlotEndAnchor,
-  )
-  if (closeOwner === CloseAnchorOwner.Self) {
+  // The close marker is a valid stable anchor candidate: reuse it once, or
+  // create a fresh runtime anchor after it when another fragment already did.
+  if (
+    frag.isSlot ||
+    (anchorLabel === 'if' && isArray(frag.nodes) && frag.nodes.length > 1)
+  ) {
     const anchor = locateHydrationBoundaryClose(
       slotAnchor || currentHydrationNode!,
       slotAnchor || null,
     )
     if (isComment(anchor!, ']')) {
-      return { kind: 'reuse', node: anchor }
+      return reuseOrCreateAfterAnchor(anchor)
     } else if (__DEV__) {
       throw new Error(
-        `Failed to locate ${frag.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
+        `Failed to locate ${anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
       )
     }
-  } else if (
-    closeOwner === CloseAnchorOwner.ParentAfter &&
-    currentSlotEndAnchor
-  ) {
-    // Otherwise, create a new anchor.
-    // This covers: empty forwarded slots.
-    // Keep the forwarded slot close marker structural for parent cleanup,
-    // even though this fragment uses a runtime anchor after it.
-    return {
-      kind: 'create',
-      parent: currentSlotEndAnchor.parentNode!,
-      next: currentSlotEndAnchor.nextSibling,
-      mark: currentSlotEndAnchor,
-    }
-  } else if (
-    closeOwner === CloseAnchorOwner.ParentBefore &&
-    currentSlotEndAnchor
-  ) {
-    return { kind: 'create-before-slot-end', end: currentSlotEndAnchor }
   }
 
   // Otherwise, create a new anchor.
   // This covers: dynamic-component, async component, keyed fragment.
-  let parentNode: Node | null
-  let nextNode: Node | null
-  if (
-    frag.anchorLabel === 'if' &&
-    !isValidBlock(frag.nodes) &&
-    currentSlotEndAnchor &&
-    currentHydrationNode === currentSlotEndAnchor
-  ) {
-    // Only reuse the slot end anchor as insertion point when this empty
-    // inner `v-if` has already consumed the whole local slot range.
-    parentNode = currentSlotEndAnchor.parentNode
-    nextNode = currentSlotEndAnchor
-  } else {
-    const node = findBlockBoundary(frag.nodes)
-    parentNode = node.parentNode
-    nextNode = node.nextNode
-  }
+  const node = findBlockBoundary(frag.nodes)
+  const parentNode = node.parentNode
+  const nextNode = node.nextNode
   let fallbackNext: Node | null = null
   if (
     currentSlotEndAnchor &&
@@ -535,33 +461,33 @@ export function executeAnchorPlan(
         const slotEnd = plan.slotEnd
         queuePendingSlotContentAnchor({
           onContent: () => {
-            // Content won: adopt the pending SSR anchor for this empty
-            // fragment and advance past it before hydrating following content.
+            // Content won: claim the current SSR anchor candidate, or create a
+            // fresh anchor after it if another fragment already claimed it.
             const node = currentHydrationNode
             const nodeParent = node && getParentNode(node)
             if (
               node &&
               nodeParent === plan.parent &&
-              node.nodeType === 8 &&
-              (isComment(node, '') ||
-                (frag.anchorLabel !== undefined &&
-                  isReusableDynamicFragmentAnchor(
-                    node as Comment,
-                    frag.anchorLabel,
-                  )))
+              isReusableAnchorCandidate(node, frag.anchorLabel)
             ) {
-              frag.anchor = markHydrationAnchor(node)
-              advanceHydrationNode(node)
-            } else {
-              // Mismatch recovery can leave the cursor on fallback DOM instead
-              // of a reusable content anchor. Create this empty branch's
-              // runtime anchor before that DOM so later updates have a stable
-              // insertion point.
-              const anchor = node && nodeParent === plan.parent ? node : slotEnd
-              const parentNode = getParentNode(anchor)
-              if (parentNode) {
-                parentNode.insertBefore(createRuntimeAnchor(), anchor)
+              if (isHydrationAnchor(node)) {
+                const nextNode = node.nextSibling
+                advanceHydrationNode(node)
+                nodeParent.insertBefore(createRuntimeAnchor(), nextNode)
+              } else {
+                frag.anchor = markHydrationAnchor(node)
+                advanceHydrationNode(node)
               }
+              return
+            }
+            // Mismatch recovery can leave the cursor on fallback DOM instead
+            // of a reusable content anchor. Create this empty branch's
+            // runtime anchor before that DOM so later updates have a stable
+            // insertion point.
+            const anchor = node && nodeParent === plan.parent ? node : slotEnd
+            const parentNode = getParentNode(anchor)
+            if (parentNode) {
+              parentNode.insertBefore(createRuntimeAnchor(), anchor)
             }
           },
           onFallback: () => {
@@ -573,6 +499,7 @@ export function executeAnchorPlan(
         break
       }
       case 'create': {
+        if (plan.resetNodes) frag.nodes = EMPTY_BLOCK
         if (plan.mark) markHydrationAnchor(plan.mark)
         queueAnchorInsert(
           plan.parent,
@@ -591,15 +518,6 @@ export function executeAnchorPlan(
           setCurrentHydrationNode(null)
         }
         queueAnchorInsert(plan.parent, plan.next, createRuntimeAnchor)
-        break
-      }
-      case 'create-before-slot-end': {
-        const endAnchor = plan.end
-        queuePostFlushCb(() => {
-          const parentNode = getParentNode(endAnchor)
-          if (!parentNode) return
-          parentNode.insertBefore(createRuntimeAnchor(), endAnchor)
-        })
         break
       }
     }
