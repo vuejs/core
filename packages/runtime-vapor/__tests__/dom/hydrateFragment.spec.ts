@@ -6,6 +6,7 @@ import {
 } from '../../src/dom/hydration'
 import {
   type AnchorPlan,
+  queuePendingSlotContentAnchor,
   resolveDynamicAnchor,
   startPendingSlotContent,
   withHydratingSlotBoundary,
@@ -211,6 +212,42 @@ describe('resolveDynamicAnchor', () => {
     const pending = expectKind(plan, 'pending')
     expect(pending.parent).toBe(host)
     expect(pending.slotEnd).toBe(end)
+  })
+
+  test('nested invalid pending slot content preserves outer pending anchors', () => {
+    const host = document.createElement('div')
+    const start = document.createComment('[')
+    const end = document.createComment(']')
+    host.append(start, end)
+    const calls: string[] = []
+
+    setIsHydratingEnabled(true)
+    try {
+      hydrateNode(start, () => {
+        withHydratingSlotBoundary(() => {
+          const finishOuter = startPendingSlotContent(start)
+          queuePendingSlotContentAnchor({
+            onContent: () => calls.push('outer content'),
+            onFallback: () => calls.push('outer fallback'),
+          })
+
+          const finishNested = startPendingSlotContent(start)
+          queuePendingSlotContentAnchor({
+            onContent: () => calls.push('nested content'),
+            onFallback: () => calls.push('nested fallback'),
+          })
+          finishNested(false)
+
+          expect(calls).toEqual(['nested fallback'])
+
+          finishOuter(true)
+        })
+      })
+    } finally {
+      setIsHydratingEnabled(false)
+    }
+
+    expect(calls).toEqual(['nested fallback', 'outer content'])
   })
 
   test('empty inner v-if that consumed the slot range reuses the slot end anchor', () => {
