@@ -94,6 +94,7 @@ import {
   dynamicSlotsProxyHandlers,
   getRawSlotsOwner,
   getSlot,
+  setCurrentSlotOwner,
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
@@ -722,6 +723,7 @@ function normalizeVaporSlotVNodes(
     value = runVdomSlotVNodeCollection(() =>
       scope.run(() =>
         withVdomSlotVNodeCollection(() => {
+          const prevSlotOwner = setCurrentSlotOwner(owner)
           const prevInstance = owner && setCurrentInstance(owner, scope)
           try {
             return slot(props)
@@ -729,6 +731,7 @@ function normalizeVaporSlotVNodes(
             if (prevInstance) {
               setCurrentInstance(...prevInstance)
             }
+            setCurrentSlotOwner(prevSlotOwner)
           }
         }),
       ),
