@@ -112,11 +112,7 @@ import {
   isVaporTeleport,
 } from './teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
-import {
-  currentKeepAliveCtx,
-  isKeepAliveEnabled,
-  setCurrentKeepAliveCtx,
-} from './keepAlive'
+import { getKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -391,18 +387,11 @@ export function createComponent(
       ce,
     )
 
-    // handle currentKeepAliveCtx for component boundary isolation
-    // AsyncWrapper should NOT clear currentKeepAliveCtx so its internal
-    // DynamicFragment can capture it
-    if (
-      isKeepAliveEnabled &&
-      currentKeepAliveCtx &&
-      !isAsyncWrapper(instance)
-    ) {
-      currentKeepAliveCtx.processShapeFlag(instance)
-      // clear currentKeepAliveCtx so child components don't associate
-      // with parent's KeepAlive
-      setCurrentKeepAliveCtx(null)
+    // Async wrappers are skipped here: their DynamicFragment resolves the outer
+    // KeepAlive context from the wrapper's parent chain during setup.
+    if (isKeepAliveEnabled && !isAsyncWrapper(instance)) {
+      const keepAliveCtx = getKeepAliveContext(currentInstance)
+      if (keepAliveCtx) keepAliveCtx.processShapeFlag(instance)
     }
 
     // reset currentSlotOwner to null to avoid affecting the child components

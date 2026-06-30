@@ -161,10 +161,9 @@ import {
   deactivate,
 } from './components/KeepAlive'
 import {
-  currentKeepAliveCtx,
   enableKeepAlive,
+  getKeepAliveContext,
   isKeepAliveEnabled,
-  setCurrentKeepAliveCtx,
 } from './keepAlive'
 import {
   parentSuspense as currentParentSuspense,
@@ -1014,16 +1013,14 @@ function createVDOMComponent(
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
   )
   const { frag, syncNodes } = createVNodeFragment(vnode)
+  const keepAliveCtx = isKeepAliveEnabled
+    ? getKeepAliveContext(parentComponent)
+    : null
 
-  if (
-    !isCollectingVdomSlotVNodes &&
-    isKeepAliveEnabled &&
-    currentKeepAliveCtx
-  ) {
-    currentKeepAliveCtx.processShapeFlag(frag)
+  if (!isCollectingVdomSlotVNodes && keepAliveCtx) {
+    keepAliveCtx.processShapeFlag(frag)
     // for VDOM async components, trigger cacheBlock after resolution
     if ((component as any).__asyncLoader) {
-      const keepAliveCtx = currentKeepAliveCtx
       // guard against stale resolution after unmount or branch switch
       let disposed = false
       onScopeDispose(() => (disposed = true))
@@ -1034,7 +1031,6 @@ function createVDOMComponent(
         })
         .catch(NOOP)
     }
-    setCurrentKeepAliveCtx(null)
   }
 
   const wrapper = new VaporComponentInstance<Record<string, unknown>>(
@@ -1111,7 +1107,7 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        (parentComponent as KeepAliveInstance)!.ctx.getStorageContainer(),
+        keepAliveCtx!.getStorageContainer(),
         internals,
         parentComponent as any,
         null,
