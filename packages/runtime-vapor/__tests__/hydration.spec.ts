@@ -4308,8 +4308,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[-->foo<!--]-->
-        <!--slot--></div>"
+        <!--[-->foo<!--slot--><!--]-->
+        </div>"
       `,
       )
 
@@ -4318,8 +4318,8 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[-->foo1<!--]-->
-        <!--slot--></div>"
+        <!--[-->foo1<!--slot--><!--]-->
+        </div>"
       `,
       )
     })
@@ -11995,8 +11995,8 @@ describe('VDOM interop', () => {
       `
         "
         <!--[--><div>
-        <!--[-->foo<!--]-->
-        <!--slot--></div><!--]-->
+        <!--[-->foo<!--slot--><!--]-->
+        </div><!--]-->
         "
       `,
     )
@@ -12009,8 +12009,8 @@ describe('VDOM interop', () => {
       `
         "
         <!--[--><div>
-        <!--[-->bar<!--]-->
-        <!--slot--></div><!--]-->
+        <!--[-->bar<!--slot--><!--]-->
+        </div><!--]-->
         "
       `,
     )
@@ -12065,7 +12065,66 @@ describe('VDOM interop', () => {
       "<div>
       <!--[-->
       <!--[--><span>foo</span><!--if--><!--if--><!--if--><!--]-->
-      <!--]-->
+      <!--slot--><!--]-->
+      </div>"
+    `)
+  })
+
+  test('hydrate forwarded slot fallback with empty v-for before becoming valid', async () => {
+    const items = ref<string[]>([])
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <template #foo><slot name="foo" /></template>
+        </components.Child>
+      </template>`,
+      {
+        Child: {
+          code: `<script setup>
+              const items = _data
+            </script>
+            <template>
+              <div>
+                <slot name="foo">
+                  <span v-for="item in items" :key="item">{{ item }}</span>
+                </slot>
+              </div>
+            </template>`,
+          vapor: true,
+        },
+      },
+      items,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[-->
+      <!--[--><!--]-->
+      <!--slot--><!--]-->
+      </div>"
+    `)
+
+    items.value = ['foo']
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[-->
+      <!--[--><span>foo</span><!--]-->
+      <!--slot--><!--]-->
+      </div>"
+    `)
+
+    items.value = ['bar']
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[-->
+      <!--[--><span>bar</span><!--]-->
+      <!--slot--><!--]-->
       </div>"
     `)
   })
@@ -13358,7 +13417,7 @@ describe('VDOM interop', () => {
       "<div>
       <!--[--><div>banner</div><!--]-->
       <div><main><span>content</span></main>
-      <!--[--><!--]-->
+      <!--[--><!--slot--><!--]-->
       <p>footer</p></div></div>"
       `,
     )
