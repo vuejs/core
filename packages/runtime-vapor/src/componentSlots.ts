@@ -109,6 +109,12 @@ const rawSlotWrappersCache = new WeakMap<
   >
 >()
 
+export function getRawSlotsOwner(
+  slots: RawSlots,
+): VaporComponentInstance | null {
+  return rawSlotsOwnerMap.get(slots) || null
+}
+
 export function normalizeRawSlots(
   rawSlots?: LooseRawSlots | null,
 ): RawSlots | null | undefined {

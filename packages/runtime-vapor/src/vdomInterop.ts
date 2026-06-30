@@ -40,6 +40,7 @@ import {
   onScopeDispose,
   queuePostFlushCb,
   renderSlot,
+  setCurrentInstance,
   setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
   shallowRef,
@@ -91,7 +92,9 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import {
   currentSlotScopeIds,
   dynamicSlotsProxyHandlers,
+  getRawSlotsOwner,
   getSlot,
+  setCurrentSlotOwner,
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
@@ -680,7 +683,7 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
       // represented as VDOM vnodes, fall back to the real renderSlot protocol.
       const wrapped = (props?: Record<string, any>) => {
         return (
-          normalizeVaporSlotVNodes(slot, props) || [
+          normalizeVaporSlotVNodes(target, slot, props) || [
             renderSlot({ [key]: slot }, key as string, props),
           ]
         )
@@ -705,6 +708,7 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 const collectedVdomSlotVNodes = new WeakMap<VaporFragment, VNode>()
 
 function normalizeVaporSlotVNodes(
+  rawSlots: RawSlots,
   slot: Function,
   props: Record<string, any> | undefined,
 ): VNode[] | undefined {
@@ -712,10 +716,24 @@ function normalizeVaporSlotVNodes(
     return
   }
   const scope = effectScope()
+  const owner = getRawSlotsOwner(rawSlots)
   let value: any
   try {
     value = runVdomSlotVNodeCollection(() =>
-      scope.run(() => withVdomSlotVNodeCollection(() => slot(props))),
+      scope.run(() =>
+        withVdomSlotVNodeCollection(() => {
+          const prevSlotOwner = setCurrentSlotOwner(owner)
+          const prevInstance = owner && setCurrentInstance(owner, scope)
+          try {
+            return slot(props)
+          } finally {
+            if (prevInstance) {
+              setCurrentInstance(...prevInstance)
+            }
+            setCurrentSlotOwner(prevSlotOwner)
+          }
+        }),
+      ),
     )
   } finally {
     scope.stop()
