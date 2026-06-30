@@ -12100,6 +12100,7 @@ describe('VDOM interop', () => {
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
       <!--[-->
@@ -12125,6 +12126,72 @@ describe('VDOM interop', () => {
       <!--[-->
       <!--[--><span>bar</span><!--]-->
       <!--slot--><!--]-->
+      </div>"
+    `)
+  })
+
+  test('hydrate forwarded slot content with empty v-for before nested invalid slot', async () => {
+    const data = reactive({
+      items: [] as string[],
+      tail: 'tail',
+    })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.Outer />
+      </template>`,
+      {
+        Outer: {
+          code: `<script setup>
+            const components = _components
+            const data = _data
+          </script>
+          <template>
+            <components.Child>
+              <template #foo>
+                <span v-for="item in data.items" :key="item">{{ item }}</span>
+                <slot name="bar" />
+                <b>{{ data.tail }}</b>
+              </template>
+            </components.Child>
+          </template>`,
+          vapor: true,
+        },
+        Child: {
+          code: `<template>
+            <div>
+              <slot name="foo">
+                <i>outer fallback</i>
+              </slot>
+            </div>
+          </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[-->
+      <!--[--><!--]-->
+      <!--[--><!--]-->
+      <b>tail</b><!--]-->
+      </div>"
+    `)
+
+    data.items = ['foo']
+    await nextTick()
+    expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+      "<div>
+      <!--[-->
+      <!--[--><span>foo</span><!--]-->
+      <!--[--><!--]-->
+      <b>tail</b><!--]-->
       </div>"
     `)
   })

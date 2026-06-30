@@ -80,14 +80,18 @@ export function withHydratingSlotBoundary<R>(fn: () => R): R {
 function resolvePendingSlotContentAnchors(
   state: HydratingSlotBoundaryState,
   contentValid: boolean,
+  startIndex: number = 0,
 ): void {
   // Empty fragments rendered before the slot decision wait until content wins
   // before claiming the current SSR anchor candidate.
   const pendingAnchors = state.pendingAnchors
   if (!pendingAnchors) return
-  state.pendingAnchors = null
-  for (let i = 0; i < pendingAnchors.length; i++) {
-    const pendingAnchor = pendingAnchors[i]
+  const anchors = startIndex
+    ? pendingAnchors.splice(startIndex)
+    : pendingAnchors
+  if (!startIndex) state.pendingAnchors = null
+  for (let i = 0; i < anchors.length; i++) {
+    const pendingAnchor = anchors[i]
     if (contentValid) {
       pendingAnchor.onContent()
     } else {
@@ -113,12 +117,19 @@ export function startPendingSlotContent(
   const state = currentHydratingSlotBoundaryState
   if (!state) return () => {}
   const prevPending = state.pending
+  const pendingAnchorStart = state.pendingAnchors
+    ? state.pendingAnchors.length
+    : 0
   state.pending = true
   let active = true
   return contentValid => {
     if (!active) return
     active = false
-    resolvePendingSlotContentAnchors(state, contentValid)
+    resolvePendingSlotContentAnchors(
+      state,
+      contentValid,
+      !contentValid && prevPending ? pendingAnchorStart : 0,
+    )
     state.pending = prevPending
     if (!contentValid) {
       setCurrentHydrationNode(start)
