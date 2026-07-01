@@ -2013,10 +2013,24 @@ test('should reapply css vars when teleport root children are replaced', async (
   expect(teleported.style.getPropertyValue('--color')).toBe('blue')
 })
 
-test('should reapply css vars when invalid target keeps children in main view', async () => {
+test('should reapply css vars when missing target receives detached children', async () => {
   const state = reactive({ color: 'red' })
+  const target = ref<any>('#missing-teleport-target')
   const disabled = ref(true)
   const showAlt = ref(false)
+  const unmounted = vi.fn()
+
+  const Base = defineVaporComponent({
+    setup() {
+      onUnmounted(unmounted)
+      return template('<span>base</span>', 1)()
+    },
+  })
+  const Alt = defineVaporComponent({
+    setup() {
+      return template('<p>alt</p>', 1)()
+    },
+  })
 
   const { host } = define({
     setup() {
@@ -2024,14 +2038,12 @@ test('should reapply css vars when invalid target keeps children in main view', 
       return createComponent(
         VaporTeleport,
         {
-          to: () => '#missing-teleport-target',
+          to: () => target.value,
           disabled: () => disabled.value,
         },
         {
           default: () =>
-            showAlt.value
-              ? template('<p>alt</p>', 1)()
-              : template('<span>base</span>', 1)(),
+            showAlt.value ? createComponent(Alt) : createComponent(Base),
         },
       )
     },
@@ -2044,11 +2056,19 @@ test('should reapply css vars when invalid target keeps children in main view', 
   await nextTick()
   expect('Failed to locate Teleport target').toHaveBeenWarned()
   expect('Invalid Teleport target').toHaveBeenWarned()
+  expect(host.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
 
   showAlt.value = true
   await nextTick()
+  expect(host.innerHTML).toBe('<!--teleport start--><!--teleport end-->')
+  expect(unmounted).toHaveBeenCalledTimes(1)
 
-  const teleported = host.firstElementChild as HTMLElement
+  const targetEl = document.createElement('div')
+  document.body.appendChild(targetEl)
+  target.value = targetEl
+  await nextTick()
+
+  const teleported = targetEl.firstElementChild as HTMLElement
   expect(teleported.tagName).toBe('P')
   expect(teleported.getAttribute('data-v-owner')).toBeTruthy()
   expect(teleported.style.getPropertyValue('--color')).toBe('red')

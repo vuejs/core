@@ -1,14 +1,12 @@
 import { EffectScope } from '@vue/reactivity'
-import { isArray } from '@vue/shared'
 import {
   type Block,
   type TransitionOptions,
+  detachBlock,
   insert,
   isValidSlot,
   remove,
-  removeNode,
 } from './block'
-import { isVaporComponent } from './component'
 import { isHydrating } from './dom/hydration'
 import {
   type SlotBoundaryContext,
@@ -111,39 +109,6 @@ export interface SlotResolutionState {
   notifyExposedValidityChange(): void
 }
 
-// Takes a block's nodes out of the DOM without tearing the block down: no
-// scopes are stopped and no remove() hooks run, so it can be re-inserted
-// later (content parked while fallback shows, or an invalid fallback parked
-// until it becomes valid). Fragment anchors are detached along with their
-// block because the generic fragment insert() re-inserts them — except a
-// SlotFragment's anchor: insertSlot() never re-inserts it and the slot
-// locates itself through it (getParentNode/getAnchor), so it must stay in
-// the DOM as the slot's persistent position marker.
-function detachBlock(block: Block, parent: ParentNode): void {
-  if (block instanceof Node) {
-    if (block.parentNode === parent) {
-      removeNode(block, parent)
-    }
-  } else if (isVaporComponent(block)) {
-    if (block.block) {
-      detachBlock(block.block, parent)
-    }
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      detachBlock(block[i], parent)
-    }
-  } else {
-    detachBlock(block.nodes, parent)
-    if (
-      !(block instanceof SlotFragment) &&
-      block.anchor &&
-      block.anchor.parentNode === parent
-    ) {
-      removeNode(block.anchor, parent)
-    }
-  }
-}
-
 // Entry point for validity-change notifications (boundary.markDirty). While
 // user fallback code is rendering or the host is mid content update, the
 // notification is folded into pendingRecheck instead of recursing: the
@@ -227,7 +192,13 @@ function commitSlotFallback(
 ): void {
   const parentNode = state.getParentNode()
   if (detachContent && !isHydrating && parentNode) {
-    detachBlock(state.getContent(), parentNode)
+    // SlotFragment anchors stay in the DOM because insertSlot() does not
+    // reinsert them, and slot positioning depends on the persistent anchor.
+    detachBlock(
+      state.getContent(),
+      parentNode,
+      fragment => !(fragment instanceof SlotFragment),
+    )
   }
   state.activeFallback = block
   state.fallbackScope = scope
@@ -316,7 +287,11 @@ export function recheckSlotResolution(
         // slot empty.
         const parentNode = state.getParentNode()
         if (parentNode) {
-          detachBlock(fallback, parentNode)
+          detachBlock(
+            fallback,
+            parentNode,
+            fragment => !(fragment instanceof SlotFragment),
+          )
         }
       } else if (force) {
         renderAndCommitSlotFallback(state, true)
