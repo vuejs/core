@@ -304,6 +304,37 @@ export function removeNode(block: Node, parent?: ParentNode): void {
   }
 }
 
+// Takes a block's nodes out of the DOM without tearing the block down: no
+// scopes are stopped and no remove() hooks run, so it can be re-inserted later.
+export function detachBlock(
+  block: Block,
+  parent: ParentNode,
+  detachAnchor?: (block: VaporFragment | DynamicFragment) => boolean,
+): void {
+  if (block instanceof Node) {
+    if (block.parentNode === parent) {
+      removeNode(block, parent)
+    }
+  } else if (isVaporComponent(block)) {
+    if (block.block) {
+      detachBlock(block.block, parent, detachAnchor)
+    }
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      detachBlock(block[i], parent, detachAnchor)
+    }
+  } else {
+    detachBlock(block.nodes, parent, detachAnchor)
+    if (
+      block.anchor &&
+      (!detachAnchor || detachAnchor(block)) &&
+      block.anchor.parentNode === parent
+    ) {
+      removeNode(block.anchor, parent)
+    }
+  }
+}
+
 export function removeFragment(
   block: VaporFragment | DynamicFragment,
   parent?: ParentNode,
@@ -355,12 +386,13 @@ export function findBlockBoundary(block: Block): {
 
   // if nodes render as a fragment and the current nextNode is fragment
   // end anchor, need to move to the next node. Skip this when the block
-  // already includes its own end anchor (for example VDOM Fragment ranges).
+  // already includes its own end or runtime empty text anchor.
   if (
     nextNode &&
     isComment(nextNode, ']') &&
     isFragmentBlock(block) &&
-    !isComment(lastChild, ']')
+    !isComment(lastChild, ']') &&
+    !(lastChild.nodeType === 3 && !(lastChild as Text).data)
   ) {
     nextNode = nextNode.nextSibling
   }

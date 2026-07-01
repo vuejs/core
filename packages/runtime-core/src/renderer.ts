@@ -2619,6 +2619,10 @@ function baseCreateRenderer(
       // so that scheduler will no longer invoke it
       effect.stop()
       unmount(subTree, instance, parentSuspense, doRemove)
+    } else if (doRemove && subTree && instance.vnode.el) {
+      // A hydrated async component may own SSR DOM before its effect exists.
+      // subTree is the placeholder vnode matching that adopted DOM.
+      remove(subTree)
     }
     // unmounted hook
     if (um) {

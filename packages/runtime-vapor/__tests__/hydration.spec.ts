@@ -51,6 +51,18 @@ const formatHtml = (raw: string) => {
     .replace(/\n{2,}/g, '\n')
 }
 
+const formatNodeList = (nodes: ArrayLike<ChildNode>) => {
+  return Array.from(nodes).map(node => {
+    if (node.nodeType === 8) {
+      return `<!--${(node as Comment).data}-->`
+    }
+    if (node.nodeType === 3) {
+      return `text(${JSON.stringify((node as Text).data)})`
+    }
+    return (node as Element).outerHTML
+  })
+}
+
 async function testWithVaporApp(
   code: string,
   components?: Record<string, string | { code: string; vapor: boolean }>,
@@ -5882,7 +5894,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect('Invalid Teleport target').toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
       )
     })
 
@@ -5925,7 +5937,7 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect('Invalid Teleport target on mount').toHaveBeenWarned()
       expect(container.innerHTML).toBe(
-        '<!--[--><!--teleport start--><div>content</div><!--teleport end--><span>tail-updated</span><!--]-->',
+        '<!--[--><!--teleport start--><!--teleport end--><span>tail-updated</span><!--]-->',
       )
     })
 
@@ -6802,6 +6814,105 @@ describe('Vapor Mode hydration', () => {
           expect(beforeMount).toHaveBeenCalledTimes(1)
         })
 
+        test('hydrate VDOM Suspense vapor async setup can unmount before resolve', async () => {
+          let resolveClient!: () => void
+          const data = ref({
+            showSuspense: true,
+            tail: 'tail',
+          })
+          const serverData = ref({
+            wait: Promise.resolve(),
+          })
+          const clientData = ref({
+            wait: new Promise<void>(r => {
+              resolveClient = r
+            }),
+          })
+          const vaporChildCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template><div>async resolved</div></template>
+          `
+
+          let VaporChild = compile(
+            vaporChildCode,
+            serverData,
+            {},
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+
+          const App = {
+            setup() {
+              return () => [
+                data.value.showSuspense
+                  ? h(
+                      runtimeDom.Suspense,
+                      { timeout: 0 },
+                      {
+                        default: () => h(VaporChild),
+                        fallback: () => h('div', 'pending'),
+                      },
+                    )
+                  : h('p', 'fallback'),
+                h('span', data.value.tail),
+              ]
+            },
+          }
+
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+          expect(formatHtml(html)).toMatchInlineSnapshot(`
+            "
+            <!--[--><div>async resolved</div><span>tail</span><!--]-->
+            "
+          `)
+
+          VaporChild = compile(
+            vaporChildCode,
+            clientData,
+            {},
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><div>async resolved</div><span>tail</span><!--]-->
+            "
+          `)
+
+          data.value.showSuspense = false
+          await nextTick()
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><p>fallback</p><span>tail</span><!--]-->
+            "
+          `)
+
+          resolveClient()
+          await new Promise(r => setTimeout(r))
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><p>fallback</p><span>tail</span><!--]-->
+            "
+          `)
+        })
+
         test('hydrate VDOM Suspense vapor async multi-root setup should preserve SSR range before resolve', async () => {
           let resolveClient!: () => void
           const serverData = ref({
@@ -7196,6 +7307,7 @@ describe('Vapor Mode hydration', () => {
       describe.todo('vapor suspense', () => {
         test.todo('hydrate safely when property used by async setup changed before render', async () => {})
         test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
+        test.todo('hydrate vapor async setup can unmount before resolve', async () => {})
       })
     })
 
@@ -9374,6 +9486,14 @@ describe('VDOM interop', () => {
     `,
     )
 
+    expect(formatNodeList(container.childNodes)).toEqual([
+      '<!--[-->',
+      '<div>foo</div>',
+      'text("")',
+      '<!--dynamic-component-->',
+      '<!--]-->',
+    ])
+
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
 
     data.value = 'bar'
@@ -9623,11 +9743,23 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><!--dynamic-component--><div>first</div><div>second</div><!--]-->
-      <span>tail</span><!--]-->
+      <!--[--><div>first</div><div>second</div><!--]-->
+      <!--dynamic-component--><span>tail</span><!--]-->
       "
     `,
     )
+
+    expect(formatNodeList(container.childNodes)).toEqual([
+      '<!--[-->',
+      '<!--[-->',
+      '<div>first</div>',
+      '<div>second</div>',
+      '<!--]-->',
+      'text("")',
+      '<!--dynamic-component-->',
+      '<span>tail</span>',
+      '<!--]-->',
+    ])
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
 
@@ -9637,8 +9769,8 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><p>fallback</p><!--dynamic-component--><!--]-->
-      <span>tail</span><!--]-->
+      <!--[--><!--]-->
+      <p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
       "
     `,
     )
@@ -9649,8 +9781,8 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><div>first</div><div>second</div><!--dynamic-component--><!--]-->
-      <span>tail</span><!--]-->
+      <!--[--><!--]-->
+      <div>first</div><div>second</div><!--dynamic-component--><span>tail</span><!--]-->
       "
     `,
     )
@@ -9660,8 +9792,8 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
       <!--[-->
-      <!--[--><div>first</div><div>second</div><!--dynamic-component--><!--]-->
-      <span>tail-updated</span><!--]-->
+      <!--[--><!--]-->
+      <div>first</div><div>second</div><!--dynamic-component--><span>tail-updated</span><!--]-->
       "
     `)
   })
@@ -10816,7 +10948,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
       "
     `)
 
@@ -10824,7 +10956,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><div>pending</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--[--><div>pending</div><!--dynamic-component--><span>tail</span><!--]-->
       "
     `)
 
@@ -10832,7 +10964,7 @@ describe('VDOM interop', () => {
     await new Promise(r => setTimeout(r))
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
       "
     `)
 
@@ -10840,7 +10972,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><div>async resolved</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail-updated</span><!--]-->
       "
     `)
   })

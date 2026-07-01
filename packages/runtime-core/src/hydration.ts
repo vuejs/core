@@ -339,7 +339,7 @@ export function createHydrationFunctions(
               vnode,
               node,
               container,
-              null,
+              nextNode,
               parentComponent,
               parentSuspense,
               () => {
@@ -388,28 +388,31 @@ export function createHydrationFunctions(
               getContainerType(container),
               optimized,
             )
-          }
 
-          // #3787
-          // if component is async, it may get moved / unmounted before its
-          // inner component is loaded, so we need to give it a placeholder
-          // vnode that matches its adopted DOM.
-          if (
-            isAsyncWrapper(vnode) &&
-            !(vnode.type as ComponentOptions).__asyncResolved
-          ) {
-            let subTree
-            if (isFragmentStart) {
-              subTree = createVNode(Fragment)
-              subTree.anchor = nextNode
-                ? nextNode.previousSibling
-                : container.lastChild
-            } else {
-              subTree =
-                node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+            // #3787
+            // An async component may move or unmount before its render effect
+            // exists, so keep a placeholder vnode that matches its adopted DOM.
+            // The wrapper check preserves lazy hydration behavior; asyncDep
+            // covers plain async setup under Suspense.
+            const component = vnode.component!
+            if (
+              (isAsyncWrapper(vnode) &&
+                !(vnode.type as ComponentOptions).__asyncResolved) ||
+              (component.asyncDep && !component.asyncResolved)
+            ) {
+              let subTree
+              if (isFragmentStart) {
+                subTree = createVNode(Fragment)
+                subTree.anchor = nextNode
+                  ? nextNode.previousSibling
+                  : container.lastChild
+              } else {
+                subTree =
+                  node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+              }
+              subTree.el = node
+              component.subTree = subTree
             }
-            subTree.el = node
-            vnode.component!.subTree = subTree
           }
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
           if (domType !== DOMNodeTypes.COMMENT) {

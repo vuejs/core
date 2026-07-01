@@ -16,7 +16,14 @@ import {
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, type BlockFn, insert, move, remove } from '../block'
+import {
+  type Block,
+  type BlockFn,
+  detachBlock,
+  insert,
+  move,
+  remove,
+} from '../block'
 import {
   createComment,
   createTextNode,
@@ -191,11 +198,12 @@ export class TeleportFragment extends RenderContextFragment {
 
   private handleChildrenUpdate(children: Block): void {
     const mountState = this.mountState
-    if (
-      isHydrating ||
-      !this.parent ||
-      mountState.location === TeleportMountLocation.None
-    ) {
+    if (isHydrating || !this.parent) {
+      this.nodes = children
+      return
+    }
+    if (mountState.location === TeleportMountLocation.None) {
+      remove(this.nodes)
       this.nodes = children
       return
     }
@@ -305,6 +313,11 @@ export class TeleportFragment extends RenderContextFragment {
       this.ensureChildrenInitialized()
       this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
     } else {
+      const mountState = this.mountState
+      if (mountState.location === TeleportMountLocation.Main) {
+        detachBlock(this.nodes, mountState.container)
+        this.mountState = { location: TeleportMountLocation.None }
+      }
       if (__DEV__) {
         warn(
           `Invalid Teleport target on ${this.targetAnchor ? 'update' : 'mount'}:`,
@@ -381,8 +394,13 @@ export class TeleportFragment extends RenderContextFragment {
 
     // remove nodes
     const mountState = this.mountState
-    if (this.nodes && mountState.location !== TeleportMountLocation.None) {
-      remove(this.nodes, mountState.container)
+    if (this.nodes && this.childrenInitialized) {
+      remove(
+        this.nodes,
+        mountState.location === TeleportMountLocation.None
+          ? undefined
+          : mountState.container,
+      )
       this.nodes = []
     }
 

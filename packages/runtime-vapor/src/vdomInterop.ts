@@ -98,7 +98,7 @@ import {
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { _next, createTextNode } from './dom/node'
+import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
@@ -203,13 +203,8 @@ const vaporInteropImpl: Omit<
     onVnodeBeforeMount,
   ) {
     const selfAnchor = (vnode.anchor = createTextNode())
-    if (isHydrating) {
-      // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
-      queuePostFlushCb(() => container.insertBefore(selfAnchor, anchor))
-    } else {
-      vnode.el = selfAnchor
-      container.insertBefore(selfAnchor, anchor)
-    }
+    vnode.el = selfAnchor
+    container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
@@ -342,9 +337,8 @@ const vaporInteropImpl: Omit<
     const instance = vnode.component as any as VaporComponentInstance
     let slotStartAnchor: Node | null = null
     if (instance) {
-      // the async component may not be resolved yet, block is null
+      const anchor = vnode.anchor as Node | null
       if (instance.block) {
-        const anchor = vnode.anchor as Node | null
         unmountComponent(instance, container)
         if (!doRemove) {
           // When the surrounding VDOM fragment owns DOM removal, we still need
@@ -355,6 +349,23 @@ const vaporInteropImpl: Omit<
             ? ((anchor && anchor.parentNode) as ParentNode)
             : undefined
           remove(instance.block, blockContainer)
+        }
+      } else {
+        // The async Vapor component may not be resolved yet, so block is null.
+        // Hydration still adopted SSR DOM on vnode.el; when this VNode owns
+        // removal, clear the adopted range before the interop anchor.
+        const adoptedNode =
+          vnode.el && vnode.el !== anchor ? (vnode.el as Node) : null
+        unmountComponent(instance)
+        if (doRemove && container && adoptedNode) {
+          let cur: Node | null = adoptedNode
+          while (cur && cur !== anchor) {
+            const nextNode: ChildNode | null = cur.nextSibling
+            if (cur.parentNode === container) {
+              remove(cur, container)
+            }
+            cur = nextNode
+          }
         }
       }
     } else if (vnode.vb) {
@@ -493,8 +504,9 @@ const vaporInteropImpl: Omit<
     // In CSR (createApp/createVaporApp + vaporInteropPlugin), both are false,
     // so this logic is tree-shaken.
     if (!isHydrating && !isVdomHydrating) return node
-    vaporHydrateNode(node, () =>
-      this.mount(
+    let instance: VaporComponentInstance | undefined
+    vaporHydrateNode(node, () => {
+      instance = this.mount(
         vnode,
         container,
         anchor,
@@ -502,9 +514,14 @@ const vaporInteropImpl: Omit<
         parentSuspense,
         onBeforeMount,
         onVnodeBeforeMount,
-      ),
-    )
-    return _next(node)
+      ) as VaporComponentInstance
+    })
+    if (instance && instance.asyncDep && !instance.asyncResolved) {
+      // mount() cannot expose a block before async setup resolves. Keep the SSR
+      // start node so unmount can remove the adopted range if it is discarded.
+      vnode.el = node
+    }
+    return anchor
   },
 
   hydrateSlot(vnode, node, parentComponent, parentSuspense) {
@@ -818,9 +835,11 @@ function resolveVNodeNodes(vnode: VNode): Block {
   // Vapor component VNodes expose only their first root on `vnode.el`.
   // Use the mounted block so multi-root output keeps slot anchors and other
   // trailing anchors in the resolved block shape.
-  if (!isHydrating && vnode.component && isVaporComponent(vnode.component)) {
+  if (vnode.component && isVaporComponent(vnode.component)) {
     const block = (vnode.component as any).block as Block | undefined
     if (block) {
+      const anchor = vnode.anchor
+      if (anchor) return [block, anchor as Node]
       return block
     }
   }
@@ -945,6 +964,10 @@ function mountVNode(
       }
     } else {
       internals.um(vnode, parentComponent as any, null, !!parentNode)
+    }
+
+    if (vnode.anchor && parentNode && vnode.anchor.parentNode === parentNode) {
+      remove(vnode.anchor as Node, parentNode)
     }
   }
 
