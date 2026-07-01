@@ -1160,7 +1160,13 @@ export function unmountComponent(
     return
   }
 
-  if (instance.isMounted && !instance.isUnmounted) {
+  if (
+    !instance.isUnmounted &&
+    (instance.isMounted ||
+      // A hydrating async setup component can be unmounted before its block exists.
+      // It still needs normal scope cleanup so a later resolve is ignored.
+      (instance.asyncDep && !instance.asyncResolved))
+  ) {
     if (__DEV__) {
       unregisterHMR(instance)
     }
@@ -1179,7 +1185,12 @@ export function unmountComponent(
   }
 
   if (parentNode) {
-    remove(instance.block, parentNode)
+    if (instance.block) {
+      remove(instance.block, parentNode)
+    } else {
+      // TODO: a hydrated async setup component may own SSR DOM before its
+      // block exists. That adopted DOM should be removed on this path.
+    }
   }
 }
 

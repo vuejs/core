@@ -1331,6 +1331,143 @@ describe('SSR hydration', () => {
     )
   })
 
+  test('unmount hydrated Suspense branch before async component resolves', async () => {
+    const data = ref({
+      showSuspense: true,
+      tail: 'tail',
+    })
+    const ResolvedComp = {
+      render: () => h('div', 'async resolved'),
+    }
+
+    let serverResolve: any
+    let AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          serverResolve = r
+        }),
+    )
+
+    const App = {
+      setup() {
+        return () => [
+          data.value.showSuspense
+            ? h(
+                Suspense,
+                { timeout: 0 },
+                {
+                  default: () => h(AsyncComp),
+                  fallback: () => h('div', 'pending'),
+                },
+              )
+            : h('p', 'fallback'),
+          h('span', data.value.tail),
+        ]
+      },
+    }
+
+    const htmlPromise = renderToString(h(App))
+    serverResolve(ResolvedComp)
+    const html = await htmlPromise
+    expect(html).toMatchInlineSnapshot(
+      `"<!--[--><div>async resolved</div><span>tail</span><!--]-->"`,
+    )
+
+    let clientResolve: any
+    AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          clientResolve = r
+        }),
+    )
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><div>async resolved</div><span>tail</span><!--]-->"`,
+    )
+
+    data.value.showSuspense = false
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><p>fallback</p><span>tail</span><!--]-->"`,
+    )
+
+    data.value.showSuspense = true
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><div>pending</div><span>tail</span><!--]-->"`,
+    )
+
+    clientResolve(ResolvedComp)
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><div>async resolved</div><span>tail</span><!--]-->"`,
+    )
+
+    data.value.tail = 'tail-updated'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><div>async resolved</div><span>tail-updated</span><!--]-->"`,
+    )
+  })
+
+  test('unmount hydrated async setup Suspense branch before resolve', async () => {
+    const data = ref({
+      showSuspense: true,
+      tail: 'tail',
+    })
+    let clientResolve: any
+    let wait = Promise.resolve()
+    const AsyncComp = {
+      async setup() {
+        await wait
+        return () => h('div', 'async resolved')
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => [
+          data.value.showSuspense
+            ? h(
+                Suspense,
+                { timeout: 0 },
+                {
+                  default: () => h(AsyncComp),
+                  fallback: () => h('div', 'pending'),
+                },
+              )
+            : h('p', 'fallback'),
+          h('span', data.value.tail),
+        ]
+      },
+    }
+
+    const html = await renderToString(h(App))
+
+    wait = new Promise(r => {
+      clientResolve = r
+    })
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    data.value.showSuspense = false
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><p>fallback</p><span>tail</span><!--]-->"`,
+    )
+
+    clientResolve()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<!--[--><p>fallback</p><span>tail</span><!--]-->"`,
+    )
+  })
+
   test('hydrate safely when property used by async setup changed before render', async () => {
     const toggle = ref(true)
 

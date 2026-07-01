@@ -6814,6 +6814,105 @@ describe('Vapor Mode hydration', () => {
           expect(beforeMount).toHaveBeenCalledTimes(1)
         })
 
+        test('hydrate VDOM Suspense vapor async setup can unmount before resolve', async () => {
+          let resolveClient!: () => void
+          const data = ref({
+            showSuspense: true,
+            tail: 'tail',
+          })
+          const serverData = ref({
+            wait: Promise.resolve(),
+          })
+          const clientData = ref({
+            wait: new Promise<void>(r => {
+              resolveClient = r
+            }),
+          })
+          const vaporChildCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template><div>async resolved</div></template>
+          `
+
+          let VaporChild = compile(
+            vaporChildCode,
+            serverData,
+            {},
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+
+          const App = {
+            setup() {
+              return () => [
+                data.value.showSuspense
+                  ? h(
+                      runtimeDom.Suspense,
+                      { timeout: 0 },
+                      {
+                        default: () => h(VaporChild),
+                        fallback: () => h('div', 'pending'),
+                      },
+                    )
+                  : h('p', 'fallback'),
+                h('span', data.value.tail),
+              ]
+            },
+          }
+
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+          expect(formatHtml(html)).toMatchInlineSnapshot(`
+            "
+            <!--[--><div>async resolved</div><span>tail</span><!--]-->
+            "
+          `)
+
+          VaporChild = compile(
+            vaporChildCode,
+            clientData,
+            {},
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><div>async resolved</div><span>tail</span><!--]-->
+            "
+          `)
+
+          data.value.showSuspense = false
+          await nextTick()
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><p>fallback</p><span>tail</span><!--]-->
+            "
+          `)
+
+          resolveClient()
+          await new Promise(r => setTimeout(r))
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><p>fallback</p><span>tail</span><!--]-->
+            "
+          `)
+        })
+
         test('hydrate VDOM Suspense vapor async multi-root setup should preserve SSR range before resolve', async () => {
           let resolveClient!: () => void
           const serverData = ref({
@@ -7208,6 +7307,7 @@ describe('Vapor Mode hydration', () => {
       describe.todo('vapor suspense', () => {
         test.todo('hydrate safely when property used by async setup changed before render', async () => {})
         test.todo('hydrate safely when property used by deep nested async setup changed before render', async () => {})
+        test.todo('hydrate vapor async setup can unmount before resolve', async () => {})
       })
     })
 
@@ -10848,7 +10948,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
+      <!--[--><p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
       "
     `)
 
@@ -10856,7 +10956,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><div>pending</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--[--><div>pending</div><!--dynamic-component--><span>tail</span><!--]-->
       "
     `)
 
@@ -10864,7 +10964,7 @@ describe('VDOM interop', () => {
     await new Promise(r => setTimeout(r))
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
+      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail</span><!--]-->
       "
     `)
 
@@ -10872,7 +10972,7 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
-      <!--[--><div>async resolved</div><div>async resolved</div><!--dynamic-component--><span>tail-updated</span><!--]-->
+      <!--[--><div>async resolved</div><!--dynamic-component--><span>tail-updated</span><!--]-->
       "
     `)
   })
