@@ -38,6 +38,7 @@ import {
   invokeArrayFns,
   isArray,
   isReservedProp,
+  isString,
 } from '@vue/shared'
 import {
   type SchedulerJob,
@@ -51,6 +52,7 @@ import {
 import {
   EffectFlags,
   ReactiveEffect,
+  isRef,
   pauseTracking,
   resetTracking,
 } from '@vue/reactivity'
@@ -493,11 +495,24 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
+      let refCleared = false
+      if (!isArray(ref)) {
+        pauseTracking()
+        try {
+          refCleared = isString(ref.r)
+            ? ref.i.refs[ref.r] === null
+            : isRef(ref.r)
+              ? ref.r.value === null
+              : false
+        } finally {
+          resetTracking()
+        }
+      }
       const clearComponentRef =
         prevComponentSubTree &&
         (n2.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) > 0 &&
-        prevComponentSubTree.type !== Comment &&
-        n2.component!.subTree.type === Comment
+        n2.component!.subTree.type === Comment &&
+        (prevComponentSubTree.type !== Comment || refCleared)
       const unsetRef = !n2 || !!clearComponentRef
       setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, unsetRef)
     } else if (ref == null && n1 && n1.ref != null) {

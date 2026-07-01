@@ -250,9 +250,10 @@ describe('api: template refs', () => {
     const root = nodeOps.createElement('div')
     const childRef = ref<any>(null)
     const show = ref(true)
+    const tick = ref(0)
 
     const Child = defineComponent({
-      props: ['show'],
+      props: ['show', 'tick'],
       setup(props) {
         return () => (props.show ? h('div') : null)
       },
@@ -263,6 +264,7 @@ describe('api: template refs', () => {
         return h(Child, {
           ref: childRef,
           show: show.value,
+          tick: tick.value,
         })
       },
     }
@@ -271,6 +273,10 @@ describe('api: template refs', () => {
     expect(childRef.value === null).toBe(false)
 
     show.value = false
+    await nextTick()
+    expect(childRef.value === null).toBe(true)
+
+    tick.value++
     await nextTick()
     expect(childRef.value === null).toBe(true)
 
