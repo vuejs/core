@@ -355,12 +355,13 @@ export function findBlockBoundary(block: Block): {
 
   // if nodes render as a fragment and the current nextNode is fragment
   // end anchor, need to move to the next node. Skip this when the block
-  // already includes its own end anchor (for example VDOM Fragment ranges).
+  // already includes its own end or runtime empty text anchor.
   if (
     nextNode &&
     isComment(nextNode, ']') &&
     isFragmentBlock(block) &&
-    !isComment(lastChild, ']')
+    !isComment(lastChild, ']') &&
+    !(lastChild.nodeType === 3 && !(lastChild as Text).data)
   ) {
     nextNode = nextNode.nextSibling
   }
