@@ -339,7 +339,7 @@ export function createHydrationFunctions(
               vnode,
               node,
               container,
-              null,
+              nextNode,
               parentComponent,
               parentSuspense,
               () => {
