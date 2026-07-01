@@ -98,7 +98,7 @@ import {
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { _next, createTextNode } from './dom/node'
+import { createTextNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
@@ -203,13 +203,8 @@ const vaporInteropImpl: Omit<
     onVnodeBeforeMount,
   ) {
     const selfAnchor = (vnode.anchor = createTextNode())
-    if (isHydrating) {
-      // avoid vdom hydration children mismatch by the selfAnchor, delay its insertion
-      queuePostFlushCb(() => container.insertBefore(selfAnchor, anchor))
-    } else {
-      vnode.el = selfAnchor
-      container.insertBefore(selfAnchor, anchor)
-    }
+    vnode.el = selfAnchor
+    container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
 
@@ -504,7 +499,7 @@ const vaporInteropImpl: Omit<
         onVnodeBeforeMount,
       ),
     )
-    return _next(node)
+    return anchor
   },
 
   hydrateSlot(vnode, node, parentComponent, parentSuspense) {
@@ -818,9 +813,11 @@ function resolveVNodeNodes(vnode: VNode): Block {
   // Vapor component VNodes expose only their first root on `vnode.el`.
   // Use the mounted block so multi-root output keeps slot anchors and other
   // trailing anchors in the resolved block shape.
-  if (!isHydrating && vnode.component && isVaporComponent(vnode.component)) {
+  if (vnode.component && isVaporComponent(vnode.component)) {
     const block = (vnode.component as any).block as Block | undefined
     if (block) {
+      const anchor = vnode.anchor
+      if (anchor) return [block, anchor as Node]
       return block
     }
   }
@@ -945,6 +942,10 @@ function mountVNode(
       }
     } else {
       internals.um(vnode, parentComponent as any, null, !!parentNode)
+    }
+
+    if (vnode.anchor && parentNode && vnode.anchor.parentNode === parentNode) {
+      remove(vnode.anchor as Node, parentNode)
     }
   }
 

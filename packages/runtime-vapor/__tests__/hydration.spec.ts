@@ -51,6 +51,18 @@ const formatHtml = (raw: string) => {
     .replace(/\n{2,}/g, '\n')
 }
 
+const formatNodeList = (nodes: ArrayLike<ChildNode>) => {
+  return Array.from(nodes).map(node => {
+    if (node.nodeType === 8) {
+      return `<!--${(node as Comment).data}-->`
+    }
+    if (node.nodeType === 3) {
+      return `text(${JSON.stringify((node as Text).data)})`
+    }
+    return (node as Element).outerHTML
+  })
+}
+
 async function testWithVaporApp(
   code: string,
   components?: Record<string, string | { code: string; vapor: boolean }>,
@@ -9374,6 +9386,14 @@ describe('VDOM interop', () => {
     `,
     )
 
+    expect(formatNodeList(container.childNodes)).toEqual([
+      '<!--[-->',
+      '<div>foo</div>',
+      'text("")',
+      '<!--dynamic-component-->',
+      '<!--]-->',
+    ])
+
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
 
     data.value = 'bar'
@@ -9623,11 +9643,23 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><!--dynamic-component--><div>first</div><div>second</div><!--]-->
-      <span>tail</span><!--]-->
+      <!--[--><div>first</div><div>second</div><!--]-->
+      <!--dynamic-component--><span>tail</span><!--]-->
       "
     `,
     )
+
+    expect(formatNodeList(container.childNodes)).toEqual([
+      '<!--[-->',
+      '<!--[-->',
+      '<div>first</div>',
+      '<div>second</div>',
+      '<!--]-->',
+      'text("")',
+      '<!--dynamic-component-->',
+      '<span>tail</span>',
+      '<!--]-->',
+    ])
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
 
@@ -9637,8 +9669,8 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><p>fallback</p><!--dynamic-component--><!--]-->
-      <span>tail</span><!--]-->
+      <!--[--><!--]-->
+      <p>fallback</p><!--dynamic-component--><span>tail</span><!--]-->
       "
     `,
     )
@@ -9649,8 +9681,8 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><div>first</div><div>second</div><!--dynamic-component--><!--]-->
-      <span>tail</span><!--]-->
+      <!--[--><!--]-->
+      <div>first</div><div>second</div><!--dynamic-component--><span>tail</span><!--]-->
       "
     `,
     )
@@ -9660,8 +9692,8 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "
       <!--[-->
-      <!--[--><div>first</div><div>second</div><!--dynamic-component--><!--]-->
-      <span>tail-updated</span><!--]-->
+      <!--[--><!--]-->
+      <div>first</div><div>second</div><!--dynamic-component--><span>tail-updated</span><!--]-->
       "
     `)
   })
