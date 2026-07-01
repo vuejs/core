@@ -23,3 +23,4 @@ export {
   ssrRenderDynamicModel,
   ssrGetDynamicModelProps,
 } from './helpers/ssrVModelHelpers'
+export { isSet as ssrIsSet } from '@vue/shared'
