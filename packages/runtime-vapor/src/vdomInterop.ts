@@ -40,6 +40,7 @@ import {
   onScopeDispose,
   queuePostFlushCb,
   renderSlot,
+  setCurrentInstance,
   setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
   shallowRef,
@@ -91,7 +92,9 @@ import type { RawSlots, VaporSlot } from './componentSlots'
 import {
   currentSlotScopeIds,
   dynamicSlotsProxyHandlers,
+  getRawSlotsOwner,
   getSlot,
+  setCurrentSlotOwner,
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
@@ -161,10 +164,9 @@ import {
   deactivate,
 } from './components/KeepAlive'
 import {
-  currentKeepAliveCtx,
   enableKeepAlive,
+  getKeepAliveContext,
   isKeepAliveEnabled,
-  setCurrentKeepAliveCtx,
 } from './keepAlive'
 import {
   parentSuspense as currentParentSuspense,
@@ -681,7 +683,7 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
       // represented as VDOM vnodes, fall back to the real renderSlot protocol.
       const wrapped = (props?: Record<string, any>) => {
         return (
-          normalizeVaporSlotVNodes(slot, props) || [
+          normalizeVaporSlotVNodes(target, slot, props) || [
             renderSlot({ [key]: slot }, key as string, props),
           ]
         )
@@ -706,6 +708,7 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
 const collectedVdomSlotVNodes = new WeakMap<VaporFragment, VNode>()
 
 function normalizeVaporSlotVNodes(
+  rawSlots: RawSlots,
   slot: Function,
   props: Record<string, any> | undefined,
 ): VNode[] | undefined {
@@ -713,10 +716,24 @@ function normalizeVaporSlotVNodes(
     return
   }
   const scope = effectScope()
+  const owner = getRawSlotsOwner(rawSlots)
   let value: any
   try {
     value = runVdomSlotVNodeCollection(() =>
-      scope.run(() => withVdomSlotVNodeCollection(() => slot(props))),
+      scope.run(() =>
+        withVdomSlotVNodeCollection(() => {
+          const prevSlotOwner = setCurrentSlotOwner(owner)
+          const prevInstance = owner && setCurrentInstance(owner, scope)
+          try {
+            return slot(props)
+          } finally {
+            if (prevInstance) {
+              setCurrentInstance(...prevInstance)
+            }
+            setCurrentSlotOwner(prevSlotOwner)
+          }
+        }),
+      ),
     )
   } finally {
     scope.stop()
@@ -1014,16 +1031,14 @@ function createVDOMComponent(
     rawProps && extend({}, new Proxy(rawProps, rawPropsProxyHandlers)),
   )
   const { frag, syncNodes } = createVNodeFragment(vnode)
+  const keepAliveCtx = isKeepAliveEnabled
+    ? getKeepAliveContext(parentComponent)
+    : null
 
-  if (
-    !isCollectingVdomSlotVNodes &&
-    isKeepAliveEnabled &&
-    currentKeepAliveCtx
-  ) {
-    currentKeepAliveCtx.processShapeFlag(frag)
+  if (!isCollectingVdomSlotVNodes && keepAliveCtx) {
+    keepAliveCtx.processShapeFlag(frag)
     // for VDOM async components, trigger cacheBlock after resolution
     if ((component as any).__asyncLoader) {
-      const keepAliveCtx = currentKeepAliveCtx
       // guard against stale resolution after unmount or branch switch
       let disposed = false
       onScopeDispose(() => (disposed = true))
@@ -1034,7 +1049,6 @@ function createVDOMComponent(
         })
         .catch(NOOP)
     }
-    setCurrentKeepAliveCtx(null)
   }
 
   const wrapper = new VaporComponentInstance<Record<string, unknown>>(
@@ -1111,7 +1125,7 @@ function createVDOMComponent(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       vdomDeactivate(
         vnode,
-        (parentComponent as KeepAliveInstance)!.ctx.getStorageContainer(),
+        keepAliveCtx!.getStorageContainer(),
         internals,
         parentComponent as any,
         null,

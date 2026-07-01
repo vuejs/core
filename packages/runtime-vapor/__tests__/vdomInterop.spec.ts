@@ -2140,6 +2140,49 @@ describe('vdomInterop', () => {
       expect(getLabels()).toEqual(['Vitest', 'Cypress'])
     })
 
+    test('slots.default() delayed by VDOM child should not warn when vapor slot contains v-for', async () => {
+      const data = ref(['Vue', 'Vapor'])
+
+      const VDomClientOnly = defineComponent({
+        setup(_, { slots }) {
+          const show = ref(false)
+          onMounted(() => {
+            show.value = true
+          })
+          return () => h('section', null, show.value ? slots.default?.() : [])
+        },
+      })
+
+      const VaporChild = compile(
+        `<template>
+          <components.VDomClientOnly>
+            <span v-for="item in data" :key="item">{{ item }}</span>
+          </components.VDomClientOnly>
+        </template>`,
+        data,
+        {
+          VDomClientOnly,
+        },
+      )
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<section></section>')
+
+      await nextTick()
+
+      expect(html()).toBe(
+        '<section><span>Vue</span><span>Vapor</span><!--for--></section>',
+      )
+      expect(
+        'createFor() can only be used inside setup()',
+      ).not.toHaveBeenWarned()
+    })
+
     test('slots.default() access should return a stable wrapper', () => {
       const VDomChild = defineComponent({
         setup(_, { slots }) {

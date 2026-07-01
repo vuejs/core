@@ -54,9 +54,8 @@ import {
 import { setBlockKey } from './helpers/setKey'
 import {
   type VaporKeepAliveContext,
-  currentKeepAliveCtx,
+  getKeepAliveContext,
   isKeepAliveEnabled,
-  setCurrentKeepAliveCtx,
 } from './keepAlive'
 import {
   applyTransitionHooks,
@@ -125,7 +124,7 @@ export class RenderContextFragment<
   constructor(nodes: T) {
     super(nodes)
     if (isKeepAliveEnabled) {
-      this.keepAliveCtx = currentKeepAliveCtx
+      this.keepAliveCtx = getKeepAliveContext(currentInstance)
     }
   }
 
@@ -153,30 +152,21 @@ export function runWithFragmentCtxOnly<R>(
   fragment: RenderContextFragment,
   fn: () => R,
 ): R {
-  const keepAliveCtx = isKeepAliveEnabled ? fragment.keepAliveCtx || null : null
   // When ambient fragment context already matches, no ambient state needs
   // restoring. This keeps ordinary branch renders on the cheap path.
   if (
     currentSlotOwner === fragment.slotOwner &&
-    currentSlotBoundary === fragment.slotBoundary &&
-    (!isKeepAliveEnabled || currentKeepAliveCtx === keepAliveCtx)
+    currentSlotBoundary === fragment.slotBoundary
   ) {
     return fn()
   }
 
   const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
-  let prevKeepAliveCtx: VaporKeepAliveContext | null = null
-  if (isKeepAliveEnabled) {
-    prevKeepAliveCtx = setCurrentKeepAliveCtx(keepAliveCtx)
-  }
   const prevBoundary = setCurrentSlotBoundary(fragment.slotBoundary)
   try {
     return fn()
   } finally {
     setCurrentSlotBoundary(prevBoundary)
-    if (isKeepAliveEnabled) {
-      setCurrentKeepAliveCtx(prevKeepAliveCtx)
-    }
     setCurrentSlotOwner(prevSlotOwner)
   }
 }
