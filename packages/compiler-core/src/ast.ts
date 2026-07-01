@@ -57,6 +57,10 @@ export enum ElementTypes {
   TEMPLATE,
 }
 
+export enum CommentTypes {
+  IN_TAG_LINE,
+}
+
 export interface Node {
   type: NodeTypes
   loc: SourceLocation
@@ -102,6 +106,7 @@ export interface RootNode extends Node {
   type: NodeTypes.ROOT
   source: string
   children: TemplateChildNode[]
+  comments: RootCommentNode[]
   helpers: Set<symbol>
   components: string[]
   directives: string[]
@@ -180,6 +185,13 @@ export interface CommentNode extends Node {
   content: string
 }
 
+export interface InTagCommentNode extends Node {
+  type: NodeTypes.COMMENT
+  kind: CommentTypes.IN_TAG_LINE
+  content: string
+  contentLoc: SourceLocation
+}
+
 export interface AttributeNode extends Node {
   type: NodeTypes.ATTRIBUTE
   name: string
@@ -206,6 +218,8 @@ export interface DirectiveNode extends Node {
    */
   forParseResult?: ForParseResult
 }
+
+export type RootCommentNode = InTagCommentNode
 
 /**
  * Static types have several levels.
@@ -593,6 +607,7 @@ export function createRoot(
     type: NodeTypes.ROOT,
     source,
     children,
+    comments: [],
     helpers: new Set(),
     components: [],
     directives: [],
