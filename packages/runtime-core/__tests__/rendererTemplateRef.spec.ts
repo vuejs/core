@@ -245,6 +245,38 @@ describe('api: template refs', () => {
     expect(el.value).toBe(null)
   })
 
+  // #15032
+  it('clears component ref when child root is unmounted by v-if', async () => {
+    const root = nodeOps.createElement('div')
+    const childRef = ref<any>(null)
+    const show = ref(true)
+
+    const Child = defineComponent({
+      props: ['show'],
+      setup(props) {
+        return () => (props.show ? h('div') : null)
+      },
+    })
+
+    const App = {
+      render() {
+        return h(Child, {
+          ref: childRef,
+          show: show.value,
+        })
+      },
+    }
+
+    render(h(App), root)
+    expect(childRef.value === null).toBe(false)
+
+    show.value = false
+    await nextTick()
+    expect(childRef.value === null).toBe(true)
+
+    render(null, root)
+  })
+
   it('set and change ref in the same tick', async () => {
     const root = nodeOps.createElement('div')
     const show = ref(false)

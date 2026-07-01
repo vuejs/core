@@ -404,6 +404,10 @@ function baseCreateRenderer(
     }
 
     const { type, ref, shapeFlag } = n2
+    const prevComponentSubTree =
+      n1 && (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) > 0
+        ? n1.component!.subTree
+        : null
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor)
@@ -489,7 +493,13 @@ function baseCreateRenderer(
 
     // set ref
     if (ref != null && parentComponent) {
-      setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, !n2)
+      const clearComponentRef =
+        prevComponentSubTree &&
+        (n2.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) > 0 &&
+        prevComponentSubTree.type !== Comment &&
+        n2.component!.subTree.type === Comment
+      const unsetRef = !n2 || !!clearComponentRef
+      setRef(ref, n1 && n1.ref, parentSuspense, n2 || n1, unsetRef)
     } else if (ref == null && n1 && n1.ref != null) {
       setRef(n1.ref, null, parentSuspense, n1, true)
     }
