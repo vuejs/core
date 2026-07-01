@@ -49,11 +49,12 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run compiler unit tests
-        run: pnpm run test-unit compiler
+      - parallel:
+          - name: Run compiler unit tests
+            run: pnpm run test-unit compiler
 
-      - name: Run ssr unit tests
-        run: pnpm run test-unit server-renderer
+          - name: Run ssr unit tests
+            run: pnpm run test-unit server-renderer
 
   e2e-test:
     runs-on: ubuntu-latest
@@ -113,11 +114,12 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
-        run: pnpm run lint
+      - parallel:
+          - name: Run eslint
+            run: pnpm run lint
 
-      - name: Run prettier
-        run: pnpm run format-check
+          - name: Run prettier
+            run: pnpm run format-check
 
       - name: Run tsc
         run: pnpm run check
