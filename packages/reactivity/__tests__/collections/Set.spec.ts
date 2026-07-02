@@ -545,6 +545,26 @@ describe('reactivity/collections', () => {
       },
     )
     ;(hasSetMethods ? it : it.skip)(
+      'should observe object identities in reactive Set method arguments',
+      () => {
+        const value = {}
+        const otherValue = {}
+        let dummy: object[] = []
+        const set = reactive(new Set([value, otherValue])) as any
+        const other = reactive(new Set([value]))
+
+        effect(() => {
+          dummy = [...set.intersection(other)]
+        })
+
+        expect(dummy).toEqual([value])
+        other.delete(value)
+        expect(dummy).toEqual([])
+        other.add(otherValue)
+        expect(dummy).toEqual([otherValue])
+      },
+    )
+    ;(hasSetMethods ? it : it.skip)(
       'should support Set methods on refs',
       () => {
         const set = ref(new Set([1, 2]))

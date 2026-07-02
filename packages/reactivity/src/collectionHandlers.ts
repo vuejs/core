@@ -14,6 +14,7 @@ import {
   hasChanged,
   hasOwn,
   isMap,
+  isSet,
   toRawType,
 } from '@vue/shared'
 import { warn } from './warning'
@@ -98,7 +99,22 @@ function createSetMethod(method: string, readonly: boolean): Function {
 
     !readonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
 
-    return (rawTarget as any)[method](...args)
+    const rawArgs = args.map(arg => {
+      const rawArg = toRaw(arg)
+      const rawArgIsMap = isMap(rawArg)
+      if (rawArg !== arg && (rawArgIsMap || isSet(rawArg))) {
+        !isReadonly(arg) &&
+          track(
+            rawArg,
+            TrackOpTypes.ITERATE,
+            rawArgIsMap ? MAP_KEY_ITERATE_KEY : ITERATE_KEY,
+          )
+        return rawArg
+      }
+      return arg
+    })
+
+    return (rawTarget as any)[method](...rawArgs)
   }
 }
 
