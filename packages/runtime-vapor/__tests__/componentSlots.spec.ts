@@ -1,10 +1,7 @@
-// NOTE: This test is implemented based on the case of `runtime-core/__test__/componentSlots.spec.ts`.
-
 import {
   VaporTeleport,
   child,
   createComponent,
-  createDynamicComponent,
   createFor,
   createForSlots,
   createIf,
@@ -38,7 +35,6 @@ import {
 } from '@vue/runtime-dom'
 import {
   VaporBlockShape,
-  VaporDynamicComponentFlags,
   VaporIfFlags,
   VaporSlotFlags,
   VaporVForFlags,
@@ -354,89 +350,84 @@ describe('component: slots', () => {
       expect(localFallback).toHaveBeenCalledTimes(1)
     })
 
-    test('slot fragment switches local fallback and root v-if content without keeping the inactive anchor in DOM', async () => {
+    test('compiled root v-if slot content switches local fallback without keeping the inactive anchor in DOM', async () => {
       const show = ref(false)
-      const Child = defineVaporComponent(() =>
-        createSlot('default', null, () => document.createTextNode('fallback')),
+      const Child = compile(`<template><slot>fallback</slot></template>`, show)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data">content</template>
+          </components.Child>
+        </template>`,
+        show,
+        { Child },
       )
-      const { host } = define(() =>
-        createComponent(Child, null, {
-          default: extend(
-            () =>
-              createIf(
-                () => show.value,
-                () => document.createTextNode('content'),
-                undefined,
-                keyedSlotRootIfShape,
-              ),
-            nonStableSlot,
-          ),
-        }),
-      ).render()
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
 
-      expect(host.innerHTML).toBe('fallback<!--slot-->')
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
 
       show.value = true
       await nextTick()
 
-      expect(host.innerHTML).toBe('content<!--if--><!--slot-->')
+      expect(root.innerHTML).toBe('content<!--if--><!--slot-->')
+      app.unmount()
     })
 
-    test('slot fragment switches local fallback and root v-for content without keeping the inactive anchor in DOM', async () => {
+    test('compiled root v-for slot content switches local fallback without keeping the inactive anchor in DOM', async () => {
       const items = ref<string[]>([])
-      const Child = defineVaporComponent(() =>
-        createSlot('default', null, () => document.createTextNode('fallback')),
+      const Child = compile(`<template><slot>fallback</slot></template>`, items)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-for="item in data">
+              {{ item }}
+            </template>
+          </components.Child>
+        </template>`,
+        items,
+        { Child },
       )
-      const { host } = define(() =>
-        createComponent(Child, null, {
-          default: extend(
-            () =>
-              createFor(
-                () => items.value,
-                item => document.createTextNode(item.value),
-                undefined,
-                slotRootForFlags,
-              ),
-            nonStableSlot,
-          ),
-        }),
-      ).render()
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
 
-      expect(host.innerHTML).toBe('fallback<!--slot-->')
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
 
       items.value = ['content']
       await nextTick()
 
-      expect(host.innerHTML).toBe('content<!--for--><!--slot-->')
+      expect(root.innerHTML).toBe('content<!--for--><!--slot-->')
+      app.unmount()
     })
 
-    test('slot fragment switches root dynamic component content to fallback', async () => {
+    test('compiled root dynamic component slot content switches to fallback', async () => {
       const current = shallowRef<any>(() => document.createTextNode('content'))
-      const Child = defineVaporComponent(() =>
-        createSlot('default', null, () => document.createTextNode('fallback')),
+      const Child = compile(
+        `<template><slot>fallback</slot></template>`,
+        current,
       )
-      const { host } = define(() =>
-        createComponent(Child, null, {
-          default: extend(
-            () =>
-              createDynamicComponent(
-                () => current.value,
-                null,
-                null,
-                VaporDynamicComponentFlags.SINGLE_ROOT |
-                  VaporDynamicComponentFlags.SLOT_ROOT,
-              ),
-            nonStableSlot,
-          ),
-        }),
-      ).render()
+      const App = compile(
+        `<template>
+          <components.Child>
+            <component :is="data" />
+          </components.Child>
+        </template>`,
+        current,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
 
-      expect(host.innerHTML).toBe('content<!--dynamic-component--><!--slot-->')
+      expect(root.innerHTML).toBe('content<!--dynamic-component--><!--slot-->')
 
       current.value = null
       await nextTick()
 
-      expect(host.innerHTML).toBe('fallback<!--slot-->')
+      expect(root.innerHTML).toBe('fallback<!--slot-->')
+      app.unmount()
     })
 
     test('slot fallback falls through and restores local root v-if fallback without keeping inactive anchor in DOM', async () => {
@@ -1354,81 +1345,78 @@ describe('component: slots', () => {
       expect(boundary.markDirty).toHaveBeenCalledTimes(2)
     })
 
-    test('vdom slot dirties parent boundary when nested fallback validity flips', async () => {
-      const showInnerFallback = ref(true)
-      const boundary = {
-        parent: null,
-        getFallback: () => undefined,
-        run: (fn: () => any) => fn(),
-        markDirty: vi.fn(),
-      }
-      const instance = renderWithSlots({})
-      const app = createApp({ render: () => null })
-      app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
-      const slotsRef = shallowRef({
-        default: () => [],
-      })
-      const renderInnerFallback = () => {
-        const child = new SlotFragment(true)
-        renderEffect(() => {
-          child.updateSlot(
-            showInnerFallback.value
-              ? () => template('inner fallback')()
-              : undefined,
-          )
-        })
-        return child
-      }
-      const frag = withSlotBoundary(boundary, () =>
-        vapor.vdomSlot(
-          slotsRef,
-          'default',
-          {},
-          instance,
-          renderInnerFallback,
-          false,
-          true,
-        ),
+    test('compiled vdom slot propagates nested fallback validity changes', async () => {
+      const show = ref(true)
+      const Receiver = compile(
+        `<template><slot><span>outer fallback</span></slot></template>`,
+        show,
       )
-      const host = document.createElement('div')
+      const Bridge = compile(
+        `<template>
+          <components.Receiver>
+            <slot>
+              <span v-if="data">inner fallback</span>
+            </slot>
+          </components.Receiver>
+        </template>`,
+        show,
+        { Receiver },
+      )
+      const App = compile(
+        `<template>
+          <components.Bridge>
+            <span v-if="false">content</span>
+          </components.Bridge>
+        </template>`,
+        show,
+        { Bridge },
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
 
-      insert(frag, host)
-      boundary.markDirty.mockClear()
+      expect(root.innerHTML).toBe(
+        '<span>inner fallback</span><!--if--><!--slot--><!--slot-->',
+      )
 
-      expect(host.innerHTML).toBe('inner fallback<!--slot-->')
-
-      showInnerFallback.value = false
+      show.value = false
       await nextTick()
 
-      expect(host.innerHTML).toBe('<!--slot-->')
-      expect(boundary.markDirty).toHaveBeenCalledTimes(1)
+      expect(root.innerHTML).toBe(
+        '<span>outer fallback</span><!--slot--><!--slot-->',
+      )
 
-      showInnerFallback.value = true
+      show.value = true
       await nextTick()
 
-      expect(host.innerHTML).toBe('inner fallback<!--slot-->')
-      expect(boundary.markDirty).toHaveBeenCalledTimes(2)
+      expect(root.innerHTML).toBe(
+        '<span>inner fallback</span><!--if--><!--slot--><!--slot-->',
+      )
+      app.unmount()
     })
 
-    test('vdom slot still renders vapor fallback when slot content resolves empty', () => {
-      const Child = defineVaporComponent({
-        setup() {
-          return createSlot('default', null, () => template('child fallback')())
-        },
-      })
+    test('compiled vdom slot still renders vapor fallback when slot content resolves empty', () => {
+      const data = ref(false)
+      const Child = compile(
+        `<template><slot>child fallback</slot></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <span v-if="data">content</span>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
       const root = document.createElement('div')
 
-      createApp({
-        render: () =>
-          h(Child as any, null, {
-            default: () => [],
-          }),
-      })
-        .use(vaporInteropPlugin)
-        .mount(root)
+      createApp(App).use(vaporInteropPlugin).mount(root)
 
-      expect(root.innerHTML).toBe('child fallback')
+      expect(root.innerHTML).toBe('child fallback<!--slot-->')
     })
   })
 
