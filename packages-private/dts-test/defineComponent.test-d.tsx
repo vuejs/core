@@ -1960,6 +1960,22 @@ describe('__typeEl backdoor', () => {
   expectType<HTMLAnchorElement>(c.$el)
 })
 
+describe('__typeEl with a non-DOM host node (custom renderer)', () => {
+  // Custom renderers (TUI, canvas, native, …) have host nodes that are not
+  // DOM Elements. `$el` must accept them — `TypeEl` is not constrained to
+  // `Element`.
+  interface CustomElement {
+    foo: string
+  }
+  const Comp = defineComponent({
+    __typeEl: {} as CustomElement,
+  })
+  const c = new Comp()
+
+  expectType<CustomElement>(c.$el)
+  expectType<string>(c.$el.foo)
+})
+
 defineComponent({
   props: {
     foo: [String, null],
