@@ -5942,35 +5942,33 @@ describe('Vapor Mode hydration', () => {
     })
 
     test('enabled teleport with null target should delay child setup until target becomes available', async () => {
-      const version = ref('one')
-      const target = ref<any>('#non-existent-target-hydrate-late')
-      const setups: string[] = []
-
-      const Child = defineVaporComponent({
-        props: { msg: String },
-        setup(props) {
-          setups.push(String(props.msg))
-          const n0 = template('<div> </div>')() as any
-          const x0 = child(n0) as any
-          renderEffect(() => setText(x0, String(props.msg)))
-          return n0
-        },
+      const data = ref<{
+        version: string
+        target: string | Element
+        setups: string[]
+      }>({
+        version: 'one',
+        target: '#non-existent-target-hydrate-late',
+        setups: [],
       })
-
-      const App = defineVaporComponent({
-        setup() {
-          return createComponent(
-            VaporTeleport,
-            { to: () => target.value },
-            {
-              default: () => {
-                const current = version.value
-                return createComponent(Child, { msg: () => current })
-              },
-            },
-          )
-        },
-      })
+      const Child = compile(
+        `<script setup>
+          const props = defineProps(['msg'])
+          const data = _data
+          data.value.setups.push(String(props.msg))
+        </script>
+        <template><div>{{ props.msg }}</div></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <teleport :to="data.target">
+            <components.Child :msg="data.version" />
+          </teleport>
+        </template>`,
+        data,
+        { Child },
+      )
 
       const container = document.createElement('div')
       container.innerHTML = '<!--teleport start--><!--teleport end-->'
@@ -5982,20 +5980,20 @@ describe('Vapor Mode hydration', () => {
       expect(container.innerHTML).toBe(
         `<!--teleport start--><!--teleport end-->`,
       )
-      expect(setups).toEqual([])
+      expect(data.value.setups).toEqual([])
       expect('Failed to locate Teleport target').toHaveBeenWarned()
 
-      version.value = 'two'
+      data.value.version = 'two'
       await nextTick()
-      version.value = 'three'
+      data.value.version = 'three'
       await nextTick()
-      expect(setups).toEqual([])
+      expect(data.value.setups).toEqual([])
 
       const targetEl = document.createElement('div')
-      target.value = targetEl
+      data.value.target = targetEl
       await nextTick()
 
-      expect(setups).toEqual(['three'])
+      expect(data.value.setups).toEqual(['three'])
       expect(targetEl.innerHTML).toBe('<div>three</div>')
     })
 
