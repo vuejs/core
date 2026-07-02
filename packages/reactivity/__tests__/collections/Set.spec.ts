@@ -3,6 +3,7 @@ import {
   isReactive,
   reactive,
   readonly,
+  ref,
   shallowReactive,
   toRaw,
 } from '../../src'
@@ -494,5 +495,69 @@ describe('reactivity/collections', () => {
       const result = set.add('a')
       expect(result).toBe(set)
     })
+
+    const hasSetMethods =
+      typeof (Set.prototype as any).intersection === 'function'
+    ;(hasSetMethods ? it : it.skip)(
+      'should support Set methods on reactive sets',
+      () => {
+        const set = reactive(new Set([1, 2])) as any
+
+        expect([...set.intersection(new Set([2, 3]))]).toEqual([2])
+        expect([...set.union(new Set([2, 3]))]).toEqual([1, 2, 3])
+        expect([...set.difference(new Set([2]))]).toEqual([1])
+        expect([...set.symmetricDifference(new Set([2, 3]))]).toEqual([1, 3])
+        expect(set.isSubsetOf(new Set([1, 2, 3]))).toBe(true)
+        expect(set.isSupersetOf(new Set([1]))).toBe(true)
+        expect(set.isDisjointFrom(new Set([3]))).toBe(true)
+      },
+    )
+    ;(hasSetMethods ? it : it.skip)('should observe Set method results', () => {
+      let dummy: number[] = []
+      const set = reactive(new Set([1]))
+
+      effect(() => {
+        dummy = [...(set as any).intersection(new Set([1, 2]))]
+      })
+
+      expect(dummy).toEqual([1])
+      set.delete(1)
+      expect(dummy).toEqual([])
+      set.add(2)
+      expect(dummy).toEqual([2])
+    })
+    ;(hasSetMethods ? it : it.skip)(
+      'should observe reactive Set method arguments',
+      () => {
+        let dummy: number[] = []
+        const set = reactive(new Set([1, 2]))
+        const other = reactive(new Set([2]))
+
+        effect(() => {
+          dummy = [...(set as any).intersection(other)]
+        })
+
+        expect(dummy).toEqual([2])
+        other.delete(2)
+        expect(dummy).toEqual([])
+        other.add(1)
+        expect(dummy).toEqual([1])
+      },
+    )
+    ;(hasSetMethods ? it : it.skip)(
+      'should support Set methods on refs',
+      () => {
+        const set = ref(new Set([1, 2]))
+        const value = set.value as any
+
+        expect([...value.intersection(new Set([2, 3]))]).toEqual([2])
+        expect([...value.union(new Set([2, 3]))]).toEqual([1, 2, 3])
+        expect([...value.difference(new Set([2]))]).toEqual([1])
+        expect([...value.symmetricDifference(new Set([2, 3]))]).toEqual([1, 3])
+        expect(value.isSubsetOf(new Set([1, 2, 3]))).toBe(true)
+        expect(value.isSupersetOf(new Set([1]))).toBe(true)
+        expect(value.isDisjointFrom(new Set([3]))).toBe(true)
+      },
+    )
   })
 })
