@@ -1057,6 +1057,87 @@ describe('component: slots', () => {
       expect(boundary.markDirty).not.toHaveBeenCalled()
     })
 
+    test('compiled vdom slot removes parked content while fallback is active', async () => {
+      const showContent = ref(true)
+      const showChild = ref(true)
+      const Child = compile(
+        `<template>
+          <slot>
+            <span>fallback</span>
+          </slot>
+        </template>`,
+        showContent,
+      )
+      const App = {
+        setup() {
+          return () =>
+            showChild.value
+              ? h(Child as any, null, {
+                  default: () => (showContent.value ? h('div', 'content') : []),
+                })
+              : null
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<div>content</div>')
+
+      showContent.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+
+      showChild.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<!---->')
+
+      app.unmount()
+    })
+
+    test('compiled vdom slot keeps fallback when slots source is removed', async () => {
+      const showContent = ref(true)
+      const passSlot = ref(true)
+      const Child = compile(
+        `<template>
+          <slot>
+            <span>fallback</span>
+          </slot>
+        </template>`,
+        showContent,
+      )
+      const App = {
+        setup() {
+          return () =>
+            h(
+              Child as any,
+              null,
+              passSlot.value
+                ? {
+                    default: () =>
+                      showContent.value ? h('div', 'content') : [],
+                  }
+                : undefined,
+            )
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<div>content</div>')
+
+      showContent.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+
+      passSlot.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+
+      app.unmount()
+    })
+
     test('compiled slot does not reinsert active fallback while content stays invalid', async () => {
       const data = ref('first')
       const Child = compile(
