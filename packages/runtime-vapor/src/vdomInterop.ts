@@ -1550,6 +1550,25 @@ function renderVDOMSlot(
     notifyUpdated()
   }
 
+  const removeRenderedContent = (
+    rendered: VNode | Block,
+    parentNode?: ParentNode,
+  ): void => {
+    const contentDetached = !!slotResolutionState.activeFallback
+    // Active fallback means slot content was parked already; runtime-core
+    // Fragment removal expects a still-attached sibling range.
+    if (isVNode(rendered)) {
+      internals.um(
+        rendered,
+        parentComponent as any,
+        null,
+        !contentDetached && !!parentNode,
+      )
+    } else {
+      remove(rendered, contentDetached ? undefined : parentNode)
+    }
+  }
+
   frag.insert = (parentNode, anchor) => {
     if (isHydrating) return
     currentParentNode = parentNode
@@ -1585,17 +1604,8 @@ function renderVDOMSlot(
     }
     scope.stop()
     disposed = true
-    if (isVNode(contentState.rendered)) {
-      // When the surrounding VDOM range already owns DOM removal, unmount the
-      // vnode state only and avoid tearing down the same hydrated range twice.
-      internals.um(
-        contentState.rendered,
-        parentComponent as any,
-        null,
-        !!parentNode,
-      )
-    } else if (contentState.rendered) {
-      remove(contentState.rendered, parentNode)
+    if (contentState.rendered) {
+      removeRenderedContent(contentState.rendered, parentNode)
     }
     disposeSlotResolution(slotResolutionState)
   }
@@ -1720,7 +1730,7 @@ function renderVDOMSlot(
                   ? prevRendered
                   : null
               if (prevRendered && !prevIsVNode) {
-                remove(prevRendered, currentParentNode!)
+                removeRenderedContent(prevRendered, currentParentNode!)
               }
               internals.p(
                 prevVNode,
@@ -1741,10 +1751,8 @@ function renderVDOMSlot(
               frag.vnode = null
               frag.$key = undefined
               const prevRendered = contentState.rendered
-              if (isVNode(prevRendered)) {
-                internals.um(prevRendered, parentComponent as any, null, true)
-              } else if (prevRendered) {
-                remove(prevRendered, currentParentNode!)
+              if (prevRendered) {
+                removeRenderedContent(prevRendered, currentParentNode!)
               }
               insert(slotContent, currentParentNode!, currentAnchor)
               setRenderedContent(slotContent, slotContentValid)
@@ -1752,15 +1760,8 @@ function renderVDOMSlot(
               return
             }
 
-            if (isVNode(contentState.rendered)) {
-              internals.um(
-                contentState.rendered,
-                parentComponent as any,
-                null,
-                true,
-              )
-            } else if (contentState.rendered) {
-              remove(contentState.rendered, currentParentNode!)
+            if (contentState.rendered) {
+              removeRenderedContent(contentState.rendered, currentParentNode!)
             }
             frag.vnode = null
             frag.$key = undefined
