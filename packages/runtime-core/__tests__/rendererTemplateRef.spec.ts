@@ -131,6 +131,30 @@ describe('api: template refs', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  // #15039
+  it('component function ref can access exposed template refs', () => {
+    const root = nodeOps.createElement('div')
+    let calls = 0
+    let exposedEl: any = null
+    const fn = (vm: any) => {
+      calls++
+      exposedEl = vm?.rootEl
+    }
+
+    const Child = defineComponent({
+      setup(_, { expose }) {
+        const rootEl = ref(null)
+        expose({ rootEl })
+        return () => h('div', { ref: rootEl })
+      },
+    })
+    const App = defineComponent(() => () => h(Child, { ref: fn }))
+
+    render(h(App), root)
+    expect(calls).toBe(1)
+    expect(exposedEl === root.children[0]).toBe(true)
+  })
+
   it('function ref unmount', async () => {
     const root = nodeOps.createElement('div')
     const fn = vi.fn()

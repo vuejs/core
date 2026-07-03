@@ -136,11 +136,29 @@ export function setRef(
   }
 
   if (isFunction(ref)) {
-    pauseTracking()
-    try {
-      callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
-    } finally {
-      resetTracking()
+    const call = () => {
+      pauseTracking()
+      try {
+        callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [
+          value,
+          refs,
+        ])
+      } finally {
+        resetTracking()
+      }
+    }
+    if (!isUnmount && vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      const job: SchedulerJob = () => {
+        call()
+        pendingSetRefMap.delete(rawRef)
+      }
+      job.id = -1
+      pendingSetRefMap.set(rawRef, job)
+      // allow child template refs exposed by the component to resolve first
+      queuePostRenderEffect(job, parentSuspense)
+    } else {
+      invalidatePendingSetRef(rawRef)
+      call()
     }
   } else {
     const _isString = isString(ref)
