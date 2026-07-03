@@ -20,6 +20,7 @@ import {
   vaporInteropPlugin,
 } from '../src'
 import {
+  Comment,
   type Ref,
   createApp,
   createSlots,
@@ -1126,6 +1127,48 @@ describe('component: slots', () => {
       await nextTick()
       expect(root.innerHTML).toBe('<span>fallback</span>')
 
+      app.unmount()
+    })
+
+    test('vdom slot keeps invalid updates parked while fallback is active', async () => {
+      const data = ref('first')
+      const Child = compile(
+        `<template><slot><span>fallback</span></slot></template>`,
+        data,
+      )
+      const App = {
+        setup() {
+          return () =>
+            h(Child, null, {
+              default: () => [
+                data.value === 'first'
+                  ? h(Comment, 'first')
+                  : h(Comment, 'second'),
+              ],
+            })
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      const childNodes = () =>
+        Array.from(root.childNodes).map(node =>
+          node.nodeType === 3
+            ? `text:${JSON.stringify(node.textContent)}`
+            : node.nodeType === 8
+              ? `comment:${(node as Comment).data}`
+              : (node as Element).outerHTML,
+        )
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<span>fallback</span>')
+      const fallbackNodes = ['<span>fallback</span>', 'text:""']
+      expect(childNodes()).toEqual(fallbackNodes)
+
+      data.value = 'second'
+      await nextTick()
+
+      expect(childNodes()).toEqual(fallbackNodes)
+      expect(root.innerHTML).toBe('<span>fallback</span>')
       app.unmount()
     })
 
