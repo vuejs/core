@@ -18,6 +18,7 @@ import {
   currentInstance,
   isAsyncWrapper,
   isRef,
+  warn,
 } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
@@ -164,10 +165,10 @@ function getOwnedSlot(
 }
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
-  get: getSlot,
+  get: __DEV__ ? getDevSlot : getSlot,
   has: (target, key: string) => !!getSlot(target, key),
   getOwnPropertyDescriptor(target, key: string) {
-    const slot = getSlot(target, key)
+    const slot = __DEV__ ? getDevSlot(target, key) : getSlot(target, key)
     if (slot) {
       return {
         configurable: true,
@@ -201,6 +202,52 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
   },
   set: NO,
   deleteProperty: NO,
+}
+
+const devSlotWrappersCache = __DEV__
+  ? new WeakMap<
+      RawSlots,
+      Map<
+        string,
+        {
+          slot: VaporSlot
+          wrapped: VaporSlot
+        }
+      >
+    >()
+  : undefined
+
+/**
+ * dev-only
+ */
+function getDevSlot(target: RawSlots, key: string): VaporSlot | undefined {
+  const slot = getSlot(target, key)
+  if (slot) {
+    let wrappers = devSlotWrappersCache!.get(target)
+    if (!wrappers) {
+      devSlotWrappersCache!.set(target, (wrappers = new Map()))
+    }
+    const cached = wrappers.get(key)
+    if (cached && cached.slot === slot) {
+      return cached.wrapped
+    }
+    const wrapped = ((...args: any[]) => {
+      // slots.default() is not safe during hydration because it claims SSR DOM
+      // causing hydration mismatch.
+      if (isHydrating) {
+        warn(
+          `Directly invoking Vapor slot "${key}" during hydration will ` +
+            `claim SSR DOM and cause hydration mismatch. Use <slot/> instead.`,
+        )
+        return
+      }
+      return slot(...args)
+    }) as VaporSlot
+    wrapped._ = slot._
+    wrappers.set(key, { slot, wrapped })
+    return wrapped
+  }
+  return slot
 }
 
 export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {

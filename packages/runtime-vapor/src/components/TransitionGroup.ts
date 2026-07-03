@@ -60,6 +60,7 @@ import {
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import { getSlot } from '../componentSlots'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -121,7 +122,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     moveClass: String,
   }),
 
-  setup(props: TransitionGroupProps, { slots, expose }) {
+  setup(props: TransitionGroupProps, { expose }) {
     // @ts-expect-error
     expose()
 
@@ -233,7 +234,7 @@ const VaporTransitionGroupImpl = defineVaporComponent({
 
     renderEffect(() => {
       const tag = props.tag
-      const slot = slots.default
+      const slot = getSlot(instance.rawSlots, 'default')
       // if the tag and slot are the same as previous render, no need to update.
       if (isMounted && tag === currentTag && slot === currentSlot) return
 

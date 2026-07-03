@@ -148,6 +148,29 @@ describe('component: slots', () => {
     expect(slots.default()).toMatchObject(document.createElement('span'))
   })
 
+  test('direct slot invocation should warn and return undefined during hydration', () => {
+    let slotResult: any
+    const Child = defineVaporComponent({
+      setup(_, { slots }) {
+        slotResult = slots.default!()
+        return template('child')()
+      },
+    })
+    const App = {
+      render() {
+        return createComponent(Child, {}, { default: () => template('msg')() })!
+      },
+    }
+
+    const hydrationContainer = document.createElement('div')
+    hydrationContainer.innerHTML = 'child'
+    createVaporSSRApp(App).mount(hydrationContainer)
+    expect(slotResult).toBeUndefined()
+    expect(
+      'Directly invoking Vapor slot "default" during hydration will claim SSR DOM and cause hydration mismatch',
+    ).toHaveBeenWarned()
+  })
+
   test('updateSlots: instance.slots should be updated correctly', async () => {
     const flag1 = ref(true)
 

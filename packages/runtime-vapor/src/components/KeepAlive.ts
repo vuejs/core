@@ -47,6 +47,7 @@ import {
   withCurrentCacheKey,
   withKeepAliveEnabled,
 } from '../keepAlive'
+import { getSlot } from '../componentSlots'
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   ctx: VaporKeepAliveContext & {
@@ -75,7 +76,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     exclude: [String, RegExp, Array],
     max: [String, Number],
   },
-  setup(props: KeepAliveProps, { slots, expose }) {
+  setup(props: KeepAliveProps, { expose }) {
     let exposed!: Record<string, any>
     // for e2e test
     if (__E2E_TEST__) {
@@ -85,11 +86,12 @@ const VaporKeepAliveImpl = defineVaporComponent({
     }
     expose(exposed)
 
-    if (!slots.default) {
+    const keepAliveInstance = currentInstance! as KeepAliveInstance
+    const defaultSlot = getSlot(keepAliveInstance.rawSlots, 'default')
+    if (!defaultSlot) {
       return undefined
     }
 
-    const keepAliveInstance = currentInstance! as KeepAliveInstance
     const cache: Cache = new Map()
     const keys: Keys = new Set()
     const storageContainer = createElement('div')
@@ -398,7 +400,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     }
 
     keepAliveInstance.ctx = keepAliveCtx
-    let children = slots.default()
+    let children = defaultSlot()
     registerDynamicFragmentHooks(children, keepAliveCtx)
 
     if (isArray(children)) {

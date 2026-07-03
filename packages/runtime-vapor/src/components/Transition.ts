@@ -56,6 +56,7 @@ import {
 } from '../dom/hydration'
 import { type PendingVShow, setCurrentPendingVShows } from '../directives/vShow'
 import { isInteropEnabled } from '../vdomInteropState'
+import { getSlot } from '../componentSlots'
 
 export type ResolvedTransitionBlock = (
   | Element
@@ -130,7 +131,7 @@ const decorate = (t: typeof VaporTransition) => {
 }
 
 export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
-  /*@__PURE__*/ decorate((props, { slots, expose }) => {
+  /*@__PURE__*/ decorate((props, { expose }) => {
     // @ts-expect-error
     expose()
 
@@ -152,9 +153,10 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
 
     const shouldCaptureVShow = !isHydrating && !!props.appear
     const shouldPerformAppear = !!props.appear && !!performAppear
+    const rawSlots = instance.rawSlots
     // Dynamic slot sources can add/remove the default slot after setup, so
     // Transition needs a DynamicFragment to drive enter/leave on updates.
-    if (instance.rawSlots.$) {
+    if (rawSlots.$) {
       const frag = new DynamicFragment('transition')
       let isMounted = false
       renderEffect(() => {
@@ -172,7 +174,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
         }
         const [, pendingVShows] = capturePendingVShows(
           shouldCaptureVShow && !isMounted,
-          () => frag.update(slots.default),
+          () => frag.update(getSlot(rawSlots, 'default')),
         )
         applyPendingVShows(
           frag.$transition!,
@@ -184,10 +186,11 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       })
       return frag
     }
+    const defaultSlot = getSlot(rawSlots, 'default')
 
     const [children, pendingVShows] = capturePendingVShows(
       shouldCaptureVShow,
-      () => ((slots.default && slots.default()) || []) as any as Block,
+      () => ((defaultSlot && defaultSlot()) || []) as any as Block,
     )
 
     let appliedHooks = {
