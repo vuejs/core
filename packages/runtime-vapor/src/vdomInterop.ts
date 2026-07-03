@@ -820,8 +820,12 @@ function resolveVNodeRange(vnode: VNode): [Node, Node] | undefined {
     return [el as Node, anchor as Node]
   }
 
-  if ((type === Static || type === Fragment) && el && anchor && anchor !== el) {
-    return [el as Node, anchor as Node]
+  // Empty Fragments can expose only an anchor; include it so parked invalid
+  // VNode slot content can be detached from the real DOM.
+  if ((type === Static || type === Fragment) && anchor) {
+    return el && anchor !== el
+      ? [el as Node, anchor as Node]
+      : [anchor as Node, anchor as Node]
   }
   if (shapeFlag & ShapeFlags.COMPONENT) {
     const subTree = vnode.component && vnode.component.subTree
@@ -1703,6 +1707,19 @@ function renderVDOMSlot(
             }
 
             if (isVNode(slotContent)) {
+              const prevRendered = contentState.rendered
+              if (slotResolutionState.activeFallback && !slotContentValid) {
+                // Re-run the slot only to refresh validity. While fallback is
+                // active, a still-invalid VNode must stay out of the live DOM.
+                if (prevRendered) {
+                  removeRenderedContent(prevRendered, currentParentNode!)
+                }
+                frag.vnode = null
+                frag.$key = undefined
+                setRenderedContent(null)
+                finishContentUpdate()
+                return
+              }
               frag.vnode = slotContent
               frag.$key = getVNodeKey(slotContent)
               const refreshSlotVNode = () => {
@@ -1722,7 +1739,6 @@ function renderVDOMSlot(
                 refreshSlotVNode,
                 notifyBeforeUpdate,
               )
-              const prevRendered = contentState.rendered
               const prevIsVNode = isVNode(prevRendered)
               const prevVNode =
                 prevIsVNode &&
