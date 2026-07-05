@@ -340,7 +340,7 @@ export class DynamicFragment extends RenderContextFragment {
         setActiveSub(prevSub)
         return
       }
-      parent && remove(this.nodes, parent)
+      remove(this.nodes, parent || undefined)
     }
 
     const reusingDeferredAnchor = isHydrating
