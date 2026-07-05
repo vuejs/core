@@ -48,7 +48,12 @@ export function escapeHtml(string: unknown): string {
 const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
 
 export function escapeHtmlComment(src: string): string {
-  return src.replace(commentStripRE, '')
+  let prev: string
+  do {
+    prev = src
+    src = src.replace(commentStripRE, '')
+  } while (src !== prev)
+  return src
 }
 
 export const cssVarNameEscapeSymbolsRE: RegExp =
