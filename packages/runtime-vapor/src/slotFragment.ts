@@ -1,21 +1,17 @@
 import { EffectScope } from '@vue/reactivity'
-import { isArray } from '@vue/shared'
 import {
   type Block,
   type TransitionOptions,
   insert,
   isValidSlot,
   remove,
-  removeNode,
 } from './block'
-import { isVaporComponent } from './component'
 import { isHydrating } from './dom/hydration'
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
   withSlotBoundary,
 } from './slotBoundary'
-import { SlotFragment } from './fragment'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
 import { setBlockKey } from './helpers/setKey'
 
@@ -52,6 +48,7 @@ function renderSlotFallback(
     const localFallback = current.getFallback()
 
     if (localFallback) {
+      let selected = false
       const content = current.run(
         () =>
           withSlotBoundary(
@@ -60,12 +57,25 @@ function renderSlotFallback(
               // Hide the local fallback while rendering it, so slot outlets inside
               // the fallback don't resolve to the same fallback again.
               getFallback: () => undefined,
+              onContentInvalid: [],
+              // Hidden invalid fallbacks in a forwarded fallback chain must
+              // force a recheck when they become valid so the nearer fallback
+              // can win again. The selected fallback only needs a normal
+              // validity recheck because its own dynamic children update in
+              // place.
+              markDirty: force =>
+                current.markDirty(
+                  !!force || (!selected && hasSlotFallback(current.parent)),
+                ),
             },
             localFallback,
           ),
         scope,
       )
-      if (isValidSlot(content)) return content
+      if (isValidSlot(content)) {
+        selected = true
+        return content
+      }
       block = content
     }
 
@@ -92,6 +102,7 @@ export interface SlotResolutionState {
   // A dirty notification arrived while a fallback render or a host update
   // was in flight; folded into the recheck that completes that operation.
   pendingRecheck: boolean
+  pendingRecheckForce: boolean
   // Reentrancy guard, set while renderSlotFallback runs user fallback code.
   isRenderingFallback: boolean
 
@@ -111,52 +122,23 @@ export interface SlotResolutionState {
   notifyExposedValidityChange(): void
 }
 
-// Takes a block's nodes out of the DOM without tearing the block down: no
-// scopes are stopped and no remove() hooks run, so it can be re-inserted
-// later (content parked while fallback shows, or an invalid fallback parked
-// until it becomes valid). Fragment anchors are detached along with their
-// block because the generic fragment insert() re-inserts them — except a
-// SlotFragment's anchor: insertSlot() never re-inserts it and the slot
-// locates itself through it (getParentNode/getAnchor), so it must stay in
-// the DOM as the slot's persistent position marker.
-function detachBlock(block: Block, parent: ParentNode): void {
-  if (block instanceof Node) {
-    if (block.parentNode === parent) {
-      removeNode(block, parent)
-    }
-  } else if (isVaporComponent(block)) {
-    if (block.block) {
-      detachBlock(block.block, parent)
-    }
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      detachBlock(block[i], parent)
-    }
-  } else {
-    detachBlock(block.nodes, parent)
-    if (
-      !(block instanceof SlotFragment) &&
-      block.anchor &&
-      block.anchor.parentNode === parent
-    ) {
-      removeNode(block.anchor, parent)
-    }
-  }
-}
-
 // Entry point for validity-change notifications (boundary.markDirty). While
 // user fallback code is rendering or the host is mid content update, the
 // notification is folded into pendingRecheck instead of recursing: the
 // in-flight operation ends with a recheck that subsumes it.
-export function markSlotResolutionDirty(state: SlotResolutionState): void {
+export function markSlotResolutionDirty(
+  state: SlotResolutionState,
+  force: boolean = false,
+): void {
   if (state.isDisposed()) {
     return
   }
   if (state.isRenderingFallback || state.isBusy()) {
     state.pendingRecheck = true
+    state.pendingRecheckForce = state.pendingRecheckForce || force
     return
   }
-  recheckSlotResolution(state, true)
+  recheckSlotResolution(state, force)
 }
 
 function clearSlotFallback(state: SlotResolutionState): void {
@@ -225,9 +207,13 @@ function commitSlotFallback(
   scope: EffectScope,
   detachContent: boolean,
 ): void {
-  const parentNode = state.getParentNode()
-  if (detachContent && !isHydrating && parentNode) {
-    detachBlock(state.getContent(), parentNode)
+  if (detachContent && !isHydrating) {
+    const contentInvalidCallbacks = state.boundary.onContentInvalid
+    if (contentInvalidCallbacks) {
+      for (let i = 0; i < contentInvalidCallbacks.length; i++) {
+        contentInvalidCallbacks[i]()
+      }
+    }
   }
   state.activeFallback = block
   state.fallbackScope = scope
@@ -256,8 +242,10 @@ function renderAndCommitSlotFallback(
     commitSlotFallback(state, result.block, result.scope, !hadFallback)
     // drain notifications folded into this fallback render/update window
     if (state.pendingRecheck) {
+      const force = state.pendingRecheckForce
       state.pendingRecheck = false
-      recheckSlotResolution(state, true)
+      state.pendingRecheckForce = false
+      recheckSlotResolution(state, force)
     }
   }
 }
@@ -265,20 +253,23 @@ function renderAndCommitSlotFallback(
 export function disposeSlotResolution(state: SlotResolutionState): void {
   clearSlotFallback(state)
   state.pendingRecheck = false
+  state.pendingRecheckForce = false
   state.lastNodesValid = undefined
 }
 
 // Reconciles which branch the slot exposes after something may have changed.
-// `force` means a fallback source may differ from what the active fallback
-// was rendered from (a boundary was dirtied, or the fallback prop changed),
-// so a kept fallback must be re-rendered rather than merely re-inserted;
-// without `force` only the insertion state is reconciled.
+// `force` means the fallback chain may now resolve to a different block (the
+// fallback source changed, or a hidden fallback became valid), so a kept valid
+// fallback must be re-rendered. Ordinary dirty notifications from the selected
+// fallback's own dynamic children are not forced; those children update in
+// place.
 export function recheckSlotResolution(
   state: SlotResolutionState,
   force: boolean = false,
 ): void {
   if (state.isRenderingFallback) {
     state.pendingRecheck = true
+    state.pendingRecheckForce = state.pendingRecheckForce || force
     return
   }
 
@@ -311,14 +302,9 @@ export function recheckSlotResolution(
     // be in the DOM. Previously invalid fallback is inserted only after it
     // becomes valid.
     if (prevNodesValid) {
-      if (!fallbackValid && !hasSlotFallback(state.boundary.parent)) {
-        // No parent fallback can replace it, so invalid fallback leaves the
-        // slot empty.
-        const parentNode = state.getParentNode()
-        if (parentNode) {
-          detachBlock(fallback, parentNode)
-        }
-      } else if (force) {
+      if (!fallbackValid && hasSlotFallback(state.boundary.parent)) {
+        renderAndCommitSlotFallback(state, true)
+      } else if (force && fallbackValid) {
         renderAndCommitSlotFallback(state, true)
       }
     } else if (fallbackValid) {

@@ -9,7 +9,7 @@ import {
   setCurrentRenderingInstance,
 } from '@vue/runtime-dom'
 import { ShapeFlags, VaporDynamicComponentFlags } from '@vue/shared'
-import { insert, isBlock } from './block'
+import { insert, isBlock, removeNode } from './block'
 import {
   type VaporComponentInstance,
   createComponentWithFallback,
@@ -55,10 +55,26 @@ export function createDynamicComponent(
     ? captureHydrationCursor()
     : null
 
-  const frag =
-    isHydrating || __DEV__
-      ? new DynamicFragment('dynamic-component', false, true, slotRoot)
-      : new DynamicFragment(undefined, false, true, slotRoot)
+  const frag = new DynamicFragment(
+    isHydrating || __DEV__ ? 'dynamic-component' : undefined,
+    false,
+    true,
+    slotRoot,
+    slotRoot
+      ? () => {
+          // A null <component :is> branch has a branch placeholder in `nodes`
+          // in addition to the DynamicFragment anchor. Remove both so slot
+          // fallback does not expose the placeholder as content.
+          const nodes = frag.nodes
+          if (nodes instanceof Node) {
+            const parent = nodes.parentNode
+            if (parent) removeNode(nodes, parent)
+          }
+          const anchorParent = frag.anchor.parentNode
+          if (anchorParent) removeNode(frag.anchor, anchorParent)
+        }
+      : undefined,
+  )
 
   const normalizedRawSlots = normalizeRawSlots(rawSlots)
   const scopeOwner = getScopeOwner()

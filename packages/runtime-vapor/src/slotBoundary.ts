@@ -17,7 +17,8 @@ export interface SlotBoundaryContext {
   // Notifies the owning slot that the validity of a dynamic branch rendered
   // under this boundary may have changed; routes into the slot resolution
   // state machine (markSlotResolutionDirty).
-  markDirty: () => void
+  markDirty: (force?: boolean) => void
+  onContentInvalid?: (() => void)[]
 }
 
 export let currentSlotBoundary: SlotBoundaryContext | null = null
@@ -46,9 +47,16 @@ export function withSlotBoundary<R>(
 
 // Dynamic children (`v-if`, `v-for`, interop fragments) created under a slot
 // boundary dirty the boundary only when their rendered validity changes.
-export function trackSlotBoundaryDirtying(fragment: VaporFragment): void {
+export function trackSlotBoundaryDirtying(
+  fragment: VaporFragment,
+  onInvalid?: () => void,
+): void {
   const boundary = currentSlotBoundary
   if (!boundary) return
+
+  if (onInvalid) {
+    ;(boundary.onContentInvalid ||= []).push(onInvalid)
+  }
 
   let prevValid: boolean
   ;(fragment.onBeforeUpdate ||= []).push(() => {

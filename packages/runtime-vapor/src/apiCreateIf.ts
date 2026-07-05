@@ -1,4 +1,4 @@
-import { type Block, type BlockFn, insert } from './block'
+import { type Block, type BlockFn, insert, removeNode } from './block'
 import {
   type HydrationCursor,
   advanceHydrationNode,
@@ -53,10 +53,20 @@ export function createIf(
     const keyed = index > 0
     const keyBase = keyed ? (index - 1) * 2 : 0
     const trackSlotBoundary = !!(flags & VaporIfFlags.SLOT_ROOT)
-    frag =
-      isHydrating || __DEV__
-        ? new DynamicFragment('if', keyed, false, trackSlotBoundary)
-        : new DynamicFragment(undefined, keyed, false, trackSlotBoundary)
+    const dynamicFragment = new DynamicFragment(
+      isHydrating || __DEV__ ? 'if' : undefined,
+      keyed,
+      false,
+      trackSlotBoundary,
+      trackSlotBoundary
+        ? () => {
+            const anchor = dynamicFragment.anchor
+            const parent = anchor.parentNode
+            if (parent) removeNode(anchor, parent)
+          }
+        : undefined,
+    )
+    frag = dynamicFragment
     renderEffect(() => {
       const ok = condition()
       if (isHydrating) {
@@ -65,7 +75,7 @@ export function createIf(
           branchShape === VaporBlockShape.MULTI_ROOT,
         )
       }
-      ;(frag as DynamicFragment).update(
+      dynamicFragment.update(
         ok ? b1 : b2,
         keyed ? keyBase + (ok ? 0 : 1) : undefined,
         isNoScopeBranch(flags, ok),

@@ -116,7 +116,17 @@ export const createFor = (
     parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   }
 
-  const frag = new ForFragment(oldBlocks, !!(flags & VaporVForFlags.SLOT_ROOT))
+  const trackSlotBoundary = !!(flags & VaporVForFlags.SLOT_ROOT)
+  const frag = new ForFragment(
+    oldBlocks,
+    trackSlotBoundary,
+    trackSlotBoundary
+      ? () => {
+          const parent = parentAnchor.parentNode
+          if (parent) removeNode(parentAnchor, parent)
+        }
+      : undefined,
+  )
   const instance = currentInstance!
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
   const canUseFastRemove =
