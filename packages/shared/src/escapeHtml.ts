@@ -45,7 +45,7 @@ export function escapeHtml(string: unknown): string {
 }
 
 // https://www.w3.org/TR/html52/syntax.html#comments
-const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
+const commentStripRE = /^(?:-?>)+|<!--|-->|--!>|<!-$/g
 
 export function escapeHtmlComment(src: string): string {
   let prev: string
