@@ -1795,6 +1795,67 @@ describe('vdomInterop', () => {
       )
     })
 
+    test('compiled vdom local fallback keeps outlet fallback clean across invalid updates', async () => {
+      const data = ref({
+        mode: 'local',
+        outlet: 'outlet fallback',
+      })
+      const VDomOuterSlot = compile(
+        `<script setup>const data = _data</script>
+        <template>
+          <slot name="foo"><section>{{ data.outlet }}</section></slot>
+        </template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const VDomInnerSlot = compile(
+        `<script setup>
+          const data = _data
+          const components = _components
+        </script>
+        <template>
+          <components.VDomOuterSlot>
+            <template #foo>
+              <slot name="bar">
+                <span v-if="data.mode === 'local'">local fallback</span>
+                <template v-else-if="data.mode === 'empty-a'" />
+                <template v-else-if="data.mode === 'empty-b'" />
+              </slot>
+            </template>
+          </components.VDomOuterSlot>
+        </template>`,
+        data,
+        { VDomOuterSlot },
+        { vapor: false },
+      )
+      const VaporBridge = compile(
+        `<template>
+          <components.VDomInnerSlot>
+            <template #bar><slot name="bar" /></template>
+          </components.VDomInnerSlot>
+        </template>`,
+        data,
+        { VDomInnerSlot },
+      )
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporBridge as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<span>local fallback</span>')
+
+      data.value.mode = 'empty-a'
+      await nextTick()
+      expect(html()).toBe('<section>outlet fallback</section>')
+
+      data.value.mode = 'empty-b'
+      await nextTick()
+      expect(html()).toBe('<section>outlet fallback</section>')
+    })
+
     test('preserves normalized VDOM slot functions passed to Vapor', async () => {
       const msg = ref('default slot')
       const VaporChild = defineVaporComponent(() => createSlot('default', null))

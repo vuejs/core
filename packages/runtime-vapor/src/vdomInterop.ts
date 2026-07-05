@@ -2376,8 +2376,10 @@ function createVNodeChildrenFragment(
     children: VNode[] = currentChildren,
   ): boolean => {
     const validityChanged = syncResolvedNodes(children)
-    if (validityChanged && !contentValid && frag.slotBoundary) {
+    if (!contentValid && frag.slotBoundary) {
       cleanupInvalidContent()
+      currentVNode = null
+      currentChildren = EMPTY_VNODES
     }
     return validityChanged
   }
