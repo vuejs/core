@@ -131,6 +131,7 @@ import {
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
+  registerContentInvalid,
   trackSlotBoundaryDirtying,
   withSlotBoundary,
 } from './slotBoundary'
@@ -1464,6 +1465,12 @@ function renderVDOMSlot(
   let isContentUpdateRecheck = false
   let localFallback: BlockFn | undefined
   let slotResolutionState!: SlotResolutionState
+  const cleanupInvalidContent = () => {
+    if (currentParentNode) {
+      removeAttachedNodes(contentState.nodes, currentParentNode)
+    }
+  }
+  const onContentInvalid = [cleanupInvalidContent]
   frag.isBlockValid = componentAsValid => {
     if (!contentResolved) return true
     return slotResolutionState.activeFallback
@@ -1476,12 +1483,14 @@ function renderVDOMSlot(
     },
     getFallback: (): BlockFn | undefined => localFallback,
     run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
-    markDirty: () => markSlotResolutionDirty(slotResolutionState),
+    markDirty: force => markSlotResolutionDirty(slotResolutionState, force),
+    onContentInvalid,
   }
   slotResolutionState = {
     boundary,
     activeFallback: null,
     pendingRecheck: false,
+    pendingRecheckForce: false,
     isRenderingFallback: false,
     getContent: () => contentState.nodes,
     getParentNode: () => currentParentNode,
@@ -1498,7 +1507,9 @@ function renderVDOMSlot(
       }
     },
   }
-  if (slotRoot) trackSlotBoundaryDirtying(frag)
+  if (slotRoot) {
+    trackSlotBoundaryDirtying(frag, cleanupInvalidContent)
+  }
   localFallback = fallback
     ? once
       ? () => withOnceSlot(() => fallback(internals, parentComponent))
@@ -1993,12 +2004,21 @@ function renderVaporSlot(
     let slotResolutionState!: SlotResolutionState
     let ownedSlotFragment: SlotFragment | undefined
     let ownedSlotFragmentDirtyQueued = false
-    const markInteropSlotResolutionDirty = (): void => {
+    let ownedSlotFragmentDirtyForce = false
+    const onContentInvalid = [
+      () => {
+        if (currentParentNode) {
+          removeAttachedNodes(contentNodes, currentParentNode)
+        }
+      },
+    ]
+    const markInteropSlotResolutionDirty = (force?: boolean): void => {
       const target = ownedSlotFragment
       if (!target) {
-        markSlotResolutionDirty(slotResolutionState)
+        markSlotResolutionDirty(slotResolutionState, force)
         return
       }
+      ownedSlotFragmentDirtyForce = ownedSlotFragmentDirtyForce || !!force
       // When the inner SlotFragment owns the fallback, a single vdom flush
       // can dirty this slot multiple times; batch into one post-flush recheck
       // so it observes the settled re-rendered content.
@@ -2008,7 +2028,9 @@ function renderVaporSlot(
       ownedSlotFragmentDirtyQueued = true
       queuePostFlushCb(() => {
         ownedSlotFragmentDirtyQueued = false
-        markSlotResolutionDirty(target)
+        const force = ownedSlotFragmentDirtyForce
+        ownedSlotFragmentDirtyForce = false
+        markSlotResolutionDirty(target, force)
       })
     }
     const outletFallbackBoundary: SlotBoundaryContext = {
@@ -2028,11 +2050,13 @@ function renderVaporSlot(
         slotState.localFallback.value ? localFallback : undefined,
       run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
       markDirty: markInteropSlotResolutionDirty,
+      onContentInvalid,
     }
     slotResolutionState = {
       boundary: localFallbackBoundary,
       activeFallback: null,
       pendingRecheck: false,
+      pendingRecheckForce: false,
       isRenderingFallback: false,
       getContent: () => contentNodes,
       getParentNode: () => currentParentNode,
@@ -2051,9 +2075,10 @@ function renderVaporSlot(
       },
     }
     const takePendingRecheck = (): boolean => {
-      const shouldRecheck = slotResolutionState.pendingRecheck
+      const force = slotResolutionState.pendingRecheckForce
       slotResolutionState.pendingRecheck = false
-      return shouldRecheck
+      slotResolutionState.pendingRecheckForce = false
+      return force
     }
 
     const dispose = (parentNode?: ParentNode): void => {
@@ -2086,6 +2111,7 @@ function renderVaporSlot(
       const hasInteropFallback =
         !!slotState.localFallback.value || !!slotState.outletFallback.value
       slotResolutionState.pendingRecheck = false
+      slotResolutionState.pendingRecheckForce = false
       let finish: ((contentValid: boolean) => void) | undefined
       const finishHydratingContent = (contentValid: boolean): void => {
         if (!finish) return
@@ -2160,6 +2186,7 @@ function renderVaporSlot(
       }
 
       slotResolutionState.pendingRecheck = false
+      slotResolutionState.pendingRecheckForce = false
       frag.insert = (parentNode, anchor) => {
         currentParentNode = parentNode
         currentAnchor = anchor
@@ -2324,6 +2351,14 @@ function createVNodeChildrenFragment(
   let isMounted = false
   let isRenderEffectStarted = false
   const scope = effectScope()
+  const cleanupInvalidContent = () => {
+    if (currentParentNode) {
+      removeAttachedNodes(frag.nodes, currentParentNode)
+    }
+  }
+  if (frag.slotBoundary) {
+    registerContentInvalid(frag.slotBoundary, cleanupInvalidContent, frag)
+  }
 
   const syncResolvedNodes = (children: VNode[] = currentChildren): boolean => {
     const prevValid = contentResolved ? contentValid : true
@@ -2337,6 +2372,17 @@ function createVNodeChildrenFragment(
     }
     contentResolved = true
     return prevValid !== contentValid
+  }
+  const syncResolvedNodesAndCleanup = (
+    children: VNode[] = currentChildren,
+  ): boolean => {
+    const validityChanged = syncResolvedNodes(children)
+    if (!contentValid && frag.slotBoundary) {
+      cleanupInvalidContent()
+      currentVNode = null
+      currentChildren = EMPTY_VNODES
+    }
+    return validityChanged
   }
 
   const notifyUpdated = (validityChanged = false): void => {
@@ -2395,7 +2441,7 @@ function createVNodeChildrenFragment(
             trackSlotVNodeUpdatesWithRefresh(
               currentVNode,
               () => {
-                notifyUpdated(syncResolvedNodes(nextChildren))
+                notifyUpdated(syncResolvedNodesAndCleanup(nextChildren))
               },
               notifyBeforeUpdate,
             )
@@ -2416,7 +2462,7 @@ function createVNodeChildrenFragment(
             trackSlotVNodeUpdatesWithRefresh(
               nextVNode,
               () => {
-                notifyUpdated(syncResolvedNodes(nextChildren))
+                notifyUpdated(syncResolvedNodesAndCleanup(nextChildren))
               },
               notifyBeforeUpdate,
             )
@@ -2435,7 +2481,7 @@ function createVNodeChildrenFragment(
             currentVNode = nextVNode
           }
 
-          const validityChanged = syncResolvedNodes()
+          const validityChanged = syncResolvedNodesAndCleanup()
           if (isHydrating) {
             if (isMounted && frag.onUpdated) {
               frag.onUpdated.forEach(hook => hook())
@@ -2472,7 +2518,7 @@ function createVNodeChildrenFragment(
         trackSlotVNodeUpdatesWithRefresh(
           currentVNode,
           () => {
-            notifyUpdated(syncResolvedNodes(currentChildren))
+            notifyUpdated(syncResolvedNodesAndCleanup(currentChildren))
           },
           notifyBeforeUpdate,
         )

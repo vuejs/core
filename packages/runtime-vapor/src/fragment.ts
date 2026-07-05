@@ -97,6 +97,7 @@ export class VaporFragment<
   onBeforeInsert?: ((nodes: Block) => void)[]
   // Return true to keep the branch scope alive after removing its DOM.
   onBeforeRemove?: ((scope: EffectScope) => boolean)[]
+  onRemove?: (() => void)[]
   onBeforeUpdate?: (() => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
 
@@ -178,9 +179,13 @@ export class ForFragment extends VaporFragment<Block[]> {
   // O(1) instead of N per-item Map.delete calls.
   resetListeners?: (() => void)[]
 
-  constructor(nodes: Block[], trackSlotBoundary: boolean) {
+  constructor(
+    nodes: Block[],
+    trackSlotBoundary: boolean,
+    onInvalid?: () => void,
+  ) {
     super(nodes)
-    if (trackSlotBoundary) trackSlotBoundaryDirtying(this)
+    if (trackSlotBoundary) trackSlotBoundaryDirtying(this, onInvalid)
   }
 
   onReset(fn: () => void): void {
@@ -253,6 +258,7 @@ export class DynamicFragment extends RenderContextFragment {
     keyed: boolean = false,
     locate: boolean = true,
     trackSlotBoundary: boolean = false,
+    onInvalid?: () => void,
   ) {
     super(EMPTY_BLOCK)
     if (keyed) this.keyed = true
@@ -271,7 +277,7 @@ export class DynamicFragment extends RenderContextFragment {
         __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
       if (__DEV__) this.anchorLabel = anchorLabel
     }
-    if (trackSlotBoundary) trackSlotBoundaryDirtying(this)
+    if (trackSlotBoundary) trackSlotBoundaryDirtying(this, onInvalid)
   }
 
   // Whether update() claims the SSR anchor itself during hydration.
@@ -334,7 +340,7 @@ export class DynamicFragment extends RenderContextFragment {
         setActiveSub(prevSub)
         return
       }
-      parent && remove(this.nodes, parent)
+      remove(this.nodes, parent || undefined)
     }
 
     const reusingDeferredAnchor = isHydrating
@@ -455,7 +461,9 @@ export class SlotFragment
   fallbackScope?: EffectScope
   lastNodesValid?: boolean
   pendingRecheck = false
+  pendingRecheckForce = false
   isRenderingFallback = false
+  private readonly onContentInvalid: (() => void)[] = []
   private content: Block = EMPTY_BLOCK
   private localFallback?: BlockFn
   private isUpdating = false
@@ -479,7 +487,8 @@ export class SlotFragment
       parent: this.slotBoundary,
       getFallback: () => this.localFallback,
       run: (fn, scope) => this.runWithRenderCtx(fn, scope),
-      markDirty: () => markSlotResolutionDirty(this),
+      markDirty: force => markSlotResolutionDirty(this, force),
+      onContentInvalid: this.onContentInvalid,
     })
   }
 
@@ -497,6 +506,7 @@ export class SlotFragment
       // so disposeSlotResolution does not remove it a second time
       this.activeFallback = null
     }
+    this.onContentInvalid.length = 0
     disposeSlotResolution(this)
   }
 
@@ -508,6 +518,9 @@ export class SlotFragment
   }
 
   private updateContent(render: BlockFn | undefined, key: any): void {
+    if (key !== this.current) {
+      this.onContentInvalid.length = 0
+    }
     // update() operates on this.nodes, but while fallback is active `nodes`
     // points at the fallback block. Aim it at the content branch so the base
     // pipeline re-renders content, then capture the result back; the
@@ -611,16 +624,17 @@ export class SlotFragment
         } else {
           withHydratingSlotBoundary(() => {
             this.updateHydratingContent(slotRender, key)
-            recheckSlotResolution(this, shouldForce)
+            recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)
             hydrateDynamicFragmentAnchor(this, !isValidBlock(this.nodes))
           })
         }
       } else {
         this.updateContent(slotRender, key)
-        recheckSlotResolution(this, shouldForce)
+        recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)
       }
     } finally {
       this.pendingRecheck = false
+      this.pendingRecheckForce = false
       this.isUpdating = false
     }
   }

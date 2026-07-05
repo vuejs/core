@@ -17,7 +17,8 @@ export interface SlotBoundaryContext {
   // Notifies the owning slot that the validity of a dynamic branch rendered
   // under this boundary may have changed; routes into the slot resolution
   // state machine (markSlotResolutionDirty).
-  markDirty: () => void
+  markDirty: (force?: boolean) => void
+  onContentInvalid?: (() => void)[]
 }
 
 export let currentSlotBoundary: SlotBoundaryContext | null = null
@@ -46,9 +47,16 @@ export function withSlotBoundary<R>(
 
 // Dynamic children (`v-if`, `v-for`, interop fragments) created under a slot
 // boundary dirty the boundary only when their rendered validity changes.
-export function trackSlotBoundaryDirtying(fragment: VaporFragment): void {
+export function trackSlotBoundaryDirtying(
+  fragment: VaporFragment,
+  onInvalid?: () => void,
+): void {
   const boundary = currentSlotBoundary
   if (!boundary) return
+
+  if (onInvalid) {
+    registerContentInvalid(boundary, onInvalid, fragment)
+  }
 
   let prevValid: boolean
   ;(fragment.onBeforeUpdate ||= []).push(() => {
@@ -59,6 +67,22 @@ export function trackSlotBoundaryDirtying(fragment: VaporFragment): void {
       boundary.markDirty()
     }
   })
+}
+
+export function registerContentInvalid(
+  boundary: SlotBoundaryContext,
+  onInvalid: () => void,
+  fragment: VaporFragment,
+): void {
+  const callbacks = (boundary.onContentInvalid ||= [])
+  callbacks.push(onInvalid)
+  const unregister = () => {
+    const index = callbacks.indexOf(onInvalid)
+    if (index > -1) callbacks.splice(index, 1)
+  }
+  // The callback belongs to the slot-root fragment; remove it with that
+  // fragment so stale branches do not stay on a long-lived boundary.
+  ;(fragment.onRemove ||= []).push(unregister)
 }
 
 export function hasSlotFallback(
