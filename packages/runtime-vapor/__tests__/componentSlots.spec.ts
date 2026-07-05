@@ -481,6 +481,85 @@ describe('component: slots', () => {
       app.unmount()
     })
 
+    test('compiled v-for slot content unregisters invalid callbacks for removed item roots', async () => {
+      let boundary: SlotBoundaryContext | null | undefined
+      const data = ref({
+        items: [
+          { id: 1, show: true },
+          { id: 2, show: true },
+        ],
+        capture: () => {
+          if (currentSlotBoundary) {
+            boundary = currentSlotBoundary
+          }
+          return true
+        },
+      })
+      const Child = compile(`<template><slot>fallback</slot></template>`, data)
+      const Leaf = compile(`<template><span>item</span></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-for="item in data.items" :key="item.id">
+              <components.Leaf v-if="data.capture() && item.show" />
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child, Leaf },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      const initialCallbacks = boundary!.onContentInvalid!.length
+      expect(initialCallbacks).toBeGreaterThan(1)
+
+      data.value.items = [{ id: 2, show: true }]
+      await nextTick()
+
+      expect(boundary!.onContentInvalid!.length).toBe(initialCallbacks - 1)
+      app.unmount()
+    })
+
+    test('compiled nested slot root v-if unregisters invalid callbacks for removed inner roots', async () => {
+      let boundary: SlotBoundaryContext | null | undefined
+      const data = ref({
+        outer: true,
+        inner: true,
+        capture: () => {
+          if (currentSlotBoundary) {
+            boundary = currentSlotBoundary
+          }
+          return true
+        },
+      })
+      const Child = compile(`<template><slot>fallback</slot></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.outer">
+              <span v-if="data.capture() && data.inner">item</span>
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      const initialCallbacks = boundary!.onContentInvalid!.length
+      expect(initialCallbacks).toBeGreaterThan(1)
+
+      data.value.outer = false
+      await nextTick()
+
+      expect(boundary!.onContentInvalid!.length).toBe(initialCallbacks - 1)
+      app.unmount()
+    })
+
     test('compiled slot fallback falls through and restores local root v-if fallback without keeping inactive anchor in DOM', async () => {
       const show = ref(false)
       const Outer = compile(
@@ -524,6 +603,43 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(root.innerHTML).toBe('parent fallback<!--slot--><!--slot-->')
+      app.unmount()
+    })
+
+    test('compiled slot keeps active fallback anchor when fallback becomes invalid without parent fallback', async () => {
+      const show = ref(true)
+      const Child = compile(
+        `<template>
+          <slot>
+            <span v-if="data">fallback</span>
+          </slot>
+        </template>`,
+        show,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <span v-if="false">content</span>
+          </components.Child>
+        </template>`,
+        show,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      app.mount(root)
+
+      expect(root.innerHTML).toBe('<span>fallback</span><!--if--><!--slot-->')
+
+      show.value = false
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<!--if--><!--slot-->')
+
+      show.value = true
+      await nextTick()
+
+      expect(root.innerHTML).toBe('<span>fallback</span><!--if--><!--slot-->')
       app.unmount()
     })
 

@@ -131,6 +131,7 @@ import {
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
+  registerContentInvalid,
   trackSlotBoundaryDirtying,
   withSlotBoundary,
 } from './slotBoundary'
@@ -2356,7 +2357,7 @@ function createVNodeChildrenFragment(
     }
   }
   if (frag.slotBoundary) {
-    ;(frag.slotBoundary.onContentInvalid ||= []).push(cleanupInvalidContent)
+    registerContentInvalid(frag.slotBoundary, cleanupInvalidContent, frag)
   }
 
   const syncResolvedNodes = (children: VNode[] = currentChildren): boolean => {

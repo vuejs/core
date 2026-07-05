@@ -302,6 +302,9 @@ export function recheckSlotResolution(
     // be in the DOM. Previously invalid fallback is inserted only after it
     // becomes valid.
     if (prevNodesValid) {
+      // If the selected fallback becomes invalid and no inherited fallback can
+      // take over, keep it active. This is an internal fallback update, so its
+      // anchors/effects must stay live until it becomes valid again.
       if (!fallbackValid && hasSlotFallback(state.boundary.parent)) {
         renderAndCommitSlotFallback(state, true)
       } else if (force && fallbackValid) {

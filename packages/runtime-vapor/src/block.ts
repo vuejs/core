@@ -308,6 +308,12 @@ export function removeFragment(
   block: VaporFragment | DynamicFragment,
   parent?: ParentNode,
 ): void {
+  const onRemove = block.onRemove
+  if (onRemove) {
+    for (let i = 0; i < onRemove.length; i++) {
+      onRemove[i]()
+    }
+  }
   if (block.remove) {
     block.remove(parent, (block as TransitionBlock).$transition)
   } else {

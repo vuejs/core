@@ -97,6 +97,7 @@ export class VaporFragment<
   onBeforeInsert?: ((nodes: Block) => void)[]
   // Return true to keep the branch scope alive after removing its DOM.
   onBeforeRemove?: ((scope: EffectScope) => boolean)[]
+  onRemove?: (() => void)[]
   onBeforeUpdate?: (() => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
 
