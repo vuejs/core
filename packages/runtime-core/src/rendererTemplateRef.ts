@@ -136,11 +136,24 @@ export function setRef(
   }
 
   if (isFunction(ref)) {
-    pauseTracking()
-    try {
-      callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
-    } finally {
-      resetTracking()
+    const isComponent = !!(vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT)
+    if (value && isComponent) {
+      const job: SchedulerJob = () => {
+        pauseTracking()
+        try {
+          callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
+        } finally {
+          resetTracking()
+        }
+      }
+      queuePostRenderEffect(job, parentSuspense)
+    } else {
+      pauseTracking()
+      try {
+        callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
+      } finally {
+        resetTracking()
+      }
     }
   } else {
     const _isString = isString(ref)
