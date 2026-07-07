@@ -390,6 +390,14 @@ export function createHydrationFunctions(
     // #9033 force hydrate dynamic props.
     // Keep separate from forcePatch, which also patches value-like keys.
     const hasDynamicProps = !!dynamicProps
+    // #XXXX determine SVG/MathML namespace from the element itself
+    // so that patchProp can properly handle SVG coordinate attributes
+    // (x1, y1, cx, cy, etc.) which must be set as attributes not DOM props
+    const elementNamespace = el.namespaceURI?.includes('svg') && el.tagName !== 'foreignObject'
+      ? ('svg' as const)
+      : el.namespaceURI?.includes('MathML')
+        ? ('mathml' as const)
+        : undefined
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
     if (
@@ -520,7 +528,7 @@ export function createHydrationFunctions(
               (isCustomElement && !isReservedProp(key)) ||
               (dynamicProps && dynamicProps.includes(key))
             ) {
-              patchProp(el, key, null, props[key], undefined, parentComponent)
+              patchProp(el, key, null, props[key], elementNamespace, parentComponent)
             }
           }
         } else if (props.onClick) {
@@ -531,7 +539,7 @@ export function createHydrationFunctions(
             'onClick',
             null,
             props.onClick,
-            undefined,
+            elementNamespace,
             parentComponent,
           )
         } else if (patchFlag & PatchFlags.STYLE && isReactive(props.style)) {

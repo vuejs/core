@@ -1594,6 +1594,38 @@ describe('SSR hydration', () => {
     )
   })
 
+  test('SVG element coordinate attributes are set as attributes not properties', () => {
+    const { container } = mountWithHydration(
+      '<svg width="200" height="200"><line x1="10" y1="20" x2="180" y2="190" /></svg>',
+      () =>
+        h('svg', { width: 200, height: 200 }, [
+          h('line', { x1: 10, y1: 20, x2: 180, y2: 190 }),
+        ]),
+    )
+    const line = container.querySelector('line')!
+    expect(line.getAttribute('x1')).toBe('10')
+    expect(line.getAttribute('y1')).toBe('20')
+    expect(line.getAttribute('x2')).toBe('180')
+    expect(line.getAttribute('y2')).toBe('190')
+    // Should not warn about setting SVG coordinate props
+    expect(`Failed setting prop`).not.toHaveBeenWarned()
+  })
+
+  test('SVG element circle coordinate attributes hydrate correctly', () => {
+    const { container } = mountWithHydration(
+      '<svg width="200" height="200"><circle cx="100" cy="100" r="50" /></svg>',
+      () =>
+        h('svg', { width: 200, height: 200 }, [
+          h('circle', { cx: 100, cy: 100, r: 50 }),
+        ]),
+    )
+    const circle = container.querySelector('circle')!
+    expect(circle.getAttribute('cx')).toBe('100')
+    expect(circle.getAttribute('cy')).toBe('100')
+    expect(circle.getAttribute('r')).toBe('50')
+    expect(`Failed setting prop`).not.toHaveBeenWarned()
+  })
+
   test('force hydrate prop with `.prop` modifier', () => {
     const { container } = mountWithHydration('<input type="checkbox">', () =>
       h('input', {
