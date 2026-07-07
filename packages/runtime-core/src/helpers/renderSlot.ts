@@ -76,8 +76,8 @@ export function renderSlot(
   const validSlotContent = slot && ensureValidVNode(slot(props))
   const userSlotKey = hasOwn(props, 'key') ? props.key : undefined
   const resolvedSlotKey =
-    userSlotKey ||
-    slotKey ||
+    userSlotKey ??
+    slotKey ??
     // slot content array of a dynamic conditional slot may have a branch
     // key attached in the `createSlots` helper, respect that
     (validSlotContent && (validSlotContent as any).key)
@@ -85,7 +85,7 @@ export function renderSlot(
     Fragment,
     {
       key:
-        (resolvedSlotKey && !isSymbol(resolvedSlotKey)
+        (resolvedSlotKey != null && !isSymbol(resolvedSlotKey)
           ? resolvedSlotKey
           : `_${name}`) +
         // #7256 force differentiate fallback content from actual content
