@@ -38,6 +38,49 @@ describe('renderSlot', () => {
     expect(vnode.key).toBe('_default')
   })
 
+  it('should not expose compiler-injected slot keys to slot props', () => {
+    let receivedProps: any
+    const props = ['foo', 'bar']
+    const vnode = renderSlot(
+      {
+        default: props => {
+          receivedProps = props
+          return [h('div')]
+        },
+      },
+      'default',
+      props as any,
+      undefined,
+      undefined,
+      'branch',
+    )
+
+    expect(receivedProps).toBe(props)
+    expect(receivedProps).not.toHaveProperty('key')
+    expect(vnode.key).toBe('branch')
+  })
+
+  it('should prefer user-provided slot prop keys over compiler-injected keys', () => {
+    let receivedProps: any
+    const props = { key: 'user' }
+    const vnode = renderSlot(
+      {
+        default: props => {
+          receivedProps = props
+          return [h('div')]
+        },
+      },
+      'default',
+      props,
+      undefined,
+      undefined,
+      'branch',
+    )
+
+    expect(receivedProps).toBe(props)
+    expect(vnode.key).toBe('user')
+  })
+
   it('should render slot fallback', () => {
     const vnode = renderSlot({}, 'default', { key: 'foo' }, () => ['fallback'])
     expect(vnode.children).toEqual(['fallback'])

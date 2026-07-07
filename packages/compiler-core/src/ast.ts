@@ -491,14 +491,29 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 // renderSlot(...)
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
-  arguments: // $slots, name, props, fallback
+  arguments: // $slots, name, props, fallback, noSlotted, slotKey
     | [string, string | ExpressionNode]
-    | [string, string | ExpressionNode, PropsExpression]
+    | [string, string | ExpressionNode, PropsExpression | '{}']
     | [
         string,
         string | ExpressionNode,
         PropsExpression | '{}',
-        TemplateChildNode[],
+        FunctionExpression | string,
+      ]
+    | [
+        string,
+        string | ExpressionNode,
+        PropsExpression | '{}',
+        FunctionExpression | string,
+        string,
+      ]
+    | [
+        string,
+        string | ExpressionNode,
+        PropsExpression | '{}',
+        FunctionExpression | string,
+        string,
+        JSChildNode,
       ]
 }
 
