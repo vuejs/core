@@ -62,7 +62,11 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
           // :type="foo"
           directiveToUse = V_MODEL_DYNAMIC
         } else if (type.value) {
-          switch (type.value.content) {
+          switch (
+            tag === 'input'
+              ? type.value.content.toLowerCase()
+              : type.value.content
+          ) {
             case 'radio':
               directiveToUse = V_MODEL_RADIO
               break

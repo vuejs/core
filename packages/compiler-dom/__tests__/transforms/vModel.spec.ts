@@ -50,11 +50,23 @@ describe('compiler: transform v-model', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  test('simple expression for input (case-insensitive radio)', () => {
+    const root = transformWithModel('<input type="RADIO" v-model="model" />')
+
+    expect(root.helpers).toContain(V_MODEL_RADIO)
+  })
+
   test('simple expression for input (checkbox)', () => {
     const root = transformWithModel('<input type="checkbox" v-model="model" />')
 
     expect(root.helpers).toContain(V_MODEL_CHECKBOX)
     expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('simple expression for input (case-insensitive checkbox)', () => {
+    const root = transformWithModel('<input type="CheckBox" v-model="model" />')
+
+    expect(root.helpers).toContain(V_MODEL_CHECKBOX)
   })
 
   test('simple expression for input (dynamic type)', () => {
@@ -138,6 +150,18 @@ describe('compiler: transform v-model', () => {
     test('should raise error if used file input element', () => {
       const onError = vi.fn()
       transformWithModel(`<input type="file" v-model="test"/>`, {
+        onError,
+      })
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT,
+        }),
+      )
+    })
+
+    test('should raise error if used case-insensitive file input element', () => {
+      const onError = vi.fn()
+      transformWithModel(`<input type="FILE" v-model="test"/>`, {
         onError,
       })
       expect(onError).toHaveBeenCalledWith(

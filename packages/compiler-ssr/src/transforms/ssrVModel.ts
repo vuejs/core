@@ -102,7 +102,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
           ]
         } else if (type.value) {
           // static type
-          switch (type.value.content) {
+          switch (type.value.content.toLowerCase()) {
             case 'radio':
               res.props = [
                 createObjectProperty(

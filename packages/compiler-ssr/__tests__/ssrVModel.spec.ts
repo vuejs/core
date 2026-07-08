@@ -308,6 +308,10 @@ describe('ssr: v-model', () => {
         }></div>\`)
       }"
     `)
+
+    expect(
+      compileWithWrapper(`<input type="RADIO" value="foo" v-model="bar">`).code,
+    ).toContain(`_ssrLooseEqual(_ctx.bar, "foo")`)
   })
 
   test('<input type="checkbox">', () => {
@@ -374,6 +378,11 @@ describe('ssr: v-model', () => {
         }></div>\`)
       }"
     `)
+
+    expect(
+      compileWithWrapper(`<input type="CheckBox" value="foo" v-model="bar">`)
+        .code,
+    ).toContain(`_ssrLooseContain(_ctx.bar, "foo")`)
   })
 
   test('<textarea>', () => {
