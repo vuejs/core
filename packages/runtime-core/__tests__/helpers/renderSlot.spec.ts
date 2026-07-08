@@ -81,6 +81,39 @@ describe('renderSlot', () => {
     expect(vnode.key).toBe('user')
   })
 
+  it('should preserve falsy user-provided and compiler-injected slot keys', () => {
+    expect(
+      renderSlot(
+        { default: () => [h('div')] },
+        'default',
+        { key: 0 },
+        undefined,
+        undefined,
+        'branch',
+      ).key,
+    ).toBe('0')
+    expect(
+      renderSlot(
+        { default: () => [h('div')] },
+        'default',
+        { key: '' },
+        undefined,
+        undefined,
+        'branch',
+      ).key,
+    ).toBe('')
+    expect(
+      renderSlot(
+        { default: () => [h('div')] },
+        'default',
+        {},
+        undefined,
+        undefined,
+        0,
+      ).key,
+    ).toBe('0')
+  })
+
   it('should render slot fallback', () => {
     const vnode = renderSlot({}, 'default', { key: 'foo' }, () => ['fallback'])
     expect(vnode.children).toEqual(['fallback'])
