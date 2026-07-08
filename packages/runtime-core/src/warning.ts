@@ -32,6 +32,12 @@ export function popWarningContext(): void {
 
 let isWarning = false
 
+const formatWarnArg = (arg: any): string =>
+  arg == null
+    ? String(arg)
+    : // eslint-disable-next-line no-restricted-syntax
+      (arg.toString?.() ?? JSON.stringify(arg))
+
 export function warn(msg: string, ...args: any[]): void {
   if (isWarning) return
   isWarning = true
@@ -50,8 +56,7 @@ export function warn(msg: string, ...args: any[]): void {
       instance,
       ErrorCodes.APP_WARN_HANDLER,
       [
-        // eslint-disable-next-line no-restricted-syntax
-        msg + args.map(a => a.toString?.() ?? JSON.stringify(a)).join(''),
+        msg + args.map(formatWarnArg).join(''),
         instance && instance.proxy,
         trace
           .map(

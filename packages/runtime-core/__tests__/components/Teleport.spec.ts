@@ -451,6 +451,33 @@ describe('renderer: teleport', () => {
     })
   })
 
+  test('custom warnHandler should handle null target warning args', () => {
+    const root = document.createElement('div')
+    const warnHandler = vi.fn()
+    const App = {
+      setup() {
+        return () =>
+          originalH(Teleport, { to: null }, [originalH('div', 'foo')])
+      },
+    }
+    const app = createDOMApp(App)
+    app.config.warnHandler = warnHandler
+
+    expect(() => app.mount(root)).not.toThrow()
+    expect(warnHandler).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid Teleport target: null'),
+      expect.anything(),
+      expect.any(String),
+      expect.any(Array),
+    )
+    expect(warnHandler).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid Teleport target on mount:null(object)'),
+      expect.anything(),
+      expect.any(String),
+      expect.any(Array),
+    )
+  })
+
   function runSharedTests(deferMode: boolean) {
     const h = (deferMode
       ? (type: any, props: any, ...args: any[]) => {
