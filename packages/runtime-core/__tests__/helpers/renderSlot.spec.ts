@@ -38,6 +38,19 @@ describe('renderSlot', () => {
     expect(vnode.key).toBe('_default')
   })
 
+  it('should allow symbol values for compiler-injected slot keys', () => {
+    const key = Symbol()
+    const vnode = renderSlot(
+      { default: () => [h('div')] },
+      'default',
+      {},
+      undefined,
+      undefined,
+      key,
+    )
+    expect(vnode.key).toBe('_default')
+  })
+
   it('should not expose compiler-injected slot keys to slot props', () => {
     let receivedProps: any
     const props = ['foo', 'bar']
@@ -112,6 +125,27 @@ describe('renderSlot', () => {
         0,
       ).key,
     ).toBe('0')
+  })
+
+  it('should preserve compiler-injected slot keys in custom element mode', () => {
+    setCurrentRenderingInstance({ type: {}, ce: {} } as any)
+
+    let vnode = renderSlot({}, 'default', {}, undefined, undefined, 0)
+    let slot = (vnode.children as any[])[0]
+    expect(slot.type).toBe('slot')
+    expect(slot.key).toBe(0)
+    expect(vnode.patchFlag).toBe(PatchFlags.BAIL)
+
+    vnode = renderSlot(
+      {},
+      'default',
+      { key: 'user' },
+      undefined,
+      undefined,
+      'branch',
+    )
+    slot = (vnode.children as any[])[0]
+    expect(slot.key).toBe('user')
   })
 
   it('should render slot fallback', () => {
