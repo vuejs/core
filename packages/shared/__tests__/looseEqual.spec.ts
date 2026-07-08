@@ -168,6 +168,22 @@ describe('utils/looseEqual', () => {
     expect(looseEqual(nestedObj1, nestedObj2)).toBe(false)
   })
 
+  test('compares objects without prototype safely', () => {
+    const obj1 = Object.assign(Object.create(null), { foo: 1 })
+    const obj2 = Object.assign(Object.create(null), { foo: '1' })
+    const obj3 = Object.assign(Object.create(null), { foo: 2 })
+
+    expect(looseEqual(obj1, obj2)).toBe(true)
+    expect(looseEqual(obj1, obj3)).toBe(false)
+  })
+
+  test('compares objects with shadowed hasOwnProperty safely', () => {
+    const obj1 = { foo: 1, hasOwnProperty: false }
+    const obj2 = { foo: '1', hasOwnProperty: false }
+
+    expect(looseEqual(obj1, obj2)).toBe(true)
+  })
+
   test('compares different types correctly', () => {
     const obj1 = {}
     const obj2 = { a: 1 }
