@@ -251,6 +251,25 @@ test('check when has explicit parse options', () => {
   expect(content).toMatch('return { get x() { return x } }')
 })
 
+// #12542
+test('pug template usage', () => {
+  const { content } = compile(`
+<script setup lang="ts">
+import { MyType, UsedComponent } from './x'
+const msg = 'hi'
+defineProps<{ value: MyType }>()
+</script>
+<template lang="pug">
+div
+  UsedComponent
+  span {{ msg }}
+</template>
+  `)
+  expect(content).not.toMatch(`get MyType() { return MyType }`)
+  expect(content).toMatch(`get UsedComponent() { return UsedComponent }`)
+  assertCode(content)
+})
+
 // #11745
 test('shorthand binding w/ kebab-case', () => {
   const { content } = compile(

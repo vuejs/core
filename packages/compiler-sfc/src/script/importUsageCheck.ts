@@ -2,14 +2,17 @@ import type { SFCDescriptor } from '../parse'
 import {
   type ExpressionNode,
   NodeTypes,
+  type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
   isSimpleIdentifier,
+  parse as parseTemplate,
   parserOptions,
   walkIdentifiers,
 } from '@vue/compiler-dom'
 import { createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
+import consolidate from '@vue/consolidate'
 
 /**
  * Check if an import is used in the SFC's template. This is used to determine
@@ -17,12 +20,14 @@ import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
  * when not using inline mode.
  */
 export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
-  return resolveTemplateUsedIdentifiers(sfc).has(local)
+  const ids = resolveTemplateUsedIdentifiers(sfc)
+  return ids === undefined || ids.has(local)
 }
 
 const templateAnalysisCache = createCache<{
   usedIds?: Set<string>
   vModelIds: Set<string>
+  isUsageUnknown?: boolean
 }>()
 
 export function resolveTemplateVModelIdentifiers(
@@ -31,8 +36,10 @@ export function resolveTemplateVModelIdentifiers(
   return resolveTemplateAnalysisResult(sfc, false).vModelIds
 }
 
-function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
-  return resolveTemplateAnalysisResult(sfc).usedIds!
+function resolveTemplateUsedIdentifiers(
+  sfc: SFCDescriptor,
+): Set<string> | undefined {
+  return resolveTemplateAnalysisResult(sfc).usedIds
 }
 
 function resolveTemplateAnalysisResult(
@@ -42,9 +49,12 @@ function resolveTemplateAnalysisResult(
   usedIds?: Set<string>
   vModelIds: Set<string>
 } {
-  const { content, ast } = sfc.template!
-  const cached = templateAnalysisCache.get(content)
-  if (cached && (!collectUsedIds || cached.usedIds)) {
+  const template = sfc.template!
+  const cacheKey = template.lang
+    ? `${sfc.filename}\n${template.lang}\n${template.content}`
+    : template.content
+  const cached = templateAnalysisCache.get(cacheKey)
+  if (cached && (!collectUsedIds || cached.usedIds || cached.isUsageUnknown)) {
     return cached
   }
 
@@ -52,6 +62,17 @@ function resolveTemplateAnalysisResult(
   // and only collect `vModelIds`.
   const ids = collectUsedIds ? new Set<string>() : undefined
   const vModelIds = new Set<string>()
+  const ast = getTemplateAST(sfc)
+
+  if (!ast) {
+    const result = {
+      usedIds: undefined,
+      vModelIds,
+      isUsageUnknown: collectUsedIds,
+    }
+    templateAnalysisCache.set(cacheKey, result)
+    return result
+  }
 
   ast!.children.forEach(walk)
 
@@ -130,8 +151,61 @@ function resolveTemplateAnalysisResult(
   }
 
   const result = { usedIds: ids, vModelIds }
-  templateAnalysisCache.set(content, result)
+  templateAnalysisCache.set(cacheKey, result)
   return result
+}
+
+interface PreProcessor {
+  render(
+    source: string,
+    options: any,
+    cb: (err: Error | null, res: string) => void,
+  ): void
+}
+
+function getTemplateAST(sfc: SFCDescriptor): RootNode | undefined {
+  const template = sfc.template!
+  if (!template.lang) {
+    return template.ast
+  }
+
+  const preprocessor =
+    !__ESM_BROWSER__ &&
+    !__GLOBAL__ &&
+    (consolidate[template.lang as keyof typeof consolidate] as
+      | PreProcessor
+      | undefined)
+  if (!preprocessor) {
+    return
+  }
+
+  try {
+    return parseTemplate(preprocessTemplate(sfc, preprocessor), {
+      prefixIdentifiers: true,
+    })
+  } catch {
+    return
+  }
+}
+
+function preprocessTemplate(
+  sfc: SFCDescriptor,
+  preprocessor: PreProcessor,
+): string {
+  let res = ''
+  let err: Error | null = null
+  preprocessor.render(
+    sfc.template!.content,
+    { filename: sfc.filename },
+    (_err, _res) => {
+      if (_err) err = _err
+      res = _res
+    },
+  )
+  if (err) {
+    throw err
+  }
+  return res
 }
 
 function extractIdentifiers(ids: Set<string>, node: ExpressionNode) {

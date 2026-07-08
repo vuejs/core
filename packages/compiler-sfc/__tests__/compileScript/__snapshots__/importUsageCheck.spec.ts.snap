@@ -154,6 +154,26 @@ return { get Foo() { return Foo } }
 })"
 `;
 
+exports[`pug template usage 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { MyType, UsedComponent } from './x'
+const msg = 'hi'
+
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    value: { type: null, required: true }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+
+
+return { msg, get UsedComponent() { return UsedComponent } }
+}
+
+})"
+`;
+
 exports[`spread operator 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { Foo, Bar, Baz } from './foo'

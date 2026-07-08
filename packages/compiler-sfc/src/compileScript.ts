@@ -263,8 +263,7 @@ export function compileScript(
       needTemplateUsageCheck &&
       ctx.isTS &&
       sfc.template &&
-      !sfc.template.src &&
-      !sfc.template.lang
+      !sfc.template.src
     ) {
       isUsedInTemplate = isImportUsed(local, sfc)
     }
