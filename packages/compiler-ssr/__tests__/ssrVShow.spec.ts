@@ -134,4 +134,30 @@ describe('ssr: v-show', () => {
       }"
     `)
   })
+
+  test('on component', () => {
+    expect(compile(`<foo v-show="foo"/>`).code).toMatchInlineSnapshot(`
+      "const { resolveComponent: _resolveComponent } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_foo = _resolveComponent("foo")
+
+        _push(_ssrRenderComponent(_component_foo, _attrs, null, _parent, undefined, {
+          style: (_ctx.foo) ? null : { display: "none" }
+        }))
+      }"
+    `)
+    expect(compile(`<component :is="foo" v-show="foo"/>`).code)
+      .toMatchInlineSnapshot(`
+        "const { resolveDynamicComponent: _resolveDynamicComponent, createVNode: _createVNode } = require("vue")
+        const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.foo), _attrs, null), _parent, undefined, {
+            style: (_ctx.foo) ? null : { display: "none" }
+          })
+        }"
+      `)
+  })
 })

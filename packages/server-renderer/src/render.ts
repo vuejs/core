@@ -93,6 +93,7 @@ export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
+  rootAttrs?: Props,
 ): SSRBuffer | Promise<SSRBuffer> {
   const instance = (vnode.component = createComponentInstance(
     vnode,
@@ -117,15 +118,18 @@ export function renderComponentVNode(
       })
       // Note: error display is already done by the wrapped lifecycle hook function.
       .catch(NOOP)
-    return p.then(() => renderComponentSubTree(instance, slotScopeId))
+    return p.then(() =>
+      renderComponentSubTree(instance, slotScopeId, rootAttrs),
+    )
   } else {
-    return renderComponentSubTree(instance, slotScopeId)
+    return renderComponentSubTree(instance, slotScopeId, rootAttrs)
   }
 }
 
 function renderComponentSubTree(
   instance: ComponentInternalInstance,
   slotScopeId?: string,
+  rootAttrs?: Props,
 ): SSRBuffer | Promise<SSRBuffer> {
   if (__DEV__) pushWarningContext(instance.vnode)
   const comp = instance.type as Component
@@ -141,7 +145,13 @@ function renderComponentSubTree(
         }
       }
     }
-    renderVNode(push, (instance.subTree = root), instance, slotScopeId)
+    renderVNode(
+      push,
+      (instance.subTree = root),
+      instance,
+      slotScopeId,
+      rootAttrs,
+    )
   } else {
     if (
       (!instance.render || instance.render === NOOP) &&
@@ -158,6 +168,9 @@ function renderComponentSubTree(
       // resolve fallthrough attrs
       let attrs = instance.inheritAttrs !== false ? instance.attrs : undefined
       let hasCloned = false
+      if (rootAttrs) {
+        attrs = attrs ? mergeProps(attrs, rootAttrs) : rootAttrs
+      }
 
       let cur = instance
       while (true) {
@@ -210,6 +223,7 @@ function renderComponentSubTree(
         (instance.subTree = renderComponentRoot(instance)),
         instance,
         slotScopeId,
+        rootAttrs,
       )
     } else {
       const componentName = comp.name || comp.__file || `<Anonymous>`
@@ -226,6 +240,7 @@ export function renderVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  rootAttrs?: Props,
 ): void {
   const { type, shapeFlag, children, dirs, props } = vnode
   if (dirs) {
@@ -262,9 +277,11 @@ export function renderVNode(
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
-        renderElementVNode(push, vnode, parentComponent, slotScopeId)
+        renderElementVNode(push, vnode, parentComponent, slotScopeId, rootAttrs)
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
-        push(renderComponentVNode(vnode, parentComponent, slotScopeId))
+        push(
+          renderComponentVNode(vnode, parentComponent, slotScopeId, rootAttrs),
+        )
       } else if (shapeFlag & ShapeFlags.TELEPORT) {
         renderTeleportVNode(push, vnode, parentComponent, slotScopeId)
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
@@ -295,9 +312,13 @@ function renderElementVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  rootAttrs?: Props,
 ) {
   const tag = vnode.type as string
   let { props, children, shapeFlag, scopeId } = vnode
+  if (rootAttrs) {
+    props = props ? mergeProps(props, rootAttrs) : rootAttrs
+  }
   let openTag = `<${tag}`
 
   if (props) {

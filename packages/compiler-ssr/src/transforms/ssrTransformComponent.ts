@@ -30,6 +30,7 @@ import {
   createCallExpression,
   createFunctionExpression,
   createIfStatement,
+  createObjectExpression,
   createReturnStatement,
   createRoot,
   createSimpleExpression,
@@ -61,6 +62,7 @@ import {
   ssrProcessTransition,
   ssrTransformTransition,
 } from './ssrTransformTransition'
+import { ssrTransformShow } from './ssrVShow'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -81,6 +83,7 @@ const componentTypeMap = new WeakMap<
   ComponentNode,
   string | symbol | CallExpression
 >()
+const rootAttrsMap = new WeakMap<ComponentNode, JSChildNode>()
 
 // ssr component transform is done in two phases:
 // In phase 1. we use `buildSlot` to analyze the children of the component into
@@ -122,6 +125,18 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   const clonedNode = clone(node)
 
   return function ssrPostTransformComponent() {
+    const vShowIndex = node.props.findIndex(
+      p => p.type === NodeTypes.DIRECTIVE && p.name === 'show',
+    )
+    if (vShowIndex !== -1) {
+      const vShow = node.props[vShowIndex] as DirectiveNode
+      node.props.splice(vShowIndex, 1)
+      rootAttrsMap.set(
+        node,
+        createObjectExpression(ssrTransformShow(vShow, node, context).props),
+      )
+    }
+
     // Using the cloned node, build the normal VNode-based branches (for
     // fallback in case the child is render-fn based). Store them in an array
     // for later use.
@@ -253,6 +268,13 @@ export function ssrProcessComponent(
     // component is inside a slot, inherit slot scope Id
     if (context.withSlotScopeId) {
       node.ssrCodegenNode.arguments.push(`_scopeId`)
+    }
+    const rootAttrs = rootAttrsMap.get(node)
+    if (rootAttrs) {
+      if (!context.withSlotScopeId) {
+        node.ssrCodegenNode.arguments.push(`undefined`)
+      }
+      node.ssrCodegenNode.arguments.push(rootAttrs)
     }
 
     if (typeof component === 'string') {

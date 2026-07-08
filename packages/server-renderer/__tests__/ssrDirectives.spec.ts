@@ -2,6 +2,7 @@ import { renderToString } from '../src/renderToString'
 import {
   createApp,
   h,
+  markRaw,
   mergeProps,
   ref,
   resolveDirective,
@@ -65,6 +66,31 @@ describe('ssr: directives', () => {
           }),
         ),
       ).toBe(`<div style="color:red;font-size:12;display:none;"></div>`)
+    })
+
+    // #12503
+    test('component with inheritAttrs false and manual attrs binding', async () => {
+      const Child = {
+        inheritAttrs: false,
+        template: `<div><div v-bind="$attrs">child</div></div>`,
+      }
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ show: false }),
+            components: { Child },
+            template: `<Child v-show="show" />`,
+          }),
+        ),
+      ).toBe(`<div style="display:none;"><div>child</div></div>`)
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ show: false, child: markRaw(Child) }),
+            template: `<component :is="child" v-show="show" />`,
+          }),
+        ),
+      ).toBe(`<div style="display:none;"><div>child</div></div>`)
     })
   })
 
