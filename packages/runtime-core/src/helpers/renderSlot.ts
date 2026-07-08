@@ -14,7 +14,7 @@ import {
   isVNode,
   openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags, hasOwn, isSymbol } from '@vue/shared'
+import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
@@ -30,7 +30,7 @@ export function renderSlot(
   // the compiler and guaranteed to be a function returning an array
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean,
-  slotKey?: string | number,
+  branchKey?: string | number,
 ): VNode {
   if (
     currentRenderingInstance!.ce ||
@@ -74,10 +74,9 @@ export function renderSlot(
   }
   openBlock()
   const validSlotContent = slot && ensureValidVNode(slot(props))
-  const userSlotKey = hasOwn(props, 'key') ? props.key : undefined
-  const resolvedSlotKey =
-    userSlotKey ??
-    slotKey ??
+  const slotKey =
+    props.key ||
+    branchKey ||
     // slot content array of a dynamic conditional slot may have a branch
     // key attached in the `createSlots` helper, respect that
     (validSlotContent && (validSlotContent as any).key)
@@ -85,9 +84,7 @@ export function renderSlot(
     Fragment,
     {
       key:
-        (resolvedSlotKey != null && !isSymbol(resolvedSlotKey)
-          ? resolvedSlotKey
-          : `_${name}`) +
+        (slotKey != null && !isSymbol(slotKey) ? slotKey : `_${name}`) +
         // #7256 force differentiate fallback content from actual content
         (!validSlotContent && fallback ? '_fb' : ''),
     },
