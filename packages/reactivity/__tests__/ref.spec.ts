@@ -625,14 +625,38 @@ describe('reactivity/ref', () => {
     expect(dummyY).toBe(5)
   })
 
-  test('toRefs should warn on plain object', () => {
-    toRefs({})
-    expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
+  test('toRefs plain object', () => {
+    const object = { x: 1, y: 2 }
+    const { x, y } = toRefs(object)
+
+    expect(isRef(x)).toBe(true)
+    expect(isRef(y)).toBe(true)
+    expect(x.value).toBe(1)
+    expect(y.value).toBe(2)
+
+    object.x = 2
+    expect(x.value).toBe(2)
+
+    y.value = 3
+    expect(object.y).toBe(3)
+    expect(`toRefs() expects a reactive object`).not.toHaveBeenWarned()
   })
 
-  test('toRefs should warn on plain array', () => {
-    toRefs([])
-    expect(`toRefs() expects a reactive object`).toHaveBeenWarned()
+  test('toRefs plain array', () => {
+    const array = ['a', 'b']
+    const refs = toRefs(array)
+
+    expect(Array.isArray(refs)).toBe(true)
+    expect(isRef(refs[0])).toBe(true)
+    expect(isRef(refs[1])).toBe(true)
+    expect(refs[0].value).toBe('a')
+
+    array[0] = 'c'
+    expect(refs[0].value).toBe('c')
+
+    refs[1].value = 'd'
+    expect(array[1]).toBe('d')
+    expect(`toRefs() expects a reactive object`).not.toHaveBeenWarned()
   })
 
   test('toRefs reactive array', () => {
