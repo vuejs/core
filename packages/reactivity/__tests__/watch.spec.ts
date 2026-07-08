@@ -157,6 +157,39 @@ describe('watch', () => {
     expect(onError.mock.calls[1]).toMatchObject(['oops in once watch'])
   })
 
+  test('once option stops watcher after callback error', () => {
+    const onError = vi.fn()
+    const call: WatchOptions['call'] = function call(fn, type, args) {
+      if (Array.isArray(fn)) {
+        fn.forEach(f => call(f, type, args))
+        return
+      }
+      try {
+        fn.apply(null, args)
+      } catch (e) {
+        onError(e, type)
+      }
+    }
+    const source = ref(0)
+
+    watch(
+      source,
+      () => {
+        throw 'oops in once watch'
+      },
+      { call, once: true },
+    )
+
+    source.value++
+    source.value++
+
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0]).toMatchObject([
+      'oops in once watch',
+      WatchErrorCodes.WATCH_CALLBACK,
+    ])
+  })
+
   test('watch with onWatcherCleanup', async () => {
     let dummy = 0
     let source: Ref<number>
