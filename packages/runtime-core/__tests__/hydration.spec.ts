@@ -1626,6 +1626,24 @@ describe('SSR hydration', () => {
     expect(`Failed setting prop`).not.toHaveBeenWarned()
   })
 
+  test('SVG foreignObject own attributes hydrate correctly through HTML path', () => {
+    const { container } = mountWithHydration(
+      '<svg width="200" height="200"><foreignObject x="10" y="20" width="100" height="50" /></svg>',
+      () =>
+        h('svg', { width: 200, height: 200 }, [
+          h('foreignObject', { x: 10, y: 20, width: 100, height: 50 }),
+        ]),
+    )
+    const fo = container.querySelector('foreignObject')!
+    // foreignObject should exclude its own attributes from SVG namespace handling
+    // so they fall through to setAttribute via the non-SVG prop path
+    expect(fo.getAttribute('x')).toBe('10')
+    expect(fo.getAttribute('y')).toBe('20')
+    expect(fo.getAttribute('width')).toBe('100')
+    expect(fo.getAttribute('height')).toBe('50')
+    expect(`Failed setting prop`).not.toHaveBeenWarned()
+  })
+
   test('force hydrate prop with `.prop` modifier', () => {
     const { container } = mountWithHydration('<input type="checkbox">', () =>
       h('input', {
