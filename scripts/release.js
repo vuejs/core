@@ -21,7 +21,7 @@ import { parseArgs } from 'node:util'
 let versionUpdated = false
 
 const { prompt } = enquirer
-const currentVersion = createRequire(import.meta.url)('../package.json').version
+let currentVersion = createRequire(import.meta.url)('../package.json').version
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const { values: args, positionals } = parseArgs({
@@ -358,9 +358,11 @@ async function getBranch() {
  * @param {(pkgName: string) => string} getNewPackageName
  */
 function updateVersions(version, getNewPackageName = keepThePackageName) {
-  // 1. update root package.json
+  // 1. update currentVersion
+  currentVersion = version
+  // 2. update root package.json
   updatePackage(path.resolve(__dirname, '..'), version, getNewPackageName)
-  // 2. update all packages
+  // 3. update all packages
   packages.forEach(p =>
     updatePackage(getPkgRoot(p), version, getNewPackageName),
   )

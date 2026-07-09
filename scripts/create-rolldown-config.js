@@ -193,6 +193,9 @@ export function createConfigsForPackage({
         __TEST__: `false`,
         // this is only used during Vue's internal e2e-tests
         __E2E_TEST__: String(e2eTest),
+        __DEV__: isBundlerESMBuild
+          ? `!!(process.env.NODE_ENV !== 'production')`
+          : String(!isProductionBuild),
         // If the build is expected to run directly in the browser (global / esm builds)
         __BROWSER__: String(isBrowserBuild),
         __GLOBAL__: String(isGlobalBuild),
@@ -219,11 +222,6 @@ export function createConfigsForPackage({
           : `false`,
       }
 
-      if (!isBundlerESMBuild) {
-        // hard coded dev/prod builds
-        defines.__DEV__ = String(!isProductionBuild)
-      }
-
       // allow inline overrides like
       //__RUNTIME_COMPILE__=true pnpm build runtime-core
       Object.keys(defines).forEach(key => {
@@ -242,13 +240,6 @@ export function createConfigsForPackage({
     function resolveReplace() {
       /** @type {Record<string, string>} */
       const replacements = { ...enumDefines }
-
-      if (isBundlerESMBuild) {
-        Object.assign(replacements, {
-          // preserve to be handled by bundlers
-          __DEV__: `!!(process.env.NODE_ENV !== 'production')`,
-        })
-      }
 
       // for compiler-sfc browser build inlined deps
       if (isBrowserESMBuild && name === 'compiler-sfc') {
