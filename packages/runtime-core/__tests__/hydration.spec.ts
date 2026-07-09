@@ -25,6 +25,7 @@ import {
   openBlock,
   reactive,
   ref,
+  registerRuntimeCompiler,
   renderSlot,
   useCssVars,
   vModelCheckbox,
@@ -32,13 +33,28 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
+import * as runtimeDom from '@vue/runtime-dom'
 import type { HMRRuntime } from '../src/hmr'
+import type { InternalRenderFunction } from '../src/component'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
+import { type CompilerOptions, compile } from '@vue/compiler-dom'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, reload } = __VUE_HMR_RUNTIME__
+
+registerRuntimeCompiler(compileToFunction)
+
+function compileToFunction(template: string, options?: CompilerOptions) {
+  const { code } = compile(
+    template,
+    Object.assign({ hoistStatic: true }, options),
+  )
+  const render = new Function('Vue', code)(runtimeDom) as InternalRenderFunction
+  render._rc = true
+  return render
+}
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
