@@ -13,7 +13,7 @@ import {
   mergeProps,
   ssrUtils,
   warn,
-} from 'vue'
+} from '@vue/runtime-dom'
 import {
   NOOP,
   ShapeFlags,
