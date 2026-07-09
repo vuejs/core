@@ -896,16 +896,25 @@ export function buildDirectiveArgs(
     }
   }
   const { loc } = dir
-  if (dir.exp) dirArgs.push(dir.exp)
+  // An empty directive value (e.g. `v-my-dir=""`) parses to an empty expression.
+  // Treat it as absent so it is not emitted as an argument, which would otherwise
+  // produce invalid code in the SSR output (a hole in a function call argument list).
+  const exp =
+    dir.exp &&
+    (dir.exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
+      dir.exp.content.trim() !== '')
+      ? dir.exp
+      : undefined
+  if (exp) dirArgs.push(exp)
   if (dir.arg) {
-    if (!dir.exp) {
+    if (!exp) {
       dirArgs.push(`void 0`)
     }
     dirArgs.push(dir.arg)
   }
   if (Object.keys(dir.modifiers).length) {
     if (!dir.arg) {
-      if (!dir.exp) {
+      if (!exp) {
         dirArgs.push(`void 0`)
       }
       dirArgs.push(`void 0`)

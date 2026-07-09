@@ -745,6 +745,75 @@ describe('compiler: element transform', () => {
     })
   })
 
+  // #6283
+  test('empty directive value is treated as no expression', () => {
+    // empty value with an arg -> `void 0` placeholder keeps the arg's position
+    expect(
+      parseWithElementTransform(`<div v-foo:bar="" />`).node,
+    ).toMatchObject({
+      directives: {
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+        elements: [
+          {
+            type: NodeTypes.JS_ARRAY_EXPRESSION,
+            elements: [
+              `_directive_foo`,
+              `void 0`,
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: `bar`,
+                isStatic: true,
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    // a whitespace-only value is also treated as empty
+    expect(
+      parseWithElementTransform(`<div v-foo:bar="  " />`).node,
+    ).toMatchObject({
+      directives: {
+        elements: [
+          {
+            elements: [
+              `_directive_foo`,
+              `void 0`,
+              { type: NodeTypes.SIMPLE_EXPRESSION, content: `bar` },
+            ],
+          },
+        ],
+      },
+    })
+
+    // empty value with modifiers but no arg -> two `void 0` placeholders
+    expect(
+      parseWithElementTransform(`<div v-foo.mod="" />`).node,
+    ).toMatchObject({
+      directives: {
+        elements: [
+          {
+            elements: [
+              `_directive_foo`,
+              `void 0`,
+              `void 0`,
+              {
+                type: NodeTypes.JS_OBJECT_EXPRESSION,
+                properties: [
+                  {
+                    key: { content: `mod`, isStatic: true },
+                    value: { content: `true` },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+  })
+
   test(`props merging: event handlers`, () => {
     const { node } = parseWithElementTransform(
       `<div @click.foo="a" @click.bar="b" />`,

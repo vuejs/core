@@ -312,6 +312,18 @@ describe('ssr: element', () => {
       `)
     })
 
+    // #6283 an empty directive value must not emit an empty argument, which
+    // would generate a syntax error in the SSR output
+    test('custom dir with empty value', () => {
+      expect(getCompiledString(`<div v-xxx:x="" />`)).toMatchInlineSnapshot(`
+        "\`<div\${
+            _ssrRenderAttrs(_temp0 = _ssrGetDirectiveProps(_ctx, _directive_xxx, void 0, "x"))
+          }>\${
+            ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+          }</div>\`"
+      `)
+    })
+
     test('custom dir with normal attrs', () => {
       expect(getCompiledString(`<div class="foo" v-xxx />`))
         .toMatchInlineSnapshot(`
