@@ -2045,6 +2045,41 @@ function baseCreateRenderer(
     }
   }
 
+  // #12435 A `<Transition>` sitting under a plain wrapper element is mounted
+  // off-dom while its Suspense boundary is pending (its enter hooks are
+  // deferred), and on resolve the whole branch is relocated with a single
+  // `MoveType.ENTER`. `move` only fires the transition on the branch's own root,
+  // so a transition nested under a wrapper element (e.g.
+  // `<Suspense><div><Transition appear>`) would never run its enter/appear hooks.
+  // Walk such a subtree and fire those deferred enter hooks without re-inserting
+  // the nodes (they moved with their wrapper's DOM already).
+  const moveDeferredEnterHooks = (
+    vnode: VNode,
+    parentSuspense: SuspenseBoundary | null,
+  ) => {
+    const { el, transition, children, shapeFlag } = vnode
+    if (shapeFlag & ShapeFlags.COMPONENT) {
+      moveDeferredEnterHooks(vnode.component!.subTree, parentSuspense)
+      return
+    }
+    // teleported / nested-suspense content is entered by its own owner
+    if (
+      shapeFlag & ShapeFlags.TELEPORT ||
+      (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE)
+    ) {
+      return
+    }
+    if (shapeFlag & ShapeFlags.ELEMENT && transition && !transition.persisted) {
+      transition.beforeEnter(el!)
+      queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+    }
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        moveDeferredEnterHooks((children as VNode[])[i], parentSuspense)
+      }
+    }
+  }
+
   const move: MoveFn = (
     vnode,
     container,
@@ -2135,6 +2170,14 @@ function baseCreateRenderer(
       }
     } else {
       hostInsert(el!, container, anchor)
+    }
+    // #12435 the element itself has no (or an already-handled) transition, but a
+    // `<Transition>` may be nested under it (e.g. `<Suspense><div><Transition>`).
+    // On enter, fire those deferred child transition hooks explicitly.
+    if (moveType === MoveType.ENTER && shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        moveDeferredEnterHooks((children as VNode[])[i], parentSuspense)
+      }
     }
   }
 
