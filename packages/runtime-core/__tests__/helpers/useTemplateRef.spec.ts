@@ -85,6 +85,31 @@ describe('useTemplateRef', () => {
     expect(`useTemplateRef('foo') already exists.`).toHaveBeenWarned()
   })
 
+  // #12754
+  test('should not throw on duplicate useTemplateRef (compiled in prod mode)', () => {
+    __DEV__ = false
+    try {
+      let foo: ShallowRef
+      let duplicate: ShallowRef
+      const Comp = {
+        setup() {
+          foo = useTemplateRef('foo')
+          duplicate = useTemplateRef('foo')
+        },
+        render() {
+          return h('div', { ref: 'foo' })
+        },
+      }
+      const root = nodeOps.createElement('div')
+
+      expect(() => render(h(Comp), root)).not.toThrow()
+      expect(foo!.value).toBe(root.children[0])
+      expect(duplicate!.value).toBe(null)
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   // #11795
   test('should not attempt to set when variable name is same as key', () => {
     let tRef: ShallowRef

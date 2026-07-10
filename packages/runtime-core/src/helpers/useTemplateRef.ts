@@ -14,8 +14,10 @@ export function useTemplateRef<T = unknown, Keys extends string = string>(
   const r = shallowRef(null)
   if (i) {
     const refs = i.refs === EMPTY_OBJ ? (i.refs = {}) : i.refs
-    if (__DEV__ && isTemplateRefKey(refs, key)) {
-      warn(`useTemplateRef('${key}') already exists.`)
+    if (isTemplateRefKey(refs, key)) {
+      if (__DEV__) {
+        warn(`useTemplateRef('${key}') already exists.`)
+      }
     } else {
       Object.defineProperty(refs, key, {
         enumerable: true,
