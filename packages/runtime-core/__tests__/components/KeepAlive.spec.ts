@@ -1,4 +1,5 @@
 import {
+  BaseTransition,
   type Component,
   type ComponentOptions,
   type ComponentPublicInstance,
@@ -1221,5 +1222,50 @@ describe('KeepAlive', () => {
     toggle.value = true
     await nextTick()
     expect(serializeInner(root)).toBe('<p>1</p>')
+  })
+
+  // #12435 the deferred-enter walk that fixes Suspense-nested transitions must
+  // not replay enter hooks for an unrelated, never-toggled Transition nested
+  // under a kept-alive component's root when it is re-activated (activation also
+  // relocates the subtree with `MoveType.ENTER`).
+  test('does not replay enter hooks of a nested Transition on activation', async () => {
+    const onBeforeEnter = vi.fn()
+    const onEnter = vi.fn((el, done: () => void) => done())
+
+    // root is a plain wrapper element containing an unrelated <Transition>
+    const CompA = {
+      name: 'CompA',
+      setup() {
+        return () =>
+          h('div', [
+            h(BaseTransition, { onBeforeEnter, onEnter }, () => h('span', 'A')),
+          ])
+      },
+    }
+    const CompB = { name: 'CompB', setup: () => () => h('div', 'B') }
+
+    const current = shallowRef<Component>(CompA)
+    const App = {
+      setup: () => () =>
+        h(KeepAlive, null, { default: () => h(current.value) }),
+    }
+
+    render(h(App), root)
+    await nextTick()
+    // a nested Transition without `appear` fires no enter hooks on first mount
+    expect(onBeforeEnter).toHaveBeenCalledTimes(0)
+    expect(onEnter).toHaveBeenCalledTimes(0)
+
+    // deactivate then reactivate CompA
+    current.value = CompB
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>B</div>`)
+    current.value = CompA
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><span>A</span></div>`)
+
+    // the transition was never toggled, so its enter hooks must not replay
+    expect(onBeforeEnter).toHaveBeenCalledTimes(0)
+    expect(onEnter).toHaveBeenCalledTimes(0)
   })
 })

@@ -90,7 +90,11 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
+import {
+  type TransitionHooks,
+  deferredEnterKey,
+  leaveCbKey,
+} from './components/BaseTransition'
 import type { ComponentCustomElementInterface } from './component'
 
 export interface Renderer<HostElement = RendererElement> {
@@ -731,6 +735,17 @@ function baseCreateRenderer(
     const needCallTransitionHooks = needTransition(parentSuspense, transition)
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
+    } else if (
+      transition &&
+      !transition.persisted &&
+      parentSuspense &&
+      parentSuspense.pendingBranch
+    ) {
+      // #12435 the enter hooks are skipped here because the element mounts
+      // off-dom while its Suspense boundary is still pending. Mark it so the
+      // deferred enter is fired when the boundary resolves and relocates the
+      // branch (see `move`).
+      el[deferredEnterKey] = true
     }
     hostInsert(el, container, anchor)
     if (
@@ -2069,7 +2084,16 @@ function baseCreateRenderer(
     ) {
       return
     }
-    if (shapeFlag & ShapeFlags.ELEMENT && transition && !transition.persisted) {
+    if (
+      shapeFlag & ShapeFlags.ELEMENT &&
+      transition &&
+      !transition.persisted &&
+      el![deferredEnterKey]
+    ) {
+      // fire the deferred enter exactly once, then clear the mark so later
+      // relocations of the same element (e.g. KeepAlive activation, which also
+      // moves with `MoveType.ENTER`) do not replay the enter hooks.
+      el![deferredEnterKey] = undefined
       transition.beforeEnter(el!)
       queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
     }
