@@ -6,7 +6,7 @@ import {
   isArray,
   isFunction,
 } from '@vue/shared'
-import { type Block, type BlockFn, insert } from './block'
+import { type Block, type BlockFn, EMPTY_BLOCK, insert } from './block'
 import {
   type RawProps,
   rawPropsProxyHandlers,
@@ -321,6 +321,44 @@ export function createSlot(
       fallback,
       isCustomElementSlot,
     )
+
+    let cachedSlot: VaporSlot | undefined
+    let cachedBoundSlot: VaporSlot | undefined
+    const getBoundSlot = (slot: VaporSlot): VaporSlot => {
+      if (slot !== cachedSlot) {
+        cachedSlot = slot
+        cachedBoundSlot = () => {
+          const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
+          try {
+            return once ? withOnceSlot(() => slot(slotProps)) : slot(slotProps)
+          } finally {
+            setCurrentSlotScopeIds(prevSlotScopeIds)
+          }
+        }
+      }
+      return cachedBoundSlot!
+    }
+    const isDynamicName = isFunction(name)
+
+    // A slot with a concrete insertion parent does not escape as a
+    // fragment-shaped block, so a fixed CSR branch can use it directly.
+    if (
+      !isHydrating &&
+      _insertionParent &&
+      !needsSlotFragment &&
+      !isDynamicName &&
+      !rawSlots.$
+    ) {
+      const slot = getSlot(rawSlots, name)
+      const render = slot ? getBoundSlot(slot) : fallback
+      if (render) {
+        const slotBlock = render() || EMPTY_BLOCK
+        if (slotScopeIds) setScopeId(slotBlock, slotScopeIds)
+        insert(slotBlock, _insertionParent, _insertionAnchor)
+        return slotBlock
+      }
+    }
+
     const slotFragment = needsSlotFragment
       ? new SlotFragment(slotRoot)
       : undefined
@@ -343,8 +381,6 @@ export function createSlot(
       ;(fragment as DynamicFragment).forwarded =
         currentSlotOwner != null && currentSlotOwner !== currentInstance
     }
-
-    const isDynamicName = isFunction(name)
 
     const renderSlot = () => {
       const slotName = isFunction(name) ? name() : name
@@ -394,23 +430,6 @@ export function createSlot(
           dynamicFragment!.update(render || fallback)
         }
       }
-    }
-
-    let cachedSlot: VaporSlot | undefined
-    let cachedBoundSlot: VaporSlot | undefined
-    const getBoundSlot = (slot: VaporSlot): VaporSlot => {
-      if (slot !== cachedSlot) {
-        cachedSlot = slot
-        cachedBoundSlot = () => {
-          const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
-          try {
-            return once ? withOnceSlot(() => slot(slotProps)) : slot(slotProps)
-          } finally {
-            setCurrentSlotScopeIds(prevSlotScopeIds)
-          }
-        }
-      }
-      return cachedBoundSlot!
     }
 
     // dynamic slot name or has dynamicSlots

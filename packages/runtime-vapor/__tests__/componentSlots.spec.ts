@@ -1963,11 +1963,9 @@ describe('component: slots', () => {
 
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
-        prepend(
-          n0 as any as ParentNode,
-          createSlot(
-            () => val.value, // dynamic slot outlet name
-          ),
+        setInsertionState(n0 as any as ParentNode)
+        createSlot(
+          () => val.value, // dynamic slot outlet name
         )
         return n0
       })
@@ -2228,11 +2226,12 @@ describe('component: slots', () => {
 
     test('dynamic slot work with v-if', async () => {
       const val = ref('header')
-      const toggle = ref(false)
+      const toggle = ref(true)
 
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
-        prepend(n0 as any as ParentNode, createSlot('header', null))
+        setInsertionState(n0 as any as ParentNode)
+        createSlot('header', null)
         return n0
       })
 
@@ -2253,11 +2252,11 @@ describe('component: slots', () => {
         })
       }).render()
 
-      expect(host.innerHTML).toBe('<div><!--slot--></div>')
-
-      toggle.value = true
-      await nextTick()
       expect(host.innerHTML).toBe('<div><h1></h1><!--slot--></div>')
+
+      toggle.value = false
+      await nextTick()
+      expect(host.innerHTML).toBe('<div><!--slot--></div>')
     })
 
     test('slots proxy ownKeys trap correctly reflects dynamic slot presence', async () => {
@@ -3150,6 +3149,48 @@ describe('component: slots', () => {
           expect(observedBoundary).toBe(null)
         })
 
+        test('stable slot with insertion parent returns content directly', () => {
+          let slotBlock!: Block
+          let content!: Block
+          const fallback = vi.fn(() => template('fallback')())
+          const Comp = defineVaporComponent(() => {
+            const root = template('<div>')()
+            setInsertionState(root as any as ParentNode)
+            slotBlock = createSlot('default', null, fallback)
+            return root
+          })
+
+          const { host } = define(() =>
+            createComponent(Comp, null, {
+              default: () => (content = template('content')()),
+            }),
+          ).render()
+
+          expect(slotBlock).toBe(content)
+          expect(fallback).not.toHaveBeenCalled()
+          expect(host.innerHTML).toBe('<div>content</div>')
+        })
+
+        test('fallback with insertion parent returns fallback directly', () => {
+          let slotBlock!: Block
+          let fallbackBlock!: Block
+          const Comp = defineVaporComponent(() => {
+            const root = template('<div>')()
+            setInsertionState(root as any as ParentNode)
+            slotBlock = createSlot(
+              'default',
+              null,
+              () => (fallbackBlock = template('fallback')()),
+            )
+            return root
+          })
+
+          const { host } = define(() => createComponent(Comp)).render()
+
+          expect(slotBlock).toBe(fallbackBlock)
+          expect(host.innerHTML).toBe('<div>fallback</div>')
+        })
+
         test('slot with fallback and explicit empty slots', () => {
           let slotBlock!: Block
           const Comp = defineVaporComponent(() => {
@@ -3204,9 +3245,12 @@ describe('component: slots', () => {
           const slot = (() => template('<p>A</p>')()) as BlockFn
           ;(slot as any)._ = VaporSlotFlags.NON_STABLE
           const Comp = defineVaporComponent(() => {
-            return (slotBlock = createSlot('default', null, () =>
+            const root = template('<div>')()
+            setInsertionState(root as any as ParentNode)
+            slotBlock = createSlot('default', null, () =>
               template('fallback')(),
-            ))
+            )
+            return root
           })
 
           define(() =>
@@ -3723,9 +3767,7 @@ describe('component: slots', () => {
 
       show.value = true
       await nextTick()
-      expect(html()).toBe(
-        '<div>custom header<!--slot--></div><!--if--><!--slot-->',
-      )
+      expect(html()).toBe('<div>custom header</div><!--if--><!--slot-->')
 
       show.value = false
       await nextTick()
@@ -3862,13 +3904,7 @@ describe('component: slots', () => {
         },
       }).render()
 
-      expect(html()).toBe(
-        `<div>` +
-          `default<!--slot-->` +
-          `foo<!--slot-->` +
-          `<div>baz</div>` +
-          `</div>`,
-      )
+      expect(html()).toBe('<div>defaultfoo<div>baz</div></div>')
     })
 
     describe('vdom interop', () => {

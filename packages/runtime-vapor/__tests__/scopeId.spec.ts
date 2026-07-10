@@ -323,7 +323,6 @@ describe('scopeId', () => {
         // - slotted scopeId from slot owner
         // - its own scopeId
         `<span child2="" child-s="" parent=""></span>` +
-        `<!--slot-->` +
         `</div>`,
     )
   })
@@ -380,7 +379,7 @@ describe('scopeId', () => {
     expect(html()).toBe(
       `<div wrapper="" slotted="" root="">` +
         `<div root="" slotted-s=""></div>` +
-        `<!--slot--><!--slot-->` +
+        `<!--slot-->` +
         `</div>`,
     )
   })
@@ -669,9 +668,9 @@ describe('scopeId', () => {
     expect(host.innerHTML).toBe(
       `<div data-v-parent="" app="">` +
         `<div data-v-parent="">` +
-        `<div data-v-parent="">test<!--slot-->` +
-        `</div><!--slot-->` +
-        `</div><!--slot-->` +
+        `<div data-v-parent="">test` +
+        `</div>` +
+        `</div>` +
         `</div>`,
     )
   })
@@ -731,16 +730,16 @@ describe('scopeId', () => {
       },
     }).render()
 
-    expect(html()).toBe(`<div app=""><!--for--><!--slot--></div>`)
+    expect(html()).toBe(`<div app=""><!--for--></div>`)
 
     count.value++
     await nextTick()
     expect(html()).toBe(
       `<div app="">` +
         `<div class="test" app="">` + // should have app scopeId
-        `<div> red </div><!--slot-->` +
+        `<div> red </div>` +
         `</div><!--for-->` +
-        `<!--slot--></div>`,
+        `</div>`,
     )
   })
 })
@@ -1628,7 +1627,6 @@ describe('vdom interop', () => {
       `<div vapor-slot="" vapor-parent="">` +
         `<div vapor-parent="" vapor-slot-s=""></div>` +
         `<span vdom-child="" vapor-parent="" vapor-slot-s=""></span>` +
-        `<!--slot-->` +
         `</div>`,
     )
   })
@@ -1678,7 +1676,6 @@ describe('vdom interop', () => {
     expect(root.innerHTML).toBe(
       `<div vapor-slot="" vapor-parent="">` +
         `<button vdom-child="" vapor-parent="" vapor-slot-s="">base</button>` +
-        `<!--slot-->` +
         `</div>`,
     )
 
@@ -1688,7 +1685,6 @@ describe('vdom interop', () => {
     expect(root.innerHTML).toBe(
       `<div vapor-slot="" vapor-parent="">` +
         `<span vdom-child="" vapor-parent="" vapor-slot-s="">alt</span>` +
-        `<!--slot-->` +
         `</div>`,
     )
   })
