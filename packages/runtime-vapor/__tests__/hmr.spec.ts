@@ -91,14 +91,14 @@ describe('hot module replacement', () => {
 
     const { mount } = define(Parent).create()
     mount(root)
-    expect(root.innerHTML).toBe(`<div>0<div>0</div></div>`)
+    expect(root.innerHTML).toBe(`<div>0<div>0<!--slot--></div></div>`)
 
     // Perform some state change. This change should be preserved after the
     // re-render!
     // triggerEvent(root.children[0] as TestElement, 'click')
     triggerEvent('click', root.children[0])
     await nextTick()
-    expect(root.innerHTML).toBe(`<div>1<div>1</div></div>`)
+    expect(root.innerHTML).toBe(`<div>1<div>1<!--slot--></div></div>`)
 
     // Update text while preserving state
     rerender(
@@ -107,7 +107,7 @@ describe('hot module replacement', () => {
         `<div @click="count++">{{ count }}!<Child>{{ count }}</Child></div>`,
       ),
     )
-    expect(root.innerHTML).toBe(`<div>1!<div>1</div></div>`)
+    expect(root.innerHTML).toBe(`<div>1!<div>1<!--slot--></div></div>`)
 
     // Should force child update on slot content change
     rerender(
@@ -116,7 +116,7 @@ describe('hot module replacement', () => {
         `<div @click="count++">{{ count }}!<Child>{{ count }}!</Child></div>`,
       ),
     )
-    expect(root.innerHTML).toBe(`<div>1!<div>1!</div></div>`)
+    expect(root.innerHTML).toBe(`<div>1!<div>1!<!--slot--></div></div>`)
 
     // Should force update element children despite block optimization
     rerender(
@@ -127,7 +127,9 @@ describe('hot module replacement', () => {
     </div>`,
       ),
     )
-    expect(root.innerHTML).toBe(`<div>1<span>1</span><div>1!</div></div>`)
+    expect(root.innerHTML).toBe(
+      `<div>1<span>1</span><div>1!<!--slot--></div></div>`,
+    )
 
     // Should force update child slot elements
     rerender(
@@ -138,7 +140,9 @@ describe('hot module replacement', () => {
     </div>`,
       ),
     )
-    expect(root.innerHTML).toBe(`<div><div><span>1</span></div></div>`)
+    expect(root.innerHTML).toBe(
+      `<div><div><span>1</span><!--slot--></div></div>`,
+    )
   })
 
   test('reload', async () => {
@@ -1017,7 +1021,7 @@ describe('hot module replacement', () => {
 
     define(Parent).create().mount(root)
     expect(root.innerHTML).toBe(`<!--teleport start--><!--teleport end-->`)
-    expect(target.innerHTML).toBe(`<div><div>1</div></div>`)
+    expect(target.innerHTML).toBe(`<div><div>1</div><!--slot--></div>`)
 
     rerender(
       parentId,
@@ -1031,7 +1035,9 @@ describe('hot module replacement', () => {
     `),
     )
     expect(root.innerHTML).toBe(`<!--teleport start--><!--teleport end-->`)
-    expect(target.innerHTML).toBe(`<div><div>1</div><div>2</div></div>`)
+    expect(target.innerHTML).toBe(
+      `<div><div>1</div><div>2</div><!--slot--></div>`,
+    )
   })
 
   test('rerender for component that has no active instance yet', () => {
