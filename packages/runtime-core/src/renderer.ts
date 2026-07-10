@@ -2198,7 +2198,16 @@ function baseCreateRenderer(
     // #12435 the element itself has no (or an already-handled) transition, but a
     // `<Transition>` may be nested under it (e.g. `<Suspense><div><Transition>`).
     // On enter, fire those deferred child transition hooks explicitly.
-    if (moveType === MoveType.ENTER && shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    // Only do this when the move is not into a still-pending Suspense boundary:
+    // the deferred enter is meant for the branch's real insertion on resolve
+    // (where `move` is called without a `parentSuspense`), not for other ENTER
+    // moves such as KeepAlive activation while the boundary is still pending,
+    // which would relocate the branch off-dom and replay hooks prematurely.
+    if (
+      moveType === MoveType.ENTER &&
+      !(parentSuspense && parentSuspense.pendingBranch) &&
+      shapeFlag & ShapeFlags.ARRAY_CHILDREN
+    ) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
         moveDeferredEnterHooks((children as VNode[])[i], parentSuspense)
       }
