@@ -5,6 +5,7 @@ import {
   type IfBranchNode,
   type NodeTransform,
   NodeTypes,
+  findDir,
   isCommentOrWhitespace,
 } from '@vue/compiler-core'
 import { TRANSITION } from '../runtimeHelpers'
@@ -47,7 +48,7 @@ export function postTransformTransition(
     // check if it's a single child w/ v-show
     // if yes, inject "persisted: true" to the transition props
     const child = node.children[0]
-    if (child.type === NodeTypes.ELEMENT) {
+    if (child.type === NodeTypes.ELEMENT && !findDir(child, 'if')) {
       for (const p of child.props) {
         if (p.type === NodeTypes.DIRECTIVE && p.name === 'show') {
           node.props.push({

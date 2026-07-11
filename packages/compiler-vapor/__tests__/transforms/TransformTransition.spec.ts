@@ -268,6 +268,16 @@ describe('compiler: transition', () => {
     ).toMatchSnapshot()
   })
 
+  test('does not inject persisted when v-if owns a v-show child', () => {
+    const { code } = compileWithElementTransform(
+      `<Transition><div v-if="show" v-show="true" /></Transition>`,
+    )
+
+    expect(code).toContain('_createIf')
+    expect(code).toContain('_applyVShow')
+    expect(code).not.toContain('persisted')
+  })
+
   test('the v-if/else-if/else branches in Transition should ignore comments', () => {
     const { code } = compile(
       `
