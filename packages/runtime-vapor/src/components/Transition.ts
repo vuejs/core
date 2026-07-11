@@ -174,10 +174,15 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
           shouldCaptureVShow && !isMounted,
           () => frag.update(slots.default),
         )
+        let hasStructuralRoot = false
+        const root = resolveTransitionBlock(frag.nodes, fragment => {
+          hasStructuralRoot ||= isStructuralTransitionFragment(fragment)
+        })
         applyPendingVShows(
           frag.$transition!,
-          resolveTransitionBlock(frag.nodes),
+          root,
           pendingVShows,
+          hasStructuralRoot,
         )
         if (!isMounted && shouldPerformAppear) performAppear(frag.$transition!)
         isMounted = true
@@ -205,14 +210,14 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // re-resolve. Reusing appliedHooks preserves runtime state (persisted /
     // delayedLeave) across re-resolves.
     renderEffect(() => {
-      const { hooks, root } = applyResolvedTransitionHooks(
+      const { hooks, root, hasStructuralRoot } = applyResolvedTransitionHooks(
         children,
         appliedHooks,
       )
       appliedHooks = hooks
       if (!isMounted) {
         isMounted = true
-        applyPendingVShows(hooks, root, pendingVShows)
+        applyPendingVShows(hooks, root, pendingVShows, hasStructuralRoot)
         if (shouldPerformAppear) performAppear(hooks)
       }
     })
@@ -361,6 +366,7 @@ function applyResolvedTransitionHooks(
 ): {
   hooks: VaporTransitionHooks
   root?: ResolvedTransitionBlock
+  hasStructuralRoot: boolean
 } {
   // filter out comment nodes
   if (isArray(block)) {
@@ -368,7 +374,7 @@ function applyResolvedTransitionHooks(
     if (block.length === 1) {
       block = block[0]
     } else if (block.length === 0) {
-      return { hooks }
+      return { hooks, hasStructuralRoot: false }
     }
   }
 
@@ -382,11 +388,15 @@ function applyResolvedTransitionHooks(
       (isVaporComponent(block) && isSlotFragment(block.block)))
   ) {
     hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
-    return { hooks }
+    return { hooks, hasStructuralRoot: false }
   }
 
   const fragments: VaporFragment[] = []
-  const child = resolveTransitionBlock(block, frag => fragments.push(frag))
+  let hasStructuralRoot = false
+  const child = resolveTransitionBlock(block, fragment => {
+    fragments.push(fragment)
+    hasStructuralRoot ||= isStructuralTransitionFragment(fragment)
+  })
   if (!child) {
     // set transition hooks on fragments for later use
     fragments.forEach(f => (f.$transition = hooks))
@@ -394,7 +404,7 @@ function applyResolvedTransitionHooks(
     if (__DEV__ && fragments.length === 0) {
       warn('Transition component has no valid child element')
     }
-    return { hooks }
+    return { hooks, hasStructuralRoot }
   }
 
   const { props, instance, state, delayedLeave } = hooks
@@ -422,7 +432,16 @@ function applyResolvedTransitionHooks(
   return {
     hooks: resolvedHooks,
     root: child,
+    hasStructuralRoot,
   }
+}
+
+function isStructuralTransitionFragment(fragment: VaporFragment): boolean {
+  return !!(
+    fragment instanceof DynamicFragment &&
+    !isSlotFragment(fragment) &&
+    fragment.inTransition
+  )
 }
 
 function applyTransitionLeaveHooksImpl(
@@ -886,6 +905,7 @@ function applyPendingVShows(
   hooks: VaporTransitionHooks,
   root: ResolvedTransitionBlock | undefined,
   pendingVShows: PendingVShow[] | undefined,
+  hasStructuralRoot: boolean,
 ): void {
   if (!pendingVShows) return
 
@@ -895,11 +915,12 @@ function applyPendingVShows(
     // deferred v-show target resolves to the same transition root.
     hooks.persisted =
       hooks.persisted ||
-      pendingVShows.some(
-        pending =>
-          pending.target === root ||
-          resolveTransitionBlock(pending.target) === root,
-      )
+      (!hasStructuralRoot &&
+        pendingVShows.some(
+          pending =>
+            pending.target === root ||
+            resolveTransitionBlock(pending.target) === root,
+        ))
   }
 
   onBeforeMount(() => {
