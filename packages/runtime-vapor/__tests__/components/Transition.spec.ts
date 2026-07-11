@@ -615,6 +615,45 @@ describe('Transition', () => {
     leaveDone && leaveDone()
   })
 
+  test('does not carry persisted into a structural v-if root', async () => {
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      branch: true,
+      show: true,
+      visible: true,
+      onLeave,
+    })
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @leave="data.onLeave">
+          <template #default v-if="data.branch">
+            <components.Child>
+              <div v-show="data.show">foo</div>
+            </components.Child>
+          </template>
+          <template #default v-else>
+            <div v-if="data.visible" v-show="true">bar</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    data.value.branch = false
+    await nextTick()
+    expect(host.querySelector('div')?.textContent).toBe('bar')
+    onLeave.mockClear()
+
+    data.value.visible = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')).toBeNull()
+  })
+
   test('does not early-remove across mixed number/string keys of equal value', async () => {
     let leaveDone: (() => void) | undefined
     const data = ref<any>({

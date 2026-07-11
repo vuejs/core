@@ -418,13 +418,14 @@ function applyResolvedTransitionHooks(
   // Dynamic slot / branch swaps replace the active hook object. The previously
   // derived persisted state (slot/component-root v-show, detected only at mount
   // via applyPendingVShows) must carry forward when the new root is *also* a
-  // v-show root, but must NOT leak onto a non-v-show root — otherwise that
-  // root's structural removal would wrongly skip its leave animation. Gating
-  // the carry-forward on the current root's v-show marker keeps the latch tied
-  // to the live root; mount/non-appear paths are untouched because they never
-  // have a latched `hooks.persisted` to carry.
+  // v-show root, but must NOT leak onto a structural root — otherwise that
+  // root's removal would wrongly skip its leave animation. Gating the
+  // carry-forward on both the current root's v-show marker and its ownership
+  // keeps the latch tied to the live root; mount/non-appear paths are untouched
+  // because they never have a latched `hooks.persisted` to carry.
   resolvedHooks.persisted =
-    resolvedHooks.persisted || (hooks.persisted && hasVShowMarker(child))
+    resolvedHooks.persisted ||
+    (!hasStructuralRoot && hooks.persisted && hasVShowMarker(child))
   resolvedHooks.delayedLeave = delayedLeave
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))
