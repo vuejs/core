@@ -199,6 +199,7 @@ function genInsertionState(
   context: CodegenContext,
 ): CodeFragment[] {
   const { parent, anchor, logicalIndex, append } = operation
+  const isPrepend = anchor === -1
   return [
     NEWLINE,
     ...genCall(
@@ -206,13 +207,15 @@ function genInsertionState(
       `n${parent}`,
       anchor == null
         ? undefined
-        : anchor === -1 // -1 indicates prepend
+        : isPrepend // -1 indicates prepend
           ? `0` // runtime anchor value for prepend
           : append
             ? // for append, always use null since we have logicalIndex
               'null'
             : `n${anchor}`,
-      logicalIndex !== undefined ? String(logicalIndex) : undefined,
+      logicalIndex !== undefined && (!isPrepend || logicalIndex !== 0)
+        ? String(logicalIndex)
+        : undefined,
     ),
   ]
 }

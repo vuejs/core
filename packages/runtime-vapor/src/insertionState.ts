@@ -24,7 +24,7 @@ export let insertionIndex: number | undefined
 export function setInsertionState(
   parent: ParentNode & { $fc?: Node | null },
   anchor?: Node | 0 | null,
-  logicalIndex?: number,
+  logicalIndex: number | undefined = anchor === 0 ? 0 : undefined,
 ): void {
   insertionParent = parent
   insertionIndex = logicalIndex

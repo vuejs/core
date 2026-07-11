@@ -7,7 +7,7 @@ const t0 = _template("<div><div></div><!><span>", 1)
 export function render(_ctx) {
   const n2 = t0()
   const n3 = _next(_child(n2), 2)
-  _setInsertionState(n2, 0, 0)
+  _setInsertionState(n2, 0)
   const n0 = _createAssetComponent("Comp1")
   _setInsertionState(n2, n3, 2)
   const n1 = _createAssetComponent("Comp2")
@@ -22,7 +22,7 @@ const t0 = _template("<div><i></i><b></b><section><span> ", 1)
 export function render(_ctx) {
   const n2 = t0()
   const n1 = _child(_nthChild(n2, 2, 3))
-  _setInsertionState(n2, 0, 0)
+  _setInsertionState(n2, 0)
   const n0 = _createAssetComponent("Comp")
   const x1 = _txt(n1)
   _renderEffect(() => _setText(x1, _toDisplayString(_ctx.msg)))
@@ -37,7 +37,7 @@ const t0 = _template("<div><div></div><!><span>", 1)
 export function render(_ctx) {
   const n3 = t0()
   const n4 = _next(_child(n3), 3)
-  _setInsertionState(n3, 0, 0)
+  _setInsertionState(n3, 0)
   const n0 = _createAssetComponent("Comp1")
   _setInsertionState(n3, 0, 1)
   const n1 = _createAssetComponent("Comp2")
@@ -74,7 +74,7 @@ const t1 = _template("<div><div></div><span></span><!><div><button>", 1)
 export function render(_ctx) {
   const n4 = t1()
   const n5 = _nthChild(n4, 2, 3)
-  _setInsertionState(n4, 0, 0)
+  _setInsertionState(n4, 0)
   const n0 = _createAssetComponent("Comp")
   _setInsertionState(n4, n5, 3)
   const n1 = _createIf(() => (true), () => {
@@ -211,7 +211,7 @@ const t1 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n2 = t1()
-  _setInsertionState(n2, 0, 0)
+  _setInsertionState(n2, 0)
   const n0 = _createKeyedFragment(() => (_ctx.id), () => {
     const n1 = t0()
     return n1
@@ -226,7 +226,7 @@ const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n2 = t0()
-  _setInsertionState(n2, 0, 0)
+  _setInsertionState(n2, 0)
   const n0 = _createAssetComponent("Comp1")
   _setInsertionState(n2, null, 2)
   const n1 = _createAssetComponent("Comp2")
@@ -241,7 +241,7 @@ const t0 = _template("<div><span>A</span><!><p>B", 1)
 export function render(_ctx) {
   const n3 = t0()
   const n4 = _next(_child(n3), 2)
-  _setInsertionState(n3, 0, 0)
+  _setInsertionState(n3, 0)
   const n0 = _createAssetComponent("Comp1")
   _setInsertionState(n3, n4, 2)
   const n1 = _createAssetComponent("Comp2")
@@ -257,7 +257,7 @@ const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n2 = t0()
-  _setInsertionState(n2, 0, 0)
+  _setInsertionState(n2, 0)
   const n0 = _createAssetComponent("Comp1")
   _setInsertionState(n2, 0, 1)
   const n1 = _createAssetComponent("Comp2")
@@ -271,7 +271,7 @@ const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n1 = t0()
-  _setInsertionState(n1, 0, 0)
+  _setInsertionState(n1, 0)
   const n0 = _createAssetComponent("Comp")
   return n1
 }"
@@ -295,7 +295,7 @@ const t0 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n1 = t0()
-  _setInsertionState(n1, 0, 0)
+  _setInsertionState(n1, 0)
   const n0 = _createSlot()
   return n1
 }"
@@ -324,7 +324,7 @@ const t1 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n3 = t1()
-  _setInsertionState(n3, 0, 0)
+  _setInsertionState(n3, 0)
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
     return n2
@@ -373,7 +373,7 @@ const t1 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n3 = t1()
-  _setInsertionState(n3, 0, 0)
+  _setInsertionState(n3, 0)
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2
@@ -414,7 +414,7 @@ const t2 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n6 = t2()
-  _setInsertionState(n6, 0, 0)
+  _setInsertionState(n6, 0)
   const n0 = _createAssetComponent("Comp")
   _setInsertionState(n6, 0, 1)
   const n1 = _createIf(() => (_ctx.show), () => {
@@ -524,7 +524,7 @@ const t2 = _template("<div><span>A", 1)
 
 export function render(_ctx) {
   const n5 = t2()
-  _setInsertionState(n5, 0, 0)
+  _setInsertionState(n5, 0)
   const n0 = _createIf(() => (_ctx.show), () => {
     const n2 = t0()
     return n2

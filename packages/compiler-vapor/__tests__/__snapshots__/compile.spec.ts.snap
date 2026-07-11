@@ -155,7 +155,7 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n3 = t1()
   const n2 = _child(n3, 1)
   _renderEffect(() => _setProp(n3, "id", _ctx.foo))
-  _setInsertionState(n3, 0, 0)
+  _setInsertionState(n3, 0)
   const n1 = _createAssetComponent("Comp")
   _renderEffect(() => _setText(n2, _toDisplayString(_ctx.bar)))
   return [n0, n3]
