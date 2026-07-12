@@ -91,6 +91,33 @@ test('preprocess pug with indents and blank lines', () => {
   )
 })
 
+// #15062
+test('preprocess pug preserves escaped quotes in Vue binding expressions', () => {
+  const { descriptor } = parse(
+    String.raw`
+<script setup>
+const l = (s) => s
+</script>
+<template lang="pug">
+button(:title="l('It\'s')") x
+button(:title='l("It\"s")') y
+</template>
+`,
+    { filename: 'example.vue' },
+  )
+
+  const { content } = compileScript(descriptor, {
+    id: 'x',
+    inlineTemplate: true,
+    templateOptions: {
+      preprocessLang: 'pug',
+    },
+  })
+
+  expect(content).toContain(String.raw`title: l('It\'s')`)
+  expect(content).toContain(String.raw`title: l("It\"s")`)
+})
+
 test('warn missing preprocessor', () => {
   const template = parse(`<template lang="unknownLang">hi</template>\n`, {
     filename: 'example.vue',

@@ -104,6 +104,104 @@ function preprocess(
   return res
 }
 
+// Pug parses attribute values as JavaScript strings, so redundant quote
+// escapes in Vue directive expressions are removed before Vue sees the HTML.
+// Preserve those escapes in Vue directive attrs so the resulting expression
+// remains valid JavaScript after Pug preprocessing (#15062).
+const pugVueDirectiveExpressionPlugin = {
+  postParse(ast: any) {
+    walkPugAst(ast, node => {
+      const attrs = node.attrs
+      if (Array.isArray(attrs)) {
+        for (const attr of attrs) {
+          if (isVueDirectiveAttr(attr.name) && typeof attr.val === 'string') {
+            attr.val = preservePugQuoteEscapes(attr.val)
+          }
+        }
+      }
+    })
+    return ast
+  },
+}
+
+function resolvePreprocessOptions({
+  preprocessLang,
+  preprocessOptions,
+}: SFCTemplateCompileOptions): any {
+  if (preprocessLang !== 'pug') {
+    return preprocessOptions
+  }
+
+  return {
+    ...preprocessOptions,
+    plugins: [
+      ...(preprocessOptions?.plugins || []),
+      pugVueDirectiveExpressionPlugin,
+    ],
+  }
+}
+
+function walkPugAst(node: any, cb: (node: any) => void): void {
+  if (!node || typeof node !== 'object') {
+    return
+  }
+  if (Array.isArray(node)) {
+    node.forEach(child => walkPugAst(child, cb))
+    return
+  }
+
+  cb(node)
+  for (const key in node) {
+    walkPugAst(node[key], cb)
+  }
+}
+
+function isVueDirectiveAttr(name: unknown): boolean {
+  return (
+    typeof name === 'string' &&
+    (name.startsWith('v-') ||
+      name.startsWith(':') ||
+      name.startsWith('@') ||
+      name.startsWith('#'))
+  )
+}
+
+function preservePugQuoteEscapes(value: string): string {
+  const quote = value[0]
+  if ((quote !== `"` && quote !== `'`) || value[value.length - 1] !== quote) {
+    return value
+  }
+
+  const oppositeQuote = quote === `"` ? `'` : `"`
+  const body = value.slice(1, -1)
+  let rewritten = ''
+  let changed = false
+
+  for (let i = 0; i < body.length; i++) {
+    const char = body[i]
+    if (char === `\\`) {
+      let slashCount = 1
+      while (body[i + slashCount] === `\\`) {
+        slashCount++
+      }
+
+      if (body[i + slashCount] === oppositeQuote && slashCount === 1) {
+        rewritten += `\\\\${oppositeQuote}`
+        i += slashCount
+        changed = true
+        continue
+      }
+
+      rewritten += `\\`.repeat(slashCount)
+      i += slashCount - 1
+    } else {
+      rewritten += char
+    }
+  }
+
+  return changed ? `${quote}${rewritten}${quote}` : value
+}
+
 export function compileTemplate(
   options: SFCTemplateCompileOptions,
 ): SFCTemplateCompileResults {
@@ -130,9 +228,11 @@ export function compileTemplate(
     : false
   if (preprocessor) {
     try {
+      const preprocessOptions = resolvePreprocessOptions(options)
       return doCompileTemplate({
         ...options,
-        source: preprocess(options, preprocessor),
+        preprocessOptions,
+        source: preprocess({ ...options, preprocessOptions }, preprocessor),
         ast: undefined, // invalidate AST if template goes through preprocessor
       })
     } catch (e: any) {
