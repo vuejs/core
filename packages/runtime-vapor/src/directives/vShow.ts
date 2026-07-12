@@ -12,7 +12,8 @@ import { isVaporComponent } from '../component'
 import type { Block, TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
 import { isHydrating } from '../dom/hydration'
-import { isDynamicFragment, isFragment } from '../fragment'
+import { isDynamicFragment, isFragment, isInteropFragment } from '../fragment'
+import { isInteropEnabled } from '../vdomInteropState'
 
 export interface PendingVShow {
   target: Block
@@ -76,16 +77,21 @@ function setDisplay(
   target: Block,
   value: unknown,
   deferEnter = false,
+  transition: TransitionBlock['$transition'] = undefined,
 ): (() => void) | undefined {
   if (isVaporComponent(target)) {
-    return setDisplay(target.block, value, deferEnter)
+    return setDisplay(target.block, value, deferEnter, transition)
   }
   if (isArray(target)) {
     if (target.length === 0) return
-    if (target.length === 1) return setDisplay(target[0], value, deferEnter)
+    if (target.length === 1)
+      return setDisplay(target[0], value, deferEnter, transition)
   }
   if (isFragment(target)) {
-    return setDisplay(target.nodes, value, deferEnter)
+    if (isInteropEnabled && isInteropFragment(target) && target.$transition) {
+      transition = target.$transition
+    }
+    return setDisplay(target.nodes, value, deferEnter, transition)
   }
 
   if (target instanceof Element) {
@@ -95,7 +101,7 @@ function setDisplay(
         el.style.display === 'none' ? '' : el.style.display
     }
 
-    const { $transition } = target as TransitionBlock
+    const { $transition = transition } = target as TransitionBlock
     if ($transition) {
       if (value) {
         $transition.beforeEnter(target)

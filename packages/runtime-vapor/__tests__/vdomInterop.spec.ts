@@ -724,6 +724,60 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div style=""></div>')
     })
 
+    test('apply v-show transition to vdom child', async () => {
+      let finishLeave: (() => void) | undefined
+      const onBeforeEnter = vi.fn()
+      const onEnter = vi.fn((_el: Element, done: () => void) => done())
+      const onLeave = vi.fn((_el: Element, done: () => void) => {
+        finishLeave = done
+      })
+      const data = ref({
+        show: true,
+        onBeforeEnter,
+        onEnter,
+        onLeave,
+      })
+      const VDomChild = compile(
+        `<script setup>const text = 'Comp text'</script><template><div>{{ text }}</div></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <Transition
+            :css="false"
+            @before-enter="data.onBeforeEnter"
+            @enter="data.onEnter"
+            @leave="data.onLeave"
+          >
+            <components.VDomChild v-show="data.show" />
+          </Transition>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const { host } = define(App as any).render()
+      document.body.appendChild(host)
+      const el = host.querySelector('div')!
+
+      data.value.show = false
+      await nextTick()
+
+      expect(onLeave).toHaveBeenCalledOnce()
+      expect(el.style.display).toBe('')
+
+      finishLeave!()
+      expect(el.style.display).toBe('none')
+
+      data.value.show = true
+      await nextTick()
+
+      expect(onBeforeEnter).toHaveBeenCalledOnce()
+      expect(onEnter).toHaveBeenCalledOnce()
+      expect(el.style.display).toBe('')
+    })
+
     test('apply v-show to vapor child', async () => {
       const VaporChild = defineVaporComponent({
         setup() {
