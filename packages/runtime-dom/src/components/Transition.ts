@@ -395,8 +395,7 @@ interface CSSTransitionInfo {
 
 type AnimationProperties = 'Delay' | 'Duration'
 type StylePropertiesKey =
-  | `${AnimationTypes}${AnimationProperties}`
-  | `${typeof TRANSITION}Property`
+  `${AnimationTypes}${AnimationProperties}` | `${typeof TRANSITION}Property`
 
 export function getTransitionInfo(
   el: Element,

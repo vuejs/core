@@ -76,13 +76,11 @@ export const transformElement: NodeTransform = (node, context) => {
   return function postTransformElement() {
     node = context.currentNode!
 
-    if (
-      !(
-        node.type === NodeTypes.ELEMENT &&
-        (node.tagType === ElementTypes.ELEMENT ||
-          node.tagType === ElementTypes.COMPONENT)
-      )
-    ) {
+    if (!(
+      node.type === NodeTypes.ELEMENT &&
+      (node.tagType === ElementTypes.ELEMENT ||
+        node.tagType === ElementTypes.COMPONENT)
+    )) {
       return
     }
 
