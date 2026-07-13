@@ -4,6 +4,7 @@ import {
   type ForNode,
   NodeTypes,
   generate,
+  isWhitespaceText,
   baseParse as parse,
   transform,
 } from '../../src'
@@ -107,6 +108,24 @@ describe('compiler: transform text', () => {
     })
     expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
     expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('whitespace text', () => {
+    const root = transformWithTextOpt(`<div/>hello<div/>  <div/>`)
+    expect(root.children.length).toBe(5)
+    expect(root.children[0].type).toBe(NodeTypes.ELEMENT)
+    expect(root.children[1].type).toBe(NodeTypes.TEXT_CALL)
+    expect(root.children[2].type).toBe(NodeTypes.ELEMENT)
+    expect(root.children[3].type).toBe(NodeTypes.TEXT_CALL)
+    expect(root.children[4].type).toBe(NodeTypes.ELEMENT)
+
+    expect(root.children.map(isWhitespaceText)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      false,
+    ])
   })
 
   test('consecutive text mixed with elements', () => {

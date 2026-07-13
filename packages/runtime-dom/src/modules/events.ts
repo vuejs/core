@@ -67,17 +67,19 @@ export function patchEvent(
   }
 }
 
-const optionsModifierRE = /(?:Once|Passive|Capture)$/
+const optionsModifierRE = /(Once|Passive|Capture)$/
+const optionsModifierEventRE = /^on:?(?:Once|Passive|Capture)$/
 
 function parseName(name: string): [string, EventListenerOptions | undefined] {
   let options: EventListenerOptions | undefined
-  if (optionsModifierRE.test(name)) {
-    options = {}
-    let m
-    while ((m = name.match(optionsModifierRE))) {
-      name = name.slice(0, name.length - m[0].length)
-      ;(options as any)[m[0].toLowerCase()] = true
-    }
+  let m
+  while (
+    (m = name.match(optionsModifierRE)) &&
+    !optionsModifierEventRE.test(name)
+  ) {
+    if (!options) options = {}
+    name = name.slice(0, name.length - m[1].length)
+    ;(options as any)[m[1].toLowerCase()] = true
   }
   const event = name[2] === ':' ? name.slice(3) : hyphenate(name.slice(2))
   return [event, options]
@@ -112,12 +114,37 @@ function createInvoker(
     } else if (e._vts <= invoker.attached) {
       return
     }
-    callWithAsyncErrorHandling(
-      patchStopImmediatePropagation(e, invoker.value),
-      instance,
-      ErrorCodes.NATIVE_EVENT_HANDLER,
-      [e],
-    )
+    const value = invoker.value
+    if (isArray(value)) {
+      const originalStop = e.stopImmediatePropagation
+      e.stopImmediatePropagation = () => {
+        originalStop.call(e)
+        ;(e as any)._stopped = true
+      }
+      const handlers = value.slice()
+      const args = [e]
+      for (let i = 0; i < handlers.length; i++) {
+        if ((e as any)._stopped) {
+          break
+        }
+        const handler = handlers[i]
+        if (handler) {
+          callWithAsyncErrorHandling(
+            handler,
+            instance,
+            ErrorCodes.NATIVE_EVENT_HANDLER,
+            args,
+          )
+        }
+      }
+    } else {
+      callWithAsyncErrorHandling(
+        value,
+        instance,
+        ErrorCodes.NATIVE_EVENT_HANDLER,
+        [e],
+      )
+    }
   }
   invoker.value = initialValue
   invoker.attached = getNow()
@@ -133,22 +160,4 @@ function sanitizeEventValue(value: unknown, propName: string): EventValue {
       `in front of your prop?\nExpected function or array of functions, received type ${typeof value}.`,
   )
   return NOOP
-}
-
-function patchStopImmediatePropagation(
-  e: Event,
-  value: EventValue,
-): EventValue {
-  if (isArray(value)) {
-    const originalStop = e.stopImmediatePropagation
-    e.stopImmediatePropagation = () => {
-      originalStop.call(e)
-      ;(e as any)._stopped = true
-    }
-    return (value as Function[]).map(
-      fn => (e: Event) => !(e as any)._stopped && fn && fn(e),
-    )
-  } else {
-    return value
-  }
 }

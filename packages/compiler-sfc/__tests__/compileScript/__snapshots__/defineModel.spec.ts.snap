@@ -166,6 +166,50 @@ return { count }
 }"
 `;
 
+exports[`defineModel() > w/ template literal name 1`] = `
+"import { useModel as _useModel } from 'vue'
+
+export default {
+  props: {
+    "x": { default: 100 },
+    "xModifiers": {},
+    "y": { default: 200 },
+    "yModifiers": {},
+  },
+  emits: ["update:x", "update:y"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const x = _useModel(__props, \`x\`)
+      const y = _useModel(__props, \`y\`)
+      
+return { x, y }
+}
+
+}"
+`;
+
+exports[`defineModel() > w/ template literal name with expressions falls back to modelValue 1`] = `
+"import { useModel as _useModel } from 'vue'
+const name = 'x'
+      
+export default {
+  props: {
+    "modelValue": \`\${name}\`,
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const m = _useModel(__props, "modelValue", \`\${name}\`)
+      
+return { name, m }
+}
+
+}"
+`;
+
 exports[`defineModel() > w/ types, basic usage 1`] = `
 "import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
 

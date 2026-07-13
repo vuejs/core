@@ -14,6 +14,7 @@ describe('e2e: todomvc', () => {
     classList,
     enterValue,
     clearValue,
+    timeout,
   } = setupPuppeteer()
 
   async function removeItemAt(n: number) {
@@ -101,6 +102,7 @@ describe('e2e: todomvc', () => {
 
     // active filter
     await click('.filters li:nth-child(2) a')
+    await timeout(1)
     expect(await count('.todo')).toBe(1)
     expect(await count('.todo.completed')).toBe(0)
     // add item with filter active
@@ -109,6 +111,7 @@ describe('e2e: todomvc', () => {
 
     // completed filter
     await click('.filters li:nth-child(3) a')
+    await timeout(1)
     expect(await count('.todo')).toBe(2)
     expect(await count('.todo.completed')).toBe(2)
 
@@ -128,13 +131,15 @@ describe('e2e: todomvc', () => {
     await click('.todo .toggle')
     expect(await count('.todo')).toBe(1)
     await click('.filters li:nth-child(2) a')
+    await timeout(1)
     expect(await count('.todo')).toBe(3)
     await click('.todo .toggle')
     expect(await count('.todo')).toBe(2)
 
     // editing triggered by blur
     await click('.filters li:nth-child(1) a')
-    await click('.todo:nth-child(1) label', { clickCount: 2 })
+    await timeout(1)
+    await click('.todo:nth-child(1) label', { count: 2 })
     expect(await count('.todo.editing')).toBe(1)
     expect(await isFocused('.todo:nth-child(1) .edit')).toBe(true)
     await clearValue('.todo:nth-child(1) .edit')
@@ -144,13 +149,13 @@ describe('e2e: todomvc', () => {
     expect(await text('.todo:nth-child(1) label')).toBe('edited!')
 
     // editing triggered by enter
-    await click('.todo label', { clickCount: 2 })
+    await click('.todo label', { count: 2 })
     await enterValue('.todo:nth-child(1) .edit', 'edited again!')
     expect(await count('.todo.editing')).toBe(0)
     expect(await text('.todo:nth-child(1) label')).toBe('edited again!')
 
     // cancel
-    await click('.todo label', { clickCount: 2 })
+    await click('.todo label', { count: 2 })
     await clearValue('.todo:nth-child(1) .edit')
     await page().type('.todo:nth-child(1) .edit', 'edited!')
     await page().keyboard.press('Escape')
@@ -158,7 +163,7 @@ describe('e2e: todomvc', () => {
     expect(await text('.todo:nth-child(1) label')).toBe('edited again!')
 
     // empty value should remove
-    await click('.todo label', { clickCount: 2 })
+    await click('.todo label', { count: 2 })
     await enterValue('.todo:nth-child(1) .edit', ' ')
     expect(await count('.todo')).toBe(3)
 

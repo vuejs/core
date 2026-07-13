@@ -106,6 +106,7 @@ onMounted(() => {
 
 <style>
 .version {
+  z-index: 1;
   margin-right: 12px;
   position: relative;
 }
