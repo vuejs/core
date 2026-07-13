@@ -40,7 +40,7 @@ function onCompositionEnd(e: Event) {
 const assignKey: unique symbol = Symbol('_assign')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
-  T & { [assignKey]: AssignerFn; _assigning?: boolean },
+  T & { [assignKey]: AssignerFn; _assigning?: boolean; _assignedValue?: any },
   any,
   Modifiers
 >
@@ -214,13 +214,16 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o),
         )
-      el[assignKey](
-        el.multiple
-          ? isSetModel
-            ? new Set(selectedVal)
-            : selectedVal
-          : selectedVal[0],
-      )
+      const assignedValue = el.multiple
+        ? isSetModel
+          ? new Set(selectedVal)
+          : selectedVal
+        : selectedVal[0]
+      el[assignKey](assignedValue)
+      // remember the value just assigned by the user interaction so that the
+      // `updated` hook can detect when the model is later changed to a
+      // different value (e.g. reset) inside the update handler. #10505
+      el._assignedValue = assignedValue
       el._assigning = true
       nextTick(() => {
         el._assigning = false
@@ -237,7 +240,10 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
-    if (!el._assigning) {
+    // Skip the redundant DOM sync only when the model still holds the value
+    // produced by the user's selection. If it was changed to a different value
+    // during the update (e.g. reset to null), the DOM must be re-synced. #10505
+    if (!el._assigning || !looseEqual(value, el._assignedValue)) {
       setSelected(el, value)
     }
   },
