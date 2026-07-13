@@ -1193,7 +1193,7 @@ function testRender(type: string, render: typeof renderToString) {
     })
 
     test('async setup throwing error', async () => {
-      let capturedError: string[] = []
+      const capturedError: string[] = []
 
       const Child = {
         async setup() {
@@ -1215,9 +1215,7 @@ function testRender(type: string, render: typeof renderToString) {
         template: `<Suspense><Child /></Suspense>`,
       })
 
-      try {
-        await render(app)
-      } catch (e: any) {}
+      expect(await render(app)).toBe('')
       expect(capturedError.length).toBe(2)
       expect(capturedError).toStrictEqual([
         'An error',

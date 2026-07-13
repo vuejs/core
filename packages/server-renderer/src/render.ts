@@ -121,7 +121,13 @@ export function renderComponentVNode(
       .catch(NOOP)
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
-    return renderComponentSubTree(instance, slotScopeId)
+    try {
+      return renderComponentSubTree(instance, slotScopeId)
+    } catch (err) {
+      // let the SSR buffer propagate the error so parent render functions
+      // don't handle the same error again
+      return Promise.reject(err)
+    }
   }
 }
 
