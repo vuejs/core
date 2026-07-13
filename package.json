@@ -83,8 +83,8 @@
     "enquirer": "^2.4.1",
     "esbuild": "^0.28.1",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "eslint": "^10.5.0",
-    "eslint-plugin-import-x": "^4.17.0",
+    "eslint": "^10.7.0",
+    "eslint-plugin-import-x": "^4.17.1",
     "estree-walker": "catalog:",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.8",
@@ -95,7 +95,7 @@
     "npm-run-all2": "^9.0.2",
     "picocolors": "^1.1.1",
     "playwright": "^1.61.1",
-    "prettier": "^3.8.4",
+    "prettier": "^3.9.5",
     "pretty-bytes": "^7.1.0",
     "pug": "^3.0.4",
     "puppeteer": "~25.2.0",
@@ -111,7 +111,7 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.62.0",
+    "typescript-eslint": "^8.63.0",
     "vite": "catalog:",
     "vitest": "^4.1.9"
   }
