@@ -14,6 +14,7 @@ import { flushPostFlushCbs } from './scheduler'
 import type { ComponentInternalInstance, ComponentOptions } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
+import { ErrorCodes, handleError } from './errorHandling'
 import {
   PatchFlags,
   ShapeFlags,
@@ -56,13 +57,44 @@ export enum DOMNodeTypes {
 }
 
 let hasLoggedMismatchError = false
-const logMismatchError = () => {
-  if (__TEST__ || hasLoggedMismatchError) {
+const logMismatchError = (
+  instance: ComponentInternalInstance | null = null,
+) => {
+  if (hasLoggedMismatchError) {
     return
   }
-  // this error should show up in production
-  console.error('Hydration completed but contains mismatches.')
   hasLoggedMismatchError = true
+
+  const err = new Error('Hydration completed but contains mismatches.')
+  const hasConsumer =
+    !!instance &&
+    (!!instance.appContext.config.errorHandler || hasErrorCaptured(instance))
+
+  if (hasConsumer) {
+    // Route through Vue's error handling pipeline so that
+    // onErrorCaptured and app.config.errorHandler can catch it.
+    handleError(err, instance, ErrorCodes.HYDRATION_MISMATCH, false)
+  } else if (!__TEST__) {
+    // Preserve the original default behavior: a production console.error
+    // so SSR apps that have not opted in still see the mismatch signal.
+    console.error(err.message)
+  }
+}
+
+function hasErrorCaptured(instance: ComponentInternalInstance): boolean {
+  let cur = instance.parent
+  while (cur) {
+    if (cur.ec && cur.ec.length) return true
+    cur = cur.parent
+  }
+  return false
+}
+
+/**
+ * @internal
+ */
+export function resetHydrationMismatchState(): void {
+  hasLoggedMismatchError = false
 }
 
 const isSVGContainer = (container: Element) =>
@@ -191,7 +223,7 @@ export function createHydrationFunctions(
                 )}` +
                   `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
               )
-            logMismatchError()
+            logMismatchError(parentComponent)
             ;(node as Text).data = vnode.children as string
           }
           nextNode = nextSibling(node)
@@ -450,7 +482,7 @@ export function createHydrationFunctions(
               el,
               `\nServer rendered element contains more child nodes than client vdom.`,
             )
-          logMismatchError()
+          logMismatchError(parentComponent)
         }
         while (next) {
           // The SSRed DOM contains more nodes than it should. Remove them.
@@ -483,7 +515,7 @@ export function createHydrationFunctions(
                 `\n  - rendered on server: ${textContent}` +
                   `\n  - expected on client: ${clientText}`,
               )
-            logMismatchError()
+            logMismatchError(parentComponent)
           }
           el.textContent = vnode.children as string
         }
@@ -509,7 +541,7 @@ export function createHydrationFunctions(
               !(dirs && dirs.some(d => d.dir.created)) &&
               propHasMismatch(el, key, props[key], vnode, parentComponent)
             ) {
-              logMismatchError()
+              logMismatchError(parentComponent)
             }
             if (
               (forcePatch &&
@@ -625,7 +657,7 @@ export function createHydrationFunctions(
                 container,
                 `\nServer rendered element contains fewer child nodes than client vdom.`,
               )
-            logMismatchError()
+            logMismatchError(parentComponent)
           }
         }
 
@@ -675,7 +707,7 @@ export function createHydrationFunctions(
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
       // back. This should have led to node/children mismatch warnings.
-      logMismatchError()
+      logMismatchError(parentComponent)
 
       // since the anchor is missing, we need to create one and insert it
       insert((vnode.anchor = createComment(`]`)), container, next)
@@ -704,7 +736,7 @@ export function createHydrationFunctions(
           `\n- expected on client:`,
           vnode.type,
         )
-      logMismatchError()
+      logMismatchError(parentComponent)
     }
 
     vnode.el = null
