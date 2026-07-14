@@ -2739,6 +2739,30 @@ describe('SSR hydration', () => {
       }
     })
 
+    test('force patch svg dynamic props with correct namespace when hydrating', () => {
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<svg width="24" height="24" viewBox="0 0 24 24"></svg>`,
+          () =>
+            createElementVNode(
+              'svg',
+              { width: 48, height: 48, viewBox: '0 0 48 48' },
+              null,
+              PatchFlags.PROPS,
+              ['width', 'height', 'viewBox'],
+            ),
+        )
+        const el = container.firstChild as Element
+        expect(el.namespaceURI).toContain('svg')
+        expect(el.getAttribute('width')).toBe('48')
+        expect(el.getAttribute('height')).toBe('48')
+        expect(el.getAttribute('viewBox')).toBe('0 0 48 48')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
     test('only patches declared dynamic props when hydrating', () => {
       const { container } = mountWithHydration(
         `<div data-allow-mismatch="attribute" id="server" value="server"></div>`,
