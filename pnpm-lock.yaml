@@ -312,8 +312,8 @@ importers:
         specifier: 'catalog:'
         version: 0.30.21
       postcss:
-        specifier: ^8.5.15
-        version: 8.5.15
+        specifier: ^8.5.19
+        version: 8.5.19
       source-map-js:
         specifier: 'catalog:'
         version: 1.2.1
@@ -338,7 +338,7 @@ importers:
         version: 10.2.5
       postcss-modules:
         specifier: ^6.0.1
-        version: 6.0.1(postcss@8.5.15)
+        version: 6.0.1(postcss@8.5.19)
       postcss-selector-parser:
         specifier: ^7.1.4
         version: 7.1.4
@@ -2785,6 +2785,10 @@ packages:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
 
+  postcss@8.5.19:
+    resolution: {integrity: sha512-Mz8SaolMd8nB+G13WkORcxQKHZ/NE4xXevtkJHVuG+guo9/wYKlIMTKAqGdEmYOXR2ijPjTYNHssizdaVSUNdQ==}
+    engines: {node: ^10 || ^12 || >=14}
+
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
@@ -4911,9 +4915,9 @@ snapshots:
 
   human-signals@2.1.0: {}
 
-  icss-utils@5.1.0(postcss@8.5.15):
+  icss-utils@5.1.0(postcss@8.5.19):
     dependencies:
-      postcss: 8.5.15
+      postcss: 8.5.19
 
   ignore@5.3.2: {}
 
@@ -5352,37 +5356,37 @@ snapshots:
 
   pngjs@7.0.0: {}
 
-  postcss-modules-extract-imports@3.1.0(postcss@8.5.15):
+  postcss-modules-extract-imports@3.1.0(postcss@8.5.19):
     dependencies:
-      postcss: 8.5.15
+      postcss: 8.5.19
 
-  postcss-modules-local-by-default@4.0.5(postcss@8.5.15):
+  postcss-modules-local-by-default@4.0.5(postcss@8.5.19):
     dependencies:
-      icss-utils: 5.1.0(postcss@8.5.15)
-      postcss: 8.5.15
+      icss-utils: 5.1.0(postcss@8.5.19)
+      postcss: 8.5.19
       postcss-selector-parser: 6.1.2
       postcss-value-parser: 4.2.0
 
-  postcss-modules-scope@3.2.0(postcss@8.5.15):
+  postcss-modules-scope@3.2.0(postcss@8.5.19):
     dependencies:
-      postcss: 8.5.15
+      postcss: 8.5.19
       postcss-selector-parser: 6.1.2
 
-  postcss-modules-values@4.0.0(postcss@8.5.15):
+  postcss-modules-values@4.0.0(postcss@8.5.19):
     dependencies:
-      icss-utils: 5.1.0(postcss@8.5.15)
-      postcss: 8.5.15
+      icss-utils: 5.1.0(postcss@8.5.19)
+      postcss: 8.5.19
 
-  postcss-modules@6.0.1(postcss@8.5.15):
+  postcss-modules@6.0.1(postcss@8.5.19):
     dependencies:
       generic-names: 4.0.0
-      icss-utils: 5.1.0(postcss@8.5.15)
+      icss-utils: 5.1.0(postcss@8.5.19)
       lodash.camelcase: 4.3.0
-      postcss: 8.5.15
-      postcss-modules-extract-imports: 3.1.0(postcss@8.5.15)
-      postcss-modules-local-by-default: 4.0.5(postcss@8.5.15)
-      postcss-modules-scope: 3.2.0(postcss@8.5.15)
-      postcss-modules-values: 4.0.0(postcss@8.5.15)
+      postcss: 8.5.19
+      postcss-modules-extract-imports: 3.1.0(postcss@8.5.19)
+      postcss-modules-local-by-default: 4.0.5(postcss@8.5.19)
+      postcss-modules-scope: 3.2.0(postcss@8.5.19)
+      postcss-modules-values: 4.0.0(postcss@8.5.19)
       string-hash: 1.1.3
 
   postcss-selector-parser@6.1.2:
@@ -5398,6 +5402,12 @@ snapshots:
   postcss-value-parser@4.2.0: {}
 
   postcss@8.5.15:
+    dependencies:
+      nanoid: 3.3.12
+      picocolors: 1.1.1
+      source-map-js: 1.2.1
+
+  postcss@8.5.19:
     dependencies:
       nanoid: 3.3.12
       picocolors: 1.1.1
