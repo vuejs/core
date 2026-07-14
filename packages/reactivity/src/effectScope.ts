@@ -70,8 +70,9 @@ export class EffectScope {
       this._isPaused = true
       let i, l
       if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].pause()
+        const scopes = this.scopes.slice()
+        for (i = 0, l = scopes.length; i < l; i++) {
+          scopes[i].pause()
         }
       }
       for (i = 0, l = this.effects.length; i < l; i++) {
@@ -89,8 +90,9 @@ export class EffectScope {
         this._isPaused = false
         let i, l
         if (this.scopes) {
-          for (i = 0, l = this.scopes.length; i < l; i++) {
-            this.scopes[i].resume()
+          const scopes = this.scopes.slice()
+          for (i = 0, l = scopes.length; i < l; i++) {
+            scopes[i].resume()
           }
         }
         for (i = 0, l = this.effects.length; i < l; i++) {
@@ -171,8 +173,9 @@ export class EffectScope {
       this.cleanups.length = 0
 
       if (this.scopes) {
-        for (i = 0, l = this.scopes.length; i < l; i++) {
-          this.scopes[i].stop(true)
+        const scopes = this.scopes.slice()
+        for (i = 0, l = scopes.length; i < l; i++) {
+          scopes[i].stop(true)
         }
         this.scopes.length = 0
       }
