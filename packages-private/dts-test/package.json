@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.0.0",
   "dependencies": {
+    "@vue/compiler-sfc": "workspace:*",
+    "typescript": "7.0.2",
     "vue": "workspace:*",
     "dts-built-test": "workspace:*"
   }

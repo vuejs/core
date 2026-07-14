@@ -894,10 +894,10 @@ let loadTS: (() => typeof TS) | undefined
 /**
  * @private
  */
-export function registerTS(_loadTS: () => typeof TS): void {
+export function registerTS(_loadTS: () => unknown): void {
   loadTS = () => {
     try {
-      return _loadTS()
+      return _loadTS() as typeof TS
     } catch (err: any) {
       if (
         typeof err.message === 'string' &&
@@ -905,7 +905,7 @@ export function registerTS(_loadTS: () => typeof TS): void {
       ) {
         throw new Error(
           'Failed to load TypeScript, which is required for resolving imported types. ' +
-            'Please make sure "TypeScript" is installed as a project dependency.',
+            'Please install "typescript" or, for TypeScript 7, "@typescript/typescript6" as a project dependency.',
         )
       } else {
         throw new Error(
