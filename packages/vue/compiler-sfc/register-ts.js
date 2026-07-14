@@ -1,3 +1,4 @@
 if (typeof require !== 'undefined') {
-  require('@vue/compiler-sfc').registerTS(() => require('typescript'))
+  const loadTS = require('./load-ts.js')
+  require('@vue/compiler-sfc').registerTS(() => loadTS(require))
 }

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["esnext", "dom"],
+    "paths": {
+      "typescript": ["./node_modules/typescript"]
+    }
+  },
+  "files": ["./compiler-sfc.typescript7.test-d.ts"]
+}

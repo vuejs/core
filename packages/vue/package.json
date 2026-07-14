@@ -102,9 +102,13 @@
     "@vue/server-renderer": "workspace:*"
   },
   "peerDependencies": {
+    "@typescript/typescript6": "*",
     "typescript": "*"
   },
   "peerDependenciesMeta": {
+    "@typescript/typescript6": {
+      "optional": true
+    },
     "typescript": {
       "optional": true
     }
