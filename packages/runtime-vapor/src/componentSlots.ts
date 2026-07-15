@@ -42,10 +42,7 @@ import {
 import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
-import {
-  isCollectingVdomSlotVNodes,
-  isInteropEnabled,
-} from './vdomInteropState'
+import { isInteropEnabled } from './vdomInteropState'
 import { setScopeId, trackScopeIdFragment } from './scopeId'
 import { withHydratingSlotBoundary } from './dom/hydrateFragment'
 
@@ -108,12 +105,6 @@ const rawSlotWrappersCache = new WeakMap<
     }
   >
 >()
-
-export function getRawSlotsOwner(
-  slots: RawSlots,
-): VaporComponentInstance | null {
-  return rawSlotsOwnerMap.get(slots) || null
-}
 
 export function normalizeRawSlots(
   rawSlots?: LooseRawSlots | null,
@@ -268,12 +259,6 @@ export function createSlot(
   fallback?: VaporSlot,
   flags: number = 0,
 ): Block {
-  if (isInteropEnabled && isCollectingVdomSlotVNodes) {
-    // A Vapor <slot/> cannot expose child vnode metadata without real slot
-    // hydration. Bail out so renderSlot() handles it for real.
-    return undefined as any
-  }
-
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()

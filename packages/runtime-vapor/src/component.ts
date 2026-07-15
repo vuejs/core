@@ -81,7 +81,6 @@ import {
   type RawSlots,
   type StaticSlots,
   dynamicSlotsProxyHandlers,
-  getScopeOwner,
   getSlot,
   inOnceSlot,
   normalizeRawSlots,
@@ -130,10 +129,7 @@ import {
   parentSuspense,
   setParentSuspense,
 } from './suspense'
-import {
-  isCollectingVdomSlotVNodes,
-  isInteropEnabled,
-} from './vdomInteropState'
+import { isInteropEnabled } from './vdomInteropState'
 import {
   getCurrentScopeId,
   setComponentScopeId,
@@ -257,15 +253,6 @@ export function createComponent(
   const wasInOnceSlot = inOnceSlot
   if (wasInOnceSlot) once = true
 
-  if (isInteropEnabled && isCollectingVdomSlotVNodes) {
-    if (component.__vapor) {
-      // Vapor components cannot be represented as VDOM child metadata. Bail out
-      // with undefined so slots.default() falls back to the real renderSlot path.
-      return undefined as any
-    }
-    const owner = getScopeOwner()
-    if (owner) appContext = owner.appContext
-  }
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationClose: Node | null = null
@@ -350,11 +337,6 @@ export function createComponent(
         normalizeRawSlots(rawSlots),
         once,
       )
-      if (isCollectingVdomSlotVNodes) {
-        // VDOM interop children already expose frag.vnode for collection. Do not
-        // mount or hydrate the dry fragment.
-        return frag as any
-      }
       if (!isHydrating) {
         if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
       } else {
