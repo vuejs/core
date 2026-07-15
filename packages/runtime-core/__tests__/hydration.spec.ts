@@ -2760,5 +2760,30 @@ describe('SSR hydration', () => {
       expect(el.getAttribute('id')).toBe('client')
       expect(el.getAttribute('value')).toBe('server')
     })
+
+    // #15081
+    test('patches dynamic props as attributes on SVG elements', () => {
+      const { container } = mountWithHydration(
+        `<svg data-allow-mismatch="attribute" viewBox="0 0 12 12"></svg>`,
+        () => (
+          openBlock(),
+          createElementBlock(
+            'svg',
+            {
+              'data-allow-mismatch': 'attribute',
+              viewBox: '0 0 24 24',
+            },
+            null,
+            PatchFlags.PROPS,
+            ['viewBox'],
+          )
+        ),
+      )
+
+      expect(container.firstElementChild!.getAttribute('viewBox')).toBe(
+        '0 0 24 24',
+      )
+      expect(`Failed setting prop "viewBox"`).not.toHaveBeenWarned()
+    })
   })
 })

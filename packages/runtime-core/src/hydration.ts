@@ -491,6 +491,11 @@ export function createHydrationFunctions(
 
       // props
       if (props) {
+        const namespace = el.namespaceURI!.includes('svg')
+          ? 'svg'
+          : el.namespaceURI!.includes('MathML')
+            ? 'mathml'
+            : undefined
         if (
           __DEV__ ||
           __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ ||
@@ -520,7 +525,7 @@ export function createHydrationFunctions(
               (isCustomElement && !isReservedProp(key)) ||
               (dynamicProps && dynamicProps.includes(key))
             ) {
-              patchProp(el, key, null, props[key], undefined, parentComponent)
+              patchProp(el, key, null, props[key], namespace, parentComponent)
             }
           }
         } else if (props.onClick) {
@@ -531,7 +536,7 @@ export function createHydrationFunctions(
             'onClick',
             null,
             props.onClick,
-            undefined,
+            namespace,
             parentComponent,
           )
         } else if (patchFlag & PatchFlags.STYLE && isReactive(props.style)) {
