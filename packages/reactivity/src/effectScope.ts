@@ -95,8 +95,9 @@ export class EffectScope {
             scopes[i].resume()
           }
         }
-        for (i = 0, l = this.effects.length; i < l; i++) {
-          this.effects[i].resume()
+        const effects = this.effects.slice()
+        for (i = 0, l = effects.length; i < l; i++) {
+          effects[i].resume()
         }
       }
     }
