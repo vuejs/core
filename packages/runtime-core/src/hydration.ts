@@ -500,10 +500,11 @@ export function createHydrationFunctions(
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
           const isCustomElement = el.tagName.includes('-')
-          // pass the element's namespace so that e.g. readonly SVG/MathML props
-          // (width/height/viewBox) are patched as attributes rather than as
-          // DOM properties, which would throw.
-          const namespace = getContainerType(el)
+          const namespace = el.namespaceURI!.includes('svg')
+            ? 'svg'
+            : el.namespaceURI!.includes('MathML')
+              ? 'mathml'
+              : undefined
           for (const key in props) {
             // check hydration mismatch
             if (

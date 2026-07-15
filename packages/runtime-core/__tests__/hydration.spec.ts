@@ -2763,6 +2763,42 @@ describe('SSR hydration', () => {
       }
     })
 
+    test('force patch foreignObject dynamic props with correct namespace when hydrating', () => {
+      __DEV__ = false
+      try {
+        const container = document.createElement('div')
+        container.innerHTML =
+          '<svg><foreignObject width="24"></foreignObject></svg>'
+        const el = container.querySelector('foreignObject')!
+        expect(el.namespaceURI).toContain('svg')
+        // jsdom doesn't implement SVGForeignObjectElement.width.
+        Object.defineProperty(el, 'width', {
+          configurable: true,
+          get: () => 24,
+        })
+
+        createSSRApp({
+          render: () => (
+            openBlock(),
+            createElementBlock('svg', null, [
+              (openBlock(),
+              createElementBlock(
+                'foreignObject',
+                { width: 48 },
+                null,
+                PatchFlags.PROPS,
+                ['width'],
+              )),
+            ])
+          ),
+        }).mount(container)
+
+        expect(el.getAttribute('width')).toBe('48')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
     test('only patches declared dynamic props when hydrating', () => {
       const { container } = mountWithHydration(
         `<div data-allow-mismatch="attribute" id="server" value="server"></div>`,
