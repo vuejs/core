@@ -30,6 +30,9 @@ describe.skipIf(!global.gc)('ssr: render error leak', () => {
     await expect(renderToString(createApp(null))).rejects.toThrow(
       `Cannot read properties of null`,
     )
+    expect(
+      'Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
 
     const weakRefs: { deref(): unknown | undefined }[] = []
     const renderOnce = async () => {
@@ -63,6 +66,9 @@ describe.skipIf(!global.gc)('ssr: render error leak', () => {
     await expect(renderToString(createApp({ list: {} }))).rejects.toThrow(
       `Cannot read properties of undefined`,
     )
+    expect(
+      'Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
 
     const weakRefs: { deref(): unknown | undefined }[] = []
     const renderOnce = async () => {
