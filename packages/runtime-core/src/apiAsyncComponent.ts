@@ -136,6 +136,7 @@ export function defineAsyncComponent<
           }
           return
         }
+        if (!el.parentNode) return
         hydrate()
       }
       const doHydrate = hydrateStrategy
