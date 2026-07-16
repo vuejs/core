@@ -78,7 +78,7 @@
     "@vitest/coverage-v8": "^4.1.9",
     "@vitest/eslint-plugin": "^1.6.20",
     "@vue/consolidate": "1.0.0",
-    "conventional-changelog": "^7.2.1",
+    "conventional-changelog": "^8.1.0",
     "conventional-changelog-angular": "^9.2.1",
     "enquirer": "^2.4.1",
     "esbuild": "^0.28.1",
