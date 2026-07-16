@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.39",
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@11.13.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -71,7 +71,7 @@
     "@rollup/plugin-replace": "5.0.4",
     "@swc/core": "^1.15.43",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^24.13.2",
+    "@types/node": "^24.13.3",
     "@types/semver": "^7.7.1",
     "@types/serve-handler": "^6.1.4",
     "@vitest/browser-playwright": "4.1.10",
