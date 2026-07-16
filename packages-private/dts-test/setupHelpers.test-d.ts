@@ -1,4 +1,5 @@
 import {
+  type PropType,
   type Ref,
   type Slots,
   type VNode,
@@ -421,6 +422,18 @@ describe('defineModel', () => {
   const countDefault = defineModel<number>('count', { default: 1 })
   expectType<Ref<number>>(countDefault)
 
+  const inferredNamedArrayDefault = defineModel('items', {
+    type: Array as PropType<string[]>,
+    default: () => [],
+  })
+  expectType<Ref<string[]>>(inferredNamedArrayDefault)
+
+  const inferredArrayDefault = defineModel({
+    type: Array as PropType<string[]>,
+    default: () => [],
+  })
+  expectType<Ref<string[]>>(inferredArrayDefault)
+
   const arrayDefault = defineModel<number[]>({ default: () => [] })
   expectType<Ref<number[]>>(arrayDefault)
 
@@ -468,6 +481,11 @@ describe('defineModel', () => {
 
   // @ts-expect-error type / default mismatch
   defineModel<string>({ default: 123 })
+  // @ts-expect-error runtime type / default mismatch
+  defineModel('items', {
+    type: Array as PropType<string[]>,
+    default: () => [1],
+  })
   // @ts-expect-error raw array defaults must use a factory
   defineModel<number[]>({ default: [] })
   // @ts-expect-error raw object defaults must use a factory
