@@ -58,6 +58,7 @@ export default defineConfig({
             '**/e2e/**',
             '**/{vue,vue-compat,runtime-dom}/**',
             'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+            'packages/server-renderer/__tests__/ssrRender.spec.ts',
           ],
         },
       },
@@ -66,7 +67,10 @@ export default defineConfig({
         test: {
           name: 'unit-gc',
           pool: 'forks',
-          include: ['packages/server-renderer/__tests__/ssrWatch.spec.ts'],
+          include: [
+            'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+            'packages/server-renderer/__tests__/ssrRender.spec.ts',
+          ],
           execArgv: ['--expose-gc'],
         },
       },

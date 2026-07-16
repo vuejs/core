@@ -1,6 +1,6 @@
 import type { ComponentInternalInstance } from './component'
 import { devtoolsComponentUpdated } from './devtools'
-import { setBlockTracking } from './vnode'
+import { blockStack, closeBlock, setBlockTracking } from './vnode'
 
 /**
  * mark the current rendering instance for asset resolution (e.g.
@@ -89,10 +89,14 @@ export function withCtx(
       setBlockTracking(-1)
     }
     const prevInstance = setCurrentRenderingInstance(ctx)
+    const prevStackSize = blockStack.length
     let res
     try {
       res = fn(...args)
     } finally {
+      // close blocks left dangling when the slot throws mid-block
+      // inline blocks (for example `v-if`) have no helper to unwind themselves (#15070)
+      for (let i = blockStack.length; i > prevStackSize; i--) closeBlock()
       setCurrentRenderingInstance(prevInstance)
       if (renderFnWithContext._d) {
         setBlockTracking(1)

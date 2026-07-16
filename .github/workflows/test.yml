@@ -12,6 +12,8 @@ jobs:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -33,6 +35,8 @@ jobs:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -45,16 +49,19 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run compiler unit tests
-        run: pnpm run test-unit compiler
+      - parallel:
+          - name: Run compiler unit tests
+            run: pnpm run test-unit compiler
 
-      - name: Run ssr unit tests
-        run: pnpm run test-unit server-renderer
+          - name: Run ssr unit tests
+            run: pnpm run test-unit server-renderer
 
   e2e-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Setup cache for Chromium binary
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -93,6 +100,8 @@ jobs:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
@@ -105,11 +114,12 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
-        run: pnpm run lint
+      - parallel:
+          - name: Run eslint
+            run: pnpm run lint
 
-      - name: Run prettier
-        run: pnpm run format-check
+          - name: Run prettier
+            run: pnpm run format-check
 
       - name: Run tsc
         run: pnpm run check

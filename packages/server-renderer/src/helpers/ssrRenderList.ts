@@ -1,5 +1,5 @@
 import { isArray, isObject, isString } from '@vue/shared'
-import { warn } from '@vue/runtime-core'
+import { warn } from '@vue/runtime-dom'
 
 export function ssrRenderList(
   source: unknown,

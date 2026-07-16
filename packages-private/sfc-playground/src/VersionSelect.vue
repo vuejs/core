@@ -56,7 +56,9 @@ function setVersion(v: string) {
 
 function copyVersion(v: string) {
   window.navigator.clipboard.writeText(v).then(() => {
-    alert('Vue version has been copied to clipboard.')
+    alert(
+      `${props.label.replace(/Version$/, 'version')} has been copied to clipboard.`,
+    )
   })
 }
 

@@ -47,25 +47,23 @@ if (hash.startsWith('__SSR__')) {
 }
 
 // enable experimental features
-const sfcOptions = computed(
-  (): SFCOptions => ({
-    script: {
-      inlineTemplate: productionMode.value,
-      isProd: productionMode.value,
-      propsDestructure: true,
+const sfcOptions = computed((): SFCOptions => ({
+  script: {
+    inlineTemplate: productionMode.value,
+    isProd: productionMode.value,
+    propsDestructure: true,
+  },
+  style: {
+    isProd: productionMode.value,
+  },
+  template: {
+    isProd: productionMode.value,
+    compilerOptions: {
+      isCustomElement: (tag: string) =>
+        tag === 'mjx-container' || tag.startsWith('custom-'),
     },
-    style: {
-      isProd: productionMode.value,
-    },
-    template: {
-      isProd: productionMode.value,
-      compilerOptions: {
-        isCustomElement: (tag: string) =>
-          tag === 'mjx-container' || tag.startsWith('custom-'),
-      },
-    },
-  }),
-)
+  },
+}))
 
 const store = useStore(
   {

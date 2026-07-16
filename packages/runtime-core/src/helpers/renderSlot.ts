@@ -9,6 +9,8 @@ import {
   Fragment,
   type VNode,
   type VNodeArrayChildren,
+  blockStack,
+  closeBlock,
   createBlock,
   createVNode,
   isVNode,
@@ -71,31 +73,41 @@ export function renderSlot(
   if (slot && (slot as ContextualRenderFn)._c) {
     ;(slot as ContextualRenderFn)._d = false
   }
+  const prevStackSize = blockStack.length
   openBlock()
-  const validSlotContent = slot && ensureValidVNode(slot(props))
-  const slotKey =
-    props.key ||
-    // slot content array of a dynamic conditional slot may have a branch
-    // key attached in the `createSlots` helper, respect that
-    (validSlotContent && (validSlotContent as any).key)
-  const rendered = createBlock(
-    Fragment,
-    {
-      key:
-        (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
-        // #7256 force differentiate fallback content from actual content
-        (!validSlotContent && fallback ? '_fb' : ''),
-    },
-    validSlotContent || (fallback ? fallback() : []),
-    validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
-      ? PatchFlags.STABLE_FRAGMENT
-      : PatchFlags.BAIL,
-  )
+  let rendered: VNode
+  try {
+    const validSlotContent = slot && ensureValidVNode(slot(props))
+    const slotKey =
+      props.key ||
+      // slot content array of a dynamic conditional slot may have a branch
+      // key attached in the `createSlots` helper, respect that
+      (validSlotContent && (validSlotContent as any).key)
+    rendered = createBlock(
+      Fragment,
+      {
+        key:
+          (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
+          // #7256 force differentiate fallback content from actual content
+          (!validSlotContent && fallback ? '_fb' : ''),
+      },
+      validSlotContent || (fallback ? fallback() : []),
+      validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
+        ? PatchFlags.STABLE_FRAGMENT
+        : PatchFlags.BAIL,
+    )
+  } catch (err) {
+    // close blocks left dangling when the slot throws mid-block
+    // they would otherwise retain every vnode created afterwards (#15070)
+    for (let i = blockStack.length; i > prevStackSize; i--) closeBlock()
+    throw err
+  } finally {
+    if (slot && (slot as ContextualRenderFn)._c) {
+      ;(slot as ContextualRenderFn)._d = true
+    }
+  }
   if (!noSlotted && rendered.scopeId) {
     rendered.slotScopeIds = [rendered.scopeId + '-s']
-  }
-  if (slot && (slot as ContextualRenderFn)._c) {
-    ;(slot as ContextualRenderFn)._d = true
   }
   return rendered
 }
