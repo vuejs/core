@@ -1244,24 +1244,30 @@ function handleSetupResult(
     pushWarningContext(instance)
   }
 
-  if (__DEV__ && !isBlock(setupResult)) {
+  if (!isBlock(setupResult) && !isFunction(component) && component.render) {
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      instance.devtoolsRawSetupState = setupResult
+    }
+    instance.setupState = proxyRefs(setupResult)
+    if (__DEV__) {
+      instance.setupState = createDevSetupStateProxy(instance)
+      devRender(instance)
+    } else {
+      instance.block = callRender(
+        component.render,
+        instance,
+        instance.setupState!,
+      )
+    }
+  } else if (__DEV__ && !isBlock(setupResult)) {
     if (isFunction(component)) {
       warn(`Functional vapor component must return a block directly.`)
       instance.block = []
-    } else if (!component.render) {
+    } else {
       warn(
         `Vapor component setup() returned non-block value, and has no render function.`,
       )
       instance.block = []
-    } else {
-      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-        instance.devtoolsRawSetupState = setupResult
-      }
-      instance.setupState = proxyRefs(setupResult)
-      if (__DEV__) {
-        instance.setupState = createDevSetupStateProxy(instance)
-      }
-      devRender(instance)
     }
   } else {
     // component has a render function but no setup function

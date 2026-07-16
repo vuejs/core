@@ -18,7 +18,6 @@ import {
 } from '@vue/runtime-dom'
 import {
   EMPTY_OBJ,
-  NO,
   NOOP,
   isArray,
   isFunction,
@@ -204,7 +203,7 @@ function setRef(
 ): NodeRef | undefined {
   if (!instance || instance.isUnmounted) return
 
-  const setupState: any = __DEV__ ? instance.setupState || {} : null
+  const setupState: any = instance.setupState || {}
   const refValue = getRefValue(el)
 
   // vdom interop
@@ -224,9 +223,7 @@ function setRef(
   const refs =
     instance.refs === EMPTY_OBJ ? (instance.refs = {}) : instance.refs
 
-  const canSetSetupRef = __DEV__
-    ? createCanSetSetupRefChecker(setupState, refs)
-    : NO
+  const canSetSetupRef = createCanSetSetupRefChecker(setupState, refs)
 
   const canSetRef = (ref: NodeRef, key?: string) => {
     if (__DEV__ && knownTemplateRefs.has(ref as any)) {
@@ -243,7 +240,7 @@ function setRef(
     invalidatePendingRef(el)
     if (isString(oldRef)) {
       refs[oldRef] = null
-      if (__DEV__ && canSetSetupRef(oldRef)) {
+      if (canSetSetupRef(oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
@@ -294,7 +291,7 @@ function setRef(
           if (refValue == null) return
 
           existing = _isString
-            ? __DEV__ && canSetSetupRef(ref)
+            ? canSetSetupRef(ref)
               ? setupState[ref]
               : refs[ref]
             : canSetRef(ref) || !refKey
@@ -305,7 +302,7 @@ function setRef(
             existing = [refValue]
             if (_isString) {
               refs[ref] = existing
-              if (__DEV__ && canSetSetupRef(ref)) {
+              if (canSetSetupRef(ref)) {
                 setupState[ref] = refs[ref]
                 // if setupState[ref] is a reactivity ref,
                 // the existing will also become reactivity too
@@ -321,7 +318,7 @@ function setRef(
           }
         } else if (_isString) {
           refs[ref] = refValue
-          if (__DEV__ && canSetSetupRef(ref)) {
+          if (canSetSetupRef(ref)) {
             setupState[ref] = refValue
           }
         } else if (_isRef) {
@@ -339,7 +336,7 @@ function setRef(
           }
         } else if (_isString) {
           refs[ref] = null
-          if (__DEV__ && canSetSetupRef(ref)) {
+          if (canSetSetupRef(ref)) {
             setupState[ref] = null
           }
         } else if (_isRef) {

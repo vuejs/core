@@ -565,6 +565,36 @@ describe('component', () => {
     }
   })
 
+  test('should mount a component with setup state and a render function in production mode', async () => {
+    __DEV__ = false
+    try {
+      const message = ref('hello')
+      const { component: Child } = define({
+        setup() {
+          return { message }
+        },
+        render(ctx: { message: string }) {
+          const n0 = template('<div></div>')()
+          renderEffect(() => setElementText(n0, ctx.message))
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child)
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>hello</div>')
+      message.value = 'updated'
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>updated</div>')
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   test('should pass slot args to template-only component render in production mode', () => {
     __DEV__ = false
     try {

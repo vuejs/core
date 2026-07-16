@@ -1387,6 +1387,28 @@ describe('api: template ref', () => {
     }
   })
 
+  test('should update a string template ref in production mode', () => {
+    __DEV__ = false
+    try {
+      let el: ReturnType<typeof ref>
+      const { host } = define({
+        setup() {
+          el = ref(null)
+          return { el }
+        },
+        render() {
+          const n0 = template('<div></div>')() as Element
+          createTemplateRefSetter()(n0, 'el')
+          return n0
+        },
+      }).render()
+
+      expect(el!.value).toBe(host.children[0])
+    } finally {
+      __DEV__ = true
+    }
+  })
+
   it('should not register duplicate onScopeDispose callbacks for dynamic function refs', async () => {
     const fn1 = vi.fn()
     const fn2 = vi.fn()
