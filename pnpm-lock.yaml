@@ -406,12 +406,12 @@ importers:
       '@vue/compiler-ssr':
         specifier: workspace:*
         version: link:../compiler-ssr
+      '@vue/runtime-dom':
+        specifier: workspace:*
+        version: link:../runtime-dom
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
-      vue:
-        specifier: workspace:*
-        version: link:../vue
 
   packages/shared: {}
 

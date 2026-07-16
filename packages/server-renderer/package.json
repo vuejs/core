@@ -45,11 +45,9 @@
     "url": "https://github.com/vuejs/core/issues"
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/server-renderer#readme",
-  "peerDependencies": {
-    "vue": "workspace:*"
-  },
   "dependencies": {
     "@vue/shared": "workspace:*",
-    "@vue/compiler-ssr": "workspace:*"
+    "@vue/compiler-ssr": "workspace:*",
+    "@vue/runtime-dom": "workspace:*"
   }
 }
