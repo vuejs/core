@@ -93,7 +93,7 @@ export function renderSlot(
       Fragment,
       {
         key:
-          (slotKey != null && !isSymbol(slotKey) ? slotKey : `_${name}`) +
+          (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
           // #7256 force differentiate fallback content from actual content
           (!validSlotContent && fallback ? '_fb' : ''),
       },
