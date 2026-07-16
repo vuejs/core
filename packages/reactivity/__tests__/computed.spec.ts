@@ -1150,4 +1150,29 @@ describe('reactivity/computed', () => {
     const t2 = performance.now()
     expect(t2 - t1).toBeLessThan(process.env.CI ? 100 : 30)
   })
+
+  it('should re-throw on repeated reads after getter error', () => {
+    const c = computed(() => {
+      throw new Error('fail')
+    })
+
+    expect(() => c.value).toThrow('fail')
+    expect(() => c.value).toThrow('fail')
+  })
+
+  it('should recover after getter error when condition clears', () => {
+    let shouldThrow = true
+    const c = computed(() => {
+      if (shouldThrow) {
+        throw new Error('fail')
+      }
+      return 42
+    })
+
+    expect(() => c.value).toThrow('fail')
+    expect(() => c.value).toThrow('fail')
+
+    shouldThrow = false
+    expect(c.value).toBe(42)
+  })
 })

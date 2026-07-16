@@ -419,6 +419,8 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
       dep.version++
     }
   } catch (err) {
+    computed.flags |= EffectFlags.DIRTY
+    computed.globalVersion = -1
     dep.version++
     throw err
   } finally {
