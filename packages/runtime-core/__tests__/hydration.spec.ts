@@ -19,6 +19,7 @@ import {
   defineAsyncComponent,
   defineComponent,
   h,
+  hydrateOnVisible,
   nextTick,
   onMounted,
   onServerPrefetch,
@@ -1190,6 +1191,59 @@ describe('SSR hydration', () => {
     triggerEvent('click', container.querySelector('button')!)
     expect(spy).toHaveBeenCalled()
   })
+
+  // #15091
+  async function assertSkipLazyHydration(detached: 'root' | 'ancestor') {
+    let observer!: IntersectionObserver
+    let observerCallback!: IntersectionObserverCallback
+    const originalIntersectionObserver = globalThis.IntersectionObserver
+    globalThis.IntersectionObserver = class {
+      constructor(callback: IntersectionObserverCallback) {
+        observer = this as any
+        observerCallback = callback
+      }
+      disconnect() {}
+      observe() {}
+    } as any
+
+    try {
+      const Comp = vi.fn(() => h('p', 'hello'))
+      const AsyncComp = defineAsyncComponent({
+        loader: () => Promise.resolve(Comp),
+        hydrate: hydrateOnVisible(),
+      })
+      const App = () => h(AsyncComp)
+      const container = document.createElement('div')
+
+      container.innerHTML = await renderToString(h(App))
+      document.body.appendChild(container)
+      Comp.mockClear()
+      createSSRApp(App).mount(container)
+
+      const el = container.firstElementChild!
+      if (detached === 'root') {
+        el.remove()
+      } else {
+        container.remove()
+      }
+      expect(el.isConnected).toBe(false)
+
+      expect(() =>
+        observerCallback(
+          [{ isIntersecting: true, target: el } as IntersectionObserverEntry],
+          observer,
+        ),
+      ).not.toThrow()
+      expect(Comp).not.toHaveBeenCalled()
+    } finally {
+      globalThis.IntersectionObserver = originalIntersectionObserver
+    }
+  }
+
+  test.each(['root', 'ancestor'] as const)(
+    'skip lazy hydration when the SSR %s is detached',
+    assertSkipLazyHydration,
+  )
 
   test('update async wrapper before resolve', async () => {
     const Comp = {
