@@ -3,7 +3,7 @@ import {
   type ComponentInternalInstance,
   type Slots,
   createVNode,
-} from 'vue'
+} from '@vue/runtime-dom'
 import { isString } from '@vue/shared'
 import {
   type Props,

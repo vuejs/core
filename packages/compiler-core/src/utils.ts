@@ -394,6 +394,10 @@ export function injectProp(
   prop: Property,
   context: TransformContext,
 ): void {
+  if (node.type !== NodeTypes.VNODE_CALL && injectSlotKey(node, prop)) {
+    return
+  }
+
   let propsWithInjection: ObjectExpression | CallExpression | undefined
   /**
    * 1. mergeProps(...)
@@ -473,6 +477,36 @@ export function injectProp(
       node.arguments[2] = propsWithInjection
     }
   }
+}
+
+function injectSlotKey(node: RenderSlotCall, prop: Property): boolean {
+  if (
+    prop.key.type !== NodeTypes.SIMPLE_EXPRESSION ||
+    prop.key.content !== 'key'
+  ) {
+    return false
+  }
+
+  // If the slot already has a user-provided key, avoid injecting the branch
+  // key so the user key keeps its existing priority.
+  const props = node.arguments[2]
+  if (props && !isString(props)) {
+    const [unnormalizedProps] = getUnnormalizedProps(props as PropsExpression)
+    if (
+      unnormalizedProps &&
+      !isString(unnormalizedProps) &&
+      unnormalizedProps.type === NodeTypes.JS_OBJECT_EXPRESSION &&
+      hasProp(prop, unnormalizedProps)
+    ) {
+      return true
+    }
+  }
+
+  node.arguments[2] ||= '{}'
+  node.arguments[3] ||= 'undefined'
+  node.arguments[4] ||= 'undefined'
+  node.arguments[5] = prop.value
+  return true
 }
 
 // check existing key to avoid overriding user provided keys

@@ -60,6 +60,7 @@ export default defineConfig({
           include: [
             'packages/reactivity/__tests__/gc.spec.ts',
             'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+            'packages/server-renderer/__tests__/ssrRender.spec.ts',
           ],
         },
       },
@@ -71,6 +72,7 @@ export default defineConfig({
             ...configDefaults.exclude,
             'packages/reactivity/__tests__/gc.spec.ts',
             'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+            'packages/server-renderer/__tests__/ssrRender.spec.ts',
             '**/e2e/**',
             '**/vapor-e2e-test/**',
             'packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**',

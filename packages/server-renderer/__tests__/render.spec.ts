@@ -13,6 +13,7 @@ import {
   effectScope,
   getCurrentInstance,
   h,
+  nextTick,
   onErrorCaptured,
   onScopeDispose,
   onServerPrefetch,
@@ -741,9 +742,12 @@ function testRender(type: string, render: typeof renderToString) {
               createCommentVNode('->foo'),
               createCommentVNode('<!--foo-->'),
               createCommentVNode('--!>foo<!-'),
+              createCommentVNode('--<!--><img src=x onerror=alert(1)>'),
             ]),
           ),
-        ).toBe(`<div><!--foo--><!--foo--><!--foo--><!--foo--></div>`)
+        ).toBe(
+          `<div><!--foo--><!--foo--><!--foo--><!--foo--><!--<img src=x onerror=alert(1)>--></div>`,
+        )
       })
 
       test('Static', async () => {
@@ -832,6 +836,9 @@ function testRender(type: string, render: typeof renderToString) {
           )
         } catch {}
         expect(getCurrentInstance()).toBe(prev)
+        expect(
+          '[Vue warn]: Unhandled error during execution of render function',
+        ).toHaveBeenWarned()
       })
 
       // #7733
@@ -1277,6 +1284,40 @@ function testRender(type: string, render: typeof renderToString) {
       }
       expect(renderError).toBe(null)
       expect((capturedError as unknown as Error).message).toBe('An error')
+    })
+
+    test('async setup throwing error', async () => {
+      const capturedError: string[] = []
+
+      const Child = {
+        async setup() {
+          await nextTick()
+          throw new Error('An error')
+          return { foo: { bar: 1 } }
+        },
+        template: `<span>{{ foo.bar }}</span>`,
+      }
+
+      const app = createApp({
+        components: { Child },
+        setup() {
+          onErrorCaptured(e => {
+            capturedError.push(e.message)
+            return false
+          })
+        },
+        template: `<Suspense><Child /></Suspense>`,
+      })
+
+      expect(await render(app)).toBe('')
+      expect(capturedError.length).toBe(2)
+      expect(capturedError).toStrictEqual([
+        'An error',
+        "Cannot read properties of undefined (reading 'bar')",
+      ])
+      expect(
+        '[Vue warn]: Property "foo" was accessed during render but is not defined on instance',
+      ).toHaveBeenWarned()
     })
 
     test('computed reactivity during SSR with onServerPrefetch', async () => {

@@ -16,13 +16,15 @@ env:
 
 jobs:
   size-report:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: >
       github.repository == 'vuejs/core' &&
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Setup Vite+
         uses: voidzero-dev/setup-vp@v1
@@ -37,17 +39,18 @@ jobs:
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
 
-      - name: Read PR Number
-        id: pr-number
-        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
-        with:
-          path: temp/size/number.txt
+      - parallel:
+          - name: Read PR Number
+            id: pr-number
+            uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
+            with:
+              path: temp/size/number.txt
 
-      - name: Read base branch
-        id: pr-base
-        uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
-        with:
-          path: temp/size/base.txt
+          - name: Read base branch
+            id: pr-base
+            uses: juliangruber/read-file-action@271ff311a4947af354c6abcd696a306553b9ec18 # v1.1.8
+            with:
+              path: temp/size/base.txt
 
       - name: Download Previous Size Data
         uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21

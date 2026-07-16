@@ -877,8 +877,15 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    if (__DEV__ && isHmrUpdating) {
+    if (
       // HMR updated, force full diff
+      (__DEV__ && isHmrUpdating) ||
+      // #6385 the old vnode may be a user-wrapped non-isomorphic block
+      // Force full diff when block metadata is unstable.
+      (dynamicChildren &&
+        (!n1.dynamicChildren ||
+          n1.dynamicChildren.length !== dynamicChildren.length))
+    ) {
       patchFlag = 0
       optimized = false
       dynamicChildren = null

@@ -10,6 +10,7 @@ import {
 } from '@vue/shared'
 import {
   type ComponentInternalInstance,
+  type Data,
   type SetupContext,
   createSetupContext,
   getCurrentGenericInstance,
@@ -269,6 +270,11 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
   set?: (v: S) => any
 }
 
+type DefineModelRuntimeOptions<T, G, S> = Omit<PropOptions<T>, 'default'> &
+  DefineModelOptions<T, G, S>
+
+type DefineModelDefault<T> = InferDefault<Data, T>
+
 /**
  * Vue `<script setup>` compiler macro for declaring a
  * two-way binding prop that can be consumed via `v-model` from the parent
@@ -303,25 +309,23 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
  * ```
  */
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options: ({ default: any } | { required: true }) &
-    PropOptions<T> &
-    DefineModelOptions<T, G, S>,
+  options: ({ default: DefineModelDefault<T> } | { required: true }) &
+    DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T, M, G, S>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+  options?: DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: ({ default: any } | { required: true }) &
-    PropOptions<T> &
-    DefineModelOptions<T, G, S>,
+  options: ({ default: DefineModelDefault<T> } | { required: true }) &
+    DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T, M, G, S>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+  options?: DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel(): any {

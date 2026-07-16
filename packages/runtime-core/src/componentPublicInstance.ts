@@ -230,7 +230,7 @@ export type CreateComponentPublicInstanceWithMixins<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   TypeRefs extends Data = {},
-  TypeEl extends Element = any,
+  TypeEl = any,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // mixin inference
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
@@ -301,7 +301,7 @@ export type ComponentPublicInstance<
   S extends SlotsType = {},
   Exposed extends string = '',
   TypeRefs extends Data = {},
-  TypeEl extends Element = any,
+  TypeEl = any,
 > = {
   $: ComponentInternalInstance
   $data: D

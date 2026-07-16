@@ -325,6 +325,7 @@ export function performAsyncHydrate(
   load: () => Promise<GenericComponent>,
   hydrateStrategy: HydrationStrategy | undefined,
 ): void {
+  const wasConnected = el.isConnected
   let patched = false
   ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
   const performHydrate = () => {
@@ -339,6 +340,7 @@ export function performAsyncHydrate(
       }
       return
     }
+    if (!el.parentNode || (wasConnected && !el.isConnected)) return
     hydrate()
   }
   const doHydrate = hydrateStrategy

@@ -9,12 +9,14 @@ import {
   type VNode,
   type VNodeArrayChildren,
   VaporSlot,
+  blockStack,
+  closeBlock,
   createBlock,
   createVNode,
   isVNode,
   openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
+import { PatchFlags, SlotFlags, extend, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import type { Data } from '../component'
@@ -36,6 +38,7 @@ export function renderSlot(
   // the compiler and guaranteed to be a function returning an array
   fallback?: SlotFallback,
   noSlotted?: boolean,
+  branchKey?: PropertyKey,
 ): VNode {
   let slot = slots[name]
   if (fallback) fallback.__vdom = true
@@ -61,17 +64,21 @@ export function renderSlot(
         isAsyncWrapper(currentRenderingInstance.parent) &&
         currentRenderingInstance.parent.ce))
   ) {
-    const hasProps = Object.keys(props).length > 0
+    const slotProps =
+      branchKey != null && props.key == null
+        ? extend({}, props, { key: branchKey })
+        : props
+    const hasProps = Object.keys(slotProps).length > 0
     // in custom element mode, render <slot/> as actual slot outlets
     // wrap it with a fragment because in shadowRoot: false mode the slot
     // element gets replaced by injected content
-    if (name !== 'default') props.name = name
+    if (name !== 'default') slotProps.name = name
     return (
       openBlock(),
       createBlock(
         Fragment,
         null,
-        [createVNode('slot', props, fallback && fallback())],
+        [createVNode('slot', slotProps, fallback && fallback())],
         hasProps ? PatchFlags.BAIL : PatchFlags.STABLE_FRAGMENT,
       )
     )
@@ -93,35 +100,46 @@ export function renderSlot(
   if (slot && (slot as ContextualRenderFn)._c) {
     ;(slot as ContextualRenderFn)._d = false
   }
+  const prevStackSize = blockStack.length
   openBlock()
-  const validSlotContent = slot && ensureValidVNode(slot(props))
+  let rendered: VNode
+  try {
+    const validSlotContent = slot && ensureValidVNode(slot(props))
 
-  // handle forwarded vapor slot fallback
-  ensureVaporSlotFallback(validSlotContent, fallback)
+    // handle forwarded vapor slot fallback
+    ensureVaporSlotFallback(validSlotContent, fallback)
 
-  const slotKey =
-    props.key ||
-    // slot content array of a dynamic conditional slot may have a branch
-    // key attached in the `createSlots` helper, respect that
-    (validSlotContent && (validSlotContent as any).key)
-  const rendered = createBlock(
-    Fragment,
-    {
-      key:
-        (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
-        // #7256 force differentiate fallback content from actual content
-        (!validSlotContent && fallback ? '_fb' : ''),
-    },
-    validSlotContent || (fallback ? fallback() : []),
-    validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
-      ? PatchFlags.STABLE_FRAGMENT
-      : PatchFlags.BAIL,
-  )
+    const slotKey =
+      props.key ||
+      branchKey ||
+      // slot content array of a dynamic conditional slot may have a branch
+      // key attached in the `createSlots` helper, respect that
+      (validSlotContent && (validSlotContent as any).key)
+    rendered = createBlock(
+      Fragment,
+      {
+        key:
+          (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
+          // #7256 force differentiate fallback content from actual content
+          (!validSlotContent && fallback ? '_fb' : ''),
+      },
+      validSlotContent || (fallback ? fallback() : []),
+      validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
+        ? PatchFlags.STABLE_FRAGMENT
+        : PatchFlags.BAIL,
+    )
+  } catch (err) {
+    // close blocks left dangling when the slot throws mid-block
+    // they would otherwise retain every vnode created afterwards (#15070)
+    for (let i = blockStack.length; i > prevStackSize; i--) closeBlock()
+    throw err
+  } finally {
+    if (slot && (slot as ContextualRenderFn)._c) {
+      ;(slot as ContextualRenderFn)._d = true
+    }
+  }
   if (!noSlotted && rendered.scopeId) {
     rendered.slotScopeIds = [rendered.scopeId + '-s']
-  }
-  if (slot && (slot as ContextualRenderFn)._c) {
-    ;(slot as ContextualRenderFn)._d = true
   }
   return rendered
 }
