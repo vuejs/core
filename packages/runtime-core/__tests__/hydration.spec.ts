@@ -1193,7 +1193,7 @@ describe('SSR hydration', () => {
   })
 
   // #15091
-  test('skip lazy hydration when the SSR root is detached', async () => {
+  async function assertSkipLazyHydration(detached: 'root' | 'ancestor') {
     let observer!: IntersectionObserver
     let observerCallback!: IntersectionObserverCallback
     const originalIntersectionObserver = globalThis.IntersectionObserver
@@ -1216,11 +1216,17 @@ describe('SSR hydration', () => {
       const container = document.createElement('div')
 
       container.innerHTML = await renderToString(h(App))
+      document.body.appendChild(container)
       Comp.mockClear()
       createSSRApp(App).mount(container)
 
       const el = container.firstElementChild!
-      el.remove()
+      if (detached === 'root') {
+        el.remove()
+      } else {
+        container.remove()
+      }
+      expect(el.isConnected).toBe(false)
 
       expect(() =>
         observerCallback(
@@ -1232,7 +1238,12 @@ describe('SSR hydration', () => {
     } finally {
       globalThis.IntersectionObserver = originalIntersectionObserver
     }
-  })
+  }
+
+  test.each(['root', 'ancestor'] as const)(
+    'skip lazy hydration when the SSR %s is detached',
+    assertSkipLazyHydration,
+  )
 
   test('update async wrapper before resolve', async () => {
     const Comp = {
