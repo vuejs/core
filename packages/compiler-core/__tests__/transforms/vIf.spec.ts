@@ -3,6 +3,7 @@ import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
+import { transformBind } from '../../src/transforms/vBind'
 import {
   type CommentNode,
   type ConditionalExpression,
@@ -509,7 +510,14 @@ describe('compiler: v-if', () => {
       expect(codegenNode.consequent).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_SLOT,
-        arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })],
+        arguments: [
+          '$slots',
+          '"default"',
+          '{}',
+          'undefined',
+          'undefined',
+          { content: '0' },
+        ],
       })
       expect(generate(root).code).toMatchSnapshot()
     })
@@ -522,7 +530,41 @@ describe('compiler: v-if', () => {
       expect(codegenNode.consequent).toMatchObject({
         type: NodeTypes.JS_CALL_EXPRESSION,
         callee: RENDER_SLOT,
-        arguments: ['$slots', '"default"', createObjectMatcher({ key: `[0]` })],
+        arguments: [
+          '$slots',
+          '"default"',
+          '{}',
+          'undefined',
+          'undefined',
+          { content: '0' },
+        ],
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('v-if on <slot/> with v-bind', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithIfTransform(`<slot v-if="ok" v-bind="items"></slot>`, {
+        directiveTransforms: {
+          bind: transformBind,
+        },
+      })
+      expect(codegenNode.consequent).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: RENDER_SLOT,
+        arguments: [
+          '$slots',
+          '"default"',
+          {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_PROPS,
+          },
+          'undefined',
+          'undefined',
+          { content: '0' },
+        ],
       })
       expect(generate(root).code).toMatchSnapshot()
     })

@@ -16,7 +16,7 @@ import {
   isVNode,
   openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags, isSymbol } from '@vue/shared'
+import { PatchFlags, SlotFlags, extend, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
@@ -32,6 +32,7 @@ export function renderSlot(
   // the compiler and guaranteed to be a function returning an array
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean,
+  branchKey?: PropertyKey,
 ): VNode {
   if (
     currentRenderingInstance!.ce ||
@@ -39,17 +40,21 @@ export function renderSlot(
       isAsyncWrapper(currentRenderingInstance!.parent) &&
       currentRenderingInstance!.parent.ce)
   ) {
-    const hasProps = Object.keys(props).length > 0
+    const slotProps =
+      branchKey != null && props.key == null
+        ? extend({}, props, { key: branchKey })
+        : props
+    const hasProps = Object.keys(slotProps).length > 0
     // in custom element mode, render <slot/> as actual slot outlets
     // wrap it with a fragment because in shadowRoot: false mode the slot
     // element gets replaced by injected content
-    if (name !== 'default') props.name = name
+    if (name !== 'default') slotProps.name = name
     return (
       openBlock(),
       createBlock(
         Fragment,
         null,
-        [createVNode('slot', props, fallback && fallback())],
+        [createVNode('slot', slotProps, fallback && fallback())],
         hasProps ? PatchFlags.BAIL : PatchFlags.STABLE_FRAGMENT,
       )
     )
@@ -80,6 +85,7 @@ export function renderSlot(
     const validSlotContent = slot && ensureValidVNode(slot(props))
     const slotKey =
       props.key ||
+      branchKey ||
       // slot content array of a dynamic conditional slot may have a branch
       // key attached in the `createSlots` helper, respect that
       (validSlotContent && (validSlotContent as any).key)
