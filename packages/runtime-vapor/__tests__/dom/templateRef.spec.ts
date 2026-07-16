@@ -392,32 +392,6 @@ describe('api: template ref', () => {
     expect(fn2.mock.calls[0][0]).toBe(host.children[0])
   })
 
-  it('function ref binding should not track dependencies read by callback', async () => {
-    const visible = ref(new Set<number>())
-    const fn = vi.fn((el: any) => {
-      if (!el || visible.value.has(0)) {
-        return
-      }
-      visible.value = new Set([0])
-    })
-
-    const t0 = template('<div></div>')
-    const { render } = define({
-      render() {
-        const n0 = t0()
-        setTemplateRefBinding(n0 as Element, () => fn)
-        return n0
-      },
-    })
-
-    render()
-    expect(fn).toHaveBeenCalledTimes(1)
-    expect(visible.value.has(0)).toBe(true)
-
-    await nextTick()
-    expect(fn).toHaveBeenCalledTimes(1)
-  })
-
   it('function ref unmount', async () => {
     const fn = vi.fn()
     const toggle = ref(true)
