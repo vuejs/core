@@ -5,7 +5,7 @@ import {
   createVNode,
   ssrContextKey,
   ssrUtils,
-} from 'vue'
+} from '@vue/runtime-dom'
 import { isPromise, isString } from '@vue/shared'
 import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 
