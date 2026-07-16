@@ -728,9 +728,12 @@ function testRender(type: string, render: typeof renderToString) {
               createCommentVNode('->foo'),
               createCommentVNode('<!--foo-->'),
               createCommentVNode('--!>foo<!-'),
+              createCommentVNode('--<!--><img src=x onerror=alert(1)>'),
             ]),
           ),
-        ).toBe(`<div><!--foo--><!--foo--><!--foo--><!--foo--></div>`)
+        ).toBe(
+          `<div><!--foo--><!--foo--><!--foo--><!--foo--><!--<img src=x onerror=alert(1)>--></div>`,
+        )
       })
 
       test('Static', async () => {
