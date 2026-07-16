@@ -42,8 +42,7 @@ import { shouldSkipAttr } from './compat/attrsFallthrough'
 import { createInternalObject } from './internalObject'
 
 export type ComponentPropsOptions<P = Data> =
-  | ComponentObjectPropsOptions<P>
-  | string[]
+  ComponentObjectPropsOptions<P> | string[]
 
 export type ComponentObjectPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
@@ -71,9 +70,7 @@ export interface PropOptions<T = any, D = T> {
 export type PropType<T> = PropConstructor<T> | (PropConstructor<T> | null)[]
 
 type PropConstructor<T = any> =
-  | { new (...args: any[]): T & {} }
-  | { (): T }
-  | PropMethod<T>
+  { new (...args: any[]): T & {} } | { (): T } | PropMethod<T>
 
 type PropMethod<T, TConstructor = any> = [T] extends [
   ((...args: any) => any) | undefined,

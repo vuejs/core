@@ -101,8 +101,8 @@ export interface SFCParseResult {
 }
 
 export const parseCache:
-  | Map<string, SFCParseResult>
-  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
+  Map<string, SFCParseResult> | LRUCache<string, SFCParseResult> =
+  createCache<SFCParseResult>()
 
 export function parse(
   source: string,

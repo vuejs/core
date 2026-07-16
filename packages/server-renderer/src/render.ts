@@ -3,6 +3,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type DirectiveBinding,
+  ErrorCodes,
   Fragment,
   type FunctionalComponent,
   Static,
@@ -10,10 +11,11 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
+  handleError,
   mergeProps,
   ssrUtils,
   warn,
-} from 'vue'
+} from '@vue/runtime-dom'
 import {
   NOOP,
   ShapeFlags,
@@ -119,7 +121,13 @@ export function renderComponentVNode(
       .catch(NOOP)
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
-    return renderComponentSubTree(instance, slotScopeId)
+    try {
+      return renderComponentSubTree(instance, slotScopeId)
+    } catch (err) {
+      // let the SSR buffer propagate the error so parent render functions
+      // don't handle the same error again
+      return Promise.reject(err)
+    }
   }
 }
 
@@ -201,6 +209,8 @@ function renderComponentSubTree(
           instance.data,
           instance.ctx,
         )
+      } catch (err) {
+        handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
       } finally {
         setCurrentRenderingInstance(prev)
       }

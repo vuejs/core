@@ -207,7 +207,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
-    const isSetModel = isSet(value)
+    ;(el as any)._modelValue = value
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
@@ -216,7 +216,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
         )
       el[assignKey](
         el.multiple
-          ? isSetModel
+          ? isSet((el as any)._modelValue)
             ? new Set(selectedVal)
             : selectedVal
           : selectedVal[0],
@@ -233,7 +233,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   mounted(el, { value }) {
     setSelected(el, value)
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(el, { value }, vnode) {
+    ;(el as any)._modelValue = value
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
