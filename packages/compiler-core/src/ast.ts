@@ -121,10 +121,7 @@ export interface RootNode extends Node {
 }
 
 export type ElementNode =
-  | PlainElementNode
-  | ComponentNode
-  | SlotOutletNode
-  | TemplateNode
+  PlainElementNode | ComponentNode | SlotOutletNode | TemplateNode
 
 export interface BaseElementNode extends Node {
   type: NodeTypes.ELEMENT
@@ -316,9 +313,7 @@ export interface TextCallNode extends Node {
 }
 
 export type TemplateTextChildNode =
-  | TextNode
-  | InterpolationNode
-  | CompoundExpressionNode
+  TextNode | InterpolationNode | CompoundExpressionNode
 
 export interface VNodeCall extends Node {
   type: NodeTypes.VNODE_CALL
@@ -481,7 +476,8 @@ export interface DirectiveArguments extends ArrayExpression {
 }
 
 export interface DirectiveArgumentNode extends ArrayExpression {
-  elements: // dir, exp, arg, modifiers
+  elements:
+    // dir, exp, arg, modifiers
     | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
@@ -491,7 +487,8 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 // renderSlot(...)
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
-  arguments: // $slots, name, props, fallback
+  arguments:
+    // $slots, name, props, fallback
     | [string, string | ExpressionNode]
     | [string, string | ExpressionNode, PropsExpression]
     | [
