@@ -25,6 +25,7 @@ import {
   openBlock,
   reactive,
   ref,
+  registerRuntimeCompiler,
   renderSlot,
   useCssVars,
   vModelCheckbox,
@@ -32,13 +33,28 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
+import * as runtimeDom from '@vue/runtime-dom'
 import type { HMRRuntime } from '../src/hmr'
+import type { InternalRenderFunction } from '../src/component'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
+import { type CompilerOptions, compile } from '@vue/compiler-dom'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, reload } = __VUE_HMR_RUNTIME__
+
+registerRuntimeCompiler(compileToFunction)
+
+function compileToFunction(template: string, options?: CompilerOptions) {
+  const { code } = compile(
+    template,
+    Object.assign({ hoistStatic: true }, options),
+  )
+  const render = new Function('Vue', code)(runtimeDom) as InternalRenderFunction
+  render._rc = true
+  return render
+}
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -2734,6 +2750,66 @@ describe('SSR hydration', () => {
           ),
         )
         expect(container.innerHTML).toBe(`<div><div>client</div></div>`)
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('force patch svg dynamic props with correct namespace when hydrating', () => {
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<svg width="24" height="24" viewBox="0 0 24 24"></svg>`,
+          () =>
+            createElementVNode(
+              'svg',
+              { width: 48, height: 48, viewBox: '0 0 48 48' },
+              null,
+              PatchFlags.PROPS,
+              ['width', 'height', 'viewBox'],
+            ),
+        )
+        const el = container.firstChild as Element
+        expect(el.namespaceURI).toContain('svg')
+        expect(el.getAttribute('width')).toBe('48')
+        expect(el.getAttribute('height')).toBe('48')
+        expect(el.getAttribute('viewBox')).toBe('0 0 48 48')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('force patch foreignObject dynamic props with correct namespace when hydrating', () => {
+      __DEV__ = false
+      try {
+        const container = document.createElement('div')
+        container.innerHTML =
+          '<svg><foreignObject width="24"></foreignObject></svg>'
+        const el = container.querySelector('foreignObject')!
+        expect(el.namespaceURI).toContain('svg')
+        // jsdom doesn't implement SVGForeignObjectElement.width.
+        Object.defineProperty(el, 'width', {
+          configurable: true,
+          get: () => 24,
+        })
+
+        createSSRApp({
+          render: () => (
+            openBlock(),
+            createElementBlock('svg', null, [
+              (openBlock(),
+              createElementBlock(
+                'foreignObject',
+                { width: 48 },
+                null,
+                PatchFlags.PROPS,
+                ['width'],
+              )),
+            ])
+          ),
+        }).mount(container)
+
+        expect(el.getAttribute('width')).toBe('48')
       } finally {
         __DEV__ = true
       }
