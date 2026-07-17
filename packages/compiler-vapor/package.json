@@ -3,15 +3,13 @@
   "version": "3.6.0-beta.17",
   "description": "@vue/compiler-vapor",
   "type": "module",
+  "types": "./dist/compiler-vapor.d.ts",
   "files": [
     "dist"
   ],
   "sideEffects": false,
   "exports": {
-    ".": {
-      "types": "./dist/compiler-vapor.d.ts",
-      "default": "./dist/compiler-vapor.js"
-    },
+    ".": "./dist/compiler-vapor.js",
     "./*": "./*"
   },
   "buildOptions": {

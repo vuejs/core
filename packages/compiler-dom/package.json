@@ -3,14 +3,12 @@
   "version": "3.6.0-beta.17",
   "description": "@vue/compiler-dom",
   "type": "module",
+  "types": "./dist/compiler-dom.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/compiler-dom.d.ts",
-      "default": "./dist/compiler-dom.js"
-    },
+    ".": "./dist/compiler-dom.js",
     "./*": "./*"
   },
   "sideEffects": false,

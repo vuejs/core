@@ -3,14 +3,12 @@
   "version": "3.6.0-beta.17",
   "description": "@vue/server-renderer",
   "type": "module",
+  "types": "./dist/server-renderer.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/server-renderer.d.ts",
-      "default": "./dist/server-renderer.js"
-    },
+    ".": "./dist/server-renderer.js",
     "./*": "./*"
   },
   "buildOptions": {

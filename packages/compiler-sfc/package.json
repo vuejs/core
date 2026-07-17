@@ -3,6 +3,7 @@
   "version": "3.6.0-beta.17",
   "description": "@vue/compiler-sfc",
   "type": "module",
+  "types": "./dist/compiler-sfc.d.ts",
   "files": [
     "dist"
   ],

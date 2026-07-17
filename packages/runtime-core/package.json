@@ -3,14 +3,12 @@
   "version": "3.6.0-beta.17",
   "description": "@vue/runtime-core",
   "type": "module",
+  "types": "./dist/runtime-core.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/runtime-core.d.ts",
-      "default": "./dist/runtime-core.js"
-    },
+    ".": "./dist/runtime-core.js",
     "./*": "./*"
   },
   "buildOptions": {

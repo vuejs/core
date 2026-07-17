@@ -3,14 +3,12 @@
   "version": "3.6.0-beta.17",
   "description": "@vue/runtime-vapor",
   "type": "module",
+  "types": "./dist/runtime-vapor.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/runtime-vapor.d.ts",
-      "default": "./dist/runtime-vapor.js"
-    },
+    ".": "./dist/runtime-vapor.js",
     "./*": "./*"
   },
   "sideEffects": false,

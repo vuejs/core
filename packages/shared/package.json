@@ -3,14 +3,12 @@
   "version": "3.6.0-beta.17",
   "description": "internal utils shared across @vue packages",
   "type": "module",
+  "types": "./dist/shared.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/shared.d.ts",
-      "default": "./dist/shared.js"
-    },
+    ".": "./dist/shared.js",
     "./*": "./*"
   },
   "sideEffects": false,

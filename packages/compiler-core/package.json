@@ -3,14 +3,12 @@
   "version": "3.6.0-beta.17",
   "description": "@vue/compiler-core",
   "type": "module",
+  "types": "./dist/compiler-core.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/compiler-core.d.ts",
-      "default": "./dist/compiler-core.js"
-    },
+    ".": "./dist/compiler-core.js",
     "./*": "./*"
   },
   "buildOptions": {

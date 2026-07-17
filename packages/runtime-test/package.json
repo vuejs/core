@@ -4,14 +4,12 @@
   "version": "0.0.0",
   "description": "@vue/runtime-test",
   "type": "module",
+  "types": "./dist/runtime-test.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/runtime-test.d.ts",
-      "default": "./dist/runtime-test.js"
-    },
+    ".": "./dist/runtime-test.js",
     "./*": "./*"
   },
   "repository": {
