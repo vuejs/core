@@ -197,12 +197,13 @@ function createConfigsForTarget(target) {
         resolvedFormats = formats.filter(f => pkgFormats.includes(f))
       }
     }
-    // When a single target is explicitly named (e.g. `build.js -f esm-browser
-    // reactivity`), honor the requested formats even if the package does not
-    // declare them. This lets tooling build on-demand bundles that are not part
-    // of the published output (e.g. reactivity's esm-browser bundle for
-    // benchmarks). Fuzzy/multi-target builds keep intersecting with declared
-    // formats so they don't accidentally emit unsupported formats.
+    // When a single target is explicitly named (e.g. `build.js -f global
+    // runtime-dom`), honor the requested formats even if the package does not
+    // declare them. This lets tooling build on-demand bundles that are not
+    // part of the published output (e.g. runtime-dom / compiler-dom global
+    // bundles for size tracking). Fuzzy/multi-target builds keep intersecting
+    // with declared formats so they don't accidentally emit unsupported
+    // formats.
     if (!resolvedFormats || !resolvedFormats.length) {
       if (!isNegation && targets.length === 1) {
         resolvedFormats = formats
