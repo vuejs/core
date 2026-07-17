@@ -1,1 +1,1 @@
-module.exports = require('@vue/server-renderer')
+export * from '@vue/server-renderer'

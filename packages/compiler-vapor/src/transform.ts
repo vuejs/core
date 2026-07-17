@@ -2,7 +2,6 @@ import {
   type AllNode,
   type TransformOptions as BaseTransformOptions,
   type CommentNode,
-  type CompilerCompatOptions,
   type ElementNode,
   ElementTypes,
   NodeTypes,
@@ -86,9 +85,7 @@ export class TransformContext<T extends AllNode = AllNode> {
   index: number = 0
 
   block: BlockIRNode = this.ir.block
-  options: Required<
-    Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
-  >
+  options: Required<Omit<TransformOptions, 'filename'>>
 
   template: string = ''
   templateRoot: boolean = false

@@ -24,13 +24,6 @@ import Tokenizer, {
   isWhitespace,
   toCharCodes,
 } from './tokenizer'
-import {
-  type CompilerCompatOptions,
-  CompilerDeprecationTypes,
-  checkCompatEnabled,
-  isCompatEnabled,
-  warnDeprecation,
-} from './compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import {
   ErrorCodes,
@@ -43,7 +36,6 @@ import {
   isAllWhitespace,
   isCoreComponent,
   isSimpleIdentifier,
-  isStaticArgOf,
   isVPre,
 } from './utils'
 import { decodeHTML } from 'entities/decode'
@@ -59,7 +51,6 @@ type OptionalOptions =
   | 'isNativeTag'
   | 'isBuiltInComponent'
   | 'expressionPlugins'
-  | keyof CompilerCompatOptions
 
 export type MergedParserOptions = Omit<
   Required<ParserOptions>,
@@ -378,24 +369,6 @@ const tokenizer = new Tokenizer(stack, {
           if (currentProp.name === 'for') {
             currentProp.forParseResult = parseForExpression(currentProp.exp)
           }
-          // 2.x compat v-bind:foo.sync -> v-model:foo
-          let syncIndex = -1
-          if (
-            __COMPAT__ &&
-            currentProp.name === 'bind' &&
-            (syncIndex = currentProp.modifiers.findIndex(
-              mod => mod.content === 'sync',
-            )) > -1 &&
-            checkCompatEnabled(
-              CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
-              currentOptions,
-              currentProp.loc,
-              currentProp.arg!.loc.source,
-            )
-          ) {
-            currentProp.name = 'model'
-            currentProp.modifiers.splice(syncIndex, 1)
-          }
         }
       }
       if (
@@ -674,82 +647,6 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   ) {
     tokenizer.inXML = false
   }
-
-  // 2.x compat / deprecation checks
-  if (__COMPAT__) {
-    const props = el.props
-    if (
-      __DEV__ &&
-      isCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
-        currentOptions,
-      )
-    ) {
-      let hasIf = false
-      let hasFor = false
-      for (let i = 0; i < props.length; i++) {
-        const p = props[i]
-        if (p.type === NodeTypes.DIRECTIVE) {
-          if (p.name === 'if') {
-            hasIf = true
-          } else if (p.name === 'for') {
-            hasFor = true
-          }
-        }
-        if (hasIf && hasFor) {
-          warnDeprecation(
-            CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
-            currentOptions,
-            el.loc,
-          )
-          break
-        }
-      }
-    }
-
-    if (
-      !tokenizer.inSFCRoot &&
-      isCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
-        currentOptions,
-      ) &&
-      el.tag === 'template' &&
-      !isFragmentTemplate(el)
-    ) {
-      __DEV__ &&
-        warnDeprecation(
-          CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
-          currentOptions,
-          el.loc,
-        )
-      // unwrap
-      const parent = stack[0] || currentRoot
-      const index = parent.children.indexOf(el)
-      parent.children.splice(index, 1, ...el.children)
-    }
-
-    const inlineTemplateProp = props.find(
-      p => p.type === NodeTypes.ATTRIBUTE && p.name === 'inline-template',
-    ) as AttributeNode
-    if (
-      inlineTemplateProp &&
-      checkCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_INLINE_TEMPLATE,
-        currentOptions,
-        inlineTemplateProp.loc,
-      ) &&
-      el.children.length
-    ) {
-      inlineTemplateProp.value = {
-        type: NodeTypes.TEXT,
-        content: getSlice(
-          el.children[0].loc.start.offset,
-          el.children[el.children.length - 1].loc.end.offset,
-        ),
-        loc: inlineTemplateProp.loc,
-      }
-    }
-  }
 }
 
 function lookAhead(index: number, c: number) {
@@ -801,29 +698,8 @@ function isComponent({ tag, props }: ElementNode): boolean {
       if (p.name === 'is' && p.value) {
         if (p.value.content.startsWith('vue:')) {
           return true
-        } else if (
-          __COMPAT__ &&
-          checkCompatEnabled(
-            CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-            currentOptions,
-            p.loc,
-          )
-        ) {
-          return true
         }
       }
-    } else if (
-      __COMPAT__ &&
-      // :is on plain element - only treat as component in compat mode
-      p.name === 'bind' &&
-      isStaticArgOf(p.arg, 'is') &&
-      checkCompatEnabled(
-        CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-        currentOptions,
-        p.loc,
-      )
-    ) {
-      return true
     }
   }
   return false

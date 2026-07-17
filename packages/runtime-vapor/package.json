@@ -2,25 +2,20 @@
   "name": "@vue/runtime-vapor",
   "version": "3.6.0-beta.17",
   "description": "@vue/runtime-vapor",
-  "main": "index.js",
-  "module": "dist/runtime-vapor.esm-bundler.js",
-  "types": "dist/runtime-vapor.d.ts",
+  "type": "module",
+  "types": "./dist/runtime-vapor.d.ts",
   "files": [
-    "index.js",
     "dist"
   ],
   "exports": {
-    ".": {
-      "types": "./dist/runtime-vapor.d.ts",
-      "default": "./dist/runtime-vapor.esm-bundler.js"
-    },
+    ".": "./dist/runtime-vapor.js",
     "./*": "./*"
   },
   "sideEffects": false,
   "buildOptions": {
     "name": "VueRuntimeVapor",
     "formats": [
-      "esm-bundler"
+      "esm"
     ]
   },
   "repository": {

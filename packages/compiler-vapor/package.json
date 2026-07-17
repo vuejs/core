@@ -2,27 +2,19 @@
   "name": "@vue/compiler-vapor",
   "version": "3.6.0-beta.17",
   "description": "@vue/compiler-vapor",
-  "main": "dist/compiler-vapor.cjs.js",
-  "module": "dist/compiler-vapor.esm-browser.js",
-  "types": "dist/compiler-vapor.d.ts",
+  "type": "module",
+  "types": "./dist/compiler-vapor.d.ts",
   "files": [
     "dist"
   ],
   "sideEffects": false,
   "exports": {
-    ".": {
-      "types": "./dist/compiler-vapor.d.ts",
-      "node": "./dist/compiler-vapor.cjs.js",
-      "module": "./dist/compiler-vapor.esm-browser.js",
-      "import": "./dist/compiler-vapor.esm-browser.js",
-      "require": "./dist/compiler-vapor.cjs.js"
-    },
+    ".": "./dist/compiler-vapor.js",
     "./*": "./*"
   },
   "buildOptions": {
     "formats": [
-      "cjs",
-      "esm-browser"
+      "esm"
     ],
     "prod": false,
     "enableNonBrowserBranches": true

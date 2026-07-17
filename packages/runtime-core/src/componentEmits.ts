@@ -25,11 +25,6 @@ import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import { warn } from './warning'
 import { devtoolsComponentEmit } from './devtools'
 import type { AppContext } from './apiCreateApp'
-import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
-import {
-  compatModelEmit,
-  compatModelEventPrefix,
-} from './compat/componentVModel'
 import type { ComponentTypeEmits } from './apiSetupHelpers'
 import { getModelModifiers } from './helpers/useModel'
 import type { ComponentPublicInstance } from './componentPublicInstance'
@@ -139,14 +134,7 @@ export function baseEmit(
   if (__DEV__) {
     const { emitsOptions, propsOptions } = instance
     if (emitsOptions) {
-      if (
-        !(event in emitsOptions) &&
-        !(
-          __COMPAT__ &&
-          (event.startsWith('hook:') ||
-            event.startsWith(compatModelEventPrefix))
-        )
-      ) {
+      if (!(event in emitsOptions)) {
         if (
           !propsOptions ||
           !propsOptions[0] ||
@@ -172,15 +160,12 @@ export function baseEmit(
   }
 
   let args = rawArgs
-  const isCompatModelListener =
-    __COMPAT__ && compatModelEventPrefix + event in props
-  const isModelListener = isCompatModelListener || event.startsWith('update:')
+  const isModelListener = event.startsWith('update:')
   // for v-model update:xxx events, apply modifiers on args
   // it's ok to use static get because modelModifiers can only be in the static
   // part of the props
-  const modifiers = isCompatModelListener
-    ? props.modelModifiers
-    : isModelListener && getModelModifiers(props, event.slice(7), getter)
+  const modifiers =
+    isModelListener && getModelModifiers(props, event.slice(7), getter)
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
@@ -247,15 +232,6 @@ export function baseEmit(
       onceHandler as Function | Function[],
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
-      args,
-    )
-  }
-
-  if (__COMPAT__ && args) {
-    compatModelEmit(instance as ComponentInternalInstance, event, args)
-    return compatInstanceEmit(
-      instance as ComponentInternalInstance,
-      event,
       args,
     )
   }
@@ -339,9 +315,6 @@ export function isEmitListener(
     return false
   }
 
-  if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
-    return true
-  }
   key = key.slice(2)
   // #8342 the `.once` modifier appends a `Once` suffix. Preserve the exact event
   // name `once`, while still stripping the suffix from `onOnceOnce`.

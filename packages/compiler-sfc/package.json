@@ -2,26 +2,23 @@
   "name": "@vue/compiler-sfc",
   "version": "3.6.0-beta.17",
   "description": "@vue/compiler-sfc",
-  "main": "dist/compiler-sfc.cjs.js",
-  "module": "dist/compiler-sfc.esm-browser.js",
-  "types": "dist/compiler-sfc.d.ts",
+  "type": "module",
+  "types": "./dist/compiler-sfc.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
       "types": "./dist/compiler-sfc.d.ts",
-      "node": "./dist/compiler-sfc.cjs.js",
-      "module": "./dist/compiler-sfc.esm-browser.js",
-      "import": "./dist/compiler-sfc.esm-browser.js",
-      "require": "./dist/compiler-sfc.cjs.js"
+      "browser": "./dist/compiler-sfc.esm-browser.js",
+      "default": "./dist/compiler-sfc.js"
     },
     "./*": "./*"
   },
   "buildOptions": {
     "name": "VueCompilerSFC",
     "formats": [
-      "cjs",
+      "esm",
       "esm-browser"
     ],
     "prod": false,
