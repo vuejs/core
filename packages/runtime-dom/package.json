@@ -3,7 +3,6 @@
   "version": "3.6.0-beta.17",
   "description": "@vue/runtime-dom",
   "type": "module",
-  "unpkg": "dist/runtime-dom.global.js",
   "files": [
     "dist"
   ],
@@ -18,8 +17,7 @@
   "buildOptions": {
     "name": "VueRuntimeDOM",
     "formats": [
-      "esm",
-      "global"
+      "esm"
     ]
   },
   "repository": {

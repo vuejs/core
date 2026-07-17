@@ -9,7 +9,7 @@
     "build-dts": "node scripts/build-types.js",
     "clean": "rimraf --glob packages/*/dist temp",
     "size": "run-s \"size-*\" && node scripts/usage-size.js",
-    "size-global": "node scripts/build.js vue runtime-dom compiler-dom -f global -p --size",
+    "size-global": "node scripts/build.js vue -f global -p --size && node scripts/build.js runtime-dom -f global -p --size && node scripts/build.js compiler-dom -f global -p --size",
     "size-esm-runtime": "node scripts/build.js vue -f esm-runtime",
     "size-esm": "node scripts/build.js runtime-shared runtime-dom runtime-core reactivity shared runtime-vapor -f esm",
     "check": "tsc --incremental --noEmit",
