@@ -199,11 +199,9 @@ function createConfigsForTarget(target) {
     }
     // When a single target is explicitly named (e.g. `build.js -f global
     // runtime-dom`), honor the requested formats even if the package does not
-    // declare them. This lets tooling build on-demand bundles that are not
-    // part of the published output (e.g. runtime-dom / compiler-dom global
-    // bundles for size tracking). Fuzzy/multi-target builds keep intersecting
-    // with declared formats so they don't accidentally emit unsupported
-    // formats.
+    // declare them, allowing on-demand builds of unpublished bundles.
+    // Fuzzy/multi-target builds keep intersecting with declared formats so
+    // they don't accidentally emit unsupported formats.
     if (!resolvedFormats || !resolvedFormats.length) {
       if (!isNegation && targets.length === 1) {
         resolvedFormats = formats
