@@ -9,5 +9,5 @@ declare module 'vue' {
 
 // #8376 - custom props should not be erased
 describe('Custom Props not erased', () => {
-  expectType<number | undefined>(new CustomPropsNotErased().$props.custom)
+  expectType(new CustomPropsNotErased().$props.custom, {} as number | undefined)
 })

@@ -11,7 +11,7 @@ import {
   ref,
   toRefs,
 } from 'vue'
-import { type IsAny, describe, expectAssignable, expectType } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 declare function extractComponentOptions<
   Props,
@@ -143,25 +143,25 @@ describe('object props', () => {
       },
       setup(props) {
         const refs = toRefs(props)
-        expectType<ExpectedRefs['a']>(refs.a)
-        expectType<ExpectedRefs['b']>(refs.b)
-        expectType<ExpectedRefs['e']>(refs.e)
-        expectType<ExpectedRefs['bb']>(refs.bb)
-        expectType<ExpectedRefs['bbb']>(refs.bbb)
-        expectType<ExpectedRefs['cc']>(refs.cc)
-        expectType<ExpectedRefs['dd']>(refs.dd)
-        expectType<ExpectedRefs['ee']>(refs.ee)
-        expectType<ExpectedRefs['ff']>(refs.ff)
-        expectType<ExpectedRefs['ccc']>(refs.ccc)
-        expectType<ExpectedRefs['ddd']>(refs.ddd)
-        expectType<ExpectedRefs['eee']>(refs.eee)
-        expectType<ExpectedRefs['fff']>(refs.fff)
-        expectType<ExpectedRefs['hhh']>(refs.hhh)
-        expectType<ExpectedRefs['ggg']>(refs.ggg)
-        expectType<ExpectedRefs['ffff']>(refs.ffff)
-        expectType<ExpectedRefs['validated']>(refs.validated)
-        expectType<ExpectedRefs['object']>(refs.object)
-        expectType<IsAny<typeof props.zzz>>(true)
+        expectType(refs.a, {} as ExpectedRefs['a'])
+        expectType(refs.b, {} as ExpectedRefs['b'])
+        expectType(refs.e, {} as ExpectedRefs['e'])
+        expectType(refs.bb, {} as ExpectedRefs['bb'])
+        expectType(refs.bbb, {} as ExpectedRefs['bbb'])
+        expectType(refs.cc, {} as ExpectedRefs['cc'])
+        expectType(refs.dd, {} as ExpectedRefs['dd'])
+        expectType(refs.ee, {} as ExpectedRefs['ee'])
+        expectType(refs.ff, {} as ExpectedRefs['ff'])
+        expectType(refs.ccc, {} as ExpectedRefs['ccc'])
+        expectType(refs.ddd, {} as ExpectedRefs['ddd'])
+        expectType(refs.eee, {} as ExpectedRefs['eee'])
+        expectType(refs.fff, {} as ExpectedRefs['fff'])
+        expectType(refs.hhh, {} as ExpectedRefs['hhh'])
+        expectType(refs.ggg, {} as ExpectedRefs['ggg'])
+        expectType(refs.ffff, {} as ExpectedRefs['ffff'])
+        expectType(refs.validated, {} as ExpectedRefs['validated'])
+        expectType(refs.object, {} as ExpectedRefs['object'])
+        expectType(props.zzz, {} as any)
 
         return {
           setupA: 1,
@@ -178,79 +178,82 @@ describe('object props', () => {
     const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
 
     // props
-    expectType<ExpectedProps['a']>(props.a)
-    expectType<ExpectedProps['b']>(props.b)
-    expectType<ExpectedProps['e']>(props.e)
-    expectType<ExpectedProps['bb']>(props.bb)
-    expectType<ExpectedProps['bbb']>(props.bbb)
-    expectType<ExpectedProps['cc']>(props.cc)
-    expectType<ExpectedProps['dd']>(props.dd)
-    expectType<ExpectedProps['ee']>(props.ee)
-    expectType<ExpectedProps['ff']>(props.ff)
-    expectType<ExpectedProps['ccc']>(props.ccc)
-    expectType<ExpectedProps['ddd']>(props.ddd)
-    expectType<ExpectedProps['eee']>(props.eee)
-    expectType<ExpectedProps['fff']>(props.fff)
-    expectType<ExpectedProps['hhh']>(props.hhh)
-    expectType<ExpectedProps['ggg']>(props.ggg)
-    expectType<ExpectedProps['ffff']>(props.ffff)
-    expectType<ExpectedProps['validated']>(props.validated)
-    expectType<ExpectedProps['object']>(props.object)
+    expectType(props.a, {} as ExpectedProps['a'])
+    expectType(props.b, {} as ExpectedProps['b'])
+    expectType(props.e, {} as ExpectedProps['e'])
+    expectType(props.bb, {} as ExpectedProps['bb'])
+    expectType(props.bbb, {} as ExpectedProps['bbb'])
+    expectType(props.cc, {} as ExpectedProps['cc'])
+    expectType(props.dd, {} as ExpectedProps['dd'])
+    expectType(props.ee, {} as ExpectedProps['ee'])
+    expectType(props.ff, {} as ExpectedProps['ff'])
+    expectType(props.ccc, {} as ExpectedProps['ccc'])
+    expectType(props.ddd, {} as ExpectedProps['ddd'])
+    expectType(props.eee, {} as ExpectedProps['eee'])
+    expectType(props.fff, {} as ExpectedProps['fff'])
+    expectType(props.hhh, {} as ExpectedProps['hhh'])
+    expectType(props.ggg, {} as ExpectedProps['ggg'])
+    expectType(props.ffff, {} as ExpectedProps['ffff'])
+    expectType(props.validated, {} as ExpectedProps['validated'])
+    expectType(props.object, {} as ExpectedProps['object'])
 
     // raw bindings
-    expectType<Number>(rawBindings.setupA)
-    expectType<Ref<Number>>(rawBindings.setupB)
-    expectType<Ref<Number>>(rawBindings.setupC.a)
-    expectType<Ref<Number> | undefined>(rawBindings.setupD)
+    expectAssignable<Number>(rawBindings.setupA)
+    expectAssignable<Ref<Number>>(rawBindings.setupB)
+    expectAssignable<Ref<Number>>(rawBindings.setupC.a)
+    expectAssignable<Ref<Number> | undefined>(rawBindings.setupD)
 
     // raw bindings props
-    expectType<ExpectedProps['a']>(rawBindings.setupProps.a)
-    expectType<ExpectedProps['b']>(rawBindings.setupProps.b)
-    expectType<ExpectedProps['e']>(rawBindings.setupProps.e)
-    expectType<ExpectedProps['bb']>(rawBindings.setupProps.bb)
-    expectType<ExpectedProps['bbb']>(rawBindings.setupProps.bbb)
-    expectType<ExpectedProps['cc']>(rawBindings.setupProps.cc)
-    expectType<ExpectedProps['dd']>(rawBindings.setupProps.dd)
-    expectType<ExpectedProps['ee']>(rawBindings.setupProps.ee)
-    expectType<ExpectedProps['ff']>(rawBindings.setupProps.ff)
-    expectType<ExpectedProps['ccc']>(rawBindings.setupProps.ccc)
-    expectType<ExpectedProps['ddd']>(rawBindings.setupProps.ddd)
-    expectType<ExpectedProps['eee']>(rawBindings.setupProps.eee)
-    expectType<ExpectedProps['fff']>(rawBindings.setupProps.fff)
-    expectType<ExpectedProps['hhh']>(rawBindings.setupProps.hhh)
-    expectType<ExpectedProps['ggg']>(rawBindings.setupProps.ggg)
-    expectType<ExpectedProps['ffff']>(rawBindings.setupProps.ffff)
-    expectType<ExpectedProps['validated']>(rawBindings.setupProps.validated)
+    expectType(rawBindings.setupProps.a, {} as ExpectedProps['a'])
+    expectType(rawBindings.setupProps.b, {} as ExpectedProps['b'])
+    expectType(rawBindings.setupProps.e, {} as ExpectedProps['e'])
+    expectType(rawBindings.setupProps.bb, {} as ExpectedProps['bb'])
+    expectType(rawBindings.setupProps.bbb, {} as ExpectedProps['bbb'])
+    expectType(rawBindings.setupProps.cc, {} as ExpectedProps['cc'])
+    expectType(rawBindings.setupProps.dd, {} as ExpectedProps['dd'])
+    expectType(rawBindings.setupProps.ee, {} as ExpectedProps['ee'])
+    expectType(rawBindings.setupProps.ff, {} as ExpectedProps['ff'])
+    expectType(rawBindings.setupProps.ccc, {} as ExpectedProps['ccc'])
+    expectType(rawBindings.setupProps.ddd, {} as ExpectedProps['ddd'])
+    expectType(rawBindings.setupProps.eee, {} as ExpectedProps['eee'])
+    expectType(rawBindings.setupProps.fff, {} as ExpectedProps['fff'])
+    expectType(rawBindings.setupProps.hhh, {} as ExpectedProps['hhh'])
+    expectType(rawBindings.setupProps.ggg, {} as ExpectedProps['ggg'])
+    expectType(rawBindings.setupProps.ffff, {} as ExpectedProps['ffff'])
+    expectType(
+      rawBindings.setupProps.validated,
+      {} as ExpectedProps['validated'],
+    )
 
     // setup
-    expectType<Number>(setup.setupA)
-    expectType<Number>(setup.setupB)
-    expectType<Ref<Number>>(setup.setupC.a)
-    expectType<number | undefined>(setup.setupD)
+    expectAssignable<Number>(setup.setupA)
+    expectAssignable<Number>(setup.setupB)
+    expectAssignable<Ref<Number>>(setup.setupC.a)
+    expectType(setup.setupD, {} as number | undefined)
 
     // raw bindings props
-    expectType<ExpectedProps['a']>(setup.setupProps.a)
-    expectType<ExpectedProps['b']>(setup.setupProps.b)
-    expectType<ExpectedProps['e']>(setup.setupProps.e)
-    expectType<ExpectedProps['bb']>(setup.setupProps.bb)
-    expectType<ExpectedProps['bbb']>(setup.setupProps.bbb)
-    expectType<ExpectedProps['cc']>(setup.setupProps.cc)
-    expectType<ExpectedProps['dd']>(setup.setupProps.dd)
-    expectType<ExpectedProps['ee']>(setup.setupProps.ee)
-    expectType<ExpectedProps['ff']>(setup.setupProps.ff)
-    expectType<ExpectedProps['ccc']>(setup.setupProps.ccc)
-    expectType<ExpectedProps['ddd']>(setup.setupProps.ddd)
-    expectType<ExpectedProps['eee']>(setup.setupProps.eee)
-    expectType<ExpectedProps['fff']>(setup.setupProps.fff)
-    expectType<ExpectedProps['hhh']>(setup.setupProps.hhh)
-    expectType<ExpectedProps['ggg']>(setup.setupProps.ggg)
-    expectType<ExpectedProps['ffff']>(setup.setupProps.ffff)
-    expectType<ExpectedProps['validated']>(setup.setupProps.validated)
+    expectType(setup.setupProps.a, {} as ExpectedProps['a'])
+    expectType(setup.setupProps.b, {} as ExpectedProps['b'])
+    expectType(setup.setupProps.e, {} as ExpectedProps['e'])
+    expectType(setup.setupProps.bb, {} as ExpectedProps['bb'])
+    expectType(setup.setupProps.bbb, {} as ExpectedProps['bbb'])
+    expectType(setup.setupProps.cc, {} as ExpectedProps['cc'])
+    expectType(setup.setupProps.dd, {} as ExpectedProps['dd'])
+    expectType(setup.setupProps.ee, {} as ExpectedProps['ee'])
+    expectType(setup.setupProps.ff, {} as ExpectedProps['ff'])
+    expectType(setup.setupProps.ccc, {} as ExpectedProps['ccc'])
+    expectType(setup.setupProps.ddd, {} as ExpectedProps['ddd'])
+    expectType(setup.setupProps.eee, {} as ExpectedProps['eee'])
+    expectType(setup.setupProps.fff, {} as ExpectedProps['fff'])
+    expectType(setup.setupProps.hhh, {} as ExpectedProps['hhh'])
+    expectType(setup.setupProps.ggg, {} as ExpectedProps['ggg'])
+    expectType(setup.setupProps.ffff, {} as ExpectedProps['ffff'])
+    expectType(setup.setupProps.validated, {} as ExpectedProps['validated'])
 
     // instance
     const instance = new MyComponent()
-    expectType<number>(instance.setupA)
-    expectType<number | undefined>(instance.setupD)
+    expectType(instance.setupA, {} as number)
+    expectType(instance.setupD, {} as number | undefined)
     // @ts-expect-error
     instance.notExist
   })
@@ -334,30 +337,30 @@ describe('object props', () => {
     const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
 
     // props
-    expectType<ExpectedProps['a']>(props.a)
-    expectType<ExpectedProps['b']>(props.b)
-    expectType<ExpectedProps['e']>(props.e)
-    expectType<ExpectedProps['bb']>(props.bb)
-    expectType<ExpectedProps['bbb']>(props.bbb)
-    expectType<ExpectedProps['cc']>(props.cc)
-    expectType<ExpectedProps['dd']>(props.dd)
-    expectType<ExpectedProps['ee']>(props.ee)
-    expectType<ExpectedProps['ff']>(props.ff)
-    expectType<ExpectedProps['ccc']>(props.ccc)
-    expectType<ExpectedProps['ddd']>(props.ddd)
-    expectType<ExpectedProps['eee']>(props.eee)
-    expectType<ExpectedProps['fff']>(props.fff)
-    expectType<ExpectedProps['hhh']>(props.hhh)
-    expectType<ExpectedProps['ggg']>(props.ggg)
+    expectAssignable<ExpectedProps['a']>(props.a)
+    expectType(props.b, {} as ExpectedProps['b'])
+    expectAssignable<ExpectedProps['e']>(props.e)
+    expectAssignable<ExpectedProps['bb']>(props.bb)
+    expectType(props.bbb, {} as ExpectedProps['bbb'])
+    expectAssignable<ExpectedProps['cc']>(props.cc)
+    expectType(props.dd, {} as ExpectedProps['dd'])
+    expectAssignable<ExpectedProps['ee']>(props.ee)
+    expectAssignable<ExpectedProps['ff']>(props.ff)
+    expectAssignable<ExpectedProps['ccc']>(props.ccc)
+    expectType(props.ddd, {} as ExpectedProps['ddd'])
+    expectType(props.eee, {} as ExpectedProps['eee'])
+    expectType(props.fff, {} as ExpectedProps['fff'])
+    expectType(props.hhh, {} as ExpectedProps['hhh'])
+    expectType(props.ggg, {} as ExpectedProps['ggg'])
     // expectType<ExpectedProps['ffff']>(props.ffff) // todo fix
-    expectType<ExpectedProps['validated']>(props.validated)
-    expectType<ExpectedProps['object']>(props.object)
+    expectAssignable<ExpectedProps['validated']>(props.validated)
+    expectAssignable<ExpectedProps['object']>(props.object)
 
     // rawBindings
-    expectType<Number>(rawBindings.setupA)
+    expectAssignable<Number>(rawBindings.setupA)
 
     //setup
-    expectType<Number>(setup.setupA)
+    expectAssignable<Number>(setup.setupA)
   })
 })
 
@@ -376,11 +379,11 @@ describe('array props', () => {
 
     // @ts-expect-error props should be readonly
     props.a = 1
-    expectType<any>(props.a)
-    expectType<any>(props.b)
+    expectType(props.a, {} as any)
+    expectType(props.b, {} as any)
 
-    expectType<number>(rawBindings.c)
-    expectType<number>(setup.c)
+    expectType(rawBindings.c, {} as number)
+    expectType(setup.c, {} as number)
   })
 
   describe('options', () => {
@@ -402,8 +405,8 @@ describe('array props', () => {
     // expectType<any>(props.a)
     // expectType<any>(props.b)
 
-    expectType<number>(rawBindings.c)
-    expectType<number>(setup.c)
+    expectType(rawBindings.c, {} as number)
+    expectType(setup.c, {} as number)
   })
 })
 
@@ -419,12 +422,12 @@ describe('no props', () => {
 
     const { rawBindings, setup } = extractComponentOptions(MyComponent)
 
-    expectType<number>(rawBindings.setupA)
-    expectType<number>(setup.setupA)
+    expectType(rawBindings.setupA, {} as number)
+    expectType(setup.setupA, {} as number)
 
     // instance
     const instance = new MyComponent()
-    expectType<number>(instance.setupA)
+    expectType(instance.setupA, {} as number)
     // @ts-expect-error
     instance.notExist
   })
@@ -440,8 +443,8 @@ describe('no props', () => {
 
     const { rawBindings, setup } = extractComponentOptions(MyComponent)
 
-    expectType<number>(rawBindings.setupA)
-    expectType<number>(setup.setupA)
+    expectType(rawBindings.setupA, {} as number)
+    expectType(setup.setupA, {} as number)
   })
 })
 
@@ -459,7 +462,7 @@ describe('functional', () => {
     const MyComponent = (props: { foo: number }) => props.foo
     const { props } = extractComponentOptions(MyComponent)
 
-    expectType<number>(props.foo)
+    expectType(props.foo, {} as number)
   })
 
   describe('typed', () => {
@@ -471,19 +474,19 @@ describe('functional', () => {
       props,
       { emit, slots },
     ) => {
-      expectType<Props>(props)
-      expectType<{
+      expectAssignable<Props>(props)
+      expectAssignable<{
         (event: 'change', value: string): void
         (event: 'inc', value: number): void
       }>(emit)
-      expectType<Slots>(slots)
+      expectAssignable<Slots>(slots)
     }
 
     const { props, emits, slots } = extractComponentOptions(MyComponent)
 
-    expectType<Props>(props)
-    expectType<Emits>(emits)
-    expectType<Slots>(slots)
+    expectType(props, {} as Props)
+    expectType(emits, {} as Emits)
+    expectType(slots, {} as Slots)
   })
 })
 
@@ -496,7 +499,7 @@ describe('class', () => {
 
   const { props } = extractComponentOptions(MyComponent)
 
-  expectType<number>(props.foo)
+  expectType(props.foo, {} as number)
 })
 
 describe('SetupContext', () => {
@@ -514,7 +517,7 @@ describe('SetupContext', () => {
       b: [val: number]
     }> = {} as any
 
-    expectType<{
+    expectAssignable<{
       (event: 'a', val: string): void
       (event: 'b', val: number): void
     }>(emit)

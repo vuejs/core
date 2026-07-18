@@ -7,7 +7,7 @@ import {
   shallowReactive,
   shallowReadonly,
 } from 'vue'
-import { describe, expectType } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 describe('should support DeepReadonly', () => {
   const r = readonly({ obj: { k: 'v' } })
@@ -20,7 +20,7 @@ describe('should support DeepReadonly', () => {
 // #4180
 describe('readonly ref', () => {
   const r = readonly(ref({ count: 1 }))
-  expectType<Ref>(r)
+  expectAssignable<Ref>(r)
 })
 
 describe('should support markRaw', () => {
@@ -43,20 +43,18 @@ describe('should support markRaw', () => {
     },
   })
 
-  expectType<Test<number>>(r.class.raw)
-  // @ts-expect-error it should unwrap
-  expectType<Test<number>>(r.class.reactive)
+  expectAssignable<Test<number>>(r.class.raw)
+  expectType(r.class.reactive.item, {} as number)
 
-  expectType<Ref<number>>(r.plain.raw.ref)
-  // @ts-expect-error it should unwrap
-  expectType<Ref<number>>(r.plain.reactive.ref)
+  expectType(r.plain.raw.ref, {} as Ref<number>)
+  expectType(r.plain.reactive.ref, {} as number)
 })
 
 describe('shallowReadonly ref unwrap', () => {
   const r = shallowReadonly({ count: { n: ref(1) } })
   // @ts-expect-error
   r.count = 2
-  expectType<Ref>(r.count.n)
+  expectAssignable<Ref>(r.count.n)
   r.count.n.value = 123
 })
 
@@ -64,25 +62,25 @@ describe('shallowReadonly ref unwrap', () => {
 describe('should unwrap tuple correctly', () => {
   const readonlyTuple = [ref(0)] as const
   const reactiveReadonlyTuple = reactive(readonlyTuple)
-  expectType<Ref<number>>(reactiveReadonlyTuple[0])
+  expectType(reactiveReadonlyTuple[0], {} as Ref<number>)
 
   const tuple: [Ref<number>] = [ref(0)]
   const reactiveTuple = reactive(tuple)
-  expectType<Ref<number>>(reactiveTuple[0])
+  expectType(reactiveTuple[0], {} as Ref<number>)
 })
 
 describe('should unwrap Map correctly', () => {
   const map = reactive(new Map<string, Ref<number>>())
-  expectType<Ref<number>>(map.get('a')!)
+  expectType(map.get('a')!, {} as Ref<number>)
 
   const map2 = reactive(new Map<string, { wrap: Ref<number> }>())
-  expectType<number>(map2.get('a')!.wrap)
+  expectType(map2.get('a')!.wrap, {} as number)
 
   const wm = reactive(new WeakMap<object, Ref<number>>())
-  expectType<Ref<number>>(wm.get({})!)
+  expectType(wm.get({})!, {} as Ref<number>)
 
   const wm2 = reactive(new WeakMap<object, { wrap: Ref<number> }>())
-  expectType<number>(wm2.get({})!.wrap)
+  expectType(wm2.get({})!.wrap, {} as number)
 })
 
 describe('should unwrap extended Map correctly', () => {
@@ -92,23 +90,23 @@ describe('should unwrap extended Map correctly', () => {
   }
 
   const emap1 = reactive(new ExtendendMap1())
-  expectType<string>(emap1.foo)
-  expectType<number>(emap1.bar)
-  expectType<number>(emap1.get('a')!.wrap)
+  expectType(emap1.foo, {} as string)
+  expectType(emap1.bar, {} as number)
+  expectType(emap1.get('a')!.wrap, {} as number)
 })
 
 describe('should unwrap Set correctly', () => {
   const set = reactive(new Set<Ref<number>>())
-  expectType<Set<Ref<number>>>(set)
+  expectAssignable<Set<Ref<number>>>(set)
 
   const set2 = reactive(new Set<{ wrap: Ref<number> }>())
-  expectType<Set<{ wrap: number }>>(set2)
+  expectAssignable<Set<{ wrap: number }>>(set2)
 
   const ws = reactive(new WeakSet<Ref<number>>())
-  expectType<WeakSet<Ref<number>>>(ws)
+  expectAssignable<WeakSet<Ref<number>>>(ws)
 
   const ws2 = reactive(new WeakSet<{ wrap: Ref<number> }>())
-  expectType<WeakSet<{ wrap: number }>>(ws2)
+  expectAssignable<WeakSet<{ wrap: number }>>(ws2)
 })
 
 describe('should unwrap extended Set correctly', () => {
@@ -118,18 +116,18 @@ describe('should unwrap extended Set correctly', () => {
   }
 
   const eset1 = reactive(new ExtendendSet1())
-  expectType<string>(eset1.foo)
-  expectType<number>(eset1.bar)
+  expectType(eset1.foo, {} as string)
+  expectType(eset1.bar, {} as number)
 })
 
 describe('should not error when assignment', () => {
   const arr = reactive([''])
   let record: Record<number, string>
   record = arr
-  expectType<string>(record[0])
+  expectType(record[0], {} as string)
   let record2: { [key: number]: string }
   record2 = arr
-  expectType<string>(record2[0])
+  expectType(record2[0], {} as string)
 })
 
 describe('shallowReactive marker should not leak into value unions', () => {
@@ -138,7 +136,7 @@ describe('shallowReactive marker should not leak into value unions', () => {
     b: { title: 'B' },
   })
   const value = {} as (typeof state)[keyof typeof state]
-  expectType<string>(value.title)
+  expectType(value.title, {} as string)
 })
 
 describe('shallowReactive type should accept plain object assignment', () => {

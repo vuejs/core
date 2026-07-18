@@ -1,5 +1,5 @@
 import type { ExtractPropTypes, ExtractPublicPropTypes } from 'vue'
-import { type Prettify, expectType } from './utils'
+import { type Prettify, expectAssignable, expectType } from './utils'
 
 const propsOptions = {
   foo: {
@@ -16,15 +16,15 @@ const propsOptions = {
 // internal facing props
 declare const props: Prettify<ExtractPropTypes<typeof propsOptions>>
 
-expectType<number>(props.foo)
-expectType<string>(props.bar)
-expectType<boolean>(props.baz)
-expectType<unknown[] | undefined>(props.qux)
+expectAssignable<number>(props.foo)
+expectType(props.bar, {} as string)
+expectType(props.baz, {} as boolean)
+expectType(props.qux, {} as unknown[] | undefined)
 
 // external facing props
 declare const publicProps: Prettify<ExtractPublicPropTypes<typeof propsOptions>>
 
-expectType<number | undefined>(publicProps.foo)
-expectType<string>(publicProps.bar)
-expectType<boolean | undefined>(publicProps.baz)
-expectType<unknown[] | undefined>(publicProps.qux)
+expectAssignable<number | undefined>(publicProps.foo)
+expectType(publicProps.bar, {} as string)
+expectType(publicProps.baz, {} as boolean | undefined)
+expectType(publicProps.qux, {} as unknown[] | undefined)

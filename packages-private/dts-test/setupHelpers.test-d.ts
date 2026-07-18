@@ -14,7 +14,7 @@ import {
   useSlots,
   withDefaults,
 } from 'vue'
-import { describe, expectType } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration
@@ -25,12 +25,12 @@ describe('defineProps w/ type declaration', () => {
     file?: File | File[]
   }>()
   // explicitly declared type should be refined
-  expectType<string>(props.foo)
+  expectType(props.foo, {} as string)
   // @ts-expect-error
   props.bar
 
-  expectType<boolean>(props.bool)
-  expectType<boolean>(props.boolAndUndefined)
+  expectType(props.bool, {} as boolean)
+  expectType(props.boolAndUndefined, {} as boolean)
 })
 
 describe('defineProps w/ never prop', () => {
@@ -39,16 +39,16 @@ describe('defineProps w/ never prop', () => {
     bar: number
   }>()
 
-  expectType<never | undefined>(props.foo)
-  expectType<number>(props.bar)
+  expectType(props.foo, {} as unknown as never | undefined)
+  expectType(props.bar, {} as number)
 })
 
 describe('defineProps w/ generics', () => {
   function test<T extends boolean>() {
     const props = defineProps<{ foo: T; bar: string; x?: boolean }>()
-    expectType<T>(props.foo)
-    expectType<string>(props.bar)
-    expectType<boolean>(props.x)
+    expectType(props.foo, {} as T)
+    expectType(props.bar, {} as string)
+    expectType(props.x, {} as boolean)
   }
   test()
 })
@@ -91,13 +91,13 @@ describe('defineProps w/ type declaration + withDefaults', <T extends
   // @ts-expect-error
   res.y.slice()
 
-  expectType<string | undefined>(res.x)
-  expectType<string | undefined>(res.y)
-  expectType<string>(res.z)
-  expectType<T>(res.foo)
+  expectType(res.x, {} as string | undefined)
+  expectType(res.y, {} as string | undefined)
+  expectType(res.z, {} as string)
+  expectAssignable<T>(res.foo)
 
-  expectType<boolean>(res.bool)
-  expectType<boolean>(res.boolAndUndefined)
+  expectType(res.bool, {} as boolean)
+  expectType(res.boolAndUndefined, {} as boolean)
 })
 
 describe('defineProps w/ union type declaration + withDefaults', () => {
@@ -138,7 +138,7 @@ describe('defineProps w/ object union + withDefaults', () => {
     },
   )
 
-  expectType<
+  expectAssignable<
     | {
         readonly type: 'hello'
         readonly bar: string
@@ -170,10 +170,10 @@ describe('defineProps w/ generic discriminate union + withDefaults', () => {
   })
 
   if (props.mode === 'single') {
-    expectType<string>(props.v)
+    expectType(props.v, {} as string)
   }
   if (props.mode === 'multiple') {
-    expectType<string[]>(props.v)
+    expectType(props.v, {} as string[])
   }
 })
 
@@ -209,12 +209,12 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
   // @ts-expect-error should be readonly
   res.s = ''
 
-  expectType<T[] | { x: T }>(res.generic1)
-  expectType<{ x: T }>(res.generic2)
-  expectType<TString>(res.generic3)
-  expectType<TA>(res.generic4)
+  expectType(res.generic1, {} as T[] | { x: T })
+  expectType(res.generic2, {} as { x: T })
+  expectAssignable<TString>(res.generic3)
+  expectAssignable<TA>(res.generic4)
 
-  expectType<boolean>(res.bool)
+  expectType(res.bool, {} as boolean)
 })
 
 describe('withDefaults w/ boolean type', () => {
@@ -224,7 +224,7 @@ describe('withDefaults w/ boolean type', () => {
     }>(),
     { bool: false },
   )
-  expectType<boolean>(res1.bool)
+  expectType(res1.bool, {} as boolean)
 
   const res2 = withDefaults(
     defineProps<{
@@ -234,7 +234,7 @@ describe('withDefaults w/ boolean type', () => {
       bool: undefined,
     },
   )
-  expectType<boolean | undefined>(res2.bool)
+  expectType(res2.bool, {} as boolean | undefined)
 })
 
 describe('withDefaults w/ defineProp type is different from the defaults type', () => {
@@ -244,7 +244,7 @@ describe('withDefaults w/ defineProp type is different from the defaults type', 
     }>(),
     { bool: false, value: false },
   )
-  expectType<boolean>(res1.bool)
+  expectType(res1.bool, {} as boolean)
 
   // @ts-expect-error
   res1.value
@@ -260,10 +260,10 @@ describe('withDefaults w/ defineProp discriminate union type', () => {
     },
   )
   if (props.type === 'button') {
-    expectType<'submit' | undefined>(props.buttonType)
+    expectType(props.buttonType, {} as 'submit' | undefined)
   }
   if (props.type === 'link') {
-    expectType<string>(props.href)
+    expectType(props.href, {} as string)
   }
 })
 
@@ -280,7 +280,7 @@ describe('defineProps w/ runtime declaration', () => {
       required: true,
     },
   })
-  expectType<{
+  expectAssignable<{
     foo?: string
     bar: number
     baz: unknown[]
@@ -366,11 +366,13 @@ describe('defineSlots', () => {
     default(props: { foo: string; bar: number }): any
     optional?(props: string): any
   }>()
-  expectType<(scope: { foo: string; bar: number }) => VNode[]>(fnSlots.default)
-  expectType<undefined | ((scope: string) => VNode[])>(fnSlots.optional)
+  expectAssignable<(scope: { foo: string; bar: number }) => VNode[]>(
+    fnSlots.default,
+  )
+  expectAssignable<undefined | ((scope: string) => VNode[])>(fnSlots.optional)
 
   const slotsUntype = defineSlots()
-  expectType<Slots>(slotsUntype)
+  expectAssignable<Slots>(slotsUntype)
 })
 
 describe('defineSlots generic', <T extends Record<string, any>>() => {
@@ -400,49 +402,49 @@ describe('defineSlots generic', <T extends Record<string, any>>() => {
 describe('defineModel', () => {
   // overload 1
   const modelValueRequired = defineModel<boolean>({ required: true })
-  expectType<Ref<boolean>>(modelValueRequired)
+  expectAssignable<Ref<boolean>>(modelValueRequired)
 
   // overload 2
   const modelValue = defineModel<string>()
-  expectType<Ref<string | undefined>>(modelValue)
+  expectAssignable<Ref<string | undefined>>(modelValue)
   modelValue.value = 'new value'
 
   const modelValueDefault = defineModel<boolean>({ default: true })
-  expectType<Ref<boolean>>(modelValueDefault)
+  expectAssignable<Ref<boolean>>(modelValueDefault)
 
   // overload 3
   const countRequired = defineModel<number>('count', { required: false })
-  expectType<Ref<number | undefined>>(countRequired)
+  expectAssignable<Ref<number | undefined>>(countRequired)
 
   // overload 4
   const count = defineModel<number>('count')
-  expectType<Ref<number | undefined>>(count)
+  expectAssignable<Ref<number | undefined>>(count)
 
   const countDefault = defineModel<number>('count', { default: 1 })
-  expectType<Ref<number>>(countDefault)
+  expectAssignable<Ref<number>>(countDefault)
 
   const arrayDefault = defineModel<number[]>({ default: () => [] })
-  expectType<Ref<number[]>>(arrayDefault)
+  expectAssignable<Ref<number[]>>(arrayDefault)
 
   const objectDefault = defineModel<{ foo: string }>({
     default: () => ({ foo: 'bar' }),
   })
-  expectType<Ref<{ foo: string }>>(objectDefault)
+  expectAssignable<Ref<{ foo: string }>>(objectDefault)
 
   // infer type from default
   const inferred = defineModel({ default: 123 })
-  expectType<Ref<number | undefined>>(inferred)
+  expectAssignable<Ref<number | undefined>>(inferred)
   const inferredRequired = defineModel({ default: 123, required: true })
-  expectType<Ref<number>>(inferredRequired)
+  expectAssignable<Ref<number>>(inferredRequired)
 
   // modifiers
   const [_, modifiers] = defineModel<string>()
-  expectType<true | undefined>(modifiers.foo)
+  expectType(modifiers.foo, {} as true | undefined)
 
   // limit supported modifiers
   const [__, typedModifiers] = defineModel<string, 'trim' | 'capitalize'>()
-  expectType<true | undefined>(typedModifiers.trim)
-  expectType<true | undefined>(typedModifiers.capitalize)
+  expectType(typedModifiers.trim, {} as true | undefined)
+  expectType(typedModifiers.capitalize, {} as true | undefined)
   // @ts-expect-error
   typedModifiers.foo
 
@@ -485,14 +487,14 @@ describe('defineModel', () => {
         return 1
       },
     })
-    expectType<string | undefined>(modelVal.value)
+    expectType(modelVal.value, {} as string | undefined)
     modelVal.value = 1
     modelVal.value = undefined
     // @ts-expect-error
     modelVal.value = 'foo'
 
     const [modelVal2] = modelVal
-    expectType<string | undefined>(modelVal2.value)
+    expectType(modelVal2.value, {} as string | undefined)
     modelVal2.value = 1
     modelVal2.value = undefined
     // @ts-expect-error
@@ -506,14 +508,14 @@ describe('defineModel', () => {
         return ''
       },
     })
-    expectType<string | undefined>(count.value)
+    expectType(count.value, {} as string | undefined)
     count.value = 1
     count.value = undefined
     // @ts-expect-error
     count.value = 'foo'
 
     const [count2] = count
-    expectType<string | undefined>(count2.value)
+    expectType(count2.value, {} as string | undefined)
     count2.value = 1
     count2.value = undefined
     // @ts-expect-error
@@ -526,7 +528,7 @@ describe('useModel', () => {
     props: ['foo'],
     setup(props) {
       const r = useModel(props, 'foo')
-      expectType<Ref<any>>(r)
+      expectAssignable<Ref<any>>(r)
 
       // @ts-expect-error
       useModel(props, 'bar')
@@ -540,21 +542,21 @@ describe('useModel', () => {
       baz: { type: Boolean },
     },
     setup(props) {
-      expectType<Ref<string | undefined>>(useModel(props, 'foo'))
-      expectType<Ref<number>>(useModel(props, 'bar'))
-      expectType<Ref<boolean>>(useModel(props, 'baz'))
+      expectAssignable<Ref<string | undefined>>(useModel(props, 'foo'))
+      expectAssignable<Ref<number>>(useModel(props, 'bar'))
+      expectAssignable<Ref<boolean>>(useModel(props, 'baz'))
     },
   })
 })
 
 describe('useAttrs', () => {
   const attrs = useAttrs()
-  expectType<Record<string, unknown>>(attrs)
+  expectAssignable<Record<string, unknown>>(attrs)
 })
 
 describe('useSlots', () => {
   const slots = useSlots()
-  expectType<Slots>(slots)
+  expectType(slots, {} as Slots)
 })
 
 describe('defineSlots generic', <T extends Record<string, any>>() => {
@@ -634,7 +636,7 @@ describe('toRefs w/ type declaration', () => {
   const props = defineProps<{
     file?: File | File[]
   }>()
-  expectType<Ref<File | File[] | undefined>>(toRefs(props).file)
+  expectType(toRefs(props).file, {} as Ref<File | File[] | undefined>)
 })
 
 describe('defineOptions', () => {

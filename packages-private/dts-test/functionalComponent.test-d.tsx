@@ -5,15 +5,15 @@ import {
   type VNode,
   h,
 } from 'vue'
-import { expectType } from './utils'
+import { expectAssignable, expectType } from './utils'
 
 // simple function signature
 const Foo = (props: { foo: number }) => h(Text, null, props.foo)
 
 // TSX
-expectType<JSX.Element>(<Foo foo={1} />)
-expectType<JSX.Element>(<Foo foo={1} key="1" />)
-expectType<JSX.Element>(<Foo foo={1} ref="ref" />)
+expectType(<Foo foo={1} />, {} as JSX.Element)
+expectType(<Foo foo={1} key="1" />, {} as JSX.Element)
+expectType(<Foo foo={1} ref="ref" />, {} as JSX.Element)
 // @ts-expect-error
 ;<Foo />
 //  @ts-expect-error
@@ -26,7 +26,7 @@ const Bar: FunctionalComponent<
   { foo: number },
   { update: (value: number) => void }
 > = (props, { emit }) => {
-  expectType<number>(props.foo)
+  expectType(props.foo, {} as number)
 
   emit('update', 123)
   //  @ts-expect-error
@@ -51,7 +51,7 @@ Bar.emits = {
 Bar.emits = { baz: () => void 0 }
 
 // TSX
-expectType<JSX.Element>(<Bar foo={1} onUpdate={() => {}} />)
+expectType(<Bar foo={1} onUpdate={() => {}} />, {} as JSX.Element)
 //  @ts-expect-error
 ;<Foo />
 //  @ts-expect-error
@@ -60,11 +60,11 @@ expectType<JSX.Element>(<Bar foo={1} onUpdate={() => {}} />)
 ;<Foo baz="bar" />
 
 const Baz: FunctionalComponent<{}, string[]> = (props, { emit }) => {
-  expectType<{}>(props)
-  expectType<(event: string) => void>(emit)
+  expectAssignable<{}>(props)
+  expectAssignable<(event: string) => void>(emit)
 }
 
-expectType<Component>(Baz)
+expectAssignable<Component>(Baz)
 
 const Qux: FunctionalComponent<{}, ['foo', 'bar']> = (props, { emit }) => {
   emit('foo')
@@ -73,7 +73,7 @@ const Qux: FunctionalComponent<{}, ['foo', 'bar']> = (props, { emit }) => {
   emit('bar', 1, 2)
 }
 
-expectType<Component>(Qux)
+expectAssignable<Component>(Qux)
 
 const Quux: FunctionalComponent<
   {},
@@ -83,7 +83,7 @@ const Quux: FunctionalComponent<
     optional?: { foo: number }
   }
 > = (props, { emit, slots }) => {
-  expectType<{
+  expectAssignable<{
     default: (scope: { foo: number }) => VNode[]
     optional?: (scope: { foo: number }) => VNode[]
   }>(slots)
@@ -98,5 +98,5 @@ const Quux: FunctionalComponent<
   // @ts-expect-error
   slots.optional({ foo: 123 })
 }
-expectType<Component>(Quux)
+expectAssignable<Component>(Quux)
 ;<Quux />

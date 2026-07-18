@@ -7,7 +7,7 @@ import {
   provide,
   ref,
 } from 'vue'
-import { expectType } from './utils'
+import { expectAssignable, expectType } from './utils'
 
 // non-symbol keys
 provide('foo', 123)
@@ -21,13 +21,19 @@ provide(key, 'foo')
 // @ts-expect-error
 provide(key, null)
 
-expectType<number | undefined>(inject(key))
-expectType<number>(inject(key, 1))
-expectType<number>(inject(key, () => 1, true /* treatDefaultAsFactory */))
+expectType(inject(key), {} as number | undefined)
+expectType(inject(key, 1), {} as number)
+expectType(
+  inject(key, () => 1, true /* treatDefaultAsFactory */),
+  {} as number,
+)
 
-expectType<() => number>(inject('foo', () => 1))
-expectType<() => number>(inject('foo', () => 1, false))
-expectType<number>(inject('foo', () => 1, true))
+expectAssignable<() => number>(inject('foo', () => 1))
+expectAssignable<() => number>(inject('foo', () => 1, false))
+expectType(
+  inject('foo', () => 1, true),
+  {} as number,
+)
 
 // #8201
 type Cube = {

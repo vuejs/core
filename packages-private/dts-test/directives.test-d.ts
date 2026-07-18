@@ -1,5 +1,5 @@
 import { type Directive, type ObjectDirective, vModelText } from 'vue'
-import { describe, expectType } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 type ExtractBinding<T> = T extends (
   el: any,
@@ -17,22 +17,22 @@ declare function testDirective<
 >(): ExtractBinding<Directive<any, Value, Modifiers, Arg>>
 
 describe('vmodel', () => {
-  expectType<ObjectDirective<any, any, 'trim' | 'number' | 'lazy', string>>(
-    vModelText,
-  )
+  expectAssignable<
+    ObjectDirective<any, any, 'trim' | 'number' | 'lazy', string>
+  >(vModelText)
   // @ts-expect-error
-  expectType<ObjectDirective<any, any, 'not-valid', string>>(vModelText)
+  expectType(vModelText, {} as ObjectDirective<any, any, 'not-valid', string>)
 })
 
 describe('custom', () => {
-  expectType<{
+  expectAssignable<{
     value: number
     oldValue: number | null
     arg?: 'Arg'
     modifiers: Partial<Record<'a' | 'b', boolean>>
   }>(testDirective<number, 'a' | 'b', 'Arg'>())
 
-  expectType<{
+  expectAssignable<{
     value: number
     oldValue: number | null
     arg?: 'Arg'
@@ -40,7 +40,7 @@ describe('custom', () => {
     // @ts-expect-error
   }>(testDirective<number, 'a', 'Arg'>())
 
-  expectType<{
+  expectAssignable<{
     value: number
     oldValue: number | null
     arg?: 'Arg'
@@ -48,7 +48,7 @@ describe('custom', () => {
     // @ts-expect-error
   }>(testDirective<number, 'a' | 'b', 'Argx'>())
 
-  expectType<{
+  expectAssignable<{
     value: number
     oldValue: number | null
     arg?: 'Arg'
@@ -56,14 +56,14 @@ describe('custom', () => {
     // @ts-expect-error
   }>(testDirective<string, 'a' | 'b', 'Arg'>())
 
-  expectType<{
+  expectAssignable<{
     value: number
     oldValue: number | null
     arg?: HTMLElement
     modifiers: Partial<Record<'a' | 'b', boolean>>
   }>(testDirective<number, 'a' | 'b', HTMLElement>())
 
-  expectType<{
+  expectAssignable<{
     value: number
     oldValue: number | null
     arg?: HTMLElement
@@ -71,7 +71,7 @@ describe('custom', () => {
     // @ts-expect-error
   }>(testDirective<number, 'a' | 'b', string>())
 
-  expectType<{
+  expectAssignable<{
     value: number
     oldValue: number | null
     arg?: HTMLElement
