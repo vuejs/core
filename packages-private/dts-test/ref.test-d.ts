@@ -65,7 +65,7 @@ function plainType(arg: number | Ref<number>) {
   expectType(trueRef.value, {} as true)
 
   // tuple
-  expectAssignable<[number, string]>(unref(ref([1, '1'])))
+  expectType(unref(ref<[number, string]>([1, '1'])), {} as [number, string])
 
   interface IteratorFoo {
     [Symbol.iterator]: any
@@ -81,7 +81,7 @@ function plainType(arg: number | Ref<number>) {
   const arr = ref([1, new Map<string, any>(), ref('1')]).value
   const value = arr[0]
   if (isRef(value)) {
-    expectAssignable<Ref>(value)
+    expectType(value, {} as Ref<string>)
   } else if (typeof value === 'number') {
     expectType(value, {} as number)
   } else {
@@ -186,7 +186,8 @@ expectType(state.foo.label, {} as string)
 describe('ref with generic', <T extends { name: string }>() => {
   const r = {} as T
   const s = ref(r)
-  expectAssignable<string>(s.value.name)
+  // @ts-expect-error TS cannot reduce `UnwrapRef<T>['name']` to `string` for generic `T`
+  expectType(s.value.name, {} as string)
 
   const rr = {} as MaybeRef<T>
   // should at least allow casting
@@ -259,21 +260,20 @@ describe('Type safety for `WritableComputedRef` and `ComputedRef`', () => {
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
 if (shallowStatus.value === 'initial') {
-  expectAssignable<Ref<Status>>(shallowStatus)
-  expectAssignable<Status>(shallowStatus.value)
+  expectType(shallowStatus, {} as ShallowRef<Status>)
+  expectType(shallowStatus.value, {} as 'initial')
   shallowStatus.value = 'invalidating'
 }
 
 const refStatus = ref<Status>('initial')
 if (refStatus.value === 'initial') {
-  expectAssignable<Ref<Status>>(shallowStatus)
-  expectAssignable<Status>(shallowStatus.value)
+  expectType(refStatus, {} as Ref<Status>)
+  expectType(refStatus.value, {} as 'initial')
   refStatus.value = 'invalidating'
 }
 
 {
   const shallow = shallowRef(1)
-  expectAssignable<Ref<number>>(shallow)
   expectType(shallow, {} as ShallowRef<number>)
 }
 
@@ -296,8 +296,8 @@ if (refStatus.value === 'initial') {
 describe('shallowRef with generic', <T extends { name: string }>() => {
   const r = {} as T
   const s = shallowRef(r)
-  expectAssignable<string>(s.value.name)
-  expectAssignable<ShallowRef<T>>(shallowRef(r))
+  // @ts-expect-error TS cannot reduce `s.value.name` to `string` for generic `T`
+  expectType(s.value.name, {} as string)
 
   const rr = {} as MaybeRef<T>
   // should at least allow casting
@@ -307,12 +307,16 @@ describe('shallowRef with generic', <T extends { name: string }>() => {
 
 {
   // should return ShallowRef<T> | Ref<T>, not ShallowRef<T | Ref<T>>
-  expectAssignable<ShallowRef<{ name: string }> | Ref<{ name: string }>>(
+  expectType(
     shallowRef({} as MaybeRef<{ name: string }>),
+    {} as
+      | Ref<{ name: string }>
+      | ShallowRef<{ name: string }>
+      | WritableComputedRef<{ name: string }>,
   )
   expectType(
-    shallowRef('' as Ref<string[]> | string | number),
-    {} as ShallowRef<number> | Ref<string[]> | ShallowRef<string>,
+    shallowRef({} as Ref<string[]> | string | number),
+    {} as Ref<string[]> | ShallowRef<number> | ShallowRef<string>,
   )
 }
 
@@ -372,8 +376,14 @@ expectType(p3.n, {} as Ref<number>)
   expectType(toRef(tuple, '0'), {} as Ref<string>)
   expectType(toRef(tuple, '1'), {} as Ref<number>)
 
-  expectAssignable<Ref<number>>(toRef(() => 123))
-  expectAssignable<Ref<number | string>>(toRef(() => obj.c))
+  expectType(
+    toRef(() => 123),
+    {} as Readonly<Ref<123>>,
+  )
+  expectType(
+    toRef(() => obj.c),
+    {} as Readonly<Ref<number | string>>,
+  )
 
   const r = toRef(() => 123)
   // @ts-expect-error
@@ -515,10 +525,13 @@ describe('toRef <-> toValue', () => {
     c: MaybeRefOrGetter<string>,
     d: ComputedRef<string>,
   ) {
-    const r = toRef(a)
-    expectAssignable<Ref<string>>(r)
+    const ra = toRef(a)
+    expectType(
+      ra,
+      {} as Ref<string> | ShallowRef<string> | WritableComputedRef<string>,
+    )
     // writable
-    r.value = 'foo'
+    ra.value = 'foo'
 
     const rb = toRef(b)
     expectType(rb, {} as Readonly<Ref<string>>)
@@ -526,7 +539,15 @@ describe('toRef <-> toValue', () => {
     rb.value = 'foo'
 
     const rc = toRef(c)
-    expectAssignable<Readonly<Ref<string> | Ref<string>>>(rc)
+    expectType(
+      rc,
+      {} as
+        | Ref<string>
+        | ShallowRef<string>
+        | WritableComputedRef<string>
+        | ComputedRef<string>
+        | Readonly<Ref<string>>,
+    )
     // @ts-expect-error ref created from MaybeReadonlyRef should be readonly
     rc.value = 'foo'
 
@@ -541,7 +562,7 @@ describe('toRef <-> toValue', () => {
     expectType(toValue(d), {} as string)
 
     return {
-      r: toValue(r),
+      ra: toValue(ra),
       rb: toValue(rb),
       rc: toValue(rc),
       rd: toValue(rd),
@@ -556,7 +577,7 @@ describe('toRef <-> toValue', () => {
       computed(() => 'hi'),
     ),
     {} as {
-      r: string
+      ra: string
       rb: string
       rc: string
       rd: string

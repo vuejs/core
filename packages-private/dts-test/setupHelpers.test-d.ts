@@ -1,7 +1,8 @@
 import {
+  type Attrs,
+  type ModelRef,
   type Ref,
   type Slots,
-  type VNode,
   defineComponent,
   defineEmits,
   defineModel,
@@ -280,11 +281,14 @@ describe('defineProps w/ runtime declaration', () => {
       required: true,
     },
   })
-  expectAssignable<{
-    foo?: string
-    bar: number
-    baz: unknown[]
-  }>(props)
+  expectType(
+    props,
+    {} as {
+      readonly foo?: string
+      readonly bar: number
+      readonly baz: unknown[]
+    },
+  )
 
   props.foo && props.foo + 'bar'
   props.bar + 1
@@ -363,16 +367,17 @@ describe('defineEmits w/ runtime declaration', () => {
 describe('defineSlots', () => {
   // literal fn syntax (allow for specifying return type)
   const fnSlots = defineSlots<{
-    default(props: { foo: string; bar: number }): any
-    optional?(props: string): any
+    default: (props: { foo: string; bar: number }) => any
+    optional?: (props: string) => any
   }>()
-  expectAssignable<(scope: { foo: string; bar: number }) => VNode[]>(
+  expectType(
     fnSlots.default,
+    {} as (props: { foo: string; bar: number }) => any,
   )
-  expectAssignable<undefined | ((scope: string) => VNode[])>(fnSlots.optional)
+  expectType(fnSlots.optional, {} as ((props: string) => any) | undefined)
 
-  const slotsUntype = defineSlots()
-  expectAssignable<Slots>(slotsUntype)
+  const untypedSlots = defineSlots()
+  expectAssignable<Slots>(untypedSlots)
 })
 
 describe('defineSlots generic', <T extends Record<string, any>>() => {
@@ -402,40 +407,40 @@ describe('defineSlots generic', <T extends Record<string, any>>() => {
 describe('defineModel', () => {
   // overload 1
   const modelValueRequired = defineModel<boolean>({ required: true })
-  expectAssignable<Ref<boolean>>(modelValueRequired)
+  expectType(modelValueRequired, {} as ModelRef<boolean>)
 
   // overload 2
   const modelValue = defineModel<string>()
-  expectAssignable<Ref<string | undefined>>(modelValue)
+  expectType(modelValue, {} as ModelRef<string | undefined>)
   modelValue.value = 'new value'
 
   const modelValueDefault = defineModel<boolean>({ default: true })
-  expectAssignable<Ref<boolean>>(modelValueDefault)
+  expectType(modelValueDefault, {} as ModelRef<boolean>)
 
   // overload 3
   const countRequired = defineModel<number>('count', { required: false })
-  expectAssignable<Ref<number | undefined>>(countRequired)
+  expectType(countRequired, {} as ModelRef<number | undefined>)
 
   // overload 4
   const count = defineModel<number>('count')
-  expectAssignable<Ref<number | undefined>>(count)
+  expectType(count, {} as ModelRef<number | undefined>)
 
   const countDefault = defineModel<number>('count', { default: 1 })
-  expectAssignable<Ref<number>>(countDefault)
+  expectType(countDefault, {} as ModelRef<number>)
 
   const arrayDefault = defineModel<number[]>({ default: () => [] })
-  expectAssignable<Ref<number[]>>(arrayDefault)
+  expectType(arrayDefault, {} as ModelRef<number[]>)
 
   const objectDefault = defineModel<{ foo: string }>({
     default: () => ({ foo: 'bar' }),
   })
-  expectAssignable<Ref<{ foo: string }>>(objectDefault)
+  expectType(objectDefault, {} as ModelRef<{ foo: string }>)
 
   // infer type from default
   const inferred = defineModel({ default: 123 })
-  expectAssignable<Ref<number | undefined>>(inferred)
+  expectType(inferred, {} as ModelRef<123>)
   const inferredRequired = defineModel({ default: 123, required: true })
-  expectAssignable<Ref<number>>(inferredRequired)
+  expectType(inferredRequired, {} as ModelRef<123>)
 
   // modifiers
   const [_, modifiers] = defineModel<string>()
@@ -528,7 +533,7 @@ describe('useModel', () => {
     props: ['foo'],
     setup(props) {
       const r = useModel(props, 'foo')
-      expectAssignable<Ref<any>>(r)
+      expectType(r, {} as ModelRef<any, PropertyKey>)
 
       // @ts-expect-error
       useModel(props, 'bar')
@@ -542,16 +547,19 @@ describe('useModel', () => {
       baz: { type: Boolean },
     },
     setup(props) {
-      expectAssignable<Ref<string | undefined>>(useModel(props, 'foo'))
-      expectAssignable<Ref<number>>(useModel(props, 'bar'))
-      expectAssignable<Ref<boolean>>(useModel(props, 'baz'))
+      expectType(
+        useModel(props, 'foo'),
+        {} as ModelRef<string | undefined, PropertyKey>,
+      )
+      expectType(useModel(props, 'bar'), {} as ModelRef<number, PropertyKey>)
+      expectType(useModel(props, 'baz'), {} as ModelRef<boolean, PropertyKey>)
     },
   })
 })
 
 describe('useAttrs', () => {
   const attrs = useAttrs()
-  expectAssignable<Record<string, unknown>>(attrs)
+  expectType(attrs, {} as Attrs)
 })
 
 describe('useSlots', () => {

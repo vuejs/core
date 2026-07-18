@@ -1,6 +1,7 @@
 import {
   type ComputedRef,
   type MaybeRef,
+  type Reactive,
   type Ref,
   computed,
   defineComponent,
@@ -10,7 +11,7 @@ import {
   shallowRef,
   watch,
 } from 'vue'
-import { expectAssignable, expectType } from './utils'
+import { expectType } from './utils'
 
 const source = ref('foo')
 const source2 = computed(() => source.value)
@@ -36,26 +37,26 @@ watch([source, source2, source3], (values, oldValues) => {
 
 // const array
 watch([source, source2, source3] as const, (values, oldValues) => {
-  expectAssignable<Readonly<[string, string, number]>>(values)
-  expectAssignable<Readonly<[string, string, number]>>(oldValues)
+  expectType(values, {} as [string, string, number])
+  expectType(oldValues, {} as [string, string, number])
 })
 
 // reactive array
 watch(reactive([source, source2, source3]), (value, oldValues) => {
-  expectAssignable<Bar[]>(value)
-  expectAssignable<Bar[]>(oldValues)
+  expectType(value, {} as Reactive<Bar[]>)
+  expectType(oldValues, {} as Reactive<Bar[]>)
 })
 
 // reactive w/ readonly tuple
 watch(reactive([source, source2, source3] as const), (value, oldValues) => {
-  expectAssignable<Foo>(value)
-  expectAssignable<Foo>(oldValues)
+  expectType(value, {} as Reactive<Foo>)
+  expectType(oldValues, {} as Reactive<Foo>)
 })
 
 // readonly array
 watch(readonlyArr, (values, oldValues) => {
-  expectAssignable<Readonly<[string, string, number]>>(values)
-  expectAssignable<Readonly<[string, string, number]>>(oldValues)
+  expectType(values, {} as [string, string, number])
+  expectType(oldValues, {} as [string, string, number])
 })
 
 // no type error, case from vueuse
@@ -89,10 +90,11 @@ watch(
 watch(
   [source, source2, source3] as const,
   (values, oldValues) => {
-    expectAssignable<Readonly<[string, string, number]>>(values)
-    expectAssignable<
-      Readonly<[string | undefined, string | undefined, number | undefined]>
-    >(oldValues)
+    expectType(values, {} as [string, string, number])
+    expectType(
+      oldValues,
+      {} as [string | undefined, string | undefined, number | undefined],
+    )
   },
   { immediate: true },
 )
@@ -101,26 +103,31 @@ watch(
 watch(
   reactive([source, source2, source3]),
   (value, oldVals) => {
-    expectAssignable<Bar[]>(value)
-    expectAssignable<Bar[] | undefined>(oldVals)
+    expectType(value, {} as Reactive<Bar[]>)
+    expectType(oldVals, {} as Reactive<Bar[]> | undefined)
   },
   { immediate: true },
 )
 
 // reactive w/ readonly tuple
-watch(reactive([source, source2, source3] as const), (value, oldVals) => {
-  expectAssignable<Foo>(value)
-  expectAssignable<Foo | undefined>(oldVals)
-})
+watch(
+  reactive([source, source2, source3] as const),
+  (value, oldVals) => {
+    expectType(value, {} as Reactive<Foo>)
+    expectType(oldVals, {} as Reactive<Foo> | undefined)
+  },
+  { immediate: true },
+)
 
 // readonly array
 watch(
   readonlyArr,
   (values, oldValues) => {
-    expectAssignable<Readonly<[string, string, number]>>(values)
-    expectAssignable<
-      Readonly<[string | undefined, string | undefined, number | undefined]>
-    >(oldValues)
+    expectType(values, {} as [string, string, number])
+    expectType(
+      oldValues,
+      {} as [string | undefined, string | undefined, number | undefined],
+    )
   },
   { immediate: true },
 )
@@ -182,7 +189,7 @@ defineComponent({
   // defineModel
   const bool = defineModel({ default: false })
   watch(bool, value => {
-    expectAssignable<boolean>(value)
+    expectType(value, {} as false)
   })
 
   const bool1 = defineModel<boolean>()

@@ -54,7 +54,7 @@ describe('shallowReadonly ref unwrap', () => {
   const r = shallowReadonly({ count: { n: ref(1) } })
   // @ts-expect-error
   r.count = 2
-  expectAssignable<Ref>(r.count.n)
+  expectType(r.count.n, {} as Ref<number>)
   r.count.n.value = 123
 })
 

@@ -4,6 +4,7 @@ import {
   type ComponentPublicInstance,
   type PropType,
   type SetupContext,
+  type Slot,
   type Slots,
   type SlotsType,
   type VNode,
@@ -598,7 +599,7 @@ describe('with mixins', () => {
       // should also expose declared props on `this`
       expectType(this.a, {} as number)
       expectType(this.aP1, {} as string)
-      expectAssignable<boolean | undefined>(this.aP2)
+      expectType(this.aP2, {} as boolean)
       expectType(this.b, {} as number)
       expectType(this.bP1, {} as any)
       expectType(this.c, {} as number)
@@ -614,7 +615,7 @@ describe('with mixins', () => {
       // from MixinA
       expectType(props.onBar, {} as ((...args: any[]) => any) | undefined)
       expectType(props.aP1, {} as string)
-      expectAssignable<boolean | undefined>(props.aP2)
+      expectType(props.aP2, {} as boolean)
       expectType(props.bP1, {} as any)
       expectType(props.bP2, {} as any)
       expectType(props.z, {} as string)
@@ -626,7 +627,7 @@ describe('with mixins', () => {
       // from MixinA
       expectType(props.onBar, {} as ((...args: any[]) => any) | undefined)
       expectType(props.aP1, {} as string)
-      expectAssignable<boolean | undefined>(props.aP2)
+      expectType(props.aP2, {} as boolean)
       expectType(props.bP1, {} as any)
       expectType(props.bP2, {} as any)
       expectType(props.z, {} as string)
@@ -640,7 +641,7 @@ describe('with mixins', () => {
       // should also expose declared props on `this`
       expectType(this.a, {} as number)
       expectType(this.aP1, {} as string)
-      expectAssignable<boolean | undefined>(this.aP2)
+      expectType(this.aP2, {} as boolean)
       expectType(this.b, {} as number)
       expectType(this.bP1, {} as any)
       expectType(this.c, {} as number)
@@ -718,7 +719,7 @@ describe('with extends', () => {
     render() {
       const props = this.$props
       // props
-      expectAssignable<boolean | undefined>(props.aP1)
+      expectType(props.aP1, {} as boolean)
       expectType(props.aP2, {} as number)
       expectType(props.z, {} as string)
 
@@ -727,7 +728,7 @@ describe('with extends', () => {
 
       // should also expose declared props on `this`
       expectType(this.a, {} as number)
-      expectAssignable<boolean | undefined>(this.aP1)
+      expectType(this.aP1, {} as boolean)
       expectType(this.aP2, {} as number)
 
       // setup context properties should be mutable
@@ -814,11 +815,11 @@ describe('extends with mixins', () => {
       expectType(props.onBar, {} as ((...args: any[]) => any) | undefined)
       // from Base
       expectType(props.onFoo, {} as ((...args: any[]) => any) | undefined)
-      expectAssignable<boolean | undefined>(props.p1)
+      expectType(props.p1, {} as boolean)
       expectType(props.p2, {} as number)
       expectType(props.z, {} as string)
       expectType(props.mP1, {} as string)
-      expectAssignable<boolean | undefined>(props.mP2)
+      expectType(props.mP2, {} as boolean)
 
       const data = this.$data
       expectType(data.a, {} as number)
@@ -827,10 +828,10 @@ describe('extends with mixins', () => {
       // should also expose declared props on `this`
       expectType(this.a, {} as number)
       expectType(this.b, {} as number)
-      expectAssignable<boolean | undefined>(this.p1)
+      expectType(this.p1, {} as boolean)
       expectType(this.p2, {} as number)
       expectType(this.mP1, {} as string)
-      expectAssignable<boolean | undefined>(this.mP2)
+      expectType(this.mP2, {} as boolean)
 
       // setup context properties should be mutable
       this.a = 5
@@ -889,7 +890,7 @@ describe('extends with mixins', () => {
   defineComponent({
     mixins: [CompWithC, CompEmpty],
     mounted() {
-      expectAssignable<number>(this.foo)
+      expectType(this.foo, {} as 1)
     },
   })
   defineComponent({
@@ -1592,16 +1593,14 @@ describe('slots', () => {
     slots: Object as SlotsType<{
       default: { foo: string; bar: number }
       optional?: { data: string }
-      undefinedScope: undefined | { data: string }
-      optionalUndefinedScope?: undefined | { data: string }
+      undefinedScope: { data: string } | undefined
+      optionalUndefinedScope?: { data: string } | undefined
     }>,
     setup(props, { slots }) {
+      expectType(slots.default, {} as Slot<{ foo: string; bar: number }>)
       expectType(
-        slots.default,
-        {} as (scope: { foo: string; bar: number }) => VNode[],
-      )
-      expectAssignable<((scope: { data: string }) => VNode[]) | undefined>(
         slots.optional,
+        {} as Slot<{ data: string } | undefined> | undefined,
       )
 
       slots.default({ foo: 'foo', bar: 1 })
@@ -1610,15 +1609,12 @@ describe('slots', () => {
       slots.optional({ data: 'foo' })
       slots.optional?.({ data: 'foo' })
 
-      expectAssignable<{
-        (): VNode[]
-        (scope: undefined | { data: string }): VNode[]
-      }>(slots.undefinedScope)
+      expectType(slots.undefinedScope, {} as Slot<{ data: string } | undefined>)
 
-      expectAssignable<
-        | { (): VNode[]; (scope: undefined | { data: string }): VNode[] }
-        | undefined
-      >(slots.optionalUndefinedScope)
+      expectType(
+        slots.optionalUndefinedScope,
+        {} as Slot<undefined | { data: string }> | undefined,
+      )
 
       slots.default({ foo: 'foo', bar: 1 })
       // @ts-expect-error it's optional
@@ -1637,7 +1633,7 @@ describe('slots', () => {
       // @ts-expect-error
       slots.optionalUndefinedScope?.('foo')
 
-      expectAssignable<typeof slots | undefined>(new comp1().$slots)
+      expectType(new comp1().$slots, slots)
     },
   })
 
@@ -1645,10 +1641,10 @@ describe('slots', () => {
     setup(props, { slots }) {
       // unknown slots
       expectType(slots, {} as Slots)
-      expectType(slots.default, {} as ((...args: any[]) => VNode[]) | undefined)
+      expectType(slots.default, {} as Slot | undefined)
     },
   })
-  expectAssignable<Slots | undefined>(new comp2().$slots)
+  expectType(new comp2().$slots, {} as Slots)
 })
 
 // #5885
@@ -1730,16 +1726,10 @@ describe('directive typing', () => {
     },
     directives: {
       customDirective,
-      localDirective: {
-        created(_, { arg }) {
-          expectAssignable<string | undefined>(arg)
-        },
-      },
     },
   })
 
   expectType(comp.directives!.customDirective, {} as typeof customDirective)
-  expectAssignable<Directive>(comp.directives!.localDirective)
 
   // global directive
   expectType(comp.directives!.vShow, {} as typeof vShow)

@@ -64,7 +64,7 @@ describe('options component', () => {
   const compOptions: ComponentInstance<typeof CompOptions> = {} as any
   expectType(compOptions.test, {} as string | undefined)
   expectType(compOptions.a, {} as number)
-  expectAssignable<(a: string) => boolean>(compOptions.func)
+  expectType(compOptions.func, {} as (a: string) => true)
   expectAssignable<ComponentPublicInstance>(compOptions)
 })
 
@@ -82,7 +82,7 @@ describe('object no defineComponent', () => {
     },
   }
   const compObjectSetup: ComponentInstance<typeof CompObjectSetup> = {} as any
-  expectAssignable<string | undefined>(compObjectSetup.test)
+  expectType(compObjectSetup.test, {} as string)
   expectType(compObjectSetup.a, {} as number)
   expectAssignable<ComponentPublicInstance>(compObjectSetup)
 
@@ -97,7 +97,7 @@ describe('object no defineComponent', () => {
     },
   }
   const compObjectData: ComponentInstance<typeof CompObjectData> = {} as any
-  expectAssignable<string | undefined>(compObjectData.test)
+  expectType(compObjectData.test, {} as string)
   expectType(compObjectData.a, {} as number)
   expectAssignable<ComponentPublicInstance>(compObjectData)
 
@@ -110,7 +110,7 @@ describe('object no defineComponent', () => {
   }
   const compObjectNoProps: ComponentInstance<typeof CompObjectNoProps> =
     {} as any
-  expectAssignable<string | undefined>(compObjectNoProps.test)
+  expectType(compObjectNoProps.test, {} as never)
   expectType(compObjectNoProps.a, {} as number)
   expectAssignable<ComponentPublicInstance>(compObjectNoProps)
 })

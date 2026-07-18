@@ -7,7 +7,7 @@ import {
   provide,
   ref,
 } from 'vue'
-import { expectAssignable, expectType } from './utils'
+import { expectType } from './utils'
 
 // non-symbol keys
 provide('foo', 123)
@@ -28,8 +28,14 @@ expectType(
   {} as number,
 )
 
-expectAssignable<() => number>(inject('foo', () => 1))
-expectAssignable<() => number>(inject('foo', () => 1, false))
+expectType(
+  inject('foo', () => 1),
+  {} as () => 1,
+)
+expectType(
+  inject('foo', () => 1, false),
+  {} as () => 1,
+)
 expectType(
   inject('foo', () => 1, true),
   {} as number,

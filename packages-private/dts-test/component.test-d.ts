@@ -198,10 +198,10 @@ describe('object props', () => {
     expectType(props.object, {} as ExpectedProps['object'])
 
     // raw bindings
-    expectAssignable<Number>(rawBindings.setupA)
-    expectAssignable<Ref<Number>>(rawBindings.setupB)
-    expectAssignable<Ref<Number>>(rawBindings.setupC.a)
-    expectAssignable<Ref<Number> | undefined>(rawBindings.setupD)
+    expectType(rawBindings.setupA, {} as number)
+    expectType(rawBindings.setupB, {} as Ref<number>)
+    expectType(rawBindings.setupC.a, {} as Ref<number>)
+    expectType(rawBindings.setupD, {} as Ref<number> | undefined)
 
     // raw bindings props
     expectType(rawBindings.setupProps.a, {} as ExpectedProps['a'])
@@ -226,9 +226,9 @@ describe('object props', () => {
     )
 
     // setup
-    expectAssignable<Number>(setup.setupA)
-    expectAssignable<Number>(setup.setupB)
-    expectAssignable<Ref<Number>>(setup.setupC.a)
+    expectType(setup.setupA, {} as number)
+    expectType(setup.setupB, {} as number)
+    expectType(setup.setupC.a, {} as Ref<number>)
     expectType(setup.setupD, {} as number | undefined)
 
     // raw bindings props
@@ -357,10 +357,10 @@ describe('object props', () => {
     expectAssignable<ExpectedProps['object']>(props.object)
 
     // rawBindings
-    expectAssignable<Number>(rawBindings.setupA)
+    expectType(rawBindings.setupA, {} as number)
 
     //setup
-    expectAssignable<Number>(setup.setupA)
+    expectType(setup.setupA, {} as number)
   })
 })
 
