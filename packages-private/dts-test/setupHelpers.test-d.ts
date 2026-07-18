@@ -43,6 +43,16 @@ describe('defineProps w/ never prop', () => {
   expectType<number>(props.bar)
 })
 
+describe('defineProps w/ large union prop', () => {
+  type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+  type Icon = `${Digit}${Digit}${Digit}` | { name: string }
+
+  const props = defineProps<{
+    icon?: Icon
+  }>()
+  expectType<Icon | undefined>(props.icon)
+})
+
 describe('defineProps w/ generics', () => {
   function test<T extends boolean>() {
     const props = defineProps<{ foo: T; bar: string; x?: boolean }>()
