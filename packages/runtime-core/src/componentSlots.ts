@@ -56,7 +56,7 @@ export type UnwrapSlotsType<
       Prettify<{
         [K in keyof T]: NonNullable<T[K]> extends (...args: any[]) => any
           ? T[K]
-          : Slot<T[K]>
+          : Slot<Required<T>[K]>
       }>
     >
 
