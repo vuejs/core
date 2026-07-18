@@ -4,7 +4,6 @@ import {
   type ComponentPublicInstance,
   type PropType,
   type SetupContext,
-  type Slot,
   type Slots,
   type SlotsType,
   type VNode,
@@ -1597,10 +1596,15 @@ describe('slots', () => {
       optionalUndefinedScope?: { data: string } | undefined
     }>,
     setup(props, { slots }) {
-      expectType(slots.default, {} as Slot<{ foo: string; bar: number }>)
+      expectType(
+        slots.default,
+        {} as (...args: [scope: { foo: string; bar: number }]) => VNode[],
+      )
       expectType(
         slots.optional,
-        {} as Slot<{ data: string } | undefined> | undefined,
+        {} as
+          | ((...args: [] | [scope: { data: string } | undefined]) => VNode[])
+          | undefined,
       )
 
       slots.default({ foo: 'foo', bar: 1 })
@@ -1609,11 +1613,15 @@ describe('slots', () => {
       slots.optional({ data: 'foo' })
       slots.optional?.({ data: 'foo' })
 
-      expectType(slots.undefinedScope, {} as Slot<{ data: string } | undefined>)
+      expectType(
+        slots.undefinedScope,
+        {} as (...args: [] | [scope: { data: string }]) => VNode[],
+      )
 
       expectType(
         slots.optionalUndefinedScope,
-        {} as Slot<undefined | { data: string }> | undefined,
+        {} as
+          ((...args: [] | [scope: { data: string }]) => VNode[]) | undefined,
       )
 
       slots.default({ foo: 'foo', bar: 1 })
@@ -1641,7 +1649,7 @@ describe('slots', () => {
     setup(props, { slots }) {
       // unknown slots
       expectType(slots, {} as Slots)
-      expectType(slots.default, {} as Slot | undefined)
+      expectType(slots.default, {} as ((...args: any[]) => VNode[]) | undefined)
     },
   })
   expectType(new comp2().$slots, {} as Slots)
