@@ -1,3 +1,190 @@
+# [3.6.0-rc.1](https://github.com/vuejs/core/compare/v3.6.0-beta.17...v3.6.0-rc.1) (2026-07-18)
+# Vue 3.6.0-rc.1
+
+Vue 3.6 is now entering the RC phase as we have completed the intended feature set for Vapor Mode.
+
+3.6 also includes a major refactor of `@vue/reactivity` based on [alien-signals](https://github.com/stackblitz/alien-signals), which significantly improves the reactivity system's performance and memory usage.
+
+For more details about Vapor Mode, see the [About Vapor Mode](#about-vapor-mode) section later in this release note.
+
+
+
+### Bug Fixes
+
+* **hydration:** avoid resolving inherited fallback in forwarded slots ([4c215b5](https://github.com/vuejs/core/commit/4c215b5bd293e18f3a4c62b627a7696016afb982))
+* **hydration:** remove adopted SSR DOM for unresolved async setup ([3859af4](https://github.com/vuejs/core/commit/3859af4066edeba647e886decb9b4737d7f371cc))
+* **runtime-vapor:** avoid patching invalid VNode slot content ([25f5a8a](https://github.com/vuejs/core/commit/25f5a8ae6ed3df9c4e3fbaed0da32ce0466c5612))
+* **runtime-vapor:** clean up detached slot branches ([b41009d](https://github.com/vuejs/core/commit/b41009d41b21c98174b214eebd271d456215d177))
+* **runtime-vapor:** defer slot content anchors during hydration ([9b9e4bd](https://github.com/vuejs/core/commit/9b9e4bd6efdbce7de258d27e88155bff657d6ae9))
+* **runtime-vapor:** preserve outer pending slot anchors ([4af4bf9](https://github.com/vuejs/core/commit/4af4bf92a46426631ed6323e542227855b2fc86f))
+* **runtime-vapor:** preserve slot content anchors during mismatch recovery ([26f90b5](https://github.com/vuejs/core/commit/26f90b58977ee84569b5599700dbe9e864c880a4))
+* **runtime-vapor:** preserve v-show transition on vdom child ([#15074](https://github.com/vuejs/core/issues/15074)) ([fe882c9](https://github.com/vuejs/core/commit/fe882c93bb3ec37772126de1cb5c646edb56ace4)), closes [#15073](https://github.com/vuejs/core/issues/15073)
+* **runtime-vapor:** preserve vapor slot owner during interop slot dry run ([#15031](https://github.com/vuejs/core/issues/15031)) ([340630e](https://github.com/vuejs/core/commit/340630ea37388e12f176a11cadcbdfe8e55e5912))
+* **runtime-vapor:** preserve VNode anchors in dynamic component hydration ([898e2ca](https://github.com/vuejs/core/commit/898e2ca2441ea3ac064f3b38db47a0aa1b7a556d))
+* **runtime-vapor:** remove unsafe slot dry runs from vdom interop ([#15089](https://github.com/vuejs/core/issues/15089)) ([3d42cdf](https://github.com/vuejs/core/commit/3d42cdf380b23da000de0ff9d6c3de5d77e0b0d1)), closes [#14793](https://github.com/vuejs/core/issues/14793)
+* **runtime-vapor:** reuse hydration anchor candidates ([06778e7](https://github.com/vuejs/core/commit/06778e705aa87e35f6058c575c562c355a365523))
+* **vapor:** handle v-if and v-show on transition roots ([#15069](https://github.com/vuejs/core/issues/15069)) ([8f62f2e](https://github.com/vuejs/core/commit/8f62f2e57519dcb80c9b3b42588c77ee6d2b0a2f)), closes [#15068](https://github.com/vuejs/core/issues/15068)
+
+
+## About Vapor Mode
+
+Vapor Mode is a new compilation mode for Vue Single-File Components (SFCs) with the goal of reducing baseline bundle size and improving performance.
+
+It is 100% opt-in and supports a subset of existing Vue APIs with mostly identical behavior. Features that depend on VNodes or the component public instance proxy are not available in Vapor components.
+
+Vapor Mode has demonstrated the same level of performance as Solid and Svelte 5 in [third-party benchmarks](https://github.com/krausest/js-framework-benchmark).
+
+### General Stability Notes
+
+Vapor Mode is feature-complete in Vue 3.6 RC. For now, we recommend using it in the following cases:
+
+- Partial usage in existing apps, such as implementing a performance-sensitive page in Vapor Mode.
+- Building small new apps entirely in Vapor Mode.
+
+## Opting In to Vapor Mode
+
+Vapor Mode supports template-only SFCs and SFCs using `<script setup>`; the Options API is not supported. The following forms are supported:
+
+```vue
+<script setup vapor>
+// ...
+</script>
+```
+
+`<script vapor>` is shorthand for `<script setup vapor>`:
+
+```vue
+<script vapor>
+// ...
+</script>
+```
+
+The `vapor` marker can also be placed on the template, enabling Vapor compilation for the entire SFC:
+
+```vue
+<template vapor>
+  <!-- ... -->
+</template>
+```
+
+## Creating an App and Using VDOM Interop
+
+### Pure Vapor Applications
+
+Applications composed entirely of Vapor components can use `createVaporApp()`:
+
+```js
+import { createVaporApp } from 'vue'
+import App from './App.vue'
+
+createVaporApp(App).mount('#app')
+```
+
+Apps created this way avoid pulling in the Virtual DOM runtime code and allow the baseline bundle size to be drastically reduced.
+
+### Enabling VDOM Interop
+
+To use Vapor components in a VDOM app instance created via `createApp()`, the `vaporInteropPlugin` must be installed:
+
+```js
+import { createApp, vaporInteropPlugin } from 'vue'
+import App from './App.vue'
+
+createApp(App).use(vaporInteropPlugin).mount('#app')
+```
+
+A Vapor app instance can also install `vaporInteropPlugin` to allow VDOM components to be used inside, but this pulls in the VDOM runtime and offsets the benefits of a smaller bundle.
+
+Components authored with render functions or JSX remain VDOM components and also require interop when used in a Vapor application.
+
+When the interop plugin is installed, Vapor and non-Vapor components can be nested inside each other. This currently covers standard props, events, and slots usage, but does not yet account for all possible edge cases. For example, there may still be rough edges when using a VDOM-based component library in Vapor Mode.
+
+In general, we recommend having distinct regions in an app where one rendering mode or the other is used, and avoiding mixed nesting as much as possible.
+
+## Feature Compatibility
+
+By design, Vapor Mode supports a subset of existing Vue features. For the supported subset, we aim to deliver the same behavior according to the API specifications. The following features are currently unsupported or do not apply to Vapor Mode:
+
+- Options API
+- `app.config.globalProperties`
+- `getCurrentInstance()` returns `null` in Vapor components
+- `@vue:xxx` per-element lifecycle events
+- `v-memo`
+- Component template refs do not expose properties such as `$el`, `$props`, `$attrs`, `$slots`, and `$refs`
+
+## Important Usage Considerations
+
+### Event Delegation and `stopPropagation()`
+
+Vapor delegates eligible events to `document`. Each element stores its own handler, and a single document listener walks the event path and invokes matching handlers.
+
+If any ancestor calls `stopPropagation()`, the event never reaches `document`, and the delegated handler will not run.
+
+The following forms bypass delegation and attach the listener directly to the element:
+
+```vue
+<button @[event]="onClick" />
+<button v-bind="{ onClick }" />
+<button v-on="{ click: onClick }" />
+```
+
+### `slots.default()` Is Not a Safe Dry Run
+
+In Vapor, `slots.default()` is not a side-effect-free inspection API. Calling it executes the slot's rendering logic, which may create Blocks and DOM nodes, register reactive effects, and claim existing SSR DOM during hydration.
+
+Do not call a slot to inspect its output before deciding what else to render:
+
+```vue
+<script setup vapor>
+import { useSlots } from 'vue'
+
+const slots = useSlots()
+const content = slots.default?.()
+const showFallback = !content
+</script>
+
+<template>
+  <div v-if="showFallback">Fallback</div>
+</template>
+```
+
+Instead, leave slot rendering to the template:
+
+```vue
+<template>
+  <slot />
+</template>
+```
+
+### Custom Directives Use a Different Interface
+
+Custom directives in Vapor also have a different interface:
+
+```ts
+type VaporDirective = (
+  node: Element | VaporComponentInstance,
+  value?: () => any,
+  argument?: string,
+  modifiers?: DirectiveModifiers,
+) => (() => void) | void
+```
+
+`value` is a reactive getter that returns the binding value. Reactive effects can be set up using `watchEffect()` and are automatically released when the component unmounts. A directive may also return a cleanup function:
+
+```ts
+const MyDirective = (el, source) => {
+  watchEffect(() => {
+    el.textContent = source()
+  })
+  return () => console.log('cleanup')
+}
+```
+
+## Behavior Consistency
+
+Vapor Mode attempts to match VDOM Mode behavior as much as possible, but minor inconsistencies may still exist in edge cases because the two rendering modes are fundamentally different. In general, a minor inconsistency is not considered a breaking change unless the behavior has previously been documented.
+
+
 # [3.6.0-beta.17](https://github.com/vuejs/core/compare/v3.6.0-beta.16...v3.6.0-beta.17) (2026-06-24)
 
 
