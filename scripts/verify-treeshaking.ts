@@ -1,11 +1,10 @@
-// @ts-check
 import fs from 'node:fs'
-import { exec } from './utils.js'
+import { exec } from './utils'
 
 exec('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
-  const errors = []
+  const errors: string[] = []
 
-  const devBuild = fs.readFileSync(
+  const devBuild: string = fs.readFileSync(
     'packages/vue/dist/vue.runtime.global.js',
     'utf-8',
   )
@@ -18,7 +17,7 @@ exec('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
     )
   }
 
-  const prodBuild = fs.readFileSync(
+  const prodBuild: string = fs.readFileSync(
     'packages/vue/dist/vue.runtime.global.prod.js',
     'utf-8',
   )

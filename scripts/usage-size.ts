@@ -1,7 +1,6 @@
-// @ts-check
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { rollup } from 'rollup'
+import { type OutputChunk, rollup } from 'rollup'
 import nodeResolve from '@rollup/plugin-node-resolve'
 import { minify } from '@swc/core'
 import replace from '@rollup/plugin-replace'
@@ -21,18 +20,25 @@ const {
   },
 })
 
-const sizeDir = path.resolve('temp/size')
-const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const sizeDir: string = path.resolve('temp/size')
+const entry: string = path.resolve(
+  './packages/vue/dist/vue.runtime.esm-bundler.js',
+)
 
-/**
- * @typedef {Object} Preset
- * @property {string} name - The name of the preset
- * @property {string[]} imports - The imports that are part of this preset
- * @property {Record<string, string>} [replace]
- */
+interface Preset {
+  readonly name: string
+  readonly imports: string[]
+  readonly replace?: Record<string, string>
+}
 
-/** @type {Preset[]} */
-const presets = [
+interface BundleResult {
+  readonly name: string
+  readonly size: number
+  readonly gzip: number
+  readonly brotli: number
+}
+
+const presets: Preset[] = [
   {
     name: 'createApp (CAPI only)',
     imports: ['createApp'],
@@ -56,17 +62,13 @@ const presets = [
 
 main()
 
-/**
- * Main function that initiates the bundling process for the presets
- */
-async function main() {
+async function main(): Promise<void> {
   console.log()
-  /** @type {Promise<{name: string, size: number, gzip: number, brotli: number}>[]} */
-  const tasks = []
+  const tasks: Promise<BundleResult>[] = []
   for (const preset of presets) {
     tasks.push(generateBundle(preset))
   }
-  const results = await Promise.all(tasks)
+  const results: BundleResult[] = await Promise.all(tasks)
 
   for (const r of results) {
     console.log(
@@ -85,13 +87,7 @@ async function main() {
   )
 }
 
-/**
- * Generates a bundle for a given preset
- *
- * @param {Preset} preset - The preset to generate the bundle for
- * @returns {Promise<{name: string, size: number, gzip: number, brotli: number}>} - The result of the bundling process
- */
-async function generateBundle(preset) {
+async function generateBundle(preset: Preset): Promise<BundleResult> {
   const id = 'virtual:entry'
   const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
 
@@ -100,12 +96,13 @@ async function generateBundle(preset) {
     plugins: [
       {
         name: 'usage-size-plugin',
-        resolveId(_id) {
+        resolveId(_id: string): string | null {
           if (_id === id) return id
           return null
         },
-        load(_id) {
+        load(_id: string): string | undefined {
           if (_id === id) return content
+          return undefined
         },
       },
       nodeResolve(),
@@ -121,17 +118,17 @@ async function generateBundle(preset) {
   })
 
   const generated = await result.generate({})
-  const bundled = generated.output[0].code
-  const minified = (
+  const bundled: string = (generated.output[0] as OutputChunk).code
+  const minified: string = (
     await minify(bundled, {
       module: true,
       toplevel: true,
     })
   ).code
 
-  const size = minified.length
-  const gzip = gzipSync(minified).length
-  const brotli = brotliCompressSync(minified).length
+  const size: number = minified.length
+  const gzip: number = gzipSync(minified).length
+  const brotli: number = brotliCompressSync(minified).length
 
   if (write) {
     await writeFile(path.resolve(sizeDir, preset.name + '.js'), bundled)

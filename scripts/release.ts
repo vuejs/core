@@ -9,14 +9,12 @@ import { fileURLToPath } from 'node:url'
 import { exec } from './utils.js'
 import { parseArgs } from 'node:util'
 
-/**
- * @typedef {{
- *   name: string
- *   version: string
- *   dependencies?: { [dependenciesPackageName: string]: string }
- *   peerDependencies?: { [peerDependenciesPackageName: string]: string }
- * }} Package
- */
+type Package = {
+  name: string
+  version: string
+  dependencies?: { [dependenciesPackageName: string]: string }
+  peerDependencies?: { [peerDependenciesPackageName: string]: string }
+}
 
 let versionUpdated = false
 
@@ -61,10 +59,14 @@ const { values: args, positionals } = parseArgs({
   },
 })
 
-const preId = args.preid || semver.prerelease(currentVersion)?.[0]
+const preId: string | undefined =
+  typeof args.preid === 'string'
+    ? args.preid
+    : typeof semver.prerelease(currentVersion)?.[0] === 'string'
+      ? (semver.prerelease(currentVersion)?.[0] as string)
+      : undefined
 const isDryRun = args.dry
-/** @type {boolean | undefined} */
-let skipTests = args.skipTests
+let skipTests: boolean | undefined = args.skipTests
 const skipBuild = args.skipBuild
 const skipPrompts = args.skipPrompts
 const skipGit = args.skipGit
@@ -82,63 +84,52 @@ const packages = fs
     return !pkg.private
   })
 
-const sortPackagesForPublishing = (/** @type {string[]} */ packageNames) => [
-  // Publish vue last so users cannot install the new entry package before
-  // the matching internal packages are available.
+const sortPackagesForPublishing = (packageNames: string[]) => [
   ...packageNames.filter(p => p !== 'vue'),
   ...packageNames.filter(p => p === 'vue'),
 ]
 
-const isCorePackage = (/** @type {string} */ pkgName) => {
-  if (!pkgName) return
+const keepThePackageName = (pkgName: string) => pkgName
 
-  if (pkgName === 'vue' || pkgName === '@vue/compat') {
-    return true
-  }
-
-  return (
-    pkgName.startsWith('@vue') &&
-    packages.includes(pkgName.replace(/^@vue\//, ''))
-  )
-}
-
-const keepThePackageName = (/** @type {string} */ pkgName) => pkgName
-
-/** @type {string[]} */
-const alreadyPublishedPackages = []
+const alreadyPublishedPackages: string[] = []
 
 /** @type {ReadonlyArray<import('semver').ReleaseType>} */
-const versionIncrements = [
+const versionIncrements: Array<import('semver').ReleaseType> = [
   'patch',
   'minor',
   'major',
   ...(preId
-    ? /** @type {const} */ (['prepatch', 'preminor', 'premajor', 'prerelease'])
+    ? ([
+        'prepatch',
+        'preminor',
+        'premajor',
+        'prerelease',
+      ] as import('semver').ReleaseType[])
     : []),
 ]
 
-const inc = (/** @type {import('semver').ReleaseType} */ i) =>
-  semver.inc(currentVersion, i, typeof preId === 'string' ? preId : undefined)
+const inc = (i: import('semver').ReleaseType): string | null =>
+  preId ? semver.inc(currentVersion, i, preId) : semver.inc(currentVersion, i)
 const run = async (
-  /** @type {string} */ bin,
-  /** @type {ReadonlyArray<string>} */ args,
-  /** @type {import('node:child_process').SpawnOptions} */ opts = {},
-) => exec(bin, args, { stdio: 'inherit', ...opts })
+  bin: string,
+  args: ReadonlyArray<string>,
+  opts: import('node:child_process').SpawnOptions = {},
+): Promise<{ stdout: string; stderr: string }> =>
+  exec(bin, [...args]) as Promise<{ stdout: string; stderr: string }>
 const dryRun = async (
-  /** @type {string} */ bin,
-  /** @type {ReadonlyArray<string>} */ args,
-  /** @type {import('node:child_process').SpawnOptions} */ opts = {},
+  bin: string,
+  args: ReadonlyArray<string>,
+  opts: import('node:child_process').SpawnOptions = {},
 ) => console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
 const runIfNotDry = isDryRun ? dryRun : run
-const getPkgRoot = (/** @type {string} */ pkg) =>
+const getPkgRoot = (/** @type {string} */ pkg: string) =>
   path.resolve(__dirname, '../packages/' + pkg)
-const getPkgManifest = (/** @type {string} */ pkg) =>
-  /** @type {Package} */ (
-    JSON.parse(
-      fs.readFileSync(path.resolve(getPkgRoot(pkg), 'package.json'), 'utf-8'),
-    )
+const getPkgManifest = (/** @type {string} */ pkg: string) =>
+  JSON.parse(
+    fs.readFileSync(path.resolve(getPkgRoot(pkg), 'package.json'), 'utf-8'),
   )
-const step = (/** @type {string} */ msg) => console.log(pico.cyan(msg))
+const step = (msg: string | number | null | undefined) =>
+  console.log(pico.cyan(msg))
 
 async function main() {
   if (!(await isInSyncWithRemote())) {
@@ -151,8 +142,7 @@ async function main() {
 
   if (!targetVersion) {
     // no explicit version, offer suggestions
-    /** @type {{ release: string }} */
-    const { release } = await prompt({
+    const { release }: { release: string } = await prompt({
       type: 'select',
       name: 'release',
       message: 'Select release type',
@@ -162,34 +152,32 @@ async function main() {
     })
 
     if (release === 'custom') {
-      /** @type {{ version: string }} */
-      const result = await prompt({
+      const { version }: { version: string } = await prompt({
         type: 'input',
         name: 'version',
         message: 'Input custom version',
         initial: currentVersion,
       })
-      targetVersion = result.version
+      targetVersion = version
     } else {
       targetVersion = release.match(/\((.*)\)/)?.[1] ?? ''
     }
   }
 
-  // @ts-expect-error
-  if (versionIncrements.includes(targetVersion)) {
-    // @ts-expect-error
-    targetVersion = inc(targetVersion)
+  if (
+    versionIncrements.includes(targetVersion as import('semver').ReleaseType)
+  ) {
+    targetVersion = inc(targetVersion as import('semver').ReleaseType)!
   }
 
-  if (!semver.valid(targetVersion)) {
+  if (!semver.valid(targetVersion!)) {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
 
   if (skipPrompts) {
     step(`Releasing v${targetVersion}...`)
   } else {
-    /** @type {{ yes: boolean }} */
-    const { yes: confirmRelease } = await prompt({
+    const { yes: confirmRelease }: { yes: boolean } = await prompt({
       type: 'confirm',
       name: 'yes',
       message: `Releasing v${targetVersion}. Confirm?`,
@@ -204,7 +192,7 @@ async function main() {
 
   // update all package versions and inter-dependencies
   step('\nUpdating cross dependencies...')
-  updateVersions(targetVersion, keepThePackageName)
+  updateVersions(targetVersion!, keepThePackageName)
   versionUpdated = true
 
   // generate changelog
@@ -212,8 +200,7 @@ async function main() {
   await run(`pnpm`, ['run', 'changelog'])
 
   if (!skipPrompts) {
-    /** @type {{ yes: boolean }} */
-    const { yes: changelogOk } = await prompt({
+    const { yes: changelogOk }: { yes: boolean } = await prompt({
       type: 'confirm',
       name: 'yes',
       message: `Changelog generated. Does it look good?`,
@@ -229,7 +216,9 @@ async function main() {
   await run(`pnpm`, ['install', '--prefer-offline'])
 
   if (!skipGit) {
-    const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
+    const { stdout }: { stdout: string } = await run('git', ['diff'], {
+      stdio: 'pipe',
+    })
     if (stdout) {
       step('\nCommitting changes...')
       await runIfNotDry('git', ['add', '-A'])
@@ -248,8 +237,8 @@ async function main() {
   // push to GitHub
   if (!skipGit) {
     step('\nPushing to GitHub...')
-    await runIfNotDry('git', ['tag', `v${targetVersion}`])
-    await runIfNotDry('git', ['push', 'origin', `refs/tags/v${targetVersion}`])
+    await runIfNotDry('git', ['tag', `v${targetVersion!}`])
+    await runIfNotDry('git', ['push', 'origin', `refs/tags/v${targetVersion!}`])
     await runIfNotDry('git', ['push'])
   }
 
@@ -286,8 +275,7 @@ async function runTestsIfNeeded() {
 
     if (isCIPassed) {
       if (!skipPrompts) {
-        /** @type {{ yes: boolean }} */
-        const { yes: promptSkipTests } = await prompt({
+        const { yes: promptSkipTests }: { yes: boolean } = await prompt({
           type: 'confirm',
           name: 'yes',
           message: `CI for this commit passed. Skip local tests?`,
@@ -323,8 +311,8 @@ async function getCIResult() {
       `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
         `&status=success&exclude_pull_requests=true`,
     )
-    /** @type {{ workflow_runs: ({ name: string, conclusion: string })[] }} */
-    const data = await res.json()
+    const data: { workflow_runs: { name: string; conclusion: string }[] } =
+      await res.json()
     return data.workflow_runs.some(({ name, conclusion }) => {
       return name === 'ci' && conclusion === 'success'
     })
@@ -344,8 +332,7 @@ async function isInSyncWithRemote() {
     if (data.sha === (await getSha())) {
       return true
     } else {
-      /** @type {{ yes: boolean }} */
-      const { yes } = await prompt({
+      const { yes }: { yes: boolean } = await prompt({
         type: 'confirm',
         name: 'yes',
         message: pico.red(
@@ -362,19 +349,18 @@ async function isInSyncWithRemote() {
   }
 }
 
-async function getSha() {
+async function getSha(): Promise<string> {
   return (await exec('git', ['rev-parse', 'HEAD'])).stdout
 }
 
-async function getBranch() {
+async function getBranch(): Promise<string> {
   return (await exec('git', ['rev-parse', '--abbrev-ref', 'HEAD'])).stdout
 }
 
-/**
- * @param {string} version
- * @param {(pkgName: string) => string} getNewPackageName
- */
-function updateVersions(version, getNewPackageName = keepThePackageName) {
+function updateVersions(
+  version: string,
+  getNewPackageName: (pkgName: string) => string = keepThePackageName,
+) {
   // 1. update root package.json
   updatePackage(path.resolve(__dirname, '..'), version, getNewPackageName)
   // 2. update all packages
@@ -383,15 +369,13 @@ function updateVersions(version, getNewPackageName = keepThePackageName) {
   )
 }
 
-/**
- * @param {string} pkgRoot
- * @param {string} version
- * @param {(pkgName: string) => string} getNewPackageName
- */
-function updatePackage(pkgRoot, version, getNewPackageName) {
+function updatePackage(
+  pkgRoot: string,
+  version: string,
+  getNewPackageName: (pkgName: string) => string,
+) {
   const pkgPath = path.resolve(pkgRoot, 'package.json')
-  /** @type {Package} */
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+  const pkg: Package = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
   pkg.name = getNewPackageName(pkg.name)
   pkg.version = version
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
@@ -409,7 +393,7 @@ async function buildPackages() {
 /**
  * @param {string} version
  */
-async function publishPackages(version) {
+async function publishPackages(version: string) {
   // publish packages
   step('\nPublishing packages...')
 
@@ -436,7 +420,11 @@ async function publishPackages(version) {
  * @param {string} version
  * @param {ReadonlyArray<string>} additionalFlags
  */
-async function publishPackage(pkgName, version, additionalFlags) {
+async function publishPackage(
+  pkgName: string,
+  version: string,
+  additionalFlags: ReadonlyArray<string>,
+) {
   const packageName = getPkgManifest(pkgName).name
 
   let releaseTag = null
@@ -477,8 +465,8 @@ async function publishPackage(pkgName, version, additionalFlags) {
       },
     )
     console.log(pico.green(`Successfully published ${packageName}@${version}`))
-  } catch (/** @type {any} */ e) {
-    if (e.message?.match(/previously published/)) {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.message?.match(/previously published/)) {
       const pkgVersion = `${packageName}@${version}`
       console.log(pico.red(`Skipping already published: ${pkgVersion}`))
       alreadyPublishedPackages.push(pkgVersion)
@@ -489,8 +477,8 @@ async function publishPackage(pkgName, version, additionalFlags) {
 }
 
 async function isPackagePublished(
-  /** @type {string} */ packageName,
-  /** @type {string} */ version,
+  /** @type {string} */ packageName: string,
+  /** @type {string} */ version: string,
 ) {
   try {
     await run(
@@ -504,15 +492,15 @@ async function isPackagePublished(
       { stdio: 'pipe' },
     )
     return true
-  } catch (/** @type {any} */ e) {
-    if (isPackageNotFoundError(e)) {
+  } catch (e: unknown) {
+    if (isPackageNotFoundError(e as Error)) {
       return false
     }
     throw e
   }
 }
 
-function isPackageNotFoundError(/** @type {Error} */ error) {
+function isPackageNotFoundError(/** @type {Error} */ error: Error) {
   return /E404|No match found|No matching version|notarget/i.test(error.message)
 }
 

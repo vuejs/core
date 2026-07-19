@@ -12,7 +12,7 @@ import polyfillNode from 'rollup-plugin-polyfill-node'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
-import { entries } from './scripts/aliases.js'
+import { entries } from './scripts/aliases.ts'
 import { inlineEnums } from './scripts/inline-enums.js'
 import { minify as minifySwc } from '@swc/core'
 

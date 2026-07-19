@@ -1,4 +1,3 @@
-// @ts-check
 import fs from 'node:fs'
 import pico from 'picocolors'
 import { createRequire } from 'node:module'
@@ -6,7 +5,7 @@ import { spawn } from 'node:child_process'
 
 const require = createRequire(import.meta.url)
 
-export const targets = fs
+export const targets: string[] = fs
   .readdirSync('packages')
   .filter(f => {
     if (
@@ -16,21 +15,15 @@ export const targets = fs
       return false
     }
     const pkg = require(`../packages/${f}/package.json`)
-    if (pkg.private && !pkg.buildOptions) {
-      return false
-    }
-    return true
+    return !(pkg.private && !pkg.buildOptions)
   })
   .concat('template-explorer')
 
-/**
- *
- * @param {ReadonlyArray<string>} partialTargets
- * @param {boolean | undefined} includeAllMatching
- */
-export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
-  /** @type {Array<string>} */
-  const matched = []
+export function fuzzyMatchTarget(
+  partialTargets: ReadonlyArray<string>,
+  includeAllMatching: boolean | undefined,
+): string[] {
+  const matched: string[] = []
   partialTargets.forEach(partialTarget => {
     for (const target of targets) {
       if (target.match(partialTarget)) {
@@ -56,31 +49,29 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
   }
 }
 
-/**
- * @param {string} command
- * @param {ReadonlyArray<string>} args
- * @param {object} [options]
- */
-export async function exec(command, args, options) {
-  return new Promise((resolve, reject) => {
+interface ExecResult {
+  readonly ok: boolean
+  readonly code: number | null
+  readonly stderr: string
+  readonly stdout: string
+}
+
+export async function exec(
+  command: string,
+  args: string[],
+): Promise<ExecResult> {
+  return new Promise<ExecResult>((resolve, reject): void => {
     const _process = spawn(command, args, {
       stdio: [
         'ignore', // stdin
         'pipe', // stdout
         'pipe', // stderr
       ],
-      ...options,
       shell: process.platform === 'win32',
     })
 
-    /**
-     * @type {Buffer[]}
-     */
-    const stderrChunks = []
-    /**
-     * @type {Buffer[]}
-     */
-    const stdoutChunks = []
+    const stderrChunks: Buffer[] = []
+    const stdoutChunks: Buffer[] = []
 
     _process.stderr?.on('data', chunk => {
       stderrChunks.push(chunk)

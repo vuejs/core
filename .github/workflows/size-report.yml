@@ -69,7 +69,7 @@ jobs:
           if_no_artifact_found: warn
 
       - name: Prepare report
-        run: node scripts/size-report.js > size-report.md
+        run: node scripts/size-report.ts > size-report.md
 
       - name: Read Size Report
         id: size-report

@@ -1,28 +1,10 @@
-// @ts-check
-
-/*
-Produces production builds and stitches together d.ts files.
-
-To specify the package to build, simply pass its name and the desired build
-formats to output (defaults to `buildOptions.formats` specified in that package,
-or "esm,cjs"):
-
-```
-# name supports fuzzy match. will build all packages with name containing "dom":
-nr build dom
-
-# specify the format to output
-nr build core --formats cjs
-```
-*/
-
 import fs from 'node:fs'
 import { parseArgs } from 'node:util'
 import path from 'node:path'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
 import { cpus } from 'node:os'
-import { targets as allTargets, exec, fuzzyMatchTarget } from './utils.js'
+import { targets as allTargets, exec, fuzzyMatchTarget } from './utils'
 import { scanEnums } from './inline-enums.js'
 import prettyBytes from 'pretty-bytes'
 import { spawnSync } from 'node:child_process'
@@ -82,7 +64,7 @@ const sizeDir = path.resolve('temp/size')
 
 run()
 
-async function run() {
+async function run(): Promise<void> {
   if (writeSize) fs.mkdirSync(sizeDir, { recursive: true })
   const removeCache = scanEnums()
   try {
@@ -92,19 +74,13 @@ async function run() {
     await buildAll(resolvedTargets)
     await checkAllSizes(resolvedTargets)
     if (buildTypes) {
-      await exec(
-        'pnpm',
-        [
-          'run',
-          'build-dts',
-          ...(targets.length
-            ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
-            : []),
-        ],
-        {
-          stdio: 'inherit',
-        },
-      )
+      await exec('pnpm', [
+        'run',
+        'build-dts',
+        ...(targets.length
+          ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
+          : []),
+      ])
     }
   } finally {
     removeCache()
@@ -116,7 +92,7 @@ async function run() {
  * @param {Array<string>} targets - An array of targets to build.
  * @returns {Promise<void>} - A promise representing the build process.
  */
-async function buildAll(targets) {
+async function buildAll(targets: Array<string>): Promise<void> {
   await runParallel(cpus().length, targets, build)
 }
 
@@ -128,11 +104,16 @@ async function buildAll(targets) {
  * @param {(item: T) => Promise<void>} iteratorFn - The iteratorFn
  * @returns {Promise<void[]>} - A Promise array containing all iteration results.
  */
-async function runParallel(maxConcurrency, source, iteratorFn) {
+
+async function runParallel<T>(
+  maxConcurrency: number,
+  source: Array<T>,
+  iteratorFn: (item: T) => Promise<void>,
+): Promise<void[]> {
   /**@type {Promise<void>[]} */
   const ret = []
   /**@type {Promise<void>[]} */
-  const executing = []
+  const executing: Promise<void>[] = []
   for (const item of source) {
     const p = Promise.resolve().then(() => iteratorFn(item))
     ret.push(p)
@@ -157,7 +138,7 @@ const privatePackages = fs.readdirSync('packages-private')
  * @param {string} target - The target to build.
  * @returns {Promise<void>} - A promise representing the build process.
  */
-async function build(target) {
+async function build(target: string): Promise<void> {
   const pkgBase = privatePackages.includes(target)
     ? `packages-private`
     : `packages`
@@ -178,32 +159,26 @@ async function build(target) {
     (pkg.buildOptions && pkg.buildOptions.env) ||
     (devOnly ? 'development' : 'production')
 
-  await exec(
-    'rollup',
+  await exec('rollup', [
+    '-c',
+    '--environment',
     [
-      '-c',
-      '--environment',
-      [
-        `COMMIT:${commit}`,
-        `NODE_ENV:${env}`,
-        `TARGET:${target}`,
-        formats ? `FORMATS:${formats}` : ``,
-        prodOnly ? `PROD_ONLY:true` : ``,
-        sourceMap ? `SOURCE_MAP:true` : ``,
-      ]
-        .filter(Boolean)
-        .join(','),
-    ],
-    { stdio: 'inherit' },
-  )
+      `COMMIT:${commit}`,
+      `NODE_ENV:${env}`,
+      `TARGET:${target}`,
+      formats ? `FORMATS:${formats}` : ``,
+      prodOnly ? `PROD_ONLY:true` : ``,
+      sourceMap ? `SOURCE_MAP:true` : ``,
+    ]
+      .filter(Boolean)
+      .join(','),
+  ])
 }
 
 /**
  * Checks the sizes of all targets.
- * @param {string[]} targets - The targets to check sizes for.
- * @returns {Promise<void>}
  */
-async function checkAllSizes(targets) {
+async function checkAllSizes(targets: string[]): Promise<void> {
   if (devOnly || (formats && !formats.includes('global'))) {
     return
   }
@@ -214,12 +189,7 @@ async function checkAllSizes(targets) {
   console.log()
 }
 
-/**
- * Checks the size of a target.
- * @param {string} target - The target to check the size for.
- * @returns {Promise<void>}
- */
-async function checkSize(target) {
+async function checkSize(target: string): Promise<void> {
   const pkgDir = path.resolve(`packages/${target}`)
   await checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
   if (!formats || formats.includes('global-runtime')) {
@@ -232,7 +202,7 @@ async function checkSize(target) {
  * @param {string} filePath - The path of the file to check the size for.
  * @returns {Promise<void>}
  */
-async function checkFileSize(filePath) {
+async function checkFileSize(filePath: string): Promise<void> {
   if (!fs.existsSync(filePath)) {
     return
   }
