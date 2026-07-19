@@ -16,7 +16,7 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "removeComments": false,
+    "noEmit": true,
     "jsx": "preserve",
     "lib": ["es2016", "dom"],
     "types": ["vitest/globals", "puppeteer", "node"],

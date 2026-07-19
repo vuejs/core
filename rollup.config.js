@@ -285,7 +285,7 @@ function createConfig(format, output, plugins = []) {
   function resolveNodePlugins() {
     // we are bundling forked consolidate.js in compiler-sfc which dynamically
     // requires a ton of template engines which should be ignored.
-    /** @type {ReadonlyArray<string>} */
+    /** @type {(string|string)[]} */
     let cjsIgnores = []
     if (pkg.name === '@vue/compiler-sfc') {
       cjsIgnores = [
