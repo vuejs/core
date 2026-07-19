@@ -6,7 +6,7 @@ import semver from 'semver'
 import enquirer from 'enquirer'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { exec } from './utils.js'
+import { exec } from './utils.ts'
 import { parseArgs } from 'node:util'
 
 type Package = {

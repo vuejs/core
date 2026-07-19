@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { exec } from './utils'
+import { exec } from './utils.ts'
 
 exec('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
   const errors: string[] = []
