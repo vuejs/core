@@ -3,6 +3,8 @@
   "compilerOptions": {
     "types": ["node"],
     "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
     "stripInternal": true,
     "composite": false
   },
