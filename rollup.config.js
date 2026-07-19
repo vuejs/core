@@ -1,20 +1,20 @@
 // @ts-check
-import assert from 'node:assert/strict'
-import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
-import fs from 'node:fs'
-import path from 'node:path'
-import replace from '@rollup/plugin-replace'
-import json from '@rollup/plugin-json'
-import pico from 'picocolors'
-import commonJS from '@rollup/plugin-commonjs'
-import polyfillNode from 'rollup-plugin-polyfill-node'
-import { nodeResolve } from '@rollup/plugin-node-resolve'
-import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
+import commonJS from '@rollup/plugin-commonjs'
+import json from '@rollup/plugin-json'
+import { nodeResolve } from '@rollup/plugin-node-resolve'
+import replace from '@rollup/plugin-replace'
+import { minify as minifySwc } from '@swc/core'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import { createRequire } from 'node:module'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import pico from 'picocolors'
+import esbuild from 'rollup-plugin-esbuild'
+import polyfillNode from 'rollup-plugin-polyfill-node'
 import { entries } from './scripts/aliases.ts'
 import { inlineEnums } from './scripts/inline-enums.ts'
-import { minify as minifySwc } from '@swc/core'
 
 /**
  * @template T
@@ -87,7 +87,7 @@ const outputConfigs = {
   },
 }
 
-/** @type {ReadonlyArray<PackageFormat>} */
+/** @type {(string)[]} */
 const defaultFormats = ['esm-bundler', 'cjs']
 /** @type {ReadonlyArray<PackageFormat>} */
 const inlineFormats = /** @type {any} */ (
@@ -300,20 +300,18 @@ function createConfig(format, output, plugins = []) {
       ]
     }
 
-    const nodePlugins =
-      (format === 'cjs' && Object.keys(pkg.devDependencies || {}).length) ||
+    return (format === 'cjs' &&
+      Object.keys(pkg.devDependencies || {}).length) ||
       packageOptions.enableNonBrowserBranches
-        ? [
-            commonJS({
-              sourceMap: false,
-              ignore: cjsIgnores,
-            }),
-            ...(format === 'cjs' ? [] : [polyfillNode()]),
-            nodeResolve(),
-          ]
-        : []
-
-    return nodePlugins
+      ? [
+          commonJS({
+            sourceMap: false,
+            ignore: cjsIgnores,
+          }),
+          ...(format === 'cjs' ? [] : [polyfillNode()]),
+          nodeResolve(),
+        ]
+      : []
   }
 
   return {

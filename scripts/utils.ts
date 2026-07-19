@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import pico from 'picocolors'
 import { createRequire } from 'node:module'
-import { spawn } from 'node:child_process'
+import { type SpawnOptions, spawn } from 'node:child_process'
 
 const require = createRequire(import.meta.url)
 
@@ -59,6 +59,7 @@ interface ExecResult {
 export async function exec(
   command: string,
   args: string[],
+  opts: SpawnOptions = {},
 ): Promise<ExecResult> {
   return new Promise<ExecResult>((resolve, reject): void => {
     const _process = spawn(command, args, {
@@ -68,6 +69,7 @@ export async function exec(
         'pipe', // stderr
       ],
       shell: process.platform === 'win32',
+      ...opts,
     })
 
     const stderrChunks: Buffer[] = []

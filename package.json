@@ -8,7 +8,7 @@
     "build": "node scripts/build.ts",
     "build-dts": "tsc -p tsconfig.build.json --noCheck && rollup -c rollup.dts.config.js",
     "clean": "rimraf --glob packages/*/dist temp .eslintcache",
-    "size": "run-s \"size-*\" && tsx scripts/usage-size.ts",
+    "size": "run-s \"size-*\" && node scripts/usage-size.ts",
     "size-global": "node scripts/build.ts vue runtime-dom -f global -p --size",
     "size-esm-runtime": "node scripts/build.ts vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.ts runtime-dom runtime-core reactivity shared -f esm-bundler",

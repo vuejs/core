@@ -11,6 +11,8 @@
  * This file is expected to be executed with project root as cwd.
  */
 
+import type { Expression, PrivateName } from '@babel/types'
+import type { Plugin } from 'rollup'
 import * as assert from 'node:assert'
 import {
   existsSync,
@@ -114,11 +116,7 @@ export function scanEnums() {
               }
               // e.g. 1 << 2
               else if (init.type === 'BinaryExpression') {
-                const resolveValue = (
-                  node:
-                    | import('@babel/types').Expression
-                    | import('@babel/types').PrivateName,
-                ) => {
+                const resolveValue = (node: Expression | PrivateName) => {
                   assert.ok(typeof node.start === 'number')
                   assert.ok(typeof node.end === 'number')
                   if (
@@ -127,11 +125,7 @@ export function scanEnums() {
                   ) {
                     return node.value
                   } else if (node.type === 'MemberExpression') {
-                    const exp =
-                      /** @type {`${string}.${string}`} */ content.slice(
-                        node.start,
-                        node.end,
-                      )
+                    const exp = content.slice(node.start, node.end)
                     if (!(exp in defines)) {
                       throw new Error(
                         `unhandled enum initialization expression ${exp} in ${file}`,
@@ -200,7 +194,6 @@ export function scanEnums() {
   // 3. save cache
   if (!existsSync('temp')) mkdirSync('temp')
 
-  /** @type {EnumData} */
   const enumData: EnumData = {
     declarations,
     defines,
@@ -213,27 +206,21 @@ export function scanEnums() {
   }
 }
 
-/**
- * @returns {[import('rollup').Plugin, Record<string, string>]}
- */
-export function inlineEnums(): any[] {
+export function inlineEnums(): [Plugin, Record<string, string>] {
   if (!existsSync(ENUM_CACHE_PATH)) {
     throw new Error('enum cache needs to be initialized before creating plugin')
   }
-  /**
-   * @type {EnumData}
-   */
+
   const enumData: EnumData = JSON.parse(readFileSync(ENUM_CACHE_PATH, 'utf-8'))
 
   // 3. during transform:
   //    3.1 files w/ enum declaration: rewrite declaration as object literal
   //    3.2 files using enum: inject into esbuild define
   /**
-   * @type {import('rollup').Plugin}
    */
-  const plugin: import('rollup').Plugin = {
+  const plugin = {
     name: 'inline-enum',
-    transform(code, id) {
+    transform(code: string, id: string) {
       let s: MagicString | undefined
 
       if (id in enumData.declarations) {

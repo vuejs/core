@@ -2,14 +2,15 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import pico from 'picocolors'
-import semver from 'semver'
+import type { ReleaseType } from 'semver'
 import enquirer from 'enquirer'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { exec } from './utils.ts'
+import { exec } from './utils'
 import { parseArgs } from 'node:util'
+import semver from 'semver/preload'
 
-type Package = {
+interface Package {
   name: string
   version: string
   dependencies?: { [dependenciesPackageName: string]: string }
@@ -93,8 +94,7 @@ const keepThePackageName = (pkgName: string) => pkgName
 
 const alreadyPublishedPackages: string[] = []
 
-/** @type {ReadonlyArray<import('semver').ReleaseType>} */
-const versionIncrements: Array<import('semver').ReleaseType> = [
+const versionIncrements: Array<ReleaseType> = [
   'patch',
   'minor',
   'major',
@@ -108,23 +108,23 @@ const versionIncrements: Array<import('semver').ReleaseType> = [
     : []),
 ]
 
-const inc = (i: import('semver').ReleaseType): string | null =>
+const inc = (i: ReleaseType): string | null =>
   preId ? semver.inc(currentVersion, i, preId) : semver.inc(currentVersion, i)
 const run = async (
   bin: string,
   args: ReadonlyArray<string>,
   opts: import('node:child_process').SpawnOptions = {},
 ): Promise<{ stdout: string; stderr: string }> =>
-  exec(bin, [...args]) as Promise<{ stdout: string; stderr: string }>
+  exec(bin, [...args], opts) as Promise<{ stdout: string; stderr: string }>
 const dryRun = async (
   bin: string,
   args: ReadonlyArray<string>,
   opts: import('node:child_process').SpawnOptions = {},
 ) => console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
 const runIfNotDry = isDryRun ? dryRun : run
-const getPkgRoot = (/** @type {string} */ pkg: string) =>
+const getPkgRoot = (pkg: string) =>
   path.resolve(__dirname, '../packages/' + pkg)
-const getPkgManifest = (/** @type {string} */ pkg: string) =>
+const getPkgManifest = (pkg: string) =>
   JSON.parse(
     fs.readFileSync(path.resolve(getPkgRoot(pkg), 'package.json'), 'utf-8'),
   )
@@ -390,9 +390,6 @@ async function buildPackages() {
   }
 }
 
-/**
- * @param {string} version
- */
 async function publishPackages(version: string) {
   // publish packages
   step('\nPublishing packages...')
@@ -415,11 +412,6 @@ async function publishPackages(version: string) {
   }
 }
 
-/**
- * @param {string} pkgName
- * @param {string} version
- * @param {ReadonlyArray<string>} additionalFlags
- */
 async function publishPackage(
   pkgName: string,
   version: string,
@@ -476,10 +468,7 @@ async function publishPackage(
   }
 }
 
-async function isPackagePublished(
-  /** @type {string} */ packageName: string,
-  /** @type {string} */ version: string,
-) {
+async function isPackagePublished(packageName: string, version: string) {
   try {
     await run(
       'npm',
@@ -500,7 +489,7 @@ async function isPackagePublished(
   }
 }
 
-function isPackageNotFoundError(/** @type {Error} */ error: Error) {
+function isPackageNotFoundError(error: Error) {
   return /E404|No match found|No matching version|notarget/i.test(error.message)
 }
 

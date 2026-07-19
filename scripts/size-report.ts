@@ -4,6 +4,7 @@ import { markdownTable } from 'markdown-table'
 import prettyBytes from 'pretty-bytes'
 import { readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 
 interface SizeResult {
   size: number
@@ -24,7 +25,10 @@ const prevDir: string = path.resolve('temp/size-prev')
 let output = '## Size Report\n\n'
 const sizeHeaders = ['Size', 'Gzip', 'Brotli']
 
-run()
+run().catch(err => {
+  console.error(err)
+  process.exit(1)
+})
 
 async function run(): Promise<void> {
   await renderFiles()
@@ -35,7 +39,7 @@ async function run(): Promise<void> {
 
 async function renderFiles(): Promise<void> {
   const filterFiles = (files: string[]): string[] =>
-    files.filter(file => file[0] !== '_' && !file.endsWith('.txt'))
+    files.filter(file => file[0] !== '_' && file.endsWith('.json'))
 
   const curr = filterFiles(await readdir(currDir))
   const prev = existsSync(prevDir) ? filterFiles(await readdir(prevDir)) : []
@@ -97,10 +101,9 @@ async function renderUsages(): Promise<void> {
 
   output += `${markdownTable([['Name', ...sizeHeaders], ...data] as readonly (string | null | undefined)[][])}\n\n`
 }
-
 async function importJSON<T>(filePath: string): Promise<T | undefined> {
   if (!existsSync(filePath)) return undefined
-  return (await import(filePath, { with: { type: 'json' } })).default as T
+  return JSON.parse(await readFile(filePath, 'utf-8')) as T
 }
 
 function getDiff(curr: number, prev: number | undefined): string {

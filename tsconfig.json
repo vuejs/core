@@ -11,8 +11,6 @@
     "allowJs": false,
     "strict": true,
     "noUnusedLocals": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "isolatedModules": true,

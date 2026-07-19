@@ -71,8 +71,7 @@ for (const target of targets) {
 
   // resolve externals
   // TODO this logic is largely duplicated from rollup.config.js
-  /** @type {string[]} */
-  let external: string[] = []
+  let external: any[] = []
   if (!inlineDeps) {
     // cjs & esm-bundler: external all deps
     if (format === 'cjs' || format.includes('esm-bundler')) {
@@ -111,11 +110,10 @@ for (const target of targets) {
       ]
     }
   }
-  /** @type {Array<import('esbuild').Plugin>} */
-  const plugins: Array<import('esbuild').Plugin> = [
+  const plugins = [
     {
       name: 'log-rebuild',
-      setup(build) {
+      setup(build: { onEnd: (arg0: () => void) => void }) {
         build.onEnd(() => {
           console.log(`built: ${relativeOutfile}`)
         })

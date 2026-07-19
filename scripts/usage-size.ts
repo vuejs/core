@@ -20,10 +20,8 @@ const {
   },
 })
 
-const sizeDir: string = path.resolve('temp/size')
-const entry: string = path.resolve(
-  './packages/vue/dist/vue.runtime.esm-bundler.js',
-)
+const sizeDir = path.resolve('temp/size')
+const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
 
 interface Preset {
   readonly name: string
