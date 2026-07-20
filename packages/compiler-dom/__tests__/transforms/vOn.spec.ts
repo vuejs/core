@@ -301,4 +301,18 @@ describe('compiler-dom: transform v-on', () => {
     // should only have hydration flag
     expect(node.patchFlag).toBe(PatchFlags.NEED_HYDRATION)
   })
+
+  test('should warn when .delegate is used outside Vapor', () => {
+    const onWarn = vi.fn()
+
+    parseWithVOn(`<div @click.delegate="test" />`, { onWarn })
+
+    expect(onWarn).toHaveBeenCalledOnce()
+    expect(onWarn.mock.calls[0][0]).toMatchObject({
+      message: `.delegate modifier is only supported in Vapor components.`,
+      loc: {
+        source: 'delegate',
+      },
+    })
+  })
 })
