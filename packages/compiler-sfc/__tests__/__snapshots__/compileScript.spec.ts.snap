@@ -811,6 +811,21 @@ return { ref }
 }"
 `;
 
+exports[`SFC compile <script setup> > imports > should re-parse the template when its AST is already transformed 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { transformedMsg } from './transformedMsg'
+        
+export default /*@__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        
+return { get transformedMsg() { return transformedMsg } }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > imports > should support module string names syntax 1`] = `
 "
       

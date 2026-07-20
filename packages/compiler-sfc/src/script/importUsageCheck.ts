@@ -5,6 +5,7 @@ import {
   type SimpleExpressionNode,
   type TemplateChildNode,
   isSimpleIdentifier,
+  parse,
   parserOptions,
   walkIdentifiers,
 } from '@vue/compiler-dom'
@@ -53,7 +54,11 @@ function resolveTemplateAnalysisResult(
   const ids = collectUsedIds ? new Set<string>() : undefined
   const vModelIds = new Set<string>()
 
-  ast!.children.forEach(walk)
+  const root = ast?.transformed
+    ? parse(content, { prefixIdentifiers: true })
+    : ast
+
+  root!.children.forEach(walk)
 
   function walk(node: TemplateChildNode) {
     switch (node.type) {

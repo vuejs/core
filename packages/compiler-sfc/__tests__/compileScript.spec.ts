@@ -7,6 +7,7 @@ import {
   mockId,
 } from './utils'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { compileScript, compileTemplate, parse } from '../src'
 
 vi.mock('../src/warn', () => ({
   warn: vi.fn(),
@@ -343,6 +344,27 @@ describe('SFC compile <script setup>', () => {
         `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`,
       )
       expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
+    })
+
+    test('should re-parse the template when its AST is already transformed', () => {
+      const { descriptor } = parse(`
+        <script setup lang="ts">
+        import { transformedMsg } from './transformedMsg'
+        </script>
+        <template><p>{{ transformedMsg }}</p></template>
+        `)
+      compileTemplate({
+        filename: 'example.vue',
+        id: mockId,
+        source: descriptor.template!.content,
+        ast: descriptor.template!.ast,
+      })
+      expect(descriptor.template!.ast!.transformed).toBe(true)
+      const { content } = compileScript(descriptor, { id: mockId })
+      expect(content).toMatch(
+        `return { get transformedMsg() { return transformedMsg } }`,
+      )
+      assertCode(content)
     })
 
     test('import dedupe between <script> and <script setup>', () => {
