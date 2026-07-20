@@ -10,6 +10,10 @@ on:
       - main
       - minor
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
@@ -22,21 +26,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.1.0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
           node-version-file: '.node-version'
-          cache: pnpm
+          cache: true
 
-      - name: Install dependencies
-        run: pnpm install
-
-      - run: pnpm run size
+      - run: vp run size
 
       - name: Save PR number & base branch
         if: ${{github.event_name == 'pull_request'}}
@@ -45,7 +45,7 @@ jobs:
           echo ${{ github.base_ref }} > ./temp/size/base.txt
 
       - name: Upload Size Data
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: size-data
           path: temp/size

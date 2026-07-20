@@ -11,7 +11,9 @@ import {
   type TemplateChildNode,
   defaultOnError,
   defaultOnWarn,
+  findDir,
   getSelfName,
+  isCommentOrWhitespace,
   isVSlot,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
@@ -24,10 +26,14 @@ import {
   type IRSlots,
   type OperationNode,
   type RootIRNode,
+  type SetEventIRNode,
+  TemplateRegistry,
   type VaporDirectiveNode,
+  isBlockOperation,
 } from './ir'
 import { isConstantExpression, isStaticExpression } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
+import type { ImportItem } from '@vue/compiler-core'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -46,7 +52,7 @@ export interface DirectiveTransformResult {
   modifier?: '.' | '^'
   runtimeCamelize?: boolean
   handler?: boolean
-  handlerModifiers?: string[]
+  handlerModifiers?: SetEventIRNode['modifiers']
   model?: boolean
   modelModifiers?: string[]
 }
@@ -61,9 +67,21 @@ export type StructuralDirectiveTransform = (
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
 
+const generatedVarRE = /^[nxr](\d+)$/
+
+interface ChildContextInfo {
+  node: AllNode
+  hasSingleRootChild: boolean
+  isLastEffectiveChild: boolean[]
+}
+
+const childContextInfoCache = new WeakMap<TransformContext, ChildContextInfo>()
+
 export class TransformContext<T extends AllNode = AllNode> {
   selfName: string | null = null
   parent: TransformContext<RootNode | ElementNode> | null = null
+  // cached parent that skips template tags
+  effectiveParent: TransformContext<RootNode | ElementNode> | null = null
   root: TransformContext<RootNode>
   index: number = 0
 
@@ -73,19 +91,42 @@ export class TransformContext<T extends AllNode = AllNode> {
   >
 
   template: string = ''
+  templateRoot: boolean = false
+  templateIndexMap: Map<string, number> = new Map()
   childrenTemplate: (string | null)[] = []
   dynamic: IRDynamicInfo = this.ir.block.dynamic
+  imports: ImportItem[] = []
 
   inVOnce: boolean = false
   inVFor: number = 0
-
   comment: CommentNode[] = []
   component: Set<string> = this.ir.component
   directive: Set<string> = this.ir.directive
 
   slots: IRSlots[] = []
 
+  effectIndex: number = this.block.effect.length
+  operationIndex: number = this.block.operation.length
+
+  // whether this node is the last effective child of its parent
+  // (all siblings after it are components, which don't appear in HTML template)
+  isLastEffectiveChild: boolean = true
+  // whether this node is on the rightmost path of the tree
+  // (all ancestors are also last effective children)
+  isOnRightmostPath: boolean = true
+  // whether this node is the component/template root
+  isSingleRoot: boolean = false
+  // If an ancestor in the same template must close explicitly, descendants
+  // with matching tags must also close so the browser doesn't consume the
+  // ancestor close tag for the descendant.
+  templateCloseTags: Set<string> | undefined = undefined
+  // Inline ancestors with explicit close tags also require block descendants
+  // in the same template to close explicitly.
+  templateCloseBlocks: boolean = false
+
   private globalId = 0
+  private nextIdMap: Map<number, number> | null = null
+  private ifIndex = 0
 
   constructor(
     public ir: RootIRNode,
@@ -95,53 +136,151 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.options = extend({}, defaultOptions, options)
     this.root = this as TransformContext<RootNode>
     if (options.filename) this.selfName = getSelfName(options.filename)
+    this.initNextIdMap()
   }
 
   enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
-    const { block, template, dynamic, childrenTemplate, slots } = this
+    const {
+      block,
+      template,
+      templateRoot,
+      templateIndexMap,
+      dynamic,
+      childrenTemplate,
+      slots,
+      effectIndex,
+      operationIndex,
+    } = this
     this.block = ir
     this.dynamic = ir.dynamic
     this.template = ''
+    this.templateRoot = false
+    this.templateIndexMap = templateIndexMap
     this.childrenTemplate = []
     this.slots = []
+    this.effectIndex = ir.effect.length
+    this.operationIndex = ir.operation.length
     isVFor && this.inVFor++
     return () => {
       // exit
       this.registerTemplate()
       this.block = block
       this.template = template
+      this.templateRoot = templateRoot
+      this.templateIndexMap = templateIndexMap
       this.dynamic = dynamic
       this.childrenTemplate = childrenTemplate
       this.slots = slots
+      this.effectIndex = effectIndex
+      this.operationIndex = operationIndex
       isVFor && this.inVFor--
     }
   }
 
-  increaseId = (): number => this.globalId++
+  increaseId = (): number => {
+    // allocate an id that won't conflict with user-defined bindings when used
+    // as generated identifiers with n/x/r prefixes (e.g., n1, x1, r1).
+    const id = getNextId(this.nextIdMap, this.globalId)
+    // advance next
+    this.globalId = getNextId(this.nextIdMap, id + 1)
+    return id
+  }
+
+  private initNextIdMap(): void {
+    const binding = this.root.options.bindingMetadata
+    if (!binding) return
+
+    const keys = Object.keys(binding)
+    if (keys.length === 0) return
+
+    // extract numbers for specific literal prefixes
+    const numbers = new Set<number>()
+    for (const name of keys) {
+      const m = generatedVarRE.exec(name)
+      if (m) numbers.add(Number(m[1]))
+    }
+    if (numbers.size === 0) return
+
+    this.globalId = getNextId((this.nextIdMap = buildNextIdMap(numbers)), 0)
+  }
   reference(): number {
     if (this.dynamic.id !== undefined) return this.dynamic.id
     this.dynamic.flags |= DynamicFlag.REFERENCED
     return (this.dynamic.id = this.increaseId())
   }
 
-  pushTemplate(content: string): number {
-    const existing = this.ir.template.findIndex(
-      template => template === content,
+  nextIfIndex(): number {
+    return this.ifIndex++
+  }
+
+  private getTemplateNamespace(): number {
+    return this.node.type === NodeTypes.ELEMENT ? this.node.ns : 0
+  }
+
+  private canUseStaticTemplate(): boolean {
+    if (!this.template) return false
+    if (this.inVFor) return false
+    if (this.dynamic.hasDynamicChild) return false
+    if (this.block.effect.length !== this.effectIndex) return false
+    if (this.block.operation.length !== this.operationIndex) return false
+
+    if (
+      this.node.type === NodeTypes.TEXT ||
+      this.node.type === NodeTypes.COMMENT
+    ) {
+      return true
+    }
+
+    return (
+      this.node.type === NodeTypes.ELEMENT &&
+      this.node.tagType === ElementTypes.ELEMENT &&
+      !(
+        this.options.isCustomElement(this.node.tag) ||
+        this.node.tag === 'template'
+      )
     )
-    if (existing !== -1) return existing
-    this.ir.template.push(content)
-    return this.ir.template.length - 1
+  }
+
+  pushTemplate(
+    content: string,
+    {
+      root = false,
+      static: isStatic = false,
+    }: {
+      root?: boolean
+      static?: boolean
+    } = {},
+  ): number {
+    const templateKey = JSON.stringify([
+      this.getTemplateNamespace(),
+      root,
+      isStatic,
+      content,
+    ])
+    const existingIndex = this.templateIndexMap.get(templateKey)
+    if (existingIndex !== undefined) {
+      return existingIndex
+    }
+
+    const ns = this.getTemplateNamespace()
+    const newIndex = this.ir.template.entries.length
+    this.ir.template.entries.push({ content, ns, root, static: isStatic })
+    this.templateIndexMap.set(templateKey, newIndex)
+    return newIndex
   }
   registerTemplate(): number {
     if (!this.template) return -1
-    const id = this.pushTemplate(this.template)
+    const id = this.pushTemplate(this.template, {
+      root: this.templateRoot,
+      static: this.canUseStaticTemplate(),
+    })
     return (this.dynamic.template = id)
   }
 
   registerEffect(
     expressions: SimpleExpressionNode[],
     operation: OperationNode | OperationNode[],
-    getIndex = (): number => this.block.effect.length,
+    getIndex?: () => number,
   ): void {
     const operations = [operation].flat()
     expressions = expressions.filter(exp => !isConstantExpression(exp))
@@ -155,30 +294,181 @@ export class TransformContext<T extends AllNode = AllNode> {
       return this.registerOperation(...operations)
     }
 
-    this.block.effect.splice(getIndex(), 0, {
+    const index = getIndex ? getIndex() : this.block.effect.length
+    this.block.effect.splice(index, 0, {
       expressions,
       operations,
     })
+    if (getIndex) {
+      this.shiftEffectBoundaries(index)
+    }
   }
 
   registerOperation(...node: OperationNode[]): void {
     this.block.operation.push(...node)
   }
 
+  effectBoundary(): { operationIndex: number; effectIndex: number } {
+    return {
+      operationIndex: this.operationIndex,
+      effectIndex: this.effectIndex,
+    }
+  }
+
   create<T extends TemplateChildNode>(
     node: T,
     index: number,
   ): TransformContext<T> {
+    // find effectiveParent (skip template tags)
+    let effectiveParent: TransformContext<RootNode | ElementNode> | null =
+      this as TransformContext<RootNode | ElementNode>
+    while (
+      effectiveParent &&
+      effectiveParent.node.type === NodeTypes.ELEMENT &&
+      (effectiveParent.node as ElementNode).tagType === ElementTypes.TEMPLATE
+    ) {
+      effectiveParent = effectiveParent.parent
+    }
+
+    const childInfo = this.getChildContextInfo()
+    // compute whether this node is effectively the last child
+    const isLastEffectiveChild = childInfo.isLastEffectiveChild[index]
+    const isOnRightmostPath = this.isOnRightmostPath && isLastEffectiveChild
+    const isSingleRoot = this.isSingleRootChild(childInfo)
+
     return Object.assign(Object.create(TransformContext.prototype), this, {
       node,
       parent: this as any,
       index,
 
       template: '',
+      templateRoot: false,
       childrenTemplate: [],
+      templateIndexMap: this.templateIndexMap,
       dynamic: newDynamic(),
+      effectIndex: this.block.effect.length,
+      operationIndex: this.block.operation.length,
+      effectiveParent,
+      isLastEffectiveChild,
+      isOnRightmostPath,
+      isSingleRoot,
+      templateCloseTags: this.templateCloseTags,
+      templateCloseBlocks: this.templateCloseBlocks,
     } satisfies Partial<TransformContext<T>>)
   }
+
+  private shiftEffectBoundaries(
+    index: number,
+    dynamic: IRDynamicInfo = this.dynamic,
+  ): void {
+    const operation = dynamic.operation
+    if (
+      operation &&
+      isBlockOperation(operation) &&
+      operation.effectIndex !== undefined &&
+      operation.effectIndex >= index
+    ) {
+      operation.effectIndex++
+    }
+
+    for (const child of dynamic.children) {
+      this.shiftEffectBoundaries(index, child)
+    }
+  }
+
+  private getChildContextInfo(): ChildContextInfo {
+    const node = this.node
+    if (node.type !== NodeTypes.ROOT && node.type !== NodeTypes.ELEMENT) {
+      return {
+        node,
+        hasSingleRootChild: true,
+        isLastEffectiveChild: [],
+      }
+    }
+
+    const cached = childContextInfoCache.get(this)
+    if (cached && cached.node === node) {
+      return cached
+    }
+
+    const { children } = node
+    const isLastEffectiveChild = new Array<boolean>(children.length)
+    let hasFollowingEffectiveChild = false
+    for (let i = children.length - 1; i >= 0; i--) {
+      isLastEffectiveChild[i] = !hasFollowingEffectiveChild
+      if (!isComponentChild(children[i])) {
+        hasFollowingEffectiveChild = true
+      }
+    }
+
+    const childInfo = {
+      node,
+      hasSingleRootChild: hasSingleRootChild(children),
+      isLastEffectiveChild,
+    }
+    childContextInfoCache.set(this, childInfo)
+    return childInfo
+  }
+
+  private isSingleRootChild(childInfo: ChildContextInfo): boolean {
+    if (this.inVFor || !childInfo.hasSingleRootChild) {
+      return false
+    }
+
+    if (this.node.type === NodeTypes.ROOT) {
+      return true
+    }
+
+    return (
+      this.node.type === NodeTypes.ELEMENT &&
+      this.node.tagType === ElementTypes.TEMPLATE &&
+      !!this.parent &&
+      this.isSingleRoot
+    )
+  }
+}
+
+function hasSingleRootChild(children: TemplateChildNode[]): boolean {
+  let nonCommentChildren = 0
+  let hasEncounteredIf = false
+  let isSingleIfBlock = true
+
+  for (const child of children) {
+    if (isCommentOrWhitespace(child)) {
+      continue
+    }
+
+    nonCommentChildren++
+    if (isIfChild(child)) {
+      if (hasEncounteredIf) {
+        isSingleIfBlock = false
+      }
+      hasEncounteredIf = true
+    } else if (!hasEncounteredIf || !isElseChild(child)) {
+      isSingleIfBlock = false
+    }
+  }
+
+  return nonCommentChildren === 1 || isSingleIfBlock
+}
+
+function isComponentChild(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.ELEMENT && child.tagType === ElementTypes.COMPONENT
+  )
+}
+
+function isIfChild(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.IF ||
+    (child.type === NodeTypes.ELEMENT && !!findDir(child, 'if'))
+  )
+}
+
+function isElseChild(child: TemplateChildNode): boolean {
+  return (
+    child.type === NodeTypes.ELEMENT && !!findDir(child, /^else(-if)?$/, true)
+  )
 }
 
 const defaultOptions = {
@@ -201,6 +491,7 @@ const defaultOptions = {
   bindingMetadata: EMPTY_OBJ,
   inline: false,
   isTS: false,
+  eventDelegation: true,
   onError: defaultOnError,
   onWarn: defaultOnWarn,
 }
@@ -214,7 +505,7 @@ export function transform(
     type: IRNodeTypes.ROOT,
     node,
     source: node.source,
-    template: [],
+    template: new TemplateRegistry(),
     component: new Set(),
     directive: new Set(),
     block: newBlock(node),
@@ -224,6 +515,8 @@ export function transform(
   const context = new TransformContext(ir, node, options)
 
   transformNode(context)
+
+  ir.node.imports = context.imports
 
   return ir
 }
@@ -295,4 +588,39 @@ export function createStructuralDirectiveTransform(
       return exitFns
     }
   }
+}
+
+/**
+ * Build a "next-id" map from an occupied number set.
+ * For each consecutive range [start..end], map every v in the range to end + 1.
+ * Example: input [0, 1, 2, 4] => { 0: 3, 1: 3, 2: 3, 4: 5 }.
+ */
+export function buildNextIdMap(nums: Iterable<number>): Map<number, number> {
+  const map: Map<number, number> = new Map()
+  const arr = Array.from(new Set(nums)).sort((a, b) => a - b)
+  if (arr.length === 0) return map
+
+  for (let i = 0; i < arr.length; i++) {
+    let start = arr[i]
+    let end = start
+    while (i + 1 < arr.length && arr[i + 1] === end + 1) {
+      i++
+      end = arr[i]
+    }
+    for (let v = start; v <= end; v++) map.set(v, end + 1)
+  }
+  return map
+}
+
+/**
+ * Return the available id for n using a map built by buildNextIdMap:
+ * - If n is not occupied, return n.
+ * - If n is occupied, return the mapped value
+ */
+export function getNextId(
+  map: Map<number, number> | null | undefined,
+  n: number,
+): number {
+  if (map && map.has(n)) return map.get(n)!
+  return n
 }

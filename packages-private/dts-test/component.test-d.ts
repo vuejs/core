@@ -198,10 +198,10 @@ describe('object props', () => {
     expectType<ExpectedProps['object']>(props.object)
 
     // raw bindings
-    expectType<Number>(rawBindings.setupA)
-    expectType<Ref<Number>>(rawBindings.setupB)
-    expectType<Ref<Number>>(rawBindings.setupC.a)
-    expectType<Ref<Number> | undefined>(rawBindings.setupD)
+    expectType<number>(rawBindings.setupA)
+    expectType<Ref<number>>(rawBindings.setupB)
+    expectType<Ref<number>>(rawBindings.setupC.a)
+    expectType<Ref<number> | undefined>(rawBindings.setupD)
 
     // raw bindings props
     expectType<ExpectedProps['a']>(rawBindings.setupProps.a)
@@ -223,9 +223,9 @@ describe('object props', () => {
     expectType<ExpectedProps['validated']>(rawBindings.setupProps.validated)
 
     // setup
-    expectType<Number>(setup.setupA)
-    expectType<Number>(setup.setupB)
-    expectType<Ref<Number>>(setup.setupC.a)
+    expectType<number>(setup.setupA)
+    expectType<number>(setup.setupB)
+    expectType<Ref<number>>(setup.setupC.a)
     expectType<number | undefined>(setup.setupD)
 
     // raw bindings props
@@ -354,10 +354,10 @@ describe('object props', () => {
     expectType<ExpectedProps['object']>(props.object)
 
     // rawBindings
-    expectType<Number>(rawBindings.setupA)
+    expectType<number>(rawBindings.setupA)
 
     //setup
-    expectType<Number>(setup.setupA)
+    expectType<number>(setup.setupA)
   })
 })
 

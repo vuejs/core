@@ -140,4 +140,41 @@ describe('COMPONENT_V_MODEL', () => {
       template: `<input :value="foo" @input="$emit('bar', $event.target.value)">`,
     })
   })
+
+  // #14202
+  test('should handle v-model deprecation warning with missing appContext', async () => {
+    const ChildComponent = {
+      template: `<div @click="$emit('input', 'new val')">{{ value }}</div>`,
+      props: ['value'],
+    }
+
+    const vm = new Vue({
+      components: { ChildComponent },
+      data() {
+        return {
+          myVal: 'initial',
+        }
+      },
+      template: `
+        <div>
+          <child-component v-model="myVal"></child-component>
+        </div>
+      `,
+    }).$mount() as any
+
+    expect(vm.$el.textContent).toContain('initial')
+
+    expect(
+      (deprecationData[DeprecationTypes.COMPONENT_V_MODEL].message as Function)(
+        ChildComponent,
+      ),
+    ).toHaveBeenWarned()
+
+    // Should work correctly
+    const child = vm.$el.querySelector('div')
+    child.click()
+    await nextTick()
+    expect(vm.myVal).toBe('new val')
+    expect(vm.$el.textContent).toContain('new val')
+  })
 })

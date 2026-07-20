@@ -1,5 +1,16 @@
 import { onEffectCleanup } from '@vue/reactivity'
 import { isArray } from '@vue/shared'
+import {
+  ErrorCodes,
+  callWithAsyncErrorHandling,
+  currentInstance,
+  withKeys as withDomKeys,
+  withModifiers as withDomModifiers,
+} from '@vue/runtime-dom'
+
+type EventHandler = (...args: any[]) => any
+type EventHandlerValue = EventHandler | EventHandler[]
+type MaybeEventHandlerValue = EventHandlerValue | null | undefined
 
 export function addEventListener(
   el: Element,
@@ -14,43 +25,53 @@ export function addEventListener(
 export function on(
   el: Element,
   event: string,
-  handler: (e: Event) => any,
-  options: AddEventListenerOptions & { effect?: boolean } = {},
+  handler: EventHandlerValue,
+  options: AddEventListenerOptions = {},
 ): void {
-  addEventListener(el, event, handler, options)
-  if (options.effect) {
-    onEffectCleanup(() => {
-      el.removeEventListener(event, handler, options)
-    })
+  if (isArray(handler)) {
+    handler.forEach(fn => on(el, event, fn, options))
+  } else {
+    if (!handler) return
+    addEventListener(el, event, createInvoker(handler), options)
   }
 }
 
-export function delegate(
-  el: any,
+export function onBinding(
+  el: Element,
   event: string,
-  handler: (e: Event) => any,
+  handler: EventHandlerValue,
+  options: AddEventListenerOptions = {},
 ): void {
+  if (isArray(handler)) {
+    handler.forEach(fn => onBinding(el, event, fn, options))
+  } else {
+    if (!handler) return
+    const cleanup = addEventListener(el, event, createInvoker(handler), options)
+    onEffectCleanup(cleanup)
+  }
+}
+
+export function delegate(el: any, event: string, handler: EventHandler): void {
   const key = `$evt${event}`
   const existing = el[key]
+  const invoker = createInvoker(handler)
   if (existing) {
     if (isArray(existing)) {
-      existing.push(handler)
+      existing.push(invoker)
     } else {
-      el[key] = [existing, handler]
+      el[key] = [existing, invoker]
     }
   } else {
-    el[key] = handler
+    el[key] = invoker
   }
 }
 
-type DelegatedHandler = {
-  (...args: any[]): any
-}
+type DelegatedHandler = EventHandler
 
 /**
  * Event delegation borrowed from solid
  */
-const delegatedEvents = Object.create(null)
+const delegatedEvents = /*@__PURE__*/ Object.create(null)
 
 export const delegateEvents = (...names: string[]): void => {
   for (const name of names) {
@@ -87,7 +108,7 @@ const delegatedEventHandler = (e: Event) => {
             if (e.cancelBubble) return
           }
         }
-      } else {
+      } else if (!node.disabled) {
         handlers(e)
         if (e.cancelBubble) return
       }
@@ -101,9 +122,44 @@ const delegatedEventHandler = (e: Event) => {
 
 export function setDynamicEvents(
   el: HTMLElement,
-  events: Record<string, (...args: any[]) => any>,
+  events: Record<string, EventHandlerValue>,
 ): void {
   for (const name in events) {
-    on(el, name, events[name], { effect: true })
+    onBinding(el, name, events[name])
   }
+}
+
+export function withVaporModifiers<
+  T extends (event: Event, ...args: unknown[]) => any,
+>(fn: T | null | undefined, modifiers: string[]): T {
+  return createInvoker(
+    typeof fn === 'function'
+      ? withDomModifiers(
+          fn,
+          modifiers as Parameters<typeof withDomModifiers>[1],
+        )
+      : fn,
+  ) as T
+}
+
+export function withVaporKeys<T extends (event: KeyboardEvent) => any>(
+  fn: T | null | undefined,
+  modifiers: string[],
+): T {
+  return createInvoker(
+    typeof fn === 'function'
+      ? (withDomKeys(fn, modifiers) as EventHandler)
+      : fn,
+  ) as T
+}
+
+export function createInvoker(handler: MaybeEventHandlerValue): EventHandler {
+  const i = currentInstance!
+  return (...args: any[]) =>
+    callWithAsyncErrorHandling(
+      handler as EventHandlerValue,
+      i,
+      ErrorCodes.NATIVE_EVENT_HANDLER,
+      args,
+    )
 }

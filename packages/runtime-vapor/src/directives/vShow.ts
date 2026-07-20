@@ -1,13 +1,36 @@
 import {
+  MismatchTypes,
   type VShowElement,
+  logMismatchError,
   vShowHidden,
   vShowOriginalDisplay,
   warn,
+  warnPropMismatch,
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
-import { type Block, DynamicFragment, VaporFragment } from '../block'
+import type { Block, TransitionBlock } from '../block'
 import { isArray } from '@vue/shared'
+import { isHydrating } from '../dom/hydration'
+import { isDynamicFragment, isFragment, isInteropFragment } from '../fragment'
+import { isInteropEnabled } from '../vdomInteropState'
+
+export interface PendingVShow {
+  target: Block
+  apply: () => (() => void) | undefined
+}
+
+export let currentPendingVShows: PendingVShow[] | null = null
+
+export function setCurrentPendingVShows(
+  pending: PendingVShow[] | null,
+): PendingVShow[] | null {
+  try {
+    return currentPendingVShows
+  } finally {
+    currentPendingVShows = pending
+  }
+}
 
 export function applyVShow(target: Block, source: () => any): void {
   if (isVaporComponent(target)) {
@@ -18,44 +41,110 @@ export function applyVShow(target: Block, source: () => any): void {
     return applyVShow(target[0], source)
   }
 
-  if (target instanceof DynamicFragment) {
+  if (isDynamicFragment(target)) {
     const update = target.update
-    target.update = (render, key) => {
-      update.call(target, render, key)
+    target.update = (...args) => {
+      const res = update.call(target, ...args)
       setDisplay(target, source())
+      return res
     }
-  } else if (target instanceof VaporFragment && target.insert) {
+  } else if (isFragment(target) && target.insert) {
     const insert = target.insert
-    target.insert = (parent, anchor) => {
-      insert.call(target, parent, anchor)
+    target.insert = (...args) => {
+      const res = insert.call(target, ...args)
       setDisplay(target, source())
+      return res
     }
   }
 
-  renderEffect(() => setDisplay(target, source()))
+  renderEffect(() => {
+    const value = source()
+    if (currentPendingVShows) {
+      // Inside Transition appear, target.$transition is not assigned yet.
+      // Defer the initial setDisplay until Transition beforeMount so it can
+      // enter through the transition-aware branch.
+      currentPendingVShows.push({
+        target,
+        apply: () => setDisplay(target, value, true),
+      })
+      return
+    }
+    setDisplay(target, value)
+  })
 }
 
-function setDisplay(target: Block, value: unknown): void {
+function setDisplay(
+  target: Block,
+  value: unknown,
+  deferEnter = false,
+  transition: TransitionBlock['$transition'] = undefined,
+): (() => void) | undefined {
   if (isVaporComponent(target)) {
-    return setDisplay(target, value)
+    return setDisplay(target.block, value, deferEnter, transition)
   }
   if (isArray(target)) {
     if (target.length === 0) return
-    if (target.length === 1) return setDisplay(target[0], value)
+    if (target.length === 1)
+      return setDisplay(target[0], value, deferEnter, transition)
   }
-  if (target instanceof DynamicFragment) {
-    return setDisplay(target.nodes, value)
+  if (isFragment(target)) {
+    if (isInteropEnabled && isInteropFragment(target) && target.$transition) {
+      transition = target.$transition
+    }
+    return setDisplay(target.nodes, value, deferEnter, transition)
   }
-  if (target instanceof VaporFragment && target.insert) {
-    return setDisplay(target.nodes, value)
-  }
+
   if (target instanceof Element) {
     const el = target as VShowElement
     if (!(vShowOriginalDisplay in el)) {
       el[vShowOriginalDisplay] =
         el.style.display === 'none' ? '' : el.style.display
     }
-    el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
+
+    const { $transition = transition } = target as TransitionBlock
+    if ($transition) {
+      if (value) {
+        $transition.beforeEnter(target)
+        el.style.display = el[vShowOriginalDisplay]!
+        if (deferEnter) {
+          return () => $transition.enter(target)
+        }
+        $transition.enter(target)
+      } else {
+        // during initial render, the element is not yet inserted into the
+        // DOM, and it is hidden, no need to trigger transition
+        if (target.isConnected) {
+          $transition.leave(target, () => {
+            el.style.display = 'none'
+          })
+        } else {
+          el.style.display = 'none'
+        }
+      }
+    } else {
+      if (
+        (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+        isHydrating
+      ) {
+        if (!value && el.style.display !== 'none') {
+          const hasMismatch = warnPropMismatch(
+            el,
+            'style',
+            MismatchTypes.STYLE,
+            `display: ${el.style.display}`,
+            'display: none',
+          )
+          if (hasMismatch) {
+            logMismatchError()
+            el.style.display = 'none'
+            el[vShowOriginalDisplay] = ''
+          }
+        }
+      } else {
+        el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
+      }
+    }
+
     el[vShowHidden] = !value
   } else if (__DEV__) {
     warn(

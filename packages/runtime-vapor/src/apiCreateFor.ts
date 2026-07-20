@@ -4,6 +4,7 @@ import {
   isReactive,
   isReadonly,
   isShallow,
+  onScopeDispose,
   setActiveSub,
   shallowReadArray,
   shallowRef,
@@ -15,46 +16,52 @@ import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
-  VaporFragment,
   insert,
-  remove as removeBlock,
+  insertFragment,
+  insertNode,
+  isValidBlock,
+  remove,
+  removeFragment,
+  removeNode,
 } from './block'
-import { warn } from '@vue/runtime-dom'
+import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance, isVaporComponent } from './component'
-import type { DynamicSlot } from './componentSlots'
-import { renderEffect } from './renderEffect'
-import { VaporVForFlags } from '../../shared/src/vaporFlags'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
 import {
+  type DynamicSlot,
+  currentSlotOwner,
+  setCurrentSlotOwner,
+} from './componentSlots'
+import { renderEffect } from './renderEffect'
+import { VaporVForFlags } from '@vue/shared'
+import {
+  type HydrationCursor,
+  advanceHydrationNode,
+  currentHydrationNode,
+  enterHydrationBoundary,
+  enterHydrationCursor,
+  exitHydrationCursor,
+  isComment,
+  isHydrating,
+  locateHydrationBoundaryClose,
+  markHydrationAnchor,
+  nextLogicalSibling,
+  setCurrentHydrationNode,
+} from './dom/hydration'
+import { ForBlock, ForFragment, type VaporFragment } from './fragment'
+import {
+  getCurrentSlotEndAnchor,
+  isPendingSlotContent,
+  queuePendingSlotContentAnchor,
+} from './dom/hydrateFragment'
+import {
+  type ChildItem,
   insertionAnchor,
+  insertionIndex,
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-
-class ForBlock extends VaporFragment {
-  scope: EffectScope | undefined
-  key: any
-
-  itemRef: ShallowRef<any>
-  keyRef: ShallowRef<any> | undefined
-  indexRef: ShallowRef<number | undefined> | undefined
-
-  constructor(
-    nodes: Block,
-    scope: EffectScope | undefined,
-    item: ShallowRef<any>,
-    key: ShallowRef<any> | undefined,
-    index: ShallowRef<number | undefined> | undefined,
-    renderKey: any,
-  ) {
-    super(nodes)
-    this.scope = scope
-    this.itemRef = item
-    this.keyRef = key
-    this.indexRef = index
-    this.key = renderKey
-  }
-}
+import { applyTransitionHooks, isTransitionEnabled } from './transition'
+import { setBlockKey } from './helpers/setKey'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -63,6 +70,19 @@ type ResolvedSource = {
   needsWrap: boolean
   isReadonlySource: boolean
   keys?: string[]
+}
+
+type ForHydrationAnchorResolver = (
+  hydrationStart: Node,
+  anchorNode: Node | null | undefined,
+) => Node | undefined
+
+let resolveForHydrationAnchor: ForHydrationAnchorResolver | undefined
+
+export function setForHydrationAnchorResolver(
+  resolver: ForHydrationAnchorResolver,
+): void {
+  resolveForHydrationAnchor = resolver
 }
 
 export const createFor = (
@@ -74,14 +94,13 @@ export const createFor = (
   ) => Block,
   getKey?: (item: any, key: any, index?: number) => any,
   flags = 0,
-  setup?: (_: {
-    createSelector: (source: () => any) => (cb: () => void) => void
-  }) => void,
-): VaporFragment => {
+): ForFragment => {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
+  const _insertionIndex = insertionIndex
+  let hydrationCursor: HydrationCursor | null = null
   if (isHydrating) {
-    locateHydrationNode()
+    hydrationCursor = enterHydrationCursor(true)
   } else {
     resetInsertionState()
   }
@@ -89,22 +108,47 @@ export const createFor = (
   let isMounted = false
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
+  let newKeys: any[] | undefined
   let parent: ParentNode | undefined | null
-  // useSelector only
-  let currentKey: any
-  // TODO handle this in hydration
-  const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
-  const frag = new VaporFragment(oldBlocks)
+  let parentAnchor: Node
+  let pendingHydrationAnchor = false
+  if (!isHydrating) {
+    parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+  }
+
+  const trackSlotBoundary = !!(flags & VaporVForFlags.SLOT_ROOT)
+  const frag = new ForFragment(
+    oldBlocks,
+    trackSlotBoundary,
+    trackSlotBoundary
+      ? () => {
+          const parent = parentAnchor.parentNode
+          if (parent) removeNode(parentAnchor, parent)
+        }
+      : undefined,
+  )
   const instance = currentInstance!
-  const canUseFastRemove = !!(flags & VaporVForFlags.FAST_REMOVE)
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
-  const selectors: {
-    deregister: (key: any) => void
-    cleanup: () => void
-  }[] = []
+  const canUseFastRemove =
+    !!(flags & VaporVForFlags.FAST_REMOVE) && !isComponent
+  const isSingleNode = !!(flags & VaporVForFlags.IS_SINGLE_NODE)
+  const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
+
+  const slotOwner = currentSlotOwner
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
+  }
+
+  if (!isComponent) {
+    onScopeDispose(() => {
+      stopBlockScopes(oldBlocks)
+      if (newBlocks && newBlocks !== oldBlocks) {
+        stopBlockScopes(newBlocks)
+      }
+      oldBlocks = []
+      newBlocks = []
+    }, true)
   }
 
   const renderList = () => {
@@ -112,29 +156,53 @@ export const createFor = (
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
+    // Key expressions can depend on item fields, not just list shape. Evaluate
+    // them while the render effect is still the active subscriber so those deps
+    // can trigger keyed diff, then reuse the same keys below after
+    // setActiveSub() clears the active subscriber during patching.
+    newKeys = undefined
+    if (getKey) {
+      newKeys = new Array(newLength)
+      for (let i = 0; i < newLength; i++) {
+        newKeys[i] = getKey(...getItem(source, i))
+      }
+    }
 
     const prevSub = setActiveSub()
-
-    if (!isMounted) {
+    const wasMounted = isMounted
+    if (wasMounted && frag.onBeforeUpdate) {
+      for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
+        frag.onBeforeUpdate[i]()
+      }
+    }
+    if (!wasMounted) {
       isMounted = true
-      for (let i = 0; i < newLength; i++) {
-        mount(source, i)
+      if (isHydrating) {
+        hydrateList(source, newLength)
+      } else {
+        for (let i = 0; i < newLength; i++) {
+          mount(source, i)
+        }
       }
     } else {
-      parent = parent || parentAnchor!.parentNode
+      parent = parentAnchor!.parentNode
       if (!oldLength) {
         // fast path for all new
         for (let i = 0; i < newLength; i++) {
           mount(source, i)
         }
       } else if (!newLength) {
-        // fast path for clearing all
-        for (const selector of selectors) {
-          selector.cleanup()
+        // fast path for clearing all.
+        // Fire reset listeners BEFORE per-item unmount so attached selectors
+        // bump their generation counter; the subsequent block.scope.stop()
+        // calls then short-circuit their onScopeDispose deregisters instead
+        // of doing N individual Map.delete() ops.
+        if (frag.resetListeners) {
+          for (const fn of frag.resetListeners) fn()
         }
         const doRemove = !canUseFastRemove
         for (let i = 0; i < oldLength; i++) {
-          unmount(oldBlocks[i], doRemove, false)
+          unmount(oldBlocks[i], doRemove)
         }
         if (canUseFastRemove) {
           parent!.textContent = ''
@@ -144,7 +212,8 @@ export const createFor = (
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
         for (let i = 0; i < commonLength; i++) {
-          update((newBlocks[i] = oldBlocks[i]), getItem(source, i)[0])
+          const item = getItem(source, i)
+          update((newBlocks[i] = oldBlocks[i]), ...item)
         }
         for (let i = oldLength; i < newLength; i++) {
           mount(source, i)
@@ -156,8 +225,7 @@ export const createFor = (
         if (__DEV__) {
           const keyToIndexMap: Map<any, number> = new Map()
           for (let i = 0; i < newLength; i++) {
-            const item = getItem(source, i)
-            const key = getKey(...item)
+            const key = newKeys![i]
             if (key != null) {
               if (keyToIndexMap.has(key)) {
                 warn(
@@ -171,208 +239,228 @@ export const createFor = (
           }
         }
 
-        const sharedBlockCount = Math.min(oldLength, newLength)
-        const previousKeyIndexPairs: [any, number][] = new Array(oldLength)
+        const commonLength = Math.min(oldLength, newLength)
+        const oldKeyIndexPairs: [any, number][] = new Array(oldLength)
         const queuedBlocks: [
-          blockIndex: number,
-          blockItem: ReturnType<typeof getItem>,
-          blockKey: any,
+          index: number,
+          item: ReturnType<typeof getItem>,
+          key: any,
         ][] = new Array(newLength)
 
-        let anchorFallback: Node = parentAnchor
         let endOffset = 0
-        let startOffset = 0
-        let queuedBlocksInsertIndex = 0
-        let previousKeyIndexInsertIndex = 0
+        let queuedBlocksLength = 0
+        let oldKeyIndexPairsLength = 0
 
-        while (endOffset < sharedBlockCount) {
-          const currentIndex = newLength - endOffset - 1
-          const currentItem = getItem(source, currentIndex)
-          const currentKey = getKey(...currentItem)
+        while (endOffset < commonLength) {
+          const index = newLength - endOffset - 1
+          const item = getItem(source, index)
+          const key = newKeys![index]
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
-          if (existingBlock.key === currentKey) {
-            update(existingBlock, ...currentItem)
-            newBlocks[currentIndex] = existingBlock
-            endOffset++
-            continue
-          }
-          break
+          if (existingBlock.key !== key) break
+          update(existingBlock, ...item)
+          newBlocks[index] = existingBlock
+          endOffset++
         }
 
-        if (endOffset !== 0) {
-          anchorFallback = normalizeAnchor(
-            newBlocks[newLength - endOffset].nodes,
+        const e1 = commonLength - endOffset
+        const e2 = oldLength - endOffset
+        const e3 = newLength - endOffset
+
+        for (let i = 0; i < e1; i++) {
+          const currentItem = getItem(source, i)
+          const currentKey = newKeys![i]
+          const oldBlock = oldBlocks[i]
+          const oldKey = oldBlock.key
+          if (oldKey === currentKey) {
+            update((newBlocks[i] = oldBlock), ...currentItem)
+          } else {
+            queuedBlocks[queuedBlocksLength++] = [i, currentItem, currentKey]
+            oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldKey, i]
+          }
+        }
+
+        for (let i = e1; i < e2; i++) {
+          oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldBlocks[i].key, i]
+        }
+
+        for (let i = e1; i < e3; i++) {
+          const blockItem = getItem(source, i)
+          const blockKey = newKeys![i]
+          queuedBlocks[queuedBlocksLength++] = [i, blockItem, blockKey]
+        }
+
+        queuedBlocks.length = queuedBlocksLength
+        oldKeyIndexPairs.length = oldKeyIndexPairsLength
+
+        interface MountOper {
+          source: ResolvedSource
+          index: number
+          item: ReturnType<typeof getItem>
+          key: any
+        }
+        interface MoveOper {
+          index: number
+          block: ForBlock
+        }
+
+        const oldKeyIndexMap = new Map(oldKeyIndexPairs)
+        const opers: (MountOper | MoveOper)[] = new Array(queuedBlocks.length)
+
+        let mountCounter = 0
+        let opersLength = 0
+
+        for (let i = queuedBlocks.length - 1; i >= 0; i--) {
+          const [index, item, key] = queuedBlocks[i]
+          const oldIndex = oldKeyIndexMap.get(key)
+          if (oldIndex !== undefined) {
+            oldKeyIndexMap.delete(key)
+            const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
+            update(reusedBlock, ...item)
+            opers[opersLength++] = { index, block: reusedBlock }
+          } else {
+            mountCounter++
+            opers[opersLength++] = { source, index, item, key }
+          }
+        }
+
+        const useFastRemove = mountCounter === newLength
+
+        // Same ordering note as the !newLength path: reset before unmount so
+        // the generation bump turns per-item deregisters into no-ops.
+        if (useFastRemove && frag.resetListeners) {
+          for (const fn of frag.resetListeners) fn()
+        }
+        for (const leftoverIndex of oldKeyIndexMap.values()) {
+          unmount(
+            oldBlocks[leftoverIndex],
+            !(useFastRemove && canUseFastRemove),
           )
         }
+        if (useFastRemove && canUseFastRemove) {
+          parent!.textContent = ''
+          parent!.appendChild(parentAnchor)
+        }
 
-        while (startOffset < sharedBlockCount - endOffset) {
-          const currentItem = getItem(source, startOffset)
-          const currentKey = getKey(...currentItem)
-          const previousBlock = oldBlocks[startOffset]
-          const previousKey = previousBlock.key
-          if (previousKey === currentKey) {
-            update((newBlocks[startOffset] = previousBlock), currentItem[0])
-          } else {
-            queuedBlocks[queuedBlocksInsertIndex++] = [
-              startOffset,
-              currentItem,
-              currentKey,
-            ]
-            previousKeyIndexPairs[previousKeyIndexInsertIndex++] = [
-              previousKey,
-              startOffset,
-            ]
+        if (opers.length === mountCounter) {
+          for (const { source, index, item, key } of opers as MountOper[]) {
+            mount(
+              source,
+              index,
+              index < newLength - 1
+                ? normalizeAnchor(newBlocks[index + 1].nodes)
+                : parentAnchor,
+              item,
+              key,
+            )
           }
-          startOffset++
-        }
-
-        for (let i = startOffset; i < oldLength - endOffset; i++) {
-          previousKeyIndexPairs[previousKeyIndexInsertIndex++] = [
-            oldBlocks[i].key,
-            i,
-          ]
-        }
-
-        const preparationBlockCount = Math.min(
-          newLength - endOffset,
-          sharedBlockCount,
-        )
-        for (let i = startOffset; i < preparationBlockCount; i++) {
-          const blockItem = getItem(source, i)
-          const blockKey = getKey(...blockItem)
-          queuedBlocks[queuedBlocksInsertIndex++] = [i, blockItem, blockKey]
-        }
-
-        if (!queuedBlocksInsertIndex && !previousKeyIndexInsertIndex) {
-          for (let i = preparationBlockCount; i < newLength - endOffset; i++) {
-            const blockItem = getItem(source, i)
-            const blockKey = getKey(...blockItem)
-            mount(source, i, anchorFallback, blockItem, blockKey)
+        } else if (opers.length) {
+          let anchor = oldBlocks[0]
+          let blocksTail: ForBlock | undefined
+          for (let i = 0; i < oldLength; i++) {
+            const block = oldBlocks[i]
+            if (oldKeyIndexMap.has(block.key)) {
+              continue
+            }
+            block.prevAnchor = anchor
+            anchor = oldBlocks[i + 1]
+            if (blocksTail !== undefined) {
+              blocksTail.next = block
+              block.prev = blocksTail
+            }
+            blocksTail = block
           }
-        } else {
-          queuedBlocks.length = queuedBlocksInsertIndex
-          previousKeyIndexPairs.length = previousKeyIndexInsertIndex
-
-          const previousKeyIndexMap = new Map(previousKeyIndexPairs)
-          const operations: (() => void)[] = []
-
-          let mountCounter = 0
-          const relocateOrMountBlock = (
-            blockIndex: number,
-            blockItem: ReturnType<typeof getItem>,
-            blockKey: any,
-            anchorOffset: number,
-          ) => {
-            const previousIndex = previousKeyIndexMap.get(blockKey)
-            if (previousIndex !== undefined) {
-              const reusedBlock = (newBlocks[blockIndex] =
-                oldBlocks[previousIndex])
-              update(reusedBlock, ...blockItem)
-              previousKeyIndexMap.delete(blockKey)
-              if (previousIndex !== blockIndex) {
-                operations.push(() =>
-                  insert(
-                    reusedBlock,
-                    parent!,
-                    anchorOffset === -1
-                      ? anchorFallback
-                      : normalizeAnchor(newBlocks[anchorOffset].nodes),
-                  ),
-                )
+          for (const action of opers) {
+            const { index } = action
+            if (index < newLength - 1) {
+              const nextBlock = newBlocks[index + 1]
+              let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
+              if (!anchorNode.parentNode)
+                anchorNode = normalizeAnchor(nextBlock.nodes)
+              if ('source' in action) {
+                const { item, key } = action
+                const block = mount(source, index, anchorNode, item, key)
+                moveLink(block, nextBlock.prev, nextBlock)
+              } else if (action.block.next !== nextBlock) {
+                insertForBlock(action.block, anchorNode)
+                moveLink(action.block, nextBlock.prev, nextBlock)
               }
-            } else {
-              mountCounter++
-              operations.push(() =>
-                mount(
-                  source,
-                  blockIndex,
-                  anchorOffset === -1
-                    ? anchorFallback
-                    : normalizeAnchor(newBlocks[anchorOffset].nodes),
-                  blockItem,
-                  blockKey,
-                ),
-              )
+            } else if ('source' in action) {
+              const { item, key } = action
+              const block = mount(source, index, parentAnchor, item, key)
+              moveLink(block, blocksTail)
+              blocksTail = block
+            } else if (action.block.next !== undefined) {
+              let anchorNode = anchor
+                ? normalizeAnchor(anchor.nodes)
+                : parentAnchor
+              if (!anchorNode.parentNode) anchorNode = parentAnchor
+              insertForBlock(action.block, anchorNode)
+              moveLink(action.block, blocksTail)
+              blocksTail = action.block
             }
           }
-
-          for (let i = queuedBlocks.length - 1; i >= 0; i--) {
-            const [blockIndex, blockItem, blockKey] = queuedBlocks[i]
-            relocateOrMountBlock(
-              blockIndex,
-              blockItem,
-              blockKey,
-              blockIndex < preparationBlockCount - 1 ? blockIndex + 1 : -1,
-            )
-          }
-
-          for (let i = preparationBlockCount; i < newLength - endOffset; i++) {
-            const blockItem = getItem(source, i)
-            const blockKey = getKey(...blockItem)
-            relocateOrMountBlock(i, blockItem, blockKey, -1)
-          }
-
-          const useFastRemove = mountCounter === newLength
-
-          for (const leftoverIndex of previousKeyIndexMap.values()) {
-            unmount(
-              oldBlocks[leftoverIndex],
-              !(useFastRemove && canUseFastRemove),
-              !useFastRemove,
-            )
-          }
-          if (useFastRemove) {
-            for (const selector of selectors) {
-              selector.cleanup()
-            }
-            if (canUseFastRemove) {
-              parent!.textContent = ''
-              parent!.appendChild(parentAnchor)
-            }
-          }
-
-          // perform mount and move operations
-          for (const action of operations) {
-            action()
+          for (const block of newBlocks) {
+            block.prevAnchor = block.next = block.prev = undefined
           }
         }
       }
     }
 
     frag.nodes = [(oldBlocks = newBlocks)]
-    if (parentAnchor) {
-      frag.nodes.push(parentAnchor)
-    }
+    if (parentAnchor) frag.nodes.push(parentAnchor)
 
+    if (wasMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
     setActiveSub(prevSub)
   }
 
   const needKey = renderItem.length > 1
   const needIndex = renderItem.length > 2
 
+  type InsertForBlock = (block: ForBlock, anchor: Node | undefined) => void
+  // IS_COMPONENT means the item owns its own scope, not that block.nodes is
+  // guaranteed to be a VaporComponentInstance. Component fallback may produce a
+  // plain DOM node, so component-shaped blocks still use the generic block path.
+  const insertForBlock: InsertForBlock = isSingleNode
+    ? (block, anchor) => insertNode(block.nodes as Node, parent!, anchor)
+    : isFragment
+      ? (block, anchor) =>
+          insertFragment(block.nodes as VaporFragment, parent!, anchor)
+      : (block, anchor) => insert(block.nodes, parent!, anchor)
+
+  type RemoveForBlock = (block: ForBlock) => void
+  const removeForBlock: RemoveForBlock = isSingleNode
+    ? block => removeNode(block.nodes as Node, parent!)
+    : isFragment
+      ? block => removeFragment(block.nodes as VaporFragment, parent!)
+      : block => remove(block.nodes, parent!)
+
   const mount = (
     source: ResolvedSource,
     idx: number,
     anchor: Node | undefined = parentAnchor,
     [item, key, index] = getItem(source, idx),
-    key2 = getKey && getKey(item, key, index),
+    key2 = newKeys ? newKeys[idx] : getKey && getKey(item, key, index),
   ): ForBlock => {
     const itemRef = shallowRef(item)
     // avoid creating refs if the render fn doesn't need it
     const keyRef = needKey ? shallowRef(key) : undefined
     const indexRef = needIndex ? shallowRef(index) : undefined
 
-    currentKey = key2
     let nodes: Block
     let scope: EffectScope | undefined
     if (isComponent) {
       // component already has its own scope so no outer scope needed
       nodes = renderItem(itemRef, keyRef as any, indexRef as any)
     } else {
-      scope = new EffectScope()
-      nodes = scope.run(() =>
-        renderItem(itemRef, keyRef as any, indexRef as any),
-      )!
+      scope = new EffectScope(true)
+      try {
+        nodes = scope.run(() =>
+          renderItem(itemRef, keyRef as any, indexRef as any),
+        )!
+      } catch (err) {
+        scope.stop()
+        throw err
+      }
     }
 
     const block = (newBlocks[idx] = new ForBlock(
@@ -384,9 +472,118 @@ export const createFor = (
       key2,
     ))
 
-    if (parent) insert(block.nodes, parent, anchor)
+    // apply transition for new nodes
+    if (isTransitionEnabled && frag.$transition) {
+      if (frag.$transition.applyGroup) setBlockKey(block.nodes, block.key)
+      applyTransitionHooks(block.nodes, frag.$transition)
+    }
+
+    if (parent) {
+      const onBeforeInsert = frag.onBeforeInsert
+      if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(block.nodes))
+      insertForBlock(block, anchor)
+    }
 
     return block
+  }
+
+  function hydrateList(source: ResolvedSource, newLength: number): void {
+    const hydrationStart = currentHydrationNode!
+    let exitHydrationBoundary: (() => void) | undefined
+    let nextNode
+    const emptyLocalRange =
+      isComment(hydrationStart, ']') &&
+      isComment(hydrationStart.previousSibling!, '[')
+    const slotEndAnchor = getCurrentSlotEndAnchor()
+    const slotFallbackRange = isPendingSlotContent() && slotEndAnchor
+
+    const reuseBoundaryClose = (close: Node): void => {
+      parentAnchor = markHydrationAnchor(close)
+      exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+    }
+
+    try {
+      if (emptyLocalRange && newLength) {
+        reuseBoundaryClose(hydrationStart)
+        for (let i = 0; i < newLength; i++) {
+          mount(source, i)
+        }
+        setCurrentHydrationNode(parentAnchor)
+      } else {
+        for (let i = 0; i < newLength; i++) {
+          if (isComment(currentHydrationNode!, ']')) {
+            nextNode = markHydrationAnchor(currentHydrationNode!)
+            setCurrentHydrationNode(nextNode)
+          } else {
+            nextNode = nextLogicalSibling(currentHydrationNode!)
+          }
+          mount(source, i)
+          if (nextNode) setCurrentHydrationNode(nextNode)
+        }
+
+        // special handling transition-group + v-for, without <!--]--> marker
+        const resolvedAnchor =
+          resolveForHydrationAnchor &&
+          resolveForHydrationAnchor(
+            hydrationStart,
+            newLength ? nextNode : currentHydrationNode,
+          )
+        if (resolvedAnchor) {
+          parentAnchor = resolvedAnchor
+          pendingHydrationAnchor = true
+        } else if (slotFallbackRange && !isValidBlock(newBlocks)) {
+          // Slot fallback can fall through an empty/invalid `v-for`. In that
+          // case SSR only rendered the parent slot range, so this `v-for` has no
+          // own `<!--]-->` to reuse. Keep its runtime anchor detached if
+          // fallback wins; if content wins, insert it at the local slot-content
+          // boundary below.
+          const anchor =
+            // The invalid list still consumed local SSR item ranges.
+            currentHydrationNode !== hydrationStart
+              ? currentHydrationNode!
+              : // Empty source with trailing slot siblings.
+                hydrationStart !== slotEndAnchor
+                ? hydrationStart.nextSibling!
+                : slotEndAnchor!
+          parentAnchor = markHydrationAnchor(
+            __DEV__ ? createComment('for') : createTextNode(),
+          )
+          pendingHydrationAnchor = true
+          if (
+            currentHydrationNode === hydrationStart ||
+            currentHydrationNode === slotEndAnchor
+          ) {
+            setCurrentHydrationNode(hydrationStart)
+          }
+          queuePendingSlotContentAnchor({
+            onContent: () => {
+              queuePostFlushCb(() => {
+                const parentNode = anchor.parentNode
+                if (parentNode) parentNode.insertBefore(parentAnchor, anchor)
+              })
+            },
+            onFallback: () => {},
+          })
+        } else {
+          const close = locateHydrationBoundaryClose(currentHydrationNode!)
+          reuseBoundaryClose(close)
+          if (__DEV__ && !isComment(parentAnchor, ']')) {
+            throw new Error(
+              `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
+            )
+          }
+
+          // optimization: cache the fragment end anchor as $llc (last logical child)
+          // so that locateChildByLogicalIndex can skip the entire fragment
+          if (_insertionParent && isComment(parentAnchor, ']')) {
+            ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
+            _insertionParent.$llc = parentAnchor
+          }
+        }
+      }
+    } finally {
+      exitHydrationBoundary && exitHydrationBoundary()
+    }
   }
 
   const update = (
@@ -406,82 +603,154 @@ export const createFor = (
     }
   }
 
-  const unmount = (block: ForBlock, doRemove = true, doDeregister = true) => {
+  const unmount = (block: ForBlock, doRemove = true) => {
     if (!isComponent) {
       block.scope!.stop()
     }
     if (doRemove) {
-      removeBlock(block.nodes, parent!)
+      removeForBlock(block)
     }
-    if (doDeregister) {
-      for (const selector of selectors) {
-        selector.deregister(block.key)
-      }
-    }
-  }
-
-  if (setup) {
-    setup({ createSelector })
   }
 
   if (flags & VaporVForFlags.ONCE) {
     renderList()
   } else {
-    renderEffect(renderList)
+    renderEffect(() => {
+      if (!isMounted) return renderList()
+      const prevOwner = setCurrentSlotOwner(slotOwner)
+      try {
+        renderList()
+      } finally {
+        setCurrentSlotOwner(prevOwner)
+      }
+    })
   }
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    if (!pendingHydrationAnchor && currentHydrationNode === parentAnchor!) {
+      advanceHydrationNode(parentAnchor!)
+    }
+    exitHydrationCursor(hydrationCursor)
   }
 
   return frag
+}
 
-  function createSelector(source: () => any): (cb: () => void) => void {
-    let operMap = new Map<any, (() => void)[]>()
-    let activeKey = source()
-    let activeOpers: (() => void)[] | undefined
+export interface ForSelector {
+  (key: any, oper: () => void): void
+  /**
+   * Bulk-reset the selector's internal state. Hook into a v-for's fast-reset
+   * paths via `forFragment.onReset(selector.reset)` so the lazy per-item
+   * `onScopeDispose` teardowns short-circuit instead of doing N individual
+   * Map.delete() calls.
+   */
+  reset(): void
+}
 
-    watch(source, newValue => {
-      if (activeOpers !== undefined) {
-        for (const oper of activeOpers) {
-          oper()
-        }
+/**
+ * Builds a key-indexed selector that activates only the opers registered with
+ * the key matching the current source value. Compared to letting each item
+ * subscribe directly, this keeps re-renders on source change O(2) instead of
+ * O(N) (only previous and new active item re-run).
+ *
+ * Selector cleanup follows the current scope. Per-item teardown is auto-wired
+ * via `onScopeDispose` so callers (typically v-for item scopes) don't need
+ * explicit deregistration. For bulk-reset hot paths, attach the selector to
+ * the v-for via `frag.onReset(selector.reset)` to skip the per-item Map ops.
+ */
+export function createSelector(source: () => any): ForSelector {
+  const operMap = new Map<any, (() => void)[]>()
+  let activeKey = source()
+  let activeOpers: (() => void)[] | undefined
+  let pendingKey = activeKey
+  let pending = false
+  // bumped by reset(); register captures the current value and uses it as
+  // a stale-check so post-reset deregisters become no-ops
+  let generation = 0
+
+  watch(source, newValue => {
+    pendingKey = newValue
+    if (pending) return
+    pending = true
+
+    if (activeOpers !== undefined) {
+      for (const oper of activeOpers) {
+        oper()
       }
-      activeOpers = operMap.get(newValue)
+    }
+
+    // watch may trigger before list patched
+    // defer to post-flush so operMap is up to date
+    queuePostFlushCb(() => {
+      pending = false
+      activeKey = pendingKey
+      activeOpers = operMap.get(activeKey)
       if (activeOpers !== undefined) {
         for (const oper of activeOpers) {
           oper()
         }
       }
     })
+  })
 
-    selectors.push({ deregister, cleanup })
-    return register
-
-    function cleanup() {
-      operMap = new Map()
-      activeOpers = undefined
-    }
-
-    function register(oper: () => void) {
-      oper()
-      let opers = operMap.get(currentKey)
-      if (opers !== undefined) {
-        opers.push(oper)
-      } else {
-        opers = [oper]
-        operMap.set(currentKey, opers)
-        if (currentKey === activeKey) {
-          activeOpers = opers
-        }
-      }
-    }
-
-    function deregister(key: any) {
-      operMap.delete(key)
+  const register: ForSelector = (key, oper) => {
+    oper()
+    let opers = operMap.get(key)
+    if (opers !== undefined) {
+      opers.push(oper)
+    } else {
+      opers = [oper]
+      operMap.set(key, opers)
       if (key === activeKey) {
-        activeOpers = undefined
+        activeOpers = opers
       }
+    }
+    const myGen = generation
+    onScopeDispose(() => {
+      if (myGen !== generation) return // bulk-cleared, skip
+      const list = operMap.get(key)
+      if (list === undefined) return
+      if (list.length === 1) {
+        operMap.delete(key)
+        if (key === activeKey) activeOpers = undefined
+      } else {
+        const idx = list.indexOf(oper)
+        if (idx !== -1) list.splice(idx, 1)
+      }
+    }, true)
+  }
+  register.reset = () => {
+    operMap.clear()
+    activeOpers = undefined
+    generation++
+  }
+  return register
+}
+
+function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
+  const { prev: oldPrev, next: oldNext } = block
+  if (oldPrev) oldPrev.next = oldNext
+  if (oldNext) {
+    oldNext.prev = oldPrev
+    if (block.prevAnchor !== block) {
+      oldNext.prevAnchor = block.prevAnchor
+    }
+  }
+  if (newPrev) newPrev.next = block
+  if (newNext) newNext.prev = block
+  block.prev = newPrev
+  block.next = newNext
+  block.prevAnchor = block
+}
+
+function stopBlockScopes(blocks: ForBlock[]): void {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]
+    if (block) {
+      const scope = block.scope
+      if (scope) scope.stop()
     }
   }
 }
@@ -513,11 +782,15 @@ function normalizeSource(source: any): ResolvedSource {
   } else if (isString(source)) {
     values = source.split('')
   } else if (typeof source === 'number') {
-    if (__DEV__ && !Number.isInteger(source)) {
-      warn(`The v-for range expect an integer value but got ${source}.`)
+    if (__DEV__ && (!Number.isInteger(source) || source < 0)) {
+      warn(
+        `The v-for range expects a positive integer value but got ${source}.`,
+      )
+      values = []
+    } else {
+      values = new Array(source)
+      for (let i = 0; i < source; i++) values[i] = i + 1
     }
-    values = new Array(source)
-    for (let i = 0; i < source; i++) values[i] = i + 1
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
       values = Array.from(source as Iterable<any>)
@@ -528,6 +801,8 @@ function normalizeSource(source: any): ResolvedSource {
         values[i] = source[keys[i]]
       }
     }
+  } else {
+    values = []
   }
   return {
     values,
@@ -557,11 +832,20 @@ function normalizeAnchor(node: Block): Node {
   if (node instanceof Node) {
     return node
   } else if (isArray(node)) {
-    return normalizeAnchor(node[0])
+    for (let i = 0; i < node.length; i++) {
+      const anchor = normalizeAnchor(node[i])
+      if (anchor) return anchor
+    }
+    return undefined!
   } else if (isVaporComponent(node)) {
     return normalizeAnchor(node.block!)
   } else {
-    return normalizeAnchor(node.nodes!)
+    const nodes = node.nodes
+    // Empty ForFragment keeps its insertion anchor in `nodes`, even though it
+    // is not a valid content block.
+    return isValidBlock(nodes)
+      ? normalizeAnchor(nodes)
+      : node.anchor || normalizeAnchor(nodes)
   }
 }
 
@@ -574,6 +858,10 @@ export function getRestElement(val: any, keys: string[]): any {
   return res
 }
 
-export function getDefaultValue(val: any, defaultVal: any): any {
-  return val === undefined ? defaultVal : val
+export function getDefaultValue(val: any, getDefaultVal: () => any): any {
+  return val === undefined ? getDefaultVal() : val
+}
+
+export function isForBlock(block: Block): block is ForBlock {
+  return block instanceof ForBlock
 }

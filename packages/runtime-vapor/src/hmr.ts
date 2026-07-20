@@ -3,7 +3,7 @@ import {
   pushWarningContext,
   setCurrentInstance,
 } from '@vue/runtime-dom'
-import { insert, normalizeBlock, remove } from './block'
+import { findBlockBoundary, insert, remove } from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
@@ -14,15 +14,21 @@ import {
 } from './component'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
-  const normalized = normalizeBlock(instance.block)
-  const parent = normalized[0].parentNode!
-  const anchor = normalized[normalized.length - 1].nextSibling
+  const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
+  const parent = parentNode as ParentNode
+  if (instance.renderEffects) {
+    instance.renderEffects.forEach(e => e.stop())
+    instance.renderEffects.length = 0
+  }
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
-  devRender(instance)
-  popWarningContext()
-  setCurrentInstance(...prev)
+  try {
+    devRender(instance)
+  } finally {
+    popWarningContext()
+    setCurrentInstance(...prev)
+  }
   insert(instance.block, parent, anchor)
 }
 
@@ -30,17 +36,38 @@ export function hmrReload(
   instance: VaporComponentInstance,
   newComp: VaporComponent,
 ): void {
-  const normalized = normalizeBlock(instance.block)
-  const parent = normalized[0].parentNode!
-  const anchor = normalized[normalized.length - 1].nextSibling
+  const parentInstance = instance.parent
+
+  // Align child reloads with VDOM HMR: rerender the parent instead of
+  // surgically swapping the child instance. A local swap can leave parent
+  // block ownership, component refs, or exposed instances pointing at the old
+  // instance.
+  if (parentInstance) {
+    parentInstance.hmrRerender!()
+    return
+  }
+
+  const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
+  const parent = parentNode as ParentNode
   unmountComponent(instance, parent)
-  const prev = setCurrentInstance(instance.parent)
-  const newInstance = createComponent(
-    newComp,
-    instance.rawProps,
-    instance.rawSlots,
-    instance.isSingleRoot,
-  )
-  setCurrentInstance(...prev)
+  const prev = setCurrentInstance(parentInstance)
+  let newInstance: VaporComponentInstance
+  try {
+    newInstance = createComponent(
+      newComp,
+      instance.rawProps,
+      instance.rawSlots,
+      instance.isSingleRoot,
+      undefined,
+      instance.appContext,
+    )
+  } finally {
+    setCurrentInstance(...prev)
+  }
   mountComponent(newInstance, parent, anchor)
+
+  const app = instance.appContext.app
+  if (app && app._instance === instance) {
+    app._instance = newInstance
+  }
 }

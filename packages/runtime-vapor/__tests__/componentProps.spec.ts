@@ -15,6 +15,7 @@ import {
   renderEffect,
   template,
 } from '../src'
+import { resolveDynamicProps } from '../src/componentProps'
 import { makeRender } from './_utils'
 import { setElementText } from '../src/dom/prop'
 
@@ -590,5 +591,264 @@ describe('component: props', () => {
 
     render({ msg: () => 'test' })
     expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
+  })
+
+  test('v-once preserves function-valued props', () => {
+    const cb = vi.fn(() => 'called')
+    const resolved: unknown[] = []
+    const Child = defineVaporComponent({
+      props: ['cb'],
+      setup(props: any) {
+        resolved.push(props.cb)
+        return []
+      },
+    })
+
+    define({
+      setup() {
+        return [
+          createComponent(Child, { cb: () => cb }, null, true, true),
+          createComponent(Child, { $: [{ cb: () => cb }] }, null, true, true),
+        ]
+      },
+    }).render()
+
+    expect(resolved[0]).toBe(cb)
+    expect(resolved[1]).toBe(cb)
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  describe('dynamic props source caching', () => {
+    test('v-bind object should be cached when child accesses multiple props', () => {
+      let sourceCallCount = 0
+      const obj = ref({ foo: 1, bar: 2, baz: 3 })
+
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        props: ['foo', 'bar', 'baz'],
+        setup(props: any) {
+          const n0 = t0()
+          // Child component accesses multiple props
+          renderEffect(() => {
+            setElementText(n0, `${props.foo}-${props.bar}-${props.baz}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [
+              () => {
+                sourceCallCount++
+                return obj.value
+              },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>1-2-3</div>')
+      // Source should only be called once even though 3 props are accessed
+      expect(sourceCallCount).toBe(1)
+    })
+
+    test('v-bind object should update when source changes', async () => {
+      let sourceCallCount = 0
+      const obj = ref({ foo: 1, bar: 2 })
+
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        props: ['foo', 'bar'],
+        setup(props: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            setElementText(n0, `${props.foo}-${props.bar}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [
+              () => {
+                sourceCallCount++
+                return obj.value
+              },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>1-2</div>')
+      expect(sourceCallCount).toBe(1)
+
+      // Update source
+      obj.value = { foo: 10, bar: 20 }
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div>10-20</div>')
+      // Should be called again after source changes
+      expect(sourceCallCount).toBe(2)
+    })
+
+    test('v-bind object should not update child when resolved values are unchanged', async () => {
+      let childRenderCount = 0
+      const activeId = ref(0)
+
+      const t0 = template('<div></div>', 1)
+      const Child = defineVaporComponent({
+        props: ['active', 'tone'],
+        setup(props: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            childRenderCount++
+            setElementText(n0, `${props.active}-${props.tone}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [
+              () => {
+                const active = activeId.value === 1
+                return {
+                  active,
+                  tone: 'stable',
+                  class: active ? 'active' : 'inactive',
+                }
+              },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div class="inactive">false-stable</div>')
+      expect(childRenderCount).toBe(1)
+
+      activeId.value = 2
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div class="inactive">false-stable</div>')
+      expect(childRenderCount).toBe(1)
+    })
+
+    test('v-bind object should be cached when child accesses multiple attrs', () => {
+      let sourceCallCount = 0
+      const obj = ref({ foo: 1, bar: 2, baz: 3 })
+
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        // No props declaration - all become attrs
+        setup(_: any, { attrs }: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            setElementText(n0, `${attrs.foo}-${attrs.bar}-${attrs.baz}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [
+              () => {
+                sourceCallCount++
+                return obj.value
+              },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div foo="1" bar="2" baz="3">1-2-3</div>')
+      // Source should only be called once
+      expect(sourceCallCount).toBe(1)
+    })
+
+    test('mixed static and dynamic props', async () => {
+      let sourceCallCount = 0
+      const obj = ref({ foo: 1 })
+
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        props: ['id', 'foo', 'class'],
+        setup(props: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            setElementText(n0, `${props.id}-${props.foo}-${props.class}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            id: 'static',
+            $: [
+              () => {
+                sourceCallCount++
+                return obj.value
+              },
+              { class: 'bar' },
+            ],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>static-1-bar</div>')
+      expect(sourceCallCount).toBe(1)
+
+      obj.value = { foo: 2 }
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div>static-2-bar</div>')
+      expect(sourceCallCount).toBe(2)
+    })
+
+    test('static object source direct values are exposed as attrs', () => {
+      const t0 = template('<div></div>')
+      const Child = defineVaporComponent({
+        setup(_: any, { attrs }: any) {
+          const n0 = t0()
+          renderEffect(() => {
+            setElementText(n0, `${attrs.id}-${attrs.class}`)
+          })
+          return n0
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, {
+            $: [{ id: 'foo', class: 'bar' }],
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div id="foo" class="bar">foo-bar</div>')
+    })
+
+    test('resolveDynamicProps supports direct values in static object sources', () => {
+      expect(
+        resolveDynamicProps({
+          id: 'foo',
+          class: 'base',
+          $: [() => ({ class: 'dynamic' }), { class: 'bar', title: 'baz' }],
+        }),
+      ).toEqual({
+        id: 'foo',
+        class: ['base', 'dynamic', 'bar'],
+        title: 'baz',
+      })
+    })
   })
 })

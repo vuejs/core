@@ -23,6 +23,7 @@ import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export type {
   WatchHandle,
@@ -68,7 +69,9 @@ export function watchPostEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? extend({}, options as any, { flush: 'post' }) : { flush: 'post' },
+    __DEV__
+      ? extend({}, options as WatchEffectOptions, { flush: 'post' })
+      : { flush: 'post' },
   )
 }
 
@@ -79,7 +82,9 @@ export function watchSyncEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? extend({}, options as any, { flush: 'sync' }) : { flush: 'sync' },
+    __DEV__
+      ? extend({}, options as WatchEffectOptions, { flush: 'sync' })
+      : { flush: 'sync' },
   )
 }
 
@@ -277,11 +282,11 @@ export function instanceWatch(
   value: WatchCallback | ObjectWatchOptionItem,
   options?: WatchOptions,
 ): WatchHandle {
-  const publicThis = this.proxy as any
+  const publicThis = this.proxy
   const getter = isString(source)
     ? source.includes('.')
-      ? createPathGetter(publicThis, source)
-      : () => publicThis[source]
+      ? createPathGetter(publicThis!, source)
+      : () => publicThis![source as keyof typeof publicThis]
     : source.bind(publicThis, publicThis)
   let cb
   if (isFunction(value)) {
@@ -296,12 +301,15 @@ export function instanceWatch(
   return res
 }
 
-export function createPathGetter(ctx: any, path: string) {
+export function createPathGetter(
+  ctx: ComponentPublicInstance,
+  path: string,
+): () => WatchSource | WatchSource[] | WatchEffect | object {
   const segments = path.split('.')
-  return (): any => {
+  return (): WatchSource | WatchSource[] | WatchEffect | object => {
     let cur = ctx
     for (let i = 0; i < segments.length && cur; i++) {
-      cur = cur[segments[i]]
+      cur = cur[segments[i] as keyof typeof cur]
     }
     return cur
   }

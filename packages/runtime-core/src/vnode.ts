@@ -6,6 +6,7 @@ import {
   extend,
   isArray,
   isFunction,
+  isModelListener,
   isObject,
   isOn,
   isString,
@@ -23,6 +24,7 @@ import {
 } from './component'
 import type { RawSlots } from './componentSlots'
 import {
+  type EffectScope,
   type ReactiveFlags,
   type Ref,
   type ShallowRef,
@@ -268,7 +270,10 @@ export interface VNode<
   vs?: {
     slot: (props: any) => any
     fallback: (() => VNodeArrayChildren) | undefined
+    outletFallback?: (() => VNodeArrayChildren) | undefined
+    state?: unknown
     ref?: ShallowRef<any>
+    scope?: EffectScope
   }
   /**
    * @internal Vapor slot Block
@@ -455,18 +460,17 @@ const createVNodeWithArgsTransform = (
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
-const normalizeRef = ({
-  ref,
-  ref_key,
-  ref_for,
-}: VNodeProps): VNodeNormalizedRefAtom | null => {
+export const normalizeRef = (
+  { ref, ref_key, ref_for }: VNodeProps,
+  i: ComponentInternalInstance = currentRenderingInstance!,
+): VNodeNormalizedRefAtom | null => {
   if (typeof ref === 'number') {
     ref = '' + ref
   }
   return (
     ref != null
       ? isString(ref) || isRef(ref) || isFunction(ref)
-        ? { i: currentRenderingInstance, r: ref, k: ref_key, f: !!ref_for }
+        ? { i, r: ref, k: ref_key, f: !!ref_for }
         : ref
       : null
   ) as any
@@ -738,6 +742,9 @@ export function cloneVNode<T, U>(
     anchor: vnode.anchor,
     ctx: vnode.ctx,
     ce: vnode.ce,
+    vi: vnode.vi,
+    vs: cloneVaporSlotMeta(vnode as VNode),
+    vb: vnode.vb,
   }
 
   // if the vnode will be replaced by the cloned one, it is necessary
@@ -752,6 +759,27 @@ export function cloneVNode<T, U>(
 
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
+  }
+
+  return cloned
+}
+
+function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
+  const vaporSlot = vnode.vs
+  if (!vaporSlot) {
+    return vaporSlot
+  }
+
+  const cloned: NonNullable<VNode['vs']> = {
+    slot: vaporSlot.slot,
+    fallback: vaporSlot.fallback,
+    outletFallback: vaporSlot.outletFallback,
+  }
+
+  if (vnode.el) {
+    cloned.state = vaporSlot.state
+    cloned.ref = vaporSlot.ref
+    cloned.scope = vaporSlot.scope
   }
 
   return cloned
@@ -873,6 +901,10 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
       }
     }
   } else if (isFunction(children)) {
+    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
+      normalizeChildren(vnode, { default: children })
+      return
+    }
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
@@ -911,6 +943,14 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
           ret[key] = existing
             ? [].concat(existing as any, incoming as any)
             : incoming
+        } else if (
+          incoming == null &&
+          existing == null &&
+          // mergeProps({ 'onUpdate:modelValue': undefined }) should not retain
+          // the model listener.
+          !isModelListener(key)
+        ) {
+          ret[key] = incoming
         }
       } else if (key !== '') {
         ret[key] = toMerge[key]

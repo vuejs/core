@@ -364,6 +364,150 @@ describe('reactivity/effect/scope', () => {
     expect(scope.cleanupsLength).toBe(0)
   })
 
+  it('should still trigger updates after stopping scope stored in reactive object', () => {
+    const rs = ref({
+      stage: 0,
+      scope: null as any,
+    })
+
+    let renderCount = 0
+    effect(() => {
+      renderCount++
+      return rs.value.stage
+    })
+
+    const handleBegin = () => {
+      const status = rs.value
+      status.stage = 1
+      status.scope = effectScope()
+      status.scope.run(() => {
+        watch([() => status.stage], () => {})
+      })
+    }
+
+    const handleExit = () => {
+      const status = rs.value
+      status.stage = 0
+      const watchScope = status.scope
+      status.scope = null
+      if (watchScope) {
+        watchScope.stop()
+      }
+    }
+
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(1)
+
+    // 1. Click begin
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(2)
+
+    // 2. Click add
+    rs.value.stage++
+    expect(rs.value.stage).toBe(2)
+    expect(renderCount).toBe(3)
+
+    // 3. Click end
+    handleExit()
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(4)
+
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(5)
+  })
+
+  it('should still trigger updates after stopping scope stored in reactive object', () => {
+    const rs = ref({
+      stage: 0,
+      scope: null as any,
+    })
+
+    let renderCount = 0
+    effect(() => {
+      renderCount++
+      return rs.value.stage
+    })
+
+    const handleBegin = () => {
+      const status = rs.value
+      status.stage = 1
+      status.scope = effectScope()
+      status.scope.run(() => {
+        watch([() => status.stage], () => {})
+      })
+    }
+
+    const handleExit = () => {
+      const status = rs.value
+      status.stage = 0
+      const watchScope = status.scope
+      status.scope = null
+      if (watchScope) {
+        watchScope.stop()
+      }
+    }
+
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(1)
+
+    // 1. Click begin
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(2)
+
+    // 2. Click add
+    rs.value.stage++
+    expect(rs.value.stage).toBe(2)
+    expect(renderCount).toBe(3)
+
+    // 3. Click end
+    handleExit()
+    expect(rs.value.stage).toBe(0)
+    expect(renderCount).toBe(4)
+
+    handleBegin()
+    expect(rs.value.stage).toBe(1)
+    expect(renderCount).toBe(5)
+  })
+
+  it('should stop child scopes when cleanup stops a sibling scope', () => {
+    const parent = effectScope()
+    let sibling!: EffectScope
+
+    parent.run(() => {
+      effectScope().run(() => {
+        onScopeDispose(() => sibling.stop())
+      })
+      sibling = effectScope()
+    })
+
+    expect(() => parent.stop()).not.toThrow()
+    expect(sibling.active).toBe(false)
+  })
+
+  it('should resume effects when a watcher stops a sibling watcher', () => {
+    const count = ref(0)
+    const scope = effectScope()
+    let stopSecond = () => {}
+    const firstSpy = vi.fn(() => stopSecond())
+    const secondSpy = vi.fn()
+
+    scope.run(() => {
+      watch(count, firstSpy, { flush: 'sync' })
+      stopSecond = watch(count, secondSpy, { flush: 'sync' })
+    })
+
+    scope.pause()
+    count.value++
+
+    expect(() => scope.resume()).not.toThrow()
+    expect(firstSpy).toHaveBeenCalledTimes(1)
+    expect(secondSpy).not.toHaveBeenCalled()
+    expect(getEffectsCount(scope)).toBe(1)
+  })
+
   test('signal', () => {
     const scope = effectScope()
     // should not create an `AbortController` until `scope.signal` is accessed

@@ -1,10 +1,12 @@
 import {
+  type VaporDirective,
   createComponent,
   createTextNode,
   createVaporApp,
+  createVaporSSRApp,
   defineVaporComponent,
-  // @ts-expect-error
-  withDirectives,
+  template,
+  withVaporDirectives,
 } from '../src'
 import {
   type GenericComponentInstance,
@@ -56,6 +58,26 @@ describe('api: createVaporApp', () => {
     expect(`already been mounted`).toHaveBeenWarned()
   })
 
+  test('mount should no-op when selector returns null', () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        return createTextNode('hello')
+      },
+    })
+    const app = createVaporApp(Comp)
+    let proxy: any
+
+    expect(() => {
+      proxy = app.mount('#not-exist-id')
+    }).not.toThrow()
+
+    expect(proxy).toBeUndefined()
+    expect(
+      'Failed to mount app: mount target selector "#not-exist-id" returned null.',
+    ).toHaveBeenWarned()
+    expect(app._container).toBeNull()
+  })
+
   test('unmount', () => {
     const Comp = defineVaporComponent({
       props: {
@@ -77,6 +99,47 @@ describe('api: createVaporApp', () => {
 
     app.unmount()
     expect(root.innerHTML).toBe(``)
+  })
+
+  test('unmount in non-dev mode', () => {
+    __DEV__ = false
+    try {
+      const Comp = defineVaporComponent({
+        setup() {
+          return createTextNode('ok')
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createVaporApp(Comp)
+
+      app.mount(root)
+      expect(root.innerHTML).toBe(`ok`)
+      expect(app._instance).toBeNull()
+
+      expect(() => app.unmount()).not.toThrow()
+      expect(root.innerHTML).toBe(``)
+      expect(app._instance).toBeNull()
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('ssr mount should fall back to full mount when container is empty', () => {
+    const Comp = defineVaporComponent({
+      setup() {
+        return createTextNode('hello')
+      },
+    })
+
+    const root = document.createElement('div')
+    const app = createVaporSSRApp(Comp)
+
+    expect(() => app.mount(root)).not.toThrow()
+    expect(root.innerHTML).toBe(`hello`)
+    expect(
+      `Attempting to hydrate existing markup but container is empty. Performing full mount instead.`,
+    ).toHaveBeenWarned()
   })
 
   test('provide', () => {
@@ -158,18 +221,17 @@ describe('api: createVaporApp', () => {
     expect(host.innerHTML).toBe(`foobar!barbaz!`)
   })
 
-  test.todo('directive', () => {
+  test('directive', () => {
     const spy1 = vi.fn()
     const spy2 = vi.fn()
 
     const { app, mount } = define({
       setup() {
-        const FooBar = resolveDirective('foo-bar')
-        const BarBaz = resolveDirective('bar-baz')
-        return withDirectives(document.createElement('div'), [
-          [FooBar],
-          [BarBaz],
-        ])
+        const FooBar = resolveDirective('foo-bar') as VaporDirective
+        const BarBaz = resolveDirective('bar-baz') as VaporDirective
+        const n0 = template('<div></div>')() as Element
+        withVaporDirectives(n0, [[FooBar], [BarBaz]])
+        return n0
       },
     }).create()
 

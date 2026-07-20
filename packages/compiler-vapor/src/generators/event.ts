@@ -1,6 +1,7 @@
 import {
   BindingTypes,
   type SimpleExpressionNode,
+  TS_NODE_TYPES,
   isFnExpression,
   isMemberExpression,
 } from '@vue/compiler-dom'
@@ -27,9 +28,7 @@ export function genSetEvent(
   const { helper } = context
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
-  const name = genName()
-  const handler = genEventHandler(context, value, modifiers)
-  const eventOptions = genEventOptions()
+  let handler: CodeFragment[] | undefined
 
   if (delegate) {
     // key is static
@@ -38,25 +37,46 @@ export function genSetEvent(
     // we can generate optimized handler attachment code
     // e.g. n1.$evtclick = () => {}
     if (!context.block.operation.some(isSameDelegateEvent)) {
-      return [NEWLINE, `n${element}.$evt${key.content} = `, ...handler]
+      return [
+        NEWLINE,
+        `n${element}.$evt${key.content} = `,
+        ...genDirectHandler(),
+      ]
     }
   }
 
+  const name = genName()
+  const eventOptions = genEventOptions()
   return [
     NEWLINE,
     ...genCall(
-      helper(delegate ? 'delegate' : 'on'),
+      helper(effect ? 'onBinding' : delegate ? 'delegate' : 'on'),
       `n${element}`,
       name,
-      handler,
+      genHandler(),
       eventOptions,
     ),
   ]
 
+  function genHandler(): CodeFragment[] {
+    return (handler ||= genEventHandler(context, [value], modifiers))
+  }
+
+  function genInvoker(): CodeFragment[] {
+    return [`${helper('createInvoker')}(`, ...genHandler(), `)`]
+  }
+
+  function genDirectHandler(): CodeFragment[] {
+    return modifiers.keys.length || modifiers.nonKeys.length
+      ? genEventHandler(context, [value], modifiers, {
+          modifierHelper: 'vapor',
+        })
+      : genInvoker()
+  }
+
   function genName(): CodeFragment[] {
     const expr = genExpression(key, context)
     if (keyOverride) {
-      // TODO unit test
       const find = JSON.stringify(keyOverride[0])
       const replacement = JSON.stringify(keyOverride[1])
       const wrapped: CodeFragment[] = ['(', ...expr, ')']
@@ -68,11 +88,10 @@ export function genSetEvent(
 
   function genEventOptions(): CodeFragment[] | undefined {
     let { options } = modifiers
-    if (!options.length && !effect) return
+    if (!options.length) return
 
     return genMulti(
       DELIMITERS_OBJECT_NEWLINE,
-      effect && ['effect: true'],
       ...options.map((option): CodeFragment[] => [`${option}: true`]),
     )
   }
@@ -105,56 +124,96 @@ export function genSetDynamicEvents(
   ]
 }
 
+interface GenEventHandlerOptions {
+  // Generate handler expressions suitable for passing as component props
+  // (avoid wrapping member expressions with invocation).
+  asComponentProp?: boolean
+  // Wrap the result in a getter function `() => ...`.
+  extraWrap?: boolean
+  // Direct delegated assignments use Vapor guard helpers because the guard
+  // helper owns the event invoker wrapper.
+  modifierHelper?: 'runtime' | 'vapor'
+}
+
 export function genEventHandler(
   context: CodegenContext,
-  value: SimpleExpressionNode | undefined,
+  values: (SimpleExpressionNode | undefined)[] | undefined,
   modifiers: {
     nonKeys: string[]
     keys: string[]
   } = { nonKeys: [], keys: [] },
-  // passed as component prop - need additional wrap
-  extraWrap: boolean = false,
+  options: GenEventHandlerOptions = {},
 ): CodeFragment[] {
-  let handlerExp: CodeFragment[] = [`() => {}`]
-  if (value && value.content.trim()) {
-    // Determine how the handler should be wrapped so it always reference the
-    // latest value when invoked.
-    if (isMemberExpression(value, context.options)) {
-      // e.g. @click="foo.bar"
-      handlerExp = genExpression(value, context)
-      if (!isConstantBinding(value, context) && !extraWrap) {
-        // non constant, wrap with invocation as `e => foo.bar(e)`
-        // when passing as component handler, access is always dynamic so we
-        // can skip this
-        handlerExp = [`e => `, ...handlerExp, `(e)`]
+  const {
+    asComponentProp = false,
+    extraWrap = false,
+    modifierHelper = 'runtime',
+  } = options
+  const useVaporModifierHelper = modifierHelper === 'vapor'
+  let handlerExp: CodeFragment[] = []
+  if (values) {
+    values.forEach((value, index) => {
+      let exp: CodeFragment[] = []
+      if (value && value.content.trim()) {
+        // Determine how the handler should be wrapped so it always reference the
+        // latest value when invoked.
+        if (isMemberExpression(value, context.options)) {
+          // e.g. @click="foo.bar"
+          exp = genExpression(value, context)
+          if (!isConstantBinding(value, context) && !asComponentProp) {
+            // non constant, wrap with invocation as `e => foo.bar(e)`
+            // when passing as component handler, access is always dynamic so we
+            // can skip this
+            const isTSNode = value.ast && TS_NODE_TYPES.includes(value.ast.type)
+            exp = [
+              `e => `,
+              isTSNode ? '(' : '',
+              ...exp,
+              isTSNode ? ')' : '',
+              `(e)`,
+            ]
+          }
+        } else if (isFnExpression(value, context.options)) {
+          // Fn expression: @click="e => foo(e)"
+          // no need to wrap in this case
+          exp = genExpression(value, context)
+        } else {
+          // inline statement
+          // @click="foo($event)" ---> $event => foo($event)
+          const referencesEvent = value.content.includes('$event')
+          const hasMultipleStatements = value.content.includes(`;`)
+          const expr = referencesEvent
+            ? context.withId(() => genExpression(value, context), {
+                $event: null,
+              })
+            : genExpression(value, context)
+          exp = [
+            referencesEvent ? '$event => ' : '() => ',
+            hasMultipleStatements ? '{' : '(',
+            ...expr,
+            hasMultipleStatements ? '}' : ')',
+          ]
+        }
+        handlerExp = handlerExp.concat([index !== 0 ? ', ' : '', ...exp])
       }
-    } else if (isFnExpression(value, context.options)) {
-      // Fn expression: @click="e => foo(e)"
-      // no need to wrap in this case
-      handlerExp = genExpression(value, context)
-    } else {
-      // inline statement
-      // @click="foo($event)" ---> $event => foo($event)
-      const referencesEvent = value.content.includes('$event')
-      const hasMultipleStatements = value.content.includes(`;`)
-      const expr = referencesEvent
-        ? context.withId(() => genExpression(value, context), {
-            $event: null,
-          })
-        : genExpression(value, context)
-      handlerExp = [
-        referencesEvent ? '$event => ' : '() => ',
-        hasMultipleStatements ? '{' : '(',
-        ...expr,
-        hasMultipleStatements ? '}' : ')',
-      ]
+    })
+
+    if (values.length > 1) {
+      handlerExp = ['[', ...handlerExp, ']']
     }
   }
 
+  if (handlerExp.length === 0) handlerExp = ['() => {}']
   const { keys, nonKeys } = modifiers
   if (nonKeys.length)
-    handlerExp = genWithModifiers(context, handlerExp, nonKeys)
-  if (keys.length) handlerExp = genWithKeys(context, handlerExp, keys)
+    handlerExp = genWithModifiers(
+      context,
+      handlerExp,
+      nonKeys,
+      useVaporModifierHelper && !keys.length,
+    )
+  if (keys.length)
+    handlerExp = genWithKeys(context, handlerExp, keys, useVaporModifierHelper)
 
   if (extraWrap) handlerExp.unshift(`() => `)
   return handlerExp
@@ -164,9 +223,10 @@ function genWithModifiers(
   context: CodegenContext,
   handler: CodeFragment[],
   nonKeys: string[],
+  useVaporHelper: boolean = false,
 ): CodeFragment[] {
   return genCall(
-    context.helper('withModifiers'),
+    context.helper(useVaporHelper ? 'withVaporModifiers' : 'withModifiers'),
     handler,
     JSON.stringify(nonKeys),
   )
@@ -176,8 +236,13 @@ function genWithKeys(
   context: CodegenContext,
   handler: CodeFragment[],
   keys: string[],
+  useVaporHelper: boolean = false,
 ): CodeFragment[] {
-  return genCall(context.helper('withKeys'), handler, JSON.stringify(keys))
+  return genCall(
+    context.helper(useVaporHelper ? 'withVaporKeys' : 'withKeys'),
+    handler,
+    JSON.stringify(keys),
+  )
 }
 
 function isConstantBinding(

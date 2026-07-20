@@ -83,12 +83,9 @@ describe('computed', () => {
       computeds.push(c)
     }
     let i = 0
-    bench(
-      "write ref, don't read 1000 computeds (with multiple effects)",
-      () => {
-        v.value = i++
-      },
-    )
+    bench("write ref, don't read 1000 computeds (with multiple effects)", () => {
+      v.value = i++
+    })
   }
 
   {

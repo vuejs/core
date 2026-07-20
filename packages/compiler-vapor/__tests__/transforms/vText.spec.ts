@@ -58,6 +58,26 @@ describe('v-text', () => {
     expect(code).matchSnapshot()
   })
 
+  test('work with dynamic component', () => {
+    const { code } = compileWithVText(`<component :is="Comp" v-text="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+  })
+
+  test('work with component', () => {
+    const { code } = compileWithVText(`<Comp v-text="foo"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+  })
+
+  test('work with plain template createElement path', () => {
+    const { code } = compileWithVText(`<template v-text="foo"></template>`)
+    expect(code).matchSnapshot()
+    expect(code).toContain('createPlainElement')
+    expect(code).toContain('_insert(')
+    expect(code).not.toContain('_txt(n0)')
+  })
+
   test('should raise error and ignore children when v-text is present', () => {
     const onError = vi.fn()
     const { code, ir } = compileWithVText(`<div v-text="test">hello</div>`, {
@@ -68,7 +88,7 @@ describe('v-text', () => {
     ])
 
     // children should have been removed
-    expect(ir.template).toEqual(['<div> </div>'])
+    expect([...ir.template.keys()]).toEqual(['<div> '])
 
     expect(ir.block.effect).toMatchObject([
       {
@@ -97,7 +117,7 @@ describe('v-text', () => {
 
     expect(code).matchSnapshot()
     // children should have been removed
-    expect(code).contains('template("<div> </div>", true)')
+    expect(code).contains('template("<div> ", 1)')
   })
 
   test('should raise error if has no expression', () => {

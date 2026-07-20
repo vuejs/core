@@ -1,6 +1,7 @@
 // Global compile-time constants
 declare var __DEV__: boolean
 declare var __TEST__: boolean
+declare var __E2E_TEST__: boolean
 declare var __BROWSER__: boolean
 declare var __GLOBAL__: boolean
 declare var __ESM_BUNDLER__: boolean

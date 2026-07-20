@@ -3,6 +3,7 @@ import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
 import { UNKNOWN_TYPE, isCallOf, toRuntimeTypeString } from './utils'
 import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
+import { getModifierPropName } from '@vue/shared'
 
 export const DEFINE_MODEL = 'defineModel'
 
@@ -29,9 +30,13 @@ export function processDefineModel(
   let modelName: string
   let options: Node | undefined
   const arg0 = node.arguments[0] && unwrapTSNode(node.arguments[0])
-  const hasName = arg0 && arg0.type === 'StringLiteral'
+  const hasName =
+    arg0 &&
+    (arg0.type === 'StringLiteral' ||
+      (arg0.type === 'TemplateLiteral' && arg0.expressions.length === 0))
   if (hasName) {
-    modelName = arg0.value
+    modelName =
+      arg0.type === 'StringLiteral' ? arg0.value : arg0.quasis[0].value.cooked!
     options = node.arguments[1]
   } else {
     modelName = 'modelValue'
@@ -114,7 +119,7 @@ export function processDefineModel(
   return true
 }
 
-export function genModelProps(ctx: ScriptCompileContext) {
+export function genModelProps(ctx: ScriptCompileContext): string | undefined {
   if (!ctx.hasDefineModelCall) return
 
   const isProd = !!ctx.options.isProd
@@ -167,9 +172,7 @@ export function genModelProps(ctx: ScriptCompileContext) {
     modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
 
     // also generate modifiers prop
-    const modifierPropName = JSON.stringify(
-      name === 'modelValue' ? `modelModifiers` : `${name}Modifiers`,
-    )
+    const modifierPropName = JSON.stringify(getModifierPropName(name))
     modelPropsDecl += `\n    ${modifierPropName}: {},`
   }
   return `{${modelPropsDecl}\n  }`

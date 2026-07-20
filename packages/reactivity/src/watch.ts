@@ -192,8 +192,9 @@ export class WatcherEffect extends ReactiveEffect {
     if (once && cb) {
       const _cb = cb
       cb = (...args) => {
-        _cb(...args)
+        const res = _cb(...args)
         this.stop()
+        return res
       }
     }
 
@@ -220,6 +221,7 @@ export class WatcherEffect extends ReactiveEffect {
       return
     }
     if (
+      initialRun ||
       deep ||
       this.forceTrigger ||
       (this.isMultiSource
@@ -291,17 +293,17 @@ export function watch(
 export function traverse(
   value: unknown,
   depth: number = Infinity,
-  seen?: Set<unknown>,
+  seen?: Map<unknown, number>,
 ): unknown {
   if (depth <= 0 || !isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
 
-  seen = seen || new Set()
-  if (seen.has(value)) {
+  seen = seen || new Map()
+  if ((seen.get(value) || 0) >= depth) {
     return value
   }
-  seen.add(value)
+  seen.set(value, depth)
   depth--
   if (isRef(value)) {
     traverse(value.value, depth, seen)

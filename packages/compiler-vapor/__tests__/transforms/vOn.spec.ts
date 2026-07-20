@@ -87,7 +87,7 @@ describe('v-on', () => {
       `<div v-on:[event]="handler"/>`,
     )
 
-    expect(helpers).contains('on')
+    expect(helpers).contains('onBinding')
     expect(helpers).contains('renderEffect')
     expect(ir.block.operation).toMatchObject([])
 
@@ -107,6 +107,7 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
+    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e))`)
   })
 
   test('dynamic arg with prefixing', () => {
@@ -117,6 +118,22 @@ describe('v-on', () => {
     expect(code).matchSnapshot()
   })
 
+  test('dynamic arg with event options', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div v-on:[event].capture.once="handler"/>`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(helpers).contains('onBinding')
+    expect(code).matchSnapshot()
+    expect(code).contains(`_onBinding(n0, _ctx.event, e => _ctx.handler(e), {`)
+    expect(code).contains('capture: true')
+    expect(code).contains('once: true')
+    expect(code).not.contains('effect: true')
+  })
+
   test('dynamic arg with complex exp prefixing', () => {
     const { ir, code, helpers } = compileWithVOn(
       `<div v-on:[event(foo)]="handler"/>`,
@@ -125,7 +142,7 @@ describe('v-on', () => {
       },
     )
 
-    expect(helpers).contains('on')
+    expect(helpers).contains('onBinding')
     expect(helpers).contains('renderEffect')
     expect(ir.block.operation).toMatchObject([])
 
@@ -165,7 +182,7 @@ describe('v-on', () => {
         delegate: true,
       },
     ])
-    expect(code).contains(`n0.$evtclick = () => (_ctx.i++)`)
+    expect(code).contains(`n0.$evtclick = _createInvoker(() => (_ctx.i++))`)
   })
 
   test('should wrap in unref if identifier is setup-maybe-ref w/ inline: true', () => {
@@ -182,9 +199,40 @@ describe('v-on', () => {
     )
     expect(code).matchSnapshot()
     expect(helpers).contains('unref')
-    expect(code).contains(`n0.$evtclick = () => (x.value=_unref(y))`)
-    expect(code).contains(`n1.$evtclick = () => (x.value++)`)
-    expect(code).contains(`n2.$evtclick = () => ({ x: x.value } = _unref(y))`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker(() => (x.value=_unref(y)))`,
+    )
+    expect(code).contains(`n1.$evtclick = _createInvoker(() => (x.value++))`)
+    expect(code).contains(
+      `n2.$evtclick = _createInvoker(() => ({ x: x.value } = _unref(y)))`,
+    )
+  })
+
+  test('should handle setup-let assignment w/ inline: true', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div @click="x=y"/><div @click="x++"/><div @click="{ x } = y"/>`,
+      {
+        mode: 'module',
+        inline: true,
+        bindingMetadata: {
+          x: BindingTypes.SETUP_LET,
+          y: BindingTypes.SETUP_MAYBE_REF,
+        },
+      },
+    )
+
+    expect(code).matchSnapshot()
+    expect(helpers).contains('isRef')
+    expect(helpers).contains('unref')
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker(() => (_isRef(x) ? x.value = _unref(y) : x=_unref(y)))`,
+    )
+    expect(code).contains(
+      `n1.$evtclick = _createInvoker(() => (_isRef(x) ? x.value++ : x++))`,
+    )
+    expect(code).contains(
+      `n2.$evtclick = _createInvoker(() => ({ x } = _unref(y)))`,
+    )
   })
 
   test('should handle multiple inline statement', () => {
@@ -200,7 +248,9 @@ describe('v-on', () => {
     // should wrap with `{` for multiple statements
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
-    expect(code).contains(`n0.$evtclick = () => {_ctx.foo();_ctx.bar()}`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker(() => {_ctx.foo();_ctx.bar()})`,
+    )
   })
 
   test('should handle multi-line statement', () => {
@@ -216,7 +266,9 @@ describe('v-on', () => {
     // should wrap with `{` for multiple statements
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
-    expect(code).contains(`n0.$evtclick = () => {\n_ctx.foo();\n_ctx.bar()\n}`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker(() => {\n_ctx.foo();\n_ctx.bar()\n})`,
+    )
   })
 
   test('inline statement w/ prefixIdentifiers: true', () => {
@@ -232,7 +284,9 @@ describe('v-on', () => {
       },
     ])
     // should NOT prefix $event
-    expect(code).contains(`n0.$evtclick = $event => (_ctx.foo($event))`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker($event => (_ctx.foo($event)))`,
+    )
   })
 
   test('multiple inline statements w/ prefixIdentifiers: true', () => {
@@ -249,7 +303,7 @@ describe('v-on', () => {
     ])
     // should NOT prefix $event
     expect(code).contains(
-      `n0.$evtclick = $event => {_ctx.foo($event);_ctx.bar()}`,
+      `n0.$evtclick = _createInvoker($event => {_ctx.foo($event);_ctx.bar()})`,
     )
   })
 
@@ -263,7 +317,9 @@ describe('v-on', () => {
         value: { content: '$event => foo($event)' },
       },
     ])
-    expect(code).contains(`n0.$evtclick = $event => _ctx.foo($event)`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker($event => _ctx.foo($event))`,
+    )
   })
 
   test('should NOT wrap as function if expression is already function expression (with Typescript)', () => {
@@ -279,7 +335,9 @@ describe('v-on', () => {
         value: { content: '(e: any): any => foo(e)' },
       },
     ])
-    expect(code).contains(`n0.$evtclick = (e: any): any => _ctx.foo(e)`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker((e: any): any => _ctx.foo(e))`,
+    )
   })
 
   test('should NOT wrap as function if expression is already function expression (with newlines)', () => {
@@ -344,7 +402,9 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(`n0.$evtclick = e => _ctx.a['b' + _ctx.c](e)`)
+    expect(code).contains(
+      `n0.$evtclick = _createInvoker(e => _ctx.a['b' + _ctx.c](e))`,
+    )
   })
 
   test('function expression w/ prefixIdentifiers: true', () => {
@@ -359,7 +419,7 @@ describe('v-on', () => {
         value: { content: `e => foo(e)` },
       },
     ])
-    expect(code).contains(`n0.$evtclick = e => _ctx.foo(e)`)
+    expect(code).contains(`n0.$evtclick = _createInvoker(e => _ctx.foo(e))`)
   })
 
   test('should error if no expression AND no modifier', () => {
@@ -415,7 +475,7 @@ describe('v-on', () => {
     ])
     expect(code).contains(
       `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop","prevent"]), {
-    capture: true, 
+    capture: true,
     once: true
   })`,
     )
@@ -447,6 +507,7 @@ describe('v-on', () => {
           nonKeys: ['stop'],
           options: [],
         },
+        delegate: false,
       },
       {
         type: IRNodeTypes.SET_EVENT,
@@ -465,12 +526,13 @@ describe('v-on', () => {
           nonKeys: [],
           options: [],
         },
+        delegate: true,
       },
     ])
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `n0.$evtclick = _withModifiers(e => _ctx.test(e), ["stop"])
+      `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))
   n0.$evtkeyup = _withKeys(e => _ctx.test(e), ["enter"])`,
     )
   })
@@ -648,13 +710,71 @@ describe('v-on', () => {
     )
   })
 
+  test('should prioritize right over middle for click event normalization', () => {
+    const { code, ir } = compileWithVOn(
+      `<div @click.middle.right="test"/><div @click.right.middle="test"/>`,
+    )
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_EVENT,
+        key: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'contextmenu',
+          isStatic: true,
+        },
+        modifiers: { nonKeys: ['middle', 'right'] },
+        keyOverride: undefined,
+      },
+      {
+        type: IRNodeTypes.SET_EVENT,
+        key: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'contextmenu',
+          isStatic: true,
+        },
+        modifiers: { nonKeys: ['right', 'middle'] },
+        keyOverride: undefined,
+      },
+    ])
+    expect(code).toContain('$evtcontextmenu')
+    expect(code).not.toContain('$evtmouseup')
+
+    const { code: code2, ir: ir2 } = compileWithVOn(
+      `<div @[event].middle.right="test"/><div @[event].right.middle="test"/>`,
+    )
+    expect(ir2.block.effect.map(effect => effect.operations[0])).toMatchObject([
+      {
+        type: IRNodeTypes.SET_EVENT,
+        key: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'event',
+          isStatic: false,
+        },
+        modifiers: { nonKeys: ['middle', 'right'] },
+        keyOverride: ['click', 'contextmenu'],
+      },
+      {
+        type: IRNodeTypes.SET_EVENT,
+        key: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'event',
+          isStatic: false,
+        },
+        modifiers: { nonKeys: ['right', 'middle'] },
+        keyOverride: ['click', 'contextmenu'],
+      },
+    ])
+    expect(code2).toContain('=== "click" ? "contextmenu"')
+    expect(code2).not.toContain('"mouseup"')
+  })
+
   test('should not prefix member expression', () => {
     const { code } = compileWithVOn(`<div @click="foo.bar"/>`, {
       prefixIdentifiers: true,
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`n0.$evtclick = e => _ctx.foo.bar(e)`)
+    expect(code).contains(`n0.$evtclick = _createInvoker(e => _ctx.foo.bar(e))`)
   })
 
   test('should delegate event', () => {
@@ -671,21 +791,101 @@ describe('v-on', () => {
     ])
   })
 
-  test('should use delegate helper when have multiple events of same name', () => {
+  test('should allow disabling event delegation', () => {
+    const { code, ir, helpers } = compileWithVOn(`<div @click="test"/>`, {
+      eventDelegation: false,
+    })
+
+    expect(code).toMatchSnapshot()
+    expect(helpers).not.contains('delegate')
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).contains('_on(n0, "click", e => _ctx.test(e))')
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_EVENT,
+        delegate: false,
+      },
+    ])
+  })
+
+  test('should let runtime event helpers create invokers', () => {
+    const { code } = compileWithVOn(
+      `<div @click.stop="test" /><div @click.foo="a" @click.bar="b" />`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(code).contains(
+      '_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
+    )
+    expect(code).contains('_delegate(n1, "click", e => _ctx.a(e))')
+    expect(code).contains('_delegate(n1, "click", e => _ctx.b(e))')
+    expect(code).not.contains('_createInvoker')
+  })
+
+  test('should hide direct event invokers in modifier guards once', () => {
+    const { code } = compileWithVOn(`<input @keyup.self.enter="test" />`, {
+      prefixIdentifiers: true,
+    })
+
+    expect(code).contains(
+      'n0.$evtkeyup = _withKeys(_withModifiers(e => _ctx.test(e), ["self"]), ["enter"])',
+    )
+    expect(code).not.contains('_createInvoker(_withKeys')
+    expect(code).not.contains('_withKeys(_createInvoker')
+    expect(code).not.contains('_withModifiers(_createInvoker')
+  })
+
+  test('should avoid alias collisions between vapor and runtime guard helpers', () => {
+    const { code } = compileWithVOn(
+      `<input @keyup.enter="foo" /><input @[event].enter="bar" />`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+
+    expect(code).contains('withVaporKeys as _withKeys')
+    expect(code).contains('withKeys as _withKeys1')
+    expect(code).contains(
+      'n0.$evtkeyup = _withKeys(e => _ctx.foo(e), ["enter"])',
+    )
+    expect(code).contains('_onBinding(n1, _ctx.event, _withKeys1')
+    expect(code).contains('e => _ctx.bar(e), ["enter"]))')
+  })
+
+  test('should not delegate .stop when have multiple events of same name', () => {
     const { code, helpers } = compileWithVOn(
       `<div @click="test" @click.stop="test" />`,
     )
-    expect(helpers).contains('delegate')
+    expect(helpers).not.contains('delegate')
+    expect(helpers).not.contains('delegateEvents')
     expect(code).toMatchSnapshot()
-    expect(code).contains('_delegate(n0, "click", e => _ctx.test(e))')
+    expect(code).contains('_on(n0, "click", e => _ctx.test(e))')
     expect(code).contains(
-      '_delegate(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
+      '_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
+    )
+  })
+
+  test('should not delegate normalized static event when sibling uses .stop', () => {
+    const { code, helpers } = compileWithVOn(
+      `<div @click.right="test" @contextmenu.stop="test" />`,
+    )
+
+    expect(helpers).not.contains('delegate')
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).toMatchSnapshot()
+    expect(code).contains(
+      '_on(n0, "contextmenu", _withModifiers(e => _ctx.test(e), ["right"]))',
+    )
+    expect(code).contains(
+      '_on(n0, "contextmenu", _withModifiers(e => _ctx.test(e), ["stop"]))',
     )
   })
 
   test('expression with type', () => {
     const { code } = compileWithVOn(
-      `<div @click="(<number>handleClick as any)"></div>`,
+      `<div @click="foo[handleClick] as any"></div>`,
       {
         bindingMetadata: {
           handleClick: BindingTypes.SETUP_CONST,
@@ -693,7 +893,9 @@ describe('v-on', () => {
       },
     )
     expect(code).matchSnapshot()
-    expect(code).include('n0.$evtclick = e => _ctx.handleClick(e)')
+    expect(code).include(
+      'n0.$evtclick = _createInvoker(e => (_ctx.foo[_ctx.handleClick] as any)(e))',
+    )
   })
 
   test('component event with special characters', () => {
@@ -705,6 +907,12 @@ describe('v-on', () => {
     expect(code).contains('const _on_update_model = () => {}')
     expect(code).contains('const _on_update_model1 = () => {}')
     expect(code).contains('"onUpdate:model": () => _on_update_model')
-    expect(code).contains('"onUpdate-model": () => _on_update_model1')
+    expect(code).contains('onUpdateModel: () => _on_update_model1')
+  })
+
+  test('component event should camelize kebab-case', () => {
+    const { code } = compileWithVOn(`<Comp @name-click="handleClick" />`)
+    expect(code).matchSnapshot()
+    expect(code).contains('onNameClick: () => _ctx.handleClick')
   })
 })

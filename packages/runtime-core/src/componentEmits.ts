@@ -36,7 +36,7 @@ import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export type ObjectEmitsOptions = Record<
   string,
-  ((...args: any[]) => any) | null
+  ((...args: any[]) => any) | null | any[]
 >
 
 export type EmitsOptions = ObjectEmitsOptions | string[]
@@ -53,7 +53,9 @@ export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> =
               ? P
               : T[K] extends null
                 ? any[]
-                : never
+                : T[K] extends any[]
+                  ? T[K]
+                  : never
           ) => any
         }
       : {}
@@ -266,12 +268,14 @@ export function defaultPropGetter(
   return props[key]
 }
 
+const mixinEmitsCache = new WeakMap<ConcreteComponent, ObjectEmitsOptions>()
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): ObjectEmitsOptions | null {
-  const cache = appContext.emitsCache
+  const cache =
+    __FEATURE_OPTIONS_API__ && asMixin ? mixinEmitsCache : appContext.emitsCache
   const cached = cache.get(comp)
   if (cached !== undefined) {
     return cached
@@ -338,8 +342,10 @@ export function isEmitListener(
   if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
     return true
   }
-
-  key = key.slice(2).replace(/Once$/, '')
+  key = key.slice(2)
+  // #8342 the `.once` modifier appends a `Once` suffix. Preserve the exact event
+  // name `once`, while still stripping the suffix from `onOnceOnce`.
+  key = key === 'Once' ? key : key.replace(/Once$/, '')
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
     hasOwn(options, hyphenate(key)) ||

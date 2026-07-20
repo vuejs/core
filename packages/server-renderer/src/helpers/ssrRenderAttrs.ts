@@ -29,21 +29,29 @@ export function ssrRenderAttrs(
   tag?: string,
 ): string {
   let ret = ''
-  for (const key in props) {
+  for (let key in props) {
     if (
       shouldIgnoreProp(key) ||
       isOn(key) ||
-      (tag === 'textarea' && key === 'value')
+      (tag === 'textarea' && key === 'value') ||
+      // force as property (not rendered in SSR)
+      key.startsWith('.')
     ) {
       continue
     }
     const value = props[key]
+    // force as attribute
+    if (key.startsWith('^')) key = key.slice(1)
     if (key === 'class') {
       ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
       ret += ` style="${ssrRenderStyle(value)}"`
     } else if (key === 'className') {
-      ret += ` class="${String(value)}"`
+      // className should not go through ssrRenderClass which normalizes non-string
+      // values into strings. it should coerce directly into strings
+      if (value != null) {
+        ret += ` class="${escapeHtml(String(value))}"`
+      }
     } else {
       ret += ssrRenderDynamicAttr(key, value, tag)
     }

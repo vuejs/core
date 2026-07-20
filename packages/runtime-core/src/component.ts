@@ -18,7 +18,7 @@ import {
   createDevRenderContext,
   exposePropsOnRenderContext,
   exposeSetupStateOnRenderContext,
-  publicPropertiesMap,
+  getPublicPropertiesMap,
 } from './componentPublicInstance'
 import {
   type ComponentPropsOptions,
@@ -101,6 +101,13 @@ import {
 export * from './componentCurrentInstance'
 
 export type Data = Record<string, unknown>
+
+/**
+ * For extending allowed non-declared attrs on components in TSX
+ */
+export interface AllowedAttrs {}
+
+export type Attrs = Data & AllowedAttrs
 
 /**
  * Public utility type for extracting the instance type of a component.
@@ -198,6 +205,14 @@ export interface ComponentInternalOptions {
    */
   __vapor?: boolean
   /**
+   * whether this vapor component has multiple root nodes
+   */
+  __multiRoot?: boolean
+  /**
+   * indicates keep-alive component
+   */
+  __isKeepAlive?: boolean
+  /**
    * @internal
    */
   __scopeId?: string
@@ -221,6 +236,27 @@ export interface ComponentInternalOptions {
    * name inferred from filename
    */
   __name?: string
+}
+
+export interface AsyncComponentInternalOptions<
+  R = ConcreteComponent,
+  I = ComponentInternalInstance,
+> {
+  /**
+   * marker for AsyncComponentWrapper
+   * @internal
+   */
+  __asyncLoader?: () => Promise<R>
+  /**
+   * the inner component resolved by the AsyncComponentWrapper
+   * @internal
+   */
+  __asyncResolved?: R
+  /**
+   * Exposed for lazy hydration
+   * @internal
+   */
+  __asyncHydrate?: (el: Element, instance: I, hydrate: () => void) => void
 }
 
 export interface FunctionalComponent<
@@ -302,7 +338,7 @@ export type SetupContext<
   S extends SlotsType = {},
 > = E extends any
   ? {
-      attrs: Data
+      attrs: Attrs
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
       expose: <Exposed extends Record<string, any> = Record<string, any>>(
@@ -436,6 +472,35 @@ export interface GenericComponentInstance {
    * @internal
    */
   suspense: SuspenseBoundary | null
+  /**
+   * suspense pending batch id
+   * @internal
+   */
+  suspenseId: number
+  /**
+   * @internal
+   */
+  asyncDep: Promise<any> | null
+  /**
+   * @internal
+   */
+  asyncResolved: boolean
+  /**
+   * restore renderer-specific async context after `withAsyncContext()`
+   * @internal
+   */
+  restoreAsyncContext?: () => void | (() => void)
+  /**
+   * `updateTeleportCssVars`
+   * For updating css vars on contained teleports
+   * @internal
+   */
+  ut?: (vars?: Record<string, string>) => void
+  /**
+   * dev only. For style v-bind hydration mismatch checks
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
 
   // lifecycle
   /**
@@ -665,18 +730,6 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
    * @internal
    */
   n?: () => Promise<void>
-  /**
-   * `updateTeleportCssVars`
-   * For updating css vars on contained teleports
-   * @internal
-   */
-  ut?: (vars?: Record<string, unknown>) => void
-
-  /**
-   * dev only. For style v-bind hydration mismatch checks
-   * @internal
-   */
-  getCssVars?: () => Record<string, unknown>
 
   /**
    * v2 compat only, for caching mutated $options
@@ -685,7 +738,7 @@ export interface ComponentInternalInstance extends GenericComponentInstance {
   resolvedOptions?: MergedComponentOptions
 }
 
-const emptyAppContext = createAppContext()
+const emptyAppContext = /*@__PURE__*/ createAppContext()
 
 let uid = 0
 
@@ -927,7 +980,7 @@ function setupStatefulComponent(
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
         if (__DEV__ && !instance.suspense) {
-          const name = Component.name ?? 'Anonymous'
+          const name = formatComponentName(instance, Component)
           warn(
             `Component <${name}>: setup function returned a promise, but no ` +
               `<Suspense> boundary was found in the parent component tree. ` +
@@ -1158,13 +1211,13 @@ export function createSetupContext(
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
-    let attrsProxy: Data
+    let attrsProxy: Attrs
     let slotsProxy: Slots
     return Object.freeze({
       get attrs() {
         return (
           attrsProxy ||
-          (attrsProxy = new Proxy(instance.attrs, attrsProxyHandlers))
+          (attrsProxy = new Proxy(instance.attrs, attrsProxyHandlers) as Attrs)
         )
       },
       get slots() {
@@ -1177,7 +1230,7 @@ export function createSetupContext(
     })
   } else {
     return {
-      attrs: new Proxy(instance.attrs, attrsProxyHandlers),
+      attrs: new Proxy(instance.attrs, attrsProxyHandlers) as Attrs,
       slots: instance.slots,
       emit: instance.emit,
       expose: exposed => expose(instance, exposed as any),
@@ -1225,13 +1278,17 @@ export function getComponentPublicInstance(
         get(target, key: string) {
           if (key in target) {
             return target[key]
-          } else if (key in publicPropertiesMap) {
-            return publicPropertiesMap[key](
-              instance as ComponentInternalInstance,
-            )
+          } else {
+            const publicPropertiesMap = getPublicPropertiesMap()
+            if (key in publicPropertiesMap) {
+              return publicPropertiesMap[key](
+                instance as ComponentInternalInstance,
+              )
+            }
           }
         },
         has(target, key: string) {
+          const publicPropertiesMap = getPublicPropertiesMap()
           return key in target || key in publicPropertiesMap
         },
       }))
@@ -1241,7 +1298,7 @@ export function getComponentPublicInstance(
   }
 }
 
-const classifyRE = /(?:^|[-_])(\w)/g
+const classifyRE = /(?:^|[-_])\w/g
 const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
@@ -1267,9 +1324,11 @@ export function formatComponentName(
     }
   }
 
-  if (!name && instance && instance.parent) {
+  if (!name && instance) {
     // try to infer the name based on reverse resolution
-    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
+    const inferFromRegistry = (
+      registry: Record<string, any> | undefined | null,
+    ) => {
       for (const key in registry) {
         if (registry[key] === Component) {
           return key
@@ -1277,10 +1336,12 @@ export function formatComponentName(
       }
     }
     name =
-      inferFromRegistry(
-        (instance as ComponentInternalInstance).components ||
+      inferFromRegistry((instance as ComponentInternalInstance).components) ||
+      (instance.parent &&
+        inferFromRegistry(
           (instance.parent.type as ComponentOptions).components,
-      ) || inferFromRegistry(instance.appContext.components)
+        )) ||
+      inferFromRegistry(instance.appContext.components)
   }
 
   return name ? classify(name) : isRoot ? `App` : `Anonymous`
@@ -1294,7 +1355,11 @@ export interface ComponentCustomElementInterface {
   /**
    * @internal
    */
-  _injectChildStyle(type: ConcreteComponent): void
+  _isVueCE: boolean
+  /**
+   * @internal
+   */
+  _injectChildStyle(type: ConcreteComponent, parent?: ConcreteComponent): void
   /**
    * @internal
    */
@@ -1309,7 +1374,19 @@ export interface ComponentCustomElementInterface {
     shouldUpdate?: boolean,
   ): void
   /**
+   * @internal
+   */
+  _beginPatch(): void
+  /**
+   * @internal
+   */
+  _endPatch(): void
+  /**
    * @internal attached by the nested Teleport when shadowRoot is false.
    */
-  _teleportTarget?: RendererElement
+  _teleportTargets?: Set<RendererElement>
+  /**
+   * @internal check if shadow root is enabled
+   */
+  _hasShadowRoot(): boolean
 }

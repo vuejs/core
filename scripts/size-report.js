@@ -41,7 +41,7 @@ async function run() {
  * Renders file sizes and diffs between current and previous versions
  */
 async function renderFiles() {
-  const filterFiles = files =>
+  const filterFiles = (/** @type {string[]} */ files) =>
     files.filter(file => file[0] !== '_' && !file.endsWith('.txt'))
 
   const curr = filterFiles(await readdir(currDir))

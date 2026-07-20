@@ -4,14 +4,14 @@ exports[`compiler: transform <slot> outlets > default slot outlet 1`] = `
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null)
+  const n0 = _createSlot()
   return n0
 }"
 `;
 
 exports[`compiler: transform <slot> outlets > default slot outlet with fallback 1`] = `
 "import { createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createSlot("default", null, () => {
@@ -24,7 +24,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform <slot> outlets > default slot outlet with props & fallback 1`] = `
 "import { createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createSlot("default", { foo: () => (_ctx.bar) }, () => {
@@ -40,9 +40,28 @@ exports[`compiler: transform <slot> outlets > default slot outlet with props 1`]
 
 export function render(_ctx) {
   const n0 = _createSlot("default", {
-    foo: () => ("bar"), 
-    baz: () => (_ctx.qux), 
+    foo: "bar",
+    baz: () => (_ctx.qux),
     fooBar: () => (_ctx.foo-_ctx.bar)
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > does not mark non-root fallback v-if as slot root 1`] = `
+"import { setInsertionState as _setInsertionState, createIf as _createIf, createSlot as _createSlot, template as _template } from 'vue';
+const t0 = _template("<span>", 2)
+const t1 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, () => {
+    const n5 = t1()
+    _setInsertionState(n5, null, 0)
+    const n2 = _createIf(() => (_ctx.ok), () => {
+      const n4 = t0()
+      return n4
+    })
+    return n5
   })
   return n0
 }"
@@ -52,7 +71,7 @@ exports[`compiler: transform <slot> outlets > dynamically named slot outlet 1`] 
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot(() => (_ctx.foo + _ctx.bar), null)
+  const n0 = _createSlot(() => (_ctx.foo + _ctx.bar))
   return n0
 }"
 `;
@@ -61,7 +80,7 @@ exports[`compiler: transform <slot> outlets > dynamically named slot outlet with
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot(() => (_ctx.name), null)
+  const n0 = _createSlot(() => (_ctx.name))
   return n0
 }"
 `;
@@ -71,7 +90,7 @@ exports[`compiler: transform <slot> outlets > error on unexpected custom directi
 
 export function render(_ctx) {
   const _directive_foo = _resolveDirective("foo")
-  const n0 = _createSlot("default", null)
+  const n0 = _createSlot()
   return n0
 }"
 `;
@@ -80,14 +99,14 @@ exports[`compiler: transform <slot> outlets > error on unexpected custom directi
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("default", null)
+  const n0 = _createSlot()
   return n0
 }"
 `;
 
 exports[`compiler: transform <slot> outlets > named slot outlet with fallback 1`] = `
 "import { createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", null, () => {
@@ -100,7 +119,7 @@ export function render(_ctx) {
 
 exports[`compiler: transform <slot> outlets > named slot outlet with props & fallback 1`] = `
 "import { createSlot as _createSlot, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", { foo: () => (_ctx.bar) }, () => {
@@ -111,11 +130,89 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform <slot> outlets > nested root v-for fallback 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, createIf as _createIf, createSlot as _createSlot, template as _template } from 'vue';
+const t0 = _template("<span> ")
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, () => {
+    const n2 = _createIf(() => (_ctx.ok), () => {
+      const n4 = _createFor(() => (_ctx.items), (_for_item0) => {
+        const n6 = t0()
+        const x6 = _txt(n6)
+        _renderEffect(() => _setText(x6, _toDisplayString(_for_item0.value)))
+        return n6
+      }, undefined, 8 /* IS_SINGLE_NODE */)
+      const x4 = _txt(n4)
+      _renderEffect(() => _setText(x4, _toDisplayString(_ctx.item)))
+      return n4
+    })
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > root dynamic component fallback 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, () => {
+    const n2 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */)
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > root v-if fallback 1`] = `
+"import { createIf as _createIf, createSlot as _createSlot, template as _template } from 'vue';
+const t0 = _template("<span>", 3)
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, () => {
+    const n2 = _createIf(() => (_ctx.ok), () => {
+      const n4 = t0()
+      return n4
+    })
+    return n2
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slotted=false should generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot("default", null, null, 1 /* NO_SLOTTED */)
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > slot outlet with scopeId and slotted=true should not generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot()
+  return n0
+}"
+`;
+
+exports[`compiler: transform <slot> outlets > slot outlet without scopeId should not generate noSlotted 1`] = `
+"import { createSlot as _createSlot } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createSlot()
+  return n0
+}"
+`;
+
 exports[`compiler: transform <slot> outlets > statically named slot outlet 1`] = `
 "import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createSlot("foo", null)
+  const n0 = _createSlot("foo")
   return n0
 }"
 `;
@@ -125,7 +222,7 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet with 
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", {
-    foo: () => ("bar"), 
+    foo: "bar",
     baz: () => (_ctx.qux)
   })
   return n0
@@ -137,9 +234,9 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet with 
 
 export function render(_ctx) {
   const n0 = _createSlot("foo", {
-    foo: () => ("bar"), 
+    foo: "bar",
     $: [
-      () => (_ctx.obj), 
+      () => (_ctx.obj),
       { baz: () => (_ctx.qux) }
     ]
   })
@@ -152,9 +249,9 @@ exports[`compiler: transform <slot> outlets > statically named slot outlet with 
 
 export function render(_ctx) {
   const n0 = _createSlot("default", {
-    onClick: () => _ctx.foo, 
+    onClick: () => _ctx.foo,
     $: [
-      () => (_toHandlers(_ctx.bar)), 
+      () => (_toHandlers(_ctx.bar)),
       { baz: () => (_ctx.qux) }
     ]
   })

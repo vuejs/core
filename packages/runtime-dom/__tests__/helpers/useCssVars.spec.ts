@@ -488,4 +488,34 @@ describe('useCssVars', () => {
     expect(style.getPropertyValue('--foo')).toBe('initial')
     expect(style.getPropertyValue('--bar')).toBe('initial')
   })
+
+  test('with v-if initial false then update css vars', async () => {
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const show = ref(false)
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => (show.value ? h('div') : null)
+      },
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(root.children.length).toBe(0)
+
+    // toggle v-if to true
+    show.value = true
+    await nextTick()
+    expect(root.children.length).toBe(1)
+    let el = root.children[0] as HTMLElement
+    expect(el.style.getPropertyValue(`--color`)).toBe('red')
+
+    // update css vars
+    state.color = 'green'
+    await nextTick()
+    el = root.children[0] as HTMLElement
+    expect(el.style.getPropertyValue(`--color`)).toBe('green')
+  })
 })

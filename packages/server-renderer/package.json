@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.6.0-alpha.2",
+  "version": "3.6.0-rc.1",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "module": "dist/server-renderer.esm-bundler.js",
@@ -45,11 +45,9 @@
     "url": "https://github.com/vuejs/core/issues"
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/server-renderer#readme",
-  "peerDependencies": {
-    "vue": "workspace:*"
-  },
   "dependencies": {
     "@vue/shared": "workspace:*",
-    "@vue/compiler-ssr": "workspace:*"
+    "@vue/compiler-ssr": "workspace:*",
+    "@vue/runtime-dom": "workspace:*"
   }
 }

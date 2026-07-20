@@ -54,8 +54,13 @@ export function warn(msg: string, ...args: any[]): void {
       instance,
       ErrorCodes.APP_WARN_HANDLER,
       [
-        // eslint-disable-next-line no-restricted-syntax
-        msg + args.map(a => a.toString?.() ?? JSON.stringify(a)).join(''),
+        msg +
+          args
+            .map(a => {
+              const toString = a.toString
+              return toString == null ? JSON.stringify(a) : toString.call(a)
+            })
+            .join(''),
         (instance && instance.proxy) || instance,
         trace
           .map(

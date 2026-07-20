@@ -96,12 +96,9 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     const r = reactive(rawArray)
     effect(() => r.reduce((v, a) => a + v, 0))
 
-    bench(
-      `trigger index mutation (1st only), tracked with reduce, ${amount} elements`,
-      () => {
-        r[0]++
-      },
-    )
+    bench(`trigger index mutation (1st only), tracked with reduce, ${amount} elements`, () => {
+      r[0]++
+    })
   }
 
   {
@@ -112,14 +109,11 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     const r = reactive(rawArray)
     effect(() => r.reduce((v, a) => a + v, 0))
 
-    bench(
-      `trigger index mutation (all), tracked with reduce, ${amount} elements`,
-      () => {
-        for (let i = 0, n = r.length; i < n; i++) {
-          r[i]++
-        }
-      },
-    )
+    bench(`trigger index mutation (all), tracked with reduce, ${amount} elements`, () => {
+      for (let i = 0, n = r.length; i < n; i++) {
+        r[i]++
+      }
+    })
   }
 
   {

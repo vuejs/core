@@ -9,6 +9,7 @@ import type { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
 import type { TypeScope } from './resolveType'
 import { warn } from '../warn'
+import { isJS, isTS } from './utils'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -18,12 +19,11 @@ export class ScriptCompileContext {
   scriptAst: Program | null
   scriptSetupAst: Program | null
 
-  source: string = this.descriptor.source
-  filename: string = this.descriptor.filename
-  s: MagicString = new MagicString(this.source)
-  startOffset: number | undefined =
-    this.descriptor.scriptSetup?.loc.start.offset
-  endOffset: number | undefined = this.descriptor.scriptSetup?.loc.end.offset
+  source: string
+  filename: string
+  s: MagicString
+  startOffset: number | undefined
+  endOffset: number | undefined
 
   // import / type analysis
   scope?: TypeScope
@@ -87,19 +87,17 @@ export class ScriptCompileContext {
     const scriptLang = script && script.lang
     const scriptSetupLang = scriptSetup && scriptSetup.lang
 
-    this.isJS =
-      scriptLang === 'js' ||
-      scriptLang === 'jsx' ||
-      scriptSetupLang === 'js' ||
-      scriptSetupLang === 'jsx'
-    this.isTS =
-      scriptLang === 'ts' ||
-      scriptLang === 'tsx' ||
-      scriptSetupLang === 'ts' ||
-      scriptSetupLang === 'tsx'
+    this.source = descriptor.source
+    this.filename = descriptor.filename
+    this.s = new MagicString(descriptor.source)
+    this.startOffset = descriptor.scriptSetup?.loc.start.offset
+    this.endOffset = descriptor.scriptSetup?.loc.end.offset
+
+    this.isJS = isJS(scriptLang, scriptSetupLang)
+    this.isTS = isTS(scriptLang, scriptSetupLang)
 
     const customElement = options.customElement
-    const filename = this.descriptor.filename
+    const filename = descriptor.filename
     if (customElement) {
       this.isCE =
         typeof customElement === 'boolean'
@@ -195,7 +193,13 @@ export function resolveParserPlugins(
     // should remove the jsx from user options
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
-  if (lang === 'ts' || lang === 'mts' || lang === 'tsx' || lang === 'mtsx') {
+  if (
+    lang === 'ts' ||
+    lang === 'mts' ||
+    lang === 'tsx' ||
+    lang === 'cts' ||
+    lang === 'mtsx'
+  ) {
     plugins.push(['typescript', { dts }], 'explicitResourceManagement')
     if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')

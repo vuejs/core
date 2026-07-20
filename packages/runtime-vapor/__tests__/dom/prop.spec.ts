@@ -1,8 +1,11 @@
-import { NOOP } from '@vue/shared'
+import { NOOP, VaporDynamicComponentFlags, toDisplayString } from '@vue/shared'
 import {
   setDynamicProp as _setDynamicProp,
   setAttr,
+  setBlockHtml,
+  setBlockText,
   setClass,
+  setClassName,
   setDynamicProps,
   setElementText,
   setHtml,
@@ -11,8 +14,27 @@ import {
   setValue,
 } from '../../src/dom/prop'
 import { setStyle } from '../../src/dom/prop'
-import { VaporComponentInstance } from '../../src/component'
-import { ref, setCurrentInstance } from '@vue/runtime-dom'
+import {
+  VaporComponentInstance,
+  applyFallthroughProps,
+  createComponent,
+  isApplyingFallthroughProps,
+} from '../../src/component'
+import {
+  effectScope,
+  nextTick,
+  ref,
+  setCurrentInstance,
+  svgNS,
+  xlinkNS,
+} from '@vue/runtime-dom'
+import { makeRender } from '../_utils'
+import {
+  createDynamicComponent,
+  defineVaporComponent,
+  renderEffect,
+  template,
+} from '../../src'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
@@ -24,6 +46,8 @@ afterEach(() => {
   removeComponentInstance()
 })
 
+const define = makeRender()
+
 describe('patchProp', () => {
   describe('setClass', () => {
     test('should set class', () => {
@@ -34,6 +58,80 @@ describe('patchProp', () => {
       expect(el.className).toBe('bar baz')
       setClass(el, { a: true, b: false })
       expect(el.className).toBe('a')
+    })
+
+    test('should set class with flags', () => {
+      const el = document.createElement('div')
+
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+
+      setClassName(el, 0, ['danger'])
+      expect(el.className).toBe('')
+
+      const string = document.createElement('div')
+      setClassName(string, 1, 'danger')
+      expect(string.className).toBe('danger')
+
+      setClassName(el, 1, [' danger'])
+      expect(el.className).toBe('danger')
+
+      const multi = document.createElement('div')
+      setClassName(multi, 3, [' danger', ' active'])
+      expect(multi.className).toBe('danger active')
+
+      setClassName(el, 3, [' danger', ' active'], 'base')
+      expect(el.className).toBe('base danger active')
+
+      const stringWithBase = document.createElement('div')
+      setClassName(stringWithBase, 1, ' danger', 'base')
+      expect(stringWithBase.className).toBe('base danger')
+
+      setClassName(el, 1, ['danger'], '', 'tail')
+      expect(el.className).toBe('danger tail')
+
+      setClassName(el, 0, ['danger'], '', 'tail')
+      expect(el.className).toBe('tail')
+    })
+
+    test('should refresh after generic class writes', () => {
+      const el = document.createElement('div')
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+
+      setClass(el, 'fallthrough')
+      expect(el.className).toBe('fallthrough')
+
+      setClassName(el, 1, ['danger'])
+      expect(el.className).toBe('danger')
+    })
+
+    test('should support the max className flag bit', () => {
+      const el = document.createElement('div')
+      const classes = Array.from({ length: 31 }, (_, i) => ` c${i}`)
+
+      setClassName(el, 0x7fffffff, classes, 'base')
+      expect(el.className).toBe(
+        `base ${Array.from({ length: 31 }, (_, i) => `c${i}`).join(' ')}`,
+      )
+    })
+
+    test('should set root class with flags incrementally', () => {
+      const el = document.createElement('div')
+      el.className = 'fallthrough'
+      ;(el as any).$root = true
+
+      setClassName(el, 1, [' danger'], 'base')
+      expect(el.className).toBe('fallthrough base danger')
+
+      setClassName(el, 0, [' danger'], 'base')
+      expect(el.className).toBe('fallthrough base')
+
+      setClassName(el, 1, ['danger'], '', 'tail')
+      expect(el.className).toBe('fallthrough danger tail')
+
+      setClassName(el, 0, ['danger'], '', 'tail')
+      expect(el.className).toBe('fallthrough tail')
     })
   })
 
@@ -177,9 +275,92 @@ describe('patchProp', () => {
     })
   })
 
-  describe.todo('setClassIncremental', () => {})
+  describe('setClassIncremental', () => {
+    test('should set class', () => {
+      const el = document.createElement('div')
+      // mark as root
+      ;(el as any).$root = true
+      setClass(el, 'foo')
+      expect(el.className).toBe('foo')
 
-  describe.todo('setStyleIncremental', () => {})
+      // Should replace previous class set by setClass
+      setClass(el, 'bar')
+      expect(el.className).toBe('bar')
+    })
+
+    test('should coexist with existing classes', () => {
+      const el = document.createElement('div')
+      el.className = 'existing'
+      ;(el as any).$root = true
+
+      setClass(el, 'foo')
+      expect(el.className).toBe('existing foo')
+
+      setClass(el, 'bar')
+      expect(el.className).toBe('existing bar')
+
+      setClass(el, '')
+      expect(el.className).toBe('existing')
+    })
+
+    test('should handle multiple classes', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+
+      setClass(el, 'foo bar')
+      expect(el.className).toBe('foo bar')
+
+      setClass(el, 'baz')
+      expect(el.className).toBe('baz')
+    })
+  })
+
+  describe('setStyleIncremental', () => {
+    test('should set style', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, 'color: red')
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, 'font-size: 12px')
+      expect(el.style.cssText).toBe('font-size: 12px;')
+    })
+
+    test('should coexist with existing styles', () => {
+      const el = document.createElement('div')
+      el.style.display = 'block'
+      ;(el as any).$root = true
+
+      setStyle(el, 'color: red')
+      expect(el.style.display).toBe('block')
+      expect(el.style.color).toBe('red')
+
+      setStyle(el, 'font-size: 12px')
+      expect(el.style.display).toBe('block')
+      expect(el.style.fontSize).toBe('12px')
+      expect(el.style.color).toBe('')
+    })
+
+    test('should set style with object', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, { color: 'red' })
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, { fontSize: '12px' })
+      expect(el.style.cssText).toBe('font-size: 12px;')
+    })
+
+    test('should remove style', () => {
+      const el = document.createElement('div')
+      ;(el as any).$root = true
+      setStyle(el, 'color: red')
+      expect(el.style.cssText).toBe('color: red;')
+
+      setStyle(el, '')
+      expect(el.style.cssText).toBe('')
+    })
+  })
 
   describe('setAttr', () => {
     test('should set attribute', () => {
@@ -208,6 +389,13 @@ describe('patchProp', () => {
       expect(el.getAttribute('disabled')).toBe('true')
       setAttr(el, 'disabled', false)
       expect(el.getAttribute('disabled')).toBe('false')
+    })
+
+    test('should set symbol attribute values', () => {
+      const el = document.createElement('div')
+      const symbol = Symbol('foo')
+      setAttr(el, 'data-foo', symbol)
+      expect(el.getAttribute('data-foo')).toBe(symbol.toString())
     })
   })
 
@@ -299,6 +487,17 @@ describe('patchProp', () => {
         `Failed setting prop "someProp" on <div>: value foo is invalid.`,
       ).toHaveBeenWarnedLast()
     })
+
+    test('checkbox with indeterminate', () => {
+      const el = document.createElement('input')
+      el.type = 'checkbox'
+      setProp(el, 'indeterminate', true)
+      expect(el.indeterminate).toBe(true)
+      setProp(el, 'indeterminate', false)
+      expect(el.indeterminate).toBe(false)
+      setProp(el, 'indeterminate', '')
+      expect(el.indeterminate).toBe(true)
+    })
   })
 
   describe('setDynamicProp', () => {
@@ -307,8 +506,9 @@ describe('patchProp', () => {
       key: string,
       value: any,
       el = element.cloneNode(true) as HTMLElement,
+      isSVG: boolean = false,
     ) {
-      _setDynamicProp(el, key, value)
+      _setDynamicProp(el, key, value, isSVG)
       return el
     }
 
@@ -339,6 +539,12 @@ describe('patchProp', () => {
       expect((res as any)['foo']).toBeUndefined()
     })
 
+    test('should be able to set ^attr to symbol values', () => {
+      const symbol = Symbol('foo')
+      const res = setDynamicProp('^foo', symbol)
+      expect(res.getAttribute('foo')).toBe(symbol.toString())
+    })
+
     test('should be able to set boolean prop', () => {
       let res = setDynamicProp(
         'disabled',
@@ -359,7 +565,40 @@ describe('patchProp', () => {
       expect(res.textContent).toBe('foo')
     })
 
-    test.todo('should be able to set something on SVG')
+    test('set class w/ SVG', () => {
+      const el = document.createElementNS(svgNS, 'svg') as any
+      setDynamicProp('class', 'foo', el, true)
+      expect(el.getAttribute('class')).toBe('foo')
+    })
+
+    test('set class incremental w/ SVG', () => {
+      const el = document.createElementNS(svgNS, 'svg') as any
+      el.setAttribute('class', 'bar')
+      el.$root = true
+      setDynamicProp('class', 'foo', el, true)
+      expect(el.getAttribute('class')).toBe('bar foo')
+    })
+
+    test('set xlink attributes w/ SVG', () => {
+      const el = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'use',
+      ) as any
+      setDynamicProp('xlink:href', 'a', el, true)
+      expect(el.getAttributeNS(xlinkNS, 'href')).toBe('a')
+      setDynamicProp('xlink:href', null, el, true)
+      expect(el.getAttributeNS(xlinkNS, 'href')).toBe(null)
+    })
+
+    test('set textContent attributes w/ SVG', () => {
+      const el = document.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'use',
+      ) as any
+      setDynamicProp('textContent', 'foo', el, true)
+      expect(el.attributes.length).toBe(0)
+      expect(el.innerHTML).toBe('foo')
+    })
   })
 
   describe('setDynamicProps', () => {
@@ -388,6 +627,25 @@ describe('patchProp', () => {
       expect(el.getAttribute('foo')).toBeNull()
     })
 
+    test('should treat nullish dynamic props as empty props', () => {
+      const el = document.createElement('div')
+
+      setDynamicProps(el, [null])
+      setDynamicProps(el, [undefined])
+
+      setDynamicProps(el, [{ foo: 'val' }])
+      expect(el.getAttribute('foo')).toBe('val')
+
+      setDynamicProps(el, [null])
+      expect(el.getAttribute('foo')).toBeNull()
+
+      setDynamicProps(el, [{ bar: 'val' }])
+      expect(el.getAttribute('bar')).toBe('val')
+
+      setDynamicProps(el, [undefined])
+      expect(el.getAttribute('bar')).toBeNull()
+    })
+
     test('should reset old modifier props', () => {
       const el = document.createElement('div')
 
@@ -406,6 +664,115 @@ describe('patchProp', () => {
       expect(el.attributes.length).toBe(1)
       expect(el.getAttribute('bar')).toBe('val')
       expect(el.getAttribute('foo')).toBeNull()
+    })
+
+    test('should skip unchanged primitive dynamic props', () => {
+      const el = document.createElement('div')
+      let directSetCount = 0
+      let fallthroughSetCount = 0
+
+      Object.defineProperty(el, 'foo', {
+        set() {
+          directSetCount++
+        },
+      })
+      Object.defineProperty(el, 'bar', {
+        set() {
+          fallthroughSetCount++
+        },
+      })
+
+      setDynamicProps(el, [{ ['.foo']: 'val' }])
+      setDynamicProps(el, [{ ['.foo']: 'val' }])
+      expect(directSetCount).toBe(1)
+
+      setDynamicProps(el, [{ ['.foo']: 'next' }])
+      expect(directSetCount).toBe(2)
+
+      applyFallthroughProps(el, { ['.bar']: 'fallthrough' })
+      applyFallthroughProps(el, { ['.bar']: 'fallthrough' })
+      expect(fallthroughSetCount).toBe(1)
+
+      applyFallthroughProps(el, { ['.bar']: 'next' })
+      expect(fallthroughSetCount).toBe(2)
+    })
+
+    test('should clean dynamic event props on effect update and stop', async () => {
+      const el = document.createElement('button')
+      const active = ref(true)
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [active.value ? { onClick: handler } : {}])
+        })
+      })
+
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+
+      active.value = false
+      await nextTick()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+
+      active.value = true
+      await nextTick()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(2)
+
+      scope.stop()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(2)
+    })
+
+    test('should parse dynamic event option modifiers like vdom', () => {
+      const el = document.createElement('button')
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onClickOnceCapture: handler }])
+        })
+      })
+
+      el.dispatchEvent(new Event('click'))
+      el.dispatchEvent(new Event('click'))
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
+    test('should parse dynamic event names like vdom', () => {
+      const el = document.createElement('button')
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onMyEventOnce: handler }])
+        })
+      })
+
+      el.dispatchEvent(new Event('my-event'))
+      el.dispatchEvent(new Event('my-event'))
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
+    test('should restore fallthrough state when dynamic props throw', () => {
+      const el = document.createElement('div')
+      const attrs: Record<string, any> = {}
+
+      Object.defineProperty(attrs, 'foo', {
+        enumerable: true,
+        get() {
+          throw new Error('fallthrough boom')
+        },
+      })
+
+      expect(() => applyFallthroughProps(el, attrs)).toThrow('fallthrough boom')
+      expect(isApplyingFallthroughProps).toBe(false)
     })
   })
 
@@ -442,6 +809,210 @@ describe('patchProp', () => {
       expect(el.innerHTML).toBe('<p>foo</p>')
       setHtml(el, '<p>bar</p>')
       expect(el.innerHTML).toBe('<p>bar</p>')
+    })
+  })
+
+  describe('setBlockText', () => {
+    test('with dynamic component', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('<div>child</div>', 1)()
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createDynamicComponent(
+            () => Comp,
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div>foo</div><!--dynamic-component-->')
+    })
+
+    test('with dynamic component with fallback', async () => {
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createDynamicComponent(
+            () => 'button',
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<button>foo</button><!--dynamic-component-->')
+    })
+
+    test('with component', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('<div>child</div>', 1)()
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div>foo</div>')
+    })
+
+    test('with component renders multiple roots nodes', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return [
+            template('<div>child</div>')(),
+            template('<div>child</div>')(),
+          ]
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div>child</div><div>child</div>')
+      expect('Extraneous non-props attributes (textContent)').toHaveBeenWarned()
+    })
+
+    test('with component renders text node', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('child')()
+        },
+      })
+      const value = ref('foo')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockText(n1, toDisplayString(value)))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('child')
+      expect('Extraneous non-props attributes (textContent)').toHaveBeenWarned()
+    })
+  })
+
+  describe('setBlockHtml', () => {
+    test('with dynamic component', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('<div>child</div>', 1)()
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createDynamicComponent(
+            () => Comp,
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div><p>foo</p></div><!--dynamic-component-->')
+    })
+
+    test('with dynamic component with fallback', async () => {
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createDynamicComponent(
+            () => 'button',
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<button><p>foo</p></button><!--dynamic-component-->')
+    })
+
+    test('with component', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('<div>child</div>', 1)()
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div><p>foo</p></div>')
+    })
+
+    test('with component renders multiple roots', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return [
+            template('<div>child</div>')(),
+            template('<div>child</div>')(),
+          ]
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('<div>child</div><div>child</div>')
+      expect('Extraneous non-props attributes (innerHTML)').toHaveBeenWarned()
+    })
+
+    test('with component renders text node', async () => {
+      const Comp = defineVaporComponent({
+        setup() {
+          return template('child')()
+        },
+      })
+      const value = ref('<p>foo</p>')
+      const { html } = define({
+        setup() {
+          const n1 = createComponent(Comp, null, null, true)
+          renderEffect(() => setBlockHtml(n1, value.value))
+          return n1
+        },
+      }).render()
+
+      expect(html()).toBe('child')
+      expect('Extraneous non-props attributes (innerHTML)').toHaveBeenWarned()
     })
   })
 })

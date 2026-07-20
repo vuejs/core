@@ -105,3 +105,6 @@ registerRuntimeCompiler(compileToFunction)
 
 export { compileToFunction as compile }
 export * from '@vue/runtime-dom'
+// SSR uses the standard runtime entry, so expose the Vapor async name as the
+// VDOM async wrapper for hand-written imports outside SFC compileScript.
+export { defineAsyncComponent as defineVaporAsyncComponent } from '@vue/runtime-dom'

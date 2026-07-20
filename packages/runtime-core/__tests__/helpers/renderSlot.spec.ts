@@ -38,6 +38,83 @@ describe('renderSlot', () => {
     expect(vnode.key).toBe('_default')
   })
 
+  it('should allow symbol values for compiler-injected slot keys', () => {
+    const key = Symbol()
+    const vnode = renderSlot(
+      { default: () => [h('div')] },
+      'default',
+      {},
+      undefined,
+      undefined,
+      key,
+    )
+    expect(vnode.key).toBe('_default')
+  })
+
+  it('should not expose compiler-injected slot keys to slot props', () => {
+    let receivedProps: any
+    const props = ['foo', 'bar']
+    const vnode = renderSlot(
+      {
+        default: props => {
+          receivedProps = props
+          return [h('div')]
+        },
+      },
+      'default',
+      props as any,
+      undefined,
+      undefined,
+      'branch',
+    )
+
+    expect(receivedProps).toBe(props)
+    expect(receivedProps).not.toHaveProperty('key')
+    expect(vnode.key).toBe('branch')
+  })
+
+  it('should prefer user-provided slot prop keys over compiler-injected keys', () => {
+    let receivedProps: any
+    const props = { key: 'user' }
+    const vnode = renderSlot(
+      {
+        default: props => {
+          receivedProps = props
+          return [h('div')]
+        },
+      },
+      'default',
+      props,
+      undefined,
+      undefined,
+      'branch',
+    )
+
+    expect(receivedProps).toBe(props)
+    expect(vnode.key).toBe('user')
+  })
+
+  it('should preserve compiler-injected slot keys in custom element mode', () => {
+    setCurrentRenderingInstance({ type: {}, ce: {} } as any)
+
+    let vnode = renderSlot({}, 'default', {}, undefined, undefined, 0)
+    let slot = (vnode.children as any[])[0]
+    expect(slot.type).toBe('slot')
+    expect(slot.key).toBe(0)
+    expect(vnode.patchFlag).toBe(PatchFlags.BAIL)
+
+    vnode = renderSlot(
+      {},
+      'default',
+      { key: 'user' },
+      undefined,
+      undefined,
+      'branch',
+    )
+    slot = (vnode.children as any[])[0]
+    expect(slot.key).toBe('user')
+  })
+
   it('should render slot fallback', () => {
     const vnode = renderSlot({}, 'default', { key: 'foo' }, () => ['fallback'])
     expect(vnode.children).toEqual(['fallback'])
@@ -94,5 +171,41 @@ describe('renderSlot', () => {
       expect(vnode.children).toEqual([fallback])
       expect(vnode.patchFlag).toBe(PatchFlags.BAIL)
     })
+  })
+
+  it('should preserve local fallback while updating outlet fallback on forwarded vapor slot', () => {
+    const localFallback = () => [createCommentVNode('local empty')]
+    const firstOuterFallback = () => ['first outer fallback']
+    const nextOuterFallback = () => ['next outer fallback']
+    const forwarded = createVNode('div')
+
+    forwarded.vs = {
+      slot: () => [],
+      fallback: localFallback,
+    } as any
+
+    renderSlot(
+      {
+        default: () => [forwarded],
+      },
+      'default',
+      undefined,
+      firstOuterFallback,
+    )
+
+    expect(forwarded.vs!.fallback).toBe(localFallback)
+    expect(forwarded.vs!.outletFallback).toBe(firstOuterFallback)
+
+    renderSlot(
+      {
+        default: () => [forwarded],
+      },
+      'default',
+      undefined,
+      nextOuterFallback,
+    )
+
+    expect(forwarded.vs!.fallback).toBe(localFallback)
+    expect(forwarded.vs!.outletFallback).toBe(nextOuterFallback)
   })
 })

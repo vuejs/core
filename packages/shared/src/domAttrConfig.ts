@@ -199,5 +199,12 @@ export function shouldSetAsAttr(tagName: string, key: string): boolean {
     return true
   }
 
+  // #13946 iframe.sandbox should always be set as attribute since setting
+  // the property to null results in 'null' string, and setting to empty string
+  // enables the most restrictive sandbox mode instead of no sandboxing.
+  if (key === 'sandbox' && tagName === 'IFRAME') {
+    return true
+  }
+
   return false
 }

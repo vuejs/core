@@ -1,9 +1,15 @@
-import { DOMErrorCodes, createDOMCompilerError } from '@vue/compiler-dom'
+import {
+  DOMErrorCodes,
+  ElementTypes,
+  createDOMCompilerError,
+} from '@vue/compiler-dom'
 import { IRNodeTypes } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import type { DirectiveTransform } from '../transform'
 import { getLiteralExpressionValue } from '../utils'
 import { isVoidTag } from '../../../shared/src'
+import { markNonTemplate, registerSyntheticTextChild } from './transformText'
+import { shouldUseCreateElement } from './transformElement'
 
 export const transformVText: DirectiveTransform = (dir, node, context) => {
   let { exp, loc } = dir
@@ -18,6 +24,9 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
       createDOMCompilerError(DOMErrorCodes.X_V_TEXT_WITH_CHILDREN, loc),
     )
     context.childrenTemplate.length = 0
+    for (const child of node.children) {
+      markNonTemplate(child, context)
+    }
   }
 
   // v-text on void tags do nothing
@@ -26,19 +35,41 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
   }
 
   const literal = getLiteralExpressionValue(exp)
+  const useCreateElement = shouldUseCreateElement(context.node, context)
   if (literal != null) {
-    context.childrenTemplate = [String(literal)]
+    if (useCreateElement) {
+      const id = registerSyntheticTextChild(context, '', [exp])
+      context.registerOperation({
+        type: IRNodeTypes.INSERT_NODE,
+        elements: [id],
+        parent: context.reference(),
+      })
+    } else {
+      context.childrenTemplate = [String(literal)]
+    }
   } else {
-    context.childrenTemplate = [' ']
-    context.registerOperation({
-      type: IRNodeTypes.GET_TEXT_CHILD,
-      parent: context.reference(),
-    })
+    const isComponent = node.tagType === ElementTypes.COMPONENT
+    let id: number | undefined
+    if (useCreateElement) {
+      id = registerSyntheticTextChild(context, '')
+      context.registerOperation({
+        type: IRNodeTypes.INSERT_NODE,
+        elements: [id],
+        parent: context.reference(),
+      })
+    } else if (!isComponent) {
+      context.childrenTemplate = [' ']
+      context.registerOperation({
+        type: IRNodeTypes.GET_TEXT_CHILD,
+        parent: context.reference(),
+      })
+    }
     context.registerEffect([exp], {
       type: IRNodeTypes.SET_TEXT,
-      element: context.reference(),
+      element: useCreateElement ? id! : context.reference(),
       values: [exp],
-      generated: true,
+      generated: !useCreateElement,
+      isComponent,
     })
   }
 }

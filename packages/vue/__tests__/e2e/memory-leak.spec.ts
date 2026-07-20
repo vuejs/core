@@ -1,7 +1,7 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
 
-const { page, html, click } = setupPuppeteer()
+const { page, html, click, timeout } = setupPuppeteer()
 
 beforeEach(async () => {
   await page().setContent(`<div id="app"></div>`)
@@ -221,6 +221,81 @@ describe('not leaking', async () => {
       }
 
       expect(await isCollected()).toBe(true)
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #14761
+  test(
+    'Transition out-in with Suspense inside template v-if should not leak DOM',
+    async () => {
+      await page().evaluate(async () => {
+        const { createApp, h, ref } = (window as any).Vue
+        const AsyncChild = {
+          props: ['label'],
+          async setup(props: { label: string }) {
+            const value = await Promise.resolve(1)
+            return () =>
+              h(
+                'div',
+                { class: 'async-child' },
+                `Async child (label=${props.label}, value=${value})`,
+              )
+          },
+        }
+
+        createApp({
+          components: { AsyncChild },
+          template: `
+            <button id="toggleBtn" @click="toggleOn = !toggleOn">button</button>
+            <div id="container">
+              <template v-if="toggleOn">
+                <h4>Path A</h4>
+                <Transition mode="out-in">
+                  <Suspense>
+                    <AsyncChild label="A" />
+                  </Suspense>
+                </Transition>
+              </template>
+              <template v-else>
+                <h4>Path B</h4>
+                <Transition mode="out-in">
+                  <Suspense>
+                    <AsyncChild label="B" />
+                  </Suspense>
+                </Transition>
+              </template>
+            </div>
+          `,
+          setup() {
+            const toggleOn = ref(true)
+            return { toggleOn }
+          },
+        }).mount('#app')
+      })
+
+      const assertAsyncChildren = async (label: string) => {
+        expect(
+          await page().$$eval('#container .async-child', children =>
+            children.map(child => child.textContent),
+          ),
+        ).toEqual([`Async child (label=${label}, value=1)`])
+      }
+
+      await timeout(1)
+      await assertAsyncChildren('A')
+
+      await click('#toggleBtn')
+      await timeout(1)
+      await assertAsyncChildren('B')
+
+      await click('#toggleBtn')
+      await timeout(1)
+      await assertAsyncChildren('A')
+
+      await click('#toggleBtn')
+      await timeout(1)
+      await assertAsyncChildren('B')
     },
     E2E_TIMEOUT,
   )

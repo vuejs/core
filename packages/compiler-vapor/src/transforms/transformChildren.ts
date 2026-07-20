@@ -10,6 +10,11 @@ import {
   IRNodeTypes,
   isBlockOperation,
 } from '../ir'
+import {
+  getChildTemplateCloseState,
+  isInSameTemplateAsParent,
+  shouldUseCreateElement,
+} from './transformElement'
 
 export const transformChildren: NodeTransform = (node, context) => {
   const isFragment =
@@ -20,8 +25,27 @@ export const transformChildren: NodeTransform = (node, context) => {
 
   if (!isFragment && node.type !== NodeTypes.ELEMENT) return
 
+  const useCreateElement =
+    node.type === NodeTypes.ELEMENT &&
+    shouldUseCreateElement(node, context as TransformContext<ElementNode>)
+  const childTemplateCloseState =
+    !isFragment && !useCreateElement
+      ? getChildTemplateCloseState(context as TransformContext<ElementNode>)
+      : undefined
+
   for (const [i, child] of node.children.entries()) {
     const childContext = context.create(child, i)
+    const isInSameTemplate =
+      childTemplateCloseState &&
+      child.type === NodeTypes.ELEMENT &&
+      child.tagType === ElementTypes.ELEMENT &&
+      isInSameTemplateAsParent(childContext as TransformContext<ElementNode>)
+    childContext.templateCloseTags = isInSameTemplate
+      ? childTemplateCloseState.tags
+      : undefined
+    childContext.templateCloseBlocks = isInSameTemplate
+      ? childTemplateCloseState.blocks
+      : false
     transformNode(childContext)
 
     const childDynamic = childContext.dynamic
@@ -35,6 +59,21 @@ export const transformChildren: NodeTransform = (node, context) => {
         childDynamic.flags & DynamicFlag.INSERT
       ) {
         context.block.returns.push(childContext.dynamic.id!)
+      }
+    } else if (useCreateElement) {
+      const createsNode =
+        childContext.template !== '' ||
+        childDynamic.template != null ||
+        childDynamic.id !== undefined ||
+        childDynamic.operation !== undefined ||
+        childDynamic.hasDynamicChild === true
+
+      if (createsNode) {
+        // createElement-backed parents don't materialize childNodes from a
+        // static HTML string, so every real child node must be inserted.
+        childContext.reference()
+        childContext.registerTemplate()
+        childDynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
       }
     } else {
       context.childrenTemplate.push(childContext.template)
@@ -59,17 +98,26 @@ export const transformChildren: NodeTransform = (node, context) => {
 
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   let prevDynamics: IRDynamicInfo[] = []
-  let hasStaticTemplate = false
+  let staticCount = 0
   const children = context.dynamic.children
+
+  // Track logical index for each child.
+  // logicalIndex represents the position in SSR DOM, used during hydration
+  // to locate the correct DOM node. Each child (static element, component,
+  // v-if/v-else-if/v-else chain, v-for, slot) counts as one logical unit.
+  let logicalIndex = 0
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
+      child.logicalIndex = logicalIndex
       prevDynamics.push(child)
+      logicalIndex++
     }
 
     if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
+      child.logicalIndex = logicalIndex
       if (prevDynamics.length) {
-        if (hasStaticTemplate) {
+        if (staticCount) {
           context.childrenTemplate[index - prevDynamics.length] = `<!>`
           prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
           const anchor = (prevDynamics[0].anchor = context.increaseId())
@@ -79,33 +127,44 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
         }
         prevDynamics = []
       }
-      hasStaticTemplate = true
+      staticCount++
+      logicalIndex++
     }
   }
 
   if (prevDynamics.length) {
-    registerInsertion(prevDynamics, context)
+    registerInsertion(
+      prevDynamics,
+      context,
+      // the logical index of append child
+      prevDynamics[0].logicalIndex!,
+      true,
+    )
   }
 }
 
 function registerInsertion(
   dynamics: IRDynamicInfo[],
   context: TransformContext,
-  anchor?: number,
+  anchor: number,
+  append?: boolean,
 ) {
   for (const child of dynamics) {
+    const logicalIndex = child.logicalIndex
     if (child.template != null) {
       // template node due to invalid nesting - generate actual insertion
       context.registerOperation({
         type: IRNodeTypes.INSERT_NODE,
         elements: dynamics.map(child => child.id!),
         parent: context.reference(),
-        anchor,
+        anchor: append ? undefined : anchor,
       })
     } else if (child.operation && isBlockOperation(child.operation)) {
       // block types
       child.operation.parent = context.reference()
       child.operation.anchor = anchor
+      child.operation.logicalIndex = logicalIndex
+      child.operation.append = append
     }
   }
 }

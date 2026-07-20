@@ -1,0 +1,341 @@
+import { shallowReactive } from '@vue/reactivity'
+import { extend, isPlainObject } from '@vue/shared'
+import { createVaporApp, createVaporSSRApp, defineVaporComponent } from '.'
+import {
+  type ComponentObjectPropsOptions,
+  type CreateAppFunction,
+  type CustomElementOptions,
+  type EmitFn,
+  type EmitsOptions,
+  type EmitsToProps,
+  type ExtractPropTypes,
+  VueElementBase,
+  warn,
+} from '@vue/runtime-dom'
+import {
+  type VaporComponent,
+  type VaporComponentInstance,
+  type VaporComponentOptions,
+  createComponent,
+} from './component'
+import type { Block } from './block'
+import { withHydration } from './dom/hydration'
+import type {
+  DefineVaporComponent,
+  DefineVaporSetupFnComponent,
+  VaporRenderResult,
+} from './apiDefineComponent'
+import type { StaticSlots } from './componentSlots'
+import { isFragment, isSlotFragment } from './fragment'
+
+export type VaporElementConstructor<P = {}> = {
+  new (initialProps?: Record<string, any>): VaporElement & P
+}
+
+type VaporCustomElementHydrate = (
+  container: ParentNode,
+  createComponent: () => void,
+) => void
+
+const vaporCustomElementHydrates = new WeakMap<
+  Function,
+  VaporCustomElementHydrate
+>()
+
+// overload 1: direct setup function
+export function defineVaporCustomElement<Props, RawBindings = object>(
+  setup: (
+    props: Props,
+    ctx: {
+      attrs: Record<string, any>
+      slots: StaticSlots
+      emit: EmitFn
+      expose: (exposed: Record<string, any>) => void
+    },
+  ) => RawBindings | VaporRenderResult,
+  options?: Pick<VaporComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
+    CustomElementOptions & {
+      props?: (keyof NoInfer<Props>)[]
+    },
+): VaporElementConstructor<Props>
+export function defineVaporCustomElement<Props, RawBindings = object>(
+  setup: (
+    props: Props,
+    ctx: {
+      attrs: Record<string, any>
+      slots: StaticSlots
+      emit: EmitFn
+      expose: (exposed: Record<string, any>) => void
+    },
+  ) => RawBindings | VaporRenderResult,
+  options?: Pick<VaporComponentOptions, 'name' | 'inheritAttrs' | 'emits'> &
+    CustomElementOptions & {
+      props?: ComponentObjectPropsOptions<Props>
+    },
+): VaporElementConstructor<Props>
+
+// overload 2: defineVaporCustomElement with options object, infer props from options
+export function defineVaporCustomElement<
+  // props
+  RuntimePropsOptions extends ComponentObjectPropsOptions =
+    ComponentObjectPropsOptions,
+  RuntimePropsKeys extends string = string,
+  // emits
+  RuntimeEmitsOptions extends EmitsOptions = {},
+  RuntimeEmitsKeys extends string = string,
+  Slots extends StaticSlots = StaticSlots,
+  // resolved types
+  InferredProps = string extends RuntimePropsKeys
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : ExtractPropTypes<RuntimePropsOptions>
+    : { [key in RuntimePropsKeys]?: any },
+  ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
+>(
+  options: CustomElementOptions & {
+    props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
+    emits?: RuntimeEmitsOptions | RuntimeEmitsKeys[]
+    slots?: Slots
+    setup?: (
+      props: Readonly<InferredProps>,
+      ctx: {
+        attrs: Record<string, any>
+        slots: Slots
+        emit: EmitFn<RuntimeEmitsOptions>
+        expose: (exposed: Record<string, any>) => void
+      },
+    ) => any
+  } & ThisType<void>,
+  extraOptions?: CustomElementOptions,
+): VaporElementConstructor<ResolvedProps>
+
+// overload 3: defining a custom element from the returned value of
+// `defineVaporComponent`
+export function defineVaporCustomElement<
+  T extends
+    | DefineVaporComponent<any, any, any, any, any, any, any, any, any, any>
+    | DefineVaporSetupFnComponent<any, any, any, any, any>,
+>(
+  options: T,
+  extraOptions?: CustomElementOptions,
+): VaporElementConstructor<
+  T extends DefineVaporComponent<
+    infer RuntimePropsOptions,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any
+  >
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : ExtractPropTypes<RuntimePropsOptions>
+    : T extends DefineVaporSetupFnComponent<
+          infer P extends Record<string, any>,
+          any,
+          any,
+          any,
+          any
+        >
+      ? P
+      : unknown
+>
+
+/*@__NO_SIDE_EFFECTS__*/
+export function defineVaporCustomElement(
+  options: any,
+  extraOptions?: Omit<VaporComponentOptions, 'setup'> & CustomElementOptions,
+  /**
+   * @internal
+   */
+  _createApp?: CreateAppFunction<ParentNode, VaporComponent>,
+  /**
+   * @internal
+   */
+  _hydrate?: VaporCustomElementHydrate,
+): VaporElementConstructor {
+  let Comp = defineVaporComponent(options, extraOptions)
+  if (isPlainObject(Comp)) Comp = extend({}, Comp, extraOptions)
+  class VaporCustomElement extends VaporElement {
+    static def = Comp
+
+    constructor(initialProps?: Record<string, any>) {
+      super(Comp, initialProps, _createApp)
+    }
+  }
+
+  if (_hydrate) {
+    vaporCustomElementHydrates.set(VaporCustomElement, _hydrate)
+  }
+
+  return VaporCustomElement
+}
+
+/*@__NO_SIDE_EFFECTS__*/
+export const defineVaporSSRCustomElement = ((
+  options: any,
+  extraOptions?: Omit<VaporComponentOptions, 'setup'>,
+) => {
+  return defineVaporCustomElement(
+    options,
+    extraOptions,
+    // @ts-expect-error
+    createVaporSSRApp,
+    withHydration,
+  )
+}) as typeof defineVaporCustomElement
+
+type VaporInnerComponentDef = VaporComponent & CustomElementOptions
+
+export class VaporElement extends VueElementBase<
+  ParentNode,
+  VaporComponent,
+  VaporInnerComponentDef
+> {
+  constructor(
+    def: VaporInnerComponentDef,
+    props: Record<string, any> | undefined = {},
+    createAppFn: CreateAppFunction<ParentNode, VaporComponent> = createVaporApp,
+  ) {
+    super(def, shallowReactive(props), createAppFn)
+  }
+
+  protected _needsHydration(): boolean {
+    const hydrate = vaporCustomElementHydrates.get(this.constructor)
+    if (this.shadowRoot && hydrate) {
+      return true
+    } else {
+      if (__DEV__ && this.shadowRoot) {
+        warn(
+          `Custom element has pre-rendered declarative shadow root but is not ` +
+            `defined as hydratable. Use \`defineVaporSSRCustomElement\`.`,
+        )
+      }
+    }
+    return false
+  }
+  protected _mount(def: VaporInnerComponentDef): void {
+    if ((__DEV__ || __FEATURE_PROD_DEVTOOLS__) && !def.name) {
+      def.name = 'VaporElement'
+    }
+
+    this._app = this._createApp(this._def)
+    this._inheritParentContext()
+    if (this._def.configureApp) {
+      this._def.configureApp(this._app)
+    }
+
+    // create component in hydration context
+    const hydrate = vaporCustomElementHydrates.get(this.constructor)
+    if (this.shadowRoot && hydrate) {
+      hydrate(this._root, this._createComponent.bind(this))
+    } else {
+      this._createComponent()
+    }
+
+    this._app!.mount(this._root)
+
+    // Render slots immediately after mount for shadowRoot: false
+    // This ensures correct lifecycle order for nested custom elements
+    if (!this.shadowRoot) {
+      this._renderSlots()
+    }
+  }
+
+  protected _update(): void {
+    // Unlike VDOM custom elements, Vapor does not synchronously patch the root
+    // component in _update(). CE props are reactive, so property writes update
+    // in the next scheduler flush. Attribute writes are delivered by
+    // MutationObserver first; compared with VDOM CE, which patches inside
+    // _update(), they become visible one tick later.
+  }
+
+  protected _unmount(): void {
+    if (this._app) {
+      this._app.unmount()
+    }
+    if (this._instance && this._instance.ce) {
+      this._instance.ce = undefined
+    }
+    this._app = this._instance = null
+  }
+
+  /**
+   * Only called when shadowRoot is false
+   */
+  protected _updateSlotNodes(
+    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
+  ): void {
+    this._updateFragmentNodes(
+      (this._instance! as VaporComponentInstance).block,
+      replacements,
+    )
+  }
+
+  /**
+   * Replace slot nodes with their replace content
+   * @internal
+   */
+  private _updateFragmentNodes(
+    block: Block,
+    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
+  ): void {
+    if (Array.isArray(block)) {
+      block.forEach(item => this._updateFragmentNodes(item, replacements))
+      return
+    }
+
+    if (!isFragment(block)) return
+    const { nodes } = block
+    if (nodes instanceof HTMLSlotElement) {
+      const replacement = replacements.get(nodes)
+      if (!replacement) return
+
+      // Slotted content can be represented as plain nodes, but fallback must
+      // stay as its live block so nested updates and unmounting keep using the
+      // current owner rather than a stale DOM snapshot.
+      if (
+        replacement.usedFallback &&
+        isSlotFragment(block) &&
+        block.customElementFallback
+      ) {
+        this._updateFragmentNodes(block.customElementFallback, replacements)
+        block.nodes = block.customElementFallback
+      } else {
+        block.nodes = replacement.nodes
+      }
+    } else if (Array.isArray(nodes)) {
+      nodes.forEach(item => this._updateFragmentNodes(item, replacements))
+    } else {
+      this._updateFragmentNodes(nodes, replacements)
+    }
+  }
+
+  private _createComponent() {
+    const ce = (instance: VaporComponentInstance) => {
+      this._app!._ceComponent = this._instance = instance
+      // For shadowRoot: false, _renderSlots is called synchronously after mount
+      // in _mount() to ensure correct lifecycle order
+      if (!this.shadowRoot) {
+        // Still set updated hooks for subsequent updates
+        this._instance!.u = [this._renderSlots.bind(this)]
+      }
+      this._processInstance()
+    }
+
+    createComponent(
+      this._def,
+      this._props,
+      undefined,
+      undefined,
+      undefined,
+      this._app!._context,
+      false,
+      ce,
+    )
+  }
+}

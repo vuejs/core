@@ -1,5 +1,9 @@
-import { type DirectiveModifiers, onScopeDispose } from '@vue/runtime-dom'
-import type { VaporComponentInstance } from '../component'
+import { type DirectiveModifiers, onScopeDispose, warn } from '@vue/runtime-dom'
+import {
+  type VaporComponentInstance,
+  getRootElement,
+  isVaporComponent,
+} from '../component'
 
 // !! vapor directive is different from vdom directives
 export type VaporDirective = (
@@ -25,10 +29,20 @@ export function withVaporDirectives(
   node: Element | VaporComponentInstance,
   dirs: VaporDirectiveArguments,
 ): void {
-  // TODO handle custom directive on component
+  const element = isVaporComponent(node) ? getRootElement(node.block) : node
+  if (!element) {
+    if (__DEV__) {
+      warn(
+        `Runtime directive used on component with non-element root node. ` +
+          `The directives will not function as intended.`,
+      )
+    }
+    return
+  }
+
   for (const [dir, value, argument, modifiers] of dirs) {
     if (dir) {
-      const ret = dir(node, value, argument, modifiers)
+      const ret = dir(element, value, argument, modifiers)
       if (ret) onScopeDispose(ret)
     }
   }

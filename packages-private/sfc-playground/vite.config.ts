@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { type Plugin, defineConfig } from 'vite'
+import { type Plugin, defineConfig } from 'vite-plus'
 import vue from '@vitejs/plugin-vue'
 import { spawnSync } from 'node:child_process'
 

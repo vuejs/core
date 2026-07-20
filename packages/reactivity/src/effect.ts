@@ -8,7 +8,9 @@ import {
   type ReactiveNode,
   activeSub,
   checkDirty,
+  decRunDepth,
   endTracking,
+  incRunDepth,
   link,
   setActiveSub,
   startTracking,
@@ -117,9 +119,11 @@ export class ReactiveEffect<T = any>
     }
     cleanup(this)
     const prevSub = startTracking(this)
+    incRunDepth()
     try {
       return this.fn()
     } finally {
+      decRunDepth()
       endTracking(this, prevSub)
       const flags = this.flags
       if (
@@ -167,11 +171,6 @@ export class ReactiveEffect<T = any>
 
 if (__DEV__) {
   setupOnTrigger(ReactiveEffect)
-}
-
-export interface ReactiveEffectRunner<T = any> {
-  (): T
-  effect: ReactiveEffect
 }
 
 export function effect<T = any>(

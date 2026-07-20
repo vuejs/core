@@ -507,6 +507,24 @@ describe('compiler: transform v-model', () => {
     )
   })
 
+  test('should generate modelModifiers$ for component v-model:model with arguments', () => {
+    const root = parseWithVModel('<Comp v-model:model.trim="foo" />', {
+      prefixIdentifiers: true,
+    })
+    const vnodeCall = (root.children[0] as ComponentNode)
+      .codegenNode as VNodeCall
+    expect(vnodeCall.props).toMatchObject({
+      properties: [
+        { key: { content: `model` } },
+        { key: { content: `onUpdate:model` } },
+        {
+          key: { content: 'modelModifiers$' },
+          value: { content: `{ trim: true }`, isStatic: false },
+        },
+      ],
+    })
+  })
+
   describe('errors', () => {
     test('missing expression', () => {
       const onError = vi.fn()
@@ -579,6 +597,23 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
           code: ErrorCodes.X_V_MODEL_ON_PROPS,
+        }),
+      )
+    })
+
+    test('used on const binding', () => {
+      const onError = vi.fn()
+      parseWithVModel('<div v-model="c" />', {
+        onError,
+        bindingMetadata: {
+          c: BindingTypes.LITERAL_CONST,
+        },
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_CONST,
         }),
       )
     })
