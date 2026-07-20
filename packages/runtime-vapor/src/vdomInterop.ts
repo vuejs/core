@@ -359,6 +359,17 @@ const vaporInteropImpl: Omit<
     if (instance) {
       const anchor = vnode.anchor as Node | null
       if (instance.block) {
+        // an async setup component resolves its block after mount, so the
+        // hooks captured at mount time may never have reached the block.
+        // re-apply the current hooks so removal performs the leave (and its
+        // afterLeave, which Suspense relies on to mount the next branch).
+        if (vnode.transition) {
+          ensureTransitionHooksRegistered()
+          setVaporTransitionHooks(
+            instance,
+            vnode.transition as VaporTransitionHooks,
+          )
+        }
         unmountComponent(instance, container)
         if (!doRemove) {
           // When the surrounding VDOM fragment owns DOM removal, we still need
@@ -498,6 +509,15 @@ const vaporInteropImpl: Omit<
   },
 
   move(vnode, container, anchor, moveType) {
+    const instance = vnode.component as any as VaporComponentInstance
+    // see unmount: async setup blocks may not have received hooks at mount
+    if (vnode.transition && instance && instance.block) {
+      ensureTransitionHooksRegistered()
+      setVaporTransitionHooks(
+        instance,
+        vnode.transition as VaporTransitionHooks,
+      )
+    }
     if (
       vnode.el &&
       vnode.el !== vnode.anchor &&

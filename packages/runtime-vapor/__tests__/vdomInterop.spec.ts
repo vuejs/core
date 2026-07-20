@@ -3,6 +3,7 @@ import {
   type ShallowRef,
   Suspense,
   Teleport,
+  Transition,
   cloneVNode,
   createApp,
   createCommentVNode,
@@ -4756,6 +4757,207 @@ describe('vdomInterop', () => {
         'component updated',
         'vnode updated',
       ])
+    })
+  })
+
+  describe('transition', () => {
+    const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
+
+    const makeHooks = () => {
+      let finishLeave: (() => void) | undefined
+      return {
+        onLeave: vi.fn((_el: Element, done: () => void) => {
+          finishLeave = done
+        }),
+        onEnter: vi.fn((_el: Element, done: () => void) => done()),
+        onBeforeEnter: vi.fn(),
+        onAfterEnter: vi.fn(),
+        finishLeave: () => {
+          finishLeave!()
+          finishLeave = undefined
+        },
+      }
+    }
+
+    test('out-in + suspense: leaving async vapor component resolves leave and mounts next branch', async () => {
+      const hooks = makeHooks()
+      const VaporChild = defineVaporComponent({
+        async setup() {
+          await timeout()
+          return template('<div>vapor</div>', 1)()
+        },
+      })
+      const VdomChild = { setup: () => () => h('div', 'vdom') }
+      const current = shallowRef<any>(VaporChild)
+      const { host, html } = define({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              {
+                mode: 'out-in',
+                css: false,
+                onLeave: hooks.onLeave,
+                onEnter: hooks.onEnter,
+              },
+              {
+                default: () =>
+                  h(Suspense, null, {
+                    default: () =>
+                      h(current.value, {
+                        key: current.value === VaporChild ? 'a' : 'b',
+                      }),
+                  }),
+              },
+            )
+        },
+      }).render()
+      document.body.appendChild(host)
+
+      await timeout(10)
+      expect(html()).toContain('vapor')
+
+      current.value = VdomChild
+      await timeout(10)
+      expect(hooks.onLeave).toHaveBeenCalledTimes(1)
+      expect(html()).toContain('vapor')
+
+      hooks.finishLeave()
+      await timeout(10)
+      expect(html()).toContain('vdom')
+      expect(html()).not.toContain('vapor')
+    })
+
+    test('out-in + suspense: entering vapor component fires enter hooks once', async () => {
+      const hooks = makeHooks()
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>', 1)()
+        },
+      })
+      const VdomChild = { setup: () => () => h('div', 'vdom') }
+      const current = shallowRef<any>(VdomChild)
+      const { host, html } = define({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              {
+                mode: 'out-in',
+                css: false,
+                onLeave: hooks.onLeave,
+                onEnter: hooks.onEnter,
+                onBeforeEnter: hooks.onBeforeEnter,
+                onAfterEnter: hooks.onAfterEnter,
+              },
+              {
+                default: () =>
+                  h(Suspense, null, {
+                    default: () =>
+                      h(current.value, {
+                        key: current.value === VaporChild ? 'a' : 'b',
+                      }),
+                  }),
+              },
+            )
+        },
+      }).render()
+      document.body.appendChild(host)
+
+      expect(html()).toContain('vdom')
+      current.value = VaporChild
+      await nextTick()
+      expect(hooks.onLeave).toHaveBeenCalledTimes(1)
+      hooks.finishLeave()
+      await nextTick()
+      await nextTick()
+      expect(html()).toContain('vapor')
+      expect(hooks.onBeforeEnter).toHaveBeenCalledTimes(1)
+      expect(hooks.onAfterEnter).toHaveBeenCalledTimes(1)
+    })
+
+    test('out-in + suspense: entering async vapor component fires enter hooks once', async () => {
+      const hooks = makeHooks()
+      const VaporChild = defineVaporComponent({
+        async setup() {
+          await timeout()
+          return template('<div>vapor</div>', 1)()
+        },
+      })
+      const VdomChild = { setup: () => () => h('div', 'vdom') }
+      const current = shallowRef<any>(VdomChild)
+      const { host, html } = define({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              {
+                mode: 'out-in',
+                css: false,
+                onLeave: hooks.onLeave,
+                onEnter: hooks.onEnter,
+                onBeforeEnter: hooks.onBeforeEnter,
+                onAfterEnter: hooks.onAfterEnter,
+              },
+              {
+                default: () =>
+                  h(Suspense, null, {
+                    default: () =>
+                      h(current.value, {
+                        key: current.value === VaporChild ? 'a' : 'b',
+                      }),
+                  }),
+              },
+            )
+        },
+      }).render()
+      document.body.appendChild(host)
+
+      expect(html()).toContain('vdom')
+      current.value = VaporChild
+      await timeout(10)
+      expect(hooks.onLeave).toHaveBeenCalledTimes(1)
+      hooks.finishLeave()
+      await timeout(10)
+      expect(html()).toContain('vapor')
+      expect(hooks.onBeforeEnter).toHaveBeenCalledTimes(1)
+      expect(hooks.onAfterEnter).toHaveBeenCalledTimes(1)
+    })
+
+    test('default mode: leaving vapor component is removed after leave finishes', async () => {
+      const hooks = makeHooks()
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>', 1)()
+        },
+      })
+      const VdomChild = { setup: () => () => h('div', 'vdom') }
+      const current = shallowRef<any>(VaporChild)
+      const { host, html } = define({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              { css: false, onLeave: hooks.onLeave },
+              {
+                default: () =>
+                  h(current.value, {
+                    key: current.value === VaporChild ? 'a' : 'b',
+                  }),
+              },
+            )
+        },
+      }).render()
+      document.body.appendChild(host)
+
+      current.value = VdomChild
+      await nextTick()
+      expect(hooks.onLeave).toHaveBeenCalledTimes(1)
+      expect(html()).toContain('vapor')
+      hooks.finishLeave()
+      await nextTick()
+      expect(html()).not.toContain('vapor')
+      expect(html()).toContain('vdom')
     })
   })
 })

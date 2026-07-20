@@ -580,6 +580,9 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     if (isVaporComponent(vnode.type as ConcreteComponent)) {
+      // keep vnode.transition in sync so consumers reading hooks off the
+      // branch vnode (e.g. Suspense resolve) see the current hooks
+      vnode.transition = hooks
       getVaporInterface(vnode.component, vnode).setTransitionHooks(
         vnode.component,
         hooks,
