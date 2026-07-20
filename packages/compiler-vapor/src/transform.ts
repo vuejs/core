@@ -491,7 +491,6 @@ const defaultOptions = {
   bindingMetadata: EMPTY_OBJ,
   inline: false,
   isTS: false,
-  eventDelegation: true,
   onError: defaultOnError,
   onWarn: defaultOnWarn,
 }

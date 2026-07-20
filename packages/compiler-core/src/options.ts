@@ -295,12 +295,6 @@ export interface TransformOptions
    * correctly, e.g. #6938, #7138
    */
   hmr?: boolean
-  /**
-   * Vapor only: control whether eligible static DOM events are compiled to
-   * document-level delegated events.
-   * @default true
-   */
-  eventDelegation?: boolean
 }
 
 export interface CodegenOptions extends SharedTransformCodegenOptions {

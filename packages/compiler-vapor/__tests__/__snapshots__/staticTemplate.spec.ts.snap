@@ -67,13 +67,12 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`static template marker > does not mark single-root element with dynamic event handler 1`] = `
-"import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { on as _on, template as _template } from 'vue';
 const t0 = _template("<button>", 1)
-_delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(e => _ctx.foo(e))
+  _on(n0, "click", e => _ctx.foo(e))
   return n0
 }"
 `;
