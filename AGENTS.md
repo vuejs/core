@@ -11,14 +11,14 @@
 
 ## Environment and Tooling
 
-- The Node version follows `.node-version`, currently `lts/*`; `package.json` also requires `node >= 22.12.0`.
-- Use only `pnpm` as the package manager; the repo enforces `only-allow pnpm` via `preinstall`; the currently declared version is `pnpm@10.28.2`.
+- The Node version follows `.node-version`, `package.json#engines.node` defines the minimum node version.
+- Use only `pnpm` as the package manager; the repo enforces `only-allow pnpm` via `preinstall`.
 - Install dependencies with `pnpm i`.
-- The main toolchain includes TypeScript, Rolldown, Vitest, oxlint / oxfmt, and Vite+ (`vp`).
+- The main toolchain includes TypeScript, Rolldown, Vitest (`vp test`), oxlint (`vp lint`) / oxfmt (`vp fmt`), and Vite+ (`vp`).
 - Git hooks are managed by Vite+; after installing dependencies, hooks are installed via `vp config --hooks-dir .vite-hooks`.
 - During commits, the following run automatically:
   - Vite+ staged tasks on staged files: JS / JSON are formatted, and TS / TSX run `lint --fix` before formatting
-  - Full format / lint / type checks (`vp run check`)
+  - Full project type check (`vp run check`)
   - Commit message validation (`scripts/verify-commit.js`)
 
 ## Branches and Change Types
