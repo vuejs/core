@@ -4,10 +4,8 @@ import {
   setBlockKey,
   template,
 } from '../../src'
-import {
-  resolveTransitionBlock,
-  resolveTransitionBlocks,
-} from '../../src/components/Transition'
+import { resolveTransitionBlock } from '../../src/components/Transition'
+import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
 import { nextTick, ref } from 'vue'
 import { compile, makeInteropRender, makeRender } from '../_utils'
 

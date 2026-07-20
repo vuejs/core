@@ -30,6 +30,7 @@ import {
   ensureValidVNode,
   ensureVaporSlotFallback,
   getInheritedScopeIds,
+  getTransitionRawChildren,
   invokeDirectiveHook,
   isEmitListener,
   isKeepAlive,
@@ -144,9 +145,9 @@ import {
 import type { NodeRef } from './apiTemplateRef'
 import {
   ensureTransitionHooksRegistered,
-  getVNodeKey,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
+import { registerTransitionInterop } from './transition'
 import { interopKey, setInteropEnabled } from './vdomInteropState'
 import {
   type KeepAliveInstance,
@@ -167,6 +168,35 @@ import {
 
 const EMPTY_BLOCK = EMPTY_ARR as unknown as Block[]
 const EMPTY_VNODES = EMPTY_ARR as unknown as VNode[]
+
+function getRawTransitionChild(vnode: VNode | undefined): VNode | undefined {
+  if (!vnode) return
+  const children = getTransitionRawChildren([vnode])
+  return children.length === 1 ? children[0] : undefined
+}
+
+function getInteropTransitionType(vnode: VNode): VNode['type'] | undefined {
+  const child = getRawTransitionChild(vnode)
+  return child && child.type
+}
+
+function getVNodeKey(vnode: VNode | undefined): VNode['key'] | undefined {
+  const child = getRawTransitionChild(vnode)
+  return child && child.key
+}
+
+function getInteropTransitionElement(vnode: VNode): Element | undefined {
+  if (vnode.component) {
+    return getInteropTransitionElement(vnode.component.subTree)
+  }
+  if (vnode.el instanceof Element) {
+    return vnode.el
+  }
+  if (vnode.type === Fragment) {
+    const child = getRawTransitionChild(vnode)
+    if (child) return getInteropTransitionElement(child)
+  }
+}
 
 function filterReservedProps(props: VNode['props']): VNode['props'] {
   const filtered: VNode['props'] = {}
@@ -1717,6 +1747,10 @@ export const vaporInteropPlugin: Plugin = app => {
   if (__FEATURE_SUSPENSE__) {
     enableSuspense()
   }
+  registerTransitionInterop(
+    getInteropTransitionType,
+    getInteropTransitionElement,
+  )
   setInteropEnabled()
   const internals = ensureRenderer().internals
   // Keep the shared base implementation immutable; renderer-bound methods must

@@ -21,7 +21,7 @@ import {
   vShowHidden,
   warn,
 } from '@vue/runtime-dom'
-import { extend } from '@vue/shared'
+import { extend, isArray } from '@vue/shared'
 import {
   type Block,
   type BlockFn,
@@ -31,26 +31,32 @@ import {
 import { renderEffect } from '../renderEffect'
 import {
   type ResolvedTransitionBlock,
-  ensureTransitionHooksRegistered,
+  applyTransitionHooksImpl,
   getTransitionElement,
   isValidTransitionBlock,
-  resolveTransitionBlocks,
   resolveTransitionHooks,
-  setTransitionHooks,
+  setTransitionType,
 } from './Transition'
-import type {
-  VaporComponentInstance,
-  VaporComponentOptions,
+import {
+  type VaporComponentInstance,
+  type VaporComponentOptions,
+  isVaporComponent,
 } from '../component'
 import { resolveDynamicProps } from '../componentProps'
 import { setForHydrationAnchorResolver } from '../apiCreateFor'
 import { createComment, createElement, createTextNode } from '../dom/node'
-import { DynamicFragment, type VaporFragment, isFragment } from '../fragment'
+import {
+  DynamicFragment,
+  type VaporFragment,
+  isForBlock,
+  isFragment,
+  isSlotFragment,
+} from '../fragment'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
-import { watch } from '@vue/reactivity'
+import { EffectFlags, ReactiveEffect } from '@vue/reactivity'
 import {
   adoptTemplate,
   cleanupHydrationTail,
@@ -60,6 +66,8 @@ import {
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import { isTransitionEnabled, registerTransitionHooks } from '../transition'
+import { isInteropEnabled } from '../vdomInteropState'
 
 const positionMap = new WeakMap<TransitionBlock, DOMRect>()
 const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
@@ -113,7 +121,7 @@ const decorate = <T extends VaporComponentOptions>(t: T): T => {
   return t
 }
 
-const VaporTransitionGroupImpl = defineVaporComponent({
+const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
   name: 'VaporTransitionGroup',
 
   props: /*@__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -125,8 +133,13 @@ const VaporTransitionGroupImpl = defineVaporComponent({
     // @ts-expect-error
     expose()
 
-    // Register transition hooks on first use
-    ensureTransitionHooksRegistered()
+    if (!isTransitionEnabled) {
+      registerTransitionHooks(
+        applyTransitionHooksImpl,
+        () => false,
+        () => false,
+      )
+    }
 
     const instance = currentInstance as VaporComponentInstance
     const state = useTransitionState()
@@ -304,6 +317,117 @@ export const VaporTransitionGroup: DefineVaporComponent<
   TransitionGroupProps
 > = /*@__PURE__*/ decorate(VaporTransitionGroupImpl)
 
+type InheritedTransitionKeyRecord = {
+  generation: number
+  rawBaseKey: any
+  inheritedKey: string
+}
+
+const inheritedTransitionKeyMap = new WeakMap<
+  ResolvedTransitionBlock,
+  InheritedTransitionKeyRecord
+>()
+let transitionKeyGeneration = 0
+let currentTransitionKeyGeneration = 0
+
+export function resolveTransitionBlocks(
+  block: Block,
+  onFragment?: (frag: VaporFragment) => void,
+  onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
+): ResolvedTransitionBlock[] {
+  const children: ResolvedTransitionBlock[] = []
+  const prevGeneration = currentTransitionKeyGeneration
+  currentTransitionKeyGeneration = ++transitionKeyGeneration
+  try {
+    collectTransitionBlocks(block, children, onFragment, onUpdateOwner)
+    return children
+  } finally {
+    currentTransitionKeyGeneration = prevGeneration
+  }
+}
+
+function collectTransitionBlocks(
+  block: Block,
+  children: ResolvedTransitionBlock[],
+  onFragment?: (frag: VaporFragment) => void,
+  onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
+): void {
+  if (block instanceof Node) {
+    if (block instanceof Element) children.push(block)
+  } else if (isVaporComponent(block)) {
+    const isRootSlot = block.block && isSlotFragment(block.block)
+    if (onUpdateOwner && !isRootSlot) onUpdateOwner(block)
+
+    const start = children.length
+    collectTransitionBlocks(
+      block.block,
+      children,
+      onFragment,
+      isRootSlot ? onUpdateOwner : undefined,
+    )
+    if (!isRootSlot) {
+      for (let i = start; i < children.length; i++) {
+        setTransitionType(children[i], block.type)
+      }
+    }
+    inheritTransitionKey(children, start, block.$key)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      collectTransitionBlocks(block[i], children, onFragment, onUpdateOwner)
+    }
+  } else if (isFragment(block)) {
+    if (onFragment) onFragment(block)
+    if (onUpdateOwner) onUpdateOwner(block)
+    if (isInteropEnabled && block.vnode) {
+      children.push(block)
+    } else {
+      const start = children.length
+      collectTransitionBlocks(block.nodes, children, onFragment, onUpdateOwner)
+      if (isForBlock(block)) {
+        const count = children.length - start
+        for (let i = start; i < children.length; i++) {
+          children[i].$key =
+            block.key != null && count > 1
+              ? `${block.key}:${i - start}`
+              : block.key
+        }
+      } else {
+        inheritTransitionKey(children, start, block.$key)
+      }
+    }
+  }
+}
+
+function inheritTransitionKey(
+  children: ResolvedTransitionBlock[],
+  start: number,
+  key: any,
+): void {
+  if (key == null || start === children.length) return
+  for (let i = start; i < children.length; i++) {
+    const child = children[i]
+    let record = inheritedTransitionKeyMap.get(child)
+    let baseKey
+    if (record && record.generation === currentTransitionKeyGeneration) {
+      baseKey = child.$key != null ? child.$key : i - start
+    } else {
+      if (!record || !Object.is(child.$key, record.inheritedKey)) {
+        record = {
+          generation: currentTransitionKeyGeneration,
+          rawBaseKey: child.$key != null ? child.$key : i - start,
+          inheritedKey: '',
+        }
+        inheritedTransitionKeyMap.set(child, record)
+      } else {
+        record.generation = currentTransitionKeyGeneration
+      }
+      baseKey = record.rawBaseKey
+    }
+    record.inheritedKey = String(key) + String(baseKey)
+    child.$key = record.inheritedKey
+  }
+}
+
 function applyGroupTransitionHooks(
   block: Block,
   props: TransitionProps,
@@ -321,9 +445,11 @@ function applyGroupTransitionHooks(
     const child = children[i]
     if (isValidTransitionBlock(child)) {
       if (child.$key != null) {
-        setTransitionHooks(
+        child.$transition = resolveTransitionHooks(
           child,
-          resolveTransitionHooks(child, props, state, instance),
+          props,
+          state,
+          instance,
         )
       } else if (__DEV__) {
         warn(`<transition-group> children must be keyed`)
@@ -358,7 +484,7 @@ function trackTransitionGroupUpdate(
     ;(owner.onUpdated ||= []).push(() => updateHooks.updated())
   } else {
     // A component child can update from parent-driven props without re-running
-    // the surrounding v-for fragment. Watch raw props directly instead of
+    // the surrounding v-for fragment. Track raw props directly instead of
     // using component updated hooks, because child-local state updates should
     // not trigger TransitionGroup move bookkeeping. This matches VDOM behavior.
     let isPending = false
@@ -367,25 +493,26 @@ function trackTransitionGroupUpdate(
       updateHooks.updated()
     }
     owner.scope.run(() => {
-      watch(
-        () => {
-          // Dynamic prop sources are resolved as child props, so the getter
-          // must run with the child instance while the watcher itself remains
-          // owned by the child scope for teardown.
-          const prev = setCurrentInstance(owner, owner.scope)
-          try {
-            return resolveDynamicProps(owner.rawProps)
-          } finally {
-            setCurrentInstance(...prev)
-          }
-        },
-        () => {
-          if (isPending) return
-          isPending = true
-          updateHooks.beforeUpdate()
-          queuePostFlushCb(flushUpdated)
-        },
-      )
+      const effect = new ReactiveEffect(() => {
+        // Dynamic prop sources are resolved as child props, so the getter
+        // must run with the child instance while the effect itself remains
+        // owned by the child scope for teardown.
+        const prev = setCurrentInstance(owner, owner.scope)
+        try {
+          resolveDynamicProps(owner.rawProps)
+        } finally {
+          setCurrentInstance(...prev)
+        }
+      })
+      effect.notify = () => {
+        if (effect.flags & EffectFlags.PAUSED || !effect.dirty) return
+        effect.run()
+        if (isPending) return
+        isPending = true
+        updateHooks.beforeUpdate()
+        queuePostFlushCb(flushUpdated)
+      }
+      effect.run()
     })
   }
 }

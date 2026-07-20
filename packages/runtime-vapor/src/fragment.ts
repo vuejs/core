@@ -690,6 +690,14 @@ export function isDynamicFragment(val: unknown): val is DynamicFragment {
   return !!(val && (val as any).__df)
 }
 
+export function isForFragment(val: unknown): val is ForFragment {
+  return isFragment(val) && typeof (val as ForFragment).onReset === 'function'
+}
+
+export function isForBlock(val: unknown): val is ForBlock {
+  return isFragment(val) && (val as ForBlock).itemRef !== undefined
+}
+
 export function isSlotFragment(val: unknown): val is SlotFragment {
   return isDynamicFragment(val) && !!val.isSlot
 }
