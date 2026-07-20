@@ -7,6 +7,7 @@ import {
   createApp,
   createCommentVNode,
   createVNode,
+  currentInstance,
   defineComponent,
   h,
   inject,
@@ -56,6 +57,7 @@ import {
   template,
   txt,
   vaporInteropPlugin,
+  withAsyncContext,
 } from '../src'
 
 const define = makeInteropRender()
@@ -4457,6 +4459,52 @@ describe('vdomInterop', () => {
       expect(
         'resolveComponent can only be used in render() or setup()',
       ).not.toHaveBeenWarned()
+    })
+
+    test('render effects created in render() after async setup are owned by the instance', async () => {
+      const duration = 5
+      const msg = ref('pending')
+      let instanceInRender: any
+
+      const VaporAsyncChild = defineVaporComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;(([__temp, __restore] = withAsyncContext(
+            () => new Promise(resolve => setTimeout(resolve, duration)),
+          )),
+            (__temp = await __temp),
+            __restore())
+          return { msg }
+        },
+        render(_ctx: any) {
+          instanceInRender = currentInstance
+          const n = template('<div> </div>')()
+          const x = child(n as any) as any
+          renderEffect(() => setText(x, toDisplayString(_ctx.msg)))
+          return n
+        },
+      })
+
+      const { html } = define({
+        render() {
+          return h(Suspense as any, null, {
+            default: () => h(VaporAsyncChild as any),
+            fallback: () => h('span', 'loading'),
+          })
+        },
+      }).render()
+
+      expect(html()).toContain('<span>loading</span>')
+
+      await new Promise(resolve => setTimeout(resolve, duration + 1))
+      await nextTick()
+
+      expect(html()).toContain('<div>pending</div>')
+      expect(instanceInRender).not.toBe(null)
+
+      msg.value = 'updated'
+      await nextTick()
+      expect(html()).toContain('<div>updated</div>')
     })
 
     test('renders async VDOM child inside VDOM Suspense', async () => {

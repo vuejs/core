@@ -1053,17 +1053,29 @@ export function mountComponent(
       // mode so the last mount does not fall back to fresh DOM insertion.
       const reset =
         instance.restoreAsyncContext && instance.restoreAsyncContext()
+      // handleSetupResult may invoke the render function, which creates
+      // render effects that must be owned by this instance and its scope.
+      const handleResult = () => {
+        const prevInstance = setCurrentInstance(instance)
+        const prevSub = setActiveSub()
+        try {
+          handleSetupResult(setupResult, component, instance)
+        } finally {
+          setActiveSub(prevSub)
+          setCurrentInstance(...prevInstance)
+        }
+      }
       try {
         if (isHydrating) {
           withDeferredHydrationBoundary(() => {
-            handleSetupResult(setupResult, component, instance)
+            handleResult()
             mountComponent(instance, parent, anchor)
             if (instance.deferredHydrationBoundary) {
               instance.deferredHydrationBoundary()
             }
           })
         } else {
-          handleSetupResult(setupResult, component, instance)
+          handleResult()
           mountComponent(instance, parent, anchor)
         }
       } finally {
