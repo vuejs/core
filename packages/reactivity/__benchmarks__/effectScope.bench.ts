@@ -6,18 +6,15 @@ import {
 
 describe('effectScope', () => {
   function benchEffectCreateAndStop(size: number) {
-    bench(
-      `create and stop an effectScope that tracks ${size} cleanup functions`,
-      () => {
-        const scope = effectScope()
-        scope.run(() => {
-          for (let i = 0; i < size; i++) {
-            onEffectCleanup(() => {})
-          }
-        })
-        scope.stop()
-      },
-    )
+    bench(`create and stop an effectScope that tracks ${size} cleanup functions`, () => {
+      const scope = effectScope()
+      scope.run(() => {
+        for (let i = 0; i < size; i++) {
+          onEffectCleanup(() => {})
+        }
+      })
+      scope.stop()
+    })
   }
 
   benchEffectCreateAndStop(10)
