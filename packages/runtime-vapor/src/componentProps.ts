@@ -498,12 +498,15 @@ export function setupPropsValidation(
   if (!rawProps) return
   renderEffect(() => {
     pushWarningContext(warningContext)
-    validateProps(
-      resolveDynamicProps(rawProps),
-      instance.props,
-      normalizePropsOptions(instance.type)[0]!,
-    )
-    popWarningContext()
+    try {
+      validateProps(
+        resolveDynamicProps(rawProps),
+        instance.props,
+        normalizePropsOptions(instance.type)[0]!,
+      )
+    } finally {
+      popWarningContext()
+    }
   }, true /* noLifecycle */)
 }
 

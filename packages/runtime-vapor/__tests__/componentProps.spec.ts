@@ -4,13 +4,16 @@ import {
   // currentInstance,
   inject,
   nextTick,
+  popWarningContext,
   provide,
   ref,
   toRefs,
+  warn,
   watch,
 } from '@vue/runtime-dom'
 import {
   createComponent,
+  createVaporApp,
   defineVaporComponent,
   renderEffect,
   template,
@@ -850,5 +853,42 @@ describe('component: props', () => {
         title: 'baz',
       })
     })
+  })
+
+  test('restores warning context when prop validation throws', async () => {
+    const error = new Error('validation failed')
+    const value = ref(1)
+    const errorHandler = vi.fn()
+    const warnHandler = vi.fn()
+    const Comp = defineVaporComponent({
+      props: {
+        foo: {
+          validator(value) {
+            if (value === 2) throw error
+            return true
+          },
+        },
+      },
+      setup: () => [],
+    })
+    const app = createVaporApp(Comp, { foo: () => value.value })
+    app.config.errorHandler = errorHandler
+    app.config.warnHandler = warnHandler
+    app.mount(document.createElement('div'))
+
+    value.value = 2
+    await nextTick()
+    expect(errorHandler).toHaveBeenCalledWith(
+      error,
+      expect.anything(),
+      'component update',
+    )
+    warnHandler.mockClear()
+
+    warn('after failed prop validation')
+    popWarningContext()
+
+    expect('[Vue warn]: after failed prop validation').toHaveBeenWarned()
+    expect(warnHandler).not.toHaveBeenCalled()
   })
 })

@@ -1307,7 +1307,7 @@ function baseCreateRenderer(
     }
   }
 
-  const mountComponent: MountComponentFn = (
+  const mountComponentImpl: MountComponentFn = (
     initialVNode,
     container,
     anchor,
@@ -1333,7 +1333,6 @@ function baseCreateRenderer(
     }
 
     if (__DEV__) {
-      pushWarningContext(initialVNode)
       startMeasure(instance, `mount`)
     }
 
@@ -1418,10 +1417,21 @@ function baseCreateRenderer(
     }
 
     if (__DEV__) {
-      popWarningContext()
       endMeasure(instance, `mount`)
     }
   }
+
+  // keep error-safe warning context cleanup out of the production mount path
+  const mountComponent: MountComponentFn = __DEV__
+    ? (...args) => {
+        pushWarningContext(args[0])
+        try {
+          mountComponentImpl(...args)
+        } finally {
+          popWarningContext()
+        }
+      }
+    : mountComponentImpl
 
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
     const instance = (n2.component = n1.component)!
@@ -1435,10 +1445,13 @@ function baseCreateRenderer(
         // since the component's reactive effect for render isn't set-up yet
         if (__DEV__) {
           pushWarningContext(n2)
-        }
-        updateComponentPreRender(instance, n2, optimized)
-        if (__DEV__) {
-          popWarningContext()
+          try {
+            updateComponentPreRender(instance, n2, optimized)
+          } finally {
+            popWarningContext()
+          }
+        } else {
+          updateComponentPreRender(instance, n2, optimized)
         }
         return
       } else {
@@ -1478,6 +1491,19 @@ function baseCreateRenderer(
       this.job.i = instance
 
       if (__DEV__) {
+        // keep the production update effect on the direct call path
+        const componentUpdateFn = this.fn.bind(this)
+        this.fn = () => {
+          if (!instance.isMounted) {
+            return componentUpdateFn()
+          }
+          pushWarningContext(instance.next || instance.vnode)
+          try {
+            componentUpdateFn()
+          } finally {
+            popWarningContext()
+          }
+        }
         this.onTrack = instance.rtc
           ? e => invokeArrayFns(instance.rtc!, e)
           : void 0
@@ -1695,9 +1721,6 @@ function baseCreateRenderer(
         // OR parent calling processComponent (next: VNode)
         let originNext = next
         let vnodeHook: VNodeHook | null | undefined
-        if (__DEV__) {
-          pushWarningContext(next || instance.vnode)
-        }
 
         // Disallow component effect recursion during pre-lifecycle hooks.
         toggleRecurse(instance, false)
@@ -1784,10 +1807,6 @@ function baseCreateRenderer(
 
         if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
           devtoolsComponentUpdated(instance)
-        }
-
-        if (__DEV__) {
-          popWarningContext()
         }
       }
     }

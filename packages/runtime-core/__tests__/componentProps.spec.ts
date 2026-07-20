@@ -13,11 +13,13 @@ import {
   inject,
   nextTick,
   nodeOps,
+  popWarningContext,
   provide,
   ref,
   render,
   serializeInner,
   toRefs,
+  warn,
   watch,
 } from '@vue/runtime-test'
 import { render as domRender } from 'vue'
@@ -907,5 +909,72 @@ describe('component props', () => {
     foo.value++
     await nextTick()
     expect(props).not.toHaveProperty('onEvent')
+  })
+
+  test('restores warning context when prop validation throws', () => {
+    const error = new Error('validation failed')
+    const warnHandler = vi.fn()
+    const Comp = defineComponent({
+      props: {
+        foo: {
+          validator() {
+            throw error
+          },
+        },
+      },
+      render() {},
+    })
+    const root = nodeOps.createElement('div')
+    const app = createApp(Comp, { foo: 1 })
+    app.config.warnHandler = warnHandler
+
+    expect(() => app.mount(root)).toThrow(error)
+    warnHandler.mockClear()
+
+    warn('after failed prop validation')
+    popWarningContext()
+
+    expect('[Vue warn]: after failed prop validation').toHaveBeenWarned()
+    expect(warnHandler).not.toHaveBeenCalled()
+  })
+
+  test('restores warning context when prop validation throws on update', async () => {
+    const error = new Error('validation failed')
+    const value = ref(1)
+    const errorHandler = vi.fn()
+    const warnHandler = vi.fn()
+    const Child = defineComponent({
+      props: {
+        foo: {
+          validator(value) {
+            if (value === 2) throw error
+            return true
+          },
+        },
+      },
+      render() {},
+    })
+    const Parent = () => h(Child, { foo: value.value })
+    const root = nodeOps.createElement('div')
+    const app = createApp(Parent)
+    app.config.errorHandler = errorHandler
+    app.config.warnHandler = warnHandler
+    app.mount(root)
+
+    value.value = 2
+    await nextTick()
+    expect(errorHandler).toHaveBeenCalledWith(
+      error,
+      expect.anything(),
+      'component update',
+    )
+    warnHandler.mockClear()
+
+    warn('after failed prop validation update')
+    popWarningContext()
+    popWarningContext()
+
+    expect('[Vue warn]: after failed prop validation update').toHaveBeenWarned()
+    expect(warnHandler).not.toHaveBeenCalled()
   })
 })
