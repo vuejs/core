@@ -187,9 +187,9 @@ function getInteropTransitionElement(vnode: VNode): Element | undefined {
   if (vnode.el instanceof Element) {
     return vnode.el
   }
-  const child = getRawTransitionChild(vnode)
-  if (child && child !== vnode) {
-    return getInteropTransitionElement(child)
+  if (vnode.type === Fragment) {
+    const child = getRawTransitionChild(vnode)
+    if (child) return getInteropTransitionElement(child)
   }
 }
 

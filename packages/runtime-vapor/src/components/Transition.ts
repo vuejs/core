@@ -229,7 +229,8 @@ function getTransitionType(block: ResolvedTransitionBlock): any {
   if (type !== undefined) return type
   if (block instanceof Element) return block.localName
   if (isInteropEnabled && isFragment(block) && block.vnode) {
-    return getInteropTransitionType(block.vnode)
+    const type = getInteropTransitionType(block.vnode)
+    if (type !== undefined) return type
   }
   return block
 }

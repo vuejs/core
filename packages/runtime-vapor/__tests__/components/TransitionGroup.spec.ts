@@ -15,45 +15,6 @@ const define = makeRender()
 const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
 
 describe('TransitionGroup', () => {
-  test('registers full transition hooks when Transition is used later', async () => {
-    const group = define({
-      setup() {
-        return createComponent(VaporTransitionGroup)
-      },
-    }).render()
-    group.app.unmount()
-
-    let leaveDone: (() => void) | undefined
-    const data = ref({
-      show: true,
-      onLeave: (_: Element, done: () => void) => {
-        leaveDone = done
-      },
-    })
-    const App = compile(
-      `<template>
-        <Transition mode="out-in" :css="false" @leave="data.onLeave">
-          <div v-if="data.show" key="a">A</div>
-          <div v-else key="b">B</div>
-        </Transition>
-      </template>`,
-      data,
-    )
-    const { host } = define(App as any).render()
-
-    data.value.show = false
-    await nextTick()
-
-    expect(host.textContent).toContain('A')
-    expect(host.textContent).not.toContain('B')
-
-    leaveDone!()
-    await nextTick()
-
-    expect(host.textContent).not.toContain('A')
-    expect(host.textContent).toContain('B')
-  })
-
   test('prefixes outer component key for a single transition child', () => {
     const Child = defineVaporComponent({
       setup() {
@@ -312,5 +273,44 @@ describe('TransitionGroup', () => {
     leaveDone && leaveDone()
     await nextTick()
     expect(host.querySelectorAll('.item').length).toBe(1)
+  })
+
+  test('registers full transition hooks when Transition is used later', async () => {
+    const group = define({
+      setup() {
+        return createComponent(VaporTransitionGroup)
+      },
+    }).render()
+    group.app.unmount()
+
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: true,
+      onLeave: (_: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <div v-if="data.show" key="a">A</div>
+          <div v-else key="b">B</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(host.textContent).toContain('A')
+    expect(host.textContent).not.toContain('B')
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.textContent).not.toContain('A')
+    expect(host.textContent).toContain('B')
   })
 })
