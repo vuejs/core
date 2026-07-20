@@ -55,7 +55,10 @@ function resolveTemplateAnalysisResult(
   const vModelIds = new Set<string>()
 
   const root = ast?.transformed
-    ? parse(content, { prefixIdentifiers: true })
+    ? parse(content, {
+        prefixIdentifiers: true,
+        onError: () => {} // ignore errors since they were already reported by the SFC parser
+      })
     : ast
 
   root!.children.forEach(walk)
