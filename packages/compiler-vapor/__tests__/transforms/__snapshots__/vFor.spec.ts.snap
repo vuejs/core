@@ -30,6 +30,53 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-for > avoids cache variable collision with an existing runtime helper 1`] = `
+"import { setInsertionState as _setInsertionState, createSelector as _createSelector, child as _child, txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<button><span> ")
+const t1 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n4 = t1()
+  _setInsertionState(n4, null, 0)
+  const _selector0 = _createSelector(() => _ctx.selected)
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n3 = t0()
+    const n2 = _child(n3)
+    const x2 = _txt(n2)
+    let _child1
+    _renderEffect(() => {
+      _child1 = _for_item0.value
+      _setProp(n3, "disabled", _child1.disabled)
+      _setText(x2, _toDisplayString(_child1.label))
+    })
+    _selector0(_child1.key, () => {
+      _setClassName(n3, (_child1.key === _ctx.selected ? 1 : 0), "selected")
+    })
+    return n3
+  }, (child) => (child.key), 9 /* FAST_REMOVE, IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n4
+}"
+`;
+
+exports[`compiler: v-for > avoids runtime helper collision with an existing cache variable 1`] = `
+"import { setProp as _setProp1, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = t0()
+    _renderEffect(() => {
+      const _setProp = _for_item0.value
+      _setProp1(n2, "id", _setProp.id)
+      _setProp1(n2, "title", _setProp.title)
+    })
+    return n2
+  }, undefined, 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > basic v-for 1`] = `
 "import { txt as _txt, createInvoker as _createInvoker, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
 const t0 = _template("<div> ")

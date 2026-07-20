@@ -52,22 +52,9 @@ export class CodegenContext {
     }
 
     const base = `_${helperNameAliases[name] || name}`
-    if (this.isHelperNameAvailable(base)) {
-      this.helpers.set(name, base)
-      return base
-    }
-
-    const map = this.nextIdMap.get(base)
-    let next = 1
-    while (true) {
-      // start from 1 because "base" (no suffix) is already taken.
-      const alias = `${base}${getNextId(map, next)}`
-      if (this.isHelperNameAvailable(alias)) {
-        this.helpers.set(name, alias)
-        return alias
-      }
-      next++
-    }
+    const alias = this.findAvailableName(base, this.generatedLocalNames)
+    this.helpers.set(name, alias)
+    return alias
   }
 
   delegates: Set<string> = new Set<string>()
@@ -141,12 +128,34 @@ export class CodegenContext {
   private templateVars: Map<number, string> = new Map()
   private nextIdMap: Map<string, Map<number, number>> = new Map()
   private lastIdMap: Map<string, number> = new Map()
-  private isHelperNameAvailable(name: string): boolean {
-    if (this.bindingNames.has(name)) return false
+  private generatedLocalNames: Set<string> = new Set()
+
+  getUniqueLocalName(base: string, scopeNames: Set<string>): string {
+    const name = this.findAvailableName(base, scopeNames)
+    scopeNames.add(name)
+    this.generatedLocalNames.add(name)
+    return name
+  }
+
+  private isNameAvailable(name: string, reservedNames: Set<string>): boolean {
+    if (this.bindingNames.has(name) || reservedNames.has(name)) return false
     for (const alias of this.helpers.values()) {
       if (alias === name) return false
     }
     return true
+  }
+
+  private findAvailableName(base: string, reservedNames: Set<string>): string {
+    if (this.isNameAvailable(base, reservedNames)) return base
+
+    const map = this.nextIdMap.get(base)
+    let next = 1
+    while (true) {
+      const id = getNextId(map, next)
+      const name = `${base}${id}`
+      if (this.isNameAvailable(name, reservedNames)) return name
+      next = id + 1
+    }
   }
 
   private lastTIndex: number = -1
