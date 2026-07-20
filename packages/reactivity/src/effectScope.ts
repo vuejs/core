@@ -22,12 +22,12 @@ export class EffectScope implements ReactiveNode {
   /**
    * @internal
    */
-  private _controller: AbortController | undefined
+  controller: AbortController | undefined
 
   get signal(): AbortSignal {
-    if (!this._controller) this._controller = new AbortController()
+    if (!this.controller) this.controller = new AbortController()
 
-    return this._controller.signal
+    return this.controller.signal
   }
 
   constructor(detached = false) {
@@ -105,8 +105,8 @@ export class EffectScope implements ReactiveNode {
       }
     }
     cleanup(this)
-    if (this._controller) {
-      this._controller.abort()
+    if (this.controller) {
+      this.controller.abort()
     }
   }
 }

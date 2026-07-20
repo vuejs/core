@@ -511,10 +511,10 @@ describe('reactivity/effect/scope', () => {
   test('signal', () => {
     const scope = effectScope()
     // should not create an `AbortController` until `scope.signal` is accessed
-    expect((scope as any)._controller).toBeUndefined()
+    expect(scope.controller).toBeUndefined()
 
     const { signal } = scope
-    expect((scope as any)._controller).toBeDefined()
+    expect(scope.controller).toBeDefined()
     expect(signal).toBeDefined()
 
     const spy = vi.fn()
@@ -522,7 +522,7 @@ describe('reactivity/effect/scope', () => {
 
     scope.stop()
     // should trigger `abort` on the `signal` when `scope.stop()` is called.
-    expect(spy).toBeCalled()
+    expect(spy).toHaveBeenCalled()
   })
 })
 
