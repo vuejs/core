@@ -13605,4 +13605,104 @@ describe('VDOM interop', () => {
       <p>after</p></div>"
     `)
   })
+
+  test('hydrate vapor slot passed to render function vdom child', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const VdomLink = {
+          props: ['to'],
+          setup(props, { slots }) {
+            return () => h('a', { href: props.to }, slots.default && slots.default())
+          }
+        }
+      </script>
+      <template>
+        <div><VdomLink to="/about">{{ data }}</VdomLink></div>
+      </template>`,
+      {},
+      data,
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><a href="/about">foo</a></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><a href="/about">bar</a></div>"`,
+    )
+  })
+
+  test('hydrate vapor slot passed to render function vdom child with trailing sibling', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const VdomLink = {
+          setup(_, { slots }) {
+            return () => h('a', null, [slots.default && slots.default(), h('span', 'after')])
+          }
+        }
+      </script>
+      <template>
+        <div><VdomLink>{{ data }}</VdomLink></div>
+      </template>`,
+      {},
+      data,
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><a><!--[-->foo<!--]--><span>after</span></a></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><a><!--[-->bar<!--]--><span>after</span></a></div>"`,
+    )
+  })
+
+  test('hydrate vapor slot passed to render function vdom child in vdom app', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const components = _components;</script>
+      <template>
+        <div><components.VaporPage/></div>
+      </template>`,
+      {
+        VaporPage: {
+          code: `<script setup>
+            import { h } from 'vue'
+            const data = _data
+            const VdomLink = {
+              props: ['to'],
+              setup(props, { slots }) {
+                return () => h('a', { href: props.to }, slots.default && slots.default())
+              }
+            }
+          </script>
+          <template>
+            <div><VdomLink to="/about">{{ data }}</VdomLink></div>
+          </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><div><a href="/about">foo</a></div></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><div><a href="/about">bar</a></div></div>"`,
+    )
+  })
 })

@@ -101,7 +101,7 @@ import {
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { createTextNode } from './dom/node'
+import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
@@ -546,12 +546,24 @@ const vaporInteropImpl: Omit<
 
   hydrateSlot(vnode, node, parentComponent, parentSuspense) {
     if (!isHydrating && !isVdomHydrating) return node
+    let createdAnchor = false
     vaporHydrateNode(node, () => {
       vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
-      const anchor =
+      let anchor =
         isFragment(vnode.vb) && vnode.vb.anchor
           ? vnode.vb.anchor
           : currentHydrationNode!
+      // Slot content rendered without fragment anchors (e.g. a render
+      // function child invoking `slots.default()` directly) and sitting at
+      // the end of its container leaves no next sibling to adopt as the slot
+      // anchor: advancing past the last child climbs out of the container and
+      // may yield null or a node from an ancestor scope. Create an anchor
+      // instead, matching the mount path.
+      if (!anchor || parentNode(anchor) !== parentNode(node)) {
+        createdAnchor = true
+        anchor = createTextNode()
+        insert(anchor, parentNode(node)!)
+      }
       // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
       // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
       if (isComment(node, '[') && isComment(anchor, ']')) {
@@ -566,6 +578,9 @@ const vaporInteropImpl: Omit<
         )
       }
     })
+    // The created anchor is a client-only node; returning it would make
+    // hydrateChildren() treat it as an unclaimed server-rendered child.
+    if (createdAnchor) return null
     // For fragment-wrapped slot content (`<!--[-->...<!--]-->`), return the
     // node after the end anchor to avoid hydrateChildren() treating `<!--]-->`
     // as an extra child of the current container.
