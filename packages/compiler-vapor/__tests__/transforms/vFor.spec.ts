@@ -565,4 +565,38 @@ describe('compiler: v-for', () => {
       type: IRNodeTypes.KEY,
     })
   })
+
+  test('avoids cache variable collision with an existing runtime helper', () => {
+    const { code } = compileWithVFor(`
+      <div>
+        <button
+          v-for="child in items"
+          :key="child.key"
+          :disabled="child.disabled"
+          :class="{ selected: child.key === selected }"
+        >
+          <span>{{ child.label }}</span>
+        </button>
+      </div>
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).toContain('child as _child')
+    expect(code).toContain('const n2 = _child(n3)')
+    expect(code).toContain('let _child1')
+    expect(code).toContain('_child1 = _for_item0.value')
+    expect(code).toContain('_selector0(_child1.key')
+  })
+
+  test('avoids runtime helper collision with an existing cache variable', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="setProp in items" :id="setProp.id" :title="setProp.title" />`,
+    )
+
+    expect(code).matchSnapshot()
+    expect(code).toContain('setProp as _setProp1')
+    expect(code).toContain('const _setProp = _for_item0.value')
+    expect(code).toContain('_setProp1(n2, "id", _setProp.id)')
+    expect(code).toContain('_setProp1(n2, "title", _setProp.title)')
+  })
 })

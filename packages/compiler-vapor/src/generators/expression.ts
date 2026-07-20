@@ -943,8 +943,10 @@ function genDeclarations(
   // process identifiers first as expressions may rely on them
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (isIdentifier) {
-      const varName = (ids[name] = `_${name}`)
-      varNames.add(varName)
+      const varName = (ids[name] = context.getUniqueLocalName(
+        `_${name}`,
+        varNames,
+      ))
       if (shouldDeclare) {
         push(`const `)
       }
@@ -955,8 +957,7 @@ function genDeclarations(
   // process expressions
   declarations.forEach(({ name, isIdentifier, value }) => {
     if (!isIdentifier) {
-      const varName = `_${name}`
-      varNames.add(varName)
+      const varName = context.getUniqueLocalName(`_${name}`, varNames)
       if (shouldDeclare) {
         push(`const `)
       }
