@@ -7,11 +7,9 @@ import {
   type TransitionProps,
   TransitionPropsValidators,
   type TransitionState,
-  type VNode,
   baseResolveTransitionHooks,
   checkTransitionMode,
   currentInstance,
-  getTransitionRawChildren,
   isAsyncWrapper,
   isTemplateNode,
   leaveCbKey,
@@ -33,7 +31,13 @@ import {
   isValidBlock,
   remove,
 } from '../block'
-import { displayName, registerTransitionHooks } from '../transition'
+import {
+  displayName,
+  getInteropTransitionElement,
+  getInteropTransitionType,
+  isVaporTransition,
+  registerTransitionHooks,
+} from '../transition'
 import {
   type FunctionalVaporComponent,
   type VaporComponentInstance,
@@ -43,9 +47,9 @@ import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import {
   DynamicFragment,
-  ForBlock,
-  ForFragment,
   type VaporFragment,
+  isDynamicFragment,
+  isForFragment,
   isFragment,
   isSlotFragment,
 } from '../fragment'
@@ -63,12 +67,6 @@ export type ResolvedTransitionBlock = (
   | DynamicFragment
 ) &
   TransitionOptions
-
-type ResolveTransitionBlocksOptions = {
-  mode: 'single' | 'group'
-  onFragment?: (frag: VaporFragment) => void
-  onUpdateOwner?: (owner: VaporFragment | VaporComponentInstance) => void
-}
 
 let registered = false
 export const ensureTransitionHooksRegistered = (): void => {
@@ -225,29 +223,22 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
   })
 
 const transitionTypeMap = new WeakMap<ResolvedTransitionBlock, any>()
-const inheritedTransitionKeyMap = new WeakMap<
-  ResolvedTransitionBlock,
-  InheritedTransitionKeyRecord
->()
-
-type InheritedTransitionKeyRecord = {
-  generation: number
-  rawBaseKey: any
-  inheritedKey: string
-}
-
-let transitionKeyGeneration = 0
-let currentTransitionKeyGeneration = 0
 
 function getTransitionType(block: ResolvedTransitionBlock): any {
   const type = transitionTypeMap.get(block)
   if (type !== undefined) return type
   if (block instanceof Element) return block.localName
   if (isInteropEnabled && isFragment(block) && block.vnode) {
-    const children = getTransitionRawChildren([block.vnode])
-    if (children.length === 1) return children[0].type
+    return getInteropTransitionType(block.vnode)
   }
   return block
+}
+
+export function setTransitionType(
+  block: ResolvedTransitionBlock,
+  type: any,
+): void {
+  transitionTypeMap.set(block, type)
 }
 
 function getLeavingNodesForType(
@@ -353,7 +344,7 @@ export function resolveTransitionHooks(
   return hooks
 }
 
-function applyTransitionHooksImpl(
+export function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
 ): VaporTransitionHooks {
@@ -383,7 +374,7 @@ function applyResolvedTransitionHooks(
   // enter/leave hooks for their resolved single child.
   if (
     hooks.applyGroup &&
-    (block instanceof ForFragment ||
+    (isForFragment(block) ||
       isSlotFragment(block) ||
       (isVaporComponent(block) && isSlotFragment(block.block)))
   ) {
@@ -439,7 +430,7 @@ function applyResolvedTransitionHooks(
 
 function isStructuralTransitionFragment(fragment: VaporFragment): boolean {
   return !!(
-    fragment instanceof DynamicFragment &&
+    isDynamicFragment(fragment) &&
     !isSlotFragment(fragment) &&
     fragment.inTransition
   )
@@ -594,106 +585,44 @@ export function resolveTransitionBlock(
   block: Block,
   onFragment?: (frag: VaporFragment) => void,
 ): ResolvedTransitionBlock | undefined {
-  return resolveTransitionChildren(block, { mode: 'single', onFragment })[0]
-}
-
-export function resolveTransitionBlocks(
-  block: Block,
-  onFragment?: (frag: VaporFragment) => void,
-  onUpdateOwner?: (owner: VaporFragment | VaporComponentInstance) => void,
-): ResolvedTransitionBlock[] {
-  return resolveTransitionChildren(block, {
-    mode: 'group',
-    onFragment,
-    onUpdateOwner,
-  })
-}
-
-function resolveTransitionChildren(
-  block: Block,
-  options: ResolveTransitionBlocksOptions,
-): ResolvedTransitionBlock[] {
   const children: ResolvedTransitionBlock[] = []
-  const prevGeneration = currentTransitionKeyGeneration
-  currentTransitionKeyGeneration = ++transitionKeyGeneration
-  try {
-    collectTransitionBlocks(block, options, children)
-    return children
-  } finally {
-    currentTransitionKeyGeneration = prevGeneration
-  }
+  collectTransitionBlocks(block, onFragment, children)
+  return children[0]
 }
 
 function collectTransitionBlocks(
   block: Block,
-  options: ResolveTransitionBlocksOptions,
+  onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
 ): void {
   if (block instanceof Node) {
     // transition can only be applied on Element child
     if (block instanceof Element) children.push(block)
   } else if (isVaporComponent(block)) {
-    collectComponentTransitionBlocks(block, options, children)
+    collectComponentTransitionBlocks(block, onFragment, children)
   } else if (isArray(block)) {
-    collectArrayTransitionBlocks(block, options, children)
+    collectArrayTransitionBlocks(block, onFragment, children)
   } else if (isFragment(block)) {
-    collectFragmentTransitionBlocks(block, options, children)
+    collectFragmentTransitionBlocks(block, onFragment, children)
   }
 }
 
 function collectComponentTransitionBlocks(
   block: VaporComponentInstance,
-  options: ResolveTransitionBlocksOptions,
+  onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
 ): void {
-  if (options.mode === 'group') {
-    // A normal component child can move when parent-driven props update its
-    // root layout without re-running the surrounding v-for fragment.
-    // When the component root is a slot, the TransitionGroup children are the
-    // slotted blocks, so track the slot fragment instead of the component.
-    const isRootSlot = block.block && isSlotFragment(block.block)
-    if (options.onUpdateOwner && !isRootSlot) options.onUpdateOwner(block)
-
-    const start = children.length
-    collectTransitionBlocks(
-      block.block,
-      isRootSlot
-        ? options
-        : {
-            mode: options.mode,
-            onFragment: options.onFragment,
-          },
-      children,
-    )
-    // Tag the resolved children with the component type so the leaving cache
-    // buckets by component (mirroring single mode's inheritSingleComponentKey
-    // and VDOM's vnode.type bucketing) instead of the shared root tag name.
-    // Otherwise a leaving item cached via this group path under its tag name
-    // can't be matched by a re-entering item — which v-for resolves via the
-    // single path under the component type — so earlyRemove misses and two
-    // same-key instances are left in the DOM. Root-slot children belong to the
-    // parent, so they keep their own resolved type.
-    if (!isRootSlot) {
-      for (let i = start; i < children.length; i++) {
-        transitionTypeMap.set(children[i], block.type)
-      }
-    }
-    inheritTransitionKey(children, start, block.$key)
-    return
-  }
-
   if (isAsyncWrapper(block)) {
     // for unresolved async wrapper, set transition hooks on inner fragment
     if (!block.type.__asyncResolved) {
-      if (options.onFragment)
-        options.onFragment(block.block! as DynamicFragment)
+      if (onFragment) onFragment(block.block! as DynamicFragment)
       return
     }
 
     const start = children.length
     collectTransitionBlocks(
       (block.block! as DynamicFragment).nodes,
-      options,
+      onFragment,
       children,
     )
     inheritSingleComponentKey(children[start], block)
@@ -701,38 +630,23 @@ function collectComponentTransitionBlocks(
   }
 
   // stop searching if encountering nested Transition component
-  if (block.type === VaporTransition) return
+  if (isVaporTransition(block.type)) return
 
   const start = children.length
-  collectTransitionBlocks(block.block, options, children)
+  collectTransitionBlocks(block.block, onFragment, children)
   inheritSingleComponentKey(children[start], block)
 }
 
 function collectArrayTransitionBlocks(
   block: Block[],
-  options: ResolveTransitionBlocksOptions,
+  onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
 ): void {
-  if (options.mode === 'group') {
-    for (const c of block) {
-      const start = children.length
-      collectTransitionBlocks(c, options, children)
-      if (c instanceof ForBlock) {
-        const count = children.length - start
-        for (let j = start; j < children.length; j++) {
-          children[j].$key =
-            c.key != null && count > 1 ? `${c.key}:${j - start}` : c.key
-        }
-      }
-    }
-    return
-  }
-
   let hasFound = false
   for (const c of block) {
     if (c instanceof Comment) continue
     const nested: ResolvedTransitionBlock[] = []
-    collectTransitionBlocks(c, options, nested)
+    collectTransitionBlocks(c, onFragment, nested)
     if (__DEV__ && hasFound) {
       // warn more than one non-comment child
       warn(
@@ -749,35 +663,19 @@ function collectArrayTransitionBlocks(
 
 function collectFragmentTransitionBlocks(
   block: VaporFragment,
-  options: ResolveTransitionBlocksOptions,
+  onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
 ): void {
-  if (options.mode === 'group') {
-    if (options.onFragment) options.onFragment(block)
-    if (options.onUpdateOwner) options.onUpdateOwner(block)
-    if (isInteropEnabled && block.vnode) {
-      // vdom component
-      children.push(block)
-    } else {
-      const start = children.length
-      collectTransitionBlocks(block.nodes, options, children)
-      inheritTransitionKey(children, start, block.$key)
-    }
-    return
-  }
-
   if (isInteropEnabled && block.vnode) {
     children.push(block)
-    const rawChildren = getTransitionRawChildren([block.vnode])
-    if (rawChildren.length === 1) {
-      transitionTypeMap.set(block, rawChildren[0].type)
-    }
+    const type = getInteropTransitionType(block.vnode)
+    if (type !== undefined) setTransitionType(block, type)
     return
   }
 
   // collect fragments for setting transition hooks
-  if (options.onFragment) options.onFragment(block)
-  collectTransitionBlocks(block.nodes, options, children)
+  if (onFragment) onFragment(block)
+  collectTransitionBlocks(block.nodes, onFragment, children)
 }
 
 function inheritSingleComponentKey(
@@ -795,39 +693,7 @@ function inheritSingleComponentKey(
   if (child.$key == null && block.$key != null) {
     child.$key = block.$key
   }
-  transitionTypeMap.set(child, block.type)
-}
-
-function inheritTransitionKey(
-  children: ResolvedTransitionBlock[],
-  start: number,
-  key: any,
-): void {
-  if (key == null || start === children.length) return
-  for (let i = start; i < children.length; i++) {
-    const child = children[i]
-    let record = inheritedTransitionKeyMap.get(child)
-    let baseKey
-    // Match VDOM parentKey + (child.key ?? index) composition, while reusing
-    // the raw base key across resolutions to avoid repeating prefixes.
-    if (record && record.generation === currentTransitionKeyGeneration) {
-      baseKey = child.$key != null ? child.$key : i - start
-    } else {
-      if (!record || !Object.is(child.$key, record.inheritedKey)) {
-        record = {
-          generation: currentTransitionKeyGeneration,
-          rawBaseKey: child.$key != null ? child.$key : i - start,
-          inheritedKey: '',
-        }
-        inheritedTransitionKeyMap.set(child, record)
-      } else {
-        record.generation = currentTransitionKeyGeneration
-      }
-      baseKey = record.rawBaseKey
-    }
-    record.inheritedKey = String(key) + String(baseKey)
-    child.$key = record.inheritedKey
-  }
+  setTransitionType(child, block.type)
 }
 
 export function setTransitionHooks(
@@ -839,30 +705,6 @@ export function setTransitionHooks(
     if (!block) return
   }
   block.$transition = hooks
-}
-
-export function getVNodeKey(
-  vnode: VNode | undefined,
-): VNode['key'] | undefined {
-  if (!vnode) return
-  const children = getTransitionRawChildren([vnode])
-  return children.length === 1 ? children[0].key : undefined
-}
-
-function getTransitionElementFromVNode(
-  vnode: VNode | undefined,
-): Element | undefined {
-  if (!vnode) return
-  if (vnode.component) {
-    return getTransitionElementFromVNode(vnode.component.subTree)
-  }
-  if (vnode.el instanceof Element) {
-    return vnode.el
-  }
-  const children = getTransitionRawChildren([vnode])
-  if (children.length === 1 && children[0] !== vnode) {
-    return getTransitionElementFromVNode(children[0])
-  }
 }
 
 export function isValidTransitionBlock(
@@ -881,7 +723,7 @@ export function getTransitionElement(
 
   // vdom interop
   if (isInteropEnabled && isFragment(block) && block.vnode) {
-    return getTransitionElementFromVNode(block.vnode)
+    return getInteropTransitionElement(block.vnode)
   }
 }
 

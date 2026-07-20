@@ -1,7 +1,7 @@
-import { getComponentName } from '@vue/runtime-dom'
+import type { VNode } from '@vue/runtime-dom'
 import type { Block, BlockFn } from './block'
 import type { VaporTransitionHooks } from './block'
-import type { VaporComponent } from './component'
+import type { FunctionalVaporComponent, VaporComponent } from './component'
 import type { DynamicFragment } from './fragment'
 
 // Transition hooks registry for tree-shaking
@@ -32,6 +32,12 @@ export let applyTransitionHooks: ApplyTransitionHooksFn
 export let deferBranchUpdateDuringLeave: DeferBranchUpdateDuringLeaveFn
 export let removeBranchWithLeave: RemoveBranchWithLeaveFn
 
+type GetInteropTransitionTypeFn = (vnode: VNode) => VNode['type'] | undefined
+type GetInteropTransitionElementFn = (vnode: VNode) => Element | undefined
+
+export let getInteropTransitionType: GetInteropTransitionTypeFn
+export let getInteropTransitionElement: GetInteropTransitionElementFn
+
 export let isTransitionEnabled = false
 
 export function registerTransitionHooks(
@@ -45,8 +51,16 @@ export function registerTransitionHooks(
   removeBranchWithLeave = removeBranch
 }
 
+export function registerTransitionInterop(
+  getType: GetInteropTransitionTypeFn,
+  getElement: GetInteropTransitionElementFn,
+): void {
+  getInteropTransitionType = getType
+  getInteropTransitionElement = getElement
+}
+
 export const displayName = 'VaporTransition'
 
 export function isVaporTransition(component: VaporComponent): boolean {
-  return getComponentName(component) === displayName
+  return (component as FunctionalVaporComponent).displayName === displayName
 }
