@@ -1244,34 +1244,34 @@ function handleSetupResult(
     pushWarningContext(instance)
   }
 
-  if (__DEV__ && !isBlock(setupResult)) {
+  if (!isBlock(setupResult)) {
     if (isFunction(component)) {
-      warn(`Functional vapor component must return a block directly.`)
+      if (__DEV__) {
+        warn(`Functional vapor component must return a block directly.`)
+      }
       instance.block = []
     } else if (!component.render) {
-      warn(
-        `Vapor component setup() returned non-block value, and has no render function.`,
-      )
-      instance.block = []
-    } else {
-      if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-        instance.devtoolsRawSetupState = setupResult
-      }
-      instance.setupState = proxyRefs(setupResult)
       if (__DEV__) {
-        instance.setupState = createDevSetupStateProxy(instance)
+        warn(
+          `Vapor component setup() returned non-block value, and has no render function.`,
+        )
       }
+      // setup either threw or returned a non-block value: fall back to an
+      // empty block so mount / unmount can proceed and the error can
+      // propagate to parent error boundaries
+      instance.block = []
+    } else if (__DEV__) {
+      instance.devtoolsRawSetupState = setupResult
+      instance.setupState = proxyRefs(setupResult)
+      instance.setupState = createDevSetupStateProxy(instance)
       devRender(instance)
+    } else {
+      // component has a render function but no setup function
+      // (typically components with only a template and no state)
+      instance.block = callRender(component.render, instance, setupResult) || []
     }
   } else {
-    // component has a render function but no setup function
-    // (typically components with only a template and no state)
-    if (setupResult === EMPTY_OBJ && component.render) {
-      instance.block = callRender(component.render, instance, setupResult)
-    } else {
-      // in prod result can only be block
-      instance.block = setupResult as Block
-    }
+    instance.block = setupResult as Block
   }
 
   // single root, inherit attrs
