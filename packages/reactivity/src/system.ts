@@ -1,5 +1,5 @@
-/* eslint-disable */
-// Ported from https://github.com/stackblitz/alien-signals/blob/v2.0.4/src/system.ts
+// Ported from alien-signals. Diff against upstream main:
+// https://github.com/stackblitz/alien-signals/compare/7e53655f40c3dd298168c278b3bf248a72f742d9...main
 import type { ComputedRefImpl as Computed } from './computed.js'
 import type { ReactiveEffect as Effect } from './effect.js'
 import type { EffectScope } from './effectScope.js'
@@ -14,6 +14,7 @@ export interface ReactiveNode {
 }
 
 export interface Link {
+  version: number
   dep: ReactiveNode | Computed | Effect | EffectScope
   sub: ReactiveNode | Computed | Effect | EffectScope
   prevSub: Link | undefined
@@ -42,6 +43,17 @@ const notifyBuffer: (Effect | undefined)[] = []
 export let batchDepth = 0
 export let activeSub: ReactiveNode | undefined = undefined
 
+let runDepth = 0
+
+export function incRunDepth(): void {
+  ++runDepth
+}
+
+export function decRunDepth(): void {
+  --runDepth
+}
+
+let globalVersion = 0
 let notifyIndex = 0
 let notifyBufferLength = 0
 
@@ -68,21 +80,25 @@ export function link(dep: ReactiveNode, sub: ReactiveNode): void {
   if (prevDep !== undefined && prevDep.dep === dep) {
     return
   }
-  let nextDep: Link | undefined = undefined
-  const recursedCheck = sub.flags & ReactiveFlags.RecursedCheck
-  if (recursedCheck) {
-    nextDep = prevDep !== undefined ? prevDep.nextDep : sub.deps
-    if (nextDep !== undefined && nextDep.dep === dep) {
-      sub.depsTail = nextDep
-      return
-    }
+  const nextDep = prevDep !== undefined ? prevDep.nextDep : sub.deps
+  if (nextDep !== undefined && nextDep.dep === dep) {
+    nextDep.version = globalVersion
+    sub.depsTail = nextDep
+    return
   }
-  // TODO: maybe can find a good way to check duplicate link
   const prevSub = dep.subsTail
+  if (
+    prevSub !== undefined &&
+    prevSub.version === globalVersion &&
+    prevSub.sub === sub
+  ) {
+    return
+  }
   const newLink =
     (sub.depsTail =
     dep.subsTail =
       {
+        version: globalVersion,
         dep,
         sub,
         prevDep,
@@ -149,7 +165,6 @@ export function propagate(link: Link): void {
 
   top: do {
     const sub = link.sub
-
     let flags = sub.flags
 
     if (flags & (ReactiveFlags.Mutable | ReactiveFlags.Watching)) {
@@ -163,6 +178,9 @@ export function propagate(link: Link): void {
         )
       ) {
         sub.flags = flags | ReactiveFlags.Pending
+        if (runDepth) {
+          sub.flags |= ReactiveFlags.Recursed
+        }
       } else if (
         !(flags & (ReactiveFlags.RecursedCheck | ReactiveFlags.Recursed))
       ) {
@@ -215,6 +233,7 @@ export function propagate(link: Link): void {
 }
 
 export function startTracking(sub: ReactiveNode): ReactiveNode | undefined {
+  ++globalVersion
   sub.depsTail = undefined
   sub.flags =
     (sub.flags &
@@ -269,8 +288,8 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Dirty)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Dirty)
     ) {
+      const subs = dep.subs!
       if ((dep as Computed).update()) {
-        const subs = dep.subs!
         if (subs.nextSub !== undefined) {
           shallowPropagate(subs)
         }
@@ -280,9 +299,7 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       (depFlags & (ReactiveFlags.Mutable | ReactiveFlags.Pending)) ===
       (ReactiveFlags.Mutable | ReactiveFlags.Pending)
     ) {
-      if (link.nextSub !== undefined || link.prevSub !== undefined) {
-        stack = { value: link, prev: stack }
-      }
+      stack = { value: link, prev: stack }
       link = dep.deps!
       sub = dep
       ++checkDepth
@@ -296,18 +313,13 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
 
     while (checkDepth) {
       --checkDepth
-      const firstSub = sub.subs!
-      const hasMultipleSubs = firstSub.nextSub !== undefined
-      if (hasMultipleSubs) {
-        link = stack!.value
-        stack = stack!.prev
-      } else {
-        link = firstSub
-      }
+      link = stack!.value
+      stack = stack!.prev
       if (dirty) {
+        const subs = sub.subs!
         if ((sub as Computed).update()) {
-          if (hasMultipleSubs) {
-            shallowPropagate(firstSub)
+          if (subs.nextSub !== undefined) {
+            shallowPropagate(subs)
           }
           sub = link.sub
           continue
@@ -323,7 +335,7 @@ export function checkDirty(link: Link, sub: ReactiveNode): boolean {
       dirty = false
     }
 
-    return dirty
+    return dirty && !!sub.flags
   } while (true)
 }
 
@@ -343,18 +355,12 @@ export function shallowPropagate(link: Link): void {
 }
 
 function isValidLink(checkLink: Link, sub: ReactiveNode): boolean {
-  const depsTail = sub.depsTail
-  if (depsTail !== undefined) {
-    let link = sub.deps!
-    do {
-      if (link === checkLink) {
-        return true
-      }
-      if (link === depsTail) {
-        break
-      }
-      link = link.nextDep!
-    } while (link !== undefined)
+  let link = sub.depsTail
+  while (link !== undefined) {
+    if (link === checkLink) {
+      return true
+    }
+    link = link.prevDep
   }
   return false
 }

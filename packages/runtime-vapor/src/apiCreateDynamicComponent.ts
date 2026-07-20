@@ -1,51 +1,153 @@
-import { resolveDynamicComponent } from '@vue/runtime-dom'
-import { DynamicFragment, type VaporFragment, insert } from './block'
-import { createComponentWithFallback } from './component'
+import {
+  type ComponentInternalInstance,
+  Fragment,
+  type VNode,
+  currentInstance,
+  isKeepAlive,
+  isVNode,
+  resolveDynamicComponent,
+  setCurrentRenderingInstance,
+} from '@vue/runtime-dom'
+import { ShapeFlags, VaporDynamicComponentFlags } from '@vue/shared'
+import { insert, isBlock, removeNode } from './block'
+import {
+  type VaporComponentInstance,
+  createComponentWithFallback,
+  emptyContext,
+} from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
-import type { RawSlots } from './componentSlots'
+import {
+  type LooseRawSlots,
+  getScopeOwner,
+  normalizeRawSlots,
+} from './componentSlots'
 import {
   insertionAnchor,
   insertionParent,
   resetInsertionState,
 } from './insertionState'
-import { isHydrating, locateHydrationNode } from './dom/hydration'
+import {
+  type HydrationCursor,
+  captureHydrationCursor,
+  exitHydrationCursor,
+  isHydrating,
+  locateHydrationNode,
+} from './dom/hydration'
+import { DynamicFragment, type VaporFragment } from './fragment'
+import type { KeepAliveInstance } from './components/KeepAlive'
+import { isInteropEnabled } from './vdomInteropState'
+import { enableKeepAlive } from './keepAlive'
 
 export function createDynamicComponent(
   getter: () => any,
   rawProps?: RawProps | null,
-  rawSlots?: RawSlots | null,
-  isSingleRoot?: boolean,
+  rawSlots?: LooseRawSlots | null,
+  flags: number = 0,
 ): VaporFragment {
+  const isSingleRoot = !!(flags & VaporDynamicComponentFlags.SINGLE_ROOT)
+  const once = !!(flags & VaporDynamicComponentFlags.ONCE)
+  const slotRoot = !!(flags & VaporDynamicComponentFlags.SLOT_ROOT)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  if (isHydrating) {
-    locateHydrationNode()
-  } else {
-    resetInsertionState()
-  }
+  if (!isHydrating) resetInsertionState()
+  const hydrationCursor: HydrationCursor | null = isHydrating
+    ? captureHydrationCursor()
+    : null
 
-  const frag = __DEV__
-    ? new DynamicFragment('dynamic-component')
-    : new DynamicFragment()
+  const frag = new DynamicFragment(
+    isHydrating || __DEV__ ? 'dynamic-component' : undefined,
+    false,
+    true,
+    slotRoot,
+    slotRoot
+      ? () => {
+          // A null <component :is> branch has a branch placeholder in `nodes`
+          // in addition to the DynamicFragment anchor. Remove both so slot
+          // fallback does not expose the placeholder as content.
+          const nodes = frag.nodes
+          if (nodes instanceof Node) {
+            const parent = nodes.parentNode
+            if (parent) removeNode(nodes, parent)
+          }
+          const anchorParent = frag.anchor.parentNode
+          if (anchorParent) removeNode(frag.anchor, anchorParent)
+        }
+      : undefined,
+  )
 
-  renderEffect(() => {
+  const normalizedRawSlots = normalizeRawSlots(rawSlots)
+  const scopeOwner = getScopeOwner()
+  const renderFn = () => {
     const value = getter()
-    frag.update(
-      () =>
-        createComponentWithFallback(
-          resolveDynamicComponent(value) as any,
-          rawProps,
-          rawSlots,
-          isSingleRoot,
-        ),
-      value,
-    )
-  })
+    const appContext =
+      (currentInstance && currentInstance.appContext) || emptyContext
+    frag.update(() => {
+      // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
+      if (isBlock(value)) return value
 
-  if (!isHydrating && _insertionParent) {
-    insert(frag, _insertionParent, _insertionAnchor)
+      // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
+      if (isInteropEnabled && appContext.vapor && isVNode(value)) {
+        if (isKeepAlive(currentInstance)) {
+          enableKeepAlive()
+          const frag = (
+            currentInstance as KeepAliveInstance
+          ).ctx.getCachedComponent(value.type, value.key) as VaporFragment
+          if (frag) return frag
+        }
+
+        const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
+        if (isHydrating) {
+          locateHydrationNode(shouldConsumeFragmentStart(value))
+          frag.hydrate()
+        }
+        return frag
+      }
+
+      return createComponentWithFallback(
+        withScopeOwner(scopeOwner, () => resolveDynamicComponent(value)),
+        rawProps,
+        normalizedRawSlots,
+        isSingleRoot,
+        once,
+        appContext,
+      )
+    }, value)
   }
 
+  if (once) renderFn()
+  else renderEffect(renderFn)
+
+  if (!isHydrating) {
+    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+  } else {
+    exitHydrationCursor(hydrationCursor)
+  }
   return frag
+}
+
+function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {
+  const prev = setCurrentRenderingInstance(
+    owner as ComponentInternalInstance | null,
+  )
+  try {
+    return fn()
+  } finally {
+    setCurrentRenderingInstance(prev)
+  }
+}
+
+function shouldConsumeFragmentStart(vnode: VNode): boolean {
+  if (vnode.type === Fragment) {
+    return false
+  }
+
+  // Only Vapor component VNodes carry `__multiRoot`
+  // e.g. `h(VaporComp)`
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const type = vnode.type as { __vapor?: boolean; __multiRoot?: boolean }
+    return !!type.__vapor && !type.__multiRoot
+  }
+
+  return true
 }

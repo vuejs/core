@@ -1,32 +1,113 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: element transform > component > cache v-on expression with unique handler name 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+exports[`compiler: element transform > MathML 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<math><mrow><mi>x", 3, 2)
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const _component_Bar = _resolveComponent("Bar")
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > b in nested divs 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><div><b></b></div><div>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > checkbox with static indeterminate 1`] = `
+"import { setProp as _setProp, template as _template } from 'vue';
+const t0 = _template("<input type=checkbox>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setProp(n0, "indeterminate", "")
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > cache v-on expression with unique handler name 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
   const _on_bar = $event => (_ctx.handleBar($event))
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar })
+  const n0 = _createAssetComponent("Foo", { onBar: () => _on_bar })
   const _on_bar1 = () => _ctx.handler
-  const n1 = _createComponentWithFallback(_component_Bar, { onBar: () => _on_bar1 })
+  const n1 = _createAssetComponent("Bar", { onBar: () => _on_bar1 })
   return [n0, n1]
 }"
 `;
 
-exports[`compiler: element transform > component > do not resolve component from non-script-setup bindings 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+exports[`compiler: element transform > component > component vue vnode hooks 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
-  const _component_Example = _resolveComponent("Example")
-  const n0 = _createComponentWithFallback(_component_Example, null, null, true)
+  const n0 = _createAssetComponent("Foo", { onVnodeMounted: () => _ctx.handleMounted }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > constant bind props are direct raw prop values 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    size: 16,
+    disabled: false,
+    tabindex: 0,
+    nullable: null,
+    missing: undefined,
+    big: 1n,
+    label: "Save 1",
+    items: [1, 'two', false, null, undefined],
+    options: { placement: 'bottom', offset: 8, nested: { enabled: true } }
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > create single-use asset component with inline resolve 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > do not resolve component from non-script-setup bindings 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = _createAssetComponent("Example", null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > dynamic non-literal prop values stay as getter sources 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    foo: () => (_ctx.bar),
+    obj: () => ({ a: _ctx.bar }),
+    handler: () => (_ctx.onClick),
+    formatter: () => (v => v.toFixed(2)),
+    fn: () => (() => _ctx.bar),
+    onClick: () => _ctx.foo
+  }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > generate multi root component 1`] = `
 "import { createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("123")
+const t0 = _template("123", 2)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = _createComponent(_ctx.Comp)
@@ -44,12 +125,178 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compiler: element transform > component > import + resolve component 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+exports[`compiler: element transform > component > hoist asset component also used in component slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, null, null, true)
+  const _component_Child = _resolveComponent("Child")
+  const n0 = _createComponentWithFallback(_component_Child)
+  const n2 = _createAssetComponent("Parent", null, () => {
+    const n1 = _createComponentWithFallback(_component_Child)
+    return n1
+  })
+  return [n0, n2]
+}"
+`;
+
+exports[`compiler: element transform > component > hoist asset component also used in conditional component slot 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, extend as _extend, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const _component_Child = _resolveComponent("Child")
+  const n0 = _createComponentWithFallback(_component_Child)
+  const n5 = _createAssetComponent("Parent", null, _extend(() => {
+    const n1 = _createIf(() => (_ctx.ok), () => {
+      const n3 = _createComponentWithFallback(_component_Child)
+      return n3
+    }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
+    return n1
+  }, { _: 8 /* NON_STABLE */ }))
+  return [n0, n5]
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-bind joins existing static component props 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    id: "x",
+    foo: () => (_ctx.bar)
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-bind preserves dynamic source merge order 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ [_ctx.name]: _ctx.value }),
+    { foo: () => (_ctx.bar) }
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-bind preserves dynamic source merge order 2`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    foo: () => (_ctx.bar),
+    $: [
+      () => ({ [_ctx.name]: _ctx.value })
+    ]
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-bind props are expanded 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    foo: () => (_ctx.bar),
+    baz: 1,
+    id: "x",
+    formatter: () => (v => v + 1)
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-on conflicts with existing component handlers stay dynamic 1`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ click: _ctx.a })),
+    { onClick: () => _ctx.b }
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-on conflicts with existing component handlers stay dynamic 2`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ click: _ctx.a })),
+    { onClick: () => (_ctx.b) }
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-on handlers are expanded 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    onClick: () => (_ctx.onClick),
+    onInput: () => (_ctx.onInput),
+    "onFoo-bar": () => (_ctx.onFooBar)
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > object literal v-on joins existing static component props 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    id: "x",
+    onClick: () => (_ctx.onClick)
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: class 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { class: () => (["foo", { bar: _ctx.isBar }]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: event handlers 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { onClick: () => [
+    _ctx.a,
+    _ctx.b
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: inline event handlers 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const _on_click = e => _ctx.a(e)
+  const _on_click1 = e => _ctx.b(e)
+  const n0 = _createAssetComponent("Foo", { onClick: () => [
+    _on_click,
+    _on_click1
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: style 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { style: () => (["color: green", { color: 'red' }]) }, null, true)
   return n0
 }"
 `;
@@ -78,11 +325,10 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compiler: element transform > component > resolve implicitly self-referencing component 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Example__self = _resolveComponent("Example", true)
-  const n0 = _createComponentWithFallback(_component_Example__self, null, null, true)
+  const n0 = _createAssetComponent("Example", null, null, true, null, true)
   return n0
 }"
 `;
@@ -119,25 +365,215 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
-exports[`compiler: element transform > component > static props 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+exports[`compiler: element transform > component > static literal bind props 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
-    class: () => ("bar")
+  const n0 = _createAssetComponent("Foo", { literal: "bar" }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > static props 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    id: "foo",
+    class: "bar"
   }, null, true)
   return n0
 }"
 `;
 
-exports[`compiler: element transform > component > v-bind="obj" 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+exports[`compiler: element transform > component > template literal prop values with object and array interpolations stay as getter sources 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", {
+    objLabel: () => (\`\${{ __proto__: null }}\`),
+    arrLabel: () => (\`\${[1]}\`)
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported constant prop shapes stay as getter sources 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    computed: () => ({ [_ctx.foo]: 1 }),
+    spread: () => ({ ...{ foo: 1 } }),
+    list: () => ([1, ...[2]])
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ [_ctx.foo]: 1, ..._ctx.obj })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 2`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ __proto__: _ctx.foo })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 3`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ key: _ctx.foo })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 4`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ foo: _ctx.a, foo: _ctx.b })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 5`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ foo() {} })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 6`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    foo: "x",
+    $: [
+      () => ({ foo: _ctx.bar })
+    ]
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 7`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    foo: () => (_ctx.a),
+    $: [
+      () => ({ foo: _ctx.b })
+    ]
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 8`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    "foo-bar": "x",
+    $: [
+      () => ({ fooBar: _ctx.bar })
+    ]
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 9`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    onVnodeMounted: () => _ctx.a,
+    $: [
+      () => ({ onVnodeMounted: _ctx.b })
+    ]
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-bind shapes stay as dynamic sources 10`] = `
+"import { withModifiers as _withModifiers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    onContextmenu: () => _withModifiers(_ctx.a, ["right"]),
+    $: [
+      () => ({ onContextmenu: _ctx.b })
+    ]
+  }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-on shapes stay as dynamic sources 1`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ [_ctx.event]: _ctx.onClick, ..._ctx.listeners }))
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-on shapes stay as dynamic sources 2`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ __proto__: _ctx.onClick }))
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > unsupported object literal v-on shapes stay as dynamic sources 3`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers({ click: _ctx.onClick, Click: _ctx.onClick2 }))
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
     () => (_ctx.obj)
   ] }, null, true)
   return n0
@@ -145,12 +581,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-bind="obj" after static prop 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+  const n0 = _createAssetComponent("Foo", {
+    id: "foo",
     $: [
       () => (_ctx.obj)
     ]
@@ -160,28 +595,26 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > v-bind="obj" before static prop 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => (_ctx.obj), 
-    { id: () => ("foo") }
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_ctx.obj),
+    { id: "foo" }
   ] }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > v-bind="obj" between static props 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, {
-    id: () => ("foo"), 
+  const n0 = _createAssetComponent("Foo", {
+    id: "foo",
     $: [
-      () => (_ctx.obj), 
-      { class: () => ("bar") }
+      () => (_ctx.obj),
+      { class: "bar" }
     ]
   }, null, true)
   return n0
@@ -195,90 +628,166 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = _createComponent(_ctx.Comp)
     return n2
-  }, (item) => (item), 2)
+  }, (item) => (item), 2 /* IS_COMPONENT */)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > v-on expression is a function call 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
   const _on_bar = $event => (_ctx.handleBar($event))
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
+  const n0 = _createAssetComponent("Foo", { onBar: () => _on_bar }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > v-on expression is inline statement 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
   const _on_bar = () => _ctx.handler
-  const n0 = _createComponentWithFallback(_component_Foo, { onBar: () => _on_bar }, null, true)
+  const n0 = _createAssetComponent("Foo", { onBar: () => _on_bar }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component > v-on="obj" 1`] = `
-"import { resolveComponent as _resolveComponent, toHandlers as _toHandlers, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
+  const n0 = _createAssetComponent("Foo", { $: [
     () => (_toHandlers(_ctx.obj))
   ] }, null, true)
   return n0
 }"
 `;
 
-exports[`compiler: element transform > component dynamic event with once modifier 1`] = `
-"import { resolveComponent as _resolveComponent, toHandlerKey as _toHandlerKey, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+exports[`compiler: element transform > component > v-on="obj" before static event keeps handler getters 1`] = `
+"import { toHandlers as _toHandlers, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_toHandlerKey(_ctx.foo) + "Once"]: () => _ctx.bar })
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => (_toHandlers(_ctx.obj)),
+    { onFoo: () => _ctx.bar }
   ] }, null, true)
   return n0
 }"
 `;
 
-exports[`compiler: element transform > component event with once modifier 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+exports[`compiler: element transform > component dynamic event with once modifier 1`] = `
+"import { toHandlerKey as _toHandlerKey, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { onFooOnce: () => _ctx.bar }, null, true)
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ [_toHandlerKey(_ctx.foo) + "Once"]: _ctx.bar })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with keys modifier 1`] = `
+"import { withKeys as _withKeys, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { onKeyup: () => _withKeys(_ctx.bar, ["enter"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with multiple modifiers and event options 1`] = `
+"import { withModifiers as _withModifiers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { onFooCaptureOnce: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with nonKeys modifier 1`] = `
+"import { withModifiers as _withModifiers, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { onFoo: () => _withModifiers(_ctx.bar, ["stop","prevent"]) }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component event with once modifier 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { onFooOnce: () => _ctx.bar }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component with dynamic event arguments 1`] = `
-"import { resolveComponent as _resolveComponent, toHandlerKey as _toHandlerKey, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { toHandlerKey as _toHandlerKey, createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: () => _ctx.bar }), 
-    () => ({ [_toHandlerKey(_ctx.baz)]: () => _ctx.qux })
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ [_toHandlerKey(_ctx.foo-_ctx.bar)]: _ctx.bar }),
+    () => ({ [_toHandlerKey(_ctx.baz)]: _ctx.qux })
+  ] }, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component with dynamic event arguments and inline statement 1`] = `
+"import { toHandlerKey as _toHandlerKey, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ [_toHandlerKey(_ctx.event)]: $event => (_ctx.bar($event)) })
   ] }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > component with dynamic prop arguments 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_Foo = _resolveComponent("Foo")
-  const n0 = _createComponentWithFallback(_component_Foo, { $: [
-    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }), 
+  const n0 = _createAssetComponent("Foo", { $: [
+    () => ({ [_ctx.foo-_ctx.bar]: _ctx.bar }),
     () => ({ [_ctx.baz]: _ctx.qux })
   ] }, null, true)
   return n0
+}"
+`;
+
+exports[`compiler: element transform > constant object literal v-bind props are lowered to template attrs 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div id=foo disabled>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > custom element 1`] = `
+"import { createPlainElement as _createPlainElement } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createPlainElement("my-custom-element", null, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > custom element with dynamic child 1`] = `
+"import { createPlainElement as _createPlainElement, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("my-custom-element", null, null, true)
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _insert(n0, n1)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n1
 }"
 `;
 
@@ -291,11 +800,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > dynamic component > component keeps both :is and is props 1`] = `
+"import { createComponent as _createComponent } from 'vue';
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = _createComponent(_ctx.Comp, { is: "Parent" })
+  const n1 = _createComponent(_ctx.Comp, { is: "Parent" })
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler: element transform > dynamic component > dynamic binding 1`] = `
 "import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, 1 /* SINGLE_ROOT */)
   return n0
 }"
 `;
@@ -304,17 +823,25 @@ exports[`compiler: element transform > dynamic component > dynamic binding short
 "import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.is), null, null, true)
+  const n0 = _createDynamicComponent(() => (_ctx.is), null, null, 1 /* SINGLE_ROOT */)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > dynamic component > normal component with dynamic :is prop 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("custom-input", { is: "foo" }, null, true)
   return n0
 }"
 `;
 
 exports[`compiler: element transform > dynamic component > normal component with is prop 1`] = `
-"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback } from 'vue';
+"import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
-  const _component_custom_input = _resolveComponent("custom-input")
-  const n0 = _createComponentWithFallback(_component_custom_input, { is: () => ("foo") }, null, true)
+  const n0 = _createAssetComponent("custom-input", { is: "foo" }, null, true)
   return n0
 }"
 `;
@@ -331,15 +858,15 @@ export function render(_ctx) {
 exports[`compiler: element transform > empty template 1`] = `
 "
 export function render(_ctx) {
-  return null
+  return []
 }"
 `;
 
 exports[`compiler: element transform > invalid html nesting 1`] = `
 "import { insert as _insert, template as _template } from 'vue';
-const t0 = _template("<div>123</div>")
-const t1 = _template("<p></p>")
-const t2 = _template("<form></form>")
+const t0 = _template("<div>123")
+const t1 = _template("<p>")
+const t2 = _template("<form>")
 
 export function render(_ctx) {
   const n1 = t1()
@@ -352,9 +879,132 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > invalid table nesting with dynamic child 1`] = `
+"import { child as _child, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<tr><td> ")
+const t1 = _template("<table>")
+const t2 = _template("<div>", 2)
+
+export function render(_ctx) {
+  const n2 = t1()
+  const n1 = t0()
+  const n0 = _child(n1)
+  const n3 = t2()
+  const x0 = _txt(n0)
+  _insert(n1, n2)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return [n2, n3]
+}"
+`;
+
+exports[`compiler: element transform > multiple roots 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><span>", 2)
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: element transform > object literal v-bind before dynamic key tracks the original source 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ id: _ctx.foo }, { [_ctx.name]: _ctx.bar }]))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > object literal v-bind prop is lowered to setProp 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setProp(n0, "id", _ctx.foo))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > order-sensitive object literal v-bind props stay dynamic 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, { id: _ctx.bar }]))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > plain template element 1`] = `
+"import { createPlainElement as _createPlainElement, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _insert(n0, n1)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n1
+}"
+`;
+
+exports[`compiler: element transform > plain template element with dynamic text child 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("")
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  _renderEffect(() => _setText(n0, _toDisplayString(_ctx.msg)))
+  return n1
+}"
+`;
+
+exports[`compiler: element transform > plain template element with static child 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, template as _template } from 'vue';
+const t0 = _template("<div>hi", 2)
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
+exports[`compiler: element transform > plain template element with static text child 1`] = `
+"import { createPlainElement as _createPlainElement, insert as _insert, template as _template } from 'vue';
+const t0 = _template("hello", 2)
+
+export function render(_ctx) {
+  const n1 = _createPlainElement("template", null, null, true)
+  const n0 = t0()
+  _insert(n0, n1)
+  return n1
+}"
+`;
+
+exports[`compiler: element transform > props + child 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div id=foo><span>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > props + children 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\"><span></span></div>", true)
+const t0 = _template("<div id=foo><span><b></b></span><main><b></b><div><div><span></span><span>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -363,97 +1013,249 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: class 1`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+"import { setClassName as _setClassName, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setClass(n0, ["foo", { bar: _ctx.isBar }]))
+  _renderEffect(() => _setClassName(n0, (_ctx.isBar ? 1 : 0), " bar", "foo"))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
-"import { withKeys as _withKeys, delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+"import { delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", _withKeys(e => _ctx.a(e), ["foo"]))
-  _delegate(n0, "click", _withKeys(e => _ctx.b(e), ["bar"]))
+  _delegate(n0, "click", e => _ctx.a(e))
+  _delegate(n0, "click", e => _ctx.b(e))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > props merging: style 1`] = `
-"import { setStyle as _setStyle, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+"import { template as _template } from 'vue';
+const t0 = _template("<div style=color:red;>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
-  _setStyle(n0, ["color: green", { color: 'red' }])
   return n0
 }"
 `;
 
-exports[`compiler: element transform > static props 1`] = `
+exports[`compiler: element transform > pure nested divs 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>", true)
+const t0 = _template("<div><div><div></div></div><div>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > span in nested divs 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><div><span></div><div>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > escapes double quotes in value 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div title=\\"say &quot;hello&quot;\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > mixed quoting with boolean attribute 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div title=\\"has whitespace\\"inert data-targets=\\"foo>bar\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > quoted when value contains < 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div data-expr=\\"a<b\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > quoted when value contains = 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div data-expr=\\"a=b\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > quoted when value contains > 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div data-expr=\\"a>b\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > quoted when value contains backtick 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div title=\\"foo\`bar\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > quoted when value contains single quote 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div title=\\"it's\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > quoted when value contains whitespace 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div title=\\"has whitespace\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > space omitted after quoted attribute 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div title=\\"has whitespace\\"alt=\\"&quot;contains quotes&quot;\\"data-targets=\\"foo>bar\\">", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > static props quoting > unquoted when value has no special chars 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div id=foo class=bar>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > svg 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<svg><circle r=40>", 3, 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > unsafe native object literal v-bind props stay dynamic 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ onClick: _ctx.click }]))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > unsafe native object literal v-bind props stay dynamic 2`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<input>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ '.value': _ctx.value }]))
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > unsafe native object literal v-bind props stay dynamic 3`] = `
+"import { setDynamicProps as _setDynamicProps, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setDynamicProps(n0, [{ 'foo bar': 'x' }])
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj]))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj]))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj, { id: "foo" }], true))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj, { id: "foo" }]))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }], true))
+  _renderEffect(() => _setDynamicProps(n0, [{ id: "foo" }, _ctx.obj, { class: "bar" }]))
   return n0
 }"
 `;
 
 exports[`compiler: element transform > v-on="obj" 1`] = `
 "import { setDynamicEvents as _setDynamicEvents, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()

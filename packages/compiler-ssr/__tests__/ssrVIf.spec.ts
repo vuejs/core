@@ -82,15 +82,15 @@ describe('ssr: v-if', () => {
   test('<template v-if> (text)', () => {
     expect(compile(`<template v-if="foo">hello</template>`).code)
       .toMatchInlineSnapshot(`
-      "
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        if (_ctx.foo) {
-          _push(\`<!--[-->hello<!--]-->\`)
-        } else {
-          _push(\`<!---->\`)
-        }
-      }"
-    `)
+        "
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          if (_ctx.foo) {
+            _push(\`<!--[-->hello<!--]-->\`)
+          } else {
+            _push(\`<!---->\`)
+          }
+        }"
+      `)
   })
 
   test('<template v-if> (single element)', () => {

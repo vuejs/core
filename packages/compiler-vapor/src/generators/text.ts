@@ -10,27 +10,31 @@ export function genSetText(
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
-  const { element, values, generated, jsx } = oper
-  const texts = combineValues(values, context, jsx)
+  const { element, values, generated, isComponent } = oper
+  const texts = combineValues(values, context)
   return [
     NEWLINE,
-    ...genCall(helper('setText'), `${generated ? 'x' : 'n'}${element}`, texts),
+    ...genCall(
+      // use setBlockText for component
+      isComponent ? helper('setBlockText') : helper('setText'),
+      `${generated && !isComponent ? 'x' : 'n'}${element}`,
+      texts,
+    ),
   ]
 }
 
 function combineValues(
   values: SimpleExpressionNode[],
   context: CodegenContext,
-  jsx?: boolean,
 ): CodeFragment[] {
   return values.flatMap((value, i) => {
     let exp = genExpression(value, context)
-    if (!jsx && getLiteralExpressionValue(value) == null) {
+    if (getLiteralExpressionValue(value, true) == null) {
       // dynamic, wrap with toDisplayString
       exp = genCall(context.helper('toDisplayString'), exp)
     }
     if (i > 0) {
-      exp.unshift(jsx ? ', ' : ' + ')
+      exp.unshift(' + ')
     }
     return exp
   })
@@ -42,6 +46,6 @@ export function genGetTextChild(
 ): CodeFragment[] {
   return [
     NEWLINE,
-    `const x${oper.parent} = ${context.helper('child')}(n${oper.parent})`,
+    `const x${oper.parent} = ${context.helper('txt')}(n${oper.parent})`,
   ]
 }

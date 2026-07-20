@@ -1,7 +1,20 @@
 import { createVaporApp, vaporInteropPlugin } from '../src'
 import { type App, type Component, createApp } from '@vue/runtime-dom'
-import type { VaporComponent, VaporComponentInstance } from '../src/component'
+import type {
+  VaporComponent,
+  VaporComponentInstance,
+  VaporComponentOptions,
+} from '../src/component'
 import type { RawProps } from '../src/componentProps'
+import { compileScript, parse } from '@vue/compiler-sfc'
+import * as runtimeVapor from '../src'
+import * as runtimeDom from '@vue/runtime-dom'
+import * as VueServerRenderer from '@vue/server-renderer'
+import {
+  type CompilerOptions,
+  compile as compileVapor,
+} from '@vue/compiler-vapor'
+import { VaporIfFlags } from '@vue/shared'
 
 export interface RenderContext {
   component: VaporComponent
@@ -134,6 +147,89 @@ export function makeInteropRender(): (comp: Component) => InteropRenderContext {
   }
 
   return define
+}
+
+export { runtimeDom, runtimeVapor, VueServerRenderer }
+
+export function ifFlags(
+  blockShape: number,
+  once = false,
+  index?: number,
+): number {
+  return (
+    blockShape |
+    (once ? VaporIfFlags.ONCE : 0) |
+    (index === undefined ? 0 : (index + 1) << VaporIfFlags.INDEX_SHIFT)
+  )
+}
+
+export function compile(
+  sfc: string,
+  data: runtimeDom.Ref<any>,
+  components: Record<string, any> = {},
+  {
+    vapor = true,
+    ssr = false,
+  }: {
+    vapor?: boolean | undefined
+    ssr?: boolean | undefined
+  } = {},
+): any {
+  if (!sfc.includes(`<script`)) {
+    sfc =
+      `<script vapor>const data = _data; const components = _components;</script>` +
+      sfc
+  }
+  const descriptor = parse(sfc).descriptor
+
+  const script = compileScript(descriptor, {
+    id: 'x',
+    isProd: true,
+    inlineTemplate: true,
+    genDefaultAs: '__sfc__',
+    vapor,
+    templateOptions: {
+      ssr,
+    },
+  })
+
+  const code =
+    script.content
+      .replace(/\bimport {/g, 'const {')
+      .replace(/ as _/g, ': _')
+      .replace(/} from ['"]vue['"]/g, `} = Vue`)
+      .replace(/} from "vue\/server-renderer"/g, '} = VueServerRenderer') +
+    '\nreturn __sfc__'
+
+  return new Function('Vue', 'VueServerRenderer', '_data', '_components', code)(
+    { ...runtimeDom, ...runtimeVapor },
+    VueServerRenderer,
+    data,
+    components,
+  )
+}
+
+export function compileToVaporRender(
+  template: string,
+  options?: CompilerOptions,
+): VaporComponentOptions['render'] {
+  let { code } = compileVapor(template, {
+    mode: 'module',
+    prefixIdentifiers: true,
+    hmr: true,
+    ...options,
+  })
+
+  const transformed = code
+    .replace(/\bimport {/g, 'const {')
+    .replace(/ as _/g, ': _')
+    .replace(/} from ['"]vue['"];/g, '} = Vue;')
+    .replace(/export function render/, 'function render')
+
+  return new Function('Vue', `${transformed}\nreturn render`)({
+    ...runtimeDom,
+    ...runtimeVapor,
+  })
 }
 
 export function shuffle(array: Array<any>): any[] {

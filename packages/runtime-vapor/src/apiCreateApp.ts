@@ -21,9 +21,10 @@ import {
 import type { RawProps } from './componentProps'
 import { getGlobalThis } from '@vue/shared'
 import { optimizePropertyLookup } from './dom/prop'
-import { withHydration } from './dom/hydration'
+import { setIsHydratingEnabled, withHydration } from './dom/hydration'
 
 let _createApp: CreateAppFunction<ParentNode, VaporComponent>
+const rootInstances = new WeakMap<App, VaporComponentInstance>()
 
 const mountApp: AppMountFn<ParentNode> = (app, container) => {
   optimizePropertyLookup()
@@ -36,15 +37,19 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
     container.textContent = ''
   }
 
-  const instance = createComponent(
-    app._component,
-    app._props as RawProps,
-    null,
-    false,
-    app._context,
-  )
+  const instance =
+    (app._ceComponent as VaporComponentInstance) ||
+    createComponent(
+      app._component,
+      app._props as RawProps,
+      null,
+      false,
+      false,
+      app._context,
+    )
   mountComponent(instance, container)
   flushOnAppMount()
+  rootInstances.set(app, instance)
 
   return instance!
 }
@@ -52,26 +57,42 @@ const mountApp: AppMountFn<ParentNode> = (app, container) => {
 let _hydrateApp: CreateAppFunction<ParentNode, VaporComponent>
 
 const hydrateApp: AppMountFn<ParentNode> = (app, container) => {
-  optimizePropertyLookup()
+  if (!container.hasChildNodes()) {
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+      warn(
+        `Attempting to hydrate existing markup but container is empty. ` +
+          `Performing full mount instead.`,
+      )
+    return mountApp(app, container)
+  }
 
+  optimizePropertyLookup()
   let instance: VaporComponentInstance
   withHydration(container, () => {
-    instance = createComponent(
-      app._component,
-      app._props as RawProps,
-      null,
-      false,
-      app._context,
-    )
+    instance =
+      (app._ceComponent as VaporComponentInstance) ||
+      createComponent(
+        app._component,
+        app._props as RawProps,
+        null,
+        false,
+        false,
+        app._context,
+        true,
+      )
     mountComponent(instance, container)
     flushOnAppMount()
   })
+  rootInstances.set(app, instance!)
 
   return instance!
 }
 
 const unmountApp: AppUnmountFn = app => {
-  unmountComponent(app._instance as VaporComponentInstance, app._container)
+  const instance = ((__DEV__ && app._instance) ||
+    rootInstances.get(app)!) as VaporComponentInstance
+  unmountComponent(instance, app._container)
+  rootInstances.delete(app)
 }
 
 function prepareApp() {
@@ -90,9 +111,16 @@ function prepareApp() {
 function postPrepareApp(app: App) {
   app.vapor = true
   const mount = app.mount
-  app.mount = (container, ...args: any[]) => {
+  app.mount = (container, ...args: any[]): any => {
     container = normalizeContainer(container) as ParentNode
-    return mount(container, ...args)
+    if (!container) return
+
+    const proxy = mount(container, ...args)
+    if (container instanceof Element) {
+      container.removeAttribute('v-cloak')
+      container.setAttribute('data-v-app', '')
+    }
+    return proxy
   }
 }
 
@@ -111,6 +139,7 @@ export const createVaporSSRApp: CreateAppFunction<
   ParentNode,
   VaporComponent
 > = (comp, props) => {
+  setIsHydratingEnabled(true)
   prepareApp()
   if (!_hydrateApp)
     _hydrateApp = createAppAPI(hydrateApp, unmountApp, getExposed)

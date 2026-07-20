@@ -23,7 +23,7 @@ describe('compiler v-bind', () => {
       id: 0,
       flags: DynamicFlag.REFERENCED,
     })
-    expect(ir.template).toEqual(['<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div>'])
     expect(ir.block.effect).lengthOf(1)
     expect(ir.block.effect[0].expressions).lengthOf(1)
     expect(ir.block.effect[0].operations).lengthOf(1)
@@ -171,7 +171,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, [_title]: _title }])',
     )
   })
 
@@ -224,7 +224,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }], true)',
+      '_setDynamicProps(n0, [{ [_id]: _id, foo: "bar", checked: "" }])',
     )
   })
 
@@ -241,10 +241,10 @@ describe('compiler v-bind', () => {
         end: { line: 1, column: 19 },
       },
     })
-    expect(ir.template).toEqual(['<div arg></div>'])
+    expect([...ir.template.keys()]).toEqual(['<div arg>'])
 
     expect(code).matchSnapshot()
-    expect(code).contains(JSON.stringify('<div arg></div>'))
+    expect(code).contains(JSON.stringify('<div arg>'))
   })
 
   test('error on invalid argument for same-name shorthand', () => {
@@ -341,11 +341,40 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo)]: _ctx.id }], true)`,
+      `_setDynamicProps(n0, [{ [_camelize(_ctx.foo || "")]: _ctx.id }])`,
     )
   })
 
-  test.todo('.camel modifier w/ dynamic arg + prefixIdentifiers')
+  test('.camel modifier w/ dynamic arg + prefixIdentifiers', () => {
+    const { ir, code } = compileWithVBind(
+      `<div v-bind:[foo(bar)].camel="id"/>`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
+    expect(code).matchSnapshot()
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      props: [
+        [
+          {
+            key: {
+              content: `foo(bar)`,
+              isStatic: false,
+            },
+            values: [
+              {
+                content: `id`,
+                isStatic: false,
+              },
+            ],
+            runtimeCamelize: true,
+            modifier: undefined,
+          },
+        ],
+      ],
+    })
+  })
 
   test('.prop modifier', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:fooBar.prop="id"/>`)
@@ -422,11 +451,38 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n0, [{ ["." + _ctx.fooBar]: _ctx.id }], true)`,
+      `_setDynamicProps(n0, [{ ["." + (_ctx.fooBar || "")]: _ctx.id }])`,
     )
   })
 
-  test.todo('.prop modifier w/ dynamic arg + prefixIdentifiers')
+  test('.prop modifier w/ dynamic arg + prefixIdentifiers', () => {
+    const { ir, code } = compileWithVBind(
+      `<div v-bind:[foo(bar)].prop="id"/>`,
+      { prefixIdentifiers: true },
+    )
+    expect(code).matchSnapshot()
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      props: [
+        [
+          {
+            key: {
+              content: `foo(bar)`,
+              isStatic: false,
+            },
+            values: [
+              {
+                content: `id`,
+                isStatic: false,
+              },
+            ],
+            runtimeCamelize: false,
+            modifier: '.',
+          },
+        ],
+      ],
+    })
+  })
 
   test('.prop modifier (shorthand)', () => {
     const { ir, code } = compileWithVBind(`<div .fooBar="id"/>`)
@@ -573,6 +629,36 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setAttr(n0, "foo-bar", _ctx.fooBar)')
   })
 
+  test('.attr modifier w/ dynamic arg', () => {
+    const { ir, code } = compileWithVBind(`<div v-bind:[fooBar].attr="id"/>`)
+
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      props: [
+        [
+          {
+            key: {
+              content: `fooBar`,
+              isStatic: false,
+            },
+            values: [
+              {
+                content: `id`,
+                isStatic: false,
+              },
+            ],
+            runtimeCamelize: false,
+            modifier: '^',
+          },
+        ],
+      ],
+    })
+    expect(code).contains('renderEffect')
+    expect(code).contains(
+      `_setDynamicProps(n0, [{ ["^" + (_ctx.fooBar || "")]: _ctx.id }])`,
+    )
+  })
+
   test('.attr modifier w/ innerHTML', () => {
     const { code } = compileWithVBind(`<div :innerHTML.attr="foo" />`)
     expect(code).matchSnapshot()
@@ -656,22 +742,309 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setProp(n0, "value", _ctx.foo)')
   })
 
+  test(':class w/ svg elements', () => {
+    const { code } = compileWithVBind(`
+      <svg :class="cls"/>
+    `)
+    expect(code).matchSnapshot()
+    // should pass isSVG: true to the helper
+    expect(code).contains('_setClass(n0, _ctx.cls, true))')
+  })
+
+  test('constant boolean class and style bindings are emitted in template', () => {
+    const { code } = compileWithVBind(`
+      <div
+        :disabled="true"
+        :class="{ active: true, hidden: false }"
+        :style="{ color: 'red', marginTop: '4px' }"
+      />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      'const t0 = _template("<div disabled class=active style=color:red;margin-top:4px;>", 3)',
+    )
+  })
+
+  test('unsafe constant object style stays on runtime setter', () => {
+    const { code } = compileWithVBind(`
+      <div :style="{ '--x': 'a;b' }" />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('const t0 = _template("<div>", 1)')
+    expect(code).contains("_setStyle(n0, { '--x': 'a;b' })")
+    expect(code).not.contains('style=')
+  })
+
+  test('constant folded class and style escape html entities', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ '&amp;nbsp;': true }" :style="{ '--x': '&amp;copy' }" />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      'const t0 = _template("<div class=&amp;nbsp; style=--x:&amp;copy;>", 3)',
+    )
+  })
+
+  test('constant false boolean bindings are omitted from template', () => {
+    const { code } = compileWithVBind(`
+      <button :disabled="false" :hidden="null" :multiple="undefined" />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('const t0 = _template("<button>", 3)')
+  })
+
+  test('pure static class stays in template without runtime setter', () => {
+    const { code } = compileWithVBind(`
+      <div class=" foo  bar " />
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      'const t0 = _template("<div class=\\"foo bar\\">", 3)',
+    )
+    expect(code).not.contains('_setClass')
+  })
+
+  test('simple object className helper', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('"active"')
+    expect(code).not.contains('{ active:')
+  })
+
+  test('ternary string className helper', () => {
+    const { code } = compileWithVBind(`
+      <div :class="selected === row.id ? 'danger' : ''"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger")',
+    )
+  })
+
+  test('reverse ternary string className helper', () => {
+    const { code } = compileWithVBind(`
+      <div :class="selected === row.id ? '' : 'danger'"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 0 : 1), "danger")',
+    )
+  })
+
+  test('static class after conditional uses className helper with suffix', () => {
+    const { code } = compileWithVBind(`
+      <div :class="selected === row.id ? 'danger' : ''" class="foo"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      `_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0), "danger", "", "foo")`,
+    )
+  })
+
+  test('static class with simple object className helper', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ bar: isBar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
+    expect(code).contains('" bar", "foo"')
+    expect(code).not.contains('{ bar:')
+  })
+
+  test('mixed static and dynamic class keeps static class in runtime merge', () => {
+    const { code } = compileWithVBind(`
+      <div class="base" :class="{ active: ok, hidden: false, fixed: true }"/>
+    `)
+
+    expect(code).contains('const t0 = _template("<div>", 1)')
+    expect(code).contains('_setClassName(n0,')
+    expect(code).contains('"base"')
+    expect(code).not.contains('class=\\"base')
+  })
+
+  test('static class with unanalyzable dynamic class keeps runtime merge', () => {
+    const { code } = compileWithVBind(`
+      <div class="base" :class="cls"/>
+    `)
+
+    expect(code).contains('const t0 = _template("<div>", 1)')
+    expect(code).contains('_setClass(n0, ["base", _ctx.cls])')
+    expect(code).not.contains('class=base')
+    expect(code).not.contains('_setClassName')
+  })
+
+  test('static class in reverse order uses className helper with suffix', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ bar: isBar }" class="foo"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.isBar ? 1 : 0), "bar", "", "foo")',
+    )
+  })
+
+  test('static class after multiple object className helper uses suffix', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: ok, foo: bar }" class="tail"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0), [" active", " foo"], "", "tail")',
+    )
+  })
+
+  test('multiple simple object className helper', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ active: ok, foo: bar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.ok ? 1 : 0) | (_ctx.bar ? 2 : 0)',
+    )
+    expect(code).contains('[" active", " foo"]')
+    expect(code).not.contains('{ active:')
+  })
+
+  test('static class with multiple object className helper', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ danger: selected === row.id, 'is-active': active }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.selected === _ctx.row.id ? 1 : 0) | (_ctx.active ? 2 : 0), [" danger", " is-active"], "foo")',
+    )
+    expect(code).not.contains('{ danger:')
+  })
+
+  test('object class with multi-token key', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ 'foo bar': isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('"foo bar"')
+    expect(code).not.contains("'foo bar':")
+  })
+
+  test('static class with overlapping object class', () => {
+    const { code } = compileWithVBind(`
+      <div class="bar" :class="{ bar: isBar }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isBar ? 1 : 0)')
+    expect(code).contains('" bar", "bar"')
+    expect(code).not.contains('{ bar:')
+  })
+
+  test('static class with overlapping multi-token object class', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ 'foo bar': isActive }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClassName(n0, (_ctx.isActive ? 1 : 0)')
+    expect(code).contains('" foo bar", "foo"')
+    expect(code).not.contains("'foo bar':")
+  })
+
+  test('className helper normalizes static and string class values', () => {
+    const { code } = compileWithVBind(`
+      <div class=" foo  bar " :class="ok ? ' baz ' : ''"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setClassName(n0, (_ctx.ok ? 1 : 0), " baz", "foo bar")',
+    )
+  })
+
+  test('className helper falls back when bit flags are exhausted', () => {
+    const entries = Array.from({ length: 32 }, (_, i) => `c${i}: a${i}`).join(
+      ', ',
+    )
+    const { code } = compileWithVBind(`<div :class="{ ${entries} }"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClass(n0, {')
+    expect(code).not.contains('_setClassName')
+  })
+
+  test('className helper supports the max safe bit flag', () => {
+    const entries = Array.from({ length: 31 }, (_, i) => `c${i}: a${i}`).join(
+      ', ',
+    )
+    const { code } = compileWithVBind(`<div :class="{ ${entries} }"/>`)
+    expect(code).contains('_setClassName')
+    expect(code).contains('(_ctx.a30 ? 1073741824 : 0)')
+    expect(code).not.contains('_setClass(n0, {')
+  })
+
+  test('computed object class key falls back to setClass', () => {
+    const { code } = compileWithVBind(`
+      <div :class="{ [name]: active }"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClass(n0, { [_ctx.name]: _ctx.active })')
+    expect(code).not.contains('_setClassName')
+  })
+
+  test('array class falls back to setClass', () => {
+    const { code } = compileWithVBind(`
+      <div :class="[foo, { danger: active }]"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setClass(n0, [_ctx.foo, { danger: _ctx.active }])')
+    expect(code).not.contains('_setClassName')
+  })
+
+  test('class with v-bind object falls back to dynamic props', () => {
+    const { code } = compileWithVBind(`
+      <div class="foo" :class="{ bar: isBar }" v-bind="mayBeHasClass"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setDynamicProps(n0, [{ class: ["foo", { bar: _ctx.isBar }] }, _ctx.mayBeHasClass])',
+    )
+    expect(code).not.contains('_setClassName')
+  })
+
+  test(':style w/ svg elements', () => {
+    const { code } = compileWithVBind(`
+      <svg :style="style"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setStyle(n0, _ctx.style))')
+  })
+
+  test('v-bind w/ svg elements', () => {
+    const { code } = compileWithVBind(`
+      <svg v-bind="obj"/>
+    `)
+    expect(code).matchSnapshot()
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true))')
+  })
+
   test('number value', () => {
     const { code } = compileWithVBind(`<Comp :depth="0" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('{ depth: () => (0) }')
+    expect(code).contains('{ depth: 0 }')
   })
 
   test('with constant value', () => {
     const { code } = compileWithVBind(
       `
         <div
-          :a="void 0" 
-          :b="1 > 2" 
-          :c="1 + 2" 
-          :d="1 ? 2 : 3" 
-          :e="(2)" 
-          :f="\`foo${1}\`"
+          :a="void 0"
+          :b="1 > 2"
+          :c="1 + 2"
+          :d="1 ? 2 : 3"
+          :e="(2)"
+          :f="\`foo\${1}\`"
           :g="1"
           :h="'1'"
           :i="true"
@@ -692,155 +1065,5 @@ describe('compiler v-bind', () => {
       },
     )
     expect(code).matchSnapshot()
-  })
-})
-
-describe('cache multiple access', () => {
-  test('repeated variables', () => {
-    const { code } = compileWithVBind(`
-        <div :class="foo"></div>
-        <div :class="foo"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo = _ctx.foo')
-    expect(code).contains('setClass(n0, _foo)')
-    expect(code).contains('setClass(n1, _foo)')
-  })
-
-  test('repeated expressions', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo + bar"></div>
-        <div :id="foo + bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar = _ctx.foo + _ctx.bar')
-    expect(code).contains('_setProp(n0, "id", _foo_bar)')
-    expect(code).contains('_setProp(n1, "id", _foo_bar)')
-  })
-
-  test('repeated variable in expressions', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo + foo + bar"></div>
-        <div :id="foo"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo = _ctx.foo')
-    expect(code).contains('_setProp(n0, "id", _foo + _foo + _ctx.bar)')
-    expect(code).contains('_setProp(n1, "id", _foo)')
-  })
-
-  test('repeated expression in expressions', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo + bar"></div>
-        <div :id="foo + bar"></div>
-        <div :id="foo + foo + bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar = _foo + _ctx.bar')
-    expect(code).contains('_setProp(n0, "id", _foo_bar)')
-    expect(code).contains('_setProp(n2, "id", _foo + _foo_bar)')
-  })
-
-  test('function calls with arguments', () => {
-    const { code } = compileWithVBind(`
-        <div :id="foo[bar(baz)]"></div>
-        <div :id="foo[bar(baz)]"></div>
-        <div :id="bar() + foo"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _foo_bar_baz = _foo[_bar(_ctx.baz)]')
-    expect(code).contains('_setProp(n0, "id", _foo_bar_baz)')
-    expect(code).contains('_setProp(n1, "id", _foo_bar_baz)')
-    expect(code).contains('_setProp(n2, "id", _bar() + _foo)')
-  })
-
-  test('dynamic key bindings with expressions', () => {
-    const { code } = compileWithVBind(`
-        <div :[key+1]="foo[key+1]()" />
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _key = _ctx.key')
-    expect(code).contains('[{ [_key+1]: _ctx.foo[_key+1]() }]')
-  })
-
-  test('object property chain access', () => {
-    const { code } = compileWithVBind(`
-        <div :id="obj['foo']['baz'] + obj.bar"></div>
-        <div :id="obj['foo']['baz'] + obj.bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains(
-      "const _obj_foo_baz_obj_bar = _obj['foo']['baz'] + _obj.bar",
-    )
-    expect(code).contains('_setProp(n0, "id", _obj_foo_baz_obj_bar)')
-    expect(code).contains('_setProp(n1, "id", _obj_foo_baz_obj_bar)')
-  })
-
-  test('dynamic property access', () => {
-    const { code } = compileWithVBind(`
-        <div :id="obj[1][baz] + obj.bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _obj = _ctx.obj')
-    expect(code).contains('_setProp(n0, "id", _obj[1][_ctx.baz] + _obj.bar)')
-  })
-
-  test('variable name substring edge cases', () => {
-    const { code } = compileWithVBind(
-      `<div :id="title + titles + title"></div>`,
-    )
-    expect(code).matchSnapshot()
-    expect(code).contains('const _title = _ctx.title')
-    expect(code).contains('_setProp(n0, "id", _title + _ctx.titles + _title)')
-  })
-
-  test('object property name substring cases', () => {
-    const { code } = compileWithVBind(
-      `<div :id="p.title + p.titles + p.title"></div>`,
-    )
-    expect(code).matchSnapshot()
-    expect(code).contains('const _p = _ctx.p')
-    expect(code).contains('const _p_title = _p.title')
-    expect(code).contains('_setProp(n0, "id", _p_title + _p.titles + _p_title)')
-  })
-
-  test('cache variable used in both property shorthand and normal binding', () => {
-    const { code } = compileWithVBind(`
-        <div :style="{color}" :id="color"/>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _color = _ctx.color')
-    expect(code).contains('_setStyle(n0, {color: _color})')
-  })
-
-  test('optional chaining', () => {
-    const { code } = compileWithVBind(`<div :id="obj?.foo + obj?.bar"></div>`)
-    expect(code).matchSnapshot()
-    expect(code).contains('const _obj = _ctx.obj')
-    expect(code).contains('_setProp(n0, "id", _obj?.foo + _obj?.bar)')
-  })
-
-  test('not cache variable only used in property shorthand', () => {
-    const { code } = compileWithVBind(`
-        <div :style="{color}" />
-      `)
-    expect(code).matchSnapshot()
-    expect(code).not.contains('const _color = _ctx.color')
-  })
-
-  test('not cache variable and member expression with the same name', () => {
-    const { code } = compileWithVBind(`
-        <div :id="bar + obj.bar"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).not.contains('const _bar = _ctx.bar')
-  })
-
-  test('not cache variable in function expression', () => {
-    const { code } = compileWithVBind(`
-        <div v-bind="{ foo: bar => foo = bar }"></div>
-      `)
-    expect(code).matchSnapshot()
-    expect(code).not.contains('const _bar = _ctx.bar')
   })
 })

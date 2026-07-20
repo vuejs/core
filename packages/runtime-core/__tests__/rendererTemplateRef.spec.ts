@@ -10,6 +10,7 @@ import {
   render,
   serializeInner,
   shallowRef,
+  watch,
 } from '@vue/runtime-test'
 
 describe('api: template refs', () => {
@@ -177,6 +178,89 @@ describe('api: template refs', () => {
     toggle.value = false
     await nextTick()
     expect(el.value).toBe(null)
+  })
+
+  // #12639
+  it('update and unmount child in the same tick', async () => {
+    const root = nodeOps.createElement('div')
+    const el = ref(null)
+    const toggle = ref(true)
+    const show = ref(true)
+
+    const Comp = defineComponent({
+      emits: ['change'],
+      props: ['show'],
+      setup(props, { emit }) {
+        watch(
+          () => props.show,
+          () => {
+            emit('change')
+          },
+        )
+        return () => h('div', 'hi')
+      },
+    })
+
+    const App = {
+      setup() {
+        return {
+          refKey: el,
+        }
+      },
+      render() {
+        return toggle.value
+          ? h(Comp, {
+              ref: 'refKey',
+              show: show.value,
+              onChange: () => (toggle.value = false),
+            })
+          : null
+      },
+    }
+    render(h(App), root)
+    expect(el.value).not.toBe(null)
+
+    show.value = false
+    await nextTick()
+    expect(el.value).toBe(null)
+  })
+
+  it('set and change ref in the same tick', async () => {
+    const root = nodeOps.createElement('div')
+    const show = ref(false)
+    const refName = ref('a')
+
+    const Child = defineComponent({
+      setup() {
+        refName.value = 'b'
+        return () => {}
+      },
+    })
+
+    const Comp = {
+      render() {
+        return h(Child, {
+          ref: refName.value,
+        })
+      },
+      updated(this: any) {
+        expect(this.$refs.a).toBe(null)
+        expect(this.$refs.b).not.toBe(null)
+      },
+    }
+
+    const App = {
+      render() {
+        return show.value ? h(Comp) : null
+      },
+    }
+
+    render(h(App), root)
+    expect(refName.value).toBe('a')
+
+    show.value = true
+    await nextTick()
+    expect(refName.value).toBe('b')
   })
 
   it('unset old ref when new ref is absent', async () => {

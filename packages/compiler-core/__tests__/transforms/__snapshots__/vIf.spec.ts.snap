@@ -80,7 +80,7 @@ return function render(_ctx, _cache) {
     const { renderSlot: _renderSlot, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? _renderSlot($slots, "default", { key: 0 })
+      ? _renderSlot($slots, "default", {}, undefined, undefined, 0)
       : _createCommentVNode("v-if", true)
   }
 }"
@@ -140,7 +140,21 @@ return function render(_ctx, _cache) {
     const { renderSlot: _renderSlot, createCommentVNode: _createCommentVNode } = _Vue
 
     return ok
-      ? _renderSlot($slots, "default", { key: 0 })
+      ? _renderSlot($slots, "default", {}, undefined, undefined, 0)
+      : _createCommentVNode("v-if", true)
+  }
+}"
+`;
+
+exports[`compiler: v-if > codegen > v-if on <slot/> with v-bind 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { normalizeProps: _normalizeProps, guardReactiveProps: _guardReactiveProps, renderSlot: _renderSlot, createCommentVNode: _createCommentVNode } = _Vue
+
+    return ok
+      ? _renderSlot($slots, "default", _normalizeProps(_guardReactiveProps(items)), undefined, undefined, 0)
       : _createCommentVNode("v-if", true)
   }
 }"

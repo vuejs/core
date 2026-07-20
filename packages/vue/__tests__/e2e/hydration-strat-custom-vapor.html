@@ -1,0 +1,69 @@
+<div><span id="custom-trigger">click here to hydrate</span></div>
+<div id="app"><button>0</button></div>
+
+<script type="module">
+  import {
+    createVaporSSRApp,
+    defineVaporAsyncComponent,
+    ref,
+    onMounted,
+    delegateEvents,
+    template,
+    createIf,
+    createComponent,
+    child,
+    renderEffect,
+    setText,
+  } from '../../dist/vue.runtime-with-vapor.esm-browser.js'
+
+  delegateEvents('click')
+
+  window.isHydrated = false
+  const Comp = {
+    setup() {
+      const count = ref(0)
+      onMounted(() => {
+        console.log('hydrated')
+        window.isHydrated = true
+      })
+
+      const n0 = template('<button> </button>', true)()
+      const x0 = child(n0)
+      n0.$evtclick = () => count.value++
+      renderEffect(() => setText(x0, count.value))
+      return n0
+    },
+  }
+
+  const AsyncComp = defineVaporAsyncComponent({
+    loader: () => Promise.resolve(Comp),
+    hydrate: (hydrate, el) => {
+      const triggerEl = document.getElementById('custom-trigger')
+      triggerEl.addEventListener('click', hydrate, { once: true })
+      return () => {
+        window.teardownCalled = true
+        triggerEl.removeEventListener('click', hydrate)
+      }
+    },
+  })
+
+  const show = (window.show = ref(true))
+  createVaporSSRApp({
+    setup() {
+      onMounted(() => {
+        window.isRootMounted = true
+      })
+
+      const n0 = createIf(
+        () => show.value,
+        () => {
+          return createComponent(AsyncComp)
+        },
+        () => {
+          return template('off')()
+        },
+      )
+      return n0
+    },
+  }).mount('#app')
+</script>

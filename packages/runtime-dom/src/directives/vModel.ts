@@ -74,6 +74,12 @@ export const vModelText: ModelDirective<
   },
 }
 
+function castValue(value: string, trim?: boolean, number?: boolean | null) {
+  if (trim) value = value.trim()
+  if (number) value = looseToNumber(value)
+  return value
+}
+
 /**
  * @internal
  */
@@ -86,18 +92,13 @@ export const vModelTextInit = (
 ): void => {
   addEventListener(el, lazy ? 'change' : 'input', e => {
     if ((e.target as any).composing) return
-    let domValue: string | number = el.value
-    if (trim) {
-      domValue = domValue.trim()
-    }
-    if (number || el.type === 'number') {
-      domValue = looseToNumber(domValue)
-    }
-    ;(set || (el as any)[assignKey])(domValue)
+    ;(set || (el as any)[assignKey])(
+      castValue(el.value, trim, number || el.type === 'number'),
+    )
   })
-  if (trim) {
+  if (trim || number) {
     addEventListener(el, 'change', () => {
-      el.value = el.value.trim()
+      el.value = castValue(el.value, trim, number || el.type === 'number')
     })
   }
   if (!lazy) {
@@ -134,7 +135,12 @@ export const vModelTextUpdate = (
     return
   }
 
-  if (document.activeElement === el && el.type !== 'range') {
+  const rootNode = el.getRootNode()
+  if (
+    (rootNode instanceof Document || rootNode instanceof ShadowRoot) &&
+    rootNode.activeElement === el &&
+    el.type !== 'range'
+  ) {
     // #8546
     if (lazy && value === oldValue) {
       return
@@ -267,7 +273,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   mounted(el, { value }) {
     vModelSetSelected(el, value)
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(el, { value }, vnode) {
+    ;(el as any)._modelValue = value
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
@@ -284,7 +291,7 @@ export const vModelSelectInit = (
   number: boolean | undefined,
   set?: (v: any) => void,
 ): void => {
-  const isSetModel = isSet(value)
+  ;(el as any)._modelValue = value
   addEventListener(el, 'change', () => {
     const selectedVal = Array.prototype.filter
       .call(el.options, (o: HTMLOptionElement) => o.selected)
@@ -293,7 +300,7 @@ export const vModelSelectInit = (
       )
     ;(set || el[assignKey]!)(
       el.multiple
-        ? isSetModel
+        ? isSet((el as any)._modelValue)
           ? new Set(selectedVal)
           : selectedVal
         : selectedVal[0],
@@ -309,6 +316,7 @@ export const vModelSelectInit = (
  * @internal
  */
 export const vModelSetSelected = (el: HTMLSelectElement, value: any): void => {
+  ;(el as any)._modelValue = value
   if ((el as any)._assigning) return
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)

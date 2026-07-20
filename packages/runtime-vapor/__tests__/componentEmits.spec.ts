@@ -7,10 +7,16 @@ import {
   isEmitListener,
   nextTick,
   onBeforeUnmount,
+  ref,
   toHandlers,
 } from '@vue/runtime-dom'
-import { createComponent, defineVaporComponent } from '../src'
-import { makeRender } from './_utils'
+import {
+  createComponent,
+  createIf,
+  defineVaporComponent,
+  template,
+} from '../src'
+import { compile, makeRender } from './_utils'
 
 const define = makeRender()
 
@@ -61,6 +67,23 @@ describe('component: emit', () => {
     expect(onBaz).toHaveBeenCalled()
   })
 
+  test('should ignore nullish object v-bind sources when emitting', () => {
+    const Child = defineVaporComponent({
+      emits: ['ready'],
+      setup(_, { emit }) {
+        emit('ready')
+        return []
+      },
+    })
+    const Parent = compile(
+      `<template><components.Child v-bind="data.attrs" /></template>`,
+      ref({ attrs: null }),
+      { Child },
+    )
+
+    expect(() => define(Parent).render()).not.toThrow()
+  })
+
   test('trigger camelCase handler', () => {
     const { render } = define({
       setup(_, { emit }) {
@@ -87,7 +110,6 @@ describe('component: emit', () => {
     expect(fooSpy).toHaveBeenCalledTimes(1)
   })
 
-  // #3527
   test('trigger mixed case handlers', () => {
     const { render } = define({
       setup(_, { emit }) {
@@ -265,10 +287,10 @@ describe('component: emit', () => {
     const fn2 = vi.fn()
     render({
       modelValue: () => null,
-      modelModifiers: () => ({ number: true }),
+      modelModifiers: { number: true },
       ['onUpdate:modelValue']: () => fn1,
       foo: () => null,
-      fooModifiers: () => ({ number: true }),
+      fooModifiers: { number: true },
       ['onUpdate:foo']: () => fn2,
     })
     expect(fn1).toHaveBeenCalledTimes(1)
@@ -291,18 +313,14 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true }
-      },
+      modelModifiers: { trim: true },
       ['onUpdate:modelValue']() {
         return fn1
       },
       foo() {
         return null
       },
-      fooModifiers() {
-        return { trim: true }
-      },
+      fooModifiers: { trim: true },
       'onUpdate:foo'() {
         return fn2
       },
@@ -327,18 +345,14 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true, number: true }
-      },
+      modelModifiers: { trim: true, number: true },
       ['onUpdate:modelValue']() {
         return fn1
       },
       foo() {
         return null
       },
-      fooModifiers() {
-        return { trim: true, number: true }
-      },
+      fooModifiers: { trim: true, number: true },
       ['onUpdate:foo']() {
         return fn2
       },
@@ -361,9 +375,7 @@ describe('component: emit', () => {
       modelValue() {
         return null
       },
-      modelModifiers() {
-        return { trim: true }
-      },
+      modelModifiers: { trim: true },
       ['onUpdate:modelValue']() {
         return fn
       },
@@ -423,5 +435,177 @@ describe('component: emit', () => {
     app.unmount()
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  test('should not execute handler during lookup', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('click')
+        return []
+      },
+    })
+
+    const handler = vi.fn()
+    const props = {
+      $: [
+        () => ({
+          onClick: handler,
+        }),
+      ],
+    }
+    render(props as any)
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('v-once should not execute handlers during lookup', () => {
+    const Child = defineVaporComponent({
+      setup(_, { emit }) {
+        emit('click', 1)
+        return []
+      },
+    })
+    const staticHandler = vi.fn()
+    const objectSourceHandler = vi.fn()
+
+    define({
+      setup() {
+        return [
+          createComponent(
+            Child,
+            { onClick: () => staticHandler },
+            null,
+            true,
+            true,
+          ),
+          createComponent(
+            Child,
+            { $: [{ onClick: () => objectSourceHandler }] },
+            null,
+            true,
+            true,
+          ),
+        ]
+      },
+    }).render()
+
+    expect(staticHandler.mock.calls).toEqual([[1]])
+    expect(objectSourceHandler.mock.calls).toEqual([[1]])
+  })
+
+  test('should trigger once handler from dynamic source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('foo')
+        emit('foo')
+        return []
+      },
+    })
+
+    const handler = vi.fn()
+    render({
+      $: [
+        () => ({
+          onFooOnce: handler,
+        }),
+      ],
+    } as any)
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('v-model modifiers should work from dynamic source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('update:modelValue', '1')
+        emit('update:foo', '  two  ')
+        return []
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    render({
+      $: [
+        () => ({
+          modelValue: null,
+          modelModifiers: { number: true },
+          ['onUpdate:modelValue']: fn1,
+          foo: null,
+          fooModifiers: { trim: true },
+          ['onUpdate:foo']: fn2,
+        }),
+      ],
+    } as any)
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
+  test('v-model modifiers should work from static object source', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('update:modelValue', '1')
+        emit('update:foo', '  two  ')
+        return []
+      },
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    render({
+      $: [
+        {
+          modelValue: null,
+          modelModifiers: { number: true },
+          ['onUpdate:modelValue']: () => fn1,
+          foo: null,
+          fooModifiers: { trim: true },
+          ['onUpdate:foo']: () => fn2,
+        },
+      ],
+    } as any)
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith('two')
+  })
+
+  test('should re-queue when child emit mutates parent state during update', async () => {
+    const show = ref(false)
+    const calls: string[] = []
+
+    const { component: Child } = define({
+      emits: ['change'],
+      setup(_: any, { emit }: any) {
+        emit('change')
+        return template('<p>child</p>')()
+      },
+    })
+
+    const { host } = define({
+      setup() {
+        const onChange = () => {
+          calls.push(`change:${show.value}`)
+          show.value = false
+        }
+        return createIf(
+          () => show.value,
+          () =>
+            createComponent(Child, {
+              onChange: () => onChange,
+            }),
+        )
+      },
+    }).render()
+
+    show.value = true
+    await nextTick()
+
+    expect(calls).toEqual(['change:true'])
+    expect(host.innerHTML).toBe('<!--if-->')
   })
 })

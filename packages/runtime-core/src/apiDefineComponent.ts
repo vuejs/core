@@ -68,7 +68,7 @@ export type DefineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
-  TypeEl extends Element = any,
+  TypeEl = any,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstanceWithMixins<
     Props,
@@ -157,7 +157,7 @@ export function defineComponent<
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: (keyof Props)[]
+    props?: (keyof NoInfer<Props>)[]
     emits?: E | EE[]
     slots?: S
   },
@@ -183,8 +183,8 @@ export function defineComponent<
 export function defineComponent<
   // props
   TypeProps,
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsOptions extends ComponentObjectPropsOptions =
+    ComponentObjectPropsOptions,
   RuntimePropsKeys extends string = string,
   // emits
   TypeEmits extends ComponentTypeEmits = {},
@@ -216,7 +216,7 @@ export function defineComponent<
         : ExtractPropTypes<RuntimePropsOptions>
       : { [key in RuntimePropsKeys]?: any },
   TypeRefs extends Record<string, unknown> = {},
-  TypeEl extends Element = any,
+  TypeEl = any,
 >(
   options: {
     props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
@@ -272,7 +272,7 @@ export function defineComponent<
         Slots,
         LocalComponents,
         Directives,
-        Exposed
+        string
       >
     >,
 ): DefineComponent<
@@ -301,15 +301,13 @@ export function defineComponent<
 >
 
 // implementation, close to no-op
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineComponent(
   options: unknown,
   extraOptions?: ComponentOptions,
 ) {
   return isFunction(options)
-    ? // #8236: extend call and options.name access are considered side-effects
-      // by Rollup, so we have to wrap it in a pure-annotated IIFE.
-      /*@__PURE__*/ (() =>
+    ? /*@__PURE__*/ (() =>
         extend({ name: options.name }, extraOptions, { setup: options }))()
     : options
 }

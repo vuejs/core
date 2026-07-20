@@ -1,5 +1,20 @@
-export let insertionParent: ParentNode | undefined
-export let insertionAnchor: Node | 0 | undefined
+import { isHydrating } from './dom/hydration'
+export type ChildItem = ChildNode & {
+  // logical index, used during hydration to locate the node
+  $idx: number
+}
+
+export type InsertionParent = ParentNode & {
+  // cache the first child for potential consecutive prepends
+  $fc?: Node | null
+
+  // last located logical child
+  $llc?: Node | null
+}
+export let insertionParent: InsertionParent | undefined
+export let insertionAnchor: Node | 0 | undefined | null
+// logical index for hydration
+export let insertionIndex: number | undefined
 
 /**
  * This function is called before a block type that requires insertion
@@ -7,21 +22,28 @@ export let insertionAnchor: Node | 0 | undefined
  * insertion on client-side render, and used for node adoption during hydration.
  */
 export function setInsertionState(
-  parent: ParentNode & { $anchor?: Node | null },
-  anchor?: Node | 0,
+  parent: ParentNode & { $fc?: Node | null },
+  anchor?: Node | 0 | null,
+  logicalIndex: number | undefined = anchor === 0 ? 0 : undefined,
 ): void {
-  // When setInsertionState(n3, 0) is called consecutively, the first prepend operation
-  // uses parent.firstChild as the anchor. However, after insertion, parent.firstChild
-  // changes and cannot serve as the anchor for subsequent prepends. Therefore, we cache
-  // the original parent.firstChild on the first call for subsequent prepend operations.
-  if (anchor === 0 && !parent.$anchor) {
-    parent.$anchor = parent.firstChild
-  }
-
   insertionParent = parent
-  insertionAnchor = anchor
+  insertionIndex = logicalIndex
+
+  if (anchor !== undefined) {
+    if (isHydrating) {
+      // hydration uses logicalIndex, not anchor
+      insertionAnchor = undefined
+    } else {
+      insertionAnchor = anchor
+      if (anchor === 0 && !parent.$fc) {
+        parent.$fc = parent.firstChild
+      }
+    }
+  } else {
+    insertionAnchor = undefined
+  }
 }
 
 export function resetInsertionState(): void {
-  insertionParent = insertionAnchor = undefined
+  insertionParent = insertionAnchor = insertionIndex = undefined
 }

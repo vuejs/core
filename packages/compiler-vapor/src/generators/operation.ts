@@ -12,7 +12,7 @@ import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genDynamicProps, genSetProp } from './prop'
-import { genDeclareOldRef, genSetTemplateRef } from './templateRef'
+import { genSetTemplateRef, genSetTemplateRefBinding } from './templateRef'
 import { genGetTextChild, genSetText } from './text'
 import {
   type CodeFragment,
@@ -26,6 +26,7 @@ import { genCreateComponent } from './component'
 import { genSlotOutlet } from './slotOutlet'
 import { processExpressions } from './expression'
 import { genBuiltinDirective } from './directive'
+import { genKey, genSetBlockKey } from './key'
 
 export function genOperations(
   opers: OperationNode[],
@@ -55,6 +56,8 @@ export function genOperation(
   context: CodegenContext,
 ): CodeFragment[] {
   switch (oper.type) {
+    case IRNodeTypes.SET_BLOCK_KEY:
+      return genSetBlockKey(oper, context)
     case IRNodeTypes.SET_PROP:
       return genSetProp(oper, context)
     case IRNodeTypes.SET_DYNAMIC_PROPS:
@@ -77,10 +80,10 @@ export function genOperation(
       return genIf(oper, context)
     case IRNodeTypes.FOR:
       return genFor(oper, context)
+    case IRNodeTypes.KEY:
+      return genKey(oper, context)
     case IRNodeTypes.CREATE_COMPONENT_NODE:
       return genCreateComponent(oper, context)
-    case IRNodeTypes.DECLARE_OLD_REF:
-      return genDeclareOldRef(oper)
     case IRNodeTypes.SLOT_OUTLET_NODE:
       return genSlotOutlet(oper, context)
     case IRNodeTypes.DIRECTIVE:
@@ -109,42 +112,69 @@ export function genEffects(
     ids,
     frag: declarationFrags,
     varNames,
+    expressionReplacements,
   } = processExpressions(context, expressions, shouldDeclare)
-  push(...declarationFrags)
-  for (let i = 0; i < effects.length; i++) {
-    const effect = effects[i]
-    operationsCount += effect.operations.length
-    const frags = context.withId(() => genEffect(effect, context), ids)
-    i > 0 && push(NEWLINE)
-    if (frag[frag.length - 1] === ')' && frags[0] === '(') {
-      push(';')
+  if (shouldDeclare && !declarationFrags.length && !varNames.length) {
+    const effect = effects.length === 1 ? effects[0] : undefined
+    const operation =
+      effect && effect.operations.length === 1
+        ? effect.operations[0]
+        : undefined
+    if (
+      operation &&
+      operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
+      operation.effect &&
+      // Keep ref-for on the render-effect path so v-for branches reuse the
+      // root/slot-owner scoped _setTemplateRef instead of allocating a setter
+      // and its tracking WeakMaps for each item.
+      !operation.refFor
+    ) {
+      return context.withExpressionReplacements(expressionReplacements, () =>
+        context.withId(() => genSetTemplateRefBinding(operation, context), ids),
+      )
     }
-    push(...frags)
   }
-
-  const newLineCount = frag.filter(frag => frag === NEWLINE).length
-  if (newLineCount > 1 || operationsCount > 1 || declarationFrags.length > 0) {
-    unshift(`{`, INDENT_START, NEWLINE)
-    push(INDENT_END, NEWLINE, '}')
-    if (!effects.length) {
-      unshift(NEWLINE)
+  return context.withExpressionReplacements(expressionReplacements, () => {
+    push(...declarationFrags)
+    for (let i = 0; i < effects.length; i++) {
+      const effect = effects[i]
+      operationsCount += effect.operations.length
+      const frags = context.withId(() => genEffect(effect, context), ids)
+      i > 0 && push(NEWLINE)
+      if (frag[frag.length - 1] === ')' && frags[0] === '(') {
+        push(';')
+      }
+      push(...frags)
     }
-  }
 
-  if (effects.length) {
-    unshift(NEWLINE, `${helper('renderEffect')}(() => `)
-    push(`)`)
-  }
+    const newLineCount = frag.filter(frag => frag === NEWLINE).length
+    if (
+      newLineCount > 1 ||
+      operationsCount > 1 ||
+      declarationFrags.length > 0
+    ) {
+      unshift(`{`, INDENT_START, NEWLINE)
+      push(INDENT_END, NEWLINE, '}')
+      if (!effects.length) {
+        unshift(NEWLINE)
+      }
+    }
 
-  if (!shouldDeclare && varNames.length) {
-    unshift(NEWLINE, `let `, varNames.join(', '))
-  }
+    if (effects.length) {
+      unshift(NEWLINE, `${helper('renderEffect')}(() => `)
+      push(`)`)
+    }
 
-  if (genExtraFrag) {
-    push(...context.withId(genExtraFrag, ids))
-  }
+    if (!shouldDeclare && varNames.length) {
+      unshift(NEWLINE, `let `, varNames.join(', '))
+    }
 
-  return frag
+    if (genExtraFrag) {
+      push(...context.withId(genExtraFrag, ids))
+    }
+
+    return frag
+  })
 }
 
 export function genEffect(
@@ -168,16 +198,24 @@ function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {
+  const { parent, anchor, logicalIndex, append } = operation
+  const isPrepend = anchor === -1
   return [
     NEWLINE,
     ...genCall(
       context.helper('setInsertionState'),
-      `n${operation.parent}`,
-      operation.anchor == null
+      `n${parent}`,
+      anchor == null
         ? undefined
-        : operation.anchor === -1 // -1 indicates prepend
+        : isPrepend // -1 indicates prepend
           ? `0` // runtime anchor value for prepend
-          : `n${operation.anchor}`,
+          : append
+            ? // for append, always use null since we have logicalIndex
+              'null'
+            : `n${anchor}`,
+      logicalIndex !== undefined && (!isPrepend || logicalIndex !== 0)
+        ? String(logicalIndex)
+        : undefined,
     ),
   ]
 }

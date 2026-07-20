@@ -1,9 +1,5 @@
-import { BindingTypes, type RootNode } from '@vue/compiler-dom'
+import { BindingTypes, type RootNode, parse } from '@vue/compiler-dom'
 import { type CompilerOptions, compile as _compile } from '../src'
-
-// TODO This is a temporary test case for initial implementation.
-// Remove it once we have more comprehensive tests.
-// DO NOT ADD MORE TESTS HERE.
 
 function compile(template: string | RootNode, options: CompilerOptions = {}) {
   let { code } = _compile(template, {
@@ -71,7 +67,7 @@ describe('compile', () => {
 
         expect(code).toMatchSnapshot()
         expect(code).contains(
-          JSON.stringify('<div :id="foo"><Comp></Comp>{{ bar }}</div>'),
+          JSON.stringify('<div :id=foo><Comp></Comp>{{ bar }}'),
         )
         expect(code).not.contains('effect')
       })
@@ -89,7 +85,6 @@ describe('compile', () => {
         )
 
         expect(code).toMatchSnapshot()
-        // Waiting for TODO, There should be more here.
       })
     })
 
@@ -196,11 +191,81 @@ describe('compile', () => {
       expect(code).contains('const _key = key.value')
       expect(code).contains('_key+1')
       expect(code).contains(
-        '_setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }], true)',
+        '_setDynamicProps(n0, [{ [_key+1]: _unref(foo)[_key+1]() }])',
       )
     })
 
-    // TODO: add more test for expression parsing (v-on, v-slot, v-for)
+    test('v-on multi statements', () => {
+      const code = compile(`<div @click="a++;b++" />`, {
+        prefixIdentifiers: true,
+      })
+      expect(code).matchSnapshot()
+    })
+
+    test('v-slot', () => {
+      const code = compile(`<Comp #foo="{ a, b }">{{ a + b }}</Comp>`, {
+        prefixIdentifiers: true,
+      })
+      expect(code).matchSnapshot()
+    })
+
+    test('v-for', () => {
+      const code = compile(`<div v-for="({ a, b }, key, index) of a.b" />`, {
+        prefixIdentifiers: true,
+      })
+      expect(code).matchSnapshot()
+    })
+
+    test('keeps member selector source offsets after prefixing', () => {
+      const code = compile(
+        `<tr
+          v-for="row in rows"
+          :key="row.id"
+          :class="row.id === state.selected ? 'danger' : ''"
+        ></tr>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `const _selector0 = _createSelector(() => _ctx.state.selected)`,
+      )
+    })
+
+    test('does not mutate cached member expressions on reused AST', () => {
+      const ast = parse(
+        `<button v-on="{ click: arr[0].click }">{{ arr[0].label }}</button>`,
+        { prefixIdentifiers: true },
+      )
+      const options = {
+        bindingMetadata: {
+          arr: BindingTypes.SETUP_CONST,
+        },
+      }
+
+      compile(ast, options)
+      expect(JSON.stringify(ast)).not.contains(`arr_0`)
+      const code = compile(ast, options)
+
+      expect(code).contains(`const _arr_0 = _ctx.arr[0]`)
+      expect(code).contains(`_setDynamicEvents(n0, { click: _arr_0.click })`)
+      expect(code).contains(`_setText(x0, _toDisplayString(_arr_0.label))`)
+      expect(code).not.contains(`_ctx.arr_0`)
+    })
+
+    test('applies cached member expressions to className specialization', () => {
+      const code = compile(
+        `<div :class="{ active: arr[0].active }"></div><span>{{ arr[0].label }}</span>`,
+        {
+          bindingMetadata: {
+            arr: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+
+      expect(code).contains(`const _arr_0 = _ctx.arr[0]`)
+      expect(code).contains(`_setClassName(n0, (_arr_0.active ? 1 : 0)`)
+      expect(code).contains(`_setText(x1, _toDisplayString(_arr_0.label))`)
+      expect(code).not.contains(`_ctx.arr[0].active`)
+    })
   })
 
   describe('custom directive', () => {
@@ -221,9 +286,67 @@ describe('compile', () => {
     })
   })
 
-  describe('setInsertionState', () => {
-    test('next, child and nthChild should be above the setInsertionState', () => {
-      const code = compile(`
+  describe('execution order', () => {
+    test('basic', () => {
+      const code = compile(`<div :id="foo">{{ bar }}</div>`)
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_setProp(n0, "id", _ctx.foo)
+    _setText(x0, _toDisplayString(_ctx.bar))`,
+      )
+    })
+
+    test('flushes previous effects before creating child component', () => {
+      const code = compile(`<div>parent: {{ useId() }}</div><Child />`, {
+        bindingMetadata: {
+          useId: BindingTypes.SETUP_CONST,
+        },
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_renderEffect(() => _setText(x0, "parent: " + _toDisplayString(_ctx.useId())))
+  const n1 = _createAssetComponent("Child")`,
+      )
+    })
+
+    test('flushes parent props before creating child component', () => {
+      const code = compile(`<div :id="useId()"><Child /></div>`, {
+        bindingMetadata: {
+          useId: BindingTypes.SETUP_CONST,
+        },
+      })
+      expect(code).contains(
+        `_renderEffect(() => _setProp(n1, "id", _ctx.useId()))
+  _setInsertionState(n1, null, 0)
+  const n0 = _createAssetComponent("Child")`,
+      )
+      expect(code).matchSnapshot()
+    })
+
+    test('does not flush later v-for effects before child component', () => {
+      const code = compile(
+        `<div v-for="row of rows" :key="row.id">
+          <span>{{ selected === row.id ? 'danger' : '' }}</span>
+          <Child />
+          <span>{{ useId() }}</span>
+        </div>`,
+        {
+          bindingMetadata: {
+            useId: BindingTypes.SETUP_CONST,
+          },
+        },
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `const n3 = _createComponentWithFallback(_component_Child)
+    const x4 = _txt(n4)
+    _renderEffect(() => _setText(x4, _toDisplayString(_ctx.useId())))`,
+      )
+    })
+
+    describe('setInsertionState', () => {
+      test('next, child and nthChild should be above the setInsertionState', () => {
+        const code = compile(`
       <div>
         <div />
         <Comp />
@@ -234,18 +357,8 @@ describe('compile', () => {
         </div>
       </div>
       `)
-      expect(code).toMatchSnapshot()
-    })
-  })
-
-  describe('execution order', () => {
-    test('basic', () => {
-      const code = compile(`<div :id="foo">{{ bar }}</div>`)
-      expect(code).matchSnapshot()
-      expect(code).contains(
-        `_setProp(n0, "id", _ctx.foo)
-    _setText(x0, _toDisplayString(_ctx.bar))`,
-      )
+        expect(code).toMatchSnapshot()
+      })
     })
 
     test('with v-once', () => {
@@ -266,6 +379,103 @@ describe('compile', () => {
     test('with insertionState', () => {
       const code = compile(`<div><div><slot /></div><Comp/></div>`)
       expect(code).matchSnapshot()
+    })
+  })
+
+  describe('gen unique helper alias', () => {
+    test('should avoid conflicts with existing variable names', () => {
+      const code = compile(`<div>{{ foo }}</div>`, {
+        bindingMetadata: {
+          _txt: BindingTypes.LITERAL_CONST,
+          _txt1: BindingTypes.SETUP_REF,
+        },
+      })
+      expect(code).matchSnapshot()
+      expect(code).contains('txt as _txt2')
+      expect(code).contains('const x0 = _txt2(n0)')
+    })
+  })
+
+  describe('gen unique node variables', () => {
+    test('should avoid binding conflicts for node vars (n*/x*)', () => {
+      const code = compile(`<div>{{ foo }}</div><div>{{ foo }}</div>`, {
+        bindingMetadata: {
+          n0: BindingTypes.SETUP_REACTIVE_CONST,
+          x0: BindingTypes.SETUP_MAYBE_REF,
+          n2: BindingTypes.SETUP_REACTIVE_CONST,
+          x2: BindingTypes.SETUP_MAYBE_REF,
+        },
+      })
+
+      expect(code).matchSnapshot()
+      expect(code).not.contains('const n0')
+      expect(code).not.contains('const x0')
+      expect(code).not.contains('const n2')
+      expect(code).not.contains('const x2')
+      expect(code).contains('const n1 = t0()')
+      expect(code).contains('const n3 = t0()')
+      expect(code).contains('const x1 = _txt(n1)')
+      expect(code).contains('const x3 = _txt(n3)')
+    })
+
+    test('should bump old ref var (r*) on conflict', () => {
+      const code = compile(
+        `<div :ref="bar" /><div :ref="bar" /><div :ref="bar" />`,
+        {
+          bindingMetadata: {
+            r0: BindingTypes.SETUP_REF,
+            r2: BindingTypes.SETUP_REF,
+            bar: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+
+      expect(code).matchSnapshot()
+      expect(code).not.contains('let r0')
+      expect(code).not.contains('let r2')
+      expect(code).contains('_setTemplateRef(n1, _bar)')
+      expect(code).contains('_setTemplateRef(n3, _bar)')
+      expect(code).contains('_setTemplateRef(n4, _bar)')
+    })
+
+    test('should bump template var (t*) on conflict', () => {
+      const code = compile(`<div/><span/><p/>`, {
+        bindingMetadata: {
+          t0: BindingTypes.SETUP_REF,
+          t2: BindingTypes.SETUP_REF,
+        },
+      })
+
+      expect(code).matchSnapshot()
+      expect(code).not.contains('const t0 =')
+      expect(code).not.contains('const t2 =')
+      expect(code).contains('const t1 = _template("<div>", 2)')
+      expect(code).contains('const t3 = _template("<span>", 2)')
+      expect(code).contains('const t4 = _template("<p>", 2)')
+    })
+
+    test('should bump placeholder cursor var (p*) on conflict', () => {
+      const code = compile(
+        `<div>
+          <div>x</div>
+          <div><span>{{ foo }}</span></div>
+          <div><span>{{ foo }}</span></div>
+        </div>`,
+        {
+          bindingMetadata: {
+            p0: BindingTypes.SETUP_REF,
+            p2: BindingTypes.SETUP_REF,
+            foo: BindingTypes.SETUP_REF,
+          },
+        },
+      )
+
+      expect(code).matchSnapshot()
+      expect(code).not.contains('let p0 = ')
+      expect(code).not.contains('let p2 = ')
+      expect(code).contains('let p1 = _next(_child(n2), 1)')
+      expect(code).contains('const n0 = _child(p1)')
+      expect(code).contains('const n1 = _child((p1 = _next(p1, 2)))')
     })
   })
 })

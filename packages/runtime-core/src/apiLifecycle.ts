@@ -61,6 +61,7 @@ export function injectHook(
   }
 }
 
+/* @__NO_SIDE_EFFECTS__ */
 const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
   (

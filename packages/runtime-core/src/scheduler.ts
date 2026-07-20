@@ -53,10 +53,15 @@ const RECURSION_LIMIT = 100
 
 type CountMap = Map<SchedulerJob, number>
 
-export function nextTick<T = void, R = void>(
+export function nextTick(): Promise<void>
+export function nextTick<T, R>(
   this: T,
-  fn?: (this: T) => R,
-): Promise<Awaited<R>> {
+  fn: (this: T) => R | Promise<R>,
+): Promise<R>
+export function nextTick<T, R>(
+  this: T,
+  fn?: (this: T) => R | Promise<R>,
+): Promise<void | R> {
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
 }
@@ -90,11 +95,26 @@ function findInsertionIndex(
 /**
  * @internal for runtime-vapor only
  */
-export function queueJob(job: SchedulerJob, id?: number, isPre = false): void {
+export function queueJob(
+  job: SchedulerJob,
+  id?: number,
+  isPre = false,
+  order = 0,
+): void {
   if (
     queueJobWorker(
       job,
-      id === undefined ? (isPre ? -2 : Infinity) : isPre ? id * 2 : id * 2 + 1,
+      id === undefined
+        ? isPre
+          ? -2
+          : Infinity
+        : isPre
+          ? id * 2
+          : order
+            ? // `order / (order + 1)` is monotonic and always < 1, so it sorts
+              // same-component Vapor effects without changing component order.
+              id * 2 + 1 + order / (order + 1)
+            : id * 2 + 1,
       jobs,
       jobsLength,
       flushIndex,
@@ -239,10 +259,10 @@ let isFlushing = false
 /**
  * @internal
  */
-export function flushOnAppMount(): void {
+export function flushOnAppMount(instance?: GenericComponentInstance): void {
   if (!isFlushing) {
     isFlushing = true
-    flushPreFlushCbs()
+    flushPreFlushCbs(instance)
     flushPostFlushCbs()
     isFlushing = false
   }
@@ -259,11 +279,6 @@ function flushJobs(seen?: CountMap) {
       jobs[flushIndex++] = undefined as any
 
       if (!(job.flags! & SchedulerJobFlags.DISPOSED)) {
-        // conditional usage of checkRecursiveUpdate must be determined out of
-        // try ... catch block since Rollup by default de-optimizes treeshaking
-        // inside try-catch. This can leave all warning code unshaked. Although
-        // they would get eventually shaken by a minifier like terser, some minifiers
-        // would fail to do that (e.g. https://github.com/evanw/esbuild/issues/1610)
         if (__DEV__ && checkRecursiveUpdates(seen!, job)) {
           continue
         }
@@ -294,6 +309,7 @@ function flushJobs(seen?: CountMap) {
 
     flushIndex = 0
     jobsLength = 0
+    jobs.length = 0
 
     flushPostFlushCbs(seen)
 

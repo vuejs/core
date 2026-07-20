@@ -2,26 +2,39 @@ import {
   type EffectScope,
   ReactiveEffect,
   type Ref,
+  type SuspenseBoundary,
   inject,
   nextTick,
+  onBeforeMount,
   onMounted,
   onUpdated,
   provide,
   ref,
+  toDisplayString,
+  useAttrs,
   watch,
   watchEffect,
 } from '@vue/runtime-dom'
 import {
+  createAssetComponent,
   createComponent,
   createIf,
   createTextNode,
+  defineVaporComponent,
   renderEffect,
   setInsertionState,
   template,
+  txt,
 } from '../src'
-import { makeRender } from './_utils'
-import type { VaporComponentInstance } from '../src/component'
+import { compile, compileToVaporRender, makeRender } from './_utils'
+import { type VaporComponentInstance, currentInstance } from '../src/component'
+import { currentSlotOwner, setCurrentSlotOwner } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
+import {
+  enableSuspense,
+  parentSuspense,
+  setParentSuspense,
+} from '../src/suspense'
 
 const define = makeRender()
 
@@ -59,7 +72,7 @@ describe('component', () => {
   it('should create a component with props', () => {
     const { component: Comp } = define({
       setup() {
-        return template('<div>', true)()
+        return template('<div>', 1)()
       },
     })
 
@@ -72,13 +85,63 @@ describe('component', () => {
     expect(host.innerHTML).toBe('<div id="foo" class="bar"></div>')
   })
 
+  it('should create an asset component', () => {
+    const { component: Child } = define({
+      setup() {
+        return template('<span>child</span>')()
+      },
+    })
+
+    const { host } = define({
+      components: { Child },
+      setup() {
+        return createAssetComponent('Child')
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>child</span>')
+  })
+
+  it('should fallback unresolved component to plain element', () => {
+    const { host } = define({
+      setup() {
+        return createAssetComponent('foo-bar', { id: 'foo' }, null, true)
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<foo-bar id="foo"></foo-bar>')
+    expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
+  })
+
+  it('should pass maybeSelfReference when creating asset component', () => {
+    const { host } = define({
+      props: ['nested'],
+      setup(props: any) {
+        if (props.nested) {
+          return template('<span>self</span>')()
+        }
+        return createAssetComponent(
+          'ImplicitSelf',
+          { nested: true },
+          null,
+          true,
+          undefined,
+          true,
+        )
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<span>self</span>')
+    expect(`Failed to resolve component: ImplicitSelf`).not.toHaveBeenWarned()
+  })
+
   it('should not update Component if only changed props are declared emit listeners', async () => {
     const updatedSyp = vi.fn()
     const { component: Comp } = define({
       emits: ['foo'],
       setup() {
         onUpdated(updatedSyp)
-        return template('<div>', true)()
+        return template('<div>', 1)()
       },
     })
 
@@ -156,6 +219,35 @@ describe('component', () => {
     outer.value++
     await nextTick()
     expect(host.innerHTML).toBe('<div>1</div><div>1</div>')
+  })
+
+  it('events in dynamic props', async () => {
+    const { component: Child } = define({
+      props: ['count'],
+      setup(props: any, { emit }) {
+        emit('update', props.count + 1)
+        const n0 = template('<div></div>')()
+        renderEffect(() => setElementText(n0, props.count))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { host } = define({
+      setup() {
+        const n0 = createComponent(Child, {
+          $: [
+            () => ({
+              count: count.value,
+            }),
+            { onUpdate: () => (val: number) => (count.value = val) },
+          ],
+        })
+        return n0
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>1</div>')
   })
 
   it('child only updates once when triggered in multiple ways', async () => {
@@ -282,7 +374,7 @@ describe('component', () => {
 
     const { host } = define({
       setup() {
-        const n2 = template('<div></div>', true)()
+        const n2 = template('<div></div>', 1)()
         setInsertionState(n2 as any)
         createComponent(Comp)
         return n2
@@ -315,25 +407,231 @@ describe('component', () => {
     expect(getEffectsCount(i.scope)).toBe(0)
   })
 
-  test('should mount component only with template in production mode', () => {
-    __DEV__ = false
-    const { component: Child } = define({
-      render() {
-        return template('<div> HI </div>', true)()
+  it('work with v-once + props', () => {
+    const Child = defineVaporComponent({
+      props: {
+        count: Number,
+      },
+      setup(props) {
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, String(props.count)))
+        return n0
       },
     })
 
-    const { host } = define({
+    const count = ref(0)
+    const { html } = define({
       setup() {
-        return createComponent(Child, null, null, true)
+        return createComponent(
+          Child,
+          { count: () => count.value },
+          null,
+          true,
+          true, // v-once
+        )
       },
     }).render()
 
-    expect(host.innerHTML).toBe('<div> HI </div>')
-    __DEV__ = true
+    expect(html()).toBe('0')
+
+    count.value++
+    expect(html()).toBe('0')
+  })
+
+  it('work with v-once + attrs', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        const attrs = useAttrs()
+        const n0 = template(' ')() as any
+        renderEffect(() => setText(n0, attrs.count as string))
+        return n0
+      },
+    })
+
+    const count = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => count.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('0')
+
+    count.value++
+    expect(html()).toBe('0')
+  })
+
+  it('v-once props should be frozen and not update when parent changes', async () => {
+    const localCount = ref(0)
+    const Child = defineVaporComponent({
+      props: {
+        count: Number,
+      },
+      setup(props) {
+        const n0 = template('<div></div>')() as any
+        renderEffect(() =>
+          setElementText(n0, `${localCount.value} - ${props.count}`),
+        )
+        return n0
+      },
+    })
+
+    const parentCount = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => parentCount.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    parentCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    localCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>1 - 0</div>')
+  })
+
+  it('v-once attrs should be frozen and not update when parent changes', async () => {
+    const localCount = ref(0)
+    const Child = defineVaporComponent({
+      inheritAttrs: false,
+      setup() {
+        const attrs = useAttrs()
+        const n0 = template('<div></div>')() as any
+        renderEffect(() =>
+          setElementText(n0, `${localCount.value} - ${attrs.count}`),
+        )
+        return n0
+      },
+    })
+
+    const parentCount = ref(0)
+    const { html } = define({
+      setup() {
+        return createComponent(
+          Child,
+          { count: () => parentCount.value },
+          null,
+          true,
+          true, // v-once
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    parentCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>0 - 0</div>')
+
+    localCount.value++
+    await nextTick()
+    expect(html()).toBe('<div>1 - 0</div>')
+  })
+
+  test('should mount component only with template in production mode', () => {
+    __DEV__ = false
+    try {
+      const { component: Child } = define({
+        render() {
+          return template('<div> HI </div>', 1)()
+        },
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, null, null, true)
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<div> HI </div>')
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  test('should pass slot args to template-only component render in production mode', () => {
+    __DEV__ = false
+    try {
+      const { component: Child } = define({
+        render: compileToVaporRender(
+          `<span v-if="$slots.default"><slot /></span>`,
+          { bindingMetadata: {} },
+        ),
+      })
+
+      const { host } = define({
+        setup() {
+          return createComponent(Child, null, {
+            default: () => template('<button>slot</button>')(),
+          })
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<span><button>slot</button></span>')
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  it('should treat function rawSlots as default slot', () => {
+    __DEV__ = false
+    try {
+      const { component: Child } = define({
+        render: compileToVaporRender(
+          `<span v-if="$slots.default"><slot /></span>`,
+          { bindingMetadata: {} },
+        ),
+      })
+
+      const { host } = define({
+        components: { Child },
+        setup() {
+          return createAssetComponent(
+            'Child',
+            null,
+            () => template('<button>slot</button>')(),
+            true,
+          )
+        },
+      }).render()
+
+      expect(host.innerHTML).toBe('<span><button>slot</button></span>')
+    } finally {
+      __DEV__ = true
+    }
+  })
+
+  it('should render function rawSlots when asset fallback creates plain element', () => {
+    const { host } = define({
+      setup() {
+        return createAssetComponent('foo-bar', null, () =>
+          template('<span>slot</span>')(),
+        )
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<foo-bar><span>slot</span></foo-bar>')
+    expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
   })
 
   it('warn if functional vapor component not return a block', () => {
+    // @ts-expect-error
     define(() => {
       return () => {}
     }).render()
@@ -353,6 +651,276 @@ describe('component', () => {
     expect(
       'Vapor component setup() returned non-block value, and has no render function',
     ).toHaveBeenWarned()
+  })
+
+  it('warn non-existent property access', () => {
+    define({
+      setup() {
+        return {}
+      },
+      render(ctx: any) {
+        ctx.foo
+        return []
+      },
+    }).render()
+
+    expect(
+      'Property "foo" was accessed during render but is not defined on instance.',
+    ).toHaveBeenWarned()
+  })
+
+  test('display attrs', () => {
+    const App = defineVaporComponent({
+      props: {},
+      emits: [],
+      setup(props, { attrs }) {
+        const n0 = template('<div> ')() as any
+        const x0 = txt(n0) as any
+        renderEffect(() => setText(x0, toDisplayString(attrs)))
+        return n0
+      },
+    })
+    const { render } = define(App)
+    expect(render).not.toThrow(TypeError)
+    expect(
+      'Unhandled error during execution of setup function',
+    ).not.toHaveBeenWarned()
+  })
+
+  it('mounts plain template elements with dynamic descendants', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template>
+          <div>{{ msg }}</div>
+        </template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+
+    const div = templateEl.firstChild as HTMLDivElement
+    expect(div.tagName).toBe('DIV')
+    expect(div.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(div.textContent).toBe('34')
+  })
+
+  it('mounts plain template elements with dynamic text children', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template>
+          {{ msg }}
+        </template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(templateEl.textContent).toBe('34')
+  })
+
+  it('mounts plain template literal interpolation as text', () => {
+    const Comp = compile(
+      `<template>
+        <template>{{ "<b>foo</b>" }}</template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template escaped static text as text', () => {
+    const Comp = compile(
+      `<template>
+        <template>&lt;b&gt;foo&lt;/b&gt;</template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template literal v-text as text', () => {
+    const Comp = compile(
+      `<template>
+        <template v-text="'<b>foo</b>'"></template>
+      </template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(templateEl.textContent).toBe('<b>foo</b>')
+  })
+
+  it('mounts plain template elements with slot content', () => {
+    const data = ref('unused')
+    const Child = compile(
+      `<template>
+        <template><slot /></template>
+      </template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child><div>slot child</div></components.Child></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.firstChild).toBeInstanceOf(HTMLDivElement)
+    expect(templateEl.firstChild!.textContent).toBe('slot child')
+  })
+
+  it('mounts plain template elements with v-html', () => {
+    const msg = ref('<b>foo</b>')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template v-html="msg"></template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.innerHTML.toLowerCase()).toBe('<b>foo</b>')
+    expect(templateEl.content.firstChild).toBeInstanceOf(HTMLElement)
+    expect((templateEl.content.firstChild as HTMLElement).tagName).toBe('B')
+  })
+
+  it('mounts plain template elements with v-text', async () => {
+    const msg = ref('12')
+    const Comp = compile(
+      `<script setup vapor>
+        const msg = _data
+      </script>
+      <template>
+        <template v-text="msg"></template>
+      </template>`,
+      msg,
+    )
+
+    const { host } = define(Comp).render()
+    const templateEl = host.firstChild as HTMLTemplateElement
+    expect(templateEl.tagName).toBe('TEMPLATE')
+    expect(templateEl.textContent).toBe('12')
+
+    msg.value = '34'
+    await nextTick()
+    expect(templateEl.textContent).toBe('34')
+  })
+
+  it('should invalidate pending mounted hooks when unmounted before flush', async () => {
+    const mountedSpy = vi.fn()
+    const show = ref(false)
+
+    const Child = defineVaporComponent({
+      setup() {
+        onBeforeMount(() => {
+          show.value = false
+        })
+        onMounted(mountedSpy)
+        return template('<div>child</div>')()
+      },
+    })
+
+    define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => createComponent(Child),
+        )
+      },
+    }).render()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+
+    show.value = true
+    await nextTick()
+
+    expect(mountedSpy).toHaveBeenCalledTimes(0)
+  })
+
+  it('should restore component context when child setup throws', () => {
+    enableSuspense()
+
+    const err = new Error('setup boom')
+    const owner = { type: {} } as VaporComponentInstance
+    const previousSuspense = { pendingId: 1 } as SuspenseBoundary
+    const activeSuspense = { pendingId: 2 } as SuspenseBoundary
+    let caught: unknown
+    let ownerAfterThrow: VaporComponentInstance | null = null
+    let suspenseAfterThrow: SuspenseBoundary | null = null
+
+    const { component: Child } = define({
+      setup() {
+        throw err
+      },
+    })
+
+    define({
+      setup() {
+        const instance = currentInstance as VaporComponentInstance
+        instance.suspense = activeSuspense
+
+        const prevOwner = setCurrentSlotOwner(owner)
+        const prevSuspense = setParentSuspense(previousSuspense)
+        try {
+          createComponent(Child)
+        } catch (e) {
+          caught = e
+        }
+        ownerAfterThrow = currentSlotOwner
+        suspenseAfterThrow = parentSuspense
+        setCurrentSlotOwner(prevOwner)
+        setParentSuspense(prevSuspense)
+        return []
+      },
+    }).render()
+
+    expect(
+      `Unhandled error during execution of setup function`,
+    ).toHaveBeenWarned()
+    expect(caught).toBe(err)
+    expect(ownerAfterThrow).toBe(owner)
+    expect(suspenseAfterThrow).toBe(previousSuspense)
   })
 })
 

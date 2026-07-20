@@ -19,14 +19,16 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
 import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 import {
   type ComponentOptions,
   type Data,
   getComponentPublicInstance,
 } from './component'
-import { knownTemplateRefs } from './helpers/useTemplateRef'
+import { isTemplateRefKey, knownTemplateRefs } from './helpers/useTemplateRef'
 
+const pendingSetRefMap = new WeakMap<VNodeNormalizedRef, SchedulerJob>()
 /**
  * Function for handling a template ref
  */
@@ -83,26 +85,32 @@ export function setRef(
   const oldRef = oldRawRef && (oldRawRef as VNodeNormalizedRefAtom).r
   const refs = owner.refs === EMPTY_OBJ ? (owner.refs = {}) : owner.refs
   const setupState = owner.setupState
-  const canSetSetupRef = createCanSetSetupRefChecker(setupState)
+  const canSetSetupRef = createCanSetSetupRefChecker(setupState, refs)
 
-  const canSetRef = (ref: VNodeRef) => {
-    return !__DEV__ || !knownTemplateRefs.has(ref as any)
+  const canSetRef = (ref: VNodeRef, key?: string) => {
+    if (__DEV__ && knownTemplateRefs.has(ref as any)) {
+      return false
+    }
+    if (key && isTemplateRefKey(refs, key)) {
+      return false
+    }
+    return true
   }
 
   // dynamic ref changed. unset old ref
   if (oldRef != null && oldRef !== ref) {
+    invalidatePendingSetRef(oldRawRef!)
     if (isString(oldRef)) {
       refs[oldRef] = null
       if (canSetSetupRef(oldRef)) {
         setupState[oldRef] = null
       }
     } else if (isRef(oldRef)) {
-      if (canSetRef(oldRef)) {
-        oldRef.value = null
-      }
-
       // this type assertion is valid since `oldRef` has already been asserted to be non-null
       const oldRawRefAtom = oldRawRef as VNodeNormalizedRefAtom
+      if (canSetRef(oldRef, oldRawRefAtom.k)) {
+        oldRef.value = null
+      }
       if (oldRawRefAtom.k) refs[oldRawRefAtom.k] = null
     }
   }
@@ -134,7 +142,7 @@ export function setRef(
                 }
               } else {
                 const newVal = [refValue]
-                if (canSetRef(ref)) {
+                if (canSetRef(ref, rawRef.k)) {
                   ref.value = newVal
                 }
                 if (rawRef.k) refs[rawRef.k] = newVal
@@ -149,7 +157,7 @@ export function setRef(
             setupState[ref] = value
           }
         } else if (_isRef) {
-          if (canSetRef(ref)) {
+          if (canSetRef(ref, rawRef.k)) {
             ref.value = value
           }
           if (rawRef.k) refs[rawRef.k] = value
@@ -161,8 +169,14 @@ export function setRef(
         // #1789: for non-null values, set them after render
         // null values means this is unmount and it should not overwrite another
         // ref with the same key
-        queuePostRenderEffect(doSet, -1, parentSuspense)
+        const job: SchedulerJob = () => {
+          doSet()
+          pendingSetRefMap.delete(rawRef)
+        }
+        pendingSetRefMap.set(rawRef, job)
+        queuePostRenderEffect(job, -1, parentSuspense)
       } else {
+        invalidatePendingSetRef(rawRef)
         doSet()
       }
     } else if (__DEV__) {
@@ -173,9 +187,10 @@ export function setRef(
 
 export function createCanSetSetupRefChecker(
   setupState: Data,
+  refs: Data,
 ): (key: string) => boolean {
   const rawSetupState = toRaw(setupState)
-  return setupState === EMPTY_OBJ
+  return setupState === undefined || setupState === EMPTY_OBJ
     ? NO
     : (key: string) => {
         if (__DEV__) {
@@ -190,6 +205,20 @@ export function createCanSetSetupRefChecker(
             return false
           }
         }
+
+        // skip setting up ref if the key is from useTemplateRef
+        if (isTemplateRefKey(refs, key)) {
+          return false
+        }
+
         return hasOwn(rawSetupState, key)
       }
+}
+
+function invalidatePendingSetRef(rawRef: VNodeNormalizedRef) {
+  const pendingSetRef = pendingSetRefMap.get(rawRef)
+  if (pendingSetRef) {
+    pendingSetRef.flags! |= SchedulerJobFlags.DISPOSED
+    pendingSetRefMap.delete(rawRef)
+  }
 }

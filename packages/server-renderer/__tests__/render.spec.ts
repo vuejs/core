@@ -10,9 +10,12 @@ import {
   createTextVNode,
   createVNode,
   defineComponent,
+  effectScope,
   getCurrentInstance,
   h,
+  nextTick,
   onErrorCaptured,
+  onScopeDispose,
   onServerPrefetch,
   reactive,
   ref,
@@ -228,6 +231,17 @@ function testRender(type: string, render: typeof renderToString) {
             }),
           ),
         ).toBe(`<div>parent<div>hello</div></div>`)
+      })
+
+      test('renders unresolved tag fallback as plain element', async () => {
+        const html = await render(
+          createApp({
+            template: `<center><span>foo</span></center>`,
+          }),
+        )
+
+        expect(html).toBe(`<center><span>foo</span></center>`)
+        expect(`Failed to resolve component: center`).toHaveBeenWarned()
       })
 
       test('nested template components', async () => {
@@ -728,9 +742,12 @@ function testRender(type: string, render: typeof renderToString) {
               createCommentVNode('->foo'),
               createCommentVNode('<!--foo-->'),
               createCommentVNode('--!>foo<!-'),
+              createCommentVNode('--<!--><img src=x onerror=alert(1)>'),
             ]),
           ),
-        ).toBe(`<div><!--foo--><!--foo--><!--foo--><!--foo--></div>`)
+        ).toBe(
+          `<div><!--foo--><!--foo--><!--foo--><!--foo--><!--<img src=x onerror=alert(1)>--></div>`,
+        )
       })
 
       test('Static', async () => {
@@ -819,6 +836,9 @@ function testRender(type: string, render: typeof renderToString) {
           )
         } catch {}
         expect(getCurrentInstance()).toBe(prev)
+        expect(
+          '[Vue warn]: Unhandled error during execution of render function',
+        ).toHaveBeenWarned()
       })
 
       // #7733
@@ -1000,6 +1020,84 @@ function testRender(type: string, render: typeof renderToString) {
       })
       const html = await render(app)
       expect(html).toBe(`<div>hello</div>`)
+    })
+
+    test('cleans up component effect scopes after each render', async () => {
+      const cleanups: number[] = []
+      const app = createApp({
+        setup() {
+          onScopeDispose(() => {
+            cleanups.push(1)
+          })
+          return () => h('div', 'ok')
+        },
+      })
+
+      expect(cleanups).toEqual([])
+      expect(await render(app)).toBe(`<div>ok</div>`)
+      expect(cleanups).toEqual([1])
+    })
+
+    test('concurrent renders isolate scope cleanup ownership', async () => {
+      const cleaned: string[] = []
+
+      const deferred = () => {
+        let resolve!: () => void
+        const promise = new Promise<void>(r => {
+          resolve = r
+        })
+        return { promise, resolve }
+      }
+
+      const gateA = deferred()
+      const gateB = deferred()
+
+      const makeApp = (id: string, gate: ReturnType<typeof deferred>) =>
+        createApp({
+          async setup() {
+            onScopeDispose(() => {
+              cleaned.push(id)
+            })
+            await gate.promise
+            return () => h('div', id)
+          },
+        })
+
+      const pA = render(makeApp('A', gateA))
+      const pB = render(makeApp('B', gateB))
+
+      gateB.resolve()
+      expect(await pB).toBe(`<div>B</div>`)
+      expect(cleaned).toEqual(['B'])
+
+      gateA.resolve()
+      expect(await pA).toBe(`<div>A</div>`)
+      expect(cleaned.sort()).toEqual(['A', 'B'])
+    })
+
+    test('detached scopes created during SSR are not auto-stopped', async () => {
+      let detachedStopped = false
+      let detached: any
+
+      const app = createApp({
+        setup() {
+          detached = effectScope(true)
+          detached.run(() => {
+            onScopeDispose(() => {
+              detachedStopped = true
+            })
+          })
+          return () => h('div', 'detached')
+        },
+      })
+
+      expect(await render(app)).toBe(`<div>detached</div>`)
+      expect(detached.active).toBe(true)
+      expect(detachedStopped).toBe(false)
+
+      detached.stop()
+      expect(detached.active).toBe(false)
+      expect(detachedStopped).toBe(true)
     })
 
     test('multiple onServerPrefetch', async () => {
@@ -1188,6 +1286,40 @@ function testRender(type: string, render: typeof renderToString) {
       expect((capturedError as unknown as Error).message).toBe('An error')
     })
 
+    test('async setup throwing error', async () => {
+      const capturedError: string[] = []
+
+      const Child = {
+        async setup() {
+          await nextTick()
+          throw new Error('An error')
+          return { foo: { bar: 1 } }
+        },
+        template: `<span>{{ foo.bar }}</span>`,
+      }
+
+      const app = createApp({
+        components: { Child },
+        setup() {
+          onErrorCaptured(e => {
+            capturedError.push(e.message)
+            return false
+          })
+        },
+        template: `<Suspense><Child /></Suspense>`,
+      })
+
+      expect(await render(app)).toBe('')
+      expect(capturedError.length).toBe(2)
+      expect(capturedError).toStrictEqual([
+        'An error',
+        "Cannot read properties of undefined (reading 'bar')",
+      ])
+      expect(
+        '[Vue warn]: Property "foo" was accessed during render but is not defined on instance',
+      ).toHaveBeenWarned()
+    })
+
     test('computed reactivity during SSR with onServerPrefetch', async () => {
       const store = {
         // initial state could be hydrated
@@ -1228,6 +1360,24 @@ function testRender(type: string, render: typeof renderToString) {
       // should only be called twice since access should be cached
       // during the render phase
       expect(getterSpy).toHaveBeenCalledTimes(2)
+    })
+
+    test('props modifiers in render attrs', async () => {
+      const app = createApp({
+        setup() {
+          return () =>
+            h(
+              'div',
+              {
+                '^attr': 'attr',
+                '.prop': 'prop',
+              },
+              'Functional Component',
+            )
+        },
+      })
+      const html = await render(app)
+      expect(html).toBe(`<div attr="attr">Functional Component</div>`)
     })
   })
 }

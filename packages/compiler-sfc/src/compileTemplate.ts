@@ -22,6 +22,7 @@ import {
   createSrcsetTransformWithOptions,
   transformSrcset,
 } from './template/transformSrcset'
+import { isMultiRoot } from './template/templateUtils'
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerVapor from '@vue/compiler-vapor'
@@ -42,6 +43,7 @@ export interface SFCTemplateCompileResults {
   code: string
   ast?: unknown
   preamble?: string
+  multiRoot?: boolean
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
@@ -253,6 +255,12 @@ function doCompileTemplate({
       slotted,
       sourceMap: true,
       ...compilerOptions,
+      // Template-only vapor SFCs have no script analysis, but compiler-vapor
+      // still needs bindingMetadata to keep built-in render args like $slots.
+      bindingMetadata:
+        vapor && !ssr && compilerOptions.bindingMetadata == null
+          ? {}
+          : compilerOptions.bindingMetadata,
       hmr: !isProd,
       nodeTransforms: nodeTransforms.concat(
         compilerOptions.nodeTransforms || [],
@@ -291,6 +299,9 @@ function doCompileTemplate({
     code,
     ast,
     preamble,
+    multiRoot: vapor
+      ? isMultiRoot(inAST || source, compilerOptions)
+      : undefined,
     source,
     errors,
     tips,

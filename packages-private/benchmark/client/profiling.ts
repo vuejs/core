@@ -1,7 +1,5 @@
-/* eslint-disable no-console */
-/* eslint-disable no-restricted-syntax */
-/* eslint-disable no-restricted-globals */
-
+/* oxlint-disable no-console */
+/* oxlint-disable no-restricted-globals */
 import { nextTick } from 'vue'
 
 declare global {

@@ -19,6 +19,7 @@ import type {
 import { type Directive, validateDirectiveName } from './directives'
 import type {
   ElementNamespace,
+  MoveType,
   RootRenderFunction,
   UnmountComponentFn,
 } from './renderer'
@@ -27,7 +28,7 @@ import { warn } from './warning'
 import type { VNode } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
-import { version } from '.'
+import { type SuspenseBoundary, type TransitionHooks, version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
 import type { ObjectEmitsOptions } from './componentEmits'
@@ -55,7 +56,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
   ): Directive<HostElement, Value, Modifiers, Arg> | undefined
@@ -63,7 +64,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
     directive: Directive<HostElement, Value, Modifiers, Arg>,
@@ -110,6 +111,11 @@ export interface App<HostElement = any> {
    * @internal custom element vnode
    */
   _ceVNode?: VNode
+
+  /**
+   * @internal vapor custom element instance
+   */
+  _ceComponent?: GenericComponentInstance | null
 
   /**
    * v2 compat only
@@ -175,7 +181,6 @@ export interface AppConfig extends GenericAppConfig {
 
 /**
  * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
- * @internal
  */
 export interface VaporInteropInterface {
   mount(
@@ -183,13 +188,62 @@ export interface VaporInteropInterface {
     container: any,
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    onBeforeMount?: () => void,
+    onVnodeBeforeMount?: () => void,
   ): GenericComponentInstance // VaporComponentInstance
-  update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
+  update(
+    n1: VNode,
+    n2: VNode,
+    shouldUpdate: boolean,
+    onBeforeUpdate?: () => void,
+    onVnodeBeforeUpdate?: () => void,
+  ): void
   unmount(vnode: VNode, doRemove?: boolean): void
-  move(vnode: VNode, container: any, anchor: any): void
-  slot(n1: VNode | null, n2: VNode, container: any, anchor: any): void
+  move(vnode: VNode, container: any, anchor: any, moveType: MoveType): void
+  slot(
+    n1: VNode | null,
+    n2: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+  ): void
+  hydrate(
+    vnode: VNode,
+    node: any,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    onBeforeMount?: () => void,
+    onVnodeBeforeMount?: () => void,
+  ): Node
+  hydrateSlot(
+    vnode: VNode,
+    node: any,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+  ): Node
+  activate(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    parentComponent: ComponentInternalInstance,
+  ): void
+  deactivate(vnode: VNode, container: any): void
+  setTransitionHooks(
+    component: ComponentInternalInstance,
+    transition: TransitionHooks,
+  ): void
 
-  vdomMount: (component: ConcreteComponent, props?: any, slots?: any) => any
+  vdomMount: (
+    component: ConcreteComponent,
+    parentComponent: any,
+    props?: any,
+    slots?: any,
+    once?: boolean,
+  ) => any
   vdomUnmount: UnmountComponentFn
   vdomSlot: (
     slots: any,
@@ -197,6 +251,12 @@ export interface VaporInteropInterface {
     props: Record<string, any>,
     parentComponent: any, // VaporComponentInstance
     fallback?: any, // VaporSlot
+    once?: boolean,
+    slotRoot?: boolean,
+  ) => any
+  vdomMountVNode: (
+    vnode: VNode,
+    parentComponent: any, // VaporComponentInstance
   ) => any
 }
 

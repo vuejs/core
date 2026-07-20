@@ -77,12 +77,15 @@ export type StructuralDirectiveTransform = (
 ) => void | (() => void)
 
 export interface ImportItem {
-  exp: string | ExpressionNode
+  exp: SimpleExpressionNode
   path: string
 }
 
+type IdentifierScopeType = 'local' | 'slot'
+
 export interface TransformContext
-  extends Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
+  extends
+    Required<Omit<TransformOptions, keyof CompilerCompatOptions>>,
     CompilerCompatOptions {
   selfName: string | null
   root: RootNode
@@ -94,6 +97,7 @@ export interface TransformContext
   temps: number
   cached: (CacheExpression | null)[]
   identifiers: { [name: string]: number | undefined }
+  identifierScopes: { [name: string]: IdentifierScopeType[] | undefined }
   scopes: {
     vFor: number
     vSlot: number
@@ -113,11 +117,13 @@ export interface TransformContext
   replaceNode(node: TemplateChildNode): void
   removeNode(node?: TemplateChildNode): void
   onNodeRemoved(): void
-  addIdentifiers(exp: ExpressionNode | string): void
+  addIdentifiers(exp: ExpressionNode | string, type?: IdentifierScopeType): void
   removeIdentifiers(exp: ExpressionNode | string): void
+  isSlotScopeIdentifier(name: string): boolean
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
   cache(exp: JSChildNode, isVNode?: boolean, inVOnce?: boolean): CacheExpression
   constantCache: WeakMap<TemplateChildNode, ConstantTypes>
+  vForMemoKeyedNodes: WeakSet<ElementNode>
 
   // 2.x Compat only
   filters?: Set<string>
@@ -150,6 +156,7 @@ export function createTransformContext(
     bindingMetadata = EMPTY_OBJ,
     inline = false,
     isTS = false,
+    eventDelegation = true,
     onError = defaultOnError,
     onWarn = defaultOnWarn,
     compatConfig,
@@ -177,6 +184,7 @@ export function createTransformContext(
     bindingMetadata,
     inline,
     isTS,
+    eventDelegation,
     onError,
     onWarn,
     compatConfig,
@@ -190,8 +198,10 @@ export function createTransformContext(
     imports: [],
     cached: [],
     constantCache: new WeakMap(),
+    vForMemoKeyedNodes: new WeakSet(),
     temps: 0,
     identifiers: Object.create(null),
+    identifierScopes: Object.create(null),
     scopes: {
       vFor: 0,
       vSlot: 0,
@@ -266,15 +276,15 @@ export function createTransformContext(
       context.parent!.children.splice(removalIndex, 1)
     },
     onNodeRemoved: NOOP,
-    addIdentifiers(exp) {
+    addIdentifiers(exp, type = 'local') {
       // identifier tracking only happens in non-browser builds.
       if (!__BROWSER__) {
         if (isString(exp)) {
-          addId(exp)
+          addId(exp, type)
         } else if (exp.identifiers) {
-          exp.identifiers.forEach(addId)
+          exp.identifiers.forEach(id => addId(id, type))
         } else if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-          addId(exp.content)
+          addId(exp.content, type)
         }
       }
     },
@@ -288,6 +298,10 @@ export function createTransformContext(
           removeId(exp.content)
         }
       }
+    },
+    isSlotScopeIdentifier(name) {
+      const scopes = context.identifierScopes[name]
+      return scopes ? scopes[scopes.length - 1] === 'slot' : false
     },
     hoist(exp) {
       if (isString(exp)) exp = createSimpleExpression(exp)
@@ -317,16 +331,21 @@ export function createTransformContext(
     context.filters = new Set()
   }
 
-  function addId(id: string) {
-    const { identifiers } = context
+  function addId(id: string, type: IdentifierScopeType) {
+    const { identifiers, identifierScopes } = context
     if (identifiers[id] === undefined) {
       identifiers[id] = 0
     }
     identifiers[id]!++
+    ;(identifierScopes[id] || (identifierScopes[id] = [])).push(type)
   }
 
   function removeId(id: string) {
     context.identifiers[id]!--
+    const scopes = context.identifierScopes[id]
+    if (scopes) {
+      scopes.pop()
+    }
   }
 
   return context

@@ -73,6 +73,17 @@ export class EffectScope implements ReactiveNode {
       return
     }
     this.flags = EffectFlags.STOP
+    this.reset()
+    const sub = this.subs
+    if (sub !== undefined) {
+      unlink(sub)
+    }
+  }
+
+  /**
+   * @internal
+   */
+  reset(): void {
     let dep = this.deps
     while (dep !== undefined) {
       const node = dep.dep
@@ -82,10 +93,6 @@ export class EffectScope implements ReactiveNode {
       } else {
         dep = unlink(dep, this)
       }
-    }
-    const sub = this.subs
-    if (sub !== undefined) {
-      unlink(sub)
     }
     cleanup(this)
   }

@@ -1,7 +1,9 @@
 import { EffectFlags, type EffectScope, ReactiveEffect } from '@vue/reactivity'
 import {
   type SchedulerJob,
+  SchedulerJobFlags,
   currentInstance,
+  endMeasure,
   queueJob,
   queuePostFlushCb,
   setCurrentInstance,
@@ -9,16 +11,22 @@ import {
   warn,
 } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
+import { inOnceSlot } from './componentSlots'
 import { invokeArrayFns } from '@vue/shared'
 
-class RenderEffect extends ReactiveEffect {
+export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
   job: SchedulerJob
-  updateJob: SchedulerJob
+  updateJob?: SchedulerJob
+  render: () => void
+  // Creation order within the owning component.
+  order: number
 
-  constructor(public render: () => void) {
-    super()
+  constructor(render: () => void, noLifecycle = false) {
+    super(noLifecycle ? render : undefined)
+    this.render = render
     const instance = currentInstance as VaporComponentInstance | null
+    this.order = instance ? instance.effectCount++ : 0
     if (__DEV__ && !__TEST__ && !this.subs && !isVaporComponent(instance)) {
       warn('renderEffect called without active EffectScope or Vapor instance.')
     }
@@ -28,13 +36,9 @@ class RenderEffect extends ReactiveEffect {
         this.run()
       }
     }
-    this.updateJob = () => {
-      instance!.isUpdating = false
-      instance!.u && invokeArrayFns(instance!.u)
-    }
 
     if (instance) {
-      if (__DEV__) {
+      if (__DEV__ && !noLifecycle) {
         this.onTrack = instance.rtc
           ? e => invokeArrayFns(instance.rtc!, e)
           : void 0
@@ -42,13 +46,22 @@ class RenderEffect extends ReactiveEffect {
           ? e => invokeArrayFns(instance.rtg!, e)
           : void 0
       }
+
+      // register effect for HMR rerender cleanup
+      if (__DEV__) {
+        ;(instance.renderEffects ||= []).push(this)
+      }
       job.i = instance
     }
 
     this.job = job
     this.i = instance
 
-    // TODO recurse handling
+    // Allow self re-queue when render/hook logic mutates reactive state.
+    // Safe in Vapor because updates are always async via queueJob(), and
+    // isUpdating prevents duplicate bu/u hooks on re-entry.
+    this.flags |= EffectFlags.ALLOW_RECURSE
+    this.job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
   }
 
   fn(): void {
@@ -60,32 +73,48 @@ class RenderEffect extends ReactiveEffect {
       startMeasure(instance, `renderEffect`)
     }
     const prev = setCurrentInstance(instance, scope)
-    if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
-      instance.isUpdating = true
-      instance.bu && invokeArrayFns(instance.bu)
-      this.render()
-      queuePostFlushCb(this.updateJob)
-    } else {
-      this.render()
-    }
-    setCurrentInstance(...prev)
-    if (__DEV__ && instance) {
-      startMeasure(instance, `renderEffect`)
+    try {
+      if (hasUpdateHooks && instance.isMounted && !instance.isUpdating) {
+        // avoid recurse update until updateJob flushed
+        instance.isUpdating = true
+        try {
+          instance.bu && invokeArrayFns(instance.bu)
+          this.render()
+        } catch (err) {
+          instance.isUpdating = false
+          throw err
+        }
+        let updateJob = this.updateJob
+        if (!updateJob) {
+          updateJob = this.updateJob = () => {
+            instance.isUpdating = false
+            instance.u && invokeArrayFns(instance.u)
+          }
+        }
+        queuePostFlushCb(updateJob)
+      } else {
+        this.render()
+      }
+    } finally {
+      setCurrentInstance(...prev)
+      if (__DEV__ && instance) {
+        endMeasure(instance, `renderEffect`)
+      }
     }
   }
 
   notify(): void {
     const flags = this.flags
     if (!(flags & EffectFlags.PAUSED)) {
-      queueJob(this.job, this.i ? this.i.uid : undefined)
+      queueJob(this.job, this.i ? this.i.uid : undefined, false, this.order)
     }
   }
 }
 
 export function renderEffect(fn: () => void, noLifecycle = false): void {
-  const effect = new RenderEffect(fn)
-  if (noLifecycle) {
-    effect.fn = fn
-  }
+  // in once slot, just run the function directly
+  if (inOnceSlot) return fn()
+
+  const effect = new RenderEffect(fn, noLifecycle)
   effect.run()
 }

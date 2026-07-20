@@ -3,6 +3,7 @@ import {
   type Component,
   type ComponentInternalInstance,
   type DirectiveBinding,
+  ErrorCodes,
   Fragment,
   type FunctionalComponent,
   Static,
@@ -10,15 +11,18 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
+  handleError,
   mergeProps,
+  ssrContextKey,
   ssrUtils,
   warn,
-} from 'vue'
+} from '@vue/runtime-dom'
 import {
   NOOP,
   ShapeFlags,
   escapeHtml,
   escapeHtmlComment,
+  hasOwn,
   isArray,
   isFunction,
   isPromise,
@@ -55,6 +59,37 @@ export type SSRContext = {
    * @internal
    */
   __watcherHandles?: (() => void)[]
+  /**
+   * @internal
+   */
+  __instanceScopes?: { stop: () => void }[]
+}
+
+export function cleanupContext(context: SSRContext): void {
+  let firstError: unknown
+  if (context.__watcherHandles) {
+    for (const unwatch of context.__watcherHandles) {
+      try {
+        unwatch()
+      } catch (err) {
+        if (firstError === undefined) firstError = err
+      }
+    }
+    context.__watcherHandles.length = 0
+  }
+  if (context.__instanceScopes) {
+    for (const scope of context.__instanceScopes) {
+      try {
+        scope.stop()
+      } catch (err) {
+        if (firstError === undefined) firstError = err
+      }
+    }
+    context.__instanceScopes.length = 0
+  }
+  if (firstError !== undefined) {
+    throw firstError
+  }
 }
 
 // Each component has a buffer array.
@@ -98,6 +133,14 @@ export function renderComponentVNode(
     parentComponent,
     null,
   ))
+  const context = instance.appContext.provides[ssrContextKey as any] as
+    | SSRContext
+    | undefined
+  if (context) {
+    ;(context.__instanceScopes || (context.__instanceScopes = [])).push(
+      instance.scope,
+    )
+  }
   if (__DEV__) pushWarningContext(vnode)
   const res = setupComponent(instance, true /* isSSR */)
   if (__DEV__) popWarningContext()
@@ -118,7 +161,13 @@ export function renderComponentVNode(
       .catch(NOOP)
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {
-    return renderComponentSubTree(instance, slotScopeId)
+    try {
+      return renderComponentSubTree(instance, slotScopeId)
+    } catch (err) {
+      // let the SSR buffer propagate the error so parent render functions
+      // don't handle the same error again
+      return Promise.reject(err)
+    }
   }
 }
 
@@ -200,6 +249,8 @@ function renderComponentSubTree(
           instance.data,
           instance.ctx,
         )
+      } catch (err) {
+        handleError(err, instance, ErrorCodes.RENDER_FUNCTION)
       } finally {
         setCurrentRenderingInstance(prev)
       }
@@ -303,8 +354,20 @@ function renderElementVNode(
     openTag += ssrRenderAttrs(props, tag)
   }
 
+  const renderedScopeIds: string[] = []
+  const appendScopeId = (id: string) => {
+    if (
+      id &&
+      (!props || !hasOwn(props, id)) &&
+      !renderedScopeIds.includes(id)
+    ) {
+      openTag += ` ${id}`
+      renderedScopeIds.push(id)
+    }
+  }
+
   if (scopeId) {
-    openTag += ` ${scopeId}`
+    appendScopeId(scopeId)
   }
   // inherit parent chain scope id if this is the root node
   let curParent: ComponentInternalInstance | null = parentComponent
@@ -312,12 +375,15 @@ function renderElementVNode(
   while (curParent && curVnode === curParent.subTree) {
     curVnode = curParent.vnode
     if (curVnode.scopeId) {
-      openTag += ` ${curVnode.scopeId}`
+      appendScopeId(curVnode.scopeId)
     }
     curParent = curParent.parent as ComponentInternalInstance
   }
   if (slotScopeId) {
-    openTag += ` ${slotScopeId}`
+    const slotScopeIdList = slotScopeId.trim().split(' ')
+    for (let i = 0; i < slotScopeIdList.length; i++) {
+      appendScopeId(slotScopeIdList[i])
+    }
   }
 
   push(openTag + `>`)

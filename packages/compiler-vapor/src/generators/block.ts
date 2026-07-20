@@ -1,4 +1,14 @@
-import type { BlockIRNode, CoreHelper } from '../ir'
+import type {
+  BlockIRNode,
+  CoreHelper,
+  CreateComponentIRNode,
+  ForIRNode,
+  IRDynamicInfo,
+  IRSlots,
+  IfIRNode,
+  OperationNode,
+} from '../ir'
+import { IRNodeTypes, IRSlotType, isBlockOperation } from '../ir'
 import {
   type CodeFragment,
   DELIMITERS_ARRAY,
@@ -10,7 +20,11 @@ import {
   genMulti,
 } from './utils'
 import type { CodegenContext } from '../generate'
-import { genEffects, genOperations } from './operation'
+import {
+  genEffects,
+  genOperationWithInsertionState,
+  genOperations,
+} from './operation'
 import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
 
@@ -37,13 +51,28 @@ export function genBlockContent(
   context: CodegenContext,
   root?: boolean,
   genEffectsExtraFrag?: () => CodeFragment[],
+  skippedEffectIndexes?: Set<number>,
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   const { dynamic, effect, operation, returns } = block
   const resetBlock = context.enterBlock(block)
+  const singleUseAssetComponentNames = root
+    ? collectSingleUseAssetComponents(block)
+    : undefined
+  const prevSingleUseAssetComponentNames = context.singleUseAssetComponentNames
+
+  if (singleUseAssetComponentNames) {
+    context.singleUseAssetComponentNames = singleUseAssetComponentNames
+  }
 
   if (root) {
     for (let name of context.ir.component) {
+      if (
+        singleUseAssetComponentNames &&
+        singleUseAssetComponentNames.has(name)
+      ) {
+        continue
+      }
       const id = toValidAssetId(name, 'component')
       const maybeSelfReference = name.endsWith('__self')
       if (maybeSelfReference) name = name.slice(0, -6)
@@ -61,17 +90,70 @@ export function genBlockContent(
     genResolveAssets('directive', 'resolveDirective')
   }
 
-  for (const child of dynamic.children) {
-    push(...genSelf(child, context))
+  let operationIndex = 0
+  let effectIndex = 0
+  const flushPendingOperations = (
+    operationEnd: number,
+    effectEnd: number,
+    push: (...items: CodeFragment[]) => number,
+  ) => {
+    while (operationIndex < operationEnd) {
+      push(
+        ...genOperationWithInsertionState(operation[operationIndex], context),
+      )
+      operationIndex++
+    }
+
+    if (effectIndex < effectEnd) {
+      push(...genEffectRange(effectIndex, effectEnd))
+      effectIndex = effectEnd
+    }
   }
-  for (const child of dynamic.children) {
-    if (!child.hasDynamicChild) {
-      push(...genChildren(child, context, push, `n${child.id!}`))
+  const flushBeforeDynamic = (
+    dynamic: IRDynamicInfo,
+    push: (...items: CodeFragment[]) => number,
+  ) => {
+    const operation = dynamic.operation
+    if (
+      operation &&
+      isBlockOperation(operation) &&
+      operation.operationIndex !== undefined &&
+      operation.effectIndex !== undefined
+    ) {
+      flushPendingOperations(
+        operation.operationIndex,
+        operation.effectIndex,
+        push,
+      )
     }
   }
 
-  push(...genOperations(operation, context))
-  push(...genEffects(effect, context, genEffectsExtraFrag))
+  for (const child of dynamic.children) {
+    flushBeforeDynamic(child, push)
+    push(...genSelf(child, context, flushBeforeDynamic))
+  }
+  for (const child of dynamic.children) {
+    if (!child.hasDynamicChild) {
+      push(
+        ...genChildren(
+          child,
+          context,
+          push,
+          `n${child.id!}`,
+          flushBeforeDynamic,
+        ),
+      )
+    }
+  }
+
+  if (operationIndex < operation.length) {
+    push(...genOperations(operation.slice(operationIndex), context))
+  }
+  if (effectIndex < effect.length) {
+    push(...genEffectRange(effectIndex, effect.length, genEffectsExtraFrag))
+  } else if (genEffectsExtraFrag) {
+    push(...genEffects([], context, genEffectsExtraFrag))
+  }
 
   push(NEWLINE, `return `)
 
@@ -79,11 +161,34 @@ export function genBlockContent(
   const returnsCode: CodeFragment[] =
     returnNodes.length > 1
       ? genMulti(DELIMITERS_ARRAY, ...returnNodes)
-      : [returnNodes[0] || 'null']
+      : [returnNodes[0] || '[]']
   push(...returnsCode)
 
   resetBlock()
+  context.singleUseAssetComponentNames = prevSingleUseAssetComponentNames
   return frag
+
+  function genEffectRange(
+    start: number,
+    end: number,
+    genExtraFrag?: () => CodeFragment[],
+  ): CodeFragment[] {
+    if (!skippedEffectIndexes) {
+      return genEffects(effect.slice(start, end), context, genExtraFrag)
+    }
+
+    const effects: typeof effect = []
+    for (let i = start; i < end; i++) {
+      if (!skippedEffectIndexes.has(i)) {
+        effects.push(effect[i])
+      }
+    }
+
+    if (effects.length || genExtraFrag) {
+      return genEffects(effects, context, genExtraFrag)
+    }
+    return []
+  }
 
   function genResolveAssets(
     kind: 'component' | 'directive',
@@ -95,6 +200,178 @@ export function genBlockContent(
         `const ${toValidAssetId(name, kind)} = `,
         ...genCall(context.helper(helper), JSON.stringify(name)),
       )
+    }
+  }
+}
+
+export function markSlotRootOperations(block: BlockIRNode): void {
+  for (let i = 0; i < block.returns.length; i++) {
+    const child = findReturnedDynamic(block, block.returns[i])
+    const operation = child && child.operation
+    if (!operation) continue
+
+    if (operation.type === IRNodeTypes.IF) {
+      markSlotRootIf(operation)
+    } else if (operation.type === IRNodeTypes.FOR) {
+      markSlotRootFor(operation)
+    } else if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
+      markSlotRootComponent(operation)
+    }
+  }
+}
+
+function markSlotRootIf(operation: IfIRNode): void {
+  if (!operation.once) {
+    operation.slotRoot = true
+  }
+  markSlotRootOperations(operation.positive)
+
+  const negative = operation.negative
+  if (!negative) return
+  if (negative.type === IRNodeTypes.IF) {
+    markSlotRootIf(negative)
+  } else {
+    markSlotRootOperations(negative)
+  }
+}
+
+function markSlotRootFor(operation: ForIRNode): void {
+  if (!operation.once) {
+    operation.slotRoot = true
+  }
+  markSlotRootOperations(operation.render)
+}
+
+function markSlotRootComponent(operation: CreateComponentIRNode): void {
+  if (!operation.once && operation.dynamic && !operation.dynamic.isStatic) {
+    operation.slotRoot = true
+  }
+}
+
+export function findReturnedDynamic(
+  block: BlockIRNode,
+  id: number,
+): IRDynamicInfo | undefined {
+  for (let i = 0; i < block.dynamic.children.length; i++) {
+    const child = block.dynamic.children[i]
+    if (child.id === id) return child
+  }
+}
+
+interface AssetComponentUsage {
+  count: number
+  root: boolean
+}
+
+function collectSingleUseAssetComponents(block: BlockIRNode): Set<string> {
+  const usageMap = new Map<string, AssetComponentUsage>()
+  const seenOperations = new Set<OperationNode>()
+
+  // createAssetComponent is only emitted from the root block. Nested blocks,
+  // including component slots, still need the hoisted resolveComponent binding.
+  visitBlock(block, true)
+
+  const names = new Set<string>()
+
+  for (const [name, usage] of usageMap) {
+    if (usage.count === 1 && usage.root) {
+      names.add(name)
+    }
+  }
+
+  return names
+
+  function visitBlock(block: BlockIRNode, rootCandidate: boolean) {
+    visitDynamic(block.dynamic, rootCandidate)
+
+    for (const operation of block.operation) {
+      visitOperation(operation, rootCandidate)
+    }
+
+    for (const effect of block.effect) {
+      for (const operation of effect.operations) {
+        visitOperation(operation, false)
+      }
+    }
+  }
+
+  function visitDynamic(dynamic: IRDynamicInfo, rootCandidate: boolean) {
+    if (dynamic.operation) {
+      visitOperation(dynamic.operation, rootCandidate)
+    }
+
+    for (const child of dynamic.children) {
+      visitDynamic(child, rootCandidate)
+    }
+  }
+
+  function visitOperation(operation: OperationNode, rootCandidate: boolean) {
+    if (seenOperations.has(operation)) {
+      return
+    }
+    seenOperations.add(operation)
+
+    if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
+      if (operation.asset) {
+        const usage = usageMap.get(operation.tag) || {
+          count: 0,
+          root: false,
+        }
+        usage.count++
+        if (rootCandidate) {
+          usage.root = true
+        }
+        usageMap.set(operation.tag, usage)
+      }
+
+      visitSlots(operation.slots)
+      return
+    }
+
+    switch (operation.type) {
+      case IRNodeTypes.IF:
+        visitBlock(operation.positive, false)
+        if (operation.negative) {
+          if (operation.negative.type === IRNodeTypes.IF) {
+            visitOperation(operation.negative, false)
+          } else {
+            visitBlock(operation.negative, false)
+          }
+        }
+        break
+      case IRNodeTypes.FOR:
+        visitBlock(operation.render, false)
+        break
+      case IRNodeTypes.KEY:
+        visitBlock(operation.block, false)
+        break
+      case IRNodeTypes.SLOT_OUTLET_NODE:
+        if (operation.fallback) {
+          visitBlock(operation.fallback, false)
+        }
+        break
+    }
+  }
+
+  function visitSlots(slots: IRSlots[]) {
+    for (const slot of slots) {
+      switch (slot.slotType) {
+        case IRSlotType.STATIC:
+          for (const name in slot.slots) {
+            visitBlock(slot.slots[name], false)
+          }
+          break
+        case IRSlotType.DYNAMIC:
+        case IRSlotType.LOOP:
+          visitBlock(slot.fn, false)
+          break
+        case IRSlotType.CONDITIONAL:
+          visitSlots([slot.positive])
+          if (slot.negative) {
+            visitSlots([slot.negative])
+          }
+          break
+      }
     }
   }
 }

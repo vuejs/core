@@ -4,16 +4,23 @@ import {
   IRNodeTypes,
   transformChildren,
   transformElement,
+  transformKey,
+  transformSlotOutlet,
   transformText,
   transformVBind,
   transformVFor,
+  transformVIf,
   transformVOn,
 } from '../../src'
 import { NodeTypes } from '@vue/compiler-dom'
+import { VaporVForFlags } from '@vue/shared'
 
 const compileWithVFor = makeCompile({
   nodeTransforms: [
+    transformVIf,
     transformVFor,
+    transformKey,
+    transformSlotOutlet,
     transformText,
     transformElement,
     transformChildren,
@@ -32,7 +39,10 @@ describe('compiler: v-for', () => {
 
     expect(code).matchSnapshot()
     expect(helpers).contains('createFor')
-    expect(ir.template).toEqual(['<div> </div>'])
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_SINGLE_NODE} /* IS_SINGLE_NODE */)`,
+    )
+    expect([...ir.template.keys()]).toEqual(['<div> '])
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.FOR,
       id: 0,
@@ -80,6 +90,20 @@ describe('compiler: v-for', () => {
       `,
       ).code,
     ).matchSnapshot()
+
+    const reverseMemberSelector = compileWithVFor(
+      `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="row.id === state.selected ? 'danger' : ''"
+          ></tr>
+      `,
+    ).code
+    expect(reverseMemberSelector).matchSnapshot()
+    expect(reverseMemberSelector).contains(
+      `const _selector0 = _createSelector(() => _ctx.state.selected)`,
+    )
   })
 
   test('selector pattern', () => {
@@ -134,11 +158,46 @@ describe('compiler: v-for', () => {
     ).matchSnapshot()
   })
 
+  test('multiple selector patterns on one v-for', () => {
+    const { code } = compileWithVFor(
+      `
+          <tr
+            v-for="row of rows"
+            :key="row.id"
+            :class="selected === row.id ? 'a' : ''"
+            :title="active === row.id ? 'b' : ''"
+          ></tr>
+      `,
+    )
+    expect(code).matchSnapshot()
+    // both selectors created at outer scope with sub-indexed names
+    expect(code).contains(
+      `const _selector0_0 = _createSelector(() => _ctx.selected)`,
+    )
+    expect(code).contains(
+      `const _selector0_1 = _createSelector(() => _ctx.active)`,
+    )
+    // both wired to the same fragment's onReset
+    expect(code).contains(`n0.onReset(_selector0_0.reset)`)
+    expect(code).contains(`n0.onReset(_selector0_1.reset)`)
+  })
+
   test('multi effect', () => {
     const { code } = compileWithVFor(
       `<div v-for="(item, index) of items" :item="item" :index="index" />`,
     )
     expect(code).matchSnapshot()
+  })
+
+  test('multi className helper with repeated v-for value', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="todo of todos" :key="todo.id" :class="{ completed: todo.completed, editing: todo === editedTodo }" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).contains(`const _todo = _for_item0.value`)
+    expect(code).contains(
+      `_setClassName(n2, (_todo.completed ? 1 : 0) | (_todo === _ctx.editedTodo ? 2 : 0), [" completed", " editing"])`,
+    )
   })
 
   test('w/o value', () => {
@@ -156,7 +215,7 @@ describe('compiler: v-for', () => {
       `_createFor(() => (_for_item0.value), (_for_item1) => {`,
     )
     expect(code).contains(`_for_item1.value+_for_item0.value`)
-    expect(ir.template).toEqual(['<span> </span>', '<div></div>'])
+    expect([...ir.template.keys()]).toEqual(['<span> ', '<div>'])
     const parentOp = ir.block.dynamic.children[0].operation
     expect(parentOp).toMatchObject({
       type: IRNodeTypes.FOR,
@@ -342,9 +401,11 @@ describe('compiler: v-for', () => {
       </div>`,
     )
     expect(code).matchSnapshot()
-    expect(code).toContain(`_getDefaultValue(_for_item0.value.foo, _ctx.bar)`)
     expect(code).toContain(
-      `_getDefaultValue(_for_item0.value.baz[0], _ctx.quux)`,
+      `_getDefaultValue(_for_item0.value.foo, () => (_ctx.bar))`,
+    )
+    expect(code).toContain(
+      `_getDefaultValue(_for_item0.value.baz[0], () => (_ctx.quux))`,
     )
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.FOR,
@@ -367,5 +428,175 @@ describe('compiler: v-for', () => {
       key: undefined,
       index: undefined,
     })
+  })
+
+  test('v-for on component', () => {
+    const { code, ir } = compileWithVFor(
+      `<Comp v-for="item in list">{{item}}</Comp>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
+  })
+
+  test('v-for on dynamic component marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<component :is="view" v-for="item in list" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${
+        VaporVForFlags.IS_COMPONENT | VaporVForFlags.IS_FRAGMENT
+      } /* IS_COMPONENT, IS_FRAGMENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      dynamic: { content: 'view' },
+    })
+  })
+
+  test('v-for on static dynamic component keeps component block', () => {
+    const { code } = compileWithVFor(
+      `<component is="view" v-for="item in list" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
+    )
+  })
+
+  test('v-for on slot outlet marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<slot v-for="item in list" :name="item.name" :key="item.id" />`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, (item) => (item.id), ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.SLOT_OUTLET_NODE,
+    })
+  })
+
+  test('v-for single node flag is not set for fragment item blocks', () => {
+    const { code } = compileWithVFor(
+      `<template v-for="item in list"><div>{{ item }}</div><span>{{ item }}</span></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).not.toContain('IS_SINGLE_NODE')
+  })
+
+  test('v-for on template with single component child', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in list"><Comp>{{item}}</Comp></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_COMPONENT} /* IS_COMPONENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(true)
+  })
+
+  test('v-for on template with element and component v-if branches', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in items">
+        <div v-if="item.id===1">hi</div>
+        <Comp v-else></Comp>
+      </template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).component,
+    ).toBe(false)
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.IF,
+    })
+  })
+
+  test('v-for on template with nested v-for child marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="row in rows"><div v-for="item in row">{{ item }}</div></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.FOR,
+    })
+  })
+
+  test('v-for on template with keyed child marks fragment block', () => {
+    const { code, ir } = compileWithVFor(
+      `<template v-for="item in items"><div :key="item.id">{{ item.text }}</div></template>`,
+    )
+    expect(code).matchSnapshot()
+    expect(code).toContain(
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+    )
+    expect(
+      (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
+        .children[0].operation,
+    ).toMatchObject({
+      type: IRNodeTypes.KEY,
+    })
+  })
+
+  test('avoids cache variable collision with an existing runtime helper', () => {
+    const { code } = compileWithVFor(`
+      <div>
+        <button
+          v-for="child in items"
+          :key="child.key"
+          :disabled="child.disabled"
+          :class="{ selected: child.key === selected }"
+        >
+          <span>{{ child.label }}</span>
+        </button>
+      </div>
+    `)
+
+    expect(code).matchSnapshot()
+    expect(code).toContain('child as _child')
+    expect(code).toContain('const n2 = _child(n3)')
+    expect(code).toContain('let _child1')
+    expect(code).toContain('_child1 = _for_item0.value')
+    expect(code).toContain('_selector0(_child1.key')
+  })
+
+  test('avoids runtime helper collision with an existing cache variable', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="setProp in items" :id="setProp.id" :title="setProp.title" />`,
+    )
+
+    expect(code).matchSnapshot()
+    expect(code).toContain('setProp as _setProp1')
+    expect(code).toContain('const _setProp = _for_item0.value')
+    expect(code).toContain('_setProp1(n2, "id", _setProp.id)')
+    expect(code).toContain('_setProp1(n2, "title", _setProp.title)')
   })
 })

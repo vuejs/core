@@ -1,7 +1,8 @@
 import { isFunction } from '@vue/shared'
-import { getCurrentGenericInstance } from './component'
+import { currentInstance, getCurrentGenericInstance } from './component'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
+import { isHmrUpdating } from './hmr'
 
 interface InjectionConstraint<T> {}
 
@@ -11,12 +12,12 @@ export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
 ): void {
-  const currentInstance = getCurrentGenericInstance()
-  if (!currentInstance) {
-    if (__DEV__) {
+  if (__DEV__) {
+    if (!currentInstance || (currentInstance.isMounted && !isHmrUpdating)) {
       warn(`provide() can only be used inside setup().`)
     }
-  } else {
+  }
+  if (currentInstance) {
     let provides = currentInstance.provides
     // by default an instance inherits its parent's provides object
     // but when it needs to provide values of its own, it creates its

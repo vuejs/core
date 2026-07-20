@@ -1,4 +1,3 @@
-// TODO: add tests for this transform
 import { NodeTypes } from '@vue/compiler-dom'
 import {
   IRNodeTypes,
@@ -6,13 +5,21 @@ import {
   transformElement,
   transformText,
   transformVBind,
+  transformVIf,
   transformVOn,
+  transformVSlot,
 } from '../../src'
 
 import { makeCompile } from './_utils'
 
 const compileWithTextTransform = makeCompile({
-  nodeTransforms: [transformElement, transformChildren, transformText],
+  nodeTransforms: [
+    transformVIf,
+    transformElement,
+    transformVSlot,
+    transformChildren,
+    transformText,
+  ],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,
@@ -47,5 +54,92 @@ describe('compiler: text transform', () => {
     expect(helpers).contains.all.keys('setText', 'template')
     expect(ir.block.operation).toMatchObject([])
     expect(ir.block.effect.length).toBe(1)
+  })
+
+  it('escapes raw static text when generating the template string', () => {
+    const { ir } = compileWithTextTransform('<code>&lt;script&gt;</code>')
+    expect([...ir.template.keys()]).toContain('<code>&lt;script&gt;')
+    expect([...ir.template.keys()]).not.toContain('<code><script>')
+  })
+
+  it('escapes raw static text for plain template createElement path', () => {
+    const { code } = compileWithTextTransform(
+      '<template>&lt;b&gt;foo&lt;/b&gt;</template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('const t0 = _template("")')
+    expect(code).toContain('_setText(n0, "<b>foo</b>")')
+    expect(code).not.toContain('_template("<b>foo</b>")')
+  })
+
+  it('escapes raw static text for custom element createElement path', () => {
+    const { code } = compileWithTextTransform(
+      '<my-el>&lt;b&gt;foo&lt;/b&gt;</my-el>',
+      {
+        isCustomElement: tag => tag === 'my-el',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('const t0 = _template("")')
+    expect(code).toContain('_setText(n0, "<b>foo</b>")')
+    expect(code).not.toContain('_template("<b>foo</b>")')
+  })
+
+  it('materializes literal interpolation text for mixed plain template children', () => {
+    const { code } = compileWithTextTransform(
+      '<template><span></span>{{ "<b>foo</b>" }}</template>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('const t1 = _template("")')
+    expect(code).toContain('_setText(n1, "<b>foo</b>")')
+    expect(code).not.toContain('_template("<b>foo</b>")')
+  })
+
+  it('should not escape quotes in root-level text nodes', () => {
+    // Root-level text goes through createTextNode() which doesn't need escaping
+    const { ir } = compileWithTextTransform(`Howdy y'all`)
+    expect([...ir.template.keys()]).toContain(`Howdy y'all`)
+    expect([...ir.template.keys()]).not.toContain(`Howdy y&#39;all`)
+  })
+
+  it('should not escape double quotes in root-level text nodes', () => {
+    const { ir } = compileWithTextTransform(`Say "hello"`)
+    expect([...ir.template.keys()]).toContain(`Say "hello"`)
+    expect([...ir.template.keys()]).not.toContain(`Say &quot;hello&quot;`)
+  })
+
+  it('should not escape quotes in template v-if text', () => {
+    // Text inside <template> tag also goes through createTextNode()
+    const { code } = compileWithTextTransform(
+      `<template v-if="ok">Howdy y'all</template>`,
+    )
+    expect(code).toContain(`Howdy y'all`)
+    expect(code).not.toContain(`Howdy y&#39;all`)
+  })
+
+  it('should not escape quotes in component slot text', () => {
+    // Text inside component (slot content) also goes through createTextNode()
+    const { ir } = compileWithTextTransform(`<Comp>Howdy y'all</Comp>`)
+    expect([...ir.template.keys()]).toContain(`Howdy y'all`)
+    expect([...ir.template.keys()]).not.toContain(`Howdy y&#39;all`)
+  })
+
+  test('constant text', () => {
+    const { code } = compileWithTextTransform(
+      `
+        <div>
+          {{ (2) }}
+          {{ \`foo\${1}\` }}
+          {{ 1 }}
+          {{ 1n }}
+          {{ '1' }}
+        </div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
+
+  test('slot literal interpolation', () => {
+    const { code } = compileWithTextTransform(`<Comp>{{ "Hello" }}</Comp>`)
+    expect(code).toMatchSnapshot()
   })
 })

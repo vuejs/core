@@ -1397,12 +1397,35 @@ describe('function syntax w/ emits', () => {
       },
     },
   )
+
+  const NamedTupleEmit = defineComponent<
+    {},
+    {
+      update: [value: string] // named tuple syntax
+    }
+  >((_props, ctx) => {
+    ctx.emit('update', '123')
+    // @ts-expect-error
+    ctx.emit('update', 123)
+    // @ts-expect-error
+    ctx.emit('non-exist')
+    return () => {}
+  })
+  expectType<JSX.Element>(
+    <NamedTupleEmit
+      onUpdate={value => {
+        expectType<string>(value.toUpperCase())
+        // @ts-expect-error string payload should not expose number methods
+        value.toFixed()
+      }}
+    />,
+  )
 })
 
 describe('function syntax w/ runtime props', () => {
   // with runtime props, the runtime props must match
   // manual type declaration
-  defineComponent(
+  const Comp1 = defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
@@ -1411,7 +1434,34 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error bar isn't specified in props definition
   defineComponent(
+    (_props: { msg: string }) => {
+      return () => {}
+    },
+    {
+      props: ['msg', 'bar'],
+    },
+  )
+
+  defineComponent(
+    (_props: { msg: string; bar: string }) => {
+      return () => {}
+    },
+    {
+      props: ['msg'],
+    },
+  )
+
+  expectType<JSX.Element>(<Comp1 msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp1 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp1 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp1 msg="1" bar="2" />)
+
+  const Comp2 = defineComponent(
     <T extends string>(_props: { msg: T }) => {
       return () => {}
     },
@@ -1420,7 +1470,36 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error bar isn't specified in props definition
   defineComponent(
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg', 'bar'],
+    },
+  )
+
+  defineComponent(
+    <T extends string>(_props: { msg: T; bar: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg'],
+    },
+  )
+
+  expectType<JSX.Element>(<Comp2 msg="1" />)
+  expectType<JSX.Element>(<Comp2<string> msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp2 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp2 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp2 msg="1" bar="2" />)
+
+  // Note: generics aren't supported with object runtime props
+  const Comp3 = defineComponent(
     <T extends string>(_props: { msg: T }) => {
       return () => {}
     },
@@ -1430,6 +1509,40 @@ describe('function syntax w/ runtime props', () => {
       },
     },
   )
+
+  defineComponent(
+    // @ts-expect-error bar isn't specified in props definition
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: {
+        bar: String,
+      },
+    },
+  )
+
+  defineComponent(
+    // @ts-expect-error generics aren't supported with object runtime props
+    <T extends string>(_props: { msg: T; bar: T }) => {
+      return () => {}
+    },
+    {
+      props: {
+        msg: String,
+      },
+    },
+  )
+
+  expectType<JSX.Element>(<Comp3 msg="1" />)
+  // @ts-expect-error generics aren't supported with object runtime props
+  expectType<JSX.Element>(<Comp3<string> msg="1" />)
+  // @ts-expect-error msg type is incorrect
+  expectType<JSX.Element>(<Comp3 msg={1} />)
+  // @ts-expect-error msg is missing
+  expectType<JSX.Element>(<Comp3 />)
+  // @ts-expect-error bar doesn't exist
+  expectType<JSX.Element>(<Comp3 msg="1" bar="2" />)
 
   // @ts-expect-error string prop names don't match
   defineComponent(
@@ -1449,19 +1562,6 @@ describe('function syntax w/ runtime props', () => {
       props: {
         // @ts-expect-error prop type mismatch
         msg: Number,
-      },
-    },
-  )
-
-  // @ts-expect-error prop keys don't match
-  defineComponent(
-    (_props: { msg: string }, ctx) => {
-      return () => {}
-    },
-    {
-      props: {
-        msg: String,
-        bar: String,
       },
     },
   )
@@ -1860,6 +1960,22 @@ describe('__typeEl backdoor', () => {
   expectType<HTMLAnchorElement>(c.$el)
 })
 
+describe('__typeEl with a non-DOM host node (custom renderer)', () => {
+  // Custom renderers (TUI, canvas, native, …) have host nodes that are not
+  // DOM Elements. `$el` must accept them — `TypeEl` is not constrained to
+  // `Element`.
+  interface CustomElement {
+    foo: string
+  }
+  const Comp = defineComponent({
+    __typeEl: {} as CustomElement,
+  })
+  const c = new Comp()
+
+  expectType<CustomElement>(c.$el)
+  expectType<string>(c.$el.foo)
+})
+
 defineComponent({
   props: {
     foo: [String, null],
@@ -1892,7 +2008,8 @@ declare const ErrorMessage: {
           type: StringConstructor
           required: true
         }
-      }>
+      }> &
+        vue.AllowedComponentProps
     >,
     () =>
       | VNode<
@@ -2106,4 +2223,39 @@ defineComponent({
     // @ts-expect-error
     expectType<string>(this.$props)
   },
+})
+
+// #14117
+defineComponent({
+  setup() {
+    const setup1 = ref('setup1')
+    const setup2 = ref('setup2')
+    return { setup1, setup2 }
+  },
+  data() {
+    return {
+      data1: 1,
+    }
+  },
+  props: {
+    props1: {
+      type: String,
+    },
+  },
+  methods: {
+    methods1() {
+      return `methods1`
+    },
+  },
+  computed: {
+    computed1() {
+      this.setup1
+      this.setup2
+      this.data1
+      this.props1
+      this.methods1()
+      return `computed1`
+    },
+  },
+  expose: ['setup1'],
 })

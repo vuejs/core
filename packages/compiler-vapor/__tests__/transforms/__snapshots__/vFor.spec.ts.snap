@@ -1,70 +1,152 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-for > array de-structured value (with rest) 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value[0] + _for_item0.value.slice(1) + _for_key0.value)))
     return n2
-  }, ([id, ...other], index) => (id))
+  }, ([id, ...other], index) => (id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > array de-structured value 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value[0] + _for_item0.value[1] + _for_key0.value)))
     return n2
-  }, ([id, other], index) => (id))
+  }, ([id, other], index) => (id), 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > avoids cache variable collision with an existing runtime helper 1`] = `
+"import { setInsertionState as _setInsertionState, createSelector as _createSelector, child as _child, txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<button><span> ")
+const t1 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n4 = t1()
+  _setInsertionState(n4, null, 0)
+  const _selector0 = _createSelector(() => _ctx.selected)
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n3 = t0()
+    const n2 = _child(n3)
+    const x2 = _txt(n2)
+    let _child1
+    _renderEffect(() => {
+      _child1 = _for_item0.value
+      _setProp(n3, "disabled", _child1.disabled)
+      _setText(x2, _toDisplayString(_child1.label))
+    })
+    _selector0(_child1.key, () => {
+      _setClassName(n3, (_child1.key === _ctx.selected ? 1 : 0), "selected")
+    })
+    return n3
+  }, (child) => (child.key), 9 /* FAST_REMOVE, IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n4
+}"
+`;
+
+exports[`compiler: v-for > avoids runtime helper collision with an existing cache variable 1`] = `
+"import { setProp as _setProp1, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = t0()
+    _renderEffect(() => {
+      const _setProp = _for_item0.value
+      _setProp1(n2, "id", _setProp.id)
+      _setProp1(n2, "title", _setProp.title)
+    })
+    return n2
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > basic v-for 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+"import { txt as _txt, createInvoker as _createInvoker, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, delegateEvents as _delegateEvents, template as _template } from 'vue';
+const t0 = _template("<div> ")
 _delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
-    const x2 = _child(n2)
-    n2.$evtclick = () => (_ctx.remove(_for_item0.value))
+    const x2 = _txt(n2)
+    n2.$evtclick = _createInvoker(() => (_ctx.remove(_for_item0.value)))
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
     return n2
-  }, (item) => (item.id))
+  }, (item) => (item.id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > key only binding pattern 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr> </tr>", true)
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _txt(n2)
     _setText(x2, _toDisplayString(_for_item0.value.id + _for_item0.value.id))
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > key only binding pattern 2`] = `
+"import { createSelector as _createSelector, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr>")
+
+export function render(_ctx) {
+  const _selector0 = _createSelector(() => _ctx.state.selected)
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    _selector0(_for_item0.value.id, () => {
+      _setClassName(n2, (_for_item0.value.id === _ctx.state.selected ? 1 : 0), "danger")
+    })
+    return n2
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > multi className helper with repeated v-for value 1`] = `
+"import { setClassName as _setClassName, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.todos), (_for_item0) => {
+    const n2 = t0()
+    _renderEffect(() => {
+      const _todo = _for_item0.value
+      _setClassName(n2, (_todo.completed ? 1 : 0) | (_todo === _ctx.editedTodo ? 2 : 0), [" completed", " editing"])
+    })
+    return n2
+  }, (todo) => (todo.id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > multi effect 1`] = `
 "import { setProp as _setProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0, _for_key0) => {
@@ -74,162 +156,328 @@ export function render(_ctx) {
       _setProp(n2, "index", _for_key0.value)
     })
     return n2
-  })
+  }, undefined, 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > multiple selector patterns on one v-for 1`] = `
+"import { createSelector as _createSelector, setClassName as _setClassName, setProp as _setProp, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr>")
+
+export function render(_ctx) {
+  const _selector0_0 = _createSelector(() => _ctx.selected)
+  const _selector0_1 = _createSelector(() => _ctx.active)
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = t0()
+    _selector0_0(_for_item0.value.id, () => {
+      _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "a")
+    })
+    _selector0_1(_for_item0.value.id, () => {
+      _setProp(n2, "title", _ctx.active === _for_item0.value.id ? 'b' : '')
+    })
+    return n2
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0_0.reset)
+  n0.onReset(_selector0_1.reset)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > nested v-for 1`] = `
-"import { setInsertionState as _setInsertionState, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<span> </span>")
-const t1 = _template("<div></div>", true)
+"import { setInsertionState as _setInsertionState, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<span> ")
+const t1 = _template("<div>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n5 = t1()
-    _setInsertionState(n5)
+    _setInsertionState(n5, null, 0)
     const n2 = _createFor(() => (_for_item0.value), (_for_item1) => {
       const n4 = t0()
-      const x4 = _child(n4)
+      const x4 = _txt(n4)
       _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value+_for_item0.value)))
       return n4
-    }, undefined, 1)
+    }, undefined, 9 /* FAST_REMOVE, IS_SINGLE_NODE */)
     return n5
-  })
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > object de-structured value (with rest) 1`] = `
-"import { getRestElement as _getRestElement, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+"import { getRestElement as _getRestElement, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0) => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id + _getRestElement(_for_item0.value, ["id"]) + _for_key0.value)))
     return n2
-  }, ({ id, ...other }, index) => (id))
+  }, ({ id, ...other }, index) => (id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > object de-structured value 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<span> </span>", true)
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<span> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value.id) + _toDisplayString(_for_item0.value.value)))
     return n2
-  }, ({ id, value }) => (id))
+  }, ({ id, value }) => (id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > object value, key and index 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0, _for_key0, _for_index0) => {
     const n2 = t0()
-    const x2 = _child(n2)
+    const x2 = _txt(n2)
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value + _for_key0.value + _for_index0.value)))
     return n2
-  }, (value, key, index) => (key))
+  }, (value, key, index) => (key), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > selector pattern 1`] = `
-"import { child as _child, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr> </tr>", true)
+"import { createSelector as _createSelector, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr> ")
 
 export function render(_ctx) {
-  let _selector0_0
+  const _selector0 = _createSelector(() => _ctx.selected)
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
-    const x2 = _child(n2)
-    _selector0_0(() => {
+    const x2 = _txt(n2)
+    _selector0(_for_item0.value.id, () => {
       _setText(x2, _toDisplayString(_ctx.selected === _for_item0.value.id ? 'danger' : ''))
     })
     return n2
-  }, (row) => (row.id), undefined, ({ createSelector }) => {
-    _selector0_0 = createSelector(() => _ctx.selected)
-  })
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > selector pattern 2`] = `
-"import { setClass as _setClass, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr></tr>", true)
+"import { createSelector as _createSelector, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr>")
 
 export function render(_ctx) {
-  let _selector0_0
+  const _selector0 = _createSelector(() => _ctx.selected)
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
-    _selector0_0(() => {
-      _setClass(n2, _ctx.selected === _for_item0.value.id ? 'danger' : '')
+    _selector0(_for_item0.value.id, () => {
+      _setClassName(n2, (_ctx.selected === _for_item0.value.id ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id), undefined, ({ createSelector }) => {
-    _selector0_0 = createSelector(() => _ctx.selected)
-  })
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > selector pattern 3`] = `
-"import { setClass as _setClass, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr></tr>", true)
+"import { setClassName as _setClassName, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr>")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
     _renderEffect(() => {
       const _row = _for_item0.value
-      _setClass(n2, _row.label === _row.id ? 'danger' : '')
+      _setClassName(n2, (_row.label === _row.id ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id))
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > selector pattern 4`] = `
-"import { setClass as _setClass, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<tr></tr>", true)
+"import { createSelector as _createSelector, setClassName as _setClassName, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<tr>")
 
 export function render(_ctx) {
-  let _selector0_0
+  const _selector0 = _createSelector(() => _ctx.selected)
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n2 = t0()
-    _selector0_0(() => {
-      _setClass(n2, { danger: _for_item0.value.id === _ctx.selected })
+    _selector0(_for_item0.value.id, () => {
+      _setClassName(n2, (_for_item0.value.id === _ctx.selected ? 1 : 0), "danger")
     })
     return n2
-  }, (row) => (row.id), undefined, ({ createSelector }) => {
-    _selector0_0 = createSelector(() => _ctx.selected)
-  })
+  }, (row) => (row.id), 8 /* IS_SINGLE_NODE */)
+  n0.onReset(_selector0.reset)
   return n0
 }"
 `;
 
 exports[`compiler: v-for > v-for aliases w/ complex expressions 1`] = `
-"import { getDefaultValue as _getDefaultValue, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div> </div>", true)
+"import { getDefaultValue as _getDefaultValue, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
     const n2 = t0()
-    const x2 = _child(n2)
-    _renderEffect(() => _setText(x2, _toDisplayString(_getDefaultValue(_for_item0.value.foo, _ctx.bar) + _ctx.bar + _ctx.baz + _getDefaultValue(_for_item0.value.baz[0], _ctx.quux) + _ctx.quux)))
+    const x2 = _txt(n2)
+    _renderEffect(() => _setText(x2, _toDisplayString(_getDefaultValue(_for_item0.value.foo, () => (_ctx.bar)) + _ctx.bar + _ctx.baz + _getDefaultValue(_for_item0.value.baz[0], () => (_ctx.quux)) + _ctx.quux)))
     return n2
+  }, undefined, 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on component 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n3 = _createComponentWithFallback(_component_Comp)
+    const n2 = _child(n3)
+    _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
+    return [n2, n3]
+  }, undefined, 2 /* IS_COMPONENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on dynamic component marks fragment block 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, createFor as _createFor } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = _createDynamicComponent(() => (_ctx.view))
+    return n2
+  }, (item) => (item.id), 18 /* IS_COMPONENT, IS_FRAGMENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on slot outlet marks fragment block 1`] = `
+"import { createSlot as _createSlot, createFor as _createFor } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = _createSlot(() => (_for_item0.value.name))
+    return n2
+  }, (item) => (item.id), 16 /* IS_FRAGMENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on static dynamic component keeps component block 1`] = `
+"import { resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback, createFor as _createFor } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = _createComponentWithFallback(_resolveDynamicComponent("view"))
+    return n2
+  }, (item) => (item.id), 2 /* IS_COMPONENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with element and component v-if branches 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, createIf as _createIf, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>hi")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createIf(() => (_for_item0.value.id===1), () => {
+      const n4 = t0()
+      return n4
+    }, () => {
+      const n6 = _createComponentWithFallback(_component_Comp)
+      return n6
+    }, 266 /* TRUE_MULTI_ROOT, FALSE_MULTI_ROOT, KEYED_INDEX_0 */)
+    return n2
+  }, undefined, 16 /* IS_FRAGMENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with keyed child marks fragment block 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createKeyedFragment as _createKeyedFragment, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
+    const n2 = _createKeyedFragment(() => (_for_item0.value.id), () => {
+      const n3 = t0()
+      const x3 = _txt(n3)
+      _renderEffect(() => _setText(x3, _toDisplayString(_for_item0.value.text)))
+      return n3
+    })
+    return n2
+  }, undefined, 16 /* IS_FRAGMENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with nested v-for child marks fragment block 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
+    const n2 = _createFor(() => (_for_item0.value), (_for_item1) => {
+      const n4 = t0()
+      const x4 = _txt(n4)
+      _renderEffect(() => _setText(x4, _toDisplayString(_for_item1.value)))
+      return n4
+    }, undefined, 8 /* IS_SINGLE_NODE */)
+    return n2
+  }, undefined, 16 /* IS_FRAGMENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for on template with single component child 1`] = `
+"import { resolveComponent as _resolveComponent, createComponentWithFallback as _createComponentWithFallback, child as _child, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n3 = _createComponentWithFallback(_component_Comp)
+    const n2 = _child(n3)
+    _renderEffect(() => _setText(n2, _toDisplayString(_for_item0.value)))
+    return [n2, n3]
+  }, undefined, 2 /* IS_COMPONENT */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > v-for single node flag is not set for fragment item blocks 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+const t1 = _template("<span> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.list), (_for_item0) => {
+    const n2 = t0()
+    const n3 = t1()
+    const x2 = _txt(n2)
+    const x3 = _txt(n3)
+    _renderEffect(() => {
+      const _item = _for_item0.value
+      _setText(x2, _toDisplayString(_item))
+      _setText(x3, _toDisplayString(_item))
+    })
+    return [n2, n3]
   })
   return n0
 }"
@@ -237,13 +485,13 @@ export function render(_ctx) {
 
 exports[`compiler: v-for > w/o value 1`] = `
 "import { createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div>item</div>", true)
+const t0 = _template("<div>item")
 
 export function render(_ctx) {
   const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
     const n2 = t0()
     return n2
-  })
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;

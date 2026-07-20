@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-globals */
+/* oxlint-disable no-restricted-globals */
 import { type GenericComponentInstance, formatComponentName } from './component'
 import { devtoolsPerfEnd, devtoolsPerfStart } from './devtools'
 

@@ -1,0 +1,316 @@
+import {
+  VaporTransitionGroup,
+  createComponent,
+  createFor,
+  createIf,
+  defineVaporAsyncComponent,
+  defineVaporComponent,
+  setBlockKey,
+  template,
+} from '../../src'
+import { nextTick, ref } from '@vue/runtime-dom'
+import { compile, makeRender } from '../_utils'
+
+const define = makeRender()
+const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
+
+describe('TransitionGroup', () => {
+  test('prefixes outer component key for a single transition child', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template(`<div>child</div>`)() as any
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        child.block.$key = undefined
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => child,
+        })
+      },
+    }).render()
+
+    expect(child.block.$key).toBe('foo0')
+    expect(child.block.$transition).toBeDefined()
+  })
+
+  test('prefixes outer fragment key for a single transition child', () => {
+    let frag: any
+    define({
+      setup() {
+        frag = createIf(
+          () => true,
+          () => template(`<div>child</div>`)() as any,
+        )
+        setBlockKey(frag, 'foo')
+        frag.nodes.$key = undefined
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => frag,
+        })
+      },
+    }).render()
+
+    expect(frag.nodes.$key).toBe('foo0')
+    expect(frag.nodes.$transition).toBeDefined()
+  })
+
+  test('derives unique keys from outer key across multiple transition children', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return [
+          template(`<div>a</div>`)() as any,
+          template(`<div>b</div>`)() as any,
+        ]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        child.block[0].$key = undefined
+        child.block[1].$key = undefined
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => child,
+        })
+      },
+    }).render()
+
+    expect(child.block[0].$key).toBe('foo0')
+    expect(child.block[1].$key).toBe('foo1')
+    expect(child.block[0].$transition).toBeDefined()
+    expect(child.block[1].$transition).toBeDefined()
+  })
+
+  test('prefixes child keys with outer key across multiple transition children', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        const a = template(`<div>a</div>`)() as any
+        const b = template(`<div>b</div>`)() as any
+        a.$key = 'a'
+        b.$key = 'b'
+        return [a, b]
+      },
+    })
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(Child)
+        setBlockKey(child, 'foo')
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => child,
+        })
+      },
+    }).render()
+
+    expect(child.block[0].$key).toBe('fooa')
+    expect(child.block[1].$key).toBe('foob')
+    expect(child.block[0].$transition).toBeDefined()
+    expect(child.block[1].$transition).toBeDefined()
+  })
+
+  test('preserves outer key when unresolved async child resolves', async () => {
+    let resolve!: (comp: any) => void
+    const ResolvedChild = defineVaporComponent({
+      setup() {
+        return template(`<div>child</div>`)() as any
+      },
+    })
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    let child: any
+    define({
+      setup() {
+        child = createComponent(AsyncChild)
+        setBlockKey(child, 'foo')
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => child,
+        })
+      },
+    }).render()
+
+    expect(child.$key).toBe('foo')
+    expect(child.block.$key).toBe('foo')
+
+    resolve(ResolvedChild)
+    await timeout()
+    await nextTick()
+    await nextTick()
+
+    expect(child.block.nodes.$key).toBe('foo')
+    expect(child.block.nodes.block.$key).toBe('foo')
+    expect(child.block.nodes.block.$transition).toBeDefined()
+  })
+
+  test('inherits v-for item key when applying transition hooks to new items', async () => {
+    const items = ref([1])
+    let list: any
+
+    define({
+      setup() {
+        list = createFor(
+          () => items.value,
+          item => template(`<div></div>`)(),
+          item => item,
+        )
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => list,
+        })
+      },
+    }).render()
+
+    items.value = [1, 2]
+    await nextTick()
+
+    expect(list.nodes[0][1].nodes.$key).toBe(2)
+    expect(list.nodes[0][1].nodes.$transition).toBeDefined()
+  })
+
+  test('preserves unique keys for multi-root v-for items', () => {
+    const items = ref([1])
+    let list: any
+
+    define({
+      setup() {
+        list = createFor(
+          () => items.value,
+          () => [template(`<div></div>`)(), template(`<span></span>`)()],
+          item => item,
+        )
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => list,
+        })
+      },
+    }).render()
+
+    const nodes = list.nodes[0][0].nodes
+
+    expect(nodes[0].$key).toBe('1:0')
+    expect(nodes[1].$key).toBe('1:1')
+    expect(nodes[0].$transition).toBeDefined()
+    expect(nodes[1].$transition).toBeDefined()
+  })
+
+  test('restores disabled transition hooks when no move transform is available', async () => {
+    const items = ref([1, 2])
+    let list: any
+
+    define({
+      setup() {
+        list = createFor(
+          () => items.value,
+          item => {
+            const el = template(`<div></div>`)()
+            el.textContent = String(item.value)
+            return el
+          },
+          item => item,
+        )
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => list,
+        })
+      },
+    }).render()
+
+    const first = list.nodes[0][0].nodes
+
+    items.value = [2, 1]
+    await nextTick()
+    await nextTick()
+
+    expect(first.$transition.disabled).toBe(false)
+  })
+
+  test('re-adding a leaving keyed component item early-removes the previous instance', async () => {
+    let leaveDone: (() => void) | undefined
+    const Comp = compile(
+      `<template><div class="item">item</div></template>`,
+      ref({}),
+    )
+    const data = ref<any>({
+      list: [0],
+      onLeave: (_: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <TransitionGroup @leave="data.onLeave">
+          <components.Comp v-for="i in data.list" :key="i" />
+        </TransitionGroup>
+      </template>`,
+      data,
+      { Comp },
+    )
+    const { host } = define(App as any).render()
+    expect(host.querySelectorAll('.item').length).toBe(1)
+
+    // remove the item -> @leave is held open by the captured done callback
+    data.value.list = []
+    await nextTick()
+    expect(host.querySelectorAll('.item').length).toBe(1)
+
+    // re-add the same key while the previous instance is still leaving. The
+    // component child must bucket the leaving cache by component type in both
+    // the leaving (group) path and the re-entering (v-for single) path so
+    // earlyRemove matches and force-removes the previous instance instead of
+    // leaving two elements in the DOM.
+    data.value.list = [0]
+    await nextTick()
+    expect(host.querySelectorAll('.item').length).toBe(1)
+
+    leaveDone && leaveDone()
+    await nextTick()
+    expect(host.querySelectorAll('.item').length).toBe(1)
+  })
+
+  test('registers full transition hooks when Transition is used later', async () => {
+    const group = define({
+      setup() {
+        return createComponent(VaporTransitionGroup)
+      },
+    }).render()
+    group.app.unmount()
+
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: true,
+      onLeave: (_: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <div v-if="data.show" key="a">A</div>
+          <div v-else key="b">B</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(host.textContent).toContain('A')
+    expect(host.textContent).not.toContain('B')
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.textContent).not.toContain('A')
+    expect(host.textContent).toContain('B')
+  })
+})

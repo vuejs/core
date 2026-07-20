@@ -1,5 +1,5 @@
 import { isArray, isObject, isString } from '@vue/shared'
-import { warn } from '@vue/runtime-core'
+import { warn } from '@vue/runtime-dom'
 
 export function ssrRenderList(
   source: unknown,
@@ -10,8 +10,10 @@ export function ssrRenderList(
       renderItem(source[i], i)
     }
   } else if (typeof source === 'number') {
-    if (__DEV__ && !Number.isInteger(source)) {
-      warn(`The v-for range expect an integer value but got ${source}.`)
+    if (__DEV__ && (!Number.isInteger(source) || source < 0)) {
+      warn(
+        `The v-for range expects a positive integer value but got ${source}.`,
+      )
       return
     }
     for (let i = 0; i < source; i++) {
@@ -19,9 +21,9 @@ export function ssrRenderList(
     }
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
-      const arr = Array.from(source as Iterable<any>)
-      for (let i = 0, l = arr.length; i < l; i++) {
-        renderItem(arr[i], i)
+      let i = 0
+      for (const item of source as Iterable<any>) {
+        renderItem(item, i++)
       }
     } else {
       const keys = Object.keys(source)

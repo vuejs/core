@@ -5,7 +5,7 @@ import type {
   SimpleExpressionNode,
   TemplateChildNode,
 } from '@vue/compiler-dom'
-import type { Prettify } from '@vue/shared'
+import type { Namespace, Prettify } from '@vue/shared'
 import type { DirectiveTransform, NodeTransform } from '../transform'
 import type { IRProp, IRProps, IRSlots } from './component'
 
@@ -15,6 +15,7 @@ export enum IRNodeTypes {
   ROOT,
   BLOCK,
 
+  SET_BLOCK_KEY,
   SET_PROP,
   SET_DYNAMIC_PROPS,
   SET_TEXT,
@@ -29,16 +30,21 @@ export enum IRNodeTypes {
   SLOT_OUTLET_NODE,
 
   DIRECTIVE,
-  DECLARE_OLD_REF, // consider make it more general
 
   IF,
   FOR,
+  KEY,
 
   GET_TEXT_CHILD,
 }
 
 export interface BaseIRNode {
   type: IRNodeTypes
+}
+
+export interface EffectBoundary {
+  operationIndex?: number
+  effectIndex?: number
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -59,23 +65,42 @@ export interface RootIRNode {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
-  template: string[]
-  rootTemplateIndex?: number
+  template: TemplateRegistry
   component: Set<string>
   directive: Set<string>
   block: BlockIRNode
   hasTemplateRef: boolean
 }
 
-export interface IfIRNode extends BaseIRNode {
+export interface IRTemplate {
+  content: string
+  ns: Namespace
+  root: boolean
+  static: boolean
+}
+
+export class TemplateRegistry {
+  entries: IRTemplate[] = []
+
+  keys(): string[] {
+    return this.entries.map(({ content }) => content)
+  }
+}
+
+export interface IfIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.IF
   id: number
+  blockShape: number
   condition: SimpleExpressionNode
   positive: BlockIRNode
   negative?: BlockIRNode | IfIRNode
   once?: boolean
+  slotRoot?: boolean
+  index?: number
   parent?: number
   anchor?: number
+  logicalIndex?: number
+  append?: boolean
 }
 
 export interface IRFor {
@@ -85,23 +110,42 @@ export interface IRFor {
   index?: SimpleExpressionNode
 }
 
-export interface ForIRNode extends BaseIRNode, IRFor {
+export interface ForIRNode extends BaseIRNode, IRFor, EffectBoundary {
   type: IRNodeTypes.FOR
   id: number
   keyProp?: SimpleExpressionNode
   render: BlockIRNode
   once: boolean
+  slotRoot?: boolean
   component: boolean
   onlyChild: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
+  append?: boolean
+}
+
+export interface KeyIRNode extends BaseIRNode, EffectBoundary {
+  type: IRNodeTypes.KEY
+  id: number
+  value: SimpleExpressionNode
+  block: BlockIRNode
+  parent?: number
+  anchor?: number
+  logicalIndex?: number
+  append?: boolean
+}
+
+export interface SetBlockKeyIRNode extends BaseIRNode {
+  type: IRNodeTypes.SET_BLOCK_KEY
+  element: number
+  value: SimpleExpressionNode
 }
 
 export interface SetPropIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_PROP
   element: number
   prop: IRProp
-  root: boolean
   tag: string
 }
 
@@ -109,7 +153,7 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_DYNAMIC_PROPS
   element: number
   props: IRProps[]
-  root: boolean
+  tag: string
 }
 
 export interface SetDynamicEventsIRNode extends BaseIRNode {
@@ -123,7 +167,7 @@ export interface SetTextIRNode extends BaseIRNode {
   element: number
   values: SimpleExpressionNode[]
   generated?: boolean // whether this is a generated empty text node by `processTextLikeContainer`
-  jsx?: boolean
+  isComponent?: boolean
 }
 
 export type KeyOverride = [find: string, replacement: string]
@@ -150,6 +194,7 @@ export interface SetHtmlIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_HTML
   element: number
   value: SimpleExpressionNode
+  isComponent?: boolean
 }
 
 export interface SetTemplateRefIRNode extends BaseIRNode {
@@ -183,7 +228,7 @@ export interface DirectiveIRNode extends BaseIRNode {
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
 }
 
-export interface CreateComponentIRNode extends BaseIRNode {
+export interface CreateComponentIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.CREATE_COMPONENT_NODE
   id: number
   tag: string
@@ -192,24 +237,26 @@ export interface CreateComponentIRNode extends BaseIRNode {
   asset: boolean
   root: boolean
   once: boolean
+  slotRoot?: boolean
   dynamic?: SimpleExpressionNode
+  useCreateElement: boolean
   parent?: number
   anchor?: number
+  logicalIndex?: number
+  append?: boolean
 }
 
-export interface DeclareOldRefIRNode extends BaseIRNode {
-  type: IRNodeTypes.DECLARE_OLD_REF
-  id: number
-}
-
-export interface SlotOutletIRNode extends BaseIRNode {
+export interface SlotOutletIRNode extends BaseIRNode, EffectBoundary {
   type: IRNodeTypes.SLOT_OUTLET_NODE
   id: number
   name: SimpleExpressionNode
   props: IRProps[]
   fallback?: BlockIRNode
+  flags: number
   parent?: number
   anchor?: number
+  logicalIndex?: number
+  append?: boolean
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {
@@ -219,6 +266,7 @@ export interface GetTextChildIRNode extends BaseIRNode {
 
 export type IRNode = OperationNode | RootIRNode
 export type OperationNode =
+  | SetBlockKeyIRNode
   | SetPropIRNode
   | SetDynamicPropsIRNode
   | SetTextIRNode
@@ -231,8 +279,8 @@ export type OperationNode =
   | DirectiveIRNode
   | IfIRNode
   | ForIRNode
+  | KeyIRNode
   | CreateComponentIRNode
-  | DeclareOldRefIRNode
   | SlotOutletIRNode
   | GetTextChildIRNode
 
@@ -256,6 +304,9 @@ export interface IRDynamicInfo {
   id?: number
   flags: DynamicFlag
   anchor?: number
+  // logical index of this node among siblings (including dynamic nodes)
+  // used during hydration to locate the correct DOM node
+  logicalIndex?: number
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
@@ -291,6 +342,7 @@ export type VaporDirectiveNode = Overwrite<
 export type InsertionStateTypes =
   | IfIRNode
   | ForIRNode
+  | KeyIRNode
   | SlotOutletIRNode
   | CreateComponentIRNode
 
@@ -300,6 +352,7 @@ export function isBlockOperation(op: OperationNode): op is InsertionStateTypes {
     type === IRNodeTypes.CREATE_COMPONENT_NODE ||
     type === IRNodeTypes.SLOT_OUTLET_NODE ||
     type === IRNodeTypes.IF ||
+    type === IRNodeTypes.KEY ||
     type === IRNodeTypes.FOR
   )
 }

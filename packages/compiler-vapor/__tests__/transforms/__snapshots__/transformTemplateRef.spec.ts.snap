@@ -1,56 +1,171 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: template ref transform > dynamic ref 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+exports[`compiler: template ref transform > component static ref 1`] = `
+"import { createAssetComponent as _createAssetComponent, setStaticTemplateRef as _setStaticTemplateRef } from 'vue';
 
 export function render(_ctx) {
-  const _setTemplateRef = _createTemplateRefSetter()
-  const n0 = t0()
-  let r0
-  _renderEffect(() => r0 = _setTemplateRef(n0, _ctx.foo, r0))
+  const n0 = _createAssetComponent("Foo", null, null, true)
+  _setStaticTemplateRef(n0, "foo")
   return n0
 }"
 `;
 
-exports[`compiler: template ref transform > function ref 1`] = `
+exports[`compiler: template ref transform > dynamic and function refs 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
   const n0 = t0()
-  let r0
+  const n1 = t0()
   _renderEffect(() => {
     const _foo = _ctx.foo
-    r0 = _setTemplateRef(n0, bar => {
-        _foo.value = bar
-        ;({ baz: _ctx.baz } = bar)
-        console.log(_foo.value, _ctx.baz)
-      }, r0)
+    _setTemplateRef(n0, _foo)
+    _setTemplateRef(n1, bar => { _foo.value = bar })
   })
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: template ref transform > dynamic and static refs 1`] = `
+"import { setStaticTemplateRef as _setStaticTemplateRef, setTemplateRefBinding as _setTemplateRefBinding, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _setStaticTemplateRef(n1, "foo")
+  _setTemplateRefBinding(n0, () => _ctx.bar)
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: template ref transform > dynamic component static ref 1`] = `
+"import { createDynamicComponent as _createDynamicComponent, setStaticTemplateRef as _setStaticTemplateRef } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */)
+  _setStaticTemplateRef(n0, "foo")
   return n0
 }"
 `;
 
-exports[`compiler: template ref transform > ref + v-for 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, createFor as _createFor, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+exports[`compiler: template ref transform > dynamic ref (inline mode) 1`] = `
+"
+  const n0 = t0()
+  _setTemplateRefBinding(n0, () => foo, undefined, undefined, "foo")
+  return n0
+"
+`;
+
+exports[`compiler: template ref transform > dynamic ref + v-for 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
   const n0 = _createFor(() => ([1,2,3]), (_for_item0) => {
     const n2 = t0()
-    _setTemplateRef(n2, "foo", void 0, true)
+    _renderEffect(() => _setTemplateRef(n2, _ctx.foo, true))
     return n2
-  }, undefined, 4)
+  }, undefined, 12 /* IS_SINGLE_NODE, ONCE */)
+  return n0
+}"
+`;
+
+exports[`compiler: template ref transform > dynamic ref 1`] = `
+"import { setTemplateRefBinding as _setTemplateRefBinding, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setTemplateRefBinding(n0, () => _ctx.foo)
+  return n0
+}"
+`;
+
+exports[`compiler: template ref transform > dynamic ref in slot uses owner setter 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, setTemplateRefBinding as _setTemplateRefBinding, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    _setTemplateRefBinding(n0, () => _ctx.refName, _setTemplateRef)
+    return n0
+  }, true)
+  return n1
+}"
+`;
+
+exports[`compiler: template ref transform > function ref 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n0 = t0()
+  _renderEffect(() => {
+    const _foo = _ctx.foo
+    _setTemplateRef(n0, bar => {
+        _foo.value = bar
+        ;({ baz: _ctx.baz } = bar)
+        console.log(_foo.value, _ctx.baz)
+      })
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: template ref transform > multiple dynamic refs 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n0 = t0()
+  const n1 = t0()
+  _renderEffect(() => {
+    _setTemplateRef(n0, _ctx.foo)
+    _setTemplateRef(n1, _ctx.bar)
+  })
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: template ref transform > multiple static refs 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n0 = t0()
+  const n1 = t0()
+  _setTemplateRef(n0, "foo")
+  _setTemplateRef(n1, "bar")
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: template ref transform > ref + v-for 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const _setTemplateRef = _createTemplateRefSetter()
+  const n0 = _createFor(() => ([1,2,3]), (_for_item0) => {
+    const n2 = t0()
+    _setTemplateRef(n2, "foo", true)
+    return n2
+  }, undefined, 12 /* IS_SINGLE_NODE, ONCE */)
   return n0
 }"
 `;
 
 exports[`compiler: template ref transform > ref + v-if 1`] = `
 "import { createTemplateRefSetter as _createTemplateRefSetter, createIf as _createIf, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
@@ -58,28 +173,65 @@ export function render(_ctx) {
     const n2 = t0()
     _setTemplateRef(n2, "foo")
     return n2
-  })
+  }, null, 17 /* TRUE_SINGLE_ROOT, ONCE */)
   return n0
+}"
+`;
+
+exports[`compiler: template ref transform > simple function ref 1`] = `
+"import { setTemplateRefBinding as _setTemplateRefBinding, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setTemplateRefBinding(n0, () => bar => { _ctx.foo.value = bar })
+  return n0
+}"
+`;
+
+exports[`compiler: template ref transform > static and dynamic refs 1`] = `
+"import { setStaticTemplateRef as _setStaticTemplateRef, setTemplateRefBinding as _setTemplateRefBinding, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  _setStaticTemplateRef(n0, "foo")
+  _setTemplateRefBinding(n1, () => _ctx.bar)
+  return [n0, n1]
 }"
 `;
 
 exports[`compiler: template ref transform > static ref (inline mode) 1`] = `
 "
-  const _setTemplateRef = _createTemplateRefSetter()
   const n0 = t0()
-  _setTemplateRef(n0, foo)
+  _setStaticTemplateRef(n0, foo, null, "foo")
   return n0
 "
 `;
 
 exports[`compiler: template ref transform > static ref 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, template as _template } from 'vue';
-const t0 = _template("<div></div>", true)
+"import { setStaticTemplateRef as _setStaticTemplateRef, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setStaticTemplateRef(n0, "foo")
+  return n0
+}"
+`;
+
+exports[`compiler: template ref transform > static ref in slot uses owner setter 1`] = `
+"import { createTemplateRefSetter as _createTemplateRefSetter, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div>")
 
 export function render(_ctx) {
   const _setTemplateRef = _createTemplateRefSetter()
-  const n0 = t0()
-  _setTemplateRef(n0, "foo")
-  return n0
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    _setTemplateRef(n0, "foo")
+    return n0
+  }, true)
+  return n1
 }"
 `;
