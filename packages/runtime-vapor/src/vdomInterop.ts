@@ -36,6 +36,7 @@ import {
   isKeepAlive,
   isVNode,
   isHydrating as isVdomHydrating,
+  isHydratingEnabled as isVdomHydratingEnabled,
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
@@ -108,9 +109,11 @@ import {
   currentHydrationNode,
   isComment,
   isHydrating,
+  isHydratingEnabled,
   isHydrationAnchor,
   locateEndAnchor,
   setCurrentHydrationNode,
+  setIsHydratingEnabled,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
 import {
@@ -209,6 +212,19 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
 }
 
 // mounting vapor components and slots in vdom
+// Deferred hydration (async chunks, lazy hydration strategies) runs after
+// vapor's hydration gate has been reset, so scope-enable it for the duration
+// of the interop hydrate call.
+function withVaporHydrationEnabled<T>(fn: () => T): T {
+  const prev = isHydratingEnabled
+  if (!prev) setIsHydratingEnabled(true)
+  try {
+    return fn()
+  } finally {
+    if (!prev) setIsHydratingEnabled(false)
+  }
+}
+
 const vaporInteropImpl: Omit<
   VaporInteropInterface,
   'vdomMount' | 'vdomUnmount' | 'vdomSlot' | 'vdomMountVNode'
@@ -519,22 +535,28 @@ const vaporInteropImpl: Omit<
     onBeforeMount,
     onVnodeBeforeMount,
   ) {
-    // Check both vapor's isHydrating (for createVaporSSRApp) and
-    // VDOM's isVdomHydrating (for createSSRApp).
-    // In CSR (createApp/createVaporApp + vaporInteropPlugin), both are false,
+    // Check vapor's isHydrating (for createVaporSSRApp) and VDOM's
+    // isVdomHydrating (for createSSRApp). isVdomHydratingEnabled covers
+    // deferred hydration (async chunks, lazy hydration strategies), which
+    // runs after the root hydration pass has reset isVdomHydrating.
+    // In CSR (createApp/createVaporApp + vaporInteropPlugin), all are false,
     // so this logic is tree-shaken.
-    if (!isHydrating && !isVdomHydrating) return node
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+      return node
+    }
     let instance: VaporComponentInstance | undefined
-    vaporHydrateNode(node, () => {
-      instance = this.mount(
-        vnode,
-        container,
-        anchor,
-        parentComponent,
-        parentSuspense,
-        onBeforeMount,
-        onVnodeBeforeMount,
-      ) as VaporComponentInstance
+    withVaporHydrationEnabled(() => {
+      vaporHydrateNode(node, () => {
+        instance = this.mount(
+          vnode,
+          container,
+          anchor,
+          parentComponent,
+          parentSuspense,
+          onBeforeMount,
+          onVnodeBeforeMount,
+        ) as VaporComponentInstance
+      })
     })
     if (instance && instance.asyncDep && !instance.asyncResolved) {
       // mount() cannot expose a block before async setup resolves. Keep the SSR
@@ -545,26 +567,30 @@ const vaporInteropImpl: Omit<
   },
 
   hydrateSlot(vnode, node, parentComponent, parentSuspense) {
-    if (!isHydrating && !isVdomHydrating) return node
-    vaporHydrateNode(node, () => {
-      vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
-      const anchor =
-        isFragment(vnode.vb) && vnode.vb.anchor
-          ? vnode.vb.anchor
-          : currentHydrationNode!
-      // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
-      // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
-      if (isComment(node, '[') && isComment(anchor, ']')) {
-        vnode.el = node
-        vnode.anchor = anchor
-      } else {
-        vnode.anchor = vnode.el = anchor
-      }
-      if (__DEV__ && !vnode.anchor) {
-        throw new Error(
-          `Failed to locate slot anchor. this is likely a Vue internal bug.`,
-        )
-      }
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+      return node
+    }
+    withVaporHydrationEnabled(() => {
+      vaporHydrateNode(node, () => {
+        vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
+        const anchor =
+          isFragment(vnode.vb) && vnode.vb.anchor
+            ? vnode.vb.anchor
+            : currentHydrationNode!
+        // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
+        // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
+        if (isComment(node, '[') && isComment(anchor, ']')) {
+          vnode.el = node
+          vnode.anchor = anchor
+        } else {
+          vnode.anchor = vnode.el = anchor
+        }
+        if (__DEV__ && !vnode.anchor) {
+          throw new Error(
+            `Failed to locate slot anchor. this is likely a Vue internal bug.`,
+          )
+        }
+      })
     })
     // For fragment-wrapped slot content (`<!--[-->...<!--]-->`), return the
     // node after the end anchor to avoid hydrateChildren() treating `<!--]-->`
