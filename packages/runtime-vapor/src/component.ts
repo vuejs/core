@@ -1034,6 +1034,19 @@ export function createPlainElement(
   return el
 }
 
+function queuePostMountEffect(
+  fn: LifecycleHook & {},
+  suspense: SuspenseBoundary | null,
+): void {
+  // while mounting into a pending suspense's hidden container, defer to the
+  // boundary so the hooks run once the resolved branch is in the real tree.
+  if (__FEATURE_SUSPENSE__ && suspense && suspense.pendingBranch) {
+    suspense.effects.push(...fn)
+  } else {
+    queuePostFlushCb(fn)
+  }
+}
+
 export function mountComponent(
   instance: VaporComponentInstance,
   parent: ParentNode,
@@ -1124,13 +1137,13 @@ export function mountComponent(
     // client-only branch switches keep inherited scope ids.
     trackComponentScopeId(instance)
   }
-  if (instance.m) queuePostFlushCb(instance.m!)
+  if (instance.m) queuePostMountEffect(instance.m!, instance.suspense)
   if (
     isKeepAliveEnabled &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.a
   ) {
-    queuePostFlushCb(instance.a!)
+    queuePostMountEffect(instance.a!, instance.suspense)
   }
   instance.isMounted = true
   if (__DEV__) {
