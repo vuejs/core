@@ -40,6 +40,7 @@ import {
   onScopeDispose,
   queuePostFlushCb,
   renderSlot,
+  setCurrentInstance,
   setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
   shallowRef,
@@ -86,7 +87,11 @@ import {
   isReservedProp,
   isString,
 } from '@vue/shared'
-import { type RawProps, rawPropsProxyHandlers } from './componentProps'
+import {
+  type RawProps,
+  rawPropsProxyHandlers,
+  setupPropsValidation,
+} from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import {
   currentSlotScopeIds,
@@ -1013,6 +1018,15 @@ function createVDOMComponent(
       wrapper.rawSlots === EMPTY_OBJ
         ? EMPTY_OBJ
         : new Proxy(wrapper.rawSlots, vaporSlotsProxyHandler)
+
+    if (__DEV__) {
+      const prev = setCurrentInstance(wrapper, instance.scope)
+      try {
+        setupPropsValidation(wrapper, vnode)
+      } finally {
+        setCurrentInstance(...prev)
+      }
+    }
   }
 
   let rawRef: VNodeNormalizedRef | null = null

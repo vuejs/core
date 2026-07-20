@@ -10,7 +10,9 @@ import {
 } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
+  type GenericComponentInstance,
   type NormalizedPropsOptions,
+  type VNode,
   baseNormalizePropsOptions,
   currentInstance,
   isEmitListener,
@@ -488,11 +490,14 @@ export function hasFallthroughAttrs(
 /**
  * dev only
  */
-export function setupPropsValidation(instance: VaporComponentInstance): void {
+export function setupPropsValidation(
+  instance: VaporComponentInstance,
+  warningContext: GenericComponentInstance | VNode = instance,
+): void {
   const rawProps = instance.rawProps
   if (!rawProps) return
   renderEffect(() => {
-    pushWarningContext(instance)
+    pushWarningContext(warningContext)
     validateProps(
       resolveDynamicProps(rawProps),
       instance.props,

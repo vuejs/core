@@ -333,6 +333,30 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div class="foo bar"></div>')
     })
 
+    test('should warn on invalid prop when vapor renders vdom component', async () => {
+      const base = ref<unknown>('invalid')
+      const VDomChild = defineComponent({
+        props: {
+          base: Number,
+        },
+        render: () => h('div'),
+      })
+
+      const VaporChild = defineVaporComponent(() =>
+        createComponent(VDomChild as any, {
+          base: () => base.value,
+        }),
+      )
+
+      define(() => h(VaporChild as any)).render()
+
+      expect('type check failed for prop "base"').toHaveBeenWarnedTimes(1)
+
+      base.value = 'still invalid'
+      await nextTick()
+      expect('type check failed for prop "base"').toHaveBeenWarnedTimes(2)
+    })
+
     test('should not pass reserved props into vapor attrs on update', async () => {
       const msg = ref('foo')
       const onVnodeMounted = vi.fn()
