@@ -174,14 +174,13 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { txt as _txt, createInvoker as _createInvoker, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { txt as _txt, on as _on, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<button> ", 1)
-_delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
   const x0 = _txt(n0)
-  n0.$evtclick = _createInvoker(e => _ctx.handleClick(e))
+  _on(n0, "click", e => _ctx.handleClick(e))
   _renderEffect(() => {
     const _count = _ctx.count
     _setProp(n0, "id", _count)
@@ -366,13 +365,12 @@ export function render(_ctx) {
 `;
 
 exports[`compile > expression parsing > v-on multi statements 1`] = `
-"import { createInvoker as _createInvoker, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { on as _on, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
-_delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  n0.$evtclick = _createInvoker(() => {_ctx.a++;_ctx.b++})
+  _on(n0, "click", () => {_ctx.a++;_ctx.b++})
   return n0
 }"
 `;
