@@ -38,6 +38,11 @@ export type InternalSlots = {
 export type Slots = Readonly<InternalSlots>
 
 declare const SlotSymbol: unique symbol
+/**
+ * With `exactOptionalPropertyTypes` disabled, optional object-style slot props
+ * cannot distinguish implicit from explicit `undefined`. Use a function
+ * signature with an optional parameter when both calls need to be supported.
+ */
 export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
   [SlotSymbol]?: T
 }

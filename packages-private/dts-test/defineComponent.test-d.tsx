@@ -1593,6 +1593,7 @@ describe('slots', () => {
       default: { foo: string; bar: number }
       optional?: { data: string }
       undefinedScope: undefined | { data: string }
+      optionalUndefinedScope?: undefined | { data: string }
     }>,
     setup(props, { slots }) {
       expectType<(scope: { foo: string; bar: number }) => VNode[]>(
@@ -1610,6 +1611,15 @@ describe('slots', () => {
       slots.optional?.()
       // @ts-expect-error slot props do not accept undefined
       slots.optional?.(undefined)
+
+      expectType<((scope: { data: string }) => VNode[]) | undefined>(
+        slots.optionalUndefinedScope,
+      )
+      slots.optionalUndefinedScope?.({ data: 'foo' })
+      // @ts-expect-error slot props are required
+      slots.optionalUndefinedScope?.()
+      // @ts-expect-error slot props do not accept undefined
+      slots.optionalUndefinedScope?.(undefined)
 
       expectType<{
         (): VNode[]
