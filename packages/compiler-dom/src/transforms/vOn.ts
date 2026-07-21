@@ -51,12 +51,15 @@ export const resolveModifiers = (
     const modifier = modifiers[i].content
 
     // delegate modifier is vapor-only modifier
-    if (modifier === 'delegate' && context) {
-      const error = new SyntaxError(
-        `.delegate modifier is only supported in Vapor components.`,
-      ) as CompilerError
-      error.loc = modifiers[i].loc
-      context.onWarn(error)
+    if (modifier === 'delegate') {
+      if (context) {
+        const error = new SyntaxError(
+          `.delegate modifier is only supported in Vapor components.`,
+        ) as CompilerError
+        error.loc = modifiers[i].loc
+        context.onWarn(error)
+      }
+      continue
     }
 
     if (
