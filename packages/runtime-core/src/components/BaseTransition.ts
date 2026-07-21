@@ -28,6 +28,12 @@ type Hook<T = () => void> = T | T[]
 
 export const leaveCbKey: unique symbol = Symbol('_leaveCb')
 const enterCbKey: unique symbol = Symbol('_enterCb')
+// #12435 marks an element whose enter hooks were deferred because it mounted
+// while its Suspense boundary was still pending. The deferred enter is fired
+// once, when the boundary resolves and relocates the branch (see renderer's
+// `move`), and the mark is cleared so later relocations (e.g. KeepAlive
+// activation) do not replay it.
+export const deferredEnterKey: unique symbol = Symbol('_deferredEnter')
 
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
@@ -98,6 +104,8 @@ export interface TransitionElement {
   // before it finishes.
   [enterCbKey]?: PendingCallback
   [leaveCbKey]?: PendingCallback
+  // #12435 set while the element awaits its pending Suspense boundary to resolve
+  [deferredEnterKey]?: boolean
 }
 
 export function useTransitionState(): TransitionState {

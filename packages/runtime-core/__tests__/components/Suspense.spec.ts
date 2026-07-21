@@ -3,6 +3,7 @@
  */
 
 import {
+  BaseTransition,
   type ComponentOptions,
   Fragment,
   KeepAlive,
@@ -3272,5 +3273,50 @@ describe('Suspense', () => {
       await nextTick()
       expect(updateSpy).not.toHaveBeenCalled()
     })
+  })
+
+  // #12435
+  test('appear hooks are called for a Transition nested under a wrapper element', async () => {
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const onBeforeAppear = vi.fn()
+    const onAppear = vi.fn((el, done: () => void) => done())
+    const onEnter = vi.fn((el, done: () => void) => done())
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            // wrapper element sits between Suspense and Transition (#12435)
+            default: () =>
+              h('div', [
+                h(
+                  BaseTransition,
+                  { appear: true, onBeforeAppear, onAppear, onEnter },
+                  () => h(Async),
+                ),
+              ]),
+            fallback: () => h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<div><div>async</div></div>`)
+    // the appear transition must run even though the Transition is wrapped
+    expect(onBeforeAppear).toHaveBeenCalledTimes(1)
+    expect(onAppear).toHaveBeenCalledTimes(1)
+    expect(onEnter).not.toHaveBeenCalled()
   })
 })

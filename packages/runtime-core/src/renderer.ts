@@ -90,7 +90,11 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
+import {
+  type TransitionHooks,
+  deferredEnterKey,
+  leaveCbKey,
+} from './components/BaseTransition'
 import type { ComponentCustomElementInterface } from './component'
 
 export interface Renderer<HostElement = RendererElement> {
@@ -731,6 +735,17 @@ function baseCreateRenderer(
     const needCallTransitionHooks = needTransition(parentSuspense, transition)
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
+    } else if (
+      transition &&
+      !transition.persisted &&
+      parentSuspense &&
+      parentSuspense.pendingBranch
+    ) {
+      // #12435 the enter hooks are skipped here because the element mounts
+      // off-dom while its Suspense boundary is still pending. Mark it so the
+      // deferred enter is fired when the boundary resolves and relocates the
+      // branch (see `move`).
+      el[deferredEnterKey] = true
     }
     hostInsert(el, container, anchor)
     if (
@@ -2045,6 +2060,50 @@ function baseCreateRenderer(
     }
   }
 
+  // #12435 A `<Transition>` sitting under a plain wrapper element is mounted
+  // off-dom while its Suspense boundary is pending (its enter hooks are
+  // deferred), and on resolve the whole branch is relocated with a single
+  // `MoveType.ENTER`. `move` only fires the transition on the branch's own root,
+  // so a transition nested under a wrapper element (e.g.
+  // `<Suspense><div><Transition appear>`) would never run its enter/appear hooks.
+  // Walk such a subtree and fire those deferred enter hooks without re-inserting
+  // the nodes (they moved with their wrapper's DOM already).
+  const moveDeferredEnterHooks = (
+    vnode: VNode,
+    parentSuspense: SuspenseBoundary | null,
+  ) => {
+    const { el, transition, children, shapeFlag } = vnode
+    if (shapeFlag & ShapeFlags.COMPONENT) {
+      moveDeferredEnterHooks(vnode.component!.subTree, parentSuspense)
+      return
+    }
+    // teleported / nested-suspense content is entered by its own owner
+    if (
+      shapeFlag & ShapeFlags.TELEPORT ||
+      (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE)
+    ) {
+      return
+    }
+    if (
+      shapeFlag & ShapeFlags.ELEMENT &&
+      transition &&
+      !transition.persisted &&
+      el![deferredEnterKey]
+    ) {
+      // fire the deferred enter exactly once, then clear the mark so later
+      // relocations of the same element (e.g. KeepAlive activation, which also
+      // moves with `MoveType.ENTER`) do not replay the enter hooks.
+      el![deferredEnterKey] = undefined
+      transition.beforeEnter(el!)
+      queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+    }
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        moveDeferredEnterHooks((children as VNode[])[i], parentSuspense)
+      }
+    }
+  }
+
   const move: MoveFn = (
     vnode,
     container,
@@ -2135,6 +2194,23 @@ function baseCreateRenderer(
       }
     } else {
       hostInsert(el!, container, anchor)
+    }
+    // #12435 the element itself has no (or an already-handled) transition, but a
+    // `<Transition>` may be nested under it (e.g. `<Suspense><div><Transition>`).
+    // On enter, fire those deferred child transition hooks explicitly.
+    // Only do this when the move is not into a still-pending Suspense boundary:
+    // the deferred enter is meant for the branch's real insertion on resolve
+    // (where `move` is called without a `parentSuspense`), not for other ENTER
+    // moves such as KeepAlive activation while the boundary is still pending,
+    // which would relocate the branch off-dom and replay hooks prematurely.
+    if (
+      moveType === MoveType.ENTER &&
+      !(parentSuspense && parentSuspense.pendingBranch) &&
+      shapeFlag & ShapeFlags.ARRAY_CHILDREN
+    ) {
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        moveDeferredEnterHooks((children as VNode[])[i], parentSuspense)
+      }
     }
   }
 
