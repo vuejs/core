@@ -24,6 +24,7 @@ import {
   effectScope,
   nextTick,
   ref,
+  restoreCurrentInstance,
   setCurrentInstance,
   svgNS,
   xlinkNS,
@@ -40,7 +41,7 @@ let removeComponentInstance = NOOP
 beforeEach(() => {
   const instance = new VaporComponentInstance({}, {}, null)
   const prev = setCurrentInstance(instance)
-  removeComponentInstance = () => setCurrentInstance(...prev)
+  removeComponentInstance = () => restoreCurrentInstance(prev)
 })
 afterEach(() => {
   removeComponentInstance()

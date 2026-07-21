@@ -1062,7 +1062,7 @@ export function mountComponent(
           handleSetupResult(setupResult, component, instance)
         } finally {
           setActiveSub(prevSub)
-          setCurrentInstance(...prevInstance)
+          restoreCurrentInstance(prevInstance)
         }
       }
       try {
