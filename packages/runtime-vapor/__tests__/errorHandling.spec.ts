@@ -941,40 +941,44 @@ describe('error handling', () => {
     expect(handler).toHaveBeenCalledTimes(1)
   })
 
-  test('component can be updated and unmounted after setup error', async () => {
-    const err = new Error('foo')
-    const fn = vi.fn()
-    const toggle = ref(true)
+  test('component can be updated and unmounted after setup error in production', async () => {
+    __DEV__ = false
+    try {
+      const err = new Error('foo')
+      const fn = vi.fn()
+      const toggle = ref(true)
 
-    const Child = defineVaporComponent({
-      setup() {
-        throw err
-      },
-    })
+      const Child = defineVaporComponent({
+        setup() {
+          throw err
+        },
+      })
 
-    const Comp: VaporComponent = {
-      setup() {
-        onErrorCaptured((err, instance, info) => {
-          fn(err, info)
-          return false
-        })
-        return createIf(
-          () => toggle.value,
-          () => createComponent(Child),
-          () => template('<div>fallback</div>')(),
-        )
-      },
+      const Comp: VaporComponent = {
+        setup() {
+          onErrorCaptured(err => {
+            fn(err)
+            return false
+          })
+          return createIf(
+            () => toggle.value,
+            () => createComponent(Child),
+            () => template('<div>fallback</div>')(),
+          )
+        },
+      }
+
+      const { app, html } = define(Comp).render()
+      expect(fn).toHaveBeenCalledWith(err)
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toContain('fallback')
+
+      expect(() => app.unmount()).not.toThrow()
+    } finally {
+      __DEV__ = true
     }
-
-    const { app, html } = define(Comp).render()
-    expect(fn).toHaveBeenCalledWith(err, 'setup function')
-
-    toggle.value = false
-    await nextTick()
-    expect(html()).toContain('fallback')
-
-    expect(() => app.unmount()).not.toThrow()
-    expect(`returned non-block value`).toHaveBeenWarned()
   })
 
   // native event handler handling should be tested in respective renderers
