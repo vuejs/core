@@ -143,6 +143,14 @@ export const isKnownMathMLAttr: (key: string) => boolean =
   )
 
 /**
+ * Asset URL-like attributes that may differ between SSR and client due to
+ * origin resolution.
+ */
+export const isAssetUrlAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
+  'src,href,xlink:href,poster,data,srcset',
+)
+
+/**
  * Shared between server-renderer and runtime-core hydration logic
  */
 export function isRenderableAttrValue(value: unknown): boolean {
