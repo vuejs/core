@@ -7,6 +7,8 @@ import {
   mockId,
 } from './utils'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { compileScript, compileTemplate, parse } from '../src'
+import { templateAnalysisCache } from '../src/script/importUsageCheck'
 
 vi.mock('../src/warn', () => ({
   warn: vi.fn(),
@@ -343,6 +345,43 @@ describe('SFC compile <script setup>', () => {
         `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`,
       )
       expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
+    })
+
+    test('should re-analyze a transformed template after cache invalidation', () => {
+      const delimiters: [string, string] = ['[[', ']]']
+      const { descriptor } = parse(
+        `
+        <script setup lang="ts">
+        import { cachedMsg } from './cachedMsg'
+        </script>
+        <template><p>[[ cachedMsg ]]</p></template>
+        `,
+        { templateParseOptions: { delimiters } },
+      )
+
+      const templateOptions = { compilerOptions: { delimiters } }
+      compileScript(descriptor, { id: mockId, templateOptions })
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(true)
+
+      compileTemplate({
+        filename: 'example.vue',
+        id: mockId,
+        source: descriptor.template!.content,
+        ast: descriptor.template!.ast,
+        compilerOptions: { delimiters },
+      })
+      expect(descriptor.template!.ast!.transformed).toBe(true)
+
+      templateAnalysisCache.clear()
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(
+        false,
+      )
+
+      const { content } = compileScript(descriptor, {
+        id: mockId,
+        templateOptions,
+      })
+      expect(content).toMatch(`return { get cachedMsg() { return cachedMsg } }`)
     })
 
     test('import dedupe between <script> and <script setup>', () => {
