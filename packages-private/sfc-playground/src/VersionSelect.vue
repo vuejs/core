@@ -86,11 +86,19 @@ onMounted(() => {
 
     <ul class="versions" :class="{ expanded }">
       <li v-if="!versions"><a>loading versions...</a></li>
-      <li v-for="(ver, index) of versions" class="versions-item" :class="{
-        active: ver === version || (version === 'latest' && index === 0),
-      }">
+      <li
+        v-for="(ver, index) of versions"
+        class="versions-item"
+        :class="{
+          active: ver === version || (version === 'latest' && index === 0),
+        }"
+      >
         <a @click="setVersion(ver)">v{{ ver }}</a>
-        <button title="Copy Version" class="version-copy" @click="copyVersion(`v${ver}`)">
+        <button
+          title="Copy Version"
+          class="version-copy"
+          @click="copyVersion(`v${ver}`)"
+        >
           <Copy />
         </button>
       </li>
