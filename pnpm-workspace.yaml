@@ -3,11 +3,11 @@ packages:
   - 'packages-private/*'
 
 catalog:
-  '@babel/parser': ^7.29.7
-  '@babel/types': ^7.29.7
+  '@babel/parser': ^8.0.4
+  '@babel/types': ^8.0.4
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
-  'magic-string': ^0.30.21
+  'magic-string': ^1.0.0
   'source-map-js': ^1.2.1
   'vite': ^8.1.4
   '@vitejs/plugin-vue': ^6.0.8
