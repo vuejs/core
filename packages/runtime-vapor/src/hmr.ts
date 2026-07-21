@@ -1,6 +1,7 @@
 import {
   popWarningContext,
   pushWarningContext,
+  restoreCurrentInstance,
   setCurrentInstance,
 } from '@vue/runtime-dom'
 import { findBlockBoundary, insert, remove } from './block'
@@ -27,7 +28,7 @@ export function hmrRerender(instance: VaporComponentInstance): void {
     devRender(instance)
   } finally {
     popWarningContext()
-    setCurrentInstance(...prev)
+    restoreCurrentInstance(prev)
   }
   insert(instance.block, parent, anchor)
 }
@@ -62,7 +63,7 @@ export function hmrReload(
       instance.appContext,
     )
   } finally {
-    setCurrentInstance(...prev)
+    restoreCurrentInstance(prev)
   }
   mountComponent(newInstance, parent, anchor)
 

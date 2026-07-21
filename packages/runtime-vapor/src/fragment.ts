@@ -17,6 +17,7 @@ import {
   type VNode,
   currentInstance,
   queuePostFlushCb,
+  restoreCurrentInstance,
   setCurrentInstance,
 } from '@vue/runtime-dom'
 import type { VaporComponentInstance } from './component'
@@ -143,7 +144,7 @@ export function runWithRenderCtx<R>(
   try {
     return runWithFragmentCtxOnly(fragment, fn)
   } finally {
-    setCurrentInstance(...prevInstance)
+    restoreCurrentInstance(prevInstance)
   }
 }
 

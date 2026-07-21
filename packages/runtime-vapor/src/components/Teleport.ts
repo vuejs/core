@@ -13,6 +13,7 @@ import {
   logMismatchError,
   queuePostFlushCb,
   resolveTeleportTarget,
+  restoreCurrentInstance,
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
@@ -157,7 +158,7 @@ export class TeleportFragment extends RenderContextFragment {
       )
       this.bindChildren(this.nodes)
     } finally {
-      setCurrentInstance(...prevInstance)
+      restoreCurrentInstance(prevInstance)
     }
   }
 

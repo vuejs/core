@@ -7,6 +7,7 @@ import {
   handleError,
   markAsyncBoundary,
   performAsyncHydrate,
+  restoreCurrentInstance,
   setCurrentInstance,
   useAsyncComponentState,
 } from '@vue/runtime-dom'
@@ -230,6 +231,6 @@ function createInnerComp(
       parent.appContext,
     )
   } finally {
-    setCurrentInstance(...prevInstance)
+    restoreCurrentInstance(prevInstance)
   }
 }

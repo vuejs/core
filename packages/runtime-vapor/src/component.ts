@@ -34,6 +34,7 @@ import {
   queuePostFlushCb,
   registerHMR,
   resolveComponent,
+  restoreCurrentInstance,
   setCurrentInstance,
   setCurrentRenderingInstance,
   startMeasure,
@@ -531,7 +532,7 @@ export function setupComponent(
   }
 
   setActiveSub(prevSub)
-  setCurrentInstance(...prevInstance)
+  restoreCurrentInstance(prevInstance)
 }
 
 export let isApplyingFallthroughProps = false
@@ -1061,7 +1062,7 @@ export function mountComponent(
           handleSetupResult(setupResult, component, instance)
         } finally {
           setActiveSub(prevSub)
-          setCurrentInstance(...prevInstance)
+          restoreCurrentInstance(prevInstance)
         }
       }
       try {

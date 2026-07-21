@@ -42,6 +42,7 @@ import {
   onScopeDispose,
   queuePostFlushCb,
   renderSlot,
+  restoreCurrentInstance,
   setCurrentInstance,
   setTransitionHooks as setVNodeTransitionHooks,
   shallowReactive,
@@ -1083,7 +1084,7 @@ function createVDOMComponent(
       try {
         setupPropsValidation(wrapper, vnode)
       } finally {
-        setCurrentInstance(...prev)
+        restoreCurrentInstance(prev)
       }
     }
   }

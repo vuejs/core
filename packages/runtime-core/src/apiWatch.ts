@@ -16,6 +16,7 @@ import {
   type GenericComponentInstance,
   currentInstance,
   isInSSRComponentSetup,
+  restoreCurrentInstance,
   setCurrentInstance,
 } from './component'
 import { callWithAsyncErrorHandling } from './errorHandling'
@@ -297,7 +298,7 @@ export function instanceWatch(
   }
   const prev = setCurrentInstance(this)
   const res = doWatch(getter, cb.bind(publicThis), options)
-  setCurrentInstance(...prev)
+  restoreCurrentInstance(prev)
   return res
 }
 
