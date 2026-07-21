@@ -5052,6 +5052,102 @@ describe('vdomInterop', () => {
       expect(html()).not.toContain('vapor')
       expect(html()).toContain('vdom')
     })
+
+    test('out-in + suspense: leaving vapor branch completes after hooks re-clone', async () => {
+      const hooks = makeHooks()
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>', 1)()
+        },
+      })
+      const VdomChild = { setup: () => () => h('div', 'vdom') }
+      const current = shallowRef<any>(VaporChild)
+      const tick = ref(0)
+      const { host, html } = define({
+        setup() {
+          return () => {
+            // reading tick makes a bump re-render the tree, which re-clones the
+            // transition hooks onto the branch vnode (mirrors an intervening
+            // parent render during an async page's resolve window in Nuxt).
+            void tick.value
+            return h(
+              Transition,
+              {
+                mode: 'out-in',
+                css: false,
+                onLeave: hooks.onLeave,
+                onEnter: hooks.onEnter,
+              },
+              {
+                default: () =>
+                  h(Suspense, null, {
+                    default: () =>
+                      h(current.value, {
+                        key: current.value === VaporChild ? 'a' : 'b',
+                      }),
+                  }),
+              },
+            )
+          }
+        },
+      }).render()
+      document.body.appendChild(host)
+
+      await timeout(10)
+      expect(html()).toContain('vapor')
+
+      tick.value++
+      await nextTick()
+
+      current.value = VdomChild
+      await timeout(10)
+      expect(hooks.onLeave).toHaveBeenCalledTimes(1)
+      expect(html()).toContain('vapor')
+
+      hooks.finishLeave()
+      await timeout(10)
+      expect(html()).toContain('vdom')
+      expect(html()).not.toContain('vapor')
+    })
+
+    test('uses latest transition hooks when a vapor root branch switches', async () => {
+      const data = ref({ show: true })
+      const useSecondHook = ref(false)
+      const firstLeave = vi.fn((_el: Element, done: () => void) => done())
+      const secondLeave = vi.fn((_el: Element, done: () => void) => done())
+      const VaporChild = compile(
+        `<template>
+          <div v-if="data.show">first</div>
+          <div v-else>second</div>
+        </template>`,
+        data,
+      )
+      const { html } = define({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              {
+                css: false,
+                onLeave: useSecondHook.value ? secondLeave : firstLeave,
+              },
+              { default: () => h(VaporChild as any) },
+            )
+        },
+      }).render()
+
+      expect(html()).toContain('first')
+
+      useSecondHook.value = true
+      await nextTick()
+
+      data.value.show = false
+      await nextTick()
+
+      expect(firstLeave).not.toHaveBeenCalled()
+      expect(secondLeave).toHaveBeenCalledTimes(1)
+      expect(html()).toContain('second')
+    })
   })
 
   describe('error handling', () => {

@@ -341,6 +341,10 @@ const vaporInteropImpl: Omit<
         }
       }
       vnodeHookState.skipVnodeHooks = true
+      if (n2.transition && instance.block) {
+        ensureTransitionHooksRegistered()
+        setVaporTransitionHooks(instance, n2.transition as VaporTransitionHooks)
+      }
       instance.rawPropsRef!.value = filterReservedProps(n2.props)
       instance.rawSlotsRef!.value = normalizeInteropSlots(n2.children)
       queuePostFlushCb(() => {
