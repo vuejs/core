@@ -9,6 +9,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   createComponent,
+  createIf,
   createInvoker,
   createSlot,
   createTemplateRefSetter,
@@ -938,6 +939,46 @@ describe('error handling', () => {
     await nextTick()
     expect(handler).toHaveBeenCalledWith(error, {}, 'render function')
     expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  test('component can be updated and unmounted after setup error in production', async () => {
+    __DEV__ = false
+    try {
+      const err = new Error('foo')
+      const fn = vi.fn()
+      const toggle = ref(true)
+
+      const Child = defineVaporComponent({
+        setup() {
+          throw err
+        },
+      })
+
+      const Comp: VaporComponent = {
+        setup() {
+          onErrorCaptured(err => {
+            fn(err)
+            return false
+          })
+          return createIf(
+            () => toggle.value,
+            () => createComponent(Child),
+            () => template('<div>fallback</div>')(),
+          )
+        },
+      }
+
+      const { app, html } = define(Comp).render()
+      expect(fn).toHaveBeenCalledWith(err)
+
+      toggle.value = false
+      await nextTick()
+      expect(html()).toContain('fallback')
+
+      expect(() => app.unmount()).not.toThrow()
+    } finally {
+      __DEV__ = true
+    }
   })
 
   // native event handler handling should be tested in respective renderers

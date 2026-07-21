@@ -36,6 +36,7 @@ import {
   isKeepAlive,
   isVNode,
   isHydrating as isVdomHydrating,
+  isHydratingEnabled as isVdomHydratingEnabled,
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
@@ -101,7 +102,7 @@ import {
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { createTextNode } from './dom/node'
+import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
@@ -523,11 +524,15 @@ const vaporInteropImpl: Omit<
     onBeforeMount,
     onVnodeBeforeMount,
   ) {
-    // Check both vapor's isHydrating (for createVaporSSRApp) and
-    // VDOM's isVdomHydrating (for createSSRApp).
-    // In CSR (createApp/createVaporApp + vaporInteropPlugin), both are false,
+    // Check vapor's isHydrating (for createVaporSSRApp) and VDOM's
+    // isVdomHydrating (for createSSRApp). isVdomHydratingEnabled covers
+    // deferred hydration (async chunks, lazy hydration strategies), which
+    // runs after the root hydration pass has reset isVdomHydrating.
+    // In CSR (createApp/createVaporApp + vaporInteropPlugin), all are false,
     // so this logic is tree-shaken.
-    if (!isHydrating && !isVdomHydrating) return node
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+      return node
+    }
     let instance: VaporComponentInstance | undefined
     vaporHydrateNode(node, () => {
       instance = this.mount(
@@ -549,13 +554,26 @@ const vaporInteropImpl: Omit<
   },
 
   hydrateSlot(vnode, node, parentComponent, parentSuspense) {
-    if (!isHydrating && !isVdomHydrating) return node
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+      return node
+    }
+    const container = parentNode(node)!
+    let createdAnchor = false
+    let resumeNode: Node | null = null
     vaporHydrateNode(node, () => {
       vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
-      const anchor =
-        isFragment(vnode.vb) && vnode.vb.anchor
-          ? vnode.vb.anchor
-          : currentHydrationNode!
+      const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
+      let anchor = fragmentAnchor || currentHydrationNode!
+      const wrapped = isComment(node, '[') && isComment(anchor, ']')
+      // An unwrapped slot has no SSR-owned boundary. The hydration cursor is
+      // only where VDOM should resume and may belong to the next sibling, so
+      // create a dedicated self anchor matching the mount path.
+      if (!fragmentAnchor && !wrapped) {
+        createdAnchor = true
+        resumeNode = anchor && parentNode(anchor) === container ? anchor : null
+        anchor = createTextNode()
+        container.insertBefore(anchor, resumeNode)
+      }
       // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
       // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
       if (isComment(node, '[') && isComment(anchor, ']')) {
@@ -570,6 +588,9 @@ const vaporInteropImpl: Omit<
         )
       }
     })
+    // The created anchor is a client-only node; returning it would make
+    // hydrateChildren() treat it as an unclaimed server-rendered child.
+    if (createdAnchor) return resumeNode
     // For fragment-wrapped slot content (`<!--[-->...<!--]-->`), return the
     // node after the end anchor to avoid hydrateChildren() treating `<!--]-->`
     // as an extra child of the current container.

@@ -1024,14 +1024,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: event handlers 1`] = `
-"import { delegate as _delegate, delegateEvents as _delegateEvents, template as _template } from 'vue';
+"import { on as _on, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
-_delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _delegate(n0, "click", e => _ctx.a(e))
-  _delegate(n0, "click", e => _ctx.b(e))
+  _on(n0, "click", e => _ctx.a(e))
+  _on(n0, "click", e => _ctx.b(e))
   return n0
 }"
 `;

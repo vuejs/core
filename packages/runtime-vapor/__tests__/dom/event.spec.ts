@@ -335,7 +335,7 @@ describe('dom event', () => {
     expect(handler2).toHaveBeenCalledTimes(2)
   })
 
-  test('compiled direct key and non-key modifiers use vapor guard helpers', () => {
+  test('compiled direct key and non-key modifiers', () => {
     const onKeyup = vi.fn()
     const Comp = defineVaporComponent({
       setup() {
@@ -361,10 +361,10 @@ describe('dom event', () => {
     expect(onKeyup).toHaveBeenCalledTimes(1)
   })
 
-  test('compiled direct missing handlers do not throw during render', () => {
+  test('compiled delegated missing handlers do not throw during render', () => {
     const Comp = defineVaporComponent({
       render: compileToVaporRender(
-        `<button @click="missing" /><button @click.self="missing" /><input @keyup.enter="missing" /><input @keyup.self.enter="missing" />`,
+        `<button @click.delegate="missing" /><button @click.delegate.self="missing" /><input @keyup.delegate.enter="missing" /><input @keyup.delegate.self.enter="missing" />`,
         {
           bindingMetadata: {
             missing: BindingTypes.SETUP_CONST,
@@ -388,5 +388,30 @@ describe('dom event', () => {
     expect(
       `Invalid value type passed to callWithAsyncErrorHandling(): undefined`,
     ).toHaveBeenWarned()
+  })
+
+  test('compiled child handlers run before parent .stop handlers', () => {
+    const calls: string[] = []
+    const parent = () => calls.push('parent')
+    const child = () => calls.push('child')
+    const Comp = defineVaporComponent({
+      setup() {
+        return { parent, child }
+      },
+      render: compileToVaporRender(
+        `<div @click.stop="parent"><button @click="child" /></div>`,
+        {
+          bindingMetadata: {
+            parent: BindingTypes.SETUP_CONST,
+            child: BindingTypes.SETUP_CONST,
+          },
+        },
+      ),
+    })
+    const { host } = define(Comp).render()
+
+    host.querySelector('button')!.click()
+
+    expect(calls).toEqual(['child', 'parent'])
   })
 })

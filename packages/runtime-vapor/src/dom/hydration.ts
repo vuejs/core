@@ -2,6 +2,7 @@ import {
   MismatchTypes,
   isMismatchAllowed,
   isHydrating as isVdomHydrating,
+  isHydratingEnabled as isVdomHydratingEnabled,
   logMismatchError,
   warn,
 } from '@vue/runtime-dom'
@@ -34,7 +35,9 @@ export let currentHydrationNode: Node | null = null
 
 export let isHydrating = false
 function setIsHydrating(value: boolean) {
-  if (!isHydratingEnabled && !isVdomHydrating) return false
+  if (!isHydratingEnabled && !isVdomHydrating && !isVdomHydratingEnabled) {
+    return false
+  }
   try {
     return isHydrating
   } finally {

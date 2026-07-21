@@ -6648,6 +6648,99 @@ describe('Vapor Mode hydration', () => {
       `)
     })
 
+    test('hydrate vapor component inside VDOM async component resolved after hydration (interop)', async () => {
+      const data = ref({
+        spy: vi.fn(),
+      })
+
+      const compCode = `<button @click="data.spy">hello!</button>`
+      const SSRComp = compileVaporComponent(compCode, data, undefined, true)
+      const SSRAsyncComp = defineAsyncComponent(() => Promise.resolve(SSRComp))
+      const SSRApp = defineComponent({
+        render: () => h('div', [h(SSRAsyncComp)]),
+      })
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      expect(html).toMatchInlineSnapshot(`"<div><button>hello!</button></div>"`)
+
+      let clientResolve: any
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      )
+      const App = defineComponent({
+        render: () => h('div', [h(AsyncComp)]),
+      })
+
+      const Comp = compileVaporComponent(compCode, data)
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = runtimeDom.createSSRApp(App)
+      app.use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).not.toHaveBeenCalled()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).toHaveBeenCalledTimes(1)
+    })
+
+    test('hydrate vapor component inside VDOM async component with lazy hydration strategy (interop)', async () => {
+      const data = ref({
+        spy: vi.fn(),
+      })
+
+      const compCode = `<button @click="data.spy">hello!</button>`
+      const SSRComp = compileVaporComponent(compCode, data, undefined, true)
+      const SSRAsyncComp = defineAsyncComponent(() => Promise.resolve(SSRComp))
+      const SSRApp = defineComponent({
+        render: () => h('div', [h(SSRAsyncComp)]),
+      })
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+
+      const Comp = compileVaporComponent(compCode, data)
+      let doHydrate: (() => void) | undefined
+      const AsyncComp = defineAsyncComponent({
+        loader: () => Promise.resolve(Comp) as any,
+        hydrate(hydrate) {
+          doHydrate = hydrate
+          return () => {}
+        },
+      })
+      const App = defineComponent({
+        render: () => h('div', [h(AsyncComp)]),
+      })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = runtimeDom.createSSRApp(App)
+      app.use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      await new Promise(r => setTimeout(r))
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).not.toHaveBeenCalled()
+
+      expect(doHydrate).toBeDefined()
+      doHydrate!()
+      await new Promise(r => setTimeout(r))
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).toHaveBeenCalledTimes(1)
+    })
+
     describe('suspense', () => {
       describe('VDOM suspense', () => {
         test('hydrate VDOM Suspense vapor async setup updates empty v-for before trailing sibling', async () => {
@@ -9487,6 +9580,7 @@ describe('VDOM interop', () => {
     expect(formatNodeList(container.childNodes)).toEqual([
       '<!--[-->',
       '<div>foo</div>',
+      'text("")',
       'text("")',
       '<!--dynamic-component-->',
       '<!--]-->',
@@ -13604,5 +13698,168 @@ describe('VDOM interop', () => {
       <!--]-->
       <p>after</p></div>"
     `)
+  })
+
+  test('hydrate vapor slot passed to render function vdom child', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const VdomLink = {
+          props: ['to'],
+          setup(props, { slots }) {
+            return () => h('a', { href: props.to }, slots.default && slots.default())
+          }
+        }
+      </script>
+      <template>
+        <div><VdomLink to="/about">{{ data }}</VdomLink></div>
+      </template>`,
+      {},
+      data,
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><a href="/about">foo</a></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><a href="/about">bar</a></div>"`,
+    )
+  })
+
+  test('hydrate vapor slot passed to render function vdom child with trailing sibling', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const VdomLink = {
+          setup(_, { slots }) {
+            return () => h('a', null, [slots.default && slots.default(), h('span', 'after')])
+          }
+        }
+      </script>
+      <template>
+        <div><VdomLink>{{ data }}</VdomLink></div>
+      </template>`,
+      {},
+      data,
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><a><!--[-->foo<!--]--><span>after</span></a></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><a><!--[-->bar<!--]--><span>after</span></a></div>"`,
+    )
+  })
+
+  test('hydrate vapor slot passed to render function vdom child in vdom app', async () => {
+    const data = ref('foo')
+    const { container } = await testWithVDOMApp(
+      `<script setup>const components = _components;</script>
+      <template>
+        <div><components.VaporPage/></div>
+      </template>`,
+      {
+        VaporPage: {
+          code: `<script setup>
+            import { h } from 'vue'
+            const data = _data
+            const VdomLink = {
+              props: ['to'],
+              setup(props, { slots }) {
+                return () => h('a', { href: props.to }, slots.default && slots.default())
+              }
+            }
+          </script>
+          <template>
+            <div><VdomLink to="/about">{{ data }}</VdomLink></div>
+          </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><div><a href="/about">foo</a></div></div>"`,
+    )
+
+    data.value = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<div><div><a href="/about">bar</a></div></div>"`,
+    )
+  })
+
+  test('hydrate dynamic vapor slot passed to render function vdom child', async () => {
+    const data = reactive({ items: [0, 1] })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const VdomLink = {
+          setup(_, { slots }) {
+            return () => h('a', null, slots.default && slots.default())
+          }
+        }
+      </script>
+      <template>
+        <div>
+          <VdomLink>
+            <template v-for="item in data.items" #default>
+              <span>{{ item }}</span>
+            </template>
+          </VdomLink>
+        </div>
+      </template>`,
+      {},
+      data,
+    )
+
+    expect(container.innerHTML).toBe('<div><a><span>1</span></a></div>')
+
+    data.items.push(2)
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><a><span>2</span></a></div>')
+  })
+
+  test('hydrate flattened vapor slot before persistent vdom sibling', async () => {
+    const show = ref(true)
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const show = _data
+        const VdomLink = {
+          setup(_, { slots }) {
+            return () => h('a', null, [
+              ...(show.value && slots.default ? slots.default() : []),
+              h('span', { key: 'after' }, 'after')
+            ])
+          }
+        }
+      </script>
+      <template>
+        <div><VdomLink><b>slot</b></VdomLink></div>
+      </template>`,
+      {},
+      show,
+    )
+
+    expect(container.innerHTML).toBe(
+      '<div><a><b>slot</b><span>after</span></a></div>',
+    )
+
+    show.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><a><span>after</span></a></div>')
   })
 })
