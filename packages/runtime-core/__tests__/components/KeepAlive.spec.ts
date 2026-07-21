@@ -542,6 +542,22 @@ describe('KeepAlive', () => {
       await assertNameMatch({ include: 'one,two', exclude: 'two' })
     })
 
+    test('include + exclude with space before commas', async () => {
+      await assertNameMatch({ include: 'one ,two', exclude: 'two' })
+    })
+
+    test('include + exclude with space after commas', async () => {
+      await assertNameMatch({ include: 'one, two', exclude: 'two' })
+    })
+
+    test('include + exclude with space around comma', async () => {
+      await assertNameMatch({ include: 'one , two', exclude: 'two' })
+    })
+
+    test('include + exclude with space at both ends', async () => {
+      await assertNameMatch({ include: ' one , two ', exclude: ' two ' })
+    })
+
     test('max', async () => {
       const spyAC = vi.fn()
       const spyBC = vi.fn()
