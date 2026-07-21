@@ -122,7 +122,7 @@ export function insert(
   } else if (isArray(block)) {
     anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
     for (const b of block) {
-      insert(b, parent, anchor)
+      insert(b, parent, anchor, parentSuspense)
     }
   } else {
     insertFragment(block, parent, anchor, parentSuspense)

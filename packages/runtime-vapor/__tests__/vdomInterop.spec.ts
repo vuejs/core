@@ -4830,11 +4830,10 @@ describe('vdomInterop', () => {
 
     test('out-in + suspense: entering vapor component fires enter hooks once', async () => {
       const hooks = makeHooks()
-      const VaporChild = defineVaporComponent({
-        setup() {
-          return template('<div>vapor</div>', 1)()
-        },
-      })
+      const VaporChild = compile(
+        `<template><!-- ignored root --><div>vapor</div></template>`,
+        ref(null),
+      )
       const VdomChild = { setup: () => () => h('div', 'vdom') }
       const current = shallowRef<any>(VdomChild)
       const { host, html } = define({
@@ -4927,7 +4926,8 @@ describe('vdomInterop', () => {
     test('default mode: leaving vapor component is removed after leave finishes', async () => {
       const hooks = makeHooks()
       const VaporChild = defineVaporComponent({
-        setup() {
+        async setup() {
+          await timeout()
           return template('<div>vapor</div>', 1)()
         },
       })
@@ -4941,8 +4941,11 @@ describe('vdomInterop', () => {
               { css: false, onLeave: hooks.onLeave },
               {
                 default: () =>
-                  h(current.value, {
-                    key: current.value === VaporChild ? 'a' : 'b',
+                  h(Suspense, null, {
+                    default: () =>
+                      h(current.value, {
+                        key: current.value === VaporChild ? 'a' : 'b',
+                      }),
                   }),
               },
             )
@@ -4950,6 +4953,7 @@ describe('vdomInterop', () => {
       }).render()
       document.body.appendChild(host)
 
+      await timeout(10)
       current.value = VdomChild
       await nextTick()
       expect(hooks.onLeave).toHaveBeenCalledTimes(1)
