@@ -32,6 +32,7 @@ import {
   popWarningContext,
   pushWarningContext,
   queuePostFlushCb,
+  queuePostRenderEffect,
   registerHMR,
   resolveComponent,
   restoreCurrentInstance,
@@ -1125,13 +1126,15 @@ export function mountComponent(
     // client-only branch switches keep inherited scope ids.
     trackComponentScopeId(instance)
   }
-  if (instance.m) queuePostFlushCb(instance.m!)
+  if (instance.m) {
+    queuePostRenderEffect(instance.m!, undefined, instance.suspense)
+  }
   if (
     isKeepAliveEnabled &&
     instance.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE &&
     instance.a
   ) {
-    queuePostFlushCb(instance.a!)
+    queuePostRenderEffect(instance.a!, undefined, instance.suspense)
   }
   instance.isMounted = true
   if (__DEV__) {

@@ -645,6 +645,7 @@ export {
   performTransitionEnter,
   performTransitionLeave,
   invalidateMount,
+  queuePostRenderEffect,
 } from './renderer'
 /**
  * @internal

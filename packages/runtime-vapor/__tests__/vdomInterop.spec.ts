@@ -4656,6 +4656,46 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toContain('<span>resolved</span>')
     })
+
+    test('mounted/activated hooks defer to the owning suspense boundary', async () => {
+      const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
+      const order: string[] = []
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          onMounted(() => order.push('vapor mounted'))
+          return template('<div>vapor</div>', 1)()
+        },
+      })
+
+      const AsyncSibling = defineComponent({
+        async setup() {
+          await timeout(5)
+          return () => h('span', 'async')
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () =>
+            h(
+              Suspense,
+              { onResolve: () => order.push('suspense resolved') },
+              {
+                default: () =>
+                  h('div', [h(VaporChild as any), h(AsyncSibling)]),
+                fallback: () => h('span', 'loading'),
+              },
+            )
+        },
+      }).render()
+
+      await timeout(20)
+      await nextTick()
+
+      expect(html()).toContain('<div>vapor</div>')
+      expect(order).toEqual(['suspense resolved', 'vapor mounted'])
+    })
   })
 
   describe('current scope', () => {
