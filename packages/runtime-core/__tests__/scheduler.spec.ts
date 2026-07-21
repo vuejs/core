@@ -321,6 +321,26 @@ describe('scheduler', () => {
       expect(called).toBe(1000000)
     })
 
+    it('should not overflow the call stack when merging a very large cb array into an active flush', async () => {
+      // same as above, but the large array is queued while a post flush is
+      // already in progress, exercising the merge into activePostFlushCbs
+      // inside a nested flushPostFlushCbs call
+      let called = 0
+      const cbs: SchedulerJob[] = []
+      for (let i = 0; i < 1000000; i++) {
+        cbs.push(() => {
+          called++
+        })
+      }
+
+      queuePostFlushCb(() => {
+        queuePostFlushCb(cbs)
+        flushPostFlushCbs()
+      })
+      await nextTick()
+      expect(called).toBe(1000000)
+    })
+
     it('should dedupe queued postFlushCb', async () => {
       const calls: string[] = []
       const cb1 = () => {
