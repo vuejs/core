@@ -26,7 +26,7 @@ describe('v-on', () => {
     )
 
     expect(code).matchSnapshot()
-    expect(helpers).not.contains('delegate') // optimized as direct attachment
+    expect(helpers).not.contains('delegate')
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
       {
@@ -44,7 +44,7 @@ describe('v-on', () => {
         },
         modifiers: { keys: [], nonKeys: [], options: [] },
         keyOverride: undefined,
-        delegate: true,
+        delegate: false,
       },
     ])
   })
@@ -179,10 +179,10 @@ describe('v-on', () => {
           content: 'i++',
           isStatic: false,
         },
-        delegate: true,
+        delegate: false,
       },
     ])
-    expect(code).contains(`n0.$evtclick = _createInvoker(() => (_ctx.i++))`)
+    expect(code).contains(`_on(n0, "click", () => (_ctx.i++))`)
   })
 
   test('should wrap in unref if identifier is setup-maybe-ref w/ inline: true', () => {
@@ -199,12 +199,10 @@ describe('v-on', () => {
     )
     expect(code).matchSnapshot()
     expect(helpers).contains('unref')
+    expect(code).contains(`_on(n0, "click", () => (x.value=_unref(y)))`)
+    expect(code).contains(`_on(n1, "click", () => (x.value++))`)
     expect(code).contains(
-      `n0.$evtclick = _createInvoker(() => (x.value=_unref(y)))`,
-    )
-    expect(code).contains(`n1.$evtclick = _createInvoker(() => (x.value++))`)
-    expect(code).contains(
-      `n2.$evtclick = _createInvoker(() => ({ x: x.value } = _unref(y)))`,
+      `_on(n2, "click", () => ({ x: x.value } = _unref(y)))`,
     )
   })
 
@@ -225,14 +223,12 @@ describe('v-on', () => {
     expect(helpers).contains('isRef')
     expect(helpers).contains('unref')
     expect(code).contains(
-      `n0.$evtclick = _createInvoker(() => (_isRef(x) ? x.value = _unref(y) : x=_unref(y)))`,
+      `_on(n0, "click", () => (_isRef(x) ? x.value = _unref(y) : x=_unref(y)))`,
     )
     expect(code).contains(
-      `n1.$evtclick = _createInvoker(() => (_isRef(x) ? x.value++ : x++))`,
+      `_on(n1, "click", () => (_isRef(x) ? x.value++ : x++))`,
     )
-    expect(code).contains(
-      `n2.$evtclick = _createInvoker(() => ({ x } = _unref(y)))`,
-    )
+    expect(code).contains(`_on(n2, "click", () => ({ x } = _unref(y)))`)
   })
 
   test('should handle multiple inline statement', () => {
@@ -248,9 +244,7 @@ describe('v-on', () => {
     // should wrap with `{` for multiple statements
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
-    expect(code).contains(
-      `n0.$evtclick = _createInvoker(() => {_ctx.foo();_ctx.bar()})`,
-    )
+    expect(code).contains(`_on(n0, "click", () => {_ctx.foo();_ctx.bar()})`)
   })
 
   test('should handle multi-line statement', () => {
@@ -267,7 +261,7 @@ describe('v-on', () => {
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      `n0.$evtclick = _createInvoker(() => {\n_ctx.foo();\n_ctx.bar()\n})`,
+      `_on(n0, "click", () => {\n_ctx.foo();\n_ctx.bar()\n})`,
     )
   })
 
@@ -284,9 +278,7 @@ describe('v-on', () => {
       },
     ])
     // should NOT prefix $event
-    expect(code).contains(
-      `n0.$evtclick = _createInvoker($event => (_ctx.foo($event)))`,
-    )
+    expect(code).contains(`_on(n0, "click", $event => (_ctx.foo($event)))`)
   })
 
   test('multiple inline statements w/ prefixIdentifiers: true', () => {
@@ -303,7 +295,7 @@ describe('v-on', () => {
     ])
     // should NOT prefix $event
     expect(code).contains(
-      `n0.$evtclick = _createInvoker($event => {_ctx.foo($event);_ctx.bar()})`,
+      `_on(n0, "click", $event => {_ctx.foo($event);_ctx.bar()})`,
     )
   })
 
@@ -317,9 +309,7 @@ describe('v-on', () => {
         value: { content: '$event => foo($event)' },
       },
     ])
-    expect(code).contains(
-      `n0.$evtclick = _createInvoker($event => _ctx.foo($event))`,
-    )
+    expect(code).contains(`_on(n0, "click", $event => _ctx.foo($event))`)
   })
 
   test('should NOT wrap as function if expression is already function expression (with Typescript)', () => {
@@ -335,14 +325,12 @@ describe('v-on', () => {
         value: { content: '(e: any): any => foo(e)' },
       },
     ])
-    expect(code).contains(
-      `n0.$evtclick = _createInvoker((e: any): any => _ctx.foo(e))`,
-    )
+    expect(code).contains(`_on(n0, "click", (e: any): any => _ctx.foo(e))`)
   })
 
   test('should NOT wrap as function if expression is already function expression (with newlines)', () => {
     const { ir, code } = compileWithVOn(
-      `<div @click="
+      `<div @click.delegate="
       $event => {
         foo($event)
       }
@@ -402,9 +390,7 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(
-      `n0.$evtclick = _createInvoker(e => _ctx.a['b' + _ctx.c](e))`,
-    )
+    expect(code).contains(`_on(n0, "click", e => _ctx.a['b' + _ctx.c](e))`)
   })
 
   test('function expression w/ prefixIdentifiers: true', () => {
@@ -419,7 +405,7 @@ describe('v-on', () => {
         value: { content: `e => foo(e)` },
       },
     ])
-    expect(code).contains(`n0.$evtclick = _createInvoker(e => _ctx.foo(e))`)
+    expect(code).contains(`_on(n0, "click", e => _ctx.foo(e))`)
   })
 
   test('should error if no expression AND no modifier', () => {
@@ -526,14 +512,14 @@ describe('v-on', () => {
           nonKeys: [],
           options: [],
         },
-        delegate: true,
+        delegate: false,
       },
     ])
 
     expect(code).matchSnapshot()
     expect(code).contains(
       `_on(n0, "click", _withModifiers(e => _ctx.test(e), ["stop"]))
-  n0.$evtkeyup = _withKeys(e => _ctx.test(e), ["enter"])`,
+  _on(n0, "keyup", _withKeys(e => _ctx.test(e), ["enter"]))`,
     )
   })
 
@@ -736,8 +722,8 @@ describe('v-on', () => {
         keyOverride: undefined,
       },
     ])
-    expect(code).toContain('$evtcontextmenu')
-    expect(code).not.toContain('$evtmouseup')
+    expect(code).toContain('_on(n0, "contextmenu"')
+    expect(code).not.toContain('"mouseup"')
 
     const { code: code2, ir: ir2 } = compileWithVOn(
       `<div @[event].middle.right="test"/><div @[event].right.middle="test"/>`,
@@ -774,29 +760,12 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`n0.$evtclick = _createInvoker(e => _ctx.foo.bar(e))`)
+    expect(code).contains(`_on(n0, "click", e => _ctx.foo.bar(e))`)
   })
 
-  test('should delegate event', () => {
+  test('should use direct event listener by default', () => {
     const { code, ir, helpers } = compileWithVOn(`<div @click="test"/>`)
 
-    expect(code).matchSnapshot()
-    expect(code).contains('_delegateEvents("click")')
-    expect(helpers).contains('delegateEvents')
-    expect(ir.block.operation).toMatchObject([
-      {
-        type: IRNodeTypes.SET_EVENT,
-        delegate: true,
-      },
-    ])
-  })
-
-  test('should allow disabling event delegation', () => {
-    const { code, ir, helpers } = compileWithVOn(`<div @click="test"/>`, {
-      eventDelegation: false,
-    })
-
-    expect(code).toMatchSnapshot()
     expect(helpers).not.contains('delegate')
     expect(helpers).not.contains('delegateEvents')
     expect(code).contains('_on(n0, "click", e => _ctx.test(e))')
@@ -808,9 +777,78 @@ describe('v-on', () => {
     ])
   })
 
+  test('should delegate event with .delegate modifier', () => {
+    const { code, ir, helpers } = compileWithVOn(
+      `<input @keyup.delegate="test"/>`,
+    )
+
+    expect(helpers).contains('delegateEvents')
+    expect(code).contains('_delegateEvents("keyup")')
+    expect(code).contains('n0.$evtkeyup = _createInvoker(e => _ctx.test(e))')
+    expect(code).not.contains('withKeys')
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_EVENT,
+        modifiers: { keys: [], nonKeys: [], options: [] },
+        delegate: true,
+      },
+    ])
+  })
+
+  test('should warn and use a direct listener for unsupported delegated events', () => {
+    const onWarn = vi.fn()
+    const { code, ir, helpers } = compileWithVOn(
+      `<div @scroll.delegate="test"/>`,
+      { onWarn },
+    )
+
+    expect(onWarn).toHaveBeenCalledOnce()
+    expect(onWarn.mock.calls[0][0].message).toContain(
+      `.delegate modifier is not supported on the "scroll" event`,
+    )
+    expect(onWarn.mock.calls[0][0].loc.source).toBe('delegate')
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).contains('_on(n0, "scroll", e => _ctx.test(e))')
+    expect(ir.block.operation).toMatchObject([{ delegate: false }])
+  })
+
+  test('should warn and use a direct listener for dynamic delegated events', () => {
+    const onWarn = vi.fn()
+    const { code, ir, helpers } = compileWithVOn(
+      `<div @[event].delegate="test"/>`,
+      { onWarn },
+    )
+
+    expect(onWarn).toHaveBeenCalledOnce()
+    expect(onWarn.mock.calls[0][0].message).toContain(
+      `.delegate modifier requires a static event name`,
+    )
+    expect(onWarn.mock.calls[0][0].loc.source).toBe('delegate')
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).contains('_onBinding(n0, _ctx.event, e => _ctx.test(e))')
+    expect(ir.block.effect[0].operations).toMatchObject([{ delegate: false }])
+  })
+
+  test('should preserve direct fallback for ineligible delegated events', () => {
+    const { code, ir, helpers } = compileWithVOn(
+      `<div @click.delegate.capture="test"/><div @click.delegate.stop="test"/>`,
+    )
+
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).contains('_on(n0, "click", e => _ctx.test(e), {')
+    expect(code).contains('capture: true')
+    expect(code).contains(
+      '_on(n1, "click", _withModifiers(e => _ctx.test(e), ["stop"]))',
+    )
+    expect(ir.block.operation).toMatchObject([
+      { delegate: false },
+      { delegate: false },
+    ])
+  })
+
   test('should let runtime event helpers create invokers', () => {
     const { code } = compileWithVOn(
-      `<div @click.stop="test" /><div @click.foo="a" @click.bar="b" />`,
+      `<div @click.stop="test" /><div @click.delegate.foo="a" @click.delegate.bar="b" />`,
       {
         prefixIdentifiers: true,
       },
@@ -825,9 +863,12 @@ describe('v-on', () => {
   })
 
   test('should hide direct event invokers in modifier guards once', () => {
-    const { code } = compileWithVOn(`<input @keyup.self.enter="test" />`, {
-      prefixIdentifiers: true,
-    })
+    const { code } = compileWithVOn(
+      `<input @keyup.delegate.self.enter="test" />`,
+      {
+        prefixIdentifiers: true,
+      },
+    )
 
     expect(code).contains(
       'n0.$evtkeyup = _withKeys(_withModifiers(e => _ctx.test(e), ["self"]), ["enter"])',
@@ -839,7 +880,7 @@ describe('v-on', () => {
 
   test('should avoid alias collisions between vapor and runtime guard helpers', () => {
     const { code } = compileWithVOn(
-      `<input @keyup.enter="foo" /><input @[event].enter="bar" />`,
+      `<input @keyup.delegate.enter="foo" /><input @[event].enter="bar" />`,
       {
         prefixIdentifiers: true,
       },
@@ -856,7 +897,7 @@ describe('v-on', () => {
 
   test('should not delegate .stop when have multiple events of same name', () => {
     const { code, helpers } = compileWithVOn(
-      `<div @click="test" @click.stop="test" />`,
+      `<div @click.delegate="test" @click.stop="test" />`,
     )
     expect(helpers).not.contains('delegate')
     expect(helpers).not.contains('delegateEvents')
@@ -869,7 +910,7 @@ describe('v-on', () => {
 
   test('should not delegate normalized static event when sibling uses .stop', () => {
     const { code, helpers } = compileWithVOn(
-      `<div @click.right="test" @contextmenu.stop="test" />`,
+      `<div @click.right.delegate="test" @contextmenu.stop="test" />`,
     )
 
     expect(helpers).not.contains('delegate')
@@ -894,7 +935,7 @@ describe('v-on', () => {
     )
     expect(code).matchSnapshot()
     expect(code).include(
-      'n0.$evtclick = _createInvoker(e => (_ctx.foo[_ctx.handleClick] as any)(e))',
+      '_on(n0, "click", e => (_ctx.foo[_ctx.handleClick] as any)(e))',
     )
   })
 
@@ -914,5 +955,22 @@ describe('v-on', () => {
     const { code } = compileWithVOn(`<Comp @name-click="handleClick" />`)
     expect(code).matchSnapshot()
     expect(code).contains('onNameClick: () => _ctx.handleClick')
+  })
+
+  test('should warn and ignore .delegate on component events', () => {
+    const onWarn = vi.fn()
+    const { code, helpers } = compileWithVOn(
+      `<Comp @click.delegate="handleClick" />`,
+      { onWarn },
+    )
+
+    expect(onWarn).toHaveBeenCalledOnce()
+    expect(onWarn.mock.calls[0][0].message).toContain(
+      `.delegate modifier is only supported on native DOM elements`,
+    )
+    expect(onWarn.mock.calls[0][0].loc.source).toBe('delegate')
+    expect(helpers).not.contains('delegateEvents')
+    expect(code).not.contains('withKeys')
+    expect(code).contains('onClick: () => _ctx.handleClick')
   })
 })

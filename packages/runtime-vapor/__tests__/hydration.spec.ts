@@ -6648,6 +6648,99 @@ describe('Vapor Mode hydration', () => {
       `)
     })
 
+    test('hydrate vapor component inside VDOM async component resolved after hydration (interop)', async () => {
+      const data = ref({
+        spy: vi.fn(),
+      })
+
+      const compCode = `<button @click="data.spy">hello!</button>`
+      const SSRComp = compileVaporComponent(compCode, data, undefined, true)
+      const SSRAsyncComp = defineAsyncComponent(() => Promise.resolve(SSRComp))
+      const SSRApp = defineComponent({
+        render: () => h('div', [h(SSRAsyncComp)]),
+      })
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      expect(html).toMatchInlineSnapshot(`"<div><button>hello!</button></div>"`)
+
+      let clientResolve: any
+      const AsyncComp = defineAsyncComponent(
+        () =>
+          new Promise(r => {
+            clientResolve = r
+          }),
+      )
+      const App = defineComponent({
+        render: () => h('div', [h(AsyncComp)]),
+      })
+
+      const Comp = compileVaporComponent(compCode, data)
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = runtimeDom.createSSRApp(App)
+      app.use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).not.toHaveBeenCalled()
+
+      clientResolve(Comp)
+      await new Promise(r => setTimeout(r))
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).toHaveBeenCalledTimes(1)
+    })
+
+    test('hydrate vapor component inside VDOM async component with lazy hydration strategy (interop)', async () => {
+      const data = ref({
+        spy: vi.fn(),
+      })
+
+      const compCode = `<button @click="data.spy">hello!</button>`
+      const SSRComp = compileVaporComponent(compCode, data, undefined, true)
+      const SSRAsyncComp = defineAsyncComponent(() => Promise.resolve(SSRComp))
+      const SSRApp = defineComponent({
+        render: () => h('div', [h(SSRAsyncComp)]),
+      })
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+
+      const Comp = compileVaporComponent(compCode, data)
+      let doHydrate: (() => void) | undefined
+      const AsyncComp = defineAsyncComponent({
+        loader: () => Promise.resolve(Comp) as any,
+        hydrate(hydrate) {
+          doHydrate = hydrate
+          return () => {}
+        },
+      })
+      const App = defineComponent({
+        render: () => h('div', [h(AsyncComp)]),
+      })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = runtimeDom.createSSRApp(App)
+      app.use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      await new Promise(r => setTimeout(r))
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).not.toHaveBeenCalled()
+
+      expect(doHydrate).toBeDefined()
+      doHydrate!()
+      await new Promise(r => setTimeout(r))
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).toHaveBeenCalledTimes(1)
+    })
+
     describe('suspense', () => {
       describe('VDOM suspense', () => {
         test('hydrate VDOM Suspense vapor async setup updates empty v-for before trailing sibling', async () => {

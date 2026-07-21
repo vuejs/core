@@ -36,6 +36,7 @@ import {
   isKeepAlive,
   isVNode,
   isHydrating as isVdomHydrating,
+  isHydratingEnabled as isVdomHydratingEnabled,
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
@@ -519,11 +520,15 @@ const vaporInteropImpl: Omit<
     onBeforeMount,
     onVnodeBeforeMount,
   ) {
-    // Check both vapor's isHydrating (for createVaporSSRApp) and
-    // VDOM's isVdomHydrating (for createSSRApp).
-    // In CSR (createApp/createVaporApp + vaporInteropPlugin), both are false,
+    // Check vapor's isHydrating (for createVaporSSRApp) and VDOM's
+    // isVdomHydrating (for createSSRApp). isVdomHydratingEnabled covers
+    // deferred hydration (async chunks, lazy hydration strategies), which
+    // runs after the root hydration pass has reset isVdomHydrating.
+    // In CSR (createApp/createVaporApp + vaporInteropPlugin), all are false,
     // so this logic is tree-shaken.
-    if (!isHydrating && !isVdomHydrating) return node
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+      return node
+    }
     let instance: VaporComponentInstance | undefined
     vaporHydrateNode(node, () => {
       instance = this.mount(
@@ -545,7 +550,9 @@ const vaporInteropImpl: Omit<
   },
 
   hydrateSlot(vnode, node, parentComponent, parentSuspense) {
-    if (!isHydrating && !isVdomHydrating) return node
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+      return node
+    }
     const container = parentNode(node)!
     let createdAnchor = false
     let resumeNode: Node | null = null

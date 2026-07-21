@@ -1314,7 +1314,7 @@ describe('compiler: element transform', () => {
           isStatic: false,
         },
         keyOverride: undefined,
-        delegate: true,
+        delegate: false,
         effect: false,
       },
       {
@@ -1331,7 +1331,7 @@ describe('compiler: element transform', () => {
           isStatic: false,
         },
         keyOverride: undefined,
-        delegate: true,
+        delegate: false,
         effect: false,
       },
     ])
