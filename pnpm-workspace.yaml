@@ -13,6 +13,7 @@ catalog:
   '@vitejs/plugin-vue': ^6.0.8
 
 allowBuilds:
+  '@parcel/watcher': true
   '@swc/core': true
   'esbuild': true
   'puppeteer': true
