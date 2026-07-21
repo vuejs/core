@@ -2809,6 +2809,56 @@ describe('SSR hydration', () => {
       }
     })
 
+    test('does not re-write unchanged resource props when hydrating', () => {
+      __DEV__ = false
+      try {
+        const container = document.createElement('div')
+        container.innerHTML = `<img src="/foo.png">`
+        const el = container.firstChild as HTMLImageElement
+        const setSrc = vi.fn()
+        Object.defineProperty(el, 'src', {
+          configurable: true,
+          get: () => el.getAttribute('src'),
+          set: setSrc,
+        })
+        createSSRApp({
+          render: () =>
+            createElementVNode(
+              'img',
+              { src: '/foo.png' },
+              null,
+              PatchFlags.PROPS,
+              ['src'],
+            ),
+        }).mount(container)
+        expect(setSrc).not.toHaveBeenCalled()
+        expect(el.getAttribute('src')).toBe('/foo.png')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('still patches resource props when server and client values differ', () => {
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<img src="/server.png">`,
+          () =>
+            createElementVNode(
+              'img',
+              { src: '/client.png' },
+              null,
+              PatchFlags.PROPS,
+              ['src'],
+            ),
+        )
+        const el = container.firstChild as HTMLImageElement
+        expect(el.getAttribute('src')).toBe('/client.png')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
     test('force patch svg dynamic props with correct namespace when hydrating', () => {
       __DEV__ = false
       try {
