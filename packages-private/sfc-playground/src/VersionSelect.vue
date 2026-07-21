@@ -25,20 +25,23 @@ async function fetchVersions(): Promise<string[]> {
   const { versions } = (await res.json()) as { versions: string[] }
 
   if (props.pkg === 'vue') {
-    // if the latest version is a pre-release, list all current pre-releases
-    // otherwise filter out pre-releases
+    // If the latest Vue version is a pre-release, include up to 10 of the
+    // current pre-releases so stable releases still have room in the list.
+    // Once a stable release is reached, skip all older pre-releases.
     let isInPreRelease = versions[0].includes('-')
+    let preReleaseCount = 0
     const filteredVersions: string[] = []
     for (const v of versions) {
       if (v.includes('-')) {
-        if (isInPreRelease) {
+        if (isInPreRelease && preReleaseCount < 10) {
           filteredVersions.push(v)
+          preReleaseCount++
         }
       } else {
         filteredVersions.push(v)
         isInPreRelease = false
       }
-      if (filteredVersions.length >= 30 || v === '3.0.10') {
+      if (filteredVersions.length >= 30) {
         break
       }
     }
