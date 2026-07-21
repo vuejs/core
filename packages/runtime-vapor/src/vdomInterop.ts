@@ -102,7 +102,7 @@ import {
   withOnceSlot,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
-import { createTextNode } from './dom/node'
+import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
@@ -553,12 +553,23 @@ const vaporInteropImpl: Omit<
     if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
       return node
     }
+    const container = parentNode(node)!
+    let createdAnchor = false
+    let resumeNode: Node | null = null
     vaporHydrateNode(node, () => {
       vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
-      const anchor =
-        isFragment(vnode.vb) && vnode.vb.anchor
-          ? vnode.vb.anchor
-          : currentHydrationNode!
+      const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
+      let anchor = fragmentAnchor || currentHydrationNode!
+      const wrapped = isComment(node, '[') && isComment(anchor, ']')
+      // An unwrapped slot has no SSR-owned boundary. The hydration cursor is
+      // only where VDOM should resume and may belong to the next sibling, so
+      // create a dedicated self anchor matching the mount path.
+      if (!fragmentAnchor && !wrapped) {
+        createdAnchor = true
+        resumeNode = anchor && parentNode(anchor) === container ? anchor : null
+        anchor = createTextNode()
+        container.insertBefore(anchor, resumeNode)
+      }
       // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
       // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
       if (isComment(node, '[') && isComment(anchor, ']')) {
@@ -573,6 +584,9 @@ const vaporInteropImpl: Omit<
         )
       }
     })
+    // The created anchor is a client-only node; returning it would make
+    // hydrateChildren() treat it as an unclaimed server-rendered child.
+    if (createdAnchor) return resumeNode
     // For fragment-wrapped slot content (`<!--[-->...<!--]-->`), return the
     // node after the end anchor to avoid hydrateChildren() treating `<!--]-->`
     // as an extra child of the current container.
