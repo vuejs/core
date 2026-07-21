@@ -341,6 +341,10 @@ const vaporInteropImpl: Omit<
         }
       }
       vnodeHookState.skipVnodeHooks = true
+      if (n2.transition && instance.block) {
+        ensureTransitionHooksRegistered()
+        setVaporTransitionHooks(instance, n2.transition as VaporTransitionHooks)
+      }
       instance.rawPropsRef!.value = filterReservedProps(n2.props)
       instance.rawSlotsRef!.value = normalizeInteropSlots(n2.children)
       queuePostFlushCb(() => {
@@ -364,19 +368,6 @@ const vaporInteropImpl: Omit<
     if (instance) {
       const anchor = vnode.anchor as Node | null
       if (instance.block) {
-        // The block's transition hooks are applied at mount time, but a later
-        // re-clone (e.g. Suspense's setTransitionHooks assigns a fresh clone to
-        // the branch vnode without reaching the vapor block) leaves the block
-        // pointing at a stale hooks object. Re-sync here so the leaving block
-        // runs the current hooks, whose afterLeave is what Suspense relies on
-        // to move in the next out-in branch.
-        if (vnode.transition) {
-          ensureTransitionHooksRegistered()
-          setVaporTransitionHooks(
-            instance,
-            vnode.transition as VaporTransitionHooks,
-          )
-        }
         unmountComponent(instance, container)
         if (!doRemove) {
           // When the surrounding VDOM fragment owns DOM removal, we still need

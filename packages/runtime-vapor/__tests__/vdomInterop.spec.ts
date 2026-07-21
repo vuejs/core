@@ -5069,6 +5069,45 @@ describe('vdomInterop', () => {
       expect(html()).toContain('vdom')
       expect(html()).not.toContain('vapor')
     })
+
+    test('uses latest transition hooks when a vapor root branch switches', async () => {
+      const data = ref({ show: true })
+      const useSecondHook = ref(false)
+      const firstLeave = vi.fn((_el: Element, done: () => void) => done())
+      const secondLeave = vi.fn((_el: Element, done: () => void) => done())
+      const VaporChild = compile(
+        `<template>
+          <div v-if="data.show">first</div>
+          <div v-else>second</div>
+        </template>`,
+        data,
+      )
+      const { html } = define({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              {
+                css: false,
+                onLeave: useSecondHook.value ? secondLeave : firstLeave,
+              },
+              { default: () => h(VaporChild as any) },
+            )
+        },
+      }).render()
+
+      expect(html()).toContain('first')
+
+      useSecondHook.value = true
+      await nextTick()
+
+      data.value.show = false
+      await nextTick()
+
+      expect(firstLeave).not.toHaveBeenCalled()
+      expect(secondLeave).toHaveBeenCalledTimes(1)
+      expect(html()).toContain('second')
+    })
   })
 
   describe('error handling', () => {
