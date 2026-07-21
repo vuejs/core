@@ -42,7 +42,7 @@ import {
   inject,
   provide,
 } from 'vue'
-import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
+import type { RawSlots } from '../../src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
 import { PatchFlags } from '@vue/shared'
 
