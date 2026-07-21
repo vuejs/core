@@ -94,6 +94,7 @@ import { markAsyncBoundary } from './helpers/useId'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import type { RendererElement } from './renderer'
 import {
+  restoreCurrentInstance,
   setCurrentInstance,
   setInSSRSetupState,
 } from './componentCurrentInstance'
@@ -954,7 +955,7 @@ function setupStatefulComponent(
     )
     const isAsyncSetup = isPromise(setupResult)
     setActiveSub(prevSub)
-    setCurrentInstance(...prev)
+    restoreCurrentInstance(prev)
 
     if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
       // async setup / serverPrefetch, mark as async boundary for useId()
@@ -1143,7 +1144,7 @@ export function finishComponentSetup(
       applyOptions(instance)
     } finally {
       setActiveSub(prevSub)
-      setCurrentInstance(...prevInstance)
+      restoreCurrentInstance(prevInstance)
     }
   }
 

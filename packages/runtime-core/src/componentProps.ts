@@ -32,6 +32,7 @@ import {
   type ConcreteComponent,
   type Data,
   type GenericComponentInstance,
+  restoreCurrentInstance,
   setCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
@@ -533,7 +534,7 @@ function baseResolveDefault(
       : null,
     props,
   )
-  setCurrentInstance(...prev)
+  restoreCurrentInstance(prev)
   return value
 }
 

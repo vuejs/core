@@ -16,6 +16,7 @@ import {
   onUpdated,
   queuePostFlushCb,
   resolveTransitionProps,
+  restoreCurrentInstance,
   setCurrentInstance,
   useTransitionState,
   vShowHidden,
@@ -501,7 +502,7 @@ function trackTransitionGroupUpdate(
         try {
           resolveDynamicProps(owner.rawProps)
         } finally {
-          setCurrentInstance(...prev)
+          restoreCurrentInstance(prev)
         }
       })
       effect.notify = () => {

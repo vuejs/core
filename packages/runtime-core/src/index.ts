@@ -562,6 +562,7 @@ export {
  */
 export {
   currentInstance,
+  restoreCurrentInstance,
   setCurrentInstance,
   simpleSetCurrentInstance,
 } from './componentCurrentInstance'

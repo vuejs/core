@@ -2,6 +2,7 @@ import {
   type GenericComponentInstance,
   currentInstance,
   isInSSRComponentSetup,
+  restoreCurrentInstance,
   setCurrentInstance,
 } from './component'
 import type { ComponentPublicInstance } from './componentPublicInstance'
@@ -37,7 +38,7 @@ export function injectHook(
         try {
           return callWithAsyncErrorHandling(hook, target, type, args)
         } finally {
-          setCurrentInstance(...prev)
+          restoreCurrentInstance(prev)
           setActiveSub(prevSub)
         }
       })

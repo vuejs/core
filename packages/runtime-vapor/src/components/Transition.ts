@@ -16,6 +16,7 @@ import {
   onBeforeMount,
   queuePostFlushCb,
   resolveTransitionProps,
+  restoreCurrentInstance,
   setCurrentInstance,
   useTransitionState,
   vShowOriginalDisplay,
@@ -563,7 +564,7 @@ function removeBranchWithLeaveImpl(
           frag.renderBranch(render, transition, parent, key, noScope, true)
         }
       } finally {
-        setCurrentInstance(...prevInstance)
+        restoreCurrentInstance(prevInstance)
       }
     })
     if (mode === 'out-in') {

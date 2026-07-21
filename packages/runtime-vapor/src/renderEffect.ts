@@ -6,6 +6,7 @@ import {
   endMeasure,
   queueJob,
   queuePostFlushCb,
+  restoreCurrentInstance,
   setCurrentInstance,
   startMeasure,
   warn,
@@ -96,7 +97,7 @@ export class RenderEffect extends ReactiveEffect {
         this.render()
       }
     } finally {
-      setCurrentInstance(...prev)
+      restoreCurrentInstance(prev)
       if (__DEV__ && instance) {
         endMeasure(instance, `renderEffect`)
       }

@@ -10,6 +10,7 @@ import {
   createVNode,
   currentInstance,
   defineComponent,
+  getCurrentScope,
   h,
   inject,
   nextTick,
@@ -4654,6 +4655,69 @@ describe('vdomInterop', () => {
 
       await nextTick()
       expect(html()).toContain('<span>resolved</span>')
+    })
+  })
+
+  describe('current scope', () => {
+    test('does not leak active scope after mounting sync-setup vapor child', () => {
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<div>vapor</div>')()
+        },
+      })
+
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () => h(VaporChild as any),
+      })
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+
+      expect(getCurrentScope()).toBeUndefined()
+    })
+
+    test('vapor component mounted via Suspense branch swap is not unmounted on resolve', async () => {
+      const unmounted = vi.fn()
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return template('<span>sync vapor</span>')()
+        },
+      })
+
+      const Page1 = defineComponent({
+        setup() {
+          return () => h('div', [h(VaporChild as any)])
+        },
+      })
+
+      const VaporPage2 = defineVaporComponent({
+        async setup() {
+          onUnmounted(unmounted)
+          return template('<div>page 2</div>')()
+        },
+      })
+
+      const current = shallowRef<any>(Page1)
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(current.value),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+      app.mount(host)
+      await nextTick()
+      expect(host.innerHTML).toContain('sync vapor')
+
+      current.value = VaporPage2
+      await nextTick()
+      await new Promise(resolve => setTimeout(resolve))
+      await nextTick()
+
+      expect(host.innerHTML).toContain('page 2')
+      expect(unmounted).not.toHaveBeenCalled()
     })
   })
 
