@@ -275,10 +275,14 @@ const vaporInteropImpl: Omit<
 
     if (vnode.transition) {
       ensureTransitionHooksRegistered()
-      setVaporTransitionHooks(
-        instance,
-        vnode.transition as VaporTransitionHooks,
-      )
+      // Async setup resolves the block after interop mount. Apply the latest
+      // hooks once the block exists, before it is inserted by mountComponent.
+      ;(instance.bm ||= []).push(() => {
+        const transition = vnodeHookState.vnode.transition
+        if (transition) {
+          setVaporTransitionHooks(instance, transition as VaporTransitionHooks)
+        }
+      })
     }
 
     if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {

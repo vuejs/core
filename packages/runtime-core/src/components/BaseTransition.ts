@@ -579,13 +579,13 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+    vnode.transition = hooks
     if (isVaporComponent(vnode.type as ConcreteComponent)) {
       getVaporInterface(vnode.component, vnode).setTransitionHooks(
         vnode.component,
         hooks,
       )
     } else {
-      vnode.transition = hooks
       setTransitionHooks(vnode.component.subTree, hooks)
     }
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {

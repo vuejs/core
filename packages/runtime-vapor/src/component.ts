@@ -1114,7 +1114,10 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   if (!isHydrating) {
-    insert(instance.block, parent, anchor)
+    // pass the owning suspense so enter transitions are skipped while
+    // mounting into a pending suspense's hidden container (vdom parity);
+    // the enter runs when the resolved branch is moved into the real tree.
+    insert(instance.block, parent, anchor, instance.suspense)
     setComponentScopeId(instance)
   } else {
     // Hydrated roots already have SSR scope attrs. Track dynamic roots so
