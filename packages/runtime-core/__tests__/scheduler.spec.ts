@@ -303,6 +303,24 @@ describe('scheduler', () => {
       expect(calls).toEqual(['cb1', 'cb2', 'cb3'])
     })
 
+    it('should not overflow the call stack with a very large cb array', async () => {
+      // a suspense boundary can buffer an unbounded number of post effects
+      // while pending (e.g. a large tree re-rendering under it) and flush them
+      // all at once on resolve - spreading such an array into push() throws
+      // RangeError: Maximum call stack size exceeded
+      let called = 0
+      const cbs: SchedulerJob[] = []
+      for (let i = 0; i < 1000000; i++) {
+        cbs.push(() => {
+          called++
+        })
+      }
+
+      queuePostFlushCb(cbs)
+      await nextTick()
+      expect(called).toBe(1000000)
+    })
+
     it('should dedupe queued postFlushCb', async () => {
       const calls: string[] = []
       const cb1 = () => {

@@ -616,8 +616,11 @@ function createSuspenseBoundary(
       while (parent) {
         if (parent.pendingBranch) {
           // found a pending parent suspense, merge buffered post jobs
-          // into that parent
-          parent.effects.push(...effects)
+          // into that parent. loop instead of spread to avoid a call stack
+          // overflow when many effects were buffered while pending
+          for (let i = 0; i < effects.length; i++) {
+            parent.effects.push(effects[i])
+          }
           hasUnresolvedAncestor = true
           break
         }
