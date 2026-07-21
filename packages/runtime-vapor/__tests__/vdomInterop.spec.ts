@@ -15,6 +15,7 @@ import {
   onBeforeMount,
   onBeforeUpdate,
   onDeactivated,
+  onErrorCaptured,
   onMounted,
   onUnmounted,
   onUpdated,
@@ -4756,6 +4757,47 @@ describe('vdomInterop', () => {
         'component updated',
         'vnode updated',
       ])
+    })
+  })
+
+  describe('error handling', () => {
+    test('vdom parent captures error thrown in vapor child setup', async () => {
+      const err = new Error('foo')
+      const fn = vi.fn()
+      const show = ref(false)
+
+      const VaporChild = defineVaporComponent({
+        setup() {
+          throw err
+        },
+      })
+
+      const Parent = defineComponent({
+        setup() {
+          onErrorCaptured((err, instance, info) => {
+            fn(err, info)
+            return false
+          })
+          return () => (show.value ? h(VaporChild as any) : h('div', 'ok'))
+        },
+      })
+
+      const root = document.createElement('div')
+      const app = createApp(Parent)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      expect(root.innerHTML).toBe('<div>ok</div>')
+
+      show.value = true
+      await nextTick()
+      expect(fn).toHaveBeenCalledWith(err, 'setup function')
+
+      show.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<div>ok</div>')
+
+      expect(() => app.unmount()).not.toThrow()
+      expect(`returned non-block value`).toHaveBeenWarned()
     })
   })
 })
