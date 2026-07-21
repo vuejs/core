@@ -9488,6 +9488,7 @@ describe('VDOM interop', () => {
       '<!--[-->',
       '<div>foo</div>',
       'text("")',
+      'text("")',
       '<!--dynamic-component-->',
       '<!--]-->',
     ])
@@ -13704,5 +13705,68 @@ describe('VDOM interop', () => {
     expect(container.innerHTML).toMatchInlineSnapshot(
       `"<div><div><a href="/about">bar</a></div></div>"`,
     )
+  })
+
+  test('hydrate dynamic vapor slot passed to render function vdom child', async () => {
+    const data = reactive({ items: [0, 1] })
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const data = _data
+        const VdomLink = {
+          setup(_, { slots }) {
+            return () => h('a', null, slots.default && slots.default())
+          }
+        }
+      </script>
+      <template>
+        <div>
+          <VdomLink>
+            <template v-for="item in data.items" #default>
+              <span>{{ item }}</span>
+            </template>
+          </VdomLink>
+        </div>
+      </template>`,
+      {},
+      data,
+    )
+
+    expect(container.innerHTML).toBe('<div><a><span>1</span></a></div>')
+
+    data.items.push(2)
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><a><span>2</span></a></div>')
+  })
+
+  test('hydrate flattened vapor slot before persistent vdom sibling', async () => {
+    const show = ref(true)
+    const { container } = await testWithVaporApp(
+      `<script setup>
+        import { h } from 'vue'
+        const show = _data
+        const VdomLink = {
+          setup(_, { slots }) {
+            return () => h('a', null, [
+              ...(show.value && slots.default ? slots.default() : []),
+              h('span', { key: 'after' }, 'after')
+            ])
+          }
+        }
+      </script>
+      <template>
+        <div><VdomLink><b>slot</b></VdomLink></div>
+      </template>`,
+      {},
+      show,
+    )
+
+    expect(container.innerHTML).toBe(
+      '<div><a><b>slot</b><span>after</span></a></div>',
+    )
+
+    show.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><a><span>after</span></a></div>')
   })
 })
