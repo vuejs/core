@@ -55,6 +55,15 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` checked disabled`) // boolean attr w/ false should be ignored
   })
 
+  test('combined boolean/string attribute', () => {
+    expect(ssrRenderAttrs({ hidden: true })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ disabled: true, hidden: false })).toBe(` disabled`)
+    expect(ssrRenderAttrs({ hidden: 'until-found' })).toBe(
+      ` hidden="until-found"`,
+    )
+    expect(ssrRenderAttrs({ hidden: '' })).toBe(` hidden`)
+  })
+
   test('ignore falsy values', () => {
     expect(
       ssrRenderAttrs({
