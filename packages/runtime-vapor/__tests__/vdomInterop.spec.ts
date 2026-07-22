@@ -40,6 +40,7 @@ import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
 import { compile, makeInteropRender } from './_utils'
 import {
+  type VaporComponentInstance,
   VaporKeepAlive,
   VaporTeleport,
   applyTextModel,
@@ -4165,6 +4166,286 @@ describe('vdomInterop', () => {
   })
 
   describe('Suspense', () => {
+    function deferred() {
+      let resolve!: () => void
+      const promise = new Promise<void>(r => (resolve = r))
+      return { promise, resolve }
+    }
+
+    async function flushResolution(promise: Promise<void>) {
+      await promise
+      await Promise.resolve()
+      await nextTick()
+      await nextTick()
+    }
+
+    test('preserves source order when an async vapor child precedes a dynamic sibling', async () => {
+      const pending = deferred()
+      const Tail = compile(`<template><i>tail</i></template>`, ref(null))
+      const data = ref({ wait: pending.promise, current: Tail })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const VaporParent = compile(
+        `<template>
+          <div>
+            <components.AsyncChild />
+            <component :is="data.current" />
+          </div>
+        </template>`,
+        data,
+        { AsyncChild },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+        expect(host.innerHTML).toBe('<p>pending</p>')
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect(host.innerHTML).toBe(
+          '<div><span>async</span><i>tail</i><!--dynamic-component--></div>',
+        )
+      } finally {
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('uses the live placeholder after a directive removes the old insertion anchor', async () => {
+      const pending = deferred()
+      const data = ref({ wait: pending.promise })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const VaporParent = compile(
+        `<template>
+          <div>
+            <components.AsyncChild />
+            <span v-remove>tail</span>
+          </div>
+        </template>`,
+        data,
+        { AsyncChild },
+      )
+      const host = document.createElement('div')
+      const errorHandler = vi.fn()
+      const remove = vi.fn((el: Element) => el.remove())
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+      app.directive('remove', remove)
+      app.config.errorHandler = errorHandler
+
+      try {
+        app.mount(host)
+        expect(host.innerHTML).toBe('<p>pending</p>')
+        expect(remove).toHaveBeenCalledOnce()
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect(errorHandler).not.toHaveBeenCalled()
+        expect(host.innerHTML).toBe('<div><span>async</span></div>')
+      } finally {
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('removes a pending async placeholder when its VDOM parent unmounts', async () => {
+      const pending = deferred()
+      const data = ref({ wait: pending.promise })
+      let instance!: VaporComponentInstance
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const setup = AsyncChild.setup
+      AsyncChild.setup = (props: any, child: VaporComponentInstance) => {
+        instance = child
+        return setup(props, child)
+      }
+      const host = document.createElement('div')
+      const errorHandler = vi.fn()
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h('div', [h(AsyncChild)]),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+      app.config.errorHandler = errorHandler
+      let mounted = false
+
+      try {
+        app.mount(host)
+        mounted = true
+        const placeholder = instance.block as Node
+        expect(placeholder).toBeInstanceOf(Comment)
+
+        app.unmount()
+        mounted = false
+
+        expect(placeholder.parentNode).toBeNull()
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+        expect(errorHandler).not.toHaveBeenCalled()
+        expect(host.innerHTML).toBe('')
+      } finally {
+        pending.resolve()
+        if (mounted) app.unmount()
+        host.remove()
+      }
+    })
+
+    test('removes a pending async placeholder disposed through its vapor parent scope', async () => {
+      const pending = deferred()
+      const data = ref({ wait: pending.promise })
+      let instance!: VaporComponentInstance
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const setup = AsyncChild.setup
+      AsyncChild.setup = (props: any, child: VaporComponentInstance) => {
+        instance = child
+        return setup(props, child)
+      }
+      const VaporParent = compile(
+        `<template><div><components.AsyncChild /><i>tail</i></div></template>`,
+        data,
+        { AsyncChild },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+      let mounted = false
+
+      try {
+        app.mount(host)
+        mounted = true
+        const placeholder = instance.block as Node
+        expect(placeholder.parentNode).not.toBeNull()
+
+        app.unmount()
+        mounted = false
+
+        expect(placeholder.parentNode).toBeNull()
+      } finally {
+        if (mounted) app.unmount()
+        pending.resolve()
+        await flushResolution(pending.promise)
+        host.remove()
+      }
+    })
+
+    test('first-mounts a pending async component re-entered from KeepAlive cache', async () => {
+      const pending = deferred()
+      const data = ref({ wait: pending.promise })
+      let instance!: VaporComponentInstance
+      let setupCalls = 0
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const setup = AsyncChild.setup
+      AsyncChild.setup = (props: any, child: VaporComponentInstance) => {
+        setupCalls++
+        instance = child
+        return setup(props, child)
+      }
+      const SyncChild = defineVaporComponent({
+        setup: () => template('<span>sync</span>')(),
+      })
+      const current = shallowRef<any>(SyncChild)
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: () => createDynamicComponent(() => current.value),
+          })
+        },
+      })
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+        current.value = AsyncChild
+        await nextTick()
+        current.value = SyncChild
+        await nextTick()
+        current.value = AsyncChild
+        await nextTick()
+
+        expect(setupCalls).toBe(1)
+        expect(instance.isDeactivated).toBe(false)
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect(instance.isMounted).toBe(true)
+        expect(host.innerHTML).toBe(
+          '<span>async</span><!--dynamic-component-->',
+        )
+      } finally {
+        pending.resolve()
+        app.unmount()
+        host.remove()
+      }
+    })
+
     test('renders vapor async wrapper inside VDOM Suspense', async () => {
       const duration = 5
 
