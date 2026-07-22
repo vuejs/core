@@ -697,6 +697,7 @@ export type { GenericComponent } from './component'
 export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
+  isFunctionalFallthroughKey,
   shouldUpdateComponent,
 } from './componentRenderUtils'
 
