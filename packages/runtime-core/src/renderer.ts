@@ -1209,6 +1209,7 @@ function baseCreateRenderer(
             container,
             anchor,
             parentComponent!,
+            parentSuspense,
           )
         } else {
           const vnodeBeforeMountHook =
@@ -2268,6 +2269,7 @@ function baseCreateRenderer(
         container,
         anchor,
         moveType,
+        parentSuspense,
       )
       return
     }
@@ -2413,6 +2415,7 @@ function baseCreateRenderer(
         getVaporInterface(parentComponent!, vnode).deactivate(
           vnode,
           (parentComponent!.ctx as KeepAliveContext).getStorageContainer(),
+          parentSuspense,
         )
       } else {
         ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
@@ -2437,7 +2440,11 @@ function baseCreateRenderer(
         if (dirs) {
           invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
         }
-        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        getVaporInterface(parentComponent, vnode).unmount(
+          vnode,
+          doRemove,
+          parentSuspense,
+        )
         if (
           (shouldInvokeVnodeHook &&
             (vnodeHook = props && props.onVnodeUnmounted)) ||
@@ -2505,7 +2512,11 @@ function baseCreateRenderer(
       }
 
       if (type === VaporSlot) {
-        getVaporInterface(parentComponent, vnode).unmount(vnode, doRemove)
+        getVaporInterface(parentComponent, vnode).unmount(
+          vnode,
+          doRemove,
+          parentSuspense,
+        )
         return
       }
 

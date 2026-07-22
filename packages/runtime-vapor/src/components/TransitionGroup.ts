@@ -15,6 +15,7 @@ import {
   onBeforeUpdate,
   onUpdated,
   queuePostFlushCb,
+  queuePostRenderEffect,
   resolveTransitionProps,
   restoreCurrentInstance,
   setCurrentInstance,
@@ -234,7 +235,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     const updated = () => {
       if (!isUpdatePending || isUpdatedPending) return
       isUpdatedPending = true
-      queuePostFlushCb(flushUpdated)
+      queuePostRenderEffect(flushUpdated, undefined, instance.suspense)
     }
 
     onBeforeUpdate(beforeUpdate)

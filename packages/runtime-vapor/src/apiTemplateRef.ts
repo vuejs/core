@@ -8,12 +8,13 @@ import {
 import {
   ErrorCodes,
   type SchedulerJob,
+  type SuspenseBoundary,
   callWithErrorHandling,
   createCanSetSetupRefChecker,
   isAsyncWrapper,
   isTemplateRefKey,
   knownTemplateRefs,
-  queuePostFlushCb,
+  queuePostRenderEffect,
   warn,
 } from '@vue/runtime-dom'
 import {
@@ -40,6 +41,7 @@ import {
   unsetRef,
 } from './refCleanup'
 import { renderEffect } from './renderEffect'
+import { parentSuspense } from './suspense'
 
 export type NodeRef =
   | string
@@ -59,6 +61,7 @@ export type setRefFn = (
 ) => NodeRef | undefined
 
 interface TemplateRefState {
+  suspense: SuspenseBoundary | null
   oldRef?: NodeRef
   oldRefKey?: string
   ref: NodeRef
@@ -94,7 +97,7 @@ export function createTemplateRefSetter(): setRefFn {
   return (el, ref, refFor, refKey) => {
     let state = stateMap.get(el)
     if (!state) {
-      stateMap.set(el, (state = { ref }))
+      stateMap.set(el, (state = { ref, suspense: parentSuspense }))
     }
     return setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
   }
@@ -106,7 +109,7 @@ function createSingleTemplateRefSetter(): setRefFn {
 
   return (el, ref, refFor, refKey) => {
     if (!state) {
-      state = { ref }
+      state = { ref, suspense: parentSuspense }
     }
     return setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
   }
@@ -135,6 +138,7 @@ function setTemplateRefWithState(
       if (isVaporComponent(el) && el.isDeactivated) return
       state.oldRef = setRef(
         instance,
+        state.suspense,
         el,
         state.ref,
         state.oldRef,
@@ -148,6 +152,7 @@ function setTemplateRefWithState(
 
   const oldRef = setRef(
     instance,
+    state.suspense,
     el,
     ref,
     state.oldRef,
@@ -167,14 +172,15 @@ export function setStaticTemplateRef(
   refKey?: string,
 ): NodeRef | undefined {
   const instance = currentInstance as VaporComponentInstance
-  const oldRef = setRef(instance, el, ref, undefined, refFor, refKey)
+  const suspense = parentSuspense
+  const oldRef = setRef(instance, suspense, el, ref, undefined, refFor, refKey)
   const frag = getTemplateRefUpdateFragment(el)
   if (frag) {
     // Static refs do not need old-ref tracking, but async/dynamic component
     // targets still need to re-apply the same ref after their fragment updates.
     ;(frag.onUpdated ||= []).push(() => {
       if (isVaporComponent(el) && el.isDeactivated) return
-      setRef(instance, el, ref, oldRef, refFor, refKey)
+      setRef(instance, suspense, el, ref, oldRef, refFor, refKey)
     })
   }
   return oldRef
@@ -195,6 +201,7 @@ export function setTemplateRefBinding(
  */
 function setRef(
   instance: VaporComponentInstance,
+  suspense: SuspenseBoundary | null,
   el: RefEl,
   ref: NodeRef,
   oldRef?: NodeRef,
@@ -355,7 +362,7 @@ function setRef(
           if (cleanup.job === job) cleanup.job = undefined
         }
         cleanup.job = job
-        queuePostFlushCb(job, -1)
+        queuePostRenderEffect(job, -1, suspense)
       } else {
         doSet()
       }

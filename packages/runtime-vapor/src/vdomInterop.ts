@@ -41,6 +41,7 @@ import {
   normalizeVNode,
   onScopeDispose,
   queuePostFlushCb,
+  queuePostRenderEffect,
   renderSlot,
   restoreCurrentInstance,
   setCurrentInstance,
@@ -362,14 +363,14 @@ const vaporInteropImpl: Omit<
     }
   },
 
-  unmount(vnode, doRemove) {
+  unmount(vnode, doRemove, parentSuspense) {
     const container = doRemove ? vnode.anchor!.parentNode : undefined
     const instance = vnode.component as any as VaporComponentInstance
     let slotStartAnchor: Node | null = null
     if (instance) {
       const anchor = vnode.anchor as Node | null
       if (instance.block) {
-        unmountComponent(instance, container)
+        unmountComponent(instance, container, parentSuspense)
         if (!doRemove) {
           // When the surrounding VDOM fragment owns DOM removal, we still need
           // to dispose the vapor-returned block tree so nested interop state
@@ -386,7 +387,7 @@ const vaporInteropImpl: Omit<
         // removal, clear the adopted range before the interop anchor.
         const adoptedNode =
           vnode.el && vnode.el !== anchor ? (vnode.el as Node) : null
-        unmountComponent(instance)
+        unmountComponent(instance, undefined, parentSuspense)
         if (doRemove && container && adoptedNode) {
           let cur: Node | null = adoptedNode
           while (cur && cur !== anchor) {
@@ -454,7 +455,7 @@ const vaporInteropImpl: Omit<
         (isFragment(slotBlock) ? slotBlock.anchor : undefined) ||
         createTextNode()
       insert((n2.el = n2.anchor = selfAnchor), container, anchor)
-      insert((n2.vb = slotBlock), container, selfAnchor)
+      insert((n2.vb = slotBlock), container, selfAnchor, parentSuspense)
     } else {
       // update
       // slot function changed (e.g. dynamic slots from _createForSlots),
@@ -493,7 +494,7 @@ const vaporInteropImpl: Omit<
         }
         insert((n2.anchor = newAnchor), parent, insertAnchor)
         n2.el = rangeStartAnchor || newAnchor
-        insert((n2.vb = slotBlock), parent, newAnchor)
+        insert((n2.vb = slotBlock), parent, newAnchor, parentSuspense)
       } else {
         const vs1 = n1.vs!
         const vs2 = n2.vs!
@@ -507,16 +508,37 @@ const vaporInteropImpl: Omit<
     }
   },
 
-  move(vnode, container, anchor, moveType) {
+  move(vnode, container, anchor, moveType, parentSuspense) {
     if (
       vnode.el &&
       vnode.el !== vnode.anchor &&
       isComment(vnode.el as Node, '[')
     ) {
-      move(vnode.el as any, container, anchor, moveType)
+      move(
+        vnode.el as any,
+        container,
+        anchor,
+        moveType,
+        undefined,
+        parentSuspense,
+      )
     }
-    move(vnode.vb || (vnode.component as any), container, anchor, moveType)
-    move(vnode.anchor as any, container, anchor, moveType)
+    move(
+      vnode.vb || (vnode.component as any),
+      container,
+      anchor,
+      moveType,
+      undefined,
+      parentSuspense,
+    )
+    move(
+      vnode.anchor as any,
+      container,
+      anchor,
+      moveType,
+      undefined,
+      parentSuspense,
+    )
   },
 
   hydrate(
@@ -609,7 +631,7 @@ const vaporInteropImpl: Omit<
     setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
   },
 
-  activate(vnode, container, anchor, parentComponent) {
+  activate(vnode, container, anchor, parentComponent, parentSuspense) {
     const cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
       vnode,
     )
@@ -651,53 +673,67 @@ const vaporInteropImpl: Omit<
       }
       queuePostFlushCb(() => {
         syncVNodeEl(vnode, instance)
-        if (vnode.dirs) {
-          invokeDirectiveHook(vnode, cached, parentComponent, 'updated')
-        }
-        const vnodeUpdatedHook = vnode.props && vnode.props.onVnodeUpdated
-        if (vnodeUpdatedHook) {
-          callWithAsyncErrorHandling(
-            vnodeUpdatedHook,
-            parentComponent,
-            ErrorCodes.VNODE_HOOK,
-            [vnode, cached],
-          )
-        }
         if (!instance.isUpdating) {
           vnodeHookState.skipVnodeHooks = false
         }
       })
+      queuePostRenderEffect(
+        () => {
+          if (vnode.dirs) {
+            invokeDirectiveHook(vnode, cached, parentComponent, 'updated')
+          }
+          const vnodeUpdatedHook = vnode.props && vnode.props.onVnodeUpdated
+          if (vnodeUpdatedHook) {
+            callWithAsyncErrorHandling(
+              vnodeUpdatedHook,
+              parentComponent,
+              ErrorCodes.VNODE_HOOK,
+              [vnode, cached],
+            )
+          }
+        },
+        undefined,
+        parentSuspense,
+      )
     }
-    activate(instance, container, anchor)
+    activate(instance, container, anchor, parentSuspense)
     insert(vnode.anchor as any, container, anchor)
     const vnodeMountedHook = vnode.props && vnode.props.onVnodeMounted
     if (vnodeMountedHook) {
-      queuePostFlushCb(() => {
-        callWithAsyncErrorHandling(
-          vnodeMountedHook,
-          parentComponent,
-          ErrorCodes.VNODE_HOOK,
-          [vnode],
-        )
-      })
+      queuePostRenderEffect(
+        () => {
+          callWithAsyncErrorHandling(
+            vnodeMountedHook,
+            parentComponent,
+            ErrorCodes.VNODE_HOOK,
+            [vnode],
+          )
+        },
+        undefined,
+        parentSuspense,
+      )
     }
   },
 
-  deactivate(vnode, container) {
+  deactivate(vnode, container, parentSuspense) {
     const instance = vnode.component as any as VaporComponentInstance
-    deactivate(instance, container)
+    deactivate(instance, container, parentSuspense)
     insert(vnode.anchor as any, container)
-    queuePostFlushCb(() => {
-      const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
-      if (vnodeHook) {
-        callWithAsyncErrorHandling(
-          vnodeHook,
-          instance.parent,
-          ErrorCodes.VNODE_HOOK,
-          [vnode],
-        )
-      }
-    })
+    queuePostRenderEffect(
+      () => {
+        const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
+        if (vnodeHook) {
+          callWithAsyncErrorHandling(
+            vnodeHook,
+            instance.parent,
+            ErrorCodes.VNODE_HOOK,
+            [vnode],
+          )
+        }
+      },
+      undefined,
+      parentSuspense,
+    )
   },
 }
 
@@ -940,11 +976,13 @@ function mountVNode(
     syncNodes()
   }
 
-  frag.insert = (parentNode, anchor, transition) => {
+  frag.insert = (parentNode, anchor, transition, parentSuspense) => {
     if (isHydrating) return
+    const operationSuspense =
+      parentSuspense === undefined ? suspense : parentSuspense
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
       if ((vnode.type as any).__vapor) {
-        activate(vnode.component as any, parentNode, anchor)
+        activate(vnode.component as any, parentNode, anchor, operationSuspense)
       } else {
         vdomActivate(
           vnode,
@@ -952,7 +990,7 @@ function mountVNode(
           anchor,
           internals,
           parentComponent as any,
-          null,
+          operationSuspense,
           undefined,
           false,
         )
@@ -969,7 +1007,7 @@ function mountVNode(
           parentNode,
           anchor,
           parentComponent as any,
-          suspense,
+          operationSuspense,
           undefined, // namespace
           vnode.slotScopeIds,
         )
@@ -983,6 +1021,7 @@ function mountVNode(
           anchor,
           MoveType.REORDER,
           parentComponent as any,
+          operationSuspense,
         )
       }
       simpleSetCurrentInstance(prev)
@@ -1135,8 +1174,10 @@ function createVDOMComponent(
   vnode.scopeId = getCurrentScopeId() || null
   vnode.slotScopeIds = currentSlotScopeIds
 
-  frag.insert = (parentNode, anchor, transition) => {
+  frag.insert = (parentNode, anchor, transition, parentSuspense) => {
     if (isHydrating) return
+    const operationSuspense =
+      parentSuspense === undefined ? suspense : parentSuspense
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
       vdomActivate(
         vnode,
@@ -1144,7 +1185,7 @@ function createVDOMComponent(
         anchor,
         internals,
         parentComponent as any,
-        null,
+        operationSuspense,
         undefined,
         false,
       )
@@ -1158,12 +1199,12 @@ function createVDOMComponent(
           parentNode,
           anchor,
           parentComponent as any,
-          suspense,
+          operationSuspense,
           undefined,
           false,
         )
         // set ref
-        if (rawRef) vdomSetRef(rawRef, null, null, vnode)
+        if (rawRef) vdomSetRef(rawRef, null, operationSuspense, vnode)
         isMounted = true
       } else {
         // move
@@ -1173,6 +1214,7 @@ function createVDOMComponent(
           anchor,
           MoveType.REORDER,
           parentComponent as any,
+          operationSuspense,
         )
       }
       simpleSetCurrentInstance(prev)
@@ -1384,7 +1426,7 @@ function renderVDOMSlot(
   once?: boolean,
   slotRoot?: boolean,
 ): VaporFragment {
-  const suspense = currentParentSuspense || parentComponent.suspense
+  let suspense = currentParentSuspense || parentComponent.suspense
   const frag = createInteropFragment()
   // `isBlockValid` below reports VDOM-side validity (`contentState.valid`), not
   // `isValidBlock(frag.nodes)`: `frag.nodes` tracks the active fallback when one
@@ -1524,8 +1566,9 @@ function renderVDOMSlot(
     }
   }
 
-  frag.insert = (parentNode, anchor) => {
+  frag.insert = (parentNode, anchor, _transition, parentSuspense) => {
     if (isHydrating) return
+    if (parentSuspense !== undefined) suspense = parentSuspense
     currentParentNode = parentNode
     currentAnchor = anchor
 
@@ -1541,10 +1584,11 @@ function renderVDOMSlot(
           anchor,
           MoveType.REORDER,
           parentComponent as any,
+          suspense,
         )
       } else if (contentState.rendered) {
         // move vapor content
-        insert(contentState.rendered, parentNode, anchor)
+        insert(contentState.rendered, parentNode, anchor, suspense)
       }
 
       insertActiveSlotFallback(slotResolutionState)
@@ -2131,13 +2175,13 @@ function renderVaporSlot(
 
       slotResolutionState.pendingRecheck = false
       slotResolutionState.pendingRecheckForce = false
-      frag.insert = (parentNode, anchor) => {
+      frag.insert = (parentNode, anchor, _transition, parentSuspense) => {
         currentParentNode = parentNode
         currentAnchor = anchor
         if (slotResolutionState.activeFallback) {
           insertActiveSlotFallback(slotResolutionState)
         } else {
-          insert(frag.nodes, parentNode, anchor)
+          insert(frag.nodes, parentNode, anchor, parentSuspense)
         }
       }
       frag.remove = parentNode => {
@@ -2280,7 +2324,7 @@ function createVNodeChildrenFragment(
   render: () => VNode[],
   parentComponent: ComponentInternalInstance | null,
 ): VaporFragment {
-  const suspense =
+  let suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const frag = createInteropFragment()
   let contentValid = false
@@ -2452,8 +2496,9 @@ function createVNodeChildrenFragment(
     startRenderEffect()
   }
 
-  frag.insert = (parentNode, anchor) => {
+  frag.insert = (parentNode, anchor, _transition, parentSuspense) => {
     if (isHydrating) return
+    if (parentSuspense !== undefined) suspense = parentSuspense
     currentParentNode = parentNode
     currentAnchor = anchor
     if (!isMounted) {
@@ -2489,6 +2534,7 @@ function createVNodeChildrenFragment(
           anchor,
           MoveType.REORDER,
           parentComponent as any,
+          suspense,
         )
       })
     }

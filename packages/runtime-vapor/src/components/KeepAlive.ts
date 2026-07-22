@@ -4,6 +4,7 @@ import {
   type GenericComponentInstance,
   type KeepAliveProps,
   MoveType,
+  type SuspenseBoundary,
   type VNode,
   currentInstance,
   devtoolsComponentAdded,
@@ -15,7 +16,7 @@ import {
   onBeforeUnmount,
   onMounted,
   onUpdated,
-  queuePostFlushCb,
+  queuePostRenderEffect,
   resetShapeFlag,
   warn,
   watch,
@@ -54,8 +55,12 @@ export interface KeepAliveInstance extends VaporComponentInstance {
       instance: VaporComponentInstance,
       parentNode: ParentNode,
       anchor?: Node | null | 0,
+      parentSuspense?: SuspenseBoundary | null,
     ) => void
-    deactivate: (instance: VaporComponentInstance) => void
+    deactivate: (
+      instance: VaporComponentInstance,
+      parentSuspense?: SuspenseBoundary | null,
+    ) => void
     getCachedComponent: (
       comp: VaporComponent | VNode['type'] | VNode,
       key?: any,
@@ -312,7 +317,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
         const instance = getInstanceFromCache(cached)
         if (instance) {
           const da = instance.da
-          da && queuePostFlushCb(da)
+          da && queuePostRenderEffect(da, undefined, keepAliveInstance.suspense)
         }
       }
 
@@ -349,13 +354,13 @@ const VaporKeepAliveImpl = defineVaporComponent({
         }
         return cache.get(key ?? currentCacheKey ?? comp)
       },
-      activate: (instance, parentNode, anchor) => {
+      activate: (instance, parentNode, anchor, parentSuspense) => {
         current = instance
-        activate(instance, parentNode, anchor)
+        activate(instance, parentNode, anchor, parentSuspense)
       },
-      deactivate: instance => {
+      deactivate: (instance, parentSuspense) => {
         current = undefined
-        deactivate(instance, storageContainer)
+        deactivate(instance, storageContainer, parentSuspense)
       },
       acquireBranchScope(key) {
         return deleteScope(key)
@@ -561,13 +566,25 @@ export function activate(
   instance: VaporComponentInstance,
   parentNode: ParentNode,
   anchor?: Node | null | 0,
+  parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
-  move(instance.block, parentNode, anchor, MoveType.ENTER, instance)
+  move(
+    instance.block,
+    parentNode,
+    anchor,
+    MoveType.ENTER,
+    instance,
+    parentSuspense,
+  )
 
-  queuePostFlushCb(() => {
-    instance.isDeactivated = false
-    if (instance.a) invokeArrayFns(instance.a)
-  })
+  queuePostRenderEffect(
+    () => {
+      instance.isDeactivated = false
+      if (instance.a) invokeArrayFns(instance.a)
+    },
+    undefined,
+    parentSuspense,
+  )
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
@@ -577,6 +594,7 @@ export function activate(
 export function deactivate(
   instance: VaporComponentInstance,
   container: ParentNode,
+  parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
   // Clear refs before deactivation, matching VDOM core's unmount path
   // which calls setRef(null) before the deactivation check.
@@ -585,12 +603,23 @@ export function deactivate(
   invalidateMount(instance.m)
   invalidateMount(instance.a)
 
-  move(instance.block, container, null, MoveType.LEAVE, instance)
+  move(
+    instance.block,
+    container,
+    null,
+    MoveType.LEAVE,
+    instance,
+    parentSuspense,
+  )
 
-  queuePostFlushCb(() => {
-    if (instance.da) invokeArrayFns(instance.da)
-    instance.isDeactivated = true
-  })
+  queuePostRenderEffect(
+    () => {
+      if (instance.da) invokeArrayFns(instance.da)
+      instance.isDeactivated = true
+    },
+    undefined,
+    parentSuspense,
+  )
 
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentAdded(instance)
