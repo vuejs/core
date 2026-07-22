@@ -109,3 +109,20 @@ export function locateChildByLogicalIndex(
 
   return null
 }
+
+// Hydration mismatch recovery and other DOM mutations can replace or remove
+// the cached node. Transfer `$llc` only when it still points to that node.
+export function updateLastLocatedLogicalChild(
+  parent: ParentNode,
+  from: Node,
+  to: Node | null,
+  logicalIndexOffset = 0,
+): void {
+  const insertionParent = parent as InsertionParent
+  if (insertionParent.$llc === from) {
+    if (to) {
+      ;(to as ChildItem).$idx = (from as ChildItem).$idx + logicalIndexOffset
+    }
+    insertionParent.$llc = to
+  }
+}
