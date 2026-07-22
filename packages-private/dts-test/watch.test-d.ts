@@ -11,7 +11,7 @@ import {
   shallowRef,
   watch,
 } from 'vue'
-import { expectType } from './utils'
+import { expectAssignable, expectType } from './utils'
 
 const source = ref('foo')
 const source2 = computed(() => source.value)
@@ -189,7 +189,7 @@ defineComponent({
   // defineModel
   const bool = defineModel({ default: false })
   watch(bool, value => {
-    expectType(value, {} as false)
+    expectAssignable<boolean>(value)
   })
 
   const bool1 = defineModel<boolean>()

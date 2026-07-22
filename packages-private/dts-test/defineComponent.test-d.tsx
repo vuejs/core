@@ -1734,10 +1734,16 @@ describe('directive typing', () => {
     },
     directives: {
       customDirective,
+      localDirective: {
+        created(_, { arg }) {
+          expectAssignable<string | undefined>(arg)
+        },
+      },
     },
   })
 
   expectType(comp.directives!.customDirective, {} as typeof customDirective)
+  expectAssignable<Directive>(comp.directives!.localDirective)
 
   // global directive
   expectType(comp.directives!.vShow, {} as typeof vShow)

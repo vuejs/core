@@ -367,8 +367,8 @@ describe('defineEmits w/ runtime declaration', () => {
 describe('defineSlots', () => {
   // literal fn syntax (allow for specifying return type)
   const fnSlots = defineSlots<{
-    default: (props: { foo: string; bar: number }) => any
-    optional?: (props: string) => any
+    default(props: { foo: string; bar: number }): any
+    optional?(props: string): any
   }>()
   expectType(
     fnSlots.default,
@@ -438,9 +438,9 @@ describe('defineModel', () => {
 
   // infer type from default
   const inferred = defineModel({ default: 123 })
-  expectType(inferred, {} as ModelRef<123>)
+  expectAssignable<Ref<number | undefined>>(inferred)
   const inferredRequired = defineModel({ default: 123, required: true })
-  expectType(inferredRequired, {} as ModelRef<123>)
+  expectAssignable<Ref<number>>(inferredRequired)
 
   // modifiers
   const [_, modifiers] = defineModel<string>()

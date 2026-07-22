@@ -186,8 +186,7 @@ expectType(state.foo.label, {} as string)
 describe('ref with generic', <T extends { name: string }>() => {
   const r = {} as T
   const s = ref(r)
-  // @ts-expect-error TS cannot reduce `UnwrapRef<T>['name']` to `string` for generic `T`
-  expectType(s.value.name, {} as string)
+  expectAssignable<string>(s.value.name)
 
   const rr = {} as MaybeRef<T>
   // should at least allow casting
@@ -296,8 +295,8 @@ if (refStatus.value === 'initial') {
 describe('shallowRef with generic', <T extends { name: string }>() => {
   const r = {} as T
   const s = shallowRef(r)
-  // @ts-expect-error TS cannot reduce `s.value.name` to `string` for generic `T`
-  expectType(s.value.name, {} as string)
+  expectAssignable<string>(s.value.name)
+  expectAssignable<ShallowRef<T>>(shallowRef(r))
 
   const rr = {} as MaybeRef<T>
   // should at least allow casting
