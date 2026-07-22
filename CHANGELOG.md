@@ -1,3 +1,39 @@
+# [3.6.0-rc.2](https://github.com/vuejs/core/compare/v3.6.0-rc.1...v3.6.0-rc.2) (2026-07-22)
+
+### Bug Fixes
+
+* **compiler-vapor:** avoid helper and cache variable name collisions ([#15124](https://github.com/vuejs/core/issues/15124)) ([e9cb7c8](https://github.com/vuejs/core/commit/e9cb7c86109f860c873470751a7cc653f9f31f43))
+* **runtime-core,runtime-vapor:** restore undefined effect scope after `setCurrentInstance` ([#15141](https://github.com/vuejs/core/issues/15141)) ([3e41d52](https://github.com/vuejs/core/commit/3e41d52536dfe9ccd7440248824cdc0d3d43b2aa))
+* **runtime-vapor:** apply transition hooks before suspense insertion ([#15133](https://github.com/vuejs/core/issues/15133)) ([567c515](https://github.com/vuejs/core/commit/567c515bd0f2897269e0b44c1f1c2c5c2fdb12a5))
+* **runtime-vapor:** contain setup errors in prod ([#15130](https://github.com/vuejs/core/issues/15130)) ([6921182](https://github.com/vuejs/core/commit/69211821539136ee51c67a1512c9edf1bdbfe86d))
+* **runtime-vapor:** create slot anchor when hydrating unwrapped interop slot content ([#15131](https://github.com/vuejs/core/issues/15131)) ([42a7186](https://github.com/vuejs/core/commit/42a718673cb09eda9f3b599faa1352fa792b5edb))
+* **runtime-vapor:** defer mount hooks to owning suspense boundary ([#15139](https://github.com/vuejs/core/issues/15139)) ([7d63723](https://github.com/vuejs/core/commit/7d63723a0e3784545f5566656c6db58ea7f31a73))
+* **runtime-vapor:** defer post-render effects to vdom suspense boundaries ([#15144](https://github.com/vuejs/core/issues/15144)) ([429006e](https://github.com/vuejs/core/commit/429006e3ac914658861ee77cbbcc5edfa7740c4a))
+* **runtime-vapor:** hydrate vapor components in deferred vdom hydration via interop ([#15132](https://github.com/vuejs/core/issues/15132)) ([ce85e8a](https://github.com/vuejs/core/commit/ce85e8ad27fb3f4f2763eb8e64e1ea61c59e8cbe))
+* **runtime-vapor:** preserve pending async component position ([#15147](https://github.com/vuejs/core/issues/15147)) ([fb4538c](https://github.com/vuejs/core/commit/fb4538ccd77c0d8b0d4b1ec0fd925a438ce0eb05))
+* **runtime-vapor:** restore instance context when handling async setup result ([#15129](https://github.com/vuejs/core/issues/15129)) ([208f1ed](https://github.com/vuejs/core/commit/208f1ed3bbe0079f7ca5d6024fb9e4899e7fdf6f))
+* **runtime-vapor:** sync transition hooks on interop update ([#15140](https://github.com/vuejs/core/issues/15140)) ([39b1ddf](https://github.com/vuejs/core/commit/39b1ddf5b9dfec07de8e05d96e8845117c54edc5))
+* **runtime-vapor:** update logical child cache after hydration mutations ([#15145](https://github.com/vuejs/core/issues/15145)) ([d385f89](https://github.com/vuejs/core/commit/d385f8960751dc9866639acd4ac60eb729922d61))
+* **runtime-vapor:** validate props for vdom interop ([#15111](https://github.com/vuejs/core/issues/15111)) ([a686662](https://github.com/vuejs/core/commit/a686662492f00c4cb2552cf9ffcc39fc13e0730f))
+
+### Features
+
+* **compiler-vapor:** make event delegation opt-in ([#15127](https://github.com/vuejs/core/issues/15127)) ([810a1ef](https://github.com/vuejs/core/commit/810a1ef0b3ab1a8b3398213a5784c0207603f775))
+
+### BREAKING CHANGES
+
+#### Vapor event delegation is now opt-in
+
+To align Vapor Mode with standard Vue and native DOM event behavior, DOM event listeners are now attached directly to elements by default. Previously, supported events were automatically delegated to `document`, which could produce behavioral differences from VDOM Mode—for example, an ancestor calling `stopPropagation()` could prevent a child handler from running.
+
+Document-level delegation is now an explicit optimization. Use the Vapor-only `.delegate` modifier to opt in for supported static events:
+
+```vue
+<button @click.delegate="onClick" />
+```
+The `compilerOptions.eventDelegation` option has been removed. Remove this option from existing configurations and add `.delegate` to individual listeners where delegation is desired.
+
+
 # [3.6.0-rc.1](https://github.com/vuejs/core/compare/v3.6.0-beta.17...v3.6.0-rc.1) (2026-07-18)
 # Vue 3.6.0-rc.1
 
