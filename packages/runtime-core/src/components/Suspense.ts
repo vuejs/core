@@ -617,7 +617,9 @@ function createSuspenseBoundary(
         if (parent.pendingBranch) {
           // found a pending parent suspense, merge buffered post jobs
           // into that parent
-          parent.effects.push(...effects)
+          for (let i = 0; i < effects.length; i++) {
+            parent.effects.push(effects[i])
+          }
           hasUnresolvedAncestor = true
           break
         }
