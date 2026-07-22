@@ -844,4 +844,27 @@ describe('scheduler', () => {
     await nextTick()
     expect(calls).toEqual(['cb2', 'cb1'])
   })
+
+  test('nextick callback should be executed after the queuejob', async () => {
+    let val = 1
+    queueJob(() => {
+      val = 3
+    })
+    await nextTick(() => {
+      val = 2
+    })
+    expect(val).toBe(2)
+
+    const p = new Promise<void>(r => {
+      nextTick(() => {
+        val = 2
+        r()
+      })
+      queueJob(() => {
+        val = 3
+      })
+    })
+    await p
+    expect(val).toBe(2)
+  })
 })
