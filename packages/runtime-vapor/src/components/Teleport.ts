@@ -8,7 +8,6 @@ import {
   type SuspenseBoundary,
   type TeleportProps,
   type TeleportTargetElement,
-  type TransitionHooks,
   isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
@@ -360,7 +359,6 @@ export class TeleportFragment extends RenderContextFragment {
   insert = (
     container: ParentNode,
     anchor: Node | null,
-    _transition?: TransitionHooks,
     parentSuspense?: SuspenseBoundary | null,
   ): void => {
     if (isHydrating) return

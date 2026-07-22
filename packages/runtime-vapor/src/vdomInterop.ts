@@ -976,7 +976,7 @@ function mountVNode(
     syncNodes()
   }
 
-  frag.insert = (parentNode, anchor, transition, parentSuspense) => {
+  frag.insert = (parentNode, anchor, parentSuspense, transition) => {
     if (isHydrating) return
     const operationSuspense =
       parentSuspense === undefined ? suspense : parentSuspense
@@ -1174,7 +1174,7 @@ function createVDOMComponent(
   vnode.scopeId = getCurrentScopeId() || null
   vnode.slotScopeIds = currentSlotScopeIds
 
-  frag.insert = (parentNode, anchor, transition, parentSuspense) => {
+  frag.insert = (parentNode, anchor, parentSuspense, transition) => {
     if (isHydrating) return
     const operationSuspense =
       parentSuspense === undefined ? suspense : parentSuspense
@@ -1566,7 +1566,7 @@ function renderVDOMSlot(
     }
   }
 
-  frag.insert = (parentNode, anchor, _transition, parentSuspense) => {
+  frag.insert = (parentNode, anchor, parentSuspense) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     currentParentNode = parentNode
@@ -2175,7 +2175,7 @@ function renderVaporSlot(
 
       slotResolutionState.pendingRecheck = false
       slotResolutionState.pendingRecheckForce = false
-      frag.insert = (parentNode, anchor, _transition, parentSuspense) => {
+      frag.insert = (parentNode, anchor, parentSuspense) => {
         currentParentNode = parentNode
         currentAnchor = anchor
         if (slotResolutionState.activeFallback) {
@@ -2496,7 +2496,7 @@ function createVNodeChildrenFragment(
     startRenderEffect()
   }
 
-  frag.insert = (parentNode, anchor, _transition, parentSuspense) => {
+  frag.insert = (parentNode, anchor, parentSuspense) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     currentParentNode = parentNode

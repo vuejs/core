@@ -84,8 +84,8 @@ export class VaporFragment<
   insert?: (
     parent: ParentNode,
     anchor: Node | null,
-    transitionHooks?: TransitionHooks,
     parentSuspense?: SuspenseBoundary | null,
+    transitionHooks?: TransitionHooks,
   ) => void
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
   hydrate?(...args: any[]): void
@@ -475,7 +475,7 @@ export class SlotFragment
   constructor(private readonly notifyParentBoundary: boolean = false) {
     super(isHydrating || __DEV__ ? 'slot' : undefined, false, false, false)
     if (!isHydrating) {
-      this.insert = (parent, anchor, _transition, parentSuspense) =>
+      this.insert = (parent, anchor, parentSuspense) =>
         this.insertSlot(parent, anchor, parentSuspense)
     }
     this.remove = parent => this.removeSlot(parent)

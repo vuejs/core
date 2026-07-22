@@ -171,8 +171,8 @@ export function insertFragment(
     block.insert(
       parent,
       anchor,
-      (block as TransitionBlock).$transition,
       parentSuspense,
+      (block as TransitionBlock).$transition,
     )
   } else {
     insert(block.nodes, parent, anchor, parentSuspense)
@@ -263,8 +263,8 @@ export function move(
       block.insert(
         parent,
         anchor,
-        (block as TransitionBlock).$transition,
         parentSuspense,
+        (block as TransitionBlock).$transition,
       )
     } else {
       move(
