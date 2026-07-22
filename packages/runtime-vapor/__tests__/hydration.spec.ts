@@ -4690,6 +4690,37 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`"<!---->"`)
     })
+
+    test('transition appear should not break following component hydration', async () => {
+      const data = ref('initial')
+      const { container, html } = await testHydration(
+        `<template>
+          <div>
+            <Transition :css="false" appear>
+              <p>{{ data }}</p>
+            </Transition>
+            <components.Second />
+          </div>
+        </template>`,
+        {
+          Second: `<template><i>{{ data }}</i></template>`,
+        },
+        data,
+      )
+
+      expect(html).toBe(
+        '<div><template><p>initial</p></template><i>initial</i></div>',
+      )
+      expect(container.innerHTML).toBe(
+        '<div><p style="">initial</p><i>initial</i></div>',
+      )
+
+      data.value = 'updated'
+      await nextTick()
+      expect(container.innerHTML).toBe(
+        '<div><p style="">updated</p><i>updated</i></div>',
+      )
+    })
   })
 
   describe('transition-group', () => {
@@ -7792,6 +7823,65 @@ describe('mismatch handling', () => {
     expect(container.innerHTML).toBe('<ins id="foo">x</ins>')
     expect(`Hydration node mismatch`).toHaveBeenWarned()
   })
+  test('element mismatch should not break following component hydration', async () => {
+    const data = ref('initial')
+    const appCode = `<template>
+      <div>
+        <components.First />
+        <components.Second />
+      </div>
+    </template>`
+
+    const ssrComponents: Record<string, any> = {}
+    ssrComponents.First = compile(
+      `<template><span>{{ data }}</span></template>`,
+      data,
+      ssrComponents,
+      { vapor: true, ssr: true },
+    )
+    ssrComponents.Second = compile(
+      `<template><i>{{ data }}</i></template>`,
+      data,
+      ssrComponents,
+      { vapor: true, ssr: true },
+    )
+    const serverComp = compile(appCode, data, ssrComponents, {
+      vapor: true,
+      ssr: true,
+    })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(serverComp),
+    )
+
+    const clientComponents: Record<string, any> = {}
+    clientComponents.First = compile(
+      `<template><p>{{ data }}</p></template>`,
+      data,
+      clientComponents,
+      { vapor: true },
+    )
+    clientComponents.Second = compile(
+      `<template><i>{{ data }}</i></template>`,
+      data,
+      clientComponents,
+      { vapor: true },
+    )
+    const clientComp = compile(appCode, data, clientComponents, {
+      vapor: true,
+    })
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+
+    createVaporSSRApp(clientComp).mount(container)
+
+    expect(container.innerHTML).toBe('<div><p>initial</p><i>initial</i></div>')
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+
+    data.value = 'updated'
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><p>updated</p><i>updated</i></div>')
+  })
   test('static text content mismatch should warn', async () => {
     const { container } = await mountWithHydration(`server text`, `client text`)
     expect(container.textContent).toBe('client text')
@@ -7927,6 +8017,50 @@ describe('mismatch handling', () => {
     )
 
     const { container } = await mountWithHydration(html, code, clientData)
+
+    expect(container.innerHTML).toBe('<div><!--if--><i>tail</i></div>')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    clientData.value.show = true
+    clientData.value.tail = 'tail updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><span>shown</span><!--if--><i>tail updated</i></div>',
+    )
+  })
+  test('v-if empty branch should not break following component hydration', async () => {
+    const code = `
+      <div>
+        <span v-if="data.show">shown</span>
+        <components.Second />
+      </div>
+    `
+    const ssrData = ref({ show: true, tail: 'tail' })
+    const ssrComponents = {
+      Second: compileVaporComponent(
+        `<i>{{ data.tail }}</i>`,
+        ssrData,
+        undefined,
+        true,
+      ),
+    }
+    const SSRComp = compileVaporComponent(code, ssrData, ssrComponents, true)
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRComp),
+    )
+    expect(html).toBe('<div><span>shown</span><i>tail</i></div>')
+
+    const clientData = ref({ show: false, tail: 'tail' })
+    const clientComponents = {
+      Second: compileVaporComponent(`<i>{{ data.tail }}</i>`, clientData),
+    }
+    const { container } = await mountWithHydration(
+      html,
+      code,
+      clientData,
+      clientComponents,
+    )
 
     expect(container.innerHTML).toBe('<div><!--if--><i>tail</i></div>')
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -9999,6 +10133,56 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(container.innerHTML).toBe(
       '<!--[--><!--dynamic-component--><span>tail-updated</span><!--]-->',
+    )
+  })
+
+  test('hydrate null dynamic component should not break following component hydration', async () => {
+    const code = `<div>
+      <component :is="data.show ? 'p' : null">{{ data.msg }}</component>
+      <components.Second />
+    </div>`
+    const ssrData = ref({ show: true, msg: 'initial' })
+    const ssrComponents = {
+      Second: compileVaporComponent(
+        `<i>{{ data.msg }}</i>`,
+        ssrData,
+        undefined,
+        true,
+      ),
+    }
+    const SSRComp = compileVaporComponent(code, ssrData, ssrComponents, true)
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(SSRComp),
+    )
+    expect(html).toBe('<div><p>initial</p><i>initial</i></div>')
+
+    const clientData = ref({ show: false, msg: 'initial' })
+    const clientComponents = {
+      Second: compileVaporComponent(`<i>{{ data.msg }}</i>`, clientData),
+    }
+    const { container } = await mountWithHydration(
+      html,
+      code,
+      clientData,
+      clientComponents,
+    )
+
+    expect(container.innerHTML).toBe(
+      '<div><!--dynamic-component--><i>initial</i></div>',
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    clientData.value.msg = 'updated'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><!--dynamic-component--><i>updated</i></div>',
+    )
+
+    clientData.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><p>updated</p><!--dynamic-component--><i>updated</i></div>',
     )
   })
 

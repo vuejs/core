@@ -19,6 +19,7 @@ import {
   createComment,
   createTextNode,
   parentNode as getParentNode,
+  updateLastLocatedLogicalChild,
 } from './node'
 import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
 import type { DynamicFragment } from '../fragment'
@@ -522,6 +523,17 @@ export function executeAnchorPlan(
       }
       case 'create-cleanup': {
         frag.nodes = EMPTY_BLOCK
+        // The runtime anchor is inserted later. Until then, advance the cache
+        // to the surviving next sibling, or clear it when cleanup reaches the tail.
+        const cleanupParent = getParentNode(plan.cleanupStart)
+        if (cleanupParent) {
+          updateLastLocatedLogicalChild(
+            cleanupParent,
+            plan.cleanupStart,
+            plan.cleanupUntil,
+            1,
+          )
+        }
         if (plan.cleanupUntil) {
           exitHydrationBoundary = enterHydrationBoundary(plan.cleanupUntil)
         } else {

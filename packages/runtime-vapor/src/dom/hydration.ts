@@ -20,6 +20,7 @@ import {
   createTextNode,
   locateChildByLogicalIndex,
   parentNode,
+  updateLastLocatedLogicalChild,
 } from './node'
 import { remove } from '../block'
 
@@ -363,10 +364,12 @@ function handleMismatch(
 
   // fast path for text nodes
   if (template[0] !== '<') {
-    return container.insertBefore(
-      markRecreatedNode(createTextNode(template)),
-      next,
-    )
+    const newNode = markRecreatedNode(createTextNode(template))
+    container.insertBefore(newNode, next)
+    if (!shouldPreserveAnchor) {
+      updateLastLocatedLogicalChild(container, node, newNode)
+    }
+    return newNode
   }
 
   // element node
@@ -398,6 +401,9 @@ function handleMismatch(
     }
   }
   container.insertBefore(newNode, next)
+  if (!shouldPreserveAnchor) {
+    updateLastLocatedLogicalChild(container, node, newNode)
+  }
   return newNode
 }
 

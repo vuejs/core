@@ -60,6 +60,7 @@ import {
   isHydrating,
   setCurrentHydrationNode,
 } from '../dom/hydration'
+import { updateLastLocatedLogicalChild } from '../dom/node'
 import { type PendingVShow, setCurrentPendingVShows } from '../directives/vShow'
 import { isInteropEnabled } from '../vdomInteropState'
 
@@ -85,7 +86,8 @@ export const ensureTransitionHooksRegistered = (): void => {
 const hydrateTransitionImpl = (suspense: SuspenseBoundary | null) => {
   if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
   // replace <template> node with inner child
-  const { content, parentNode } = currentHydrationNode
+  const templateNode = currentHydrationNode
+  const { content, parentNode } = templateNode
   const { firstChild } = content
   if (firstChild) {
     let transitionEl: Element | undefined
@@ -102,8 +104,9 @@ const hydrateTransitionImpl = (suspense: SuspenseBoundary | null) => {
       }
     }
 
-    parentNode!.insertBefore(content, currentHydrationNode)
-    parentNode!.removeChild(currentHydrationNode)
+    parentNode!.insertBefore(content, templateNode)
+    parentNode!.removeChild(templateNode)
+    updateLastLocatedLogicalChild(parentNode!, templateNode, firstChild)
     setCurrentHydrationNode(firstChild)
 
     if (
