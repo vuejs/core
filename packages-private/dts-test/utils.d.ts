@@ -7,7 +7,13 @@ import 'vue/jsx'
 export function describe(_name: string, _fn: () => void): void
 export function test(_name: string, _fn: () => any): void
 
-export function expectType<T>(value: T): void
+// https://stackoverflow.com/a/53808212
+type IfEquals<T, U, Y = unknown, N = never> =
+  (<G>() => G extends T ? 1 : 2) extends <G>() => G extends U ? 1 : 2 ? Y : N
+export function expectType<T, U>(
+  actual: T & IfEquals<T, U>,
+  expected: U & IfEquals<T, U>,
+): IfEquals<T, U>
 export function expectAssignable<T, T2 extends T = T>(value: T2): void
 
 export type IsUnion<T, U extends T = T> = (

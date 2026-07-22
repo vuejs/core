@@ -38,12 +38,13 @@ describe('h inference w/ element', () => {
   // events
   h('div', {
     onClick: e => {
-      expectType<MouseEvent>(e)
+      // `click` can be MouseEvent or PointerEvent across TS versions
+      expectType(e, {} as HTMLElementEventMap['click'])
     },
   })
   h('input', {
     onFocus(e) {
-      expectType<FocusEvent>(e)
+      expectType(e, {} as FocusEvent)
     },
   })
 })

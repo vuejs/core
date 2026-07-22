@@ -2,30 +2,38 @@ import { nextTick } from 'vue'
 import { describe, expectType } from './utils'
 
 describe('nextTick', async () => {
-  expectType<Promise<void>>(nextTick())
-  expectType<Promise<string>>(nextTick(() => 'foo'))
-  expectType<Promise<string>>(nextTick(() => Promise.resolve('foo')))
-  expectType<Promise<string>>(
+  expectType(nextTick(), {} as Promise<void>)
+  expectType(
+    nextTick(() => 'foo'),
+    {} as Promise<string>,
+  )
+  expectType(
+    nextTick(() => Promise.resolve('foo')),
+    {} as Promise<string>,
+  )
+  expectType(
     nextTick(() => Promise.resolve(Promise.resolve('foo'))),
+    {} as Promise<string>,
   )
 
-  expectType<void>(await nextTick())
-  expectType<string>(await nextTick(() => 'foo'))
-  expectType<string>(await nextTick(() => Promise.resolve('foo')))
-  expectType<string>(
+  expectType(await nextTick(), {} as unknown as void)
+  expectType(await nextTick(() => 'foo'), {} as string)
+  expectType(await nextTick(() => Promise.resolve('foo')), {} as string)
+  expectType(
     await nextTick(() => Promise.resolve(Promise.resolve('foo'))),
+    {} as string,
   )
 
   nextTick().then(value => {
-    expectType<void>(value)
+    expectType(value, {} as unknown as void)
   })
   nextTick(() => 'foo').then(value => {
-    expectType<string>(value)
+    expectType(value, {} as string)
   })
   nextTick(() => Promise.resolve('foo')).then(value => {
-    expectType<string>(value)
+    expectType(value, {} as string)
   })
   nextTick(() => Promise.resolve(Promise.resolve('foo'))).then(value => {
-    expectType<string>(value)
+    expectType(value, {} as string)
   })
 })

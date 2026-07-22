@@ -5,7 +5,7 @@ import {
   defineComponent,
   ref,
 } from 'vue'
-import { describe, expectType } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 describe('defineComponent', () => {
   const CompSetup = defineComponent({
@@ -20,23 +20,23 @@ describe('defineComponent', () => {
   })
   const compSetup: ComponentInstance<typeof CompSetup> = {} as any
 
-  expectType<string | undefined>(compSetup.test)
-  expectType<number>(compSetup.a)
-  expectType<ComponentPublicInstance>(compSetup)
+  expectType(compSetup.test, {} as string | undefined)
+  expectType(compSetup.a, {} as number)
+  expectAssignable<ComponentPublicInstance>(compSetup)
 })
 describe('functional component', () => {
   // Functional
   const CompFunctional: FunctionalComponent<{ test?: string }> = {} as any
   const compFunctional: ComponentInstance<typeof CompFunctional> = {} as any
 
-  expectType<string | undefined>(compFunctional.test)
-  expectType<ComponentPublicInstance>(compFunctional)
+  expectType(compFunctional.test, {} as string | undefined)
+  expectAssignable<ComponentPublicInstance>(compFunctional)
 
   const CompFunction: (props: { test?: string }) => any = {} as any
   const compFunction: ComponentInstance<typeof CompFunction> = {} as any
 
-  expectType<string | undefined>(compFunction.test)
-  expectType<ComponentPublicInstance>(compFunction)
+  expectType(compFunction.test, {} as string | undefined)
+  expectAssignable<ComponentPublicInstance>(compFunction)
 })
 
 describe('options component', () => {
@@ -62,10 +62,10 @@ describe('options component', () => {
     },
   })
   const compOptions: ComponentInstance<typeof CompOptions> = {} as any
-  expectType<string | undefined>(compOptions.test)
-  expectType<number>(compOptions.a)
-  expectType<(a: string) => boolean>(compOptions.func)
-  expectType<ComponentPublicInstance>(compOptions)
+  expectType(compOptions.test, {} as string | undefined)
+  expectType(compOptions.a, {} as number)
+  expectType(compOptions.func, {} as (a: string) => true)
+  expectAssignable<ComponentPublicInstance>(compOptions)
 })
 
 describe('object no defineComponent', () => {
@@ -82,9 +82,9 @@ describe('object no defineComponent', () => {
     },
   }
   const compObjectSetup: ComponentInstance<typeof CompObjectSetup> = {} as any
-  expectType<string | undefined>(compObjectSetup.test)
-  expectType<number>(compObjectSetup.a)
-  expectType<ComponentPublicInstance>(compObjectSetup)
+  expectAssignable<string | undefined>(compObjectSetup.test)
+  expectType(compObjectSetup.a, {} as number)
+  expectAssignable<ComponentPublicInstance>(compObjectSetup)
 
   const CompObjectData = {
     props: {
@@ -97,9 +97,9 @@ describe('object no defineComponent', () => {
     },
   }
   const compObjectData: ComponentInstance<typeof CompObjectData> = {} as any
-  expectType<string | undefined>(compObjectData.test)
-  expectType<number>(compObjectData.a)
-  expectType<ComponentPublicInstance>(compObjectData)
+  expectAssignable<string | undefined>(compObjectData.test)
+  expectType(compObjectData.a, {} as number)
+  expectAssignable<ComponentPublicInstance>(compObjectData)
 
   const CompObjectNoProps = {
     data() {
@@ -110,9 +110,9 @@ describe('object no defineComponent', () => {
   }
   const compObjectNoProps: ComponentInstance<typeof CompObjectNoProps> =
     {} as any
-  expectType<string | undefined>(compObjectNoProps.test)
-  expectType<number>(compObjectNoProps.a)
-  expectType<ComponentPublicInstance>(compObjectNoProps)
+  expectAssignable<string | undefined>(compObjectNoProps.test)
+  expectType(compObjectNoProps.a, {} as number)
+  expectAssignable<ComponentPublicInstance>(compObjectNoProps)
 })
 
 describe('Generic component', () => {
@@ -134,8 +134,8 @@ describe('Generic component', () => {
 
   // defaults to known types since types are resolved on instantiation
   const comp: ComponentInstance<typeof Comp> = {} as any
-  expectType<string | number>(comp.msg)
-  expectType<Array<string | number>>(comp.list)
+  expectType(comp.msg, {} as string | number)
+  expectType(comp.list, {} as Array<string | number>)
 })
 
 // #12751
@@ -147,8 +147,13 @@ describe('Generic component', () => {
   })
   const comp: ComponentInstance<typeof Comp> = {} as any
 
-  expectType<((value?: boolean) => any) | undefined>(comp['onUpdate:visible'])
-  expectType<{ 'onUpdate:visible'?: (value?: boolean) => any }>(comp['$props'])
+  expectType(
+    comp['onUpdate:visible'],
+    {} as ((value?: boolean) => any) | undefined,
+  )
+  expectAssignable<{ 'onUpdate:visible'?: (value?: boolean) => any }>(
+    comp['$props'],
+  )
   // @ts-expect-error
   comp['$props']['$props']
 }

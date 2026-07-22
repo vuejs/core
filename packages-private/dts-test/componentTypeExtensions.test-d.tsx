@@ -35,7 +35,7 @@ export const Custom = defineComponent({
   data: () => ({ counter: 0 }),
 
   test(n) {
-    expectType<number>(n)
+    expectType(n, {} as number)
   },
 
   methods: {
@@ -54,15 +54,15 @@ export const Custom = defineComponent({
   },
 })
 
-expectType<Directive>(Custom.directives!.test)
-expectType<DefineComponent<{}>>(Custom.components!.RouterView)
-expectType<JSX.Element>(<Custom baz={1} />)
-expectType<JSX.Element>(<Custom custom={1} baz={1} />)
-expectType<JSX.Element>(<Custom bar="bar" baz={1} />)
-expectType<JSX.Element>(<Custom ref={''} bar="bar" baz={1} />)
+expectType(Custom.directives!.test, {} as Directive)
+expectType(Custom.components!.RouterView, {} as DefineComponent<{}>)
+expectType(<Custom baz={1} />, {} as JSX.Element)
+expectType(<Custom custom={1} baz={1} />, {} as JSX.Element)
+expectType(<Custom bar="bar" baz={1} />, {} as JSX.Element)
+expectType(<Custom ref={''} bar="bar" baz={1} />, {} as JSX.Element)
 
 // @ts-expect-error
-expectType<JSX.Element>(<Custom />)
+expectType(<Custom />, {} as JSX.Element)
 // @ts-expect-error
 ;<Custom bar="bar" />
 // @ts-expect-error

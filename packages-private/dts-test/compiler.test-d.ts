@@ -11,10 +11,10 @@ import {
 } from 'vue'
 import { expectType } from './utils'
 
-expectType<VNode>(createBlock(Teleport))
-expectType<VNode>(createBlock(Text))
-expectType<VNode>(createBlock(Static))
-expectType<VNode>(createBlock(Comment))
-expectType<VNode>(createBlock(Fragment))
-expectType<VNode>(createBlock(Suspense))
-expectType<VNode>(createBlock(defineComponent({})))
+expectType(createBlock(Teleport), {} as VNode)
+expectType(createBlock(Text), {} as VNode)
+expectType(createBlock(Static), {} as VNode)
+expectType(createBlock(Comment), {} as VNode)
+expectType(createBlock(Fragment), {} as VNode)
+expectType(createBlock(Suspense), {} as VNode)
+expectType(createBlock(defineComponent({})), {} as VNode)

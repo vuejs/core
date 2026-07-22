@@ -3,7 +3,7 @@ import {
   defineComponent,
   defineCustomElement,
 } from 'vue'
-import { describe, expectType, test } from './utils'
+import { describe, expectAssignable, expectType, test } from './utils'
 
 describe('inject', () => {
   // with object inject
@@ -16,8 +16,8 @@ describe('inject', () => {
       bar: 'bar',
     },
     created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
+      expectType(this.foo, {} as unknown)
+      expectType(this.bar, {} as unknown)
       //  @ts-expect-error
       this.foobar = 1
     },
@@ -28,8 +28,8 @@ describe('inject', () => {
     props: ['a', 'b'],
     inject: ['foo', 'bar'],
     created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
+      expectType(this.foo, {} as unknown)
+      expectType(this.bar, {} as unknown)
       //  @ts-expect-error
       this.foobar = 1
     },
@@ -48,8 +48,8 @@ describe('inject', () => {
       },
     },
     created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
+      expectType(this.foo, {} as unknown)
+      expectType(this.bar, {} as unknown)
       //  @ts-expect-error
       this.foobar = 1
     },
@@ -78,10 +78,10 @@ describe('defineCustomElement using defineComponent return type', () => {
       },
     })
     const Comp = defineCustomElement(Comp1Vue)
-    expectType<VueElementConstructor>(Comp)
+    expectAssignable<VueElementConstructor>(Comp)
 
     const instance = new Comp()
-    expectType<string | undefined>(instance.a)
+    expectType(instance.a, {} as string | undefined)
     instance.a = ''
   })
 
@@ -93,10 +93,10 @@ describe('defineCustomElement using defineComponent return type', () => {
       emits: ['click'],
     })
     const Comp = defineCustomElement(Comp1Vue)
-    expectType<VueElementConstructor>(Comp)
+    expectAssignable<VueElementConstructor>(Comp)
 
     const instance = new Comp()
-    expectType<number | undefined>(instance.a)
+    expectType(instance.a, {} as number | undefined)
     instance.a = 42
   })
 
@@ -107,10 +107,10 @@ describe('defineCustomElement using defineComponent return type', () => {
       },
     })
     const Comp = defineCustomElement(Comp1Vue)
-    expectType<VueElementConstructor>(Comp)
+    expectAssignable<VueElementConstructor>(Comp)
 
     const instance = new Comp()
-    expectType<number>(instance.a)
+    expectType(instance.a, {} as number)
     instance.a = 42
   })
 
@@ -126,10 +126,10 @@ describe('defineCustomElement using defineComponent return type', () => {
       emits: ['click'],
     })
     const Comp = defineCustomElement(Comp1Vue)
-    expectType<VueElementConstructor>(Comp)
+    expectAssignable<VueElementConstructor>(Comp)
 
     const instance = new Comp()
-    expectType<number>(instance.a)
+    expectType(instance.a, {} as number)
     instance.a = 42
   })
 })

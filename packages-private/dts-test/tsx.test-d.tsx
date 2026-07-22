@@ -9,34 +9,39 @@ import {
 } from 'vue'
 import { expectType } from './utils'
 
-expectType<VNode>(<div />)
-expectType<JSX.Element>(<div />)
-expectType<JSX.Element>(<div id="foo" />)
-expectType<JSX.Element>(<div>hello</div>)
-expectType<JSX.Element>(<input value="foo" />)
-expectType<JSX.Element>(<textarea value={null} />)
+expectType(<div />, {} as VNode)
+expectType(<div />, {} as JSX.Element)
+expectType(<div id="foo" />, {} as JSX.Element)
+expectType(<div>hello</div>, {} as JSX.Element)
+expectType(<input value="foo" />, {} as JSX.Element)
+expectType(<textarea value={null} />, {} as JSX.Element)
 
 // @ts-expect-error style css property validation
 ;<div style={{ unknown: 123 }} />
 
 // allow array styles and nested array styles
-expectType<JSX.Element>(<div style={[{ color: 'red' }]} />)
-expectType<JSX.Element>(
+expectType(<div style={[{ color: 'red' }]} />, {} as JSX.Element)
+expectType(
   <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />,
+  {} as JSX.Element,
 )
 
 // allow undefined, string, object, array and nested array classes
-expectType<JSX.Element>(<div class={undefined} />)
-expectType<JSX.Element>(<div class={'foo'} />)
-expectType<JSX.Element>(<div class={['foo', undefined, 'bar']} />)
-expectType<JSX.Element>(<div class={[]} />)
-expectType<JSX.Element>(<div class={['foo', ['bar'], [['baz']]]} />)
-expectType<JSX.Element>(<div class={{ foo: true, bar: false, baz: true }} />)
-expectType<JSX.Element>(<div class={{}} />)
-expectType<JSX.Element>(
-  <div class={['foo', ['bar'], { baz: true }, [{ qux: true }]]} />,
+expectType(<div class={undefined} />, {} as JSX.Element)
+expectType(<div class={'foo'} />, {} as JSX.Element)
+expectType(<div class={['foo', undefined, 'bar']} />, {} as JSX.Element)
+expectType(<div class={[]} />, {} as JSX.Element)
+expectType(<div class={['foo', ['bar'], [['baz']]]} />, {} as JSX.Element)
+expectType(
+  <div class={{ foo: true, bar: false, baz: true }} />,
+  {} as JSX.Element,
 )
-expectType<JSX.Element>(
+expectType(<div class={{}} />, {} as JSX.Element)
+expectType(
+  <div class={['foo', ['bar'], { baz: true }, [{ qux: true }]]} />,
+  {} as JSX.Element,
+)
+expectType(
   <div
     class={[
       { foo: false },
@@ -48,8 +53,9 @@ expectType<JSX.Element>(
       { grault: NaN },
     ]}
   />,
+  {} as JSX.Element,
 )
-expectType<JSX.Element>(
+expectType(
   <div
     class={[
       { foo: true },
@@ -59,26 +65,27 @@ expectType<JSX.Element>(
       { quux: [] },
     ]}
   />,
+  {} as JSX.Element,
 )
 
 // allow class/style passthrough from attrs
 const attrs = useAttrs()
-expectType<JSX.Element>(<div class={attrs.class} />)
-expectType<JSX.Element>(<div style={attrs.style} />)
+expectType(<div class={attrs.class} />, {} as JSX.Element)
+expectType(<div style={attrs.style} />, {} as JSX.Element)
 
 // @ts-expect-error invalid class value
 ;<div class={0} />
 
 // #7955
-expectType<JSX.Element>(<div style={[undefined, '', null, false]} />)
+expectType(<div style={[undefined, '', null, false]} />, {} as JSX.Element)
 
-expectType<JSX.Element>(<div style={undefined} />)
+expectType(<div style={undefined} />, {} as JSX.Element)
 
-expectType<JSX.Element>(<div style={null} />)
+expectType(<div style={null} />, {} as JSX.Element)
 
-expectType<JSX.Element>(<div style={''} />)
+expectType(<div style={''} />, {} as JSX.Element)
 
-expectType<JSX.Element>(<div style={false} />)
+expectType(<div style={false} />, {} as JSX.Element)
 
 // @ts-expect-error
 ;<div style={[0]} />
@@ -90,24 +97,25 @@ expectType<JSX.Element>(<div style={false} />)
 ;<div foo="bar" />
 
 // allow key/ref on arbitrary element
-expectType<JSX.Element>(<div key="foo" />)
-expectType<JSX.Element>(<div ref="bar" />)
+expectType(<div key="foo" />, {} as JSX.Element)
+expectType(<div ref="bar" />, {} as JSX.Element)
 
-expectType<JSX.Element>(
+expectType(
   <input
     onInput={e => {
       // infer correct event type
-      expectType<EventTarget | null>(e.target)
+      expectType(e.target, {} as EventTarget | null)
     }}
   />,
+  {} as JSX.Element,
 )
 
 // built-in types
-expectType<JSX.Element>(<Fragment />)
-expectType<JSX.Element>(<Fragment key="1" />)
+expectType(<Fragment />, {} as JSX.Element)
+expectType(<Fragment key="1" />, {} as JSX.Element)
 
-expectType<JSX.Element>(<Teleport to="#foo" />)
-expectType<JSX.Element>(<Teleport to="#foo" key="1" />)
+expectType(<Teleport to="#foo" />, {} as JSX.Element)
+expectType(<Teleport to="#foo" key="1" />, {} as JSX.Element)
 
 // @ts-expect-error
 ;<Teleport />
@@ -115,26 +123,28 @@ expectType<JSX.Element>(<Teleport to="#foo" key="1" />)
 ;<Teleport to={1} />
 
 // KeepAlive
-expectType<JSX.Element>(<KeepAlive include="foo" exclude={['a']} />)
-expectType<JSX.Element>(<KeepAlive key="1" />)
+expectType(<KeepAlive include="foo" exclude={['a']} />, {} as JSX.Element)
+expectType(<KeepAlive key="1" />, {} as JSX.Element)
 // @ts-expect-error
 ;<KeepAlive include={123} />
 
 // Suspense
-expectType<JSX.Element>(<Suspense />)
-expectType<JSX.Element>(<Suspense key="1" />)
-expectType<JSX.Element>(
+expectType(<Suspense />, {} as JSX.Element)
+expectType(<Suspense key="1" />, {} as JSX.Element)
+expectType(
   <Suspense onResolve={() => {}} onFallback={() => {}} onPending={() => {}} />,
+  {} as JSX.Element,
 )
 // @ts-expect-error
 ;<Suspense onResolve={123} />
 
 // svg
-expectType<JSX.Element>(
+expectType(
   <svg
     xmlnsXlink="http://www.w3.org/1999/xlink"
     xmlns="http://www.w3.org/2000/svg"
   />,
+  {} as JSX.Element,
 )
 // details
-expectType<JSX.Element>(<details name="details" />)
+expectType(<details name="details" />, {} as JSX.Element)

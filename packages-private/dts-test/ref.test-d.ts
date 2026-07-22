@@ -22,71 +22,81 @@ import {
   unref,
   useTemplateRef,
 } from 'vue'
-import { type IsAny, type IsUnion, describe, expectType } from './utils'
+import {
+  type IsAny,
+  type IsUnion,
+  describe,
+  expectAssignable,
+  expectType,
+} from './utils'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
   const coerced = ref(arg)
-  expectType<Ref<number>>(coerced)
+  expectType(coerced, {} as Ref<number>)
 
   // isRef as type guard
   if (isRef(arg)) {
-    expectType<Ref<number>>(arg)
+    expectType(arg, {} as Ref<number>)
   }
 
   // ref unwrapping
-  expectType<number>(unref(arg))
-  expectType<number>(toValue(arg))
-  expectType<number>(toValue(() => 123))
+  expectType(unref(arg), {} as number)
+  expectType(toValue(arg), {} as number)
+  expectType(
+    toValue(() => 123),
+    {} as number,
+  )
 
   // ref inner type should be unwrapped
   const nestedRef = ref({
     foo: ref(1),
   })
-  expectType<{ foo: number }>(nestedRef.value)
+  expectType(nestedRef.value, {} as { foo: number })
 
   // ref boolean
   const falseRef = ref(false)
-  expectType<Ref<boolean>>(falseRef)
-  expectType<boolean>(falseRef.value)
+  expectType(falseRef, {} as Ref<boolean>)
+  expectType(falseRef.value, {} as boolean)
 
   // ref true
   const trueRef = ref<true>(true)
-  expectType<Ref<true>>(trueRef)
-  expectType<true>(trueRef.value)
+  expectType(trueRef, {} as Ref<true>)
+  expectType(trueRef.value, {} as true)
 
   // tuple
-  expectType<[number, string]>(unref(ref([1, '1'])))
+  expectType(unref(ref<[number, string]>([1, '1'])), {} as [number, string])
 
   interface IteratorFoo {
     [Symbol.iterator]: any
   }
 
   // with symbol
-  expectType<Ref<IteratorFoo | null | undefined>>(
+  expectType(
     ref<IteratorFoo | null | undefined>(),
+    {} as Ref<IteratorFoo | null | undefined>,
   )
 
   // should not unwrap ref inside arrays
   const arr = ref([1, new Map<string, any>(), ref('1')]).value
   const value = arr[0]
   if (isRef(value)) {
-    expectType<Ref>(value)
+    expectType(value, {} as Ref<string>)
   } else if (typeof value === 'number') {
-    expectType<number>(value)
+    expectType(value, {} as number)
   } else {
     // should narrow down to Map type
     // and not contain any Ref type
-    expectType<Map<string, any>>(value)
+    expectAssignable<Map<string, any>>(value)
   }
 
   // should still unwrap in objects nested in arrays
   const arr2 = ref([{ a: ref(1) }]).value
-  expectType<number>(arr2[0].a)
+  expectType(arr2[0].a, {} as number)
 
   // any value should return Ref<any>, not any
   const a = ref(1 as any)
-  expectType<IsAny<typeof a>>(false)
+  expectType(false, {} as IsAny<typeof a>)
 }
 
 plainType(1)
@@ -94,21 +104,21 @@ plainType(1)
 function bailType(arg: HTMLElement | Ref<HTMLElement>) {
   // ref coercing
   const coerced = ref(arg)
-  expectType<Ref<HTMLElement>>(coerced)
+  expectType(coerced, {} as Ref<HTMLElement>)
 
   // isRef as type guard
   if (isRef(arg)) {
-    expectType<Ref<HTMLElement>>(arg)
+    expectType(arg, {} as Ref<HTMLElement>)
   }
 
   // ref unwrapping
-  expectType<HTMLElement>(unref(arg))
+  expectType(unref(arg), {} as HTMLElement)
 
   // ref inner type should be unwrapped
   const nestedRef = ref({ foo: ref(document.createElement('DIV')) })
 
-  expectType<Ref<{ foo: HTMLElement }>>(nestedRef)
-  expectType<{ foo: HTMLElement }>(nestedRef.value)
+  expectType(nestedRef, {} as Ref<{ foo: HTMLElement }>)
+  expectType(nestedRef.value, {} as { foo: HTMLElement })
 }
 const el = document.createElement('DIV')
 bailType(el)
@@ -134,24 +144,32 @@ function withSymbol() {
 
   const objRef = ref(obj)
 
-  expectType<Ref<number>>(objRef.value[Symbol.asyncIterator])
-  expectType<{ a: Ref<string> }>(objRef.value[Symbol.hasInstance])
-  expectType<{ b: Ref<boolean> }>(objRef.value[Symbol.isConcatSpreadable])
-  expectType<Ref<number>[]>(objRef.value[Symbol.iterator])
-  expectType<Set<Ref<number>>>(objRef.value[Symbol.match])
-  expectType<Map<number, Ref<string>>>(objRef.value[Symbol.matchAll])
-  expectType<{ arr: Ref<string>[] }>(objRef.value[Symbol.replace])
-  expectType<{ set: Set<Ref<number>> }>(objRef.value[Symbol.search])
-  expectType<{ map: Map<number, Ref<string>> }>(objRef.value[Symbol.species])
-  expectType<WeakSet<Ref<boolean>>>(objRef.value[Symbol.split])
-  expectType<WeakMap<Ref<boolean>, string>>(objRef.value[Symbol.toPrimitive])
-  expectType<{ weakSet: WeakSet<Ref<boolean>> }>(
+  expectType(objRef.value[Symbol.asyncIterator], {} as Ref<number>)
+  expectType(objRef.value[Symbol.hasInstance], {} as { a: Ref<string> })
+  expectType(objRef.value[Symbol.isConcatSpreadable], {} as { b: Ref<boolean> })
+  expectType(objRef.value[Symbol.iterator], {} as Ref<number>[])
+  expectType(objRef.value[Symbol.match], {} as Set<Ref<number>>)
+  expectType(objRef.value[Symbol.matchAll], {} as Map<number, Ref<string>>)
+  expectType(objRef.value[Symbol.replace], {} as { arr: Ref<string>[] })
+  expectType(objRef.value[Symbol.search], {} as { set: Set<Ref<number>> })
+  expectType(
+    objRef.value[Symbol.species],
+    {} as { map: Map<number, Ref<string>> },
+  )
+  expectType(objRef.value[Symbol.split], {} as WeakSet<Ref<boolean>>)
+  expectType(
+    objRef.value[Symbol.toPrimitive],
+    {} as WeakMap<Ref<boolean>, string>,
+  )
+  expectType(
     objRef.value[Symbol.toStringTag],
+    {} as { weakSet: WeakSet<Ref<boolean>> },
   )
-  expectType<{ weakMap: WeakMap<Ref<boolean>, string> }>(
+  expectType(
     objRef.value[Symbol.unscopables],
+    {} as { weakMap: WeakMap<Ref<boolean>, string> },
   )
-  expectType<{ arr: Ref<number>[] }>(objRef.value[customSymbol])
+  expectType(objRef.value[customSymbol], {} as { arr: Ref<number>[] })
 }
 
 withSymbol()
@@ -163,17 +181,17 @@ const state = reactive({
   },
 })
 
-expectType<string>(state.foo.label)
+expectType(state.foo.label, {} as string)
 
 describe('ref with generic', <T extends { name: string }>() => {
   const r = {} as T
   const s = ref(r)
-  expectType<string>(s.value.name)
+  expectAssignable<string>(s.value.name)
 
   const rr = {} as MaybeRef<T>
   // should at least allow casting
   const ss = ref(rr) as Ref<T>
-  expectType<string>(ss.value.name)
+  expectType(ss.value.name, {} as string)
 })
 
 describe('allow getter and setter types to be unrelated', <T>() => {
@@ -186,7 +204,7 @@ describe('allow getter and setter types to be unrelated', <T>() => {
   e.value = d
 
   const f = ref(ref(0))
-  expectType<number>(f.value)
+  expectType(f.value, {} as number)
   // @ts-expect-error
   f.value = ref(1)
 })
@@ -199,14 +217,14 @@ describe('correctly unwraps nested refs', () => {
   }
 
   const a = ref(obj)
-  expectType<number>(a.value.n)
-  expectType<number>(a.value.ref)
-  expectType<number>(a.value.nestedRef.n)
+  expectType(a.value.n, {} as number)
+  expectType(a.value.ref, {} as number)
+  expectType(a.value.nestedRef.n, {} as number)
 
   const b = reactive({ a })
-  expectType<number>(b.a.n)
-  expectType<number>(b.a.ref)
-  expectType<number>(b.a.nestedRef.n)
+  expectType(b.a.n, {} as number)
+  expectType(b.a.ref, {} as number)
+  expectType(b.a.nestedRef.n, {} as number)
 })
 
 // computed
@@ -226,7 +244,7 @@ describe('allow computed getter and setter types to be unrelated', () => {
 
   c.value = { name: 'bar' } // object
 
-  expectType<string>(c.value)
+  expectType(c.value, {} as string)
 })
 
 describe('Type safety for `WritableComputedRef` and `ComputedRef`', () => {
@@ -234,29 +252,28 @@ describe('Type safety for `WritableComputedRef` and `ComputedRef`', () => {
   const writableComputed: WritableComputedRef<string> = computed(() => '')
   // should allow
   const immutableComputed: ComputedRef<string> = writableComputed
-  expectType<ComputedRef<string>>(immutableComputed)
+  expectType(immutableComputed, {} as ComputedRef<string>)
 })
 
 // shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
 if (shallowStatus.value === 'initial') {
-  expectType<Ref<Status>>(shallowStatus)
-  expectType<Status>(shallowStatus.value)
+  expectType(shallowStatus, {} as ShallowRef<Status>)
+  expectType(shallowStatus.value, {} as 'initial')
   shallowStatus.value = 'invalidating'
 }
 
 const refStatus = ref<Status>('initial')
 if (refStatus.value === 'initial') {
-  expectType<Ref<Status>>(shallowStatus)
-  expectType<Status>(shallowStatus.value)
+  expectType(refStatus, {} as Ref<Status>)
+  expectType(refStatus.value, {} as 'initial')
   refStatus.value = 'invalidating'
 }
 
 {
   const shallow = shallowRef(1)
-  expectType<Ref<number>>(shallow)
-  expectType<ShallowRef<number>>(shallow)
+  expectType(shallow, {} as ShallowRef<number>)
 }
 
 {
@@ -265,35 +282,40 @@ if (refStatus.value === 'initial') {
   const shallowUnionGenParam = shallowRef<Steps>({ step: '1' })
   const shallowUnionAsCast = shallowRef({ step: '1' } as Steps)
 
-  expectType<IsUnion<typeof shallowUnionGenParam>>(false)
-  expectType<IsUnion<typeof shallowUnionAsCast>>(false)
+  expectType(false, {} as IsUnion<typeof shallowUnionGenParam>)
+  expectType(false, {} as IsUnion<typeof shallowUnionAsCast>)
 }
 
 {
   // any value should return Ref<any>, not any
   const a = shallowRef(1 as any)
-  expectType<IsAny<typeof a>>(false)
+  expectType(false, {} as IsAny<typeof a>)
 }
 
 describe('shallowRef with generic', <T extends { name: string }>() => {
   const r = {} as T
   const s = shallowRef(r)
-  expectType<string>(s.value.name)
-  expectType<ShallowRef<T>>(shallowRef(r))
+  expectAssignable<string>(s.value.name)
+  expectAssignable<ShallowRef<T>>(shallowRef(r))
 
   const rr = {} as MaybeRef<T>
   // should at least allow casting
   const ss = shallowRef(rr) as Ref<T> | ShallowRef<T>
-  expectType<string>(ss.value.name)
+  expectType(ss.value.name, {} as string)
 })
 
 {
   // should return ShallowRef<T> | Ref<T>, not ShallowRef<T | Ref<T>>
-  expectType<ShallowRef<{ name: string }> | Ref<{ name: string }>>(
+  expectType(
     shallowRef({} as MaybeRef<{ name: string }>),
+    {} as
+      | Ref<{ name: string }>
+      | ShallowRef<{ name: string }>
+      | WritableComputedRef<{ name: string }>,
   )
-  expectType<ShallowRef<number> | Ref<string[]> | ShallowRef<string>>(
-    shallowRef('' as Ref<string[]> | string | number),
+  expectType(
+    shallowRef({} as Ref<string[]> | string | number),
+    {} as Ref<string[]> | ShallowRef<number> | ShallowRef<string>,
   )
 }
 
@@ -302,7 +324,7 @@ const r1 = reactive({
   k: 'v',
 })
 const p1 = proxyRefs(r1)
-expectType<typeof r1>(p1)
+expectType(p1, {} as typeof r1)
 
 // proxyRefs: `ShallowUnwrapRef`
 const r2 = {
@@ -315,17 +337,17 @@ const r2 = {
   union: Math.random() > 0 - 5 ? ref({ name: 'yo' }) : null,
 }
 const p2 = proxyRefs(r2)
-expectType<number>(p2.a)
-expectType<number>(p2.c)
-expectType<undefined>(p2.u)
-expectType<Ref<string>>(p2.obj.k)
-expectType<{ name: string } | null>(p2.union)
+expectType(p2.a, {} as number)
+expectType(p2.c, {} as number)
+expectType(p2.u, {} as unknown as undefined)
+expectType(p2.obj.k, {} as Ref<string>)
+expectType(p2.union, {} as { name: string } | null)
 
 const r3 = shallowReactive({
   n: ref(1),
 })
 const p3 = proxyRefs(r3)
-expectType<Ref<number>>(p3.n)
+expectType(p3.n, {} as Ref<number>)
 
 // toRef and toRefs
 {
@@ -340,33 +362,42 @@ expectType<Ref<number>>(p3.n)
   }
 
   // toRef
-  expectType<Ref<number>>(toRef(obj, 'a'))
-  expectType<Ref<number>>(toRef(obj, 'b'))
+  expectType(toRef(obj, 'a'), {} as Ref<number>)
+  expectType(toRef(obj, 'b'), {} as Ref<number>)
   // Should not distribute Refs over union
-  expectType<Ref<number | string>>(toRef(obj, 'c'))
+  expectType(toRef(obj, 'c'), {} as Ref<number | string>)
 
   const array = reactive(['a', 'b'])
-  expectType<Ref<string>>(toRef(array, '1'))
-  expectType<Ref<string>>(toRef(array, '1', 'fallback'))
+  expectType(toRef(array, '1'), {} as Ref<string>)
+  expectType(toRef(array, '1', 'fallback'), {} as Ref<string>)
 
   const tuple: [string, number] = ['a', 1]
-  expectType<Ref<string>>(toRef(tuple, '0'))
-  expectType<Ref<number>>(toRef(tuple, '1'))
+  expectType(toRef(tuple, '0'), {} as Ref<string>)
+  expectType(toRef(tuple, '1'), {} as Ref<number>)
 
-  expectType<Ref<number>>(toRef(() => 123))
-  expectType<Ref<number | string>>(toRef(() => obj.c))
+  expectType(
+    toRef(() => 123),
+    {} as Readonly<Ref<123>>,
+  )
+  expectType(
+    toRef(() => obj.c),
+    {} as Readonly<Ref<number | string>>,
+  )
 
   const r = toRef(() => 123)
   // @ts-expect-error
   r.value = 234
 
   // toRefs
-  expectType<{
-    a: Ref<number>
-    b: Ref<number>
-    // Should not distribute Refs over union
-    c: Ref<number | string>
-  }>(toRefs(obj))
+  expectType(
+    toRefs(obj),
+    {} as {
+      a: Ref<number>
+      b: Ref<number>
+      // Should not distribute Refs over union
+      c: Ref<number | string>
+    },
+  )
 
   // Both should not do any unwrapping
   const someReactive = shallowReactive({
@@ -378,24 +409,24 @@ expectType<Ref<number>>(p3.n)
   const toRefResult = toRef(someReactive, 'a')
   const toRefsResult = toRefs(someReactive)
 
-  expectType<Ref<number>>(toRefResult.value.b)
-  expectType<Ref<number>>(toRefsResult.a.value.b)
+  expectType(toRefResult.value.b, {} as Ref<number>)
+  expectType(toRefsResult.a.value.b, {} as Ref<number>)
 
   // #5188
   const props = { foo: 1 } as { foo: any }
   const { foo } = toRefs(props)
-  expectType<Ref<any>>(foo)
+  expectType(foo, {} as Ref<any>)
 }
 
 // toRef default value
 {
   const obj: { x?: number } = {}
   const x = toRef(obj, 'x', 1)
-  expectType<Ref<number>>(x)
+  expectType(x, {} as Ref<number>)
 }
 
 // readonly() + ref()
-expectType<Readonly<Ref<number>>>(readonly(ref(1)))
+expectType(readonly(ref(1)), {} as Readonly<Ref<number>>)
 
 // #2687
 interface AppData {
@@ -422,7 +453,7 @@ switch (data.state.value) {
 
 // #3954
 function testUnrefGenerics<T>(p: T | Ref<T>) {
-  expectType<T>(unref(p))
+  expectType(unref(p), {} as T)
 }
 
 testUnrefGenerics(1)
@@ -439,8 +470,8 @@ describe('shallow reactive in reactive', () => {
 
   const foo = toRef(baz, 'foo')
 
-  expectType<Ref<number>>(foo.value.a.b)
-  expectType<number>(foo.value.a.b.value)
+  expectType(foo.value.a.b, {} as Ref<number>)
+  expectType(foo.value.a.b.value, {} as number)
 })
 
 describe('shallow reactive collection in reactive', () => {
@@ -449,7 +480,7 @@ describe('shallow reactive collection in reactive', () => {
   })
 
   const foo = toRef(baz, 'foo')
-  expectType<Ref<number> | undefined>(foo.value.get('a'))
+  expectType(foo.value.get('a'), {} as Ref<number> | undefined)
 })
 
 describe('shallow ref in reactive', () => {
@@ -464,8 +495,8 @@ describe('shallow ref in reactive', () => {
     }),
   })
 
-  expectType<Ref<number>>(x.foo.bar.baz)
-  expectType<number>(x.foo.bar.qux.z)
+  expectType(x.foo.bar.baz, {} as Ref<number>)
+  expectType(x.foo.bar.qux.z, {} as number)
 })
 
 describe('ref in shallow ref', () => {
@@ -473,7 +504,7 @@ describe('ref in shallow ref', () => {
     a: ref(123),
   })
 
-  expectType<Ref<number>>(x.value.a)
+  expectType(x.value.a, {} as Ref<number>)
 })
 
 describe('reactive in shallow ref', () => {
@@ -483,7 +514,7 @@ describe('reactive in shallow ref', () => {
     }),
   })
 
-  expectType<number>(x.value.a.b)
+  expectType(x.value.a.b, {} as number)
 })
 
 describe('toRef <-> toValue', () => {
@@ -493,58 +524,70 @@ describe('toRef <-> toValue', () => {
     c: MaybeRefOrGetter<string>,
     d: ComputedRef<string>,
   ) {
-    const r = toRef(a)
-    expectType<Ref<string>>(r)
+    const ra = toRef(a)
+    expectType(
+      ra,
+      {} as Ref<string> | ShallowRef<string> | WritableComputedRef<string>,
+    )
     // writable
-    r.value = 'foo'
+    ra.value = 'foo'
 
     const rb = toRef(b)
-    expectType<Readonly<Ref<string>>>(rb)
+    expectType(rb, {} as Readonly<Ref<string>>)
     // @ts-expect-error ref created from getter should be readonly
     rb.value = 'foo'
 
     const rc = toRef(c)
-    expectType<Readonly<Ref<string> | Ref<string>>>(rc)
+    expectType(
+      rc,
+      {} as
+        | Ref<string>
+        | ShallowRef<string>
+        | WritableComputedRef<string>
+        | ComputedRef<string>
+        | Readonly<Ref<string>>,
+    )
     // @ts-expect-error ref created from MaybeReadonlyRef should be readonly
     rc.value = 'foo'
 
     const rd = toRef(d)
-    expectType<ComputedRef<string>>(rd)
+    expectType(rd, {} as ComputedRef<string>)
     // @ts-expect-error ref created from computed ref should be readonly
     rd.value = 'foo'
 
-    expectType<string>(toValue(a))
-    expectType<string>(toValue(b))
-    expectType<string>(toValue(c))
-    expectType<string>(toValue(d))
+    expectType(toValue(a), {} as string)
+    expectType(toValue(b), {} as string)
+    expectType(toValue(c), {} as string)
+    expectType(toValue(d), {} as string)
 
     return {
-      r: toValue(r),
+      ra: toValue(ra),
       rb: toValue(rb),
       rc: toValue(rc),
       rd: toValue(rd),
     }
   }
 
-  expectType<{
-    r: string
-    rb: string
-    rc: string
-    rd: string
-  }>(
+  expectType(
     foo(
       'foo',
       () => 'bar',
       ref('baz'),
       computed(() => 'hi'),
     ),
+    {} as {
+      ra: string
+      rb: string
+      rc: string
+      rd: string
+    },
   )
 })
 
 // unref
 // #8747
 declare const unref1: number | Ref<number> | ComputedRef<number>
-expectType<number>(unref(unref1))
+expectType(unref(unref1), {} as number)
 
 // #11356
 declare const unref2:
@@ -552,18 +595,18 @@ declare const unref2:
   | ShallowRef<string>
   | ComputedRef<string>
   | WritableComputedRef<string>
-expectType<string>(unref(unref2))
+expectType(unref(unref2), {} as string)
 
 // toValue
-expectType<number>(toValue(unref1))
-expectType<string>(toValue(unref2))
+expectType(toValue(unref1), {} as number)
+expectType(toValue(unref2), {} as string)
 
 // useTemplateRef
 const tRef = useTemplateRef('foo')
-expectType<TemplateRef>(tRef)
+expectType(tRef, {} as TemplateRef)
 
 const tRef2 = useTemplateRef<HTMLElement>('bar')
-expectType<TemplateRef<HTMLElement>>(tRef2)
+expectType(tRef2, {} as TemplateRef<HTMLElement>)
 
 // #14637 customRef with different getter/setter types
 describe('customRef with different getter/setter types', () => {
@@ -577,7 +620,7 @@ describe('customRef with different getter/setter types', () => {
   }))
 
   // getter returns string
-  expectType<string>(cr.value)
+  expectType(cr.value, {} as string)
   // setter accepts number
   cr.value = 123
   // @ts-expect-error setter doesn't accept string
