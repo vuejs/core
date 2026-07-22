@@ -1,6 +1,7 @@
 import {
   type BaseTransitionProps,
   type GenericComponentInstance,
+  type SuspenseBoundary,
   type TransitionElement,
   type TransitionHooks,
   type TransitionHooksContext,
@@ -14,7 +15,7 @@ import {
   isTemplateNode,
   leaveCbKey,
   onBeforeMount,
-  queuePostFlushCb,
+  queuePostRenderEffect,
   resolveTransitionProps,
   restoreCurrentInstance,
   setCurrentInstance,
@@ -81,7 +82,7 @@ export const ensureTransitionHooksRegistered = (): void => {
   }
 }
 
-const hydrateTransitionImpl = () => {
+const hydrateTransitionImpl = (suspense: SuspenseBoundary | null) => {
   if (!currentHydrationNode || !isTemplateNode(currentHydrationNode)) return
   // replace <template> node with inner child
   const { content, parentNode } = currentHydrationNode
@@ -115,7 +116,11 @@ const hydrateTransitionImpl = () => {
       return (hooks: TransitionHooks) => {
         hooks.beforeEnter(transitionEl)
         transitionEl.style.display = originalDisplay
-        queuePostFlushCb(() => hooks.enter(transitionEl))
+        queuePostRenderEffect(
+          () => hooks.enter(transitionEl),
+          undefined,
+          suspense,
+        )
       }
     }
   }
@@ -136,9 +141,11 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // Register transition hooks on first use
     ensureTransitionHooksRegistered()
 
-    const performAppear = isHydrating ? hydrateTransitionImpl() : undefined
-    const state = useTransitionState()
     const instance = currentInstance! as VaporComponentInstance
+    const performAppear = isHydrating
+      ? hydrateTransitionImpl(instance.suspense)
+      : undefined
+    const state = useTransitionState()
     const { mode } = props
     __DEV__ && checkTransitionMode(mode)
 
@@ -781,7 +788,11 @@ function applyPendingVShows(
     pendingVShows.length = 0
     if (enterCbs) {
       const cbs = enterCbs
-      queuePostFlushCb(() => cbs.forEach(cb => cb()), -1)
+      queuePostRenderEffect(
+        () => cbs.forEach(cb => cb()),
+        -1,
+        hooks.instance.suspense,
+      )
     }
   })
 }

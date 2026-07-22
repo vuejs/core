@@ -115,7 +115,7 @@ export function insert(
   if (isVaporComponent(block)) {
     anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
     if (block.isMounted && !block.isDeactivated) {
-      insert(block.block!, parent, anchor)
+      insert(block.block!, parent, anchor, parentSuspense)
     } else {
       mountComponent(block, parent, anchor)
     }
@@ -168,7 +168,12 @@ export function insertFragment(
     anchor = block.anchor
   }
   if (block.insert) {
-    block.insert(parent, anchor, (block as TransitionBlock).$transition)
+    block.insert(
+      parent,
+      anchor,
+      parentSuspense,
+      (block as TransitionBlock).$transition,
+    )
   } else {
     insert(block.nodes, parent, anchor, parentSuspense)
   }
@@ -255,7 +260,12 @@ export function move(
     }
     // fragment
     if (block.insert) {
-      block.insert(parent, anchor, (block as TransitionBlock).$transition)
+      block.insert(
+        parent,
+        anchor,
+        parentSuspense,
+        (block as TransitionBlock).$transition,
+      )
     } else {
       move(
         block.nodes,

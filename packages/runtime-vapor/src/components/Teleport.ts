@@ -5,13 +5,14 @@ import {
   MoveType,
   type SchedulerJob,
   SchedulerJobFlags,
+  type SuspenseBoundary,
   type TeleportProps,
   type TeleportTargetElement,
   isMismatchAllowed,
   isTeleportDeferred,
   isTeleportDisabled,
   logMismatchError,
-  queuePostFlushCb,
+  queuePostRenderEffect,
   resolveTeleportTarget,
   restoreCurrentInstance,
   setCurrentInstance,
@@ -96,6 +97,7 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   private mountToTargetJob?: SchedulerJob
+  private parentSuspense?: SuspenseBoundary | null
 
   constructor(props: LooseRawProps, slots?: RawSlots | null) {
     super([])
@@ -297,7 +299,11 @@ export class TeleportFragment extends RenderContextFragment {
         }
       }
     }
-    queuePostFlushCb(this.mountToTargetJob)
+    queuePostRenderEffect(
+      this.mountToTargetJob,
+      undefined,
+      this.parentSuspense || null,
+    )
   }
 
   private mountToTarget(): void {
@@ -350,8 +356,14 @@ export class TeleportFragment extends RenderContextFragment {
     }
   }
 
-  insert = (container: ParentNode, anchor: Node | null): void => {
+  insert = (
+    container: ParentNode,
+    anchor: Node | null,
+    parentSuspense?: SuspenseBoundary | null,
+  ): void => {
     if (isHydrating) return
+
+    this.parentSuspense = parentSuspense
 
     const wasMountedInTarget =
       this.mountState.location === TeleportMountLocation.Target

@@ -199,8 +199,18 @@ export interface VaporInteropInterface {
     onBeforeUpdate?: () => void,
     onVnodeBeforeUpdate?: () => void,
   ): void
-  unmount(vnode: VNode, doRemove?: boolean): void
-  move(vnode: VNode, container: any, anchor: any, moveType: MoveType): void
+  unmount(
+    vnode: VNode,
+    doRemove: boolean | undefined,
+    parentSuspense: SuspenseBoundary | null,
+  ): void
+  move(
+    vnode: VNode,
+    container: any,
+    anchor: any,
+    moveType: MoveType,
+    parentSuspense: SuspenseBoundary | null,
+  ): void
   slot(
     n1: VNode | null,
     n2: VNode,
@@ -230,8 +240,13 @@ export interface VaporInteropInterface {
     container: any,
     anchor: any,
     parentComponent: ComponentInternalInstance,
+    parentSuspense: SuspenseBoundary | null,
   ): void
-  deactivate(vnode: VNode, container: any): void
+  deactivate(
+    vnode: VNode,
+    container: any,
+    parentSuspense: SuspenseBoundary | null,
+  ): void
   setTransitionHooks(
     component: ComponentInternalInstance,
     transition: TransitionHooks,

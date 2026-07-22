@@ -31,7 +31,6 @@ import {
   nextUid,
   popWarningContext,
   pushWarningContext,
-  queuePostFlushCb,
   queuePostRenderEffect,
   registerHMR,
   resolveComponent,
@@ -340,7 +339,9 @@ export function createComponent(
         once,
       )
       if (!isHydrating) {
-        if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+        if (_insertionParent) {
+          insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
+        }
       } else {
         frag.hydrate()
       }
@@ -356,7 +357,9 @@ export function createComponent(
         onScopeDispose(() => frag.dispose(), true)
       }
       if (!isHydrating) {
-        if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+        if (_insertionParent) {
+          insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
+        }
       } else {
         frag.hydrate()
       }
@@ -1145,6 +1148,7 @@ export function mountComponent(
 export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
+  parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
   // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
@@ -1155,7 +1159,10 @@ export function unmountComponent(
     (instance.parent as KeepAliveInstance).ctx
   ) {
     if (parentNode) {
-      ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(instance)
+      ;(instance.parent as KeepAliveInstance)!.ctx.deactivate(
+        instance,
+        parentSuspense,
+      )
     }
     return
   }
@@ -1179,7 +1186,7 @@ export function unmountComponent(
     instance.scope.stop()
 
     if (instance.um) {
-      queuePostFlushCb(instance.um!)
+      queuePostRenderEffect(instance.um!, undefined, parentSuspense)
     }
     instance.isUnmounted = true
   }
