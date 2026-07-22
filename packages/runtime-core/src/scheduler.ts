@@ -184,8 +184,6 @@ export function flushPostFlushCbs(seen?: CountMap): void {
 
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostFlushCbs) {
-      // loop instead of spread to avoid a call stack overflow when the
-      // deduped array is very large
       for (let i = 0; i < deduped.length; i++) {
         activePostFlushCbs.push(deduped[i])
       }

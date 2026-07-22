@@ -616,8 +616,7 @@ function createSuspenseBoundary(
       while (parent) {
         if (parent.pendingBranch) {
           // found a pending parent suspense, merge buffered post jobs
-          // into that parent. loop instead of spread to avoid a call stack
-          // overflow when many effects were buffered while pending
+          // into that parent
           for (let i = 0; i < effects.length; i++) {
             parent.effects.push(effects[i])
           }
