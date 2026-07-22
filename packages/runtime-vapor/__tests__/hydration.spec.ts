@@ -7035,6 +7035,88 @@ describe('Vapor Mode hydration', () => {
           `)
         })
 
+        test('does not register or insert a CSR placeholder when moving pending hydrated async setup', async () => {
+          let resolveClient!: () => void
+          const childData = ref({ wait: Promise.resolve() })
+          const items = ref(['sync', 'async'])
+          const vaporChildCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template><span>async</span></template>
+          `
+          let VaporChild = compile(
+            vaporChildCode,
+            childData,
+            {},
+            {
+              vapor: true,
+              ssr: true,
+            },
+          )
+          const App = defineComponent({
+            setup() {
+              return () =>
+                h(runtimeDom.Suspense, null, {
+                  default: () =>
+                    h(
+                      'div',
+                      items.value.map(id =>
+                        id === 'async'
+                          ? h(VaporChild, { key: id })
+                          : h('i', { key: id }, 'sync'),
+                      ),
+                    ),
+                })
+            },
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+
+          childData.value.wait = new Promise<void>(resolve => {
+            resolveClient = resolve
+          })
+          let instance!: VaporComponentInstance
+          VaporChild = compile(
+            vaporChildCode,
+            childData,
+            {},
+            {
+              vapor: true,
+              ssr: false,
+            },
+          )
+          const setup = VaporChild.setup
+          VaporChild.setup = (props: any, child: VaporComponentInstance) => {
+            instance = child
+            return setup(props, child)
+          }
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          const registerDep = vi.spyOn(instance.suspense!, 'registerDep')
+          try {
+            items.value = ['async', 'sync']
+            await nextTick()
+
+            expect(registerDep).not.toHaveBeenCalled()
+            expect(instance.block).toBeNull()
+          } finally {
+            registerDep.mockRestore()
+            app.unmount()
+            resolveClient()
+            await new Promise(resolve => setTimeout(resolve))
+            container.remove()
+          }
+        })
+
         test('hydrate VDOM Suspense vapor async multi-root setup should preserve SSR range before resolve', async () => {
           let resolveClient!: () => void
           const serverData = ref({

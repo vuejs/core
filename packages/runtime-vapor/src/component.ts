@@ -680,6 +680,7 @@ export class VaporComponentInstance<
   suspenseId: number
   asyncDep: Promise<any> | null
   asyncResolved: boolean
+  asyncDepRegistered?: boolean
   restoreAsyncContext?: () => void | (() => void)
   deferredHydrationBoundary?: () => void
 
@@ -1051,7 +1052,40 @@ export function mountComponent(
     instance.asyncDep &&
     !instance.asyncResolved
   ) {
+    // Moving a pending instance, including re-entering from KeepAlive, retries
+    // mountComponent. Move its CSR placeholder when present; during hydration,
+    // `instance.block` is still null, but the async dependency must not be
+    // registered again.
+    if (instance.asyncDepRegistered) {
+      if (instance.block) {
+        insert(instance.block, parent, anchor)
+      }
+      if (
+        isKeepAliveEnabled &&
+        instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE
+      ) {
+        // A cached pending instance still needs its initial mount after setup
+        // resolves. Restore only its active state; KeepAlive activation requires
+        // a mounted block.
+        instance.isDeactivated = false
+      }
+      return
+    }
+
+    const hydrating = isHydrating
+    if (!hydrating) {
+      // Keep a placeholder in the DOM while async setup is pending so
+      // sibling insertion and moves use the component's current position.
+      instance.block = createComment('')
+      insert(instance.block, parent, anchor)
+    }
+
+    instance.asyncDepRegistered = true
     const component = instance.type
+    // CSR resolves from the live placeholder, so do not retain its original
+    // DOM location through the unresolved promise.
+    const hydrationParent = hydrating ? parent : undefined
+    const hydrationAnchor = hydrating ? anchor : undefined
     instance.suspense.registerDep(instance, setupResult => {
       // Final suspense retry after async setup resolves. Restore hydrating
       // mode so the last mount does not fall back to fresh DOM insertion.
@@ -1070,20 +1104,24 @@ export function mountComponent(
         }
       }
       try {
-        if (isHydrating) {
+        if (hydrating) {
           withDeferredHydrationBoundary(() => {
             handleResult()
-            mountComponent(instance, parent, anchor)
+            mountComponent(instance, hydrationParent!, hydrationAnchor)
             if (instance.deferredHydrationBoundary) {
               instance.deferredHydrationBoundary()
             }
           })
         } else {
+          const placeholder = instance.block as Comment
+          const placeholderParent = placeholder.parentNode as ParentNode
+          const placeholderAnchor = placeholder.nextSibling
           handleResult()
-          mountComponent(instance, parent, anchor)
+          mountComponent(instance, placeholderParent, placeholderAnchor)
+          remove(placeholder, placeholderParent)
         }
       } finally {
-        if (isHydrating) {
+        if (hydrating) {
           instance.deferredHydrationBoundary = undefined
         }
         instance.restoreAsyncContext = undefined
@@ -1093,9 +1131,11 @@ export function mountComponent(
     return
   }
 
+  // A pending async component may be cached before its initial mount.
   if (
     isKeepAliveEnabled &&
-    instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE
+    instance.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE &&
+    instance.isMounted
   ) {
     ;(instance.parent as KeepAliveInstance)!.ctx.activate(
       instance,
@@ -1167,12 +1207,16 @@ export function unmountComponent(
     return
   }
 
+  const pendingAsyncSetup =
+    __FEATURE_SUSPENSE__ && !!instance.asyncDep && !instance.asyncResolved
+
   if (
     !instance.isUnmounted &&
     (instance.isMounted ||
-      // A hydrating async setup component can be unmounted before its block exists.
-      // It still needs normal scope cleanup so a later resolve is ignored.
-      (instance.asyncDep && !instance.asyncResolved))
+      // An async setup component can be unmounted before it finishes mounting.
+      // It still needs normal unmount cleanup and must be marked unmounted so
+      // a later async resolution is ignored.
+      pendingAsyncSetup)
   ) {
     if (__DEV__) {
       unregisterHMR(instance)
@@ -1191,7 +1235,14 @@ export function unmountComponent(
     instance.isUnmounted = true
   }
 
-  if (parentNode) {
+  // Callers that own surrounding DOM removal may omit parentNode, so remove
+  // the pending placeholder from its live DOM parent.
+  if (pendingAsyncSetup && instance.block instanceof Comment) {
+    const blockParent = instance.block.parentNode
+    if (blockParent) {
+      remove(instance.block, blockParent)
+    }
+  } else if (parentNode) {
     if (instance.block) {
       remove(instance.block, parentNode)
     } else {
