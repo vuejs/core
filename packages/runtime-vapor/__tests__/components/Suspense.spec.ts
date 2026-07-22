@@ -414,6 +414,60 @@ describe('effects in pending branches', () => {
     app.unmount()
   })
 
+  test('dynamic VDOM component ref uses the rendering suspense boundary', async () => {
+    const asyncSetup = deferred()
+    const useSecondRef = ref(false)
+    const firstRef = ref<unknown>(null)
+    const secondRef = ref<unknown>(null)
+    const VDomChild = defineComponent({
+      setup: () => () => h('div', 'child'),
+    })
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VDomHost = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          h(Suspense, null, {
+            default: () => h('div', [slots.default!(), h(AsyncSibling)]),
+            fallback: () => h('span', 'loading'),
+          })
+      },
+    })
+    const VaporOwner = defineVaporComponent({
+      setup() {
+        const child = createComponent(VDomChild as any)
+        const setRef = createTemplateRefSetter()
+        renderEffect(() =>
+          setRef(child, useSecondRef.value ? secondRef : firstRef),
+        )
+        return createComponent(VDomHost as any, null, {
+          default: () => child,
+        })
+      },
+    })
+    const host = document.createElement('div')
+    const app = createApp({ render: () => h(VaporOwner as any) })
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(firstRef.value === null).toBe(true)
+
+    useSecondRef.value = true
+    await nextTick()
+    expect(secondRef.value === null).toBe(true)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(firstRef.value === null).toBe(true)
+    expect(secondRef.value === null).toBe(false)
+    app.unmount()
+  })
+
   test('teleport target mount waits for the branch to resolve', async () => {
     const asyncSetup = deferred()
     const target = document.createElement('div')

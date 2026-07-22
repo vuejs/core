@@ -1045,7 +1045,7 @@ function createVDOMComponent(
   rawSlots?: LooseRawSlots | null,
   once?: boolean,
 ): VaporFragment {
-  const suspense =
+  let suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
@@ -1176,8 +1176,8 @@ function createVDOMComponent(
 
   frag.insert = (parentNode, anchor, parentSuspense, transition) => {
     if (isHydrating) return
-    const operationSuspense =
-      parentSuspense === undefined ? suspense : parentSuspense
+    if (parentSuspense !== undefined) suspense = parentSuspense
+    const operationSuspense = suspense
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
       vdomActivate(
         vnode,
@@ -1244,7 +1244,7 @@ function createVDOMComponent(
 
     if (isMounted) {
       if (rawRef) {
-        vdomSetRef(rawRef, oldRawRef, null, vnode)
+        vdomSetRef(rawRef, oldRawRef, suspense, vnode)
       } else if (oldRawRef) {
         vdomSetRef(oldRawRef, null, null, vnode, true)
       }
@@ -1765,7 +1765,7 @@ function renderVDOMSlot(
               if (prevRendered) {
                 removeRenderedContent(prevRendered, currentParentNode!)
               }
-              insert(slotContent, currentParentNode!, currentAnchor)
+              insert(slotContent, currentParentNode!, currentAnchor, suspense)
               setRenderedContent(slotContent, slotContentValid)
               finishContentUpdate()
               return
