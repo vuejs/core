@@ -7064,6 +7064,198 @@ describe('Vapor Mode hydration', () => {
           `)
         })
 
+        test('preserves nested pending SSR range until parent transition leave', async () => {
+          let resolveClient!: () => void
+          let instance!: VaporComponentInstance
+          const data = ref({ show: true })
+          const serverData = ref({ wait: Promise.resolve() })
+          const clientData = ref({
+            wait: new Promise<void>(resolve => {
+              resolveClient = resolve
+            }),
+          })
+          const leaveHtml: string[] = []
+          let finishLeave!: () => void
+          let leavingElement!: Element
+          const transition = {
+            persisted: false,
+            beforeEnter() {},
+            enter() {},
+            leave(el: Element, done: () => void) {
+              leaveHtml.push(el.innerHTML)
+              leavingElement = el
+              finishLeave = done
+            },
+            clone() {
+              return this
+            },
+          }
+          const childCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template><div>async resolved</div></template>
+          `
+          const parentCode = `
+            <script vapor>
+              const components = _components
+            </script>
+            <template><section><components.AsyncChild /></section></template>
+          `
+
+          const serverChild = compileVaporComponent(
+            childCode,
+            serverData,
+            undefined,
+            true,
+          )
+          let Parent = compileVaporComponent(
+            parentCode,
+            serverData,
+            { AsyncChild: serverChild },
+            true,
+          )
+          const App = defineComponent({
+            setup() {
+              return () =>
+                data.value.show
+                  ? h(
+                      runtimeDom.Suspense,
+                      { timeout: 0 },
+                      {
+                        default: () => {
+                          const owner = h(Parent)
+                          owner.transition = transition as any
+                          return owner
+                        },
+                      },
+                    )
+                  : h('p', 'fallback')
+            },
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+
+          const clientChild = compileVaporComponent(childCode, clientData)
+          const setup = clientChild.setup
+          clientChild.setup = (
+            props: any,
+            childInstance: VaporComponentInstance,
+          ) => {
+            instance = childInstance
+            return setup(props, childInstance)
+          }
+          Parent = compileVaporComponent(parentCode, clientData, {
+            AsyncChild: clientChild,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          data.value.show = false
+          await nextTick()
+
+          expect(leaveHtml).toEqual(['<div>async resolved</div>'])
+          expect(instance.isUnmounted).toBe(true)
+          expect(instance.scope.active).toBe(false)
+          expect(leavingElement.isConnected).toBe(true)
+          expect(leavingElement.innerHTML).toBe('<div>async resolved</div>')
+
+          finishLeave()
+          expect(leavingElement.isConnected).toBe(false)
+          resolveClient()
+          await new Promise(resolve => setTimeout(resolve))
+        })
+
+        test('removes a pending SSR range through a vapor parent root', async () => {
+          let resolveClient!: () => void
+          let instance!: VaporComponentInstance
+          const data = ref({ show: true })
+          const serverData = ref({ wait: Promise.resolve() })
+          const clientData = ref({
+            wait: new Promise<void>(resolve => {
+              resolveClient = resolve
+            }),
+          })
+          const childCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template><div>async resolved</div></template>
+          `
+          const parentCode = `
+            <script vapor>
+              const components = _components
+            </script>
+            <template><components.AsyncChild /></template>
+          `
+
+          const serverChild = compileVaporComponent(
+            childCode,
+            serverData,
+            undefined,
+            true,
+          )
+          let Parent = compileVaporComponent(
+            parentCode,
+            serverData,
+            { AsyncChild: serverChild },
+            true,
+          )
+          const App = defineComponent({
+            setup() {
+              return () =>
+                data.value.show
+                  ? h(runtimeDom.Suspense, null, {
+                      default: () => h(Parent),
+                    })
+                  : h('p', 'fallback')
+            },
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+
+          const clientChild = compileVaporComponent(childCode, clientData)
+          const setup = clientChild.setup
+          clientChild.setup = (
+            props: any,
+            childInstance: VaporComponentInstance,
+          ) => {
+            instance = childInstance
+            return setup(props, childInstance)
+          }
+          Parent = compileVaporComponent(parentCode, clientData, {
+            AsyncChild: clientChild,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          const pendingNodes = normalizeBlock(instance.pendingBlock!)
+          data.value.show = false
+          await nextTick()
+
+          expect(instance.pendingBlock).toBeUndefined()
+          expect(pendingNodes.every(node => !node.isConnected)).toBe(true)
+          expect(container.innerHTML).toBe('<p>fallback</p>')
+
+          resolveClient()
+          await new Promise(resolve => setTimeout(resolve))
+          expect(container.innerHTML).toBe('<p>fallback</p>')
+        })
+
         test.each([
           ['single root', '<span>async</span>', ['<span>async</span>']],
           [

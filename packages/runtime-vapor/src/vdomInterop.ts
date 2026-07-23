@@ -382,7 +382,11 @@ const vaporInteropImpl: Omit<
           remove(instance.block, blockContainer)
         }
       } else {
-        unmountComponent(instance, container, parentSuspense, doRemove)
+        unmountComponent(instance, container, parentSuspense)
+        if (!doRemove) {
+          // VDOM retains the enclosing range through vnode.el and vnode.anchor.
+          instance.pendingBlock = undefined
+        }
       }
     } else if (vnode.vb) {
       const anchor = vnode.anchor as Node | null

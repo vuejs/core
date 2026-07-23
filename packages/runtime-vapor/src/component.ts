@@ -1215,7 +1215,6 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
-  removePendingBlock = true,
 ): void {
   // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
@@ -1262,18 +1261,19 @@ export function unmountComponent(
     instance.isUnmounted = true
   }
 
-  // A pending hydration range may have moved, so remove it from its live parent.
-  // If VDOM owns an enclosing removal, only release `pendingBlock`.
   if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && pendingAsyncSetup) {
     if (instance.pendingBlock) {
-      const pendingBlock = instance.pendingBlock
-      if (removePendingBlock) {
+      // Without parentNode this is state-only teardown. Leave the DOM intact
+      // for its enclosing owner, and retain the descriptor in case a
+      // subsequent Vapor block removal needs it.
+      if (parentNode) {
+        const pendingBlock = instance.pendingBlock
         const { parentNode: blockParent } = findBlockBoundary(pendingBlock)
         if (blockParent) {
           remove(pendingBlock, blockParent as ParentNode)
         }
+        instance.pendingBlock = undefined
       }
-      instance.pendingBlock = undefined
     } else if (instance.block instanceof Comment) {
       // CSR placeholders are component-owned, so always detach them from their
       // live parent even when VDOM owns an enclosing removal.
