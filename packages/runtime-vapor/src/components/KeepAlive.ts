@@ -568,14 +568,7 @@ export function activate(
   anchor?: Node | null | 0,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
-  move(
-    instance.block,
-    parentNode,
-    anchor,
-    MoveType.ENTER,
-    instance,
-    parentSuspense,
-  )
+  move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)
 
   queuePostRenderEffect(
     () => {
@@ -603,14 +596,7 @@ export function deactivate(
   invalidateMount(instance.m)
   invalidateMount(instance.a)
 
-  move(
-    instance.block,
-    container,
-    null,
-    MoveType.LEAVE,
-    instance,
-    parentSuspense,
-  )
+  move(instance, container, null, MoveType.LEAVE, instance, parentSuspense)
 
   queuePostRenderEffect(
     () => {

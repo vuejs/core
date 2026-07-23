@@ -42,6 +42,7 @@ import {
   withDeferredHydrationBoundary,
 } from '../src/dom/hydration'
 import { DynamicFragment } from '../src/fragment'
+import { normalizeBlock } from '../src/block'
 
 const formatHtml = (raw: string) => {
   return raw
@@ -51,7 +52,7 @@ const formatHtml = (raw: string) => {
     .replace(/\n{2,}/g, '\n')
 }
 
-const formatNodeList = (nodes: ArrayLike<ChildNode>) => {
+const formatNodeList = (nodes: ArrayLike<Node>) => {
   return Array.from(nodes).map(node => {
     if (node.nodeType === 8) {
       return `<!--${(node as Comment).data}-->`
@@ -6938,6 +6939,7 @@ describe('Vapor Mode hydration', () => {
 
         test('hydrate VDOM Suspense vapor async setup can unmount before resolve', async () => {
           let resolveClient!: () => void
+          let instance!: VaporComponentInstance
           const data = ref({
             showSuspense: true,
             tail: 'tail',
@@ -6950,6 +6952,19 @@ describe('Vapor Mode hydration', () => {
               resolveClient = r
             }),
           })
+          const leaveHtml: string[] = []
+          const transition = {
+            persisted: false,
+            beforeEnter() {},
+            enter() {},
+            leave(el: Element, done: () => void) {
+              leaveHtml.push(el.innerHTML)
+              done()
+            },
+            clone() {
+              return this
+            },
+          }
           const vaporChildCode = `
             <script vapor>
               const data = _data
@@ -6976,7 +6991,11 @@ describe('Vapor Mode hydration', () => {
                       runtimeDom.Suspense,
                       { timeout: 0 },
                       {
-                        default: () => h(VaporChild),
+                        default: () => {
+                          const owner = h('section', [h(VaporChild)])
+                          owner.transition = transition as any
+                          return owner
+                        },
                         fallback: () => h('div', 'pending'),
                       },
                     )
@@ -6991,97 +7010,13 @@ describe('Vapor Mode hydration', () => {
           )
           expect(formatHtml(html)).toMatchInlineSnapshot(`
             "
-            <!--[--><div>async resolved</div><span>tail</span><!--]-->
+            <!--[--><section><div>async resolved</div></section><span>tail</span><!--]-->
             "
           `)
 
           VaporChild = compile(
             vaporChildCode,
             clientData,
-            {},
-            {
-              vapor: true,
-              ssr: false,
-            },
-          )
-
-          const container = document.createElement('div')
-          container.innerHTML = html
-          document.body.appendChild(container)
-
-          const app = runtimeDom.createSSRApp(App)
-          app.use(runtimeVapor.vaporInteropPlugin)
-          app.mount(container)
-          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-            "
-            <!--[--><div>async resolved</div><span>tail</span><!--]-->
-            "
-          `)
-
-          data.value.showSuspense = false
-          await nextTick()
-          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-            "
-            <!--[--><p>fallback</p><span>tail</span><!--]-->
-            "
-          `)
-
-          resolveClient()
-          await new Promise(r => setTimeout(r))
-          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
-            "
-            <!--[--><p>fallback</p><span>tail</span><!--]-->
-            "
-          `)
-        })
-
-        test('does not register or insert a CSR placeholder when moving pending hydrated async setup', async () => {
-          let resolveClient!: () => void
-          const childData = ref({ wait: Promise.resolve() })
-          const items = ref(['sync', 'async'])
-          const vaporChildCode = `
-            <script vapor>
-              const data = _data
-              await data.value.wait
-            </script>
-            <template><span>async</span></template>
-          `
-          let VaporChild = compile(
-            vaporChildCode,
-            childData,
-            {},
-            {
-              vapor: true,
-              ssr: true,
-            },
-          )
-          const App = defineComponent({
-            setup() {
-              return () =>
-                h(runtimeDom.Suspense, null, {
-                  default: () =>
-                    h(
-                      'div',
-                      items.value.map(id =>
-                        id === 'async'
-                          ? h(VaporChild, { key: id })
-                          : h('i', { key: id }, 'sync'),
-                      ),
-                    ),
-                })
-            },
-          })
-          const html = await VueServerRenderer.renderToString(
-            runtimeDom.createSSRApp(App),
-          )
-
-          childData.value.wait = new Promise<void>(resolve => {
-            resolveClient = resolve
-          })
-          let instance!: VaporComponentInstance
-          VaporChild = compile(
-            vaporChildCode,
-            childData,
             {},
             {
               vapor: true,
@@ -7097,22 +7032,496 @@ describe('Vapor Mode hydration', () => {
           const container = document.createElement('div')
           container.innerHTML = html
           document.body.appendChild(container)
+
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+          const pendingNodes = normalizeBlock(instance.pendingBlock!)
+          expect(instance.block).toBeNull()
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><section><div>async resolved</div></section><span>tail</span><!--]-->
+            "
+          `)
+
+          data.value.showSuspense = false
+          await nextTick()
+          expect(leaveHtml).toEqual(['<div>async resolved</div>'])
+          expect(instance.pendingBlock).toBeUndefined()
+          expect(pendingNodes.every(node => !node.isConnected)).toBe(true)
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><p>fallback</p><span>tail</span><!--]-->
+            "
+          `)
+
+          resolveClient()
+          await new Promise(r => setTimeout(r))
+          expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
+            "
+            <!--[--><p>fallback</p><span>tail</span><!--]-->
+            "
+          `)
+        })
+
+        test('preserves nested pending SSR range until parent transition leave', async () => {
+          let resolveClient!: () => void
+          let instance!: VaporComponentInstance
+          const data = ref({ show: true })
+          const serverData = ref({ wait: Promise.resolve() })
+          const clientData = ref({
+            wait: new Promise<void>(resolve => {
+              resolveClient = resolve
+            }),
+          })
+          const leaveHtml: string[] = []
+          let finishLeave!: () => void
+          let leavingElement!: Element
+          const transition = {
+            persisted: false,
+            beforeEnter() {},
+            enter() {},
+            leave(el: Element, done: () => void) {
+              leaveHtml.push(el.innerHTML)
+              leavingElement = el
+              finishLeave = done
+            },
+            clone() {
+              return this
+            },
+          }
+          const childCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template><div>async resolved</div></template>
+          `
+          const parentCode = `
+            <script vapor>
+              const components = _components
+            </script>
+            <template><section><components.AsyncChild /></section></template>
+          `
+
+          const serverChild = compileVaporComponent(
+            childCode,
+            serverData,
+            undefined,
+            true,
+          )
+          let Parent = compileVaporComponent(
+            parentCode,
+            serverData,
+            { AsyncChild: serverChild },
+            true,
+          )
+          const App = defineComponent({
+            setup() {
+              return () =>
+                data.value.show
+                  ? h(
+                      runtimeDom.Suspense,
+                      { timeout: 0 },
+                      {
+                        default: () => {
+                          const owner = h(Parent)
+                          owner.transition = transition as any
+                          return owner
+                        },
+                      },
+                    )
+                  : h('p', 'fallback')
+            },
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+
+          const clientChild = compileVaporComponent(childCode, clientData)
+          const setup = clientChild.setup
+          clientChild.setup = (
+            props: any,
+            childInstance: VaporComponentInstance,
+          ) => {
+            instance = childInstance
+            return setup(props, childInstance)
+          }
+          Parent = compileVaporComponent(parentCode, clientData, {
+            AsyncChild: clientChild,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
           const app = runtimeDom.createSSRApp(App)
           app.use(runtimeVapor.vaporInteropPlugin)
           app.mount(container)
 
-          const registerDep = vi.spyOn(instance.suspense!, 'registerDep')
+          data.value.show = false
+          await nextTick()
+
+          expect(leaveHtml).toEqual(['<div>async resolved</div>'])
+          expect(instance.isUnmounted).toBe(true)
+          expect(instance.scope.active).toBe(false)
+          expect(leavingElement.isConnected).toBe(true)
+          expect(leavingElement.innerHTML).toBe('<div>async resolved</div>')
+
+          finishLeave()
+          expect(leavingElement.isConnected).toBe(false)
+          resolveClient()
+          await new Promise(resolve => setTimeout(resolve))
+        })
+
+        test('removes a pending SSR range through a vapor parent root', async () => {
+          let resolveClient!: () => void
+          let instance!: VaporComponentInstance
+          const data = ref({ show: true })
+          const serverData = ref({ wait: Promise.resolve() })
+          const clientData = ref({
+            wait: new Promise<void>(resolve => {
+              resolveClient = resolve
+            }),
+          })
+          const childCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template><div>async resolved</div></template>
+          `
+          const parentCode = `
+            <script vapor>
+              const components = _components
+            </script>
+            <template><components.AsyncChild /></template>
+          `
+
+          const serverChild = compileVaporComponent(
+            childCode,
+            serverData,
+            undefined,
+            true,
+          )
+          let Parent = compileVaporComponent(
+            parentCode,
+            serverData,
+            { AsyncChild: serverChild },
+            true,
+          )
+          const App = defineComponent({
+            setup() {
+              return () =>
+                data.value.show
+                  ? h(runtimeDom.Suspense, null, {
+                      default: () => h(Parent),
+                    })
+                  : h('p', 'fallback')
+            },
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+
+          const clientChild = compileVaporComponent(childCode, clientData)
+          const setup = clientChild.setup
+          clientChild.setup = (
+            props: any,
+            childInstance: VaporComponentInstance,
+          ) => {
+            instance = childInstance
+            return setup(props, childInstance)
+          }
+          Parent = compileVaporComponent(parentCode, clientData, {
+            AsyncChild: clientChild,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          const pendingNodes = normalizeBlock(instance.pendingBlock!)
+          data.value.show = false
+          await nextTick()
+
+          expect(instance.pendingBlock).toBeUndefined()
+          expect(pendingNodes.every(node => !node.isConnected)).toBe(true)
+          expect(container.innerHTML).toBe('<p>fallback</p>')
+
+          resolveClient()
+          await new Promise(resolve => setTimeout(resolve))
+          expect(container.innerHTML).toBe('<p>fallback</p>')
+        })
+
+        test.each([
+          ['single root', '<span>async</span>', ['<span>async</span>']],
+          [
+            'multi-root range',
+            '<span>async</span><b>range</b>',
+            ['<!--[-->', '<span>async</span>', '<b>range</b>', '<!--]-->'],
+          ],
+        ] as const)(
+          'moves pending hydrated async setup before resolving (%s)',
+          async (_, childTemplate, expectedPendingNodes) => {
+            let resolveClient!: () => void
+            const childData = ref({ wait: Promise.resolve() })
+            const items = ref(['sync', 'async'])
+            const vaporChildCode = `
+            <script vapor>
+              const data = _data
+              await data.value.wait
+            </script>
+            <template>${childTemplate}</template>
+          `
+            let VaporChild = compile(
+              vaporChildCode,
+              childData,
+              {},
+              {
+                vapor: true,
+                ssr: true,
+              },
+            )
+            const App = defineComponent({
+              setup() {
+                return () =>
+                  h(runtimeDom.Suspense, null, {
+                    default: () =>
+                      h(
+                        'div',
+                        items.value.map(id =>
+                          id === 'async'
+                            ? h(VaporChild, { key: id })
+                            : h('i', { key: id }, 'sync'),
+                        ),
+                      ),
+                  })
+              },
+            })
+            const html = await VueServerRenderer.renderToString(
+              runtimeDom.createSSRApp(App),
+            )
+
+            childData.value.wait = new Promise<void>(resolve => {
+              resolveClient = resolve
+            })
+            let instance!: VaporComponentInstance
+            VaporChild = compile(
+              vaporChildCode,
+              childData,
+              {},
+              {
+                vapor: true,
+                ssr: false,
+              },
+            )
+            const setup = VaporChild.setup
+            VaporChild.setup = (props: any, child: VaporComponentInstance) => {
+              instance = child
+              return setup(props, child)
+            }
+
+            const container = document.createElement('div')
+            container.innerHTML = html
+            document.body.appendChild(container)
+            const app = runtimeDom.createSSRApp(App)
+            app.use(runtimeVapor.vaporInteropPlugin)
+            app.mount(container)
+            const childNodes = container.querySelector('div')!.childNodes
+            const pendingNodes = normalizeBlock(instance.pendingBlock!)
+            const syncNode = childNodes[0]
+            const selfAnchor =
+              pendingNodes[pendingNodes.length - 1].nextSibling!
+            expect(formatNodeList(pendingNodes)).toEqual(expectedPendingNodes)
+            expect(formatNodeList(childNodes)).toEqual([
+              '<i>sync</i>',
+              ...expectedPendingNodes,
+              'text("")',
+            ])
+            expect(instance.block).toBeNull()
+
+            const registerDep = vi.spyOn(instance.suspense!, 'registerDep')
+            try {
+              items.value = ['async', 'sync']
+              await nextTick()
+
+              expect(registerDep).not.toHaveBeenCalled()
+              expect(instance.block).toBeNull()
+              expect(normalizeBlock(instance.pendingBlock!)).toEqual(
+                pendingNodes,
+              )
+              expect(Array.from(childNodes)).toEqual([
+                ...pendingNodes,
+                selfAnchor,
+                syncNode,
+              ])
+
+              resolveClient()
+              await new Promise(resolve => setTimeout(resolve))
+              expect(instance.pendingBlock).toBeUndefined()
+              expect(instance.block).not.toBeNull()
+              expect(Array.from(childNodes)).toEqual([
+                ...pendingNodes,
+                selfAnchor,
+                syncNode,
+              ])
+            } finally {
+              registerDep.mockRestore()
+              app.unmount()
+              resolveClient()
+              await new Promise(resolve => setTimeout(resolve))
+              container.remove()
+            }
+          },
+        )
+
+        test('moves and removes pending hydrated ranges through Vapor v-for', async () => {
+          const serverData = ref({
+            items: [1, 2],
+            wait: Promise.resolve(),
+          })
+          const clientData = ref({
+            items: [1, 2],
+            wait: new Promise<void>(() => {}),
+          })
+          const childCode = `
+            <script vapor>
+              const data = _data
+              const props = defineProps(['id'])
+              await data.value.wait
+            </script>
+            <template>
+              <template v-if="true">
+                <span>{{ props.id }}-one</span>
+                <span>{{ props.id }}-two</span>
+              </template>
+            </template>
+          `
+          const parentCode = `
+            <script vapor>
+              const data = _data
+              const components = _components
+            </script>
+            <template>
+              <div>
+                <components.AsyncChild
+                  v-for="id in data.items"
+                  :key="id"
+                  :id="id"
+                />
+                <i>tail</i>
+              </div>
+            </template>
+          `
+          const serverChild = compileVaporComponent(
+            childCode,
+            serverData,
+            {},
+            true,
+          )
+          let Parent = compileVaporComponent(
+            parentCode,
+            serverData,
+            { AsyncChild: serverChild },
+            true,
+          )
+          const App = defineComponent({
+            setup: () => () =>
+              h(runtimeDom.Suspense, null, {
+                default: () => h(Parent),
+              }),
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+
+          const instances: VaporComponentInstance[] = []
+          const clientChild = compileVaporComponent(childCode, clientData)
+          const setup = clientChild.setup
+          clientChild.setup = (
+            props: any,
+            instance: VaporComponentInstance,
+          ) => {
+            instances.push(instance)
+            return setup(props, instance)
+          }
+          Parent = compileVaporComponent(parentCode, clientData, {
+            AsyncChild: clientChild,
+          })
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+
           try {
-            items.value = ['async', 'sync']
+            app.mount(container)
+
+            expect(instances).toHaveLength(2)
+            expect(instances[0].block).toBeNull()
+            expect(instances[1].block).toBeNull()
+            const firstRange = normalizeBlock(instances[0].pendingBlock!)
+            const secondRange = normalizeBlock(instances[1].pendingBlock!)
+            expect(formatNodeList(firstRange)).toEqual([
+              '<!--[-->',
+              '<span>1-one</span>',
+              '<span>1-two</span>',
+              '<!--]-->',
+            ])
+            expect(formatNodeList(secondRange)).toEqual([
+              '<!--[-->',
+              '<span>2-one</span>',
+              '<span>2-two</span>',
+              '<!--]-->',
+            ])
+
+            const parent = container.querySelector('div')!
+            const tail = parent.querySelector('i')!
+            const expectRangesInOrder = (...ranges: Node[][]) => {
+              const nodes: Node[] = Array.from(parent.childNodes)
+              let previousEnd = -1
+              for (const range of ranges) {
+                const start = nodes.indexOf(range[0])
+                expect(start).toBeGreaterThan(previousEnd)
+                expect(nodes.slice(start, start + range.length)).toEqual(range)
+                previousEnd = start + range.length - 1
+              }
+              expect(parent.lastElementChild).toBe(tail)
+            }
+
+            expectRangesInOrder(firstRange, secondRange)
+
+            clientData.value.items = [2, 1]
             await nextTick()
 
-            expect(registerDep).not.toHaveBeenCalled()
-            expect(instance.block).toBeNull()
+            expect(instances).toHaveLength(2)
+            expect(normalizeBlock(instances[0].pendingBlock!)).toEqual(
+              firstRange,
+            )
+            expect(normalizeBlock(instances[1].pendingBlock!)).toEqual(
+              secondRange,
+            )
+            expectRangesInOrder(secondRange, firstRange)
+
+            clientData.value.items = [2]
+            await nextTick()
+            expect(instances[0].pendingBlock).toBeUndefined()
+            expect(firstRange.every(node => node.parentNode === null)).toBe(
+              true,
+            )
+            expect(normalizeBlock(instances[1].pendingBlock!)).toEqual(
+              secondRange,
+            )
+            expectRangesInOrder(secondRange)
+
+            expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+            expect(`Hydration children mismatch`).not.toHaveBeenWarned()
           } finally {
-            registerDep.mockRestore()
             app.unmount()
-            resolveClient()
-            await new Promise(resolve => setTimeout(resolve))
             container.remove()
           }
         })

@@ -16,6 +16,7 @@ import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
+  getBlockFirstNode,
   insert,
   insertFragment,
   insertNode,
@@ -25,7 +26,7 @@ import {
   removeNode,
 } from './block'
 import { queuePostFlushCb, warn } from '@vue/runtime-dom'
-import { currentInstance, isVaporComponent } from './component'
+import { currentInstance } from './component'
 import {
   type DynamicSlot,
   currentSlotOwner,
@@ -347,7 +348,7 @@ export const createFor = (
               source,
               index,
               index < newLength - 1
-                ? normalizeAnchor(newBlocks[index + 1].nodes)
+                ? getBlockFirstNode(newBlocks[index + 1].nodes)
                 : parentAnchor,
               item,
               key,
@@ -373,9 +374,9 @@ export const createFor = (
             const { index } = action
             if (index < newLength - 1) {
               const nextBlock = newBlocks[index + 1]
-              let anchorNode = normalizeAnchor(nextBlock.prevAnchor!.nodes)
+              let anchorNode = getBlockFirstNode(nextBlock.prevAnchor!.nodes)
               if (!anchorNode.parentNode)
-                anchorNode = normalizeAnchor(nextBlock.nodes)
+                anchorNode = getBlockFirstNode(nextBlock.nodes)
               if ('source' in action) {
                 const { item, key } = action
                 const block = mount(source, index, anchorNode, item, key)
@@ -391,7 +392,7 @@ export const createFor = (
               blocksTail = block
             } else if (action.block.next !== undefined) {
               let anchorNode = anchor
-                ? normalizeAnchor(anchor.nodes)
+                ? getBlockFirstNode(anchor.nodes)
                 : parentAnchor
               if (!anchorNode.parentNode) anchorNode = parentAnchor
               insertForBlock(action.block, anchorNode)
@@ -825,27 +826,6 @@ function getItem(
     return [value, keys[idx], idx]
   } else {
     return [value, idx, undefined]
-  }
-}
-
-function normalizeAnchor(node: Block): Node {
-  if (node instanceof Node) {
-    return node
-  } else if (isArray(node)) {
-    for (let i = 0; i < node.length; i++) {
-      const anchor = normalizeAnchor(node[i])
-      if (anchor) return anchor
-    }
-    return undefined!
-  } else if (isVaporComponent(node)) {
-    return normalizeAnchor(node.block!)
-  } else {
-    const nodes = node.nodes
-    // Empty ForFragment keeps its insertion anchor in `nodes`, even though it
-    // is not a valid content block.
-    return isValidBlock(nodes)
-      ? normalizeAnchor(nodes)
-      : node.anchor || normalizeAnchor(nodes)
   }
 }
 
