@@ -463,6 +463,27 @@ return { props, get defaults() { return defaults } }
 })"
 `;
 
+exports[`defineProps > withDefaults (locally variable) 1`] = `
+"import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
+const defaults = { baz: false }
+    
+export default /*#__PURE__*/_defineComponent({
+  props: _mergeDefaults({
+    baz: { type: Boolean, required: true }
+  }, defaults),
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+const props = __props;
+
+    
+    
+return { defaults, props }
+}
+
+})"
+`;
+
 exports[`defineProps > withDefaults (reference) 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 import { defaults } from './foo'
