@@ -125,6 +125,29 @@ describe('attribute fallthrough', () => {
     expect(node.style.fontWeight).toBe('bold')
   })
 
+  it('should preserve root bindings excluded from functional fallthrough', async () => {
+    const title = ref('one')
+    const { component: Child } = define((props: any) => {
+      const n0 = template('<div></div>', 1)() as Element
+      renderEffect(() => setProp(n0, 'title', `child:${props.title}`))
+      return n0
+    })
+
+    const { host } = define({
+      setup() {
+        return createComponent(Child, {
+          title: () => title.value,
+        })
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<div title="child:one"></div>')
+
+    title.value = 'two'
+    await nextTick()
+    expect(host.innerHTML).toBe('<div title="child:two"></div>')
+  })
+
   it('should only allow whitelisted fallthrough on functional component dynamic root branch', async () => {
     const show = ref(false)
     const parentClass = ref('c0')

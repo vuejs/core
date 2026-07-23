@@ -22,6 +22,7 @@ import {
   MismatchTypes,
   currentInstance,
   getAttributeMismatch,
+  isFunctionalFallthroughKey,
   isMapEqual,
   isMismatchAllowed,
   isSetEqual,
@@ -45,6 +46,7 @@ import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
   isVaporComponent,
+  shouldUseFunctionalFallthrough,
 } from '../component'
 import {
   isHydrating,
@@ -71,7 +73,9 @@ const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
     el.$root &&
     instance.hasFallthrough &&
     instance.type.inheritAttrs !== false &&
-    key in instance.attrs
+    key in instance.attrs &&
+    (!shouldUseFunctionalFallthrough(instance.type) ||
+      isFunctionalFallthroughKey(key))
   )
 }
 

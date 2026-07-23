@@ -541,6 +541,15 @@ export function setupComponent(
 
 export let isApplyingFallthroughProps = false
 
+export function shouldUseFunctionalFallthrough(
+  component: VaporComponent,
+): boolean {
+  return (
+    isFunction(component) &&
+    !(isTransitionEnabled && isVaporTransition(component))
+  )
+}
+
 export function applyFallthroughProps(
   el: Element,
   attrs: Record<string, any>,
@@ -1360,11 +1369,9 @@ function handleSetupResult(
     component.inheritAttrs !== false &&
     Object.keys(instance.attrs).length
   ) {
-    const getFallthroughAttrs =
-      isFunction(component) &&
-      !(isTransitionEnabled ? isVaporTransition(component) : false)
-        ? () => getFunctionalFallthrough(instance.attrs)
-        : () => instance.attrs
+    const getFallthroughAttrs = shouldUseFunctionalFallthrough(component)
+      ? () => getFunctionalFallthrough(instance.attrs)
+      : () => instance.attrs
     // attach attrs to the root element, or to root dynamic fragments so they
     // can be (re-)applied during each branch update
     applyFallthroughAttrs(instance.block, instance, getFallthroughAttrs)

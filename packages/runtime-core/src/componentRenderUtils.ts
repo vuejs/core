@@ -348,10 +348,13 @@ export function filterSingleRoot(
   return singleRoot
 }
 
+export const isFunctionalFallthroughKey = (key: string): boolean =>
+  key === 'class' || key === 'style' || isOn(key)
+
 export const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
   let res: Data | undefined
   for (const key in attrs) {
-    if (key === 'class' || key === 'style' || isOn(key)) {
+    if (isFunctionalFallthroughKey(key)) {
       ;(res || (res = {}))[key] = attrs[key]
     }
   }
