@@ -1,4 +1,4 @@
-import { EffectFlags, cleanup } from './effect'
+import { EffectFlags } from './effect'
 import { type Link, type ReactiveNode, link, unlink } from './system'
 import { warn } from './warning'
 
@@ -14,11 +14,13 @@ export class EffectScope implements ReactiveNode {
   /**
    * @internal
    */
-  cleanups: (() => void)[] = []
-  /**
-   * @internal
-   */
-  cleanupsLength = 0
+  controller: AbortController | undefined
+
+  get signal(): AbortSignal {
+    if (!this.controller) this.controller = new AbortController()
+
+    return this.controller.signal
+  }
 
   constructor(detached = false) {
     if (!detached && activeEffectScope) {
@@ -94,7 +96,9 @@ export class EffectScope implements ReactiveNode {
         dep = unlink(dep, this)
       }
     }
-    cleanup(this)
+    if (this.controller) {
+      this.controller.abort()
+    }
   }
 }
 
@@ -137,7 +141,7 @@ export function setCurrentScope(scope?: EffectScope): EffectScope | undefined {
  */
 export function onScopeDispose(fn: () => void, failSilently = false): void {
   if (activeEffectScope !== undefined) {
-    activeEffectScope.cleanups[activeEffectScope.cleanupsLength++] = fn
+    activeEffectScope.signal.addEventListener('abort', fn, { once: true })
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
