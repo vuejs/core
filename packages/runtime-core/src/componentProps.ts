@@ -88,7 +88,9 @@ type RequiredKeys<T> = {
     ? T[K] extends { default: undefined | (() => undefined) }
       ? never
       : K
-    : never
+    : T[K] extends PropType<infer B> | { type: PropType<infer B> }
+      ? IfAny<B, never, B extends boolean ? K : never>
+      : never
 }[keyof T]
 
 type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
@@ -102,7 +104,11 @@ type DefaultKeys<T> = {
     ? T[K] extends { type: BooleanConstructor; required: true } // not default if Boolean is marked as required
       ? never
       : K
-    : never
+    : T[K] extends
+          | PropType<infer B>
+          | { type: PropType<infer B>; required?: false }
+      ? IfAny<B, never, B extends boolean ? K : never>
+      : never
 }[keyof T]
 
 type InferPropType<T, NullAsAny = true> = [T] extends [null]
