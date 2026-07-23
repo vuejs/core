@@ -23,6 +23,7 @@ import {
 import { isTeleportEnabled, isTeleportFragment } from './teleport'
 import { isTransitionEnabled } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
+import { isSuspenseEnabled } from './suspense'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   state: TransitionState
@@ -362,11 +363,35 @@ export function normalizeBlock(block: Block): Node[] {
   return nodes
 }
 
+export function getBlockFirstNode(block: Block): Node {
+  if (block instanceof Node) {
+    return block
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      const anchor = getBlockFirstNode(block[i])
+      if (anchor) return anchor
+    }
+    return undefined!
+  } else if (isVaporComponent(block)) {
+    return getBlockFirstNode(getComponentPhysicalBlock(block))
+  } else {
+    const nodes = block.nodes
+    // Empty fragments may keep their insertion anchor in `anchor` or in
+    // `nodes` (ForFragment).
+    return isValidBlock(nodes)
+      ? getBlockFirstNode(nodes)
+      : block.anchor || getBlockFirstNode(nodes)
+  }
+}
+
 export function findBlockBoundary(block: Block): {
   parentNode: Node | null
   nextNode: Node | null
 } {
-  const lastChild = findLastChild(block)!
+  const boundaryBlock = isVaporComponent(block)
+    ? getComponentPhysicalBlock(block)
+    : block
+  const lastChild = findLastChild(boundaryBlock)!
   let { parentNode, nextSibling: nextNode } = lastChild
 
   // if nodes render as a fragment and the current nextNode is fragment
@@ -375,7 +400,7 @@ export function findBlockBoundary(block: Block): {
   if (
     nextNode &&
     isComment(nextNode, ']') &&
-    isFragmentBlock(block) &&
+    isFragmentBlock(boundaryBlock) &&
     !isComment(lastChild, ']') &&
     !(lastChild.nodeType === 3 && !(lastChild as Text).data)
   ) {
@@ -394,18 +419,27 @@ function findLastChild(node: Block): Node | undefined | null {
   } else if (isArray(node)) {
     return findLastChild(node[node.length - 1])
   } else if (isVaporComponent(node)) {
-    return findLastChild(node.block!)
+    return findLastChild(getComponentPhysicalBlock(node))
   } else {
     if (node.anchor) return node.anchor
     return findLastChild(node.nodes!)
   }
 }
 
+// While present, `pendingBlock` is authoritative for physical operations until
+// the initial hydration mount transfers ownership to `block`.
+function getComponentPhysicalBlock(instance: VaporComponentInstance): Block {
+  return (
+    (__FEATURE_SUSPENSE__ && isSuspenseEnabled && instance.pendingBlock) ||
+    instance.block
+  )
+}
+
 export function isFragmentBlock(block: Block): boolean {
   if (isArray(block)) {
     return true
   } else if (isVaporComponent(block)) {
-    return isFragmentBlock(block.block!)
+    return isFragmentBlock(getComponentPhysicalBlock(block))
   } else if (isFragment(block)) {
     return isFragmentBlock(block.nodes)
   }

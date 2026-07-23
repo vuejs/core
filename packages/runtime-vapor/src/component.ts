@@ -420,10 +420,33 @@ export function createComponent(
           // boundary rule above when the delayed setup actually runs.
           wasInOnceSlot ? () => withOnceSlot(setup, false) : setup,
         )
-      } else if (wasInOnceSlot) {
-        withOnceSlot(() => setupComponent(instance, component), false)
       } else {
-        setupComponent(instance, component)
+        if (wasInOnceSlot) {
+          withOnceSlot(() => setupComponent(instance, component), false)
+        } else {
+          setupComponent(instance, component)
+        }
+
+        if (
+          isHydrating &&
+          __FEATURE_SUSPENSE__ &&
+          isSuspenseEnabled &&
+          instance.suspense &&
+          instance.asyncDep
+        ) {
+          // Async setup cannot create `block` yet. Capture the adopted SSR
+          // range for pending move/removal before hydration advances past it.
+          const pendingBlock: Node[] = []
+          let node = hydrationCursor!.start!
+          const hydrationNext = nextLogicalSibling(node)
+          do {
+            pendingBlock.push(node)
+            node = node.nextSibling!
+          } while (node !== hydrationNext)
+          instance.pendingBlock =
+            pendingBlock.length === 1 ? pendingBlock[0] : pendingBlock
+          advanceHydrationNode(pendingBlock[pendingBlock.length - 1])
+        }
       }
     } finally {
       if (__DEV__) {
@@ -643,6 +666,10 @@ export class VaporComponentInstance<
   appContext: GenericAppContext
 
   block: TypeBlock
+  // VDOM can identify adopted SSR DOM with a placeholder VNode. Vapor adopts
+  // raw nodes, so storing them in `block` would make logical consumers treat
+  // them as rendered output. Keep temporary hydration ownership separate.
+  pendingBlock?: Node | Node[]
   scope: EffectScope
 
   rawProps: RawProps
@@ -1052,12 +1079,13 @@ export function mountComponent(
     instance.asyncDep &&
     !instance.asyncResolved
   ) {
-    // Moving a pending instance, including re-entering from KeepAlive, retries
-    // mountComponent. Move its CSR placeholder when present; during hydration,
-    // `instance.block` is still null, but the async dependency must not be
-    // registered again.
+    // Moving a still-pending instance, such as a keyed reorder or KeepAlive
+    // re-entry, retries `mountComponent`. `insert` relocates its already-mounted
+    // DOM without registering the async dependency again.
     if (instance.asyncDepRegistered) {
-      if (instance.block) {
+      if (instance.pendingBlock) {
+        insert(instance.pendingBlock, parent, anchor)
+      } else if (instance.block) {
         insert(instance.block, parent, anchor)
       }
       if (
@@ -1082,10 +1110,6 @@ export function mountComponent(
 
     instance.asyncDepRegistered = true
     const component = instance.type
-    // CSR resolves from the live placeholder, so do not retain its original
-    // DOM location through the unresolved promise.
-    const hydrationParent = hydrating ? parent : undefined
-    const hydrationAnchor = hydrating ? anchor : undefined
     instance.suspense.registerDep(instance, setupResult => {
       // Final suspense retry after async setup resolves. Restore hydrating
       // mode so the last mount does not fall back to fresh DOM insertion.
@@ -1104,24 +1128,26 @@ export function mountComponent(
         }
       }
       try {
+        const pendingBlock = hydrating ? instance.pendingBlock! : instance.block
+        // Use the pending DOM's live boundary because it may have moved while
+        // setup was suspended.
+        const { parentNode, nextNode } = findBlockBoundary(pendingBlock)
         if (hydrating) {
           withDeferredHydrationBoundary(() => {
             handleResult()
-            mountComponent(instance, hydrationParent!, hydrationAnchor)
+            mountComponent(instance, parentNode as ParentNode, nextNode)
             if (instance.deferredHydrationBoundary) {
               instance.deferredHydrationBoundary()
             }
           })
         } else {
-          const placeholder = instance.block as Comment
-          const placeholderParent = placeholder.parentNode as ParentNode
-          const placeholderAnchor = placeholder.nextSibling
           handleResult()
-          mountComponent(instance, placeholderParent, placeholderAnchor)
-          remove(placeholder, placeholderParent)
+          mountComponent(instance, parentNode as ParentNode, nextNode)
+          remove(pendingBlock, parentNode as ParentNode)
         }
       } finally {
         if (hydrating) {
+          instance.pendingBlock = undefined
           instance.deferredHydrationBoundary = undefined
         }
         instance.restoreAsyncContext = undefined
@@ -1189,6 +1215,7 @@ export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
+  removePendingBlock = true,
 ): void {
   // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
@@ -1235,20 +1262,32 @@ export function unmountComponent(
     instance.isUnmounted = true
   }
 
-  // Callers that own surrounding DOM removal may omit parentNode, so remove
-  // the pending placeholder from its live DOM parent.
-  if (pendingAsyncSetup && instance.block instanceof Comment) {
-    const blockParent = instance.block.parentNode
-    if (blockParent) {
-      remove(instance.block, blockParent)
+  // A pending hydration range may have moved, so remove it from its live parent.
+  // If VDOM owns an enclosing removal, only release `pendingBlock`.
+  if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && pendingAsyncSetup) {
+    if (instance.pendingBlock) {
+      const pendingBlock = instance.pendingBlock
+      if (removePendingBlock) {
+        const { parentNode: blockParent } = findBlockBoundary(pendingBlock)
+        if (blockParent) {
+          remove(pendingBlock, blockParent as ParentNode)
+        }
+      }
+      instance.pendingBlock = undefined
+    } else if (instance.block instanceof Comment) {
+      // CSR placeholders are component-owned, so always detach them from their
+      // live parent even when VDOM owns an enclosing removal.
+      const blockParent = instance.block.parentNode
+      if (blockParent) {
+        remove(instance.block, blockParent)
+      }
     }
   } else if (parentNode) {
-    if (instance.block) {
-      remove(instance.block, parentNode)
-    } else {
-      // TODO: a hydrated async setup component may own SSR DOM before its
-      // block exists. That adopted DOM should be removed on this path.
-    }
+    if (instance.block) remove(instance.block, parentNode)
+  }
+  if (pendingAsyncSetup) {
+    instance.restoreAsyncContext = undefined
+    instance.deferredHydrationBoundary = undefined
   }
 }
 

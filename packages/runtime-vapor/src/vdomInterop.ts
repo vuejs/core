@@ -382,22 +382,7 @@ const vaporInteropImpl: Omit<
           remove(instance.block, blockContainer)
         }
       } else {
-        // The async Vapor component may not be resolved yet, so block is null.
-        // Hydration still adopted SSR DOM on vnode.el; when this VNode owns
-        // removal, clear the adopted range before the interop anchor.
-        const adoptedNode =
-          vnode.el && vnode.el !== anchor ? (vnode.el as Node) : null
-        unmountComponent(instance, undefined, parentSuspense)
-        if (doRemove && container && adoptedNode) {
-          let cur: Node | null = adoptedNode
-          while (cur && cur !== anchor) {
-            const nextNode: ChildNode | null = cur.nextSibling
-            if (cur.parentNode === container) {
-              remove(cur, container)
-            }
-            cur = nextNode
-          }
-        }
+        unmountComponent(instance, container, parentSuspense, doRemove)
       }
     } else if (vnode.vb) {
       const anchor = vnode.anchor as Node | null
@@ -509,10 +494,16 @@ const vaporInteropImpl: Omit<
   },
 
   move(vnode, container, anchor, moveType, parentSuspense) {
+    const block = vnode.vb || (vnode.component as any)
+    // Resolved Vapor blocks exclude the VDOM-owned opening marker, but a
+    // pending hydration range includes it. Avoid moving `vnode.el` twice.
+    const pendingRangeOwnsFragmentStart =
+      isVaporComponent(block) && !!block.pendingBlock
     if (
       vnode.el &&
       vnode.el !== vnode.anchor &&
-      isComment(vnode.el as Node, '[')
+      isComment(vnode.el as Node, '[') &&
+      !pendingRangeOwnsFragmentStart
     ) {
       move(
         vnode.el as any,
@@ -523,14 +514,7 @@ const vaporInteropImpl: Omit<
         parentSuspense,
       )
     }
-    move(
-      vnode.vb || (vnode.component as any),
-      container,
-      anchor,
-      moveType,
-      undefined,
-      parentSuspense,
-    )
+    move(block, container, anchor, moveType, undefined, parentSuspense)
     move(
       vnode.anchor as any,
       container,
@@ -573,8 +557,8 @@ const vaporInteropImpl: Omit<
       ) as VaporComponentInstance
     })
     if (instance && instance.asyncDep && !instance.asyncResolved) {
-      // mount() cannot expose a block before async setup resolves. Keep the SSR
-      // start node so unmount can remove the adopted range if it is discarded.
+      // `block` stays null until async setup resolves. VDOM still needs
+      // `vnode.el` as the host start node; `pendingBlock` owns the full range.
       vnode.el = node
     }
     return anchor
