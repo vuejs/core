@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.5.40",
-  "packageManager": "pnpm@11.13.0",
+  "packageManager": "pnpm@11.16.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -96,7 +96,7 @@
     "picocolors": "^1.1.1",
     "playwright": "^1.61.1",
     "prettier": "^3.9.5",
-    "pretty-bytes": "^7.1.0",
+    "pretty-bytes": "^7.1.1",
     "pug": "^3.0.4",
     "puppeteer": "~25.3.0",
     "rimraf": "^6.1.3",
