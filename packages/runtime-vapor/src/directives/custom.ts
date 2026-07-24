@@ -4,6 +4,7 @@ import {
   getRootElement,
   isVaporComponent,
 } from '../component'
+import { type VaporFragment } from 'vue'
 
 // !! vapor directive is different from vdom directives
 export type VaporDirective = (
@@ -26,7 +27,7 @@ type VaporDirectiveArguments = Array<
 >
 
 export function withVaporDirectives(
-  node: Element | VaporComponentInstance,
+  node: Element | VaporComponentInstance | VaporFragment,
   dirs: VaporDirectiveArguments,
 ): void {
   const element = isVaporComponent(node) ? getRootElement(node.block) : node
