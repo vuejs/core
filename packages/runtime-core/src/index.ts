@@ -27,6 +27,7 @@ export {
   toRaw,
   // effect
   effect,
+  untrack,
   stop,
   getCurrentWatcher,
   onWatcherCleanup,
