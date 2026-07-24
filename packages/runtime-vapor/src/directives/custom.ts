@@ -31,7 +31,7 @@ type VaporDirectiveArguments = Array<
 >
 
 export function withVaporDirectives(
-  node: Block,
+  node: Element | VaporComponentInstance | VaporFragment,
   dirs: VaporDirectiveArguments,
 ): void {
   const trackedFragments = new WeakSet<VaporFragment>()
