@@ -2282,6 +2282,46 @@ describe('defineCustomElement', () => {
     expect(inner.shadowRoot!.innerHTML).toBe('<div>foo/bar</div>')
   })
 
+  test('should not resolve nested custom element after disconnect', async () => {
+    const mounted = vi.fn()
+    const ParentComp = defineComponent({
+      render() {
+        return h('slot')
+      },
+    })
+    let resolveParent!: (comp: typeof ParentComp) => void
+    const parentReady = new Promise<typeof ParentComp>(resolve => {
+      resolveParent = resolve
+    })
+    const Parent = defineCustomElement(defineAsyncComponent(() => parentReady))
+    const Child = defineCustomElement({
+      mounted,
+      render() {
+        return h('div', 'child')
+      },
+    })
+
+    customElements.define('async-disconnect-parent', Parent)
+    customElements.define('async-disconnect-child', Child)
+    container.innerHTML =
+      `<async-disconnect-parent>` +
+      `<async-disconnect-child></async-disconnect-child>` +
+      `</async-disconnect-parent>`
+
+    const parent = container.firstChild as VueElement
+    const child = parent.firstChild as VueElement
+    child.remove()
+    resolveParent(ParentComp)
+    await new Promise(resolve => setTimeout(resolve))
+
+    expect(mounted).not.toHaveBeenCalled()
+    expect(child.shadowRoot!.innerHTML).toBe('')
+
+    parent.appendChild(child)
+    expect(mounted).toHaveBeenCalledOnce()
+    expect(child.shadowRoot!.innerHTML).toBe('<div>child</div>')
+  })
+
   describe('configureApp', () => {
     test('should work', () => {
       const E = defineCustomElement(

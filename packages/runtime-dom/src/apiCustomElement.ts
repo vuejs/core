@@ -313,7 +313,9 @@ export class VueElement
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
             this._pendingResolve = undefined
-            return this._resolveDef()
+            if (this.isConnected) {
+              return this._resolveDef()
+            }
           })
         } else {
           this._resolveDef()
