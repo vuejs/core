@@ -2210,6 +2210,78 @@ describe('defineCustomElement', () => {
     expect(barVal).toBe('bar')
   })
 
+  test('nested async custom elements should mount ancestor-first', async () => {
+    const mounted: string[] = []
+    const OuterComp = defineComponent({
+      setup() {
+        provide('foo', 'foo')
+      },
+      mounted() {
+        mounted.push('outer')
+      },
+      render() {
+        return h('slot')
+      },
+    })
+    const MiddleComp = defineComponent({
+      setup() {
+        provide('bar', 'bar')
+      },
+      mounted() {
+        mounted.push('middle')
+      },
+      render() {
+        return h('slot')
+      },
+    })
+    const InnerComp = defineComponent({
+      setup() {
+        const foo = inject('foo')
+        const bar = inject('bar')
+        return () => h('div', `${foo}/${bar}`)
+      },
+      mounted() {
+        mounted.push('inner')
+      },
+    })
+    let resolveOuter!: (comp: typeof OuterComp) => void
+    let resolveMiddle!: (comp: typeof MiddleComp) => void
+    let resolveInner!: (comp: typeof InnerComp) => void
+    const outerReady = new Promise<typeof OuterComp>(resolve => {
+      resolveOuter = resolve
+    })
+    const middleReady = new Promise<typeof MiddleComp>(resolve => {
+      resolveMiddle = resolve
+    })
+    const innerReady = new Promise<typeof InnerComp>(resolve => {
+      resolveInner = resolve
+    })
+
+    const Outer = defineCustomElement(defineAsyncComponent(() => outerReady))
+    const Middle = defineCustomElement(defineAsyncComponent(() => middleReady))
+    const Inner = defineCustomElement(defineAsyncComponent(() => innerReady))
+
+    customElements.define('async-chain-outer', Outer)
+    customElements.define('async-chain-middle', Middle)
+    customElements.define('async-chain-inner', Inner)
+    container.innerHTML =
+      `<async-chain-outer>` +
+      `<async-chain-middle>` +
+      `<async-chain-inner></async-chain-inner>` +
+      `</async-chain-middle>` +
+      `</async-chain-outer>`
+
+    resolveInner(InnerComp)
+    resolveOuter(OuterComp)
+    await new Promise(resolve => setTimeout(resolve))
+    resolveMiddle(MiddleComp)
+    await new Promise(resolve => setTimeout(resolve))
+
+    const inner = container.querySelector('async-chain-inner') as VueElement
+    expect(mounted).toEqual(['outer', 'middle', 'inner'])
+    expect(inner.shadowRoot!.innerHTML).toBe('<div>foo/bar</div>')
+  })
+
   describe('configureApp', () => {
     test('should work', () => {
       const E = defineCustomElement(
