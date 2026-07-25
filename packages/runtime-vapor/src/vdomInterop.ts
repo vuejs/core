@@ -31,6 +31,7 @@ import {
   ensureVaporSlotFallback,
   getInheritedScopeIds,
   getTransitionRawChildren,
+  hasTransitionChildChanged,
   invokeDirectiveHook,
   isEmitListener,
   isKeepAlive,
@@ -183,6 +184,7 @@ function getRawTransitionChild(vnode: VNode | undefined): VNode | undefined {
 function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
+  prevVNode?: VNode | null,
 ): VNode | undefined {
   const transition = frag.$transition
   const instance = frag.renderInstance
@@ -196,12 +198,28 @@ function prepareInteropSlotTransition(
   }
   const branch = resolveTransitionChild([vnode], true)!
   if (transition) {
-    prepareTransition(
+    const prepared = prepareTransition(
       branch,
       transition.props,
       transition.state,
       transition.instance,
     )
+
+    // Match BaseTransition by refreshing the leaving child's hooks with the latest
+    // transition props. Compare resolved children because KeepAlive and Teleport
+    // may retain the same wrapper VNode while switching their inner child.
+    if (
+      prevVNode &&
+      prepared &&
+      hasTransitionChildChanged(prevVNode, prepared.inner)
+    ) {
+      prepareTransition(
+        prevVNode,
+        transition.props,
+        transition.state,
+        transition.instance,
+      )
+    }
   }
   return branch
 }
@@ -1745,10 +1763,16 @@ function renderVDOMSlot(
                 finishContentUpdate()
                 return
               }
-              const transition = frag.$transition
+              const prevIsVNode = isVNode(prevRendered)
+              const prevVNode =
+                prevIsVNode &&
+                (!slotResolutionState.activeFallback || contentState.valid)
+                  ? prevRendered
+                  : null
               const transitionBranch = prepareInteropSlotTransition(
                 frag,
                 slotContent,
+                prevVNode,
               )
               const renderedSlotContent = transitionBranch || slotContent
               frag.vnode = renderedSlotContent
@@ -1770,21 +1794,6 @@ function renderVDOMSlot(
                 refreshSlotVNode,
                 notifyBeforeUpdate,
               )
-              const prevIsVNode = isVNode(prevRendered)
-              const prevVNode =
-                prevIsVNode &&
-                (!slotResolutionState.activeFallback || contentState.valid)
-                  ? prevRendered
-                  : null
-              if (prevVNode && transition) {
-                // The previous VNode is already the prepared renderer subtree.
-                prepareTransition(
-                  prevVNode,
-                  transition.props,
-                  transition.state,
-                  transition.instance,
-                )
-              }
               if (prevRendered && !prevIsVNode) {
                 removeRenderedContent(prevRendered, currentParentNode!)
               }

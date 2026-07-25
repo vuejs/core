@@ -599,6 +599,18 @@ export function prepareTransition(
   return prepared
 }
 
+export function hasTransitionChildChanged(
+  vnode: VNode,
+  nextInner: VNode,
+): boolean {
+  const inner = getInnerChild(vnode)
+  return !!(
+    inner &&
+    inner.type !== Comment &&
+    !isSameVNodeType(inner, nextInner)
+  )
+}
+
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     vnode.transition = hooks
