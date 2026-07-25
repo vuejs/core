@@ -180,7 +180,7 @@ function getRawTransitionChild(vnode: VNode | undefined): VNode | undefined {
   return children.length === 1 ? children[0] : undefined
 }
 
-function prepareInteropSlotTransitionBranch(
+function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
 ): VNode | undefined {
@@ -1674,7 +1674,7 @@ function renderVDOMSlot(
                   ? slotContent
                   : undefined
               if (isVNode(hydratedContent)) {
-                const transitionBranch = prepareInteropSlotTransitionBranch(
+                const transitionBranch = prepareInteropSlotTransition(
                   frag,
                   hydratedContent,
                 )
@@ -1746,7 +1746,7 @@ function renderVDOMSlot(
                 return
               }
               const transition = frag.$transition
-              const transitionBranch = prepareInteropSlotTransitionBranch(
+              const transitionBranch = prepareInteropSlotTransition(
                 frag,
                 slotContent,
               )
