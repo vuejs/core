@@ -37,8 +37,11 @@ export function withVaporDirectives(
   const trackedFragments = new WeakSet<VaporFragment>()
   let currentElement: Element | null | undefined = null
   let directiveScope: EffectScope | undefined
+  let disposed = false
 
   function applyDirectives() {
+    if (disposed) return
+
     const pending = trackFragments(node)
     const element = getRootElement(node)
     if (!element && pending) return
@@ -108,6 +111,7 @@ export function withVaporDirectives(
 
   if (getCurrentScope()) {
     onScopeDispose(() => {
+      disposed = true
       // To stope the detached scope when the current scope disposes
       if (directiveScope) directiveScope.stop()
     })
