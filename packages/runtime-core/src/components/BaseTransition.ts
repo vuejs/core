@@ -160,6 +160,13 @@ const BaseTransitionImpl: ComponentOptions = {
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
+    const resumeAfterLeave = () => {
+      // #6835
+      // it also needs to be updated when active is undefined
+      if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+        instance.update()
+      }
+    }
 
     return () => {
       const child = resolveTransitionChild(
@@ -177,80 +184,14 @@ const BaseTransitionImpl: ComponentOptions = {
       // check mode
       checkTransitionMode(mode)
 
-      if (state.isLeaving) {
-        return emptyPlaceholder(child)
-      }
-
-      const prepared = prepareTransition(child, rawProps, state, instance)
-      if (!prepared) {
-        return emptyPlaceholder(child)
-      }
-      const { inner: innerChild } = prepared
-
-      let oldInnerChild = instance.subTree && getInnerChild(instance.subTree)
-
-      // handle mode
-      if (
-        oldInnerChild &&
-        oldInnerChild.type !== Comment &&
-        !isSameVNodeType(oldInnerChild, innerChild) &&
-        recursiveGetSubtree(instance).type !== Comment
-      ) {
-        let leavingHooks = resolveTransitionHooks(
-          oldInnerChild,
-          rawProps,
-          state,
-          instance,
-        )
-        // update old tree's hooks in case of dynamic transition
-        setTransitionHooks(oldInnerChild, leavingHooks)
-        // switching between different views
-        if (mode === 'out-in' && innerChild.type !== Comment) {
-          state.isLeaving = true
-          // return placeholder node and queue update when leave finishes
-          leavingHooks.afterLeave = () => {
-            state.isLeaving = false
-            // #6835
-            // it also needs to be updated when active is undefined
-            if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
-              instance.update()
-            }
-            delete leavingHooks.afterLeave
-            oldInnerChild = undefined
-          }
-          return emptyPlaceholder(child)
-        } else if (mode === 'in-out' && innerChild.type !== Comment) {
-          leavingHooks.delayLeave = (
-            el: TransitionElement,
-            earlyRemove,
-            delayedLeave,
-          ) => {
-            const leavingVNodesCache = getLeavingNodesForType(
-              state,
-              oldInnerChild!,
-            )
-            leavingVNodesCache[String(oldInnerChild!.key)] = oldInnerChild!
-            // early removal callback
-            el[leaveCbKey] = () => {
-              earlyRemove()
-              el[leaveCbKey] = undefined
-              delete prepared.hooks.delayedLeave
-              oldInnerChild = undefined
-            }
-            prepared.hooks.delayedLeave = () => {
-              delayedLeave()
-              delete prepared.hooks.delayedLeave
-              oldInnerChild = undefined
-            }
-          }
-        } else {
-          oldInnerChild = undefined
-        }
-      } else if (oldInnerChild) {
-        oldInnerChild = undefined
-      }
-
-      return child
+      return prepareTransitionSwitch(
+        instance.subTree,
+        child,
+        rawProps,
+        state,
+        instance,
+        resumeAfterLeave,
+      )
     }
   },
 }
@@ -571,7 +512,7 @@ export function resolveTransitionChild(
       : undefined
 }
 
-export function prepareTransition(
+function prepareTransition(
   vnode: VNode,
   props: BaseTransitionProps<any>,
   state: TransitionState,
@@ -599,16 +540,73 @@ export function prepareTransition(
   return prepared
 }
 
-export function hasTransitionChildChanged(
-  vnode: VNode,
-  nextInner: VNode,
-): boolean {
-  const inner = getInnerChild(vnode)
-  return !!(
-    inner &&
-    inner.type !== Comment &&
-    !isSameVNodeType(inner, nextInner)
-  )
+/**
+ * @internal
+ */
+export function prepareTransitionSwitch(
+  previous: VNode | null | undefined,
+  next: VNode,
+  props: BaseTransitionProps<any>,
+  state: TransitionState,
+  instance: GenericComponentInstance,
+  resumeAfterLeave: () => void,
+): VNode | undefined {
+  if (state.isLeaving) {
+    return emptyPlaceholder(next)
+  }
+
+  const prepared = prepareTransition(next, props, state, instance)
+  if (!prepared) {
+    return emptyPlaceholder(next)
+  }
+
+  let previousInner = previous && getInnerChild(previous)
+  if (
+    previous &&
+    previousInner &&
+    previousInner.type !== Comment &&
+    !isSameVNodeType(previousInner, prepared.inner) &&
+    (!previous.component ||
+      recursiveGetSubtree(previous.component).type !== Comment)
+  ) {
+    // update old tree's hooks in case of dynamic transition
+    const leaving = prepareTransition(previous, props, state, instance)!
+
+    // switching between different views
+    if (props.mode === 'out-in' && prepared.inner.type !== Comment) {
+      state.isLeaving = true
+      leaving.hooks.afterLeave = () => {
+        state.isLeaving = false
+        resumeAfterLeave()
+        delete leaving.hooks.afterLeave
+        previousInner = undefined
+      }
+      return emptyPlaceholder(next)
+    } else if (props.mode === 'in-out' && prepared.inner.type !== Comment) {
+      leaving.hooks.delayLeave = (
+        el: TransitionElement,
+        earlyRemove,
+        delayedLeave,
+      ) => {
+        const leavingVNodesCache = getLeavingNodesForType(state, previousInner!)
+        leavingVNodesCache[String(previousInner!.key)] = previousInner!
+        // early removal callback
+        el[leaveCbKey] = () => {
+          earlyRemove()
+          el[leaveCbKey] = undefined
+          delete prepared.hooks.delayedLeave
+          previousInner = undefined
+        }
+        prepared.hooks.delayedLeave = () => {
+          delayedLeave()
+          delete prepared.hooks.delayedLeave
+          previousInner = undefined
+        }
+      }
+    }
+  }
+
+  return next
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {

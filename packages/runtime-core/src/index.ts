@@ -683,9 +683,8 @@ export { isTemplateNode } from './hydration'
 export {
   baseResolveTransitionHooks,
   checkTransitionMode,
-  hasTransitionChildChanged,
   leaveCbKey,
-  prepareTransition,
+  prepareTransitionSwitch,
   resolveTransitionChild,
 } from './components/BaseTransition'
 

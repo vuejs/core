@@ -834,6 +834,363 @@ describe('Transition', () => {
     expect(entering.className).toBe('fade-enter-from fade-enter-active')
   })
 
+  test('vdom slot content should respect out-in transition mode', async () => {
+    let leaveDone: (() => void) | undefined
+    let finishLeaveSynchronously = false
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+      if (finishLeaveSynchronously) done()
+    })
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      provide: true,
+      show: true,
+      onLeave,
+      onEnter,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @leave="data.onLeave"
+          @enter="data.onEnter"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    // A render function can remove the slot source entirely, while compiled
+    // dynamic slots retain an empty slots object.
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(
+            Child,
+            null,
+            data.value.provide
+              ? {
+                  default: () => [
+                    h(
+                      data.value.show ? 'div' : 'span',
+                      data.value.show ? 'first' : 'second',
+                    ),
+                  ],
+                }
+              : undefined,
+          )
+      },
+    })
+    const { host } = defineInterop(App).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+    expect(host.querySelector('span')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')?.textContent).toBe('second')
+    expect(onEnter).toHaveBeenCalledOnce()
+
+    data.value.show = true
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(2)
+    expect(host.querySelector('div')).toBeNull()
+
+    data.value.provide = false
+    await nextTick()
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')).toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+
+    data.value.provide = true
+    await nextTick()
+    finishLeaveSynchronously = true
+    data.value.show = false
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')?.textContent).toBe('second')
+    expect(onEnter).toHaveBeenCalledTimes(3)
+  })
+
+  test('vdom KeepAlive slot content should respect out-in transition mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onFirstSetup = vi.fn()
+    const data = ref({
+      show: true,
+      onLeave,
+      onEnter,
+      onFirstSetup,
+    })
+    const First = compile(
+      `<script setup>
+        const data = _data
+        data.value.onFirstSetup()
+      </script>
+      <template>
+        <div>first</div>
+      </template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const Second = compile(
+      `<template><span>second</span></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @leave="data.onLeave"
+          @enter="data.onEnter"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <KeepAlive>
+            <components.First v-if="data.show" />
+            <components.Second v-else />
+          </KeepAlive>
+        </components.Child>
+      </template>`,
+      data,
+      { Child, First, Second },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+    expect(host.querySelector('span')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')?.textContent).toBe('second')
+    expect(onEnter).toHaveBeenCalledOnce()
+
+    data.value.show = true
+    await nextTick()
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')?.textContent).toBe('second')
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')?.textContent).toBe('first')
+    expect(host.querySelector('span')).toBeNull()
+    expect(onFirstSetup).toHaveBeenCalledOnce()
+  })
+
+  test('vdom Teleport slot content should respect out-in transition mode', async () => {
+    const target = document.createElement('div')
+    target.id = 'vdom-slot-transition-target'
+    document.body.appendChild(target)
+    let leaveDone: (() => void) | undefined
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      show: true,
+      onLeave,
+      onEnter,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @leave="data.onLeave"
+          @enter="data.onEnter"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <Teleport to="#vdom-slot-transition-target">
+            <div v-if="data.show">first</div>
+            <span v-else>second</span>
+          </Teleport>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    defineInterop(App as any).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(target.querySelector('div')?.textContent).toBe('first')
+    expect(target.querySelector('span')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(target.querySelector('div')).toBeNull()
+    expect(target.querySelector('span')?.textContent).toBe('second')
+    expect(onEnter).toHaveBeenCalledOnce()
+    target.remove()
+  })
+
+  test('vdom slot content should respect in-out transition mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="in-out"
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <div v-if="data.show">first</div>
+          <span v-else>second</span>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+    expect(host.querySelector('span')?.textContent).toBe('second')
+
+    enterDone!()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')?.textContent).toBe('second')
+  })
+
+  test('vdom slot out-in should skip a component that renders a comment', async () => {
+    const data = ref({
+      show: true,
+      empty: false,
+    })
+    const Empty = compile(
+      `<script setup>
+        const data = _data
+      </script>
+      <template><div v-if="data.empty" /></template>`,
+      data,
+      {},
+      { vapor: false },
+    )
+    const Child = compile(
+      `<template>
+        <Transition mode="out-in" :css="false">
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <components.Empty v-if="data.show" />
+          <div v-else id="next">next</div>
+        </components.Child>
+      </template>`,
+      data,
+      { Child, Empty },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+    // A comment-root component should be replaced directly instead of going
+    // through an intermediate out-in placeholder.
+    const insertBefore = vi.spyOn(Node.prototype, 'insertBefore')
+
+    data.value.show = false
+    await nextTick()
+
+    const insertedComment = insertBefore.mock.calls.some(
+      ([node]) => node.nodeType === Node.COMMENT_NODE,
+    )
+    insertBefore.mockRestore()
+    expect(host.querySelector('#next')?.textContent).toBe('next')
+    expect(insertedComment).toBe(false)
+  })
+
   test('slot fallback should trigger enter hooks when slot content becomes empty', async () => {
     const onBeforeEnter = vi.fn()
     const onEnter = vi.fn()

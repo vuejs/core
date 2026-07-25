@@ -22,6 +22,7 @@ import {
   type VaporInteropInterface,
   VaporSlot as VaporSlotVNode,
   callWithAsyncErrorHandling,
+  createCommentVNode,
   createInternalObject,
   createVNode,
   currentInstance,
@@ -31,7 +32,6 @@ import {
   ensureVaporSlotFallback,
   getInheritedScopeIds,
   getTransitionRawChildren,
-  hasTransitionChildChanged,
   invokeDirectiveHook,
   isEmitListener,
   isKeepAlive,
@@ -41,7 +41,7 @@ import {
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
-  prepareTransition,
+  prepareTransitionSwitch,
   queuePostFlushCb,
   queuePostRenderEffect,
   renderSlot,
@@ -181,11 +181,17 @@ function getRawTransitionChild(vnode: VNode | undefined): VNode | undefined {
   return children.length === 1 ? children[0] : undefined
 }
 
+interface InteropSlotTransition {
+  vnode: VNode
+  deferred: boolean
+}
+
 function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
-  prevVNode?: VNode | null,
-): VNode | undefined {
+  previous: VNode | undefined,
+  resumeAfterLeave: () => void,
+): InteropSlotTransition | undefined {
   const transition = frag.$transition
   const instance = frag.renderInstance
   // The slot renders before VaporTransition propagates its hooks on the first
@@ -197,31 +203,25 @@ function prepareInteropSlotTransition(
     return
   }
   const branch = resolveTransitionChild([vnode], true)!
-  if (transition) {
-    const prepared = prepareTransition(
-      branch,
-      transition.props,
-      transition.state,
-      transition.instance,
-    )
-
-    // Match BaseTransition by refreshing the leaving child's hooks with the latest
-    // transition props. Compare resolved children because KeepAlive and Teleport
-    // may retain the same wrapper VNode while switching their inner child.
-    if (
-      prevVNode &&
-      prepared &&
-      hasTransitionChildChanged(prevVNode, prepared.inner)
-    ) {
-      prepareTransition(
-        prevVNode,
-        transition.props,
-        transition.state,
-        transition.instance,
-      )
+  if (!transition) {
+    return {
+      vnode: branch,
+      deferred: false,
     }
   }
-  return branch
+
+  const prepared = prepareTransitionSwitch(
+    previous,
+    branch,
+    transition.props,
+    transition.state,
+    transition.instance,
+    resumeAfterLeave,
+  )
+  return {
+    vnode: prepared || createCommentVNode(),
+    deferred: transition.state.isLeaving,
+  }
 }
 
 function getInteropTransitionType(vnode: VNode): VNode['type'] | undefined {
@@ -1476,6 +1476,13 @@ function renderVDOMSlot(
   let currentParentNode: ParentNode | null = null
   let currentAnchor: Node | null = null
   let disposed = false
+  let pendingOutIn:
+    | {
+        content: VNode | Block | undefined
+        placeholder: VNode
+        valid: boolean
+      }
+    | undefined
   const scope = effectScope()
   const slotBoundary = frag.slotBoundary
   let isContentUpdateRecheck = false
@@ -1581,6 +1588,49 @@ function renderVDOMSlot(
     notifyUpdated()
   }
 
+  const trackSlotVNode = (vnode: VNode): void => {
+    const refreshSlotVNode = () => {
+      const prevValid = contentState.valid
+      const prevOutput = frag.nodes
+      setRenderedContent(vnode)
+      recheckResolutionAfterContentUpdate()
+      if (
+        contentState.valid !== prevValid ||
+        !isSameResolvedOutput(prevOutput, frag.nodes)
+      ) {
+        notifyUpdated()
+      }
+    }
+    trackSlotVNodeUpdatesWithRefresh(
+      vnode,
+      refreshSlotVNode,
+      notifyBeforeUpdate,
+    )
+  }
+
+  const patchSlotVNode = (
+    previous: VNode | null,
+    next: VNode,
+    slotScopeIds: string[] | null,
+    valid: boolean,
+  ): void => {
+    frag.vnode = next
+    frag.$key = getVNodeKey(next)
+    trackSlotVNode(next)
+    internals.p(
+      previous,
+      next,
+      currentParentNode!,
+      currentAnchor,
+      parentComponent as any,
+      suspense,
+      undefined,
+      slotScopeIds,
+    )
+    setRenderedContent(next, valid)
+    finishContentUpdate()
+  }
+
   const removeRenderedContent = (
     rendered: VNode | Block,
     parentNode?: ParentNode,
@@ -1598,6 +1648,46 @@ function renderVDOMSlot(
     } else {
       remove(rendered, contentDetached ? undefined : parentNode)
     }
+  }
+
+  const resumeOutIn = (): void => {
+    // A user leave hook may finish synchronously while the renderer is still
+    // patching the placeholder. Resume after that patch.
+    queuePostFlushCb(() => {
+      const pending = pendingOutIn
+      pendingOutIn = undefined
+      if (!pending || disposed || !currentParentNode) {
+        return
+      }
+
+      const content = pending.content
+      if (isVNode(content)) {
+        const pendingTransition = prepareInteropSlotTransition(
+          frag,
+          content,
+          undefined,
+          NOOP,
+        )
+        const pendingVNode = pendingTransition
+          ? pendingTransition.vnode
+          : content
+        patchSlotVNode(
+          pending.placeholder,
+          pendingVNode,
+          content.slotScopeIds,
+          pending.valid,
+        )
+      } else {
+        frag.vnode = null
+        frag.$key = undefined
+        removeRenderedContent(pending.placeholder, currentParentNode)
+        if (content) {
+          insert(content, currentParentNode, currentAnchor, suspense)
+        }
+        setRenderedContent(content || null, pending.valid)
+        finishContentUpdate()
+      }
+    })
   }
 
   frag.insert = (parentNode, anchor, parentSuspense) => {
@@ -1637,6 +1727,7 @@ function renderVDOMSlot(
     }
     scope.stop()
     disposed = true
+    pendingOutIn = undefined
     if (contentState.rendered) {
       removeRenderedContent(contentState.rendered, parentNode)
     }
@@ -1692,12 +1783,15 @@ function renderVDOMSlot(
                   ? slotContent
                   : undefined
               if (isVNode(hydratedContent)) {
-                const transitionBranch = prepareInteropSlotTransition(
+                const hydratedTransition = prepareInteropSlotTransition(
                   frag,
                   hydratedContent,
+                  undefined,
+                  NOOP,
                 )
-                const renderedHydratedContent =
-                  transitionBranch || hydratedContent
+                const renderedHydratedContent = hydratedTransition
+                  ? hydratedTransition.vnode
+                  : hydratedContent
                 frag.vnode = renderedHydratedContent
                 frag.$key = getVNodeKey(renderedHydratedContent)
                 const refreshSlotVNode = () => {
@@ -1749,6 +1843,12 @@ function renderVDOMSlot(
               return
             }
 
+            if (pendingOutIn) {
+              pendingOutIn.content = slotContent
+              pendingOutIn.valid = slotContentValid
+              return
+            }
+
             if (isVNode(slotContent)) {
               const prevRendered = contentState.rendered
               if (slotResolutionState.activeFallback && !slotContentValid) {
@@ -1769,46 +1869,48 @@ function renderVDOMSlot(
                 (!slotResolutionState.activeFallback || contentState.valid)
                   ? prevRendered
                   : null
-              const transitionBranch = prepareInteropSlotTransition(
+              const nextTransition = prepareInteropSlotTransition(
                 frag,
                 slotContent,
-                prevVNode,
+                prevVNode || undefined,
+                resumeOutIn,
               )
-              const renderedSlotContent = transitionBranch || slotContent
-              frag.vnode = renderedSlotContent
-              frag.$key = getVNodeKey(renderedSlotContent)
-              const refreshSlotVNode = () => {
-                const prevValid = contentState.valid
-                const prevOutput = frag.nodes
-                setRenderedContent(renderedSlotContent)
-                recheckResolutionAfterContentUpdate()
-                if (
-                  contentState.valid !== prevValid ||
-                  !isSameResolvedOutput(prevOutput, frag.nodes)
-                ) {
-                  notifyUpdated()
+              const renderedSlotContent = nextTransition
+                ? nextTransition.vnode
+                : slotContent
+              if (prevVNode && nextTransition && nextTransition.deferred) {
+                pendingOutIn = {
+                  content: slotContent,
+                  placeholder: renderedSlotContent,
+                  valid: slotContentValid,
                 }
+                frag.vnode = renderedSlotContent
+                frag.$key = getVNodeKey(renderedSlotContent)
+                // The renderer owns the placeholder while the outgoing VNode
+                // remains in the DOM until its leave finishes.
+                contentState.rendered = renderedSlotContent
+                internals.p(
+                  prevVNode,
+                  renderedSlotContent,
+                  currentParentNode!,
+                  currentAnchor,
+                  parentComponent as any,
+                  suspense,
+                  undefined,
+                  null,
+                )
+                return
               }
-              trackSlotVNodeUpdatesWithRefresh(
-                renderedSlotContent,
-                refreshSlotVNode,
-                notifyBeforeUpdate,
-              )
               if (prevRendered && !prevIsVNode) {
                 removeRenderedContent(prevRendered, currentParentNode!)
               }
-              internals.p(
+              // pass slotScopeIds for :slotted styles
+              patchSlotVNode(
                 prevVNode,
                 renderedSlotContent,
-                currentParentNode!,
-                currentAnchor,
-                parentComponent as any,
-                suspense,
-                undefined, // namespace
-                slotContent.slotScopeIds, // pass slotScopeIds for :slotted styles
+                slotContent.slotScopeIds,
+                slotContentValid,
               )
-              setRenderedContent(renderedSlotContent, slotContentValid)
-              finishContentUpdate()
               return
             }
 
