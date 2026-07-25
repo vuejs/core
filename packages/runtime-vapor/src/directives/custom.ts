@@ -42,10 +42,13 @@ export function withVaporDirectives(
     const pending = trackFragments(node)
     const element = getRootElement(node)
     if (!element && pending) return
+    // Only re-apply when the root element changes
     if (element === currentElement) return
 
     currentElement = element
     if (directiveScope) {
+      // The previous root element is no longer directive's target
+      // Dispose effects and cleanup bound to the previous root element
       directiveScope.stop()
       directiveScope = undefined
     }
@@ -60,6 +63,8 @@ export function withVaporDirectives(
       return
     }
 
+    // The fragment makes the root element mutable without disposing the owner scope
+    // So directive effects and cleanup need a replaceable detached scope
     directiveScope = new EffectScope(true)
     directiveScope.run(() => {
       for (const [dir, value, argument, modifiers] of dirs) {
@@ -75,6 +80,7 @@ export function withVaporDirectives(
     if (isVaporComponent(block)) {
       return trackFragments(block.block)
     }
+    // For root-level comments
     if (isArray(block)) {
       let pending = false
       for (const child of block) {
@@ -86,10 +92,13 @@ export function withVaporDirectives(
 
     if (!trackedFragments.has(block)) {
       trackedFragments.add(block)
-      ;(block.onUpdated ||= []).push(applyDirectives)
+      block.onUpdated ||= []
+      // Re-resolve the root element when the fragment updates
+      block.onUpdated.push(applyDirectives)
     }
 
     return (
+      // For VDOM interops, directives cannot resolve the root element until `syncNodes`
       (isInteropEnabled &&
         isInteropFragment(block) &&
         block.nodes === EMPTY_BLOCK) ||
@@ -99,6 +108,7 @@ export function withVaporDirectives(
 
   if (getCurrentScope()) {
     onScopeDispose(() => {
+      // To stope the detached scope when the current scope disposes
       if (directiveScope) directiveScope.stop()
     })
   }
