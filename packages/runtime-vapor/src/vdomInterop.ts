@@ -40,7 +40,7 @@ import {
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
-  prepareTransitionBranch,
+  prepareTransition,
   queuePostFlushCb,
   queuePostRenderEffect,
   renderSlot,
@@ -196,7 +196,7 @@ function prepareInteropSlotTransitionBranch(
   }
   const branch = resolveTransitionChild([vnode], true)!
   if (transition) {
-    prepareTransitionBranch(
+    prepareTransition(
       branch,
       transition.props,
       transition.state,
@@ -1778,7 +1778,7 @@ function renderVDOMSlot(
                   : null
               if (prevVNode && transition) {
                 // The previous VNode is already the prepared renderer subtree.
-                prepareTransitionBranch(
+                prepareTransition(
                   prevVNode,
                   transition.props,
                   transition.state,

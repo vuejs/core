@@ -181,7 +181,7 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      const prepared = prepareTransitionBranch(child, rawProps, state, instance)
+      const prepared = prepareTransition(child, rawProps, state, instance)
       if (!prepared) {
         return emptyPlaceholder(child)
       }
@@ -571,15 +571,15 @@ export function resolveTransitionChild(
       : undefined
 }
 
-export function prepareTransitionBranch(
-  branch: VNode,
+export function prepareTransition(
+  vnode: VNode,
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: GenericComponentInstance,
 ): { inner: VNode; hooks: TransitionHooks } | undefined {
   // in the case of <transition><keep-alive/></transition>, we need to
   // compare the type of the kept-alive children.
-  const inner = getInnerChild(branch)
+  const inner = getInnerChild(vnode)
   if (!inner) {
     return
   }
