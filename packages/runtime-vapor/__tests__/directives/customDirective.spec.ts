@@ -7,6 +7,9 @@ import {
 } from '../../src'
 import { nextTick, watchEffect } from '@vue/runtime-dom'
 import type { Mock } from 'vitest'
+import { compile, makeRender } from '../_utils'
+
+const define = makeRender()
 
 describe('custom directive', () => {
   it('should work', async () => {
@@ -105,5 +108,86 @@ describe('custom directive', () => {
     expect(
       'Runtime directive used on component with non-element root node',
     ).toHaveBeenWarned()
+  })
+
+  it('should re-apply to dynamic component root', async () => {
+    const teardown = vi.fn()
+    const data = ref({ current: 'div' })
+    const dir: VaporDirective = vi.fn(el => {
+      ;(el as Element).setAttribute('data-custom', '')
+      return teardown
+    })
+    const App = compile(
+      `<template><component :is="data.current" v-custom /></template>`,
+      data,
+    )
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+    const first = host.firstElementChild!
+
+    expect(first).toBeInstanceOf(HTMLDivElement)
+    expect(first.getAttribute('data-custom')).toBe('')
+    expect(dir).toHaveBeenCalledOnce()
+    expect(teardown).not.toHaveBeenCalled()
+
+    data.value.current = 'span'
+    await nextTick()
+
+    const second = host.firstElementChild!
+    expect(second).toBeInstanceOf(HTMLSpanElement)
+    expect(second).not.toBe(first)
+    expect(second.getAttribute('data-custom')).toBe('')
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(teardown).toHaveBeenCalledOnce()
+
+    app.unmount()
+  })
+
+  it('should re-apply when component root element changes', async () => {
+    const teardown = vi.fn()
+    const data = ref({ show: true, value: 'one' })
+    const dir: VaporDirective = vi.fn(el => {
+      watchEffect(() => {
+        ;(el as Element).setAttribute('data-value', data.value.value)
+      })
+      return teardown
+    })
+    const Child = compile(
+      `<template><div v-if="data.show" /><span v-else /></template>`,
+      data,
+    )
+    const App = compile(
+      `<template><components.Child v-custom /></template>`,
+      data,
+      { Child },
+    )
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+    const first = host.firstElementChild!
+
+    expect(first).toBeInstanceOf(HTMLDivElement)
+    expect(first.getAttribute('data-value')).toBe('one')
+    expect(dir).toHaveBeenCalledOnce()
+    expect(teardown).not.toHaveBeenCalled()
+
+    data.value.show = false
+    await nextTick()
+
+    const second = host.firstElementChild!
+    expect(second).toBeInstanceOf(HTMLSpanElement)
+    expect(second).not.toBe(first)
+    expect(second.getAttribute('data-value')).toBe('one')
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(teardown).toHaveBeenCalledOnce()
+
+    data.value.value = 'two'
+    await nextTick()
+
+    expect(first.getAttribute('data-value')).toBe('one')
+    expect(second.getAttribute('data-value')).toBe('two')
+
+    app.unmount()
   })
 })
