@@ -181,15 +181,11 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      const { inner: innerChild, hooks: enterHooks } = prepareTransitionBranch(
-        child,
-        rawProps,
-        state,
-        instance,
-      )
-      if (!innerChild || !enterHooks) {
+      const prepared = prepareTransitionBranch(child, rawProps, state, instance)
+      if (!prepared) {
         return emptyPlaceholder(child)
       }
+      const { inner: innerChild } = prepared
 
       let oldInnerChild = instance.subTree && getInnerChild(instance.subTree)
 
@@ -238,12 +234,12 @@ const BaseTransitionImpl: ComponentOptions = {
             el[leaveCbKey] = () => {
               earlyRemove()
               el[leaveCbKey] = undefined
-              delete enterHooks.delayedLeave
+              delete prepared.hooks.delayedLeave
               oldInnerChild = undefined
             }
-            enterHooks.delayedLeave = () => {
+            prepared.hooks.delayedLeave = () => {
               delayedLeave()
-              delete enterHooks.delayedLeave
+              delete prepared.hooks.delayedLeave
               oldInnerChild = undefined
             }
           }
@@ -580,29 +576,27 @@ export function prepareTransitionBranch(
   props: BaseTransitionProps<any>,
   state: TransitionState,
   instance: GenericComponentInstance,
-): {
-  inner?: VNode
-  hooks?: TransitionHooks
-} {
+): { inner: VNode; hooks: TransitionHooks } | undefined {
   // in the case of <transition><keep-alive/></transition>, we need to
   // compare the type of the kept-alive children.
   const inner = getInnerChild(branch)
   if (!inner) {
-    return {}
+    return
   }
-  let hooks: TransitionHooks
-  hooks = resolveTransitionHooks(
+  let prepared: { inner: VNode; hooks: TransitionHooks }
+  const hooks = resolveTransitionHooks(
     inner,
     props,
     state,
     instance,
-    // #11061, ensure enterHooks is fresh after clone
-    cloned => (hooks = cloned),
+    // #11061, keep the returned hooks fresh after clone
+    cloned => (prepared.hooks = cloned),
   )
+  prepared = { inner, hooks }
   if (inner.type !== Comment) {
     setTransitionHooks(inner, hooks)
   }
-  return { inner, hooks }
+  return prepared
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
