@@ -12127,6 +12127,39 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toBe('<div>content</div>')
   })
 
+  test('hydrate VDOM slot content inside Vapor Transition', async () => {
+    const data = reactive({ show: true })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild>
+          <div v-if="data.show">content</div>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template>
+            <Transition name="fade">
+              <slot />
+            </Transition>
+          </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    data.show = false
+    await nextTick()
+
+    expect(container.querySelector('div')?.className).toBe(
+      'fade-leave-from fade-leave-active',
+    )
+  })
+
   test('hydrate compiled VDOM slot child keeps owner root current after branch update', async () => {
     const data = reactive({
       child: 'span',

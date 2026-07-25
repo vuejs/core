@@ -162,16 +162,10 @@ const BaseTransitionImpl: ComponentOptions = {
     const state = useTransitionState()
 
     return () => {
-      const children =
-        slots.default && getTransitionRawChildren(slots.default(), true)
-      const child =
-        children && children.length
-          ? findNonCommentChild(children)
-          : // Keep explicit default-slot conditionals on the same transition path
-            // as regular v-if branches, which render a comment placeholder.
-            instance.subTree
-            ? createCommentVNode()
-            : undefined
+      const child = resolveTransitionChild(
+        slots.default && slots.default(),
+        !!instance.subTree,
+      )
       if (!child) {
         return
       }
@@ -187,24 +181,14 @@ const BaseTransitionImpl: ComponentOptions = {
         return emptyPlaceholder(child)
       }
 
-      // in the case of <transition><keep-alive/></transition>, we need to
-      // compare the type of the kept-alive children.
-      const innerChild = getInnerChild(child)
-      if (!innerChild) {
-        return emptyPlaceholder(child)
-      }
-
-      let enterHooks = resolveTransitionHooks(
-        innerChild,
+      const { inner: innerChild, hooks: enterHooks } = prepareTransitionBranch(
+        child,
         rawProps,
         state,
         instance,
-        // #11061, ensure enterHooks is fresh after clone
-        hooks => (enterHooks = hooks),
       )
-
-      if (innerChild.type !== Comment) {
-        setTransitionHooks(innerChild, enterHooks)
+      if (!innerChild || !enterHooks) {
+        return emptyPlaceholder(child)
       }
 
       let oldInnerChild = instance.subTree && getInnerChild(instance.subTree)
@@ -575,6 +559,50 @@ function getInnerChild(vnode: VNode): VNode | undefined {
       return (children as any).default()
     }
   }
+}
+
+export function resolveTransitionChild(
+  children: VNode[] | undefined,
+  renderEmpty: boolean = false,
+): VNode | undefined {
+  const branches = children && getTransitionRawChildren(children, true)
+  return branches && branches.length
+    ? findNonCommentChild(branches)
+    : renderEmpty
+      ? // Keep explicit default-slot conditionals on the same transition path
+        // as regular v-if branches, which render a comment placeholder.
+        createCommentVNode()
+      : undefined
+}
+
+export function prepareTransitionBranch(
+  branch: VNode,
+  props: BaseTransitionProps<any>,
+  state: TransitionState,
+  instance: GenericComponentInstance,
+): {
+  inner?: VNode
+  hooks?: TransitionHooks
+} {
+  // in the case of <transition><keep-alive/></transition>, we need to
+  // compare the type of the kept-alive children.
+  const inner = getInnerChild(branch)
+  if (!inner) {
+    return {}
+  }
+  let hooks: TransitionHooks
+  hooks = resolveTransitionHooks(
+    inner,
+    props,
+    state,
+    instance,
+    // #11061, ensure enterHooks is fresh after clone
+    cloned => (hooks = cloned),
+  )
+  if (inner.type !== Comment) {
+    setTransitionHooks(inner, hooks)
+  }
+  return { inner, hooks }
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {

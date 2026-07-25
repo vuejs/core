@@ -6,7 +6,7 @@ import {
 } from '../../src'
 import { resolveTransitionBlock } from '../../src/components/Transition'
 import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
-import { nextTick, ref } from 'vue'
+import { Fragment, defineComponent, h, nextTick, ref } from 'vue'
 import { compile, makeInteropRender, makeRender } from '../_utils'
 
 const define = makeRender()
@@ -723,6 +723,115 @@ describe('Transition', () => {
       '<span class="v-enter-from v-enter-active">slot</span>',
     )
     expect(host.innerHTML).not.toContain('<div>fallback</div>')
+  })
+
+  test('vdom slot content should participate in leave transition', async () => {
+    const data = ref({
+      show: true,
+    })
+    const Child = compile(
+      `<template>
+        <Transition name="fade">
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <div v-if="data.show">slot</div>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    expect(host.innerHTML).toContain('<div>slot</div>')
+
+    data.value.show = false
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="fade-leave-from fade-leave-active">slot</div>',
+    )
+  })
+
+  test('vdom slot content should participate in enter transition', async () => {
+    const data = ref({
+      show: false,
+    })
+    const Child = compile(
+      `<template>
+        <Transition name="fade">
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <div v-if="data.show">slot</div>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    expect(host.querySelector('div')).toBeNull()
+
+    data.value.show = true
+    await nextTick()
+
+    expect(host.innerHTML).toContain(
+      '<div class="fade-enter-from fade-enter-active">slot</div>',
+    )
+  })
+
+  test('vdom slot fragment keys should control transition child identity', async () => {
+    const key = ref('a')
+    const Child = compile(
+      `<template>
+        <Transition name="fade">
+          <slot />
+        </Transition>
+      </template>`,
+      key,
+    )
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(Child, null, {
+            default: () => [
+              h(Fragment, { key: key.value }, [h('div', 'slot')]),
+            ],
+          })
+      },
+    })
+    const { host } = defineInterop(App).render()
+    const leaving = host.querySelector('div')!
+
+    key.value = 'b'
+    await nextTick()
+
+    const children = Array.from(host.querySelectorAll('div'))
+    const entering = children.find(child => child !== leaving)!
+    expect(children).toHaveLength(2)
+    expect(leaving.className).toBe('fade-leave-from fade-leave-active')
+    expect(entering.className).toBe('fade-enter-from fade-enter-active')
   })
 
   test('slot fallback should trigger enter hooks when slot content becomes empty', async () => {

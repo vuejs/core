@@ -40,9 +40,11 @@ import {
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
+  prepareTransitionBranch,
   queuePostFlushCb,
   queuePostRenderEffect,
   renderSlot,
+  resolveTransitionChild,
   restoreCurrentInstance,
   setCurrentInstance,
   setTransitionHooks as setVNodeTransitionHooks,
@@ -150,7 +152,7 @@ import {
   ensureTransitionHooksRegistered,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
-import { registerTransitionInterop } from './transition'
+import { isVaporTransition, registerTransitionInterop } from './transition'
 import { interopKey, setInteropEnabled } from './vdomInteropState'
 import {
   type KeepAliveInstance,
@@ -176,6 +178,32 @@ function getRawTransitionChild(vnode: VNode | undefined): VNode | undefined {
   if (!vnode) return
   const children = getTransitionRawChildren([vnode])
   return children.length === 1 ? children[0] : undefined
+}
+
+function prepareInteropSlotTransitionBranch(
+  frag: RenderContextFragment,
+  vnode: VNode,
+): VNode | undefined {
+  const transition = frag.$transition
+  const instance = frag.renderInstance
+  // The slot renders before VaporTransition propagates its hooks on the first
+  // render, but it must already use the same renderer branch as BaseTransition.
+  if (
+    !transition &&
+    !(instance && isVaporTransition(instance.type as VaporComponent))
+  ) {
+    return
+  }
+  const branch = resolveTransitionChild([vnode], true)!
+  if (transition) {
+    prepareTransitionBranch(
+      branch,
+      transition.props,
+      transition.state,
+      transition.instance,
+    )
+  }
+  return branch
 }
 
 function getInteropTransitionType(vnode: VNode): VNode['type'] | undefined {
@@ -1646,36 +1674,50 @@ function renderVDOMSlot(
                   ? slotContent
                   : undefined
               if (isVNode(hydratedContent)) {
-                frag.vnode = hydratedContent
-                frag.$key = getVNodeKey(hydratedContent)
+                const transitionBranch = prepareInteropSlotTransitionBranch(
+                  frag,
+                  hydratedContent,
+                )
+                const renderedHydratedContent =
+                  transitionBranch || hydratedContent
+                frag.vnode = renderedHydratedContent
+                frag.$key = getVNodeKey(renderedHydratedContent)
                 const refreshSlotVNode = () => {
-                  frag.nodes = resolveVNodeNodes(hydratedContent)
+                  frag.nodes = resolveVNodeNodes(renderedHydratedContent)
                   notifyUpdated()
                 }
                 trackSlotVNodeUpdatesWithRefresh(
-                  hydratedContent,
+                  renderedHydratedContent,
                   refreshSlotVNode,
                   notifyBeforeUpdate,
                 )
                 // Forwarded slot fragments that resolve to an empty SSR range
                 // should stay on that range instead of re-entering it through
                 // generic Fragment hydration.
+                const hydrationParent = parentNode(currentHydrationNode!)!
                 if (
                   !hydrateForwardedEmptySlotFragment(
-                    hydratedContent,
+                    renderedHydratedContent,
                     parentComponent,
                     slotContentValid,
                   )
                 ) {
-                  hydrateVNode(hydratedContent, parentComponent as any)
+                  hydrateVNode(
+                    renderedHydratedContent,
+                    parentComponent as any,
+                    renderedHydratedContent === hydratedContent
+                      ? null
+                      : hydratedContent.slotScopeIds,
+                  )
                 }
                 // Remember the slot outlet insertion point outside the hydrated VNode range.
                 // The hydrated content itself may be removed by later VDOM patches before the
                 // fallback is inserted.
-                const hydratedEnd = hydratedContent.anchor as Node
-                currentParentNode = hydratedEnd.parentNode as ParentNode
-                currentAnchor = hydratedEnd.nextSibling
-                setRenderedContent(hydratedContent, slotContentValid)
+                currentParentNode = hydrationParent
+                currentAnchor = internals.n(
+                  renderedHydratedContent,
+                ) as Node | null
+                setRenderedContent(renderedHydratedContent, slotContentValid)
               } else if (hydratedContent) {
                 frag.vnode = null
                 frag.$key = undefined
@@ -1703,12 +1745,18 @@ function renderVDOMSlot(
                 finishContentUpdate()
                 return
               }
-              frag.vnode = slotContent
-              frag.$key = getVNodeKey(slotContent)
+              const transition = frag.$transition
+              const transitionBranch = prepareInteropSlotTransitionBranch(
+                frag,
+                slotContent,
+              )
+              const renderedSlotContent = transitionBranch || slotContent
+              frag.vnode = renderedSlotContent
+              frag.$key = getVNodeKey(renderedSlotContent)
               const refreshSlotVNode = () => {
                 const prevValid = contentState.valid
                 const prevOutput = frag.nodes
-                setRenderedContent(slotContent)
+                setRenderedContent(renderedSlotContent)
                 recheckResolutionAfterContentUpdate()
                 if (
                   contentState.valid !== prevValid ||
@@ -1718,7 +1766,7 @@ function renderVDOMSlot(
                 }
               }
               trackSlotVNodeUpdatesWithRefresh(
-                slotContent,
+                renderedSlotContent,
                 refreshSlotVNode,
                 notifyBeforeUpdate,
               )
@@ -1728,12 +1776,21 @@ function renderVDOMSlot(
                 (!slotResolutionState.activeFallback || contentState.valid)
                   ? prevRendered
                   : null
+              if (prevVNode && transition) {
+                // The previous VNode is already the prepared renderer subtree.
+                prepareTransitionBranch(
+                  prevVNode,
+                  transition.props,
+                  transition.state,
+                  transition.instance,
+                )
+              }
               if (prevRendered && !prevIsVNode) {
                 removeRenderedContent(prevRendered, currentParentNode!)
               }
               internals.p(
                 prevVNode,
-                slotContent,
+                renderedSlotContent,
                 currentParentNode!,
                 currentAnchor,
                 parentComponent as any,
@@ -1741,7 +1798,7 @@ function renderVDOMSlot(
                 undefined, // namespace
                 slotContent.slotScopeIds, // pass slotScopeIds for :slotted styles
               )
-              setRenderedContent(slotContent, slotContentValid)
+              setRenderedContent(renderedSlotContent, slotContentValid)
               finishContentUpdate()
               return
             }
@@ -1833,6 +1890,7 @@ export const vaporInteropPlugin: Plugin = app => {
 function hydrateVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
+  slotScopeIds: string[] | null = null,
 ) {
   const node = currentHydrationNode!
   if (!vdomHydrateNode) vdomHydrateNode = ensureHydrationRenderer().hydrateNode!
@@ -1841,7 +1899,7 @@ function hydrateVNode(
     vnode,
     parentComponent,
     null,
-    null,
+    slotScopeIds,
     false,
   )
   if (nextNode) setCurrentHydrationNode(nextNode)
