@@ -181,19 +181,18 @@ function getRawTransitionChild(vnode: VNode | undefined): VNode | undefined {
   return children.length === 1 ? children[0] : undefined
 }
 
-interface InteropSlotTransition {
-  vnode: VNode
-  deferred: boolean
-}
-
 function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
   previous: VNode | undefined,
   resumeAfterLeave: () => void,
-): InteropSlotTransition | undefined {
+): VNode | undefined {
   const transition = frag.$transition
   const instance = frag.renderInstance
+  // TransitionGroup owns list resolution; never collapse its VDOM fragment
+  // into the single branch expected by BaseTransition.
+  if (transition && transition.applyGroup) return
+
   // The slot renders before VaporTransition propagates its hooks on the first
   // render, but it must already use the same renderer branch as BaseTransition.
   if (
@@ -204,24 +203,19 @@ function prepareInteropSlotTransition(
   }
   const branch = resolveTransitionChild([vnode], true)!
   if (!transition) {
-    return {
-      vnode: branch,
-      deferred: false,
-    }
+    return branch
   }
 
-  const prepared = prepareTransitionSwitch(
-    previous,
-    branch,
-    transition.props,
-    transition.state,
-    transition.instance,
-    resumeAfterLeave,
+  return (
+    prepareTransitionSwitch(
+      previous,
+      branch,
+      transition.props,
+      transition.state,
+      transition.instance,
+      resumeAfterLeave,
+    ) || createCommentVNode()
   )
-  return {
-    vnode: prepared || createCommentVNode(),
-    deferred: transition.state.isLeaving,
-  }
 }
 
 function getInteropTransitionType(vnode: VNode): VNode['type'] | undefined {
@@ -1662,15 +1656,9 @@ function renderVDOMSlot(
 
       const content = pending.content
       if (isVNode(content)) {
-        const pendingTransition = prepareInteropSlotTransition(
-          frag,
-          content,
-          undefined,
-          NOOP,
-        )
-        const pendingVNode = pendingTransition
-          ? pendingTransition.vnode
-          : content
+        const pendingVNode =
+          prepareInteropSlotTransition(frag, content, undefined, NOOP) ||
+          content
         patchSlotVNode(
           pending.placeholder,
           pendingVNode,
@@ -1789,9 +1777,8 @@ function renderVDOMSlot(
                   undefined,
                   NOOP,
                 )
-                const renderedHydratedContent = hydratedTransition
-                  ? hydratedTransition.vnode
-                  : hydratedContent
+                const renderedHydratedContent =
+                  hydratedTransition || hydratedContent
                 frag.vnode = renderedHydratedContent
                 frag.$key = getVNodeKey(renderedHydratedContent)
                 const refreshSlotVNode = () => {
@@ -1875,10 +1862,14 @@ function renderVDOMSlot(
                 prevVNode || undefined,
                 resumeOutIn,
               )
-              const renderedSlotContent = nextTransition
-                ? nextTransition.vnode
-                : slotContent
-              if (prevVNode && nextTransition && nextTransition.deferred) {
+              const renderedSlotContent = nextTransition || slotContent
+              const transition = frag.$transition
+              if (
+                prevVNode &&
+                nextTransition &&
+                transition &&
+                transition.state.isLeaving
+              ) {
                 pendingOutIn = {
                   content: slotContent,
                   placeholder: renderedSlotContent,
