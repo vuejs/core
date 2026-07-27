@@ -12164,6 +12164,65 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate Vapor Transition fallback in out-in mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = reactive({
+      show: false,
+      onLeave,
+    })
+    // VDOM SSR preserves an all-comment slot inside Transition, so omit the
+    // dynamic slot entirely to make the fallback the server-rendered branch.
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild>
+          <template #default v-if="data.show">
+            <div class="content">content</div>
+          </template>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <Transition
+                mode="out-in"
+                :css="false"
+                @leave="data.onLeave"
+              >
+                <slot><div class="fallback">fallback</div></slot>
+              </Transition>
+            </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+    const fallback = container.querySelector('.fallback')
+
+    expect(fallback).not.toBeNull()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.show = true
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(container.querySelector('.fallback')).toBe(fallback)
+    expect(container.querySelector('.content')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(container.querySelector('.fallback')).toBeNull()
+    expect(container.querySelector('.content')?.textContent).toBe('content')
+  })
+
   test('hydrate compiled VDOM slot child keeps owner root current after branch update', async () => {
     const data = reactive({
       child: 'span',
