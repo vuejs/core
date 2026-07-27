@@ -12145,6 +12145,7 @@ describe('VDOM interop', () => {
             <Transition name="fade">
               <slot />
             </Transition>
+            <span id="after">after</span>
           </template>`,
           vapor: true,
         },
@@ -12157,6 +12158,9 @@ describe('VDOM interop', () => {
 
     expect(container.querySelector('div')?.className).toBe(
       'fade-leave-from fade-leave-active',
+    )
+    expect(container.querySelector('#after')?.previousElementSibling).toBe(
+      container.querySelector('div'),
     )
   })
 

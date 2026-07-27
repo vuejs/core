@@ -19,7 +19,7 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
+import { NOOP, PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import {
@@ -160,13 +160,7 @@ const BaseTransitionImpl: ComponentOptions = {
   setup(props: BaseTransitionProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
-    const resumeAfterLeave = () => {
-      // #6835
-      // it also needs to be updated when active is undefined
-      if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
-        instance.update()
-      }
-    }
+    let resumeAfterLeave: (() => void) | undefined
 
     return () => {
       const child = resolveTransitionChild(
@@ -190,7 +184,14 @@ const BaseTransitionImpl: ComponentOptions = {
         rawProps,
         state,
         instance,
-        resumeAfterLeave,
+        mode === 'out-in'
+          ? (resumeAfterLeave ||= () => {
+              // #6835: update even when the active branch is undefined.
+              if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
+                instance.update()
+              }
+            })
+          : NOOP,
       )
     }
   },
@@ -512,34 +513,6 @@ export function resolveTransitionChild(
       : undefined
 }
 
-function prepareTransition(
-  vnode: VNode,
-  props: BaseTransitionProps<any>,
-  state: TransitionState,
-  instance: GenericComponentInstance,
-): { inner: VNode; hooks: TransitionHooks } | undefined {
-  // in the case of <transition><keep-alive/></transition>, we need to
-  // compare the type of the kept-alive children.
-  const inner = getInnerChild(vnode)
-  if (!inner) {
-    return
-  }
-  let prepared: { inner: VNode; hooks: TransitionHooks }
-  const hooks = resolveTransitionHooks(
-    inner,
-    props,
-    state,
-    instance,
-    // #11061, keep the returned hooks fresh after clone
-    cloned => (prepared.hooks = cloned),
-  )
-  prepared = { inner, hooks }
-  if (inner.type !== Comment) {
-    setTransitionHooks(inner, hooks)
-  }
-  return prepared
-}
-
 /**
  * @internal
  */
@@ -555,9 +528,20 @@ export function prepareTransitionSwitch(
     return emptyPlaceholder(next)
   }
 
-  const prepared = prepareTransition(next, props, state, instance)
-  if (!prepared) {
+  const nextInner = getInnerChild(next)
+  if (!nextInner) {
     return emptyPlaceholder(next)
+  }
+  let enterHooks = resolveTransitionHooks(
+    nextInner,
+    props,
+    state,
+    instance,
+    // #11061: keep enter hooks in sync when the incoming VNode is cloned.
+    hooks => (enterHooks = hooks),
+  )
+  if (nextInner.type !== Comment) {
+    setTransitionHooks(nextInner, enterHooks)
   }
 
   let previousInner = previous && getInnerChild(previous)
@@ -565,25 +549,31 @@ export function prepareTransitionSwitch(
     previous &&
     previousInner &&
     previousInner.type !== Comment &&
-    !isSameVNodeType(previousInner, prepared.inner) &&
+    !isSameVNodeType(previousInner, nextInner) &&
     (!previous.component ||
       recursiveGetSubtree(previous.component).type !== Comment)
   ) {
     // update old tree's hooks in case of dynamic transition
-    const leaving = prepareTransition(previous, props, state, instance)!
+    const leavingHooks = resolveTransitionHooks(
+      previousInner,
+      props,
+      state,
+      instance,
+    )
+    setTransitionHooks(previousInner, leavingHooks)
 
     // switching between different views
-    if (props.mode === 'out-in' && prepared.inner.type !== Comment) {
+    if (props.mode === 'out-in' && nextInner.type !== Comment) {
       state.isLeaving = true
-      leaving.hooks.afterLeave = () => {
+      leavingHooks.afterLeave = () => {
         state.isLeaving = false
         resumeAfterLeave()
-        delete leaving.hooks.afterLeave
+        delete leavingHooks.afterLeave
         previousInner = undefined
       }
       return emptyPlaceholder(next)
-    } else if (props.mode === 'in-out' && prepared.inner.type !== Comment) {
-      leaving.hooks.delayLeave = (
+    } else if (props.mode === 'in-out' && nextInner.type !== Comment) {
+      leavingHooks.delayLeave = (
         el: TransitionElement,
         earlyRemove,
         delayedLeave,
@@ -594,12 +584,12 @@ export function prepareTransitionSwitch(
         el[leaveCbKey] = () => {
           earlyRemove()
           el[leaveCbKey] = undefined
-          delete prepared.hooks.delayedLeave
+          delete enterHooks.delayedLeave
           previousInner = undefined
         }
-        prepared.hooks.delayedLeave = () => {
+        enterHooks.delayedLeave = () => {
           delayedLeave()
-          delete prepared.hooks.delayedLeave
+          delete enterHooks.delayedLeave
           previousInner = undefined
         }
       }

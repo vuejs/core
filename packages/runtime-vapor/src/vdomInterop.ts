@@ -88,6 +88,7 @@ import {
   NOOP,
   ShapeFlags,
   extend,
+  hasOwn,
   isArray,
   isFunction,
   isObject,
@@ -181,20 +182,37 @@ function getRawTransitionChild(vnode: VNode | undefined): VNode | undefined {
   return children.length === 1 ? children[0] : undefined
 }
 
+function isVaporTransitionHooks(
+  hooks: TransitionHooks | undefined,
+): hooks is VaporTransitionHooks {
+  return !!(
+    hooks &&
+    hasOwn(hooks, 'state') &&
+    hasOwn(hooks, 'props') &&
+    hasOwn(hooks, 'instance')
+  )
+}
+
 function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
   previous: VNode | undefined,
   resumeAfterLeave: () => void,
 ): VNode | undefined {
-  const transition = frag.$transition
+  const transition = frag.$transition as TransitionHooks | undefined
   const instance = frag.renderInstance
+  // Hooks inherited from VDOM BaseTransition already belong to its state
+  // machine. Only forward them through the Vapor slot boundary.
+  if (transition && !isVaporTransitionHooks(transition)) {
+    setVNodeTransitionHooks(vnode, transition)
+    return
+  }
   // TransitionGroup owns list resolution; never collapse its VDOM fragment
   // into the single branch expected by BaseTransition.
   if (transition && transition.applyGroup) return
 
-  // The slot renders before VaporTransition propagates its hooks on the first
-  // render, but it must already use the same renderer branch as BaseTransition.
+  // The slot can render before VaporTransition propagates its hooks, notably
+  // during hydration, but it must already use BaseTransition's branch shape.
   if (
     !transition &&
     !(instance && isVaporTransition(instance.type as VaporComponent))
@@ -1474,7 +1492,7 @@ function renderVDOMSlot(
     | {
         content: VNode | Block | undefined
         placeholder: VNode
-        valid: boolean
+        contentValid: boolean
       }
     | undefined
   const scope = effectScope()
@@ -1582,26 +1600,6 @@ function renderVDOMSlot(
     notifyUpdated()
   }
 
-  const trackSlotVNode = (vnode: VNode): void => {
-    const refreshSlotVNode = () => {
-      const prevValid = contentState.valid
-      const prevOutput = frag.nodes
-      setRenderedContent(vnode)
-      recheckResolutionAfterContentUpdate()
-      if (
-        contentState.valid !== prevValid ||
-        !isSameResolvedOutput(prevOutput, frag.nodes)
-      ) {
-        notifyUpdated()
-      }
-    }
-    trackSlotVNodeUpdatesWithRefresh(
-      vnode,
-      refreshSlotVNode,
-      notifyBeforeUpdate,
-    )
-  }
-
   const patchSlotVNode = (
     previous: VNode | null,
     next: VNode,
@@ -1610,7 +1608,19 @@ function renderVDOMSlot(
   ): void => {
     frag.vnode = next
     frag.$key = getVNodeKey(next)
-    trackSlotVNode(next)
+    const refreshSlotVNode = () => {
+      const prevValid = contentState.valid
+      const prevOutput = frag.nodes
+      setRenderedContent(next)
+      recheckResolutionAfterContentUpdate()
+      if (
+        contentState.valid !== prevValid ||
+        !isSameResolvedOutput(prevOutput, frag.nodes)
+      ) {
+        notifyUpdated()
+      }
+    }
+    trackSlotVNodeUpdatesWithRefresh(next, refreshSlotVNode, notifyBeforeUpdate)
     internals.p(
       previous,
       next,
@@ -1656,14 +1666,14 @@ function renderVDOMSlot(
 
       const content = pending.content
       if (isVNode(content)) {
-        const pendingVNode =
+        const nextVNode =
           prepareInteropSlotTransition(frag, content, undefined, NOOP) ||
           content
         patchSlotVNode(
           pending.placeholder,
-          pendingVNode,
+          nextVNode,
           content.slotScopeIds,
-          pending.valid,
+          pending.contentValid,
         )
       } else {
         frag.vnode = null
@@ -1672,7 +1682,7 @@ function renderVDOMSlot(
         if (content) {
           insert(content, currentParentNode, currentAnchor, suspense)
         }
-        setRenderedContent(content || null, pending.valid)
+        setRenderedContent(content || null, pending.contentValid)
         finishContentUpdate()
       }
     })
@@ -1771,22 +1781,21 @@ function renderVDOMSlot(
                   ? slotContent
                   : undefined
               if (isVNode(hydratedContent)) {
-                const hydratedTransition = prepareInteropSlotTransition(
+                const transitionChild = prepareInteropSlotTransition(
                   frag,
                   hydratedContent,
                   undefined,
                   NOOP,
                 )
-                const renderedHydratedContent =
-                  hydratedTransition || hydratedContent
-                frag.vnode = renderedHydratedContent
-                frag.$key = getVNodeKey(renderedHydratedContent)
+                const hydrationVNode = transitionChild || hydratedContent
+                frag.vnode = hydrationVNode
+                frag.$key = getVNodeKey(hydrationVNode)
                 const refreshSlotVNode = () => {
-                  frag.nodes = resolveVNodeNodes(renderedHydratedContent)
+                  frag.nodes = resolveVNodeNodes(hydrationVNode)
                   notifyUpdated()
                 }
                 trackSlotVNodeUpdatesWithRefresh(
-                  renderedHydratedContent,
+                  hydrationVNode,
                   refreshSlotVNode,
                   notifyBeforeUpdate,
                 )
@@ -1796,15 +1805,15 @@ function renderVDOMSlot(
                 const hydrationParent = parentNode(currentHydrationNode!)!
                 if (
                   !hydrateForwardedEmptySlotFragment(
-                    renderedHydratedContent,
+                    hydrationVNode,
                     parentComponent,
                     slotContentValid,
                   )
                 ) {
                   hydrateVNode(
-                    renderedHydratedContent,
+                    hydrationVNode,
                     parentComponent as any,
-                    renderedHydratedContent === hydratedContent
+                    hydrationVNode === hydratedContent
                       ? null
                       : hydratedContent.slotScopeIds,
                   )
@@ -1813,10 +1822,8 @@ function renderVDOMSlot(
                 // The hydrated content itself may be removed by later VDOM patches before the
                 // fallback is inserted.
                 currentParentNode = hydrationParent
-                currentAnchor = internals.n(
-                  renderedHydratedContent,
-                ) as Node | null
-                setRenderedContent(renderedHydratedContent, slotContentValid)
+                currentAnchor = internals.n(hydrationVNode) as Node | null
+                setRenderedContent(hydrationVNode, slotContentValid)
               } else if (hydratedContent) {
                 frag.vnode = null
                 frag.$key = undefined
@@ -1832,7 +1839,7 @@ function renderVDOMSlot(
 
             if (pendingOutIn) {
               pendingOutIn.content = slotContent
-              pendingOutIn.valid = slotContentValid
+              pendingOutIn.contentValid = slotContentValid
               return
             }
 
@@ -1856,33 +1863,33 @@ function renderVDOMSlot(
                 (!slotResolutionState.activeFallback || contentState.valid)
                   ? prevRendered
                   : null
-              const nextTransition = prepareInteropSlotTransition(
+              const transitionChild = prepareInteropSlotTransition(
                 frag,
                 slotContent,
                 prevVNode || undefined,
                 resumeOutIn,
               )
-              const renderedSlotContent = nextTransition || slotContent
+              const nextVNode = transitionChild || slotContent
               const transition = frag.$transition
               if (
                 prevVNode &&
-                nextTransition &&
+                transitionChild &&
                 transition &&
                 transition.state.isLeaving
               ) {
                 pendingOutIn = {
                   content: slotContent,
-                  placeholder: renderedSlotContent,
-                  valid: slotContentValid,
+                  placeholder: nextVNode,
+                  contentValid: slotContentValid,
                 }
-                frag.vnode = renderedSlotContent
-                frag.$key = getVNodeKey(renderedSlotContent)
+                frag.vnode = nextVNode
+                frag.$key = getVNodeKey(nextVNode)
                 // The renderer owns the placeholder while the outgoing VNode
                 // remains in the DOM until its leave finishes.
-                contentState.rendered = renderedSlotContent
+                contentState.rendered = nextVNode
                 internals.p(
                   prevVNode,
-                  renderedSlotContent,
+                  nextVNode,
                   currentParentNode!,
                   currentAnchor,
                   parentComponent as any,
@@ -1895,10 +1902,11 @@ function renderVDOMSlot(
               if (prevRendered && !prevIsVNode) {
                 removeRenderedContent(prevRendered, currentParentNode!)
               }
-              // pass slotScopeIds for :slotted styles
+              // Preserve the original slot wrapper's scope IDs for :slotted
+              // styles.
               patchSlotVNode(
                 prevVNode,
-                renderedSlotContent,
+                nextVNode,
                 slotContent.slotScopeIds,
                 slotContentValid,
               )
