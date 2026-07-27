@@ -140,6 +140,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
         applyTransitionHooksImpl,
         () => false,
         () => false,
+        () => false,
       )
     }
 

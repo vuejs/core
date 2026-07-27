@@ -41,6 +41,7 @@ import {
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
+  prepareTransitionLeave,
   prepareTransitionSwitch,
   queuePostFlushCb,
   queuePostRenderEffect,
@@ -88,7 +89,6 @@ import {
   NOOP,
   ShapeFlags,
   extend,
-  hasOwn,
   isArray,
   isFunction,
   isObject,
@@ -141,6 +141,7 @@ import {
   type SlotResolutionState,
   disposeSlotResolution,
   insertActiveSlotFallback,
+  leaveSlotFallback,
   markSlotResolutionDirty,
   recheckSlotResolution,
 } from './slotFragment'
@@ -185,12 +186,7 @@ function getRawTransitionChild(vnode: VNode | undefined): VNode | undefined {
 function isVaporTransitionHooks(
   hooks: TransitionHooks | undefined,
 ): hooks is VaporTransitionHooks {
-  return !!(
-    hooks &&
-    hasOwn(hooks, 'state') &&
-    hasOwn(hooks, 'props') &&
-    hasOwn(hooks, 'instance')
-  )
+  return !!hooks && (hooks as VaporTransitionHooks).__vapor === true
 }
 
 function prepareInteropSlotTransition(
@@ -198,6 +194,7 @@ function prepareInteropSlotTransition(
   vnode: VNode,
   previous: VNode | undefined,
   resumeAfterLeave: () => void,
+  delayedLeaveSource?: TransitionHooks,
 ): VNode | undefined {
   const transition = frag.$transition as TransitionHooks | undefined
   const instance = frag.renderInstance
@@ -232,6 +229,7 @@ function prepareInteropSlotTransition(
       transition.state,
       transition.instance,
       resumeAfterLeave,
+      delayedLeaveSource || transition,
     ) || createCommentVNode()
   )
 }
@@ -1488,10 +1486,11 @@ function renderVDOMSlot(
   let currentParentNode: ParentNode | null = null
   let currentAnchor: Node | null = null
   let disposed = false
+  let pendingInOutVNode: VNode | undefined
   let pendingOutIn:
     | {
         content: VNode | Block | undefined
-        placeholder: VNode
+        placeholder: VNode | null
         contentValid: boolean
       }
     | undefined
@@ -1501,6 +1500,24 @@ function renderVDOMSlot(
   let localFallback: BlockFn | undefined
   let slotResolutionState!: SlotResolutionState
   const cleanupInvalidContent = () => {
+    const pending = pendingInOutVNode
+    if (pending) {
+      pendingInOutVNode = undefined
+      const transition = slotResolutionState.$transition
+      const fallback = slotResolutionState.activeFallback
+      if (transition) {
+        prepareTransitionLeave(
+          pending,
+          fallback && isValidSlot(fallback) ? transition : undefined,
+          transition.props,
+          transition.state,
+          transition.instance,
+          NOOP,
+        )
+      }
+      internals.um(pending, parentComponent as any, null, true)
+      return
+    }
     if (currentParentNode) {
       removeAttachedNodes(contentState.nodes, currentParentNode)
     }
@@ -1524,9 +1541,19 @@ function renderVDOMSlot(
   slotResolutionState = {
     boundary,
     activeFallback: null,
+    fallbackInserted: false,
     pendingRecheck: false,
     pendingRecheckForce: false,
     isRenderingFallback: false,
+    get $transition() {
+      const transition = frag.$transition
+      return transition && isVaporTransitionHooks(transition)
+        ? transition
+        : undefined
+    },
+    set $transition(transition) {
+      frag.$transition = transition
+    },
     getContent: () => contentState.nodes,
     getParentNode: () => currentParentNode,
     getAnchor: () => currentAnchor,
@@ -1678,7 +1705,9 @@ function renderVDOMSlot(
       } else {
         frag.vnode = null
         frag.$key = undefined
-        removeRenderedContent(pending.placeholder, currentParentNode)
+        if (pending.placeholder) {
+          removeRenderedContent(pending.placeholder, currentParentNode)
+        }
         if (content) {
           insert(content, currentParentNode, currentAnchor, suspense)
         }
@@ -1845,6 +1874,9 @@ function renderVDOMSlot(
 
             if (isVNode(slotContent)) {
               const prevRendered = contentState.rendered
+              const transition = slotResolutionState.$transition
+              const mode = transition && transition.props.mode
+              let delayedLeaveSource: TransitionHooks | undefined
               if (slotResolutionState.activeFallback && !slotContentValid) {
                 // Re-run the slot only to refresh validity. While fallback is
                 // active, a still-invalid VNode must stay out of the live DOM.
@@ -1857,20 +1889,103 @@ function renderVDOMSlot(
                 finishContentUpdate()
                 return
               }
+              if (
+                slotResolutionState.activeFallback &&
+                slotContentValid &&
+                transition
+              ) {
+                if (mode === 'out-in') {
+                  pendingOutIn = {
+                    content: slotContent,
+                    placeholder: null,
+                    contentValid: true,
+                  }
+                  if (
+                    leaveSlotFallback(
+                      slotResolutionState,
+                      transition,
+                      resumeOutIn,
+                    )
+                  ) {
+                    return
+                  }
+                  pendingOutIn = undefined
+                } else if (mode === 'in-out') {
+                  // Keep the fallback's current enter hooks separate from the
+                  // delayed leave that will be forwarded to the incoming VNode.
+                  const enterHooks = extend({}, transition)
+                  delete enterHooks.delayedLeave
+                  leaveSlotFallback(slotResolutionState, enterHooks, NOOP)
+                  delayedLeaveSource = enterHooks
+                }
+              }
               const prevIsVNode = isVNode(prevRendered)
               const prevVNode =
                 prevIsVNode &&
                 (!slotResolutionState.activeFallback || contentState.valid)
                   ? prevRendered
                   : null
+              if (
+                prevVNode &&
+                !slotContentValid &&
+                transition &&
+                hasSlotFallback(boundary)
+              ) {
+                if (mode === 'out-in') {
+                  const placeholder =
+                    prepareInteropSlotTransition(
+                      frag,
+                      slotContent,
+                      undefined,
+                      NOOP,
+                    ) || createCommentVNode()
+                  if (
+                    prepareTransitionLeave(
+                      prevVNode,
+                      undefined,
+                      transition.props,
+                      transition.state,
+                      transition.instance,
+                      resumeOutIn,
+                    )
+                  ) {
+                    pendingOutIn = {
+                      content: slotContent,
+                      placeholder,
+                      contentValid: false,
+                    }
+                    frag.vnode = placeholder
+                    frag.$key = getVNodeKey(placeholder)
+                    contentState.rendered = placeholder
+                    internals.p(
+                      prevVNode,
+                      placeholder,
+                      currentParentNode!,
+                      currentAnchor,
+                      parentComponent as any,
+                      suspense,
+                      undefined,
+                      null,
+                    )
+                    return
+                  }
+                } else if (mode === 'in-out') {
+                  pendingInOutVNode = prevVNode
+                  frag.vnode = null
+                  frag.$key = undefined
+                  setRenderedContent(null)
+                  finishContentUpdate()
+                  return
+                }
+              }
               const transitionChild = prepareInteropSlotTransition(
                 frag,
                 slotContent,
                 prevVNode || undefined,
                 resumeOutIn,
+                delayedLeaveSource,
               )
               const nextVNode = transitionChild || slotContent
-              const transition = frag.$transition
               if (
                 prevVNode &&
                 transitionChild &&
@@ -2199,6 +2314,7 @@ function renderVaporSlot(
     slotResolutionState = {
       boundary: localFallbackBoundary,
       activeFallback: null,
+      fallbackInserted: false,
       pendingRecheck: false,
       pendingRecheckForce: false,
       isRenderingFallback: false,

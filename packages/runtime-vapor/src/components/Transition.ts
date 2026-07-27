@@ -77,6 +77,7 @@ export const ensureTransitionHooksRegistered = (): void => {
     registered = true
     registerTransitionHooks(
       applyTransitionHooksImpl,
+      applyTransitionLeaveHooksImpl,
       deferBranchUpdateDuringLeaveImpl,
       removeBranchWithLeaveImpl,
     )
@@ -205,6 +206,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     )
 
     let appliedHooks = {
+      __vapor: true,
       state,
       // use proxy to keep props reference stable
       props: propsProxy,
@@ -350,6 +352,7 @@ export function resolveTransitionHooks(
     state,
     instance,
   ) as VaporTransitionHooks
+  hooks.__vapor = true
   hooks.state = state
   hooks.props = props
   hooks.instance = instance as VaporComponentInstance
@@ -448,13 +451,13 @@ function isStructuralTransitionFragment(fragment: VaporFragment): boolean {
   )
 }
 
-function applyTransitionLeaveHooksImpl(
+export function applyTransitionLeaveHooksImpl(
   block: Block,
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
-): void {
+): boolean {
   const leavingBlock = resolveTransitionBlock(block)
-  if (!leavingBlock) return undefined
+  if (!leavingBlock) return false
 
   const { props, state, instance } = enterHooks
   const leavingHooks = resolveTransitionHooks(
@@ -509,6 +512,7 @@ function applyTransitionLeaveHooksImpl(
       enterHooks.delayedLeave = delayedLeaveCb
     }
   }
+  return true
 }
 
 function deferBranchUpdateDuringLeaveImpl(

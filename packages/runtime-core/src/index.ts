@@ -684,6 +684,7 @@ export {
   baseResolveTransitionHooks,
   checkTransitionMode,
   leaveCbKey,
+  prepareTransitionLeave,
   prepareTransitionSwitch,
   resolveTransitionChild,
 } from './components/BaseTransition'

@@ -124,6 +124,7 @@ function createTestSlotResolutionState(options: {
   state = {
     boundary,
     activeFallback: null,
+    fallbackInserted: false,
     pendingRecheck: false,
     pendingRecheckForce: false,
     isRenderingFallback: false,
@@ -765,6 +766,7 @@ describe('component: slots', () => {
       state = {
         boundary,
         activeFallback: null,
+        fallbackInserted: false,
         pendingRecheck: false,
         pendingRecheckForce: false,
         isRenderingFallback: false,
@@ -810,6 +812,7 @@ describe('component: slots', () => {
       state = {
         boundary,
         activeFallback: null,
+        fallbackInserted: false,
         pendingRecheck: false,
         pendingRecheckForce: false,
         isRenderingFallback: false,
