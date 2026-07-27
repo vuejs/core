@@ -593,9 +593,12 @@ export function prepareTransitionSwitch(
           previousInner = undefined
         }
       }
+      return next
     }
   }
 
+  // avoid retaining the previous tree through enterHooks' clone callback
+  previousInner = undefined
   return next
 }
 
