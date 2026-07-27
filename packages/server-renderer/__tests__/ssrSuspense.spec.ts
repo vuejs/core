@@ -107,9 +107,10 @@ describe('SSR Suspense', () => {
 
   // nuxt/nuxt#28162
   test('propagates sync errors from compiled ssrRenderSuspense default slot', async () => {
+    const error = new TypeError('bang')
     const Throwing = defineComponent({
       ssrRender(_ctx: any, _push: any) {
-        throw new TypeError('bang')
+        throw error
       },
     })
 
@@ -124,7 +125,10 @@ describe('SSR Suspense', () => {
       },
     })
 
-    await expect(renderToString(createApp(Root))).rejects.toThrow('bang')
+    await expect(renderToString(createApp(Root))).rejects.toBe(error)
+    expect(
+      '[Vue warn]: Unhandled error during execution of render function',
+    ).toHaveBeenWarnedTimes(1)
   })
 
   test('passing suspense in failing suspense', async () => {

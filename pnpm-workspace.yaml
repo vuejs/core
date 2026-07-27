@@ -9,10 +9,11 @@ catalog:
   'estree-walker': ^2.0.2
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
-  'vite': ^8.1.0
-  '@vitejs/plugin-vue': ^6.0.7
+  'vite': ^8.1.4
+  '@vitejs/plugin-vue': ^6.0.8
 
 allowBuilds:
+  '@parcel/watcher': true
   '@swc/core': true
   'esbuild': true
   'puppeteer': true

@@ -316,11 +316,9 @@ export function setupBrowserE2E(): BrowserUtils {
         return
       }
       const error = ((e: ErrorEvent) => handler(e.error || e.message)) as
-        | EventListener
-        | any
+        EventListener | any
       const rejection = ((e: PromiseRejectionEvent) => handler(e.reason)) as
-        | EventListener
-        | any
+        EventListener | any
       pageErrorHandlers.set(handler, { error, rejection })
       window.addEventListener('error', error)
       window.addEventListener('unhandledrejection', rejection)

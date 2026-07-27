@@ -344,17 +344,10 @@ type InferDefaults<T> = {
 }
 
 type NativeType =
-  | null
-  | undefined
-  | number
-  | string
-  | boolean
-  | symbol
-  | Function
+  null | undefined | number | string | boolean | symbol | Function
 
 type InferDefault<P, T> =
-  | ((props: P) => T & {})
-  | (T extends NativeType ? T : never)
+  ((props: P) => T & {}) | (T extends NativeType ? T : never)
 
 type PropsWithDefaults<
   T,
@@ -362,9 +355,9 @@ type PropsWithDefaults<
   BKeys extends keyof T,
 > = T extends unknown
   ? Readonly<MappedOmit<T, keyof Defaults>> & {
-      readonly [K in keyof Defaults as K extends keyof T
-        ? K
-        : never]-?: K extends keyof T
+      readonly [
+        K in keyof Defaults as K extends keyof T ? K : never
+      ]-?: K extends keyof T
         ? Defaults[K] extends undefined
           ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
           : NotUndefined<T[K]>

@@ -1,4 +1,4 @@
-import { initDirectivesForSSR } from 'vue'
+import { initDirectivesForSSR } from '@vue/runtime-dom'
 initDirectivesForSSR()
 
 // public

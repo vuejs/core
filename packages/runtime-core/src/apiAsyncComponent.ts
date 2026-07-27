@@ -123,6 +123,7 @@ export function defineAsyncComponent<
     __asyncLoader: load,
 
     __asyncHydrate(el, instance, hydrate) {
+      const wasConnected = el.isConnected
       let patched = false
       ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
       const performHydrate = () => {
@@ -136,6 +137,7 @@ export function defineAsyncComponent<
           }
           return
         }
+        if (!el.parentNode || (wasConnected && !el.isConnected)) return
         hydrate()
       }
       const doHydrate = hydrateStrategy

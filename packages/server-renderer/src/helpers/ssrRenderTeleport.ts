@@ -1,4 +1,4 @@
-import { type ComponentInternalInstance, ssrContextKey } from 'vue'
+import { type ComponentInternalInstance, ssrContextKey } from '@vue/runtime-dom'
 import { isArray, isPromise } from '@vue/shared'
 import {
   type PushFn,

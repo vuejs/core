@@ -97,8 +97,7 @@ export type SimpleTypeResolveContext = Pick<
   }
 
 export type TypeResolveContext = (
-  | ScriptCompileContext
-  | SimpleTypeResolveContext
+  ScriptCompileContext | SimpleTypeResolveContext
 ) & {
   silentOnExtendsFailure?: boolean
 }
@@ -761,10 +760,7 @@ function resolveBuiltin(
 }
 
 type ReferenceTypes =
-  | TSTypeReference
-  | TSExpressionWithTypeArguments
-  | TSImportType
-  | TSTypeQuery
+  TSTypeReference | TSExpressionWithTypeArguments | TSImportType | TSTypeQuery
 
 function resolveTypeReference(
   ctx: TypeResolveContext,

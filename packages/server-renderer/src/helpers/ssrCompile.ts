@@ -2,13 +2,13 @@ import {
   type ComponentInternalInstance,
   type ComponentOptions,
   warn,
-} from 'vue'
+} from '@vue/runtime-dom'
 import { compile } from '@vue/compiler-ssr'
 import { NO, extend, generateCodeFrame, isFunction } from '@vue/shared'
 import type { CompilerError, CompilerOptions } from '@vue/compiler-core'
 import type { PushFn } from '../render'
 
-import * as Vue from 'vue'
+import * as Vue from '@vue/runtime-dom'
 import * as helpers from '../internal'
 
 type SSRRenderFunction = (

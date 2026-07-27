@@ -1,3 +1,18 @@
+## [3.5.40](https://github.com/vuejs/core/compare/v3.5.39...v3.5.40) (2026-07-16)
+
+### Bug Fixes
+
+* **compiler-core:** avoid leaking slot branch keys ([#15051](https://github.com/vuejs/core/issues/15051)) ([20c9d26](https://github.com/vuejs/core/commit/20c9d263d3bfafdfbcc1921f259fd8f711e18659)), closes [#15048](https://github.com/vuejs/core/issues/15048)
+* **hydration:** pass namespace when patching dynamic props ([#15082](https://github.com/vuejs/core/issues/15082)) ([e0d2723](https://github.com/vuejs/core/commit/e0d27234ddd2061383cb5dcc475d6b9558ed8e4f)), closes [#15081](https://github.com/vuejs/core/issues/15081) [#15050](https://github.com/vuejs/core/issues/15050)
+* **reactivity:** handle effect removal during scope stop ([#15084](https://github.com/vuejs/core/issues/15084)) ([378f978](https://github.com/vuejs/core/commit/378f9783248a4a4f20781d665d4f7089f39cae6e)), closes [#15083](https://github.com/vuejs/core/issues/15083)
+* **runtime-core:** skip lazy hydration for detached roots ([#15092](https://github.com/vuejs/core/issues/15092)) ([97f3525](https://github.com/vuejs/core/commit/97f3525551ad06103083eb2cbf9858c5e57cd58e)), closes [#15091](https://github.com/vuejs/core/issues/15091)
+* **runtime-core:** unwind dangling blocks when slot content throws ([#15071](https://github.com/vuejs/core/issues/15071)) ([ddc132d](https://github.com/vuejs/core/commit/ddc132d7c054ecd2029ddcc95bcba770cd44f022)), closes [#15070](https://github.com/vuejs/core/issues/15070)
+* **runtime-dom:** respect current select model type ([#15010](https://github.com/vuejs/core/issues/15010)) ([eb89e93](https://github.com/vuejs/core/commit/eb89e935a771ab7fc3f8e67a82bc8fc7ea28bdaa)), closes [#15009](https://github.com/vuejs/core/issues/15009)
+* **server-renderer:** handle errors in optimized component renders ([#12601](https://github.com/vuejs/core/issues/12601)) ([474907c](https://github.com/vuejs/core/commit/474907c0f01d021c564545137051a2b56eb4a769)), closes [#12575](https://github.com/vuejs/core/issues/12575)
+* **server-renderer:** remove package dependency cycle ([#15063](https://github.com/vuejs/core/issues/15063)) ([4d35eca](https://github.com/vuejs/core/commit/4d35ecadb6f625b0f7407ccee0e357c2dd8084c7))
+* **shared:** prevent SSR comment escaping from creating closing delimiters ([#15045](https://github.com/vuejs/core/issues/15045)) ([bd962bb](https://github.com/vuejs/core/commit/bd962bbaca746d8f65775a07723420406ebad0da))
+* **types:** don't constrain component $el type to Element ([#15040](https://github.com/vuejs/core/issues/15040)) ([164460a](https://github.com/vuejs/core/commit/164460a52988c44dc34a541219c88120078372a0))
+
 ## [3.5.39](https://github.com/vuejs/core/compare/v3.5.38...v3.5.39) (2026-06-25)
 
 

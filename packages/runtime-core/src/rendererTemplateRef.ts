@@ -17,7 +17,7 @@ import {
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { warn } from './warning'
-import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
+import { isRef, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
@@ -136,12 +136,7 @@ export function setRef(
   }
 
   if (isFunction(ref)) {
-    pauseTracking()
-    try {
-      callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
-    } finally {
-      resetTracking()
-    }
+    callWithErrorHandling(ref, owner, ErrorCodes.FUNCTION_REF, [value, refs])
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)

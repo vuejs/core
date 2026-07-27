@@ -111,26 +111,6 @@ describe('api: template refs', () => {
     expect(fn2.mock.calls[0][0]).toBe(root.children[0])
   })
 
-  it('function ref should not track dependencies read by callback', async () => {
-    const root = nodeOps.createElement('div')
-    const visible = ref(new Set<number>())
-    const fn = vi.fn((el: any) => {
-      if (!el || visible.value.has(0)) {
-        return
-      }
-      visible.value = new Set([0])
-    })
-
-    const Comp = defineComponent(() => () => h('div', { ref: fn }))
-
-    render(h(Comp), root)
-    expect(fn).toHaveBeenCalledTimes(1)
-    expect(visible.value.has(0)).toBe(true)
-
-    await nextTick()
-    expect(fn).toHaveBeenCalledTimes(1)
-  })
-
   it('function ref unmount', async () => {
     const root = nodeOps.createElement('div')
     const fn = vi.fn()

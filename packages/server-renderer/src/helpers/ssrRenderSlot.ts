@@ -1,4 +1,8 @@
-import { type ComponentInternalInstance, type Slots, ssrUtils } from 'vue'
+import {
+  type ComponentInternalInstance,
+  type Slots,
+  ssrUtils,
+} from '@vue/runtime-dom'
 import {
   type Props,
   type PushFn,

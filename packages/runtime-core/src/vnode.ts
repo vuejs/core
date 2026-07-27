@@ -112,16 +112,12 @@ export type VNodeNormalizedRefAtom = {
 }
 
 export type VNodeNormalizedRef =
-  | VNodeNormalizedRefAtom
-  | VNodeNormalizedRefAtom[]
+  VNodeNormalizedRefAtom | VNodeNormalizedRefAtom[]
 
 type VNodeMountHook = (vnode: VNode) => void
 type VNodeUpdateHook = (vnode: VNode, oldVNode: VNode) => void
 export type VNodeHook =
-  | VNodeMountHook
-  | VNodeUpdateHook
-  | VNodeMountHook[]
-  | VNodeUpdateHook[]
+  VNodeMountHook | VNodeUpdateHook | VNodeMountHook[] | VNodeUpdateHook[]
 
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
@@ -140,23 +136,14 @@ export type VNodeProps = {
 }
 
 type VNodeChildAtom =
-  | VNode
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | void
+  VNode | string | number | boolean | null | undefined | void
 
 export type VNodeArrayChildren = Array<VNodeArrayChildren | VNodeChildAtom>
 
 export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 
 export type VNodeNormalizedChildren =
-  | string
-  | VNodeArrayChildren
-  | RawSlots
-  | null
+  string | VNodeArrayChildren | RawSlots | null
 
 export interface VNode<
   HostNode = RendererNode,

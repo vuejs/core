@@ -500,6 +500,11 @@ export function createHydrationFunctions(
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
           const isCustomElement = el.tagName.includes('-')
+          const namespace = el.namespaceURI!.includes('svg')
+            ? 'svg'
+            : el.namespaceURI!.includes('MathML')
+              ? 'mathml'
+              : undefined
           for (const key in props) {
             // check hydration mismatch
             if (
@@ -520,7 +525,7 @@ export function createHydrationFunctions(
               (isCustomElement && !isReservedProp(key)) ||
               (dynamicProps && dynamicProps.includes(key))
             ) {
-              patchProp(el, key, null, props[key], undefined, parentComponent)
+              patchProp(el, key, null, props[key], namespace, parentComponent)
             }
           }
         } else if (props.onClick) {
