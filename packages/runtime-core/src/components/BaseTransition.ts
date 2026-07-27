@@ -540,15 +540,20 @@ export function prepareTransitionSwitch(
     instance,
     // #11061: keep enter hooks in sync when the incoming VNode is cloned.
     hooks => {
-      forwardDelayedLeave(hooks, delayedLeaveSource)
+      if (delayedLeaveSource) {
+        forwardDelayedLeave(hooks, delayedLeaveSource)
+      }
       enterHooks = hooks
     },
   )
-  forwardDelayedLeave(enterHooks, delayedLeaveSource)
+  if (delayedLeaveSource) {
+    forwardDelayedLeave(enterHooks, delayedLeaveSource)
+  }
   if (nextInner.type !== Comment) {
     setTransitionHooks(nextInner, enterHooks)
   }
 
+  const mode = props.mode
   const previousInner = previous && getInnerChild(previous)
   if (
     previous &&
@@ -566,10 +571,11 @@ export function prepareTransitionSwitch(
     )
     if (
       nextInner.type !== Comment &&
+      (mode === 'out-in' || mode === 'in-out') &&
       applyTransitionModeSwitch(
         previousInner,
         leavingHooks,
-        () => enterHooks,
+        mode === 'in-out' ? () => enterHooks : undefined,
         props,
         state,
         resumeAfterLeave,
