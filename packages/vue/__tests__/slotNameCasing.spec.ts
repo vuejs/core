@@ -30,14 +30,18 @@ describe('slot name casing in in-DOM templates', () => {
     ).toBe(`<div>content</div>`)
   })
 
-  test('an exact match still wins', () => {
+  test('an exact match wins over a competing hyphenated one', () => {
     const container = document.createElement('div')
     createApp({
       components: { Child },
-      template: `<Child><template #dropdownRender>content</template></Child>`,
+      template:
+        `<Child>` +
+        `<template #dropdownRender>exact</template>` +
+        `<template #dropdown-render>hyphenated</template>` +
+        `</Child>`,
     }).mount(container)
 
-    expect(container.innerHTML).toBe(`<div>content</div>`)
+    expect(container.innerHTML).toBe(`<div>exact</div>`)
   })
 
   test('a genuinely kebab-cased slot name is unaffected', () => {
