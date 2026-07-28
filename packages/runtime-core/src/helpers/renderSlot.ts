@@ -16,7 +16,7 @@ import {
   isVNode,
   openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags, extend, isSymbol } from '@vue/shared'
+import { PatchFlags, SlotFlags, extend, hyphenate, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 
@@ -61,6 +61,16 @@ export function renderSlot(
   }
 
   let slot = slots[name]
+
+  // In-DOM templates are case-insensitive, so a camelCase slot name can only
+  // be written there in its kebab-cased form. Resolve that here, the same way
+  // props and v-on listeners already support kebab -> camel conversion.
+  if (!slot) {
+    const hyphenatedName = hyphenate(name)
+    if (hyphenatedName !== name) {
+      slot = slots[hyphenatedName]
+    }
+  }
 
   if (__DEV__ && slot && slot.length > 1) {
     warn(
