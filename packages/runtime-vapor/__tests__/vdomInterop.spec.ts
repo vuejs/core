@@ -41,6 +41,7 @@ import { VaporSlot } from '../../runtime-core/src/vnode'
 import { compile, makeInteropRender } from './_utils'
 import {
   type VaporComponentInstance,
+  type VaporDirective,
   VaporKeepAlive,
   VaporTeleport,
   applyTextModel,
@@ -830,6 +831,31 @@ describe('vdomInterop', () => {
       show.value = true
       await nextTick()
       expect(root.innerHTML).toBe('<div><div style=""></div></div>')
+    })
+
+    test('apply vapor custom directive to vdom child', () => {
+      const dir: VaporDirective = vi.fn(el => {
+        ;(el as Element).setAttribute('data-custom', '')
+      })
+      const VDomChild = defineComponent({
+        setup() {
+          return () => h('div', 'vdom child')
+        },
+      })
+      const App = compile(
+        `<template><components.VDomChild v-custom /></template>`,
+        ref(null),
+        { VDomChild },
+      )
+      App.directives = { custom: dir }
+
+      const { host } = define(App as any).render()
+      const el = host.firstElementChild!
+
+      expect(el).toBeInstanceOf(HTMLDivElement)
+      expect(el.getAttribute('data-custom')).toBe('')
+      expect(dir).toHaveBeenCalledOnce()
+      expect(dir).toHaveBeenCalledWith(el, undefined, undefined, undefined)
     })
 
     test('apply custom directive to vapor child', async () => {

@@ -5,8 +5,11 @@ import {
   defineVaporComponent,
   withVaporDirectives,
 } from '../../src'
-import { nextTick, watchEffect } from '@vue/runtime-dom'
+import { currentInstance, nextTick, watchEffect } from '@vue/runtime-dom'
 import type { Mock } from 'vitest'
+import { compile, makeRender } from '../_utils'
+
+const define = makeRender()
 
 describe('custom directive', () => {
   it('should work', async () => {
@@ -35,7 +38,7 @@ describe('custom directive', () => {
     expect(el.textContent).toBe('2')
 
     scope.stop()
-    expect(teardown).toHaveBeenCalled()
+    expect(teardown).toHaveBeenCalledOnce()
 
     n.value = 3
     await nextTick()
@@ -43,7 +46,7 @@ describe('custom directive', () => {
     expect(el.textContent).toBe('2')
   })
 
-  it('should work on single root component', async () => {
+  it('should apply to a resolved component root synchronously', async () => {
     const teardown = vi.fn()
     const dir: VaporDirective = vi.fn((el, source) => {
       watchEffect(() => {
@@ -68,11 +71,11 @@ describe('custom directive', () => {
     scope.run(() => {
       const instance = createComponent(Child)
       withVaporDirectives(instance, [[dir, source]])
+      expect(dir).toHaveBeenCalledOnce()
       root.appendChild(instance.block as Node)
     })
 
     // Should resolve to the div element inside Child
-    expect(dir).toHaveBeenCalled()
     const el = (dir as unknown as Mock).mock.calls[0][0]
     expect(el).toBeInstanceOf(HTMLDivElement)
     expect(el.textContent).toBe('1')
@@ -82,7 +85,7 @@ describe('custom directive', () => {
     expect(el.textContent).toBe('2')
 
     scope.stop()
-    expect(teardown).toHaveBeenCalled()
+    expect(teardown).toHaveBeenCalledOnce()
   })
 
   it('should warn on multi-root component', () => {
@@ -105,5 +108,94 @@ describe('custom directive', () => {
     expect(
       'Runtime directive used on component with non-element root node',
     ).toHaveBeenWarned()
+    scope.stop()
+  })
+
+  it('should re-apply to dynamic component root', async () => {
+    const teardown = vi.fn()
+    const data = ref({ current: 'div' })
+    const dir: VaporDirective = vi.fn(el => {
+      ;(el as Element).setAttribute('data-custom', '')
+      return teardown
+    })
+    const App = compile(
+      `<template><component :is="data.current" v-custom /></template>`,
+      data,
+    )
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+    const first = host.firstElementChild!
+
+    expect(first).toBeInstanceOf(HTMLDivElement)
+    expect(first.getAttribute('data-custom')).toBe('')
+    expect(dir).toHaveBeenCalledOnce()
+    expect(teardown).not.toHaveBeenCalled()
+
+    data.value.current = 'span'
+    await nextTick()
+
+    const second = host.firstElementChild!
+    expect(second).toBeInstanceOf(HTMLSpanElement)
+    expect(second).not.toBe(first)
+    expect(second.getAttribute('data-custom')).toBe('')
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(teardown).toHaveBeenCalledOnce()
+
+    app.unmount()
+  })
+
+  it('should re-apply with the directive owner when component root changes', async () => {
+    const teardown = vi.fn()
+    const data = ref({ show: true, value: 'one' })
+    const owners: unknown[] = []
+    const dir: VaporDirective = vi.fn(el => {
+      owners.push(currentInstance)
+      watchEffect(() => {
+        ;(el as Element).setAttribute('data-value', data.value.value)
+      })
+      return teardown
+    })
+    const Child = compile(
+      `<template><div v-if="data.show" /><span v-else /></template>`,
+      data,
+    )
+    const App = compile(
+      `<template><components.Child v-custom /></template>`,
+      data,
+      { Child },
+    )
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+    const owner = app._instance
+    const first = host.firstElementChild!
+
+    expect(first).toBeInstanceOf(HTMLDivElement)
+    expect(first.getAttribute('data-value')).toBe('one')
+    expect(dir).toHaveBeenCalledOnce()
+    expect(owners).toHaveLength(1)
+    expect(owners[0]).toBe(owner)
+    expect(teardown).not.toHaveBeenCalled()
+
+    data.value.show = false
+    await nextTick()
+
+    const second = host.firstElementChild!
+    expect(second).toBeInstanceOf(HTMLSpanElement)
+    expect(second).not.toBe(first)
+    expect(second.getAttribute('data-value')).toBe('one')
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(owners).toHaveLength(2)
+    expect(owners[1]).toBe(owner)
+    expect(teardown).toHaveBeenCalledOnce()
+
+    data.value.value = 'two'
+    await nextTick()
+
+    expect(first.getAttribute('data-value')).toBe('one')
+    expect(second.getAttribute('data-value')).toBe('two')
+
+    app.unmount()
   })
 })
