@@ -461,6 +461,7 @@ export class SlotFragment
   // can preserve block ownership after the outlet node is gone.
   customElementFallback?: Block
   activeFallback: Block | null = null
+  fallbackInserted = false
   fallbackScope?: EffectScope
   lastNodesValid?: boolean
   pendingRecheck = false
@@ -503,6 +504,9 @@ export class SlotFragment
   ): void {
     this.disposed = false
     insert(this.nodes, parent, anchor, parentSuspense)
+    if (this.activeFallback === this.nodes) {
+      this.fallbackInserted = true
+    }
   }
 
   private removeSlot(parent?: ParentNode): void {
@@ -513,6 +517,7 @@ export class SlotFragment
       // the exposed fallback was just torn down by remove() above; null it
       // so disposeSlotResolution does not remove it a second time
       this.activeFallback = null
+      this.fallbackInserted = false
     }
     this.onContentInvalid.length = 0
     disposeSlotResolution(this)

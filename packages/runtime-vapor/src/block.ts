@@ -26,6 +26,7 @@ import { isInteropEnabled } from './vdomInteropState'
 import { isSuspenseEnabled } from './suspense'
 
 export interface VaporTransitionHooks extends TransitionHooks {
+  __vapor: true
   state: TransitionState
   props: TransitionProps
   instance: VaporComponentInstance
