@@ -266,10 +266,10 @@ function getInteropTransitionElement(
   if (vnode.el instanceof Element) {
     return vnode.el
   }
-  if (
-    (vnode.type === Fragment || vnode.shapeFlag & ShapeFlags.TELEPORT) &&
-    isArray(vnode.children)
-  ) {
+  if (vnode.type === Fragment) {
+    const child = getRawTransitionChild(vnode)
+    if (child) return getInteropTransitionElement(child)
+  } else if (vnode.shapeFlag & ShapeFlags.TELEPORT && isArray(vnode.children)) {
     const child = resolveTransitionChild(vnode.children as VNode[])
     if (child) return getInteropTransitionElement(child)
   }
@@ -2875,7 +2875,7 @@ function isSameResolvedOutput(prev: Block, next: Block): boolean {
 }
 
 function normalizeInteropSlots(rawSlots: any): any {
-  if (rawSlots == null) return rawSlots
+  if (rawSlots == null) return EMPTY_OBJ
   // VDOM children bypass runtime-core's component slot initialization here,
   // so normalize raw children into a callable default slot first.
   if (!isObject(rawSlots) || isArray(rawSlots) || isVNode(rawSlots)) {
