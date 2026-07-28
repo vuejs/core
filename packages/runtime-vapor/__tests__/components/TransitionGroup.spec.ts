@@ -8,10 +8,11 @@ import {
   setBlockKey,
   template,
 } from '../../src'
-import { nextTick, ref } from '@vue/runtime-dom'
-import { compile, makeRender } from '../_utils'
+import { defineComponent, h, nextTick, ref } from '@vue/runtime-dom'
+import { compile, makeInteropRender, makeRender } from '../_utils'
 
 const define = makeRender()
+const defineInterop = makeInteropRender()
 const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
 
 describe('TransitionGroup', () => {
@@ -273,6 +274,39 @@ describe('TransitionGroup', () => {
     leaveDone && leaveDone()
     await nextTick()
     expect(host.querySelectorAll('.item').length).toBe(1)
+  })
+
+  test('preserves vdom slot children', async () => {
+    const items = ref(['a', 'b'])
+    const Child = compile(
+      `<template>
+        <TransitionGroup>
+          <slot />
+        </TransitionGroup>
+      </template>`,
+      ref({}),
+    )
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(Child, null, {
+            default: () =>
+              items.value.map(item => h('div', { key: item }, item)),
+          })
+      },
+    })
+    const { host } = defineInterop(App).render()
+
+    expect(
+      Array.from(host.querySelectorAll('div'), el => el.textContent),
+    ).toEqual(['a', 'b'])
+
+    items.value = ['b', 'c']
+    await nextTick()
+
+    expect(
+      Array.from(host.querySelectorAll('div'), el => el.textContent),
+    ).toEqual(['b', 'c'])
   })
 
   test('registers full transition hooks when Transition is used later', async () => {

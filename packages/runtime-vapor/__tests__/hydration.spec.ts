@@ -12127,6 +12127,102 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toBe('<div>content</div>')
   })
 
+  test('hydrate VDOM slot content inside Vapor Transition', async () => {
+    const data = reactive({ show: true })
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild>
+          <div v-if="data.show">content</div>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template>
+            <Transition name="fade">
+              <slot />
+            </Transition>
+            <span id="after">after</span>
+          </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+
+    data.show = false
+    await nextTick()
+
+    expect(container.querySelector('div')?.className).toBe(
+      'fade-leave-from fade-leave-active',
+    )
+    expect(container.querySelector('#after')?.previousElementSibling).toBe(
+      container.querySelector('div'),
+    )
+  })
+
+  test('hydrate Vapor Transition fallback in out-in mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = reactive({
+      show: false,
+      onLeave,
+    })
+    // VDOM SSR preserves an all-comment slot inside Transition, so omit the
+    // dynamic slot entirely to make the fallback the server-rendered branch.
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild>
+          <template #default v-if="data.show">
+            <div class="content">content</div>
+          </template>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<script setup>const data = _data</script>
+            <template>
+              <Transition
+                mode="out-in"
+                :css="false"
+                @leave="data.onLeave"
+              >
+                <slot><div class="fallback">fallback</div></slot>
+              </Transition>
+            </template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+    const fallback = container.querySelector('.fallback')
+
+    expect(fallback).not.toBeNull()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+    data.show = true
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(container.querySelector('.fallback')).toBe(fallback)
+    expect(container.querySelector('.content')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(container.querySelector('.fallback')).toBeNull()
+    expect(container.querySelector('.content')?.textContent).toBe('content')
+  })
+
   test('hydrate compiled VDOM slot child keeps owner root current after branch update', async () => {
     const data = reactive({
       child: 'span',

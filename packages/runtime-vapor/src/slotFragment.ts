@@ -1,7 +1,7 @@
 import { EffectScope } from '@vue/reactivity'
 import {
   type Block,
-  type TransitionOptions,
+  type VaporTransitionHooks,
   insert,
   isValidSlot,
   remove,
@@ -12,7 +12,11 @@ import {
   hasSlotFallback,
   withSlotBoundary,
 } from './slotBoundary'
-import { applyTransitionHooks, isTransitionEnabled } from './transition'
+import {
+  applyTransitionHooks,
+  applyTransitionLeaveHooks,
+  isTransitionEnabled,
+} from './transition'
 import { setBlockKey } from './helpers/setKey'
 
 // Slot resolution.
@@ -93,6 +97,8 @@ export interface SlotResolutionState {
   boundary: SlotBoundaryContext
   // The committed fallback block, or null while content is exposed.
   activeFallback: Block | null
+  // A committed fallback can be invalid and therefore remain detached.
+  fallbackInserted: boolean
   // Detached scope owning the active fallback's effects (see
   // renderFallbackInScope); stopped by clearSlotFallback.
   fallbackScope?: EffectScope
@@ -105,6 +111,7 @@ export interface SlotResolutionState {
   pendingRecheckForce: boolean
   // Reentrancy guard, set while renderSlotFallback runs user fallback code.
   isRenderingFallback: boolean
+  $transition?: VaporTransitionHooks
 
   getContent(): Block
   getParentNode(): ParentNode | null
@@ -145,15 +152,29 @@ function clearSlotFallback(state: SlotResolutionState): void {
   const fallback = state.activeFallback
   if (fallback) {
     const parentNode = state.getParentNode()
-    if (parentNode) {
+    if (state.fallbackInserted && parentNode) {
       remove(fallback, parentNode)
     }
     state.activeFallback = null
+    state.fallbackInserted = false
   }
   if (state.fallbackScope) {
     state.fallbackScope.stop()
     state.fallbackScope = undefined
   }
+}
+
+export function leaveSlotFallback(
+  state: SlotResolutionState,
+  hooks: VaporTransitionHooks,
+  afterLeave: () => void,
+): boolean {
+  const fallback = state.activeFallback
+  if (!fallback || !applyTransitionLeaveHooks(fallback, hooks, afterLeave)) {
+    return false
+  }
+  clearSlotFallback(state)
+  return true
 }
 
 // Renders the fallback into a dedicated detached scope: the fallback must
@@ -196,6 +217,7 @@ export function insertActiveSlotFallback(state: SlotResolutionState): void {
     return
   }
   insert(fallback, parentNode, state.getAnchor())
+  state.fallbackInserted = true
 }
 
 // `detachContent` is true only on the first content -> fallback switch: the
@@ -207,26 +229,23 @@ function commitSlotFallback(
   scope: EffectScope,
   detachContent: boolean,
 ): void {
+  state.activeFallback = block
+  state.fallbackScope = scope
+  state.fallbackInserted = isHydrating
+  if (isTransitionEnabled) {
+    if (state.$transition) {
+      // Match VDOM slot fallback branch identity so fallback enter does not
+      // early-remove the currently leaving slot content.
+      setBlockKey(block, '_fb')
+      state.$transition = applyTransitionHooks(block, state.$transition)
+    }
+  }
   if (detachContent && !isHydrating) {
     const contentInvalidCallbacks = state.boundary.onContentInvalid
     if (contentInvalidCallbacks) {
       for (let i = 0; i < contentInvalidCallbacks.length; i++) {
         contentInvalidCallbacks[i]()
       }
-    }
-  }
-  state.activeFallback = block
-  state.fallbackScope = scope
-  if (isTransitionEnabled) {
-    const transitionState = state as SlotResolutionState & TransitionOptions
-    if (transitionState.$transition) {
-      // Match VDOM slot fallback branch identity so fallback enter does not
-      // early-remove the currently leaving slot content.
-      setBlockKey(block, '_fb')
-      transitionState.$transition = applyTransitionHooks(
-        block,
-        transitionState.$transition,
-      )
     }
   }
   insertActiveSlotFallback(state)
