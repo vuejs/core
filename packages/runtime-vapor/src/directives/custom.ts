@@ -3,6 +3,8 @@ import { isArray } from '@vue/shared'
 import {
   type DirectiveModifiers,
   currentInstance,
+  isAsyncWrapper,
+  onBeforeMount,
   onScopeDispose,
   restoreCurrentInstance,
   setCurrentInstance,
@@ -48,27 +50,38 @@ export function withVaporDirectives(
   }
 
   const instance = currentInstance
-  const trackedFragments = new WeakSet<VaporFragment>()
+  const trackedBlocks = new WeakSet<VaporFragment | VaporComponentInstance>()
   let currentElement: Element | null | undefined = null
   let directiveScope: EffectScope | undefined
   let disposed = false
 
+  function stopDirectiveScope() {
+    if (directiveScope) {
+      directiveScope.stop()
+      directiveScope = undefined
+    }
+  }
+
   function applyDirectives() {
     if (disposed) return
 
-    const pending = trackFragments(node)
+    const isRootPending = trackRootUpdates(node)
     const element = getRootElement(node)
-    if (!element && pending) return
+    if (!element && isRootPending) {
+      // Keep null as the pending state so a resolved invalid root still warns
+      if (currentElement !== null) {
+        currentElement = null
+        stopDirectiveScope()
+      }
+      return
+    }
     // Only re-apply when the root element changes
     if (element === currentElement) return
 
     currentElement = element
     // The previous root element is no longer directive's target
     // Dispose effects and cleanup bound to the previous root element
-    if (directiveScope) {
-      directiveScope.stop()
-      directiveScope = undefined
-    }
+    stopDirectiveScope()
 
     if (!element) {
       if (__DEV__) {
@@ -92,22 +105,39 @@ export function withVaporDirectives(
     }
   }
 
-  function trackFragments(block: Block): boolean {
+  function trackRootUpdates(block: Block): boolean {
     if (isVaporComponent(block)) {
-      return trackFragments(block.block)
+      if (__FEATURE_SUSPENSE__ && block.asyncDep && !block.asyncResolved) {
+        if (!trackedBlocks.has(block)) {
+          trackedBlocks.add(block)
+          // Suspense replaces the pending block before the component's first mount
+          onBeforeMount(applyDirectives, block)
+        }
+        return true
+      }
+
+      const innerBlock = block.block
+      if (trackRootUpdates(innerBlock)) return true
+
+      // Async wrappers keep an empty fragment until a renderable branch is available
+      return (
+        isAsyncWrapper(block) &&
+        isFragment(innerBlock) &&
+        innerBlock.nodes === EMPTY_BLOCK
+      )
     }
     // Traverse every child so all nested fragments are tracked
     if (isArray(block)) {
-      let pending = false
+      let hasPendingTarget = false
       for (const child of block) {
-        pending = trackFragments(child) || pending
+        if (trackRootUpdates(child)) hasPendingTarget = true
       }
-      return pending
+      return hasPendingTarget
     }
     if (!isFragment(block)) return false
 
-    if (!trackedFragments.has(block)) {
-      trackedFragments.add(block)
+    if (!trackedBlocks.has(block)) {
+      trackedBlocks.add(block)
       // Re-resolve the root element when the fragment updates
       ;(block.onUpdated ||= []).push(applyDirectives)
     }
@@ -117,14 +147,14 @@ export function withVaporDirectives(
       (isInteropEnabled &&
         isInteropFragment(block) &&
         block.nodes === EMPTY_BLOCK) ||
-      trackFragments(block.nodes)
+      trackRootUpdates(block.nodes)
     )
   }
 
   onScopeDispose(() => {
     disposed = true
     // Stop the detached scope when the calling scope is disposed
-    if (directiveScope) directiveScope.stop()
+    stopDirectiveScope()
   }, true)
 
   applyDirectives()

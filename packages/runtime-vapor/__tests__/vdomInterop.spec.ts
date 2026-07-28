@@ -63,6 +63,7 @@ import {
   txt,
   vaporInteropPlugin,
   withAsyncContext,
+  withVaporDirectives,
 } from '../src'
 
 const define = makeInteropRender()
@@ -4472,8 +4473,15 @@ describe('vdomInterop', () => {
       }
     })
 
-    test('renders vapor async wrapper inside VDOM Suspense', async () => {
+    test('renders vapor async wrapper with directive inside VDOM Suspense', async () => {
       const duration = 5
+      const calls: string[] = []
+      const error = new Error('directive error')
+      const dir: VaporDirective = vi.fn(el => {
+        ;(el as Element).setAttribute('data-custom', '')
+        calls.push('directive')
+        throw error
+      })
 
       const VaporAsyncChild = defineVaporAsyncComponent({
         loader: () =>
@@ -4482,6 +4490,8 @@ describe('vdomInterop', () => {
               resolve(
                 defineVaporComponent({
                   setup() {
+                    onBeforeMount(() => calls.push('beforeMount'))
+                    onMounted(() => calls.push('mounted'))
                     return template('<div><button>click</button></div>')()
                   },
                 }) as any,
@@ -4496,7 +4506,11 @@ describe('vdomInterop', () => {
             Suspense as any,
             null,
             {
-              default: () => createComponent(VaporAsyncChild, null, null, true),
+              default: () => {
+                const child = createComponent(VaporAsyncChild, null, null, true)
+                withVaporDirectives(child, [[dir]])
+                return child
+              },
               fallback: () => template('loading')(),
             },
             true,
@@ -4504,18 +4518,29 @@ describe('vdomInterop', () => {
         },
       })
 
-      const { html } = define({
+      const { app, html } = define({
         setup() {
           return () => h(VaporParent as any)
         },
       }).render()
+      const errorHandler = (app.config.errorHandler = vi.fn())
 
       expect(html()).toContain('loading')
+      expect(dir).not.toHaveBeenCalled()
 
       await new Promise(resolve => setTimeout(resolve, duration + 1))
       await nextTick()
 
-      expect(html()).toContain('<div><button>click</button></div>')
+      expect(html()).toContain(
+        '<div data-custom=""><button>click</button></div>',
+      )
+      expect(dir).toHaveBeenCalledOnce()
+      expect(calls).toEqual(['directive', 'beforeMount', 'mounted'])
+      expect(errorHandler).toHaveBeenCalledOnce()
+      expect(errorHandler.mock.calls[0][0]).toBe(error)
+      expect(
+        'Runtime directive used on component with non-element root node',
+      ).not.toHaveBeenWarned()
     })
 
     test('does not suspend vapor async wrapper with suspensible false inside VDOM Suspense', async () => {
@@ -4722,6 +4747,54 @@ describe('vdomInterop', () => {
       await nextTick()
 
       expect(html()).toContain('<div><button>click</button></div>')
+    })
+
+    test('applies directive to async setup vapor component inside VDOM Suspense', async () => {
+      const pending = deferred()
+      const dir: VaporDirective = vi.fn(el => {
+        ;(el as Element).setAttribute('data-custom', '')
+      })
+      const VaporAsyncChild = defineVaporComponent({
+        async setup() {
+          await pending.promise
+          return template('<div>resolved</div>')()
+        },
+      })
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () => {
+                const child = createComponent(VaporAsyncChild, null, null, true)
+                withVaporDirectives(child, [[dir]])
+                return child
+              },
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toContain('loading')
+      expect(dir).not.toHaveBeenCalled()
+
+      pending.resolve()
+      await flushResolution(pending.promise)
+
+      expect(html()).toContain('<div data-custom="">resolved</div>')
+      expect(dir).toHaveBeenCalledOnce()
+      expect(
+        'Runtime directive used on component with non-element root node',
+      ).not.toHaveBeenWarned()
     })
 
     test('preserves render context for setup-returned helpers after async setup resumes', async () => {

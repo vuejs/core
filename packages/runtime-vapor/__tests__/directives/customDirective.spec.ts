@@ -1,7 +1,9 @@
 import { effectScope, ref } from '@vue/reactivity'
 import {
+  type VaporComponent,
   type VaporDirective,
   createComponent,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   withVaporDirectives,
 } from '../../src'
@@ -197,5 +199,142 @@ describe('custom directive', () => {
     expect(second.getAttribute('data-value')).toBe('two')
 
     app.unmount()
+  })
+
+  it('should apply after async component resolves', async () => {
+    let resolve!: (component: VaporComponent) => void
+    const data = ref(null)
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const Child = compile(`<template><div /></template>`, data)
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn(el => {
+      ;(el as Element).setAttribute('data-custom', '')
+      return teardown
+    })
+    const App = compile(
+      `<template><components.AsyncChild v-custom /></template>`,
+      data,
+      { AsyncChild },
+    )
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+
+    expect(dir).not.toHaveBeenCalled()
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).not.toHaveBeenWarned()
+
+    resolve(Child)
+    await new Promise(r => setTimeout(r))
+
+    const element = host.firstElementChild!
+    expect(element).toBeInstanceOf(HTMLDivElement)
+    expect(element.getAttribute('data-custom')).toBe('')
+    expect(dir).toHaveBeenCalledOnce()
+    expect(teardown).not.toHaveBeenCalled()
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).not.toHaveBeenWarned()
+
+    app.unmount()
+    expect(teardown).toHaveBeenCalledOnce()
+  })
+
+  it('should warn after async component resolves to multiple roots', async () => {
+    let resolve!: (component: VaporComponent) => void
+    const data = ref(null)
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const Child = compile(`<template><div /><span /></template>`, data)
+    const dir: VaporDirective = vi.fn()
+    const App = compile(
+      `<template><components.AsyncChild v-custom /></template>`,
+      data,
+      { AsyncChild },
+    )
+    App.directives = { custom: dir }
+
+    const { app } = define(App).render()
+
+    expect(dir).not.toHaveBeenCalled()
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).not.toHaveBeenWarned()
+
+    resolve(Child)
+    await new Promise(r => setTimeout(r))
+
+    expect(dir).not.toHaveBeenCalled()
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+
+    app.unmount()
+  })
+
+  it('should dispose directives while a dynamic async component is pending', async () => {
+    let resolve!: (component: VaporComponent) => void
+    const data = ref({ current: 'div', value: 'one' })
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const Child = compile(`<template><span /></template>`, data)
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn(el => {
+      watchEffect(() => {
+        ;(el as Element).setAttribute('data-value', data.value.value)
+      })
+      return teardown
+    })
+    const App = compile(
+      `<template><component :is="data.current" v-custom /></template>`,
+      data,
+    )
+    App.components = { AsyncChild }
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+    const first = host.firstElementChild!
+
+    expect(first).toBeInstanceOf(HTMLDivElement)
+    expect(first.getAttribute('data-value')).toBe('one')
+    expect(dir).toHaveBeenCalledOnce()
+
+    data.value.current = 'AsyncChild'
+    await nextTick()
+
+    expect(host.firstElementChild).toBeNull()
+    expect(teardown).toHaveBeenCalledOnce()
+    expect(dir).toHaveBeenCalledOnce()
+
+    data.value.value = 'two'
+    await nextTick()
+    expect(first.getAttribute('data-value')).toBe('one')
+
+    resolve(Child)
+    await new Promise(r => setTimeout(r))
+
+    const second = host.firstElementChild!
+    expect(second).toBeInstanceOf(HTMLSpanElement)
+    expect(second).not.toBe(first)
+    expect(second.getAttribute('data-value')).toBe('two')
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(teardown).toHaveBeenCalledOnce()
+
+    app.unmount()
+    expect(teardown).toHaveBeenCalledTimes(2)
   })
 })
