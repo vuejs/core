@@ -55,22 +55,33 @@ export function withVaporDirectives(
   let directiveScope: EffectScope | undefined
   let disposed = false
 
+  function stopDirectiveScope() {
+    if (directiveScope) {
+      directiveScope.stop()
+      directiveScope = undefined
+    }
+  }
+
   function applyDirectives() {
     if (disposed) return
 
     const isRootPending = trackRootUpdates(node)
     const element = getRootElement(node)
-    if (!element && isRootPending) return
+    if (!element && isRootPending) {
+      // Keep null as the pending state so a resolved invalid root still warns
+      if (currentElement !== null) {
+        currentElement = null
+        stopDirectiveScope()
+      }
+      return
+    }
     // Only re-apply when the root element changes
     if (element === currentElement) return
 
     currentElement = element
     // The previous root element is no longer directive's target
     // Dispose effects and cleanup bound to the previous root element
-    if (directiveScope) {
-      directiveScope.stop()
-      directiveScope = undefined
-    }
+    stopDirectiveScope()
 
     if (!element) {
       if (__DEV__) {
@@ -143,7 +154,7 @@ export function withVaporDirectives(
   onScopeDispose(() => {
     disposed = true
     // Stop the detached scope when the calling scope is disposed
-    if (directiveScope) directiveScope.stop()
+    stopDirectiveScope()
   }, true)
 
   applyDirectives()

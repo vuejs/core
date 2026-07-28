@@ -281,4 +281,60 @@ describe('custom directive', () => {
 
     app.unmount()
   })
+
+  it('should dispose directives while a dynamic async component is pending', async () => {
+    let resolve!: (component: VaporComponent) => void
+    const data = ref({ current: 'div', value: 'one' })
+    const AsyncChild = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const Child = compile(`<template><span /></template>`, data)
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn(el => {
+      watchEffect(() => {
+        ;(el as Element).setAttribute('data-value', data.value.value)
+      })
+      return teardown
+    })
+    const App = compile(
+      `<template><component :is="data.current" v-custom /></template>`,
+      data,
+    )
+    App.components = { AsyncChild }
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+    const first = host.firstElementChild!
+
+    expect(first).toBeInstanceOf(HTMLDivElement)
+    expect(first.getAttribute('data-value')).toBe('one')
+    expect(dir).toHaveBeenCalledOnce()
+
+    data.value.current = 'AsyncChild'
+    await nextTick()
+
+    expect(host.firstElementChild).toBeNull()
+    expect(teardown).toHaveBeenCalledOnce()
+    expect(dir).toHaveBeenCalledOnce()
+
+    data.value.value = 'two'
+    await nextTick()
+    expect(first.getAttribute('data-value')).toBe('one')
+
+    resolve(Child)
+    await new Promise(r => setTimeout(r))
+
+    const second = host.firstElementChild!
+    expect(second).toBeInstanceOf(HTMLSpanElement)
+    expect(second).not.toBe(first)
+    expect(second.getAttribute('data-value')).toBe('two')
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(teardown).toHaveBeenCalledOnce()
+
+    app.unmount()
+    expect(teardown).toHaveBeenCalledTimes(2)
+  })
 })
