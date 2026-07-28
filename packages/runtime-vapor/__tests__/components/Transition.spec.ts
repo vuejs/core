@@ -9,6 +9,7 @@ import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
 import {
   Fragment,
   type Ref,
+  Teleport,
   Transition,
   type VNode,
   defineComponent,
@@ -788,6 +789,134 @@ describe('Transition', () => {
     expect(host.querySelector('.content')).toBeNull()
     expect(host.querySelector('.fallback')).not.toBeNull()
     expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('unmounts a leaving fallback during an out-in switch', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: false,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    data.value.show = true
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts leaving vdom content during an out-in switch', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts a leaving Vapor component used as vdom slot content', async () => {
+    let leaveDone: (() => void) | undefined
+    const Content = defineVaporComponent({
+      setup() {
+        return template('<span class="content">content</span>')()
+      },
+    })
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      () => h(Content),
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts leaving Teleport content from its target', async () => {
+    let leaveDone: (() => void) | undefined
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      () =>
+        h(Teleport, { to: target }, [
+          h('span', { class: 'content' }, 'content'),
+        ]),
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(target.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+    expect(target.innerHTML).toBe('')
+
+    leaveDone!()
+    await nextTick()
+    expect(target.innerHTML).toBe('')
+    target.remove()
   })
 
   test('slot fallback should wait for vdom content enter in in-out mode', async () => {

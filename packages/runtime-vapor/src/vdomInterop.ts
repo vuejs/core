@@ -15,6 +15,7 @@ import {
   type Slots,
   Static,
   type SuspenseBoundary,
+  type TransitionElement,
   type TransitionHooks,
   type VNode,
   type VNodeArrayChildren,
@@ -38,6 +39,7 @@ import {
   isVNode,
   isHydrating as isVdomHydrating,
   isHydratingEnabled as isVdomHydratingEnabled,
+  leaveCbKey,
   normalizeRef,
   normalizeVNode,
   onScopeDispose,
@@ -153,6 +155,8 @@ import {
 import type { NodeRef } from './apiTemplateRef'
 import {
   ensureTransitionHooksRegistered,
+  getTransitionElement,
+  resolveTransitionBlock,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
 import { isVaporTransition, registerTransitionInterop } from './transition'
@@ -244,15 +248,29 @@ function getVNodeKey(vnode: VNode | undefined): VNode['key'] | undefined {
   return child && child.key
 }
 
-function getInteropTransitionElement(vnode: VNode): Element | undefined {
-  if (vnode.component) {
-    return getInteropTransitionElement(vnode.component.subTree)
+function getInteropTransitionElement(
+  vnode: VNode | undefined,
+): Element | undefined {
+  if (!vnode) return
+  const component = vnode.component as
+    | ComponentInternalInstance
+    | VaporComponentInstance
+    | null
+  if (isVaporComponent(component)) {
+    const block = component.block && resolveTransitionBlock(component.block)
+    return block && getTransitionElement(block)
+  }
+  if (component) {
+    return getInteropTransitionElement(component.subTree)
   }
   if (vnode.el instanceof Element) {
     return vnode.el
   }
-  if (vnode.type === Fragment) {
-    const child = getRawTransitionChild(vnode)
+  if (
+    (vnode.type === Fragment || vnode.shapeFlag & ShapeFlags.TELEPORT) &&
+    isArray(vnode.children)
+  ) {
+    const child = resolveTransitionChild(vnode.children as VNode[])
     if (child) return getInteropTransitionElement(child)
   }
 }
@@ -1492,6 +1510,7 @@ function renderVDOMSlot(
         content: VNode | Block | undefined
         placeholder: VNode | null
         contentValid: boolean
+        leavingElement?: Element
       }
     | undefined
   const scope = effectScope()
@@ -1754,7 +1773,13 @@ function renderVDOMSlot(
     }
     scope.stop()
     disposed = true
+    // out-in transfers logical ownership before the outgoing branch's
+    // physical leave finishes, so disposal must cancel that leave explicitly.
+    const leavingElement = pendingOutIn && pendingOutIn.leavingElement
     pendingOutIn = undefined
+    const leave =
+      leavingElement && (leavingElement as TransitionElement)[leaveCbKey]
+    if (leave) leave(true)
     if (contentState.rendered) {
       removeRenderedContent(contentState.rendered, parentNode)
     }
@@ -1895,10 +1920,16 @@ function renderVDOMSlot(
                 transition
               ) {
                 if (mode === 'out-in') {
+                  const fallback = slotResolutionState.activeFallback
+                  const leavingBlock =
+                    fallback && resolveTransitionBlock(fallback)
+                  const leavingElement =
+                    leavingBlock && getTransitionElement(leavingBlock)
                   pendingOutIn = {
                     content: slotContent,
                     placeholder: null,
                     contentValid: true,
+                    leavingElement,
                   }
                   if (
                     leaveSlotFallback(
@@ -1949,10 +1980,13 @@ function renderVDOMSlot(
                       resumeOutIn,
                     )
                   ) {
+                    const leavingElement =
+                      getInteropTransitionElement(prevVNode)
                     pendingOutIn = {
                       content: slotContent,
                       placeholder,
                       contentValid: false,
+                      leavingElement,
                     }
                     frag.vnode = placeholder
                     frag.$key = getVNodeKey(placeholder)
@@ -1992,10 +2026,12 @@ function renderVDOMSlot(
                 transition &&
                 transition.state.isLeaving
               ) {
+                const leavingElement = getInteropTransitionElement(prevVNode)
                 pendingOutIn = {
                   content: slotContent,
                   placeholder: nextVNode,
                   contentValid: slotContentValid,
+                  leavingElement,
                 }
                 frag.vnode = nextVNode
                 frag.$key = getVNodeKey(nextVNode)
