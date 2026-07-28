@@ -1,6 +1,13 @@
-import { EffectScope, getCurrentScope } from '@vue/reactivity'
+import { EffectScope } from '@vue/reactivity'
 import { isArray } from '@vue/shared'
-import { type DirectiveModifiers, onScopeDispose, warn } from '@vue/runtime-dom'
+import {
+  type DirectiveModifiers,
+  currentInstance,
+  onScopeDispose,
+  restoreCurrentInstance,
+  setCurrentInstance,
+  warn,
+} from '@vue/runtime-dom'
 import { type Block, EMPTY_BLOCK } from '../block'
 import {
   type VaporComponentInstance,
@@ -34,6 +41,13 @@ export function withVaporDirectives(
   node: Element | VaporComponentInstance | VaporFragment,
   dirs: VaporDirectiveArguments,
 ): void {
+  // Element targets are stable, so apply synchronously in the current scope
+  if (node instanceof Element) {
+    applyDirectivesToElement(node, dirs)
+    return
+  }
+
+  const instance = currentInstance
   const trackedFragments = new WeakSet<VaporFragment>()
   let currentElement: Element | null | undefined = null
   let directiveScope: EffectScope | undefined
@@ -49,9 +63,9 @@ export function withVaporDirectives(
     if (element === currentElement) return
 
     currentElement = element
+    // The previous root element is no longer directive's target
+    // Dispose effects and cleanup bound to the previous root element
     if (directiveScope) {
-      // The previous root element is no longer directive's target
-      // Dispose effects and cleanup bound to the previous root element
       directiveScope.stop()
       directiveScope = undefined
     }
@@ -69,21 +83,20 @@ export function withVaporDirectives(
     // The fragment makes the root element mutable without disposing the owner scope
     // So directive effects and cleanup need a replaceable detached scope
     directiveScope = new EffectScope(true)
-    directiveScope.run(() => {
-      for (const [dir, value, argument, modifiers] of dirs) {
-        if (dir) {
-          const ret = dir(element, value, argument, modifiers)
-          if (ret) onScopeDispose(ret)
-        }
-      }
-    })
+    // Re-apply in the original directive owner's component context
+    const prev = setCurrentInstance(instance, directiveScope)
+    try {
+      applyDirectivesToElement(element, dirs)
+    } finally {
+      restoreCurrentInstance(prev)
+    }
   }
 
   function trackFragments(block: Block): boolean {
     if (isVaporComponent(block)) {
       return trackFragments(block.block)
     }
-    // For root-level comments
+    // Traverse every child so all nested fragments are tracked
     if (isArray(block)) {
       let pending = false
       for (const child of block) {
@@ -95,9 +108,8 @@ export function withVaporDirectives(
 
     if (!trackedFragments.has(block)) {
       trackedFragments.add(block)
-      block.onUpdated ||= []
       // Re-resolve the root element when the fragment updates
-      block.onUpdated.push(applyDirectives)
+      ;(block.onUpdated ||= []).push(applyDirectives)
     }
 
     return (
@@ -109,13 +121,23 @@ export function withVaporDirectives(
     )
   }
 
-  if (getCurrentScope()) {
-    onScopeDispose(() => {
-      disposed = true
-      // To stope the detached scope when the current scope disposes
-      if (directiveScope) directiveScope.stop()
-    })
-  }
+  onScopeDispose(() => {
+    disposed = true
+    // Stop the detached scope when the calling scope is disposed
+    if (directiveScope) directiveScope.stop()
+  }, true)
 
   applyDirectives()
+}
+
+function applyDirectivesToElement(
+  element: Element,
+  dirs: VaporDirectiveArguments,
+): void {
+  for (const [dir, value, argument, modifiers] of dirs) {
+    if (dir) {
+      const ret = dir(element, value, argument, modifiers)
+      if (ret) onScopeDispose(ret)
+    }
+  }
 }
