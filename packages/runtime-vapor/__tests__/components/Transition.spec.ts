@@ -6,7 +6,17 @@ import {
 } from '../../src'
 import { resolveTransitionBlock } from '../../src/components/Transition'
 import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
-import { nextTick, ref } from 'vue'
+import {
+  Fragment,
+  type Ref,
+  Teleport,
+  Transition,
+  type VNode,
+  defineComponent,
+  h,
+  nextTick,
+  ref,
+} from 'vue'
 import { compile, makeInteropRender, makeRender } from '../_utils'
 
 const define = makeRender()
@@ -30,6 +40,51 @@ function createAppearTestState(
     onBeforeAppear,
     onAppear,
   }
+}
+
+interface InteropSlotTransitionTestData {
+  show: boolean
+  onEnter: (el: Element, done: () => void) => void
+  onLeave: (el: Element, done: () => void) => void
+}
+
+function renderInteropSlotFallbackTransition<
+  T extends InteropSlotTransitionTestData,
+>(
+  mode: 'out-in' | 'in-out',
+  data: Ref<T>,
+  renderContent: () => VNode = () => h('span', { class: 'content' }, 'content'),
+  fallback: string = '<div class="fallback">fallback</div>',
+  removeSlotWhenHidden = false,
+) {
+  const Child = compile(
+    `<template>
+      <Transition
+        mode="${mode}"
+        :css="false"
+        @enter="data.onEnter"
+        @leave="data.onLeave"
+      >
+        <slot>${fallback}</slot>
+      </Transition>
+    </template>`,
+    data,
+  )
+  const App = defineComponent({
+    setup() {
+      return () =>
+        h(
+          Child,
+          null,
+          removeSlotWhenHidden && !data.value.show
+            ? undefined
+            : {
+                default: () => (data.value.show ? renderContent() : []),
+              },
+        )
+    },
+  })
+  return defineInterop(App).render()
 }
 
 describe('Transition', () => {
@@ -683,28 +738,559 @@ describe('Transition', () => {
     leaveDone && leaveDone()
   })
 
-  test('interop slot fallback should participate in out-in transition swaps', async () => {
+  test('vdom slot content should wait for fallback leave in out-in mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
     const data = ref({
       show: false,
-      fallback: 'fallback',
-      msg: 'slot',
+      onEnter,
+      onLeave,
     })
+    const { host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    data.value.show = true
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    expect(host.querySelector('.content')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('slot fallback should wait for vdom content leave in out-in mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(host.querySelector('.fallback')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('.content')).toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('removed vdom slot should respect out-in mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      undefined,
+      undefined,
+      true,
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(host.querySelector('.fallback')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('.content')).toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('unmounts a leaving fallback during an out-in switch', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: false,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    data.value.show = true
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts leaving vdom content during an out-in switch', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts a leaving Vapor component used as vdom slot content', async () => {
+    let leaveDone: (() => void) | undefined
+    const Content = defineVaporComponent({
+      setup() {
+        return template('<span class="content">content</span>')()
+      },
+    })
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      () => h(Content),
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+
+    leaveDone!()
+    await nextTick()
+    expect(host.innerHTML).toBe('')
+  })
+
+  test('unmounts leaving Teleport content from its target', async () => {
+    let leaveDone: (() => void) | undefined
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const data = ref({
+      show: true,
+      onEnter: vi.fn(),
+      onLeave: vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      }),
+    })
+    const { app, host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      () =>
+        h(Teleport, { to: target }, [
+          h('span', { class: 'content' }, 'content'),
+        ]),
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(leaveDone).toBeDefined()
+    expect(target.querySelector('.content')).not.toBeNull()
+
+    app.unmount()
+    await nextTick()
+
+    expect(host.innerHTML).toBe('')
+    expect(target.innerHTML).toBe('')
+
+    leaveDone!()
+    await nextTick()
+    expect(target.innerHTML).toBe('')
+    target.remove()
+  })
+
+  test('slot fallback should wait for vdom content enter in in-out mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('in-out', data)
+
+    data.value.show = true
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    enterDone!()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    leaveDone!()
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+  })
+
+  test('vdom slot content should wait for fallback enter in in-out mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('in-out', data)
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    enterDone!()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    leaveDone!()
+    expect(host.querySelector('.content')).toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+  })
+
+  test('removed vdom slot should respect in-out mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition(
+      'in-out',
+      data,
+      undefined,
+      undefined,
+      true,
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+
+    enterDone!()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    leaveDone!()
+    expect(host.querySelector('.content')).toBeNull()
+    expect(host.querySelector('.fallback')).not.toBeNull()
+  })
+
+  test('out-in should not wait for an invalid slot fallback', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn()
+    const data = ref({
+      show: false,
+      fallbackVisible: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition(
+      'out-in',
+      data,
+      undefined,
+      '<div v-if="data.fallbackVisible" class="fallback">fallback</div>',
+    )
+
+    data.value.show = true
+    await nextTick()
+
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('in-out should not delay vdom leave for an invalid slot fallback', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      fallbackVisible: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition(
+      'in-out',
+      data,
+      undefined,
+      '<div v-if="data.fallbackVisible" class="fallback">fallback</div>',
+    )
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).not.toHaveBeenCalled()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).not.toBeNull()
+
+    leaveDone!()
+    expect(host.querySelector('.content')).toBeNull()
+  })
+
+  test('in-out should handle switching back to vdom before fallback enter finishes', async () => {
+    let fallbackEnterDone: (() => void) | undefined
+    let contentEnterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((el: Element, done: () => void) => {
+      if (el.classList.contains('fallback')) {
+        fallbackEnterDone = done
+      } else {
+        contentEnterDone = done
+      }
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('in-out', data)
+
+    data.value.show = false
+    await nextTick()
+
+    expect(fallbackEnterDone).toBeDefined()
+    expect(onLeave).not.toHaveBeenCalled()
+
+    data.value.show = true
+    await nextTick()
+
+    expect(contentEnterDone).toBeDefined()
+    expect(onLeave).not.toHaveBeenCalled()
+
+    contentEnterDone!()
+    expect(onLeave).toHaveBeenCalledOnce()
+
+    leaveDone!()
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelectorAll('.content')).toHaveLength(1)
+  })
+
+  test('out-in fallback switch should render the latest vdom slot content', async () => {
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: false,
+      tag: 'span',
+      text: 'A',
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('out-in', data, () =>
+      h(data.value.tag, { class: 'content' }, data.value.text),
+    )
+
+    data.value.show = true
+    await nextTick()
+
+    data.value.show = false
+    await nextTick()
+
+    data.value.tag = 'p'
+    data.value.text = 'B'
+    data.value.show = true
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.content')).toBeNull()
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('span')).toBeNull()
+    expect(host.querySelector('p.content')?.textContent).toBe('B')
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('out-in fallback switch should handle synchronous leave completion', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      show: false,
+      onEnter,
+      onLeave,
+    })
+    const { host } = renderInteropSlotFallbackTransition('out-in', data)
+
+    data.value.show = true
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('.fallback')).toBeNull()
+    expect(host.querySelector('.content')).not.toBeNull()
+    expect(onEnter).toHaveBeenCalledOnce()
+  })
+
+  test('does not treat inherited VDOM transition hooks as Vapor state', async () => {
+    const show = ref(true)
+    const onEnter = vi.fn()
+    const onLeave = vi.fn()
+    const Child = compile(`<template><slot /></template>`, show)
+    const App = defineComponent({
+      setup() {
+        return () => {
+          // Force BaseTransition to propagate refreshed VDOM hooks through the
+          // slot root.
+          const visible = show.value
+          return h(
+            Transition,
+            { mode: 'out-in', css: false, onEnter, onLeave },
+            {
+              default: () =>
+                h(
+                  Child,
+                  { visible },
+                  {
+                    default: () =>
+                      visible ? h('div', { id: 'content' }, 'content') : [],
+                  },
+                ),
+            },
+          )
+        }
+      },
+    })
+    const { host } = defineInterop(App).render()
+
+    show.value = false
+    await nextTick()
+
+    expect(host.querySelector('#content')).toBeNull()
+    expect(onEnter).not.toHaveBeenCalled()
+    expect(onLeave).not.toHaveBeenCalled()
+  })
+
+  test('vdom slot content should participate in transitions', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({ show: true, onEnter, onLeave })
     const Child = compile(
       `<template>
-        <Transition mode="out-in">
-          <slot>
-            <div>{{ data.fallback }}</div>
-          </slot>
+        <Transition
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <slot />
         </Transition>
       </template>`,
       data,
     )
     const App = compile(
-      `<template>
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
         <components.Child>
-          <template #default v-if="data.show">
-            <span>{{ data.msg }}</span>
-          </template>
+          <div v-if="data.show">slot</div>
         </components.Child>
       </template>`,
       data,
@@ -713,16 +1299,208 @@ describe('Transition', () => {
     )
     const { host } = defineInterop(App as any).render()
 
-    expect(host.innerHTML).toContain('<div>fallback</div>')
+    expect(host.querySelector('div')?.textContent).toBe('slot')
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('slot')
+
+    leaveDone!()
+    expect(host.querySelector('div')).toBeNull()
 
     data.value.show = true
     await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('slot')
+
+    enterDone!()
+  })
+
+  test('vdom slot fragment keys should control transition child identity', async () => {
+    const key = ref('a')
+    const Child = compile(
+      `<template>
+        <Transition name="fade">
+          <slot />
+        </Transition>
+      </template>`,
+      key,
+    )
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(Child, null, {
+            default: () => [
+              h(Fragment, { key: key.value }, [h('div', 'slot')]),
+            ],
+          })
+      },
+    })
+    const { host } = defineInterop(App).render()
+    const leaving = host.querySelector('div')!
+
+    key.value = 'b'
     await nextTick()
 
-    expect(host.innerHTML).toContain(
-      '<span class="v-enter-from v-enter-active">slot</span>',
+    const children = Array.from(host.querySelectorAll('div'))
+    const entering = children.find(child => child !== leaving)!
+    expect(children).toHaveLength(2)
+    expect(leaving.className).toBe('fade-leave-from fade-leave-active')
+    expect(entering.className).toBe('fade-enter-from fade-enter-active')
+  })
+
+  test('vdom slot content should respect out-in transition mode', async () => {
+    let leaveDone: (() => void) | undefined
+    let finishLeaveSynchronously = false
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+      if (finishLeaveSynchronously) done()
+    })
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      hasSlot: true,
+      tag: 'div',
+      text: 'first',
+      onLeave,
+      onEnter,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @leave="data.onLeave"
+          @enter="data.onEnter"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
     )
-    expect(host.innerHTML).not.toContain('<div>fallback</div>')
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(
+            Child,
+            null,
+            data.value.hasSlot
+              ? {
+                  default: () => h(data.value.tag, data.value.text),
+                }
+              : undefined,
+          )
+      },
+    })
+    const { host } = defineInterop(App).render()
+
+    data.value.tag = 'span'
+    data.value.text = 'second'
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+    expect(host.querySelector('span')).toBeNull()
+
+    data.value.tag = 'p'
+    data.value.text = 'latest'
+    await nextTick()
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')).toBeNull()
+    expect(host.querySelector('p')?.textContent).toBe('latest')
+    expect(onEnter).toHaveBeenCalledOnce()
+
+    finishLeaveSynchronously = true
+    data.value.tag = 'div'
+    data.value.text = 'sync'
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledTimes(2)
+    expect(host.querySelector('p')).toBeNull()
+    expect(host.querySelector('div')?.textContent).toBe('sync')
+    expect(onEnter).toHaveBeenCalledTimes(2)
+
+    finishLeaveSynchronously = false
+    data.value.tag = 'span'
+    data.value.text = 'discarded'
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(3)
+    data.value.hasSlot = false
+    await nextTick()
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')).toBeNull()
+    expect(onEnter).toHaveBeenCalledTimes(2)
+  })
+
+  test('vdom slot content should respect in-out transition mode', async () => {
+    let enterDone: (() => void) | undefined
+    let leaveDone: (() => void) | undefined
+    const onEnter = vi.fn((_el: Element, done: () => void) => {
+      enterDone = done
+    })
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({
+      show: true,
+      onEnter,
+      onLeave,
+    })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="in-out"
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <slot />
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Child>
+          <div v-if="data.show">first</div>
+          <span v-else>second</span>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    data.value.show = false
+    await nextTick()
+
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+    expect(host.querySelector('span')?.textContent).toBe('second')
+
+    enterDone!()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.textContent).toBe('first')
+
+    leaveDone!()
+    await nextTick()
+
+    expect(host.querySelector('div')).toBeNull()
+    expect(host.querySelector('span')?.textContent).toBe('second')
   })
 
   test('slot fallback should trigger enter hooks when slot content becomes empty', async () => {

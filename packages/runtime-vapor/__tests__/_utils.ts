@@ -102,6 +102,7 @@ export interface InteropRenderContext {
     props?: RawProps,
     container?: string | ParentNode,
   ) => InteropRenderContext
+  app: App
   host: HTMLElement
   html: () => string
 }
@@ -137,6 +138,7 @@ export function makeInteropRender(): (comp: Component) => InteropRenderContext {
     }
 
     const res = () => ({
+      app,
       host,
       mount,
       render,
