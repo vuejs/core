@@ -726,8 +726,8 @@ export class VaporComponentInstance<
   // for keep-alive
   shapeFlag?: number
   $key?: any
-  // For A(pending) -> B -> A, buffer KeepAlive render effects until A resolves
-  // so only the final branch renders, matching VDOM.
+  // Share a buffer along the KeepAlive component-root chain so
+  // A(pending) -> B -> A renders only the final branch, matching VDOM.
   deferredRenderEffects?: SchedulerJob[]
 
   // for v-once: caches props/attrs values to ensure they remain frozen
@@ -1080,6 +1080,60 @@ export function createPlainElement(
   return el
 }
 
+interface DeferredKeepAliveEffects {
+  effects: SchedulerJob[]
+  owners: VaporComponentInstance[]
+  suspense: SuspenseBoundary
+}
+
+function deferKeepAliveRenderEffects(
+  instance: VaporComponentInstance,
+): DeferredKeepAliveEffects | undefined {
+  const suspense = instance.suspense!
+  const owners: VaporComponentInstance[] = []
+  if (isHydrating) {
+    // Ancestor blocks are not committed during hydration. Preserve the direct
+    // KeepAlive-owner path; wrapper roots cannot be proven here.
+    const owner = instance.parent
+    if (
+      owner &&
+      owner.vapor &&
+      isKeepAlive(owner) &&
+      owner.suspense === suspense
+    ) {
+      owners.push(owner as VaporComponentInstance)
+    }
+  } else {
+    let child: Block = instance
+    let owner = instance.parent
+    while (owner && owner.vapor && owner.suspense === suspense) {
+      const vaporOwner = owner as VaporComponentInstance
+      let root = vaporOwner.block
+      // Dynamic component and v-if roots use fragments in Vapor where VDOM
+      // exposes the active component directly as `subTree.component`.
+      while (isDynamicFragment(root) && !root.isSlot) {
+        root = root.nodes
+      }
+      if (root !== child) return
+
+      owners.push(vaporOwner)
+      if (isKeepAlive(owner)) break
+
+      child = vaporOwner
+      owner = vaporOwner.parent
+    }
+  }
+
+  const keepAlive = owners[owners.length - 1]
+  if (!keepAlive || !isKeepAlive(keepAlive)) return
+
+  const effects: SchedulerJob[] = []
+  for (let i = 0; i < owners.length; i++) {
+    owners[i].deferredRenderEffects = effects
+  }
+  return { effects, owners, suspense }
+}
+
 export function mountComponent(
   instance: VaporComponentInstance,
   parent: ParentNode,
@@ -1092,22 +1146,6 @@ export function mountComponent(
     instance.asyncDep &&
     !instance.asyncResolved
   ) {
-    const owner = instance.parent
-    // Suspense does not participate in the component parent chain. Only defer
-    // the direct async child when it shares KeepAlive's boundary, matching VDOM.
-    const keepAlive =
-      isKeepAliveEnabled &&
-      !isAsyncWrapper(instance) &&
-      owner &&
-      owner.vapor &&
-      isKeepAlive(owner) &&
-      owner.suspense === instance.suspense
-        ? (owner as KeepAliveInstance)
-        : undefined
-    if (keepAlive && !keepAlive.deferredRenderEffects) {
-      keepAlive.deferredRenderEffects = []
-    }
-
     // Moving a still-pending instance, such as a keyed reorder or KeepAlive
     // re-entry, retries `mountComponent`. `insert` relocates its already-mounted
     // DOM without registering the async dependency again.
@@ -1129,6 +1167,7 @@ export function mountComponent(
       return
     }
 
+    const deferred = isKeepAliveEnabled && deferKeepAliveRenderEffects(instance)
     const hydrating = isHydrating
     if (!hydrating) {
       // Keep a placeholder in the DOM while async setup is pending so
@@ -1161,12 +1200,23 @@ export function mountComponent(
         // Use the pending DOM's live boundary because it may have moved while
         // setup was suspended.
         const { parentNode, nextNode } = findBlockBoundary(pendingBlock)
-        const effects = keepAlive && keepAlive.deferredRenderEffects
-        if (effects) {
-          keepAlive.deferredRenderEffects = undefined
-          // Queue the deferred update before hooks created by the setup result.
-          if (effects.length) {
-            queuePostRenderEffect(effects, undefined, keepAlive.suspense)
+        if (deferred) {
+          const { effects, owners, suspense } = deferred
+          const keepAlive = owners[owners.length - 1]
+          if (keepAlive.deferredRenderEffects === effects) {
+            for (let i = 0; i < owners.length; i++) {
+              if (owners[i].deferredRenderEffects === effects) {
+                owners[i].deferredRenderEffects = undefined
+              }
+            }
+            if (effects.length > 1) {
+              // Restore normal Vapor scheduler order before post-flush.
+              effects.sort((a, b) => a.order! - b.order!)
+            }
+            // Queue the deferred update before hooks created by the setup result.
+            if (effects.length) {
+              queuePostRenderEffect(effects, undefined, suspense)
+            }
           }
         }
         if (hydrating) {
