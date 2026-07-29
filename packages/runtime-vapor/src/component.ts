@@ -725,6 +725,9 @@ export class VaporComponentInstance<
   // for keep-alive
   shapeFlag?: number
   $key?: any
+  // For A(pending) -> B -> A, defer KeepAlive updates until A resolves so B
+  // is never created and the final branch is rendered, matching VDOM.
+  deferRenderEffects?: boolean
 
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes
@@ -1088,6 +1091,19 @@ export function mountComponent(
     instance.asyncDep &&
     !instance.asyncResolved
   ) {
+    // Match VDOM by deferring KeepAlive updates for a pending async setup child.
+    const owner = instance.parent
+    const keepAlive =
+      isKeepAliveEnabled &&
+      instance.suspense.pendingBranch &&
+      !isAsyncWrapper(instance) &&
+      owner &&
+      owner.vapor &&
+      isKeepAlive(owner)
+        ? (owner as KeepAliveInstance)
+        : undefined
+    if (keepAlive) keepAlive.deferRenderEffects = true
+
     // Moving a still-pending instance, such as a keyed reorder or KeepAlive
     // re-entry, retries `mountComponent`. `insert` relocates its already-mounted
     // DOM without registering the async dependency again.
@@ -1153,6 +1169,11 @@ export function mountComponent(
           handleResult()
           mountComponent(instance, parentNode as ParentNode, nextNode)
           remove(pendingBlock, parentNode as ParentNode)
+        }
+
+        if (keepAlive) {
+          // Suspense flushes the deferred jobs when the branch resolves.
+          keepAlive.deferRenderEffects = false
         }
       } finally {
         if (hydrating) {

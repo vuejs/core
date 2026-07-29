@@ -4473,6 +4473,78 @@ describe('vdomInterop', () => {
       }
     })
 
+    test('defers KeepAlive updates until its async setup child resolves', async () => {
+      const pending = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const data = ref({ wait: pending.promise, asyncSetup, syncSetup })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      const current = shallowRef<any>(AsyncChild)
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: () => createDynamicComponent(() => current.value),
+          })
+        },
+      })
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+
+        current.value = SyncChild
+        await nextTick()
+        current.value = AsyncChild
+        await nextTick()
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+        expect(syncSetup).not.toHaveBeenCalled()
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+        expect(syncSetup).not.toHaveBeenCalled()
+        expect(host.innerHTML).toBe(
+          '<span>async</span><!--dynamic-component-->',
+        )
+
+        current.value = SyncChild
+        await nextTick()
+
+        expect(syncSetup).toHaveBeenCalledOnce()
+        expect(host.innerHTML).toBe('<span>sync</span><!--dynamic-component-->')
+      } finally {
+        pending.resolve()
+        app.unmount()
+        host.remove()
+      }
+    })
+
     test('renders vapor async wrapper with directive inside VDOM Suspense', async () => {
       const duration = 5
       const calls: string[] = []

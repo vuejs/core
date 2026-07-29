@@ -34,7 +34,13 @@ export class RenderEffect extends ReactiveEffect {
 
     const job: SchedulerJob = () => {
       if (this.dirty) {
-        this.run()
+        // KeepAlive sets this while a direct async setup child blocks Suspense.
+        if (this.i && this.i.deferRenderEffects) {
+          // Queue with Suspense to match VDOM's cache-before-update ordering.
+          queuePostRenderEffect(this.job, undefined, this.i.suspense)
+        } else {
+          this.run()
+        }
       }
     }
 
