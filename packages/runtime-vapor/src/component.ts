@@ -1168,7 +1168,12 @@ function deferKeepAliveRenderEffects(
         }
         // Run here so updates stay ahead of setup-created Suspense effects.
         for (let i = 0; i < effects.length; i++) {
-          effects[i]()
+          const job = effects[i]
+          callWithErrorHandling(
+            job,
+            job.i,
+            job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
+          )
         }
       },
     }
