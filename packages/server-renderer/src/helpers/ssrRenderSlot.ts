@@ -24,7 +24,8 @@ export type SSRSlot = (
 export function ssrRenderSlot(
   slots: Slots | SSRSlots,
   slotName: string,
-  slotProps: Props,
+  // can be nullish when `v-bind` on the `<slot>` evaluates to nullish
+  slotProps: Props | null | undefined,
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
@@ -47,7 +48,7 @@ export function ssrRenderSlot(
 export function ssrRenderSlotInner(
   slots: Slots | SSRSlots,
   slotName: string,
-  slotProps: Props,
+  slotProps: Props | null | undefined,
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
@@ -61,7 +62,9 @@ export function ssrRenderSlotInner(
       slotBuffer.push(item)
     }
     const ret = slotFn(
-      slotProps,
+      // keep the slot function's contract in sync with `renderSlot`, which also
+      // normalizes nullish props before invoking the slot
+      slotProps || {},
       bufferedPush,
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : '',
