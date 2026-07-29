@@ -787,7 +787,15 @@ function resolveTypeReference(
     node,
     onlyExported,
   )
-  return canCache ? (node._resolvedReference = resolved) : resolved
+  if (canCache) {
+    Object.defineProperty(node, '_resolvedReference', {
+      value: resolved,
+      writable: true,
+      configurable: true,
+      enumerable: false,
+    })
+  }
+  return resolved
 }
 
 function innerResolveTypeReference(

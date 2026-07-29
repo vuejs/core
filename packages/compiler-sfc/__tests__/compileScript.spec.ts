@@ -1791,4 +1791,45 @@ describe('compileScript', () => {
     expect(lang).toBe('coffee')
     expect(scriptAst).not.toBeDefined()
   })
+
+  test('should not walk cached recursive type references', () => {
+    const files: Record<string, string> = {
+      '/issue-15174/types.ts': `
+        export type TreeNode = {
+          parent?: TreeNode
+        }
+
+        export type ItemProps = {
+          node?: TreeNode
+        }
+      `,
+    }
+    const options = {
+      fs: {
+        fileExists: (file: string) => file in files,
+        readFile: (file: string) => files[file],
+      },
+    }
+    const item = `
+      <script setup lang="ts">
+      import type { ItemProps } from './types'
+      defineProps<ItemProps>()
+      </script>
+    `
+
+    expect(() => {
+      compile(
+        `
+          <script setup lang="ts">
+          import type { TreeNode } from './types'
+          defineProps<{ parentNode?: TreeNode['parent'] }>()
+          </script>
+        `,
+        options,
+        { filename: '/issue-15174/App.vue' },
+      )
+      compile(item, options, { filename: '/issue-15174/Second.vue' })
+      compile(item, options, { filename: '/issue-15174/Third.vue' })
+    }).not.toThrow()
+  })
 })
