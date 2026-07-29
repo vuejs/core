@@ -350,6 +350,49 @@ describe('reactivity/reactive/Array', () => {
       expect(index).toBe(2)
       expect(observed.lastSearched).toBe(6)
     })
+
+    test('restores batching when a mutation method throws', () => {
+      class ThrowingArray<T> extends Array<T> {
+        push(..._items: T[]): number {
+          throw new Error('boom')
+        }
+      }
+
+      const observed = reactive(new ThrowingArray<number>())
+      expect(() => observed.push(1)).toThrow('boom')
+
+      const count = ref(0)
+      const countSpy = vi.fn(() => count.value)
+      effect(countSpy)
+
+      count.value++
+      expect(countSpy).toHaveBeenCalledTimes(2)
+    })
+
+    test('restores tracking when flushing a mutation throws', () => {
+      const observed = reactive<number[]>([])
+      let shouldThrow = false
+      effect(() => {
+        observed.length
+        if (shouldThrow) {
+          throw new Error('boom')
+        }
+      })
+
+      const tracked = ref(0)
+      const trackedSpy = vi.fn()
+      effect(() => {
+        try {
+          shouldThrow = true
+          observed.push(1)
+        } catch {}
+        tracked.value
+        trackedSpy()
+      })
+
+      tracked.value++
+      expect(trackedSpy).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('Optimized array methods:', () => {

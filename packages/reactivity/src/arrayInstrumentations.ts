@@ -365,8 +365,13 @@ function noTracking(
 ) {
   pauseTracking()
   startBatch()
-  const res = (toRaw(self) as any)[method].apply(self, args)
-  endBatch()
-  resetTracking()
-  return res
+  try {
+    return (toRaw(self) as any)[method].apply(self, args)
+  } finally {
+    try {
+      endBatch()
+    } finally {
+      resetTracking()
+    }
+  }
 }
