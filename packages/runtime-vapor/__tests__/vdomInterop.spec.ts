@@ -4477,7 +4477,12 @@ describe('vdomInterop', () => {
       const pending = deferred()
       const asyncSetup = vi.fn()
       const syncSetup = vi.fn()
-      const data = ref({ wait: pending.promise, asyncSetup, syncSetup })
+      const data = ref({
+        wait: pending.promise,
+        asyncSetup,
+        syncSetup,
+        current: null as any,
+      })
       const AsyncChild = compile(
         `<script vapor>
           const data = _data
@@ -4495,14 +4500,20 @@ describe('vdomInterop', () => {
         <template><span>sync</span></template>`,
         data,
       )
-      const current = shallowRef<any>(AsyncChild)
-      const VaporParent = defineVaporComponent({
-        setup() {
-          return createComponent(VaporKeepAlive, null, {
-            default: () => createDynamicComponent(() => current.value),
-          })
-        },
-      })
+      data.value.current = AsyncChild
+      const VaporParent = compile(
+        `<script setup vapor>
+          const data = _data
+          const VaporKeepAlive = _components.VaporKeepAlive
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <component :is="data.current" />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive },
+      )
       const host = document.createElement('div')
       const app = createApp({
         render: () =>
@@ -4516,9 +4527,9 @@ describe('vdomInterop', () => {
       try {
         app.mount(host)
 
-        current.value = SyncChild
+        data.value.current = SyncChild
         await nextTick()
-        current.value = AsyncChild
+        data.value.current = AsyncChild
         await nextTick()
 
         expect(asyncSetup).toHaveBeenCalledOnce()
@@ -4533,7 +4544,7 @@ describe('vdomInterop', () => {
           '<span>async</span><!--dynamic-component-->',
         )
 
-        current.value = SyncChild
+        data.value.current = SyncChild
         await nextTick()
 
         expect(syncSetup).toHaveBeenCalledOnce()
@@ -4692,6 +4703,99 @@ describe('vdomInterop', () => {
       }
     })
 
+    test('skips transient components across nested KeepAlive roots', async () => {
+      const pending = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const data = ref({
+        wait: pending.promise,
+        asyncSetup,
+        syncSetup,
+        current: null as any,
+      })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const InnerRoot = compile(
+        `<script setup vapor>
+          const VaporKeepAlive = _components.VaporKeepAlive
+          const AsyncChild = _components.AsyncChild
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <AsyncChild />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive, AsyncChild },
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = InnerRoot
+      const VaporParent = compile(
+        `<script setup vapor>
+          const data = _data
+          const VaporKeepAlive = _components.VaporKeepAlive
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <component :is="data.current" />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+
+        data.value.current = SyncChild
+        await nextTick()
+        data.value.current = InnerRoot
+        await nextTick()
+
+        expect([
+          asyncSetup.mock.calls.length,
+          syncSetup.mock.calls.length,
+        ]).toEqual([1, 0])
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect([
+          asyncSetup.mock.calls.length,
+          syncSetup.mock.calls.length,
+        ]).toEqual([1, 0])
+        expect(host.textContent).toBe('async')
+      } finally {
+        pending.resolve()
+        await flushResolution(pending.promise)
+        app.unmount()
+        host.remove()
+      }
+    })
+
     test('skips transient KeepAlive components in removed branches', async () => {
       const pending = deferred()
       const syncSetup = vi.fn()
@@ -4773,6 +4877,131 @@ describe('vdomInterop', () => {
       }
     })
 
+    test.each([
+      [
+        'preserves deferred KeepAlive updates across nested async roots',
+        false,
+        1,
+        'sync',
+      ],
+      [
+        'skips transient KeepAlive components across nested async roots',
+        true,
+        0,
+        '',
+      ],
+    ] as const)('%s', async (_, removeBranch, syncCalls, textContent) => {
+      const outerPending = deferred()
+      const innerPending = deferred()
+      const outerBeforeMount = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const data = ref({
+        outerWait: outerPending.promise,
+        innerWait: innerPending.promise,
+        outerBeforeMount: outerBeforeMount.resolve,
+        asyncSetup,
+        syncSetup,
+        show: true,
+        current: null as any,
+      })
+      const InnerAsync = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.innerWait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const OuterAsync = compile(
+        `<script vapor>
+          import { onBeforeMount } from 'vue'
+          const data = _data
+          const InnerAsync = _components.InnerAsync
+          const VaporKeepAlive = _components.VaporKeepAlive
+          onBeforeMount(() => data.value.outerBeforeMount())
+          await data.value.outerWait
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <InnerAsync />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { InnerAsync, VaporKeepAlive },
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = OuterAsync
+      const Wrapper = compile(
+        `<script setup vapor>
+          const data = _data
+        </script>
+        <template>
+          <component v-if="data.show" :is="data.current" />
+        </template>`,
+        data,
+      )
+      const VaporParent = compile(
+        `<script setup vapor>
+          const VaporKeepAlive = _components.VaporKeepAlive
+          const Wrapper = _components.Wrapper
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <Wrapper />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive, Wrapper },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+
+        data.value.current = SyncChild
+        await nextTick()
+
+        outerPending.resolve()
+        await outerBeforeMount.promise
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+
+        if (removeBranch) {
+          data.value.show = false
+          await nextTick()
+        }
+
+        innerPending.resolve()
+        await flushResolution(innerPending.promise)
+
+        expect(syncSetup).toHaveBeenCalledTimes(syncCalls)
+        expect(host.textContent).toBe(textContent)
+      } finally {
+        outerPending.resolve()
+        innerPending.resolve()
+        await flushResolution(innerPending.promise)
+        app.unmount()
+        host.remove()
+      }
+    })
+
     test('does not defer KeepAlive updates across a nested Suspense boundary', async () => {
       const pending = deferred()
       const asyncSetup = vi.fn()
@@ -4840,7 +5069,12 @@ describe('vdomInterop', () => {
       const asyncSetup = vi.fn()
       const syncSetup = vi.fn()
       const onResolve = vi.fn()
-      const data = ref({ wait: pending.promise, asyncSetup, syncSetup })
+      const data = ref({
+        wait: pending.promise,
+        asyncSetup,
+        syncSetup,
+        current: null as any,
+      })
       const InitialChild = compile(
         `<template><span>initial</span></template>`,
         data,
@@ -4862,14 +5096,20 @@ describe('vdomInterop', () => {
         <template><span>sync</span></template>`,
         data,
       )
-      const current = shallowRef<any>(InitialChild)
-      const VaporParent = defineVaporComponent({
-        setup() {
-          return createComponent(VaporKeepAlive, null, {
-            default: () => createDynamicComponent(() => current.value),
-          })
-        },
-      })
+      data.value.current = InitialChild
+      const VaporParent = compile(
+        `<script setup vapor>
+          const data = _data
+          const VaporKeepAlive = _components.VaporKeepAlive
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <component :is="data.current" />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive },
+      )
       const host = document.createElement('div')
       const app = createApp({
         render: () =>
@@ -4893,11 +5133,11 @@ describe('vdomInterop', () => {
           '<span>initial</span><!--dynamic-component-->',
         )
 
-        current.value = AsyncChild
+        data.value.current = AsyncChild
         await nextTick()
-        current.value = SyncChild
+        data.value.current = SyncChild
         await nextTick()
-        current.value = AsyncChild
+        data.value.current = AsyncChild
         await nextTick()
 
         expect(asyncSetup).toHaveBeenCalledOnce()
@@ -4912,7 +5152,7 @@ describe('vdomInterop', () => {
           '<span>async</span><!--dynamic-component-->',
         )
 
-        current.value = SyncChild
+        data.value.current = SyncChild
         await nextTick()
 
         expect(syncSetup).toHaveBeenCalledOnce()

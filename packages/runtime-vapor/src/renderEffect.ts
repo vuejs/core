@@ -35,14 +35,14 @@ export class RenderEffect extends ReactiveEffect {
 
     const job: SchedulerJob = () => {
       if (this.dirty) {
-        // KeepAlive defers updates while its async setup root is pending.
+        // A pending KeepAlive async root defers updates along its root chain.
         const deferred =
           __FEATURE_SUSPENSE__ &&
           isSuspenseEnabled &&
           this.i &&
-          this.i.deferredRenderEffects
+          this.i.deferredKeepAliveUpdates
         if (deferred) {
-          deferred.push(this.job)
+          deferred.effects.push(this.job)
         } else {
           this.run()
         }
