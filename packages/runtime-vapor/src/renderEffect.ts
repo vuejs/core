@@ -14,6 +14,7 @@ import {
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import { inOnceSlot } from './componentSlots'
 import { invokeArrayFns } from '@vue/shared'
+import { isSuspenseEnabled } from './suspense'
 
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
@@ -34,10 +35,14 @@ export class RenderEffect extends ReactiveEffect {
 
     const job: SchedulerJob = () => {
       if (this.dirty) {
-        // KeepAlive sets this while a direct async setup child blocks Suspense.
-        if (this.i && this.i.deferRenderEffects) {
-          // Queue with Suspense to match VDOM's cache-before-update ordering.
-          queuePostRenderEffect(this.job, undefined, this.i.suspense)
+        // KeepAlive defers updates while its direct async setup child is pending.
+        const deferred =
+          __FEATURE_SUSPENSE__ &&
+          isSuspenseEnabled &&
+          this.i &&
+          this.i.deferredRenderEffects
+        if (deferred) {
+          deferred.push(this.job)
         } else {
           this.run()
         }

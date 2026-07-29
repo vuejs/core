@@ -16,6 +16,7 @@ import {
   NULL_DYNAMIC_COMPONENT,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
+  type SchedulerJob,
   type ShallowUnwrapRef,
   type SuspenseBoundary,
   callWithErrorHandling,
@@ -725,9 +726,9 @@ export class VaporComponentInstance<
   // for keep-alive
   shapeFlag?: number
   $key?: any
-  // For A(pending) -> B -> A, defer KeepAlive updates until A resolves so B
-  // is never created and the final branch is rendered, matching VDOM.
-  deferRenderEffects?: boolean
+  // For A(pending) -> B -> A, buffer KeepAlive render effects until A resolves
+  // so only the final branch renders, matching VDOM.
+  deferredRenderEffects?: SchedulerJob[]
 
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes
@@ -1091,18 +1092,21 @@ export function mountComponent(
     instance.asyncDep &&
     !instance.asyncResolved
   ) {
-    // Match VDOM by deferring KeepAlive updates for a pending async setup child.
     const owner = instance.parent
+    // Suspense does not participate in the component parent chain. Only defer
+    // the direct async child when it shares KeepAlive's boundary, matching VDOM.
     const keepAlive =
       isKeepAliveEnabled &&
-      instance.suspense.pendingBranch &&
       !isAsyncWrapper(instance) &&
       owner &&
       owner.vapor &&
-      isKeepAlive(owner)
+      isKeepAlive(owner) &&
+      owner.suspense === instance.suspense
         ? (owner as KeepAliveInstance)
         : undefined
-    if (keepAlive) keepAlive.deferRenderEffects = true
+    if (keepAlive && !keepAlive.deferredRenderEffects) {
+      keepAlive.deferredRenderEffects = []
+    }
 
     // Moving a still-pending instance, such as a keyed reorder or KeepAlive
     // re-entry, retries `mountComponent`. `insert` relocates its already-mounted
@@ -1157,6 +1161,14 @@ export function mountComponent(
         // Use the pending DOM's live boundary because it may have moved while
         // setup was suspended.
         const { parentNode, nextNode } = findBlockBoundary(pendingBlock)
+        const effects = keepAlive && keepAlive.deferredRenderEffects
+        if (effects) {
+          keepAlive.deferredRenderEffects = undefined
+          // Queue the deferred update before hooks created by the setup result.
+          if (effects.length) {
+            queuePostRenderEffect(effects, undefined, keepAlive.suspense)
+          }
+        }
         if (hydrating) {
           withDeferredHydrationBoundary(() => {
             handleResult()
@@ -1169,11 +1181,6 @@ export function mountComponent(
           handleResult()
           mountComponent(instance, parentNode as ParentNode, nextNode)
           remove(pendingBlock, parentNode as ParentNode)
-        }
-
-        if (keepAlive) {
-          // Suspense flushes the deferred jobs when the branch resolves.
-          keepAlive.deferRenderEffects = false
         }
       } finally {
         if (hydrating) {
