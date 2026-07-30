@@ -25,7 +25,11 @@ import {
   type RendererNode,
   queuePostRenderEffect,
 } from '../renderer'
-import { queuePostFlushCb } from '../scheduler'
+import {
+  type SchedulerJob,
+  SchedulerJobFlags,
+  queuePostFlushCb,
+} from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
 import { assertNumber, warn } from '../warning'
 import { ErrorCodes, handleError } from '../errorHandling'
@@ -290,7 +294,13 @@ function patchSuspense(
       }
       // reset suspense state
       suspense.deps = 0
-      // discard effects from pending branch
+      // discard effects from the pending branch, except retained recovery jobs
+      for (let i = 0; i < suspense.effects.length; i++) {
+        const effect = suspense.effects[i] as SchedulerJob
+        if (effect.flags! & SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD) {
+          queuePostFlushCb(effect)
+        }
+      }
       suspense.effects.length = 0
       // discard previous container
       suspense.hiddenContainer = createElement('div')

@@ -21,6 +21,11 @@ export enum SchedulerJobFlags {
    */
   ALLOW_RECURSE = 1 << 1,
   DISPOSED = 1 << 2,
+  /**
+   * Requeue a Suspense effect if its pending branch is discarded.
+   * @internal
+   */
+  REQUEUE_ON_SUSPENSE_DISCARD = 1 << 3,
 }
 
 export interface SchedulerJob extends Function {

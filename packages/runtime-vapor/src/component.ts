@@ -17,6 +17,7 @@ import {
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
   type SchedulerJob,
+  SchedulerJobFlags,
   type ShallowUnwrapRef,
   type SuspenseBoundary,
   callWithErrorHandling,
@@ -55,6 +56,7 @@ import {
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
+  NOOP,
   type Prettify,
   ShapeFlags,
   hasOwn,
@@ -1080,7 +1082,7 @@ export function createPlainElement(
   return el
 }
 
-interface DeferredKeepAliveUpdates {
+export interface DeferredKeepAliveUpdates {
   effects: SchedulerJob[]
   owners: VaporComponentInstance[]
   suspense: SuspenseBoundary
@@ -1088,6 +1090,58 @@ interface DeferredKeepAliveUpdates {
   pendingRoot?: VaporComponentInstance
   flushQueued: boolean
   flushJob: SchedulerJob
+}
+
+/**
+ * A deferred state stays live while its async root is pending or its flush is
+ * queued for the same Suspense generation. The flush is requeued if that
+ * generation is discarded, so `flushQueued` cannot strand buffered updates.
+ */
+export function isDeferredKeepAliveStateLive(
+  state: DeferredKeepAliveUpdates,
+): boolean {
+  const suspense = state.suspense
+  if (suspense.isUnmounted || state.pendingId !== suspense.pendingId) {
+    return false
+  }
+  if (state.flushQueued) return true
+  const root = state.pendingRoot
+  return !!root && !root.isUnmounted
+}
+
+export function settleDeferredKeepAliveUpdates(
+  state: DeferredKeepAliveUpdates,
+  currentJob?: SchedulerJob,
+): void {
+  const { effects, owners } = state
+  // Idempotent: a settle hook and a stale-detecting render effect may both
+  // settle the same state.
+  state.effects = []
+  state.owners = []
+  state.pendingRoot = undefined
+  for (let i = 0; i < owners.length; i++) {
+    if (owners[i].deferredKeepAliveUpdates === state) {
+      owners[i].deferredKeepAliveUpdates = undefined
+    }
+  }
+  // Replay buffered updates so owner effects captured before the state went
+  // stale are not lost. The detecting job joins the batch so the whole set
+  // runs in scheduler order - an outer removal must still precede a buffered
+  // inner update; stopped jobs no-op on their dirty check.
+  if (currentJob && !effects.includes(currentJob)) {
+    effects.push(currentJob)
+  }
+  if (effects.length > 1) {
+    effects.sort((a, b) => a.order! - b.order!)
+  }
+  for (let i = 0; i < effects.length; i++) {
+    const job = effects[i]
+    callWithErrorHandling(
+      job,
+      job.i,
+      job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
+    )
+  }
 }
 
 function deferKeepAliveRenderEffects(
@@ -1142,6 +1196,17 @@ function deferKeepAliveRenderEffects(
     deferred.suspense !== suspense ||
     deferred.pendingId !== instance.suspenseId
   ) {
+    // Runs when the boundary resolves (or on the resolving tick when it
+    // has no pending branch), ahead of setup-created Suspense effects.
+    const flushJob: SchedulerJob = () => {
+      state.flushQueued = false
+      // A resolved root may synchronously mount another pending async root.
+      if (keepAlive.deferredKeepAliveUpdates !== state || state.pendingRoot) {
+        return
+      }
+      settleDeferredKeepAliveUpdates(state)
+    }
+    flushJob.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
     const state: DeferredKeepAliveUpdates = {
       effects: [],
       owners: [],
@@ -1149,34 +1214,10 @@ function deferKeepAliveRenderEffects(
       pendingId: instance.suspenseId,
       pendingRoot: instance,
       flushQueued: false,
-      flushJob: () => {
-        state.flushQueued = false
-        // A resolved root may synchronously mount another pending async root.
-        if (keepAlive.deferredKeepAliveUpdates !== state || state.pendingRoot) {
-          return
-        }
-
-        const { effects, owners } = state
-        for (let i = 0; i < owners.length; i++) {
-          if (owners[i].deferredKeepAliveUpdates === state) {
-            owners[i].deferredKeepAliveUpdates = undefined
-          }
-        }
-        if (effects.length > 1) {
-          // Restore normal Vapor scheduler order across nested async roots.
-          effects.sort((a, b) => a.order! - b.order!)
-        }
-        // Run here so updates stay ahead of setup-created Suspense effects.
-        for (let i = 0; i < effects.length; i++) {
-          const job = effects[i]
-          callWithErrorHandling(
-            job,
-            job.i,
-            job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
-          )
-        }
-      },
+      flushJob,
     }
+    // Owner effects settle a stale state before mounting a new root. Nested
+    // roots from an accepted continuation share this generation and reuse it.
     deferred = state
   } else {
     deferred.pendingRoot = instance
@@ -1262,7 +1303,10 @@ export function mountComponent(
           if (deferred.pendingRoot === instance) {
             deferred.pendingRoot = undefined
           }
-          // Reserve one Suspense effect position for the whole async root chain.
+          // Reserve one flush for the whole async root chain, gated on the
+          // nearest boundary like VDOM's deferred retry. If the boundary
+          // discards that generation, the marked flush moves to the ordinary
+          // post queue so the surviving Vapor owners cannot stay dirty forever.
           if (!deferred.flushQueued) {
             deferred.flushQueued = true
             queuePostRenderEffect(
@@ -1294,6 +1338,19 @@ export function mountComponent(
         if (reset) reset()
       }
     })
+    if (deferred) {
+      const state = deferred
+      // Suspense skips the registerDep callback above for roots unmounted
+      // early or superseded pending cycles, leaving buffered updates with no
+      // flush and possibly no future owner notification to recover through.
+      // This hook settles after Suspense's own callback (registered above),
+      // so when the callback did run, its queued flush wins.
+      instance.asyncDep!.catch(NOOP).then(() => {
+        if (!state.flushQueued && state.pendingRoot === instance) {
+          settleDeferredKeepAliveUpdates(state)
+        }
+      })
+    }
     return
   }
 
