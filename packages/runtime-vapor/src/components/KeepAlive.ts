@@ -51,6 +51,7 @@ import {
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   ctx: VaporKeepAliveContext & {
+    clearCurrent?: (block: VaporComponentInstance | VaporFragment) => void
     activate: (
       instance: VaporComponentInstance,
       parentNode: ParentNode,
@@ -400,6 +401,13 @@ const VaporKeepAliveImpl = defineVaporComponent({
           keptAliveScopes.set(scopeLookupKey, scope)
         }
       },
+    }
+
+    if (isInteropEnabled) {
+      // Interop bypasses ctx.deactivate(), so clear current only for its block.
+      keepAliveCtx.clearCurrent = block => {
+        if (current === block) current = undefined
+      }
     }
 
     keepAliveInstance.ctx = keepAliveCtx

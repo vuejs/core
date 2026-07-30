@@ -2862,6 +2862,59 @@ describe('vdomInterop', () => {
           expect(hooksB.unmounted).toHaveBeenCalledTimes(1)
         })
 
+        it.each([
+          ['component type', (component: any) => component],
+          ['component VNode', (component: any) => h(component)],
+        ])('prunes a VDOM %s when max is reached', async (_, toValue) => {
+          const source = ref(0)
+          const renderA = vi.fn()
+          const unmountedA = vi.fn()
+
+          const VDOMCompA = defineComponent({
+            setup() {
+              onUnmounted(unmountedA)
+              return () => {
+                renderA(source.value)
+                return h('div', `vdom A ${source.value}`)
+              }
+            },
+          })
+
+          const VDOMCompB = defineComponent({
+            setup() {
+              return () => h('div', 'vdom B')
+            },
+          })
+
+          const current = shallowRef<any>(toValue(VDOMCompA))
+          const App = compile(
+            `<template>
+              <KeepAlive :max="1">
+                <component :is="data" />
+              </KeepAlive>
+            </template>`,
+            current,
+          )
+          const { host, app } = define(App as any).render()
+          const a = host.firstElementChild
+
+          current.value = toValue(VDOMCompB)
+          await nextTick()
+
+          expect(host.innerHTML).toBe(
+            '<div>vdom B</div><!--dynamic-component-->',
+          )
+          expect(unmountedA).toHaveBeenCalledOnce()
+          expect(a!.parentNode).toBeNull()
+
+          const renderCount = renderA.mock.calls.length
+          source.value++
+          await nextTick()
+          expect(renderA).toHaveBeenCalledTimes(renderCount)
+
+          app.unmount()
+        })
+
         it('unmounts inactive cached inner VDOM components during KeepAlive hmr rerender', async () => {
           const hooksA = {
             unmounted: vi.fn(),
