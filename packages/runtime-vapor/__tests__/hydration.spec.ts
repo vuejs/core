@@ -6133,6 +6133,78 @@ describe('Vapor Mode hydration', () => {
       expect(data.value.spy).toHaveBeenCalled()
     })
 
+    test('updates an earlier branch from sibling beforeMount during async component hydration', async () => {
+      const data = ref({ show: true })
+      const innerCode = `
+        <div v-if="data.show">A</div>
+        <components.Mutator />
+      `
+      const mutatorCode = `
+        <script vapor>
+          import { onBeforeMount } from 'vue'
+          const data = _data
+          onBeforeMount(() => {
+            data.value.show = false
+          })
+        </script>
+        <template><span>tail</span></template>
+      `
+      const appCode = `<components.AsyncComp />`
+
+      const SSRMutator = compileVaporComponent(
+        mutatorCode,
+        data,
+        undefined,
+        true,
+      )
+      const SSRInner = compileVaporComponent(
+        innerCode,
+        data,
+        { Mutator: SSRMutator },
+        true,
+      )
+      const SSRAsyncComp = defineAsyncComponent(() => Promise.resolve(SSRInner))
+      const SSRApp = compileVaporComponent(
+        appCode,
+        data,
+        { AsyncComp: SSRAsyncComp },
+        true,
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+
+      const Mutator = compileVaporComponent(mutatorCode, data)
+      const Inner = compileVaporComponent(innerCode, data, { Mutator })
+      let clientResolve: (comp: any) => void
+      const AsyncComp = defineVaporAsyncComponent(
+        () =>
+          new Promise(resolve => {
+            clientResolve = resolve
+          }),
+      )
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const errorHandler = vi.fn()
+      const app = createVaporSSRApp(App)
+      app.config.errorHandler = errorHandler
+      app.mount(container)
+
+      clientResolve!(Inner)
+      await new Promise(resolve => setTimeout(resolve))
+      await nextTick()
+
+      expect(errorHandler).not.toHaveBeenCalled()
+      expect(container.textContent).toBe('tail')
+
+      data.value.show = true
+      await nextTick()
+      expect(errorHandler).not.toHaveBeenCalled()
+      expect(container.textContent).toBe('Atail')
+    })
+
     // No longer needed, parent component updates in vapor mode no longer
     // cause child components to re-render
     // test.todo('update async wrapper before resolve', async () => {})
@@ -6776,6 +6848,104 @@ describe('Vapor Mode hydration', () => {
 
     describe('suspense', () => {
       describe('VDOM suspense', () => {
+        test('updates an earlier branch from sibling beforeMount during async setup hydration', async () => {
+          const childCode = `
+            <script vapor>
+              const data = _data
+              const components = _components
+              await data.value.wait
+            </script>
+            <template>
+              <div v-if="data.show">A</div>
+              <components.Mutator />
+            </template>
+          `
+          const mutatorCode = `
+            <script vapor>
+              import { onBeforeMount } from 'vue'
+              const data = _data
+              onBeforeMount(() => {
+                data.value.show = false
+              })
+            </script>
+            <template><span>tail</span></template>
+          `
+          const appCode = `
+            <script setup>
+              const components = _components
+            </script>
+            <template>
+              <Suspense>
+                <components.VaporChild />
+              </Suspense>
+            </template>
+          `
+
+          const data = ref({
+            show: true,
+            wait: Promise.resolve(),
+          })
+          const serverMutator = compileVaporComponent(
+            mutatorCode,
+            data,
+            undefined,
+            true,
+          )
+          const serverChild = compileVaporComponent(
+            childCode,
+            data,
+            { Mutator: serverMutator },
+            true,
+          )
+          const serverApp = compile(
+            appCode,
+            data,
+            { VaporChild: serverChild },
+            { vapor: false, ssr: true },
+          )
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(serverApp),
+          )
+
+          let resolve: () => void
+          data.value = {
+            show: true,
+            wait: new Promise<void>(r => {
+              resolve = r
+            }),
+          }
+          const clientMutator = compileVaporComponent(mutatorCode, data)
+          const clientChild = compileVaporComponent(childCode, data, {
+            Mutator: clientMutator,
+          })
+          const clientApp = compile(
+            appCode,
+            data,
+            { VaporChild: clientChild },
+            { vapor: false },
+          )
+          const container = document.createElement('div')
+          container.innerHTML = html
+          document.body.appendChild(container)
+          const errorHandler = vi.fn()
+          const app = runtimeDom.createSSRApp(clientApp)
+          app.config.errorHandler = errorHandler
+          app.use(runtimeVapor.vaporInteropPlugin)
+          app.mount(container)
+
+          resolve!()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+
+          expect(errorHandler).not.toHaveBeenCalled()
+          expect(container.textContent).toBe('tail')
+
+          data.value.show = true
+          await nextTick()
+          expect(errorHandler).not.toHaveBeenCalled()
+          expect(container.textContent).toBe('Atail')
+        })
+
         test('hydrate VDOM Suspense vapor async setup updates empty v-for before trailing sibling', async () => {
           const data = ref({
             items: [] as string[],
