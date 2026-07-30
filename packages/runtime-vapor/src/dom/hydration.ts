@@ -121,6 +121,10 @@ let asyncHydrationIsEnabled = false
 let asyncHydrationIsHydrating = false
 let asyncHydrationNode: Node | null = null
 
+export function isInAsyncHydration(): boolean {
+  return deferredHydrationBoundaryDepth > 0 || pendingAsyncHydrationResets > 0
+}
+
 export function enterAsyncHydration(node: Node): () => void {
   if (pendingAsyncHydrationResets++ === 0) {
     asyncHydrationIsEnabled = isHydratingEnabled
