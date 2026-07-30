@@ -3,6 +3,7 @@ import {
   child,
   createComponent,
   createPlainElement,
+  createVaporApp,
   createVaporSSRApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
@@ -14632,5 +14633,72 @@ describe('VDOM interop', () => {
     show.value = false
     await nextTick()
     expect(container.innerHTML).toBe('<div><a><span>after</span></a></div>')
+  })
+
+  test('does not leak concurrent async hydration context', async () => {
+    const resolvers: Array<() => void> = []
+    const mountedHtml: string[] = []
+    const Fresh = compileVaporComponent('<strong>fresh</strong>')
+    const mountFresh = () => {
+      const container = document.createElement('div')
+      createVaporApp(Fresh).mount(container)
+      return container.innerHTML
+    }
+    const serverData = ref({
+      waits: [Promise.resolve(), Promise.resolve()],
+      afterAwait: () => {},
+    })
+    const clientData = ref({
+      waits: [
+        new Promise<void>(resolve => resolvers.push(resolve)),
+        new Promise<void>(resolve => resolvers.push(resolve)),
+      ],
+      afterAwait: () => mountedHtml.push(mountFresh()),
+    })
+    const childCode = `
+      <script vapor>
+        const data = _data
+        const props = defineProps(['id'])
+        await data.value.waits[props.id]
+        Promise.resolve().then(data.value.afterAwait)
+      </script>
+      <template><span>{{ props.id }}</span></template>
+    `
+
+    let AsyncChild = compileVaporComponent(
+      childCode,
+      serverData,
+      undefined,
+      true,
+    )
+    const App = defineComponent({
+      setup: () => () =>
+        h(runtimeDom.Suspense, null, {
+          default: () =>
+            h('div', [h(AsyncChild, { id: 0 }), h(AsyncChild, { id: 1 })]),
+        }),
+    })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App),
+    )
+
+    AsyncChild = compileVaporComponent(childCode, clientData)
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    const app = runtimeDom.createSSRApp(App)
+    app.use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    resolvers.forEach(resolve => resolve())
+    await new Promise(resolve => setTimeout(resolve))
+    expect(container.textContent).toBe('01')
+    expect(mountedHtml).toEqual([
+      '<strong>fresh</strong>',
+      '<strong>fresh</strong>',
+    ])
+    expect(mountFresh()).toBe('<strong>fresh</strong>')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    app.unmount()
   })
 })

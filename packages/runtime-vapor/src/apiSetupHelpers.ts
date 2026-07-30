@@ -4,7 +4,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   currentHydrationNode,
-  enterHydration,
+  enterAsyncHydration,
   isHydrating,
 } from './dom/hydration'
 import type { VaporComponentInstance } from './component'
@@ -15,7 +15,7 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
     const hydrationNode = currentHydrationNode!
     // After `__restore()` brings back the component instance, vapor still needs
     // its own hydration state restored so setup can continue adopting SSR nodes.
-    instance.restoreAsyncContext = () => enterHydration(hydrationNode)
+    instance.restoreAsyncContext = () => enterAsyncHydration(hydrationNode)
   }
 
   return baseWithAsyncContext(getAwaitable)

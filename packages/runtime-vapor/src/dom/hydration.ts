@@ -114,20 +114,32 @@ export function hydrateNode(node: Node, fn: () => void): void {
   return performHydration(fn, setup, cleanup)
 }
 
-export function enterHydration(node: Node): () => void {
-  const prevHydrationEnabled = isHydratingEnabled
-  if (!prevHydrationEnabled) {
+// withAsyncContext defers cleanup, so async hydration continuations may overlap.
+// Preserve the state captured before the first restore as their shared baseline.
+let pendingAsyncHydrationResets = 0
+let asyncHydrationIsEnabled = false
+let asyncHydrationIsHydrating = false
+let asyncHydrationNode: Node | null = null
+
+export function enterAsyncHydration(node: Node): () => void {
+  if (pendingAsyncHydrationResets++ === 0) {
+    asyncHydrationIsEnabled = isHydratingEnabled
+    asyncHydrationIsHydrating = isHydrating
+    asyncHydrationNode = currentHydrationNode
+  }
+  if (!isHydratingEnabled) {
     setIsHydratingEnabled(true)
   }
 
-  const prev = setIsHydrating(true)
-  const prevHydrationNode = currentHydrationNode
+  setIsHydrating(true)
   currentHydrationNode = node
 
   return () => {
-    currentHydrationNode = prevHydrationNode
-    setIsHydrating(prev)
-    if (!prevHydrationEnabled) {
+    pendingAsyncHydrationResets--
+    // Restore the shared baseline instead of another continuation's state.
+    currentHydrationNode = asyncHydrationNode
+    setIsHydrating(asyncHydrationIsHydrating)
+    if (!asyncHydrationIsEnabled) {
       setIsHydratingEnabled(false)
     }
   }
