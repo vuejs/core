@@ -2915,6 +2915,65 @@ describe('vdomInterop', () => {
           app.unmount()
         })
 
+        it('deactivates then prunes a Vapor component VNode when max is reached', async () => {
+          const deactivatedA = vi.fn()
+          const unmountedA = vi.fn()
+          const renderA = vi.fn((value: number) => value)
+          const data = ref({
+            source: 0,
+            renderA,
+            deactivatedA,
+            unmountedA,
+          })
+          const VaporCompA = compile(
+            `
+              <script vapor>
+                import { onDeactivated, onUnmounted } from 'vue'
+                const data = _data
+                onDeactivated(data.value.deactivatedA)
+                onUnmounted(data.value.unmountedA)
+              </script>
+              <template>
+                <div>vapor A {{ data.renderA(data.source) }}</div>
+              </template>
+            `,
+            data,
+          )
+          const VaporCompB = compile(
+            `<template><div>vapor B</div></template>`,
+            data,
+          )
+
+          const current = shallowRef<any>(h(VaporCompA))
+          const App = compile(
+            `<template>
+              <KeepAlive :max="1">
+                <component :is="data" />
+              </KeepAlive>
+            </template>`,
+            current,
+          )
+          const { host, app } = define(App as any).render()
+          const a = host.firstElementChild
+
+          current.value = h(VaporCompB)
+          await nextTick()
+
+          expect(host.innerHTML).toBe(
+            '<div>vapor B</div><!--dynamic-component-->',
+          )
+          expect(deactivatedA).toHaveBeenCalledOnce()
+          expect(unmountedA).toHaveBeenCalledOnce()
+          expect(a!.parentNode).toBeNull()
+
+          const renderCount = renderA.mock.calls.length
+          data.value.source++
+          await nextTick()
+          expect(renderA).toHaveBeenCalledTimes(renderCount)
+
+          app.unmount()
+        })
+
         it('unmounts inactive cached inner VDOM components during KeepAlive hmr rerender', async () => {
           const hooksA = {
             unmounted: vi.fn(),

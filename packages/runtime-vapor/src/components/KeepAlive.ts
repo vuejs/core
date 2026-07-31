@@ -525,7 +525,12 @@ const unsetShapeFlag = (cached: VaporComponentInstance | VaporFragment) => {
       }
     }
   } else if (isInteropEnabled) {
-    resetShapeFlag(cached.vnode)
+    const vnode = cached.vnode!
+    resetShapeFlag(vnode)
+    if (isVaporComponent(vnode.component)) {
+      // Vapor VNodes copy their keep-alive flags to the inner instance.
+      unsetShapeFlag(vnode.component)
+    }
   }
 }
 

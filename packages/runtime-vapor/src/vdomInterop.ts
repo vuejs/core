@@ -1009,12 +1009,15 @@ function mountVNode(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       const keepAliveCtx = (parentComponent as KeepAliveInstance).ctx
       keepAliveCtx.clearCurrent!(frag)
+      const storageContainer = keepAliveCtx.getStorageContainer()
       if ((vnode.type as any).__vapor) {
-        deactivate(vnode.component as any, keepAliveCtx.getStorageContainer())
+        deactivate(vnode.component as any, storageContainer)
+        // Move the VNode-owned end anchor with the inner Vapor block.
+        insert(vnode.anchor as Node, storageContainer)
       } else {
         vdomDeactivate(
           vnode,
-          keepAliveCtx.getStorageContainer(),
+          storageContainer,
           internals,
           parentComponent as any,
           null,
@@ -1044,6 +1047,7 @@ function mountVNode(
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
       if ((vnode.type as any).__vapor) {
         activate(vnode.component as any, parentNode, anchor, operationSuspense)
+        insert(vnode.anchor as Node, parentNode, anchor)
       } else {
         vdomActivate(
           vnode,
