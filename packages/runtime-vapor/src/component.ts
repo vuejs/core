@@ -16,6 +16,8 @@ import {
   NULL_DYNAMIC_COMPONENT,
   type NormalizedPropsOptions,
   type ObjectEmitsOptions,
+  type SchedulerJob,
+  SchedulerJobFlags,
   type ShallowUnwrapRef,
   type SuspenseBoundary,
   callWithErrorHandling,
@@ -54,6 +56,7 @@ import {
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
+  NOOP,
   type Prettify,
   ShapeFlags,
   hasOwn,
@@ -725,6 +728,9 @@ export class VaporComponentInstance<
   // for keep-alive
   shapeFlag?: number
   $key?: any
+  // Share deferred updates across async roots on the KeepAlive component-root
+  // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
+  deferredKeepAliveUpdates?: DeferredKeepAliveUpdates
 
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes
@@ -1109,6 +1115,8 @@ export function mountComponent(
       return
     }
 
+    const suspense = instance.suspense
+    const deferred = isKeepAliveEnabled && deferKeepAliveRenderEffects(instance)
     const hydrating = isHydrating
     if (!hydrating) {
       // Keep a placeholder in the DOM while async setup is pending so
@@ -1119,9 +1127,13 @@ export function mountComponent(
 
     instance.asyncDepRegistered = true
     const component = instance.type
-    instance.suspense.registerDep(instance, setupResult => {
-      // Final suspense retry after async setup resolves. Restore hydrating
-      // mode so the last mount does not fall back to fresh DOM insertion.
+    let asyncSetupFinished = false
+    const finishAsyncSetup = (setupResult: any): void => {
+      if (asyncSetupFinished) return
+      asyncSetupFinished = true
+      instance.asyncResolved = true
+      // Restore hydrating mode for the final mount so stale-generation
+      // recovery does not fall back to fresh DOM insertion.
       const reset =
         instance.restoreAsyncContext && instance.restoreAsyncContext()
       // handleSetupResult may invoke the render function, which creates
@@ -1162,7 +1174,47 @@ export function mountComponent(
         instance.restoreAsyncContext = undefined
         if (reset) reset()
       }
+    }
+
+    suspense.registerDep(instance, setupResult => {
+      if (deferred) {
+        if (deferred.pendingRoot === instance) {
+          deferred.pendingRoot = undefined
+        }
+        // Reserve one flush for the whole async root chain, gated on the
+        // nearest boundary like VDOM's deferred retry. If the boundary
+        // discards that generation, the marked flush moves to the ordinary
+        // post queue so the surviving Vapor owners cannot stay dirty forever.
+        if (!deferred.flushQueued) {
+          deferred.flushQueued = true
+          queuePostRenderEffect(deferred.flushJob, undefined, deferred.suspense)
+        }
+      }
+      finishAsyncSetup(setupResult)
     })
+
+    if (deferred) {
+      const state = deferred
+      // Suspense skips the callback above for unmounted roots or stale
+      // generations. If the replacement generation is already gone, complete
+      // a surviving instance before replaying deferred owner updates. The
+      // normal callback runs first and makes this a no-op.
+      instance.asyncDep!.catch(NOOP).then(setupResult => {
+        if (asyncSetupFinished) return
+        // A foreign pending generation cannot own this surviving instance's
+        // mount hooks because discarding it would discard those hooks too.
+        if (
+          !instance.isUnmounted &&
+          !suspense.isUnmounted &&
+          !suspense.pendingBranch
+        ) {
+          finishAsyncSetup(setupResult)
+        }
+        if (!state.flushQueued && state.pendingRoot === instance) {
+          settleDeferredKeepAliveUpdates(state)
+        }
+      })
+    }
     return
   }
 
@@ -1549,4 +1601,155 @@ function registerDynamicFragmentFallthroughAttrs(
   ;(frag.onBeforeInsert ||= []).push(nodes =>
     applyFallthroughAttrs(nodes, instance, getFallthroughAttrs, frag.scope!),
   )
+}
+
+export interface DeferredKeepAliveUpdates {
+  effects: SchedulerJob[]
+  owners: VaporComponentInstance[]
+  suspense: SuspenseBoundary
+  pendingId: number
+  pendingRoot?: VaporComponentInstance
+  flushQueued: boolean
+  flushJob: SchedulerJob
+}
+
+/**
+ * A deferred state stays live while its async root is pending or its flush is
+ * queued for the same Suspense generation. The flush is requeued if that
+ * generation is discarded, so `flushQueued` cannot strand buffered updates.
+ */
+export function isDeferredKeepAliveStateLive(
+  state: DeferredKeepAliveUpdates,
+): boolean {
+  const suspense = state.suspense
+  if (suspense.isUnmounted || state.pendingId !== suspense.pendingId) {
+    return false
+  }
+  if (state.flushQueued) return true
+  const root = state.pendingRoot
+  return !!root && !root.isUnmounted
+}
+
+export function settleDeferredKeepAliveUpdates(
+  state: DeferredKeepAliveUpdates,
+  currentJob?: SchedulerJob,
+): void {
+  const { effects, owners } = state
+  // Idempotent: a settle hook and a stale-detecting render effect may both
+  // settle the same state.
+  state.effects = []
+  state.owners = []
+  state.pendingRoot = undefined
+  for (let i = 0; i < owners.length; i++) {
+    if (owners[i].deferredKeepAliveUpdates === state) {
+      owners[i].deferredKeepAliveUpdates = undefined
+    }
+  }
+  // Replay buffered updates so owner effects captured before the state went
+  // stale are not lost. The detecting job joins the batch so the whole set
+  // runs in scheduler order - an outer removal must still precede a buffered
+  // inner update; stopped jobs no-op on their dirty check.
+  if (currentJob && !effects.includes(currentJob)) {
+    effects.push(currentJob)
+  }
+  if (effects.length > 1) {
+    effects.sort((a, b) => a.order! - b.order!)
+  }
+  for (let i = 0; i < effects.length; i++) {
+    const job = effects[i]
+    callWithErrorHandling(
+      job,
+      job.i,
+      job.i ? ErrorCodes.COMPONENT_UPDATE : ErrorCodes.SCHEDULER,
+    )
+  }
+}
+
+function deferKeepAliveRenderEffects(
+  instance: VaporComponentInstance,
+): DeferredKeepAliveUpdates | undefined {
+  const suspense = instance.suspense!
+  const owners: VaporComponentInstance[] = []
+  let keepAlive: VaporComponentInstance | undefined
+  if (isHydrating) {
+    // Ancestor blocks are not committed during hydration. Preserve the direct
+    // KeepAlive-owner path; wrapper roots cannot be proven here.
+    const owner = instance.parent
+    if (
+      owner &&
+      owner.vapor &&
+      isKeepAlive(owner) &&
+      owner.suspense === suspense
+    ) {
+      keepAlive = owner as VaporComponentInstance
+      owners.push(keepAlive)
+    }
+  } else {
+    let child: Block = instance
+    let owner = instance.parent
+    while (owner && owner.vapor && owner.suspense === suspense) {
+      const vaporOwner = owner as VaporComponentInstance
+      let root = vaporOwner.block
+      // Dynamic component and v-if roots use fragments in Vapor where VDOM
+      // exposes the active component directly as `subTree.component`.
+      while (isDynamicFragment(root) && !root.isSlot) {
+        root = root.nodes
+      }
+      if (root !== child) return
+
+      owners.push(vaporOwner)
+      if (isKeepAlive(owner)) {
+        // Use the outermost KeepAlive so nested async roots share one state,
+        // matching VDOM's component-root update.
+        keepAlive = vaporOwner
+      }
+
+      child = vaporOwner
+      owner = vaporOwner.parent
+    }
+  }
+
+  if (!keepAlive) return
+
+  let deferred = keepAlive.deferredKeepAliveUpdates
+  if (
+    !deferred ||
+    deferred.suspense !== suspense ||
+    deferred.pendingId !== instance.suspenseId
+  ) {
+    // Runs when the boundary resolves (or on the resolving tick when it
+    // has no pending branch), ahead of setup-created Suspense effects.
+    const flushJob: SchedulerJob = () => {
+      state.flushQueued = false
+      // A resolved root may synchronously mount another pending async root.
+      if (keepAlive.deferredKeepAliveUpdates !== state || state.pendingRoot) {
+        return
+      }
+      settleDeferredKeepAliveUpdates(state)
+    }
+    flushJob.flags = SchedulerJobFlags.REQUEUE_ON_SUSPENSE_DISCARD
+    const state: DeferredKeepAliveUpdates = {
+      effects: [],
+      owners: [],
+      suspense,
+      pendingId: instance.suspenseId,
+      pendingRoot: instance,
+      flushQueued: false,
+      flushJob,
+    }
+    // Owner effects settle a stale state before mounting a new root. Nested
+    // roots from an accepted continuation share this generation and reuse it.
+    deferred = state
+  } else {
+    deferred.pendingRoot = instance
+  }
+
+  for (let i = 0; i < owners.length; i++) {
+    const owner = owners[i]
+    if (owner.deferredKeepAliveUpdates !== deferred) {
+      owner.deferredKeepAliveUpdates = deferred
+      deferred.owners.push(owner)
+    }
+  }
+  return deferred
 }

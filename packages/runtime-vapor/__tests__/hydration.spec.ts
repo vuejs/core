@@ -19,6 +19,7 @@ import {
   defineAsyncComponent,
   defineComponent,
   h,
+  markRaw,
   nextTick,
   reactive,
   ref,
@@ -7233,6 +7234,115 @@ describe('Vapor Mode hydration', () => {
             <!--[--><p>fallback</p><span>tail</span><!--]-->
             "
           `)
+        })
+
+        test('defers direct KeepAlive updates while hydrating async setup', async () => {
+          let resolveClient!: () => void
+          const asyncSetup = vi.fn()
+          const syncSetup = vi.fn()
+          const serverData = ref({
+            wait: Promise.resolve(),
+            asyncSetup: () => {},
+            syncSetup: () => {},
+            current: null as any,
+          })
+          const clientData = ref({
+            wait: new Promise<void>(resolve => {
+              resolveClient = resolve
+            }),
+            asyncSetup,
+            syncSetup,
+            current: null as any,
+          })
+          const asyncCode = `
+            <script vapor>
+              const data = _data
+              data.value.asyncSetup()
+              await data.value.wait
+            </script>
+            <template><span>async</span></template>
+          `
+          const syncCode = `
+            <script vapor>
+              const data = _data
+              data.value.syncSetup()
+            </script>
+            <template><span>sync</span></template>
+          `
+          const parentCode = `
+            <script setup vapor>
+              const data = _data
+            </script>
+            <template>
+              <KeepAlive>
+                <component :is="data.current" />
+              </KeepAlive>
+            </template>
+          `
+
+          const serverChild = compileVaporComponent(
+            asyncCode,
+            serverData,
+            undefined,
+            true,
+          )
+          serverData.value.current = markRaw(serverChild)
+          let Parent = compileVaporComponent(
+            parentCode,
+            serverData,
+            undefined,
+            true,
+          )
+          const App = defineComponent({
+            setup() {
+              return () =>
+                h(runtimeDom.Suspense, null, {
+                  default: () => h(Parent),
+                  fallback: () => h('p', 'pending'),
+                })
+            },
+          })
+          const html = await VueServerRenderer.renderToString(
+            runtimeDom.createSSRApp(App),
+          )
+
+          const asyncChild = compileVaporComponent(asyncCode, clientData)
+          const syncChild = compileVaporComponent(syncCode, clientData)
+          clientData.value.current = markRaw(asyncChild)
+          Parent = compileVaporComponent(parentCode, clientData)
+
+          const container = document.createElement('div')
+          container.innerHTML = html
+          const serverRoot = container.firstChild
+          document.body.appendChild(container)
+          const app = runtimeDom.createSSRApp(App)
+          app.use(runtimeVapor.vaporInteropPlugin)
+
+          try {
+            app.mount(container)
+
+            clientData.value.current = markRaw(syncChild)
+            await nextTick()
+            clientData.value.current = markRaw(asyncChild)
+            await nextTick()
+
+            expect(asyncSetup).toHaveBeenCalledOnce()
+            expect(syncSetup).not.toHaveBeenCalled()
+            expect(container.firstChild).toBe(serverRoot)
+            expect(container.textContent).toBe('async')
+
+            resolveClient()
+            await new Promise(resolve => setTimeout(resolve))
+
+            expect(asyncSetup).toHaveBeenCalledOnce()
+            expect(syncSetup).not.toHaveBeenCalled()
+            expect(container.firstChild).toBe(serverRoot)
+            expect(container.textContent).toBe('async')
+          } finally {
+            resolveClient()
+            app.unmount()
+            container.remove()
+          }
         })
 
         test('preserves nested pending SSR range until parent transition leave', async () => {
