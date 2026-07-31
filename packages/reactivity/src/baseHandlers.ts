@@ -134,6 +134,31 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
   }
 }
 
+interface SetOperation {
+  target: object
+  key: string | symbol
+  previous: SetOperation | undefined
+}
+
+// Reflect.set() may invoke the defineProperty trap when the receiver is the
+// reactive proxy. Keep the active operation so the mutation is triggered only
+// once while still allowing direct defineProperty calls inside user setters.
+let activeSetOperation: SetOperation | undefined
+
+function hasDescriptorChanged(
+  oldDescriptor: PropertyDescriptor,
+  newDescriptor: PropertyDescriptor,
+): boolean {
+  return (
+    oldDescriptor.configurable !== newDescriptor.configurable ||
+    oldDescriptor.enumerable !== newDescriptor.enumerable ||
+    oldDescriptor.writable !== newDescriptor.writable ||
+    oldDescriptor.get !== newDescriptor.get ||
+    oldDescriptor.set !== newDescriptor.set ||
+    hasChanged(oldDescriptor.value, newDescriptor.value)
+  )
+}
+
 class MutableReactiveHandler extends BaseReactiveHandler {
   constructor(isShallow = false) {
     super(false, isShallow)
@@ -174,12 +199,23 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     const hadKey = isArrayWithIntegerKey
       ? Number(key) < target.length
       : hasOwn(target, key)
-    const result = Reflect.set(
+    const operation: SetOperation = {
       target,
       key,
-      value,
-      isRef(target) ? target : receiver,
-    )
+      previous: activeSetOperation,
+    }
+    activeSetOperation = operation
+    let result: boolean
+    try {
+      result = Reflect.set(
+        target,
+        key,
+        value,
+        isRef(target) ? target : receiver,
+      )
+    } finally {
+      activeSetOperation = operation.previous
+    }
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver) && result) {
       if (!hadKey) {
@@ -189,6 +225,41 @@ class MutableReactiveHandler extends BaseReactiveHandler {
       }
     }
     return result
+  }
+
+  defineProperty(
+    target: Record<string | symbol, unknown>,
+    key: string | symbol,
+    descriptor: PropertyDescriptor,
+  ): boolean {
+    const oldDescriptor = Reflect.getOwnPropertyDescriptor(target, key)
+    const hadKey =
+      isArray(target) && isIntegerKey(key)
+        ? Number(key) < target.length
+        : oldDescriptor !== undefined
+    const result = Reflect.defineProperty(target, key, descriptor)
+    if (!result) {
+      return false
+    }
+
+    const operation = activeSetOperation
+    if (operation && operation.target === target && operation.key === key) {
+      // The outer set trap handles triggering with its normalized values.
+      return true
+    }
+
+    const newDescriptor = Reflect.getOwnPropertyDescriptor(target, key)!
+    const oldValue = oldDescriptor && oldDescriptor.value
+    const newValue = newDescriptor.value
+    if (!hadKey) {
+      trigger(target, TriggerOpTypes.ADD, key, newValue)
+    } else if (
+      !oldDescriptor ||
+      hasDescriptorChanged(oldDescriptor, newDescriptor)
+    ) {
+      trigger(target, TriggerOpTypes.SET, key, newValue, oldValue)
+    }
+    return true
   }
 
   deleteProperty(
@@ -241,6 +312,16 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
     if (__DEV__) {
       warn(
         `Delete operation on key "${String(key)}" failed: target is readonly.`,
+        target,
+      )
+    }
+    return true
+  }
+
+  defineProperty(target: object, key: string | symbol) {
+    if (__DEV__) {
+      warn(
+        `DefineProperty operation on key "${String(key)}" failed: target is readonly.`,
         target,
       )
     }

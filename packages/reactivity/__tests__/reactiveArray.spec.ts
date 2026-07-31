@@ -47,6 +47,39 @@ describe('reactivity/reactive/Array', () => {
     expect(original[2]).toBe(value)
   })
 
+  test('Object.defineProperty should trigger array effects', () => {
+    const observed = reactive([1, 2, 3])
+    let first
+    let last
+    let length
+    const spy = vi.fn(() => {
+      first = observed[0]
+      last = observed[2]
+      length = observed.length
+    })
+    effect(spy)
+
+    Object.defineProperty(observed, '0', {
+      value: 10,
+    })
+    expect(first).toBe(10)
+    expect(spy).toHaveBeenCalledTimes(2)
+
+    Reflect.defineProperty(observed, '3', {
+      value: 4,
+      configurable: true,
+      enumerable: true,
+      writable: true,
+    })
+    expect(length).toBe(4)
+    expect(spy).toHaveBeenCalledTimes(3)
+
+    Object.defineProperty(observed, 'length', { value: 1 })
+    expect(last).toBeUndefined()
+    expect(length).toBe(1)
+    expect(spy).toHaveBeenCalledTimes(4)
+  })
+
   test('Array identity methods should work with raw values', () => {
     const raw = {}
     const arr = reactive([{}, {}])

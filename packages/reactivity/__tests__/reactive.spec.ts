@@ -160,6 +160,118 @@ describe('reactivity/reactive', () => {
     expect(run).toBe(1)
   })
 
+  test('Object.defineProperty should trigger effects', () => {
+    const observed = reactive<{ foo: number; bar?: number }>({ foo: 1 })
+    let foo
+    let bar
+    const fooSpy = vi.fn(() => {
+      foo = observed.foo
+    })
+    const barSpy = vi.fn(() => {
+      bar = observed.bar
+    })
+    effect(fooSpy)
+    effect(barSpy)
+
+    Object.defineProperty(observed, 'foo', {
+      value: 2,
+      configurable: true,
+      enumerable: true,
+      writable: true,
+    })
+    expect(foo).toBe(2)
+    expect(fooSpy).toHaveBeenCalledTimes(2)
+
+    // defining the same descriptor should not trigger
+    Object.defineProperty(observed, 'foo', {
+      value: 2,
+      configurable: true,
+      enumerable: true,
+      writable: true,
+    })
+    expect(fooSpy).toHaveBeenCalledTimes(2)
+
+    // regular assignment should not trigger once from each proxy trap
+    observed.foo = 3
+    expect(foo).toBe(3)
+    expect(fooSpy).toHaveBeenCalledTimes(3)
+
+    Reflect.defineProperty(observed, 'bar', {
+      value: 3,
+      configurable: true,
+      enumerable: true,
+      writable: true,
+    })
+    expect(bar).toBe(3)
+    expect(barSpy).toHaveBeenCalledTimes(2)
+  })
+
+  test('replacing an accessor should update effect dependencies', () => {
+    const first = ref(1)
+    const second = ref(1)
+    const observed = reactive<{ value: number }>({} as { value: number })
+    Object.defineProperty(observed, 'value', {
+      configurable: true,
+      get: () => first.value,
+    })
+
+    let dummy
+    const spy = vi.fn(() => {
+      dummy = observed.value
+    })
+    effect(spy)
+
+    Object.defineProperty(observed, 'value', {
+      configurable: true,
+      get: () => second.value,
+    })
+    expect(dummy).toBe(1)
+    expect(spy).toHaveBeenCalledTimes(2)
+
+    first.value = 2
+    expect(spy).toHaveBeenCalledTimes(2)
+    second.value = 2
+    expect(dummy).toBe(2)
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
+  test('failed defineProperty operation should not trigger effects', () => {
+    const original = {} as { foo: number }
+    Object.defineProperty(original, 'foo', {
+      value: 1,
+      configurable: false,
+      writable: false,
+    })
+    const observed = reactive(original)
+    const spy = vi.fn(() => observed.foo)
+    effect(spy)
+
+    expect(Reflect.defineProperty(observed, 'foo', { value: 2 })).toBe(false)
+    expect(observed.foo).toBe(1)
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  test('defineProperty nested in a setter should trigger effects', () => {
+    const nested = reactive({ value: 0 })
+    const spy = vi.fn(() => nested.value)
+    effect(spy)
+
+    const observed = reactive({
+      set value(value: number) {
+        Object.defineProperty(nested, 'value', {
+          value,
+          configurable: true,
+          enumerable: true,
+          writable: true,
+        })
+      },
+    })
+    observed.value = 1
+
+    expect(nested.value).toBe(1)
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
   test('original value change should reflect in observed value (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)

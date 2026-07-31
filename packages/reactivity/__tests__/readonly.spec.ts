@@ -90,6 +90,27 @@ describe('reactivity/readonly', () => {
       expect(
         `Delete operation on key "Symbol(qux)" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
+
+      Object.defineProperty(wrapped, 'foo', {
+        value: 2,
+        configurable: true,
+      })
+      expect(wrapped.foo).toBe(1)
+      expect(original.foo).toBe(1)
+      expect(
+        `DefineProperty operation on key "foo" failed: target is readonly.`,
+      ).toHaveBeenWarnedLast()
+
+      expect(
+        Reflect.defineProperty(wrapped, 'added', {
+          value: 1,
+          configurable: true,
+        }),
+      ).toBe(true)
+      expect('added' in wrapped).toBe(false)
+      expect(
+        `DefineProperty operation on key "added" failed: target is readonly.`,
+      ).toHaveBeenWarnedLast()
     })
 
     it('should not trigger effects', () => {
