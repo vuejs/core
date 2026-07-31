@@ -1,5 +1,5 @@
 import { isArray } from '@vue/shared'
-import { queuePostFlushCb } from '@vue/runtime-dom'
+import { queueJob, queuePostFlushCb } from '@vue/runtime-dom'
 import {
   advanceHydrationNode,
   cleanupHydrationTail,
@@ -7,6 +7,7 @@ import {
   enterHydrationBoundary,
   isComment,
   isHydrationAnchor,
+  isInAsyncHydration,
   isInDeferredHydrationBoundary,
   locateEndAnchor,
   locateHydrationBoundaryClose,
@@ -159,7 +160,7 @@ function queueAnchorInsert(
 ): void {
   // Create the runtime anchor during the queued insertion so hydration
   // traversal never observes it before it is in its final position.
-  queuePostFlushCb(() => {
+  const insertAnchor = () => {
     let anchor =
       nextNode && getParentNode(nextNode) === parentNode ? nextNode : null
     if (
@@ -170,7 +171,14 @@ function queueAnchorInsert(
       anchor = fallbackNextNode
     }
     parentNode.insertBefore(createAnchor(), anchor)
-  })
+  }
+  if (isInAsyncHydration()) {
+    // Async hydration can queue a branch update before post-flush. Queue its
+    // structural anchor as a pre job so the update sees a live insertion point.
+    queueJob(insertAnchor, undefined, true)
+  } else {
+    queuePostFlushCb(insertAnchor)
+  }
 }
 
 function isReusableAnchorCandidate(
