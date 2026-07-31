@@ -11,9 +11,15 @@ import {
   startMeasure,
   warn,
 } from '@vue/runtime-dom'
-import { type VaporComponentInstance, isVaporComponent } from './component'
+import {
+  type VaporComponentInstance,
+  isDeferredKeepAliveStateLive,
+  isVaporComponent,
+  settleDeferredKeepAliveUpdates,
+} from './component'
 import { inOnceSlot } from './componentSlots'
 import { invokeArrayFns } from '@vue/shared'
+import { isSuspenseEnabled } from './suspense'
 
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
@@ -34,6 +40,24 @@ export class RenderEffect extends ReactiveEffect {
 
     const job: SchedulerJob = () => {
       if (this.dirty) {
+        // A pending KeepAlive async root defers updates along its root chain.
+        const deferred =
+          __FEATURE_SUSPENSE__ &&
+          isSuspenseEnabled &&
+          this.i &&
+          this.i.deferredKeepAliveUpdates
+        if (deferred) {
+          if (isDeferredKeepAliveStateLive(deferred)) {
+            deferred.effects.push(this.job)
+            return
+          }
+          // The pending root can no longer resolve through this state
+          // (unmounted early or superseded suspense cycle) - drop the stale
+          // state and replay its buffered updates together with this job in
+          // scheduler order (this job re-enters with the state cleared).
+          settleDeferredKeepAliveUpdates(deferred, this.job)
+          return
+        }
         this.run()
       }
     }

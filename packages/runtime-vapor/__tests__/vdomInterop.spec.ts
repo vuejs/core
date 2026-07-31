@@ -4199,7 +4199,7 @@ describe('vdomInterop', () => {
       return { promise, resolve }
     }
 
-    async function flushResolution(promise: Promise<void>) {
+    async function flushResolution(promise: Promise<unknown>) {
       await promise
       await Promise.resolve()
       await nextTick()
@@ -4471,6 +4471,1240 @@ describe('vdomInterop', () => {
         app.unmount()
         host.remove()
       }
+    })
+
+    test('defers KeepAlive updates until its async setup child resolves', async () => {
+      const pending = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const data = ref({
+        wait: pending.promise,
+        asyncSetup,
+        syncSetup,
+        current: null as any,
+      })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = AsyncChild
+      const VaporParent = compile(
+        `<script setup vapor>
+          const data = _data
+          const VaporKeepAlive = _components.VaporKeepAlive
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <component :is="data.current" />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+
+        data.value.current = SyncChild
+        await nextTick()
+        data.value.current = AsyncChild
+        await nextTick()
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+        expect(syncSetup).not.toHaveBeenCalled()
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+        expect(syncSetup).not.toHaveBeenCalled()
+        expect(host.innerHTML).toBe(
+          '<span>async</span><!--dynamic-component-->',
+        )
+
+        data.value.current = SyncChild
+        await nextTick()
+
+        expect(syncSetup).toHaveBeenCalledOnce()
+        expect(host.innerHTML).toBe('<span>sync</span><!--dynamic-component-->')
+      } finally {
+        pending.resolve()
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('defers KeepAlive updates for pending async wrappers', async () => {
+      const pending = deferred()
+      const syncSetup = vi.fn()
+      const data = ref({ current: null as any, syncSetup })
+      const ResolvedChild = compile(
+        `<template><span>async</span></template>`,
+        data,
+      )
+      const loader = vi.fn(() => pending.promise.then(() => ResolvedChild))
+      const AsyncChild = defineVaporAsyncComponent(loader)
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = AsyncChild
+      const VaporParent = compile(
+        `<script setup vapor>
+          const data = _data
+          const VaporKeepAlive = _components.VaporKeepAlive
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <component :is="data.current" />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+      let loaded!: Promise<unknown>
+
+      try {
+        app.mount(host)
+        loaded = AsyncChild.__asyncLoader!()
+
+        data.value.current = SyncChild
+        await nextTick()
+        data.value.current = AsyncChild
+        await nextTick()
+
+        expect(loader).toHaveBeenCalledOnce()
+        expect(syncSetup).not.toHaveBeenCalled()
+
+        pending.resolve()
+        await flushResolution(loaded)
+
+        expect(syncSetup).not.toHaveBeenCalled()
+        expect(host.textContent).toBe('async')
+      } finally {
+        pending.resolve()
+        await flushResolution(loaded)
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('skips transient components behind a KeepAlive root wrapper', async () => {
+      const pending = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const data = ref({
+        wait: pending.promise,
+        asyncSetup,
+        syncSetup,
+        current: null as any,
+      })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = AsyncChild
+      const Wrapper = compile(
+        `<script setup vapor>
+          const data = _data
+        </script>
+        <template><component :is="data.current" /></template>`,
+        data,
+      )
+      const VaporParent = compile(
+        `<script setup vapor>
+          const VaporKeepAlive = _components.VaporKeepAlive
+          const Wrapper = _components.Wrapper
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <Wrapper />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive, Wrapper },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+
+        data.value.current = SyncChild
+        await nextTick()
+        data.value.current = AsyncChild
+        await nextTick()
+
+        expect([
+          asyncSetup.mock.calls.length,
+          syncSetup.mock.calls.length,
+        ]).toEqual([1, 0])
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect([
+          asyncSetup.mock.calls.length,
+          syncSetup.mock.calls.length,
+        ]).toEqual([1, 0])
+        expect(host.textContent).toBe('async')
+      } finally {
+        pending.resolve()
+        await flushResolution(pending.promise)
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('skips transient components across nested KeepAlive roots', async () => {
+      const pending = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const data = ref({
+        wait: pending.promise,
+        asyncSetup,
+        syncSetup,
+        current: null as any,
+      })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const InnerRoot = compile(
+        `<script setup vapor>
+          const VaporKeepAlive = _components.VaporKeepAlive
+          const AsyncChild = _components.AsyncChild
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <AsyncChild />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive, AsyncChild },
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = InnerRoot
+      const VaporParent = compile(
+        `<script setup vapor>
+          const data = _data
+          const VaporKeepAlive = _components.VaporKeepAlive
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <component :is="data.current" />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+
+        data.value.current = SyncChild
+        await nextTick()
+        data.value.current = InnerRoot
+        await nextTick()
+
+        expect([
+          asyncSetup.mock.calls.length,
+          syncSetup.mock.calls.length,
+        ]).toEqual([1, 0])
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect([
+          asyncSetup.mock.calls.length,
+          syncSetup.mock.calls.length,
+        ]).toEqual([1, 0])
+        expect(host.textContent).toBe('async')
+      } finally {
+        pending.resolve()
+        await flushResolution(pending.promise)
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('skips transient KeepAlive components in removed branches', async () => {
+      const pending = deferred()
+      const syncSetup = vi.fn()
+      const data = ref({
+        wait: pending.promise,
+        syncSetup,
+        show: true,
+        current: null as any,
+      })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = AsyncChild
+      const Wrapper = compile(
+        `<script setup vapor>
+          const data = _data
+        </script>
+        <template>
+          <component v-if="data.show" :is="data.current" />
+        </template>`,
+        data,
+      )
+      const VaporParent = compile(
+        `<script setup vapor>
+          const VaporKeepAlive = _components.VaporKeepAlive
+          const Wrapper = _components.Wrapper
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <Wrapper />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive, Wrapper },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+
+        data.value.current = SyncChild
+        await nextTick()
+        data.value.show = false
+        await nextTick()
+
+        expect(syncSetup).not.toHaveBeenCalled()
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect(syncSetup).not.toHaveBeenCalled()
+        expect(host.textContent).toBe('')
+      } finally {
+        pending.resolve()
+        await flushResolution(pending.promise)
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test.each([
+      [
+        'preserves deferred KeepAlive updates across nested async roots',
+        false,
+        1,
+        'sync',
+      ],
+      [
+        'skips transient KeepAlive components across nested async roots',
+        true,
+        0,
+        '',
+      ],
+    ] as const)('%s', async (_, removeBranch, syncCalls, textContent) => {
+      const outerPending = deferred()
+      const innerPending = deferred()
+      const outerBeforeMount = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const data = ref({
+        outerWait: outerPending.promise,
+        innerWait: innerPending.promise,
+        outerBeforeMount: outerBeforeMount.resolve,
+        asyncSetup,
+        syncSetup,
+        show: true,
+        current: null as any,
+      })
+      const InnerAsync = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.innerWait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const OuterAsync = compile(
+        `<script vapor>
+          import { onBeforeMount } from 'vue'
+          const data = _data
+          const InnerAsync = _components.InnerAsync
+          const VaporKeepAlive = _components.VaporKeepAlive
+          onBeforeMount(() => data.value.outerBeforeMount())
+          await data.value.outerWait
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <InnerAsync />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { InnerAsync, VaporKeepAlive },
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = OuterAsync
+      const Wrapper = compile(
+        `<script setup vapor>
+          const data = _data
+        </script>
+        <template>
+          <component v-if="data.show" :is="data.current" />
+        </template>`,
+        data,
+      )
+      const VaporParent = compile(
+        `<script setup vapor>
+          const VaporKeepAlive = _components.VaporKeepAlive
+          const Wrapper = _components.Wrapper
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <Wrapper />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive, Wrapper },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+
+        data.value.current = SyncChild
+        await nextTick()
+
+        outerPending.resolve()
+        await outerBeforeMount.promise
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+
+        if (removeBranch) {
+          data.value.show = false
+          await nextTick()
+        }
+
+        innerPending.resolve()
+        await flushResolution(innerPending.promise)
+
+        expect(syncSetup).toHaveBeenCalledTimes(syncCalls)
+        expect(host.textContent).toBe(textContent)
+      } finally {
+        outerPending.resolve()
+        innerPending.resolve()
+        await flushResolution(innerPending.promise)
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('does not defer KeepAlive updates across a nested Suspense boundary', async () => {
+      const pending = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const data = ref({ wait: pending.promise, asyncSetup, syncSetup })
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      const current = shallowRef<any>(AsyncChild)
+      const Root = defineVaporComponent({
+        setup() {
+          // Exclude raw Suspense from caching to isolate boundary ownership.
+          return createComponent(
+            VaporKeepAlive,
+            { include: 'Never' },
+            {
+              default: () =>
+                createDynamicComponent(() =>
+                  h(Suspense, null, {
+                    default: () => h(current.value),
+                    fallback: () => h('p', 'pending'),
+                  }),
+                ),
+            },
+          )
+        },
+      })
+      const host = document.createElement('div')
+      const app = createVaporApp(Root)
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+        expect(host.textContent).toBe('pending')
+
+        current.value = SyncChild
+        await nextTick()
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+        expect(syncSetup).toHaveBeenCalledOnce()
+        expect(host.textContent).toBe('sync')
+      } finally {
+        pending.resolve()
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    test('skips transient KeepAlive branches when async setup starts after Suspense resolves', async () => {
+      const pending = deferred()
+      const asyncSetup = vi.fn()
+      const syncSetup = vi.fn()
+      const onResolve = vi.fn()
+      const data = ref({
+        wait: pending.promise,
+        asyncSetup,
+        syncSetup,
+        current: null as any,
+      })
+      const InitialChild = compile(
+        `<template><span>initial</span></template>`,
+        data,
+      )
+      const AsyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.asyncSetup()
+          await data.value.wait
+        </script>
+        <template><span>async</span></template>`,
+        data,
+      )
+      const SyncChild = compile(
+        `<script vapor>
+          const data = _data
+          data.value.syncSetup()
+        </script>
+        <template><span>sync</span></template>`,
+        data,
+      )
+      data.value.current = InitialChild
+      const VaporParent = compile(
+        `<script setup vapor>
+          const data = _data
+          const VaporKeepAlive = _components.VaporKeepAlive
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <component :is="data.current" />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { VaporKeepAlive },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(
+            Suspense,
+            { onResolve },
+            {
+              default: () => h(VaporParent),
+              fallback: () => h('p', 'pending'),
+            },
+          ),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+        await nextTick()
+
+        expect(onResolve).toHaveBeenCalledOnce()
+        expect(host.innerHTML).toBe(
+          '<span>initial</span><!--dynamic-component-->',
+        )
+
+        data.value.current = AsyncChild
+        await nextTick()
+        data.value.current = SyncChild
+        await nextTick()
+        data.value.current = AsyncChild
+        await nextTick()
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+        expect(syncSetup).not.toHaveBeenCalled()
+
+        pending.resolve()
+        await flushResolution(pending.promise)
+
+        expect(asyncSetup).toHaveBeenCalledOnce()
+        expect(syncSetup).not.toHaveBeenCalled()
+        expect(host.innerHTML).toBe(
+          '<span>async</span><!--dynamic-component-->',
+        )
+
+        data.value.current = SyncChild
+        await nextTick()
+
+        expect(syncSetup).toHaveBeenCalledOnce()
+        expect(host.innerHTML).toBe('<span>sync</span><!--dynamic-component-->')
+      } finally {
+        pending.resolve()
+        app.unmount()
+        host.remove()
+      }
+    })
+
+    describe('stale deferred KeepAlive updates', () => {
+      function makeChildren(data: any) {
+        const InitialChild = compile(
+          `<template><span>initial</span></template>`,
+          data,
+        )
+        const AsyncChild = compile(
+          `<script vapor>
+            const data = _data
+            data.value.asyncSetup()
+            await data.value.wait
+          </script>
+          <template><span>async</span></template>`,
+          data,
+        )
+        const SyncChild = compile(
+          `<script vapor>
+            const data = _data
+            data.value.syncSetup()
+          </script>
+          <template><span>sync</span></template>`,
+          data,
+        )
+        return { InitialChild, AsyncChild, SyncChild }
+      }
+
+      // A VDOM async branch that stays pending while the suspense root is
+      // toggled away from the active vapor branch.
+      function makeOtherAsync(otherPending: { promise: Promise<void> }) {
+        return defineComponent({
+          async setup() {
+            await otherPending.promise
+            return () => h('span', 'other')
+          },
+        })
+      }
+
+      function mountSuspenseApp(branch: ShallowRef<any>) {
+        const host = document.createElement('div')
+        const app = createApp({
+          render: () =>
+            h(Suspense, null, {
+              default: () => h(branch.value),
+              fallback: () => h('p', 'fallback'),
+            }),
+        })
+        app.use(vaporInteropPlugin)
+        app.mount(host)
+        return { host, app }
+      }
+
+      test('replays already-buffered updates when the pending root is skipped', async () => {
+        const pending = deferred()
+        const otherPending = deferred()
+        const asyncSetup = vi.fn()
+        const syncSetup = vi.fn()
+        const data = ref({
+          wait: pending.promise,
+          asyncSetup,
+          syncSetup,
+          current: null as any,
+        })
+        const { InitialChild, AsyncChild, SyncChild } = makeChildren(data)
+        data.value.current = InitialChild
+        const VaporParent = compile(
+          `<script setup vapor>
+            const data = _data
+            const VaporKeepAlive = _components.VaporKeepAlive
+          </script>
+          <template>
+            <VaporKeepAlive>
+              <component :is="data.current" />
+            </VaporKeepAlive>
+          </template>`,
+          data,
+          { VaporKeepAlive },
+        )
+        const branch = shallowRef<any>(VaporParent)
+        const { host, app } = mountSuspenseApp(branch)
+
+        try {
+          await nextTick()
+          data.value.current = AsyncChild
+          await nextTick()
+          expect(asyncSetup).toHaveBeenCalledOnce()
+
+          // buffered while armed; the effect stays dirty and will not be
+          // re-notified for this dependency again
+          data.value.current = SyncChild
+          await nextTick()
+          expect(syncSetup).not.toHaveBeenCalled()
+
+          branch.value = makeOtherAsync(otherPending)
+          await nextTick()
+          branch.value = VaporParent
+          await nextTick()
+
+          // settling the skipped root must replay the buffered switch even
+          // though no further owner effect is triggered
+          pending.resolve()
+          await flushResolution(pending.promise)
+
+          expect(syncSetup).toHaveBeenCalledOnce()
+          expect(host.innerHTML).toBe(
+            '<span>sync</span><!--dynamic-component-->',
+          )
+        } finally {
+          pending.resolve()
+          otherPending.resolve()
+          app.unmount()
+          host.remove()
+        }
+      })
+
+      test('replays stale updates in scheduler order across owner effects', async () => {
+        const pending = deferred()
+        const otherPending = deferred()
+        const asyncSetup = vi.fn()
+        const syncSetup = vi.fn()
+        const data = ref({
+          wait: pending.promise,
+          asyncSetup,
+          syncSetup,
+          show: true,
+          current: null as any,
+        })
+        const { InitialChild, AsyncChild, SyncChild } = makeChildren(data)
+        data.value.current = InitialChild
+        const Wrapper = compile(
+          `<script setup vapor>
+            const data = _data
+          </script>
+          <template>
+            <component v-if="data.show" :is="data.current" />
+          </template>`,
+          data,
+        )
+        const VaporParent = compile(
+          `<script setup vapor>
+            const VaporKeepAlive = _components.VaporKeepAlive
+            const Wrapper = _components.Wrapper
+          </script>
+          <template>
+            <VaporKeepAlive>
+              <Wrapper />
+            </VaporKeepAlive>
+          </template>`,
+          data,
+          { VaporKeepAlive, Wrapper },
+        )
+        const branch = shallowRef<any>(VaporParent)
+        const { host, app } = mountSuspenseApp(branch)
+
+        try {
+          await nextTick()
+          data.value.current = AsyncChild
+          await nextTick()
+          expect(asyncSetup).toHaveBeenCalledOnce()
+
+          // buffer the inner dynamic-component update
+          data.value.current = SyncChild
+          await nextTick()
+
+          branch.value = makeOtherAsync(otherPending)
+          await nextTick()
+          branch.value = VaporParent
+          await nextTick()
+
+          // the outer v-if removal detects the stale state; it must run
+          // before the buffered inner update so the removed branch never
+          // mounts a transient component
+          data.value.show = false
+          await nextTick()
+
+          expect(syncSetup).not.toHaveBeenCalled()
+          expect(host.textContent).toBe('')
+
+          pending.resolve()
+          await flushResolution(pending.promise)
+          expect(syncSetup).not.toHaveBeenCalled()
+          expect(host.textContent).toBe('')
+        } finally {
+          pending.resolve()
+          otherPending.resolve()
+          app.unmount()
+          host.remove()
+        }
+      })
+
+      test('replays a gated flush when its pending branch is discarded', async () => {
+        const pending = deferred()
+        const otherPending = deferred()
+        const asyncSetup = vi.fn()
+        const syncSetup = vi.fn()
+        const data = ref({
+          wait: pending.promise,
+          asyncSetup,
+          syncSetup,
+          current: null as any,
+        })
+        const { InitialChild, AsyncChild, SyncChild } = makeChildren(data)
+        data.value.current = InitialChild
+        const VaporParent = compile(
+          `<script setup vapor>
+            const data = _data
+            const VaporKeepAlive = _components.VaporKeepAlive
+          </script>
+          <template>
+            <VaporKeepAlive>
+              <component :is="data.current" />
+            </VaporKeepAlive>
+          </template>`,
+          data,
+          { VaporKeepAlive },
+        )
+        const branch = shallowRef<any>(VaporParent)
+        const { host, app } = mountSuspenseApp(branch)
+
+        try {
+          await nextTick()
+          expect(host.innerHTML).toBe(
+            '<span>initial</span><!--dynamic-component-->',
+          )
+
+          // a foreign branch starts pending while the vapor branch stays the
+          // visible active branch
+          branch.value = makeOtherAsync(otherPending)
+          await nextTick()
+
+          // the async root mounts into the active branch but registers under
+          // the foreign pending generation, so its registerDep callback runs
+          data.value.current = AsyncChild
+          await nextTick()
+          expect(asyncSetup).toHaveBeenCalledOnce()
+
+          // buffered while armed
+          data.value.current = SyncChild
+          await nextTick()
+          expect(syncSetup).not.toHaveBeenCalled()
+
+          // the root resolves; the flush parks in the foreign generation's
+          // suspense effects, gated exactly like VDOM's retry
+          pending.resolve()
+          await flushResolution(pending.promise)
+          expect(host.innerHTML).toBe(
+            '<span>async</span><!--dynamic-component-->',
+          )
+
+          // toggling back discards the foreign generation while the active
+          // branch survives. The retained flush must leave that generation
+          // and replay the already-buffered switch.
+          branch.value = VaporParent
+          await nextTick()
+          expect(syncSetup).toHaveBeenCalledOnce()
+          expect(host.innerHTML).toBe(
+            '<span>sync</span><!--dynamic-component-->',
+          )
+        } finally {
+          pending.resolve()
+          otherPending.resolve()
+          app.unmount()
+          host.remove()
+        }
+      })
+
+      test('keeps a pending-branch flush gated on the boundary', async () => {
+        const aPending = deferred()
+        const bPending = deferred()
+        const sibPending = deferred()
+        const aSetup = vi.fn()
+        const bSetup = vi.fn()
+        const cSetup = vi.fn()
+        const data = ref({
+          aWait: aPending.promise,
+          bWait: bPending.promise,
+          aSetup,
+          bSetup,
+          cSetup,
+          show: 1,
+          current: null as any,
+        })
+        const AsyncA = compile(
+          `<script vapor>
+            const data = _data
+            data.value.aSetup()
+            await data.value.aWait
+          </script>
+          <template><span>a</span></template>`,
+          data,
+        )
+        const AsyncB = compile(
+          `<script vapor>
+            const data = _data
+            data.value.bSetup()
+            await data.value.bWait
+          </script>
+          <template><span>b</span></template>`,
+          data,
+        )
+        const SyncC = compile(
+          `<script vapor>
+            const data = _data
+            data.value.cSetup()
+          </script>
+          <template><span>c</span></template>`,
+          data,
+        )
+        data.value.current = AsyncA
+        const Wrapper = compile(
+          `<script setup vapor>
+            const data = _data
+          </script>
+          <template>
+            <component v-if="data.show > 0" :is="data.current" />
+          </template>`,
+          data,
+        )
+        const VaporParent = compile(
+          `<script setup vapor>
+            const VaporKeepAlive = _components.VaporKeepAlive
+            const Wrapper = _components.Wrapper
+          </script>
+          <template>
+            <VaporKeepAlive>
+              <Wrapper />
+            </VaporKeepAlive>
+          </template>`,
+          data,
+          { VaporKeepAlive, Wrapper },
+        )
+        // an unrelated async sibling keeps the boundary pending after the
+        // KeepAlive root resolves
+        const Sibling = defineComponent({
+          async setup() {
+            await sibPending.promise
+            return () => h('span', 'sibling')
+          },
+        })
+
+        const host = document.createElement('div')
+        const app = createApp({
+          render: () =>
+            h(Suspense, null, {
+              default: () => h('div', [h(VaporParent), h(Sibling)]),
+              fallback: () => h('p', 'fallback'),
+            }),
+        })
+        app.use(vaporInteropPlugin)
+        app.mount(host)
+
+        try {
+          await nextTick()
+          expect(host.textContent).toBe('fallback')
+          expect(aSetup).toHaveBeenCalledOnce()
+
+          // buffered while A is pending inside the pending branch
+          data.value.current = AsyncB
+          await nextTick()
+          expect(bSetup).not.toHaveBeenCalled()
+
+          // resolving only A must NOT replay the buffered switch yet - the
+          // owners live in the pending branch, so the flush stays gated on
+          // boundary resolution (VDOM parity); B mounting now would join the
+          // current suspense cycle and keep the fallback up indefinitely
+          aPending.resolve()
+          await flushResolution(aPending.promise)
+          expect(bSetup).not.toHaveBeenCalled()
+          expect(host.textContent).toBe('fallback')
+
+          // A different, still-clean owner effect must see the parked flush as
+          // live. Otherwise it replays the buffered switch and mounts B early.
+          data.value.show = 2
+          await nextTick()
+          expect(bSetup).not.toHaveBeenCalled()
+          expect(cSetup).not.toHaveBeenCalled()
+          expect(host.textContent).toBe('fallback')
+
+          // The dirty dynamic-component effect already represents the latest
+          // `current` value without another notification.
+          data.value.current = SyncC
+          await nextTick()
+          expect(bSetup).not.toHaveBeenCalled()
+          expect(cSetup).not.toHaveBeenCalled()
+          expect(host.textContent).toBe('fallback')
+
+          // the boundary resolves once the sibling settles; the gated flush
+          // now renders only the latest switch
+          sibPending.resolve()
+          await flushResolution(sibPending.promise)
+          expect(bSetup).not.toHaveBeenCalled()
+          expect(cSetup).toHaveBeenCalledOnce()
+          expect(host.textContent).toContain('sibling')
+          expect(host.textContent).not.toContain('fallback')
+          expect(host.innerHTML).toContain('<span>c</span>')
+        } finally {
+          aPending.resolve()
+          bPending.resolve()
+          sibPending.resolve()
+          app.unmount()
+          host.remove()
+        }
+      })
+
+      test('survives a gated flush migrated to a pending ancestor and discarded there', async () => {
+        const aPending = deferred()
+        const otherPending = deferred()
+        const aSetup = vi.fn()
+        const syncSetup = vi.fn()
+        const data = ref({
+          wait: aPending.promise,
+          asyncSetup: aSetup,
+          syncSetup,
+          current: null as any,
+        })
+        const { AsyncChild, SyncChild } = makeChildren(data)
+        data.value.current = AsyncChild
+        const VaporParent = compile(
+          `<script setup vapor>
+            const data = _data
+            const VaporKeepAlive = _components.VaporKeepAlive
+          </script>
+          <template>
+            <VaporKeepAlive>
+              <component :is="data.current" />
+            </VaporKeepAlive>
+          </template>`,
+          data,
+          { VaporKeepAlive },
+        )
+        // the VDOM layer between the inner boundary and the vapor chain makes
+        // the chain register with the INNER boundary
+        const Mid = defineComponent({ render: () => h(VaporParent) })
+        const Wrap = defineComponent({
+          render: () =>
+            h(Suspense, null, {
+              default: () => h(Mid),
+              fallback: () => h('p', 'inner fallback'),
+            }),
+        })
+        const branch = shallowRef<any>(Wrap)
+        const { host, app } = mountSuspenseApp(branch)
+
+        try {
+          await nextTick()
+          expect(aSetup).toHaveBeenCalledOnce()
+          expect(host.textContent).toContain('inner fallback')
+
+          // buffered while the root is pending
+          data.value.current = SyncChild
+          await nextTick()
+          expect(syncSetup).not.toHaveBeenCalled()
+
+          // the OUTER boundary starts a foreign pending branch; the inner
+          // boundary (whose generation the state is keyed to) is untouched
+          branch.value = makeOtherAsync(otherPending)
+          await nextTick()
+
+          // the root resolves: the flush parks in the inner boundary's
+          // effects, and the inner resolve() migrates it into the pending
+          // ancestor's effects (parent hand-off). The buffered switch stays
+          // parked - VDOM retry timing
+          aPending.resolve()
+          await flushResolution(aPending.promise)
+          expect(host.innerHTML).toContain('<span>async</span>')
+          expect(syncSetup).not.toHaveBeenCalled()
+
+          // ancestor toggle-back discards the migrated generation while the
+          // whole chain survives. The retained flush must still replay.
+          branch.value = Wrap
+          await nextTick()
+          expect(syncSetup).toHaveBeenCalledOnce()
+          expect(host.innerHTML).toContain('<span>sync</span>')
+        } finally {
+          aPending.resolve()
+          otherPending.resolve()
+          app.unmount()
+          host.remove()
+        }
+      })
+
+      test('finishes a still-active async root after its Suspense generation is replaced', async () => {
+        const pending = deferred()
+        const otherPending = deferred()
+        const asyncSetup = vi.fn()
+        const data = ref({
+          wait: pending.promise,
+          asyncSetup,
+          syncSetup: vi.fn(),
+          current: null as any,
+        })
+        const { InitialChild, AsyncChild } = makeChildren(data)
+        data.value.current = InitialChild
+        const VaporParent = compile(
+          `<script setup vapor>
+              const data = _data
+              const VaporKeepAlive = _components.VaporKeepAlive
+            </script>
+            <template>
+              <VaporKeepAlive>
+                <component :is="data.current" />
+              </VaporKeepAlive>
+            </template>`,
+          data,
+          { VaporKeepAlive },
+        )
+        const branch = shallowRef<any>(VaporParent)
+        const { host, app } = mountSuspenseApp(branch)
+
+        try {
+          await nextTick()
+          data.value.current = AsyncChild
+          await nextTick()
+          expect(asyncSetup).toHaveBeenCalledOnce()
+
+          branch.value = makeOtherAsync(otherPending)
+          await nextTick()
+          branch.value = VaporParent
+          await nextTick()
+
+          pending.resolve()
+          await flushResolution(pending.promise)
+
+          expect(asyncSetup).toHaveBeenCalledOnce()
+          expect(host.innerHTML).toBe(
+            '<span>async</span><!--dynamic-component-->',
+          )
+        } finally {
+          pending.resolve()
+          otherPending.resolve()
+          app.unmount()
+          host.remove()
+        }
+      })
     })
 
     test('renders vapor async wrapper with directive inside VDOM Suspense', async () => {
