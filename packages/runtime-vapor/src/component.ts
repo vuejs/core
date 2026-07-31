@@ -1175,7 +1175,7 @@ export function mountComponent(
         if (reset) reset()
       }
     }
-    
+
     suspense.registerDep(instance, setupResult => {
       if (deferred) {
         if (deferred.pendingRoot === instance) {
@@ -1602,7 +1602,6 @@ function registerDynamicFragmentFallthroughAttrs(
     applyFallthroughAttrs(nodes, instance, getFallthroughAttrs, frag.scope!),
   )
 }
-
 
 export interface DeferredKeepAliveUpdates {
   effects: SchedulerJob[]

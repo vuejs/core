@@ -4199,7 +4199,7 @@ describe('vdomInterop', () => {
       return { promise, resolve }
     }
 
-    async function flushResolution(promise: Promise<void>) {
+    async function flushResolution(promise: Promise<unknown>) {
       await promise
       await Promise.resolve()
       await nextTick()
@@ -4597,9 +4597,11 @@ describe('vdomInterop', () => {
           }),
       })
       app.use(vaporInteropPlugin)
+      let loaded!: Promise<unknown>
 
       try {
         app.mount(host)
+        loaded = AsyncChild.__asyncLoader!()
 
         data.value.current = SyncChild
         await nextTick()
@@ -4608,9 +4610,15 @@ describe('vdomInterop', () => {
 
         expect(loader).toHaveBeenCalledOnce()
         expect(syncSetup).not.toHaveBeenCalled()
+
+        pending.resolve()
+        await flushResolution(loaded)
+
+        expect(syncSetup).not.toHaveBeenCalled()
+        expect(host.textContent).toBe('async')
       } finally {
         pending.resolve()
-        await flushResolution(pending.promise)
+        await flushResolution(loaded)
         app.unmount()
         host.remove()
       }
