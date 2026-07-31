@@ -33,7 +33,7 @@ export interface VaporTransitionHooks extends TransitionHooks {
   // Temporarily skips enter/move during TransitionGroup FLIP measurement.
   // Leave transitions intentionally ignore this flag.
   disabled?: boolean
-  // KeepAlive uses this target to reuse a deactivation leave during pruning.
+  // Prevents unmount from starting another leave after deactivation.
   deactivationTarget?: ParentNode
   // TransitionGroup sets this to handle applying hooks to list children
   applyGroup?: (
@@ -308,8 +308,7 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     if (transition) {
       const deactivationTarget = transition.deactivationTarget
       if (deactivationTarget) {
-        // Reuse the deactivation leave: detach an already parked node, or
-        // leave a live node to its pending leave callback.
+        // Deactivation already started leave; unmount must not start it again.
         if (block.parentNode === deactivationTarget) {
           parent && block.remove()
         }

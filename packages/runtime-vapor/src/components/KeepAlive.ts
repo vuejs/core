@@ -276,7 +276,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
         const root = isVaporComponent(cached) ? getRootElement(cached) : cached
         const transition = root && (root as TransitionBlock).$transition
         if (transition) {
-          // Reuse the deactivation leave instead of starting another on prune.
+          // Avoid running leave again when unmount follows deactivation.
           transition.deactivationTarget = storageContainer
         }
         // A pruned branch may still be leaving and not yet be in storageContainer.
