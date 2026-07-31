@@ -51,6 +51,7 @@ import {
 
 export interface KeepAliveInstance extends VaporComponentInstance {
   ctx: VaporKeepAliveContext & {
+    clearCurrent?: (block: VaporComponentInstance | VaporFragment) => void
     activate: (
       instance: VaporComponentInstance,
       parentNode: ParentNode,
@@ -402,6 +403,13 @@ const VaporKeepAliveImpl = defineVaporComponent({
       },
     }
 
+    if (isInteropEnabled) {
+      // Interop bypasses ctx.deactivate(), so clear current only for its block.
+      keepAliveCtx.clearCurrent = block => {
+        if (current === block) current = undefined
+      }
+    }
+
     keepAliveInstance.ctx = keepAliveCtx
     let children = slots.default()
     registerDynamicFragmentHooks(children, keepAliveCtx)
@@ -517,7 +525,12 @@ const unsetShapeFlag = (cached: VaporComponentInstance | VaporFragment) => {
       }
     }
   } else if (isInteropEnabled) {
-    resetShapeFlag(cached.vnode)
+    const vnode = cached.vnode!
+    resetShapeFlag(vnode)
+    if (isVaporComponent(vnode.component)) {
+      // Vapor VNodes copy their keep-alive flags to the inner instance.
+      unsetShapeFlag(vnode.component)
+    }
   }
 }
 
