@@ -5643,6 +5643,60 @@ describe('vdomInterop', () => {
           host.remove()
         }
       })
+
+      test('finishes a still-active async root after its Suspense generation is replaced', async () => {
+        const pending = deferred()
+        const otherPending = deferred()
+        const asyncSetup = vi.fn()
+        const data = ref({
+          wait: pending.promise,
+          asyncSetup,
+          syncSetup: vi.fn(),
+          current: null as any,
+        })
+        const { InitialChild, AsyncChild } = makeChildren(data)
+        data.value.current = InitialChild
+        const VaporParent = compile(
+          `<script setup vapor>
+              const data = _data
+              const VaporKeepAlive = _components.VaporKeepAlive
+            </script>
+            <template>
+              <VaporKeepAlive>
+                <component :is="data.current" />
+              </VaporKeepAlive>
+            </template>`,
+          data,
+          { VaporKeepAlive },
+        )
+        const branch = shallowRef<any>(VaporParent)
+        const { host, app } = mountSuspenseApp(branch)
+
+        try {
+          await nextTick()
+          data.value.current = AsyncChild
+          await nextTick()
+          expect(asyncSetup).toHaveBeenCalledOnce()
+
+          branch.value = makeOtherAsync(otherPending)
+          await nextTick()
+          branch.value = VaporParent
+          await nextTick()
+
+          pending.resolve()
+          await flushResolution(pending.promise)
+
+          expect(asyncSetup).toHaveBeenCalledOnce()
+          expect(host.innerHTML).toBe(
+            '<span>async</span><!--dynamic-component-->',
+          )
+        } finally {
+          pending.resolve()
+          otherPending.resolve()
+          app.unmount()
+          host.remove()
+        }
+      })
     })
 
     test('renders vapor async wrapper with directive inside VDOM Suspense', async () => {
