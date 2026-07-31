@@ -2974,6 +2974,144 @@ describe('vdomInterop', () => {
           app.unmount()
         })
 
+        it.each([
+          ['component type', (component: any) => component],
+          ['component VNode', (component: any) => h(component)],
+        ])(
+          'prunes a VDOM %s with a single leave when max is reached',
+          async (_, toValue) => {
+            const CompA = defineComponent({
+              setup: () => () => h('div', 'A'),
+            })
+            const CompB = defineComponent({
+              setup: () => () => h('div', 'B'),
+            })
+            const leaves: Array<() => void> = []
+            const data = shallowRef({
+              current: toValue(CompA),
+              onLeave: (_el: Element, done: () => void) => leaves.push(done),
+            })
+            const App = compile(
+              `<template>
+              <Transition :css="false" @leave="data.onLeave">
+                <KeepAlive :max="1">
+                  <component :is="data.current" />
+                </KeepAlive>
+              </Transition>
+            </template>`,
+              data,
+            )
+            const { host, app } = define(App as any).render()
+            const a = host.firstElementChild
+
+            data.value = {
+              ...data.value,
+              current: toValue(CompB),
+            }
+            await nextTick()
+
+            expect(leaves).toHaveLength(1)
+            expect(a!.parentNode).toBe(host)
+            leaves[0]()
+            await nextTick()
+            expect(a!.parentNode).toBeNull()
+            expect(host.innerHTML).toBe('<div>B</div><!--dynamic-component-->')
+
+            app.unmount()
+          },
+        )
+
+        it('prunes a Vapor component VNode with a single out-in leave', async () => {
+          const VaporCompA = compile(
+            `<template><div>vapor A</div></template>`,
+            ref(),
+          )
+          const VaporCompB = compile(
+            `<template><div>vapor B</div></template>`,
+            ref(),
+          )
+          const leaves: Array<() => void> = []
+          const data = shallowRef({
+            current: h(VaporCompA),
+            onLeave: (_el: Element, done: () => void) => leaves.push(done),
+          })
+          const App = compile(
+            `<template>
+              <Transition mode="out-in" :css="false" @leave="data.onLeave">
+                <KeepAlive :max="1">
+                  <component :is="data.current" />
+                </KeepAlive>
+              </Transition>
+            </template>`,
+            data,
+          )
+          const { host, app } = define(App as any).render()
+          const a = host.firstElementChild
+
+          data.value = {
+            ...data.value,
+            current: h(VaporCompB),
+          }
+          await nextTick()
+
+          expect(leaves).toHaveLength(1)
+          expect(a!.parentNode).toBe(host)
+          leaves[0]()
+          await nextTick()
+          expect(leaves).toHaveLength(1)
+          expect(a!.parentNode).toBeNull()
+          expect(host.innerHTML).toBe(
+            '<div>vapor B</div><!--dynamic-component-->',
+          )
+
+          app.unmount()
+        })
+
+        it('does not reinsert the Vapor root of a pruned VDOM component after leave', async () => {
+          const VaporRoot = compile(
+            `<template><div>vapor root</div></template>`,
+            ref(),
+          )
+          const CompA = defineComponent({
+            setup: () => () => h(VaporRoot),
+          })
+          const CompB = defineComponent({
+            setup: () => () => h('div', 'B'),
+          })
+          const leaves: Array<() => void> = []
+          const data = shallowRef({
+            current: CompA,
+            onLeave: (_el: Element, done: () => void) => leaves.push(done),
+          })
+          const App = compile(
+            `<template>
+              <Transition :css="false" @leave="data.onLeave">
+                <KeepAlive :max="1">
+                  <component :is="data.current" />
+                </KeepAlive>
+              </Transition>
+            </template>`,
+            data,
+          )
+          const { host, app } = define(App as any).render()
+          const a = host.firstElementChild
+
+          data.value = {
+            ...data.value,
+            current: CompB,
+          }
+          await nextTick()
+
+          expect(leaves).toHaveLength(1)
+          expect(a!.parentNode).toBe(host)
+          leaves[0]()
+          await nextTick()
+          expect(a!.parentNode).toBeNull()
+          expect(host.innerHTML).toBe('<div>B</div><!--dynamic-component-->')
+
+          app.unmount()
+        })
+
         it('unmounts inactive cached inner VDOM components during KeepAlive hmr rerender', async () => {
           const hooksA = {
             unmounted: vi.fn(),

@@ -33,6 +33,8 @@ export interface VaporTransitionHooks extends TransitionHooks {
   // Temporarily skips enter/move during TransitionGroup FLIP measurement.
   // Leave transitions intentionally ignore this flag.
   disabled?: boolean
+  // KeepAlive uses this target to reuse a deactivation leave during pruning.
+  deactivationTarget?: ParentNode
   // TransitionGroup sets this to handle applying hooks to list children
   applyGroup?: (
     block: Block,
@@ -212,8 +214,8 @@ export function move(
           block,
           (block as TransitionBlock).$transition as TransitionHooks,
           () => {
-            // if the component is unmounted after leave finish, remove the block
-            // to avoid retaining a detached node.
+            // A cache prune can unmount the component while its deactivation
+            // leave is pending. Remove instead of parking it when leave ends.
             if (
               moveType === MoveType.LEAVE &&
               parentComponent &&
@@ -301,19 +303,27 @@ export function remove(block: Block, parent?: ParentNode): void {
 }
 
 export function removeNode(block: Node, parent?: ParentNode): void {
-  if (
-    isTransitionEnabled &&
-    (block as TransitionBlock).$transition &&
-    block instanceof Element
-  ) {
-    performTransitionLeave(
-      block,
-      (block as TransitionBlock).$transition as TransitionHooks,
-      () => parent && parent.removeChild(block),
-    )
-  } else {
-    parent && parent.removeChild(block)
+  if (isTransitionEnabled && block instanceof Element) {
+    const transition = (block as TransitionBlock).$transition
+    if (transition) {
+      const deactivationTarget = transition.deactivationTarget
+      if (deactivationTarget) {
+        // Reuse the deactivation leave: detach an already parked node, or
+        // leave a live node to its pending leave callback.
+        if (block.parentNode === deactivationTarget) {
+          parent && block.remove()
+        }
+        return
+      }
+      performTransitionLeave(
+        block,
+        transition,
+        () => parent && parent.removeChild(block),
+      )
+      return
+    }
   }
+  parent && parent.removeChild(block)
 }
 
 export function removeFragment(

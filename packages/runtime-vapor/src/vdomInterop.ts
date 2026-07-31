@@ -573,10 +573,11 @@ const vaporInteropImpl: Omit<
 
   move(vnode, container, anchor, moveType, parentSuspense) {
     const block = vnode.vb || (vnode.component as any)
+    // Let a pending leave detect if its Vapor owner is pruned before it ends.
+    const owner = isVaporComponent(block) ? block : undefined
     // Resolved Vapor blocks exclude the VDOM-owned opening marker, but a
     // pending hydration range includes it. Avoid moving `vnode.el` twice.
-    const pendingRangeOwnsFragmentStart =
-      isVaporComponent(block) && !!block.pendingBlock
+    const pendingRangeOwnsFragmentStart = !!(owner && owner.pendingBlock)
     if (
       vnode.el &&
       vnode.el !== vnode.anchor &&
@@ -592,7 +593,7 @@ const vaporInteropImpl: Omit<
         parentSuspense,
       )
     }
-    move(block, container, anchor, moveType, undefined, parentSuspense)
+    move(block, container, anchor, moveType, owner, parentSuspense)
     move(
       vnode.anchor as any,
       container,
@@ -1005,6 +1006,8 @@ function mountVNode(
 
   let isMounted = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    const deactivationTarget =
+      transition && (transition as VaporTransitionHooks).deactivationTarget
     if (transition) setVNodeTransitionHooks(vnode, transition)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       const keepAliveCtx = (parentComponent as KeepAliveInstance).ctx
@@ -1024,7 +1027,15 @@ function mountVNode(
         )
       }
     } else {
-      internals.um(vnode, parentComponent as any, null, !!parentNode)
+      internals.um(
+        vnode,
+        parentComponent as any,
+        null,
+        !!parentNode && !deactivationTarget,
+      )
+      if (deactivationTarget) {
+        removeAttachedNodes(resolveVNodeNodes(vnode), deactivationTarget)
+      }
     }
 
     if (vnode.anchor && parentNode && vnode.anchor.parentNode === parentNode) {
@@ -1209,6 +1220,8 @@ function createVDOMComponent(
       if (!transition) removeDom(parentNode)
       return
     }
+    const deactivationTarget =
+      transition && (transition as VaporTransitionHooks).deactivationTarget
     // unset ref
     if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     if (transition) setVNodeTransitionHooks(vnode, transition)
@@ -1225,9 +1238,13 @@ function createVDOMComponent(
     }
     isUnmounted = true
     isMounted = false
-    internals.umt(vnode.component!, null, !!parentNode)
-    // VDOM transitions own their leaving DOM until the leave finishes.
-    if (!transition) removeDom(parentNode)
+    internals.umt(vnode.component!, null, !!parentNode && !deactivationTarget)
+    // Ordinary VDOM transitions own their leaving DOM until leave finishes.
+    if (deactivationTarget) {
+      removeDom(deactivationTarget)
+    } else if (!transition) {
+      removeDom(parentNode)
+    }
   }
 
   frag.hydrate = () => {
