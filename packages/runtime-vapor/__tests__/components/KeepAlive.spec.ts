@@ -1401,6 +1401,38 @@ describe('VaporKeepAlive', () => {
       leaves[0]()
       expect(a!.parentNode).toBeNull()
     })
+
+    test('does not resume an out-in branch after app unmount', async () => {
+      const CompA = compile(`<template><div>A</div></template>`, ref())
+      const CompB = compile(`<template><div>B</div></template>`, ref())
+      const leaves: Array<() => void> = []
+      const data = shallowRef({
+        current: CompA,
+        onLeave: (_el: Element, done: () => void) => leaves.push(done),
+      })
+      const App = compile(
+        `<template>
+          <Transition mode="out-in" :css="false" @leave="data.onLeave">
+            <KeepAlive :max="2">
+              <component :is="data.current" />
+            </KeepAlive>
+          </Transition>
+        </template>`,
+        data,
+      )
+      const { host, app } = define(App as any).render()
+
+      data.value = { ...data.value, current: CompB }
+      await nextTick()
+
+      expect(leaves).toHaveLength(1)
+      app.unmount()
+      expect(host.innerHTML).toBe('')
+
+      expect(() => leaves[0]()).not.toThrow()
+      await nextTick()
+      expect(host.innerHTML).toBe('')
+    })
   })
 
   describe('cache invalidation', () => {

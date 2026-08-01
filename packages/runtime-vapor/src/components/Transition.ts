@@ -557,6 +557,10 @@ function removeBranchWithLeaveImpl(
   ) {
     const instance = currentInstance
     applyTransitionLeaveHooksImpl(frag.nodes, transition, () => {
+      if (transition.state.isUnmounting || (instance && instance.isUnmounted)) {
+        frag.pending = undefined
+        return
+      }
       // By the time this deferred out-in branch runs, the renderEffect
       // has finished and currentInstance may have changed, so restore
       // the captured instance.

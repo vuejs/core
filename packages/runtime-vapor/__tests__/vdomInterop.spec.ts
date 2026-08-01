@@ -3021,6 +3021,44 @@ describe('vdomInterop', () => {
           },
         )
 
+        it('keeps the VDOM root of a cached Vapor component in the host while leaving', async () => {
+          const VDOMCompA = defineComponent({
+            setup: () => () => h('div', 'A'),
+          })
+          const VaporCompA = defineVaporComponent({
+            setup: () => createComponent(VDOMCompA as any),
+          })
+          const VaporCompB = compile(`<template><div>B</div></template>`, ref())
+          const leaves: Array<() => void> = []
+          const data = shallowRef({
+            current: VaporCompA,
+            onLeave: (_el: Element, done: () => void) => leaves.push(done),
+          })
+          const App = compile(
+            `<template>
+              <Transition :css="false" @leave="data.onLeave">
+                <KeepAlive :max="1">
+                  <component :is="data.current" />
+                </KeepAlive>
+              </Transition>
+            </template>`,
+            data,
+          )
+          const { host, app } = define(App as any).render()
+          const a = host.firstElementChild
+
+          data.value = { ...data.value, current: VaporCompB }
+          await nextTick()
+
+          expect(leaves).toHaveLength(1)
+          expect(a!.parentNode).toBe(host)
+          leaves[0]()
+          await nextTick()
+          expect(a!.parentNode).toBeNull()
+
+          app.unmount()
+        })
+
         it('removes a VDOM leave finished from onUnmounted', async () => {
           let finishLeave: (() => void) | undefined
           const CompA = defineComponent({

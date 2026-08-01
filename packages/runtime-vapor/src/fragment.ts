@@ -13,6 +13,7 @@ import {
 } from './block'
 import {
   type GenericComponentInstance,
+  type MoveType,
   type SuspenseBoundary,
   type TransitionHooks,
   type VNode,
@@ -86,6 +87,7 @@ export class VaporFragment<
     anchor: Node | null,
     parentSuspense?: SuspenseBoundary | null,
     transitionHooks?: TransitionHooks,
+    moveType?: MoveType,
   ) => void
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
   hydrate?(...args: any[]): void

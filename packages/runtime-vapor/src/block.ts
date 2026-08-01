@@ -272,6 +272,7 @@ export function move(
         anchor,
         parentSuspense,
         (block as TransitionBlock).$transition,
+        moveType,
       )
     } else {
       move(
