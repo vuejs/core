@@ -3021,6 +3021,82 @@ describe('vdomInterop', () => {
           },
         )
 
+        it('removes a VDOM leave finished from onUnmounted', async () => {
+          let finishLeave: (() => void) | undefined
+          const CompA = defineComponent({
+            setup() {
+              onUnmounted(() => finishLeave!())
+              return () => h('div', 'A')
+            },
+          })
+          const CompB = defineComponent({
+            setup: () => () => h('div', 'B'),
+          })
+          const data = shallowRef({
+            current: CompA,
+            onLeave: (_el: Element, done: () => void) => {
+              finishLeave = done
+            },
+          })
+          const App = compile(
+            `<template>
+              <Transition :css="false" @leave="data.onLeave">
+                <KeepAlive :max="1">
+                  <component :is="data.current" />
+                </KeepAlive>
+              </Transition>
+            </template>`,
+            data,
+          )
+          const { host, app } = define(App as any).render()
+          const a = host.firstElementChild
+
+          data.value = { ...data.value, current: CompB }
+          await nextTick()
+
+          expect(a!.parentNode).toBeNull()
+
+          app.unmount()
+        })
+
+        it('unmounts KeepAlive while a cached VDOM branch is leaving', async () => {
+          const CompA = defineComponent({
+            setup: () => () => h('div', 'A'),
+          })
+          const CompB = defineComponent({
+            setup: () => () => h('div', 'B'),
+          })
+          const leaves: Array<() => void> = []
+          const data = shallowRef({
+            current: CompA,
+            onLeave: (_el: Element, done: () => void) => leaves.push(done),
+          })
+          const App = compile(
+            `<template>
+              <Transition :css="false" @leave="data.onLeave">
+                <KeepAlive :max="2">
+                  <component :is="data.current" />
+                </KeepAlive>
+              </Transition>
+            </template>`,
+            data,
+          )
+          const { host, app } = define(App as any).render()
+          const a = host.firstElementChild
+
+          data.value = { ...data.value, current: CompB }
+          await nextTick()
+
+          expect(leaves).toHaveLength(1)
+          expect(a!.parentNode).toBe(host)
+          app.unmount()
+          expect(leaves).toHaveLength(1)
+          expect(a!.parentNode).toBeNull()
+          leaves[0]()
+          await nextTick()
+          expect(a!.parentNode).toBeNull()
+        })
+
         it('prunes a Vapor component VNode with a single out-in leave', async () => {
           const VaporCompA = compile(
             `<template><div>vapor A</div></template>`,
@@ -3974,6 +4050,51 @@ describe('vdomInterop', () => {
       current.value = VaporChild
       await nextTick()
       expect(root.innerHTML).toBe('<div>updated</div>')
+    })
+
+    test('unmounts VDOM KeepAlive while a Vapor child is leaving', async () => {
+      const VaporCompA = compile(
+        `<template><div>vapor A</div></template>`,
+        ref(),
+      )
+      const VaporCompB = compile(
+        `<template><div>vapor B</div></template>`,
+        ref(),
+      )
+      const current = shallowRef<any>(VaporCompA)
+      const leaves: Array<() => void> = []
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(
+              Transition,
+              {
+                css: false,
+                onLeave: (_el: Element, done: () => void) => leaves.push(done),
+              },
+              {
+                default: () => h(KeepAlive, { max: 2 }, () => h(current.value)),
+              },
+            )
+        },
+      })
+      const root = document.createElement('div')
+      const app = createApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(root)
+      const a = root.firstElementChild
+
+      current.value = VaporCompB
+      await nextTick()
+
+      expect(leaves).toHaveLength(1)
+      expect(a!.parentNode).toBe(root)
+      app.unmount()
+      expect(leaves).toHaveLength(1)
+      expect(a!.parentNode).toBeNull()
+      leaves[0]()
+      await nextTick()
+      expect(a!.parentNode).toBeNull()
     })
 
     test('should invoke vnode hooks on activate/deactivate', async () => {

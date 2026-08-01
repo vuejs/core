@@ -935,6 +935,20 @@ function removeAttachedNodes(block: Block, parent: ParentNode): void {
   }
 }
 
+function cleanupDeactivatedNodes(
+  vnode: VNode,
+  target: ParentNode,
+  liveParent?: ParentNode,
+): void {
+  const nodes = resolveVNodeNodes(vnode)
+  if (liveParent) removeAttachedNodes(nodes, liveParent)
+  const cleanup = () => removeAttachedNodes(nodes, target)
+  cleanup()
+  // A VDOM unmounted hook can finish leave before the instance is marked
+  // unmounted and park the nodes after the synchronous cleanup.
+  queuePostRenderEffect(cleanup, undefined, null)
+}
+
 function appendVnodeHook(
   vnode: VNode,
   key: 'onVnodeBeforeUpdate' | 'onVnodeUpdated',
@@ -1013,6 +1027,10 @@ function mountVNode(
       const keepAliveCtx = (parentComponent as KeepAliveInstance).ctx
       keepAliveCtx.clearCurrent!(frag)
       const storageContainer = keepAliveCtx.getStorageContainer()
+      if (transition) {
+        ;(transition as VaporTransitionHooks).deactivationTarget =
+          storageContainer
+      }
       if ((vnode.type as any).__vapor) {
         deactivate(vnode.component as any, storageContainer)
         // Move the VNode-owned end anchor with the inner Vapor block.
@@ -1034,7 +1052,13 @@ function mountVNode(
         !!parentNode && !deactivationTarget,
       )
       if (deactivationTarget) {
-        removeAttachedNodes(resolveVNodeNodes(vnode), deactivationTarget)
+        cleanupDeactivatedNodes(
+          vnode,
+          deactivationTarget,
+          (transition as VaporTransitionHooks).state.isUnmounting
+            ? parentNode
+            : undefined,
+        )
       }
     }
 
@@ -1056,6 +1080,9 @@ function mountVNode(
     const operationSuspense =
       parentSuspense === undefined ? suspense : parentSuspense
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      if (transition) {
+        ;(transition as VaporTransitionHooks).deactivationTarget = undefined
+      }
       if ((vnode.type as any).__vapor) {
         activate(vnode.component as any, parentNode, anchor, operationSuspense)
         insert(vnode.anchor as Node, parentNode, anchor)
@@ -1227,9 +1254,14 @@ function createVDOMComponent(
     if (transition) setVNodeTransitionHooks(vnode, transition)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       keepAliveCtx!.clearCurrent!(frag)
+      const storageContainer = keepAliveCtx!.getStorageContainer()
+      if (transition) {
+        ;(transition as VaporTransitionHooks).deactivationTarget =
+          storageContainer
+      }
       vdomDeactivate(
         vnode,
-        keepAliveCtx!.getStorageContainer(),
+        storageContainer,
         internals,
         parentComponent as any,
         null,
@@ -1241,7 +1273,13 @@ function createVDOMComponent(
     internals.umt(vnode.component!, null, !!parentNode && !deactivationTarget)
     // Ordinary VDOM transitions own their leaving DOM until leave finishes.
     if (deactivationTarget) {
-      removeDom(deactivationTarget)
+      cleanupDeactivatedNodes(
+        vnode,
+        deactivationTarget,
+        (transition as VaporTransitionHooks).state.isUnmounting
+          ? parentNode
+          : undefined,
+      )
     } else if (!transition) {
       removeDom(parentNode)
     }
@@ -1262,6 +1300,9 @@ function createVDOMComponent(
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      if (transition) {
+        ;(transition as VaporTransitionHooks).deactivationTarget = undefined
+      }
       vdomActivate(
         vnode,
         parentNode,

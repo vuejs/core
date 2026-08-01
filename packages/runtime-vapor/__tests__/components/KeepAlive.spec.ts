@@ -1368,6 +1368,39 @@ describe('VaporKeepAlive', () => {
 
       app.unmount()
     })
+
+    test('unmounts KeepAlive while a cached branch is leaving', async () => {
+      const CompA = compile(`<template><div>A</div></template>`, ref())
+      const CompB = compile(`<template><div>B</div></template>`, ref())
+      const leaves: Array<() => void> = []
+      const data = shallowRef({
+        current: CompA,
+        onLeave: (_el: Element, done: () => void) => leaves.push(done),
+      })
+      const App = compile(
+        `<template>
+          <Transition :css="false" @leave="data.onLeave">
+            <KeepAlive :max="2">
+              <component :is="data.current" />
+            </KeepAlive>
+          </Transition>
+        </template>`,
+        data,
+      )
+      const { host, app } = define(App as any).render()
+      const a = host.firstElementChild
+
+      data.value = { ...data.value, current: CompB }
+      await nextTick()
+
+      expect(leaves).toHaveLength(1)
+      expect(a!.parentNode).toBe(host)
+      app.unmount()
+      expect(leaves).toHaveLength(1)
+      expect(a!.parentNode).toBeNull()
+      leaves[0]()
+      expect(a!.parentNode).toBeNull()
+    })
   })
 
   describe('cache invalidation', () => {

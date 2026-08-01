@@ -353,7 +353,6 @@ export function resolveTransitionHooks(
     instance,
   ) as VaporTransitionHooks
   hooks.__vapor = true
-  hooks.state = state
   hooks.props = props
   hooks.instance = instance as VaporComponentInstance
   return hooks

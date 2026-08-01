@@ -361,7 +361,10 @@ export function baseResolveTransitionHooks(
     }
   }
 
-  const hooks: TransitionHooks<TransitionElement> = {
+  const hooks: TransitionHooks<TransitionElement> & {
+    state: TransitionState
+  } = {
+    state,
     mode,
     persisted,
     beforeEnter(el) {

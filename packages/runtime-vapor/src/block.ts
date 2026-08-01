@@ -193,35 +193,38 @@ export function move(
 ): void {
   anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (block instanceof Node) {
+    const transition =
+      isTransitionEnabled && block instanceof Element
+        ? (block as TransitionBlock).$transition
+        : undefined
+    if (transition && moveType === MoveType.ENTER) {
+      transition.deactivationTarget = undefined
+    }
     // only apply transition on Element nodes
-    if (
-      isTransitionEnabled &&
-      block instanceof Element &&
-      (block as TransitionBlock).$transition &&
-      !(block as TransitionBlock).$transition!.disabled &&
-      moveType !== MoveType.REORDER
-    ) {
+    if (transition && !transition.disabled && moveType !== MoveType.REORDER) {
       if (moveType === MoveType.ENTER) {
         performTransitionEnter(
           block,
-          (block as TransitionBlock).$transition as TransitionHooks,
+          transition,
           () => parent.insertBefore(block, anchor as Node),
           parentSuspense,
           true,
         )
       } else {
+        if (parentComponent) {
+          transition.deactivationTarget = parent
+        }
         performTransitionLeave(
           block,
-          (block as TransitionBlock).$transition as TransitionHooks,
+          transition,
           () => {
-            // A cache prune can unmount the component while its deactivation
-            // leave is pending. Remove instead of parking it when leave ends.
+            // Remove instead of parking if deactivation is followed by unmount.
             if (
               moveType === MoveType.LEAVE &&
               parentComponent &&
               parentComponent.isUnmounted
             ) {
-              block.remove()
+              ;(block as ChildNode).remove()
             } else {
               parent.insertBefore(block, anchor as Node)
             }
@@ -309,8 +312,11 @@ export function removeNode(block: Node, parent?: ParentNode): void {
       const deactivationTarget = transition.deactivationTarget
       if (deactivationTarget) {
         // Deactivation already started leave; unmount must not start it again.
-        if (block.parentNode === deactivationTarget) {
-          parent && block.remove()
+        if (
+          transition.state.isUnmounting ||
+          block.parentNode === deactivationTarget
+        ) {
+          block.remove()
         }
         return
       }
