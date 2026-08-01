@@ -80,3 +80,13 @@ const Quux: FunctionalVaporComponent<
   return []
 }
 ;<Quux />
+
+const ExposedComp: FunctionalVaporComponent<{}, {}, {}, { foo: string }> = (
+  props,
+  { expose },
+) => {
+  // @ts-expect-error should be error
+  expose({ foo: 1 })
+  return []
+}
+;<ExposedComp />
