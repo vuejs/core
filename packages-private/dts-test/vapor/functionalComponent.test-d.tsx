@@ -85,6 +85,7 @@ const ExposedComp: FunctionalVaporComponent<{}, {}, {}, { foo: string }> = (
   props,
   { expose },
 ) => {
+  expose({ foo: 'ok' })
   // @ts-expect-error should be error
   expose({ foo: 1 })
   return []
