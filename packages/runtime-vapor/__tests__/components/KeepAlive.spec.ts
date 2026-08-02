@@ -1376,6 +1376,41 @@ describe('VaporKeepAlive', () => {
       app.unmount()
     })
 
+    test('unmounts a cached branch with a pending deactivation leave', async () => {
+      const CompA = compile(`<template><div>A</div></template>`, ref())
+      const CompB = compile(`<template><div>B</div></template>`, ref())
+      const leaves: Array<() => void> = []
+      const data = shallowRef({
+        current: CompA,
+        onLeave: (_el: Element, done: () => void) => leaves.push(done),
+      })
+      const App = compile(
+        `<template>
+          <Transition :css="false" @leave="data.onLeave">
+            <KeepAlive :max="2">
+              <component :is="data.current" />
+            </KeepAlive>
+          </Transition>
+        </template>`,
+        data,
+      )
+      const { host, app } = define(App as any).render()
+      const a = host.firstElementChild
+
+      data.value = { ...data.value, current: CompB }
+      await nextTick()
+
+      expect(leaves).toHaveLength(1)
+      expect(a!.parentNode).toBe(host)
+      expect(() => app.unmount()).not.toThrow()
+      expect(host.innerHTML).toBe('')
+      expect(leaves).toHaveLength(1)
+
+      leaves[0]()
+      await nextTick()
+      expect(host.innerHTML).toBe('')
+    })
+
     test('unmounts an incoming branch superseded during mount', async () => {
       const deactivatedB = vi.fn()
       const unmountedB = vi.fn()
