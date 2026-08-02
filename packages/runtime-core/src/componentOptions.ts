@@ -121,7 +121,7 @@ export interface ComponentCustomOptions {}
  */
 export interface RenderResultExtensions {}
 
-export type RenderResult =
+type RenderResult =
   | VNodeChild
   | RenderResultExtensions[keyof RenderResultExtensions]
   | RenderResult[]
