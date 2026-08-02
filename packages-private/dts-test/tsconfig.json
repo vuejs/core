@@ -6,8 +6,8 @@
     "moduleResolution": "node",
     "jsx": "preserve",
     "jsxImportSource": "vue",
-    "types": ["vue/jsx"],
-    "lib": ["esnext", "dom"]
+    "lib": ["esnext", "dom"],
+    "types": ["vue/jsx"]
   },
-  "include": ["."]
+  "exclude": ["./vapor/*"]
 }

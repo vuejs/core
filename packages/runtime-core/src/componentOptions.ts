@@ -106,15 +106,15 @@ import { markAsyncBoundary } from './helpers/useId'
 export interface ComponentCustomOptions {}
 
 /**
- * Registry for vapor component render result types.
+ * Registry for additional render result types.
  *
  * @example
  * ```ts
- * import type { Block } from 'vue'
+ * import type { VaporRenderResult } from 'vue'
  *
  * declare module 'vue' {
  *   interface RenderResultExtensions {
- *     Block: Block
+ *     vapor: VaporRenderResult
  *   }
  * }
  * ```

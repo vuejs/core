@@ -1,10 +1,17 @@
 // global JSX namespace registration
 // somehow we have to copy=pase the jsx-runtime types here to make TypeScript happy
-import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
+import type {
+  NativeElements,
+  RenderResultExtensions,
+  ReservedProps,
+  VNode,
+} from '@vue/runtime-dom'
 
 declare global {
   namespace JSX {
-    export interface Element extends VNode {}
+    export type Element =
+      | VNode
+      | RenderResultExtensions[keyof RenderResultExtensions]
     export interface ElementClass {
       $props: {}
     }

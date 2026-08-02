@@ -1,4 +1,10 @@
-import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
+import type {
+  NativeElements,
+  RenderResultExtensions,
+  ReservedProps,
+  VNode,
+} from '@vue/runtime-dom'
+import type { Block } from '@vue/runtime-vapor'
 
 /**
  * JSX namespace for usage with @jsxImportsSource directive
@@ -8,7 +14,9 @@ import type { NativeElements, ReservedProps, VNode } from '@vue/runtime-dom'
 export { h as jsx, h as jsxDEV, Fragment, h as jsxs } from '@vue/runtime-dom'
 
 export namespace JSX {
-  export interface Element extends VNode {}
+  export type Element =
+    | VNode
+    | RenderResultExtensions[keyof RenderResultExtensions]
   export interface ElementClass {
     $props: {}
   }
