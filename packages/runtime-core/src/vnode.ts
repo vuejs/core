@@ -499,6 +499,25 @@ function createBaseVNode(
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
 
+  // #5081 validate children that will be silently discarded by innerHTML /
+  // textContent. The template compiler already errors on `v-html` / `v-text`
+  // used with children, but render functions have no such check.
+  if (__DEV__ && props && vnode.shapeFlag & ShapeFlags.ELEMENT) {
+    const overwritingProp =
+      props.innerHTML != null
+        ? 'innerHTML'
+        : props.textContent != null
+          ? 'textContent'
+          : null
+    if (overwritingProp && hasContentChildren(vnode.children)) {
+      warn(
+        `The \`${overwritingProp}\` prop on <${vnode.type as string}> will ` +
+          `override its children. Remove either the \`${overwritingProp}\` ` +
+          `prop or the children.`,
+      )
+    }
+  }
+
   // track vnode for block tree
   if (
     isBlockTreeEnabled > 0 &&
@@ -527,6 +546,18 @@ function createBaseVNode(
 }
 
 export { createBaseVNode as createElementVNode }
+
+/**
+ * dev only
+ * Whether children would actually render something. Empty text and empty
+ * arrays are ignored, mirroring the compiler's `node.children.length` check
+ * for `v-html` / `v-text`.
+ */
+function hasContentChildren(children: VNode['children']): boolean {
+  if (isString(children)) return children !== ''
+  if (isArray(children)) return children.length > 0
+  return false
+}
 
 export const createVNode = (
   __DEV__ ? createVNodeWithArgsTransform : _createVNode
