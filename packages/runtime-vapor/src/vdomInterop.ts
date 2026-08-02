@@ -1040,7 +1040,13 @@ function mountVNode(
     syncNodes()
   }
 
-  frag.insert = (parentNode, anchor, parentSuspense, transition) => {
+  frag.insert = (
+    parentNode,
+    anchor,
+    parentSuspense,
+    transition,
+    moveType = MoveType.REORDER,
+  ) => {
     if (isHydrating) return
     const operationSuspense =
       parentSuspense === undefined ? suspense : parentSuspense
@@ -1080,11 +1086,14 @@ function mountVNode(
         isMounted = true
       } else {
         // move
+        if (transition && moveType !== MoveType.REORDER) {
+          setVNodeTransitionHooks(vnode, transition)
+        }
         internals.m(
           vnode,
           parentNode,
           anchor,
-          MoveType.REORDER,
+          moveType,
           parentComponent as any,
           operationSuspense,
         )
@@ -1240,7 +1249,13 @@ function createVDOMComponent(
   vnode.scopeId = getCurrentScopeId() || null
   vnode.slotScopeIds = currentSlotScopeIds
 
-  frag.insert = (parentNode, anchor, parentSuspense, transition) => {
+  frag.insert = (
+    parentNode,
+    anchor,
+    parentSuspense,
+    transition,
+    moveType = MoveType.REORDER,
+  ) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
@@ -1274,11 +1289,14 @@ function createVDOMComponent(
         isMounted = true
       } else {
         // move
+        if (transition && moveType !== MoveType.REORDER) {
+          setVNodeTransitionHooks(vnode, transition)
+        }
         internals.m(
           vnode,
           parentNode,
           anchor,
-          MoveType.REORDER,
+          moveType,
           parentComponent as any,
           operationSuspense,
         )
