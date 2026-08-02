@@ -98,8 +98,6 @@ export class VaporFragment<
 
   // hooks
   onBeforeInsert?: ((nodes: Block) => void)[]
-  // Return true to keep the branch scope alive after removing its DOM.
-  onBeforeRemove?: ((scope: EffectScope) => boolean)[]
   onRemove?: (() => void)[]
   onBeforeUpdate?: (() => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
@@ -320,18 +318,17 @@ export class DynamicFragment extends RenderContextFragment {
 
     const prevSub = setActiveSub()
     const parent = !isHydrating ? this.getBranchParent() : null
+    let removePrevious: (() => void) | undefined
     // teardown previous branch
     if (wasMounted) {
       const scope = this.scope
+      const previous = this.nodes
+      const removeBranch = () => remove(previous, parent || undefined)
+      let deferRemoval = false
       if (scope) {
-        let retainScope = false
-        const onBeforeRemove = this.onBeforeRemove
-        if (onBeforeRemove) {
-          for (let i = 0; i < onBeforeRemove.length; i++) {
-            retainScope = onBeforeRemove[i](scope) || retainScope
-          }
-        }
-        if (!retainScope) {
+        if (this.keepAliveCtx) {
+          deferRemoval = this.keepAliveCtx.prepareBranchRemoval(this, scope)
+        } else {
           scope.stop()
         }
       }
@@ -343,7 +340,11 @@ export class DynamicFragment extends RenderContextFragment {
         setActiveSub(prevSub)
         return
       }
-      remove(this.nodes, parent || undefined)
+      if (deferRemoval) {
+        removePrevious = removeBranch
+      } else {
+        removeBranch()
+      }
     }
 
     const reusingDeferredAnchor = isHydrating
@@ -357,6 +358,7 @@ export class DynamicFragment extends RenderContextFragment {
       key,
       noScope,
       wasMounted || !!parent,
+      removePrevious,
     )
     setActiveSub(prevSub)
 
@@ -378,6 +380,7 @@ export class DynamicFragment extends RenderContextFragment {
     key: any,
     noScope: boolean = false,
     notifyUpdated: boolean = !!parent,
+    removePrevious?: () => void,
   ): void {
     this.current = key
     if (render) {
@@ -385,17 +388,8 @@ export class DynamicFragment extends RenderContextFragment {
       // A compiler-proven static branch can skip its own EffectScope, but attrs
       // fallthrough still registers branch-owned cleanup.
       const useScope = !noScope || !!this.hasFallthroughAttrs
-      if (useScope) {
-        // try to reuse the kept-alive scope
-        const scope =
-          keepAliveCtx && keepAliveCtx.acquireBranchScope(this.current)
-        if (scope) {
-          this.scope = scope
-        } else {
-          this.scope = new EffectScope()
-        }
-      } else {
-        this.scope = undefined
+      if (!keepAliveCtx) {
+        this.scope = useScope ? new EffectScope() : undefined
       }
 
       const renderBranch = () => {
@@ -423,7 +417,12 @@ export class DynamicFragment extends RenderContextFragment {
       }
 
       keepAliveCtx
-        ? keepAliveCtx.runBranchRender(this, renderBranch)
+        ? keepAliveCtx.runBranchRender(
+            this,
+            renderBranch,
+            useScope,
+            removePrevious,
+          )
         : renderBranch()
 
       if (parent) {
@@ -432,10 +431,15 @@ export class DynamicFragment extends RenderContextFragment {
           onBeforeInsert.forEach(hook => hook(this.nodes))
         }
         insert(this.nodes, parent, this.anchor)
+        if (removePrevious && keepAliveCtx) {
+          // Publish the new cache entry only after it has been mounted.
+          keepAliveCtx.cacheBlock(this)
+        }
       }
     } else {
       this.scope = undefined
       this.nodes = EMPTY_BLOCK
+      if (removePrevious) removePrevious()
     }
 
     const onUpdated = this.onUpdated

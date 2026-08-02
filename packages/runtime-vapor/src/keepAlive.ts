@@ -8,15 +8,20 @@ import type { Block } from './block'
 import type { DynamicFragment } from './fragment'
 
 export interface VaporKeepAliveContext {
-  // pre-render: hand back the kept-alive scope for a branch key, if any
-  acquireBranchScope(key: any): EffectScope | undefined
-  // wraps a DynamicFragment branch render: sets up the keyed cache-key
-  // context and marks shape flags once the render settles
-  runBranchRender(frag: DynamicFragment, fn: () => void): void
+  // caches or stops the outgoing branch scope and returns whether its DOM
+  // removal must wait for the incoming cache decision
+  prepareBranchRemoval(frag: DynamicFragment, scope: EffectScope): boolean
+  // acquires the incoming branch scope, sets up the keyed cache-key context,
+  // marks shape flags, then runs any deferred outgoing removal
+  runBranchRender(
+    frag: DynamicFragment,
+    fn: () => void,
+    useScope: boolean,
+    removePrevious?: () => void,
+  ): void
   // marks shape flags at component / interop boundaries
   processShapeFlag(block: Block): any | false
   cacheBlock(block?: Block): void
-  cacheScope(cacheKey: any, scopeLookupKey: any, scope: EffectScope): void
   getStorageContainer(): ParentNode
 }
 

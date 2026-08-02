@@ -21,7 +21,7 @@ import {
   extend,
 } from '@vue/shared'
 import type { LooseRawProps, VaporComponent } from '../../src/component'
-import { ifFlags, makeRender } from '../_utils'
+import { compile, ifFlags, makeRender } from '../_utils'
 import { VaporKeepAlive } from '../../src/components/KeepAlive'
 import {
   child,
@@ -1330,6 +1330,85 @@ describe('VaporKeepAlive', () => {
       await nextTick()
       // C should be pruned because B was used last so C is the oldest cached
       assertCount([2, 2, 1, 1, 1, 2, 2, 0, 1, 1, 1, 1])
+    })
+
+    test('unmounts without deactivating a branch pruned during the same switch', async () => {
+      const deactivatedA = vi.fn()
+      const unmountedA = vi.fn()
+      const CompA = defineVaporComponent({
+        setup() {
+          onDeactivated(deactivatedA)
+          onUnmounted(unmountedA)
+          return template('<div>A</div>')()
+        },
+      })
+      const CompB = compile(`<template><div>B</div></template>`, ref())
+      const leaves: Array<() => void> = []
+      const data = shallowRef({
+        current: CompA,
+        onLeave: (_el: Element, done: () => void) => leaves.push(done),
+      })
+      const App = compile(
+        `<template>
+          <Transition :css="false" @leave="data.onLeave">
+            <KeepAlive :max="1">
+              <component :is="data.current" />
+            </KeepAlive>
+          </Transition>
+        </template>`,
+        data,
+      )
+      const { host, app } = define(App as any).render()
+      const a = host.firstElementChild
+
+      data.value = { ...data.value, current: CompB }
+      await nextTick()
+
+      expect(deactivatedA).not.toHaveBeenCalled()
+      expect(unmountedA).toHaveBeenCalledOnce()
+      expect(leaves).toHaveLength(1)
+      expect(a!.parentNode).toBe(host)
+
+      leaves[0]()
+      await nextTick()
+      expect(a!.parentNode).toBeNull()
+
+      app.unmount()
+    })
+
+    test('unmounts an incoming branch superseded during mount', async () => {
+      const deactivatedB = vi.fn()
+      const unmountedB = vi.fn()
+      const CompA = compile(`<template><div>A</div></template>`, ref())
+      const CompC = compile(`<template><div>C</div></template>`, ref())
+      const current = shallowRef<VaporComponent>()
+      const CompB = defineVaporComponent({
+        setup() {
+          onBeforeMount(() => (current.value = CompC))
+          onDeactivated(deactivatedB)
+          onUnmounted(unmountedB)
+          return template('<div>B</div>')()
+        },
+      })
+      current.value = CompA
+      const App = compile(
+        `<template>
+          <KeepAlive :max="1">
+            <component :is="data" />
+          </KeepAlive>
+        </template>`,
+        current,
+      )
+      const { host, app } = define(App as any).render()
+
+      current.value = CompB
+      await nextTick()
+
+      expect(host.textContent).toBe('C')
+      expect(deactivatedB).not.toHaveBeenCalled()
+      expect(unmountedB).toHaveBeenCalledOnce()
+
+      app.unmount()
     })
   })
 
