@@ -1,4 +1,15 @@
-import type { NativeElements, ReservedProps, VaporRenderResult } from 'vue'
+import type {
+  Block,
+  NativeElements,
+  ReservedProps,
+  VaporRenderResult,
+} from 'vue'
+
+declare module 'vue' {
+  interface RenderResultExtensions {
+    Block: Block
+  }
+}
 
 declare global {
   namespace JSX {
