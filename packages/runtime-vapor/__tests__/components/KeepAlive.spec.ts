@@ -1410,7 +1410,6 @@ describe('VaporKeepAlive', () => {
       await nextTick()
       expect(host.innerHTML).toBe('')
     })
-
     test('unmounts an incoming branch superseded during mount', async () => {
       const deactivatedB = vi.fn()
       const unmountedB = vi.fn()
