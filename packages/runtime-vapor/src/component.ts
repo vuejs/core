@@ -160,7 +160,7 @@ export type FunctionalVaporComponent<
     emit: EmitFn<Emits>
     slots: Slots
     attrs: Record<string, any>
-    expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+    expose: (exposed: Exposed) => void
   },
 ) => VaporRenderResult) &
   Omit<
