@@ -2915,7 +2915,7 @@ describe('vdomInterop', () => {
           app.unmount()
         })
 
-        it('deactivates then prunes a Vapor component VNode when max is reached', async () => {
+        it('unmounts a Vapor component VNode pruned during the same switch', async () => {
           const deactivatedA = vi.fn()
           const unmountedA = vi.fn()
           const renderA = vi.fn((value: number) => value)
@@ -2962,7 +2962,7 @@ describe('vdomInterop', () => {
           expect(host.innerHTML).toBe(
             '<div>vapor B</div><!--dynamic-component-->',
           )
-          expect(deactivatedA).toHaveBeenCalledOnce()
+          expect(deactivatedA).not.toHaveBeenCalled()
           expect(unmountedA).toHaveBeenCalledOnce()
           expect(a!.parentNode).toBeNull()
 
