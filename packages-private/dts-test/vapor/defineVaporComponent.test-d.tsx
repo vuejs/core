@@ -1357,8 +1357,9 @@ describe('__typeEl backdoor', () => {
 })
 
 describe('Vapor component in defineComponent', () => {
-  const VaporComp = defineVaporComponent(() => <div></div>)
-  defineComponent(() => () => [<VaporComp />])
+  const VaporComp = defineVaporComponent(() => <div />)
+  defineComponent(() => () => <div />)
+  defineComponent(() => () => [<div />, <VaporComp />])
 })
 
 defineVaporComponent({
