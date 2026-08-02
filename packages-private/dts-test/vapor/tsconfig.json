@@ -5,8 +5,6 @@
     "module": "esnext",
     "moduleResolution": "node",
     "jsx": "preserve",
-    "jsxImportSource": "vue",
-    "types": ["vue/jsx"],
     "lib": ["esnext", "dom"]
   },
   "include": ["."]
