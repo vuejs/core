@@ -392,6 +392,22 @@ describe('patchProp', () => {
       expect(el.getAttribute('disabled')).toBe('false')
     })
 
+    test('should set special boolean attribute', () => {
+      const el = document.createElement('input')
+      setAttr(el, 'readonly', true)
+      expect(el.getAttribute('readonly')).toBe('')
+      setAttr(el, 'readonly', false)
+      expect(el.getAttribute('readonly')).toBe(null)
+      setAttr(el, 'readonly', '')
+      expect(el.getAttribute('readonly')).toBe('')
+      setAttr(el, 'readonly', 0)
+      expect(el.getAttribute('readonly')).toBe(null)
+      setAttr(el, 'readonly', '0')
+      expect(el.getAttribute('readonly')).toBe('')
+      setAttr(el, 'readonly', undefined)
+      expect(el.getAttribute('readonly')).toBe(null)
+    })
+
     test('should set symbol attribute values', () => {
       const el = document.createElement('div')
       const symbol = Symbol('foo')

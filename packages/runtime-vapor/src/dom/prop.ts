@@ -7,6 +7,7 @@ import {
   includeBooleanAttr,
   isArray,
   isOn,
+  isSpecialBooleanAttr,
   isString,
   isSymbol,
   normalizeClass,
@@ -123,10 +124,14 @@ export function setAttr(
         el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
       }
     } else {
-      if (value != null) {
-        el.setAttribute(key, isSymbol(value) ? String(value) : value)
-      } else {
+      const isBoolean = isSpecialBooleanAttr(key)
+      if (value == null || (isBoolean && !includeBooleanAttr(value))) {
         el.removeAttribute(key)
+      } else {
+        el.setAttribute(
+          key,
+          isBoolean ? '' : isSymbol(value) ? String(value) : value,
+        )
       }
     }
   }
