@@ -356,7 +356,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
         }
 
         unsetShapeFlag(cached)
-        remove(cached, storageContainer)
+        // A cached branch may still be leaving in its live parent.
+        const parentNode = findBlockBoundary(cached).parentNode
+        remove(cached, (parentNode as ParentNode | null) || undefined)
       })
 
       // Same-tick branch switches can tear down KeepAlive after the next branch
