@@ -12,6 +12,16 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`v-text > should escape constant v-text in template 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div>&lt;span&gt;foo&lt;/span&gt;", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`v-text > should raise error and ignore children when v-text is present 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
@@ -40,6 +50,16 @@ exports[`v-text > work with component 1`] = `
 export function render(_ctx) {
   const n0 = _createAssetComponent("Comp", null, null, true)
   _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
+  return n0
+}"
+`;
+
+exports[`v-text > work with constant v-text on component 1`] = `
+"import { createAssetComponent as _createAssetComponent, setBlockText as _setBlockText } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", null, null, true)
+  _setBlockText(n0, '<span>oops</span>')
   return n0
 }"
 `;

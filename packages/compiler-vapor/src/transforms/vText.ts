@@ -7,7 +7,7 @@ import { IRNodeTypes } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import type { DirectiveTransform } from '../transform'
 import { getLiteralExpressionValue } from '../utils'
-import { isVoidTag } from '../../../shared/src'
+import { escapeHtml, isVoidTag } from '../../../shared/src'
 import { markNonTemplate, registerSyntheticTextChild } from './transformText'
 import { shouldUseCreateElement } from './transformElement'
 
@@ -36,6 +36,7 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
 
   const literal = getLiteralExpressionValue(exp)
   const useCreateElement = shouldUseCreateElement(context.node, context)
+  const isComponent = node.tagType === ElementTypes.COMPONENT
   if (literal != null) {
     if (useCreateElement) {
       const id = registerSyntheticTextChild(context, '', [exp])
@@ -44,11 +45,18 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
         elements: [id],
         parent: context.reference(),
       })
+    } else if (isComponent) {
+      context.registerOperation({
+        type: IRNodeTypes.SET_TEXT,
+        element: context.reference(),
+        values: [exp],
+        generated: true,
+        isComponent,
+      })
     } else {
-      context.childrenTemplate = [String(literal)]
+      context.childrenTemplate = [escapeHtml(literal)]
     }
   } else {
-    const isComponent = node.tagType === ElementTypes.COMPONENT
     let id: number | undefined
     if (useCreateElement) {
       id = registerSyntheticTextChild(context, '')

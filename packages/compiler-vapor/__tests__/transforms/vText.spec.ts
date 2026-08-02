@@ -58,6 +58,17 @@ describe('v-text', () => {
     expect(code).matchSnapshot()
   })
 
+  test('should escape constant v-text in template', () => {
+    const { code, ir } = compileWithVText(
+      `<div v-text="'<span>foo</span>'"></div>`,
+    )
+
+    expect([...ir.template.keys()]).toEqual([
+      '<div>&lt;span&gt;foo&lt;/span&gt;',
+    ])
+    expect(code).matchSnapshot()
+  })
+
   test('work with dynamic component', () => {
     const { code } = compileWithVText(`<component :is="Comp" v-text="foo"/>`)
     expect(code).matchSnapshot()
@@ -68,6 +79,16 @@ describe('v-text', () => {
     const { code } = compileWithVText(`<Comp v-text="foo"/>`)
     expect(code).matchSnapshot()
     expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+  })
+
+  test('work with constant v-text on component', () => {
+    const { code, helpers } = compileWithVText(
+      `<Comp v-text="'<span>oops</span>'"/>`,
+    )
+
+    expect(helpers).contains('setBlockText')
+    expect(code).contains("_setBlockText(n0, '<span>oops</span>')")
+    expect(code).matchSnapshot()
   })
 
   test('work with plain template createElement path', () => {
