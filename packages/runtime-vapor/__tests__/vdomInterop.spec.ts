@@ -2865,6 +2865,65 @@ describe('vdomInterop', () => {
         it.each([
           ['component type', (component: any) => component],
           ['component VNode', (component: any) => h(component)],
+        ])(
+          'moves a VDOM %s root through the current KeepAlive leave transition',
+          async (_, toValue) => {
+            const VDOMCompA = defineComponent({
+              setup: () => () => h('div', 'A'),
+            })
+            const vdomRoot = shallowRef<any>(toValue(VDOMCompA))
+            const VaporCompA = compile(
+              `<template><component :is="data" /></template>`,
+              vdomRoot,
+            )
+            const VaporCompB = compile(
+              `<template><div>B</div></template>`,
+              ref(),
+            )
+            let finishLeave: (() => void) | undefined
+            const firstLeave = vi.fn(
+              (_el: Element, done: () => void) => (finishLeave = done),
+            )
+            const secondLeave = vi.fn(
+              (_el: Element, done: () => void) => (finishLeave = done),
+            )
+            const data = shallowRef({
+              current: VaporCompA,
+              onLeave: firstLeave,
+            })
+            const App = compile(
+              `<template>
+                <Transition :css="false" @leave="data.onLeave">
+                  <KeepAlive :max="2">
+                    <component :is="data.current" />
+                  </KeepAlive>
+                </Transition>
+              </template>`,
+              data,
+            )
+            const { host, app } = define(App as any).render()
+            const a = host.firstElementChild
+
+            data.value = { ...data.value, onLeave: secondLeave }
+            await nextTick()
+            data.value = { ...data.value, current: VaporCompB }
+            await nextTick()
+
+            expect(firstLeave).not.toHaveBeenCalled()
+            expect(secondLeave).toHaveBeenCalledOnce()
+            expect(a!.parentNode).toBe(host)
+
+            finishLeave!()
+            await nextTick()
+            expect(a!.parentNode).not.toBe(host)
+
+            app.unmount()
+          },
+        )
+
+        it.each([
+          ['component type', (component: any) => component],
+          ['component VNode', (component: any) => h(component)],
         ])('prunes a VDOM %s when max is reached', async (_, toValue) => {
           const source = ref(0)
           const renderA = vi.fn()
