@@ -170,7 +170,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
       block: VaporComponentInstance | VaporFragment,
       isCurrent: boolean,
     ) => {
-
       if (cache.has(key)) {
         if (isCurrent) {
           // Only active branches should refresh their recency. Background
