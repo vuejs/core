@@ -1,3 +1,4 @@
+import { setActiveSub } from '@vue/reactivity'
 import {
   MismatchTypes,
   type VShowElement,
@@ -46,14 +47,14 @@ export function applyVShow(target: Block, source: () => any): void {
     const update = target.update
     target.update = (...args) => {
       const res = update.call(target, ...args)
-      setDisplay(target, source())
+      setDisplayUntracked(target, source)
       return res
     }
   } else if (isFragment(target) && target.insert) {
     const insert = target.insert
     target.insert = (...args) => {
       const res = insert.call(target, ...args)
-      setDisplay(target, source())
+      setDisplayUntracked(target, source)
       return res
     }
   }
@@ -72,6 +73,17 @@ export function applyVShow(target: Block, source: () => any): void {
     }
     setDisplay(target, value)
   })
+}
+
+// Fragment operations may leave the caller's subscriber active. The source is
+// already tracked by the render effect above, so avoid collecting it again.
+function setDisplayUntracked(target: Block, source: () => any): void {
+  const prevSub = setActiveSub()
+  try {
+    setDisplay(target, source())
+  } finally {
+    setActiveSub(prevSub)
+  }
 }
 
 function setDisplay(
