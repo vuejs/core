@@ -5,6 +5,7 @@ import {
   nextTick,
   ref,
   render,
+  vModelCheckbox,
   vModelDynamic,
   withDirectives,
 } from '@vue/runtime-dom'
@@ -344,6 +345,9 @@ describe('vModel', () => {
     triggerEvent('input', number)
     await nextTick()
     expect(data.number).toEqual(1.2)
+    triggerEvent('change', number)
+    await nextTick()
+    expect(number.value).toEqual('1.2')
 
     trim.value = '    hello, world    '
     triggerEvent('input', trim)
@@ -369,6 +373,52 @@ describe('vModel', () => {
     triggerEvent('change', lazy)
     await nextTick()
     expect(data.lazy).toEqual('foo')
+  })
+
+  it('should preserve unresolved trimmed text while focused in nested shadow roots', async () => {
+    const model = ref('')
+    const component = defineComponent({
+      render() {
+        return withVModel(
+          h('input', {
+            'onUpdate:modelValue': (value: string) => {
+              model.value = value
+            },
+          }),
+          model.value,
+          {
+            trim: true,
+          },
+        )
+      },
+    })
+
+    document.body.appendChild(root)
+    const outerShadowRoot = root.attachShadow({ mode: 'open' })
+    const innerHost = document.createElement('div')
+    outerShadowRoot.appendChild(innerHost)
+    const innerShadowRoot = innerHost.attachShadow({ mode: 'open' })
+
+    try {
+      render(h(component), innerShadowRoot)
+
+      const input = innerShadowRoot.querySelector('input') as HTMLInputElement
+      input.focus()
+
+      expect(document.activeElement).toBe(root)
+      expect(outerShadowRoot.activeElement).toBe(innerHost)
+      expect(innerShadowRoot.activeElement).toBe(input)
+
+      input.value = '    hello, world    '
+      triggerEvent('input', input)
+      await nextTick()
+
+      expect(model.value).toEqual('hello, world')
+      expect(input.value).toEqual('    hello, world    ')
+    } finally {
+      render(null, innerShadowRoot)
+      root.remove()
+    }
   })
 
   it('should work with range', async () => {
@@ -1267,6 +1317,54 @@ describe('vModel', () => {
     expect(bar.selected).toEqual(true)
   })
 
+  it('multiple select uses current Array/Set model type', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: [] }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this),
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    data.value = new Set(['foo'])
+    await nextTick()
+    foo.selected = true
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
+    expect(data.value).toMatchObject(new Set(['foo', 'bar']))
+
+    data.value = ['foo']
+    await nextTick()
+    foo.selected = false
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(Array.isArray(data.value)).toBe(true)
+    expect(data.value).toMatchObject(['bar'])
+  })
+
   it('multiple select (model is Set, option value is object)', async () => {
     const fooValue = { foo: 1 }
     const barValue = { bar: 1 }
@@ -1444,5 +1542,52 @@ describe('vModel', () => {
     expect(data.num).toBe(1)
 
     expect(inputNum1.value).toBe('1')
+  })
+
+  it(`should support mutating an array or set value for a checkbox`, async () => {
+    const component = defineComponent({
+      data() {
+        return { value: [] }
+      },
+      render() {
+        return [
+          withDirectives(
+            h('input', {
+              type: 'checkbox',
+              class: 'foo',
+              value: 'foo',
+              'onUpdate:modelValue': setValue.bind(this),
+            }),
+            [[vModelCheckbox, this.value]],
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const foo = root.querySelector('.foo')
+    const data = root._vnode.component.data
+
+    expect(foo.checked).toEqual(false)
+
+    data.value.push('foo')
+    await nextTick()
+    expect(foo.checked).toEqual(true)
+
+    data.value[0] = 'bar'
+    await nextTick()
+    expect(foo.checked).toEqual(false)
+
+    data.value = new Set()
+    await nextTick()
+    expect(foo.checked).toEqual(false)
+
+    data.value.add('foo')
+    await nextTick()
+    expect(foo.checked).toEqual(true)
+
+    data.value.delete('foo')
+    await nextTick()
+    expect(foo.checked).toEqual(false)
   })
 })

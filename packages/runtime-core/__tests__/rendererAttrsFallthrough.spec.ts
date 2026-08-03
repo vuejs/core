@@ -6,6 +6,7 @@
 import {
   Fragment,
   type FunctionalComponent,
+  Teleport,
   createBlock,
   createCommentVNode,
   createElementBlock,
@@ -391,6 +392,26 @@ describe('attribute fallthrough', () => {
     expect(`Extraneous non-emits event listeners`).toHaveBeenWarned()
   })
 
+  it('should warn when fallthrough fails on teleport root node', () => {
+    const Parent = {
+      render() {
+        return h(Child, { class: 'parent' })
+      },
+    }
+    const root = document.createElement('div')
+
+    const Child = defineComponent({
+      render() {
+        return h(Teleport, { to: root }, h('div'))
+      },
+    })
+
+    document.body.appendChild(root)
+    render(h(Parent), root)
+
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarned()
+  })
+
   it('should dedupe same listeners when $attrs is used during render', () => {
     const click = vi.fn()
     const count = ref(0)
@@ -552,7 +573,7 @@ describe('attribute fallthrough', () => {
     const Child = {
       props: [],
       render() {
-        return openBlock(), createBlock('div')
+        return (openBlock(), createBlock('div'))
       },
     }
 

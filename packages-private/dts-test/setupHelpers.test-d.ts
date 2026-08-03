@@ -33,6 +33,16 @@ describe('defineProps w/ type declaration', () => {
   expectType<boolean>(props.boolAndUndefined)
 })
 
+describe('defineProps w/ never prop', () => {
+  const props = defineProps<{
+    foo?: never
+    bar: number
+  }>()
+
+  expectType<never | undefined>(props.foo)
+  expectType<number>(props.bar)
+})
+
 describe('defineProps w/ generics', () => {
   function test<T extends boolean>() {
     const props = defineProps<{ foo: T; bar: string; x?: boolean }>()
@@ -240,6 +250,23 @@ describe('withDefaults w/ defineProp type is different from the defaults type', 
   res1.value
 })
 
+describe('withDefaults w/ defineProp discriminate union type', () => {
+  const props = withDefaults(
+    defineProps<
+      { type: 'button'; buttonType?: 'submit' } | { type: 'link'; href: string }
+    >(),
+    {
+      type: 'button',
+    },
+  )
+  if (props.type === 'button') {
+    expectType<'submit' | undefined>(props.buttonType)
+  }
+  if (props.type === 'link') {
+    expectType<string>(props.href)
+  }
+})
+
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
   const props = defineProps({
@@ -287,6 +314,14 @@ describe('defineEmits w/ type declaration', () => {
   emit2('baz', 123)
   // @ts-expect-error
   emit2('baz')
+})
+
+describe('defineEmits w/ interface declaration', () => {
+  interface Emits {
+    foo: [value: string]
+  }
+  const emit = defineEmits<Emits>()
+  emit('foo', 'hi')
 })
 
 describe('defineEmits w/ alt type declaration', () => {
@@ -386,6 +421,14 @@ describe('defineModel', () => {
   const countDefault = defineModel<number>('count', { default: 1 })
   expectType<Ref<number>>(countDefault)
 
+  const arrayDefault = defineModel<number[]>({ default: () => [] })
+  expectType<Ref<number[]>>(arrayDefault)
+
+  const objectDefault = defineModel<{ foo: string }>({
+    default: () => ({ foo: 'bar' }),
+  })
+  expectType<Ref<{ foo: string }>>(objectDefault)
+
   // infer type from default
   const inferred = defineModel({ default: 123 })
   expectType<Ref<number | undefined>>(inferred)
@@ -425,6 +468,10 @@ describe('defineModel', () => {
 
   // @ts-expect-error type / default mismatch
   defineModel<string>({ default: 123 })
+  // @ts-expect-error raw array defaults must use a factory
+  defineModel<number[]>({ default: [] })
+  // @ts-expect-error raw object defaults must use a factory
+  defineModel<{ foo: string }>({ default: { foo: 'bar' } })
   // @ts-expect-error unknown props option
   defineModel({ foo: 123 })
 

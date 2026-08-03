@@ -3,6 +3,7 @@
 
 import {
   type ComponentPublicInstance,
+  createApp,
   defineComponent,
   h,
   nextTick,
@@ -508,6 +509,7 @@ describe('component: emit', () => {
       'test-event': null,
       fooBar: null,
       FooBaz: null,
+      once: null,
     }
     expect(isEmitListener(options, 'onClick')).toBe(true)
     expect(isEmitListener(options, 'onclick')).toBe(false)
@@ -521,6 +523,10 @@ describe('component: emit', () => {
     expect(isEmitListener(options, 'onFooBar')).toBe(true)
     // PascalCase option
     expect(isEmitListener(options, 'onFooBaz')).toBe(true)
+    // event name `once`
+    expect(isEmitListener(options, 'onOnce')).toBe(true)
+    // event name `once` with `.once` modifier
+    expect(isEmitListener(options, 'onOnceOnce')).toBe(true)
   })
 
   test('does not emit after unmount', async () => {
@@ -597,5 +603,46 @@ describe('component: emit', () => {
     expect(renderFn).toHaveBeenCalledTimes(0)
     render(h(ComponentC), el)
     expect(renderFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('merging emits for a component that is also used as a mixin', () => {
+    const render = () => h('div')
+    const CompA = {
+      render,
+    }
+    const validateByMixin = vi.fn(() => true)
+    const validateByGlobalMixin = vi.fn(() => true)
+
+    const mixin = {
+      emits: {
+        one: validateByMixin,
+      },
+    }
+
+    const CompB = defineComponent({
+      mixins: [mixin, CompA],
+      created(this) {
+        this.$emit('one', 1)
+      },
+      render,
+    })
+
+    const app = createApp({
+      render() {
+        return [h(CompA), h(CompB)]
+      },
+    })
+
+    app.mixin({
+      emits: {
+        one: validateByGlobalMixin,
+        two: null,
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+    expect(validateByMixin).toHaveBeenCalledTimes(1)
+    expect(validateByGlobalMixin).not.toHaveBeenCalled()
   })
 })

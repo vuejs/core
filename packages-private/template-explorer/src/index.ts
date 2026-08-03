@@ -233,7 +233,7 @@ window.init = () => {
           pos.column != null &&
           !(
             // ignore mock location
-            (pos.line === 1 && pos.column === 0)
+            pos.line === 1 && pos.column === 0
           )
         ) {
           const translatedPos = {

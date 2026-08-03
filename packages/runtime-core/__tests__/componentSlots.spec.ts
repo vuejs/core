@@ -6,6 +6,8 @@ import {
   nodeOps,
   ref,
   render,
+  serializeInner,
+  useSlots,
 } from '@vue/runtime-test'
 import { createBlock, normalizeVNode } from '../src/vnode'
 import { createSlots } from '../src/helpers/createSlots'
@@ -42,6 +44,25 @@ describe('component: slots', () => {
     expect(slots).toMatchObject({})
   })
 
+  test('initSlots: ensure compiler marker non-enumerable', () => {
+    const Comp = {
+      render() {
+        const slots = useSlots()
+        // Only user-defined slots should be enumerable
+        expect(Object.keys(slots)).toEqual(['foo'])
+
+        // Internal compiler markers must still exist but be non-enumerable
+        expect(slots).toHaveProperty('_')
+        expect(Object.getOwnPropertyDescriptor(slots, '_')!.enumerable).toBe(
+          false,
+        )
+        return h('div')
+      },
+    }
+    const slots = { foo: () => {}, _: 1 }
+    render(createBlock(Comp, null, slots), nodeOps.createElement('div'))
+  })
+
   test('initSlots: should normalize object slots (when value is null, string, array)', () => {
     const { slots } = renderWithSlots({
       _inner: '_inner',
@@ -51,6 +72,10 @@ describe('component: slots', () => {
     })
 
     expect(
+      '[Vue warn]: Non-function value encountered for slot "_inner". Prefer function slots for better performance.',
+    ).toHaveBeenWarned()
+
+    expect(
       '[Vue warn]: Non-function value encountered for slot "header". Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
@@ -58,8 +83,8 @@ describe('component: slots', () => {
       '[Vue warn]: Non-function value encountered for slot "footer". Prefer function slots for better performance.',
     ).toHaveBeenWarned()
 
-    expect(slots).not.toHaveProperty('_inner')
     expect(slots).not.toHaveProperty('foo')
+    expect(slots._inner()).toMatchObject([normalizeVNode('_inner')])
     expect(slots.header()).toMatchObject([normalizeVNode('header')])
     expect(slots.footer()).toMatchObject([
       normalizeVNode('f1'),
@@ -323,5 +348,117 @@ describe('component: slots', () => {
     expect(
       'Slot "default" invoked outside of the render function',
     ).not.toHaveBeenWarned()
+  })
+
+  test('basic warn', () => {
+    const Comp = {
+      setup(_: any, { slots }: any) {
+        slots.default && slots.default()
+        return () => null
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(Comp, () => h('div'))
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).toHaveBeenWarned()
+  })
+
+  test('basic warn when mounting another app in setup', () => {
+    const Comp = {
+      setup(_: any, { slots }: any) {
+        slots.default?.()
+        return () => null
+      },
+    }
+
+    const mountComp = () => {
+      createApp({
+        setup() {
+          return () => h(Comp, () => 'msg')
+        },
+      }).mount(nodeOps.createElement('div'))
+    }
+
+    const App = {
+      setup() {
+        mountComp()
+        return () => null
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).toHaveBeenWarned()
+  })
+
+  test('should not warn when render in setup', () => {
+    const container = {
+      setup(_: any, { slots }: any) {
+        return () => slots.default && slots.default()
+      },
+    }
+
+    const comp = h(container, null, () => h('div'))
+
+    const App = {
+      setup() {
+        render(h(comp), nodeOps.createElement('div'))
+        return () => null
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).not.toHaveBeenWarned()
+  })
+
+  test('basic warn when render in setup', () => {
+    const container = {
+      setup(_: any, { slots }: any) {
+        slots.default && slots.default()
+        return () => null
+      },
+    }
+
+    const comp = h(container, null, () => h('div'))
+
+    const App = {
+      setup() {
+        render(h(comp), nodeOps.createElement('div'))
+        return () => null
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).toHaveBeenWarned()
+  })
+
+  test('slot name starts with underscore', () => {
+    const Comp = {
+      setup(_: any, { slots }: any) {
+        return () => slots._foo()
+      },
+    }
+
+    const App = {
+      setup() {
+        return () => h(Comp, null, { _foo: () => 'foo' })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    createApp(App).mount(root)
+    expect(serializeInner(root)).toBe('foo')
   })
 })

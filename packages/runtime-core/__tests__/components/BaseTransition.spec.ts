@@ -14,7 +14,7 @@ import {
 } from '@vue/runtime-test'
 
 function mount(
-  props: BaseTransitionProps,
+  props: BaseTransitionProps<TestElement>,
   slot: () => any,
   withKeepAlive = false,
 ) {
@@ -35,7 +35,10 @@ function mount(
   return { root, unmount }
 }
 
-function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
+function mockProps(
+  extra: BaseTransitionProps<TestElement> = {},
+  withKeepAlive = false,
+) {
   const cbs: {
     doneEnter: Record<string, () => void>
     doneLeave: Record<string, () => void>
@@ -43,7 +46,7 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     doneEnter: {},
     doneLeave: {},
   }
-  const props: BaseTransitionProps = {
+  const props: BaseTransitionProps<TestElement> = {
     onBeforeEnter: vi.fn(el => {
       if (!extra.persisted && !withKeepAlive) {
         expect(el.parentNode).toBeNull()
@@ -52,20 +55,20 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     onEnter: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterEnter: vi.fn(),
-    onEnterCancelled: vi.fn(),
-    onBeforeLeave: vi.fn(),
+    onAfterEnter: vi.fn<(el: TestElement) => void>(),
+    onEnterCancelled: vi.fn<(el: TestElement) => void>(),
+    onBeforeLeave: vi.fn<(el: TestElement) => void>(),
     onLeave: vi.fn((el, done) => {
       cbs.doneLeave[serialize(el as TestElement)] = done
     }),
-    onAfterLeave: vi.fn(),
-    onLeaveCancelled: vi.fn(),
-    onBeforeAppear: vi.fn(),
+    onAfterLeave: vi.fn<(el: TestElement) => void>(),
+    onLeaveCancelled: vi.fn<(el: TestElement) => void>(),
+    onBeforeAppear: vi.fn<(el: TestElement) => void>(),
     onAppear: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterAppear: vi.fn(),
-    onAppearCancelled: vi.fn(),
+    onAfterAppear: vi.fn<(el: TestElement) => void>(),
+    onAppearCancelled: vi.fn<(el: TestElement) => void>(),
     ...extra,
   }
   return {
@@ -75,7 +78,7 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
 }
 
 function assertCalls(
-  props: BaseTransitionProps,
+  props: BaseTransitionProps<TestElement>,
   calls: Record<string, number>,
 ) {
   Object.keys(calls).forEach(key => {
@@ -250,6 +253,51 @@ describe('BaseTransition', () => {
       expect(props.onAfterAppear).not.toHaveBeenCalled()
       cbs.doneEnter[`<div></div>`]()
       expect(props.onAfterAppear).toHaveBeenCalledTimes(1)
+    })
+
+    // #14031
+    test('w/ KeepAlive activate/deactivate should not call enter/leave hooks', async () => {
+      const { props } = mockProps({ persisted: true })
+      const { hooks } = mockPersistedHooks()
+      const which = ref<'A' | 'B'>('A')
+      const CompA = {
+        name: 'CompA',
+        render: () => h('div', { id: 'A', ...hooks }),
+      }
+      const CompB = {
+        name: 'CompB',
+        render: () => h('span', { id: 'B' }),
+      }
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return h(BaseTransition, props, () =>
+            h(KeepAlive, null, which.value === 'A' ? h(CompA) : h(CompB)),
+          )
+        },
+      }
+      render(h(App), root)
+
+      // initial mount: persisted, so no auto enter hooks
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+
+      // switch to B → A is deactivated (moved to storage). Since the
+      // transition on A's <div> is persisted, no leave hooks should fire.
+      which.value = 'B'
+      await nextTick()
+      expect(props.onBeforeLeave).not.toHaveBeenCalled()
+      expect(props.onLeave).not.toHaveBeenCalled()
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+
+      // switch back to A → A is activated (moved back from storage). The
+      // persisted transition still shouldn't auto-fire enter hooks.
+      which.value = 'A'
+      await nextTick()
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
     })
   })
 
@@ -1197,5 +1245,52 @@ describe('BaseTransition', () => {
   // #10719
   test('should not error on KeepAlive w/ function children', () => {
     expect(() => mount({}, () => () => h('div'), true)).not.toThrow()
+  })
+
+  // #12465
+  test('mode: "out-in" w/ KeepAlive + fallthrough attrs (prod mode)', async () => {
+    __DEV__ = false
+    async function testOutIn({ trueBranch, falseBranch }: ToggleOptions) {
+      const toggle = ref(true)
+      const { props, cbs } = mockProps({ mode: 'out-in' }, true)
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return h(
+            BaseTransition,
+            {
+              ...props,
+              class: 'test',
+            },
+            () =>
+              h(KeepAlive, null, toggle.value ? trueBranch() : falseBranch()),
+          )
+        },
+      }
+      render(h(App), root)
+
+      expect(serializeInner(root)).toBe(`<div class="test">0</div>`)
+
+      // trigger toggle
+      toggle.value = false
+      await nextTick()
+      expect(props.onBeforeLeave).toHaveBeenCalledTimes(1)
+      expect(serialize((props.onBeforeLeave as any).mock.calls[0][0])).toBe(
+        `<div class="test">0</div>`,
+      )
+      expect(props.onLeave).toHaveBeenCalledTimes(1)
+      expect(serialize((props.onLeave as any).mock.calls[0][0])).toBe(
+        `<div class="test">0</div>`,
+      )
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+      // enter should not have started
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+      cbs.doneLeave[`<div class="test">0</div>`]()
+      expect(serializeInner(root)).toBe(`<span class="test">0</span>`)
+    }
+    await runTestWithKeepAlive(testOutIn)
+    __DEV__ = true
   })
 })

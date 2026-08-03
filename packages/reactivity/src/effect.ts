@@ -49,6 +49,7 @@ export enum EffectFlags {
   DIRTY = 1 << 4,
   ALLOW_RECURSE = 1 << 5,
   PAUSED = 1 << 6,
+  EVALUATED = 1 << 7,
 }
 
 /**
@@ -113,8 +114,19 @@ export class ReactiveEffect<T = any>
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
-    if (activeEffectScope && activeEffectScope.active) {
-      activeEffectScope.effects.push(this)
+    if (activeEffectScope) {
+      if (activeEffectScope.active) {
+        activeEffectScope.effects.push(this)
+      } else {
+        // The active scope has already been stopped. This happens when a
+        // component's setup is resumed after a top-level `await` (via the
+        // compiler-emitted `__restore()` from `withAsyncContext`) but the
+        // component was unmounted while pending under <Suspense>. Without
+        // this guard the effect would become an orphan: not held by any
+        // scope (so it cannot be stopped via the scope chain) yet still
+        // able to subscribe to reactive deps and fire forever.
+        this.flags &= ~EffectFlags.ACTIVE
+      }
     }
   }
 
@@ -234,9 +246,15 @@ export class ReactiveEffect<T = any>
 
 let batchDepth = 0
 let batchedSub: Subscriber | undefined
+let batchedComputed: Subscriber | undefined
 
-export function batch(sub: Subscriber): void {
+export function batch(sub: Subscriber, isComputed = false): void {
   sub.flags |= EffectFlags.NOTIFIED
+  if (isComputed) {
+    sub.next = batchedComputed
+    batchedComputed = sub
+    return
+  }
   sub.next = batchedSub
   batchedSub = sub
 }
@@ -257,23 +275,24 @@ export function endBatch(): void {
     return
   }
 
+  if (batchedComputed) {
+    let e: Subscriber | undefined = batchedComputed
+    batchedComputed = undefined
+    while (e) {
+      const next: Subscriber | undefined = e.next
+      e.next = undefined
+      e.flags &= ~EffectFlags.NOTIFIED
+      e = next
+    }
+  }
+
   let error: unknown
   while (batchedSub) {
     let e: Subscriber | undefined = batchedSub
-    let next: Subscriber | undefined
-    // 1st pass: clear notified flags for computed upfront
-    // we use the ACTIVE flag as a discriminator between computed and effect,
-    // since NOTIFIED is useless for an inactive effect anyway.
-    while (e) {
-      if (!(e.flags & EffectFlags.ACTIVE)) {
-        e.flags &= ~EffectFlags.NOTIFIED
-      }
-      e = e.next
-    }
-    e = batchedSub
     batchedSub = undefined
-    // 2nd pass: run effects
     while (e) {
+      const next: Subscriber | undefined = e.next
+      e.next = undefined
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE) {
         try {
@@ -283,8 +302,6 @@ export function endBatch(): void {
           if (!error) error = err
         }
       }
-      next = e.next
-      e.next = undefined
       e = next
     }
   }
@@ -305,7 +322,7 @@ function prepareDeps(sub: Subscriber) {
 }
 
 function cleanupDeps(sub: Subscriber) {
-  // Cleanup unsued deps
+  // Cleanup unused deps
   let head
   let tail = sub.depsTail
   let link = tail
@@ -372,22 +389,22 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
   }
   computed.globalVersion = globalVersion
 
-  const dep = computed.dep
-  computed.flags |= EffectFlags.RUNNING
   // In SSR there will be no render effect, so the computed has no subscriber
   // and therefore tracks no deps, thus we cannot rely on the dirty check.
   // Instead, computed always re-evaluate and relies on the globalVersion
   // fast path above for caching.
+  // #12337 if computed has no deps (does not rely on any reactive data) and evaluated,
+  // there is no need to re-evaluate.
   if (
-    dep.version > 0 &&
     !computed.isSSR &&
-    computed.deps &&
-    !isDirty(computed)
+    computed.flags & EffectFlags.EVALUATED &&
+    ((!computed.deps && !(computed as any)._dirty) || !isDirty(computed))
   ) {
-    computed.flags &= ~EffectFlags.RUNNING
     return
   }
+  computed.flags |= EffectFlags.RUNNING
 
+  const dep = computed.dep
   const prevSub = activeSub
   const prevShouldTrack = shouldTrack
   activeSub = computed
@@ -397,6 +414,7 @@ export function refreshComputed(computed: ComputedRefImpl): undefined {
     prepareDeps(computed)
     const value = computed.fn(computed._value)
     if (dep.version === 0 || hasChanged(value, computed._value)) {
+      computed.flags |= EffectFlags.EVALUATED
       computed._value = value
       dep.version++
     }
@@ -421,23 +439,24 @@ function removeSub(link: Link, soft = false) {
     nextSub.prevSub = prevSub
     link.nextSub = undefined
   }
-  if (dep.subs === link) {
-    // was previous tail, point new tail to prev
-    dep.subs = prevSub
-  }
   if (__DEV__ && dep.subsHead === link) {
     // was previous head, point new head to next
     dep.subsHead = nextSub
   }
 
-  if (!dep.subs && dep.computed) {
-    // if computed, unsubscribe it from all its deps so this computed and its
-    // value can be GCed
-    dep.computed.flags &= ~EffectFlags.TRACKING
-    for (let l = dep.computed.deps; l; l = l.nextDep) {
-      // here we are only "soft" unsubscribing because the computed still keeps
-      // referencing the deps and the dep should not decrease its sub count
-      removeSub(l, true)
+  if (dep.subs === link) {
+    // was previous tail, point new tail to prev
+    dep.subs = prevSub
+
+    if (!prevSub && dep.computed) {
+      // if computed, unsubscribe it from all its deps so this computed and its
+      // value can be GCed
+      dep.computed.flags &= ~EffectFlags.TRACKING
+      for (let l = dep.computed.deps; l; l = l.nextDep) {
+        // here we are only "soft" unsubscribing because the computed still keeps
+        // referencing the deps and the dep should not decrease its sub count
+        removeSub(l, true)
+      }
     }
   }
 
@@ -460,11 +479,6 @@ function removeDep(link: Link) {
     nextDep.prevDep = prevDep
     link.nextDep = undefined
   }
-}
-
-export interface ReactiveEffectRunner<T = any> {
-  (): T
-  effect: ReactiveEffect
 }
 
 export function effect<T = any>(

@@ -17,7 +17,10 @@ export async function downloadProject(store: ReplStore) {
 
   // basic structure
   zip.file('index.html', index)
-  zip.file('package.json', pkg)
+  zip.file(
+    'package.json',
+    pkg.replace(`"vue": "latest"`, `"vue": "${store.vueVersion || 'latest'}"`),
+  )
   zip.file('vite.config.js', config)
   zip.file('README.md', readme)
 

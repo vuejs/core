@@ -1,4 +1,8 @@
-import { type ComponentInternalInstance, type Slots, ssrUtils } from 'vue'
+import {
+  type ComponentInternalInstance,
+  type Slots,
+  ssrUtils,
+} from '@vue/runtime-dom'
 import {
   type Props,
   type PushFn,
@@ -74,6 +78,8 @@ export function ssrRenderSlotInner(
         )
       } else if (fallbackRenderFn) {
         fallbackRenderFn()
+      } else if (transition) {
+        push(`<!---->`)
       }
     } else {
       // ssr slot.
@@ -110,13 +116,19 @@ export function ssrRenderSlotInner(
           end--
         }
 
-        for (let i = start; i < end; i++) {
-          push(slotBuffer[i])
+        if (start < end) {
+          for (let i = start; i < end; i++) {
+            push(slotBuffer[i])
+          }
+        } else if (transition) {
+          push(`<!---->`)
         }
       }
     }
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
+  } else if (transition) {
+    push(`<!---->`)
   }
 }
 

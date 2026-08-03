@@ -116,6 +116,47 @@ describe('watch', () => {
     ])
   })
 
+  test('call option with async error handling', async () => {
+    const onError = vi.fn()
+    const call: WatchOptions['call'] = function call(fn, type, args) {
+      if (Array.isArray(fn)) {
+        fn.forEach(f => call(f, type, args))
+        return
+      }
+      fn.apply(null, args).catch((error: unknown) => {
+        onError(error)
+      })
+    }
+
+    const source1 = ref(0)
+    watch(
+      source1,
+      async () => {
+        throw 'oops in watch'
+      },
+      { call },
+    )
+
+    source1.value++
+    await nextTick()
+    expect(onError.mock.calls.length).toBe(1)
+    expect(onError.mock.calls[0]).toMatchObject(['oops in watch'])
+
+    const source2 = ref(0)
+    watch(
+      source2,
+      async () => {
+        throw 'oops in once watch'
+      },
+      { call, once: true },
+    )
+
+    source2.value++
+    await nextTick()
+    expect(onError.mock.calls.length).toBe(2)
+    expect(onError.mock.calls[1]).toMatchObject(['oops in once watch'])
+  })
+
   test('watch with onWatcherCleanup', async () => {
     let dummy = 0
     let source: Ref<number>
@@ -228,5 +269,65 @@ describe('watch', () => {
     r.value = 10
     expect(r.value).toBe(1)
     expect(c.value).toBe(1)
+  })
+
+  // edge case where a nested endBatch() causes an effect to be batched in a
+  // nested batch loop with its .next mutated, causing the outer loop to end
+  // early
+  test('nested batch edge case', () => {
+    // useClamp from VueUse
+    const clamp = (n: number, min: number, max: number) =>
+      Math.min(max, Math.max(min, n))
+    function useClamp(src: Ref<number>, min: number, max: number) {
+      return computed({
+        get() {
+          return (src.value = clamp(src.value, min, max))
+        },
+        set(val) {
+          src.value = clamp(val, min, max)
+        },
+      })
+    }
+
+    const src = ref(1)
+    const clamped = useClamp(src, 1, 5)
+    watch(src, val => (clamped.value = val))
+
+    const spy = vi.fn()
+    watch(clamped, spy)
+
+    src.value = 2
+    expect(spy).toHaveBeenCalledTimes(1)
+    src.value = 10
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  test('should ensure correct execution order in batch processing', () => {
+    const dummy: number[] = []
+    const n1 = ref(0)
+    const n2 = ref(0)
+    const sum = computed(() => n1.value + n2.value)
+    watch(n1, () => {
+      dummy.push(1)
+      n2.value++
+    })
+    watch(sum, () => dummy.push(2))
+    watch(n1, () => dummy.push(3))
+
+    n1.value++
+
+    expect(dummy).toEqual([1, 2, 3])
+  })
+
+  test('watch with immediate reset and sync flush', () => {
+    const value = ref(false)
+
+    watch(value, () => {
+      value.value = false
+    })
+
+    value.value = true
+    value.value = true
+    expect(value.value).toBe(false)
   })
 })

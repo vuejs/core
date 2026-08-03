@@ -471,5 +471,30 @@ describe('reactivity/collections', () => {
       const result = map.set('a', 'a')
       expect(result).toBe(map)
     })
+
+    it('should wrapped iterator inherit all iterator properties', () => {
+      const raw = new Map([['key', 'value']])
+      const map = reactive(raw)
+
+      const rawIterator = raw.entries()
+      const wrappedIterator = map.entries()
+
+      // Wrapped iterator should have the same properties as original iterator
+      expect(typeof wrappedIterator.next).toBe('function')
+      expect(typeof wrappedIterator[Symbol.iterator]).toBe('function')
+      expect(wrappedIterator[Symbol.iterator]()).toBe(wrappedIterator)
+
+      // Check inherited iterator helper methods if they exist on the original
+      for (const key of Object.getOwnPropertyNames(
+        Object.getPrototypeOf(rawIterator),
+      )) {
+        expect(key in wrappedIterator).toBe(true)
+      }
+      for (const key of Object.getOwnPropertySymbols(
+        Object.getPrototypeOf(rawIterator),
+      )) {
+        expect(key in wrappedIterator).toBe(true)
+      }
+    })
   })
 })

@@ -33,7 +33,7 @@ import {
   legacyPrependModifier,
   legacyRenderSlot,
   legacyRenderStatic,
-  legacyresolveScopedSlots,
+  legacyResolveScopedSlots,
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
 import type { Slots } from '../componentSlots'
@@ -183,7 +183,7 @@ export function installCompatInstanceProperties(
     _b: () => legacyBindObjectProps,
     _v: () => createTextVNode,
     _e: () => createCommentVNode,
-    _u: () => legacyresolveScopedSlots,
+    _u: () => legacyResolveScopedSlots,
     _g: () => legacyBindObjectListeners,
     _d: () => legacyBindDynamicKeys,
     _p: () => legacyPrependModifier,

@@ -496,6 +496,35 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
 }
 `;
 
+exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <![CDATA[cdata]]> 1`] = `
+{
+  "cached": [],
+  "children": [],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 18,
+      "line": 1,
+      "offset": 17,
+    },
+    "source": "<![CDATA[cdata]]>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<![CDATA[cdata]]>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[cdata]]></template> 1`] = `
 {
   "cached": [],
