@@ -85,6 +85,12 @@ function processRule(id: string, rule: Rule) {
     parent = parent.parent
   }
   rule.selector = selectorParser(selectorRoot => {
+    // A selector list can mix :deep() members with plain scoped ones. Resolve
+    // the rule's deep status up-front so rewriting a member doesn't depend on
+    // where it sits in the list relative to the :deep() member.
+    if (selectorRoot.some(selector => selector.some(isDeepSelector))) {
+      ;(rule as any).__deep = true
+    }
     selectorRoot.each(selector => {
       rewriteSelector(id, rule, selector, selectorRoot, deep)
     })
