@@ -7,7 +7,7 @@ import {
   template,
 } from '../../src'
 import { type VShowElement, nextTick, ref } from 'vue'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { makeRender } from '../_utils'
 
 const define = makeRender()
@@ -136,5 +136,39 @@ describe('directive: v-show', () => {
     visible.value = !visible.value
     await nextTick()
     expect(host.innerHTML).toBe('<span style="">child</span><!--if-->')
+  })
+
+  test('should not track v-show source in dynamic fragment effect', async () => {
+    const t0 = template('<div>child</div>')
+    const t1 = template('<span>child</span>')
+    const childIf = ref(true)
+    const visible = ref(true)
+    const condition = vi.fn(() => childIf.value)
+
+    const { component: Child } = define({
+      setup() {
+        return createIf(
+          condition,
+          () => t0(),
+          () => t1(),
+        )
+      },
+    })
+
+    define({
+      setup() {
+        const child = createComponent(Child, null, null, true)
+        applyVShow(child, () => visible.value)
+        return child
+      },
+    }).render()
+
+    childIf.value = false
+    await nextTick()
+    expect(condition).toHaveBeenCalledTimes(2)
+
+    visible.value = false
+    await nextTick()
+    expect(condition).toHaveBeenCalledTimes(2)
   })
 })
