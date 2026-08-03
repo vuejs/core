@@ -370,6 +370,56 @@ describe('Transition', () => {
     expect(calls).toEqual([false, true])
   })
 
+  // #15202
+  test('should not track reactive reads from v-show transition hooks', async () => {
+    const show = ref(false)
+    const count = ref(0)
+    const source = vi.fn(() => show.value)
+    const onBeforeEnter = vi.fn(() => count.value++)
+    const data = ref({ source, onBeforeEnter })
+    const App = compile(
+      `<template>
+        <Transition :css="false" @before-enter="data.onBeforeEnter">
+          <div v-show="data.source()">content</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+
+    show.value = true
+    await nextTick()
+
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+    expect(count.value).toBe(1)
+    expect(source).toHaveBeenCalledTimes(2)
+  })
+
+  test('should not repeat v-show transition when truthiness is unchanged', async () => {
+    const onBeforeEnter = vi.fn()
+    const data = ref({
+      show: 0,
+      onBeforeEnter,
+    })
+    const App = compile(
+      `<template>
+        <Transition :css="false" @before-enter="data.onBeforeEnter">
+          <div v-show="data.show">content</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+
+    data.value.show = 1
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+
+    data.value.show = 2
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+  })
+
   test('v-if should own enter and leave when its root also has v-show', async () => {
     const onEnter = vi.fn((_el: Element, done: () => void) => done())
     const onLeave = vi.fn((_el: Element, done: () => void) => done())

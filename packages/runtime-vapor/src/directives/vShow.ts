@@ -7,6 +7,7 @@ import {
   warn,
   warnPropMismatch,
 } from '@vue/runtime-dom'
+import { setActiveSub } from '@vue/reactivity'
 import { renderEffect } from '../renderEffect'
 import { isVaporComponent } from '../component'
 import type { Block, TransitionBlock } from '../block'
@@ -101,25 +102,41 @@ function setDisplay(
         el.style.display === 'none' ? '' : el.style.display
     }
 
+    const hidden = !value
+    if (el[vShowHidden] === hidden) return
+    el[vShowHidden] = hidden
+
     const { $transition = transition } = target as TransitionBlock
     if ($transition) {
-      if (value) {
-        $transition.beforeEnter(target)
-        el.style.display = el[vShowOriginalDisplay]!
-        if (deferEnter) {
-          return () => $transition.enter(target)
-        }
-        $transition.enter(target)
-      } else {
-        // during initial render, the element is not yet inserted into the
-        // DOM, and it is hidden, no need to trigger transition
-        if (target.isConnected) {
-          $transition.leave(target, () => {
-            el.style.display = 'none'
-          })
+      const prevSub = setActiveSub()
+      try {
+        if (value) {
+          $transition.beforeEnter(target)
+          el.style.display = el[vShowOriginalDisplay]!
+          if (deferEnter) {
+            return () => {
+              const prevSub = setActiveSub()
+              try {
+                $transition.enter(target)
+              } finally {
+                setActiveSub(prevSub)
+              }
+            }
+          }
+          $transition.enter(target)
         } else {
-          el.style.display = 'none'
+          // during initial render, the element is not yet inserted into the
+          // DOM, and it is hidden, no need to trigger transition
+          if (target.isConnected) {
+            $transition.leave(target, () => {
+              el.style.display = 'none'
+            })
+          } else {
+            el.style.display = 'none'
+          }
         }
+      } finally {
+        setActiveSub(prevSub)
       }
     } else {
       if (
@@ -144,8 +161,6 @@ function setDisplay(
         el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
       }
     }
-
-    el[vShowHidden] = !value
   } else if (__DEV__) {
     warn(
       `v-show used on component with non-single-element root node ` +
