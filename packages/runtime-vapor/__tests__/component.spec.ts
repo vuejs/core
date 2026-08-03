@@ -796,6 +796,30 @@ describe('component', () => {
     expect(el.textContent).toBe('<b>foo</b>')
   })
 
+  it('mounts raw text element literal v-text as text', () => {
+    const Comp = compile(
+      `<template><iframe v-text="'<b>foo</b>'" /></template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const iframe = host.firstChild as HTMLIFrameElement
+    expect(iframe.textContent).toBe('<b>foo</b>')
+  })
+
+  it('does not parse closing tags in raw text element literal v-text', () => {
+    const value = '</iframe><div>injected</div>'
+    const Comp = compile(
+      `<template><iframe v-text="'${value}'" /></template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const iframe = host.firstChild as HTMLIFrameElement
+    expect(iframe.textContent).toBe(value)
+    expect(host.childElementCount).toBe(1)
+  })
+
   it('mounts plain template elements with slot content', () => {
     const data = ref('unused')
     const Child = compile(

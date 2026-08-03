@@ -9,13 +9,17 @@ import {
   isStaticPropertyKey,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { escapeHtml, isGloballyAllowed, isVoidTag } from '@vue/shared'
+import { escapeHtml, isGloballyAllowed, isVoidTag, makeMap } from '@vue/shared'
 import { IRNodeTypes } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
 import type { DirectiveTransform } from '../transform'
 import { getLiteralExpressionValue, isConstantExpression } from '../utils'
 import { markNonTemplate, registerSyntheticTextChild } from './transformText'
 import { shouldUseCreateElement } from './transformElement'
+
+const isRawTextContainer = /*@__PURE__*/ makeMap(
+  'iframe,noembed,noframes,noscript,script,style,xmp',
+)
 
 export const transformVText: DirectiveTransform = (dir, node, context) => {
   let { exp, loc } = dir
@@ -54,7 +58,7 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
   const literal = getLiteralExpressionValue(exp)
   const useCreateElement = shouldUseCreateElement(context.node, context)
   if (literal != null) {
-    if (useCreateElement) {
+    if (useCreateElement || isRawTextContainer(node.tag)) {
       const id = registerSyntheticTextChild(context, '', [exp])
       context.registerOperation({
         type: IRNodeTypes.INSERT_NODE,
@@ -89,6 +93,8 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
   }
 }
 
+// Keep this aligned with the constant classification used by compiler-dom's
+// transformExpression + getConstantType path for v-text.
 function isConstantVTextExpression(
   exp: SimpleExpressionNode,
   bindings: BindingMetadata,
