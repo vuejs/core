@@ -1526,4 +1526,150 @@ describe('attribute fallthrough', () => {
     const el = host.children[0]
     expect(el.classList.length).toBe(0)
   })
+
+  it('passes v-text to components as a reactive textContent prop', async () => {
+    const value = ref('<b>one</b>')
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps(['textContent'])
+      </script>
+      <template><div>prop:{{ props.textContent }}</div></template>`,
+      ref(null),
+    )
+    const Parent = compile(
+      `<template><components.Child v-text="data" /></template>`,
+      value,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe('<div>prop:&lt;b&gt;one&lt;/b&gt;</div>')
+
+    value.value = '<i>two</i>'
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>prop:&lt;i&gt;two&lt;/i&gt;</div>')
+  })
+
+  it('passes v-html to components as a reactive innerHTML prop', async () => {
+    const value = ref('<b>one</b>')
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps(['innerHTML'])
+      </script>
+      <template><div>prop:{{ props.innerHTML }}</div></template>`,
+      ref(null),
+    )
+    const Parent = compile(
+      `<template><components.Child v-html="data" /></template>`,
+      value,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe('<div>prop:&lt;b&gt;one&lt;/b&gt;</div>')
+
+    value.value = '<i>two</i>'
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>prop:&lt;i&gt;two&lt;/i&gt;</div>')
+  })
+
+  it('warns when v-text cannot fall through to a text root', () => {
+    const Child = compile(`<template>child</template>`, ref(null))
+    const Parent = compile(
+      `<template><components.Child v-text="data" /></template>`,
+      ref('foo'),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.textContent).toBe('child')
+    expect(`Extraneous non-props attributes (textContent)`).toHaveBeenWarned()
+  })
+
+  it('warns when v-html cannot fall through to a text root', () => {
+    const Child = compile(`<template>child</template>`, ref(null))
+    const Parent = compile(
+      `<template><components.Child v-html="data" /></template>`,
+      ref('<b>foo</b>'),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.textContent).toBe('child')
+    expect(`Extraneous non-props attributes (innerHTML)`).toHaveBeenWarned()
+  })
+
+  it('does not warn for filtered functional fallthrough on a text root', () => {
+    const { component: Child } = define(() => template('child')())
+    Child.props = ['foo']
+    const Parent = compile(
+      `<template><components.Child v-text="data" /></template>`,
+      ref('foo'),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.textContent).toBe('child')
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+  })
+
+  it('applies v-text fallthrough after switching dynamic components', async () => {
+    const state = ref({ current: 'A', content: '<b>one</b>' })
+    const A = compile(`<template><div>A</div></template>`, ref(null))
+    const B = compile(`<template><div>B</div></template>`, ref(null))
+    const Parent = compile(
+      `<template>
+        <component
+          :is="components[data.current]"
+          v-text="data.content"
+        />
+      </template>`,
+      state,
+      { A, B },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe(
+      '<div>&lt;b&gt;one&lt;/b&gt;</div><!--dynamic-component-->',
+    )
+
+    state.value = { ...state.value, current: 'B' }
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<div>&lt;b&gt;one&lt;/b&gt;</div><!--dynamic-component-->',
+    )
+
+    state.value = { ...state.value, content: '<i>two</i>' }
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<div>&lt;i&gt;two&lt;/i&gt;</div><!--dynamic-component-->',
+    )
+  })
+
+  it('applies v-html fallthrough after switching dynamic components', async () => {
+    const state = ref({ current: 'A', content: '<b>one</b>' })
+    const A = compile(`<template><div>A</div></template>`, ref(null))
+    const B = compile(`<template><div>B</div></template>`, ref(null))
+    const Parent = compile(
+      `<template>
+        <component
+          :is="components[data.current]"
+          v-html="data.content"
+        />
+      </template>`,
+      state,
+      { A, B },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe('<div><b>one</b></div><!--dynamic-component-->')
+
+    state.value = { ...state.value, current: 'B' }
+    await nextTick()
+    expect(host.innerHTML).toBe('<div><b>one</b></div><!--dynamic-component-->')
+
+    state.value = { ...state.value, content: '<i>two</i>' }
+    await nextTick()
+    expect(host.innerHTML).toBe('<div><i>two</i></div><!--dynamic-component-->')
+  })
 })

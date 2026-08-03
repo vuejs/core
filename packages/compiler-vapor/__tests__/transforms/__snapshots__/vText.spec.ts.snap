@@ -1,5 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`v-text > pass textContent prop to component 1`] = `
+"import { toDisplayString as _toDisplayString, createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", { textContent: () => (_toDisplayString(_ctx.foo)) }, null, true)
+  return n0
+}"
+`;
+
+exports[`v-text > pass textContent prop to dynamic component 1`] = `
+"import { toDisplayString as _toDisplayString, createDynamicComponent as _createDynamicComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => (_ctx.Comp), { textContent: () => (_toDisplayString(_ctx.foo)) }, null, 1 /* SINGLE_ROOT */)
+  return n0
+}"
+`;
+
 exports[`v-text > should convert v-text to setText 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
@@ -30,26 +48,6 @@ const t0 = _template("<div>", 3)
 
 export function render(_ctx) {
   const n0 = t0()
-  return n0
-}"
-`;
-
-exports[`v-text > work with component 1`] = `
-"import { createAssetComponent as _createAssetComponent, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
-
-export function render(_ctx) {
-  const n0 = _createAssetComponent("Comp", null, null, true)
-  _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
-  return n0
-}"
-`;
-
-exports[`v-text > work with dynamic component 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, toDisplayString as _toDisplayString, setBlockText as _setBlockText, renderEffect as _renderEffect } from 'vue';
-
-export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, 1 /* SINGLE_ROOT */)
-  _renderEffect(() => _setBlockText(n0, _toDisplayString(_ctx.foo)))
   return n0
 }"
 `;

@@ -55,16 +55,18 @@ describe('v-html', () => {
     expect(code).matchSnapshot()
   })
 
-  test('work with dynamic component', () => {
+  test('pass innerHTML prop to dynamic component', () => {
     const { code } = compileWithVHtml(`<component :is="Comp" v-html="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockHtml(n0, _ctx.foo))')
+    expect(code).contains('{ innerHTML: () => (_ctx.foo) }')
+    expect(code).not.contains('setBlockHtml')
   })
 
-  test('work with component', () => {
+  test('pass innerHTML prop to component', () => {
     const { code } = compileWithVHtml(`<Comp v-html="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockHtml(n0, _ctx.foo))')
+    expect(code).contains('{ innerHTML: () => (_ctx.foo) }')
+    expect(code).not.contains('setBlockHtml')
   })
 
   test('should raise error and ignore children when v-html is present', () => {

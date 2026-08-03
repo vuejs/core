@@ -3,7 +3,9 @@ import type { DirectiveTransform, TransformContext } from '../transform'
 import {
   DOMErrorCodes,
   type ElementNode,
+  ElementTypes,
   createDOMCompilerError,
+  createSimpleExpression,
   findDir,
 } from '@vue/compiler-dom'
 import { EMPTY_EXPRESSION } from './utils'
@@ -37,10 +39,16 @@ export const transformVHtml: DirectiveTransform = (dir, node, context) => {
   }
   ignoreVHtmlChildren(node, context, 'template')
 
+  if (node.tagType === ElementTypes.COMPONENT) {
+    return {
+      key: createSimpleExpression('innerHTML', true, loc),
+      value: exp,
+    }
+  }
+
   context.registerEffect([exp], {
     type: IRNodeTypes.SET_HTML,
     element: context.reference(),
     value: exp,
-    isComponent: node.tagType === 1,
   })
 }
