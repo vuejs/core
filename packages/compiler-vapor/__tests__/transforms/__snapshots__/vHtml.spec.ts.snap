@@ -1,5 +1,23 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`v-html > pass innerHTML prop to component 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", { innerHTML: () => (_ctx.foo) }, null, true)
+  return n0
+}"
+`;
+
+exports[`v-html > pass innerHTML prop to dynamic component 1`] = `
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createDynamicComponent(() => (_ctx.Comp), { innerHTML: () => (_ctx.foo) }, null, 1 /* SINGLE_ROOT */)
+  return n0
+}"
+`;
+
 exports[`v-html > should convert v-html to innerHTML 1`] = `
 "import { setHtml as _setHtml, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -40,26 +58,6 @@ const t0 = _template("<div>", 1)
 export function render(_ctx) {
   const n0 = t0()
   _setHtml(n0, "")
-  return n0
-}"
-`;
-
-exports[`v-html > work with component 1`] = `
-"import { createAssetComponent as _createAssetComponent, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
-
-export function render(_ctx) {
-  const n0 = _createAssetComponent("Comp", null, null, true)
-  _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
-  return n0
-}"
-`;
-
-exports[`v-html > work with dynamic component 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, setBlockHtml as _setBlockHtml, renderEffect as _renderEffect } from 'vue';
-
-export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.Comp), null, null, 1 /* SINGLE_ROOT */)
-  _renderEffect(() => _setBlockHtml(n0, _ctx.foo))
   return n0
 }"
 `;

@@ -491,7 +491,10 @@ function genProp(
   wrapHandler = true,
   directStaticLiteral = false,
 ) {
-  const values = genPropValue(prop.values, context)
+  let values = genPropValue(prop.values, context)
+  if (prop.toDisplayString) {
+    values = genCall(context.helper('toDisplayString'), values)
+  }
   return [
     ...genPropKey(prop, context),
     ': ',

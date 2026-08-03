@@ -9,14 +9,9 @@ export function genSetHtml(
 ): CodeFragment[] {
   const { helper } = context
 
-  const { value, element, isComponent } = oper
+  const { value, element } = oper
   return [
     NEWLINE,
-    ...genCall(
-      // use setBlockHtml for component
-      isComponent ? helper('setBlockHtml') : helper('setHtml'),
-      `n${element}`,
-      genExpression(value, context),
-    ),
+    ...genCall(helper('setHtml'), `n${element}`, genExpression(value, context)),
   ]
 }

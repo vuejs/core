@@ -37,9 +37,7 @@ export { template } from './dom/template'
 export { createTextNode, child, nthChild, next, txt } from './dom/node'
 export {
   setText,
-  setBlockText,
   setHtml,
-  setBlockHtml,
   setClass,
   setClassName,
   setStyle,

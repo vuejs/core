@@ -784,6 +784,18 @@ describe('component', () => {
     expect(templateEl.textContent).toBe('<b>foo</b>')
   })
 
+  it('mounts native element literal v-text as text', () => {
+    const Comp = compile(
+      `<template><div v-text="'<b>foo</b>'" /></template>`,
+      ref('unused'),
+    )
+
+    const { host } = define(Comp).render()
+    const el = host.firstChild as HTMLDivElement
+    expect(el.firstChild!.nodeType).toBe(Node.TEXT_NODE)
+    expect(el.textContent).toBe('<b>foo</b>')
+  })
+
   it('mounts plain template elements with slot content', () => {
     const data = ref('unused')
     const Child = compile(

@@ -58,16 +58,62 @@ describe('v-text', () => {
     expect(code).matchSnapshot()
   })
 
-  test('work with dynamic component', () => {
+  test('pass textContent prop to dynamic component', () => {
     const { code } = compileWithVText(`<component :is="Comp" v-text="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+    expect(code).contains('{ textContent: () => (_toDisplayString(_ctx.foo)) }')
+    expect(code).not.contains('setBlockText')
   })
 
-  test('work with component', () => {
+  test('pass textContent prop to component', () => {
     const { code } = compileWithVText(`<Comp v-text="foo"/>`)
     expect(code).matchSnapshot()
-    expect(code).contains('setBlockText(n0, _toDisplayString(_ctx.foo))')
+    expect(code).contains('{ textContent: () => (_toDisplayString(_ctx.foo)) }')
+    expect(code).not.contains('setBlockText')
+  })
+
+  test('preserve constant component prop values', () => {
+    const number = compileWithVText(`<Comp v-text="1"/>`).code
+    expect(number).contains('{ textContent: 1 }')
+    expect(number).not.contains('toDisplayString')
+
+    const undefinedValue = compileWithVText(`<Comp v-text="undefined"/>`).code
+    expect(undefinedValue).contains('{ textContent: undefined }')
+    expect(undefinedValue).not.contains('toDisplayString')
+
+    const setupConst = compileWithVText(`<Comp v-text="foo"/>`, {
+      bindingMetadata: {
+        foo: BindingTypes.SETUP_CONST,
+      },
+      inline: true,
+    }).code
+    expect(setupConst).contains('{ textContent: () => (foo) }')
+    expect(setupConst).not.contains('toDisplayString')
+
+    const functionValue = compileWithVText(`<Comp v-text="() => 1"/>`).code
+    expect(functionValue).contains('{ textContent: () => (() => 1) }')
+    expect(functionValue).not.contains('toDisplayString')
+
+    const functionWithReference = compileWithVText(
+      `<Comp v-text="() => foo"/>`,
+    ).code
+    expect(functionWithReference).contains('toDisplayString')
+
+    const setupConstExpression = compileWithVText(`<Comp v-text="foo + 1"/>`, {
+      bindingMetadata: {
+        foo: BindingTypes.SETUP_CONST,
+      },
+      inline: true,
+    }).code
+    expect(setupConstExpression).contains('toDisplayString')
+  })
+
+  test('escape constant text in native element templates', () => {
+    const { code, ir } = compileWithVText(`<div v-text="'<b>foo</b>'"/>`)
+    expect([...ir.template.keys()]).toEqual(['<div>&lt;b&gt;foo&lt;/b&gt;'])
+    expect(code).contains(
+      'const t0 = _template("<div>&lt;b&gt;foo&lt;/b&gt;", 3)',
+    )
   })
 
   test('work with plain template createElement path', () => {
