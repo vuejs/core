@@ -55,6 +55,10 @@ export function genBlockContent(
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
   const { dynamic, effect, operation, returns } = block
+  // Built-in v-model needs to run after initial DOM props are applied. This is
+  // especially important for inputs with a dynamic type, since the runtime
+  // selects the text, checkbox, or radio implementation from the DOM property.
+  const modelOperations = operation.filter(isVModelOperation)
   const resetBlock = context.enterBlock(block)
   const singleUseAssetComponentNames = root
     ? collectSingleUseAssetComponents(block)
@@ -98,9 +102,10 @@ export function genBlockContent(
     push: (...items: CodeFragment[]) => number,
   ) => {
     while (operationIndex < operationEnd) {
-      push(
-        ...genOperationWithInsertionState(operation[operationIndex], context),
-      )
+      const oper = operation[operationIndex]
+      if (!isVModelOperation(oper)) {
+        push(...genOperationWithInsertionState(oper, context))
+      }
       operationIndex++
     }
 
@@ -147,12 +152,22 @@ export function genBlockContent(
   }
 
   if (operationIndex < operation.length) {
-    push(...genOperations(operation.slice(operationIndex), context))
+    push(
+      ...genOperations(
+        operation
+          .slice(operationIndex)
+          .filter(oper => !isVModelOperation(oper)),
+        context,
+      ),
+    )
   }
   if (effectIndex < effect.length) {
     push(...genEffectRange(effectIndex, effect.length, genEffectsExtraFrag))
   } else if (genEffectsExtraFrag) {
     push(...genEffects([], context, genEffectsExtraFrag))
+  }
+  if (modelOperations.length) {
+    push(...genOperations(modelOperations, context))
   }
 
   push(NEWLINE, `return `)
@@ -202,6 +217,14 @@ export function genBlockContent(
       )
     }
   }
+}
+
+function isVModelOperation(oper: OperationNode): boolean {
+  return (
+    oper.type === IRNodeTypes.DIRECTIVE &&
+    oper.builtin === true &&
+    oper.name === 'model'
+  )
 }
 
 export function markSlotRootOperations(block: BlockIRNode): void {
