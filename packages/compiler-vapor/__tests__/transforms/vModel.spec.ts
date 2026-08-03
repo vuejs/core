@@ -1,6 +1,7 @@
 import { makeCompile } from './_utils'
 import {
   IRNodeTypes,
+  compile as compileVapor,
   transformChildren,
   transformElement,
   transformVModel,
@@ -460,5 +461,18 @@ describe('compiler: vModel transform', () => {
     ]`,
       )
     })
+  })
+
+  test('generates dynamic model after dynamic type initialization', () => {
+    const source = '<input :type="type" v-model="model" />'
+    const reactive = compileVapor(source, { prefixIdentifiers: true }).code
+    const constant = compileVapor(source, {
+      prefixIdentifiers: true,
+      inline: true,
+      bindingMetadata: { type: BindingTypes.LITERAL_CONST },
+    }).code
+
+    expect(reactive).toMatchSnapshot()
+    expect(constant).toMatchSnapshot()
   })
 })

@@ -159,6 +159,27 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: vModel transform > generates dynamic model after dynamic type initialization 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, applyDynamicModel as _applyDynamicModel, template as _template } from 'vue';
+const t0 = _template("<input>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setProp(n0, "type", _ctx.type))
+  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > generates dynamic model after dynamic type initialization 2`] = `
+"
+  const n0 = t0()
+  _setProp(n0, "type", type)
+  _applyDynamicModel(n0, () => (model), _value => (model = _value))
+  return n0
+"
+`;
+
 exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
 "import { applyTextModel as _applyTextModel, template as _template } from 'vue';
 const t0 = _template("<input>", 1)
@@ -297,13 +318,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 1`] = `
-"import { applyDynamicModel as _applyDynamicModel, setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, applyDynamicModel as _applyDynamicModel, template as _template } from 'vue';
 const t0 = _template("<input>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   _renderEffect(() => _setDynamicProps(n0, [_ctx.obj]))
+  _applyDynamicModel(n0, () => (_ctx.model), _value => (_ctx.model = _value))
   return n0
 }"
 `;
