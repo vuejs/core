@@ -35,6 +35,7 @@ import {
 } from './compat/compatConfig'
 import { shallowReadonly } from '@vue/reactivity'
 import { getInnerChild, setTransitionHooks } from './components/BaseTransition'
+import { isTeleport } from './components/Teleport'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -255,7 +256,7 @@ export function renderComponentRoot(
   }
   // inherit transition data
   if (vnode.transition) {
-    const child = getInnerChild(root) || root
+    const child = isTeleport(root.type) ? getInnerChild(root) || root : root
     if (__DEV__ && !isElementRoot(child)) {
       warn(
         `Component inside <Transition> renders non-element root node ` +
