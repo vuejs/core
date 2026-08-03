@@ -1523,14 +1523,20 @@ function applyFallthroughAttrs(
       })
     // ensure the render effect is cleaned up when the branch scope is stopped
     scope ? scope.run(applyEffect) : applyEffect()
-  } else if (
-    __DEV__ &&
-    (hasSlotFragment ||
-      (dynamicRoot && dynamicRoot.hasNonSingleRoot) ||
-      (isTeleportEnabled && containsTeleportFragment(block)) ||
-      (!instance.accessedAttrs && isArray(block) && block.length))
-  ) {
-    warnExtraneousAttributes(instance.attrs)
+  } else if (__DEV__) {
+    const accessedAttrs = instance.accessedAttrs
+    const fallthroughAttrs = getFallthroughAttrs()
+    if (
+      fallthroughAttrs &&
+      Object.keys(fallthroughAttrs).length &&
+      (hasSlotFragment ||
+        (dynamicRoot && dynamicRoot.hasNonSingleRoot) ||
+        (isTeleportEnabled && containsTeleportFragment(block)) ||
+        (!accessedAttrs &&
+          (block instanceof Text || (isArray(block) && block.length))))
+    ) {
+      warnExtraneousAttributes(instance.attrs)
+    }
   }
 }
 

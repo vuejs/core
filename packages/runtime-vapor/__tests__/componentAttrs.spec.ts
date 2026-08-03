@@ -1573,6 +1573,46 @@ describe('attribute fallthrough', () => {
     expect(host.innerHTML).toBe('<div>prop:&lt;i&gt;two&lt;/i&gt;</div>')
   })
 
+  it('warns when v-text cannot fall through to a text root', () => {
+    const Child = compile(`<template>child</template>`, ref(null))
+    const Parent = compile(
+      `<template><components.Child v-text="data" /></template>`,
+      ref('foo'),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.textContent).toBe('child')
+    expect(`Extraneous non-props attributes (textContent)`).toHaveBeenWarned()
+  })
+
+  it('warns when v-html cannot fall through to a text root', () => {
+    const Child = compile(`<template>child</template>`, ref(null))
+    const Parent = compile(
+      `<template><components.Child v-html="data" /></template>`,
+      ref('<b>foo</b>'),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.textContent).toBe('child')
+    expect(`Extraneous non-props attributes (innerHTML)`).toHaveBeenWarned()
+  })
+
+  it('does not warn for filtered functional fallthrough on a text root', () => {
+    const { component: Child } = define(() => template('child')())
+    Child.props = ['foo']
+    const Parent = compile(
+      `<template><components.Child v-text="data" /></template>`,
+      ref('foo'),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.textContent).toBe('child')
+    expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+  })
+
   it('applies v-text fallthrough after switching dynamic components', async () => {
     const state = ref({ current: 'A', content: '<b>one</b>' })
     const A = compile(`<template><div>A</div></template>`, ref(null))
