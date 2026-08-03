@@ -17,6 +17,7 @@ import {
   createApp,
   createComponent,
   createVaporApp,
+  defineComponent,
   defineVaporComponent,
   reactive,
   ref,
@@ -1353,6 +1354,12 @@ describe('__typeEl backdoor', () => {
   })
   const c3 = new Comp3()
   expectType<HTMLAnchorElement>(c3.block)
+})
+
+describe('Vapor component in defineComponent', () => {
+  const VaporComp = defineVaporComponent(() => <div />)
+  defineComponent(() => () => <div />)
+  defineComponent(() => () => [<div />, <VaporComp />])
 })
 
 defineVaporComponent({

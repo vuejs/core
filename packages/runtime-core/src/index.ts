@@ -298,6 +298,7 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
+  RenderResultExtensions,
   // deprecated
   ComponentOptionsWithoutProps,
   ComponentOptionsWithArrayProps,
