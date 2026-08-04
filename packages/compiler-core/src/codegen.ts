@@ -67,7 +67,7 @@ import type { ImportItem } from './transform'
  *
  * Since TS 5.3, dts generation starts to strangely include broken triple slash
  * references for source-map-js, so we are inlining all source map related types
- * here to to workaround that.
+ * here to workaround that.
  */
 export interface CodegenSourceMapGenerator {
   setSourceContent(sourceFile: string, sourceContent: string): void

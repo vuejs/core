@@ -1,4 +1,5 @@
 import {
+  type Attrs,
   type Component,
   type ComponentInternalInstance,
   type Data,
@@ -228,7 +229,7 @@ export type CreateComponentPublicInstanceWithMixins<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   TypeRefs extends Data = {},
-  TypeEl extends Element = any,
+  TypeEl = any,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // mixin inference
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
@@ -299,14 +300,14 @@ export type ComponentPublicInstance<
   S extends SlotsType = {},
   Exposed extends string = '',
   TypeRefs extends Data = {},
-  TypeEl extends Element = any,
+  TypeEl = any,
 > = {
   $: ComponentInternalInstance
   $data: D
   $props: MakeDefaultsOptional extends true
     ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
     : Prettify<P> & PublicProps
-  $attrs: Data
+  $attrs: Attrs
   $refs: Data & TypeRefs
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null

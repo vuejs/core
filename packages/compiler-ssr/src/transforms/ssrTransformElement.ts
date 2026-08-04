@@ -118,9 +118,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
 
         if (node.tag === 'textarea') {
           const existingText = node.children[0] as
-            | TextNode
-            | InterpolationNode
-            | undefined
+            TextNode | InterpolationNode | undefined
           // If interpolation, this is dynamic <textarea> content, potentially
           // injected by v-model and takes higher priority than v-bind value.
           // Additionally, directives with content overrides (v-text/v-html)

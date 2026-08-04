@@ -14,6 +14,14 @@ type HMRComponent = ComponentOptions | ClassComponent
 
 export let isHmrUpdating = false
 
+export const setHmrUpdating = (v: boolean): boolean => {
+  try {
+    return isHmrUpdating
+  } finally {
+    isHmrUpdating = v
+  }
+}
+
 export const hmrDirtyComponents: Map<
   ConcreteComponent,
   Set<ComponentInternalInstance>

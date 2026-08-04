@@ -45,7 +45,7 @@
 - **compiler-sfc:** support method signature in defineProps ([afdd2f2](https://github.com/vuejs/core/commit/afdd2f28354ce8cea647279ed25d61e7b9946cf5)), closes [#2983](https://github.com/vuejs/core/issues/2983)
 - **compiler-sfc:** support TS runtime enum in `<script setup>` ([1ffd48a](https://github.com/vuejs/core/commit/1ffd48a2f5fd3eead3ea29dae668b7ed1c6f6130))
 - **runtime-core:** add missing serverPrefetch hook error string ([#4014](https://github.com/vuejs/core/issues/4014)) ([d069796](https://github.com/vuejs/core/commit/d069796b8f0cf8df9aa77d781c4b5429b9411204))
-- **runtime-core:** fix mouting of detached static vnode ([fded1e8](https://github.com/vuejs/core/commit/fded1e8dfa22ca7fecd300c4cbffd6a37b887be8)), closes [#4023](https://github.com/vuejs/core/issues/4023)
+- **runtime-core:** fix mounting of detached static vnode ([fded1e8](https://github.com/vuejs/core/commit/fded1e8dfa22ca7fecd300c4cbffd6a37b887be8)), closes [#4023](https://github.com/vuejs/core/issues/4023)
 - **runtime-dom:** fix static node content caching edge cases ([ba89ca9](https://github.com/vuejs/core/commit/ba89ca9ecafe86292e3adf751671ed5e9ca6e928)), closes [#4023](https://github.com/vuejs/core/issues/4023) [#4031](https://github.com/vuejs/core/issues/4031) [#4037](https://github.com/vuejs/core/issues/4037)
 - **sfc:** allow variables that start with \_ or $ in `<script setup>` ([0b8b576](https://github.com/vuejs/core/commit/0b8b5764287b4814a37034ad4bc6f2b8ac8f8700))
 - **ssr:** ensure behavior consistency between prod/dev when mounting SSR app to empty containers ([33708e8](https://github.com/vuejs/core/commit/33708e8bf44a037070af5c8eabdfe1ccad22bbc2)), closes [#4034](https://github.com/vuejs/core/issues/4034)

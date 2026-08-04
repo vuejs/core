@@ -71,7 +71,12 @@ import {
   type TeleportVNode,
 } from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
-import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
+import {
+  isHmrUpdating,
+  registerHMR,
+  setHmrUpdating,
+  unregisterHMR,
+} from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { endMeasure, startMeasure } from './profiling'
@@ -500,27 +505,7 @@ function baseCreateRenderer(
     } else {
       const el = (n2.el = n1.el!)
       if (n2.children !== n1.children) {
-        // We don't inherit el for cached text nodes in `traverseStaticChildren`
-        // to avoid retaining detached DOM nodes. However, the text node may be
-        // changed during HMR. In this case we need to replace the old text node
-        // with the new one.
-        if (
-          __DEV__ &&
-          isHmrUpdating &&
-          n2.patchFlag === PatchFlags.CACHED &&
-          '__elIndex' in n1
-        ) {
-          const childNodes = __TEST__
-            ? container.children
-            : container.childNodes
-          const newChild = hostCreateText(n2.children as string)
-          const oldChild =
-            childNodes[((n2 as any).__elIndex = (n1 as any).__elIndex)]
-          hostInsert(newChild, container, oldChild)
-          hostRemove(oldChild)
-        } else {
-          hostSetText(el, n2.children as string)
-        }
+        hostSetText(el, n2.children as string)
       }
     }
   }
@@ -753,10 +738,17 @@ function baseCreateRenderer(
       needCallTransitionHooks ||
       dirs
     ) {
+      const isHmr = __DEV__ && isHmrUpdating
       queuePostRenderEffect(() => {
-        vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-        needCallTransitionHooks && transition!.enter(el)
-        dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        let prev
+        if (__DEV__) prev = setHmrUpdating(isHmr)
+        try {
+          vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
+          dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
+        } finally {
+          if (__DEV__) setHmrUpdating(prev!)
+        }
       }, parentSuspense)
     }
   }
@@ -863,8 +855,15 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    if (__DEV__ && isHmrUpdating) {
+    if (
       // HMR updated, force full diff
+      (__DEV__ && isHmrUpdating) ||
+      // #6385 the old vnode may be a user-wrapped non-isomorphic block
+      // Force full diff when block metadata is unstable.
+      (dynamicChildren &&
+        (!n1.dynamicChildren ||
+          n1.dynamicChildren.length !== dynamicChildren.length))
+    ) {
       patchFlag = 0
       optimized = false
       dynamicChildren = null
@@ -1387,7 +1386,10 @@ function baseCreateRenderer(
         } else {
           // custom element style injection
           if (root.ce && root.ce._hasShadowRoot()) {
-            root.ce._injectChildStyle(type)
+            root.ce._injectChildStyle(
+              type,
+              instance.parent ? instance.parent.type : undefined,
+            )
           }
 
           if (__DEV__) {
@@ -1483,9 +1485,9 @@ function baseCreateRenderer(
             // and continue the rest of operations once the deps are resolved
             nonHydratedAsyncRoot.asyncDep!.then(() => {
               // the instance may be destroyed during the time period
-              if (!instance.isUnmounted) {
-                componentUpdateFn()
-              }
+              queuePostRenderEffect(() => {
+                if (!instance.isUnmounted) update()
+              }, parentSuspense)
             })
             return
           }
@@ -2087,9 +2089,16 @@ function baseCreateRenderer(
       transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
-        transition!.beforeEnter(el!)
-        hostInsert(el!, container, anchor)
-        queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        // #14031 if there is no pending v-show leave, the persisted
+        // transition lifecycle is directive-owned, so activating a kept-alive
+        // node only relocates it.
+        if (transition!.persisted && !el![leaveCbKey]) {
+          hostInsert(el!, container, anchor)
+        } else {
+          transition!.beforeEnter(el!)
+          hostInsert(el!, container, anchor)
+          queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        }
       } else {
         const { leave, delayLeave, afterLeave } = transition!
         const remove = () => {
@@ -2103,13 +2112,20 @@ function baseCreateRenderer(
           // #13153 move kept-alive node before v-show transition leave finishes
           // it needs to call the leaving callback to ensure element's `display`
           // is `none`
+          const wasLeaving = el!._isLeaving || !!el![leaveCbKey]
           if (el!._isLeaving) {
             el![leaveCbKey](true /* cancelled */)
           }
-          leave(el!, () => {
+          // #14031 without a pending leave, persisted transitions should skip
+          // directive-owned leave hooks and just relocate.
+          if (transition!.persisted && !wasLeaving) {
             remove()
-            afterLeave && afterLeave()
-          })
+          } else {
+            leave(el!, () => {
+              remove()
+              afterLeave && afterLeave()
+            })
+          }
         }
         if (delayLeave) {
           delayLeave(el!, remove, performLeave)
@@ -2139,6 +2155,7 @@ function baseCreateRenderer(
       patchFlag,
       dirs,
       cacheIndex,
+      memo,
     } = vnode
 
     if (patchFlag === PatchFlags.BAIL) {
@@ -2227,15 +2244,24 @@ function baseCreateRenderer(
       }
     }
 
+    // v-for + v-memo stores cached vnodes inside renderList's array cache rather
+    // than component renderCache. Invalidate detached cached vnodes after
+    // unmount so a later v-if remount won't reuse a vnode whose DOM is gone.
+    const shouldInvalidateMemo = memo != null && cacheIndex == null
+
     if (
       (shouldInvokeVnodeHook &&
         (vnodeHook = props && props.onVnodeUnmounted)) ||
-      shouldInvokeDirs
+      shouldInvokeDirs ||
+      shouldInvalidateMemo
     ) {
       queuePostRenderEffect(() => {
         vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
         shouldInvokeDirs &&
           invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
+        if (shouldInvalidateMemo) {
+          vnode.el = null
+        }
       }, parentSuspense)
     }
   }
@@ -2518,15 +2544,10 @@ export function traverseStaticChildren(
       // #6852 also inherit for text nodes
       if (c2.type === Text) {
         // avoid cached text nodes retaining detached dom nodes
-        if (c2.patchFlag !== PatchFlags.CACHED) {
-          c2.el = c1.el
-        } else {
-          // cache the child index for HMR updates
-          ;(c2 as any).__elIndex =
-            i +
-            // take fragment start anchor into account
-            (n1.type === Fragment ? 1 : 0)
+        if (c2.patchFlag === PatchFlags.CACHED) {
+          c2 = ch2[i] = cloneIfMounted(c2)
         }
+        c2.el = c1.el
       }
       // #2324 also inherit for comment nodes, but not placeholders (e.g. v-if which
       // would have received .el during block patch)

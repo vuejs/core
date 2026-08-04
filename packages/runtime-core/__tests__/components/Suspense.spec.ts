@@ -8,13 +8,19 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  Teleport,
+  createBlock,
   createCommentVNode,
+  createElementBlock,
+  getCurrentInstance,
   h,
   nextTick,
   nodeOps,
   onErrorCaptured,
   onMounted,
   onUnmounted,
+  onUpdated,
+  openBlock,
   ref,
   render,
   renderList,
@@ -24,11 +30,21 @@ import {
   shallowRef,
   watch,
   watchEffect,
+  withAsyncContext,
   withDirectives,
 } from '@vue/runtime-test'
-import { computed, createApp, defineComponent, inject, provide } from 'vue'
-import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
+import {
+  computed,
+  createApp,
+  defineAsyncComponent as defineAsyncComp,
+  defineComponent,
+  effectScope,
+  inject,
+  provide,
+} from 'vue'
+import type { RawSlots } from '../../src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
+import { PatchFlags } from '@vue/shared'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -2164,6 +2180,560 @@ describe('Suspense', () => {
     await Promise.all(deps)
   })
 
+  // #12920
+  test('unmount Suspense after async child (with defineAsyncComponent) self-triggered update', async () => {
+    const Comp = defineComponent({
+      setup() {
+        const show = ref(true)
+        onMounted(() => {
+          // trigger update
+          show.value = !show.value
+        })
+        return () =>
+          show.value
+            ? (openBlock(), createElementBlock('div', { key: 0 }, 'show'))
+            : (openBlock(), createElementBlock('div', { key: 1 }, 'hidden'))
+      },
+    })
+
+    const AsyncComp = defineAsyncComp(() => {
+      const p = new Promise(resolve => {
+        resolve(Comp)
+      })
+      deps.push(p.then(() => Promise.resolve()))
+      return p as any
+    })
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              h('h1', null, toggle.value),
+              toggle.value
+                ? (openBlock(),
+                  createBlock(
+                    Suspense,
+                    { key: 0 },
+                    {
+                      default: h(AsyncComp),
+                    },
+                  ))
+                : createCommentVNode('v-if', true),
+            ],
+            PatchFlags.STABLE_FRAGMENT,
+          )
+        )
+      },
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><div>show</div>`)
+
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><div>hidden</div>`)
+
+    // unmount suspense
+    toggle.value = false
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!--v-if-->`)
+  })
+
+  test('unmount Suspense after async child (with async setup) self-triggered update', async () => {
+    const AsyncComp = defineComponent({
+      async setup() {
+        const show = ref(true)
+        onMounted(() => {
+          // trigger update
+          show.value = !show.value
+        })
+        const p = new Promise(r => setTimeout(r, 1))
+        // extra tick needed for Node 12+
+        deps.push(p.then(() => Promise.resolve()))
+        return () =>
+          show.value
+            ? (openBlock(), createElementBlock('div', { key: 0 }, 'show'))
+            : (openBlock(), createElementBlock('div', { key: 1 }, 'hidden'))
+      },
+    })
+
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              h('h1', null, toggle.value),
+              toggle.value
+                ? (openBlock(),
+                  createBlock(
+                    Suspense,
+                    { key: 0 },
+                    {
+                      default: h(AsyncComp),
+                    },
+                  ))
+                : createCommentVNode('v-if', true),
+            ],
+            PatchFlags.STABLE_FRAGMENT,
+          )
+        )
+      },
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><div>hidden</div>`)
+
+    // unmount suspense
+    toggle.value = false
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>true</h1><!--v-if-->`)
+  })
+
+  test('propagates host el through wrapper components above Suspense after async child self-triggered update', async () => {
+    const AsyncComp = defineComponent({
+      async setup() {
+        const show = ref(true)
+        onMounted(() => {
+          show.value = false
+        })
+        const p = new Promise(r => setTimeout(r, 1))
+        deps.push(p.then(() => Promise.resolve()))
+        return () =>
+          h(
+            'div',
+            { key: show.value ? 'show' : 'hidden' },
+            show.value ? 'show' : 'hidden',
+          )
+      },
+    })
+
+    const Inner = defineComponent({
+      render() {
+        return h(Suspense, null, {
+          default: () => h(AsyncComp),
+        })
+      },
+    })
+
+    const Outer = defineComponent({
+      render() {
+        return h(Inner)
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    const vnode = h(Outer)
+    render(vnode, root)
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>hidden</div>`)
+
+    const renderedEl = root.children[0]
+    const innerVNode = vnode.component!.subTree
+    const suspenseVNode = innerVNode.component!.subTree
+
+    expect(suspenseVNode.el).toBe(renderedEl)
+    expect(innerVNode.el).toBe(renderedEl)
+    expect(vnode.el).toBe(renderedEl)
+  })
+
+  test('should mount after suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', null, [
+              h(Async),
+              h(Teleport, { to: target }, h('div', 'teleported')),
+            ]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>async</div><!--teleport start--><!--teleport end--></div>`,
+    )
+    expect(serializeInner(target)).toBe(`<div>teleported</div>`)
+  })
+
+  test('should patch teleport before suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+    const text = ref('one')
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', null, [
+              h(Async),
+              h(Teleport, { to: target }, h('div', text.value)),
+            ]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    text.value = 'two'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>async</div><!--teleport start--><!--teleport end--></div>`,
+    )
+    expect(serializeInner(target)).toBe(`<div>two</div>`)
+  })
+
+  test('should handle disabled teleport updates before suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+    const disabled = ref(false)
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', null, [
+              h(Async),
+              h(
+                Teleport,
+                { to: target, disabled: disabled.value },
+                h('div', 'teleported'),
+              ),
+            ]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    disabled.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>async</div><!--teleport start--><div>teleported</div><!--teleport end--></div>`,
+    )
+    expect(serializeInner(target)).toBe(``)
+  })
+
+  test('should not mount discarded teleport after suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+    const showTeleport = ref(true)
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () => {
+          const children = [h(Async)]
+          if (showTeleport.value) {
+            children.push(h(Teleport, { to: target }, h('div', 'teleported')))
+          }
+          return h(Suspense, null, {
+            default: h('div', null, children),
+            fallback: h('div', 'fallback'),
+          })
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    showTeleport.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><div>async</div></div>`)
+    expect(serializeInner(target)).toBe(``)
+  })
+
+  // #14876
+  test('should not mount discarded teleport with component child after suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+    const showTeleport = ref(true)
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Inner = {
+      render() {
+        return h('div', 'inner')
+      },
+    }
+
+    const Comp = {
+      setup() {
+        return () => {
+          const children = [h(Async)]
+          if (showTeleport.value) {
+            children.push(h(Teleport, { to: target }, h(Inner)))
+          }
+          return h(Suspense, null, {
+            default: h('div', null, children),
+            fallback: h('div', 'fallback'),
+          })
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    showTeleport.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><div>async</div></div>`)
+    expect(serializeInner(target)).toBe(``)
+  })
+
+  test('should not process discarded disabled teleport update after suspense is resolved', async () => {
+    const target = nodeOps.createElement('div')
+    const showTeleport = ref(true)
+    const disabled = ref(false)
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      },
+    })
+
+    const Comp = {
+      setup() {
+        return () => {
+          const children = [h(Async)]
+          if (showTeleport.value) {
+            children.push(
+              h(
+                Teleport,
+                { to: target, disabled: disabled.value },
+                h('div', 'teleported'),
+              ),
+            )
+          }
+          return h(Suspense, null, {
+            default: h('div', null, children),
+            fallback: h('div', 'fallback'),
+          })
+        }
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    disabled.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    showTeleport.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(serializeInner(target)).toBe(``)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div><div>async</div></div>`)
+    expect(serializeInner(target)).toBe(``)
+  })
+
+  // #14701
+  test('should not crash when moving disabled teleport with component children inside suspense', async () => {
+    const target = nodeOps.createElement('div')
+
+    const Comp = {
+      render() {
+        return h('div', 'comp')
+      },
+    }
+
+    const Async = defineAsyncComponent({
+      render() {
+        // Multi-root fragment: element + disabled teleport with component child
+        return [
+          h('div', 'content'),
+          h(Teleport, { to: target, disabled: true }, h(Comp)),
+        ]
+      },
+    })
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(Suspense, null, {
+        default: h(Async),
+        fallback: h('div', 'fallback'),
+      }),
+      root,
+    )
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div>content</div><!--teleport start--><div>comp</div><!--teleport end-->`,
+    )
+  })
+
+  //#11617
+  test('update async component before resolve then update again', async () => {
+    const arr: boolean[] = []
+    const Child = {
+      props: ['loading'],
+      async setup(props: any) {
+        onUpdated(() => {
+          arr.push(props.loading)
+        })
+        await 1
+        return () => {
+          const loading = props.loading
+          return h('div', null, loading ? '1' : '2')
+        }
+      },
+    }
+
+    const Parent = defineComponent({
+      setup() {
+        const loading = ref(false)
+        const delay = (delayInms: any) => {
+          return new Promise(resolve => setTimeout(resolve, delayInms))
+        }
+        onMounted(async () => {
+          loading.value = true
+          await delay(1000)
+          loading.value = false
+          await nextTick()
+          expect(arr).toEqual([true, false])
+        })
+        return () => {
+          return h(Child, { loading: loading.value })
+        }
+      },
+    })
+
+    const RouterView = {
+      props: {
+        name: { type: Object },
+      },
+      setup(props: any) {
+        return () => {
+          const name = props.name
+          return h(name)
+        }
+      },
+    }
+    const App = {
+      setup() {
+        const Dummy = {
+          setup() {
+            return () => {
+              return h('div', null, 'dummy')
+            }
+          },
+        }
+
+        const flag: any = shallowRef(Dummy)
+
+        onMounted(() => {
+          flag.value = Parent
+        })
+        return () => {
+          return h(Suspense, null, {
+            default: () => h(RouterView, { name: flag.value }),
+          })
+        }
+      },
+    }
+
+    const root: any = nodeOps.createElement('div')
+
+    render(h(App), root)
+  })
+
   // #13453
   test('add new async deps during patching', async () => {
     const getComponent = (type: string) => {
@@ -2488,6 +3058,219 @@ describe('Suspense', () => {
       await Promise.all(deps)
       await nextTick()
       expect(unmounted).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('async setup with top-level await', () => {
+    test('pending branch replaced before async setup resolves', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      let resolvePending!: (v?: unknown) => void
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvePending = r
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          watch(stateRef, updateSpy)
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const FillerComp = defineComponent({
+        setup: () => () => h('div', 'filler'),
+      })
+
+      const view = shallowRef<any>(SlowComp)
+      const Comp = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback'),
+          }),
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      view.value = FillerComp
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>filler</div>`)
+
+      // wait a macro task tick for all micro ticks to resolve
+      resolvePending(undefined)
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    test('boundary unmounted before async setup resolves', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      let resolvePending!: (v?: unknown) => void
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvePending = r
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          watch(stateRef, updateSpy)
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(
+        h(() =>
+          h(Suspense, null, {
+            default: h(SlowComp),
+            fallback: h('div', 'fallback'),
+          }),
+        ),
+        root,
+      )
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      render(null, root)
+
+      resolvePending(undefined)
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    test('repeated branch replacement before async setup resolves', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      const resolvers: Array<(v?: unknown) => void> = []
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvers.push(r)
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          const uid = getCurrentInstance()!.uid
+          watch(stateRef, () => {
+            updateSpy(uid)
+          })
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const FillerComp = defineComponent({
+        setup: () => () => h('div', 'filler'),
+      })
+
+      const view = shallowRef<any>(FillerComp)
+      const Comp = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback'),
+          }),
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>filler</div>`)
+
+      for (let i = 0; i < 3; i++) {
+        view.value = SlowComp
+        await nextTick()
+        view.value = FillerComp
+        await nextTick()
+      }
+
+      expect(resolvers.length).toBe(3)
+      resolvers.forEach(r => r(undefined))
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    test('nested scope created after pending branch is abandoned', async () => {
+      const updateSpy = vi.fn()
+      const stateRef = ref(0)
+      let resolvePending!: (v?: unknown) => void
+
+      const SlowComp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(
+            () =>
+              new Promise(r => {
+                resolvePending = r
+              }),
+          )
+          __temp = await __temp
+          __restore()
+
+          effectScope().run(() => {
+            watch(stateRef, updateSpy)
+          })
+
+          return () => h('div', 'slow')
+        },
+      })
+
+      const FillerComp = defineComponent({
+        setup: () => () => h('div', 'filler'),
+      })
+
+      const view = shallowRef<any>(SlowComp)
+      const Comp = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: h(view.value),
+            fallback: h('div', 'fallback'),
+          }),
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      view.value = FillerComp
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>filler</div>`)
+
+      resolvePending(undefined)
+      await new Promise(r => setTimeout(r))
+
+      stateRef.value++
+      await nextTick()
+      expect(updateSpy).not.toHaveBeenCalled()
     })
   })
 })

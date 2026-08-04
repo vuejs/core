@@ -55,12 +55,6 @@ function targetTypeMap(rawType: string) {
   }
 }
 
-function getTargetType(value: Target) {
-  return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
-    ? TargetType.INVALID
-    : targetTypeMap(toRawType(value))
-}
-
 // only unwrap nested ref
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
@@ -104,9 +98,16 @@ export function reactive(target: object) {
   )
 }
 
-export declare const ShallowReactiveMarker: unique symbol
+// Use a private class brand instead of a marker property so shallow-reactive
+// types remain distinguishable in `UnwrapRef` without leaking the brand into
+// `keyof`/indexed access types or requiring the property for plain assignment.
+declare class ShallowReactiveBrandClass {
+  private __shallowReactiveBrand?: never
+}
 
-export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
+export type ShallowReactiveBrand = ShallowReactiveBrandClass
+
+export type ShallowReactive<T> = T & ShallowReactiveBrand
 
 /**
  * Shallow version of {@link reactive}.
@@ -284,14 +285,17 @@ function createReactiveObject(
     return target
   }
   // only specific value types can be observed.
-  const targetType = getTargetType(target)
-  if (targetType === TargetType.INVALID) {
+  if (target[ReactiveFlags.SKIP] || !Object.isExtensible(target)) {
     return target
   }
   // target already has corresponding Proxy
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
     return existingProxy
+  }
+  const targetType = targetTypeMap(toRawType(target))
+  if (targetType === TargetType.INVALID) {
+    return target
   }
   const proxy = new Proxy(
     target,

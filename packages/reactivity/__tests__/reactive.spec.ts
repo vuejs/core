@@ -112,6 +112,19 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe(false)
   })
 
+  // #8647
+  test('observing Set with reactive initial value', () => {
+    const observed = reactive({})
+    const observedSet = reactive(new Set([observed]))
+
+    expect(observedSet.has(observed)).toBe(true)
+    expect(observedSet.size).toBe(1)
+
+    // expect nothing happens
+    observedSet.add(observed)
+    expect(observedSet.size).toBe(1)
+  })
+
   test('observed value should proxy mutations to original (Object)', () => {
     const original: any = { foo: 1 }
     const observed = reactive(original)
@@ -123,6 +136,28 @@ describe('reactivity/reactive', () => {
     delete observed.foo
     expect('foo' in observed).toBe(false)
     expect('foo' in original).toBe(false)
+  })
+
+  test('failed set operation should not trigger effects', () => {
+    const original: any = {}
+    Object.defineProperty(original, 'foo', {
+      value: 1,
+      writable: false,
+      configurable: true,
+    })
+    const observed = reactive(original)
+    let dummy
+    let run = 0
+    effect(() => {
+      run++
+      dummy = observed.foo
+    })
+
+    expect(() => {
+      observed.foo = 2
+    }).toThrow(TypeError)
+    expect(dummy).toBe(1)
+    expect(run).toBe(1)
   })
 
   test('original value change should reflect in observed value (Object)', () => {

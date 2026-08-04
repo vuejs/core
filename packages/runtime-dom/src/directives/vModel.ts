@@ -40,7 +40,6 @@ function onCompositionEnd(e: Event) {
 const assignKey: unique symbol = Symbol('_assign')
 const hydratingKey: unique symbol = Symbol('_hydrating')
 const hydrationValueKey: unique symbol = Symbol('_hydrateValue')
-const hydrationSelectKey: unique symbol = Symbol('_hydrateSelect')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & {
@@ -48,7 +47,6 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
     _assigning?: boolean
     [hydratingKey]?: boolean
     [hydrationValueKey]?: string
-    [hydrationSelectKey]?: any
   },
   any,
   Modifiers
@@ -131,7 +129,12 @@ export const vModelText: ModelDirective<
       return
     }
 
-    if (document.activeElement === el && el.type !== 'range') {
+    const rootNode = el.getRootNode()
+    if (
+      (rootNode instanceof Document || rootNode instanceof ShadowRoot) &&
+      rootNode.activeElement === el &&
+      el.type !== 'range'
+    ) {
       // #8546
       if (lazy && value === oldValue) {
         return
@@ -235,12 +238,20 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   deep: true,
   created(el, { value, modifiers: { number } }, vnode, _prev, hydrating) {
     el[hydratingKey] = hydrating
-    if (hydrating) {
-      el[hydrationSelectKey] = getSelectedValue(el, number, isSet(value))
-    }
-    const isSetModel = isSet(value)
+    ;(el as any)._modelValue = value
     addEventListener(el, 'change', () => {
-      el[assignKey](getSelectedValue(el, number, isSetModel))
+      const selectedVal = Array.prototype.filter
+        .call(el.options, (o: HTMLOptionElement) => o.selected)
+        .map((o: HTMLOptionElement) =>
+          number ? looseToNumber(getValue(o)) : getValue(o),
+        )
+      el[assignKey](
+        el.multiple
+          ? isSet((el as any)._modelValue)
+            ? new Set(selectedVal)
+            : selectedVal
+          : selectedVal[0],
+      )
       el._assigning = true
       nextTick(() => {
         el._assigning = false
@@ -253,15 +264,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   mounted(el, { value, modifiers: { number } }) {
     const hydrating = el[hydratingKey]
     delete el[hydratingKey]
-    const hydrateValue = el[hydrationSelectKey]
-    if (hydrateValue !== undefined) {
-      delete el[hydrationSelectKey]
-    }
     if (hydrating) {
-      const selectedValue =
-        hydrateValue !== undefined
-          ? hydrateValue
-          : getSelectedValue(el, number, isSet(value))
+      const selectedValue = getSelectedValue(el, number, isSet(value))
       if (!isSelectValueEqual(selectedValue, value)) {
         el[assignKey] && el[assignKey](selectedValue)
         return
@@ -269,7 +273,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
     }
     setSelected(el, value)
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(el, { value }, vnode) {
+    ;(el as any)._modelValue = value
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {

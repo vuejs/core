@@ -9,6 +9,7 @@ import {
   resolveTransitionProps,
   vtcKey,
 } from './Transition'
+import { type VShowElement, vShowHidden } from '../directives/vShow'
 import {
   type ComponentOptions,
   DeprecationTypes,
@@ -139,7 +140,12 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
       if (children) {
         for (let i = 0; i < children.length; i++) {
           const child = children[i]
-          if (child.el && child.el instanceof Element) {
+          if (
+            child.el &&
+            child.el instanceof Element &&
+            // Hidden v-show nodes have no previous layout box to animate from.
+            !(child.el as VShowElement)[vShowHidden]
+          ) {
             prevChildren.push(child)
             setTransitionHooks(
               child,
@@ -150,10 +156,7 @@ const TransitionGroupImpl: ComponentOptions = /*@__PURE__*/ decorate({
                 instance,
               ),
             )
-            positionMap.set(child, {
-              left: (child.el as HTMLElement).offsetLeft,
-              top: (child.el as HTMLElement).offsetTop,
-            })
+            positionMap.set(child, getPosition(child.el as HTMLElement))
           }
         }
       }
@@ -194,10 +197,7 @@ function callPendingCbs(c: VNode) {
 }
 
 function recordPosition(c: VNode) {
-  newPositionMap.set(c, {
-    left: (c.el as HTMLElement).offsetLeft,
-    top: (c.el as HTMLElement).offsetTop,
-  })
+  newPositionMap.set(c, getPosition(c.el as HTMLElement))
 }
 
 function applyTranslation(c: VNode): VNode | undefined {
@@ -206,10 +206,31 @@ function applyTranslation(c: VNode): VNode | undefined {
   const dx = oldPos.left - newPos.left
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
-    const s = (c.el as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
+    const el = c.el as HTMLElement
+    const s = el.style
+    const rect = el.getBoundingClientRect()
+    let scaleX = 1
+    let scaleY = 1
+    if (el.offsetWidth) scaleX = rect.width / el.offsetWidth
+    if (el.offsetHeight) scaleY = rect.height / el.offsetHeight
+    if (!Number.isFinite(scaleX) || scaleX === 0) scaleX = 1
+    if (!Number.isFinite(scaleY) || scaleY === 0) scaleY = 1
+    // Avoid division noise when scale is effectively 1.
+    if (Math.abs(scaleX - 1) < 0.01) scaleX = 1
+    if (Math.abs(scaleY - 1) < 0.01) scaleY = 1
+    s.transform = s.webkitTransform = `translate(${dx / scaleX}px,${
+      dy / scaleY
+    }px)`
     s.transitionDuration = '0s'
     return c
+  }
+}
+
+function getPosition(el: HTMLElement): Position {
+  const rect = el.getBoundingClientRect()
+  return {
+    left: rect.left,
+    top: rect.top,
   }
 }
 

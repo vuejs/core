@@ -9,10 +9,13 @@ import {
   isPromise,
 } from '@vue/shared'
 import {
+  type Data,
   type SetupContext,
   createSetupContext,
   getCurrentInstance,
+  isInSSRComponentSetup,
   setCurrentInstance,
+  setInSSRSetupState,
   unsetCurrentInstance,
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
@@ -231,6 +234,22 @@ export function defineOptions<
   }
 }
 
+/**
+ * Vue `<script setup>` compiler macro for providing type hints to IDEs for
+ * slot name and slot props type checking.
+ *
+ * Example usage:
+ * ```ts
+ * const slots = defineSlots<{
+ *   default(props: { msg: string }): any
+ * }>()
+ * ```
+ *
+ * This is only usable inside `<script setup>`, is compiled away in the
+ * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineslots}
+ */
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>,
 >(): StrictUnwrapSlotsType<SlotsType<S>> {
@@ -250,6 +269,11 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
   get?: (v: T) => G
   set?: (v: S) => any
 }
+
+type DefineModelRuntimeOptions<T, G, S> = Omit<PropOptions<T>, 'default'> &
+  DefineModelOptions<T, G, S>
+
+type DefineModelDefault<T> = InferDefault<Data, T>
 
 /**
  * Vue `<script setup>` compiler macro for declaring a
@@ -285,25 +309,23 @@ export type DefineModelOptions<T = any, G = T, S = T> = {
  * ```
  */
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options: ({ default: any } | { required: true }) &
-    PropOptions<T> &
-    DefineModelOptions<T, G, S>,
+  options: DefineModelRuntimeOptions<T, G, S> &
+    ({ default: DefineModelDefault<T> } | { required: true }),
 ): ModelRef<T, M, G, S>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
-  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+  options?: DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options: ({ default: any } | { required: true }) &
-    PropOptions<T> &
-    DefineModelOptions<T, G, S>,
+  options: DefineModelRuntimeOptions<T, G, S> &
+    ({ default: DefineModelDefault<T> } | { required: true }),
 ): ModelRef<T, M, G, S>
 
 export function defineModel<T, M extends PropertyKey = string, G = T, S = T>(
   name: string,
-  options?: PropOptions<T> & DefineModelOptions<T, G, S>,
+  options?: DefineModelRuntimeOptions<T, G, S>,
 ): ModelRef<T | undefined, M, G | undefined, S | undefined>
 
 export function defineModel(): any {
@@ -322,17 +344,10 @@ type InferDefaults<T> = {
 }
 
 type NativeType =
-  | null
-  | undefined
-  | number
-  | string
-  | boolean
-  | symbol
-  | Function
+  null | undefined | number | string | boolean | symbol | Function
 
 type InferDefault<P, T> =
-  | ((props: P) => T & {})
-  | (T extends NativeType ? T : never)
+  ((props: P) => T & {}) | (T extends NativeType ? T : never)
 
 type PropsWithDefaults<
   T,
@@ -340,9 +355,9 @@ type PropsWithDefaults<
   BKeys extends keyof T,
 > = T extends unknown
   ? Readonly<MappedOmit<T, keyof Defaults>> & {
-      readonly [K in keyof Defaults as K extends keyof T
-        ? K
-        : never]-?: K extends keyof T
+      readonly [
+        K in keyof Defaults as K extends keyof T ? K : never
+      ]-?: K extends keyof T
         ? Defaults[K] extends undefined
           ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
           : NotUndefined<T[K]>
@@ -506,6 +521,7 @@ export function createPropsRestProxy(
  */
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentInstance()!
+  const inSSRSetup = isInSSRComponentSetup
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -514,11 +530,44 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   }
   let awaitable = getAwaitable()
   unsetCurrentInstance()
+  if (inSSRSetup) {
+    setInSSRSetupState(false)
+  }
+
+  const restore = () => {
+    setCurrentInstance(ctx)
+    if (inSSRSetup) {
+      setInSSRSetupState(true)
+    }
+  }
+
+  // Never restore a captured "prev" instance here: in concurrent async setup
+  // continuations it may belong to a sibling component and cause leaks.
+  // We only need to balance ctx.scope.on() from setCurrentInstance(ctx),
+  // then clear global currentInstance for user microtasks.
+  const cleanup = () => {
+    if (getCurrentInstance() !== ctx) ctx.scope.off()
+    unsetCurrentInstance()
+    if (inSSRSetup) {
+      setInSSRSetupState(false)
+    }
+  }
+
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      setCurrentInstance(ctx)
+      restore()
+      // Defer cleanup so the async function's catch continuation
+      // still runs with the restored instance.
+      Promise.resolve().then(() => Promise.resolve().then(cleanup))
       throw e
     })
   }
-  return [awaitable, () => setCurrentInstance(ctx)]
+  return [
+    awaitable,
+    () => {
+      restore()
+      // Keep instance for the current continuation, then cleanup.
+      Promise.resolve().then(cleanup)
+    },
+  ]
 }

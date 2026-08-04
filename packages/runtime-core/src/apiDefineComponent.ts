@@ -68,7 +68,7 @@ export type DefineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
-  TypeEl extends Element = any,
+  TypeEl = any,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstanceWithMixins<
     Props,
@@ -157,7 +157,7 @@ export function defineComponent<
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: (keyof Props)[]
+    props?: (keyof NoInfer<Props>)[]
     emits?: E | EE[]
     slots?: S
   },
@@ -216,7 +216,7 @@ export function defineComponent<
         : ExtractPropTypes<RuntimePropsOptions>
       : { [key in RuntimePropsKeys]?: any },
   TypeRefs extends Record<string, unknown> = {},
-  TypeEl extends Element = any,
+  TypeEl = any,
 >(
   options: {
     props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]

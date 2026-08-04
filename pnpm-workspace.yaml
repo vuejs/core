@@ -3,20 +3,24 @@ packages:
   - 'packages-private/*'
 
 catalog:
-  '@babel/parser': ^7.28.6
-  '@babel/types': ^7.28.6
+  '@babel/parser': ^7.29.8
+  '@babel/types': ^7.29.8
+  'entities': '^7.0.1'
   'estree-walker': ^2.0.2
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
-  'vite': ^7.3.1
-  '@vitejs/plugin-vue': ^6.0.3
+  'vite': ^8.2.0
+  '@vitejs/plugin-vue': ^6.0.8
 
-onlyBuiltDependencies:
-  - '@swc/core'
-  - 'esbuild'
-  - 'puppeteer'
-  - 'simple-git-hooks'
-  - 'unrs-resolver'
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  'esbuild': true
+  'puppeteer': true
+  'simple-git-hooks': true
+  'unrs-resolver': true
+
+dedupePeers: true
 
 peerDependencyRules:
   allowedVersions:
@@ -25,3 +29,8 @@ peerDependencyRules:
     '@typescript-eslint/parser>eslint': '^9.0.0'
     '@typescript-eslint/type-utils>eslint': '^9.0.0'
     '@typescript-eslint/utils>eslint': '^9.0.0'
+
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  # Renovate security update: postcss@8.5.23
+  - postcss@8.5.23

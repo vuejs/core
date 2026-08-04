@@ -825,6 +825,29 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><div><span>loading</span></div></div>')
   })
 
+  // #6385
+  test('should fully diff props when falling back from a non-isomorphic block', () => {
+    render(h('div', { id: 'placeholder' }), root)
+
+    render(
+      (openBlock(),
+      createElementBlock(
+        'div',
+        { class: 'resolved' },
+        [
+          createTextVNode('hello '),
+          createElementVNode('button', null, '0', PatchFlags.TEXT),
+        ],
+        PatchFlags.CLASS,
+      )),
+      root,
+    )
+
+    expect(inner(root)).toBe(
+      '<div class="resolved">hello <button>0</button></div>',
+    )
+  })
+
   // #3828
   test('patch Suspense in optimized mode w/ nested dynamic nodes', async () => {
     const show = ref(false)
