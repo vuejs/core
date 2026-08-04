@@ -64,10 +64,14 @@ export const vModelText: ModelDirective<
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     // During hydration, created runs on an element already in the DOM.
-    // Text inputs strip CR/LF from value, while defaultValue retains them,
-    // so normalize it before detecting pre-hydration edits.
-    if (el.parentNode && el.type === 'text') {
-      el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
+    if (el.parentNode) {
+      if (el.type === 'text') {
+        // Text inputs strip CR/LF from value, while defaultValue retains them.
+        el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
+      } else if (el.type === 'textarea') {
+        // Textareas normalize CRLF/CR to LF in value.
+        el[initialValueKey] = el.defaultValue.replace(/\r\n?/g, '\n')
+      }
     }
     el[assignKey] = getModelAssigner(vnode)
     const castToNumber =
@@ -98,7 +102,7 @@ export const vModelText: ModelDirective<
     delete el[initialValueKey]
     if (
       initialValue !== undefined &&
-      el.type === 'text' &&
+      (el.type === 'text' || el.type === 'textarea') &&
       el.value !== initialValue
     ) {
       el[assignKey](castValue(el.value, trim, number))
