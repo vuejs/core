@@ -2504,6 +2504,7 @@ describe('defineCustomElement', () => {
     container.innerHTML = '<el-attr-tag-name tag-name="foo">'
     const e = container.childNodes[0] as VueElement
     expect(e.shadowRoot!.innerHTML).toBe(`foo`)
+  })
 
   test('hyphenated attr removal', async () => {
     const E = defineCustomElement({
