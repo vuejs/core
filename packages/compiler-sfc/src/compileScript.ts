@@ -266,7 +266,7 @@ export function compileScript(
       !sfc.template.src &&
       !sfc.template.lang
     ) {
-      isUsedInTemplate = isImportUsed(local, sfc)
+      isUsedInTemplate = isImportUsed(local, sfc, options.templateOptions)
     }
 
     ctx.userImports[local] = {
@@ -769,7 +769,10 @@ export function compileScript(
   // which requires a SETUP_LET binding (getter + setter) to keep script state in sync.
   // In inline mode, it generates `foo = $event`, which also requires `let`.
   if (sfc.template && !sfc.template.src && sfc.template.ast) {
-    const vModelIds = resolveTemplateVModelIdentifiers(sfc)
+    const vModelIds = resolveTemplateVModelIdentifiers(
+      sfc,
+      options.templateOptions,
+    )
     if (vModelIds.size) {
       const toDemote = new Set<string>()
       for (const id of vModelIds) {
