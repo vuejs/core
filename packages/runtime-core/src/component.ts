@@ -894,7 +894,12 @@ function setupStatefulComponent(
         // return the promise so server-renderer can wait on it
         return setupResult
           .then((resolvedResult: unknown) => {
-            handleSetupResult(instance, resolvedResult, isSSR)
+            setInSSRSetupState(true)
+            try {
+              handleSetupResult(instance, resolvedResult, isSSR)
+            } finally {
+              setInSSRSetupState(false)
+            }
           })
           .catch(e => {
             handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
