@@ -2,7 +2,7 @@ export function triggerEvent(
   target: Element,
   event: string,
   process?: (e: any) => any,
-) {
+): Event {
   const e = new Event(event, {
     bubbles: true,
     cancelable: true,

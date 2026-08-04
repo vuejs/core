@@ -10,6 +10,8 @@ import type {
   Node,
   ObjectProperty,
   Program,
+  SwitchCase,
+  SwitchStatement,
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -80,14 +82,31 @@ export function walkIdentifiers(
             markScopeIdentifier(node, id, knownIds),
           )
         }
+      } else if (node.type === 'SwitchStatement') {
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          // record switch case block-level local variables
+          walkSwitchStatement(node, false, id =>
+            markScopeIdentifier(node, id, knownIds),
+          )
+        }
       } else if (node.type === 'CatchClause' && node.param) {
-        for (const id of extractIdentifiers(node.param)) {
-          markScopeIdentifier(node, id, knownIds)
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          for (const id of extractIdentifiers(node.param)) {
+            markScopeIdentifier(node, id, knownIds)
+          }
         }
       } else if (isForStatement(node)) {
-        walkForStatement(node, false, id =>
-          markScopeIdentifier(node, id, knownIds),
-        )
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          walkForStatement(node, false, id =>
+            markScopeIdentifier(node, id, knownIds),
+          )
+        }
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | null) {
@@ -122,7 +141,7 @@ export function isReferencedIdentifier(
     return false
   }
 
-  if (isReferenced(id, parent)) {
+  if (isReferenced(id, parent, parentStack[parentStack.length - 2])) {
     return true
   }
 
@@ -132,7 +151,8 @@ export function isReferencedIdentifier(
     case 'AssignmentExpression':
     case 'AssignmentPattern':
       return true
-    case 'ObjectPattern':
+    case 'ObjectProperty':
+      return parent.key !== id && isInDestructureAssignment(parent, parentStack)
     case 'ArrayPattern':
       return isInDestructureAssignment(parent, parentStack)
   }
@@ -186,10 +206,11 @@ export function walkFunctionParams(
 }
 
 export function walkBlockDeclarations(
-  block: BlockStatement | Program,
+  block: BlockStatement | SwitchCase | Program,
   onIdent: (node: Identifier) => void,
 ): void {
-  for (const stmt of block.body) {
+  const body = block.type === 'SwitchCase' ? block.consequent : block.body
+  for (const stmt of body) {
     if (stmt.type === 'VariableDeclaration') {
       if (stmt.declare) continue
       for (const decl of stmt.declarations) {
@@ -205,6 +226,8 @@ export function walkBlockDeclarations(
       onIdent(stmt.id)
     } else if (isForStatement(stmt)) {
       walkForStatement(stmt, true, onIdent)
+    } else if (stmt.type === 'SwitchStatement') {
+      walkSwitchStatement(stmt, true, onIdent)
     }
   }
 }
@@ -235,6 +258,28 @@ function walkForStatement(
         onIdent(id)
       }
     }
+  }
+}
+
+function walkSwitchStatement(
+  stmt: SwitchStatement,
+  isVar: boolean,
+  onIdent: (id: Identifier) => void,
+) {
+  for (const cs of stmt.cases) {
+    for (const stmt of cs.consequent) {
+      if (
+        stmt.type === 'VariableDeclaration' &&
+        (stmt.kind === 'var' ? isVar : !isVar)
+      ) {
+        for (const decl of stmt.declarations) {
+          for (const id of extractIdentifiers(decl.id)) {
+            onIdent(id)
+          }
+        }
+      }
+    }
+    walkBlockDeclarations(cs, onIdent)
   }
 }
 

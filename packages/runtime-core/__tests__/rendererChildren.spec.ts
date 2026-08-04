@@ -65,6 +65,15 @@ test('array children -> text children', () => {
   expect(inner(root)).toBe('<div>hello</div>')
 })
 
+test('plain object child', () => {
+  const root = nodeOps.createElement('div')
+  const foo = { foo: '1' }
+  // @ts-expect-error
+  render(h('div', null, [foo]), root)
+  expect('Invalid VNode type').not.toHaveBeenWarned()
+  expect(inner(root)).toBe('<div>[object Object]</div>')
+})
+
 describe('renderer: keyed children', () => {
   let root: TestElement
   let elm: TestElement

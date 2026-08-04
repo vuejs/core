@@ -35,7 +35,7 @@ import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export type ObjectEmitsOptions = Record<
   string,
-  ((...args: any[]) => any) | null
+  ((...args: any[]) => any) | null | any[]
 >
 
 export type EmitsOptions = ObjectEmitsOptions | string[]
@@ -52,27 +52,38 @@ export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> =
               ? P
               : T[K] extends null
                 ? any[]
-                : never
+                : T[K] extends any[]
+                  ? T[K]
+                  : never
           ) => any
         }
       : {}
 
-export type TypeEmitsToOptions<T extends ComponentTypeEmits> =
-  T extends Record<string, any[]>
-    ? {
-        [K in keyof T]: T[K] extends [...args: infer Args]
-          ? (...args: Args) => any
-          : () => any
-      }
-    : T extends (...args: any[]) => any
-      ? ParametersToFns<OverloadParameters<T>>
-      : {}
+export type TypeEmitsToOptions<T extends ComponentTypeEmits> = {
+  [K in keyof T & string]: T[K] extends [...args: infer Args]
+    ? (...args: Args) => any
+    : () => any
+} & (T extends (...args: any[]) => any
+  ? ParametersToFns<OverloadParameters<T>>
+  : {})
 
 type ParametersToFns<T extends any[]> = {
-  [K in T[0]]: K extends `${infer C}`
-    ? (...args: T extends [C, ...infer Args] ? Args : never) => any
+  [K in T[0]]: IsStringLiteral<K> extends true
+    ? (
+        ...args: T extends [e: infer E, ...args: infer P]
+          ? K extends E
+            ? P
+            : never
+          : never
+      ) => any
     : never
 }
+
+type IsStringLiteral<T> = T extends string
+  ? string extends T
+    ? false
+    : true
+  : false
 
 export type ShortEmitsToObject<E> =
   E extends Record<string, any[]>
@@ -142,10 +153,14 @@ export function emit(
   }
 
   let args = rawArgs
-  const isModelListener = event.startsWith('update:')
+  const isCompatModelListener =
+    __COMPAT__ && compatModelEventPrefix + event in props
+  const isModelListener = isCompatModelListener || event.startsWith('update:')
+  const modifiers = isCompatModelListener
+    ? props.modelModifiers
+    : isModelListener && getModelModifiers(props, event.slice(7))
 
   // for v-model update:xxx events, apply modifiers on args
-  const modifiers = isModelListener && getModelModifiers(props, event.slice(7))
   if (modifiers) {
     if (modifiers.trim) {
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
@@ -219,12 +234,14 @@ export function emit(
   }
 }
 
+const mixinEmitsCache = new WeakMap<ConcreteComponent, ObjectEmitsOptions>()
 export function normalizeEmitsOptions(
   comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): ObjectEmitsOptions | null {
-  const cache = appContext.emitsCache
+  const cache =
+    __FEATURE_OPTIONS_API__ && asMixin ? mixinEmitsCache : appContext.emitsCache
   const cached = cache.get(comp)
   if (cached !== undefined) {
     return cached
@@ -287,8 +304,10 @@ export function isEmitListener(
   if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
     return true
   }
-
-  key = key.slice(2).replace(/Once$/, '')
+  key = key.slice(2)
+  // #8342 the `.once` modifier appends a `Once` suffix. Preserve the exact event
+  // name `once`, while still stripping the suffix from `onOnceOnce`.
+  key = key === 'Once' ? key : key.replace(/Once$/, '')
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
     hasOwn(options, hyphenate(key)) ||

@@ -103,11 +103,7 @@ interface LegacyVNodeDirective {
 }
 
 type LegacyVNodeChildren =
-  | string
-  | number
-  | boolean
-  | VNode
-  | VNodeArrayChildren
+  string | number | boolean | VNode | VNodeArrayChildren
 
 export function compatH(
   type: string | Component,

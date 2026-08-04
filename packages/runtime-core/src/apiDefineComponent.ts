@@ -27,7 +27,7 @@ import type {
   EmitsToProps,
   TypeEmitsToOptions,
 } from './componentEmits'
-import { extend, isFunction } from '@vue/shared'
+import { type IsKeyValues, extend, isFunction } from '@vue/shared'
 import type { VNodeProps } from './vnode'
 import type {
   ComponentPublicInstanceConstructor,
@@ -68,6 +68,7 @@ export type DefineComponent<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   MakeDefaultsOptional extends boolean = true,
   TypeRefs extends Record<string, unknown> = {},
+  TypeEl = any,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstanceWithMixins<
     Props,
@@ -78,7 +79,7 @@ export type DefineComponent<
     Mixin,
     Extends,
     E,
-    PP & Props,
+    PP,
     Defaults,
     MakeDefaultsOptional,
     {},
@@ -86,7 +87,8 @@ export type DefineComponent<
     LC & GlobalComponents,
     Directives & GlobalDirectives,
     Exposed,
-    TypeRefs
+    TypeRefs,
+    TypeEl
   >
 > &
   ComponentOptionsBase<
@@ -155,7 +157,7 @@ export function defineComponent<
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: (keyof Props)[]
+    props?: (keyof NoInfer<Props>)[]
     emits?: E | EE[]
     slots?: S
   },
@@ -181,8 +183,8 @@ export function defineComponent<
 export function defineComponent<
   // props
   TypeProps,
-  RuntimePropsOptions extends
-    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsOptions extends ComponentObjectPropsOptions =
+    ComponentObjectPropsOptions,
   RuntimePropsKeys extends string = string,
   // emits
   TypeEmits extends ComponentTypeEmits = {},
@@ -206,14 +208,15 @@ export function defineComponent<
   ResolvedEmits extends EmitsOptions = {} extends RuntimeEmitsOptions
     ? TypeEmitsToOptions<TypeEmits>
     : RuntimeEmitsOptions,
-  InferredProps = unknown extends TypeProps
-    ? string extends RuntimePropsKeys
+  InferredProps = IsKeyValues<TypeProps> extends true
+    ? TypeProps
+    : string extends RuntimePropsKeys
       ? ComponentObjectPropsOptions extends RuntimePropsOptions
         ? {}
         : ExtractPropTypes<RuntimePropsOptions>
-      : { [key in RuntimePropsKeys]?: any }
-    : TypeProps,
+      : { [key in RuntimePropsKeys]?: any },
   TypeRefs extends Record<string, unknown> = {},
+  TypeEl = any,
 >(
   options: {
     props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
@@ -229,6 +232,10 @@ export function defineComponent<
      * @private for language-tools use only
      */
     __typeRefs?: TypeRefs
+    /**
+     * @private for language-tools use only
+     */
+    __typeEl?: TypeEl
   } & ComponentOptionsBase<
     ToResolvedProps<InferredProps, ResolvedEmits>,
     SetupBindings,
@@ -258,14 +265,14 @@ export function defineComponent<
         Mixin,
         Extends,
         ResolvedEmits,
-        RuntimeEmitsKeys,
+        {},
         {},
         false,
         InjectOptions,
         Slots,
         LocalComponents,
         Directives,
-        Exposed
+        string
       >
     >,
 ): DefineComponent<
@@ -289,11 +296,12 @@ export function defineComponent<
   // MakeDefaultsOptional - if TypeProps is provided, set to false to use
   // user props types verbatim
   unknown extends TypeProps ? true : false,
-  TypeRefs
+  TypeRefs,
+  TypeEl
 >
 
 // implementation, close to no-op
-/*! #__NO_SIDE_EFFECTS__ */
+/*@__NO_SIDE_EFFECTS__*/
 export function defineComponent(
   options: unknown,
   extraOptions?: ComponentOptions,

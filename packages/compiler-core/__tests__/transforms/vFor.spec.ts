@@ -13,6 +13,7 @@ import {
   type ForNode,
   type InterpolationNode,
   NodeTypes,
+  type RootNode,
   type SimpleExpressionNode,
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
@@ -20,14 +21,19 @@ import { type CompilerOptions, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher } from '../testUtils'
+import { transformVBindShorthand } from '../../src/transforms/transformVBindShorthand'
 
 export function parseWithForTransform(
   template: string,
   options: CompilerOptions = {},
-) {
+): {
+  root: RootNode
+  node: ForNode & { codegenNode: ForCodegenNode }
+} {
   const ast = parse(template, options)
   transform(ast, {
     nodeTransforms: [
+      transformVBindShorthand,
       transformIf,
       transformFor,
       ...(options.prefixIdentifiers ? [transformExpression] : []),
@@ -635,6 +641,26 @@ describe('compiler: v-for', () => {
       })
     })
 
+    test('element v-for key expression prefixing on simple expression', () => {
+      const {
+        node: { codegenNode },
+      } = parseWithForTransform(
+        '<div v-for="item in items" :key="itemKey">test</div>',
+        { prefixIdentifiers: true },
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: `"div"`,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `_ctx.itemKey`,
+          },
+        }),
+      })
+    })
+
     // #2085
     test('template v-for key expression prefixing', () => {
       const {
@@ -658,6 +684,26 @@ describe('compiler: v-for', () => {
               { content: `item` },
               `)`,
             ],
+          },
+        }),
+      })
+    })
+
+    test('template v-for key expression prefixing on simple expression', () => {
+      const {
+        node: { codegenNode },
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="itemKey">test</template>',
+        { prefixIdentifiers: true },
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: FRAGMENT,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `_ctx.itemKey`,
           },
         }),
       })
@@ -867,6 +913,34 @@ describe('compiler: v-for', () => {
         returns: {
           type: NodeTypes.JS_CALL_EXPRESSION,
           callee: RENDER_SLOT,
+        },
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('template v-for key injection with single slot child', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithForTransform(
+        '<template v-for="item in items" :key="item.id"><slot/></template>',
+      )
+      expect(
+        assertSharedCodegen(codegenNode, true, true /* custom return */),
+      ).toMatchObject({
+        source: { content: `items` },
+        params: [{ content: `item` }],
+        returns: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: RENDER_SLOT,
+          arguments: [
+            '$slots',
+            '"default"',
+            '{}',
+            'undefined',
+            'undefined',
+            { content: 'item.id' },
+          ],
         },
       })
       expect(generate(root).code).toMatchSnapshot()
