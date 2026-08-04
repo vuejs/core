@@ -664,6 +664,9 @@ function testRender(type: string, render: typeof renderToString) {
             ),
           ),
         ).toBe(`<div><span>hello</span></div>`)
+        expect(
+          `The \`innerHTML\` prop on <div> will override its children`,
+        ).toHaveBeenWarned()
       })
 
       test('textContent', async () => {
@@ -678,6 +681,9 @@ function testRender(type: string, render: typeof renderToString) {
             ),
           ),
         ).toBe(`<div>${escapeHtml(`<span>hello</span>`)}</div>`)
+        expect(
+          `The \`textContent\` prop on <div> will override its children`,
+        ).toHaveBeenWarned()
       })
 
       test('textarea value', async () => {
