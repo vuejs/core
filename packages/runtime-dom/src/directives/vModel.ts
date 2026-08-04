@@ -38,15 +38,13 @@ function onCompositionEnd(e: Event) {
 }
 
 const assignKey: unique symbol = Symbol('_assign')
-const hydratingKey: unique symbol = Symbol('_hydrating')
-const hydrationValueKey: unique symbol = Symbol('_hydrateValue')
+const initialValueKey: unique symbol = Symbol('_initialValue')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & {
     [assignKey]: AssignerFn
+    [initialValueKey]?: string
     _assigning?: boolean
-    [hydratingKey]?: boolean
-    [hydrationValueKey]?: string
   },
   any,
   Modifiers
@@ -64,10 +62,10 @@ export const vModelText: ModelDirective<
   HTMLInputElement | HTMLTextAreaElement,
   'trim' | 'number' | 'lazy'
 > = {
-  created(el, { modifiers: { lazy, trim, number } }, vnode, _prev, hydrating) {
-    el[hydratingKey] = hydrating
-    if (hydrating) {
-      el[hydrationValueKey] = el.value
+  created(el, { modifiers: { lazy, trim, number } }, vnode) {
+    // During hydration, created runs on an element already in the DOM.
+    if (el.parentNode && el.type === 'text') {
+      el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
     }
     el[assignKey] = getModelAssigner(vnode)
     const castToNumber =
@@ -92,24 +90,19 @@ export const vModelText: ModelDirective<
     }
   },
   // set value on mounted so it's after min/max for type="range"
-  mounted(el, { value, modifiers: { trim, number } }, vnode) {
+  mounted(el, { value, modifiers: { trim, number } }) {
     const newValue = value == null ? '' : value
-    const hydrating = el[hydratingKey]
-    delete el[hydratingKey]
-    const hydrateValue = el[hydrationValueKey]
-    if (hydrateValue !== undefined) {
-      delete el[hydrationValueKey]
+    const initialValue = el[initialValueKey]
+    delete el[initialValueKey]
+    if (
+      initialValue !== undefined &&
+      el.type === 'text' &&
+      el.value !== initialValue
+    ) {
+      el[assignKey](castValue(el.value, trim, number))
+    } else {
+      el.value = newValue
     }
-    // Users may edit the value before hydration. Preserve that value
-    // and sync it back to the model instead of overriding it.
-    if (hydrating && hydrateValue !== undefined && hydrateValue !== newValue) {
-      const castToNumber =
-        number || (vnode.props && vnode.props.type === 'number')
-      el[assignKey] &&
-        el[assignKey](castValue(hydrateValue, trim, castToNumber))
-      return
-    }
-    el.value = newValue
   },
   beforeUpdate(
     el,
@@ -151,23 +144,38 @@ export const vModelText: ModelDirective<
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   // #4096 array checkboxes need to be deep traversed
   deep: true,
-  created(el, _, vnode, _prev, hydrating) {
-    el[hydratingKey] = hydrating
+  created(el, _, vnode) {
     el[assignKey] = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
       const checked = el.checked
       const assign = el[assignKey]
-      setCheckboxValue(assign, modelValue, elementValue, checked, el)
+      if (isArray(modelValue)) {
+        const index = looseIndexOf(modelValue, elementValue)
+        const found = index !== -1
+        if (checked && !found) {
+          assign(modelValue.concat(elementValue))
+        } else if (!checked && found) {
+          const filtered = [...modelValue]
+          filtered.splice(index, 1)
+          assign(filtered)
+        }
+      } else if (isSet(modelValue)) {
+        const cloned = new Set(modelValue)
+        if (checked) {
+          cloned.add(elementValue)
+        } else {
+          cloned.delete(elementValue)
+        }
+        assign(cloned)
+      } else {
+        assign(getCheckboxValue(el, checked))
+      }
     })
   },
   // set initial checked on mount to wait for true-value/false-value
-  mounted(el, binding, vnode) {
-    const hydrating = el[hydratingKey]
-    delete el[hydratingKey]
-    setChecked(el, binding, vnode, hydrating)
-  },
+  mounted: setChecked,
   beforeUpdate(el, binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
@@ -175,14 +183,13 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
 }
 
 function setChecked(
-  el: HTMLInputElement & { [assignKey]?: AssignerFn; _modelValue?: any },
+  el: HTMLInputElement,
   { value, oldValue }: DirectiveBinding,
   vnode: VNode,
-  hydrating?: boolean,
 ) {
   // store the v-model value on the element so it can be accessed by the
   // change listener.
-  el._modelValue = value
+  ;(el as any)._modelValue = value
   let checked: boolean
 
   if (isArray(value)) {
@@ -194,14 +201,6 @@ function setChecked(
     checked = looseEqual(value, getCheckboxValue(el, true))
   }
 
-  if (hydrating && el.checked !== checked) {
-    const assign = el[assignKey]
-    if (assign) {
-      setCheckboxValue(assign, value, getValue(el), el.checked, el)
-      return
-    }
-  }
-
   // Only update if the checked state has changed
   if (el.checked !== checked) {
     el.checked = checked
@@ -209,18 +208,9 @@ function setChecked(
 }
 
 export const vModelRadio: ModelDirective<HTMLInputElement> = {
-  created(el, { value }, vnode, _prev, hydrating) {
-    el[hydratingKey] = hydrating
+  created(el, { value }, vnode) {
+    el.checked = looseEqual(value, vnode.props!.value)
     el[assignKey] = getModelAssigner(vnode)
-    const checked = looseEqual(value, vnode.props!.value)
-    if (hydrating && el.checked !== checked) {
-      if (el.checked) {
-        el[assignKey](vnode.props!.value)
-      }
-    } else {
-      el.checked = checked
-    }
-    delete el[hydratingKey]
     addEventListener(el, 'change', () => {
       el[assignKey](getValue(el))
     })
@@ -236,8 +226,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
-  created(el, { value, modifiers: { number } }, vnode, _prev, hydrating) {
-    el[hydratingKey] = hydrating
+  created(el, { value, modifiers: { number } }, vnode) {
     ;(el as any)._modelValue = value
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
@@ -261,16 +250,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
-  mounted(el, { value, modifiers: { number } }) {
-    const hydrating = el[hydratingKey]
-    delete el[hydratingKey]
-    if (hydrating) {
-      const selectedValue = getSelectedValue(el, number, isSet(value))
-      if (!isSelectValueEqual(selectedValue, value)) {
-        el[assignKey] && el[assignKey](selectedValue)
-        return
-      }
-    }
+  mounted(el, { value }) {
     setSelected(el, value)
   },
   beforeUpdate(el, { value }, vnode) {
@@ -321,66 +301,6 @@ function setSelected(el: HTMLSelectElement, value: any) {
   }
 }
 
-function getSelectedValue(
-  el: HTMLSelectElement,
-  number: boolean | undefined,
-  isSetModel: boolean,
-) {
-  const selectedVal = Array.prototype.filter
-    .call(el.options, (o: HTMLOptionElement) => o.selected)
-    .map((o: HTMLOptionElement) =>
-      number ? looseToNumber(getValue(o)) : getValue(o),
-    )
-  return el.multiple
-    ? isSetModel
-      ? new Set(selectedVal)
-      : selectedVal
-    : selectedVal[0]
-}
-
-function isSelectValueEqual(a: any, b: any) {
-  if (isSet(a) && isSet(b)) {
-    if (a.size !== b.size) return false
-    for (const value of a) {
-      if (!b.has(value)) {
-        return false
-      }
-    }
-    return true
-  }
-  return looseEqual(a, b)
-}
-
-function setCheckboxValue(
-  assign: AssignerFn,
-  modelValue: any,
-  elementValue: any,
-  checked: boolean,
-  el: HTMLInputElement & { _trueValue?: any; _falseValue?: any },
-) {
-  if (isArray(modelValue)) {
-    const index = looseIndexOf(modelValue, elementValue)
-    const found = index !== -1
-    if (checked && !found) {
-      assign(modelValue.concat(elementValue))
-    } else if (!checked && found) {
-      const filtered = [...modelValue]
-      filtered.splice(index, 1)
-      assign(filtered)
-    }
-  } else if (isSet(modelValue)) {
-    const cloned = new Set(modelValue)
-    if (checked) {
-      cloned.add(elementValue)
-    } else {
-      cloned.delete(elementValue)
-    }
-    assign(cloned)
-  } else {
-    assign(getCheckboxValue(el, checked))
-  }
-}
-
 // retrieve raw value set via :value bindings
 function getValue(el: HTMLOptionElement | HTMLInputElement) {
   return '_value' in el ? (el as any)._value : el.value
@@ -398,11 +318,11 @@ function getCheckboxValue(
 export const vModelDynamic: ObjectDirective<
   HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
 > = {
-  created(el, binding, vnode, _prev, hydrating) {
-    callModelHook(el, binding, vnode, null, 'created', hydrating)
+  created(el, binding, vnode) {
+    callModelHook(el, binding, vnode, null, 'created')
   },
-  mounted(el, binding, vnode, _prev, hydrating) {
-    callModelHook(el, binding, vnode, null, 'mounted', hydrating)
+  mounted(el, binding, vnode) {
+    callModelHook(el, binding, vnode, null, 'mounted')
   },
   beforeUpdate(el, binding, vnode, prevVNode) {
     callModelHook(el, binding, vnode, prevVNode, 'beforeUpdate')
@@ -436,14 +356,13 @@ function callModelHook(
   vnode: VNode,
   prevVNode: VNode | null,
   hook: keyof ObjectDirective,
-  hydrating?: boolean,
 ) {
   const modelToUse = resolveDynamicModel(
     el.tagName,
     vnode.props && vnode.props.type,
   )
   const fn = modelToUse[hook] as DirectiveHook
-  fn && fn(el, binding, vnode, prevVNode, hydrating)
+  fn && fn(el, binding, vnode, prevVNode)
 }
 
 // SSR vnode transforms, only used when user includes client-oriented render

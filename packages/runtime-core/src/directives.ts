@@ -49,7 +49,6 @@ export type DirectiveHook<
   binding: DirectiveBinding<Value, Modifiers, Arg>,
   vnode: VNode<any, HostElement>,
   prevVNode: Prev,
-  isHydrating?: boolean,
 ) => void
 
 export type SSRDirectiveHook<
@@ -173,7 +172,6 @@ export function invokeDirectiveHook(
   prevVNode: VNode | null,
   instance: ComponentInternalInstance | null,
   name: keyof ObjectDirective,
-  isHydrating = false,
 ): void {
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
@@ -195,7 +193,6 @@ export function invokeDirectiveHook(
         binding,
         vnode,
         prevVNode,
-        isHydrating,
       ])
       resetTracking()
     }
