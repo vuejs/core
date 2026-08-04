@@ -64,6 +64,8 @@ export const vModelText: ModelDirective<
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     // During hydration, created runs on an element already in the DOM.
+    // Text inputs strip CR/LF from value, while defaultValue retains them,
+    // so normalize it before detecting pre-hydration edits.
     if (el.parentNode && el.type === 'text') {
       el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
     }

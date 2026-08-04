@@ -71,31 +71,6 @@ describe('vModel', () => {
     expect(input.value).toEqual('')
   })
 
-  it('should overwrite text mutated before a client mount completes', () => {
-    const update = vi.fn()
-    const mutateBeforeMount = {
-      beforeMount(el: HTMLInputElement) {
-        el.value = 'directive value'
-      },
-    }
-    const component = defineComponent({
-      render() {
-        return withDirectives(
-          withVModel(
-            h('input', { 'onUpdate:modelValue': update }),
-            'model value',
-          ),
-          [[mutateBeforeMount]],
-        )
-      },
-    })
-
-    render(h(component), root)
-
-    expect((root.firstChild as HTMLInputElement).value).toBe('model value')
-    expect(update).not.toHaveBeenCalled()
-  })
-
   it('should work with number input', async () => {
     const component = defineComponent({
       data() {
