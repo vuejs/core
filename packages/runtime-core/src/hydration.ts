@@ -525,6 +525,9 @@ export function createHydrationFunctions(
               (isCustomElement && !isReservedProp(key)) ||
               (dynamicProps && dynamicProps.includes(key))
             ) {
+              if (isUnchangedResourceProp(el, key, props[key])) {
+                continue
+              }
               patchProp(el, key, null, props[key], namespace, parentComponent)
             }
           }
@@ -806,6 +809,24 @@ export function createHydrationFunctions(
 /**
  * Dev only
  */
+// attributes whose assignment triggers a (re)fetch of a resource
+const resourceProps = /*@__PURE__*/ new Set(['src', 'srcset', 'href', 'poster'])
+
+function isUnchangedResourceProp(
+  el: Element,
+  key: string,
+  clientValue: any,
+): boolean {
+  if (!resourceProps.has(key)) {
+    return false
+  }
+  // compare against the rendered attribute rather than the reflected DOM
+  // property, which normalizes URLs to absolute form.
+  return (
+    el.getAttribute(key) === (clientValue == null ? null : `${clientValue}`)
+  )
+}
+
 function propHasMismatch(
   el: Element & { $cls?: string },
   key: string,
