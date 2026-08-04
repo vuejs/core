@@ -313,7 +313,9 @@ export class VueElement
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
             this._pendingResolve = undefined
-            this._resolveDef()
+            if (this.isConnected) {
+              return this._resolveDef()
+            }
           })
         } else {
           this._resolveDef()
@@ -371,7 +373,7 @@ export class VueElement
    */
   private _resolveDef() {
     if (this._pendingResolve) {
-      return
+      return this._pendingResolve
     }
 
     // set initial attrs
@@ -428,6 +430,7 @@ export class VueElement
         def.configureApp = this._def.configureApp
         resolve((this._def = def), true)
       })
+      return this._pendingResolve
     } else {
       resolve(this._def)
     }
