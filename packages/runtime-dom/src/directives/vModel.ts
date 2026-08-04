@@ -45,6 +45,12 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   Modifiers
 >
 
+function castValue(value: string, trim?: boolean, number?: boolean | null) {
+  if (trim) value = value.trim()
+  if (number) value = looseToNumber(value)
+  return value
+}
+
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
@@ -57,18 +63,11 @@ export const vModelText: ModelDirective<
       number || (vnode.props && vnode.props.type === 'number')
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
-      let domValue: string | number = el.value
-      if (trim) {
-        domValue = domValue.trim()
-      }
-      if (castToNumber) {
-        domValue = looseToNumber(domValue)
-      }
-      el[assignKey](domValue)
+      el[assignKey](castValue(el.value, trim, castToNumber))
     })
-    if (trim) {
+    if (trim || castToNumber) {
       addEventListener(el, 'change', () => {
-        el.value = el.value.trim()
+        el.value = castValue(el.value, trim, castToNumber)
       })
     }
     if (!lazy) {
@@ -103,7 +102,12 @@ export const vModelText: ModelDirective<
       return
     }
 
-    if (document.activeElement === el && el.type !== 'range') {
+    const rootNode = el.getRootNode()
+    if (
+      (rootNode instanceof Document || rootNode instanceof ShadowRoot) &&
+      rootNode.activeElement === el &&
+      el.type !== 'range'
+    ) {
       // #8546
       if (lazy && value === oldValue) {
         return
@@ -160,7 +164,7 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
 
 function setChecked(
   el: HTMLInputElement,
-  { value }: DirectiveBinding,
+  { value, oldValue }: DirectiveBinding,
   vnode: VNode,
 ) {
   // store the v-model value on the element so it can be accessed by the
@@ -173,6 +177,7 @@ function setChecked(
   } else if (isSet(value)) {
     checked = value.has(vnode.props!.value)
   } else {
+    if (value === oldValue) return
     checked = looseEqual(value, getCheckboxValue(el, true))
   }
 
@@ -202,7 +207,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
-    const isSetModel = isSet(value)
+    ;(el as any)._modelValue = value
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
@@ -211,7 +216,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
         )
       el[assignKey](
         el.multiple
-          ? isSetModel
+          ? isSet((el as any)._modelValue)
             ? new Set(selectedVal)
             : selectedVal
           : selectedVal[0],
@@ -228,7 +233,8 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   mounted(el, { value }) {
     setSelected(el, value)
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(el, { value }, vnode) {
+    ;(el as any)._modelValue = value
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {

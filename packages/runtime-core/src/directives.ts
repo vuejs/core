@@ -28,14 +28,14 @@ import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
 export interface DirectiveBinding<
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > {
   instance: ComponentPublicInstance | Record<string, any> | null
   value: Value
   oldValue: Value | null
   arg?: Arg
   modifiers: DirectiveModifiers<Modifiers>
-  dir: ObjectDirective<any, Value>
+  dir: ObjectDirective<any, Value, Modifiers, Arg>
 }
 
 export type DirectiveHook<
@@ -43,7 +43,7 @@ export type DirectiveHook<
   Prev = VNode<any, HostElement> | null,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = (
   el: HostElement,
   binding: DirectiveBinding<Value, Modifiers, Arg>,
@@ -54,7 +54,7 @@ export type DirectiveHook<
 export type SSRDirectiveHook<
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = (
   binding: DirectiveBinding<Value, Modifiers, Arg>,
   vnode: VNode,
@@ -64,7 +64,7 @@ export interface ObjectDirective<
   HostElement = any,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > {
   /**
    * @internal without this, ts-expect-error in directives.test-d.ts somehow
@@ -99,19 +99,21 @@ export type FunctionDirective<
   HostElement = any,
   V = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > = DirectiveHook<HostElement, any, V, Modifiers, Arg>
 
 export type Directive<
   HostElement = any,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string,
+  Arg = any,
 > =
   | ObjectDirective<HostElement, Value, Modifiers, Arg>
   | FunctionDirective<HostElement, Value, Modifiers, Arg>
 
-export type DirectiveModifiers<K extends string = string> = Record<K, boolean>
+export type DirectiveModifiers<K extends string = string> = Partial<
+  Record<K, boolean>
+>
 
 export function validateDirectiveName(name: string): void {
   if (isBuiltInDirective(name)) {
@@ -123,8 +125,8 @@ export function validateDirectiveName(name: string): void {
 export type DirectiveArguments = Array<
   | [Directive | undefined]
   | [Directive | undefined, any]
-  | [Directive | undefined, any, string]
-  | [Directive | undefined, any, string | undefined, DirectiveModifiers]
+  | [Directive | undefined, any, any]
+  | [Directive | undefined, any, any, DirectiveModifiers]
 >
 
 /**

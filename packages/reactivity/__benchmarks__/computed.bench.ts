@@ -1,5 +1,10 @@
 import { bench, describe } from 'vitest'
-import { type ComputedRef, type Ref, computed, effect, ref } from '../src'
+import type { ComputedRef, Ref } from '../src'
+import { computed, effect, ref } from '../dist/reactivity.esm-browser.prod'
+
+declare module '../dist/reactivity.esm-browser.prod' {
+  function computed(...args: any[]): any
+}
 
 describe('computed', () => {
   bench('create computed', () => {

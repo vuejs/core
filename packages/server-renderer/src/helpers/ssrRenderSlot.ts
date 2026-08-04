@@ -1,4 +1,8 @@
-import { type ComponentInternalInstance, type Slots, ssrUtils } from 'vue'
+import {
+  type ComponentInternalInstance,
+  type Slots,
+  ssrUtils,
+} from '@vue/runtime-dom'
 import {
   type Props,
   type PushFn,
@@ -20,7 +24,8 @@ export type SSRSlot = (
 export function ssrRenderSlot(
   slots: Slots | SSRSlots,
   slotName: string,
-  slotProps: Props,
+  // can be nullish when `v-bind` on the `<slot>` evaluates to nullish
+  slotProps: Props | null | undefined,
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
@@ -43,7 +48,7 @@ export function ssrRenderSlot(
 export function ssrRenderSlotInner(
   slots: Slots | SSRSlots,
   slotName: string,
-  slotProps: Props,
+  slotProps: Props | null | undefined,
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
@@ -57,7 +62,9 @@ export function ssrRenderSlotInner(
       slotBuffer.push(item)
     }
     const ret = slotFn(
-      slotProps,
+      // keep the slot function's contract in sync with `renderSlot`, which also
+      // normalizes nullish props before invoking the slot
+      slotProps || {},
       bufferedPush,
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : '',
@@ -74,6 +81,8 @@ export function ssrRenderSlotInner(
         )
       } else if (fallbackRenderFn) {
         fallbackRenderFn()
+      } else if (transition) {
+        push(`<!---->`)
       }
     } else {
       // ssr slot.
@@ -110,13 +119,19 @@ export function ssrRenderSlotInner(
           end--
         }
 
-        for (let i = start; i < end; i++) {
-          push(slotBuffer[i])
+        if (start < end) {
+          for (let i = start; i < end; i++) {
+            push(slotBuffer[i])
+          }
+        } else if (transition) {
+          push(`<!---->`)
         }
       }
     }
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
+  } else if (transition) {
+    push(`<!---->`)
   }
 }
 

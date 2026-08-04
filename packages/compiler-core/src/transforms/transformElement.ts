@@ -76,13 +76,11 @@ export const transformElement: NodeTransform = (node, context) => {
   return function postTransformElement() {
     node = context.currentNode!
 
-    if (
-      !(
-        node.type === NodeTypes.ELEMENT &&
-        (node.tagType === ElementTypes.ELEMENT ||
-          node.tagType === ElementTypes.COMPONENT)
-      )
-    ) {
+    if (!(
+      node.type === NodeTypes.ELEMENT &&
+      (node.tagType === ElementTypes.ELEMENT ||
+        node.tagType === ElementTypes.COMPONENT)
+    )) {
       return
     }
 
@@ -594,11 +592,9 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
-            // #10696 in case a v-bind object contains ref
-            pushRefVForMarker()
-            // have to merge early for compat build check
-            pushMergeArg()
             if (__COMPAT__) {
+              // have to merge early for compat build check
+              pushMergeArg()
               // 2.x v-bind object order compat
               if (__DEV__) {
                 const hasOverridableKeys = mergeArgs.some(arg => {
@@ -641,6 +637,9 @@ export function buildProps(
               }
             }
 
+            // #10696 in case a v-bind object contains ref
+            pushRefVForMarker()
+            pushMergeArg()
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)

@@ -260,9 +260,15 @@ function genRuntimePropFromType(
         // prop has corresponding static default value
         defaultString = `default: ${ctx.getString(prop.value)}`
       } else {
+        let paramsString = ''
+        if (prop.params.length) {
+          const start = prop.params[0].start
+          const end = prop.params[prop.params.length - 1].end
+          paramsString = ctx.getString({ start, end } as Node)
+        }
         defaultString = `${prop.async ? 'async ' : ''}${
           prop.kind !== 'method' ? `${prop.kind} ` : ''
-        }default() ${ctx.getString(prop.body)}`
+        }default(${paramsString}) ${ctx.getString(prop.body)}`
       }
     }
   }
@@ -369,7 +375,7 @@ function genDestructuredDefaultValue(
   }
 }
 
-// non-comprehensive, best-effort type infernece for a runtime value
+// non-comprehensive, best-effort type inference for a runtime value
 // this is used to catch default value / type declaration mismatches
 // when using props destructure.
 function inferValueType(node: Node): string | undefined {

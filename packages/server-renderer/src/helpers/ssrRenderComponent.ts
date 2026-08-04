@@ -3,7 +3,7 @@ import {
   type ComponentInternalInstance,
   type Slots,
   createVNode,
-} from 'vue'
+} from '@vue/runtime-dom'
 import { type Props, type SSRBuffer, renderComponentVNode } from '../render'
 import type { SSRSlots } from './ssrRenderSlot'
 

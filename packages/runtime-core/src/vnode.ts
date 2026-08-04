@@ -6,6 +6,7 @@ import {
   extend,
   isArray,
   isFunction,
+  isModelListener,
   isObject,
   isOn,
   isString,
@@ -111,16 +112,12 @@ export type VNodeNormalizedRefAtom = {
 }
 
 export type VNodeNormalizedRef =
-  | VNodeNormalizedRefAtom
-  | VNodeNormalizedRefAtom[]
+  VNodeNormalizedRefAtom | VNodeNormalizedRefAtom[]
 
 type VNodeMountHook = (vnode: VNode) => void
 type VNodeUpdateHook = (vnode: VNode, oldVNode: VNode) => void
 export type VNodeHook =
-  | VNodeMountHook
-  | VNodeUpdateHook
-  | VNodeMountHook[]
-  | VNodeUpdateHook[]
+  VNodeMountHook | VNodeUpdateHook | VNodeMountHook[] | VNodeUpdateHook[]
 
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
@@ -139,23 +136,14 @@ export type VNodeProps = {
 }
 
 type VNodeChildAtom =
-  | VNode
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | void
+  VNode | string | number | boolean | null | undefined | void
 
 export type VNodeArrayChildren = Array<VNodeArrayChildren | VNodeChildAtom>
 
 export type VNodeChild = VNodeChildAtom | VNodeArrayChildren
 
 export type VNodeNormalizedChildren =
-  | string
-  | VNodeArrayChildren
-  | RawSlots
-  | null
+  string | VNodeArrayChildren | RawSlots | null
 
 export interface VNode<
   HostNode = RendererNode,
@@ -196,6 +184,7 @@ export interface VNode<
 
   // DOM
   el: HostNode | null
+  placeholder: HostNode | null // async component el placeholder
   anchor: HostNode | null // fragment anchor
   target: HostElement | null // teleport target
   targetStart: HostNode | null // teleport target start anchor
@@ -301,7 +290,7 @@ export let isBlockTreeEnabled = 1
  *
  * ``` js
  * _cache[1] || (
- *   setBlockTracking(-1),
+ *   setBlockTracking(-1, true),
  *   _cache[1] = createVNode(...),
  *   setBlockTracking(1),
  *   _cache[1]
@@ -310,11 +299,11 @@ export let isBlockTreeEnabled = 1
  *
  * @private
  */
-export function setBlockTracking(value: number): void {
+export function setBlockTracking(value: number, inVOnce = false): void {
   isBlockTreeEnabled += value
-  if (value < 0 && currentBlock) {
+  if (value < 0 && currentBlock && inVOnce) {
     // mark current block so it doesn't take fast path and skip possible
-    // nested components duriung unmount
+    // nested components during unmount
     currentBlock.hasOnce = true
   }
 }
@@ -510,6 +499,25 @@ function createBaseVNode(
     warn(`VNode created with invalid key (NaN). VNode type:`, vnode.type)
   }
 
+  // #5081 validate children that will be silently discarded by innerHTML /
+  // textContent. The template compiler already errors on `v-html` / `v-text`
+  // used with children, but render functions have no such check.
+  if (__DEV__ && props && vnode.shapeFlag & ShapeFlags.ELEMENT) {
+    const overwritingProp =
+      props.innerHTML != null
+        ? 'innerHTML'
+        : props.textContent != null
+          ? 'textContent'
+          : null
+    if (overwritingProp && hasContentChildren(vnode.children)) {
+      warn(
+        `The \`${overwritingProp}\` prop on <${vnode.type as string}> will ` +
+          `override its children. Remove either the \`${overwritingProp}\` ` +
+          `prop or the children.`,
+      )
+    }
+  }
+
   // track vnode for block tree
   if (
     isBlockTreeEnabled > 0 &&
@@ -538,6 +546,18 @@ function createBaseVNode(
 }
 
 export { createBaseVNode as createElementVNode }
+
+/**
+ * dev only
+ * Whether children would actually render something. Empty text and empty
+ * arrays are ignored, mirroring the compiler's `node.children.length` check
+ * for `v-html` / `v-text`.
+ */
+function hasContentChildren(children: VNode['children']): boolean {
+  if (isString(children)) return children !== ''
+  if (isArray(children)) return children.length > 0
+  return false
+}
 
 export const createVNode = (
   __DEV__ ? createVNodeWithArgsTransform : _createVNode
@@ -711,6 +731,8 @@ export function cloneVNode<T, U>(
     suspense: vnode.suspense,
     ssContent: vnode.ssContent && cloneVNode(vnode.ssContent),
     ssFallback: vnode.ssFallback && cloneVNode(vnode.ssFallback),
+    placeholder: vnode.placeholder,
+
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
@@ -850,6 +872,10 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
       }
     }
   } else if (isFunction(children)) {
+    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
+      normalizeChildren(vnode, { default: children })
+      return
+    }
     children = { default: children, _ctx: currentRenderingInstance }
     type = ShapeFlags.SLOTS_CHILDREN
   } else {
@@ -888,6 +914,14 @@ export function mergeProps(...args: (Data & VNodeProps)[]): Data {
           ret[key] = existing
             ? [].concat(existing as any, incoming as any)
             : incoming
+        } else if (
+          incoming == null &&
+          existing == null &&
+          // mergeProps({ 'onUpdate:modelValue': undefined }) should not retain
+          // the model listener.
+          !isModelListener(key)
+        ) {
+          ret[key] = incoming
         }
       } else if (key !== '') {
         ret[key] = toMerge[key]

@@ -43,8 +43,7 @@ export interface SFCStyleCompileOptions {
 export interface CSSModulesOptions {
   scopeBehaviour?: 'global' | 'local'
   generateScopedName?:
-    | string
-    | ((name: string, filename: string, css: string) => string)
+    string | ((name: string, filename: string, css: string) => string)
   hashPrefix?: string
   localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
   exportGlobals?: boolean
