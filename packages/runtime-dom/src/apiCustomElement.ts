@@ -477,8 +477,14 @@ export class VueElement
       }
     }
 
-    // defining getter/setters on prototype
+    // define getter/setters for declared props
     for (const key of declaredPropKeys.map(camelize)) {
+      if (__DEV__ && key in Object.getPrototypeOf(this)) {
+        warn(
+          `Custom element prop "${key}" conflicts with an existing property ` +
+            `on the element and will overwrite it.`,
+        )
+      }
       Object.defineProperty(this, key, {
         get(this: VueElement) {
           return this._getProp(key)
