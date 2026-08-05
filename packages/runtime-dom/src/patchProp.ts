@@ -5,6 +5,7 @@ import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import {
   camelize,
+  hasOwn,
   isFunction,
   isModelListener,
   isOn,
@@ -40,6 +41,15 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     if (!isModelListener(key)) {
       patchEvent(el, key, prevValue, nextValue, parentComponent)
     }
+  } else if (
+    // Initialize declared Vue CE props through its internal prop state when
+    // direct assignment would hit an inherited property.
+    (el as VueElement)._isVueCE &&
+    camelize(key) in el &&
+    !hasOwn(el, camelize(key)) &&
+    shouldSetAsPropForVueCE(el as VueElement, key)
+  ) {
+    ;(el as VueElement)._setProp(camelize(key), nextValue)
   } else if (
     key[0] === '.'
       ? ((key = key.slice(1)), true)

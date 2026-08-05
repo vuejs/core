@@ -477,19 +477,13 @@ export class VueElement
       }
     }
 
-    // define getter/setters for non-conflicting props
+    // define getter/setters for declared props
     for (const key of declaredPropKeys.map(camelize)) {
-      // Preserve inherited properties from HTMLElement and custom subclasses.
-      // Own properties are values set before upgrade or connection and have
-      // already been copied into _props above.
-      if (!hasOwn(this, key) && key in this) {
-        if (__DEV__) {
-          warn(
-            `Custom element prop "${key}" conflicts with an existing property ` +
-              `on the element and will not be exposed as an element property.`,
-          )
-        }
-        continue
+      if (__DEV__ && !hasOwn(this, key) && key in this) {
+        warn(
+          `Custom element prop "${key}" conflicts with an existing property ` +
+            `on the element and will overwrite it.`,
+        )
       }
       Object.defineProperty(this, key, {
         get(this: VueElement) {

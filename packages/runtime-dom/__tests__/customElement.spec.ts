@@ -2505,10 +2505,10 @@ describe('defineCustomElement', () => {
     container.innerHTML = '<el-attr-tag-name tag-name="foo">'
     const e = container.childNodes[0] as VueElement
     expect(e.shadowRoot!.innerHTML).toBe(`foo`)
-    expect(e.tagName).toBe('EL-ATTR-TAG-NAME')
-    expect(Object.getOwnPropertyDescriptor(e, 'tagName')).toBeUndefined()
+    expect(e.tagName).toBe('foo')
+    expect(Object.getOwnPropertyDescriptor(e, 'tagName')).toBeDefined()
     expect(
-      `[Vue warn]: Custom element prop "tagName" conflicts with an existing property on the element and will not be exposed as an element property.`,
+      `[Vue warn]: Custom element prop "tagName" conflicts with an existing property on the element and will overwrite it.`,
     ).toHaveBeenWarned()
   })
 
@@ -2531,11 +2531,11 @@ describe('defineCustomElement', () => {
     expect(e.shadowRoot!.innerHTML).toBe(`bar`)
     expect(e.id).toBe('bar')
     expect(
-      `[Vue warn]: Custom element prop "id" conflicts with an existing property on the element and will not be exposed as an element property.`,
+      `[Vue warn]: Custom element prop "id" conflicts with an existing property on the element and will overwrite it.`,
     ).toHaveBeenWarned()
   })
 
-  test('prop name conflicts with native method', async () => {
+  test('prop name conflicts with native method', () => {
     const E = defineCustomElement({
       props: {
         hasAttribute: String,
@@ -2549,14 +2549,71 @@ describe('defineCustomElement', () => {
       '<el-attr-has-attribute has-attribute="foo"></el-attr-has-attribute>'
     const e = container.childNodes[0] as VueElement
     expect(e.shadowRoot!.innerHTML).toBe(`foo`)
-    expect(e.hasAttribute('has-attribute')).toBe(true)
-    expect(Object.getOwnPropertyDescriptor(e, 'hasAttribute')).toBeUndefined()
-
-    e.setAttribute('has-attribute', 'bar')
-    await nextTick()
-    expect(e.shadowRoot!.innerHTML).toBe(`bar`)
+    expect((e as any).hasAttribute).toBe('foo')
+    expect(Object.getOwnPropertyDescriptor(e, 'hasAttribute')).toBeDefined()
     expect(
-      `[Vue warn]: Custom element prop "hasAttribute" conflicts with an existing property on the element and will not be exposed as an element property.`,
+      `[Vue warn]: Custom element prop "hasAttribute" conflicts with an existing property on the element and will overwrite it.`,
+    ).toHaveBeenWarned()
+  })
+
+  test('native readonly prop conflict when rendered by Vue', () => {
+    const E = defineCustomElement({
+      props: {
+        tagName: String,
+      },
+      render() {
+        return this.tagName
+      },
+    })
+    customElements.define('el-vue-tag-name', E)
+
+    render(
+      h('el-vue-tag-name', {
+        tagName: 'foo',
+      }),
+      container,
+    )
+
+    const e = container.firstChild as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe('foo')
+    expect(e.getAttribute('tag-name')).toBe('foo')
+    expect(e.tagName).toBe('foo')
+    expect(Object.getOwnPropertyDescriptor(e, 'tagName')).toBeDefined()
+    expect(
+      `[Vue warn]: Custom element prop "tagName" conflicts with an existing property on the element and will overwrite it.`,
+    ).toHaveBeenWarned()
+
+    render(h('el-vue-tag-name', { tagName: 'bar' }), container)
+    expect(e.shadowRoot!.innerHTML).toBe('bar')
+    expect(e.getAttribute('tag-name')).toBe('bar')
+    expect(e.tagName).toBe('bar')
+  })
+
+  test('native method conflict when rendered by Vue', () => {
+    const value = { text: 'foo' }
+    const E = defineCustomElement({
+      props: {
+        hasAttribute: Object,
+      },
+      render() {
+        return this.hasAttribute!.text
+      },
+    })
+    customElements.define('el-vue-has-attribute', E)
+
+    render(
+      h('el-vue-has-attribute', {
+        'has-attribute': value,
+      }),
+      container,
+    )
+
+    const e = container.firstChild as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe('foo')
+    expect((e as any).hasAttribute).toBe(value)
+    expect(Object.getOwnPropertyDescriptor(e, 'hasAttribute')).toBeDefined()
+    expect(
+      `[Vue warn]: Custom element prop "hasAttribute" conflicts with an existing property on the element and will overwrite it.`,
     ).toHaveBeenWarned()
   })
 
