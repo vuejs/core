@@ -167,7 +167,7 @@
 ### Bug Fixes
 
 * **compat:** correctly transform non-identifier expressions in legacy filter syntax ([#10896](https://github.com/vuejs/core/issues/10896)) ([07b3c4b](https://github.com/vuejs/core/commit/07b3c4b7860009e19446f3d78571556c5737d82a)), closes [#10852](https://github.com/vuejs/core/issues/10852)
-* **compat:** ensure proper handling of render fuction from SFC using Vue.extend ([#7781](https://github.com/vuejs/core/issues/7781)) ([c73847f](https://github.com/vuejs/core/commit/c73847f2becc20f03cb9c68748eea92455e688ee)), closes [#7766](https://github.com/vuejs/core/issues/7766)
+* **compat:** ensure proper handling of render function from SFC using Vue.extend ([#7781](https://github.com/vuejs/core/issues/7781)) ([c73847f](https://github.com/vuejs/core/commit/c73847f2becc20f03cb9c68748eea92455e688ee)), closes [#7766](https://github.com/vuejs/core/issues/7766)
 * **compat:** only warn ATTR_FALSE_VALUE when enabled ([04729ba](https://github.com/vuejs/core/commit/04729ba2163d840f0ca7866bc964696eb5557804)), closes [#11126](https://github.com/vuejs/core/issues/11126)
 * **compile-sfc:** register props destructure rest id as setup bindings ([#10888](https://github.com/vuejs/core/issues/10888)) ([b2b5f57](https://github.com/vuejs/core/commit/b2b5f57c2c945edd0eebc1b545ec1b7568e51484)), closes [#10885](https://github.com/vuejs/core/issues/10885)
 * **compile-sfc:** Support project reference with folder,  ([#10908](https://github.com/vuejs/core/issues/10908)) ([bdeac37](https://github.com/vuejs/core/commit/bdeac377c7b85888193b49ac187e927636cc40bc)), closes [#10907](https://github.com/vuejs/core/issues/10907)
@@ -218,7 +218,7 @@
 ### Bug Fixes
 
 * **compat:** include legacy scoped slots ([#10868](https://github.com/vuejs/core/issues/10868)) ([8366126](https://github.com/vuejs/core/commit/83661264a4ced3cb2ff6800904a86dd9e82bbfe2)), closes [#8869](https://github.com/vuejs/core/issues/8869)
-* **compiler-core:** add support for arrow aysnc function with unbracketed ([#5789](https://github.com/vuejs/core/issues/5789)) ([ca7d421](https://github.com/vuejs/core/commit/ca7d421e8775f6813f8943d32ab485e0c542f98b)), closes [#5788](https://github.com/vuejs/core/issues/5788)
+* **compiler-core:** add support for arrow async function with unbracketed ([#5789](https://github.com/vuejs/core/issues/5789)) ([ca7d421](https://github.com/vuejs/core/commit/ca7d421e8775f6813f8943d32ab485e0c542f98b)), closes [#5788](https://github.com/vuejs/core/issues/5788)
 * **compiler-dom:** restrict createStaticVNode usage with option elements ([#10846](https://github.com/vuejs/core/issues/10846)) ([0e3d617](https://github.com/vuejs/core/commit/0e3d6178b02d0386d779720ae2cc4eac1d1ec990)), closes [#6568](https://github.com/vuejs/core/issues/6568) [#7434](https://github.com/vuejs/core/issues/7434)
 * **compiler-sfc:** handle keyof operator ([#10874](https://github.com/vuejs/core/issues/10874)) ([10d34a5](https://github.com/vuejs/core/commit/10d34a5624775f20437ccad074a97270ef74c3fb)), closes [#10871](https://github.com/vuejs/core/issues/10871)
 * **hydration:** handle edge case of style mismatch without style attribute ([f2c1412](https://github.com/vuejs/core/commit/f2c1412e46a8fad3e13403bfa78335c4f704f21c)), closes [#10786](https://github.com/vuejs/core/issues/10786)
@@ -417,7 +417,7 @@
 
 * **compiler-sfc:** fix type resolution for symlinked node_modules structure w/ pnpm ([75e866b](https://github.com/vuejs/core/commit/75e866bd4ef368b4e037a4933dbaf188920dc683)), closes [#10121](https://github.com/vuejs/core/issues/10121)
 * correct url for production error reference links ([c3087ff](https://github.com/vuejs/core/commit/c3087ff2cce7d96c60a870f8233441311ab4dfb4))
-* **hydration:** fix incorect mismatch warning for option with non-string value and inner text ([d16a213](https://github.com/vuejs/core/commit/d16a2138a33b106b9e1499bbb9e1c67790370c97))
+* **hydration:** fix incorrect mismatch warning for option with non-string value and inner text ([d16a213](https://github.com/vuejs/core/commit/d16a2138a33b106b9e1499bbb9e1c67790370c97))
 * **reactivity:** re-fix [#10114](https://github.com/vuejs/core/issues/10114) ([#10123](https://github.com/vuejs/core/issues/10123)) ([c2b274a](https://github.com/vuejs/core/commit/c2b274a887f61deb7e0185d1bef3b77d31e991cc))
 * **runtime-core:** should not warn out-of-render slot fn usage when mounting another app in setup ([#10125](https://github.com/vuejs/core/issues/10125)) ([6fa33e6](https://github.com/vuejs/core/commit/6fa33e67ec42af140a86fbdb86939032c3a1f345)), closes [#10124](https://github.com/vuejs/core/issues/10124)
 

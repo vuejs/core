@@ -139,6 +139,24 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: transform component slots > named slots w/ implicit default slot containing non-breaking space 1`] = `
+"const _Vue = Vue
+
+return function render(_ctx, _cache) {
+  with (_ctx) {
+    const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
+
+    const _component_Comp = _resolveComponent("Comp")
+
+    return (_openBlock(), _createBlock(_component_Comp, null, {
+      one: _withCtx(() => ["foo"]),
+      default: _withCtx(() => ["   "]),
+      _: 1 /* STABLE */
+    }))
+  }
+}"
+`;
+
 exports[`compiler: transform component slots > nested slots scoping 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
@@ -232,6 +250,20 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: transform component slots > with whitespace: 'preserve' > implicit default slot with non-breaking space 1`] = `
+"const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent("Comp")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, {
+    header: _withCtx(() => [" Header "]),
+    default: _withCtx(() => ["\\n         \\n        "]),
+    _: 1 /* STABLE */
+  }))
+}"
+`;
+
 exports[`compiler: transform component slots > with whitespace: 'preserve' > named default slot + implicit whitespace content 1`] = `
 "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
@@ -243,6 +275,54 @@ return function render(_ctx, _cache) {
     default: _withCtx(() => [" Default "]),
     _: 1 /* STABLE */
   }))
+}"
+`;
+
+exports[`compiler: transform component slots > with whitespace: 'preserve' > named slot with v-if + v-else 1`] = `
+"const { resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent("Comp")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
+    ok
+      ? {
+          name: "one",
+          fn: _withCtx(() => ["foo"]),
+          key: "0"
+        }
+      : {
+          name: "two",
+          fn: _withCtx(() => ["baz"]),
+          key: "1"
+        }
+  ]), 1024 /* DYNAMIC_SLOTS */))
+}"
+`;
+
+exports[`compiler: transform component slots > with whitespace: 'preserve' > named slot with v-if + v-else and comments 1`] = `
+"const { createTextVNode: _createTextVNode, createCommentVNode: _createCommentVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent("Comp")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
+    ok
+      ? {
+          name: "one",
+          fn: _withCtx(() => [
+            _createTextVNode("foo")
+          ]),
+          key: "0"
+        }
+      : {
+          name: "two",
+          fn: _withCtx(() => [
+            _createTextVNode("baz")
+          ]),
+          key: "1"
+        }
+  ]), 1024 /* DYNAMIC_SLOTS */))
 }"
 `;
 

@@ -190,7 +190,7 @@ describe('compiler + runtime integration', () => {
     expect('[Vue warn]: invalid template option:').toHaveBeenWarned()
   })
 
-  it('should warn when template is is not found', () => {
+  it('should warn when template is not found', () => {
     const app = createApp({
       template: '#not-exist-id',
     })
@@ -291,6 +291,42 @@ describe('compiler + runtime integration', () => {
     list.push(2)
     await nextTick()
     expect(container.innerHTML).toBe(`<div>2<div>1</div></div>`)
+  })
+
+  test('nullish v-bind on <slot>', async () => {
+    const Child = {
+      props: ['error', 'value'],
+      template:
+        `<div>` +
+        `<template v-if="error">{{ error }}</template>` +
+        `<template v-else><slot v-bind="value" name="scoped">fallback</slot></template>` +
+        `</div>`,
+    }
+
+    const fallbackContainer = document.createElement('div')
+    createApp({
+      components: { Child },
+      template: `<Child :error="null" :value="null"/>`,
+    }).mount(fallbackContainer)
+    expect(fallbackContainer.innerHTML).toBe(`<div>fallback</div>`)
+
+    const value = ref<{ label: string } | null>(null)
+    const container = document.createElement('div')
+    createApp({
+      components: { Child },
+      setup() {
+        return { value }
+      },
+      template:
+        `<Child :error="null" :value="value">` +
+        `<template #scoped="{ label }">{{ label || 'none' }}</template>` +
+        `</Child>`,
+    }).mount(container)
+    expect(container.innerHTML).toBe(`<div>none</div>`)
+
+    value.value = { label: 'foo' }
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>foo</div>`)
   })
 
   // #2413

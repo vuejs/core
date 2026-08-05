@@ -116,6 +116,47 @@ describe('watch', () => {
     ])
   })
 
+  test('call option with async error handling', async () => {
+    const onError = vi.fn()
+    const call: WatchOptions['call'] = function call(fn, type, args) {
+      if (Array.isArray(fn)) {
+        fn.forEach(f => call(f, type, args))
+        return
+      }
+      fn.apply(null, args).catch((error: unknown) => {
+        onError(error)
+      })
+    }
+
+    const source1 = ref(0)
+    watch(
+      source1,
+      async () => {
+        throw 'oops in watch'
+      },
+      { call },
+    )
+
+    source1.value++
+    await nextTick()
+    expect(onError.mock.calls.length).toBe(1)
+    expect(onError.mock.calls[0]).toMatchObject(['oops in watch'])
+
+    const source2 = ref(0)
+    watch(
+      source2,
+      async () => {
+        throw 'oops in once watch'
+      },
+      { call, once: true },
+    )
+
+    source2.value++
+    await nextTick()
+    expect(onError.mock.calls.length).toBe(2)
+    expect(onError.mock.calls[1]).toMatchObject(['oops in once watch'])
+  })
+
   test('watch with onWatcherCleanup', async () => {
     let dummy = 0
     let source: Ref<number>
@@ -276,5 +317,17 @@ describe('watch', () => {
     n1.value++
 
     expect(dummy).toEqual([1, 2, 3])
+  })
+
+  test('watch with immediate reset and sync flush', () => {
+    const value = ref(false)
+
+    watch(value, () => {
+      value.value = false
+    })
+
+    value.value = true
+    value.value = true
+    expect(value.value).toBe(false)
   })
 })

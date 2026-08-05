@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "outDir": "dist",
+    "rootDir": "src",
     "jsx": "preserve",
     "module": "esnext",
     "strict": true,

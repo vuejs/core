@@ -13,6 +13,7 @@ import {
   transformExpression,
   transformOn,
   transformStyle,
+  transformVBindShorthand,
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
@@ -55,6 +56,7 @@ export function compile(
     ...options,
     hoistStatic: false,
     nodeTransforms: [
+      transformVBindShorthand,
       ssrTransformIf,
       ssrTransformFor,
       trackVForSlotScopes,

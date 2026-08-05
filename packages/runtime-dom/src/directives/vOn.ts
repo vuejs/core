@@ -55,6 +55,7 @@ export const withModifiers = <
   fn: T & { _withMods?: { [key: string]: T } },
   modifiers: VOnModifiers[],
 ): T => {
+  if (!fn) return fn
   const cache = fn._withMods || (fn._withMods = {})
   const cacheKey = modifiers.join('.')
   return (
