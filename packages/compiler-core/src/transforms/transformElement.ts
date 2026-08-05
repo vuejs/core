@@ -223,6 +223,8 @@ export const transformElement: NodeTransform = (node, context) => {
       isComponent,
       node.loc,
     ))
+    needsPatch =
+      needsPatch && (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION)
     if (needsPatch) {
       vnodeCall.needsPatch = true
     }
@@ -598,7 +600,13 @@ export function buildProps(
       }
       // inline before-update hooks need to remain blocks so that they are
       // invoked before children
-      if (isVOn && hasChildren && isStaticArgOf(arg, 'vue:before-update')) {
+      if (
+        isVOn &&
+        hasChildren &&
+        arg &&
+        isStaticExp(arg) &&
+        camelize(arg.content) === 'vue:beforeUpdate'
+      ) {
         shouldUseBlock = true
         isBlockRequired = true
       }

@@ -1089,15 +1089,36 @@ describe('compiler: element transform', () => {
     test('preserve block for stable v-for + custom directive with children', () => {
       const { node } = parseWithForTransform(
         `<div v-for="i in 3" v-dir>{{ i }}</div>`,
+        { prefixIdentifiers: true },
       )
       const child = getVForChild(node)
       expect(child.isBlock).toBe(true)
       expect(child.patchFlag).toBe(PatchFlags.TEXT)
     })
 
-    test('preserve block for stable v-for + before-update vnode hook', () => {
+    test.each(['before-update', 'beforeUpdate'])(
+      'preserve block for stable v-for + @vue:%s vnode hook',
+      hook => {
+        const { node } = parseWithForTransform(
+          `<div v-for="i in 3" @vue:${hook}="foo"><span /></div>`,
+          {
+            prefixIdentifiers: true,
+            cacheHandlers: true,
+            directiveTransforms: {
+              bind: transformBind,
+              on: transformOn,
+            },
+          },
+        )
+        const child = getVForChild(node)
+        expect(child.isBlock).toBe(true)
+        expect(child.patchFlag).toBeUndefined()
+      },
+    )
+
+    test('does not add NEED_PATCH when another patch flag tracks the vnode', () => {
       const { node } = parseWithForTransform(
-        `<div v-for="i in 3" @vue:before-update="foo"><span /></div>`,
+        `<div v-for="i in 3" :key="i" @vue:unmounted="foo">{{ i }}</div>`,
         {
           prefixIdentifiers: true,
           cacheHandlers: true,
@@ -1108,8 +1129,8 @@ describe('compiler: element transform', () => {
         },
       )
       const child = getVForChild(node)
-      expect(child.isBlock).toBe(true)
-      expect(child.patchFlag).toBeUndefined()
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.TEXT)
     })
 
     test('script setup inline mode template ref (binding exists)', () => {

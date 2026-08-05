@@ -209,11 +209,8 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           } else {
             helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
             if (childBlock.needsPatch) {
-              childBlock.patchFlag =
-                childBlock.patchFlag === undefined
-                  ? PatchFlags.NEED_PATCH
-                  : ((childBlock.patchFlag |
-                      PatchFlags.NEED_PATCH) as PatchFlags)
+              childBlock.patchFlag = ((childBlock.patchFlag ?? 0) |
+                PatchFlags.NEED_PATCH) as PatchFlags
             }
           }
         }

@@ -409,7 +409,8 @@ describe('compiler + runtime integration', () => {
 
       show.value = false
       await nextTick()
-      expect(values[values.length - 1]).toBeNull()
+      expect(values).toHaveLength(2)
+      expect(values[1]).toBeNull()
 
       app.unmount()
     })
@@ -491,7 +492,7 @@ describe('compiler + runtime integration', () => {
       const app = createApp({
         setup: () => ({ onVnodeBeforeUpdate, value }),
         render: compileToFunction(
-          `<div v-for="i in 1" @vue:before-update="onVnodeBeforeUpdate"><span>{{ value }}</span></div>`,
+          `<div v-for="i in 1" @vue:beforeUpdate="onVnodeBeforeUpdate"><span>{{ value }}</span></div>`,
           { prefixIdentifiers: true },
         ),
       })
