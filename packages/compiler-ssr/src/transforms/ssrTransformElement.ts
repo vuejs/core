@@ -300,6 +300,13 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                         false /* no newline */,
                       ),
                     )
+                  } else if (attrName === 'hidden') {
+                    openTag.push(
+                      createCallExpression(
+                        context.helper(SSR_RENDER_DYNAMIC_ATTR),
+                        [key, value],
+                      ),
+                    )
                   } else if (isSSRSafeAttrName(attrName)) {
                     openTag.push(
                       createCallExpression(context.helper(SSR_RENDER_ATTR), [

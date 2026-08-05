@@ -2487,6 +2487,60 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
 
+    test('hidden enumerated attribute', () => {
+      mountWithHydration(`<div></div>`, () => h('div', { hidden: false }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: true }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () =>
+        h('div', { hidden: 'hidden' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="anything"></div>`, () =>
+        h('div', { hidden: true }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="until-found"></div>`, () =>
+        h('div', { hidden: 'until-found' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="UNTIL-FOUND"></div>`, () =>
+        h('div', { hidden: 'until-found' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('hidden numeric values', () => {
+      mountWithHydration(`<div></div>`, () => h('div', { hidden: 0 }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div></div>`, () => h('div', { hidden: NaN }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: 1 }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="0"></div>`, () =>
+        h('div', { hidden: '0' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('hidden state mismatch', () => {
+      mountWithHydration(`<div hidden="until-found"></div>`, () =>
+        h('div', { hidden: true }),
+      )
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
+
+      mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: 0 }))
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
+    })
+
     test('client value is null or undefined', () => {
       mountWithHydration(`<div></div>`, () =>
         h('div', { draggable: undefined }),

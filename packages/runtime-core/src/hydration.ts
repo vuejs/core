@@ -882,7 +882,10 @@ function propHasMismatch(
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
-    if (isBooleanAttr(key)) {
+    if (key === 'hidden') {
+      actual = normalizeHiddenValue(el.getAttribute(key))
+      expected = normalizeHiddenValue(clientValue)
+    } else if (isBooleanAttr(key)) {
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
     } else if (clientValue == null) {
@@ -927,6 +930,18 @@ function propHasMismatch(
     return true
   }
   return false
+}
+
+function normalizeHiddenValue(value: unknown): false | '' | 'until-found' {
+  if (!isRenderableAttrValue(value)) {
+    return false
+  }
+  if (isString(value)) {
+    // Attribute values from the DOM are strings, while numeric client values
+    // follow the `hidden` property setter, where 0 and NaN remove the attribute.
+    return value.toLowerCase() === 'until-found' ? 'until-found' : ''
+  }
+  return includeBooleanAttr(value) ? '' : false
 }
 
 function toClassSet(str: string): Set<string> {
