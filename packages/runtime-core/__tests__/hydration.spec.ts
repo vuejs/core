@@ -1692,6 +1692,24 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any)._trueValue).toBe(true)
   })
 
+  test('preserves text entered before v-model hydration', async () => {
+    const state = reactive({ text: 'server value' })
+    const App = {
+      setup: () => state,
+      template: `<input v-model="text">`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const input = container.firstChild as HTMLInputElement
+    input.value = 'user value'
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(input.value).toBe('user value')
+    expect(state.text).toBe('user value')
+  })
+
   test('force hydrate checkbox with indeterminate', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" indeterminate>',
