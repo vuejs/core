@@ -1,5 +1,19 @@
+import { BindingTypes, type CompilerOptions } from '@vue/compiler-core'
+import { compile } from '@vue/compiler-dom'
 import { EMPTY_ARR } from '@vue/shared'
-import { createApp, nextTick, reactive, ref } from '../src'
+import { type VNode, createApp, nextTick, reactive, ref } from '../src'
+import * as Vue from '../src'
+import type { InternalRenderFunction } from '../../runtime-core/src/component'
+
+function compileToFunction(template: string, options?: CompilerOptions) {
+  const { code } = compile(template, {
+    hoistStatic: true,
+    ...options,
+  })
+  const render = new Function('Vue', code)(Vue) as InternalRenderFunction
+  render._rc = true
+  return render
+}
 
 describe('compiler + runtime integration', () => {
   it('should support runtime template compilation', () => {
@@ -346,5 +360,150 @@ describe('compiler + runtime integration', () => {
     const root = document.createElement('div')
     app.mount(root)
     expect(root.innerHTML).toBe('<div>60000000100000111</div>')
+  })
+
+  describe('stable v-for lifecycle', () => {
+    test('clears static ref arrays on branch removal', async () => {
+      const show = ref(true)
+      const items = ref<HTMLElement[]>([])
+      const app = createApp({
+        setup: () => ({ items, show }),
+        render: compileToFunction(
+          `<template v-if="show"><div v-for="i in 3" :key="i" ref="items" /></template>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      expect(items.value).toHaveLength(3)
+
+      show.value = false
+      await nextTick()
+      expect(items.value).toHaveLength(0)
+
+      app.unmount()
+    })
+
+    test('calls setup-const function refs with null on branch removal', async () => {
+      const show = ref(true)
+      const values: (Element | null)[] = []
+      const setRef = (value: Element | null) => values.push(value)
+      const app = createApp({
+        setup: () => ({ setRef, show }),
+        render: compileToFunction(
+          `<template v-if="show"><div v-for="i in 1" :ref="setRef" /></template>`,
+          {
+            prefixIdentifiers: true,
+            bindingMetadata: {
+              setRef: BindingTypes.SETUP_CONST,
+            },
+          },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      expect(values).toHaveLength(1)
+      expect(values[0]).toBeInstanceOf(HTMLDivElement)
+
+      show.value = false
+      await nextTick()
+      expect(values).toHaveLength(2)
+      expect(values[1]).toBeNull()
+
+      app.unmount()
+    })
+
+    test('calls directive unmounted hooks on branch removal', async () => {
+      const show = ref(true)
+      const unmounted = vi.fn()
+      const app = createApp({
+        directives: { dir: { unmounted } },
+        setup: () => ({ show }),
+        render: compileToFunction(
+          `<template v-if="show"><div v-for="i in 1" v-dir /></template>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      show.value = false
+      await nextTick()
+      expect(unmounted).toHaveBeenCalledOnce()
+
+      app.unmount()
+    })
+
+    test('calls vnode unmounted hooks on branch removal', async () => {
+      const show = ref(true)
+      const onVnodeUnmounted = vi.fn()
+      const app = createApp({
+        setup: () => ({ onVnodeUnmounted, show }),
+        render: compileToFunction(
+          `<template v-if="show"><div v-for="i in 1" @vue:unmounted="onVnodeUnmounted" /></template>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      show.value = false
+      await nextTick()
+      expect(onVnodeUnmounted).toHaveBeenCalledOnce()
+
+      app.unmount()
+    })
+
+    test('runs directive beforeUpdate before child updates', async () => {
+      const value = ref('old')
+      const observed: string[] = []
+      const app = createApp({
+        directives: {
+          dir: {
+            beforeUpdate(el: HTMLElement) {
+              observed.push(el.textContent!)
+            },
+          },
+        },
+        setup: () => ({ value }),
+        render: compileToFunction(
+          `<div v-for="i in 1" v-dir>{{ value }}</div>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      value.value = 'new'
+      await nextTick()
+      expect(observed).toEqual(['old'])
+
+      app.unmount()
+    })
+
+    test('runs vnode beforeUpdate before nested child updates', async () => {
+      const value = ref('old')
+      const observed: string[] = []
+      const onVnodeBeforeUpdate = (vnode: VNode) => {
+        observed.push((vnode.el as HTMLElement).textContent!)
+      }
+      const app = createApp({
+        setup: () => ({ onVnodeBeforeUpdate, value }),
+        render: compileToFunction(
+          `<div v-for="i in 1" @vue:beforeUpdate="onVnodeBeforeUpdate"><span>{{ value }}</span></div>`,
+          { prefixIdentifiers: true },
+        ),
+      })
+      const container = document.createElement('div')
+
+      app.mount(container)
+      value.value = 'new'
+      await nextTick()
+      expect(observed).toEqual(['old'])
+
+      app.unmount()
+    })
   })
 })
