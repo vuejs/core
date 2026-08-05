@@ -19,12 +19,14 @@ import {
   defineAsyncComponent,
   defineComponent,
   h,
+  hydrateOnVisible,
   nextTick,
   onMounted,
   onServerPrefetch,
   openBlock,
   reactive,
   ref,
+  registerRuntimeCompiler,
   renderSlot,
   useCssVars,
   vModelCheckbox,
@@ -32,13 +34,28 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
+import * as runtimeDom from '@vue/runtime-dom'
 import type { HMRRuntime } from '../src/hmr'
+import type { InternalRenderFunction } from '../src/component'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
+import { type CompilerOptions, compile } from '@vue/compiler-dom'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
 import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
 declare var __VUE_HMR_RUNTIME__: HMRRuntime
 const { createRecord, reload } = __VUE_HMR_RUNTIME__
+
+registerRuntimeCompiler(compileToFunction)
+
+function compileToFunction(template: string, options?: CompilerOptions) {
+  const { code } = compile(
+    template,
+    Object.assign({ hoistStatic: true }, options),
+  )
+  const render = new Function('Vue', code)(runtimeDom) as InternalRenderFunction
+  render._rc = true
+  return render
+}
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1175,6 +1192,59 @@ describe('SSR hydration', () => {
     expect(spy).toHaveBeenCalled()
   })
 
+  // #15091
+  async function assertSkipLazyHydration(detached: 'root' | 'ancestor') {
+    let observer!: IntersectionObserver
+    let observerCallback!: IntersectionObserverCallback
+    const originalIntersectionObserver = globalThis.IntersectionObserver
+    globalThis.IntersectionObserver = class {
+      constructor(callback: IntersectionObserverCallback) {
+        observer = this as any
+        observerCallback = callback
+      }
+      disconnect() {}
+      observe() {}
+    } as any
+
+    try {
+      const Comp = vi.fn(() => h('p', 'hello'))
+      const AsyncComp = defineAsyncComponent({
+        loader: () => Promise.resolve(Comp),
+        hydrate: hydrateOnVisible(),
+      })
+      const App = () => h(AsyncComp)
+      const container = document.createElement('div')
+
+      container.innerHTML = await renderToString(h(App))
+      document.body.appendChild(container)
+      Comp.mockClear()
+      createSSRApp(App).mount(container)
+
+      const el = container.firstElementChild!
+      if (detached === 'root') {
+        el.remove()
+      } else {
+        container.remove()
+      }
+      expect(el.isConnected).toBe(false)
+
+      expect(() =>
+        observerCallback(
+          [{ isIntersecting: true, target: el } as IntersectionObserverEntry],
+          observer,
+        ),
+      ).not.toThrow()
+      expect(Comp).not.toHaveBeenCalled()
+    } finally {
+      globalThis.IntersectionObserver = originalIntersectionObserver
+    }
+  }
+
+  test.each(['root', 'ancestor'] as const)(
+    'skip lazy hydration when the SSR %s is detached',
+    assertSkipLazyHydration,
+  )
+
   test('update async wrapper before resolve', async () => {
     const Comp = {
       render() {
@@ -1620,6 +1690,24 @@ describe('SSR hydration', () => {
         ),
     )
     expect((container.firstChild as any)._trueValue).toBe(true)
+  })
+
+  test('preserves text entered before v-model hydration', async () => {
+    const state = reactive({ text: 'server value' })
+    const App = {
+      setup: () => state,
+      template: `<input v-model="text">`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const input = container.firstChild as HTMLInputElement
+    input.value = 'user value'
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(input.value).toBe('user value')
+    expect(state.text).toBe('user value')
   })
 
   test('force hydrate checkbox with indeterminate', () => {
@@ -2143,6 +2231,53 @@ describe('SSR hydration', () => {
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
 
+    test('children mismatch is checked once when removing excess nodes', () => {
+      const hasAttribute = vi.spyOn(Element.prototype, 'hasAttribute')
+
+      try {
+        const { container } = mountWithHydration(
+          `<div><span>foo</span><span>bar</span><span>baz</span></div>`,
+          () => h('div', [h('span', 'foo')]),
+        )
+        const el = container.firstChild as Element
+        const allowMismatchCheckCount = hasAttribute.mock.calls.filter(
+          ([key], i) =>
+            key === 'data-allow-mismatch' &&
+            hasAttribute.mock.contexts[i] === el,
+        ).length
+
+        expect(container.innerHTML).toBe('<div><span>foo</span></div>')
+        expect(`Hydration children mismatch`).toHaveBeenWarnedTimes(1)
+        expect(allowMismatchCheckCount).toBe(1)
+      } finally {
+        hasAttribute.mockRestore()
+      }
+    })
+
+    test('children mismatch is checked once when mounting missing nodes', () => {
+      const hasAttribute = vi.spyOn(Element.prototype, 'hasAttribute')
+
+      try {
+        const { container } = mountWithHydration(`<div></div>`, () =>
+          h('div', [h('span', 'foo'), h('span', 'bar'), h('span', 'baz')]),
+        )
+        const el = container.firstChild as Element
+        const allowMismatchCheckCount = hasAttribute.mock.calls.filter(
+          ([key], i) =>
+            key === 'data-allow-mismatch' &&
+            hasAttribute.mock.contexts[i] === el,
+        ).length
+
+        expect(container.innerHTML).toBe(
+          '<div><span>foo</span><span>bar</span><span>baz</span></div>',
+        )
+        expect(`Hydration children mismatch`).toHaveBeenWarnedTimes(1)
+        expect(allowMismatchCheckCount).toBe(1)
+      } finally {
+        hasAttribute.mockRestore()
+      }
+    })
+
     test('complete mismatch', () => {
       const { container } = mountWithHydration(
         `<div><span>foo</span><span>bar</span></div>`,
@@ -2607,6 +2742,46 @@ describe('SSR hydration', () => {
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     })
 
+    test('comment mismatch (v-if)', () => {
+      const { container } = mountWithHydration(`<!--v-if-->`, () =>
+        h('div', { 'data-allow-mismatch': '' }, [h('span', 'value')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch=""><span>value</span></div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('comment mismatch (v-if branch removed)', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch=""><span>value</span></div>`,
+        () => createCommentVNode('v-if', true),
+      )
+      expect(container.innerHTML).toBe('<!--v-if-->')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('node mismatch (v-else branches)', () => {
+      const { container } = mountWithHydration(
+        `<span data-allow-mismatch="">server</span>`,
+        () => h('div', { 'data-allow-mismatch': '' }, 'client'),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="">client</div>',
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('comment mismatch (v-if) only allows children mismatches', () => {
+      const { container } = mountWithHydration(`<!--v-if-->`, () =>
+        h('div', { 'data-allow-mismatch': 'class' }, [h('span', 'value')]),
+      )
+      expect(container.innerHTML).toBe(
+        '<div data-allow-mismatch="class"><span>value</span></div>',
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
     test('comment mismatch (text)', () => {
       const { container } = mountWithHydration(
         `<div data-allow-mismatch="children">foobar</div>`,
@@ -2643,6 +2818,163 @@ describe('SSR hydration', () => {
         () => h('div', { id: 'foo' }),
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #9033
+    test('force patch dynamic props when hydrating', () => {
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<div><div>server</div></div>`,
+          () => (
+            openBlock(),
+            createElementBlock('div', null, [
+              createElementVNode(
+                'div',
+                { innerHTML: 'client' },
+                null,
+                PatchFlags.PROPS,
+                ['innerHTML'],
+              ),
+            ])
+          ),
+        )
+        expect(container.innerHTML).toBe(`<div><div>client</div></div>`)
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('does not re-write unchanged resource props when hydrating', () => {
+      __DEV__ = false
+      try {
+        const container = document.createElement('div')
+        container.innerHTML = `<img src="/foo.png">`
+        const el = container.firstChild as HTMLImageElement
+        const setSrc = vi.fn()
+        Object.defineProperty(el, 'src', {
+          configurable: true,
+          get: () => el.getAttribute('src'),
+          set: setSrc,
+        })
+        createSSRApp({
+          render: () =>
+            createElementVNode(
+              'img',
+              { src: '/foo.png' },
+              null,
+              PatchFlags.PROPS,
+              ['src'],
+            ),
+        }).mount(container)
+        expect(setSrc).not.toHaveBeenCalled()
+        expect(el.getAttribute('src')).toBe('/foo.png')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('still patches resource props when server and client values differ', () => {
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<img src="/server.png">`,
+          () =>
+            createElementVNode(
+              'img',
+              { src: '/client.png' },
+              null,
+              PatchFlags.PROPS,
+              ['src'],
+            ),
+        )
+        const el = container.firstChild as HTMLImageElement
+        expect(el.getAttribute('src')).toBe('/client.png')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('force patch svg dynamic props with correct namespace when hydrating', () => {
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<svg width="24" height="24" viewBox="0 0 24 24"></svg>`,
+          () =>
+            createElementVNode(
+              'svg',
+              { width: 48, height: 48, viewBox: '0 0 48 48' },
+              null,
+              PatchFlags.PROPS,
+              ['width', 'height', 'viewBox'],
+            ),
+        )
+        const el = container.firstChild as Element
+        expect(el.namespaceURI).toContain('svg')
+        expect(el.getAttribute('width')).toBe('48')
+        expect(el.getAttribute('height')).toBe('48')
+        expect(el.getAttribute('viewBox')).toBe('0 0 48 48')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('force patch foreignObject dynamic props with correct namespace when hydrating', () => {
+      __DEV__ = false
+      try {
+        const container = document.createElement('div')
+        container.innerHTML =
+          '<svg><foreignObject width="24"></foreignObject></svg>'
+        const el = container.querySelector('foreignObject')!
+        expect(el.namespaceURI).toContain('svg')
+        // jsdom doesn't implement SVGForeignObjectElement.width.
+        Object.defineProperty(el, 'width', {
+          configurable: true,
+          get: () => 24,
+        })
+
+        createSSRApp({
+          render: () => (
+            openBlock(),
+            createElementBlock('svg', null, [
+              (openBlock(),
+              createElementBlock(
+                'foreignObject',
+                { width: 48 },
+                null,
+                PatchFlags.PROPS,
+                ['width'],
+              )),
+            ])
+          ),
+        }).mount(container)
+
+        expect(el.getAttribute('width')).toBe('48')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('only patches declared dynamic props when hydrating', () => {
+      const { container } = mountWithHydration(
+        `<div data-allow-mismatch="attribute" id="server" value="server"></div>`,
+        () =>
+          createVNode(
+            'div',
+            {
+              'data-allow-mismatch': 'attribute',
+              id: 'client',
+              value: 'client',
+            },
+            null,
+            PatchFlags.PROPS,
+            ['id'],
+          ),
+      )
+      const el = container.firstChild as Element
+
+      expect(el.getAttribute('id')).toBe('client')
+      expect(el.getAttribute('value')).toBe('server')
     })
   })
 })

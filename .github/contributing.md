@@ -89,7 +89,7 @@ $ pnpm i # install the dependencies of the project
 A high level overview of tools used:
 
 - [TypeScript](https://www.typescriptlang.org/) as the development language
-- [Vite](https://vitejs.dev/) and [ESBuild](https://esbuild.github.io/) for development bundling
+- [Vite](https://vite.dev/) and [ESBuild](https://esbuild.github.io/) for development bundling
 - [Rollup](https://rollupjs.org) for production bundling
 - [Vitest](https://vitest.dev/) for unit testing
 - [Prettier](https://prettier.io/) for code formatting

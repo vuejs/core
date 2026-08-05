@@ -97,8 +97,7 @@ export type SimpleTypeResolveContext = Pick<
   }
 
 export type TypeResolveContext = (
-  | ScriptCompileContext
-  | SimpleTypeResolveContext
+  ScriptCompileContext | SimpleTypeResolveContext
 ) & {
   silentOnExtendsFailure?: boolean
 }
@@ -191,10 +190,23 @@ function innerResolveTypeElements(
   scope: TypeScope,
   typeParameters?: Record<string, Node>,
 ): ResolvedElements {
-  if (
-    node.leadingComments &&
-    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
-  ) {
+  if (hasVueIgnore(node)) {
+    if (
+      (node.type === 'TSIntersectionType' || node.type === 'TSUnionType') &&
+      node.types.length > 1
+    ) {
+      // Babel attaches comments before the first member to the parent node.
+      // Treat them as applying to the first member only.
+      return mergeElements(
+        [
+          { props: {} },
+          ...node.types
+            .slice(1)
+            .map(t => resolveTypeElements(ctx, t, scope, typeParameters)),
+        ],
+        node.type,
+      )
+    }
     return { props: {} }
   }
   switch (node.type) {
@@ -377,6 +389,13 @@ function typeElementsToMap(
     }
   }
   return res
+}
+
+function hasVueIgnore(node: Node): boolean {
+  return !!(
+    node.leadingComments &&
+    node.leadingComments.some(c => c.value.includes('@vue-ignore'))
+  )
 }
 
 function mergeElements(
@@ -741,10 +760,7 @@ function resolveBuiltin(
 }
 
 type ReferenceTypes =
-  | TSTypeReference
-  | TSExpressionWithTypeArguments
-  | TSImportType
-  | TSTypeQuery
+  TSTypeReference | TSExpressionWithTypeArguments | TSImportType | TSTypeQuery
 
 function resolveTypeReference(
   ctx: TypeResolveContext,
@@ -1193,7 +1209,12 @@ function loadTSConfig(
   return res
 }
 
+// `recordTypes` records different members onto the TypeScope depending on
+// `asGlobal`, so the two contexts must not share a cache entry — otherwise a
+// global-scope load can poison a later import-based resolution of the same
+// file.
 const fileToScopeCache = createCache<TypeScope>()
+const fileToGlobalScopeCache = createCache<TypeScope>()
 
 /**
  * @private
@@ -1201,6 +1222,7 @@ const fileToScopeCache = createCache<TypeScope>()
 export function invalidateTypeCache(filename: string): void {
   filename = normalizePath(filename)
   fileToScopeCache.delete(filename)
+  fileToGlobalScopeCache.delete(filename)
   tsConfigCache.delete(filename)
   const affectedConfig = tsConfigRefMap.get(filename)
   if (affectedConfig) tsConfigCache.delete(affectedConfig)
@@ -1211,7 +1233,8 @@ export function fileToScope(
   filename: string,
   asGlobal = false,
 ): TypeScope {
-  const cached = fileToScopeCache.get(filename)
+  const cache = asGlobal ? fileToGlobalScopeCache : fileToScopeCache
+  const cached = cache.get(filename)
   if (cached) {
     return cached
   }
@@ -1221,7 +1244,7 @@ export function fileToScope(
   const body = parseFile(filename, source, fs, ctx.options.babelParserPlugins)
   const scope = new TypeScope(filename, source, 0, recordImports(body))
   recordTypes(ctx, body, scope, asGlobal)
-  fileToScopeCache.set(filename, scope)
+  cache.set(filename, scope)
   return scope
 }
 

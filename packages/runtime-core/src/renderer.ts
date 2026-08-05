@@ -855,8 +855,15 @@ function baseCreateRenderer(
     }
     parentComponent && toggleRecurse(parentComponent, true)
 
-    if (__DEV__ && isHmrUpdating) {
+    if (
       // HMR updated, force full diff
+      (__DEV__ && isHmrUpdating) ||
+      // #6385 the old vnode may be a user-wrapped non-isomorphic block
+      // Force full diff when block metadata is unstable.
+      (dynamicChildren &&
+        (!n1.dynamicChildren ||
+          n1.dynamicChildren.length !== dynamicChildren.length))
+    ) {
       patchFlag = 0
       optimized = false
       dynamicChildren = null
@@ -2082,9 +2089,16 @@ function baseCreateRenderer(
       transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
-        transition!.beforeEnter(el!)
-        hostInsert(el!, container, anchor)
-        queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        // #14031 if there is no pending v-show leave, the persisted
+        // transition lifecycle is directive-owned, so activating a kept-alive
+        // node only relocates it.
+        if (transition!.persisted && !el![leaveCbKey]) {
+          hostInsert(el!, container, anchor)
+        } else {
+          transition!.beforeEnter(el!)
+          hostInsert(el!, container, anchor)
+          queuePostRenderEffect(() => transition!.enter(el!), parentSuspense)
+        }
       } else {
         const { leave, delayLeave, afterLeave } = transition!
         const remove = () => {
@@ -2098,13 +2112,20 @@ function baseCreateRenderer(
           // #13153 move kept-alive node before v-show transition leave finishes
           // it needs to call the leaving callback to ensure element's `display`
           // is `none`
+          const wasLeaving = el!._isLeaving || !!el![leaveCbKey]
           if (el!._isLeaving) {
             el![leaveCbKey](true /* cancelled */)
           }
-          leave(el!, () => {
+          // #14031 without a pending leave, persisted transitions should skip
+          // directive-owned leave hooks and just relocate.
+          if (transition!.persisted && !wasLeaving) {
             remove()
-            afterLeave && afterLeave()
-          })
+          } else {
+            leave(el!, () => {
+              remove()
+              afterLeave && afterLeave()
+            })
+          }
         }
         if (delayLeave) {
           delayLeave(el!, remove, performLeave)

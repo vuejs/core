@@ -1317,6 +1317,54 @@ describe('vModel', () => {
     expect(bar.selected).toEqual(true)
   })
 
+  it('multiple select uses current Array/Set model type', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: [] }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this),
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    data.value = new Set(['foo'])
+    await nextTick()
+    foo.selected = true
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toBeInstanceOf(Set)
+    expect(data.value).toMatchObject(new Set(['foo', 'bar']))
+
+    data.value = ['foo']
+    await nextTick()
+    foo.selected = false
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+    expect(Array.isArray(data.value)).toBe(true)
+    expect(data.value).toMatchObject(['bar'])
+  })
+
   it('multiple select (model is Set, option value is object)', async () => {
     const fooValue = { foo: 1 }
     const barValue = { bar: 1 }

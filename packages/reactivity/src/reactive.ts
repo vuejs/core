@@ -55,12 +55,6 @@ function targetTypeMap(rawType: string) {
   }
 }
 
-function getTargetType(value: Target) {
-  return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
-    ? TargetType.INVALID
-    : targetTypeMap(toRawType(value))
-}
-
 // only unwrap nested ref
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
@@ -291,14 +285,17 @@ function createReactiveObject(
     return target
   }
   // only specific value types can be observed.
-  const targetType = getTargetType(target)
-  if (targetType === TargetType.INVALID) {
+  if (target[ReactiveFlags.SKIP] || !Object.isExtensible(target)) {
     return target
   }
   // target already has corresponding Proxy
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
     return existingProxy
+  }
+  const targetType = targetTypeMap(toRawType(target))
+  if (targetType === TargetType.INVALID) {
+    return target
   }
   const proxy = new Proxy(
     target,

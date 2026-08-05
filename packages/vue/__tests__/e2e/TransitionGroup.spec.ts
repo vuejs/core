@@ -1,13 +1,10 @@
-import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
-import path from 'node:path'
-import { createApp, ref } from 'vue'
+import { E2E_TIMEOUT, setupBrowserE2E } from './e2eBrowserUtils'
 
 describe('e2e: TransitionGroup', () => {
-  const { page, html, nextFrame, timeout } = setupPuppeteer()
-  const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
+  const { page, reset, html, nextFrame, timeout } = setupBrowserE2E()
 
-  const duration = process.env.CI ? 200 : 50
-  const buffer = process.env.CI ? 20 : 5
+  const duration = 50
+  const buffer = 20
 
   const htmlWhenTransitionStart = () =>
     page().evaluate(() => {
@@ -20,7 +17,7 @@ describe('e2e: TransitionGroup', () => {
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
   beforeEach(async () => {
-    await page().goto(baseUrl)
+    await reset()
     await page().waitForSelector('#app')
   })
 
@@ -293,6 +290,98 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test">b</div>` +
           `<div class="test" style="">a</div>`,
       )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'v-show enter does not also run move transition',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <transition-group name="show-group" tag="div" id="showGroup">
+                <div
+                  v-for="item in items"
+                  :key="item"
+                  :id="\`show-\${item}\`"
+                  v-show="visibleItems.includes(item)"
+                  class="show-item"
+                >
+                  {{ item }}
+                </div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const visibleItems = ref(['a', 'c'])
+            const click = () => (visibleItems.value = ['a', 'b', 'c'])
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                #showGroup {
+                  display: flex;
+                  gap: 5px;
+                }
+                #showGroup > .show-item {
+                  width: 100px;
+                  height: 20px;
+                }
+                .show-group-enter-active,
+                .show-group-move {
+                  transition: transform ${duration}ms ease;
+                }
+                .show-group-enter-from {
+                  transform: translateX(1000px);
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+
+            return { click, items, visibleItems }
+          },
+        }).mount('#app')
+      }, duration)
+
+      const duringTransition = await page().evaluate(() => {
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return Promise.resolve().then(() =>
+          Array.from(document.querySelectorAll('.show-item')).map(node => ({
+            text: node.textContent!.trim(),
+            classes: Array.from(node.classList),
+            inlineTransform: (node as HTMLElement).style.transform,
+          })),
+        )
+      })
+
+      expect(duringTransition).toStrictEqual([
+        {
+          text: 'a',
+          classes: ['show-item'],
+          inlineTransform: '',
+        },
+        {
+          text: 'b',
+          classes: [
+            'show-item',
+            'show-group-enter-from',
+            'show-group-enter-active',
+          ],
+          inlineTransform: '',
+        },
+        {
+          text: 'c',
+          classes: ['show-item', 'show-group-move'],
+          inlineTransform: '',
+        },
+      ])
+
+      await transitionFinish()
     },
     E2E_TIMEOUT,
   )
@@ -586,6 +675,7 @@ describe('e2e: TransitionGroup', () => {
   )
 
   test('warn unkeyed children', () => {
+    const { createApp, ref } = (window as any).Vue
     createApp({
       template: `
         <transition-group name="test">
@@ -602,6 +692,7 @@ describe('e2e: TransitionGroup', () => {
   })
 
   test('not warn unkeyed text children w/ whitespace preserve', () => {
+    const { createApp } = (window as any).Vue
     const app = createApp({
       template: `
         <transition-group name="test">
@@ -696,8 +787,8 @@ describe('e2e: TransitionGroup', () => {
           template: `
             <div id="container">
               <transition-group name="test">
-                <div class="test">foo</div>
-                <div class="test" v-if="show">bar</div>
+                <div key="1" class="test">foo</div>
+                <div key="2" class="test" v-if="show">bar</div>
               </transition-group>
             </div>
             <button id="toggleBtn" @click="click">button</button>

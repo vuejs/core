@@ -442,6 +442,90 @@ describe('api: defineAsyncComponent', () => {
     expect(serializeInner(root)).toBe('resolved')
   })
 
+  test('should not call errorHandler after unmount (timeout)', async () => {
+    const Foo = defineAsyncComponent({
+      loader: () => new Promise(() => {}),
+      timeout: 50,
+    })
+
+    const show = ref(true)
+    const root = nodeOps.createElement('div')
+    const handler = vi.fn()
+    const app = createApp({
+      render: () => (show.value ? h(Foo) : null),
+    })
+    app.config.errorHandler = handler
+    app.mount(root)
+
+    show.value = false
+    await nextTick()
+
+    await timeout(60)
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  test('should not call errorHandler after unmount (loader error)', async () => {
+    const Foo = defineAsyncComponent({
+      loader: () => Promise.reject(new Error('load failed')),
+    })
+
+    const show = ref(true)
+    const root = nodeOps.createElement('div')
+    const handler = vi.fn()
+    const app = createApp({
+      render: () => (show.value ? h(Foo) : null),
+    })
+    app.config.errorHandler = handler
+    app.mount(root)
+
+    show.value = false
+    await nextTick()
+
+    await timeout()
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  test('should retry loader after rejected loader is ignored after unmount', async () => {
+    let reject!: (err: Error) => void
+    let resolve!: (comp: Component) => void
+
+    const loader = vi.fn(
+      () =>
+        new Promise<Component>((_resolve, _reject) => {
+          resolve = _resolve
+          reject = _reject
+        }),
+    )
+
+    const Foo = defineAsyncComponent({ loader })
+    const show = ref(true)
+    const root = nodeOps.createElement('div')
+    const handler = vi.fn()
+
+    const app = createApp({
+      render: () => (show.value ? h(Foo) : null),
+    })
+    app.config.errorHandler = handler
+    app.mount(root)
+
+    show.value = false
+    await nextTick()
+
+    reject(new Error('load failed'))
+    await timeout()
+
+    expect(handler).not.toHaveBeenCalled()
+
+    show.value = true
+    await nextTick()
+
+    expect(loader).toHaveBeenCalledTimes(2)
+
+    resolve!(() => 'resolved')
+    await timeout()
+    expect(serializeInner(root)).toBe('resolved')
+  })
+
   test('with suspense', async () => {
     let resolve: (comp: Component) => void
     const Foo = defineAsyncComponent(

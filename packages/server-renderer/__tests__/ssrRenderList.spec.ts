@@ -65,6 +65,45 @@ describe('ssr: renderList', () => {
     expect(stack).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
+  it('should render items in a Set', () => {
+    ssrRenderList(new Set(['a', 'b', 'c']), (item, index) =>
+      stack.push(`node ${index}: ${item}`),
+    )
+    expect(stack).toEqual(['node 0: a', 'node 1: b', 'node 2: c'])
+  })
+
+  it('should render items in a Map', () => {
+    const map = new Map<string, number>([
+      ['x', 1],
+      ['y', 2],
+    ])
+    ssrRenderList(map, (item, index) =>
+      stack.push(`node ${index}: ${(item as [string, number]).join('=')}`),
+    )
+    expect(stack).toEqual(['node 0: x=1', 'node 1: y=2'])
+  })
+
+  it('should iterate iterables lazily without intermediate allocation', () => {
+    const yielded: number[] = []
+    const rendered: number[] = []
+
+    function* gen() {
+      for (let i = 0; i < 3; i++) {
+        yielded.push(i)
+        yield i
+      }
+    }
+
+    ssrRenderList(gen(), (item, index) => {
+      rendered.push(item as number)
+      // each item should be yielded by the time it is rendered
+      expect(yielded.length).toBe(rendered.length)
+    })
+
+    expect(yielded).toEqual([0, 1, 2])
+    expect(rendered).toEqual([0, 1, 2])
+  })
+
   it('should not render items when source is 0', () => {
     ssrRenderList(0, (item, index) => stack.push(`node ${index}: ${item}`))
     expect(stack).toEqual([])
