@@ -17,7 +17,7 @@ export interface SimpleReadable {
   push(chunk: string | null): void
   /**
    Call destroy when an error occurred
-   @param error - error that happened. Typed as unknown.
+   @param error - error that happened. Typed as any.
    */
   destroy(error: any): void
 }
@@ -211,8 +211,9 @@ export function pipeToWebWritable(
     destroy(err) {
       console.error('Error while destroying stream: ', err)
 
-      // ignore: handling error already
-      writer.abort(err).catch(_ => {})
+      writer.abort(err).catch(_ => {
+        // ignore: handling error already
+      })
     },
   })
 }
