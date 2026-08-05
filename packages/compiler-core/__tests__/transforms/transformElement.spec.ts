@@ -74,6 +74,12 @@ function parseWithBind(template: string, options?: CompilerOptions) {
   })
 }
 
+function getVForChild(
+  node: ReturnType<typeof parseWithForTransform>['node'],
+): VNodeCall {
+  return node.codegenNode.children.arguments[1].returns as VNodeCall
+}
+
 describe('compiler: element transform', () => {
   test('import + resolve component', () => {
     const { root } = parseWithElementTransform(`<Foo/>`)
@@ -1028,44 +1034,82 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
-    test('NEED_PATCH (vFor + static ref)', () => {
-      const { node } = parseWithBind(
-        `<div v-for="item in arr" :key="item" ref="foo" />`,
+    test('NEED_PATCH (stable v-for + static ref)', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" ref="foo" />`,
+        { prefixIdentifiers: true },
       )
-      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
-    test('NEED_PATCH (vFor + custom directives)', () => {
-      const { node } = parseWithBind(
-        `<div v-for="item in arr" :key="item" v-dir />`,
+    test('NEED_PATCH (stable v-for + custom directives)', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" v-dir />`,
+        { prefixIdentifiers: true },
       )
-      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
-    test('NEED_PATCH (vFor + vnode hooks)', () => {
-      const root = baseCompile(
-        `<div v-for="item in arr" :key="item" @vue:updated="foo" />`,
+    test('NEED_PATCH (stable v-for + vnode hooks)', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" @vue:unmounted="foo" />`,
         {
           prefixIdentifiers: true,
           cacheHandlers: true,
+          directiveTransforms: {
+            bind: transformBind,
+            on: transformOn,
+          },
         },
-      ).ast
-      const node = (root as any).children[0].children[0].codegenNode
-      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.NEED_PATCH)
     })
 
-    test('NEED_PATCH (vFor + setRef function)', () => {
-      const root = baseCompile(
-        `<div v-for="item in arr" :key="item" :ref="setRefFn" />`,
+    test('NEED_PATCH (stable v-for + setup-const function ref)', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" :key="i" :ref="setRefFn" />`,
         {
           prefixIdentifiers: true,
           bindingMetadata: {
             setRefFn: BindingTypes.SETUP_CONST,
           },
         },
-      ).ast
-      const node = (root as any).children[0].children[0].codegenNode
-      expect(node.patchFlag).toBe(PatchFlags.NEED_PATCH)
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(false)
+      expect(child.patchFlag).toBe(PatchFlags.NEED_PATCH)
+    })
+
+    test('preserve block for stable v-for + custom directive with children', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" v-dir>{{ i }}</div>`,
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(true)
+      expect(child.patchFlag).toBe(PatchFlags.TEXT)
+    })
+
+    test('preserve block for stable v-for + before-update vnode hook', () => {
+      const { node } = parseWithForTransform(
+        `<div v-for="i in 3" @vue:before-update="foo"><span /></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true,
+          directiveTransforms: {
+            bind: transformBind,
+            on: transformOn,
+          },
+        },
+      )
+      const child = getVForChild(node)
+      expect(child.isBlock).toBe(true)
+      expect(child.patchFlag).toBeUndefined()
     })
 
     test('script setup inline mode template ref (binding exists)', () => {

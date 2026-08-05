@@ -102,6 +102,8 @@ export const transformElement: NodeTransform = (node, context) => {
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
+    let needsPatch = false
+    let isBlockRequired = false
 
     let shouldUseBlock =
       // dynamic component may resolve to plain elements
@@ -127,6 +129,8 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeProps = propsBuildResult.props
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
+      needsPatch = propsBuildResult.needsPatch
+      isBlockRequired = propsBuildResult.isBlockRequired
       const directives = propsBuildResult.directives
       vnodeDirectives =
         directives && directives.length
@@ -206,7 +210,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
     }
 
-    node.codegenNode = createVNodeCall(
+    const vnodeCall = (node.codegenNode = createVNodeCall(
       context,
       vnodeTag,
       vnodeProps,
@@ -218,7 +222,13 @@ export const transformElement: NodeTransform = (node, context) => {
       false /* disableTracking */,
       isComponent,
       node.loc,
-    )
+    ))
+    if (needsPatch) {
+      vnodeCall.needsPatch = true
+    }
+    if (isBlockRequired) {
+      vnodeCall.isBlockRequired = true
+    }
   }
 }
 
@@ -382,6 +392,8 @@ export function buildProps(
   patchFlag: number
   dynamicPropNames: string[]
   shouldUseBlock: boolean
+  needsPatch: boolean
+  isBlockRequired: boolean
 } {
   const { tag, loc: elementLoc, children } = node
   let properties: ObjectExpression['properties'] = []
@@ -389,6 +401,7 @@ export function buildProps(
   const runtimeDirectives: DirectiveNode[] = []
   const hasChildren = children.length > 0
   let shouldUseBlock = false
+  let isBlockRequired = false
 
   // patchFlag analysis
   let patchFlag = 0
@@ -444,6 +457,10 @@ export function buildProps(
         hasVnodeHook = true
       }
 
+      if (name === 'ref') {
+        hasRef = true
+      }
+
       if (isEventHandler && value.type === NodeTypes.JS_CALL_EXPRESSION) {
         // handler wrapped with internal helper e.g. withModifiers(fn)
         // extract the actual expression
@@ -454,22 +471,21 @@ export function buildProps(
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
           value.type === NodeTypes.COMPOUND_EXPRESSION) &&
-          getConstantType(value, context) > 0 &&
-          name !== 'ref')
+          getConstantType(value, context) > 0)
       ) {
-        // skip if:
-        // 1. the prop is a cached handler
-        // 2. has constant value (excluding :ref="setRefFn", setRefFn is a setup-const)
+        // skip if the prop is a cached handler or has constant value
         return
       }
 
-      if (name === 'ref') {
-        hasRef = true
-      } else if (name === 'class') {
+      if (name === 'class') {
         hasClassBinding = true
       } else if (name === 'style') {
         hasStyleBinding = true
-      } else if (name !== 'key' && !dynamicPropNames.includes(name)) {
+      } else if (
+        name !== 'ref' &&
+        name !== 'key' &&
+        !dynamicPropNames.includes(name)
+      ) {
         dynamicPropNames.push(name)
       }
 
@@ -576,14 +592,15 @@ export function buildProps(
         continue
       }
 
-      if (
-        // #938: elements with dynamic keys should be forced into blocks
-        (isVBind && isStaticArgOf(arg, 'key')) ||
-        // inline before-update hooks need to force block so that it is invoked
-        // before children
-        (isVOn && hasChildren && isStaticArgOf(arg, 'vue:before-update'))
-      ) {
+      // #938: elements with dynamic keys should be forced into blocks
+      if (isVBind && isStaticArgOf(arg, 'key')) {
         shouldUseBlock = true
+      }
+      // inline before-update hooks need to remain blocks so that they are
+      // invoked before children
+      if (isVOn && hasChildren && isStaticArgOf(arg, 'vue:before-update')) {
+        shouldUseBlock = true
+        isBlockRequired = true
       }
 
       if (isVBind && isStaticArgOf(arg, 'ref')) {
@@ -694,6 +711,7 @@ export function buildProps(
         // to ensure before-update gets called before children update
         if (hasChildren) {
           shouldUseBlock = true
+          isBlockRequired = true
         }
       }
     }
@@ -739,10 +757,10 @@ export function buildProps(
       patchFlag |= PatchFlags.NEED_HYDRATION
     }
   }
-  if (
+  const needsPatch =
     (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
-  ) {
+  if (!shouldUseBlock && needsPatch) {
     patchFlag |= PatchFlags.NEED_PATCH
   }
 
@@ -827,6 +845,8 @@ export function buildProps(
     patchFlag,
     dynamicPropNames,
     shouldUseBlock,
+    needsPatch,
+    isBlockRequired,
   }
 }
 
