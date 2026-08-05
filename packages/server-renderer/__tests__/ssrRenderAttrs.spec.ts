@@ -62,6 +62,10 @@ describe('ssr: renderAttrs', () => {
       ` hidden="until-found"`,
     )
     expect(ssrRenderAttrs({ hidden: '' })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ hidden: 0 })).toBe(``)
+    expect(ssrRenderAttrs({ hidden: NaN })).toBe(``)
+    expect(ssrRenderAttrs({ hidden: 1 })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ hidden: '0' })).toBe(` hidden="0"`)
   })
 
   test('ignore falsy values', () => {

@@ -22,6 +22,7 @@ import {
 } from '@vue/compiler-core'
 import {
   escapeHtml,
+  includeBooleanAttr,
   isArray,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -357,6 +358,13 @@ function stringifyElement(
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
           const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          if (
+            arg === 'hidden' &&
+            typeof evaluated === 'number' &&
+            !includeBooleanAttr(evaluated)
+          ) {
+            continue
+          }
           if (arg === 'class') {
             evaluated = normalizeClass(evaluated)
           } else if (arg === 'style') {

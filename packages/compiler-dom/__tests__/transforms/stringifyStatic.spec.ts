@@ -389,11 +389,11 @@ describe('stringify static html', () => {
     ])
   })
 
-  test('should remove `hidden` with value `false`', () => {
+  test.each(['false', '0'])('should remove `hidden` with value `%s`', value => {
     const { ast } = compileWithStringify(
       `<div>
       ${repeat(
-        `<span :hidden="false"></span>`,
+        `<span :hidden="${value}"></span>`,
         StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
       )}
     </div>`,

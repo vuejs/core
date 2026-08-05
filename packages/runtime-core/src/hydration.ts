@@ -933,14 +933,15 @@ function propHasMismatch(
 }
 
 function normalizeHiddenValue(value: unknown): false | '' | 'until-found' {
-  if (value === false || !isRenderableAttrValue(value)) {
+  if (!isRenderableAttrValue(value)) {
     return false
   }
-  // `hidden` is enumerated: every rendered value except the case-insensitive
-  // `until-found` keyword represents the ordinary hidden state.
-  return isString(value) && value.toLowerCase() === 'until-found'
-    ? 'until-found'
-    : ''
+  if (isString(value)) {
+    // Attribute values from the DOM are strings, while numeric client values
+    // follow the `hidden` property setter, where 0 and NaN remove the attribute.
+    return value.toLowerCase() === 'until-found' ? 'until-found' : ''
+  }
+  return includeBooleanAttr(value) ? '' : false
 }
 
 function toClassSet(str: string): Set<string> {

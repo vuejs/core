@@ -74,7 +74,8 @@ export function ssrRenderDynamicAttr(
       : propsToAttrMap[key] || key.toLowerCase()
   if (
     isBooleanAttr(attrKey) ||
-    (attrKey === 'hidden' && typeof value === 'boolean')
+    (attrKey === 'hidden' &&
+      (typeof value === 'boolean' || typeof value === 'number'))
   ) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``
   } else if (isSSRSafeAttrName(attrKey)) {
