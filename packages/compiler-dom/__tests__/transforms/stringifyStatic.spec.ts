@@ -389,7 +389,7 @@ describe('stringify static html', () => {
     ])
   })
 
-  test('should remove overloaded boolean attribute for `false`', () => {
+  test('should remove `hidden` with value `false`', () => {
     const { ast } = compileWithStringify(
       `<div>
       ${repeat(

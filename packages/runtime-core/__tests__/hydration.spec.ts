@@ -2487,11 +2487,21 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
 
-    test('combined boolean/string attribute', () => {
+    test('hidden enumerated attribute', () => {
       mountWithHydration(`<div></div>`, () => h('div', { hidden: false }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
 
       mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: true }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () =>
+        h('div', { hidden: 'hidden' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="anything"></div>`, () =>
+        h('div', { hidden: true }),
+      )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
 
       mountWithHydration(`<div hidden="until-found"></div>`, () =>
@@ -2499,10 +2509,17 @@ describe('SSR hydration', () => {
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
 
-      mountWithHydration(`<div hidden=""></div>`, () =>
-        h('div', { hidden: true }),
+      mountWithHydration(`<div hidden="UNTIL-FOUND"></div>`, () =>
+        h('div', { hidden: 'until-found' }),
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('hidden state mismatch', () => {
+      mountWithHydration(`<div hidden="until-found"></div>`, () =>
+        h('div', { hidden: true }),
+      )
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
     })
 
     test('client value is null or undefined', () => {

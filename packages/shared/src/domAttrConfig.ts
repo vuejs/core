@@ -152,16 +152,3 @@ export function isRenderableAttrValue(value: unknown): boolean {
   const type = typeof value
   return type === 'string' || type === 'number' || type === 'boolean'
 }
-
-/**
- * An attribute that can be used as a flag as well as with a value.
- * When `true`, it should be present (set either to an empty string or its name).
- * When `false`, it should be omitted.
- * For any other value, should be present with that value.
- */
-export const isOverloadedBooleanAttr: (key: string) => boolean =
-  /*@__PURE__*/ makeMap('hidden')
-
-export function isBooleanAttrValue(value: unknown): boolean {
-  return typeof value === 'boolean' || value === ''
-}

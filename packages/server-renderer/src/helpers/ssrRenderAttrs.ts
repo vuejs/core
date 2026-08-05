@@ -1,9 +1,7 @@
 import {
   escapeHtml,
   isArray,
-  isBooleanAttrValue,
   isObject,
-  isOverloadedBooleanAttr,
   isRenderableAttrValue,
   isSVGTag,
   stringifyStyle,
@@ -76,7 +74,7 @@ export function ssrRenderDynamicAttr(
       : propsToAttrMap[key] || key.toLowerCase()
   if (
     isBooleanAttr(attrKey) ||
-    (isOverloadedBooleanAttr(attrKey) && isBooleanAttrValue(value))
+    (attrKey === 'hidden' && typeof value === 'boolean')
   ) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``
   } else if (isSSRSafeAttrName(attrKey)) {

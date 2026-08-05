@@ -191,7 +191,7 @@ describe('ssr: element', () => {
         `)
     })
 
-    test('v-bind:arg (overloaded boolean)', () => {
+    test('v-bind:arg (hidden)', () => {
       expect(
         getCompiledString(
           `<div><span :hidden="false"></span><span :hidden="'until-found'"></span></div>`,

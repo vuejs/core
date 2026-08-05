@@ -21,11 +21,9 @@ import {
   getEscapedCssVarName,
   includeBooleanAttr,
   isBooleanAttr,
-  isBooleanAttrValue,
   isKnownHtmlAttr,
   isKnownSvgAttr,
   isOn,
-  isOverloadedBooleanAttr,
   isRenderableAttrValue,
   isReservedProp,
   isString,
@@ -884,10 +882,10 @@ function propHasMismatch(
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
-    if (
-      isBooleanAttr(key) ||
-      (isOverloadedBooleanAttr(key) && isBooleanAttrValue(clientValue))
-    ) {
+    if (key === 'hidden') {
+      actual = normalizeHiddenValue(el.getAttribute(key))
+      expected = normalizeHiddenValue(clientValue)
+    } else if (isBooleanAttr(key)) {
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
     } else if (clientValue == null) {
@@ -932,6 +930,17 @@ function propHasMismatch(
     return true
   }
   return false
+}
+
+function normalizeHiddenValue(value: unknown): false | '' | 'until-found' {
+  if (value === false || !isRenderableAttrValue(value)) {
+    return false
+  }
+  // `hidden` is enumerated: every rendered value except the case-insensitive
+  // `until-found` keyword represents the ordinary hidden state.
+  return isString(value) && value.toLowerCase() === 'until-found'
+    ? 'until-found'
+    : ''
 }
 
 function toClassSet(str: string): Set<string> {

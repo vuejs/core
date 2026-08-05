@@ -38,7 +38,6 @@ import {
   escapeHtml,
   isBooleanAttr,
   isBuiltInDirective,
-  isOverloadedBooleanAttr,
   isSSRSafeAttrName,
   propsToAttrMap,
 } from '@vue/shared'
@@ -301,7 +300,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                         false /* no newline */,
                       ),
                     )
-                  } else if (isOverloadedBooleanAttr(attrName)) {
+                  } else if (attrName === 'hidden') {
                     openTag.push(
                       createCallExpression(
                         context.helper(SSR_RENDER_DYNAMIC_ATTR),

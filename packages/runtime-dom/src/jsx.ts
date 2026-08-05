@@ -281,7 +281,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
    * @deprecated Use `enterkeyhint` instead.
    */
   enterKeyHint?: HTMLAttributes['enterkeyhint']
-  hidden?: boolean | '' | 'hidden' | 'until-found' | undefined
+  hidden?: Booleanish | '' | 'hidden' | 'until-found' | undefined
   id?: string | undefined
   inert?: Booleanish | undefined
   lang?: string | undefined
