@@ -18,9 +18,10 @@ async function populate(reader: ReadableStreamDefaultReader<any>) {
   let res = ''
   await reader.read().then(function read({ done, value }): any {
     if (!done) {
-      res += decoder.decode(value)
+      res += decoder.decode(value, { stream: true })
       return reader.read().then(read)
     }
+    res += decoder.decode()
   })
 
   return res
