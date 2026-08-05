@@ -15,7 +15,11 @@ const { isVNode } = ssrUtils
 
 export interface SimpleReadable {
   push(chunk: string | null): void
-  destroy(err: any): void
+  /**
+   Call destroy when an error occurred
+   @param error - error that happened. Typed as unknown.
+   */
+  destroy(error: any): void
 }
 
 async function unrollBuffer(
@@ -205,10 +209,9 @@ export function pipeToWebWritable(
       }
     },
     destroy(err) {
-      // TODO better error handling?
-      // eslint-disable-next-line no-console
-      console.log(err)
-      writer.close()
+      console.error('Error while destroying stream: ', err)
+
+      writer.abort(err).catch(_ => {})
     },
   })
 }
