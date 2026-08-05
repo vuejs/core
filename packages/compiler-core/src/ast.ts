@@ -377,6 +377,13 @@ export interface Property extends Node {
   type: NodeTypes.JS_PROPERTY
   key: ExpressionNode
   value: JSChildNode
+  /**
+   * When true, the property is emitted as a getter:
+   * `get key() { return value }`
+   * Used for slot outlet props that are setup refs, so that the ref is only
+   * evaluated when the slot content actually reads the prop (lazy evaluation).
+   */
+  isGetter?: boolean
 }
 
 export interface ArrayExpression extends Node {
