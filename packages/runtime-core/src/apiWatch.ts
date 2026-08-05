@@ -57,6 +57,9 @@ export function watchEffect(
   effect: WatchEffect,
   options?: WatchEffectOptions,
 ): WatchHandle {
+  // watchEffect tracks dependencies during each synchronous run, so conditional
+  // branches can update the active dependency list between re-runs. For async
+  // effects, only accesses before the first await are tracked.
   return doWatch(effect, null, options)
 }
 
