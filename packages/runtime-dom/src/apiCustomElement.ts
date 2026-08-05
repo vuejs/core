@@ -479,7 +479,7 @@ export class VueElement
 
     // define getter/setters for declared props
     for (const key of declaredPropKeys.map(camelize)) {
-      if (__DEV__ && !hasOwn(this, key) && key in this) {
+      if (__DEV__ && key in Object.getPrototypeOf(this)) {
         warn(
           `Custom element prop "${key}" conflicts with an existing property ` +
             `on the element and will overwrite it.`,

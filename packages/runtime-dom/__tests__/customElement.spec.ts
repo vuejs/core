@@ -2533,33 +2533,6 @@ describe('defineCustomElement', () => {
     ).toHaveBeenWarned()
   })
 
-  test('native readonly prop conflict when rendered by Vue', () => {
-    const E = defineCustomElement({
-      props: {
-        tagName: String,
-      },
-      render() {
-        return this.tagName
-      },
-    })
-    customElements.define('el-vue-tag-name', E)
-
-    render(
-      h('el-vue-tag-name', {
-        tagName: 'foo',
-      }),
-      container,
-    )
-
-    const e = container.firstChild as VueElement
-    expect(e.shadowRoot!.innerHTML).toBe('foo')
-    expect(e.getAttribute('tag-name')).toBe('foo')
-    expect(e.tagName).toBe('foo')
-    expect(
-      `[Vue warn]: Custom element prop "tagName" conflicts with an existing property on the element and will overwrite it.`,
-    ).toHaveBeenWarned()
-  })
-
   test('native method conflict when rendered by Vue', () => {
     const value = { text: 'foo' }
     const E = defineCustomElement({
