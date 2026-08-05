@@ -237,6 +237,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div>foo2</div><div>bar2</div>')
       expect(e.getAttribute('foo')).toBe('foo2')
+      expect(e.foo).toBe('foo2')
       expect(e.hasAttribute('bar')).toBe(false)
 
       // change prop then attr
@@ -2489,7 +2490,7 @@ describe('defineCustomElement', () => {
     expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
   })
 
-  test('prop name is the same as native attribute', async () => {
+  test('prop name conflicts with native property', () => {
     const E = defineCustomElement({
       props: {
         tagName: {
@@ -2504,6 +2505,59 @@ describe('defineCustomElement', () => {
     container.innerHTML = '<el-attr-tag-name tag-name="foo">'
     const e = container.childNodes[0] as VueElement
     expect(e.shadowRoot!.innerHTML).toBe(`foo`)
+    expect(e.tagName).toBe('EL-ATTR-TAG-NAME')
+    expect(Object.getOwnPropertyDescriptor(e, 'tagName')).toBeUndefined()
+    expect(
+      `[Vue warn]: Custom element prop "tagName" conflicts with an existing property on the element and will not be exposed as an element property.`,
+    ).toHaveBeenWarned()
+  })
+
+  test('prop name conflicts with reflected native property', async () => {
+    const E = defineCustomElement({
+      props: {
+        id: String,
+      },
+      render() {
+        return this.id
+      },
+    })
+    customElements.define('el-attr-id', E)
+    container.innerHTML = '<el-attr-id id="foo">'
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`foo`)
+
+    e.setAttribute('id', 'bar')
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(`bar`)
+    expect(e.id).toBe('bar')
+    expect(
+      `[Vue warn]: Custom element prop "id" conflicts with an existing property on the element and will not be exposed as an element property.`,
+    ).toHaveBeenWarned()
+  })
+
+  test('prop name conflicts with native method', async () => {
+    const E = defineCustomElement({
+      props: {
+        hasAttribute: String,
+      },
+      render() {
+        return this.hasAttribute
+      },
+    })
+    customElements.define('el-attr-has-attribute', E)
+    container.innerHTML =
+      '<el-attr-has-attribute has-attribute="foo"></el-attr-has-attribute>'
+    const e = container.childNodes[0] as VueElement
+    expect(e.shadowRoot!.innerHTML).toBe(`foo`)
+    expect(e.hasAttribute('has-attribute')).toBe(true)
+    expect(Object.getOwnPropertyDescriptor(e, 'hasAttribute')).toBeUndefined()
+
+    e.setAttribute('has-attribute', 'bar')
+    await nextTick()
+    expect(e.shadowRoot!.innerHTML).toBe(`bar`)
+    expect(
+      `[Vue warn]: Custom element prop "hasAttribute" conflicts with an existing property on the element and will not be exposed as an element property.`,
+    ).toHaveBeenWarned()
   })
 
   test('hyphenated attr removal', async () => {

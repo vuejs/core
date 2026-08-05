@@ -477,16 +477,25 @@ export class VueElement
       }
     }
 
-    // defining getter/setters on prototype
-    const propValue: Record<string, any> = {}
+    // define getter/setters for non-conflicting props
     for (const key of declaredPropKeys.map(camelize)) {
-      if (key in this) propValue[key] = this[key as keyof this]
+      // Preserve inherited properties from HTMLElement and custom subclasses.
+      // Own properties are values set before upgrade or connection and have
+      // already been copied into _props above.
+      if (!hasOwn(this, key) && key in this) {
+        if (__DEV__) {
+          warn(
+            `Custom element prop "${key}" conflicts with an existing property ` +
+              `on the element and will not be exposed as an element property.`,
+          )
+        }
+        continue
+      }
       Object.defineProperty(this, key, {
         get(this: VueElement) {
-          return key in propValue ? propValue[key] : this._getProp(key)
+          return this._getProp(key)
         },
         set(this: VueElement, val) {
-          if (key in propValue) propValue[key] = val
           this._setProp(key, val, true, !this._patching)
         },
       })
