@@ -211,6 +211,7 @@ export function pipeToWebWritable(
     destroy(err) {
       console.error('Error while destroying stream: ', err)
 
+      // ignore: handling error already
       writer.abort(err).catch(_ => {})
     },
   })
