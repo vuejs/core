@@ -124,8 +124,8 @@ describe('defineVaporCustomElement', () => {
       const num = ref('12')
       const containerComp = defineVaporComponent({
         setup() {
-          const n1 = template('<div><div id="move"></div></div>', 1)() as any
-          setInsertionState(n1, 0, 0)
+          const n1 = template('<div><!><div id="move"></div></div>', 1)() as any
+          setInsertionState(n1, child(n1))
           createPlainElement('my-el-input', {
             value: () => num.value,
             onInput: () => ($event: CustomEvent) => {
@@ -824,18 +824,38 @@ describe('defineVaporCustomElement', () => {
         const t0 = template('<div>fallback</div>')
         const t1 = template('<div></div>')
         const n3 = t1() as any
-        setInsertionState(n3, null, 0)
+        setInsertionState(n3)
         createSlot('default', null, () => {
           const n2 = t0()
           return n2
         })
         const n5 = t1() as any
-        setInsertionState(n5, null, 0)
+        setInsertionState(n5)
         createSlot('named', null)
         return [n3, n5]
       },
     })
     customElements.define('my-el-slots', E)
+
+    test('anchored native slot outlet renders without placeholder adoption', () => {
+      // regression: custom-element outlets assign the native <slot> to
+      // fragment.nodes without going through update(), so adopting the
+      // template placeholder would skip their only insertion
+      const E = defineVaporCustomElement({
+        setup() {
+          const n = template('<div><!><span></span></div>', 1)() as any
+          setInsertionState(n, child(n))
+          createSlot('default', null)
+          return n
+        },
+      })
+      customElements.define('my-el-anchored-slot', E)
+      container.innerHTML = `<my-el-anchored-slot><b>hi</b></my-el-anchored-slot>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot></slot><!--slot--><!----><span></span></div>`,
+      )
+    })
 
     test('render slots correctly', () => {
       container.innerHTML = `<my-el-slots><span>hi</span></my-el-slots>`
@@ -857,7 +877,7 @@ describe('defineVaporCustomElement', () => {
       const E = defineVaporCustomElement({
         setup() {
           const n0 = template('<div></div>')() as any
-          setInsertionState(n0, null)
+          setInsertionState(n0)
           createSlot('default', { class: () => foo.value })
           return [n0]
         },
@@ -881,7 +901,7 @@ describe('defineVaporCustomElement', () => {
       const E = defineVaporCustomElement({
         setup() {
           const n0 = template('<div></div>')() as any
-          setInsertionState(n0, null)
+          setInsertionState(n0)
           createSlot(
             'default',
             { class: () => foo.value },
@@ -1042,7 +1062,7 @@ describe('defineVaporCustomElement', () => {
             )
 
             const n0 = template('<div></div>', 1)() as any
-            setInsertionState(n0, null)
+            setInsertionState(n0)
             createSlot('default', null)
             return n0
           },
@@ -1067,7 +1087,7 @@ describe('defineVaporCustomElement', () => {
               inject<string>('inner'),
             )
             const n0 = template('<div></div>', 1)() as any
-            setInsertionState(n0, null)
+            setInsertionState(n0)
             createSlot('default', null)
             return n0
           },
@@ -1623,13 +1643,13 @@ describe('defineVaporCustomElement', () => {
                 const t0 = template('<div>fallback</div>')
                 const t1 = template('<div></div>')
                 const n3 = t1() as any
-                setInsertionState(n3, null)
+                setInsertionState(n3)
                 createSlot('default', null, () => {
                   const n2 = t0()
                   return n2
                 })
                 const n5 = t1() as any
-                setInsertionState(n5, null)
+                setInsertionState(n5)
                 createSlot('named', null)
                 return [n3, n5]
               },
@@ -2050,7 +2070,7 @@ describe('defineVaporCustomElement', () => {
           {
             setup() {
               const n0 = template('<div></div>')() as any
-              setInsertionState(n0, null)
+              setInsertionState(n0)
               createSlot('default', null)
               return n0
             },
@@ -2078,7 +2098,7 @@ describe('defineVaporCustomElement', () => {
                 () => props.isShown,
                 () => {
                   const n0 = template('<div></div>')() as any
-                  setInsertionState(n0, null)
+                  setInsertionState(n0)
                   createSlot('default', null)
                   return n0
                 },
@@ -2283,7 +2303,7 @@ describe('defineVaporCustomElement', () => {
             setup() {
               provide('foo', 'foo')
               const n0 = template('<div></div>')() as any
-              setInsertionState(n0, null)
+              setInsertionState(n0)
               createSlot('default', null)
               return n0
             },
@@ -2319,7 +2339,7 @@ describe('defineVaporCustomElement', () => {
             setup() {
               provide('foo', 'foo')
               const n0 = template('<div></div>')() as any
-              setInsertionState(n0, null)
+              setInsertionState(n0)
               createSlot('default', null)
               return n0
             },
@@ -2332,7 +2352,7 @@ describe('defineVaporCustomElement', () => {
       setup() {
         provide('bar', 'bar')
         const n0 = template('<div></div>')() as any
-        setInsertionState(n0, null)
+        setInsertionState(n0)
         createSlot('default', null)
         return n0
       },
@@ -2505,7 +2525,7 @@ describe('defineVaporCustomElement', () => {
       setup() {
         const fooValue = ref('fooValue')
         const n0 = template('<div></div>')() as any
-        setInsertionState(n0, null)
+        setInsertionState(n0)
         createPlainElement('my-el-async-4', {
           fooValue: () => fooValue.value,
         })

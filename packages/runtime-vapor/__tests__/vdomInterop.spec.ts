@@ -4469,7 +4469,9 @@ describe('vdomInterop', () => {
         await flushResolution(pending.promise)
 
         expect(errorHandler).not.toHaveBeenCalled()
-        expect(host.innerHTML).toBe('<div><span>async</span></div>')
+        // the async child's `<!>` insertion anchor survives the directive
+        // removing its sibling, keeping the deferred mount position stable
+        expect(host.innerHTML).toBe('<div><span>async</span><!----></div>')
       } finally {
         app.unmount()
         host.remove()

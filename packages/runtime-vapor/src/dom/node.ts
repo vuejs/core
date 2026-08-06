@@ -41,32 +41,30 @@ export function txt(node: ParentNode): Node {
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function child(node: InsertionParent, logicalIndex?: number): Node {
+export function child(node: InsertionParent): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, logicalIndex ?? 0)!
+    return locateChildByLogicalIndex(node, 0)!
   }
   return _child(node)
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function nthChild(
-  node: InsertionParent,
-  i: number,
-  logicalIndex: number = i,
-): Node {
+export function nthChild(node: InsertionParent, i: number): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, logicalIndex)!
+    return locateChildByLogicalIndex(node, i)!
   }
   return node.childNodes[i]
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function next(node: Node, logicalIndex?: number): Node {
+export function next(node: Node): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(
-      node.parentNode! as InsertionParent,
-      logicalIndex!,
-    )!
+    const result = nextLogicalSibling(node)!
+    // advance the $llc cache when `node` is the cached logical child; the
+    // helper enforces the "$llc implies $idx" invariant for us
+    const parent = node.parentNode
+    if (parent) updateLastLocatedLogicalChild(parent, node, result, 1)
+    return result
   }
   return _next(node)
 }

@@ -5,7 +5,7 @@ import {
   exitHydrationCursor,
   isHydrating,
 } from './dom/hydration'
-import { DynamicFragment } from './fragment'
+import { DynamicFragment, isAdoptedAnchor } from './fragment'
 import {
   insertionAnchor,
   insertionParent,
@@ -31,14 +31,22 @@ export function createKeyedFragment(key: () => any, render: BlockFn): Block {
     ? captureHydrationCursor()
     : null
 
-  const frag = __DEV__
-    ? new DynamicFragment('keyed', true)
-    : new DynamicFragment(undefined, true)
+  const frag = new DynamicFragment(
+    __DEV__ ? 'keyed' : undefined,
+    true,
+    true,
+    false,
+    undefined,
+    _insertionAnchor,
+  )
 
   renderEffect(() => frag.update(render, key()))
 
   if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    // adopted fragments render in place through their template anchor
+    if (_insertionParent && !isAdoptedAnchor(frag.anchor, _insertionAnchor)) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
   } else {
     exitHydrationCursor(hydrationCursor)
   }

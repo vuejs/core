@@ -56,7 +56,7 @@ export interface KeepAliveInstance extends VaporComponentInstance {
     activate: (
       instance: VaporComponentInstance,
       parentNode: ParentNode,
-      anchor?: Node | null | 0,
+      anchor?: Node | null,
       parentSuspense?: SuspenseBoundary | null,
     ) => void
     deactivate: (
@@ -608,7 +608,7 @@ function getInstanceFromCache(
 export function activate(
   instance: VaporComponentInstance,
   parentNode: ParentNode,
-  anchor?: Node | null | 0,
+  anchor?: Node | null,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
   move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)

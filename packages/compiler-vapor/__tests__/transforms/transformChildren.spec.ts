@@ -45,10 +45,10 @@ describe('compiler: children transform', () => {
     <div><span>{{ msg }}</span></div>
   </div>`,
     )
-    expect(code).toContain(`let p0 = _next(_child(n3), 1)`)
+    expect(code).toContain(`let p0 = _next(_child(n3))`)
     expect(code).toContain(`const n0 = _child(p0)`)
-    expect(code).toContain(`const n1 = _child((p0 = _next(p0, 2)))`)
-    expect(code).toContain(`const n2 = _child((p0 = _next(p0, 3)))`)
+    expect(code).toContain(`const n1 = _child((p0 = _next(p0)))`)
+    expect(code).toContain(`const n2 = _child((p0 = _next(p0)))`)
     expect(code).not.toMatch(/const p\d =/)
     expect(code).not.toMatch(/let p[1-9]\d* =/)
     expect(code).toMatchSnapshot()
@@ -78,7 +78,7 @@ describe('compiler: children transform', () => {
     expect(code).toMatch(/let p\d = _child\(_child\(n\d\)\)/)
     expect(code).not.toMatch(/let p\d = _child\(n\d\)/)
     expect(code).toMatch(/const n\d = _child\(p\d\)/)
-    expect(code).toMatch(/const n\d = _child\(\(p\d = _next\(p\d, 1\)\)\)/)
+    expect(code).toMatch(/const n\d = _child\(\(p\d = _next\(p\d\)\)\)/)
     expect(code).toMatchSnapshot()
   })
 
@@ -121,8 +121,8 @@ describe('compiler: children transform', () => {
       </div>`,
     )
     expect(code).toContain('const n1 = _child(n3)')
-    expect(code).toContain('const n2 = _child(_next(n1, 1))')
-    expect(code).toContain('_setInsertionState(n1, null, 0)')
+    expect(code).toContain('const n2 = _child(_next(n1))')
+    expect(code).toContain('_setInsertionState(n1)')
     expect(code).not.toContain('p0 = _next')
     expect(code).toMatchSnapshot()
   })
@@ -136,8 +136,8 @@ describe('compiler: children transform', () => {
       </div>`,
     )
     // ensure the insertion anchor is generated before the insertion statement
-    expect(code).toMatch(`const n3 = _next(_child(n4), 1)`)
-    expect(code).toMatch(`_setInsertionState(n4, n3, 1)`)
+    expect(code).toMatch(`const n3 = _next(_child(n4))`)
+    expect(code).toMatch(`_setInsertionState(n4, n3)`)
     expect(code).toMatchSnapshot()
   })
 })

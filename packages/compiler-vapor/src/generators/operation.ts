@@ -6,7 +6,7 @@ import {
   isBlockOperation,
 } from '../ir'
 import type { CodegenContext } from '../generate'
-import { genInsertNode, genPrependNode } from './dom'
+import { genInsertNode } from './dom'
 import { genSetDynamicEvents, genSetEvent } from './event'
 import { genFor } from './for'
 import { genSetHtml } from './html'
@@ -74,8 +74,6 @@ export function genOperation(
       return genSetTemplateRef(oper, context)
     case IRNodeTypes.INSERT_NODE:
       return genInsertNode(oper, context)
-    case IRNodeTypes.PREPEND_NODE:
-      return genPrependNode(oper, context)
     case IRNodeTypes.IF:
       return genIf(oper, context)
     case IRNodeTypes.FOR:
@@ -198,24 +196,19 @@ function genInsertionState(
   operation: InsertionStateTypes,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { parent, anchor, logicalIndex, append } = operation
-  const isPrepend = anchor === -1
+  const { parent, anchor, appendIndex } = operation
   return [
     NEWLINE,
     ...genCall(
       context.helper('setInsertionState'),
       `n${parent}`,
-      anchor == null
-        ? undefined
-        : isPrepend // -1 indicates prepend
-          ? `0` // runtime anchor value for prepend
-          : append
-            ? // for append, always use null since we have logicalIndex
-              'null'
-            : `n${anchor}`,
-      logicalIndex !== undefined && (!isPrepend || logicalIndex !== 0)
-        ? String(logicalIndex)
-        : undefined,
+      // see setInsertionState() in runtime-vapor for the anchor/index
+      // contract; the append index is omitted when 0
+      anchor != null
+        ? `n${anchor}`
+        : appendIndex
+          ? String(appendIndex)
+          : undefined,
     ),
   ]
 }

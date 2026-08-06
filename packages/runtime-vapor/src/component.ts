@@ -353,7 +353,13 @@ export function createComponent(
 
     // teleport
     if (isTeleportEnabled && isVaporTeleport(component)) {
-      const frag = component.process(rawProps!, normalizeRawSlots(rawSlots))
+      // the teleport's main-view end anchor adopts the template `<!>`
+      // placeholder when anchored via insertion state
+      const frag = component.process(
+        rawProps!,
+        normalizeRawSlots(rawSlots),
+        _insertionAnchor,
+      )
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
@@ -1085,7 +1091,7 @@ export function createPlainElement(
 export function mountComponent(
   instance: VaporComponentInstance,
   parent: ParentNode,
-  anchor?: Node | null | 0,
+  anchor?: Node | null,
 ): void {
   if (
     __FEATURE_SUSPENSE__ &&

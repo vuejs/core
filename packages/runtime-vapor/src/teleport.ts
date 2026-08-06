@@ -3,7 +3,11 @@ import type { RawSlots } from './componentSlots'
 import type { TeleportFragment } from './components/Teleport'
 
 type VaporTeleportLike = {
-  process(props: LooseRawProps, slots?: RawSlots | null): TeleportFragment
+  process(
+    props: LooseRawProps,
+    slots?: RawSlots | null,
+    adoptAnchor?: Node,
+  ): TeleportFragment
 }
 
 export let isTeleportEnabled = false

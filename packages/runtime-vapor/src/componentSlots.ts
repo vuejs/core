@@ -37,6 +37,7 @@ import {
   DynamicFragment,
   SlotFragment,
   type VaporFragment,
+  isAdoptedAnchor,
   isInteropFragment,
 } from './fragment'
 import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
@@ -306,8 +307,15 @@ export function createSlot(
       fallback,
       isCustomElementSlot,
     )
+    // Custom-element outlets never adopt the template placeholder: they
+    // assign the native <slot> element to `fragment.nodes` directly without
+    // going through update(), so the trailing insert below must remain their
+    // only mount path.
     const slotFragment = needsSlotFragment
-      ? new SlotFragment(slotRoot)
+      ? new SlotFragment(
+          slotRoot,
+          isCustomElementSlot ? undefined : _insertionAnchor,
+        )
       : undefined
     let dynamicFragment: DynamicFragment | undefined
     if (slotFragment) {
@@ -319,6 +327,9 @@ export function createSlot(
         __DEV__ ? 'slot' : undefined,
         false,
         false,
+        false,
+        undefined,
+        _insertionAnchor,
       )
       dynamicFragment.isSlot = true
       fragment = dynamicFragment
@@ -411,7 +422,13 @@ export function createSlot(
       setScopeId(fragment, slotScopeIds)
     }
 
-    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
+    // adopted fragments render in place through their template anchor
+    if (
+      _insertionParent &&
+      !isAdoptedAnchor(fragment.anchor, _insertionAnchor)
+    ) {
+      insert(fragment, _insertionParent, _insertionAnchor)
+    }
   } else {
     if (isInteropEnabled && isInteropFragment(fragment)) {
       fragment.hydrate!()
