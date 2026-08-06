@@ -4339,6 +4339,44 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test.each([
+      ['direct', `<slot />`],
+      ['v-if', `<slot v-if="true" />`],
+      ['v-for', `<slot v-for="n in [1]" :key="n" />`],
+    ])(
+      'forwarded %s root slot replaces receiver fallback when content becomes valid',
+      async (_, outlet) => {
+        const data = reactive({ show: false })
+        const { container } = await testHydration(
+          `<script setup>
+          const components = _components
+          const data = _data
+        </script>
+        <template>
+          <components.Carrier>
+            <span v-if="data.show">content</span>
+          </components.Carrier>
+        </template>`,
+          {
+            Receiver: `<template><slot><span>fallback</span></slot></template>`,
+            Carrier: `<script setup>const components = _components</script>
+            <template>
+              <components.Receiver>${outlet}</components.Receiver>
+            </template>`,
+          },
+          data,
+        )
+
+        expect(container.textContent).toBe('fallback')
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+        data.show = true
+        await nextTick()
+
+        expect(container.textContent).toBe('content')
+      },
+    )
+
     test('forwarded slot with empty content', async () => {
       const data = reactive({
         foo: 'foo',

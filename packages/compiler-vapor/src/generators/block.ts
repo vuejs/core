@@ -27,6 +27,7 @@ import {
 } from './operation'
 import { genChildren, genSelf } from './template'
 import { toValidAssetId } from '@vue/compiler-dom'
+import { VaporSlotFlags } from '@vue/shared'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -227,42 +228,52 @@ function isVModelOperation(oper: OperationNode): boolean {
   )
 }
 
-export function markSlotRootOperations(block: BlockIRNode): void {
+export function markSlotRootOperations(
+  block: BlockIRNode,
+  context: CodegenContext,
+): void {
+  if (hasStableSlotRoot(block, context)) return
+
   for (let i = 0; i < block.returns.length; i++) {
     const child = findReturnedDynamic(block, block.returns[i])
     const operation = child && child.operation
     if (!operation) continue
 
     if (operation.type === IRNodeTypes.IF) {
-      markSlotRootIf(operation)
+      markSlotRootIf(operation, context)
     } else if (operation.type === IRNodeTypes.FOR) {
-      markSlotRootFor(operation)
+      markSlotRootFor(operation, context)
     } else if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
       markSlotRootComponent(operation)
+    } else if (
+      operation.type === IRNodeTypes.SLOT_OUTLET_NODE &&
+      !(operation.flags & VaporSlotFlags.ONCE)
+    ) {
+      operation.flags |= VaporSlotFlags.SLOT_ROOT
     }
   }
 }
 
-function markSlotRootIf(operation: IfIRNode): void {
+function markSlotRootIf(operation: IfIRNode, context: CodegenContext): void {
   if (!operation.once) {
     operation.slotRoot = true
   }
-  markSlotRootOperations(operation.positive)
+  markSlotRootOperations(operation.positive, context)
 
   const negative = operation.negative
   if (!negative) return
   if (negative.type === IRNodeTypes.IF) {
-    markSlotRootIf(negative)
+    markSlotRootIf(negative, context)
   } else {
-    markSlotRootOperations(negative)
+    markSlotRootOperations(negative, context)
   }
 }
 
-function markSlotRootFor(operation: ForIRNode): void {
+function markSlotRootFor(operation: ForIRNode, context: CodegenContext): void {
   if (!operation.once) {
     operation.slotRoot = true
   }
-  markSlotRootOperations(operation.render)
+  markSlotRootOperations(operation.render, context)
 }
 
 function markSlotRootComponent(operation: CreateComponentIRNode): void {
@@ -279,6 +290,62 @@ export function findReturnedDynamic(
     const child = block.dynamic.children[i]
     if (child.id === id) return child
   }
+}
+
+const commentOnlyTemplateRE = /^(?:<!--[\s\S]*?-->)+$/
+
+// A slot can skip fallback/boundary tracking when at least one root is stable.
+// Components count as valid even if their own render result is a comment.
+export function hasStableSlotRoot(
+  block: BlockIRNode,
+  context: CodegenContext,
+): boolean {
+  let hasValidRoot = false
+  for (let i = 0; i < block.returns.length; i++) {
+    const id = block.returns[i]
+    const child = findReturnedDynamic(block, id)
+    const operation = child && child.operation
+    if (!operation) {
+      if (child && isStableTemplateSlotRoot(child, context)) {
+        hasValidRoot = true
+      }
+      continue
+    }
+
+    switch (operation.type) {
+      case IRNodeTypes.CREATE_COMPONENT_NODE:
+        if (!operation.dynamic || operation.dynamic.isStatic) {
+          hasValidRoot = true
+          continue
+        }
+        // Align with VDOM fallback semantics:
+        // <component :is="view" /> renders fallback when view is null because
+        // the dynamic component root becomes a comment vnode. This differs from
+        // <Foo />, whose component vnode is valid slot content even if Foo
+        // renders null/comment. Keep scanning because a stable sibling can
+        // still make the whole slot content valid.
+        continue
+      case IRNodeTypes.KEY:
+        if (hasStableSlotRoot(operation.block, context)) {
+          hasValidRoot = true
+          continue
+        }
+        continue
+      default:
+        continue
+    }
+  }
+  return hasValidRoot
+}
+
+function isStableTemplateSlotRoot(
+  child: IRDynamicInfo,
+  context: CodegenContext,
+): boolean {
+  if (child.template == null) return false
+  const content = context.ir.template.entries[child.template].content
+  // Preserved whitespace is a real text root; trim only for comment detection.
+  return content !== '' && !commentOnlyTemplateRE.test(content.trim())
 }
 
 interface AssetComponentUsage {

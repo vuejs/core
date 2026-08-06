@@ -715,10 +715,46 @@ describe('compiler: transform slot', () => {
     test('<slot> tag only', () => {
       const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
       expect(code).toContain(slotNonStableFlag)
-      expect(code).not.toContain(
+      expect(code).toContain(
         `_createSlot("default", null, null, ${slotRootFlag})`,
       )
       expect(code).toMatchSnapshot()
+    })
+
+    test('root slot outlet with stable sibling does not notify parent', () => {
+      const { code } = compileWithSlots(`<Comp><slot/><span/></Comp>`)
+
+      expect(code).not.toContain('SLOT_ROOT')
+      expect(code).not.toContain(slotNonStableFlag)
+    })
+
+    test.each([
+      [
+        'v-if branch',
+        `<Comp><template v-if="ok"><slot/><span/></template></Comp>`,
+      ],
+      [
+        'v-for item',
+        `<Comp><template v-for="item in items"><slot/><span/></template></Comp>`,
+      ],
+    ])(
+      'root slot outlet with stable sibling in %s does not notify parent',
+      (_, source) => {
+        const { code } = compileWithSlots(source)
+
+        expect(code).toContain('SLOT_ROOT')
+        expect(code).not.toContain(
+          `_createSlot("default", null, null, ${slotRootFlag})`,
+        )
+      },
+    )
+
+    test('root slot outlet with stable sibling in forwarded fallback does not notify parent', () => {
+      const { code } = compileWithSlots(
+        `<Comp><slot><slot/><span/></slot></Comp>`,
+      )
+
+      expect(code).toMatch(/const n\d+ = _createSlot\(\)/)
     })
 
     test('<slot> tag w/ v-if', () => {
