@@ -18,7 +18,7 @@ export function genSlotOutlet(
   if (fallback) {
     if (context.inSlotBlock) {
       // Forwarded fallback validity affects the owning slot's exposed branch;
-      markSlotRootOperations(fallback)
+      markSlotRootOperations(fallback, context)
     }
     fallbackArg = genBlock(fallback, context)
   }

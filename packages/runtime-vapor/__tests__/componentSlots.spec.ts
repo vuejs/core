@@ -238,6 +238,27 @@ describe('component: slots', () => {
       expect(isValidBlock(frag)).toBe(true)
     })
 
+    test('slot root does not notify parent while exposed validity stays valid', () => {
+      const markDirty = vi.fn()
+      const parentBoundary: SlotBoundaryContext = {
+        parent: null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const frag = withSlotBoundary(
+        parentBoundary,
+        () => new SlotFragment(true),
+      )
+      const fallback = () => document.createTextNode('fallback')
+
+      frag.updateSlot(() => [], fallback)
+      markDirty.mockClear()
+      frag.updateSlot(() => document.createTextNode('content'), fallback)
+
+      expect(markDirty).not.toHaveBeenCalled()
+    })
+
     test('slot fragment remove cleans active fallback and fallback scope', () => {
       const container = document.createElement('div')
       const stop = vi.fn()
