@@ -172,7 +172,7 @@ async function testHydration(
   }
 
   app.mount(container)
-  return { data, container, html }
+  return { data, container, html, app }
 }
 
 const triggerEvent = (type: string, el: Element) => {
@@ -4455,6 +4455,618 @@ describe('Vapor Mode hydration', () => {
       data.key++
       await nextTick()
       expect(container.textContent).toBe('content')
+    })
+
+    test.each([
+      {
+        initial: { showA: true, showB: false },
+        initialText: 'A',
+      },
+      {
+        initial: { showA: false, showB: false },
+        initialText: 'fallback',
+      },
+      {
+        initial: { showA: false, showB: true },
+        initialText: 'B',
+      },
+    ])(
+      'multiple forwarded roots resolve receiver fallback once from $initialText',
+      async ({ initial, initialText }) => {
+        const data = reactive({ ...initial })
+        const { container } = await testHydration(
+          `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <components.Carrier>
+          <template #a><span v-if="data.showA">A</span></template>
+          <template #b><span v-if="data.showB">B</span></template>
+        </components.Carrier>
+      </template>`,
+          {
+            Receiver: `<template><slot><span>fallback</span></slot></template>`,
+            Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot name="a" />
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+          },
+          data,
+        )
+        expect(container.textContent).toBe(initialText)
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        if (initialText === 'A') {
+          data.showB = true
+        } else if (initialText === 'B') {
+          data.showA = true
+        }
+        if (initialText !== 'fallback') {
+          await nextTick()
+          expect(container.textContent).toBe('AB')
+        }
+
+        data.showA = false
+        data.showB = false
+        await nextTick()
+        expect(container.textContent).toBe('fallback')
+
+        data.showB = true
+        await nextTick()
+        expect(container.textContent).toBe('B')
+
+        data.showA = true
+        await nextTick()
+        expect(container.textContent).toBe('AB')
+
+        data.showA = false
+        data.showB = false
+        await nextTick()
+        expect(container.textContent).toBe('fallback')
+      },
+    )
+
+    test('multiple invalid forwarded roots hydrate fragment fallback without child anchors', async () => {
+      const data = reactive({ showA: false, showB: false, fallback: true })
+      const { container } = await testHydration(
+        `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <components.Carrier>
+          <template #a><span v-if="data.showA">A</span></template>
+          <template #b><span v-if="data.showB">B</span></template>
+        </components.Carrier>
+      </template>`,
+        {
+          Receiver: `<script setup>const data = _data</script>
+          <template>
+            <slot>
+              <template v-if="data.fallback">
+                <span>fallback 1</span><span>fallback 2</span>
+              </template>
+            </slot>
+          </template>`,
+          Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot name="a" />
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('fallback 1fallback 2')
+      expect(container.innerHTML).not.toContain('<!--slot-->')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('nested forwarded slot hydrates its own range inside stable content', async () => {
+      const data = reactive({ branch: true, show: false })
+      const { container } = await testHydration(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <span v-if="data.show">content</span>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <template v-if="data.branch"><div><slot /></div></template>
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.querySelector('div')!.textContent).toBe('')
+
+      data.show = true
+      await nextTick()
+      expect(container.querySelector('div')!.textContent).toBe('content')
+
+      data.branch = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
+      expect(container.innerHTML.match(/<!--slot-->/g)).toHaveLength(1)
+    })
+
+    test('nested fallbacks stay within a shared boundary during hydration', async () => {
+      const data = reactive({ showX: false })
+      const { container } = await testHydration(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #x><span v-if="data.showX">X</span></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><span>receiver fallback</span></slot></template>`,
+          Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><slot name="x" /></slot>
+              <slot name="b"><slot name="y" /></slot>
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('receiver fallback')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showX = true
+      await nextTick()
+      expect(container.textContent).toBe('X')
+
+      data.showX = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
+    })
+
+    test('v-once forwarded root shares fallback during hydration', async () => {
+      const data = reactive({ showB: false })
+      const { container } = await testHydration(
+        `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <components.Carrier>
+          <template #a><span v-if="false">A</span></template>
+          <template #b><span v-if="data.showB">B</span></template>
+        </components.Carrier>
+      </template>`,
+        {
+          Receiver: `<template><slot><span>fallback</span></slot></template>`,
+          Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot v-once name="a" />
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('fallback')
+
+      data.showB = true
+      await nextTick()
+      expect(container.textContent).toBe('B')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('shared local fallback participates in aggregate hydration', async () => {
+      const data = reactive({ localA: false })
+      const { container } = await testHydration(
+        `<script setup>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        {
+          Receiver: `<template><slot><b>receiver 1</b><b>receiver 2</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><span v-if="data.localA">local A</span></slot>
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('receiver 1receiver 2')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.localA = true
+      await nextTick()
+      expect(container.textContent).toBe('local A')
+    })
+
+    test('v-for restores slot boundary for roots created after hydration', async () => {
+      const data = reactive({ items: [] as number[], show: false })
+      const { container } = await testHydration(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <span v-if="data.show">content</span>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <slot v-for="item in data.items" :key="item" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('receiver fallback')
+
+      data.items.push(1)
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
+
+      data.show = true
+      await nextTick()
+      expect(container.textContent).toBe('content')
+    })
+
+    test('slot-root v-for keeps its hydration anchor for empty component items', async () => {
+      const data = reactive({ items: [1], show: false })
+      const { container } = await testHydration(
+        `<script setup>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          EmptyItem: `<script setup>const data = _data</script>
+          <template><span v-if="data.show">item</span></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <components.EmptyItem
+                v-for="item in data.items"
+                :key="item"
+              />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('')
+      expect(container.textContent).not.toContain('receiver fallback')
+
+      data.items.push(2)
+      await nextTick()
+      data.show = true
+      await nextTick()
+      expect(container.textContent).toBe('itemitem')
+    })
+
+    test('vdom shared roots preserve hydration order and receiver fallback', async () => {
+      const data = reactive({ showA: false, showB: true })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #a><span v-if="data.showA">A</span></template>
+            <template #b><span v-if="data.showB">B</span></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot name="a" />
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('B')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showA = true
+      await nextTick()
+      expect(container.textContent).toBe('AB')
+
+      data.showA = false
+      data.showB = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
+
+      data.showB = true
+      await nextTick()
+      expect(container.textContent).toBe('B')
+    })
+
+    test('vdom shared roots hydrate from receiver fallback', async () => {
+      const data = reactive({ mount: true, showA: false, showB: false })
+      const { app, container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier v-if="data.mount">
+            <template #a><span v-if="data.showA">A</span></template>
+            <template #b><span v-if="data.showB">B</span></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot name="a" />
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('receiver fallback')
+      const fallbackNodeCount = container.childNodes.length
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showB = true
+      await nextTick()
+      expect(container.textContent).toBe('B')
+
+      data.showA = true
+      await nextTick()
+      expect(container.textContent).toBe('AB')
+
+      data.showA = false
+      data.showB = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
+      expect(container.childNodes).toHaveLength(fallbackNodeCount)
+
+      data.mount = false
+      await nextTick()
+      expect(container.textContent).toBe('')
+      app.unmount()
+    })
+
+    test('vdom shared roots leave fragment receiver fallback to the parent', async () => {
+      const data = reactive({ showA: false, showB: false })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #a><span v-if="data.showA">A</span></template>
+            <template #b><span v-if="data.showB">B</span></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template>
+            <slot>
+              <template v-if="true">
+                <b>receiver 1</b><b>receiver 2</b>
+              </template>
+            </slot>
+          </template>`,
+          Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot name="a" />
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('receiver 1receiver 2')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showB = true
+      await nextTick()
+      expect(container.textContent).toBe('B')
+    })
+
+    test('vdom shared local fallback participates in aggregate hydration', async () => {
+      const data = reactive({ localA: false, showB: false })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #b><span v-if="data.showB">B</span></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><span v-if="data.localA">local A</span></slot>
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('receiver fallback')
+      const fallbackNodeCount = container.childNodes.length
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.localA = true
+      await nextTick()
+      expect(container.textContent).toBe('local A')
+
+      data.localA = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
+      expect(container.childNodes).toHaveLength(fallbackNodeCount)
+
+      data.showB = true
+      await nextTick()
+      expect(container.textContent).toBe('B')
+
+      data.showB = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
+      expect(container.childNodes).toHaveLength(fallbackNodeCount)
+
+      data.localA = true
+      await nextTick()
+      expect(container.textContent).toBe('local A')
+    })
+
+    test('vdom shared local fallback does not claim fragment receiver fallback', async () => {
+      const data = reactive({ localA: false })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        {
+          Receiver: `<template>
+            <slot>
+              <template v-if="true">
+                <b>receiver 1</b><b>receiver 2</b>
+              </template>
+            </slot>
+          </template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><span v-if="data.localA">local A</span></slot>
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('receiver 1receiver 2')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.localA = true
+      await nextTick()
+      expect(container.textContent).toBe('local A')
+
+      data.localA = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver 1receiver 2')
+    })
+
+    test('vdom shared local fallback preserves sibling hydration order', async () => {
+      const data = reactive({ localA: false, showB: true })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #b><span v-if="data.showB">B</span></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><span v-if="data.localA">local A</span></slot>
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('B')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.localA = true
+      await nextTick()
+      expect(container.textContent).toBe('local AB')
+
+      data.localA = false
+      await nextTick()
+      expect(container.textContent).toBe('B')
+    })
+
+    test('vdom nested hosts recover through a shared local fallback', async () => {
+      const data = reactive({ showX: true, showY: false })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #x><span v-if="data.showX">X</span></template>
+            <template #y><span v-if="data.showY">Y</span></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><slot name="x" /><slot name="y" /></slot>
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('X')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showX = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
+
+      data.showY = true
+      await nextTick()
+      expect(container.textContent).toBe('Y')
+    })
+
+    test('shared slot keeps its hydration position after a valid dynamic component', async () => {
+      const data = reactive({ showB: false, showC: true })
+      const { container } = await testHydration(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #b><span v-if="data.showB">B</span></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Item: `<template><span>A</span></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <component :is="components.Item" />
+              <slot name="b" />
+              <span v-if="data.showC">C</span>
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('AC')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showB = true
+      await nextTick()
+      expect(container.textContent).toBe('ABC')
     })
 
     test('forwarded slot with empty content', async () => {

@@ -132,7 +132,7 @@ describe('resolveDynamicAnchor', () => {
     expect(cleanup.cleanupUntil).toBe(footer)
   })
 
-  test('non-forwarded slot reuses the boundary close anchor', () => {
+  test('empty slot reuses the boundary close anchor', () => {
     const host = document.createElement('div')
     const start = document.createComment('[')
     const end = document.createComment(']')
@@ -149,26 +149,7 @@ describe('resolveDynamicAnchor', () => {
     expect(reuse.resetNodes).toBeUndefined()
   })
 
-  test('empty forwarded slot reuses the boundary close anchor', () => {
-    const host = document.createElement('div')
-    const start = document.createComment('[')
-    const end = document.createComment(']')
-    host.append(start, end)
-
-    const plan = resolveWithCursor(start, () =>
-      withHydratingSlotBoundary(() => {
-        const frag = new SlotFragment()
-        frag.forwarded = true
-        return resolveDynamicAnchor(frag, true)
-      }),
-    )
-
-    const reuse = expectKind(plan, 'reuse')
-    expect(reuse.node).toBe(end)
-    expect(reuse.resetNodes).toBeUndefined()
-  })
-
-  test('empty forwarded slot creates after an already reused boundary close anchor', () => {
+  test('empty slot creates after an already reused boundary close anchor', () => {
     const host = document.createElement('div')
     const start = document.createComment('[')
     const end = markHydrationAnchor(document.createComment(']'))
@@ -178,7 +159,6 @@ describe('resolveDynamicAnchor', () => {
     const plan = resolveWithCursor(start, () =>
       withHydratingSlotBoundary(() => {
         const frag = new SlotFragment()
-        frag.forwarded = true
         return resolveDynamicAnchor(frag, true)
       }),
     )

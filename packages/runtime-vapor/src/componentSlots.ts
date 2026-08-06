@@ -272,6 +272,8 @@ export function createSlot(
   const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
   const once = !!(flags & VaporSlotFlags.ONCE)
   const slotRoot = !!(flags & VaporSlotFlags.SLOT_ROOT)
+  const sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
+  const inheritFallback = !!(flags & VaporSlotFlags.INHERIT_FALLBACK)
   const slotProps = rawProps
     ? new Proxy(
         once ? snapshotRawProps(rawProps as RawProps) : rawProps,
@@ -295,6 +297,8 @@ export function createSlot(
       fallback,
       once,
       slotRoot,
+      sharedFallback,
+      inheritFallback,
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()
@@ -309,7 +313,12 @@ export function createSlot(
       isCustomElementSlot,
     )
     const slotFragment = needsSlotFragment
-      ? new SlotFragment(slotRoot, _insertionAnchor)
+      ? new SlotFragment(
+          slotRoot,
+          sharedFallback,
+          inheritFallback,
+          _insertionAnchor,
+        )
       : undefined
     let dynamicFragment: DynamicFragment | undefined
     if (slotFragment) {
@@ -327,11 +336,6 @@ export function createSlot(
       )
       dynamicFragment.isSlot = true
       fragment = dynamicFragment
-    }
-
-    if (isHydrating) {
-      ;(fragment as DynamicFragment).forwarded =
-        currentSlotOwner != null && currentSlotOwner !== currentInstance
     }
 
     const isDynamicName = isFunction(name)

@@ -20,7 +20,7 @@ import {
   insert,
   insertFragment,
   insertNode,
-  isValidBlock,
+  isValidSlot,
   remove,
   removeFragment,
   removeNode,
@@ -69,6 +69,7 @@ import {
 } from './insertionState'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
 import { setBlockKey } from './helpers/setKey'
+import { currentSlotBoundary, setCurrentSlotBoundary } from './slotBoundary'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -147,6 +148,7 @@ export const createFor = (
   const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
 
   const slotOwner = currentSlotOwner
+  const slotBoundary = currentSlotBoundary
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -543,7 +545,7 @@ export const createFor = (
         if (resolvedAnchor) {
           parentAnchor = resolvedAnchor
           pendingHydrationAnchor = true
-        } else if (slotFallbackRange && !isValidBlock(newBlocks)) {
+        } else if (slotFallbackRange && !isValidSlot(newBlocks)) {
           // Slot fallback can fall through an empty/invalid `v-for`. In that
           // case SSR only rendered the parent slot range, so this `v-for` has no
           // own `<!--]-->` to reuse. Keep its runtime anchor detached if
@@ -560,6 +562,7 @@ export const createFor = (
           parentAnchor = markHydrationAnchor(
             __DEV__ ? createComment('for') : createTextNode(),
           )
+          const hydrationAnchor = parentAnchor
           pendingHydrationAnchor = true
           if (
             currentHydrationNode === hydrationStart ||
@@ -567,15 +570,15 @@ export const createFor = (
           ) {
             setCurrentHydrationNode(hydrationStart)
           }
-          queuePendingSlotContentAnchor({
-            onContent: () => {
-              queuePostFlushCb(() => {
-                const parentNode = anchor.parentNode
-                if (parentNode) parentNode.insertBefore(parentAnchor, anchor)
-              })
-            },
+          const attachAnchor = () => {
+            const parentNode = anchor.parentNode
+            if (parentNode) parentNode.insertBefore(hydrationAnchor, anchor)
+          }
+          const queued = queuePendingSlotContentAnchor({
+            onContent: () => queuePostFlushCb(attachAnchor),
             onFallback: () => {},
           })
+          if (!queued) queuePostFlushCb(attachAnchor)
         } else {
           const close = locateHydrationBoundaryClose(currentHydrationNode!)
           reuseBoundaryClose(close)
@@ -640,9 +643,14 @@ export const createFor = (
     renderEffect(() => {
       if (!isMounted) return renderList()
       const prevOwner = setCurrentSlotOwner(slotOwner)
+      const restoreBoundary = currentSlotBoundary !== slotBoundary
+      const prevBoundary = restoreBoundary
+        ? setCurrentSlotBoundary(slotBoundary)
+        : null
       try {
         renderList()
       } finally {
+        if (restoreBoundary) setCurrentSlotBoundary(prevBoundary)
         setCurrentSlotOwner(prevOwner)
       }
     })
