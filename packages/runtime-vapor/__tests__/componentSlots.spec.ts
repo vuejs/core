@@ -919,6 +919,41 @@ describe('component: slots', () => {
       expect(markDirty).toHaveBeenCalledTimes(2)
     })
 
+    test('slot boundary dirtying ignores adopted v-if initial mount', async () => {
+      const markDirty = vi.fn()
+      const show = ref(true)
+      const boundary: SlotBoundaryContext = {
+        parent: null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() => {
+        const n = template('<div><!></div>', 1)() as any
+        setInsertionState(n, child(n))
+        withSlotBoundary(boundary, () =>
+          createIf(
+            () => show.value,
+            () => document.createTextNode('content'),
+            undefined,
+            slotRootIfShape,
+          ),
+        )
+        return n
+      })
+
+      const { host } = define(() => createComponent(Child)).render()
+
+      expect(host.innerHTML).toBe('<div>content<!--if--></div>')
+      expect(markDirty).not.toHaveBeenCalled()
+
+      show.value = false
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div><!--if--></div>')
+      expect(markDirty).toHaveBeenCalledTimes(1)
+    })
+
     test('slot boundary dirtying tracks root v-for updates', async () => {
       const markDirty = vi.fn()
       const items = ref([1])
