@@ -243,6 +243,9 @@ export function markSlotRootOperations(
       markSlotRootIf(operation, context)
     } else if (operation.type === IRNodeTypes.FOR) {
       markSlotRootFor(operation, context)
+    } else if (operation.type === IRNodeTypes.KEY) {
+      operation.slotRoot = true
+      markSlotRootOperations(operation.block, context)
     } else if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
       markSlotRootComponent(operation)
     } else if (

@@ -284,6 +284,19 @@ export function resolveDynamicAnchor(
   // truthiness check on the (possibly empty) label can't silently exclude one.
   const ownsDynamicAnchor = anchorLabel !== undefined || isNativeChildren
 
+  // A render function can still produce invalid slot content. Keep its anchor
+  // pending just like an empty branch so fallback cleanup cannot detach the
+  // insertion point before the runtime anchor is created.
+  if (isPendingSlotContent() && (isEmpty || !isValidBlock(frag.nodes))) {
+    const slotEnd = getCurrentSlotEndAnchor()!
+    const node = currentHydrationNode || slotEnd
+    return {
+      kind: 'pending',
+      parent: getParentNode(node)!,
+      slotEnd,
+    }
+  }
+
   // Native-children fragments get a runtime anchor injected by
   // createPlainElement when SSR rendered no default-slot content. Whenever the
   // cursor still points at that injected anchor — the branch stayed empty, or
@@ -300,15 +313,6 @@ export function resolveDynamicAnchor(
   // Empty fragments claim a current SSR anchor candidate directly. Later
   // fragments that need the same candidate create a fresh anchor after it.
   if (isEmpty) {
-    if (isPendingSlotContent()) {
-      const slotEnd = getCurrentSlotEndAnchor()!
-      const node = currentHydrationNode || slotEnd
-      return {
-        kind: 'pending',
-        parent: getParentNode(node)!,
-        slotEnd,
-      }
-    }
     if (isReusableAnchorCandidate(currentHydrationNode)) {
       return reuseOrCreateAfterAnchor(currentHydrationNode)
     }

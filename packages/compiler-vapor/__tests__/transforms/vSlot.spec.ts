@@ -7,6 +7,7 @@ import {
 import {
   IRNodeTypes,
   IRSlotType,
+  compile as compileVapor,
   transformChildren,
   transformComment,
   transformElement,
@@ -23,6 +24,8 @@ import { makeCompile } from './_utils'
 const dynamicSlotRootFlag = `${VaporDynamicComponentFlags.SLOT_ROOT} /* SLOT_ROOT */`
 const slotNonStableFlag = `_: ${VaporSlotFlags.NON_STABLE} /* NON_STABLE */`
 const slotRootFlag = `${VaporSlotFlags.SLOT_ROOT} /* SLOT_ROOT */`
+const keyedSlotRootCallRE =
+  /const (n\d+) = _createKeyedFragment\([\s\S]*?\n\s*}, true\)\n\s*return \1/
 
 const compileWithSlots = makeCompile({
   nodeTransforms: [
@@ -755,6 +758,28 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code).toMatch(/const n\d+ = _createSlot\(\)/)
+    })
+
+    test('root slot outlet with dynamic key tracks the keyed fragment and outlet', () => {
+      const { code } = compileVapor(`<Comp><slot :key="key" /></Comp>`, {
+        prefixIdentifiers: true,
+      })
+
+      expect(code).toContain(
+        `_createSlot("default", null, null, ${slotRootFlag})`,
+      )
+      expect(code).toMatch(keyedSlotRootCallRE)
+    })
+
+    test('keyed slot block with stable sibling does not track slot boundary', () => {
+      const { code } = compileVapor(
+        `<Comp><template :key="key"><slot /><span /></template></Comp>`,
+        { prefixIdentifiers: true },
+      )
+
+      expect(code).toContain('_createKeyedFragment(')
+      expect(code).not.toContain('SLOT_ROOT')
+      expect(code).not.toMatch(keyedSlotRootCallRE)
     })
 
     test('<slot> tag w/ v-if', () => {
