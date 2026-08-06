@@ -837,10 +837,7 @@ describe('defineVaporCustomElement', () => {
     })
     customElements.define('my-el-slots', E)
 
-    test('anchored native slot outlet renders without placeholder adoption', () => {
-      // regression: custom-element outlets assign the native <slot> to
-      // fragment.nodes without going through update(), so adopting the
-      // template placeholder would skip their only insertion
+    test('anchored native slot outlet adopts the placeholder', () => {
       const E = defineVaporCustomElement({
         setup() {
           const n = template('<div><!><span></span></div>', 1)() as any
@@ -853,7 +850,7 @@ describe('defineVaporCustomElement', () => {
       container.innerHTML = `<my-el-anchored-slot><b>hi</b></my-el-anchored-slot>`
       const e = container.childNodes[0] as VaporElement
       expect(e.shadowRoot!.innerHTML).toBe(
-        `<div><slot></slot><!--slot--><!----><span></span></div>`,
+        `<div><slot></slot><!--slot--><span></span></div>`,
       )
     })
 
@@ -1690,6 +1687,26 @@ describe('defineVaporCustomElement', () => {
       },
     })
     customElements.define('my-el-shadowroot-false', E)
+
+    test('anchored slot adopts the placeholder', () => {
+      const AnchoredSlot = defineVaporCustomElement({
+        shadowRoot: false,
+        setup() {
+          const n = template('<div><!><span></span></div>', 1)() as any
+          setInsertionState(n, child(n))
+          createSlot('default')
+          return n
+        },
+      })
+      customElements.define(
+        'my-el-shadowroot-false-anchored-slot',
+        AnchoredSlot,
+      )
+      container.innerHTML =
+        '<my-el-shadowroot-false-anchored-slot><b>hi</b></my-el-shadowroot-false-anchored-slot>'
+      const e = container.firstChild as VaporElement
+      expect(e.innerHTML).toBe('<div><b>hi</b><!--slot--><span></span></div>')
+    })
 
     test('should work', async () => {
       function raf() {

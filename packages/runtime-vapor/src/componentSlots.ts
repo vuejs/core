@@ -284,6 +284,7 @@ export function createSlot(
   }
 
   let fragment: VaporFragment
+  let isCustomElementSlot = false
   if (isRef(rawSlots._) && isInteropEnabled) {
     if (isHydrating) hydrationCursor = enterHydrationCursor()
     fragment = instance.appContext.vapor!.vdomSlot(
@@ -297,7 +298,7 @@ export function createSlot(
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()
-    const isCustomElementSlot = !!(
+    isCustomElementSlot = !!(
       (instance as GenericComponentInstance).ce ||
       (instance.parent && isAsyncWrapper(instance.parent) && instance.parent.ce)
     )
@@ -307,15 +308,8 @@ export function createSlot(
       fallback,
       isCustomElementSlot,
     )
-    // Custom-element outlets never adopt the template placeholder: they
-    // assign the native <slot> element to `fragment.nodes` directly without
-    // going through update(), so the trailing insert below must remain their
-    // only mount path.
     const slotFragment = needsSlotFragment
-      ? new SlotFragment(
-          slotRoot,
-          isCustomElementSlot ? undefined : _insertionAnchor,
-        )
+      ? new SlotFragment(slotRoot, _insertionAnchor)
       : undefined
     let dynamicFragment: DynamicFragment | undefined
     if (slotFragment) {
@@ -422,10 +416,13 @@ export function createSlot(
       setScopeId(fragment, slotScopeIds)
     }
 
-    // adopted fragments render in place through their template anchor
+    // Custom-element outlets assign their native <slot> directly instead of
+    // rendering through update(), so they still need this initial insertion
+    // after adopting the template anchor.
     if (
       _insertionParent &&
-      !isAdoptedAnchor(fragment.anchor, _insertionAnchor)
+      (isCustomElementSlot ||
+        !isAdoptedAnchor(fragment.anchor, _insertionAnchor))
     ) {
       insert(fragment, _insertionParent, _insertionAnchor)
     }
