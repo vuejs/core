@@ -119,6 +119,7 @@ import {
   isHydrating,
   isHydrationAnchor,
   locateEndAnchor,
+  markHydrationAnchor,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -143,14 +144,19 @@ import {
   type SlotResolutionState,
   disposeSlotResolution,
   insertActiveSlotFallback,
+  invalidateExposedSlotContent,
   leaveSlotFallback,
   markSlotResolutionDirty,
   recheckSlotResolution,
 } from './slotFragment'
 import {
   getCurrentSlotEndAnchor,
+  isPendingSlotContent,
+  queuePendingSlotContentAnchor,
+  resolvePendingSlotContent,
   startPendingSlotContent,
   withHydratingSlotBoundary,
+  withPendingHydratingSlotBoundary,
 } from './dom/hydrateFragment'
 import type { NodeRef } from './apiTemplateRef'
 import {
@@ -1509,6 +1515,8 @@ function renderVDOMSlot(
   fallback?: VaporSlot,
   once?: boolean,
   slotRoot?: boolean,
+  sharedFallback?: boolean,
+  inheritFallback?: boolean,
 ): VaporFragment {
   let suspense = currentParentSuspense || parentComponent.suspense
   const frag = createInteropFragment()
@@ -1525,6 +1533,7 @@ function renderVDOMSlot(
   }
   let currentParentNode: ParentNode | null = null
   let currentAnchor: Node | null = null
+  let sharedContentStorage: DocumentFragment | undefined
   let disposed = false
   let pendingInOutVNode: VNode | undefined
   let pendingOutIn:
@@ -1571,9 +1580,7 @@ function renderVDOMSlot(
       : contentState.valid
   }
   const boundary: SlotBoundaryContext = {
-    get parent() {
-      return slotBoundary
-    },
+    parent: inheritFallback ? slotBoundary : null,
     getFallback: (): BlockFn | undefined => localFallback,
     run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
     markDirty: force => markSlotResolutionDirty(slotResolutionState, force),
@@ -1585,7 +1592,7 @@ function renderVDOMSlot(
     fallbackInserted: false,
     pendingRecheck: false,
     pendingRecheckForce: false,
-    isRenderingFallback: false,
+    isReconciling: false,
     get $transition() {
       const transition = frag.$transition
       return transition && isVaporTransitionHooks(transition)
@@ -1610,8 +1617,33 @@ function renderVDOMSlot(
       }
     },
   }
+  if (sharedFallback && slotBoundary) {
+    registerContentInvalid(
+      slotBoundary,
+      () => {
+        if (!currentParentNode || sharedContentStorage) return
+        invalidateExposedSlotContent(slotResolutionState)
+        const storage = document.createDocumentFragment()
+        let anchor = frag.anchor
+        if (!anchor || anchor.parentNode !== currentParentNode) {
+          anchor = createTextNode()
+        }
+        storage.appendChild(anchor)
+        // VDOM Fragment ranges must keep a common parent while parked so the
+        // renderer can patch them before the aggregate fallback switches back.
+        insert(frag.nodes, storage, anchor, suspense)
+        sharedContentStorage = storage
+        currentParentNode = storage
+        currentAnchor = anchor
+      },
+      frag,
+    )
+  }
   if (slotRoot) {
-    trackSlotBoundaryDirtying(frag, cleanupInvalidContent)
+    trackSlotBoundaryDirtying(
+      frag,
+      sharedFallback ? undefined : cleanupInvalidContent,
+    )
   }
   localFallback = fallback
     ? once
@@ -1761,6 +1793,7 @@ function renderVDOMSlot(
   frag.insert = (parentNode, anchor, parentSuspense) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
+    const sharedContentParked = !!sharedContentStorage
     currentParentNode = parentNode
     currentAnchor = anchor
 
@@ -1768,7 +1801,13 @@ function renderVDOMSlot(
       scope.run(render)
       isMounted = true
     } else {
-      if (isVNode(contentState.rendered)) {
+      if (sharedContentParked) {
+        insert(frag.nodes, parentNode, anchor, suspense)
+        sharedContentStorage = undefined
+        if (slotResolutionState.activeFallback) {
+          slotResolutionState.fallbackInserted = true
+        }
+      } else if (isVNode(contentState.rendered)) {
         // move vdom content
         internals.m(
           contentState.rendered,
@@ -1783,14 +1822,17 @@ function renderVDOMSlot(
         insert(contentState.rendered, parentNode, anchor, suspense)
       }
 
-      insertActiveSlotFallback(slotResolutionState)
+      if (!sharedContentParked) {
+        insertActiveSlotFallback(slotResolutionState)
+      }
     }
 
     notifyUpdated()
   }
 
   frag.remove = parentNode => {
-    if (parentNode) {
+    const storage = sharedContentStorage
+    if (parentNode && !storage) {
       currentParentNode = parentNode
     }
     scope.stop()
@@ -1803,9 +1845,16 @@ function renderVDOMSlot(
       leavingElement && (leavingElement as TransitionElement)[leaveCbKey]
     if (leave) leave(true)
     if (contentState.rendered) {
-      removeRenderedContent(contentState.rendered, parentNode)
+      removeRenderedContent(contentState.rendered, storage || parentNode)
     }
     disposeSlotResolution(slotResolutionState)
+    if (storage) {
+      const anchor = frag.anchor
+      if (anchor && anchor.parentNode === storage) {
+        frag.anchor = undefined
+      }
+      sharedContentStorage = undefined
+    }
   }
 
   const render = () => {
@@ -1848,12 +1897,34 @@ function renderVDOMSlot(
             }
 
             if (isHydrating) {
+              if (slotContentValid && isPendingSlotContent()) {
+                resolvePendingSlotContent()
+              }
+              const contentStart = currentHydrationNode
+              const contentEnd =
+                contentStart && isComment(contentStart, '[')
+                  ? locateEndAnchor(contentStart)
+                  : null
+              const slotEnd = getCurrentSlotEndAnchor()
+              const candidateEnd =
+                contentEnd && contentEnd !== slotEnd ? contentEnd : null
+              const deferSharedContent =
+                sharedFallback && !slotContentValid && isPendingSlotContent()
+              const localFallbackOwnsRange = !!(
+                sharedFallback &&
+                !slotContentValid &&
+                !deferSharedContent &&
+                localFallback &&
+                candidateEnd
+              )
               // An empty VDOM slot fragment is still the hydration owner of the
               // SSR fragment markers when no fallback takes over. Keep hydrating
               // that content so later updates can patch inside the existing
               // range instead of mounting before it.
               const hydratedContent =
-                slotContent && (slotContentValid || !hasSlotFallback(boundary))
+                !deferSharedContent &&
+                slotContent &&
+                (slotContentValid || !hasSlotFallback(boundary))
                   ? slotContent
                   : undefined
               if (isVNode(hydratedContent)) {
@@ -1909,7 +1980,86 @@ function renderVDOMSlot(
                 frag.$key = undefined
                 setRenderedContent(null)
               }
-              finishContentUpdate(true)
+              if (deferSharedContent && localFallback && candidateEnd) {
+                // Resolve the local fallback inside its candidate range, but
+                // leave that range untouched if the parent aggregate still wins.
+                withPendingHydratingSlotBoundary(() =>
+                  finishContentUpdate(true),
+                )
+              } else if (localFallbackOwnsRange) {
+                // The candidate range belongs to the exposed local fallback,
+                // not to the invalid raw VDOM content or the parent aggregate.
+                withHydratingSlotBoundary(() => finishContentUpdate(true))
+                frag.anchor = currentAnchor = markHydrationAnchor(candidateEnd)
+                currentParentNode = candidateEnd.parentNode as ParentNode
+                advanceHydrationNode(candidateEnd)
+              } else {
+                finishContentUpdate(true)
+              }
+              const exposedValid = isValidSlot(frag.nodes)
+              if (
+                sharedFallback &&
+                exposedValid &&
+                candidateEnd &&
+                currentHydrationNode === candidateEnd
+              ) {
+                advanceHydrationNode(candidateEnd)
+              } else if (deferSharedContent && !exposedValid) {
+                if (candidateEnd && currentHydrationNode === candidateEnd) {
+                  advanceHydrationNode(candidateEnd)
+                }
+                const anchor = createTextNode()
+                const detachedParent = document.createDocumentFragment()
+                detachedParent.appendChild(anchor)
+                currentParentNode = detachedParent
+                currentAnchor = anchor
+                const previous = slotEnd && slotEnd.previousSibling
+                if (previous && isComment(previous, ']')) {
+                  markHydrationAnchor(previous)
+                }
+                const attachAnchor = () => {
+                  const insertionAnchor =
+                    candidateEnd ||
+                    (contentStart && contentStart.parentNode
+                      ? contentStart
+                      : slotEnd)
+                  const parent = insertionAnchor && insertionAnchor.parentNode
+                  if (parent) {
+                    if (candidateEnd) {
+                      frag.anchor = currentAnchor =
+                        markHydrationAnchor(candidateEnd)
+                      if (currentHydrationNode === contentStart) {
+                        advanceHydrationNode(candidateEnd)
+                      }
+                    } else {
+                      parent.insertBefore(anchor, insertionAnchor)
+                    }
+                    currentParentNode = parent
+                    move(frag.nodes, parent, currentAnchor)
+                  }
+                }
+                const queued = queuePendingSlotContentAnchor({
+                  onContent: () => {
+                    attachAnchor()
+                    // Keep the detached anchor out of the parent fragment's
+                    // boundary lookup until its hydration pass has finished.
+                    if (!candidateEnd) {
+                      queuePostFlushCb(() => {
+                        if (!disposed) frag.anchor = anchor
+                      })
+                    }
+                  },
+                  onFallback: () => {
+                    frag.anchor = anchor
+                  },
+                })
+                if (!queued) {
+                  queuePostFlushCb(() => {
+                    attachAnchor()
+                    if (!disposed && !candidateEnd) frag.anchor = anchor
+                  })
+                }
+              }
               return
             }
 
@@ -2375,7 +2525,7 @@ function renderVaporSlot(
       fallbackInserted: false,
       pendingRecheck: false,
       pendingRecheckForce: false,
-      isRenderingFallback: false,
+      isReconciling: false,
       getContent: () => contentNodes,
       getParentNode: () => currentParentNode,
       getAnchor: () => currentAnchor,

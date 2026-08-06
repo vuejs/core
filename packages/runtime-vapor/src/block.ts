@@ -296,6 +296,34 @@ export function remove(block: Block, parent?: ParentNode): void {
   }
 }
 
+// Detach a live block from `parent` without running fragment/component teardown.
+// Slot content uses this while an enclosing fallback temporarily owns the DOM.
+export function removeAttachedNodes(
+  block: Block,
+  parent: ParentNode,
+  removeAnchors: boolean = true,
+): void {
+  if (block instanceof Node) {
+    if (block.parentNode === parent) {
+      removeNode(block, parent)
+    }
+  } else if (isVaporComponent(block)) {
+    if (block.block) {
+      removeAttachedNodes(block.block, parent, removeAnchors)
+    }
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      removeAttachedNodes(block[i], parent, removeAnchors)
+    }
+  } else {
+    removeAttachedNodes(block.nodes, parent, removeAnchors)
+    const anchor = block.anchor
+    if (removeAnchors && anchor && anchor.parentNode === parent) {
+      removeNode(anchor, parent)
+    }
+  }
+}
+
 export function removeNode(block: Node, parent?: ParentNode): void {
   if (
     isTransitionEnabled &&

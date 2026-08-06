@@ -231,8 +231,10 @@ function isVModelOperation(oper: OperationNode): boolean {
 export function markSlotRootOperations(
   block: BlockIRNode,
   context: CodegenContext,
+  sharedFallback: boolean = false,
 ): void {
   if (hasStableSlotRoot(block, context)) return
+  sharedFallback = sharedFallback || hasMultipleDynamicSlotRoots(block)
 
   for (let i = 0; i < block.returns.length; i++) {
     const child = findReturnedDynamic(block, block.returns[i])
@@ -240,35 +242,43 @@ export function markSlotRootOperations(
     if (!operation) continue
 
     if (operation.type === IRNodeTypes.IF) {
-      markSlotRootIf(operation, context)
+      markSlotRootIf(operation, context, sharedFallback)
     } else if (operation.type === IRNodeTypes.FOR) {
       markSlotRootFor(operation, context)
     } else if (operation.type === IRNodeTypes.KEY) {
       operation.slotRoot = true
-      markSlotRootOperations(operation.block, context)
+      markSlotRootOperations(operation.block, context, sharedFallback)
     } else if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
       markSlotRootComponent(operation)
-    } else if (
-      operation.type === IRNodeTypes.SLOT_OUTLET_NODE &&
-      !(operation.flags & VaporSlotFlags.ONCE)
-    ) {
-      operation.flags |= VaporSlotFlags.SLOT_ROOT
+    } else if (operation.type === IRNodeTypes.SLOT_OUTLET_NODE) {
+      if (!(operation.flags & VaporSlotFlags.ONCE)) {
+        operation.flags |= VaporSlotFlags.SLOT_ROOT
+      }
+      if (sharedFallback) {
+        operation.flags |= VaporSlotFlags.SHARED_FALLBACK
+      } else {
+        operation.flags |= VaporSlotFlags.INHERIT_FALLBACK
+      }
     }
   }
 }
 
-function markSlotRootIf(operation: IfIRNode, context: CodegenContext): void {
+function markSlotRootIf(
+  operation: IfIRNode,
+  context: CodegenContext,
+  sharedFallback: boolean,
+): void {
   if (!operation.once) {
     operation.slotRoot = true
   }
-  markSlotRootOperations(operation.positive, context)
+  markSlotRootOperations(operation.positive, context, sharedFallback)
 
   const negative = operation.negative
   if (!negative) return
   if (negative.type === IRNodeTypes.IF) {
-    markSlotRootIf(negative, context)
+    markSlotRootIf(negative, context, sharedFallback)
   } else {
-    markSlotRootOperations(negative, context)
+    markSlotRootOperations(negative, context, sharedFallback)
   }
 }
 
@@ -276,7 +286,16 @@ function markSlotRootFor(operation: ForIRNode, context: CodegenContext): void {
   if (!operation.once) {
     operation.slotRoot = true
   }
-  markSlotRootOperations(operation.render, context)
+  markSlotRootOperations(operation.render, context, true)
+}
+
+function hasMultipleDynamicSlotRoots(block: BlockIRNode): boolean {
+  let count = 0
+  for (let i = 0; i < block.returns.length; i++) {
+    const child = findReturnedDynamic(block, block.returns[i])
+    if (child && child.operation && ++count > 1) return true
+  }
+  return false
 }
 
 function markSlotRootComponent(operation: CreateComponentIRNode): void {

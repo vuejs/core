@@ -39,16 +39,6 @@ interface PendingSlotContentAnchor {
   onFallback: () => void
 }
 
-function setCurrentHydratingSlotBoundaryState(
-  state: HydratingSlotBoundaryState | null,
-): HydratingSlotBoundaryState | null {
-  try {
-    return currentHydratingSlotBoundaryState
-  } finally {
-    currentHydratingSlotBoundaryState = state
-  }
-}
-
 export function getCurrentSlotEndAnchor(): Node | null {
   return currentHydratingSlotBoundaryState
     ? currentHydratingSlotBoundaryState.endAnchor
@@ -65,17 +55,59 @@ export function withHydratingSlotBoundary<R>(fn: () => R): R {
     setCurrentHydrationNode(currentHydrationNode.nextSibling)
     exitHydrationBoundary = enterHydrationBoundary(endAnchor)
   }
-  const prevState = setCurrentHydratingSlotBoundaryState({
+  const prevState = currentHydratingSlotBoundaryState
+  currentHydratingSlotBoundaryState = {
     endAnchor,
     pending: false,
     pendingAnchors: null,
-  })
+  }
 
   try {
     return fn()
   } finally {
-    setCurrentHydratingSlotBoundaryState(prevState)
+    currentHydratingSlotBoundaryState = prevState
     exitHydrationBoundary && exitHydrationBoundary()
+  }
+}
+
+export function withPendingHydratingSlotBoundary<R>(fn: () => R): R {
+  const pendingParent = currentHydratingSlotBoundaryState!
+  const contentStart = currentHydrationNode
+  let endAnchor = getCurrentSlotEndAnchor()
+  let exitHydrationBoundary: (() => void) | undefined
+
+  locateHydrationNode()
+  if (isComment(currentHydrationNode!, '[')) {
+    endAnchor = locateEndAnchor(currentHydrationNode)
+    setCurrentHydrationNode(currentHydrationNode.nextSibling)
+    exitHydrationBoundary = enterHydrationBoundary(endAnchor)
+  }
+  const state: HydratingSlotBoundaryState = {
+    endAnchor,
+    pending: true,
+    pendingAnchors: null,
+  }
+  currentHydratingSlotBoundaryState = state
+  let completed = false
+
+  try {
+    const result = fn()
+    completed = true
+    return result
+  } finally {
+    currentHydratingSlotBoundaryState = pendingParent
+    if (!completed) {
+      exitHydrationBoundary && exitHydrationBoundary()
+    } else if (state.pending) {
+      if (state.pendingAnchors) {
+        ;(pendingParent.pendingAnchors ||= []).push(...state.pendingAnchors)
+      }
+      setCurrentHydrationNode(contentStart)
+    } else {
+      exitHydrationBoundary && exitHydrationBoundary()
+      resolvePendingSlotContentAnchors(pendingParent, true)
+      pendingParent.pending = false
+    }
   }
 }
 
@@ -104,11 +136,13 @@ function resolvePendingSlotContentAnchors(
 
 export function queuePendingSlotContentAnchor(
   anchor: PendingSlotContentAnchor,
-): void {
+): boolean {
   const state = currentHydratingSlotBoundaryState
   if (state && state.pending) {
     ;(state.pendingAnchors ||= []).push(anchor)
+    return true
   }
+  return false
 }
 
 // Slot content with fallback is unresolved until it creates a valid node.

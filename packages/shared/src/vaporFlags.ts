@@ -108,6 +108,12 @@ export enum VaporSlotFlags {
   // Per-slot function metadata. The slot root can start invalid or become
   // invalid, so fallback may be reachable and needs SlotFragment tracking.
   NON_STABLE = 1 << 3,
+  // Multiple independently invalid roots share one enclosing fallback
+  // decision instead of resolving that fallback from each root.
+  SHARED_FALLBACK = 1 << 4,
+  // The outlet is the only forwarded root, so it may resolve an enclosing
+  // fallback after its own local fallback is exhausted.
+  INHERIT_FALLBACK = 1 << 5,
 }
 
 export enum VaporDynamicComponentFlags {
