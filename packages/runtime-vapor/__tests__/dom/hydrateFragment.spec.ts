@@ -214,6 +214,30 @@ describe('resolveDynamicAnchor', () => {
     expect(pending.slotEnd).toBe(end)
   })
 
+  test('rendered invalid fragment waits for pending slot content decision', () => {
+    const host = document.createElement('div')
+    const start = document.createComment('[')
+    const end = document.createComment(']')
+    host.append(start, end)
+
+    const plan = resolveWithCursor(start, () =>
+      withHydratingSlotBoundary(() => {
+        const finish = startPendingSlotContent(start)
+        try {
+          const frag = new DynamicFragment('keyed', false, false)
+          frag.nodes = document.createComment('')
+          return resolveDynamicAnchor(frag, false)
+        } finally {
+          finish(false)
+        }
+      }),
+    )
+
+    const pending = expectKind(plan, 'pending')
+    expect(pending.parent).toBe(host)
+    expect(pending.slotEnd).toBe(end)
+  })
+
   test('nested invalid pending slot content preserves outer pending anchors', () => {
     const host = document.createElement('div')
     const start = document.createComment('[')

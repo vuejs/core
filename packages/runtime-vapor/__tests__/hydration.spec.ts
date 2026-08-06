@@ -4377,6 +4377,86 @@ describe('Vapor Mode hydration', () => {
       },
     )
 
+    test('forwarded keyed root slot tracks fallback across hydration and key updates', async () => {
+      const data = reactive({ show: false, key: 0 })
+      const { container } = await testHydration(
+        `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <components.Carrier>
+          <span v-if="data.show">content</span>
+        </components.Carrier>
+      </template>`,
+        {
+          Receiver: `<template><slot><span>fallback</span></slot></template>`,
+          Carrier: `<script setup>
+          const components = _components
+          const data = _data
+        </script>
+        <template>
+          <components.Receiver>
+            <slot :key="data.key" />
+          </components.Receiver>
+        </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('fallback')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.show = true
+      await nextTick()
+      expect(container.textContent).toBe('content')
+
+      data.key++
+      data.show = false
+      await nextTick()
+      expect(container.textContent).toBe('fallback')
+
+      data.show = true
+      await nextTick()
+      expect(container.textContent).toBe('content')
+    })
+
+    test('keyed dynamic slot root tracks fallback when remounted validity changes', async () => {
+      let view: string | null = 'span'
+      const data = reactive({
+        key: 0,
+        getView: () => view,
+      })
+      const { container } = await testHydration(
+        `<script setup>
+        const components = _components
+        const data = _data
+      </script>
+      <template>
+        <components.Receiver>
+          <component :is="data.getView()" :key="data.key">content</component>
+        </components.Receiver>
+      </template>`,
+        {
+          Receiver: `<template><slot><span>fallback</span></slot></template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('content')
+
+      view = null
+      data.key++
+      await nextTick()
+      expect(container.textContent).toBe('fallback')
+      expect(container.innerHTML).not.toContain('keyed')
+
+      view = 'span'
+      data.key++
+      await nextTick()
+      expect(container.textContent).toBe('content')
+    })
+
     test('forwarded slot with empty content', async () => {
       const data = reactive({
         foo: 'foo',

@@ -133,6 +133,7 @@ export interface KeyIRNode extends BaseIRNode, EffectBoundary, InsertionState {
   id: number
   value: SimpleExpressionNode
   block: BlockIRNode
+  slotRoot?: boolean
 }
 
 export interface SetBlockKeyIRNode extends BaseIRNode {

@@ -1,4 +1,4 @@
-import { type Block, type BlockFn, insert } from './block'
+import { type Block, type BlockFn, insert, removeNode } from './block'
 import {
   type HydrationCursor,
   captureHydrationCursor,
@@ -23,7 +23,11 @@ import { renderEffect } from './renderEffect'
  *   <h1 :key="count">{{ count }}</h1>
  * </VaporTransition>
  */
-export function createKeyedFragment(key: () => any, render: BlockFn): Block {
+export function createKeyedFragment(
+  key: () => any,
+  render: BlockFn,
+  trackSlotBoundary: boolean = false,
+): Block {
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()
@@ -35,8 +39,13 @@ export function createKeyedFragment(key: () => any, render: BlockFn): Block {
     __DEV__ ? 'keyed' : undefined,
     true,
     true,
-    false,
-    undefined,
+    trackSlotBoundary,
+    trackSlotBoundary
+      ? () => {
+          const parent = frag.anchor.parentNode
+          if (parent) removeNode(frag.anchor, parent)
+        }
+      : undefined,
     _insertionAnchor,
   )
 
