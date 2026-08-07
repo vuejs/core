@@ -614,15 +614,16 @@ export function activate(
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
   instance.keepAliveUpdatePaused = false
-  // Deferred effects may update async fragments and their template refs while
-  // the branch is being restored, so expose the active state before replay.
-  if (isAsyncWrapper(instance)) instance.isDeactivated = false
   move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)
 
   const deferredEffects = instance.deferredKeepAliveEffects
   if (deferredEffects) {
     instance.deferredKeepAliveEffects = undefined
-    deferredEffects.forEach(effect => {
+    const effects = [...deferredEffects]
+    if (effects.length > 1) {
+      effects.sort((a, b) => a.job.order! - b.job.order!)
+    }
+    effects.forEach(effect => {
       let current: GenericComponentInstance | null = effect.i
       while (current) {
         if (isVaporComponent(current) && current.keepAliveUpdatePaused) {

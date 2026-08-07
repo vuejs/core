@@ -1745,6 +1745,133 @@ describe('VaporKeepAlive', () => {
       expect(html()).toBe(`<div>B</div><!--if-->`)
       expect(rendered).toEqual(['A', 'B'])
     })
+
+    test('should replay parent removal before a deferred child update', async () => {
+      const selected = ref<{ id: string } | undefined>({ id: 'A' })
+      const childDirty = ref(0)
+      const show = ref(true)
+      const rendered: Array<string | undefined> = []
+
+      const Child = defineVaporComponent({
+        props: { item: { type: Object, required: true } },
+        setup(props: any) {
+          const n0 = template(`<div> </div>`)() as any
+          const x0 = child(n0) as any
+          renderEffect(() => {
+            void childDirty.value
+            rendered.push(props.item?.id)
+            setText(x0, props.item?.id ?? '')
+          })
+          return n0
+        },
+      })
+
+      const Pane = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => selected.value,
+            () =>
+              createComponent(Child, {
+                item: () => selected.value,
+              }),
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: () =>
+              createIf(
+                () => show.value,
+                () => createComponent(Pane),
+              ),
+          })
+        },
+      }).render()
+
+      expect(html()).toBe(`<div>A</div><!--if--><!--if-->`)
+      expect(rendered).toEqual(['A'])
+
+      show.value = false
+      await nextTick()
+
+      childDirty.value++
+      await nextTick()
+      selected.value = undefined
+      await nextTick()
+
+      show.value = true
+      await nextTick()
+
+      expect(html()).toBe(`<!--if--><!--if-->`)
+      expect(rendered).toEqual(['A'])
+      expect('type check failed for prop "item"').not.toHaveBeenWarned()
+    })
+  })
+
+  test('should activate async component once when resolved while deactivated', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const activated = vi.fn()
+    const deactivated = vi.fn()
+    const mounted = vi.fn()
+    const AsyncComp = defineVaporAsyncComponent(
+      () =>
+        new Promise<VaporComponent>(r => {
+          resolve = r
+        }),
+    )
+    const show = ref(true)
+
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => show.value,
+              () => createComponent(AsyncComp),
+            ),
+        })
+      },
+    }).render()
+
+    expect(html()).toBe(`<!--async component--><!--if-->`)
+
+    show.value = false
+    await nextTick()
+
+    resolve!(
+      defineVaporComponent({
+        setup() {
+          onMounted(mounted)
+          onActivated(activated)
+          onDeactivated(deactivated)
+          return template(`<div>resolved</div>`)()
+        },
+      }),
+    )
+    await timeout()
+    await nextTick()
+
+    expect(html()).toBe(`<!--if-->`)
+    expect(mounted).not.toHaveBeenCalled()
+    expect(activated).not.toHaveBeenCalled()
+
+    show.value = true
+    await nextTick()
+
+    expect(html()).toBe(`<div>resolved</div><!--async component--><!--if-->`)
+    expect(mounted).toHaveBeenCalledTimes(1)
+    expect(activated).toHaveBeenCalledTimes(1)
+
+    show.value = false
+    await nextTick()
+    expect(deactivated).toHaveBeenCalledTimes(1)
+
+    show.value = true
+    await nextTick()
+    expect(mounted).toHaveBeenCalledTimes(1)
+    expect(activated).toHaveBeenCalledTimes(2)
   })
 
   test('should work with async component', async () => {

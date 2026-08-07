@@ -21,6 +21,7 @@ import {
 import { inOnceSlot } from './componentSlots'
 import { invokeArrayFns } from '@vue/shared'
 import { isSuspenseEnabled } from './suspense'
+import { isKeepAliveEnabled } from './keepAlive'
 
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
@@ -60,7 +61,8 @@ export class RenderEffect extends ReactiveEffect {
           return
         }
 
-        const keepAliveRoot = this.i && findPausedKeepAliveRoot(this.i)
+        const keepAliveRoot =
+          isKeepAliveEnabled && this.i && findPausedKeepAliveRoot(this.i)
         if (keepAliveRoot) {
           this.pause()
           ;(keepAliveRoot.deferredKeepAliveEffects ||= new Set()).add(this)
