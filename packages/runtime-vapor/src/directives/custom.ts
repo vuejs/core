@@ -37,11 +37,11 @@ type AnyVaporDirective = VaporDirective<any>
 type VaporDirectiveArguments = Array<
   | [AnyVaporDirective | undefined]
   | [AnyVaporDirective | undefined, () => any]
-  | [AnyVaporDirective | undefined, (() => any) | undefined, argument: string]
+  | [AnyVaporDirective | undefined, (() => any) | undefined, argument: any]
   | [
       AnyVaporDirective | undefined,
       value: (() => any) | undefined,
-      argument: string | undefined,
+      argument: any | undefined,
       modifiers: DirectiveModifiers,
     ]
 >
