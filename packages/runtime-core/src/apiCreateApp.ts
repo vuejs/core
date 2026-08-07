@@ -270,6 +270,7 @@ export interface VaporInteropInterface {
     slotRoot?: boolean,
     sharedFallback?: boolean,
     inheritFallback?: boolean,
+    adoptAnchor?: Node,
   ) => any
   vdomMountVNode: (
     vnode: VNode,

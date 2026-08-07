@@ -299,6 +299,7 @@ export function createSlot(
       slotRoot,
       sharedFallback,
       inheritFallback,
+      _insertionAnchor,
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()

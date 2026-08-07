@@ -130,6 +130,7 @@ import {
   type VaporFragment,
   isFragment,
   isSlotFragment,
+  resolveFragmentAnchor,
   runWithFragmentCtxOnly,
   runWithRenderCtx,
 } from './fragment'
@@ -1517,6 +1518,7 @@ function renderVDOMSlot(
   slotRoot?: boolean,
   sharedFallback?: boolean,
   inheritFallback?: boolean,
+  adoptAnchor?: Node,
 ): VaporFragment {
   let suspense = currentParentSuspense || parentComponent.suspense
   const frag = createInteropFragment()
@@ -1793,6 +1795,15 @@ function renderVDOMSlot(
   frag.insert = (parentNode, anchor, parentSuspense) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
+    // A non-inherited local fallback can revive independently of sibling
+    // roots, so it needs an insertion point separate from the enclosing slot.
+    if (fallback && !inheritFallback && !frag.anchor) {
+      frag.anchor = resolveFragmentAnchor(adoptAnchor, undefined)
+      if (frag.anchor !== adoptAnchor) {
+        parentNode.insertBefore(frag.anchor, anchor)
+      }
+      anchor = frag.anchor
+    }
     const sharedContentParked = !!sharedContentStorage
     currentParentNode = parentNode
     currentAnchor = anchor
@@ -1911,7 +1922,7 @@ function renderVDOMSlot(
               const deferSharedContent =
                 sharedFallback && !slotContentValid && isPendingSlotContent()
               const localFallbackOwnsRange = !!(
-                sharedFallback &&
+                !inheritFallback &&
                 !slotContentValid &&
                 !deferSharedContent &&
                 localFallback &&
@@ -1997,6 +2008,12 @@ function renderVDOMSlot(
                 finishContentUpdate(true)
               }
               const exposedValid = isValidSlot(frag.nodes)
+              if (deferSharedContent && exposedValid && candidateEnd) {
+                // The local fallback won this candidate range. Keep its close
+                // marker as the host anchor for later invalid-to-valid updates.
+                frag.anchor = currentAnchor = markHydrationAnchor(candidateEnd)
+                currentParentNode = candidateEnd.parentNode as ParentNode
+              }
               if (
                 sharedFallback &&
                 exposedValid &&
