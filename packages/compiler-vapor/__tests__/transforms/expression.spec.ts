@@ -305,6 +305,33 @@ describe('compiler: expression', () => {
       expect(code).contains('_setProp(n0, "id", _obj?.foo + _obj?.bar)')
     })
 
+    test('optional chaining with repeated member access', () => {
+      const { code } = compileWithExpression(
+        `<div :id="obj?.foo" :title="obj?.foo"></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains('const _obj_foo = _ctx.obj?.foo')
+      expect(code).contains('_setProp(n0, "id", _obj_foo)')
+    })
+
+    test('optional chaining with repeated computed member access', () => {
+      const { code } = compileWithExpression(
+        `<div :id="obj?.[key]" :title="obj?.[key]"></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains('const _obj_key = _ctx.obj?.[_ctx.key]')
+      expect(code).contains('_setProp(n0, "id", _obj_key)')
+    })
+
+    test('optional chaining with repeated mixed member access', () => {
+      const { code } = compileWithExpression(
+        `<div :id="obj?.foo.bar" :title="obj?.foo.bar"></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains('const _obj_foo_bar = _ctx.obj?.foo.bar')
+      expect(code).contains('_setProp(n0, "id", _obj_foo_bar)')
+    })
+
     test('TSNonNullExpression', () => {
       const { code } = compileWithExpression(
         `<div :id="obj!.foo + obj!.bar"></div>`,
