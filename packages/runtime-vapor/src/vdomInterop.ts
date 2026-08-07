@@ -153,6 +153,7 @@ import {
 import {
   getCurrentSlotEndAnchor,
   isPendingSlotContent,
+  queueAnchorInsert,
   queuePendingSlotContentAnchor,
   resolvePendingSlotContent,
   startPendingSlotContent,
@@ -2288,6 +2289,14 @@ function renderVDOMSlot(
     if (!currentParentNode) {
       currentAnchor = getCurrentSlotEndAnchor() || currentHydrationNode
       currentParentNode = currentAnchor!.parentNode as ParentNode
+    }
+    if (contentState.valid && fallback && !inheritFallback && !frag.anchor) {
+      // Insert an outlet-owned anchor after traversal so it cannot shift
+      // hydration indices.
+      queueAnchorInsert(currentParentNode, currentAnchor, () => {
+        return (frag.anchor = currentAnchor =
+          markHydrationAnchor(createTextNode()))
+      })
     }
     isMounted = true
   }
