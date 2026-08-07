@@ -1,11 +1,11 @@
-import {
-  type BaseCodegenResult,
-  type CompilerError,
-  type CompilerOptions,
-  type NodeTransform,
-  type ParserOptions,
-  type RawSourceMap,
-  type RootNode,
+import type {
+  BaseCodegenResult,
+  CompilerError,
+  CompilerOptions,
+  NodeTransform,
+  ParserOptions,
+  RawSourceMap,
+  RootNode,
 } from '@vue/compiler-core'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import {

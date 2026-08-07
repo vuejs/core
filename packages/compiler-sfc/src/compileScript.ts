@@ -66,8 +66,8 @@ import {
 } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import {
-  resolveTemplateVModelIdentifiers,
   isUsedInTemplate,
+  resolveTemplateVModelIdentifiers,
 } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 import { isMultiRoot } from './template/templateUtils'
