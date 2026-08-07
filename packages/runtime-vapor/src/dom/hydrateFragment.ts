@@ -279,12 +279,12 @@ export function prepareDeferredHydrationAnchor(
 export type AnchorPlan =
   // Adopt an existing comment node as the fragment anchor.
   | { kind: 'reuse'; node: Node; resetNodes?: boolean }
-  // Delay an empty slot-content anchor until content/fallback is decided.
+  // Delay an invalid slot-content anchor until content/fallback is decided.
   // If fallback wins, the content anchor is created detached.
   | {
       kind: 'pending'
       parent: Node
-      slotEnd: Node
+      slotEnd: Node | null
     }
   // Insert a fresh runtime anchor before `next` once insertion flushes.
   // `mark` keeps an SSR node structural so boundary cleanup preserves it.
@@ -322,12 +322,17 @@ export function resolveDynamicAnchor(
   // pending just like an empty branch so fallback cleanup cannot detach the
   // insertion point before the runtime anchor is created.
   if (isPendingSlotContent() && (isEmpty || !isValidBlock(frag.nodes))) {
-    const slotEnd = getCurrentSlotEndAnchor()!
+    const slotEnd = getCurrentSlotEndAnchor()
     const node = currentHydrationNode || slotEnd
-    return {
-      kind: 'pending',
-      parent: getParentNode(node)!,
-      slotEnd,
+    if (node) {
+      const parent = getParentNode(node)
+      if (parent) {
+        return {
+          kind: 'pending',
+          parent,
+          slotEnd,
+        }
+      }
     }
   }
 
@@ -453,7 +458,7 @@ export function resolveDynamicAnchor(
   // The close marker is a valid stable anchor candidate: reuse it once, or
   // create a fresh runtime anchor after it when another fragment already did.
   if (
-    frag.isSlot ||
+    (frag.isSlot && slotAnchor) ||
     (anchorLabel === 'if' && isArray(frag.nodes) && frag.nodes.length > 1)
   ) {
     const anchor = locateHydrationBoundaryClose(
@@ -539,14 +544,16 @@ export function executeAnchorPlan(
               return
             }
             // Mismatch recovery can leave the cursor on fallback DOM instead
-            // of a reusable content anchor. Create this empty branch's
+            // of a reusable content anchor. Create this invalid branch's
             // runtime anchor before that DOM so later updates have a stable
             // insertion point.
-            const anchor = node && nodeParent === plan.parent ? node : slotEnd
-            const parentNode = getParentNode(anchor)
-            if (parentNode) {
-              parentNode.insertBefore(createRuntimeAnchor(), anchor)
-            }
+            const anchor =
+              node && nodeParent === plan.parent
+                ? node
+                : slotEnd && getParentNode(slotEnd) === plan.parent
+                  ? slotEnd
+                  : null
+            plan.parent.insertBefore(createRuntimeAnchor(), anchor)
           },
           onFallback: () => {
             // Match CSR by always creating the content fragment anchor, even

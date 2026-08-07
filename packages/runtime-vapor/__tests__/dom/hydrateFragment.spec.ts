@@ -2,6 +2,7 @@ import { DynamicFragment, SlotFragment } from '../../src/fragment'
 import {
   hydrateNode,
   markHydrationAnchor,
+  setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../../src/dom/hydration'
 import {
@@ -216,6 +217,30 @@ describe('resolveDynamicAnchor', () => {
     const pending = expectKind(plan, 'pending')
     expect(pending.parent).toBe(host)
     expect(pending.slotEnd).toBe(end)
+  })
+
+  test('rendered invalid fragment reuses its anchor after a markerless pending range', () => {
+    const host = document.createElement('div')
+    const anchor = document.createComment('keyed')
+    host.append(anchor)
+
+    const plan = resolveWithCursor(anchor, () =>
+      withHydratingSlotBoundary(() => {
+        const finish = startPendingSlotContent(anchor)
+        try {
+          setCurrentHydrationNode(null)
+          const frag = new DynamicFragment('keyed', false, false)
+          frag.nodes = anchor
+          return resolveDynamicAnchor(frag, false)
+        } finally {
+          finish(false)
+        }
+      }),
+    )
+
+    const reuse = expectKind(plan, 'reuse')
+    expect(reuse.node).toBe(anchor)
+    expect(reuse.resetNodes).toBe(true)
   })
 
   test('nested invalid pending slot content preserves outer pending anchors', () => {

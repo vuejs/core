@@ -5238,6 +5238,38 @@ describe('Vapor Mode hydration', () => {
   })
 
   describe('transition', async () => {
+    test('hydrates a slot fallback without fragment markers', async () => {
+      const data = reactive({ show: false })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template v-if="data.show">
+              <span>content</span>
+            </template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <Transition :css="false">
+              <slot><div>fallback</div></slot>
+            </Transition>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(container.textContent).toBe('fallback')
+
+      data.show = true
+      await nextTick()
+      expect(container.textContent).toBe('content')
+
+      data.show = false
+      await nextTick()
+      expect(container.textContent).toBe('fallback')
+    })
+
     test('transition appear', async () => {
       const { container } = await testHydration(
         `<template>
