@@ -5002,6 +5002,65 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('B')
     })
 
+    test('hydrated vdom shared local fallback restores before its sibling', async () => {
+      const data = reactive({ localA: true, showC: true })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><span v-if="data.localA">A</span></slot>
+              <span v-if="data.showC">C</span>
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('AC')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.localA = false
+      await nextTick()
+      expect(container.textContent).toBe('C')
+
+      data.localA = true
+      await nextTick()
+      expect(container.textContent).toBe('AC')
+    })
+
+    test('hydrated vdom local fallback restores before a stable sibling', async () => {
+      const data = reactive({ localA: true })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><span v-if="data.localA">A</span></slot>
+              <span>C</span>
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('AC')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.localA = false
+      await nextTick()
+      expect(container.textContent).toBe('C')
+      data.localA = true
+      await nextTick()
+      expect(container.textContent).toBe('AC')
+    })
+
     test('vdom nested hosts recover through a shared local fallback', async () => {
       const data = reactive({ showX: true, showY: false })
       const { container } = await testWithVDOMApp(

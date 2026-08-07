@@ -1565,7 +1565,11 @@ describe('component: slots', () => {
       app.mount(root)
 
       expect(root.innerHTML).toBe('<span>fallback</span>')
-      const fallbackNodes = ['<span>fallback</span>', 'text:""']
+      const fallbackNodes = [
+        '<span>fallback</span>',
+        'text:""', // VDOM slot host
+        'text:""', // receiver slot
+      ]
       expect(childNodes()).toEqual(fallbackNodes)
 
       data.value = 'second'
@@ -2265,6 +2269,55 @@ describe('component: slots', () => {
       await nextTick()
       expect(root.textContent).toBe('fallback')
       expect(root.innerHTML).toBe('<span>fallback</span><!--slot-->')
+      app.unmount()
+    })
+
+    test('vdom local fallback restores before a stable sibling', async () => {
+      const data = ref({ showA: false })
+      const components: Record<string, any> = {}
+      components.Receiver = compile(
+        `<template><slot><b>receiver fallback</b></slot></template>`,
+        data,
+        components,
+      )
+      components.Carrier = compile(
+        `<script setup vapor>
+        const components = _components
+        const data = _data
+        </script>
+        <template>
+          <components.Receiver>
+            <slot name="a"><span v-if="data.showA">A</span></slot>
+            <span>C</span>
+          </components.Receiver>
+        </template>`,
+        data,
+        components,
+      )
+      const App = compile(
+        `<script setup>const components = _components</script>
+        <template><components.Carrier /></template>`,
+        data,
+        components,
+        { vapor: false },
+      )
+      const root = document.createElement('div')
+      const app = createApp(App).use(vaporInteropPlugin)
+      app.mount(root)
+
+      expect(root.textContent).toBe('C')
+
+      data.value.showA = true
+      await nextTick()
+      expect(root.textContent).toBe('AC')
+
+      data.value.showA = false
+      await nextTick()
+      expect(root.textContent).toBe('C')
+
+      data.value.showA = true
+      await nextTick()
+      expect(root.textContent).toBe('AC')
       app.unmount()
     })
 
