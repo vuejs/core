@@ -84,6 +84,17 @@ function processRule(id: string, rule: Rule) {
     }
     parent = parent.parent
   }
+  // Pre-scan: if any selector in this rule contains :deep(), set rule.__deep
+  // before processing individual selectors. This prevents non-:deep() members
+  // of a comma selector list from being processed with stale __deep state.
+  // See #15205.
+  selectorParser(root => {
+    root.walkPseudos(n => {
+      if (n.value === ':deep' || n.value === '::v-deep') {
+        ;(rule as any).__deep = true
+      }
+    })
+  }).processSync(rule.selector)
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
       rewriteSelector(id, rule, selector, selectorRoot, deep)
