@@ -1,5 +1,7 @@
 import {
   type Component,
+  type ComponentComputedGetter,
+  type ComponentComputedOptions,
   type ComponentOptions,
   type ComponentPublicInstance,
   type ComputedOptions,
@@ -512,26 +514,29 @@ describe('type inference w/ options API', () => {
 
 // #13103
 describe('type inference for computed previous value w/ options API', () => {
-  const computed: ComputedOptions = {
-    doubled(vm, previous: number | undefined): number {
+  const doubled: ComponentComputedGetter<number> = (vm, previous) => {
+    expectType<ComponentPublicInstance>(vm)
+    expectType<false>({} as IsAny<typeof vm>)
+    expectType<number | undefined>(previous)
+    expectType<false>({} as IsAny<typeof previous>)
+    return 2
+  }
+
+  const writable: ComponentComputedOptions<number> = {
+    get(vm, previous) {
       expectType<ComponentPublicInstance>(vm)
       expectType<false>({} as IsAny<typeof vm>)
       expectType<number | undefined>(previous)
-      return 2
+      expectType<false>({} as IsAny<typeof previous>)
+      return 1
     },
-    writable: {
-      get(vm, previous: number | undefined): number {
-        expectType<ComponentPublicInstance>(vm)
-        expectType<false>({} as IsAny<typeof vm>)
-        expectType<number | undefined>(previous)
-        return 1
-      },
-      set(value: number) {
-        expectType<number>(value)
-      },
+    set(value) {
+      expectType<number>(value)
+      expectType<false>({} as IsAny<typeof value>)
     },
   }
-  expectType<ComputedOptions>(computed)
+
+  expectType<ComputedOptions>({ doubled, writable })
 })
 
 // #4051
