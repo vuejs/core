@@ -113,8 +113,8 @@ describe('block + node ops', () => {
     remove(frag, container)
     expect(Array.from(container.childNodes)).toEqual([node2])
 
-    expect(() => remove(anchor, container)).toThrowError(
-      'The node to be removed is not a child of this node.',
-    )
+    const detached = document.createTextNode('detached')
+    expect(() => remove(detached, container)).not.toThrow()
+    expect(Array.from(container.childNodes)).toEqual([node2])
   })
 })

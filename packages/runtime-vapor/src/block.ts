@@ -297,6 +297,7 @@ export function remove(block: Block, parent?: ParentNode): void {
 }
 
 export function removeNode(block: Node, parent?: ParentNode): void {
+  // `parent` only signals whether to detach: the node may have moved since
   if (
     isTransitionEnabled &&
     (block as TransitionBlock).$transition &&
@@ -305,10 +306,10 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     performTransitionLeave(
       block,
       (block as TransitionBlock).$transition as TransitionHooks,
-      () => parent && parent.removeChild(block),
+      () => parent && block.remove(),
     )
   } else {
-    parent && parent.removeChild(block)
+    parent && (block as ChildNode).remove()
   }
 }
 

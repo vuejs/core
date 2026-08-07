@@ -1016,6 +1016,34 @@ function runSharedTests(deferMode: boolean): void {
     testUnmount({ to: () => null, disabled: () => true })
   })
 
+  test('should not throw when teleported children are detached outside of Vue', async () => {
+    const target = document.createElement('div')
+    const root = document.createElement('div')
+
+    const { app } = define({
+      setup() {
+        const n0 = createComponent(
+          VaporTeleport,
+          {
+            to: () => target,
+          },
+          {
+            default: () => template('<div>teleported</div>')(),
+          },
+        )
+        const n1 = template('<div>root</div>')()
+        return [n0, n1]
+      },
+    }).create()
+
+    app.mount(root)
+    expect(target.innerHTML).toBe('<div>teleported</div>')
+
+    target.children[0].remove()
+    expect(() => app.unmount()).not.toThrow()
+    expect(target.innerHTML).toBe('')
+  })
+
   test('component with multi roots should be removed when unmounted', async () => {
     const target = document.createElement('div')
     const root = document.createElement('div')
