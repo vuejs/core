@@ -4,12 +4,7 @@ import {
   type TransformContext,
   transformNode,
 } from '../transform'
-import {
-  DynamicFlag,
-  type IRDynamicInfo,
-  IRNodeTypes,
-  isBlockOperation,
-} from '../ir'
+import { DynamicFlag, IRNodeTypes, isBlockOperation } from '../ir'
 import {
   getChildTemplateCloseState,
   isInSameTemplateAsParent,
@@ -97,74 +92,57 @@ export const transformChildren: NodeTransform = (node, context) => {
 }
 
 function processDynamicChildren(context: TransformContext<ElementNode>) {
-  let prevDynamics: IRDynamicInfo[] = []
-  let staticCount = 0
   const children = context.dynamic.children
 
-  // Track logical index for each child.
-  // logicalIndex represents the position in SSR DOM, used during hydration
-  // to locate the correct DOM node. Each child (static element, component,
-  // v-if/v-else-if/v-else chain, v-for, slot) counts as one logical unit.
-  let logicalIndex = 0
+  // The index of the last child that materializes in the parent template.
+  // Dynamic children before it are anchored by their own `<!>` placeholder;
+  // dynamic children after it are appends and need no placeholder.
+  let lastTemplateIndex = -1
+  for (let i = children.length - 1; i >= 0; i--) {
+    if (!(children[i].flags & DynamicFlag.NON_TEMPLATE)) {
+      lastTemplateIndex = i
+      break
+    }
+  }
+
+  // Logical unit counter. Each template child (placeholders included) and
+  // each trailing dynamic block occupies one SSR logical unit; for template
+  // children the unit index equals the CSR element index by construction,
+  // which is what lets hydration reuse the CSR locators unchanged.
+  let unitIndex = 0
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
-      child.logicalIndex = logicalIndex
-      prevDynamics.push(child)
-      logicalIndex++
-    }
-
-    if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
-      child.logicalIndex = logicalIndex
-      if (prevDynamics.length) {
-        if (staticCount) {
-          context.childrenTemplate[index - prevDynamics.length] = `<!>`
-          prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
-          const anchor = (prevDynamics[0].anchor = context.increaseId())
-          registerInsertion(prevDynamics, context, anchor)
-        } else {
-          registerInsertion(prevDynamics, context, -1 /* prepend */)
-        }
-        prevDynamics = []
+      let anchor: number | undefined
+      if (index < lastTemplateIndex) {
+        // anchored insert: own `<!>` placeholder in the parent template,
+        // located at runtime and passed as the insertion anchor
+        context.childrenTemplate[index] = `<!>`
+        child.flags =
+          (child.flags - DynamicFlag.NON_TEMPLATE) | DynamicFlag.REFERENCED
+        anchor = child.anchor = context.increaseId()
       }
-      staticCount++
-      logicalIndex++
-    }
-  }
-
-  if (prevDynamics.length) {
-    registerInsertion(
-      prevDynamics,
-      context,
-      // the logical index of append child
-      prevDynamics[0].logicalIndex!,
-      true,
-    )
-  }
-}
-
-function registerInsertion(
-  dynamics: IRDynamicInfo[],
-  context: TransformContext,
-  anchor: number,
-  append?: boolean,
-) {
-  for (const child of dynamics) {
-    const logicalIndex = child.logicalIndex
-    if (child.template != null) {
-      // template node due to invalid nesting - generate actual insertion
-      context.registerOperation({
-        type: IRNodeTypes.INSERT_NODE,
-        elements: dynamics.map(child => child.id!),
-        parent: context.reference(),
-        anchor: append ? undefined : anchor,
-      })
-    } else if (child.operation && isBlockOperation(child.operation)) {
-      // block types
-      child.operation.parent = context.reference()
-      child.operation.anchor = anchor
-      child.operation.logicalIndex = logicalIndex
-      child.operation.append = append
+      if (child.template != null) {
+        // template node due to invalid nesting - generate actual insertion,
+        // appended when no anchor was assigned
+        child.operation = {
+          type: IRNodeTypes.INSERT_NODE,
+          elements: [child.id!],
+          parent: context.reference(),
+          anchor,
+        }
+      } else if (child.operation && isBlockOperation(child.operation)) {
+        child.operation.parent = context.reference()
+        if (anchor !== undefined) {
+          child.operation.anchor = anchor
+        } else {
+          // append: the block's SSR output starts at logical unit `unitIndex`
+          child.operation.appendIndex = unitIndex
+        }
+      }
+      unitIndex++
+    } else if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
+      unitIndex++
     }
   }
 }

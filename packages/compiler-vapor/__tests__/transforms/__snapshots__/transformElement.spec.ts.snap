@@ -778,14 +778,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > custom element with dynamic child 1`] = `
-"import { createPlainElement as _createPlainElement, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { createPlainElement as _createPlainElement, insert as _insert, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n1 = _createPlainElement("my-custom-element", null, null, true)
   const n0 = t0()
-  const x0 = _txt(n0)
   _insert(n0, n1)
+  const x0 = _txt(n0)
   _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
   return n1
 }"
@@ -871,16 +871,16 @@ const t2 = _template("<form>")
 export function render(_ctx) {
   const n1 = t1()
   const n0 = t0()
+  _insert(n0, n1)
   const n3 = t2()
   const n2 = t2()
-  _insert(n0, n1)
   _insert(n2, n3)
   return [n1, n3]
 }"
 `;
 
 exports[`compiler: element transform > invalid table nesting with dynamic child 1`] = `
-"import { child as _child, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { insert as _insert, child as _child, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<tr><td> ")
 const t1 = _template("<table>")
 const t2 = _template("<div>", 2)
@@ -888,10 +888,10 @@ const t2 = _template("<div>", 2)
 export function render(_ctx) {
   const n2 = t1()
   const n1 = t0()
+  _insert(n1, n2)
   const n0 = _child(n1)
   const n3 = t2()
   const x0 = _txt(n0)
-  _insert(n1, n2)
   _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
   return [n2, n3]
 }"
@@ -942,14 +942,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > plain template element 1`] = `
-"import { createPlainElement as _createPlainElement, txt as _txt, insert as _insert, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { createPlainElement as _createPlainElement, insert as _insert, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div> ")
 
 export function render(_ctx) {
   const n1 = _createPlainElement("template", null, null, true)
   const n0 = t0()
-  const x0 = _txt(n0)
   _insert(n0, n1)
+  const x0 = _txt(n0)
   _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
   return n1
 }"

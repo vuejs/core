@@ -32,6 +32,7 @@ import { extend, isArray } from '@vue/shared'
 import {
   RenderContextFragment,
   isFragment,
+  resolveFragmentAnchor,
   runWithFragmentCtxOnly,
 } from '../fragment'
 import {
@@ -53,8 +54,12 @@ const VaporTeleportImpl = {
   __isTeleport: true,
   __vapor: true,
 
-  process(props: LooseRawProps, slots?: RawSlots | null): TeleportFragment {
-    return new TeleportFragment(props, slots)
+  process(
+    props: LooseRawProps,
+    slots?: RawSlots | null,
+    adoptAnchor?: Node,
+  ): TeleportFragment {
+    return new TeleportFragment(props, slots, adoptAnchor)
   },
 }
 
@@ -99,14 +104,18 @@ export class TeleportFragment extends RenderContextFragment {
   private mountToTargetJob?: SchedulerJob
   private parentSuspense?: SuspenseBoundary | null
 
-  constructor(props: LooseRawProps, slots?: RawSlots | null) {
+  constructor(
+    props: LooseRawProps,
+    slots?: RawSlots | null,
+    adoptAnchor?: Node,
+  ) {
     super([])
     this.rawSlots = slots
+    // the main-view end anchor can adopt the template `<!>` placeholder the
+    // teleport was anchored to, saving a runtime node
     this.anchor = isHydrating
       ? undefined
-      : __DEV__
-        ? createComment('teleport end')
-        : createTextNode()
+      : resolveFragmentAnchor(adoptAnchor, 'teleport end')
 
     const propsProxy = new Proxy(
       props,
@@ -380,6 +389,8 @@ export class TeleportFragment extends RenderContextFragment {
     // content is already in target, skip the props update so target children
     // are not re-inserted.
     insert(this.placeholder, container, anchor)
+    // insertFragment/move may have already placed this.anchor and passed it
+    // back as the insertion anchor; insertNode skips the self-insert then.
     insert(this.anchor!, container, anchor)
     if (!wasMountedInTarget) {
       this.handlePropsUpdate()

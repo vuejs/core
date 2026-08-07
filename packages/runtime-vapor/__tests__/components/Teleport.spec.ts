@@ -292,8 +292,8 @@ describe('renderer: VaporTeleport', () => {
       const { mount, component: Parent } = define({
         __hmrId: parentId,
         render() {
-          const n2 = template('<div><div>root</div></div>', 1)() as any
-          setInsertionState(n2, 0)
+          const n2 = template('<div><!><div>root</div></div>', 1)() as any
+          setInsertionState(n2, child(n2))
           createComp(
             VaporTeleport,
             {
@@ -317,8 +317,8 @@ describe('renderer: VaporTeleport', () => {
 
       // rerender parent
       rerender(parentId, () => {
-        const n2 = template('<div><div>root 2</div></div>', 1)() as any
-        setInsertionState(n2, 0)
+        const n2 = template('<div><!><div>root 2</div></div>', 1)() as any
+        setInsertionState(n2, child(n2))
         createComp(
           VaporTeleport,
           {
@@ -1490,7 +1490,7 @@ function runSharedTests(deferMode: boolean): void {
           () => show.value,
           () => {
             const n0 = template('<div></div>')()
-            setInsertionState(n0 as any, null, 0)
+            setInsertionState(n0 as any)
             createComponent(
               VaporTeleport,
               {
@@ -1685,7 +1685,7 @@ function runSharedTests(deferMode: boolean): void {
       setup() {
         const n0 = template('<div id="tt"></div>')()
         const n4 = template('<div></div>')() as any
-        setInsertionState(n4, null, 0)
+        setInsertionState(n4)
         createComponent(
           VaporTeleport,
           { to: () => '#tt' },

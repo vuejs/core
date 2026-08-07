@@ -5,7 +5,6 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { _child } from './dom/node'
 import { isComment, isHydrating } from './dom/hydration'
 import {
   MoveType,
@@ -105,8 +104,8 @@ export function isValidSlot(block: Block | null | undefined): boolean {
 
 export function insert(
   block: Block,
-  parent: ParentNode & { $fc?: Node | null },
-  anchor: Node | null | 0 = null, // 0 means prepend
+  parent: ParentNode,
+  anchor: Node | null = null,
   parentSuspense?: any, // TODO Suspense
 ): void {
   if (block instanceof Node) {
@@ -115,14 +114,12 @@ export function insert(
   }
 
   if (isVaporComponent(block)) {
-    anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
     if (block.isMounted && !block.isDeactivated) {
       insert(block.block!, parent, anchor, parentSuspense)
     } else {
       mountComponent(block, parent, anchor)
     }
   } else if (isArray(block)) {
-    anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
     for (const b of block) {
       insert(b, parent, anchor, parentSuspense)
     }
@@ -133,11 +130,10 @@ export function insert(
 
 export function insertNode(
   block: Node,
-  parent: ParentNode & { $fc?: Node | null },
-  anchor: Node | null | 0 = null, // 0 means prepend
+  parent: ParentNode,
+  anchor: Node | null = null,
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (!isHydrating) {
     // only apply transition on Element nodes
     if (
@@ -152,7 +148,12 @@ export function insertNode(
         () => parent.insertBefore(block, anchor as Node),
         parentSuspense,
       )
-    } else {
+    } else if (block !== anchor) {
+      // `block === anchor` happens when a fragment's own anchor travels
+      // inside its `nodes` (ForFragment, vdom interop fragments), when a
+      // fragment re-inserts at its own position (Teleport), or when an
+      // adopted template placeholder is passed back as the insertion target —
+      // all established idempotent no-ops. Skip the wasted insertBefore.
       parent.insertBefore(block, anchor)
     }
   }
@@ -160,14 +161,14 @@ export function insertNode(
 
 export function insertFragment(
   block: VaporFragment | DynamicFragment,
-  parent: ParentNode & { $fc?: Node | null },
-  anchor: Node | null | 0 = null, // 0 means prepend
+  parent: ParentNode,
+  anchor: Node | null = null,
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
-  if (block.anchor) {
-    insertNode(block.anchor, parent, anchor, parentSuspense)
-    anchor = block.anchor
+  const blockAnchor = block.anchor
+  if (blockAnchor) {
+    insertNode(blockAnchor, parent, anchor, parentSuspense)
+    anchor = blockAnchor
   }
   if (block.insert) {
     block.insert(
@@ -183,13 +184,12 @@ export function insertFragment(
 
 export function move(
   block: Block,
-  parent: ParentNode & { $fc?: Node | null },
-  anchor: Node | null | 0 = null, // 0 means prepend
+  parent: ParentNode,
+  anchor: Node | null = null,
   moveType: MoveType = MoveType.LEAVE,
   parentComponent?: VaporComponentInstance,
   parentSuspense?: any, // TODO Suspense
 ): void {
-  anchor = anchor === 0 ? parent.$fc || _child(parent) : anchor
   if (block instanceof Node) {
     // only apply transition on Element nodes
     if (
@@ -280,11 +280,6 @@ export function move(
       )
     }
   }
-}
-
-export function prepend(parent: ParentNode, ...blocks: Block[]): void {
-  let i = blocks.length
-  while (i--) insert(blocks[i], parent, 0)
 }
 
 export function remove(block: Block, parent?: ParentNode): void {

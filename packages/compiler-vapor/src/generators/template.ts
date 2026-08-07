@@ -95,6 +95,18 @@ export function genChildren(
     }
 
     if (child.flags & DynamicFlag.INSERT && child.template != null) {
+      // template node due to invalid nesting; anchored inserts locate their
+      // `<!>` placeholder first so INSERT_NODE can insert before it
+      if (child.anchor !== undefined) {
+        const elementIndex = index + offset
+        const variable = `n${child.anchor}`
+        pushBlock(
+          NEWLINE,
+          `const ${variable} = `,
+          ...genAccessPath(context, from, elementIndex, prev),
+        )
+        prev = [variable, elementIndex, false]
+      }
       flushBeforeDynamic && flushBeforeDynamic(child, push)
       push(...genSelf(child, context, flushBeforeDynamic))
       continue
@@ -114,22 +126,13 @@ export function genChildren(
     }
 
     const elementIndex = index + offset
-    const logicalIndex =
-      child.logicalIndex !== undefined ? String(child.logicalIndex) : undefined
     const inlinePlaceholder =
       id === undefined &&
       canInlinePlaceholder(child) &&
       child.template == null &&
       child.operation === undefined &&
       !(child.flags & (DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE))
-    const accessPath = genAccessPath(
-      context,
-      from,
-      child,
-      elementIndex,
-      logicalIndex,
-      prev,
-    )
+    const accessPath = genAccessPath(context, from, elementIndex, prev)
 
     if (inlinePlaceholder) {
       if (prev && prev[2]) {
@@ -203,30 +206,25 @@ export function genChildren(
 function genAccessPath(
   { helper }: CodegenContext,
   from: CodeFragments,
-  child: IRDynamicInfo,
   elementIndex: number,
-  logicalIndex: string | undefined,
   prev: [variable: string, elementIndex: number, reusable: boolean] | undefined,
 ): CodeFragment[] {
   if (prev) {
     return elementIndex - prev[1] === 1
-      ? genCall(helper('next'), prev[0], logicalIndex)
-      : genNthChild(helper('nthChild'), from, elementIndex, logicalIndex)
+      ? genCall(helper('next'), prev[0])
+      : genCall(helper('nthChild'), from, String(elementIndex))
   }
 
   if (elementIndex === 0) {
-    return genCall(
-      helper('child'),
-      from,
-      child.logicalIndex !== 0 ? logicalIndex : undefined,
-    )
+    return genCall(helper('child'), from)
   }
 
-  // check if there's a node that we can reuse from
-  const firstChild = genCall(helper('child'), from)
-  return elementIndex === 1
-    ? genCall(helper('next'), firstChild, logicalIndex)
-    : genNthChild(helper('nthChild'), from, elementIndex, logicalIndex)
+  // adjacent to the first child: chain off it instead of an indexed lookup
+  if (elementIndex === 1) {
+    const firstChild = genCall(helper('child'), from)
+    return genCall(helper('next'), firstChild)
+  }
+  return genCall(helper('nthChild'), from, String(elementIndex))
 }
 
 /**
@@ -243,6 +241,7 @@ function canInlinePlaceholder(dynamic: IRDynamicInfo): boolean {
 /**
  * A following access can reuse the current placeholder cursor only when it is
  * the next DOM sibling. Gapped siblings need _nthChild(parent, index) instead.
+ * Kept in lockstep with genChildren's traversal rules.
  */
 function hasAdjacentFollowingAccessChild(
   children: IRDynamicInfo[],
@@ -256,10 +255,12 @@ function hasAdjacentFollowingAccessChild(
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
       futureOffset--
     }
-    if (
-      !(child.flags & DynamicFlag.INSERT && child.template != null) &&
-      (!!(child.flags & DynamicFlag.REFERENCED) || child.hasDynamicChild)
-    ) {
+    // appends produce no access and occupy no element slot; anchored inserts
+    // locate their `<!>` placeholder and always carry REFERENCED
+    if (child.flags & DynamicFlag.INSERT && child.anchor === undefined) {
+      continue
+    }
+    if (!!(child.flags & DynamicFlag.REFERENCED) || child.hasDynamicChild) {
       return i + futureOffset - elementIndex === 1
     }
   }
@@ -282,7 +283,14 @@ function countParentAccessUsages(dynamic: IRDynamicInfo): number {
       offset--
     }
 
-    if (child.flags & DynamicFlag.INSERT && child.template != null) {
+    if (
+      child.flags & DynamicFlag.INSERT &&
+      child.template != null &&
+      child.anchor === undefined
+    ) {
+      // trailing template-inserts append without locating anything; anchored
+      // ones fall through to the generic path, which resolves their id to
+      // `child.anchor` exactly like genChildren does
       continue
     }
 
@@ -331,21 +339,4 @@ function countParentAccessUsages(dynamic: IRDynamicInfo): number {
   }
 
   return usages
-}
-
-function genNthChild(
-  nthChild: string,
-  from: CodeFragments,
-  elementIndex: number,
-  logicalIndex: string | undefined,
-): CodeFragment[] {
-  const index = String(elementIndex)
-  return genCall(
-    nthChild,
-    from,
-    index,
-    // nthChild defaults the logical index to the element index at runtime, so
-    // the third argument is only needed when hydration uses a different index.
-    logicalIndex === index ? undefined : logicalIndex,
-  )
 }

@@ -1587,10 +1587,19 @@ describe('compiler: element transform', () => {
       ],
     })
 
-    expect(ir.block.operation).toMatchObject([
-      { type: IRNodeTypes.INSERT_NODE, parent: 1, elements: [0] },
-      { type: IRNodeTypes.INSERT_NODE, parent: 3, elements: [2] },
-    ])
+    // INSERT_NODE now lives on the moved child's own dynamic info so it is
+    // emitted inline in source order, not as a block-level operation
+    expect(ir.block.operation).toMatchObject([])
+    expect(ir.block.dynamic.children[0].children[0].operation).toMatchObject({
+      type: IRNodeTypes.INSERT_NODE,
+      parent: 1,
+      elements: [0],
+    })
+    expect(ir.block.dynamic.children[1].children[0].operation).toMatchObject({
+      type: IRNodeTypes.INSERT_NODE,
+      parent: 3,
+      elements: [2],
+    })
   })
 
   test('invalid table nesting with dynamic child', () => {

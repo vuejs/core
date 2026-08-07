@@ -37,6 +37,7 @@ import {
   DynamicFragment,
   SlotFragment,
   type VaporFragment,
+  isAdoptedAnchor,
   isInteropFragment,
 } from './fragment'
 import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
@@ -283,6 +284,7 @@ export function createSlot(
   }
 
   let fragment: VaporFragment
+  let isCustomElementSlot = false
   if (isRef(rawSlots._) && isInteropEnabled) {
     if (isHydrating) hydrationCursor = enterHydrationCursor()
     fragment = instance.appContext.vapor!.vdomSlot(
@@ -296,7 +298,7 @@ export function createSlot(
     )
   } else {
     if (isHydrating) hydrationCursor = captureHydrationCursor()
-    const isCustomElementSlot = !!(
+    isCustomElementSlot = !!(
       (instance as GenericComponentInstance).ce ||
       (instance.parent && isAsyncWrapper(instance.parent) && instance.parent.ce)
     )
@@ -307,7 +309,7 @@ export function createSlot(
       isCustomElementSlot,
     )
     const slotFragment = needsSlotFragment
-      ? new SlotFragment(slotRoot)
+      ? new SlotFragment(slotRoot, _insertionAnchor)
       : undefined
     let dynamicFragment: DynamicFragment | undefined
     if (slotFragment) {
@@ -319,6 +321,9 @@ export function createSlot(
         __DEV__ ? 'slot' : undefined,
         false,
         false,
+        false,
+        undefined,
+        _insertionAnchor,
       )
       dynamicFragment.isSlot = true
       fragment = dynamicFragment
@@ -411,7 +416,16 @@ export function createSlot(
       setScopeId(fragment, slotScopeIds)
     }
 
-    if (_insertionParent) insert(fragment, _insertionParent, _insertionAnchor)
+    // Custom-element outlets assign their native <slot> directly instead of
+    // rendering through update(), so they still need this initial insertion
+    // after adopting the template anchor.
+    if (
+      _insertionParent &&
+      (isCustomElementSlot ||
+        !isAdoptedAnchor(fragment.anchor, _insertionAnchor))
+    ) {
+      insert(fragment, _insertionParent, _insertionAnchor)
+    }
   } else {
     if (isInteropEnabled && isInteropFragment(fragment)) {
       fragment.hydrate!()

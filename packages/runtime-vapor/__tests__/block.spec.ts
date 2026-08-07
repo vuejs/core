@@ -3,7 +3,6 @@ import {
   insertFragment,
   insertNode,
   normalizeBlock,
-  prepend,
   remove,
   removeFragment,
   removeNode,
@@ -41,9 +40,18 @@ describe('block + node ops', () => {
     insert([], container, node3)
     expect(Array.from(container.childNodes)).toEqual([node2, anchor, node1])
 
-    expect(() => insert(node3, container, node3)).toThrowError(
-      'The child can not be found in the parent.',
-    )
+    // self-insert is a guarded no-op: fragment anchors travel inside
+    // frag.nodes (ForFragment, interop fragments) and re-insert with the
+    // anchor as the target
+    container.appendChild(node3)
+    insert(node3, container, node3)
+    expect(Array.from(container.childNodes)).toEqual([
+      node2,
+      anchor,
+      node1,
+      node3,
+    ])
+    node3.remove()
   })
 
   test('single node helpers', () => {
@@ -95,13 +103,6 @@ describe('block + node ops', () => {
     container.append(localNode, fragmentAnchor)
     removeFragment(frag, container)
     expect(Array.from(container.childNodes)).toEqual([])
-  })
-
-  test('prepend', () => {
-    const container = document.createElement('div')
-    prepend(container, [node1], node2)
-    prepend(container, new VaporFragment(node3))
-    expect(Array.from(container.childNodes)).toEqual([node3, node1, node2])
   })
 
   test('remove', () => {
