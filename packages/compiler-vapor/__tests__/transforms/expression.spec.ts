@@ -305,6 +305,15 @@ describe('compiler: expression', () => {
       expect(code).contains('_setProp(n0, "id", _obj?.foo + _obj?.bar)')
     })
 
+    test('repeated optional chaining', () => {
+      const { code } = compileWithExpression(
+        `<div :id="obj?.foo" :title="obj?.foo"></div>`,
+      )
+      expect(code).contains('const _obj_foo = _ctx.obj?.foo')
+      expect(code).contains('_setProp(n0, "id", _obj_foo)')
+      expect(code).contains('_setProp(n0, "title", _obj_foo)')
+    })
+
     test('TSNonNullExpression', () => {
       const { code } = compileWithExpression(
         `<div :id="obj!.foo + obj!.bar"></div>`,
