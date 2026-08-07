@@ -468,8 +468,8 @@ function transformNativeElement(
       } else if (
         canStringifyAttrName &&
         !prop.modifier &&
-        isBooleanAttr(key.content) &&
-        (foldedValue = foldBooleanAttrValue(values)) != null
+        (isBooleanAttr(key.content) || key.content === 'hidden') &&
+        (foldedValue = foldBooleanAttrValue(key.content, values)) != null
       ) {
         if (foldedValue) {
           appendTemplateProp(key.content)
@@ -536,6 +536,7 @@ function escapeGeneratedAttrValue(value: string): string {
 }
 
 function foldBooleanAttrValue(
+  key: string,
   values: SimpleExpressionNode[],
 ): boolean | undefined {
   if (values.length !== 1) return
@@ -544,6 +545,9 @@ function foldBooleanAttrValue(
   if (!evaluated) return
 
   const value = evaluated.value
+  if (key === 'hidden' && typeof value === 'number') {
+    return includeBooleanAttr(value)
+  }
   if (value === true || value === false || value == null) {
     return includeBooleanAttr(value)
   }
