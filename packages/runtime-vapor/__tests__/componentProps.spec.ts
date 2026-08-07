@@ -618,6 +618,29 @@ describe('component: props', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
+  // #15227
+  test('declared class prop should be normalized', () => {
+    let props: any
+    const { render } = define({
+      props: { class: { type: String } },
+      setup(_props: any) {
+        props = _props
+        return []
+      },
+    })
+
+    render({ class: () => ['a', { b: true, c: false }] })
+    expect(props.class).toBe('a b')
+
+    render({ class: () => '  a  b ' })
+    expect(props.class).toBe('  a  b ')
+
+    render()
+    expect(props.class).toBeUndefined()
+
+    expect('Invalid prop').not.toHaveBeenWarned()
+  })
+
   describe('dynamic props source caching', () => {
     test('v-bind object should be cached when child accesses multiple props', () => {
       let sourceCallCount = 0
