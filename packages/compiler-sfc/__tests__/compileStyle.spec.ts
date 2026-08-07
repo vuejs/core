@@ -195,6 +195,25 @@ color: red
     `)
   })
 
+  test(':deep() in a selector list with nested rules', () => {
+    expect(
+      compileScoped(`.a, .b :deep(.c) { color: red; > span { color: blue; } }`),
+    ).toMatchInlineSnapshot(`
+      ".a[data-v-test], .b[data-v-test] .c { color: red;
+      > span { color: blue;
+      }
+      }"
+    `)
+    expect(
+      compileScoped(`.b :deep(.c), .a { color: red; > span { color: blue; } }`),
+    ).toMatchInlineSnapshot(`
+      ".b[data-v-test] .c, .a[data-v-test] { color: red;
+      > span { color: blue;
+      }
+      }"
+    `)
+  })
+
   test('::v-slotted', () => {
     expect(compileScoped(`:slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
