@@ -1,5 +1,6 @@
 import { EffectFlags, type EffectScope, ReactiveEffect } from '@vue/reactivity'
 import {
+  type GenericComponentInstance,
   type SchedulerJob,
   SchedulerJobFlags,
   currentInstance,
@@ -58,6 +59,14 @@ export class RenderEffect extends ReactiveEffect {
           settleDeferredKeepAliveUpdates(deferred, this.job)
           return
         }
+
+        const keepAliveRoot = this.i && findPausedKeepAliveRoot(this.i)
+        if (keepAliveRoot) {
+          this.pause()
+          ;(keepAliveRoot.deferredKeepAliveEffects ||= new Set()).add(this)
+          return
+        }
+
         this.run()
       }
     }
@@ -142,4 +151,16 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
 
   const effect = new RenderEffect(fn, noLifecycle)
   effect.run()
+}
+
+function findPausedKeepAliveRoot(
+  instance: VaporComponentInstance,
+): VaporComponentInstance | undefined {
+  let current: GenericComponentInstance | null = instance
+  while (current) {
+    if (isVaporComponent(current) && current.keepAliveUpdatePaused) {
+      return current
+    }
+    current = current.parent
+  }
 }

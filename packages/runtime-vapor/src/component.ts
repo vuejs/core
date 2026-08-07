@@ -734,6 +734,8 @@ export class VaporComponentInstance<
   // for keep-alive
   shapeFlag?: number
   $key?: any
+  keepAliveUpdatePaused?: boolean
+  deferredKeepAliveEffects?: Set<RenderEffect>
   // Share deferred updates across async roots on the KeepAlive component-root
   // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
   deferredKeepAliveUpdates?: DeferredKeepAliveUpdates

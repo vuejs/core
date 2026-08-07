@@ -1697,6 +1697,54 @@ describe('VaporKeepAlive', () => {
       await nextTick()
       expect(html()).toBe(`<div>1</div><!--if-->`)
     })
+
+    test('should not update cached component with a nullish v-if prop', async () => {
+      const rendered: Array<string | undefined> = []
+      const Child = defineVaporComponent({
+        props: { item: { type: Object, required: true } },
+        setup(props: any) {
+          const n0 = template(`<div> </div>`)() as any
+          const x0 = child(n0) as any
+          renderEffect(() => {
+            const item = props.item as { id: string } | undefined
+            rendered.push(item?.id)
+            setText(x0, item?.id ?? '')
+          })
+          return n0
+        },
+      })
+
+      const items = [{ id: 'A' }, { id: 'B' }]
+      const selected = ref<(typeof items)[number] | undefined>(items[0])
+      const { html } = define({
+        setup() {
+          return createComponent(VaporKeepAlive, null, {
+            default: () =>
+              createIf(
+                () => selected.value,
+                () =>
+                  createComponent(Child, {
+                    item: () => selected.value,
+                  }),
+              ),
+          })
+        },
+      }).render()
+
+      expect(html()).toBe(`<div>A</div><!--if-->`)
+      expect(rendered).toEqual(['A'])
+
+      selected.value = undefined
+      await nextTick()
+      expect(html()).toBe(`<!--if-->`)
+      expect(rendered).toEqual(['A'])
+      expect('type check failed for prop "item"').not.toHaveBeenWarned()
+
+      selected.value = items[1]
+      await nextTick()
+      expect(html()).toBe(`<div>B</div><!--if-->`)
+      expect(rendered).toEqual(['A', 'B'])
+    })
   })
 
   test('should work with async component', async () => {
