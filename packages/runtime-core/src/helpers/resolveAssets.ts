@@ -7,7 +7,8 @@ import {
 import { currentRenderingInstance } from '../componentRenderContext'
 import type { Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
-import { warn } from '../warning'
+import { warn, warnWithSuggestion } from '../warning'
+import { findClosestMatch } from '../stringSimilarity'
 import type { VNodeTypes } from '../vnode'
 
 export const COMPONENTS = 'components'
@@ -113,12 +114,43 @@ function resolveAsset(
     }
 
     if (__DEV__ && warnMissing && !res) {
-      const extra =
-        type === COMPONENTS
-          ? `\nIf this is a native custom element, make sure to exclude it from ` +
-            `component resolution via compilerOptions.isCustomElement.`
-          : ``
-      warn(`Failed to resolve ${type.slice(0, -1)}: ${name}${extra}`)
+      const suggestionParts: string[] = []
+      if (type === COMPONENTS) {
+        // collect registered component names from local and global
+        // registries, then run findClosestMatch to suggest a name the
+        // user may have meant. Only components get this — directives
+        // and filters don't have a typed list to scan.
+        const candidates: string[] = []
+        const local =
+          (instance[type] as Record<string, unknown> | undefined) ||
+          ((Component as ComponentOptions)[type] as
+            | Record<string, unknown>
+            | undefined)
+        if (local) candidates.push(...Object.keys(local))
+        const global = instance.appContext[type] as
+          | Record<string, unknown>
+          | undefined
+        if (global) candidates.push(...Object.keys(global))
+        const closest = findClosestMatch(name, candidates)
+        if (closest) {
+          suggestionParts.push(`Did you mean \`${closest}\`?`)
+        }
+      }
+      if (type === COMPONENTS) {
+        suggestionParts.push(
+          `If this is a native custom element, make sure to exclude it from ` +
+            `component resolution via compilerOptions.isCustomElement.`,
+        )
+      }
+      const suggestion = suggestionParts.join('\n')
+      if (suggestion) {
+        warnWithSuggestion(
+          `Failed to resolve ${type.slice(0, -1)}: ${name}`,
+          suggestion,
+        )
+      } else {
+        warn(`Failed to resolve ${type.slice(0, -1)}: ${name}`)
+      }
     }
 
     return res
