@@ -13,8 +13,14 @@ import { resolveTeleports } from './renderToString'
 
 const { isVNode } = ssrUtils
 
+function waitDrain(stream: Writable): Promise<void> {
+  return new Promise(resolve => {
+    stream.once('drain', resolve)
+  })
+}
+
 export interface SimpleReadable {
-  push(chunk: string | null): void
+  push(chunk: string | null): void | Promise<void>
   destroy(err: any): void
 }
 
@@ -29,26 +35,37 @@ async function unrollBuffer(
         item = await item
       }
       if (isString(item)) {
-        stream.push(item)
+        const res = stream.push(item)
+        if (isPromise(res)) await res
       } else {
         await unrollBuffer(item, stream)
       }
     }
   } else {
-    // sync buffer can be more efficiently unrolled without unnecessary await
-    // ticks
-    unrollBufferSync(buffer, stream)
+    const res = unrollBufferSync(buffer, stream)
+    if (isPromise(res)) await res
   }
 }
 
-function unrollBufferSync(buffer: SSRBuffer, stream: SimpleReadable) {
+function unrollBufferSync(
+  buffer: SSRBuffer,
+  stream: SimpleReadable,
+): void | Promise<void> {
   for (let i = 0; i < buffer.length; i++) {
     let item = buffer[i]
     if (isString(item)) {
-      stream.push(item)
+      const res = stream.push(item)
+      if (isPromise(res)) {
+        // if the stream is async, we can't unroll it syncly anymore
+        // this can happen if a sync buffer is being pushed to an async stream
+        return res.then(() => unrollBufferSync(buffer.slice(i + 1), stream))
+      }
     } else {
       // since this is a sync buffer, child buffers are never promises
-      unrollBufferSync(item as SSRBuffer, stream)
+      const res = unrollBufferSync(item as SSRBuffer, stream)
+      if (isPromise(res)) {
+        return res.then(() => unrollBufferSync(buffer.slice(i + 1), stream))
+      }
     }
   }
 }
@@ -73,7 +90,8 @@ export function renderToSimpleStream<T extends SimpleReadable>(
   // provide the ssr context to the tree
   input.provide(ssrContextKey, context)
 
-  Promise.resolve(renderComponentVNode(vnode))
+  Promise.resolve()
+    .then(() => renderComponentVNode(vnode))
     .then(buffer => unrollBuffer(buffer, stream))
     .then(() => resolveTeleports(context))
     .then(() => {
@@ -108,8 +126,16 @@ export function renderToNodeStream(
   input: App | VNode,
   context: SSRContext = {},
 ): Readable {
+  let resolveRead: (() => void) | null = null
   const stream: Readable = __CJS__
-    ? new (require('node:stream').Readable)({ read() {} })
+    ? new (require('node:stream').Readable)({
+        read() {
+          if (resolveRead) {
+            resolveRead()
+            resolveRead = null
+          }
+        },
+      })
     : null
 
   if (!stream) {
@@ -120,7 +146,24 @@ export function renderToNodeStream(
     )
   }
 
-  return renderToSimpleStream(input, context, stream)
+  renderToSimpleStream(input, context, {
+    push(content) {
+      if (content != null) {
+        if (!stream.push(content)) {
+          return new Promise<void>(resolve => {
+            resolveRead = resolve
+          })
+        }
+      } else {
+        stream.push(null)
+      }
+    },
+    destroy(err) {
+      stream.destroy(err)
+    },
+  } as any)
+
+  return stream
 }
 
 export function pipeToNodeWritable(
@@ -129,9 +172,11 @@ export function pipeToNodeWritable(
   writable: Writable,
 ): void {
   renderToSimpleStream(input, context, {
-    push(content) {
+    async push(content) {
       if (content != null) {
-        writable.write(content)
+        if (!writable.write(content)) {
+          await waitDrain(writable)
+        }
       } else {
         writable.end()
       }
@@ -156,14 +201,20 @@ export function renderToWebStream(
 
   const encoder = new TextEncoder()
   let cancelled = false
+  let resolvePull: (() => void) | null = null
 
   return new ReadableStream({
     start(controller) {
       renderToSimpleStream(input, context, {
-        push(content) {
+        async push(content) {
           if (cancelled) return
           if (content != null) {
             controller.enqueue(encoder.encode(content))
+            if (controller.desiredSize! <= 0) {
+              return new Promise(resolve => {
+                resolvePull = resolve
+              })
+            }
           } else {
             controller.close()
           }
@@ -173,8 +224,18 @@ export function renderToWebStream(
         },
       })
     },
+    pull() {
+      if (resolvePull) {
+        resolvePull()
+        resolvePull = null
+      }
+    },
     cancel() {
       cancelled = true
+      if (resolvePull) {
+        resolvePull()
+        resolvePull = null
+      }
     },
   })
 }
@@ -205,10 +266,9 @@ export function pipeToWebWritable(
       }
     },
     destroy(err) {
-      // TODO better error handling?
-      // eslint-disable-next-line no-console
-      console.log(err)
-      writer.close()
+      writer.abort(err).catch(() => {
+        // ignore errors from aborting an already closed/errored stream
+      })
     },
   })
 }
