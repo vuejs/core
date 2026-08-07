@@ -25,7 +25,6 @@ export enum IRNodeTypes {
   SET_TEMPLATE_REF,
 
   INSERT_NODE,
-  PREPEND_NODE,
   CREATE_COMPONENT_NODE,
   SLOT_OUTLET_NODE,
 
@@ -45,6 +44,17 @@ export interface BaseIRNode {
 export interface EffectBoundary {
   operationIndex?: number
   effectIndex?: number
+}
+
+/**
+ * Insertion state shared by block operations (if / for / key / component /
+ * slot outlet). `anchor` references a template `<!>` placeholder id;
+ * `appendIndex` is the hydration start unit index for appends.
+ */
+export interface InsertionState {
+  parent?: number
+  anchor?: number
+  appendIndex?: number
 }
 
 export type CoreHelper = keyof typeof import('packages/runtime-dom/src')
@@ -87,7 +97,7 @@ export class TemplateRegistry {
   }
 }
 
-export interface IfIRNode extends BaseIRNode, EffectBoundary {
+export interface IfIRNode extends BaseIRNode, EffectBoundary, InsertionState {
   type: IRNodeTypes.IF
   id: number
   blockShape: number
@@ -97,10 +107,6 @@ export interface IfIRNode extends BaseIRNode, EffectBoundary {
   once?: boolean
   slotRoot?: boolean
   index?: number
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
 }
 
 export interface IRFor {
@@ -110,7 +116,8 @@ export interface IRFor {
   index?: SimpleExpressionNode
 }
 
-export interface ForIRNode extends BaseIRNode, IRFor, EffectBoundary {
+export interface ForIRNode
+  extends BaseIRNode, IRFor, EffectBoundary, InsertionState {
   type: IRNodeTypes.FOR
   id: number
   keyProp?: SimpleExpressionNode
@@ -119,21 +126,13 @@ export interface ForIRNode extends BaseIRNode, IRFor, EffectBoundary {
   slotRoot?: boolean
   component: boolean
   onlyChild: boolean
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
 }
 
-export interface KeyIRNode extends BaseIRNode, EffectBoundary {
+export interface KeyIRNode extends BaseIRNode, EffectBoundary, InsertionState {
   type: IRNodeTypes.KEY
   id: number
   value: SimpleExpressionNode
   block: BlockIRNode
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
 }
 
 export interface SetBlockKeyIRNode extends BaseIRNode {
@@ -210,12 +209,6 @@ export interface InsertNodeIRNode extends BaseIRNode {
   anchor?: number
 }
 
-export interface PrependNodeIRNode extends BaseIRNode {
-  type: IRNodeTypes.PREPEND_NODE
-  elements: number[]
-  parent: number
-}
-
 export interface DirectiveIRNode extends BaseIRNode {
   type: IRNodeTypes.DIRECTIVE
   element: number
@@ -226,7 +219,8 @@ export interface DirectiveIRNode extends BaseIRNode {
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
 }
 
-export interface CreateComponentIRNode extends BaseIRNode, EffectBoundary {
+export interface CreateComponentIRNode
+  extends BaseIRNode, EffectBoundary, InsertionState {
   type: IRNodeTypes.CREATE_COMPONENT_NODE
   id: number
   tag: string
@@ -238,23 +232,16 @@ export interface CreateComponentIRNode extends BaseIRNode, EffectBoundary {
   slotRoot?: boolean
   dynamic?: SimpleExpressionNode
   useCreateElement: boolean
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
 }
 
-export interface SlotOutletIRNode extends BaseIRNode, EffectBoundary {
+export interface SlotOutletIRNode
+  extends BaseIRNode, EffectBoundary, InsertionState {
   type: IRNodeTypes.SLOT_OUTLET_NODE
   id: number
   name: SimpleExpressionNode
   props: IRProps[]
   fallback?: BlockIRNode
   flags: number
-  parent?: number
-  anchor?: number
-  logicalIndex?: number
-  append?: boolean
 }
 
 export interface GetTextChildIRNode extends BaseIRNode {
@@ -273,7 +260,6 @@ export type OperationNode =
   | SetHtmlIRNode
   | SetTemplateRefIRNode
   | InsertNodeIRNode
-  | PrependNodeIRNode
   | DirectiveIRNode
   | IfIRNode
   | ForIRNode
@@ -302,9 +288,6 @@ export interface IRDynamicInfo {
   id?: number
   flags: DynamicFlag
   anchor?: number
-  // logical index of this node among siblings (including dynamic nodes)
-  // used during hydration to locate the correct DOM node
-  logicalIndex?: number
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean

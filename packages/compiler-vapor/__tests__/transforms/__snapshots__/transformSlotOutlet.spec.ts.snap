@@ -56,7 +56,7 @@ const t1 = _template("<div>", 1)
 export function render(_ctx) {
   const n0 = _createSlot("default", null, () => {
     const n5 = t1()
-    _setInsertionState(n5, null, 0)
+    _setInsertionState(n5)
     const n2 = _createIf(() => (_ctx.ok), () => {
       const n4 = t0()
       return n4

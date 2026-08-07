@@ -8,6 +8,7 @@ import {
 } from '@vue/runtime-dom'
 import { type Namespace, Namespaces } from '@vue/shared'
 import {
+  insertionAnchor,
   insertionIndex,
   insertionParent,
   resetInsertionState,
@@ -278,12 +279,14 @@ export function nextLogicalSibling(node: Node): Node | null {
 function locateHydrationNodeImpl(consumeFragmentStart = false) {
   let node: Node | null
 
-  if (insertionIndex !== undefined) {
-    // use logicalIndex to locate the node
-    node = locateChildByLogicalIndex(insertionParent!, insertionIndex)
+  if (insertionAnchor) {
+    // anchored insert: the located placeholder unit is the hydration target
+    node = insertionAnchor
   } else if (insertionParent) {
-    // no logicalIndex: withHydration entry initialization
-    node = insertionParent.firstChild
+    // append: skip the preceding logical units (0 when absent — sole-child
+    // appends and withHydration entry). Locating through the logical walk
+    // also stamps $llc/$idx so mismatch recovery keeps the cache coherent.
+    node = locateChildByLogicalIndex(insertionParent, insertionIndex || 0)
   } else {
     node = currentHydrationNode
   }

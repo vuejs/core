@@ -34,7 +34,11 @@ import {
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
-import { DynamicFragment, type VaporFragment } from './fragment'
+import {
+  DynamicFragment,
+  type VaporFragment,
+  isAdoptedAnchor,
+} from './fragment'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import { isInteropEnabled } from './vdomInteropState'
 import { enableKeepAlive } from './keepAlive'
@@ -74,6 +78,7 @@ export function createDynamicComponent(
           if (anchorParent) removeNode(frag.anchor, anchorParent)
         }
       : undefined,
+    _insertionAnchor,
   )
 
   const normalizedRawSlots = normalizeRawSlots(rawSlots)
@@ -119,7 +124,10 @@ export function createDynamicComponent(
   else renderEffect(renderFn)
 
   if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    // adopted fragments render in place through their template anchor
+    if (_insertionParent && !isAdoptedAnchor(frag.anchor, _insertionAnchor)) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
   } else {
     exitHydrationCursor(hydrationCursor)
   }

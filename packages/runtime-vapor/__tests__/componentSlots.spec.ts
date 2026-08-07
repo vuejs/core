@@ -11,7 +11,7 @@ import {
   defineVaporAsyncComponent,
   defineVaporComponent,
   insert,
-  prepend,
+  next,
   remove,
   renderEffect,
   setInsertionState,
@@ -917,6 +917,41 @@ describe('component: slots', () => {
       await nextTick()
 
       expect(markDirty).toHaveBeenCalledTimes(2)
+    })
+
+    test('slot boundary dirtying ignores adopted v-if initial mount', async () => {
+      const markDirty = vi.fn()
+      const show = ref(true)
+      const boundary: SlotBoundaryContext = {
+        parent: null,
+        getFallback: () => undefined,
+        run: fn => fn(),
+        markDirty,
+      }
+      const Child = defineVaporComponent(() => {
+        const n = template('<div><!></div>', 1)() as any
+        setInsertionState(n, child(n))
+        withSlotBoundary(boundary, () =>
+          createIf(
+            () => show.value,
+            () => document.createTextNode('content'),
+            undefined,
+            slotRootIfShape,
+          ),
+        )
+        return n
+      })
+
+      const { host } = define(() => createComponent(Child)).render()
+
+      expect(host.innerHTML).toBe('<div>content<!--if--></div>')
+      expect(markDirty).not.toHaveBeenCalled()
+
+      show.value = false
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<div><!--if--></div>')
+      expect(markDirty).toHaveBeenCalledTimes(1)
     })
 
     test('slot boundary dirtying tracks root v-for updates', async () => {
@@ -1929,9 +1964,9 @@ describe('component: slots', () => {
 
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
-        prepend(
-          n0 as any as ParentNode,
+        insert(
           createSlot('header', { title: () => val.value }),
+          n0 as any as ParentNode,
         )
         return n0
       })
@@ -1966,11 +2001,11 @@ describe('component: slots', () => {
 
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
-        prepend(
-          n0 as any as ParentNode,
+        insert(
           createSlot(
             () => val.value, // dynamic slot outlet name
           ),
+          n0 as any as ParentNode,
         )
         return n0
       })
@@ -2235,7 +2270,7 @@ describe('component: slots', () => {
 
       const Comp = defineVaporComponent(() => {
         const n0 = template('<div></div>')()
-        prepend(n0 as any as ParentNode, createSlot('header', null))
+        insert(createSlot('header', null), n0 as any as ParentNode)
         return n0
       })
 
@@ -2271,7 +2306,7 @@ describe('component: slots', () => {
       const Comp = defineVaporComponent(() => {
         instance = currentInstance
         const n0 = template('<div></div>')()
-        prepend(n0 as any as ParentNode, createSlot('header', null))
+        insert(createSlot('header', null), n0 as any as ParentNode)
         return n0
       })
 
@@ -3688,7 +3723,7 @@ describe('component: slots', () => {
                   () => props.show,
                   () => {
                     const n5 = template('<div></div>')() as any
-                    setInsertionState(n5, null, 0)
+                    setInsertionState(n5)
                     createSlot('header', null, () => {
                       const n4 = template('default header')()
                       return n4
@@ -3847,10 +3882,12 @@ describe('component: slots', () => {
     test('consecutive slots with insertion state', async () => {
       const { component: Child } = define({
         setup() {
-          const n2 = template('<div><div>baz</div></div>', 1)() as any
-          setInsertionState(n2, 0)
+          const n2 = template('<div><!><!><div>baz</div></div>', 1)() as any
+          const a0 = child(n2)
+          const a1 = next(a0)
+          setInsertionState(n2, a0)
           createSlot('default', null)
-          setInsertionState(n2, 0)
+          setInsertionState(n2, a1)
           createSlot('foo', null)
           return n2
         },
@@ -3875,6 +3912,29 @@ describe('component: slots', () => {
     })
 
     describe('vdom interop', () => {
+      test('appended outlet renders interop slot content', () => {
+        // regression: interop slot fragments have no client anchor and append
+        // outlets capture no insertion anchor — undefined === undefined must
+        // not read as adoption, which skipped the only insertion
+        const VaporChild = defineVaporComponent({
+          setup() {
+            const n = template('<div></div>', 1)() as any
+            setInsertionState(n)
+            createSlot('default', null)
+            return n
+          },
+        })
+        const root = document.createElement('div')
+        const app = createApp({
+          render: () =>
+            h(VaporChild as any, null, { default: () => h('span', 'hi') }),
+        })
+        app.use(vaporInteropPlugin)
+        app.mount(root)
+        expect(root.innerHTML).toContain('<span>hi</span>')
+        app.unmount()
+      })
+
       const createVaporSlot = (fallbackText = 'fallback') => {
         return defineVaporComponent({
           setup() {

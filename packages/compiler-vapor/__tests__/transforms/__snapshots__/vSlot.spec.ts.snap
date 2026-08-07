@@ -355,9 +355,9 @@ export function render(_ctx) {
   const _component_Foo = _resolveComponent("Foo")
   const _component_Bar = _resolveComponent("Bar")
   const n6 = t0()
-  _setInsertionState(n6, null, 0)
+  _setInsertionState(n6)
   const n0 = _createSlot("foo")
-  _setInsertionState(n6, null, 1)
+  _setInsertionState(n6, 1)
   const n1 = _createIf(() => (true), () => {
     const n3 = _createComponentWithFallback(_component_Foo)
     return n3
@@ -409,7 +409,7 @@ const t1 = _template("<div>")
 export function render(_ctx) {
   const n4 = _createAssetComponent("Comp", null, () => {
     const n3 = t1()
-    _setInsertionState(n3, null, 0)
+    _setInsertionState(n3)
     const n0 = _createIf(() => (_ctx.show), () => {
       const n2 = t0()
       return n2
@@ -492,7 +492,7 @@ export function render(_ctx) {
   const n5 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createFor(() => (_ctx.items), (_for_item0) => {
       const n3 = t0()
-      _setInsertionState(n3, null, 0)
+      _setInsertionState(n3)
       const n2 = _createComponentWithFallback(_component_ChildComp)
       return n3
     }, undefined, 40 /* IS_SINGLE_NODE, SLOT_ROOT */)
@@ -511,7 +511,7 @@ export function render(_ctx) {
   const n5 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (_ctx.show), () => {
       const n3 = t0()
-      _setInsertionState(n3, null, 0)
+      _setInsertionState(n3)
       const n2 = _createComponentWithFallback(_component_ChildComp)
       return n3
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
@@ -542,7 +542,7 @@ export function render(_ctx) {
   const n5 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (_ctx.show), () => {
       const n3 = t0()
-      _setInsertionState(n3, null, 0)
+      _setInsertionState(n3)
       const n2 = _createPlainElement("my-element")
       return n3
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
@@ -596,10 +596,10 @@ export function render(_ctx) {
   const n8 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (_ctx.a), () => {
       const n6 = t1()
-      _setInsertionState(n6, null, 0)
+      _setInsertionState(n6)
       const n2 = _createIf(() => (_ctx.b), () => {
         const n5 = t0()
-        _setInsertionState(n5, null, 0)
+        _setInsertionState(n5)
         const n4 = _createComponentWithFallback(_component_ChildComp)
         return n5
       })

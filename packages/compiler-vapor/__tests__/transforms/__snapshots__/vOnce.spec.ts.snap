@@ -18,7 +18,7 @@ const t0 = _template("<div> <span>", 1)
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n2 = t0()
   const n0 = _child(n2)
-  const n1 = _next(n0, 1)
+  const n1 = _next(n0)
   _setText(n0, _toDisplayString(_ctx.msg) + " ")
   _setClass(n1, _ctx.clz)
   return n2
@@ -41,7 +41,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n1 = t0()
-  _setInsertionState(n1, null, 0)
+  _setInsertionState(n1)
   const n0 = _createAssetComponent("Comp", { id: () => (_ctx.foo) }, null, null, true)
   return n1
 }"
@@ -65,7 +65,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n1 = t0()
-  _setInsertionState(n1, null, 0)
+  _setInsertionState(n1)
   const n0 = _createSlot("default", null, null, 2 /* ONCE */)
   return n1
 }"

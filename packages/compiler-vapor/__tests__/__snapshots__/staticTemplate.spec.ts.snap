@@ -148,17 +148,17 @@ export function render(_ctx) {
 `;
 
 exports[`static template marker > keeps materialized createElement text path non-static 1`] = `
-"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+"import { createPlainElement as _createPlainElement, insert as _insert, setText as _setText, template as _template } from 'vue';
 const t0 = _template("<span></span>", 2)
 const t1 = _template("")
 
 export function render(_ctx) {
   const n2 = _createPlainElement("template", null, null, true)
   const n0 = t0()
+  _insert(n0, n2)
   const n1 = t1()
+  _insert(n1, n2)
   _setText(n1, "<b>foo</b>")
-  _insert([n0, n1], n2)
-  _insert([n0, n1], n2)
   return n2
 }"
 `;
@@ -176,14 +176,14 @@ export function render(_ctx) {
 `;
 
 exports[`static template marker > keeps template empty-string semantics unchanged 1`] = `
-"import { createPlainElement as _createPlainElement, setText as _setText, insert as _insert, template as _template } from 'vue';
+"import { createPlainElement as _createPlainElement, insert as _insert, setText as _setText, template as _template } from 'vue';
 const t0 = _template("")
 
 export function render(_ctx) {
   const n1 = _createPlainElement("template", null, null, true)
   const n0 = t0()
-  _setText(n0, "<b>foo</b>")
   _insert(n0, n1)
+  _setText(n0, "<b>foo</b>")
   return n1
 }"
 `;

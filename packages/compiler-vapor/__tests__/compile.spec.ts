@@ -317,7 +317,7 @@ describe('compile', () => {
       })
       expect(code).contains(
         `_renderEffect(() => _setProp(n1, "id", _ctx.useId()))
-  _setInsertionState(n1, null, 0)
+  _setInsertionState(n1)
   const n0 = _createAssetComponent("Child")`,
       )
       expect(code).matchSnapshot()
@@ -473,9 +473,9 @@ describe('compile', () => {
       expect(code).matchSnapshot()
       expect(code).not.contains('let p0 = ')
       expect(code).not.contains('let p2 = ')
-      expect(code).contains('let p1 = _next(_child(n2), 1)')
+      expect(code).contains('let p1 = _next(_child(n2))')
       expect(code).contains('const n0 = _child(p1)')
-      expect(code).contains('const n1 = _child((p1 = _next(p1, 2)))')
+      expect(code).contains('const n1 = _child((p1 = _next(p1)))')
     })
   })
 })

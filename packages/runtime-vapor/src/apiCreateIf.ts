@@ -13,7 +13,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
-import { DynamicFragment } from './fragment'
+import { DynamicFragment, isAdoptedAnchor } from './fragment'
 import { createComment, createTextNode } from './dom/node'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 
@@ -30,6 +30,7 @@ export function createIf(
   if (!isHydrating) resetInsertionState()
   let hydrationCursor: HydrationCursor | null = null
   let branchShape: VaporBlockShape | undefined
+  let adopted = false
 
   let frag: Block
   if (flags & VaporIfFlags.ONCE) {
@@ -65,7 +66,9 @@ export function createIf(
             if (parent) removeNode(anchor, parent)
           }
         : undefined,
+      _insertionAnchor,
     )
+    adopted = isAdoptedAnchor(dynamicFragment.anchor, _insertionAnchor)
     frag = dynamicFragment
     renderEffect(() => {
       const ok = condition()
@@ -84,7 +87,10 @@ export function createIf(
   }
 
   if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    // adopted fragments render in place through their template anchor
+    if (_insertionParent && !adopted) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
   } else {
     // SSR empty branches render as <!---->, and no template adoption consumes
     // that comment. Claim it before restoring the outer cursor.

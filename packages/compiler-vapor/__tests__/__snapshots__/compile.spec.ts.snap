@@ -36,7 +36,7 @@ export function render(_ctx) {
   const n4 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createIf(() => (true), () => {
       const n3 = t0()
-      _setInsertionState(n3, null, 0)
+      _setInsertionState(n3)
       const n2 = _createComponentWithFallback(_component_Bar)
       _withVaporDirectives(n2, [[_directive_hello, void 0, void 0, { world: true }]])
       return n3
@@ -146,19 +146,20 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, child as _child, toDisplayString as _toDisplayString, setText as _setText, template as _template } from 'vue';
+"import { child as _child, setProp as _setProp, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createAssetComponent as _createAssetComponent, next as _next, toDisplayString as _toDisplayString, setText as _setText, template as _template } from 'vue';
 const t0 = _template("<div :id=foo><Comp></Comp>{{ bar }}", 2)
-const t1 = _template("<div> ")
+const t1 = _template("<div><!> ")
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  const n3 = t1()
-  const n2 = _child(n3, 1)
-  _renderEffect(() => _setProp(n3, "id", _ctx.foo))
-  _setInsertionState(n3, 0)
+  const n4 = t1()
+  const n3 = _child(n4)
+  const n2 = _next(n3)
+  _renderEffect(() => _setProp(n4, "id", _ctx.foo))
+  _setInsertionState(n4, n3)
   const n1 = _createAssetComponent("Comp")
   _renderEffect(() => _setText(n2, _toDisplayString(_ctx.bar)))
-  return [n0, n3]
+  return [n0, n4]
 }"
 `;
 
@@ -215,10 +216,10 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = _createFor(() => (_ctx.rows), (_for_item0) => {
     const n6 = t0()
     const n2 = _child(n6)
-    const n5 = _next(n2, 1)
-    const n4 = _next(n5, 2)
+    const n5 = _next(n2)
+    const n4 = _next(n5)
     const x2 = _txt(n2)
-    _setInsertionState(n6, n5, 1)
+    _setInsertionState(n6, n5)
     const n3 = _createComponentWithFallback(_component_Child)
     const x4 = _txt(n4)
     _renderEffect(() => _setText(x4, _toDisplayString(_ctx.useId())))
@@ -239,7 +240,7 @@ const t0 = _template("<div>", 1)
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n1 = t0()
   _renderEffect(() => _setProp(n1, "id", _ctx.useId()))
-  _setInsertionState(n1, null, 0)
+  _setInsertionState(n1)
   const n0 = _createAssetComponent("Child")
   return n1
 }"
@@ -265,12 +266,12 @@ const t1 = _template("<div><div></div><!><div></div><!><div><button>", 1)
 
 export function render(_ctx) {
   const n6 = t1()
-  const n5 = _next(_child(n6), 1)
+  const n5 = _next(_child(n6))
   const n7 = _nthChild(n6, 3)
-  const n4 = _child(_next(n7, 4))
-  _setInsertionState(n6, n5, 1)
+  const n4 = _child(_next(n7))
+  _setInsertionState(n6, n5)
   const n0 = _createAssetComponent("Comp")
-  _setInsertionState(n6, n7, 3)
+  _setInsertionState(n6, n7)
   const n1 = _createIf(() => (true), () => {
     const n3 = t0()
     return n3
@@ -287,9 +288,9 @@ const t0 = _template("<div><div>", 1)
 export function render(_ctx) {
   const n3 = t0()
   const n1 = _child(n3)
-  _setInsertionState(n1, null, 0)
+  _setInsertionState(n1)
   const n0 = _createSlot()
-  _setInsertionState(n3, null, 1)
+  _setInsertionState(n3, 1)
   const n2 = _createAssetComponent("Comp")
   return n3
 }"
@@ -302,7 +303,7 @@ const t0 = _template("<div><span> </span> <br> ", 1)
 export function render(_ctx) {
   const n3 = t0()
   const n0 = _child(n3)
-  const n1 = _next(n0, 1)
+  const n1 = _next(n0)
   const n2 = _nthChild(n3, 3)
   const x0 = _txt(n0)
   _setText(x0, _toDisplayString(_ctx.foo))
@@ -460,9 +461,9 @@ const t0 = _template("<div><div>x</div><div><span> </div><div><span> ", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n2 = t0()
-  let p1 = _next(_child(n2), 1)
+  let p1 = _next(_child(n2))
   const n0 = _child(p1)
-  const n1 = _child((p1 = _next(p1, 2)))
+  const n1 = _child((p1 = _next(p1)))
   const x0 = _txt(n0)
   const x1 = _txt(n1)
   _renderEffect(() => {

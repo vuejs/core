@@ -256,12 +256,18 @@ export class DynamicFragment extends RenderContextFragment {
   inTransition?: boolean
   // Fallthrough attrs hooks register branch-owned effects on insert.
   hasFallthroughAttrs?: true
+  // Whether update() ran before. The very first update renders as part of
+  // the mount and must not fire onUpdated hooks; with an adopted template
+  // anchor `parent` is non-null even then, so mount status can no longer be
+  // inferred from the anchor being detached.
+  everUpdated = false
   constructor(
     anchorLabel?: string,
     keyed: boolean = false,
     locate: boolean = true,
     trackSlotBoundary: boolean = false,
     onInvalid?: () => void,
+    adoptAnchor?: Node,
   ) {
     super(EMPTY_BLOCK)
     if (keyed) this.keyed = true
@@ -276,8 +282,7 @@ export class DynamicFragment extends RenderContextFragment {
       this.anchorLabel = anchorLabel
       if (locate) locateHydrationNode()
     } else {
-      this.anchor =
-        __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+      this.anchor = resolveFragmentAnchor(adoptAnchor, anchorLabel)
       if (__DEV__) this.anchorLabel = anchorLabel
     }
     if (trackSlotBoundary) trackSlotBoundaryDirtying(this, onInvalid)
@@ -290,6 +295,8 @@ export class DynamicFragment extends RenderContextFragment {
   }
 
   update(render?: BlockFn, key: any = render, noScope: boolean = false): void {
+    const everUpdated = this.everUpdated
+    this.everUpdated = true
     if (key === this.current) {
       // On initial hydration, `key === current` means `render` is empty,
       // so this fragment hydrates as empty content.
@@ -359,7 +366,9 @@ export class DynamicFragment extends RenderContextFragment {
       parent,
       key,
       noScope,
-      wasMounted || !!parent,
+      // notify on any update except the mount-time first render; see the
+      // `everUpdated` field comment
+      wasMounted || (everUpdated && !!parent),
       removePrevious,
     )
     setActiveSub(prevSub)
@@ -380,8 +389,8 @@ export class DynamicFragment extends RenderContextFragment {
     transition: VaporTransitionHooks | undefined,
     parent: ParentNode | null,
     key: any,
-    noScope: boolean = false,
-    notifyUpdated: boolean = !!parent,
+    noScope: boolean,
+    notifyUpdated: boolean,
     removePrevious?: () => void,
   ): void {
     this.current = key
@@ -479,8 +488,18 @@ export class SlotFragment
   private isUpdating = false
   private ownBoundary?: SlotBoundaryContext
   // Slot-root outlets expose their content validity to the enclosing boundary.
-  constructor(private readonly notifyParentBoundary: boolean = false) {
-    super(isHydrating || __DEV__ ? 'slot' : undefined, false, false, false)
+  constructor(
+    private readonly notifyParentBoundary: boolean = false,
+    adoptAnchor?: Node,
+  ) {
+    super(
+      isHydrating || __DEV__ ? 'slot' : undefined,
+      false,
+      false,
+      false,
+      undefined,
+      adoptAnchor,
+    )
     if (!isHydrating) {
       this.insert = (parent, anchor, parentSuspense) =>
         this.insertSlot(parent, anchor, parentSuspense)
@@ -691,6 +710,39 @@ export class SlotFragment
       this.slotBoundary.markDirty()
     }
   }
+}
+
+/**
+ * Adopt the template `<!>` placeholder passed through the insertion state as
+ * the fragment anchor instead of creating (and later inserting) a runtime
+ * anchor. Restricted to comments: adopting any other node would remove user
+ * DOM on removeFragment. Callers detect adoption by identity: the returned
+ * node is the adopted anchor iff it equals the passed one.
+ */
+export function resolveFragmentAnchor(
+  adopt: Node | undefined,
+  anchorLabel: string | undefined,
+): Node {
+  if (adopt && adopt.nodeType === 8 /* Comment */) {
+    if (__DEV__ && anchorLabel) (adopt as Comment).data = anchorLabel
+    return adopt
+  }
+  return __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+}
+
+/**
+ * Whether a fragment adopted the captured insertion anchor as its own, which
+ * means it rendered in place and the creator must skip its trailing insert.
+ * The insertion anchor must be checked non-null: append inserts capture no
+ * anchor, and fragments without a client anchor (vdom interop slots, any
+ * fragment during hydration) would otherwise compare undefined === undefined
+ * and falsely skip their only insertion.
+ */
+export function isAdoptedAnchor(
+  fragmentAnchor: Node | undefined,
+  insertionAnchor: Node | undefined,
+): boolean {
+  return !!insertionAnchor && fragmentAnchor === insertionAnchor
 }
 
 export function isFragment(val: unknown): val is VaporFragment {

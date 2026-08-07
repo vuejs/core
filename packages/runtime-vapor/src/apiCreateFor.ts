@@ -48,7 +48,13 @@ import {
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
-import { ForBlock, ForFragment, type VaporFragment } from './fragment'
+import {
+  ForBlock,
+  ForFragment,
+  type VaporFragment,
+  isAdoptedAnchor,
+  resolveFragmentAnchor,
+} from './fragment'
 import {
   getCurrentSlotEndAnchor,
   isPendingSlotContent,
@@ -114,7 +120,12 @@ export const createFor = (
   let parentAnchor: Node
   let pendingHydrationAnchor = false
   if (!isHydrating) {
-    parentAnchor = __DEV__ ? createComment('for') : createTextNode()
+    parentAnchor = resolveFragmentAnchor(_insertionAnchor, 'for')
+    if (parentAnchor === _insertionAnchor) {
+      // adopted the template `<!>` placeholder as the list anchor; it is
+      // already in place, so items mount directly in front of it
+      parent = parentAnchor.parentNode
+    }
   }
 
   const trackSlotBoundary = !!(flags & VaporVForFlags.SLOT_ROOT)
@@ -575,10 +586,20 @@ export const createFor = (
           }
 
           // optimization: cache the fragment end anchor as $llc (last logical child)
-          // so that locateChildByLogicalIndex can skip the entire fragment
+          // so that locateChildByLogicalIndex can skip the entire fragment.
+          // For anchored inserts, reuse the unit index the locator stamped on
+          // the anchor; if it is unstamped (reached via a cache-missed
+          // `next()`), leave `$llc` untouched — `0` is a valid unit index, so
+          // a fallback would alias a stale cache entry to "unit 0", while
+          // skipping the install only costs a restart walk.
           if (_insertionParent && isComment(parentAnchor, ']')) {
-            ;(parentAnchor as any as ChildItem).$idx = _insertionIndex || 0
-            _insertionParent.$llc = parentAnchor
+            const idx = _insertionAnchor
+              ? (_insertionAnchor as any as ChildItem).$idx
+              : _insertionIndex || 0
+            if (idx !== undefined) {
+              ;(parentAnchor as any as ChildItem).$idx = idx
+              _insertionParent.$llc = parentAnchor
+            }
           }
         }
       }
@@ -628,7 +649,10 @@ export const createFor = (
   }
 
   if (!isHydrating) {
-    if (_insertionParent) insert(frag, _insertionParent, _insertionAnchor)
+    // adopted lists mount their items in place through the template anchor
+    if (_insertionParent && !isAdoptedAnchor(parentAnchor!, _insertionAnchor)) {
+      insert(frag, _insertionParent, _insertionAnchor)
+    }
   } else {
     if (!pendingHydrationAnchor && currentHydrationNode === parentAnchor!) {
       advanceHydrationNode(parentAnchor!)
