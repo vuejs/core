@@ -613,6 +613,9 @@ export function createHydrationFunctions(
               (isCustomElement && !isReservedProp(key)) ||
               (dynamicProps && dynamicProps.includes(key))
             ) {
+              if (isUnchangedResourceProp(el, key, props[key])) {
+                continue
+              }
               patchProp(el, key, null, props[key], namespace, parentComponent)
             }
           }
@@ -898,6 +901,24 @@ export const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
 /**
  * Dev only
  */
+// attributes whose assignment triggers a (re)fetch of a resource
+const resourceProps = /*@__PURE__*/ new Set(['src', 'srcset', 'href', 'poster'])
+
+function isUnchangedResourceProp(
+  el: Element,
+  key: string,
+  clientValue: any,
+): boolean {
+  if (!resourceProps.has(key)) {
+    return false
+  }
+  // compare against the rendered attribute rather than the reflected DOM
+  // property, which normalizes URLs to absolute form.
+  return (
+    el.getAttribute(key) === (clientValue == null ? null : `${clientValue}`)
+  )
+}
+
 function propHasMismatch(
   el: Element & { $cls?: string },
   key: string,
@@ -970,7 +991,10 @@ export function getAttributeMismatch(
 } {
   let actual: string | boolean | null | undefined
   let expected: string | boolean | null | undefined
-  if (isBooleanAttr(key)) {
+  if (key === 'hidden') {
+    actual = normalizeHiddenValue(el.getAttribute(key))
+    expected = normalizeHiddenValue(clientValue)
+  } else if (isBooleanAttr(key)) {
     actual = el.hasAttribute(key)
     expected = includeBooleanAttr(clientValue)
   } else if (clientValue == null) {
@@ -1024,6 +1048,18 @@ export function warnPropMismatch(
     return true
   }
   return false
+}
+
+function normalizeHiddenValue(value: unknown): false | '' | 'until-found' {
+  if (!isRenderableAttrValue(value)) {
+    return false
+  }
+  if (isString(value)) {
+    // Attribute values from the DOM are strings, while numeric client values
+    // follow the `hidden` property setter, where 0 and NaN remove the attribute.
+    return value.toLowerCase() === 'until-found' ? 'until-found' : ''
+  }
+  return includeBooleanAttr(value) ? '' : false
 }
 
 export function toClassSet(str: string): Set<string> {

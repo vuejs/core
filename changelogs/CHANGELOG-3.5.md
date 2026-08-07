@@ -1,3 +1,20 @@
+## [3.5.41](https://github.com/vuejs/core/compare/v3.5.40...v3.5.41) (2026-08-05)
+
+### Bug Fixes
+
+* **compiler-core:** preserve vnode lifecycle in stable v-for ([#11682](https://github.com/vuejs/core/issues/11682)) ([02421cd](https://github.com/vuejs/core/commit/02421cdbc4da5dd2eaf39e6c51aa790f9310db62)), closes [#9239](https://github.com/vuejs/core/issues/9239) [#12569](https://github.com/vuejs/core/issues/12569)
+* **compiler-sfc:** handle transformed template AST after cache invalidation ([#15136](https://github.com/vuejs/core/issues/15136)) ([a4440c0](https://github.com/vuejs/core/commit/a4440c01b96798a23bef12cb6f9ada5ffaba0d3a)), closes [#15126](https://github.com/vuejs/core/issues/15126) [#15128](https://github.com/vuejs/core/issues/15128)
+* **custom-element:** preserve nested async mount order ([#15154](https://github.com/vuejs/core/issues/15154)) ([71f9ff5](https://github.com/vuejs/core/commit/71f9ff58a2a8748b2c1ec26c55c89f7343b86110)), closes [#15153](https://github.com/vuejs/core/issues/15153)
+* **custom-element:** warn when props override native properties ([#12125](https://github.com/vuejs/core/issues/12125)) ([22b53ea](https://github.com/vuejs/core/commit/22b53eafecf56a9fb97f00b8e8b69c90a073d2d4)), closes [#12124](https://github.com/vuejs/core/issues/12124)
+* **runtime-core:** avoid re-fetching resource props with unchanged values ([#15105](https://github.com/vuejs/core/issues/15105)) ([a7513a1](https://github.com/vuejs/core/commit/a7513a1a3ed411ccd90bf135c6cba9c9cb2ef10b))
+* **runtime-core:** restore SSR setup state when handling async setup result ([#15114](https://github.com/vuejs/core/issues/15114)) ([b6191cb](https://github.com/vuejs/core/commit/b6191cbf95c680e076164a319dd987a14de658c1)), closes [#15113](https://github.com/vuejs/core/issues/15113)
+* **scheduler:** avoid stack overflow when flushing very large post cb arrays ([#15143](https://github.com/vuejs/core/issues/15143)) ([c04a45d](https://github.com/vuejs/core/commit/c04a45d15498ebba0de3ceae674b88ac43cb9e76)), closes [#15142](https://github.com/vuejs/core/issues/15142)
+* **slots:** handle nullish v-bind slot props ([#15177](https://github.com/vuejs/core/issues/15177)) ([2506700](https://github.com/vuejs/core/commit/2506700b289c5277eb465bf959ce0ea23329094d))
+* **ssr:** normalize hidden states during hydration ([#13125](https://github.com/vuejs/core/issues/13125)) ([4e467d7](https://github.com/vuejs/core/commit/4e467d7ae2cd7d0af031fac8865dcff73cb1cf16))
+* **transition:** support transition to teleport component child ([#11959](https://github.com/vuejs/core/issues/11959)) ([77061fe](https://github.com/vuejs/core/commit/77061fe88608a5ab77fec705ff65cb81779eb01c)), closes [#11910](https://github.com/vuejs/core/issues/11910)
+* **types:** preserve defineModel inference with factory defaults ([#15097](https://github.com/vuejs/core/issues/15097)) ([0516c43](https://github.com/vuejs/core/commit/0516c43284084f0526032a1cc312fb6916bf04fe)), closes [#15096](https://github.com/vuejs/core/issues/15096)
+* **v-model:** preserve text input before hydration ([#14411](https://github.com/vuejs/core/issues/14411)) ([2468464](https://github.com/vuejs/core/commit/2468464798a0fc050f86f8fa0bb96a34851bd824)), closes [#14403](https://github.com/vuejs/core/issues/14403)
+
 ## [3.5.40](https://github.com/vuejs/core/compare/v3.5.39...v3.5.40) (2026-07-16)
 
 ### Bug Fixes

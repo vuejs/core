@@ -38,9 +38,14 @@ function onCompositionEnd(e: Event) {
 }
 
 const assignKey: unique symbol = Symbol('_assign')
+const initialValueKey: unique symbol = Symbol('_initialValue')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
-  T & { [assignKey]: AssignerFn; _assigning?: boolean },
+  T & {
+    [assignKey]: AssignerFn
+    [initialValueKey]?: string
+    _assigning?: boolean
+  },
   any,
   Modifiers
 >
@@ -52,6 +57,16 @@ export const vModelText: ModelDirective<
   'trim' | 'number' | 'lazy'
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
+    // During hydration, created runs on an element already in the DOM.
+    if (el.parentNode) {
+      if (el.type === 'text') {
+        // Text inputs strip CR/LF from value, while defaultValue retains them.
+        el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
+      } else if (el.type === 'textarea') {
+        // Textareas normalize CRLF/CR to LF in value.
+        el[initialValueKey] = el.defaultValue.replace(/\r\n?/g, '\n')
+      }
+    }
     el[assignKey] = getModelAssigner(vnode)
     vModelTextInit(
       el,
@@ -61,8 +76,19 @@ export const vModelText: ModelDirective<
     )
   },
   // set value on mounted so it's after min/max for type="range"
-  mounted(el, { value }) {
-    el.value = value == null ? '' : value
+  mounted(el, { value, modifiers: { trim, number } }) {
+    const newValue = value == null ? '' : value
+    const initialValue = el[initialValueKey]
+    delete el[initialValueKey]
+    if (
+      initialValue !== undefined &&
+      (el.type === 'text' || el.type === 'textarea') &&
+      el.value !== initialValue
+    ) {
+      el[assignKey](castValue(el.value, trim, number))
+    } else {
+      el.value = newValue
+    }
   },
   beforeUpdate(
     el,

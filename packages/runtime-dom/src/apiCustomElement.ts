@@ -336,7 +336,9 @@ export abstract class VueElementBase<
         if (parent && parent._pendingResolve) {
           this._pendingResolve = parent._pendingResolve.then(() => {
             this._pendingResolve = undefined
-            this._resolveDef()
+            if (this.isConnected) {
+              return this._resolveDef()
+            }
           })
         } else {
           this._resolveDef()
@@ -395,7 +397,7 @@ export abstract class VueElementBase<
    */
   private _resolveDef() {
     if (this._pendingResolve) {
-      return
+      return this._pendingResolve
     }
 
     // set initial attrs
@@ -454,6 +456,7 @@ export abstract class VueElementBase<
         this._def = def
         resolve(def)
       })
+      return this._pendingResolve
     } else {
       resolve(this._def)
     }
@@ -532,8 +535,14 @@ export abstract class VueElementBase<
       }
     }
 
-    // defining getter/setters on prototype
+    // define getter/setters for declared props
     for (const key of declaredPropKeys.map(camelize)) {
+      if (__DEV__ && key in Object.getPrototypeOf(this)) {
+        warn(
+          `Custom element prop "${key}" conflicts with an existing property ` +
+            `on the element and will overwrite it.`,
+        )
+      }
       Object.defineProperty(this, key, {
         get(this: VueElement) {
           return this._getProp(key)

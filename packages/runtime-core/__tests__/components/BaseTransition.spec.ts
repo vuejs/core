@@ -2,6 +2,7 @@ import {
   BaseTransition,
   type BaseTransitionProps,
   KeepAlive,
+  Teleport,
   type TestElement,
   type VNodeProps,
   h,
@@ -1292,5 +1293,67 @@ describe('BaseTransition', () => {
     }
     await runTestWithKeepAlive(testOutIn)
     __DEV__ = true
+  })
+
+  test('should preserve transition for component with KeepAlive root', async () => {
+    const root = nodeOps.createElement('div')
+    const show = ref(false)
+    const onBeforeEnter = vi.fn()
+    const Child = { render: () => h('div', 'content') }
+    const Comp = {
+      render: () => h(KeepAlive, null, { default: () => h(Child) }),
+    }
+    const App = () =>
+      h(BaseTransition, { onBeforeEnter }, () => (show.value ? h(Comp) : null))
+
+    render(h(App), root)
+
+    show.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>content</div>')
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('should not error on component with empty Teleport root', () => {
+    const root = nodeOps.createElement('div')
+    const target = nodeOps.createElement('div')
+    const Comp = () => h(Teleport, { to: target }, [])
+
+    expect(() =>
+      render(
+        h(BaseTransition, null, () => h(Comp)),
+        root,
+      ),
+    ).not.toThrow()
+    expect(serializeInner(root)).toBe(
+      '<!--teleport start--><!--teleport end-->',
+    )
+    expect(serializeInner(target)).toBe('')
+    expect(
+      'Component inside <Transition> renders non-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  test('should update transition hooks for component with Teleport root', async () => {
+    const root = nodeOps.createElement('div')
+    const target = nodeOps.createElement('div')
+    const show = ref(true)
+    const firstBeforeLeave = vi.fn()
+    const nextBeforeLeave = vi.fn()
+    const beforeLeave = ref(firstBeforeLeave)
+    const Comp = () => h(Teleport, { to: target }, h('div', 'content'))
+    const App = () =>
+      h(BaseTransition, { onBeforeLeave: beforeLeave.value }, () =>
+        show.value ? h(Comp) : null,
+      )
+
+    render(h(App), root)
+
+    beforeLeave.value = nextBeforeLeave
+    show.value = false
+    await nextTick()
+
+    expect(firstBeforeLeave).not.toHaveBeenCalled()
+    expect(nextBeforeLeave).toHaveBeenCalledTimes(1)
   })
 })

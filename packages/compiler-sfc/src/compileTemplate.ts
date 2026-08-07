@@ -2,13 +2,10 @@ import {
   type BaseCodegenResult,
   type CompilerError,
   type CompilerOptions,
-  type ElementNode,
   type NodeTransform,
-  NodeTypes,
   type ParserOptions,
   type RawSourceMap,
   type RootNode,
-  createRoot,
 } from '@vue/compiler-core'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import {
@@ -30,6 +27,7 @@ import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from '@vue/consolidate'
 import { warnOnce } from './warn'
 import { genCssVarsFromList } from './style/cssVars'
+import { resolveTemplateAST } from './template/resolveTemplateAST'
 
 export interface TemplateCompiler {
   compile(
@@ -224,21 +222,12 @@ function doCompileTemplate({
     inAST = undefined
   }
 
-  if (inAST?.transformed) {
-    // If input AST has already been transformed, then it cannot be reused.
-    // We need to parse a fresh one. Can't just use `source` here since we need
-    // the AST location info to be relative to the entire SFC.
-    const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
-      prefixIdentifiers: true,
-      ...compilerOptions,
-      parseMode: 'sfc',
-      onError: e => errors.push(e),
-    })
-    const template = newAST.children.find(
-      node => node.type === NodeTypes.ELEMENT && node.tag === 'template',
-    ) as ElementNode
-    inAST = createRoot(template.children, inAST.source)
-  }
+  inAST = resolveTemplateAST(inAST, {
+    compiler,
+    compilerOptions,
+    ssr,
+    onError: e => errors.push(e),
+  })
 
   let { code, ast, preamble, map, helpers } = compiler.compile(
     inAST || source,

@@ -1861,6 +1861,24 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any)._trueValue).toBe(true)
   })
 
+  test('preserves text entered before v-model hydration', async () => {
+    const state = reactive({ text: 'server value' })
+    const App = {
+      setup: () => state,
+      template: `<input v-model="text">`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    const input = container.firstChild as HTMLInputElement
+    input.value = 'user value'
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(input.value).toBe('user value')
+    expect(state.text).toBe('user value')
+  })
+
   test('force hydrate checkbox with indeterminate', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" indeterminate>',
@@ -2639,6 +2657,60 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
 
+    test('hidden enumerated attribute', () => {
+      mountWithHydration(`<div></div>`, () => h('div', { hidden: false }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: true }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () =>
+        h('div', { hidden: 'hidden' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="anything"></div>`, () =>
+        h('div', { hidden: true }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="until-found"></div>`, () =>
+        h('div', { hidden: 'until-found' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="UNTIL-FOUND"></div>`, () =>
+        h('div', { hidden: 'until-found' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('hidden numeric values', () => {
+      mountWithHydration(`<div></div>`, () => h('div', { hidden: 0 }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div></div>`, () => h('div', { hidden: NaN }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: 1 }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div hidden="0"></div>`, () =>
+        h('div', { hidden: '0' }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('hidden state mismatch', () => {
+      mountWithHydration(`<div hidden="until-found"></div>`, () =>
+        h('div', { hidden: true }),
+      )
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
+
+      mountWithHydration(`<div hidden></div>`, () => h('div', { hidden: 0 }))
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
+    })
+
     test('client value is null or undefined', () => {
       mountWithHydration(`<div></div>`, () =>
         h('div', { draggable: undefined }),
@@ -2974,6 +3046,56 @@ describe('SSR hydration', () => {
           ),
         )
         expect(container.innerHTML).toBe(`<div><div>client</div></div>`)
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('does not re-write unchanged resource props when hydrating', () => {
+      __DEV__ = false
+      try {
+        const container = document.createElement('div')
+        container.innerHTML = `<img src="/foo.png">`
+        const el = container.firstChild as HTMLImageElement
+        const setSrc = vi.fn()
+        Object.defineProperty(el, 'src', {
+          configurable: true,
+          get: () => el.getAttribute('src'),
+          set: setSrc,
+        })
+        createSSRApp({
+          render: () =>
+            createElementVNode(
+              'img',
+              { src: '/foo.png' },
+              null,
+              PatchFlags.PROPS,
+              ['src'],
+            ),
+        }).mount(container)
+        expect(setSrc).not.toHaveBeenCalled()
+        expect(el.getAttribute('src')).toBe('/foo.png')
+      } finally {
+        __DEV__ = true
+      }
+    })
+
+    test('still patches resource props when server and client values differ', () => {
+      __DEV__ = false
+      try {
+        const { container } = mountWithHydration(
+          `<img src="/server.png">`,
+          () =>
+            createElementVNode(
+              'img',
+              { src: '/client.png' },
+              null,
+              PatchFlags.PROPS,
+              ['src'],
+            ),
+        )
+        const el = container.firstChild as HTMLImageElement
+        expect(el.getAttribute('src')).toBe('/client.png')
       } finally {
         __DEV__ = true
       }

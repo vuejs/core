@@ -19,7 +19,7 @@ import {
   generateCodeFrame,
   isString,
 } from '@vue/shared'
-import type { InternalRenderFunction } from 'packages/runtime-core/src/component'
+import type { InternalRenderFunction } from '../../runtime-core/src/component'
 
 if (__DEV__) {
   initDev()

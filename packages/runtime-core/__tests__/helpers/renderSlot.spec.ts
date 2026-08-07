@@ -115,6 +115,50 @@ describe('renderSlot', () => {
     expect(slot.key).toBe('user')
   })
 
+  it('should handle nullish props', () => {
+    for (const props of [null, undefined]) {
+      let receivedProps: any
+      const vnode = renderSlot(
+        {
+          default: props => {
+            receivedProps = props
+            return [h('div')]
+          },
+        },
+        'default',
+        props,
+      )
+      expect(receivedProps).toEqual({})
+      expect(vnode.key).toBe('_default')
+    }
+  })
+
+  it('should handle nullish props with a compiler-injected slot key', () => {
+    for (const props of [null, undefined]) {
+      const vnode = renderSlot(
+        { default: () => [h('div')] },
+        'default',
+        props,
+        undefined,
+        undefined,
+        'branch',
+      )
+      expect(vnode.key).toBe('branch')
+    }
+  })
+
+  it('should handle nullish props in custom element mode', () => {
+    setCurrentRenderingInstance({ type: {}, ce: {} } as any)
+
+    for (const props of [null, undefined]) {
+      const vnode = renderSlot({}, 'foo', props, undefined, undefined, 'branch')
+      const slot = (vnode.children as any[])[0]
+      expect(slot.type).toBe('slot')
+      expect(slot.key).toBe('branch')
+      expect(slot.props.name).toBe('foo')
+    }
+  })
+
   it('should render slot fallback', () => {
     const vnode = renderSlot({}, 'default', { key: 'foo' }, () => ['fallback'])
     expect(vnode.children).toEqual(['fallback'])

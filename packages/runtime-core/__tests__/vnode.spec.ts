@@ -93,6 +93,50 @@ describe('vnode', () => {
     expect(`VNode created with invalid key (NaN)`).toHaveBeenWarned()
   })
 
+  // #5081
+  describe('children overridden by innerHTML / textContent', () => {
+    test('warn on text children', () => {
+      createVNode('div', { innerHTML: '<span/>' }, 'hello')
+      expect(
+        `The \`innerHTML\` prop on <div> will override its children`,
+      ).toHaveBeenWarned()
+    })
+
+    test('warn on array children', () => {
+      createVNode('div', { innerHTML: '<span/>' }, [createVNode('span')])
+      expect(
+        `The \`innerHTML\` prop on <div> will override its children`,
+      ).toHaveBeenWarned()
+    })
+
+    test('warn on textContent', () => {
+      createVNode('div', { textContent: 'text' }, 'hello')
+      expect(
+        `The \`textContent\` prop on <div> will override its children`,
+      ).toHaveBeenWarned()
+    })
+
+    test('no warning when the prop is nullish', () => {
+      createVNode('div', { innerHTML: undefined }, 'hello')
+      createVNode('div', { innerHTML: null }, 'hello')
+      createVNode('div', { textContent: undefined }, 'hello')
+      expect(`will override its children`).not.toHaveBeenWarned()
+    })
+
+    test('no warning without renderable children', () => {
+      createVNode('div', { innerHTML: '<span/>' })
+      createVNode('div', { innerHTML: '<span/>' }, '')
+      createVNode('div', { innerHTML: '<span/>' }, [])
+      expect(`will override its children`).not.toHaveBeenWarned()
+    })
+
+    test('no warning for component vnodes', () => {
+      const Comp = { props: ['innerHTML'], render: () => null }
+      createVNode(Comp, { innerHTML: '<span/>' }, { default: () => 'slot' })
+      expect(`will override its children`).not.toHaveBeenWarned()
+    })
+  })
+
   test('create with class component', () => {
     class Component {
       $props: any

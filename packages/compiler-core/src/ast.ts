@@ -332,6 +332,10 @@ export interface VNodeCall extends Node {
   patchFlag: PatchFlags | undefined
   dynamicProps: string | SimpleExpressionNode | undefined
   directives: DirectiveArguments | undefined
+  /** Whether this vnode must be patched if a later transform makes it non-block. */
+  needsPatch?: boolean
+  /** Whether a later transform must preserve this vnode as a block. */
+  isBlockRequired?: boolean
   isBlock: boolean
   disableTracking: boolean
   isComponent: boolean

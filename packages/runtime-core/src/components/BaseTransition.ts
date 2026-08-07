@@ -470,7 +470,7 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function getInnerChild(vnode: VNode): VNode | undefined {
+export function getInnerChild(vnode: VNode): VNode | undefined {
   if (!isKeepAlive(vnode)) {
     if (isTeleport(vnode.type) && vnode.children) {
       return findNonCommentChild(vnode.children as VNode[])
@@ -712,7 +712,11 @@ export function setTransitionHooks(
         hooks,
       )
     } else {
-      return setTransitionHooks(vnode.component.subTree, hooks)
+      const subTree = vnode.component.subTree
+      return setTransitionHooks(
+        isTeleport(subTree.type) ? getInnerChild(subTree) || subTree : subTree,
+        hooks,
+      )
     }
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const contentHooks = (vnode.ssContent!.transition = hooks.clone(

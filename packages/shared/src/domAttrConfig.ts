@@ -20,7 +20,7 @@ export const isSpecialBooleanAttr: (key: string) => boolean =
  */
 export const isBooleanAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
   specialBooleanAttrs +
-    `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,` +
+    `,async,autofocus,autoplay,controls,default,defer,disabled,` +
     `inert,loop,open,required,reversed,scoped,seamless,` +
     `checked,muted,multiple,selected`,
 )
