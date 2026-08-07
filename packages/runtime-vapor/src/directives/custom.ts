@@ -20,21 +20,28 @@ import { type VaporFragment, isFragment, isInteropFragment } from '../fragment'
 import { isInteropEnabled } from '../vdomInteropState'
 
 // !! vapor directive is different from vdom directives
-export type VaporDirective = (
-  node: Element | VaporComponentInstance,
-  value?: () => any,
-  argument?: string,
-  modifiers?: DirectiveModifiers,
+export type VaporDirective<
+  HostElement extends Element = Element,
+  Value = any,
+  Modifiers extends string = string,
+  Arg = any,
+> = (
+  node: HostElement,
+  value?: () => Value,
+  argument?: Arg,
+  modifiers?: DirectiveModifiers<Modifiers>,
 ) => (() => void) | void
 
+type AnyVaporDirective = VaporDirective<any>
+
 type VaporDirectiveArguments = Array<
-  | [VaporDirective | undefined]
-  | [VaporDirective | undefined, () => any]
-  | [VaporDirective | undefined, (() => any) | undefined, argument: string]
+  | [AnyVaporDirective | undefined]
+  | [AnyVaporDirective | undefined, () => any]
+  | [AnyVaporDirective | undefined, (() => any) | undefined, argument: any]
   | [
-      VaporDirective | undefined,
+      AnyVaporDirective | undefined,
       value: (() => any) | undefined,
-      argument: string | undefined,
+      argument: any | undefined,
       modifiers: DirectiveModifiers,
     ]
 >
