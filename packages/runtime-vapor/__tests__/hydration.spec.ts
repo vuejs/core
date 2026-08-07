@@ -5061,6 +5061,88 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('AC')
     })
 
+    test('hydrated vdom content switches to local fallback after its sibling is removed', async () => {
+      const data = reactive({ showProvided: true, showTail: true })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #a>
+              <span v-if="data.showProvided">provided</span>
+            </template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <slot name="a"><span>local fallback</span></slot>
+              <span v-if="data.showTail">tail</span>
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('providedtail')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showTail = false
+      await nextTick()
+      expect(container.textContent).toBe('provided')
+
+      data.showProvided = false
+      await nextTick()
+      expect(container.textContent).toBe('local fallback')
+
+      data.showProvided = true
+      await nextTick()
+      expect(container.textContent).toBe('provided')
+    })
+
+    test('hydrated vdom content switches inside a stable wrapper', async () => {
+      const data = reactive({ showProvided: true, showTail: true })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #a>
+              <span v-if="data.showProvided">provided</span>
+            </template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><slot><b>receiver fallback</b></slot></template>`,
+          Carrier: `<script setup>const components = _components; const data = _data</script>
+          <template>
+            <components.Receiver>
+              <div>
+                <slot name="a"><i>local fallback</i></slot>
+                <span v-if="data.showTail">tail</span>
+              </div>
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+
+      expect(container.textContent).toBe('providedtail')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showTail = false
+      await nextTick()
+      expect(container.textContent).toBe('provided')
+
+      data.showProvided = false
+      await nextTick()
+      expect(container.textContent).toBe('local fallback')
+
+      data.showProvided = true
+      await nextTick()
+      expect(container.textContent).toBe('provided')
+    })
+
     test('vdom nested hosts recover through a shared local fallback', async () => {
       const data = reactive({ showX: true, showY: false })
       const { container } = await testWithVDOMApp(

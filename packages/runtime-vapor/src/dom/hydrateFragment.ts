@@ -186,7 +186,7 @@ export function isPendingSlotContent(): boolean {
   return !!(state && state.pending)
 }
 
-function queueAnchorInsert(
+export function queueAnchorInsert(
   parentNode: Node,
   nextNode: Node | null,
   createAnchor: () => Node,
