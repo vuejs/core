@@ -195,6 +195,29 @@ color: red
     `)
   })
 
+  test(':deep() with selector list + nesting (issue #15205)', () => {
+    // Non-:deep() members of a comma selector list should retain scope
+    // even when another member uses :deep(). See #15205.
+    expect(
+      compileScoped(`
+.a,
+.b :deep(.c) {
+  color: red;
+  > span { color: blue; }
+}
+`),
+    ).toMatchInlineSnapshot(`
+      "
+      .a[data-v-test],
+      .b[data-v-test] .c {
+        color: red;
+      > span { color: blue;
+      }
+      }
+      "
+    `)
+  })
+
   test('::v-slotted', () => {
     expect(compileScoped(`:slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
