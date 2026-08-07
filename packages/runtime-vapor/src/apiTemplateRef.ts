@@ -135,7 +135,13 @@ function setTemplateRefWithState(
       // KeepAlive clears refs on deactivation but keeps this fragment update
       // callback alive. Skip re-applying refs for async/offscreen updates
       // until the component is activated again.
-      if (isVaporComponent(el) && el.isDeactivated) return
+      if (
+        isVaporComponent(el) &&
+        el.isDeactivated &&
+        el.keepAliveUpdatePaused !== false
+      ) {
+        return
+      }
       state.oldRef = setRef(
         instance,
         state.suspense,
@@ -179,7 +185,13 @@ export function setStaticTemplateRef(
     // Static refs do not need old-ref tracking, but async/dynamic component
     // targets still need to re-apply the same ref after their fragment updates.
     ;(frag.onUpdated ||= []).push(() => {
-      if (isVaporComponent(el) && el.isDeactivated) return
+      if (
+        isVaporComponent(el) &&
+        el.isDeactivated &&
+        el.keepAliveUpdatePaused !== false
+      ) {
+        return
+      }
       setRef(instance, suspense, el, ref, oldRef, refFor, refKey)
     })
   }

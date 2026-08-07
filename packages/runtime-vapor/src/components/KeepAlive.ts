@@ -1,11 +1,13 @@
 import {
   type AsyncComponentInternalOptions,
+  ErrorCodes,
   type GenericComponent,
   type GenericComponentInstance,
   type KeepAliveProps,
   MoveType,
   type SuspenseBoundary,
   type VNode,
+  callWithErrorHandling,
   currentInstance,
   devtoolsComponentAdded,
   getComponentName,
@@ -611,7 +613,31 @@ export function activate(
   anchor?: Node | null,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
+  instance.keepAliveUpdatePaused = false
   move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)
+
+  const deferredEffects = instance.deferredKeepAliveEffects
+  if (deferredEffects) {
+    instance.deferredKeepAliveEffects = undefined
+    const effects = [...deferredEffects]
+    if (effects.length > 1) {
+      effects.sort((a, b) => a.job.order! - b.job.order!)
+    }
+    effects.forEach(effect => {
+      let current: GenericComponentInstance | null = effect.i
+      while (current) {
+        if (isVaporComponent(current) && current.keepAliveUpdatePaused) {
+          ;(current.deferredKeepAliveEffects ||= new Set()).add(effect)
+          return
+        }
+        current = current.parent
+      }
+      if (effect.active) {
+        callWithErrorHandling(effect.job, effect.i, ErrorCodes.COMPONENT_UPDATE)
+      }
+      effect.resume()
+    })
+  }
 
   queuePostRenderEffect(
     () => {
@@ -632,6 +658,11 @@ export function deactivate(
   container: ParentNode,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
+  // Parent-owned prop sources remain reactive after the branch is cached.
+  // Block their queued render effects until activation so the cached subtree
+  // cannot observe an intermediate value that made its v-if branch inactive.
+  instance.keepAliveUpdatePaused = true
+
   // Clear refs before deactivation, matching VDOM core's unmount path
   // which calls setRef(null) before the deactivation check.
   unsetRef(instance)
