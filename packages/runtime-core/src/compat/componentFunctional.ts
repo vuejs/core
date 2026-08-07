@@ -1,7 +1,9 @@
 import {
+  type ComponentInternalInstance,
   type ComponentOptions,
   type FunctionalComponent,
   getCurrentInstance,
+  isStatefulComponent,
 } from '../component'
 import { resolveInjections } from '../componentOptions'
 import type { InternalSlots } from '../componentSlots'
@@ -17,6 +19,20 @@ export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
     const slot = target[key]
     return slot && slot()
   },
+}
+
+// #6950 - functional components have no instance,
+// so should skip the functional component check
+function getFunctionalComponentParent(instance: ComponentInternalInstance) {
+  let parent = instance.parent
+  while (parent) {
+    if (isStatefulComponent(parent)) {
+      return parent.proxy
+    }
+    parent = parent.parent
+  }
+
+  return null
 }
 
 export function convertLegacyFunctionalComponent(
@@ -36,7 +52,7 @@ export function convertLegacyFunctionalComponent(
       children: instance.vnode.children || [],
       data: instance.vnode.props || {},
       scopedSlots: ctx.slots,
-      parent: instance.parent && instance.parent.proxy,
+      parent: getFunctionalComponentParent(instance),
       slots() {
         return new Proxy(ctx.slots, legacySlotProxyHandlers)
       },
