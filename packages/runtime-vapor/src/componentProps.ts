@@ -7,6 +7,7 @@ import {
   isFunction,
   isPlainObject,
   isString,
+  normalizeClass,
 } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
@@ -185,6 +186,11 @@ export function getPropsProxyHandlers(
           !isEmitListener(emitsOptions, key)
       : (key: string | symbol) => isString(key)
 
+  // vdom normalizes class on the vnode, so prop resolution already receives a
+  // normalized value. Match that order here.
+  const normalizeRawProp = (key: string, value: unknown) =>
+    key === 'class' && value && !isString(value) ? normalizeClass(value) : value
+
   const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
     // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
     if (key === ReactiveFlags.IS_REACTIVE) return true
@@ -208,7 +214,10 @@ export function getPropsProxyHandlers(
             return resolvePropValue(
               propsOptions!,
               key,
-              isDynamic ? source[rawKey] : resolveSource(source[rawKey]),
+              normalizeRawProp(
+                key,
+                isDynamic ? source[rawKey] : resolveSource(source[rawKey]),
+              ),
               instance,
               resolveDefault,
             )
@@ -221,7 +230,7 @@ export function getPropsProxyHandlers(
         return resolvePropValue(
           propsOptions!,
           key,
-          resolveSource(rawProps[rawKey]),
+          normalizeRawProp(key, resolveSource(rawProps[rawKey])),
           instance,
           resolveDefault,
         )
