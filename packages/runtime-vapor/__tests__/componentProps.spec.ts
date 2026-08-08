@@ -16,7 +16,7 @@ import {
   template,
 } from '../src'
 import { resolveDynamicProps } from '../src/componentProps'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
@@ -620,24 +620,64 @@ describe('component: props', () => {
 
   // #15227
   test('declared class prop should be normalized', () => {
+    const data = ref({ skin: { b: true, c: false } })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ class: { type: String } })
+      </script>
+      <template><div>{{ props.class }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template><Child class="a" :class="data.skin" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe('<div>a b</div>')
+    expect('Invalid prop').not.toHaveBeenWarned()
+  })
+
+  test('class prop should only normalize the value that was passed', () => {
     let props: any
+    const fallback = ['a', 'b']
     const { render } = define({
-      props: { class: { type: String } },
+      props: { class: { default: () => fallback } },
       setup(_props: any) {
         props = _props
         return []
       },
     })
 
-    render({ class: () => ['a', { b: true, c: false }] })
-    expect(props.class).toBe('a b')
-
     render({ class: () => '  a  b ' })
     expect(props.class).toBe('  a  b ')
 
+    // class is absent or empty here, so the default is used as-is
     render()
-    expect(props.class).toBeUndefined()
+    expect(props.class).toBe(fallback)
 
+    render({ class: () => undefined })
+    expect(props.class).toBe(fallback)
+  })
+
+  test('class prop should be normalized before Boolean casting', () => {
+    let props: any
+    const { render } = define({
+      props: { class: { type: Boolean } },
+      setup(_props: any) {
+        props = _props
+        return []
+      },
+    })
+
+    // `<Child class />` casts to true and must stay true
+    render({ class: () => '' })
+    expect(props.class).toBe(true)
     expect('Invalid prop').not.toHaveBeenWarned()
   })
 

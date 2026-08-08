@@ -186,7 +186,16 @@ export function getPropsProxyHandlers(
           !isEmitListener(emitsOptions, key)
       : (key: string | symbol) => isString(key)
 
-  const resolveProp = (instance: VaporComponentInstance, key: string) => {
+  // vdom normalizes class on the vnode, so prop resolution already receives a
+  // normalized value. Match that order here.
+  const normalizeRawProp = (key: string, value: unknown) =>
+    key === 'class' && value && !isString(value) ? normalizeClass(value) : value
+
+  const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
+    // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
+    if (key === ReactiveFlags.IS_REACTIVE) return true
+
+    if (!isProp(key)) return
     const rawProps = instance.rawProps
     const dynamicSources = rawProps.$
     if (dynamicSources) {
@@ -205,7 +214,10 @@ export function getPropsProxyHandlers(
             return resolvePropValue(
               propsOptions!,
               key,
-              isDynamic ? source[rawKey] : resolveSource(source[rawKey]),
+              normalizeRawProp(
+                key,
+                isDynamic ? source[rawKey] : resolveSource(source[rawKey]),
+              ),
               instance,
               resolveDefault,
             )
@@ -218,7 +230,7 @@ export function getPropsProxyHandlers(
         return resolvePropValue(
           propsOptions!,
           key,
-          resolveSource(rawProps[rawKey]),
+          normalizeRawProp(key, resolveSource(rawProps[rawKey])),
           instance,
           resolveDefault,
         )
@@ -232,17 +244,6 @@ export function getPropsProxyHandlers(
       resolveDefault,
       true,
     )
-  }
-
-  const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
-    // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
-    if (key === ReactiveFlags.IS_REACTIVE) return true
-
-    if (!isProp(key)) return
-    const value = resolveProp(instance, key)
-    return key === 'class' && value && !isString(value)
-      ? normalizeClass(value)
-      : value
   }
 
   const withOnceCache = <
