@@ -612,6 +612,11 @@ export function activate(
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
   move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)
+  const scopeState = instance.keepAliveScopeState
+  if (scopeState) {
+    scopeState.paused = false
+    scopeState.scopes.forEach(scope => scope.resume())
+  }
 
   queuePostRenderEffect(
     () => {
@@ -632,6 +637,16 @@ export function deactivate(
   container: ParentNode,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
+  const scopeState = instance.keepAliveScopeState
+  if (scopeState) {
+    scopeState.paused = true
+    // Let an unresolved async wrapper finish resolving. The component it
+    // creates inherits scopeState.paused and starts paused while cached.
+    if (!isAsyncWrapper(instance) || instance.type.__asyncResolved) {
+      scopeState.scopes.forEach(scope => scope.pause())
+    }
+  }
+
   // Clear refs before deactivation, matching VDOM core's unmount path
   // which calls setRef(null) before the deactivation check.
   unsetRef(instance)

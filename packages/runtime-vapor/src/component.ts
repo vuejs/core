@@ -668,6 +668,11 @@ export const emptyContext: GenericAppContext = {
   provides: /*@__PURE__*/ Object.create(null),
 }
 
+interface KeepAliveScopeState {
+  scopes: Set<EffectScope>
+  paused: boolean
+}
+
 export class VaporComponentInstance<
   Props extends Record<string, any> = {},
   Emits extends EmitsOptions = {},
@@ -734,6 +739,7 @@ export class VaporComponentInstance<
   // for keep-alive
   shapeFlag?: number
   $key?: any
+  keepAliveScopeState?: KeepAliveScopeState
   // Share deferred updates across async roots on the KeepAlive component-root
   // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
   deferredKeepAliveUpdates?: DeferredKeepAliveUpdates
@@ -819,6 +825,34 @@ export class VaporComponentInstance<
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)
+
+    if (isKeepAliveEnabled) {
+      // Unlike VDOM, effects in a cached Vapor branch can directly track
+      // reactive sources owned by its parent (for example, a compiled prop
+      // getter). Moving the branch into storage does not detach those
+      // subscriptions, so its effects must be paused while deactivated.
+      //
+      // VDOM child props are updated through vnode patching instead. Once a
+      // vnode is deactivated it leaves the active patch path, and activation
+      // explicitly patches the cached instance with the latest vnode.
+      //
+      // Component scopes are detached in both runtimes. Since Vapor needs to
+      // pause the whole cached subtree, collect each component scope explicitly
+      // so descendants are included.
+      const parent = this.parent
+      const keepAliveScopeState =
+        !isKeepAlive(this) && parent && parent.vapor
+          ? isKeepAlive(parent)
+            ? { scopes: new Set<EffectScope>(), paused: false }
+            : (parent as VaporComponentInstance).keepAliveScopeState
+          : undefined
+      if (keepAliveScopeState) {
+        this.keepAliveScopeState = keepAliveScopeState
+        keepAliveScopeState.scopes.add(this.scope)
+        if (keepAliveScopeState.paused) this.scope.pause()
+      }
+    }
+
     this.isOnce = !!once
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
@@ -1318,6 +1352,11 @@ export function unmountComponent(
     invalidateMount(instance.a)
     if (instance.bum) {
       invokeArrayFns(instance.bum)
+    }
+
+    if (isKeepAliveEnabled) {
+      const scopeState = instance.keepAliveScopeState
+      if (scopeState) scopeState.scopes.delete(instance.scope)
     }
 
     instance.scope.stop()

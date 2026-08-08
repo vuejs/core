@@ -89,6 +89,8 @@ export class ReactiveEffect<T = any>
     }
     if (activeEffectScope) {
       link(this, activeEffectScope)
+      // pause() only visits existing effects, so inherit the current state.
+      this.flags |= activeEffectScope.flags & EffectFlags.PAUSED
     }
   }
 
