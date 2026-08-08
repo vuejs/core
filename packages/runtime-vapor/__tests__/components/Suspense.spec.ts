@@ -649,6 +649,87 @@ describe('effects in pending branches', () => {
     },
   )
 
+  test.each(['vdom', 'vapor'] as const)(
+    '%s nested unmounted hooks run when a pending boundary is removed by app unmount',
+    async kind => {
+      const asyncSetup = deferred()
+      const order: string[] = []
+      const vapor = kind === 'vapor'
+      const script = vapor ? '<script vapor>' : '<script setup>'
+      const data = ref({ asyncSetup, order })
+      const Child = compile(
+        `${script}
+          import { onUnmounted } from 'vue'
+          const data = _data
+          onUnmounted(() => data.value.order.push('child'))
+        </script>
+        <template><span>child</span></template>`,
+        data,
+        {},
+        { vapor },
+      )
+      const Parent = compile(
+        `${script}
+          import { onUnmounted } from 'vue'
+          const data = _data
+          const components = _components
+          onUnmounted(() => data.value.order.push('parent'))
+        </script>
+        <template><components.Child /></template>`,
+        data,
+        { Child },
+        { vapor },
+      )
+      const AsyncSibling = compile(
+        `<script setup>
+          const data = _data
+          await data.value.asyncSetup.promise
+        </script>
+        <template><span>async</span></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const VDomHost = compile(
+        `<script setup>
+          const components = _components
+        </script>
+        <template>
+          <Suspense>
+            <div>
+              <components.Parent />
+              <components.AsyncSibling />
+            </div>
+            <template #fallback><span>loading</span></template>
+          </Suspense>
+        </template>`,
+        data,
+        { Parent, AsyncSibling },
+        { vapor: false },
+      )
+      const VaporRoot = compile(
+        `<script vapor>
+          const components = _components
+        </script>
+        <template><components.VDomHost /></template>`,
+        data,
+        { VDomHost },
+      )
+      const container = document.createElement('div')
+      const app = runtimeVapor.createVaporApp(VaporRoot)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+
+      expect(container.textContent).toBe('loading')
+
+      app.unmount()
+
+      expect(order).toEqual(['child', 'parent'])
+      asyncSetup.resolve()
+      await flushResolution(asyncSetup.promise)
+    },
+  )
+
   test('keep-alive lifecycle and vnode hooks wait for the branch to resolve', async () => {
     const asyncSetup = deferred()
     const current = ref<'A' | 'B'>('A')
