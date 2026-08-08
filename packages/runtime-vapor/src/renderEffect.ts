@@ -39,7 +39,8 @@ export class RenderEffect extends ReactiveEffect {
     }
 
     const job: SchedulerJob = () => {
-      if (this.dirty) {
+      // The job may have been queued before its scope was paused.
+      if (!(this.flags & EffectFlags.PAUSED) && this.dirty) {
         // A pending KeepAlive async root defers updates along its root chain.
         const deferred =
           __FEATURE_SUSPENSE__ &&

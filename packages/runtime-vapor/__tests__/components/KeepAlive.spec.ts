@@ -12,6 +12,7 @@ import {
   ref,
   shallowRef,
   vModelText,
+  watch,
   withDirectives,
 } from 'vue'
 import {
@@ -1697,6 +1698,205 @@ describe('VaporKeepAlive', () => {
       await nextTick()
       expect(html()).toBe(`<div>1</div><!--if-->`)
     })
+  })
+
+  test('should not update a cached child while deactivating it', async () => {
+    const Child = compile(
+      `<script setup vapor>
+        defineProps({ item: { type: Object, required: true } })
+      </script>
+      <template><p>child: {{ item.id }}</p></template>`,
+      ref(),
+    )
+    const selected = ref<{ id: string } | undefined>({ id: 'A' })
+    const App = compile(
+      `<script setup vapor>
+        const selected = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="selected" :item="selected" />
+        </KeepAlive>
+      </template>`,
+      selected,
+      { Child },
+    )
+    const { host } = define(App).render()
+
+    expect(host.textContent).toBe('child: A')
+
+    for (const id of ['B', 'A', 'B']) {
+      selected.value = undefined
+      await nextTick()
+      expect(host.innerHTML).toBe('<!--if-->')
+
+      selected.value = { id }
+      await nextTick()
+      expect(host.textContent).toBe(`child: ${id}`)
+    }
+    expect('type check failed for prop "item"').not.toHaveBeenWarned()
+  })
+
+  test('should pause effects under nested KeepAlive boundaries', async () => {
+    const toggle = ref(true)
+    const innerToggle = ref(true)
+    const count = ref(0)
+    const render = vi.fn()
+    const watcher = vi.fn()
+    const NestedChild = defineVaporComponent({
+      setup() {
+        watch(count, watcher)
+        const n0 = template(`<div> </div>`)() as any
+        const x0 = child(n0) as any
+        renderEffect(() => {
+          render()
+          setText(x0, String(count.value))
+        })
+        return n0
+      },
+    })
+    const CachedRoot = defineVaporComponent({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => innerToggle.value,
+              () => createComponent(NestedChild),
+            ),
+        })
+      },
+    })
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(CachedRoot),
+            ),
+        })
+      },
+    }).render()
+
+    expect(render).toHaveBeenCalledTimes(1)
+
+    count.value = 1
+    toggle.value = false
+    await nextTick()
+    count.value = 2
+    await nextTick()
+    expect(render).toHaveBeenCalledTimes(1)
+    expect(watcher).not.toHaveBeenCalled()
+
+    innerToggle.value = false
+    await nextTick()
+    innerToggle.value = true
+    await nextTick()
+    expect(render).toHaveBeenCalledTimes(1)
+    expect(watcher).not.toHaveBeenCalled()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe(`<div>2</div><!--if--><!--if-->`)
+    expect(render).toHaveBeenCalledTimes(2)
+    expect(watcher).toHaveBeenCalledOnce()
+  })
+
+  test('should pause component effects created while cached', async () => {
+    let resolve: (comp: VaporComponent) => void
+    let increment: () => void
+    const loadingCount = ref(0)
+    const loadingRender = vi.fn()
+    const render = vi.fn()
+    const watcher = vi.fn()
+    const LoadingComp = defineVaporComponent({
+      setup() {
+        const n0 = template(`<span> </span>`)() as any
+        const x0 = child(n0) as any
+        renderEffect(() => {
+          loadingRender()
+          setText(x0, String(loadingCount.value))
+        })
+        return n0
+      },
+    })
+    const AsyncComp = defineVaporAsyncComponent({
+      loader: () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+      loadingComponent: LoadingComp,
+      delay: 0,
+    })
+    const CachedRoot = defineVaporComponent({
+      setup() {
+        return createComponent(AsyncComp)
+      },
+    })
+    const toggle = ref(true)
+    const { html } = define({
+      setup() {
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => createComponent(CachedRoot),
+            ),
+        })
+      },
+    }).render()
+
+    expect(loadingRender).toHaveBeenCalledOnce()
+
+    toggle.value = false
+    await nextTick()
+    loadingCount.value++
+    await nextTick()
+    expect(loadingRender).toHaveBeenCalledOnce()
+
+    resolve!(
+      defineVaporComponent({
+        setup() {
+          const count = ref(0)
+          increment = () => count.value++
+          watch(count, watcher)
+          const n0 = template(`<p> </p>`)() as any
+          const x0 = child(n0) as any
+          renderEffect(() => {
+            render()
+            setText(x0, String(count.value))
+          })
+          return n0
+        },
+      }),
+    )
+    await timeout()
+    expect(render).toHaveBeenCalledOnce()
+
+    increment!()
+    await nextTick()
+    expect(render).toHaveBeenCalledOnce()
+    expect(watcher).not.toHaveBeenCalled()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+    expect(render).toHaveBeenCalledTimes(2)
+    expect(watcher).toHaveBeenCalledOnce()
+
+    toggle.value = false
+    await nextTick()
+    increment!()
+    await nextTick()
+    expect(render).toHaveBeenCalledTimes(2)
+    expect(watcher).toHaveBeenCalledOnce()
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('<p>2</p><!--async component--><!--if-->')
+    expect(render).toHaveBeenCalledTimes(3)
+    expect(watcher).toHaveBeenCalledTimes(2)
   })
 
   test('should work with async component', async () => {

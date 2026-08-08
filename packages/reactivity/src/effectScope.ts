@@ -23,6 +23,8 @@ export class EffectScope implements ReactiveNode {
   constructor(detached = false) {
     if (!detached && activeEffectScope) {
       link(this, activeEffectScope)
+      // pause() only visits existing child scopes, so inherit the current state.
+      this.flags |= activeEffectScope.flags & EffectFlags.PAUSED
     }
   }
 

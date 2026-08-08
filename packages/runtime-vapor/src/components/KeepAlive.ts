@@ -11,6 +11,7 @@ import {
   getComponentName,
   invalidateMount,
   isAsyncWrapper,
+  isKeepAlive,
   isVNode,
   matches,
   onBeforeUnmount,
@@ -605,6 +606,32 @@ function getInstanceFromCache(
   }
 }
 
+type KeepAliveBranchState = NonNullable<
+  VaporComponentInstance['keepAliveBranchState']
+>
+
+function pauseKeepAliveBranch(branchState: KeepAliveBranchState): void {
+  branchState.instances.forEach(instance => {
+    // KeepAlive and unresolved async wrappers must keep advancing their
+    // boundary state. Their rendered children remain paused while cached.
+    if (
+      !isKeepAlive(instance) &&
+      (!isAsyncWrapper(instance) || instance.type.__asyncResolved)
+    ) {
+      instance.scope.pause()
+    }
+  })
+  const children = branchState.children
+  if (children) children.forEach(pauseKeepAliveBranch)
+}
+
+function resumeKeepAliveBranch(branchState: KeepAliveBranchState): void {
+  if (branchState.deactivated) return
+  branchState.instances.forEach(instance => instance.scope.resume())
+  const children = branchState.children
+  if (children) children.forEach(resumeKeepAliveBranch)
+}
+
 export function activate(
   instance: VaporComponentInstance,
   parentNode: ParentNode,
@@ -612,6 +639,15 @@ export function activate(
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
   move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)
+  const branchState = instance.keepAliveBranchState
+  if (branchState) {
+    branchState.deactivated = false
+    // A nested boundary can reactivate while an ancestor is still deactivated.
+    // Keep its local state active, but defer effects until the ancestor resumes.
+    let ancestor = branchState.parent
+    while (ancestor && !ancestor.deactivated) ancestor = ancestor.parent
+    if (!ancestor) resumeKeepAliveBranch(branchState)
+  }
 
   queuePostRenderEffect(
     () => {
@@ -632,6 +668,12 @@ export function deactivate(
   container: ParentNode,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
+  const branchState = instance.keepAliveBranchState
+  if (branchState) {
+    branchState.deactivated = true
+    pauseKeepAliveBranch(branchState)
+  }
+
   // Clear refs before deactivation, matching VDOM core's unmount path
   // which calls setRef(null) before the deactivation check.
   unsetRef(instance)

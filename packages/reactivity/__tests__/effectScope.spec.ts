@@ -324,6 +324,30 @@ describe('reactivity/effect/scope', () => {
     expect(fnSpy).toHaveBeenCalledTimes(3)
   })
 
+  it('should pause effects created in a paused scope', () => {
+    const count = ref(0)
+    const effectSpy = vi.fn(() => count.value)
+    const nestedEffectSpy = vi.fn(() => count.value)
+    const scope = effectScope()
+
+    scope.pause()
+    scope.run(() => {
+      effect(effectSpy)
+      effectScope().run(() => effect(nestedEffectSpy))
+    })
+
+    expect(effectSpy).toHaveBeenCalledOnce()
+    expect(nestedEffectSpy).toHaveBeenCalledOnce()
+
+    count.value++
+    expect(effectSpy).toHaveBeenCalledOnce()
+    expect(nestedEffectSpy).toHaveBeenCalledOnce()
+
+    scope.resume()
+    expect(effectSpy).toHaveBeenCalledTimes(2)
+    expect(nestedEffectSpy).toHaveBeenCalledTimes(2)
+  })
+
   test('removing a watcher while stopping its effectScope', async () => {
     const count = ref(0)
     const scope = effectScope()
