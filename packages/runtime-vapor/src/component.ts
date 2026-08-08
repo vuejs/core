@@ -668,9 +668,11 @@ export const emptyContext: GenericAppContext = {
   provides: /*@__PURE__*/ Object.create(null),
 }
 
-interface KeepAliveScopeState {
-  scopes: Set<EffectScope>
-  paused: boolean
+interface KeepAliveBranchState {
+  instances: Set<VaporComponentInstance>
+  parent?: KeepAliveBranchState
+  children?: Set<KeepAliveBranchState>
+  deactivated: boolean
 }
 
 export class VaporComponentInstance<
@@ -739,7 +741,7 @@ export class VaporComponentInstance<
   // for keep-alive
   shapeFlag?: number
   $key?: any
-  keepAliveScopeState?: KeepAliveScopeState
+  keepAliveBranchState?: KeepAliveBranchState
   // Share deferred updates across async roots on the KeepAlive component-root
   // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
   deferredKeepAliveUpdates?: DeferredKeepAliveUpdates
@@ -837,19 +839,42 @@ export class VaporComponentInstance<
       // explicitly patches the cached instance with the latest vnode.
       //
       // Component scopes are detached in both runtimes. Since Vapor needs to
-      // pause the whole cached subtree, collect each component scope explicitly
-      // so descendants are included.
+      // pause the whole cached subtree, track each component instance and link
+      // nested KeepAlive boundaries so an ancestor pause reaches them without
+      // merging their independent cache lifecycles.
       const parent = this.parent
-      const keepAliveScopeState =
-        !isKeepAlive(this) && parent && parent.vapor
-          ? isKeepAlive(parent)
-            ? { scopes: new Set<EffectScope>(), paused: false }
-            : (parent as VaporComponentInstance).keepAliveScopeState
-          : undefined
-      if (keepAliveScopeState) {
-        this.keepAliveScopeState = keepAliveScopeState
-        keepAliveScopeState.scopes.add(this.scope)
-        if (keepAliveScopeState.paused) this.scope.pause()
+      const vaporParent =
+        parent && parent.vapor ? (parent as VaporComponentInstance) : undefined
+      const parentBranch = vaporParent && vaporParent.keepAliveBranchState
+      let branchState = parentBranch
+      if (vaporParent && isKeepAlive(vaporParent)) {
+        branchState = {
+          instances: new Set(),
+          parent: parentBranch,
+          deactivated: false,
+        }
+        if (parentBranch) {
+          ;(parentBranch.children ||= new Set()).add(branchState)
+        }
+      }
+      if (branchState) {
+        this.keepAliveBranchState = branchState
+        branchState.instances.add(this)
+        let currentBranch: KeepAliveBranchState | undefined = branchState
+        while (currentBranch) {
+          if (currentBranch.deactivated) {
+            // KeepAlive and unresolved async wrappers must keep advancing their
+            // boundary state. Their rendered children still start paused.
+            if (
+              !isKeepAlive(this) &&
+              (!isAsyncWrapper(this) || this.type.__asyncResolved)
+            ) {
+              this.scope.pause()
+            }
+            break
+          }
+          currentBranch = currentBranch.parent
+        }
       }
     }
 
@@ -1355,8 +1380,16 @@ export function unmountComponent(
     }
 
     if (isKeepAliveEnabled) {
-      const scopeState = instance.keepAliveScopeState
-      if (scopeState) scopeState.scopes.delete(instance.scope)
+      const branchState = instance.keepAliveBranchState
+      if (branchState) {
+        branchState.instances.delete(instance)
+        const parentBranch = branchState.parent
+        if (!branchState.instances.size && parentBranch) {
+          const children = parentBranch.children!
+          children.delete(branchState)
+          if (!children.size) parentBranch.children = undefined
+        }
+      }
     }
 
     instance.scope.stop()
