@@ -1278,10 +1278,36 @@ export function mountComponent(
   }
 }
 
+// Propagate boundary-removal context through nested scope teardown.
+// `undefined` means there is no active override.
+let currentUnmountSuspense: SuspenseBoundary | null | undefined
+
 export function unmountComponent(
   instance: VaporComponentInstance,
   parentNode?: ParentNode,
-  parentSuspense: SuspenseBoundary | null = instance.suspense,
+  parentSuspense: SuspenseBoundary | null = __FEATURE_SUSPENSE__ &&
+  isSuspenseEnabled &&
+  currentUnmountSuspense !== undefined
+    ? currentUnmountSuspense
+    : instance.suspense,
+): void {
+  if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) {
+    const prevUnmountSuspense = currentUnmountSuspense
+    currentUnmountSuspense = parentSuspense
+    try {
+      unmountComponentImpl(instance, parentNode, parentSuspense)
+    } finally {
+      currentUnmountSuspense = prevUnmountSuspense
+    }
+  } else {
+    unmountComponentImpl(instance, parentNode, parentSuspense)
+  }
+}
+
+function unmountComponentImpl(
+  instance: VaporComponentInstance,
+  parentNode: ParentNode | undefined,
+  parentSuspense: SuspenseBoundary | null,
 ): void {
   // Skip unmount for kept-alive components - deactivate if called from remove()
   if (

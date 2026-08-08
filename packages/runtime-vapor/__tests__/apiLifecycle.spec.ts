@@ -310,7 +310,6 @@ describe('api: lifecycle hooks', () => {
 
     // unmount
     ctx.app.unmount()
-    await nextTick()
     expect(calls).toEqual([
       'root onBeforeUnmount',
       'mid onBeforeUnmount',

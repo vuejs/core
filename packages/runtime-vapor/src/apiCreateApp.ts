@@ -92,6 +92,7 @@ const unmountApp: AppUnmountFn = app => {
   const instance = ((__DEV__ && app._instance) ||
     rootInstances.get(app)!) as VaporComponentInstance
   unmountComponent(instance, app._container)
+  flushOnAppMount(instance)
   rootInstances.delete(app)
 }
 
