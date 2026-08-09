@@ -143,10 +143,13 @@ onMounted(() => {
   color: var(--green);
 }
 
-.versions .disabled a,
-.versions .disabled a:hover {
-  color: #a8abb2;
+.versions .versions-item.disabled {
   cursor: not-allowed;
+}
+
+.versions .versions-item.disabled a,
+.versions .versions-item.disabled a:hover {
+  color: #a8abb2;
   pointer-events: none;
 }
 
