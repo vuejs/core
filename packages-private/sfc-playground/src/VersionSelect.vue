@@ -91,7 +91,7 @@ onMounted(() => {
         class="versions-item"
         :class="{
           active: ver === version || (version === 'latest' && index === 0),
-          disabled: pkg === 'typescript' && ver.startsWith('7.')
+          disabled: pkg === 'typescript' && ver.startsWith('7.'),
         }"
       >
         <a @click="setVersion(ver)">v{{ ver }}</a>
@@ -143,7 +143,8 @@ onMounted(() => {
   color: var(--green);
 }
 
-.versions .disabled a, .versions .disabled a:hover {
+.versions .disabled a,
+.versions .disabled a:hover {
   color: #a8abb2;
   cursor: not-allowed;
   pointer-events: none;
