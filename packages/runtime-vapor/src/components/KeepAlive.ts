@@ -24,8 +24,10 @@ import {
 } from '@vue/runtime-dom'
 import { type Block, findBlockBoundary, move, remove } from '../block'
 import {
+  type KeepAliveBranchState,
   type VaporComponent,
   type VaporComponentInstance,
+  isKeepAliveBranchDeactivated,
   isVaporComponent,
 } from '../component'
 import {
@@ -44,6 +46,7 @@ import {
 } from '../fragment'
 import { EffectScope } from '@vue/reactivity'
 import { isInteropEnabled } from '../vdomInteropState'
+import { RenderEffect } from '../renderEffect'
 import {
   type VaporKeepAliveContext,
   currentCacheKey,
@@ -606,28 +609,31 @@ function getInstanceFromCache(
   }
 }
 
-type KeepAliveBranchState = NonNullable<
-  VaporComponentInstance['keepAliveBranchState']
->
-
 function pauseKeepAliveBranch(branchState: KeepAliveBranchState): void {
   branchState.instances.forEach(instance => {
-    // KeepAlive and unresolved async wrappers must keep advancing their
-    // boundary state. Their rendered children remain paused while cached.
-    if (
-      !isKeepAlive(instance) &&
-      (!isAsyncWrapper(instance) || instance.type.__asyncResolved)
-    ) {
-      instance.scope.pause()
-    }
+    instance.scope.pause()
   })
   const children = branchState.children
   if (children) children.forEach(pauseKeepAliveBranch)
 }
 
+function resumeKeepAliveScope(scope: EffectScope): void {
+  scope.resume()
+  // Watchers resumed above may change the selected branch. Reconcile it now,
+  // before child branches resume, so stale children never become active.
+  for (let link = scope.deps; link; link = link.nextDep) {
+    if (link.dep instanceof RenderEffect) link.dep.runIfDirty()
+  }
+}
+
 function resumeKeepAliveBranch(branchState: KeepAliveBranchState): void {
   if (branchState.deactivated) return
-  branchState.instances.forEach(instance => instance.scope.resume())
+  branchState.instances.forEach(instance => {
+    if (!isKeepAlive(instance)) instance.scope.resume()
+  })
+  branchState.instances.forEach(instance => {
+    if (isKeepAlive(instance)) resumeKeepAliveScope(instance.scope)
+  })
   const children = branchState.children
   if (children) children.forEach(resumeKeepAliveBranch)
 }
@@ -644,9 +650,9 @@ export function activate(
     branchState.deactivated = false
     // A nested boundary can reactivate while an ancestor is still deactivated.
     // Keep its local state active, but defer effects until the ancestor resumes.
-    let ancestor = branchState.parent
-    while (ancestor && !ancestor.deactivated) ancestor = ancestor.parent
-    if (!ancestor) resumeKeepAliveBranch(branchState)
+    if (!isKeepAliveBranchDeactivated(branchState)) {
+      resumeKeepAliveBranch(branchState)
+    }
   }
 
   queuePostRenderEffect(

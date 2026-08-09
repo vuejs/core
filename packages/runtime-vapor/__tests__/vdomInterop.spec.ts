@@ -40,6 +40,7 @@ import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
 import { compile, makeInteropRender } from './_utils'
 import {
+  type VaporComponent,
   type VaporComponentInstance,
   type VaporDirective,
   VaporKeepAlive,
@@ -4378,11 +4379,76 @@ describe('vdomInterop', () => {
   })
 
   describe('Suspense', () => {
-    function deferred() {
-      let resolve!: () => void
-      const promise = new Promise<void>(r => (resolve = r))
+    function deferred<T = void>() {
+      let resolve!: (value: T) => void
+      const promise = new Promise<T>(r => (resolve = r))
       return { promise, resolve }
     }
+
+    test('defers resolving an async component while its KeepAlive branch is deactivated', async () => {
+      const pending = deferred<VaporComponent>()
+      const setups = vi.fn()
+      const data = ref({
+        selected: { id: 'A' } as { id: string } | undefined,
+        setups,
+      })
+      const Child = compile(
+        `<script vapor>
+          const data = _data
+          data.value.setups()
+          defineProps({ item: { type: Object, required: true } })
+        </script>
+        <template><p>child: {{ item.id }}</p></template>`,
+        data,
+      )
+      const AsyncChild = defineVaporAsyncComponent(() => pending.promise)
+      const VaporParent = compile(
+        `<script setup vapor>
+          const data = _data
+          const AsyncChild = _components.AsyncChild
+          const VaporKeepAlive = _components.VaporKeepAlive
+        </script>
+        <template>
+          <VaporKeepAlive>
+            <AsyncChild v-if="data.selected" :item="data.selected" />
+          </VaporKeepAlive>
+        </template>`,
+        data,
+        { AsyncChild, VaporKeepAlive },
+      )
+      const host = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Suspense, null, {
+            default: () => h(VaporParent),
+            fallback: () => h('p', 'pending'),
+          }),
+      })
+      app.use(vaporInteropPlugin)
+
+      try {
+        app.mount(host)
+        data.value.selected = undefined
+        await nextTick()
+
+        pending.resolve(Child)
+        await flushResolution(pending.promise)
+        await new Promise(r => setTimeout(r))
+
+        expect(setups).not.toHaveBeenCalled()
+
+        data.value.selected = { id: 'B' }
+        await nextTick()
+        expect(setups).toHaveBeenCalledOnce()
+        expect(host.textContent).toBe('child: B')
+        expect('type check failed for prop "item"').not.toHaveBeenWarned()
+      } finally {
+        pending.resolve(Child)
+        await flushResolution(pending.promise)
+        app.unmount()
+        host.remove()
+      }
+    })
 
     async function flushResolution(promise: Promise<unknown>) {
       await promise

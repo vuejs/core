@@ -9,6 +9,7 @@ import {
   performAsyncHydrate,
   restoreCurrentInstance,
   setCurrentInstance,
+  shallowRef,
   useAsyncComponentState,
 } from '@vue/runtime-dom'
 import { defineVaporComponent } from './apiDefineComponent'
@@ -134,18 +135,33 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       }
 
       if (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) {
+        // Resolve the loader independently, but create its rendered branch
+        // through the wrapper scope so KeepAlive can defer or pause that work.
+        const asyncRender = instance.keepAliveBranchState
+          ? shallowRef<() => VaporComponentInstance>()
+          : undefined
+        if (asyncRender) {
+          renderEffect(() => {
+            const render = asyncRender.value
+            if (render) frag.update(render)
+          })
+        }
+        const update = (render: () => VaporComponentInstance) => {
+          if (asyncRender) asyncRender.value = render
+          else frag.update(render)
+        }
         return load()
           .then(() => {
             resolvedComp = getResolvedComp()
             if (resolvedComp) {
-              frag.update(() => createInnerComp(resolvedComp!, instance))
+              update(() => createInnerComp(resolvedComp!, instance))
             }
             return frag
           })
           .catch(err => {
             onError(err)
             if (errorComponent) {
-              frag.update(() => createErrorComp(errorComponent, instance, err))
+              update(() => createErrorComp(errorComponent, instance, err))
             }
             return frag
           })

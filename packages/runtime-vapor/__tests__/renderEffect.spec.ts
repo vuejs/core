@@ -137,6 +137,20 @@ describe('renderEffect', () => {
     expect(dummy).toBe(3)
   })
 
+  test('defers the initial run in a paused scope', async () => {
+    const scope = new EffectScope()
+    const render = vi.fn()
+    scope.pause()
+
+    scope.run(() => renderEffect(render))
+    expect(render).not.toHaveBeenCalled()
+
+    scope.resume()
+    await nextTick()
+    expect(render).toHaveBeenCalledOnce()
+    scope.stop()
+  })
+
   test('should run with the scheduling order', async () => {
     const calls: string[] = []
 

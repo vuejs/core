@@ -668,11 +668,21 @@ export const emptyContext: GenericAppContext = {
   provides: /*@__PURE__*/ Object.create(null),
 }
 
-interface KeepAliveBranchState {
+export interface KeepAliveBranchState {
   instances: Set<VaporComponentInstance>
   parent?: KeepAliveBranchState
   children?: Set<KeepAliveBranchState>
   deactivated: boolean
+}
+
+export function isKeepAliveBranchDeactivated(
+  branchState?: KeepAliveBranchState,
+): boolean {
+  while (branchState) {
+    if (branchState.deactivated) return true
+    branchState = branchState.parent
+  }
+  return false
 }
 
 export class VaporComponentInstance<
@@ -860,20 +870,8 @@ export class VaporComponentInstance<
       if (branchState) {
         this.keepAliveBranchState = branchState
         branchState.instances.add(this)
-        let currentBranch: KeepAliveBranchState | undefined = branchState
-        while (currentBranch) {
-          if (currentBranch.deactivated) {
-            // KeepAlive and unresolved async wrappers must keep advancing their
-            // boundary state. Their rendered children still start paused.
-            if (
-              !isKeepAlive(this) &&
-              (!isAsyncWrapper(this) || this.type.__asyncResolved)
-            ) {
-              this.scope.pause()
-            }
-            break
-          }
-          currentBranch = currentBranch.parent
+        if (isKeepAliveBranchDeactivated(branchState)) {
+          this.scope.pause()
         }
       }
     }
@@ -1826,6 +1824,16 @@ function deferKeepAliveRenderEffects(
     deferred = state
   } else {
     deferred.pendingRoot = instance
+  }
+
+  // The async root may own work that materializes its resolved branch. Attach
+  // it to the same state so owner removal runs before that work.
+  if (
+    isAsyncWrapper(instance) &&
+    instance.deferredKeepAliveUpdates !== deferred
+  ) {
+    instance.deferredKeepAliveUpdates = deferred
+    deferred.owners.push(instance)
   }
 
   for (let i = 0; i < owners.length; i++) {

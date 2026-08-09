@@ -3,6 +3,7 @@ import {
   type VaporComponentInstance,
   currentInstance,
   getExposed,
+  isKeepAliveBranchDeactivated,
   isVaporComponent,
 } from './component'
 import {
@@ -134,8 +135,16 @@ function setTemplateRefWithState(
     ;(frag.onUpdated ||= []).push(() => {
       // KeepAlive clears refs on deactivation but keeps this fragment update
       // callback alive. Skip re-applying refs for async/offscreen updates
-      // until the component is activated again.
-      if (isVaporComponent(el) && el.isDeactivated) return
+      // until the component is activated again. The branch state changes
+      // synchronously on activation; isDeactivated is cleared post-render.
+      if (
+        isVaporComponent(el) &&
+        el.isDeactivated &&
+        (!el.keepAliveBranchState ||
+          isKeepAliveBranchDeactivated(el.keepAliveBranchState))
+      ) {
+        return
+      }
       state.oldRef = setRef(
         instance,
         state.suspense,

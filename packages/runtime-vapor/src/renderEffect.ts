@@ -1,7 +1,9 @@
 import { EffectFlags, type EffectScope, ReactiveEffect } from '@vue/reactivity'
 import {
+  ErrorCodes,
   type SchedulerJob,
   SchedulerJobFlags,
+  callWithErrorHandling,
   currentInstance,
   endMeasure,
   queueJob,
@@ -135,6 +137,16 @@ export class RenderEffect extends ReactiveEffect {
       queueJob(this.job, this.i ? this.i.uid : undefined, false, this.order)
     }
   }
+
+  runIfDirty(): void {
+    if (this.dirty) {
+      callWithErrorHandling(
+        () => this.run(),
+        this.i,
+        ErrorCodes.COMPONENT_UPDATE,
+      )
+    }
+  }
 }
 
 export function renderEffect(fn: () => void, noLifecycle = false): void {
@@ -142,5 +154,5 @@ export function renderEffect(fn: () => void, noLifecycle = false): void {
   if (inOnceSlot) return fn()
 
   const effect = new RenderEffect(fn, noLifecycle)
-  effect.run()
+  if (!(effect.flags & EffectFlags.PAUSED)) effect.run()
 }
