@@ -31,6 +31,3 @@ peerDependencyRules:
     '@typescript-eslint/utils>eslint': '^9.0.0'
 
 minimumReleaseAge: 1440
-minimumReleaseAgeExclude:
-  # Renovate security update: postcss@8.5.23
-  - postcss@8.5.23
