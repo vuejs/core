@@ -360,9 +360,15 @@ export function createComponent(
         normalizeRawSlots(rawSlots),
         _insertionAnchor,
       )
-      // Teleport target-side state can outlive DOM-only teardown of an
-      // enclosing block, so always bind it to the creating scope.
-      onScopeDispose(() => frag.dispose(), true)
+      if (_insertionParent) {
+        // Teleports mounted via insertion state are not part of the returned
+        // block tree, so scope disposal must tear down their target-side state.
+        onScopeDispose(() => frag.disposeTarget(), true)
+      } else {
+        // Give normal block removal (and Transition leave preparation) the
+        // current stack before falling back to target-side cleanup.
+        onScopeDispose(() => frag.scheduleTargetDispose(), true)
+      }
       if (!isHydrating) {
         if (_insertionParent) {
           insert(frag, _insertionParent, _insertionAnchor, parentSuspense)

@@ -26,6 +26,7 @@ import {
 import { makeRender } from '../_utils'
 import {
   defineComponent,
+  effectScope,
   h,
   nextTick,
   onActivated,
@@ -33,6 +34,7 @@ import {
   onDeactivated,
   onMounted,
   onUnmounted,
+  queuePostFlushCb,
   reactive,
   ref,
   renderSlot,
@@ -202,6 +204,38 @@ describe('renderer: VaporTeleport', () => {
       show.value = false
       await nextTick()
 
+      expect(target.innerHTML).toBe('')
+    })
+
+    test('should not initialize deferred children after owner scope stops', () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      const mounted = vi.fn()
+      const Probe = defineVaporComponent(() => {
+        onMounted(mounted)
+        return template('<div>teleported</div>')()
+      })
+      const { mount } = define({
+        setup() {
+          const scope = effectScope()
+          const teleport = scope.run(() =>
+            createComp(
+              VaporTeleport,
+              {
+                to: () => target,
+                defer: () => true,
+              },
+              { default: () => createComp(Probe) },
+            ),
+          )!
+          queuePostFlushCb(() => scope.stop(), -1)
+          return teleport
+        },
+      }).create()
+
+      mount(root)
+
+      expect(mounted).not.toHaveBeenCalled()
       expect(target.innerHTML).toBe('')
     })
   })
