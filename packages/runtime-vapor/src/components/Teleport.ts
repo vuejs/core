@@ -410,7 +410,11 @@ export class TeleportFragment extends RenderContextFragment {
 
     const mountState = this.mountState
     if (this.nodes && mountState.location === TeleportMountLocation.Target) {
-      remove(this.nodes, mountState.container)
+      const targetParent =
+        (this.targetStart && parentNode(this.targetStart)) ||
+        (this.targetAnchor && parentNode(this.targetAnchor)) ||
+        undefined
+      remove(this.nodes, targetParent)
       this.nodes = []
       this.mountState = { location: TeleportMountLocation.None }
     }
