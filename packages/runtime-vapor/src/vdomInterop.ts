@@ -1,10 +1,14 @@
 import {
   type App,
+  type AppContext,
   type ComponentInternalInstance,
+  type ComponentOptions,
+  type ComponentPropsOptions,
   type ConcreteComponent,
   ErrorCodes,
   Fragment,
   type FunctionalComponent,
+  type GenericAppContext,
   type HydrationRenderer,
   type KeepAliveContext,
   MoveType,
@@ -1117,6 +1121,59 @@ function mountVNode(
 }
 
 /**
+ * Merge the props declared on a VDOM component through its `extends` /
+ * `mixins` chain (and global mixins), mirroring how runtime-core resolves a
+ * component's props options. The interop wrapper only knows about the props
+ * directly present on the component, so props declared on an extended base
+ * or a mixin would otherwise be treated as attrs and resolve to `undefined`.
+ * See https://github.com/vuejs/core/issues/15254
+ */
+function resolveInteropComponentProps(
+  component: ConcreteComponent,
+  appContext?: GenericAppContext,
+): ComponentPropsOptions | undefined {
+  const merged: Record<string, any> = {}
+  let hasProps = false
+
+  const merge = (raw: ComponentOptions | undefined): void => {
+    if (!raw || isFunction(raw)) return
+    if (raw.extends) merge(raw.extends)
+    if (raw.mixins) {
+      for (let i = 0; i < raw.mixins.length; i++) {
+        merge(raw.mixins[i])
+      }
+    }
+    const props = raw.props
+    if (props) {
+      if (isArray(props)) {
+        for (let i = 0; i < props.length; i++) {
+          if (isString(props[i])) {
+            merged[props[i]] = null
+            hasProps = true
+          }
+        }
+      } else if (isObject(props)) {
+        hasProps = true
+        for (const key in props) {
+          merged[key] = props[key]
+        }
+      }
+    }
+  }
+
+  // global mixins have the lowest priority, matching runtime-core
+  const globalMixins = appContext && (appContext as AppContext).mixins
+  if (globalMixins) {
+    for (let i = 0; i < globalMixins.length; i++) {
+      merge(globalMixins[i])
+    }
+  }
+  merge(component as ComponentOptions)
+
+  return hasProps ? merged : undefined
+}
+
+/**
  * Mount vdom component in vapor
  */
 function createVDOMComponent(
@@ -1157,7 +1214,14 @@ function createVDOMComponent(
   }
 
   const wrapper = new VaporComponentInstance<Record<string, unknown>>(
-    useBridge ? (comp as any) : { props: component.props },
+    useBridge
+      ? (comp as any)
+      : {
+          props: resolveInteropComponentProps(
+            component,
+            parentComponent ? parentComponent.appContext : undefined,
+          ),
+        },
     rawProps as RawProps,
     rawSlots as RawSlots,
     parentComponent ? parentComponent.appContext : undefined,

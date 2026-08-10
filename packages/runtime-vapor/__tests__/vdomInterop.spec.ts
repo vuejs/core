@@ -571,6 +571,115 @@ describe('vdomInterop', () => {
         'vnode updated',
       ])
     })
+
+    // https://github.com/vuejs/core/issues/15254
+    test('should resolve props declared via extends on a VDOM child of a vapor parent', () => {
+      const base = {
+        props: {
+          modelValue: { type: Boolean, default: false },
+        },
+        emits: ['update:modelValue'],
+      }
+
+      const ExtendsChild = defineComponent({
+        extends: base,
+        setup(props: any) {
+          return () =>
+            h(
+              'div',
+              `${typeof props.modelValue}:${String(props.modelValue)}`,
+            )
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(ExtendsChild as any, {
+            modelValue: () => false,
+          })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>boolean:false</div>')
+    })
+
+    // https://github.com/vuejs/core/issues/15254
+    test('should resolve props declared via mixins on a VDOM child of a vapor parent', () => {
+      const base = {
+        props: {
+          modelValue: { type: Boolean, default: false },
+        },
+        emits: ['update:modelValue'],
+      }
+
+      const MixinsChild = defineComponent({
+        mixins: [base],
+        setup(props: any) {
+          return () =>
+            h(
+              'div',
+              `${typeof props.modelValue}:${String(props.modelValue)}`,
+            )
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(MixinsChild as any, {
+            modelValue: () => false,
+          })
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>boolean:false</div>')
+    })
+
+    // https://github.com/vuejs/core/issues/15254
+    test('should apply props defaults declared via extends on a VDOM child of a vapor parent', () => {
+      const base = {
+        props: {
+          modelValue: { type: Boolean, default: false },
+        },
+        emits: ['update:modelValue'],
+      }
+
+      const ExtendsChild = defineComponent({
+        extends: base,
+        setup(props: any) {
+          return () =>
+            h(
+              'div',
+              `${typeof props.modelValue}:${String(props.modelValue)}`,
+            )
+        },
+      })
+
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(ExtendsChild as any)
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+
+      expect(html()).toBe('<div>boolean:false</div>')
+    })
   })
 
   describe('v-model', () => {
