@@ -1245,6 +1245,79 @@ describe('SSR hydration', () => {
     assertSkipLazyHydration,
   )
 
+  test('unmount a lazily hydrated component that has not hydrated yet', async () => {
+    const Comp = { render: () => h('p', 'hello') }
+    const AsyncComp = defineAsyncComponent({
+      loader: () => Promise.resolve(Comp),
+      // a lazy hydration strategy that has not fired yet, e.g. hydrateOnVisible()
+      // on content that was never scrolled into view
+      hydrate: () => {},
+    })
+
+    const show = ref(true)
+    // the async component is unmounted as part of a parent subtree, which is
+    // what happens on a route change
+    const App = () => h('div', show.value ? [h(AsyncComp)] : [])
+
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+    document.body.appendChild(container)
+    createSSRApp(App).mount(container)
+
+    // the strategy never fired, so instance.subTree is still null
+    show.value = false
+    await expect(nextTick()).resolves.not.toThrow()
+    // the server-rendered DOM of the never-hydrated component is removed
+    expect(container.innerHTML).toBe('<div></div>')
+  })
+
+  // the #15091 guard skips hydration when the SSR node is detached, which
+  // leaves subTree unset in the same way
+  test('unmount after lazy hydration was skipped for a detached node', async () => {
+    let observer!: IntersectionObserver
+    let observerCallback!: IntersectionObserverCallback
+    const originalIntersectionObserver = globalThis.IntersectionObserver
+    globalThis.IntersectionObserver = class {
+      constructor(callback: IntersectionObserverCallback) {
+        observer = this as any
+        observerCallback = callback
+      }
+      disconnect() {}
+      observe() {}
+    } as any
+
+    try {
+      const Comp = vi.fn(() => h('p', 'hello'))
+      const AsyncComp = defineAsyncComponent({
+        loader: () => Promise.resolve(Comp),
+        hydrate: hydrateOnVisible(),
+      })
+      const show = ref(true)
+      const App = () => h('div', show.value ? [h(AsyncComp)] : [])
+
+      const container = document.createElement('div')
+      container.innerHTML = await renderToString(h(App))
+      document.body.appendChild(container)
+      Comp.mockClear()
+      createSSRApp(App).mount(container)
+
+      // detach, then let the observer fire: hydration bails out
+      const el: Element = container.querySelector('p')!
+      el.remove()
+      observerCallback(
+        [{ isIntersecting: true, target: el } as IntersectionObserverEntry],
+        observer,
+      )
+      await nextTick()
+      expect(Comp).not.toHaveBeenCalled()
+
+      show.value = false
+      await expect(nextTick()).resolves.not.toThrow()
+    } finally {
+      globalThis.IntersectionObserver = originalIntersectionObserver
+    }
+  })
+
   test('update async wrapper before resolve', async () => {
     const Comp = {
       render() {
