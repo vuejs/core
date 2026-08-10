@@ -585,10 +585,7 @@ describe('vdomInterop', () => {
         extends: base,
         setup(props: any) {
           return () =>
-            h(
-              'div',
-              `${typeof props.modelValue}:${String(props.modelValue)}`,
-            )
+            h('div', `${typeof props.modelValue}:${String(props.modelValue)}`)
         },
       })
 
@@ -622,10 +619,7 @@ describe('vdomInterop', () => {
         mixins: [base],
         setup(props: any) {
           return () =>
-            h(
-              'div',
-              `${typeof props.modelValue}:${String(props.modelValue)}`,
-            )
+            h('div', `${typeof props.modelValue}:${String(props.modelValue)}`)
         },
       })
 
@@ -659,10 +653,7 @@ describe('vdomInterop', () => {
         extends: base,
         setup(props: any) {
           return () =>
-            h(
-              'div',
-              `${typeof props.modelValue}:${String(props.modelValue)}`,
-            )
+            h('div', `${typeof props.modelValue}:${String(props.modelValue)}`)
         },
       })
 
