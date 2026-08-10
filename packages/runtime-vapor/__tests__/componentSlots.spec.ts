@@ -7082,5 +7082,117 @@ describe('component: slots', () => {
       await nextTick()
       expect(instance.slots).toEqual({})
     })
+
+    test('should remove teleported content when a dynamic v-for slot is removed', async () => {
+      const cats = ref(['a', 'b'])
+      const unmounted = vi.fn()
+      const Modal = compile(
+        `<script setup vapor>
+        import { onUnmounted } from 'vue'
+        onUnmounted(_components.unmounted)
+        </script>
+        <template>
+          <Teleport to="body">
+            <div id="teleported">teleported</div>
+          </Teleport>
+        </template>`,
+        cats,
+        { unmounted },
+      )
+      const Host = compile(
+        `<template>
+          <div v-for="c in data" :key="c">
+            <slot :name="c" />
+          </div>
+        </template>`,
+        cats,
+      )
+      const App = compile(
+        `<template>
+          <components.Host>
+            <template v-for="c in data" :key="c" #[c]>
+              <components.Modal v-if="c === 'a'" />
+            </template>
+          </components.Host>
+        </template>`,
+        cats,
+        { Host, Modal },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        expect(document.body.querySelectorAll('#teleported')).toHaveLength(1)
+
+        cats.value = ['b']
+        await nextTick()
+
+        expect(unmounted).toHaveBeenCalledOnce()
+        expect(document.body.querySelectorAll('#teleported')).toHaveLength(0)
+      } finally {
+        app.unmount()
+        document.querySelectorAll('#teleported').forEach(node => node.remove())
+      }
+    })
+
+    test('should leave disabled teleport content to its main-view owner', async () => {
+      const cats = ref(['a', 'b'])
+      let leaveDone: (() => void) | undefined
+      const onLeave = vi.fn((_el: Element, done: () => void) => {
+        leaveDone = done
+      })
+      const target = document.createElement('div')
+      const Modal = compile(
+        `<template>
+          <Teleport :to="components.target" disabled>
+            <span>teleported</span>
+          </Teleport>
+        </template>`,
+        cats,
+        { target },
+      )
+      const Host = compile(
+        `<template>
+          <TransitionGroup :css="false" @leave="components.onLeave">
+            <div v-for="c in data" :key="c">
+              <slot :name="c" />
+            </div>
+          </TransitionGroup>
+        </template>`,
+        cats,
+        { onLeave },
+      )
+      const App = compile(
+        `<template>
+          <components.Host>
+            <template v-for="c in data" :key="c" #[c]>
+              <components.Modal v-if="c === 'a'" />
+            </template>
+          </components.Host>
+        </template>`,
+        cats,
+        { Host, Modal },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        cats.value = ['b']
+        await nextTick()
+
+        expect(onLeave).toHaveBeenCalledOnce()
+        expect(root.textContent).toContain('teleported')
+
+        leaveDone!()
+        await nextTick()
+
+        expect(root.textContent).not.toContain('teleported')
+      } finally {
+        leaveDone?.()
+        app.unmount()
+      }
+    })
   })
 })

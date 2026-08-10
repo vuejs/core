@@ -12,6 +12,7 @@ import {
   isTeleportDeferred,
   isTeleportDisabled,
   logMismatchError,
+  queuePostFlushCb,
   queuePostRenderEffect,
   resolveTeleportTarget,
   restoreCurrentInstance,
@@ -397,20 +398,26 @@ export class TeleportFragment extends RenderContextFragment {
     }
   }
 
-  dispose = (): void => {
+  private cancelMountToTarget(): void {
     if (this.mountToTargetJob) {
       this.mountToTargetJob.flags! |= SchedulerJobFlags.DISPOSED
       this.mountToTargetJob = undefined
     }
+  }
 
-    // remove nodes
+  disposeTarget(): void {
+    this.cancelMountToTarget()
+
     const mountState = this.mountState
-    if (this.nodes && mountState.location !== TeleportMountLocation.None) {
-      remove(this.nodes, mountState.container)
+    if (this.nodes && mountState.location === TeleportMountLocation.Target) {
+      const targetParent =
+        (this.targetStart && parentNode(this.targetStart)) ||
+        (this.targetAnchor && parentNode(this.targetAnchor)) ||
+        undefined
+      remove(this.nodes, targetParent)
       this.nodes = []
+      this.mountState = { location: TeleportMountLocation.None }
     }
-
-    this.mountState = { location: TeleportMountLocation.None }
 
     // remove anchors
     if (this.targetStart) {
@@ -423,6 +430,23 @@ export class TeleportFragment extends RenderContextFragment {
     }
 
     this.target = undefined
+  }
+
+  scheduleTargetDispose(): void {
+    // A deferred target mount may already be ahead of the fallback in the
+    // post-flush queue, so cancel it synchronously with scope teardown.
+    this.cancelMountToTarget()
+    queuePostFlushCb(() => this.disposeTarget())
+  }
+
+  dispose = (): void => {
+    const mountState = this.mountState
+    if (this.nodes && mountState.location === TeleportMountLocation.Main) {
+      remove(this.nodes, mountState.container)
+      this.nodes = []
+    }
+    this.disposeTarget()
+    this.mountState = { location: TeleportMountLocation.None }
   }
 
   remove = (_parent?: ParentNode): void => {

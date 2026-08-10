@@ -1553,6 +1553,89 @@ describe('Transition', () => {
     expect(host.querySelector('span')?.textContent).toBe('second')
   })
 
+  test('teleport root should respect out-in transition mode', async () => {
+    let leaveDone: (() => void) | undefined
+    const target = document.createElement('div')
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({ show: true, target, onEnter, onLeave })
+    const App = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <template #default v-if="data.show">
+            <Teleport :to="data.target"><div>A</div></Teleport>
+          </template>
+          <template #default v-else>
+            <Teleport :to="data.target"><div>B</div></Teleport>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { app } = define(App).render()
+
+    try {
+      data.value.show = false
+      await nextTick()
+
+      expect(onLeave).toHaveBeenCalledOnce()
+      expect(onEnter).not.toHaveBeenCalled()
+      expect(target.textContent).toBe('A')
+
+      leaveDone!()
+      await nextTick()
+
+      expect(onEnter).toHaveBeenCalledOnce()
+      expect(target.textContent).toBe('B')
+    } finally {
+      leaveDone?.()
+      app.unmount()
+    }
+  })
+
+  test('disabled teleport should leave with its main-view owner', async () => {
+    let leaveDone: (() => void) | undefined
+    const target = document.createElement('div')
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      leaveDone = done
+    })
+    const data = ref({ show: true, target, onLeave })
+    const App = compile(
+      `<template>
+        <Transition :css="false" @leave="data.onLeave">
+          <div v-if="data.show">
+            <Teleport :to="data.target" disabled><span>A</span></Teleport>
+          </div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { app, host } = define(App).render()
+
+    try {
+      data.value.show = false
+      await nextTick()
+
+      expect(onLeave).toHaveBeenCalledOnce()
+      expect(host.textContent).toBe('A')
+
+      leaveDone!()
+      await nextTick()
+
+      expect(host.textContent).toBe('')
+    } finally {
+      leaveDone?.()
+      app.unmount()
+    }
+  })
+
   test('slot fallback should trigger enter hooks when slot content becomes empty', async () => {
     const onBeforeEnter = vi.fn()
     const onEnter = vi.fn()
