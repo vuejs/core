@@ -66,7 +66,11 @@ function genCustomDirectives(
           extend(createSimpleExpression(name, false), { ast: null }),
           context,
         )
-    const value = dir.exp && ['() => ', ...genExpression(dir.exp, context)]
+    const value = dir.exp && [
+      '() => (',
+      ...genExpression(dir.exp, context),
+      ')',
+    ]
     const argument = dir.arg && genExpression(dir.arg, context)
     const modifiers = !!dir.modifiers.length && [
       '{ ',
