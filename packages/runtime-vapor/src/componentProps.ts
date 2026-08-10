@@ -47,7 +47,7 @@ export type DynamicPropsSource =
   | (() => Record<string, unknown>)
   | Record<string, unknown>
 
-export function createKeepAliveRawProps(rawProps: RawProps): RawProps {
+export function isolatePropSources(rawProps: RawProps): RawProps {
   // Static values cannot change while cached and need no commit boundary.
   let hasFunctionSource = false
   for (const key in rawProps) {

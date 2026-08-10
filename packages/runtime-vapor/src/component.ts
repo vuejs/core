@@ -387,11 +387,20 @@ export function createComponent(
       return frag as any
     }
 
-    if (rawProps && keepAliveCtx) {
+    if (keepAliveCtx) {
       // The cached component keeps its detached scope active, so commit only
       // its direct inputs through the KeepAlive branch scope. Descendants read
-      // from the same committed props and need no additional isolation.
-      rawProps = keepAliveCtx.isolateRawProps(rawProps as RawProps)
+      // from the same committed inputs and need no additional isolation.
+      if (rawProps) {
+        rawProps = keepAliveCtx.isolatePropSources(rawProps as RawProps)
+      }
+
+      // Static slots are fixed function entries. Only `$` contains live slot
+      // descriptor sources that useSlots() can re-resolve while cached; slot
+      // function execution retains its existing closure semantics.
+      if (rawSlots && (rawSlots as RawSlots).$) {
+        rawSlots = keepAliveCtx.isolateSlotSources(rawSlots as RawSlots)
+      }
     }
 
     const instance = new VaporComponentInstance(

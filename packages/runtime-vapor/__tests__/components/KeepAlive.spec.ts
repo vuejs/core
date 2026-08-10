@@ -4429,4 +4429,56 @@ describe('VaporKeepAlive', () => {
       name: 'B',
     })
   })
+
+  test('should isolate dynamic slots accessed by a cached component', async () => {
+    const trigger = ref(0)
+    const slotKeys: string[][] = []
+    const Child = compile(
+      `<script setup vapor>
+        import { useSlots, watchEffect } from 'vue'
+        const trigger = _data.trigger
+        const slotKeys = _data.slotKeys
+        const slots = useSlots()
+        watchEffect(() => {
+          trigger.value
+          slotKeys.push(Object.keys(slots))
+        })
+      </script>
+      <template><div>child</div></template>`,
+      { trigger, slotKeys } as any,
+    )
+    const selected = ref<{ name: string } | undefined>({ name: 'a' })
+    const App = compile(
+      `<script setup vapor>
+        const selected = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <Child v-if="selected">
+            <template #[selected.name]>content</template>
+          </Child>
+        </KeepAlive>
+      </template>`,
+      selected,
+      { Child },
+    )
+    const { html } = define(App).render()
+
+    expect(html()).toBe(`<div>child</div><!--if-->`)
+    expect(slotKeys).toEqual([['a']])
+
+    selected.value = undefined
+    await nextTick()
+    expect(html()).toBe(`<!--if-->`)
+
+    trigger.value++
+    await nextTick()
+    expect(slotKeys).toEqual([['a'], ['a']])
+
+    selected.value = { name: 'b' }
+    await nextTick()
+    expect(html()).toBe(`<div>child</div><!--if-->`)
+    expect(slotKeys[slotKeys.length - 1]).toEqual(['b'])
+  })
 })
