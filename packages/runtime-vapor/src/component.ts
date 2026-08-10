@@ -69,7 +69,6 @@ import {
 import {
   type DynamicPropsSource,
   type RawProps,
-  createKeepAliveRawProps,
   getKeysFromRawProps,
   getPropsProxyHandlers,
   hasFallthroughAttrs,
@@ -392,7 +391,7 @@ export function createComponent(
       // The cached component keeps its detached scope active, so commit only
       // its direct inputs through the KeepAlive branch scope. Descendants read
       // from the same committed props and need no additional isolation.
-      rawProps = createKeepAliveRawProps(rawProps as RawProps)
+      rawProps = keepAliveCtx.isolateRawProps(rawProps as RawProps)
     }
 
     const instance = new VaporComponentInstance(

@@ -27,6 +27,7 @@ import {
   type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
+import { createKeepAliveRawProps } from '../componentProps'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
@@ -374,6 +375,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     })
 
     const keepAliveCtx: KeepAliveInstance['ctx'] = {
+      isolateRawProps: createKeepAliveRawProps,
       getStorageContainer: () => storageContainer,
       getCachedComponent: (comp, key) => {
         if (isInteropEnabled && isVNode(comp)) {

@@ -6,8 +6,10 @@ import {
 import type { EffectScope } from '@vue/reactivity'
 import type { Block } from './block'
 import type { DynamicFragment } from './fragment'
+import type { RawProps } from './componentProps'
 
 export interface VaporKeepAliveContext {
+  isolateRawProps(rawProps: RawProps): RawProps
   // caches or stops the outgoing branch scope and returns whether its DOM
   // removal must wait for the incoming cache decision
   prepareBranchRemoval(frag: DynamicFragment, scope: EffectScope): boolean
