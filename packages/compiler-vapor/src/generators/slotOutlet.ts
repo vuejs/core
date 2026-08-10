@@ -18,7 +18,7 @@ export function genSlotOutlet(
   if (fallback) {
     if (context.inSlotBlock) {
       // Forwarded fallback validity affects the owning slot's exposed branch;
-      markSlotRootOperations(fallback)
+      markSlotRootOperations(fallback, context)
     }
     fallbackArg = genBlock(fallback, context)
   }
@@ -65,6 +65,12 @@ function genSlotFlags(flags: number): string | undefined {
   }
   if (flags & VaporSlotFlags.SLOT_ROOT) {
     names.push('SLOT_ROOT')
+  }
+  if (flags & VaporSlotFlags.SHARED_FALLBACK) {
+    names.push('SHARED_FALLBACK')
+  }
+  if (flags & VaporSlotFlags.INHERIT_FALLBACK) {
+    names.push('INHERIT_FALLBACK')
   }
 
   return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)

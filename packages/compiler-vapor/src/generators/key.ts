@@ -8,7 +8,7 @@ export function genKey(
   oper: KeyIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { id, value, block } = oper
+  const { id, value, block, slotRoot } = oper
   const [frag, push] = buildCodeFragment()
   const blockFn = genBlock(block, context)
 
@@ -19,6 +19,7 @@ export function genKey(
       context.helper('createKeyedFragment'),
       [`() => (`, ...genExpression(value, context), ')'],
       blockFn,
+      slotRoot ? 'true' : false,
     ),
   )
 

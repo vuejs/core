@@ -2,11 +2,10 @@ import type { EffectScope } from '@vue/reactivity'
 import { type BlockFn, isValidSlot } from './block'
 import type { VaporFragment } from './fragment'
 
-// A slot boundary is one slot outlet's fallback-resolution point. Forwarded
-// slots chain boundaries through `parent`: when <Inner> renders a <slot>
-// inside <Outer>'s slot content, missing/invalid content resolves against
-// Inner's own fallback first, then Outer's, and so on outward
-// (renderSlotFallback in slotFragment.ts walks this chain).
+// A slot boundary is one slot outlet's fallback-resolution point. `parent` is
+// the next boundary this outlet is allowed to inherit from; ownership caps set
+// it to null even when another slot boundary physically encloses the outlet.
+// renderSlotFallback in slotFragment.ts walks this permitted chain.
 export interface SlotBoundaryContext {
   parent: SlotBoundaryContext | null
   getFallback: () => BlockFn | undefined

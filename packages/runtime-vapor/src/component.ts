@@ -202,7 +202,9 @@ export interface VaporComponentOptions<
     },
   ) => TypeBlock | Exposed | Promise<Exposed> | void
   render?(
-    ctx: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>,
+    ctx: Block extends Exposed
+      ? Record<string, any>
+      : ShallowUnwrapRef<Exposed>,
     props: Readonly<InferredProps>,
     emit: EmitFn<Emits>,
     attrs: any,
@@ -363,7 +365,11 @@ export function createComponent(
       if (_insertionParent) {
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
-        onScopeDispose(() => frag.dispose(), true)
+        onScopeDispose(() => frag.disposeTarget(), true)
+      } else {
+        // Give normal block removal (and Transition leave preparation) the
+        // current stack before falling back to target-side cleanup.
+        onScopeDispose(() => frag.scheduleTargetDispose(), true)
       }
       if (!isHydrating) {
         if (_insertionParent) {
@@ -768,7 +774,9 @@ export class VaporComponentInstance<
   effectCount = 0
 
   // dev only
-  setupState?: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>
+  setupState?: Block extends Exposed
+    ? Record<string, any>
+    : ShallowUnwrapRef<Exposed>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void

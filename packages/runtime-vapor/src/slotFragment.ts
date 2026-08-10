@@ -5,6 +5,7 @@ import {
   insert,
   isValidSlot,
   remove,
+  removeAttachedNodes,
 } from './block'
 import { isHydrating } from './dom/hydration'
 import {
@@ -34,6 +35,11 @@ import { setBlockKey } from './helpers/setKey'
 // slot implementations in vdomInterop.ts, which keep their per-slot state in
 // closures.
 
+interface RenderedSlotFallback {
+  block: Block
+  onContentInvalid: (() => void)[]
+}
+
 // Walks the boundary chain outward and renders fallbacks into `scope`. Returns:
 // - a valid block: the innermost fallback that rendered valid output;
 // - an invalid block: every boundary providing a fallback rendered invalid
@@ -44,8 +50,8 @@ import { setBlockKey } from './helpers/setKey'
 function renderSlotFallback(
   boundary: SlotBoundaryContext | null,
   scope: EffectScope,
-): Block | undefined {
-  let block: Block | undefined
+): RenderedSlotFallback | undefined {
+  let result: RenderedSlotFallback | undefined
 
   while (boundary) {
     const current = boundary
@@ -53,6 +59,7 @@ function renderSlotFallback(
 
     if (localFallback) {
       let selected = false
+      const onContentInvalid: (() => void)[] = []
       const content = current.run(
         () =>
           withSlotBoundary(
@@ -61,7 +68,7 @@ function renderSlotFallback(
               // Hide the local fallback while rendering it, so slot outlets inside
               // the fallback don't resolve to the same fallback again.
               getFallback: () => undefined,
-              onContentInvalid: [],
+              onContentInvalid,
               // Hidden invalid fallbacks in a forwarded fallback chain must
               // force a recheck when they become valid so the nearer fallback
               // can win again. The selected fallback only needs a normal
@@ -78,15 +85,15 @@ function renderSlotFallback(
       )
       if (isValidSlot(content)) {
         selected = true
-        return content
+        return { block: content, onContentInvalid }
       }
-      block = content
+      result = { block: content, onContentInvalid }
     }
 
     boundary = current.parent
   }
 
-  return block
+  return result
 }
 
 // Per-slot state the slot resolution machine operates on. Implemented by
@@ -97,6 +104,8 @@ export interface SlotResolutionState {
   boundary: SlotBoundaryContext
   // The committed fallback block, or null while content is exposed.
   activeFallback: Block | null
+  // Parking callbacks registered by hosts rendered in the active fallback.
+  activeFallbackInvalidCallbacks?: (() => void)[]
   // A committed fallback can be invalid and therefore remain detached.
   fallbackInserted: boolean
   // Detached scope owning the active fallback's effects (see
@@ -105,12 +114,12 @@ export interface SlotResolutionState {
   // Validity of the exposed branch as of the last recheck; undefined before
   // the first recheck. Flips trigger notifyExposedValidityChange.
   lastNodesValid?: boolean
-  // A dirty notification arrived while a fallback render or a host update
-  // was in flight; folded into the recheck that completes that operation.
+  // A dirty notification arrived during reconciliation or a host update;
+  // folded into the recheck that completes that operation.
   pendingRecheck: boolean
   pendingRecheckForce: boolean
-  // Reentrancy guard, set while renderSlotFallback runs user fallback code.
-  isRenderingFallback: boolean
+  // Reentrancy guard for one atomic content/fallback reconciliation.
+  isReconciling: boolean
   $transition?: VaporTransitionHooks
 
   getContent(): Block
@@ -129,10 +138,9 @@ export interface SlotResolutionState {
   notifyExposedValidityChange(): void
 }
 
-// Entry point for validity-change notifications (boundary.markDirty). While
-// user fallback code is rendering or the host is mid content update, the
-// notification is folded into pendingRecheck instead of recursing: the
-// in-flight operation ends with a recheck that subsumes it.
+// Entry point for validity-change notifications (boundary.markDirty). During
+// reconciliation or a host content update, fold notifications into the
+// in-flight operation instead of recursing.
 export function markSlotResolutionDirty(
   state: SlotResolutionState,
   force: boolean = false,
@@ -140,12 +148,23 @@ export function markSlotResolutionDirty(
   if (state.isDisposed()) {
     return
   }
-  if (state.isRenderingFallback || state.isBusy()) {
+  if (state.isReconciling || state.isBusy()) {
     state.pendingRecheck = true
     state.pendingRecheckForce = state.pendingRecheckForce || force
     return
   }
   recheckSlotResolution(state, force)
+}
+
+export function invalidateExposedSlotContent(state: SlotResolutionState): void {
+  const callbacks = state.activeFallback
+    ? state.activeFallbackInvalidCallbacks
+    : state.boundary.onContentInvalid
+  if (callbacks) {
+    for (let i = 0; i < callbacks.length; i++) {
+      callbacks[i]()
+    }
+  }
 }
 
 function clearSlotFallback(state: SlotResolutionState): void {
@@ -158,6 +177,7 @@ function clearSlotFallback(state: SlotResolutionState): void {
     state.activeFallback = null
     state.fallbackInserted = false
   }
+  state.activeFallbackInvalidCallbacks = undefined
   if (state.fallbackScope) {
     state.fallbackScope.stop()
     state.fallbackScope = undefined
@@ -183,17 +203,14 @@ export function leaveSlotFallback(
 // or right here when the render throws or yields nothing).
 function renderFallbackInScope(
   state: SlotResolutionState,
-): { block: Block; scope: EffectScope } | undefined {
+): (RenderedSlotFallback & { scope: EffectScope }) | undefined {
   const scope = new EffectScope(true)
-  let renderedFallback: Block | undefined
-  state.isRenderingFallback = true
+  let renderedFallback: RenderedSlotFallback | undefined
   try {
     renderedFallback = renderSlotFallback(state.boundary, scope)
   } catch (err) {
     scope.stop()
     throw err
-  } finally {
-    state.isRenderingFallback = false
   }
 
   if (!renderedFallback) {
@@ -202,7 +219,8 @@ function renderFallbackInScope(
   }
 
   return {
-    block: renderedFallback,
+    block: renderedFallback.block,
+    onContentInvalid: renderedFallback.onContentInvalid,
     scope,
   }
 }
@@ -227,9 +245,11 @@ function commitSlotFallback(
   state: SlotResolutionState,
   block: Block,
   scope: EffectScope,
+  onContentInvalid: (() => void)[],
   detachContent: boolean,
 ): void {
   state.activeFallback = block
+  state.activeFallbackInvalidCallbacks = onContentInvalid
   state.fallbackScope = scope
   state.fallbackInserted = isHydrating
   if (isTransitionEnabled) {
@@ -241,11 +261,13 @@ function commitSlotFallback(
     }
   }
   if (detachContent && !isHydrating) {
+    const parentNode = state.getParentNode()
     const contentInvalidCallbacks = state.boundary.onContentInvalid
-    if (contentInvalidCallbacks) {
-      for (let i = 0; i < contentInvalidCallbacks.length; i++) {
+    if (contentInvalidCallbacks)
+      for (let i = 0; i < contentInvalidCallbacks.length; i++)
         contentInvalidCallbacks[i]()
-      }
+    if (parentNode) {
+      removeAttachedNodes(state.getContent(), parentNode, false)
     }
   }
   insertActiveSlotFallback(state)
@@ -258,14 +280,13 @@ function renderAndCommitSlotFallback(
   const result = renderFallbackInScope(state)
   clearSlotFallback(state)
   if (result) {
-    commitSlotFallback(state, result.block, result.scope, !hadFallback)
-    // drain notifications folded into this fallback render/update window
-    if (state.pendingRecheck) {
-      const force = state.pendingRecheckForce
-      state.pendingRecheck = false
-      state.pendingRecheckForce = false
-      recheckSlotResolution(state, force)
-    }
+    commitSlotFallback(
+      state,
+      result.block,
+      result.scope,
+      result.onContentInvalid,
+      !hadFallback,
+    )
   }
 }
 
@@ -286,12 +307,31 @@ export function recheckSlotResolution(
   state: SlotResolutionState,
   force: boolean = false,
 ): void {
-  if (state.isRenderingFallback) {
+  if (state.isReconciling) {
     state.pendingRecheck = true
     state.pendingRecheckForce = state.pendingRecheckForce || force
     return
   }
 
+  let nextForce = force || state.pendingRecheckForce
+  do {
+    state.pendingRecheck = false
+    state.pendingRecheckForce = false
+    state.isReconciling = true
+    try {
+      recheckSlotResolutionNow(state, nextForce)
+    } finally {
+      state.isReconciling = false
+    }
+    if (!state.pendingRecheck) return
+    nextForce = state.pendingRecheckForce
+  } while (true)
+}
+
+function recheckSlotResolutionNow(
+  state: SlotResolutionState,
+  force: boolean,
+): void {
   const fallback = state.activeFallback
   const fallbackValid = fallback ? isValidSlot(fallback) : false
   const contentValid = state.isContentValid()

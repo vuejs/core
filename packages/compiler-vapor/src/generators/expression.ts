@@ -1023,9 +1023,10 @@ function extractMemberExpression(
     case 'MemberExpression': // foo[bar.baz]
     case 'OptionalMemberExpression': // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
+      const optional = exp.type === 'OptionalMemberExpression' && exp.optional
       const prop = exp.computed
-        ? `[${extractMemberExpression(exp.property, onIdentifier)}]`
-        : `.${extractMemberExpression(exp.property, NOOP)}`
+        ? `${optional ? '?.' : ''}[${extractMemberExpression(exp.property, onIdentifier)}]`
+        : `${optional ? '?.' : '.'}${extractMemberExpression(exp.property, NOOP)}`
       return `${object}${prop}`
     case 'TSNonNullExpression': // foo!.bar
       return `${extractMemberExpression(exp.expression, onIdentifier)}`

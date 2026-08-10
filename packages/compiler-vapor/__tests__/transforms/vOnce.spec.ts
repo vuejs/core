@@ -143,6 +143,12 @@ describe('compiler: v-once', () => {
     expect(ir.block.operation).lengthOf(0)
   })
 
+  test('root slot outlet in slot content', () => {
+    const { code } = compileWithOnce(`<Comp><slot v-once /></Comp>`)
+
+    expect(code).not.toContain('SLOT_ROOT')
+  })
+
   test('inside v-once', () => {
     const { ir, code } = compileWithOnce(`<div v-once><div v-once/></div>`)
 

@@ -9,7 +9,10 @@ import {
   insert,
   isValidBlock,
   isValidSlot,
+  move,
   remove,
+  removeAttachedNodes,
+  removeNode,
 } from './block'
 import {
   type GenericComponentInstance,
@@ -37,6 +40,8 @@ import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
   type SlotBoundaryContext,
   currentSlotBoundary,
+  hasSlotFallback,
+  registerContentInvalid,
   setCurrentSlotBoundary,
   trackSlotBoundaryDirtying,
   withSlotBoundary,
@@ -45,12 +50,14 @@ import {
   getCurrentSlotEndAnchor,
   hydrateDynamicFragmentAnchor,
   prepareDeferredHydrationAnchor,
+  queuePendingSlotContentAnchor,
   startPendingSlotContent,
   withHydratingSlotBoundary,
 } from './dom/hydrateFragment'
 import {
   type SlotResolutionState,
   disposeSlotResolution,
+  invalidateExposedSlotContent,
   markSlotResolutionDirty,
   recheckSlotResolution,
 } from './slotFragment'
@@ -242,9 +249,6 @@ export class DynamicFragment extends RenderContextFragment {
   // pure marker consumed by the isSlotFragment predicate; the core update
   // pipeline never reads it.
   isSlot?: boolean
-  // Hydration-only marker for forwarded slots. They restore their own content
-  // anchor but leave inherited fallback resolution to the receiver slot.
-  forwarded?: boolean
   // Marks the generic dynamic fragment that createPlainElement creates for the
   // default-slot children of a dynamic element resolved to a native tag
   // (`rawSlots.$`). Unlike labeled control-flow fragments it has no
@@ -470,7 +474,6 @@ export class SlotFragment
 {
   isSlot = true
   private disposed = false
-  forwarded = false
   // Custom elements with `shadowRoot: false` replace their native slot outlet
   // after mount. Keep the live fallback block on the fragment so CE slot sync
   // can preserve block ownership after the outlet node is gone.
@@ -481,7 +484,7 @@ export class SlotFragment
   lastNodesValid?: boolean
   pendingRecheck = false
   pendingRecheckForce = false
-  isRenderingFallback = false
+  isReconciling = false
   private readonly onContentInvalid: (() => void)[] = []
   private content: Block = EMPTY_BLOCK
   private localFallback?: BlockFn
@@ -490,6 +493,8 @@ export class SlotFragment
   // Slot-root outlets expose their content validity to the enclosing boundary.
   constructor(
     private readonly notifyParentBoundary: boolean = false,
+    private readonly sharedFallback: boolean = false,
+    private readonly inheritFallback: boolean = false,
     adoptAnchor?: Node,
   ) {
     super(
@@ -500,6 +505,26 @@ export class SlotFragment
       undefined,
       adoptAnchor,
     )
+    if (sharedFallback) {
+      if (this.slotBoundary) {
+        registerContentInvalid(
+          this.slotBoundary,
+          () => {
+            invalidateExposedSlotContent(this)
+            const anchor = this.anchor
+            const parent = anchor.parentNode
+            if (parent) {
+              removeAttachedNodes(this.content, parent)
+              if (this.activeFallback) {
+                removeAttachedNodes(this.activeFallback, parent)
+              }
+              removeNode(anchor, parent)
+            }
+          },
+          this,
+        )
+      }
+    }
     if (!isHydrating) {
       this.insert = (parent, anchor, parentSuspense) =>
         this.insertSlot(parent, anchor, parentSuspense)
@@ -514,7 +539,7 @@ export class SlotFragment
 
   get boundary(): SlotBoundaryContext {
     return (this.ownBoundary ||= {
-      parent: this.slotBoundary,
+      parent: this.inheritFallback ? this.slotBoundary : null,
       getFallback: () => this.localFallback,
       run: (fn, scope) => this.runWithRenderCtx(fn, scope),
       markDirty: force => markSlotResolutionDirty(this, force),
@@ -576,7 +601,9 @@ export class SlotFragment
     const contentStart = currentHydrationNode
     let finish: ((contentValid: boolean) => void) | null = null
     try {
-      finish = startPendingSlotContent(contentStart)
+      if (this.sharedFallback || hasSlotFallback(this.boundary)) {
+        finish = startPendingSlotContent(contentStart)
+      }
       this.updateContent(render, key)
       const contentValid = isValidSlot(this.content)
       if (finish) {
@@ -608,18 +635,23 @@ export class SlotFragment
     try {
       const shouldForce = prevLocalFallback !== fallback
       if (isHydrating) {
-        // Forwarded content without local fallback must not run inherited
-        // fallback resolution itself. It only restores its own content anchor;
-        // the receiver slot boundary decides whether inherited fallback
-        // should run.
-        if (this.forwarded && !fallback) {
+        // Forwarded roots that do not own an inherited fallback restore only
+        // their exposed branch. The receiver decides its fallback after all
+        // shared roots have reported their final content/local-fallback result.
+        if (this.sharedFallback || (this.inheritFallback && !fallback)) {
           const { contentStart, contentValid } = this.updateHydratingContent(
             slotRender,
             key,
           )
-          this.syncNodes()
-          this.lastNodesValid = contentValid
-          if (contentValid) {
+          let exposedValid = contentValid
+          if (this.sharedFallback) {
+            recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)
+            exposedValid = isValidSlot(this.nodes)
+          } else {
+            this.syncNodes()
+            this.lastNodesValid = contentValid
+          }
+          if (exposedValid) {
             const end =
               contentStart && isComment(contentStart, '[')
                 ? locateEndAnchor(contentStart)
@@ -628,11 +660,60 @@ export class SlotFragment
               this.anchor = markHydrationAnchor(end)
               advanceHydrationNode(end)
             } else {
-              hydrateDynamicFragmentAnchor(this, !isValidBlock(this.content))
+              hydrateDynamicFragmentAnchor(this, !isValidBlock(this.nodes))
+            }
+          } else if (this.sharedFallback) {
+            const slotEnd = getCurrentSlotEndAnchor()
+            const end =
+              contentStart && isComment(contentStart, '[')
+                ? locateEndAnchor(contentStart)
+                : null
+            if (end && end !== slotEnd) {
+              // Move past this candidate range so later sibling roots hydrate
+              // from their own position. The parent aggregate decision below
+              // determines whether this root actually owns the range.
+              advanceHydrationNode(end)
+            }
+            const anchor = markHydrationAnchor(
+              __DEV__
+                ? createComment(this.anchorLabel ?? '')
+                : createTextNode(),
+            )
+            this.anchor = anchor
+            const previous = slotEnd && slotEnd.previousSibling
+            if (previous && isComment(previous, ']')) {
+              markHydrationAnchor(previous)
+            }
+            const attachContent = () => {
+              const candidate = end && end !== slotEnd ? end : null
+              const insertionAnchor =
+                candidate ||
+                (contentStart && contentStart.parentNode
+                  ? contentStart
+                  : slotEnd)
+              const parent = insertionAnchor && insertionAnchor.parentNode
+              if (!parent) return
+
+              if (candidate) {
+                this.anchor = markHydrationAnchor(candidate)
+              } else {
+                parent.insertBefore(anchor, insertionAnchor)
+              }
+              move(this.nodes, parent, this.anchor)
+            }
+            const queued = queuePendingSlotContentAnchor({
+              onContent: attachContent,
+              onFallback: () => {},
+            })
+            if (!queued) {
+              if (end && end !== slotEnd) {
+                markHydrationAnchor(end)
+              }
+              queuePostFlushCb(attachContent)
             }
           } else {
-            // Empty forwarded content should not claim the receiver slot's SSR
-            // close marker. Queue its runtime anchor before that marker so
+            // Empty forwarded content should not claim the receiver slot's
+            // SSR close marker. Queue its runtime anchor before that marker so
             // fallback hydration can finish first and the final DOM matches CSR.
             const anchor = (this.anchor = markHydrationAnchor(
               __DEV__

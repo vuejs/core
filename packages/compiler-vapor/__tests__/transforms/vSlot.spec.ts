@@ -7,6 +7,7 @@ import {
 import {
   IRNodeTypes,
   IRSlotType,
+  compile as compileVapor,
   transformChildren,
   transformComment,
   transformElement,
@@ -23,6 +24,10 @@ import { makeCompile } from './_utils'
 const dynamicSlotRootFlag = `${VaporDynamicComponentFlags.SLOT_ROOT} /* SLOT_ROOT */`
 const slotNonStableFlag = `_: ${VaporSlotFlags.NON_STABLE} /* NON_STABLE */`
 const slotRootFlag = `${VaporSlotFlags.SLOT_ROOT} /* SLOT_ROOT */`
+const inheritedFallbackSlotRootFlag = `${VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.INHERIT_FALLBACK} /* SLOT_ROOT, INHERIT_FALLBACK */`
+const sharedFallbackSlotRootFlag = `${VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.SHARED_FALLBACK} /* SLOT_ROOT, SHARED_FALLBACK */`
+const keyedSlotRootCallRE =
+  /const (n\d+) = _createKeyedFragment\([\s\S]*?\n\s*}, true\)\n\s*return \1/
 
 const compileWithSlots = makeCompile({
   nodeTransforms: [
@@ -715,10 +720,102 @@ describe('compiler: transform slot', () => {
     test('<slot> tag only', () => {
       const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
       expect(code).toContain(slotNonStableFlag)
-      expect(code).not.toContain(
-        `_createSlot("default", null, null, ${slotRootFlag})`,
+      expect(code).toContain(
+        `_createSlot("default", null, null, ${inheritedFallbackSlotRootFlag})`,
       )
       expect(code).toMatchSnapshot()
+    })
+
+    test('root slot outlet with stable sibling does not notify parent', () => {
+      const { code } = compileWithSlots(`<Comp><slot/><span/></Comp>`)
+
+      expect(code).not.toContain('SLOT_ROOT')
+      expect(code).not.toContain('INHERIT_FALLBACK')
+      expect(code).not.toContain(slotNonStableFlag)
+    })
+
+    test('multiple dynamic slot roots share the enclosing fallback decision', () => {
+      const { code } = compileWithSlots(
+        `<Comp><slot name="a"/><slot name="b"/></Comp>`,
+      )
+
+      expect(code.match(/SHARED_FALLBACK/g)).toHaveLength(2)
+      expect(code).toContain(sharedFallbackSlotRootFlag)
+    })
+
+    test('slot root shares fallback with a dynamic sibling', () => {
+      const { code } = compileWithSlots(`<Comp><slot/><span v-if="ok"/></Comp>`)
+
+      expect(code).toContain(sharedFallbackSlotRootFlag)
+    })
+
+    test('v-once slot root shares fallback without update tracking', () => {
+      const { code } = compileVapor(
+        `<Comp><slot v-once name="a"/><slot name="b"/></Comp>`,
+      )
+
+      expect(code.match(/SHARED_FALLBACK/g)).toHaveLength(2)
+      expect(code).toContain('ONCE, SHARED_FALLBACK')
+      expect(code).not.toContain('ONCE, SLOT_ROOT')
+    })
+
+    test('v-once unique slot root inherits fallback without update tracking', () => {
+      const { code } = compileVapor(`<Comp><slot v-once /></Comp>`)
+
+      expect(code).toContain('ONCE, INHERIT_FALLBACK')
+      expect(code).not.toContain('ONCE, SLOT_ROOT')
+    })
+
+    test.each([
+      [
+        'v-if branch',
+        `<Comp><template v-if="ok"><slot/><span/></template></Comp>`,
+      ],
+      [
+        'v-for item',
+        `<Comp><template v-for="item in items"><slot/><span/></template></Comp>`,
+      ],
+    ])(
+      'root slot outlet with stable sibling in %s does not notify parent',
+      (_, source) => {
+        const { code } = compileWithSlots(source)
+
+        expect(code).toContain('SLOT_ROOT')
+        expect(code).not.toContain(
+          `_createSlot("default", null, null, ${slotRootFlag})`,
+        )
+        expect(code).not.toContain('INHERIT_FALLBACK')
+      },
+    )
+
+    test('root slot outlet with stable sibling in forwarded fallback does not notify parent', () => {
+      const { code } = compileWithSlots(
+        `<Comp><slot><slot/><span/></slot></Comp>`,
+      )
+
+      expect(code).toMatch(/const n\d+ = _createSlot\(\)/)
+    })
+
+    test('root slot outlet with dynamic key tracks the keyed fragment and outlet', () => {
+      const { code } = compileVapor(`<Comp><slot :key="key" /></Comp>`, {
+        prefixIdentifiers: true,
+      })
+
+      expect(code).toContain(
+        `_createSlot("default", null, null, ${inheritedFallbackSlotRootFlag})`,
+      )
+      expect(code).toMatch(keyedSlotRootCallRE)
+    })
+
+    test('keyed slot block with stable sibling does not track slot boundary', () => {
+      const { code } = compileVapor(
+        `<Comp><template :key="key"><slot /><span /></template></Comp>`,
+        { prefixIdentifiers: true },
+      )
+
+      expect(code).toContain('_createKeyedFragment(')
+      expect(code).not.toContain('SLOT_ROOT')
+      expect(code).not.toMatch(keyedSlotRootCallRE)
     })
 
     test('<slot> tag w/ v-if', () => {

@@ -268,6 +268,9 @@ export interface VaporInteropInterface {
     fallback?: any, // VaporSlot
     once?: boolean,
     slotRoot?: boolean,
+    sharedFallback?: boolean,
+    inheritFallback?: boolean,
+    adoptAnchor?: Node,
   ) => any
   vdomMountVNode: (
     vnode: VNode,
