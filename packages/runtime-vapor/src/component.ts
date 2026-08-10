@@ -391,7 +391,9 @@ export function createComponent(
       // The cached component keeps its detached scope active, so commit only
       // its direct inputs through the KeepAlive branch scope. Descendants read
       // from the same committed inputs and need no additional isolation.
-      if (rawProps) {
+      // v-once snapshots raw props in the instance constructor, so it does not
+      // need a live commit effect after creation.
+      if (rawProps && !once) {
         rawProps = keepAliveCtx.isolatePropSources(rawProps as RawProps)
       }
 

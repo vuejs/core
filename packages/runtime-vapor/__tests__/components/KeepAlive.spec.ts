@@ -1699,12 +1699,20 @@ describe('VaporKeepAlive', () => {
     })
 
     test('should isolate props between cached dynamic components', async () => {
+      const fooCalls: Array<[number, number]> = []
       const Foo = compile(
         `<script setup vapor>
+          import { watch } from 'vue'
+          const calls = _data
           const props = defineProps(['n'])
+          watch(
+            () => props.n,
+            (value, oldValue) => calls.push([value, oldValue]),
+            { flush: 'sync' },
+          )
         </script>
         <template><div>foo {{ props.n }}</div></template>`,
-        ref(),
+        fooCalls as any,
       )
       const Bar = compile(
         `<script setup vapor>
@@ -1732,45 +1740,63 @@ describe('VaporKeepAlive', () => {
       data.value = { current: Bar, n: 1 }
       await nextTick()
       expect(html()).toBe(`<div>bar 1</div><!--dynamic-component-->`)
+      expect(fooCalls).toEqual([])
 
       data.value = { current: Foo, n: 2 }
       await nextTick()
       expect(html()).toBe(`<div>foo 2</div><!--dynamic-component-->`)
+      expect(fooCalls).toEqual([[2, 0]])
     })
 
-    test('should preserve raw prop source precedence', async () => {
+    test('should preserve raw prop source precedence across reactivation', async () => {
       const Child = compile(
         `<script setup vapor>
-          const props = defineProps(['fooBar'])
+          const props = defineProps(['fooBar', 'stale', 'bar'])
         </script>
-        <template><div>{{ props.fooBar }}</div></template>`,
+        <template><div>{{ props.fooBar }}|{{ props.stale }}|{{ props.bar }}</div></template>`,
         ref(),
       )
-      const data = ref<{ fooBar?: string }>({ fooBar: 'b' })
+      const Other = compile(
+        `<script setup vapor>
+          defineProps(['fooBar', 'stale', 'bar'])
+        </script>
+        <template><div>other</div></template>`,
+        ref(),
+      )
+      const current = shallowRef<VaporComponent>(Child)
+      const data = reactive<{
+        fooBar?: string
+        stale?: string
+        bar?: string
+      }>({ fooBar: 'b', stale: 'stale' })
       const App = compile(
         `<script setup vapor>
-          const data = _data
-          const Child = _components.Child
+          const current = _data.current
+          const data = _data.data
         </script>
         <template>
           <KeepAlive>
-            <Child foo-bar="a" v-bind="data" />
+            <component :is="current" foo-bar="a" v-bind="data" />
           </KeepAlive>
         </template>`,
-        data,
-        { Child },
+        { current, data } as any,
       )
 
       const { html } = define(App).render()
-      expect(html()).toBe(`<div>b</div>`)
+      expect(html()).toBe(`<div>b|stale|</div><!--dynamic-component-->`)
 
-      delete data.value.fooBar
+      current.value = Other
       await nextTick()
-      expect(html()).toBe(`<div>a</div>`)
+      expect(html()).toBe(`<div>other</div><!--dynamic-component-->`)
 
-      data.value.fooBar = 'c'
+      delete data.fooBar
+      delete data.stale
+      data.bar = 'bar'
       await nextTick()
-      expect(html()).toBe(`<div>c</div>`)
+
+      current.value = Child
+      await nextTick()
+      expect(html()).toBe(`<div>a||bar</div><!--dynamic-component-->`)
     })
 
     // #15228
