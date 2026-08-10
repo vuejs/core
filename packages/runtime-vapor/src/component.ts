@@ -202,7 +202,9 @@ export interface VaporComponentOptions<
     },
   ) => TypeBlock | Exposed | Promise<Exposed> | void
   render?(
-    ctx: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>,
+    ctx: Block extends Exposed
+      ? Record<string, any>
+      : ShallowUnwrapRef<Exposed>,
     props: Readonly<InferredProps>,
     emit: EmitFn<Emits>,
     attrs: any,
@@ -772,7 +774,9 @@ export class VaporComponentInstance<
   effectCount = 0
 
   // dev only
-  setupState?: Exposed extends Block ? undefined : ShallowUnwrapRef<Exposed>
+  setupState?: Block extends Exposed
+    ? Record<string, any>
+    : ShallowUnwrapRef<Exposed>
   devtoolsRawSetupState?: any
   hmrRerender?: () => void
   hmrReload?: (newComp: VaporComponent) => void

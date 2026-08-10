@@ -574,6 +574,7 @@ describe('extract instance type', () => {
       },
       c: Number,
     },
+    setup: () => <div></div>,
   })
 
   const compA = {} as InstanceType<typeof CompA>
@@ -581,6 +582,7 @@ describe('extract instance type', () => {
   expectType<boolean | undefined>(compA.props.a)
   expectType<string>(compA.props.b)
   expectType<number | undefined>(compA.props.c)
+  expectType<Record<string, any> | null>(compA.exposed)
 
   //  @ts-expect-error
   compA.props.a = true
