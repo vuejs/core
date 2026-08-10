@@ -405,13 +405,18 @@ const VaporKeepAliveImpl = defineVaporComponent({
           scope.stop()
           return false
         }
+        // Component scopes are detached from this DynamicFragment scope.
+        // Pausing it freezes branch-owned input commits without pausing the
+        // cached component's own effects; those effects keep reading the last
+        // committed inputs, like a cached VNode whose props are not patched.
+        scope.pause()
         cacheScope(cacheKey, frag.current, scope)
         return true
       },
       runBranchRender(frag, fn, useScope, removePrevious) {
-        frag.scope = useScope
-          ? deleteScope(frag.current) || new EffectScope()
-          : undefined
+        const cachedScope = useScope ? deleteScope(frag.current) : undefined
+        frag.scope = useScope ? cachedScope || new EffectScope() : undefined
+        if (cachedScope) cachedScope.resume()
         let incomingCacheKey: CacheKey | false = false
         const run = () => {
           try {

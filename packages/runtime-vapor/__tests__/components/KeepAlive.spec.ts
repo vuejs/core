@@ -1697,6 +1697,177 @@ describe('VaporKeepAlive', () => {
       await nextTick()
       expect(html()).toBe(`<div>1</div><!--if-->`)
     })
+
+    test('should isolate props between cached dynamic components', async () => {
+      const Foo = compile(
+        `<script setup vapor>
+          const props = defineProps(['n'])
+        </script>
+        <template><div>foo {{ props.n }}</div></template>`,
+        ref(),
+      )
+      const Bar = compile(
+        `<script setup vapor>
+          const props = defineProps(['n'])
+        </script>
+        <template><div>bar {{ props.n }}</div></template>`,
+        ref(),
+      )
+      const data = shallowRef({ current: Foo, n: 0 })
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+        </script>
+        <template>
+          <KeepAlive>
+            <component :is="data.current" :n="data.n" />
+          </KeepAlive>
+        </template>`,
+        data,
+      )
+      const { html } = define(App).render()
+
+      expect(html()).toBe(`<div>foo 0</div><!--dynamic-component-->`)
+
+      data.value = { current: Bar, n: 1 }
+      await nextTick()
+      expect(html()).toBe(`<div>bar 1</div><!--dynamic-component-->`)
+
+      data.value = { current: Foo, n: 2 }
+      await nextTick()
+      expect(html()).toBe(`<div>foo 2</div><!--dynamic-component-->`)
+    })
+
+    test('should preserve raw prop source precedence', async () => {
+      const Child = compile(
+        `<script setup vapor>
+          const props = defineProps(['fooBar'])
+        </script>
+        <template><div>{{ props.fooBar }}</div></template>`,
+        ref(),
+      )
+      const data = ref<{ fooBar?: string }>({ fooBar: 'b' })
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template>
+          <KeepAlive>
+            <Child foo-bar="a" v-bind="data" />
+          </KeepAlive>
+        </template>`,
+        data,
+        { Child },
+      )
+
+      const { html } = define(App).render()
+      expect(html()).toBe(`<div>b</div>`)
+
+      delete data.value.fooBar
+      await nextTick()
+      expect(html()).toBe(`<div>a</div>`)
+
+      data.value.fooBar = 'c'
+      await nextTick()
+      expect(html()).toBe(`<div>c</div>`)
+    })
+
+    // #15228
+    test('should not expose uncommitted props to a cached component', async () => {
+      const watcherCalls: Array<[string, string]> = []
+      const Hero = compile(
+        `<script setup vapor>
+          const props = defineProps({ item: { type: Object, required: true } })
+        </script>
+        <template><span>{{ props.item.id }}</span></template>`,
+        ref(),
+      )
+      const Child = compile(
+        `<script setup vapor>
+          import { watch } from 'vue'
+          const calls = _data
+          const Hero = _components.Hero
+          const props = defineProps({ item: { type: Object, required: true } })
+          watch(
+            () => props.item.id,
+            (value, oldValue) => calls.push([value, oldValue]),
+            { flush: 'sync' },
+          )
+        </script>
+        <template><p>pane: {{ props.item.id }}</p><Hero :item="props.item" /></template>`,
+        watcherCalls as any,
+        { Hero },
+      )
+      const selected = ref<{ id: string } | undefined>({ id: 'A' })
+      const App = compile(
+        `<script setup vapor>
+          const selected = _data
+          const Child = _components.Child
+        </script>
+        <template>
+          <KeepAlive>
+            <Child v-if="selected" :item="selected" />
+          </KeepAlive>
+        </template>`,
+        selected,
+        { Child },
+      )
+      const { html } = define(App).render()
+
+      expect(html()).toBe(`<p>pane: A</p><span>A</span><!--if-->`)
+
+      selected.value = undefined
+      await nextTick()
+      expect(html()).toBe(`<!--if-->`)
+      expect(watcherCalls).toEqual([])
+
+      selected.value = { id: 'B' }
+      await nextTick()
+      expect(html()).toBe(`<p>pane: B</p><span>B</span><!--if-->`)
+      expect(watcherCalls).toEqual([['B', 'A']])
+      expect('type check failed for prop "item"').not.toHaveBeenWarned()
+    })
+
+    test('should preserve props when an async component resolves while deactivated', async () => {
+      let resolve!: (comp: VaporComponent) => void
+      const AsyncChild = defineVaporAsyncComponent(
+        () => new Promise<VaporComponent>(r => (resolve = r)),
+      )
+      const Child = compile(
+        `<script setup vapor>
+          const props = defineProps({ item: { type: Object, required: true } })
+        </script>
+        <template><p>{{ props.item.id }}</p></template>`,
+        ref(),
+      )
+      const selected = ref<{ id: string } | undefined>({ id: 'A' })
+      const App = compile(
+        `<script setup vapor>
+          const selected = _data
+          const AsyncChild = _components.AsyncChild
+        </script>
+        <template>
+          <KeepAlive>
+            <AsyncChild v-if="selected" :item="selected" />
+          </KeepAlive>
+        </template>`,
+        selected,
+        { AsyncChild },
+      )
+      const { html } = define(App).render()
+
+      selected.value = undefined
+      await nextTick()
+      resolve(Child)
+      await timeout()
+      expect(html()).toBe(`<!--if-->`)
+      expect('type check failed for prop "item"').not.toHaveBeenWarned()
+
+      selected.value = { id: 'B' }
+      await nextTick()
+      expect(html()).toBe(`<p>B</p><!--async component--><!--if-->`)
+    })
   })
 
   test('should work with async component', async () => {

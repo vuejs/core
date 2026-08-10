@@ -69,6 +69,7 @@ import {
 import {
   type DynamicPropsSource,
   type RawProps,
+  createKeepAliveRawProps,
   getKeysFromRawProps,
   getPropsProxyHandlers,
   hasFallthroughAttrs,
@@ -115,7 +116,11 @@ import {
   isVaporTeleport,
 } from './teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
-import { getKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
+import {
+  type VaporKeepAliveContext,
+  getKeepAliveContext,
+  isKeepAliveEnabled,
+} from './keepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -320,6 +325,7 @@ export function createComponent(
       }
     }
 
+    let keepAliveCtx: VaporKeepAliveContext | null = null
     // keep-alive
     if (
       isKeepAliveEnabled &&
@@ -327,9 +333,9 @@ export function createComponent(
       currentInstance.vapor &&
       isKeepAlive(currentInstance)
     ) {
-      const cached = (
-        currentInstance as KeepAliveInstance
-      ).ctx.getCachedComponent(component)
+      const ctx = (currentInstance as KeepAliveInstance).ctx
+      keepAliveCtx = ctx
+      const cached = ctx.getCachedComponent(component)
       // @ts-expect-error
       if (cached) return cached
     }
@@ -382,6 +388,13 @@ export function createComponent(
       return frag as any
     }
 
+    if (rawProps && keepAliveCtx) {
+      // The cached component keeps its detached scope active, so commit only
+      // its direct inputs through the KeepAlive branch scope. Descendants read
+      // from the same committed props and need no additional isolation.
+      rawProps = createKeepAliveRawProps(rawProps as RawProps)
+    }
+
     const instance = new VaporComponentInstance(
       component,
       rawProps as RawProps,
@@ -394,7 +407,7 @@ export function createComponent(
     // Async wrappers are skipped here: their DynamicFragment resolves the outer
     // KeepAlive context from the wrapper's parent chain during setup.
     if (isKeepAliveEnabled && !isAsyncWrapper(instance)) {
-      const keepAliveCtx = getKeepAliveContext(currentInstance)
+      keepAliveCtx ||= getKeepAliveContext(currentInstance)
       if (keepAliveCtx) keepAliveCtx.processShapeFlag(instance)
     }
 
