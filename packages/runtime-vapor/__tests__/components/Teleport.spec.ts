@@ -23,9 +23,10 @@ import {
   vaporInteropPlugin,
   withVaporDirectives,
 } from '@vue/runtime-vapor'
-import { makeRender } from '../_utils'
+import { compile, makeRender } from '../_utils'
 import {
   defineComponent,
+  effectScope,
   h,
   nextTick,
   onActivated,
@@ -33,6 +34,7 @@ import {
   onDeactivated,
   onMounted,
   onUnmounted,
+  queuePostFlushCb,
   reactive,
   ref,
   renderSlot,
@@ -202,6 +204,38 @@ describe('renderer: VaporTeleport', () => {
       show.value = false
       await nextTick()
 
+      expect(target.innerHTML).toBe('')
+    })
+
+    test('should not initialize deferred children after owner scope stops', () => {
+      const root = document.createElement('div')
+      const target = document.createElement('div')
+      const mounted = vi.fn()
+      const Probe = defineVaporComponent(() => {
+        onMounted(mounted)
+        return template('<div>teleported</div>')()
+      })
+      const { mount } = define({
+        setup() {
+          const scope = effectScope()
+          const teleport = scope.run(() =>
+            createComp(
+              VaporTeleport,
+              {
+                to: () => target,
+                defer: () => true,
+              },
+              { default: () => createComp(Probe) },
+            ),
+          )!
+          queuePostFlushCb(() => scope.stop(), -1)
+          return teleport
+        },
+      }).create()
+
+      mount(root)
+
+      expect(mounted).not.toHaveBeenCalled()
       expect(target.innerHTML).toBe('')
     })
   })
@@ -1757,6 +1791,44 @@ function runSharedTests(deferMode: boolean): void {
     expect(beforeEnter).toHaveBeenCalledTimes(0)
   })
 }
+
+test('should dispose target after v-for fast remove clears it', async () => {
+  const items = ref([1])
+  const App = compile(
+    `<template>
+      <div id="teleport-fast-remove-target">
+        <template v-for="item in data" :key="item">
+          <Teleport to="#teleport-fast-remove-target">
+            <span>teleported</span>
+          </Teleport>
+          <i>item</i>
+        </template>
+      </div>
+    </template>`,
+    items,
+  )
+  const root = document.createElement('div')
+  document.body.appendChild(root)
+  const app = createVaporApp(App)
+
+  try {
+    app.mount(root)
+    await nextTick()
+    expect(
+      root.querySelector('#teleport-fast-remove-target')!.textContent,
+    ).toContain('teleported')
+
+    items.value = []
+    await nextTick()
+
+    expect(
+      root.querySelector('#teleport-fast-remove-target')!.textContent,
+    ).toBe('')
+  } finally {
+    app.unmount()
+    root.remove()
+  }
+})
 
 test('should clean up old anchors when target changes', async () => {
   const targetA = document.createElement('div')
