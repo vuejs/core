@@ -1077,7 +1077,7 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props quoting > mixed quoting with boolean attribute 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div title=\\"has whitespace\\"inert data-targets=\\"foo>bar\\">", 3)
+const t0 = _template("<div title=\\"has whitespace\\" inert data-targets=\\"foo>bar\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
@@ -1145,9 +1145,9 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: element transform > static props quoting > space omitted after quoted attribute 1`] = `
+exports[`compiler: element transform > static props quoting > space kept after quoted attribute 1`] = `
 "import { template as _template } from 'vue';
-const t0 = _template("<div title=\\"has whitespace\\"alt=\\"&quot;contains quotes&quot;\\"data-targets=\\"foo>bar\\">", 3)
+const t0 = _template("<div title=\\"has whitespace\\" alt=\\"&quot;contains quotes&quot;\\" data-targets=\\"foo>bar\\">", 3)
 
 export function render(_ctx) {
   const n0 = t0()
