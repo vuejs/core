@@ -33,7 +33,7 @@ export function includeBooleanAttr(value: unknown): boolean {
   return !!value || value === ''
 }
 
-const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u0020]/
+const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u000d\u0020]/
 const attrValidationCache: Record<string, boolean> = {}
 
 export function isSSRSafeAttrName(name: string): boolean {
