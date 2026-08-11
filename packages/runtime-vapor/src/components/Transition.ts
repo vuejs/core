@@ -184,16 +184,18 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
           shouldCaptureVShow && !isMounted,
           () => frag.update(slots.default),
         )
-        let hasStructuralRoot = false
-        const root = resolveTransitionBlock(frag.nodes, fragment => {
-          hasStructuralRoot ||= isStructuralTransitionFragment(fragment)
-        })
-        applyPendingVShows(
-          frag.$transition!,
-          root,
-          pendingVShows,
-          hasStructuralRoot,
-        )
+        if (pendingVShows && pendingVShows.length) {
+          let hasStructuralRoot = false
+          const root = resolveTransitionBlock(frag.nodes, fragment => {
+            hasStructuralRoot ||= isStructuralTransitionFragment(fragment)
+          })
+          applyPendingVShows(
+            frag.$transition!,
+            root,
+            pendingVShows,
+            hasStructuralRoot,
+          )
+        }
         if (!isMounted && shouldPerformAppear) performAppear(frag.$transition!)
         isMounted = true
       })
@@ -661,8 +663,6 @@ function collectArrayTransitionBlocks(
   let hasFound = false
   for (const c of block) {
     if (c instanceof Comment) continue
-    const nested: ResolvedTransitionBlock[] = []
-    collectTransitionBlocks(c, onFragment, nested)
     if (__DEV__ && hasFound) {
       // warn more than one non-comment child
       warn(
@@ -671,6 +671,8 @@ function collectArrayTransitionBlocks(
       )
       break
     }
+    const nested: ResolvedTransitionBlock[] = []
+    collectTransitionBlocks(c, onFragment, nested)
     if (nested.length) children.push(nested[0])
     hasFound = true
     if (!__DEV__) break
