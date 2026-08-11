@@ -116,6 +116,32 @@ describe('compile', () => {
         expect(code).matchSnapshot()
       })
 
+      test('object literal binding value', () => {
+        const code = compile(
+          `<div v-example="{ value: msg, other: 1 }"></div>`,
+          {
+            bindingMetadata: {
+              msg: BindingTypes.SETUP_REF,
+              vExample: BindingTypes.SETUP_CONST,
+            },
+          },
+        )
+        expect(code).matchSnapshot()
+        expect(code).contains('() => ({ value: _ctx.msg, other: 1 })')
+      })
+
+      test('object literal binding value w/ inline mode', () => {
+        const code = compile(`<div v-example="{ value: msg }"></div>`, {
+          inline: true,
+          bindingMetadata: {
+            msg: BindingTypes.SETUP_REF,
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+        expect(code).contains('() => ({ value: msg.value })')
+      })
+
       test('static parameters', () => {
         const code = compile(`<div v-example:foo="msg"></div>`, {
           bindingMetadata: {

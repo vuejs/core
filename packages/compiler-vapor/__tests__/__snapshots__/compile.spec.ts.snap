@@ -65,7 +65,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg)]])
   return n0
 }"
 `;
@@ -76,7 +76,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, _ctx.foo]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg), _ctx.foo]])
   return n0
 }"
 `;
@@ -87,7 +87,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, void 0, { bar: true }]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg), void 0, { bar: true }]])
   return n0
 }"
 `;
@@ -103,13 +103,32 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compile > directives > custom directive > object literal binding value 1`] = `
+"import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx, $props, $emit, $attrs, $slots) {
+  const n0 = t0()
+  _withVaporDirectives(n0, [[_ctx.vExample, () => ({ value: _ctx.msg, other: 1 })]])
+  return n0
+}"
+`;
+
+exports[`compile > directives > custom directive > object literal binding value w/ inline mode 1`] = `
+"
+  const n0 = t0()
+  _withVaporDirectives(n0, [[vExample, () => ({ value: msg.value })]])
+  return n0
+"
+`;
+
 exports[`compile > directives > custom directive > static parameters 1`] = `
 "import { withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, "foo"]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg), "foo"]])
   return n0
 }"
 `;
@@ -120,7 +139,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n0 = t0()
-  _withVaporDirectives(n0, [[_ctx.vExample, () => _ctx.msg, "foo", { bar: true }]])
+  _withVaporDirectives(n0, [[_ctx.vExample, () => (_ctx.msg), "foo", { bar: true }]])
   return n0
 }"
 `;
