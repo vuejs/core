@@ -1023,6 +1023,14 @@ function createVNodeFragment(vnode: VNode): {
   return { frag, syncNodes }
 }
 
+function resolveUnmountSuspense(
+  suspense: SuspenseBoundary | null,
+): SuspenseBoundary | null {
+  return currentUnmountSuspense === undefined
+    ? suspense
+    : currentUnmountSuspense
+}
+
 /**
  * Mount VNode in vapor
  */
@@ -1031,19 +1039,20 @@ function mountVNode(
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
 ): VaporFragment {
-  const suspense =
+  let suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
   const { frag, syncNodes } = createVNodeFragment(vnode)
 
   let isMounted = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     if (transition) setVNodeTransitionHooks(vnode, transition)
+    const parentSuspense = resolveUnmountSuspense(suspense)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       const keepAliveCtx = (parentComponent as KeepAliveInstance).ctx
       keepAliveCtx.clearCurrent!(frag)
       const storageContainer = keepAliveCtx.getStorageContainer()
       if ((vnode.type as any).__vapor) {
-        deactivate(vnode.component as any, storageContainer)
+        deactivate(vnode.component as any, storageContainer, parentSuspense)
         // Move the VNode-owned end anchor with the inner Vapor block.
         insert(vnode.anchor as Node, storageContainer)
       } else {
@@ -1052,11 +1061,11 @@ function mountVNode(
           storageContainer,
           internals,
           parentComponent as any,
-          null,
+          parentSuspense,
         )
       }
     } else {
-      internals.um(vnode, parentComponent as any, null, !!parentNode)
+      internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
     }
 
     if (vnode.anchor && parentNode && vnode.anchor.parentNode === parentNode) {
@@ -1080,8 +1089,8 @@ function mountVNode(
     moveType = MoveType.REORDER,
   ) => {
     if (isHydrating) return
-    const operationSuspense =
-      parentSuspense === undefined ? suspense : parentSuspense
+    if (parentSuspense !== undefined) suspense = parentSuspense
+    const operationSuspense = suspense
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
       if ((vnode.type as any).__vapor) {
         activate(vnode.component as any, parentNode, anchor, operationSuspense)
@@ -1259,6 +1268,7 @@ function createVDOMComponent(
     // unset ref
     if (rawRef) vdomSetRef(rawRef, null, null, vnode, true)
     if (transition) setVNodeTransitionHooks(vnode, transition)
+    const parentSuspense = resolveUnmountSuspense(suspense)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
       keepAliveCtx!.clearCurrent!(frag)
       vdomDeactivate(
@@ -1266,13 +1276,13 @@ function createVDOMComponent(
         keepAliveCtx!.getStorageContainer(),
         internals,
         parentComponent as any,
-        null,
+        parentSuspense,
       )
       return
     }
     isUnmounted = true
     isMounted = false
-    internals.umt(vnode.component!, null, !!parentNode)
+    internals.umt(vnode.component!, parentSuspense, !!parentNode)
     // VDOM transitions own their leaving DOM until the leave finishes.
     if (!transition) removeDom(parentNode)
   }
@@ -1598,7 +1608,12 @@ function renderVDOMSlot(
           NOOP,
         )
       }
-      internals.um(pending, parentComponent as any, null, true)
+      internals.um(
+        pending,
+        parentComponent as any,
+        resolveUnmountSuspense(suspense),
+        true,
+      )
       return
     }
     if (currentParentNode) {
@@ -1779,7 +1794,7 @@ function renderVDOMSlot(
       internals.um(
         rendered,
         parentComponent as any,
-        null,
+        resolveUnmountSuspense(suspense),
         !contentDetached && !!parentNode,
       )
     } else {
@@ -3078,8 +3093,9 @@ function createVNodeChildrenFragment(
 
   frag.remove = parentNode => {
     scope.stop()
+    const parentSuspense = resolveUnmountSuspense(suspense)
     currentChildren.forEach(vnode => {
-      internals.um(vnode, parentComponent, null, !!parentNode)
+      internals.um(vnode, parentComponent, parentSuspense, !!parentNode)
     })
   }
 

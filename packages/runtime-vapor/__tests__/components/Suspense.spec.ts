@@ -828,6 +828,73 @@ describe('effects in pending branches', () => {
     app.unmount()
   })
 
+  test.each(['branch removal', 'app unmount'] as const)(
+    'Vapor-owned VDOM hooks use the %s context',
+    async operation => {
+      const asyncSetup = deferred()
+      const show = ref(true)
+      const order: string[] = []
+      const data = ref({ order })
+      const Child = compile(
+        `<script setup>
+          import { onUnmounted } from 'vue'
+          const data = _data
+          onUnmounted(() => data.value.order.push('child'))
+        </script>
+        <template><span>child</span></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const Parent = compile(
+        `<script vapor>
+          const components = _components
+        </script>
+        <template><components.Child /></template>`,
+        data,
+        { Child },
+      )
+      const AsyncSibling = defineComponent({
+        async setup() {
+          await asyncSetup.promise
+          return () => h('span', 'async')
+        },
+      })
+      const Root = defineComponent({
+        setup: () => () =>
+          h(Suspense, null, {
+            default: () =>
+              h('div', [
+                show.value ? h(Parent as any) : h('span', 'gone'),
+                h(AsyncSibling),
+              ]),
+            fallback: () => h('span', 'loading'),
+          }),
+      })
+      const app = createApp(Root)
+      app.use(vaporInteropPlugin)
+      const container = document.createElement('div')
+      app.mount(container)
+
+      await nextTick()
+      expect(container.textContent).toBe('loading')
+      if (operation === 'app unmount') {
+        app.unmount()
+        expect(order).toEqual(['child'])
+        return
+      }
+
+      show.value = false
+      await nextTick()
+      expect(order).toEqual([])
+
+      asyncSetup.resolve()
+      await flushResolution(asyncSetup.promise)
+      expect(order).toEqual(['child'])
+      app.unmount()
+    },
+  )
+
   test('keep-alive lifecycle and vnode hooks wait for the branch to resolve', async () => {
     const asyncSetup = deferred()
     const current = ref<'A' | 'B'>('A')
