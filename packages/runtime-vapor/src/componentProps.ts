@@ -1,5 +1,6 @@
 import {
   EMPTY_ARR,
+  EMPTY_OBJ,
   NO,
   camelize,
   hasOwn,
@@ -30,6 +31,7 @@ import {
   ReactiveFlags,
   computed,
   onScopeDispose,
+  shallowReactive,
 } from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
 import { renderEffect } from './renderEffect'
@@ -44,6 +46,137 @@ export type RawProps = Record<string, unknown> & {
 export type DynamicPropsSource =
   | (() => Record<string, unknown>)
   | Record<string, unknown>
+
+export function isolatePropSources(rawProps: RawProps): RawProps {
+  // Static values cannot change while cached and need no commit boundary.
+  let hasFunctionSource = false
+  for (const key in rawProps) {
+    if (key !== '$' && isFunction(rawProps[key])) hasFunctionSource = true
+  }
+  const dynamicSources = rawProps.$
+  if (dynamicSources && !hasFunctionSource) {
+    for (let i = 0; i < dynamicSources.length; i++) {
+      const source = dynamicSources[i]
+      if (isFunction(source)) {
+        hasFunctionSource = true
+        break
+      } else {
+        for (const key in source) {
+          if (isFunction(source[key])) {
+            hasFunctionSource = true
+            break
+          }
+        }
+        if (hasFunctionSource) break
+      }
+    }
+  }
+  if (!hasFunctionSource) return rawProps
+
+  const isolated: RawProps = Object.create(null)
+  let committed: Record<string, unknown> | undefined
+  for (const key in rawProps) {
+    if (key === '$') continue
+    const source = rawProps[key]
+    if (isFunction(source)) {
+      const target =
+        committed || (committed = shallowReactive<Record<string, unknown>>({}))
+      isolated[key] = () => target[key]
+    } else {
+      isolated[key] = source
+    }
+  }
+
+  let committedDynamicSources:
+    | (Record<string, unknown> | undefined)[]
+    | undefined
+  let previousDynamicSources: Record<string, unknown>[] | undefined
+  if (dynamicSources) {
+    const isolatedDynamicSources: DynamicPropsSource[] & {
+      [interopKey]?: boolean
+    } = []
+    committedDynamicSources = []
+    previousDynamicSources = []
+    for (let i = 0; i < dynamicSources.length; i++) {
+      const source = dynamicSources[i]
+      if (isFunction(source)) {
+        const target = (committedDynamicSources[i] = shallowReactive<
+          Record<string, unknown>
+        >({}))
+        previousDynamicSources[i] = {}
+        isolatedDynamicSources[i] = () => target
+      } else {
+        const isolatedSource: Record<string, unknown> = Object.create(null)
+        let target: Record<string, unknown> | undefined
+        for (const key in source) {
+          const value = source[key]
+          if (isFunction(value)) {
+            if (!target) {
+              target = committedDynamicSources[i] = shallowReactive<
+                Record<string, unknown>
+              >({})
+            }
+            const committedSource = target
+            isolatedSource[key] = () => committedSource[key]
+          } else {
+            isolatedSource[key] = value
+          }
+        }
+        isolatedDynamicSources[i] = target ? isolatedSource : source
+      }
+    }
+    const symbols = Object.getOwnPropertySymbols(dynamicSources)
+    for (let i = 0; i < symbols.length; i++) {
+      ;(isolatedDynamicSources as any)[symbols[i]] = (dynamicSources as any)[
+        symbols[i]
+      ]
+    }
+    isolated.$ = isolatedDynamicSources
+  }
+
+  // Each source keeps its original position and key spelling so prop/attr
+  // precedence is unchanged. The writer belongs to the KeepAlive branch scope,
+  // so deactivation pauses parent updates without pausing the component.
+  // Source invalidations while this effect is paused still leave it dirty.
+  // Resuming the branch scope therefore schedules one commit with the latest
+  // raw props, while an unchanged cache entry needs no work on activation.
+  renderEffect(() => {
+    if (committed) {
+      for (const key in rawProps) {
+        if (key !== '$' && isFunction(rawProps[key])) {
+          committed[key] = resolveSource(rawProps[key])
+        }
+      }
+    }
+    if (dynamicSources) {
+      for (let i = 0; i < dynamicSources.length; i++) {
+        const source = dynamicSources[i]
+        const target = committedDynamicSources![i]
+        if (!target) continue
+        if (isFunction(source)) {
+          const next = resolveFunctionSource(source) || EMPTY_OBJ
+          const previous = previousDynamicSources![i]
+          for (const key in previous) {
+            if (!hasOwn(next, key)) {
+              delete target[key]
+              delete previous[key]
+            }
+          }
+          for (const key in next) {
+            target[key] = previous[key] = next[key]
+          }
+        } else {
+          for (const key in source) {
+            if (isFunction(source[key])) {
+              target[key] = resolveSource(source[key])
+            }
+          }
+        }
+      }
+    }
+  }, true)
+  return isolated
+}
 
 export function resolveSource<T>(source: T | (() => T)): T {
   return isFunction(source) ? resolveFunctionSource(source as () => T) : source

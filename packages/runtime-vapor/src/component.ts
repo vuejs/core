@@ -115,7 +115,11 @@ import {
   isVaporTeleport,
 } from './teleport'
 import type { KeepAliveInstance } from './components/KeepAlive'
-import { getKeepAliveContext, isKeepAliveEnabled } from './keepAlive'
+import {
+  type VaporKeepAliveContext,
+  getKeepAliveContext,
+  isKeepAliveEnabled,
+} from './keepAlive'
 import {
   insertionAnchor,
   insertionParent,
@@ -320,6 +324,7 @@ export function createComponent(
       }
     }
 
+    let keepAliveCtx: VaporKeepAliveContext | null = null
     // keep-alive
     if (
       isKeepAliveEnabled &&
@@ -327,9 +332,9 @@ export function createComponent(
       currentInstance.vapor &&
       isKeepAlive(currentInstance)
     ) {
-      const cached = (
-        currentInstance as KeepAliveInstance
-      ).ctx.getCachedComponent(component)
+      const ctx = (currentInstance as KeepAliveInstance).ctx
+      keepAliveCtx = ctx
+      const cached = ctx.getCachedComponent(component)
       // @ts-expect-error
       if (cached) return cached
     }
@@ -382,6 +387,24 @@ export function createComponent(
       return frag as any
     }
 
+    if (keepAliveCtx) {
+      // The cached component keeps its detached scope active, so commit only
+      // its direct inputs through the KeepAlive branch scope. Descendants read
+      // from the same committed inputs and need no additional isolation.
+      // v-once snapshots raw props in the instance constructor, so it does not
+      // need a live commit effect after creation.
+      if (rawProps && !once) {
+        rawProps = keepAliveCtx.isolatePropSources(rawProps as RawProps)
+      }
+
+      // Static slots are fixed function entries. Only `$` contains live slot
+      // descriptor sources that useSlots() can re-resolve while cached; slot
+      // function execution retains its existing closure semantics.
+      if (rawSlots && (rawSlots as RawSlots).$) {
+        rawSlots = keepAliveCtx.isolateSlotSources(rawSlots as RawSlots)
+      }
+    }
+
     const instance = new VaporComponentInstance(
       component,
       rawProps as RawProps,
@@ -394,7 +417,7 @@ export function createComponent(
     // Async wrappers are skipped here: their DynamicFragment resolves the outer
     // KeepAlive context from the wrapper's parent chain during setup.
     if (isKeepAliveEnabled && !isAsyncWrapper(instance)) {
-      const keepAliveCtx = getKeepAliveContext(currentInstance)
+      keepAliveCtx ||= getKeepAliveContext(currentInstance)
       if (keepAliveCtx) keepAliveCtx.processShapeFlag(instance)
     }
 
