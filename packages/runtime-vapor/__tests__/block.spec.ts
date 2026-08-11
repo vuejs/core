@@ -1,3 +1,4 @@
+import { shallowRef } from '@vue/reactivity'
 import {
   insert,
   insertFragment,
@@ -7,7 +8,21 @@ import {
   removeFragment,
   removeNode,
 } from '../src/block'
-import { VaporFragment } from '../src/fragment'
+import {
+  DynamicFragment,
+  ForBlock,
+  ForFragment,
+  SlotFragment,
+  VaporFragment,
+  isDynamicFragment,
+  isForBlock,
+  isForFragment,
+  isFragment,
+  isInteropFragment,
+  isSlotFragment,
+} from '../src/fragment'
+import { TeleportFragment } from '../src/components/Teleport'
+import { isTeleportFragment } from '../src/teleport'
 
 const node1 = document.createTextNode('node1')
 const node2 = document.createTextNode('node2')
@@ -116,5 +131,45 @@ describe('block + node ops', () => {
     expect(() => remove(anchor, container)).toThrowError(
       'The node to be removed is not a child of this node.',
     )
+  })
+})
+
+describe('fragment protocol flags', () => {
+  test('identify constructor-owned roles without class or shape checks', () => {
+    const fragment = new VaporFragment(node1)
+    const dynamic = new DynamicFragment(undefined, false, false)
+    const slot = new SlotFragment()
+    const forFragment = new ForFragment([], false)
+    const forBlock = new ForBlock(
+      node2,
+      undefined,
+      shallowRef(0),
+      undefined,
+      undefined,
+      0,
+    )
+    const teleport = new TeleportFragment({ to: document.body })
+
+    for (const value of [
+      fragment,
+      dynamic,
+      slot,
+      forFragment,
+      forBlock,
+      teleport,
+    ]) {
+      expect(isFragment(value)).toBe(true)
+    }
+    expect(isDynamicFragment(dynamic)).toBe(true)
+    expect(isSlotFragment(slot)).toBe(true)
+    expect(isForFragment(forFragment)).toBe(true)
+    expect(isForBlock(forBlock)).toBe(true)
+    expect(isTeleportFragment(teleport)).toBe(true)
+
+    expect(isSlotFragment(dynamic)).toBe(false)
+    expect(isDynamicFragment(fragment)).toBe(false)
+    expect(isForFragment(forBlock)).toBe(false)
+    expect(isForBlock(forFragment)).toBe(false)
+    expect(isInteropFragment(fragment)).toBe(false)
   })
 })

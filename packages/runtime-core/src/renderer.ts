@@ -103,7 +103,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
-import type { VaporInteropInterface } from './apiCreateApp'
+import type { VaporInVdomInterface } from './apiCreateApp'
 import { type TransitionHooks, leaveCbKey } from './components/BaseTransition'
 import type { ComponentCustomElementInterface } from './component'
 
@@ -2974,7 +2974,7 @@ export function performTransitionLeave(
 export function getVaporInterface(
   instance: ComponentInternalInstance | null,
   vnode: VNode,
-): VaporInteropInterface {
+): VaporInVdomInterface {
   const ctx = instance ? instance.appContext : vnode.appContext
   const res = ctx && ctx.vapor
   if (__DEV__ && !res) {

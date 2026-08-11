@@ -39,6 +39,7 @@ import {
 import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
 import { compile, makeInteropRender } from './_utils'
+import { isInteropFragment } from '../src/fragment'
 import {
   type VaporComponentInstance,
   type VaporDirective,
@@ -72,7 +73,7 @@ const inheritedFallbackSlotRootFlags =
 
 describe('vdomInterop', () => {
   describe('key', () => {
-    test('preserves vnode key on blocks passed from vdom to vapor', () => {
+    test('marks vdom blocks as interop fragments and preserves keys', () => {
       const VDomChild = defineComponent({
         setup() {
           return () => h('div', 'vdom child')
@@ -81,16 +82,15 @@ describe('vdomInterop', () => {
 
       const app = createApp({ render: () => null })
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
+      const vdom = (app._context as any).vdom
 
-      const vnodeBlock = vapor.vdomMountVNode(
-        h(VDomChild, { key: 'foo' }),
-        null,
-      )
+      const vnodeBlock = vdom.mountVNode(h(VDomChild, { key: 'foo' }), null)
+      expect(isInteropFragment(vnodeBlock)).toBe(true)
       expect(vnodeBlock.$key).toBe('foo')
       expect(vnodeBlock.vnode.key).toBe('foo')
 
-      const componentBlock = vapor.vdomMount(VDomChild, null, { key: 'bar' })
+      const componentBlock = vdom.mount(VDomChild, null, { key: 'bar' })
+      expect(isInteropFragment(componentBlock)).toBe(true)
       expect(componentBlock.$key).toBe('bar')
       expect(componentBlock.vnode.key).toBe('bar')
     })
@@ -127,10 +127,10 @@ describe('vdomInterop', () => {
 
       const app = createApp(Parent)
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
-      const originalVdomSlot = vapor.vdomSlot
+      const vdom = (app._context as any).vdom
+      const originalVdomSlot = vdom.slot
       let frag: any
-      vapor.vdomSlot = (...args: any[]) => (frag = originalVdomSlot(...args))
+      vdom.slot = (...args: any[]) => (frag = originalVdomSlot(...args))
 
       const host = document.createElement('div')
       app.mount(host)
@@ -157,10 +157,10 @@ describe('vdomInterop', () => {
 
       const app = createApp({ render: () => null })
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
+      const vdom = (app._context as any).vdom
       const host = document.createElement('div')
 
-      const frag = vapor.vdomMount(VDomChild, null)
+      const frag = vdom.mount(VDomChild, null)
       insert(frag, host)
 
       expect(host.innerHTML).toBe('<!--v-if-->')
@@ -199,10 +199,10 @@ describe('vdomInterop', () => {
 
       const app = createApp(Parent)
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
-      const originalVdomSlot = vapor.vdomSlot
+      const vdom = (app._context as any).vdom
+      const originalVdomSlot = vdom.slot
       let frag: any
-      vapor.vdomSlot = (...args: any[]) => (frag = originalVdomSlot(...args))
+      vdom.slot = (...args: any[]) => (frag = originalVdomSlot(...args))
 
       const host = document.createElement('div')
       app.mount(host)

@@ -17,12 +17,7 @@ import type {
   ComponentPublicInstance,
 } from './componentPublicInstance'
 import { type Directive, validateDirectiveName } from './directives'
-import type {
-  ElementNamespace,
-  MoveType,
-  RootRenderFunction,
-  UnmountComponentFn,
-} from './renderer'
+import type { ElementNamespace, MoveType, RootRenderFunction } from './renderer'
 import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import type { VNode } from './vnode'
@@ -182,7 +177,7 @@ export interface AppConfig extends GenericAppConfig {
 /**
  * The vapor in vdom implementation is in runtime-vapor/src/vdomInterop.ts
  */
-export interface VaporInteropInterface {
+export interface VaporInVdomInterface {
   mount(
     vnode: VNode,
     container: any,
@@ -251,16 +246,20 @@ export interface VaporInteropInterface {
     component: ComponentInternalInstance,
     transition: TransitionHooks,
   ): void
+}
 
-  vdomMount: (
+/**
+ * The vdom in vapor implementation is in runtime-vapor/src/vdomInterop.ts
+ */
+export interface VdomInVaporInterface {
+  mount: (
     component: ConcreteComponent,
     parentComponent: any,
     props?: any,
     slots?: any,
     once?: boolean,
   ) => any
-  vdomUnmount: UnmountComponentFn
-  vdomSlot: (
+  slot: (
     slots: any,
     name: string | (() => string),
     props: Record<string, any>,
@@ -272,7 +271,7 @@ export interface VaporInteropInterface {
     inheritFallback?: boolean,
     adoptAnchor?: Node,
   ) => any
-  vdomMountVNode: (
+  mountVNode: (
     vnode: VNode,
     parentComponent: any, // VaporComponentInstance
   ) => any
@@ -296,7 +295,11 @@ export interface GenericAppContext {
   /**
    * @internal vapor interop only
    */
-  vapor?: VaporInteropInterface
+  vapor?: VaporInVdomInterface
+  /**
+   * @internal vdom interop only
+   */
+  vdom?: VdomInVaporInterface
 }
 
 export interface AppContext extends GenericAppContext {

@@ -40,6 +40,7 @@ import {
   isAdoptedAnchor,
   isInteropFragment,
 } from './fragment'
+import { SLOT_FRAGMENT } from './fragmentFlags'
 import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
@@ -289,7 +290,7 @@ export function createSlot(
   let isCustomElementSlot = false
   if (isRef(rawSlots._) && isInteropEnabled) {
     if (isHydrating) hydrationCursor = enterHydrationCursor()
-    fragment = instance.appContext.vapor!.vdomSlot(
+    fragment = instance.appContext.vdom!.slot(
       rawSlots._,
       name,
       slotProps,
@@ -334,8 +335,8 @@ export function createSlot(
         false,
         undefined,
         _insertionAnchor,
+        SLOT_FRAGMENT,
       )
-      dynamicFragment.isSlot = true
       fragment = dynamicFragment
     }
 

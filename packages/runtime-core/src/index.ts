@@ -521,7 +521,10 @@ export { type NormalizedPropsOptions } from './componentProps'
 /**
  * @internal
  */
-export { type VaporInteropInterface } from './apiCreateApp'
+export {
+  type VaporInVdomInterface,
+  type VdomInVaporInterface,
+} from './apiCreateApp'
 /**
  * @internal
  */

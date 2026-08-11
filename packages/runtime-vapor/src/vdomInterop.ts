@@ -20,8 +20,9 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeNormalizedRef,
-  type VaporInteropInterface,
+  type VaporInVdomInterface,
   VaporSlot as VaporSlotVNode,
+  type VdomInVaporInterface,
   callWithAsyncErrorHandling,
   createCommentVNode,
   createInternalObject,
@@ -134,6 +135,7 @@ import {
   runWithFragmentCtxOnly,
   runWithRenderCtx,
 } from './fragment'
+import { VDOM } from './fragmentFlags'
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
@@ -309,10 +311,7 @@ function unmountVaporInteropWithParentSuspense(
 }
 
 // mounting vapor components and slots in vdom
-const vaporInteropImpl: Omit<
-  VaporInteropInterface,
-  'vdomMount' | 'vdomUnmount' | 'vdomSlot' | 'vdomMountVNode'
-> = {
+const vaporInteropImpl: VaporInVdomInterface = {
   mount(
     vnode,
     container,
@@ -2375,15 +2374,13 @@ export const vaporInteropPlugin: Plugin = app => {
     getInteropTransitionElement,
   )
   setInteropEnabled()
+  app._context.vapor = vaporInteropImpl
   const internals = ensureRenderer().internals
-  // Keep the shared base implementation immutable; renderer-bound methods must
-  // be per-app so installing the plugin cannot overwrite another app's bridge.
-  app._context.vapor = extend({}, vaporInteropImpl, {
-    vdomMount: createVDOMComponent.bind(null, internals),
-    vdomUnmount: internals.umt,
-    vdomSlot: renderVDOMSlot.bind(null, internals),
-    vdomMountVNode: mountVNode.bind(null, internals),
-  })
+  app._context.vdom = {
+    mount: createVDOMComponent.bind(null, internals),
+    slot: renderVDOMSlot.bind(null, internals),
+    mountVNode: mountVNode.bind(null, internals),
+  } satisfies VdomInVaporInterface
   const mount = app.mount
   app.mount = ((...args) => {
     optimizePropertyLookup()
@@ -3317,7 +3314,7 @@ function createInteropFragment(
   nodes: Block = EMPTY_BLOCK,
   vnode: VNode | null = null,
 ): RenderContextFragment<Block> {
-  const frag = new RenderContextFragment<Block>(nodes)
+  const frag = new RenderContextFragment<Block>(nodes, VDOM)
   frag.vnode = vnode
   return frag
 }

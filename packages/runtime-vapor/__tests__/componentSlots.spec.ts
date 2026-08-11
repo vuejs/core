@@ -56,7 +56,7 @@ import {
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
-import { DynamicFragment, SlotFragment } from '../src/fragment'
+import { DynamicFragment, SlotFragment, isSlotFragment } from '../src/fragment'
 import {
   type SlotBoundaryContext,
   currentSlotBoundary,
@@ -1358,20 +1358,12 @@ describe('component: slots', () => {
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
+      const vdom = (app._context as any).vdom
       const slotsRef = shallowRef({
         default: () => [h('div', text.value)],
       })
       const frag = withSlotBoundary(boundary, () =>
-        vapor.vdomSlot(
-          slotsRef,
-          'default',
-          {},
-          instance,
-          undefined,
-          false,
-          true,
-        ),
+        vdom.slot(slotsRef, 'default', {}, instance, undefined, false, true),
       )
       const host = document.createElement('div')
 
@@ -1396,12 +1388,12 @@ describe('component: slots', () => {
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
+      const vdom = (app._context as any).vdom
       const slotsRef = shallowRef({
         default: () => [h('div', text.value)],
       })
       const frag = withSlotBoundary(boundary, () =>
-        vapor.vdomSlot(slotsRef, 'default', {}, instance),
+        vdom.slot(slotsRef, 'default', {}, instance),
       )
       const host = document.createElement('div')
 
@@ -1426,12 +1418,12 @@ describe('component: slots', () => {
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
+      const vdom = (app._context as any).vdom
       const slotsRef = shallowRef({
         default: () => (show.value ? [h('div', 'content')] : []),
       })
       const frag = withSlotBoundary(boundary, () =>
-        vapor.vdomSlot(
+        vdom.slot(
           slotsRef,
           'default',
           {},
@@ -1763,20 +1755,12 @@ describe('component: slots', () => {
       const instance = renderWithSlots({})
       const app = createApp({ render: () => null })
       app.use(vaporInteropPlugin)
-      const vapor = (app._context as any).vapor
+      const vdom = (app._context as any).vdom
       const slotsRef = shallowRef({
         default: () => (show.value ? [h('div', 'content')] : []),
       })
       const frag = withSlotBoundary(boundary, () =>
-        vapor.vdomSlot(
-          slotsRef,
-          'default',
-          {},
-          instance,
-          undefined,
-          false,
-          true,
-        ),
+        vdom.slot(slotsRef, 'default', {}, instance, undefined, false, true),
       )
       const host = document.createElement('div')
 
@@ -3866,6 +3850,7 @@ describe('component: slots', () => {
 
           expect(slotBlock).toBeInstanceOf(DynamicFragment)
           expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          expect(isSlotFragment(slotBlock)).toBe(true)
           expect(observedBoundary).toBe(null)
         })
 
