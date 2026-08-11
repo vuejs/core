@@ -181,8 +181,10 @@ import {
 } from './keepAlive'
 import {
   parentSuspense as currentParentSuspense,
+  currentUnmountSuspense,
   enableSuspense,
   isSuspenseEnabled,
+  setCurrentUnmountSuspense,
   setParentSuspense,
 } from './suspense'
 
@@ -291,6 +293,19 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
     }
   }
   return filtered
+}
+
+function unmountVaporInteropWithParentSuspense(
+  vnode: VNode,
+  doRemove: boolean | undefined,
+  parentSuspense: SuspenseBoundary | null,
+): void {
+  const prev = setCurrentUnmountSuspense(parentSuspense)
+  try {
+    vaporInteropImpl.unmount(vnode, doRemove, parentSuspense)
+  } finally {
+    setCurrentUnmountSuspense(prev)
+  }
 }
 
 // mounting vapor components and slots in vdom
@@ -446,6 +461,15 @@ const vaporInteropImpl: Omit<
   },
 
   unmount(vnode, doRemove, parentSuspense) {
+    if (
+      __FEATURE_SUSPENSE__ &&
+      isSuspenseEnabled &&
+      currentUnmountSuspense !== parentSuspense
+    ) {
+      unmountVaporInteropWithParentSuspense(vnode, doRemove, parentSuspense)
+      return
+    }
+
     const container = doRemove ? vnode.anchor!.parentNode : undefined
     const instance = vnode.component as any as VaporComponentInstance
     let slotStartAnchor: Node | null = null

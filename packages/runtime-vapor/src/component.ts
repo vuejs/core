@@ -133,8 +133,10 @@ import { DynamicFragment, isDynamicFragment, isFragment } from './fragment'
 import { resolvePendingSlotContent } from './dom/hydrateFragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import {
+  currentUnmountSuspense,
   isSuspenseEnabled,
   parentSuspense,
+  setCurrentUnmountSuspense,
   setParentSuspense,
 } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
@@ -501,7 +503,15 @@ export function createComponent(
         hasParentSuspense = false
       }
     }
-    onScopeDispose(() => unmountComponent(instance), true)
+    onScopeDispose(
+      () =>
+        __FEATURE_SUSPENSE__ &&
+        isInteropEnabled &&
+        currentUnmountSuspense !== undefined
+          ? unmountComponent(instance, undefined, currentUnmountSuspense)
+          : unmountComponent(instance),
+      true,
+    )
 
     if (!managedMount && (_insertionParent || isHydrating)) {
       mountComponent(instance, _insertionParent!, _insertionAnchor)
@@ -1314,6 +1324,16 @@ export function unmountComponent(
   parentNode?: ParentNode,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
+  if (
+    __FEATURE_SUSPENSE__ &&
+    isSuspenseEnabled &&
+    isInteropEnabled &&
+    currentUnmountSuspense !== parentSuspense
+  ) {
+    unmountComponentWithParentSuspense(instance, parentNode, parentSuspense)
+    return
+  }
+
   // Skip unmount for kept-alive components - deactivate if called from remove()
   if (
     isKeepAliveEnabled &&
@@ -1386,6 +1406,19 @@ export function unmountComponent(
   if (pendingAsyncSetup) {
     instance.restoreAsyncContext = undefined
     instance.deferredHydrationBoundary = undefined
+  }
+}
+
+function unmountComponentWithParentSuspense(
+  instance: VaporComponentInstance,
+  parentNode: ParentNode | undefined,
+  parentSuspense: SuspenseBoundary | null,
+): void {
+  const prev = setCurrentUnmountSuspense(parentSuspense)
+  try {
+    unmountComponent(instance, parentNode, parentSuspense)
+  } finally {
+    setCurrentUnmountSuspense(prev)
   }
 }
 
