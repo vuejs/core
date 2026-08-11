@@ -237,6 +237,18 @@ color: red
     expect(threeMembers).toContain('> span[data-v-test]')
     expect(threeMembers).toContain('.b[data-v-test] .c')
 
+    // nested rules below an at-rule count as nested rules too
+    const withAtRule = compileScoped(
+      `.a,
+.b :deep(.c) {
+  @media (min-width: 100px) {
+    .z { color: pink; }
+  }
+}`,
+    )
+    expect(withAtRule).toContain('.z[data-v-test]')
+    expect(withAtRule).toContain('.b[data-v-test] .c')
+
     // without nested rules there is nothing to disambiguate, so no split
     expect(compileScoped(`.a, .b :deep(.c) { color: red; }`)).toMatch(
       `.a[data-v-test], .b[data-v-test] .c { color: red;`,

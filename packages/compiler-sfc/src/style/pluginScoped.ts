@@ -95,6 +95,21 @@ function processRule(id: string, rule: Rule) {
 }
 
 /**
+ * Whether the node has nested rules, including ones sitting below at-rules
+ * such as `@media`. Keyframes are skipped: their `from` / `to` children are
+ * not nested style rules.
+ */
+function hasNestedRule(node: Rule | AtRule): boolean {
+  return !!node.nodes?.some(
+    child =>
+      child.type === 'rule' ||
+      (child.type === 'atrule' &&
+        !keyframesRE.test(child.name) &&
+        hasNestedRule(child)),
+  )
+}
+
+/**
  * A selector list can mix `:deep()` members with plain ones, but the rule body
  * is shared by all of them. When the rule also has nested rules, the two kinds
  * need the scope id in different places (`.a > span[id]` vs
@@ -102,7 +117,7 @@ function processRule(id: string, rule: Rule) {
  * that each kind gets its own copy of the body.
  */
 function splitMixedDeepSelectorList(rule: Rule): boolean {
-  if (!rule.nodes || !rule.nodes.some(node => node.type === 'rule')) {
+  if (!hasNestedRule(rule)) {
     return false
   }
   const selectorRoot = selectorParser().astSync(rule.selector)
