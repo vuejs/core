@@ -873,7 +873,3 @@ export function getRestElement(val: any, keys: string[]): any {
 export function getDefaultValue(val: any, getDefaultVal: () => any): any {
   return val === undefined ? getDefaultVal() : val
 }
-
-export function isForBlock(block: Block): block is ForBlock {
-  return block instanceof ForBlock
-}

@@ -74,15 +74,24 @@ import {
   isVaporTransition,
   removeBranchWithLeave,
 } from './transition'
+import {
+  DYNAMIC,
+  FOR,
+  FOR_ITEM,
+  FRAGMENT,
+  SLOT,
+  SLOT_FRAGMENT,
+  VDOM,
+} from './fragmentFlags'
 
 export class VaporFragment<
   T extends Block = Block,
 > implements TransitionOptions {
   /**
-   * @internal marker for duck typing to avoid direct instanceof check
-   * which prevents tree-shaking of VaporFragment
+   * @internal fragment protocol flags. Role checks use a shared field instead
+   * of class references so unused fragment implementations remain tree-shakable.
    */
-  readonly __vf = true
+  readonly __vf: number
   $key?: any
   $transition?: VaporTransitionHooks | undefined
   nodes: T
@@ -111,8 +120,9 @@ export class VaporFragment<
   onBeforeUpdate?: (() => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
 
-  constructor(nodes: T) {
+  constructor(nodes: T, flags: number = FRAGMENT) {
     this.nodes = nodes
+    this.__vf = flags
   }
 }
 
@@ -132,8 +142,8 @@ export class RenderContextFragment<
   readonly keepAliveCtx?: VaporKeepAliveContext | null
   readonly slotBoundary: SlotBoundaryContext | null = currentSlotBoundary
 
-  constructor(nodes: T) {
-    super(nodes)
+  constructor(nodes: T, flags: number = FRAGMENT) {
+    super(nodes, flags)
     if (isKeepAliveEnabled) {
       this.keepAliveCtx = getKeepAliveContext(currentInstance)
     }
@@ -194,7 +204,7 @@ export class ForFragment extends VaporFragment<Block[]> {
     trackSlotBoundary: boolean,
     onInvalid?: () => void,
   ) {
-    super(nodes)
+    super(nodes, FOR)
     if (trackSlotBoundary) trackSlotBoundaryDirtying(this, onInvalid)
   }
 
@@ -222,7 +232,7 @@ export class ForBlock extends VaporFragment {
     index: ShallowRef<number | undefined> | undefined,
     renderKey: any,
   ) {
-    super(nodes)
+    super(nodes, FOR_ITEM)
     this.scope = scope
     this.itemRef = item
     this.keyRef = key
@@ -232,11 +242,6 @@ export class ForBlock extends VaporFragment {
 }
 
 export class DynamicFragment extends RenderContextFragment {
-  /**
-   * @internal marker for duck typing to avoid direct instanceof check
-   * which prevents tree-shaking of DynamicFragment
-   */
-  readonly __df = true
   // @ts-expect-error - assigned in the constructor or hydrateDynamicFragmentAnchor()
   anchor: Node
   scope: EffectScope | undefined
@@ -246,9 +251,6 @@ export class DynamicFragment extends RenderContextFragment {
   pending?: { render?: BlockFn; key: any; noScope: boolean }
   anchorLabel?: string
   keyed?: boolean
-  // pure marker consumed by the isSlotFragment predicate; the core update
-  // pipeline never reads it.
-  isSlot?: boolean
   // Marks the generic dynamic fragment that createPlainElement creates for the
   // default-slot children of a dynamic element resolved to a native tag
   // (`rawSlots.$`). Unlike labeled control-flow fragments it has no
@@ -272,8 +274,9 @@ export class DynamicFragment extends RenderContextFragment {
     trackSlotBoundary: boolean = false,
     onInvalid?: () => void,
     adoptAnchor?: Node,
+    flags: number = DYNAMIC,
   ) {
-    super(EMPTY_BLOCK)
+    super(EMPTY_BLOCK, flags)
     if (keyed) this.keyed = true
     if (
       isTransitionEnabled &&
@@ -472,7 +475,6 @@ export class SlotFragment
   extends DynamicFragment
   implements SlotResolutionState
 {
-  isSlot = true
   private disposed = false
   // Custom elements with `shadowRoot: false` replace their native slot outlet
   // after mount. Keep the live fallback block on the fragment so CE slot sync
@@ -504,6 +506,7 @@ export class SlotFragment
       false,
       undefined,
       adoptAnchor,
+      SLOT_FRAGMENT,
     )
     if (sharedFallback) {
       if (this.slotBoundary) {
@@ -835,21 +838,21 @@ export type InteropFragment<T extends Block = Block> = VaporFragment<T> & {
 }
 
 export function isInteropFragment(val: unknown): val is InteropFragment {
-  return isFragment(val) && val.vnode !== undefined
+  return !!(val && (val as any).__vf & VDOM)
 }
 
 export function isDynamicFragment(val: unknown): val is DynamicFragment {
-  return !!(val && (val as any).__df)
+  return !!(val && (val as any).__vf & DYNAMIC)
 }
 
 export function isForFragment(val: unknown): val is ForFragment {
-  return isFragment(val) && typeof (val as ForFragment).onReset === 'function'
+  return !!(val && (val as any).__vf & FOR)
 }
 
 export function isForBlock(val: unknown): val is ForBlock {
-  return isFragment(val) && (val as ForBlock).itemRef !== undefined
+  return !!(val && (val as any).__vf & FOR_ITEM)
 }
 
 export function isSlotFragment(val: unknown): val is SlotFragment {
-  return isDynamicFragment(val) && !!val.isSlot
+  return !!(val && (val as any).__vf & SLOT)
 }

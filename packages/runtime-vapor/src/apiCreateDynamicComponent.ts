@@ -92,7 +92,7 @@ export function createDynamicComponent(
       if (isBlock(value)) return value
 
       // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
-      if (isInteropEnabled && appContext.vapor && isVNode(value)) {
+      if (isInteropEnabled && appContext.vdom && isVNode(value)) {
         if (isKeepAlive(currentInstance)) {
           enableKeepAlive()
           const frag = (
@@ -101,7 +101,7 @@ export function createDynamicComponent(
           if (frag) return frag
         }
 
-        const frag = appContext.vapor.vdomMountVNode(value, currentInstance)
+        const frag = appContext.vdom.mountVNode(value, currentInstance)
         if (isHydrating) {
           locateHydrationNode(shouldConsumeFragmentStart(value))
           frag.hydrate()

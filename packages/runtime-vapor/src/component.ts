@@ -130,6 +130,7 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import { DynamicFragment, isDynamicFragment, isFragment } from './fragment'
+import { SLOT } from './fragmentFlags'
 import { resolvePendingSlotContent } from './dom/hydrateFragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import {
@@ -342,8 +343,8 @@ export function createComponent(
     }
 
     // vdom interop enabled and component is not an explicit vapor component
-    if (isInteropEnabled && appContext.vapor && !component.__vapor) {
-      const frag = appContext.vapor.vdomMount(
+    if (isInteropEnabled && appContext.vdom && !component.__vapor) {
+      const frag = appContext.vdom.mount(
         component as any,
         currentInstance as any,
         rawProps,
@@ -1558,7 +1559,7 @@ function applyFallthroughAttrs(
   const root = getRootElement(
     block,
     frag => {
-      if (frag.isSlot) {
+      if (frag.__vf & SLOT) {
         hasSlotFragment = true
       } else {
         ;(dynamicFragments ||= []).push(frag)
@@ -1574,7 +1575,7 @@ function applyFallthroughAttrs(
   if (fragmentsToRegister) {
     for (const frag of fragmentsToRegister) {
       // slot fragments warn instead of inheriting attrs, skip them
-      if (!frag.isSlot) {
+      if (!(frag.__vf & SLOT)) {
         // Nested dynamic fragments need their own fallthrough hook.
         registerDynamicFragmentFallthroughAttrs(
           frag,
@@ -1768,7 +1769,7 @@ function deferKeepAliveRenderEffects(
       let root = vaporOwner.block
       // Dynamic component and v-if roots use fragments in Vapor where VDOM
       // exposes the active component directly as `subTree.component`.
-      while (isDynamicFragment(root) && !root.isSlot) {
+      while (isDynamicFragment(root) && !(root.__vf & SLOT)) {
         root = root.nodes
       }
       if (root !== child) return

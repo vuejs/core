@@ -24,6 +24,7 @@ import {
 } from './node'
 import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
 import type { DynamicFragment } from '../fragment'
+import { SLOT } from '../fragmentFlags'
 
 interface HydratingSlotBoundaryState {
   endAnchor: Node | null
@@ -244,7 +245,7 @@ export function prepareDeferredHydrationAnchor(
   const isRevivingDeferredBranch =
     isInDeferredHydrationBoundary() &&
     hasRender &&
-    !frag.isSlot &&
+    !(frag.__vf & SLOT) &&
     !isValidBlock(frag.nodes)
 
   const reusingDeferredAnchor =
@@ -374,7 +375,7 @@ export function resolveDynamicAnchor(
       }
     }
     if (
-      !frag.isSlot &&
+      !(frag.__vf & SLOT) &&
       ownsDynamicAnchor &&
       currentHydrationNode &&
       !isComment(currentHydrationNode, ']')
@@ -452,13 +453,14 @@ export function resolveDynamicAnchor(
   }
 
   const currentSlotEndAnchor = getCurrentSlotEndAnchor()
-  const slotAnchor = frag.isSlot ? currentSlotEndAnchor : null
+  const isSlot = !!(frag.__vf & SLOT)
+  const slotAnchor = isSlot ? currentSlotEndAnchor : null
 
   // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
   // The close marker is a valid stable anchor candidate: reuse it once, or
   // create a fresh runtime anchor after it when another fragment already did.
   if (
-    (frag.isSlot && slotAnchor) ||
+    (isSlot && slotAnchor) ||
     (anchorLabel === 'if' && isArray(frag.nodes) && frag.nodes.length > 1)
   ) {
     const anchor = locateHydrationBoundaryClose(

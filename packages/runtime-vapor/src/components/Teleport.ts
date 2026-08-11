@@ -49,6 +49,7 @@ import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import type { RawSlots } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
 import { enableTeleport } from '../teleport'
+import { TELEPORT } from '../fragmentFlags'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -81,11 +82,6 @@ type TeleportMountState =
     }
 
 export class TeleportFragment extends RenderContextFragment {
-  /**
-   * @internal marker for duck typing to avoid direct instanceof check
-   * which prevents tree-shaking of TeleportFragment
-   */
-  readonly __tf = true
   anchor?: Node
   private resolvedProps?: TeleportProps
   private rawSlots?: RawSlots | null
@@ -110,7 +106,7 @@ export class TeleportFragment extends RenderContextFragment {
     slots?: RawSlots | null,
     adoptAnchor?: Node,
   ) {
-    super([])
+    super([], TELEPORT)
     this.rawSlots = slots
     // the main-view end anchor can adopt the template `<!>` placeholder the
     // teleport was anchored to, saving a runtime node
