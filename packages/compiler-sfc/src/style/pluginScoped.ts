@@ -84,11 +84,54 @@ function processRule(id: string, rule: Rule) {
     }
     parent = parent.parent
   }
+  if (!deep && splitMixedDeepSelectorList(rule)) {
+    return
+  }
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
       rewriteSelector(id, rule, selector, selectorRoot, deep)
     })
   }).processSync(rule.selector)
+}
+
+/**
+ * A selector list can mix `:deep()` members with plain ones, but the rule body
+ * is shared by all of them. When the rule also has nested rules, the two kinds
+ * need the scope id in different places (`.a > span[id]` vs
+ * `.b[id] .c > span`), which a single rule cannot express. Split the rule so
+ * that each kind gets its own copy of the body.
+ */
+function splitMixedDeepSelectorList(rule: Rule): boolean {
+  if (!rule.nodes || !rule.nodes.some(node => node.type === 'rule')) {
+    return false
+  }
+  const selectorRoot = selectorParser().astSync(rule.selector)
+  if (selectorRoot.nodes.length < 2) {
+    return false
+  }
+  const deepSelectors: string[] = []
+  const plainSelectors: string[] = []
+  let deepComesFirst = false
+  selectorRoot.each(selector => {
+    const target = selector.some(isDeepSelector)
+      ? deepSelectors
+      : plainSelectors
+    if (!deepSelectors.length && !plainSelectors.length) {
+      deepComesFirst = target === deepSelectors
+    }
+    target.push(String(selector).trim())
+  })
+  if (!deepSelectors.length || !plainSelectors.length) {
+    return false
+  }
+  const deepRule = rule.clone({ selector: deepSelectors.join(',\n') })
+  const plainRule = rule.clone({ selector: plainSelectors.join(',\n') })
+  const [first, second] = deepComesFirst
+    ? [deepRule, plainRule]
+    : [plainRule, deepRule]
+  second.raws.before = '\n'
+  rule.replaceWith(first, second)
+  return true
 }
 
 function rewriteSelector(

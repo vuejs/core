@@ -195,6 +195,54 @@ color: red
     `)
   })
 
+  // #15205
+  test(':deep() in a selector list with nested rules', () => {
+    const code = compileScoped(
+      `.a,
+.b :deep(.c) {
+  color: red;
+  > span { color: blue; }
+}`,
+    )
+    // the plain member keeps normal scoped nesting semantics:
+    // .a[data-v-test] and .a > span[data-v-test]
+    expect(code).toContain('&[data-v-test]')
+    expect(code).toContain('> span[data-v-test]')
+    // the :deep() member keeps deep semantics:
+    // .b[data-v-test] .c and .b[data-v-test] .c > span
+    expect(code).toContain('.b[data-v-test] .c')
+
+    // the position of the :deep() member in the list must not matter
+    const reversed = compileScoped(
+      `.b :deep(.c),
+.a {
+  color: red;
+  > span { color: blue; }
+}`,
+    )
+    expect(reversed).toContain('&[data-v-test]')
+    expect(reversed).toContain('> span[data-v-test]')
+    expect(reversed).toContain('.b[data-v-test] .c')
+
+    // plain members are grouped together, wherever they sit in the list
+    const threeMembers = compileScoped(
+      `.a,
+.b :deep(.c),
+.d {
+  color: red;
+  > span { color: blue; }
+}`,
+    )
+    expect(threeMembers).toContain('.a,\n.d {')
+    expect(threeMembers).toContain('> span[data-v-test]')
+    expect(threeMembers).toContain('.b[data-v-test] .c')
+
+    // without nested rules there is nothing to disambiguate, so no split
+    expect(compileScoped(`.a, .b :deep(.c) { color: red; }`)).toMatch(
+      `.a[data-v-test], .b[data-v-test] .c { color: red;`,
+    )
+  })
+
   test('::v-slotted', () => {
     expect(compileScoped(`:slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
