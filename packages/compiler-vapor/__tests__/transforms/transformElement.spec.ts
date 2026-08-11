@@ -610,6 +610,16 @@ describe('compiler: element transform', () => {
   ]`)
     })
 
+    test('props merging: event handlers with modifiers', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo @keydown.enter.prevent="a" @keydown.esc.prevent="b" />`,
+      )
+      expect(code).contains(`onKeydown: () => [
+    _withKeys(_withModifiers(_ctx.a, ["prevent"]), ["enter"]),
+    _withKeys(_withModifiers(_ctx.b, ["prevent"]), ["esc"])
+  ]`)
+    })
+
     test('props merging: inline event handlers', () => {
       const { code } = compileWithElementTransform(
         `<Foo @click.foo="e => a(e)" @click.bar="e => b(e)" />`,
