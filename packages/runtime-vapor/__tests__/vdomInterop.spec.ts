@@ -571,6 +571,37 @@ describe('vdomInterop', () => {
         'vnode updated',
       ])
     })
+
+    test('should resolve inherited props when vapor renders a vdom component', () => {
+      const VDomChild = defineComponent({
+        extends: {
+          props: {
+            modelValue: { type: Boolean, default: false },
+          },
+        },
+        setup(props: any, { attrs }) {
+          return () =>
+            h(
+              'div',
+              `${typeof props.modelValue}:${String(props.modelValue)}:${String('model-value' in attrs)}`,
+            )
+        },
+      })
+      const App = compile(
+        `<template>
+          <components.VDomChild :model-value="false" />
+          <components.VDomChild />
+        </template>`,
+        ref(null),
+        { VDomChild },
+      )
+
+      const { html } = define(App as any).render()
+
+      expect(html()).toBe(
+        '<div>boolean:false:false</div><div>boolean:false:false</div>',
+      )
+    })
   })
 
   describe('v-model', () => {

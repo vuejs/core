@@ -1156,16 +1156,22 @@ function createVDOMComponent(
     }
   }
 
-  const wrapper = new VaporComponentInstance<Record<string, unknown>>(
-    useBridge ? (comp as any) : { props: component.props },
-    rawProps as RawProps,
-    rawSlots as RawSlots,
-    parentComponent ? parentComponent.appContext : undefined,
-    once,
-  )
-
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
+    // Reuse VDOM's normalized options so Options API merging stays in VDOM.
+    const wrapper = new VaporComponentInstance<Record<string, unknown>>(
+      useBridge
+        ? (comp as any)
+        : {
+            props: instance.propsOptions[0],
+            __propsOptions: instance.propsOptions,
+          },
+      rawProps as RawProps,
+      rawSlots as RawSlots,
+      parentComponent ? parentComponent.appContext : undefined,
+      once,
+    )
+
     // ensure props are shallow reactive to align with VDOM behavior.
     instance.props = shallowReactive(wrapper.props)
 
