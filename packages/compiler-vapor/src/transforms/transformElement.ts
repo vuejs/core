@@ -417,26 +417,20 @@ function transformNativeElement(
       getEffectIndex,
     )
   } else {
-    // tracks if previous attribute was quoted, allowing space omission
-    // e.g. `class="foo"id="bar"` is valid, `class=foo id=bar` needs space
-    let prevWasQuoted = false
     const appendTemplateProp = (
       key: string,
       value: string = '',
       generated: boolean = false,
     ) => {
-      if (!prevWasQuoted) template += ` `
-      template += key
+      template += ` ${key}`
 
       if (value) {
         const escapedValue = generated
           ? escapeGeneratedAttrValue(value)
           : value.replace(/"/g, '&quot;')
-        template += (prevWasQuoted = NEEDS_QUOTES_RE.test(value))
+        template += NEEDS_QUOTES_RE.test(value)
           ? `="${escapedValue}"`
           : `=${escapedValue}`
-      } else {
-        prevWasQuoted = false
       }
     }
 
@@ -452,11 +446,9 @@ function transformNativeElement(
           values[0].content.includes(imported.exp.content),
         )
       ) {
-        if (!prevWasQuoted) template += ` `
         // add start and end markers to the import expression, so it can be replaced
         // with string concatenation in the generator, see genTemplates
-        template += `${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
-        prevWasQuoted = true
+        template += ` ${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
       } else if (
         canStringifyAttrName &&
         values.length === 1 &&

@@ -1792,19 +1792,19 @@ describe('compiler: element transform', () => {
       )
 
       const template =
-        '<div title="has whitespace"inert data-targets="foo>bar">'
+        '<div title="has whitespace" inert data-targets="foo>bar">'
       expect(code).toMatchSnapshot()
       expect(code).contains(JSON.stringify(template))
       expect([...ir.template.keys()]).toMatchObject([template])
     })
 
-    test('space omitted after quoted attribute', () => {
+    test('space kept after quoted attribute', () => {
       const { code, ir } = compileWithElementTransform(
         `<div title="has whitespace" alt='"contains quotes"' data-targets="foo>bar" />`,
       )
 
       const template =
-        '<div title="has whitespace"alt="&quot;contains quotes&quot;"data-targets="foo>bar">'
+        '<div title="has whitespace" alt="&quot;contains quotes&quot;" data-targets="foo>bar">'
       expect(code).toMatchSnapshot()
       expect(code).contains(JSON.stringify(template))
       expect([...ir.template.keys()]).toMatchObject([template])
