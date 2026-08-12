@@ -815,9 +815,10 @@ export function createForSlots(
     const sourceLength = source.values.length
     const names = new Array<string>(sourceLength)
     const identities = new Array<unknown>(sourceLength)
+    const items = new Array<ReturnType<typeof getItem>>(sourceLength)
 
     for (let i = 0; i < sourceLength; i++) {
-      const item = getItem(source, i)
+      const item = (items[i] = getItem(source, i))
       names[i] = String(getName(...item))
       identities[i] = getKey ? getKey(...item) : names[i]
     }
@@ -833,7 +834,7 @@ export function createForSlots(
     let changed = sourceLength !== oldRecords.length
     const prevSub = setActiveSub()
     for (let i = sourceLength - 1; i >= 0; i--) {
-      const [item, key, index] = getItem(source, i)
+      const [item, key, index] = items[i]
       const rawIdentity = identities[i]
       let record = oldByIdentity.get(rawIdentity)
       if (record) {
