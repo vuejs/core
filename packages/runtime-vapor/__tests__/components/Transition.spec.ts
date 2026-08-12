@@ -1852,4 +1852,43 @@ describe('Transition', () => {
     await nextTick()
     expect(el.className).toBe('b-leave-from b-leave-active')
   })
+
+  // #15274
+  test('should merge fallthrough class with a transition child root', async () => {
+    const data = ref({
+      internalClass: 'internal-box',
+      externalClass: 'external-class',
+    })
+    const Child = compile(
+      `<template>
+        <Transition>
+          <div class="box" :class="data.internalClass">child</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child :class="data.externalClass" />
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    const el = host.querySelector('div')!
+
+    expect([...el.classList]).toEqual(
+      expect.arrayContaining(['external-class', 'box', 'internal-box']),
+    )
+    expect(el.classList).toHaveLength(3)
+
+    data.value.internalClass = 'internal-next'
+    data.value.externalClass = 'external-next'
+    await nextTick()
+
+    expect([...el.classList]).toEqual(
+      expect.arrayContaining(['external-next', 'box', 'internal-next']),
+    )
+    expect(el.classList).toHaveLength(3)
+  })
 })

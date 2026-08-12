@@ -31,7 +31,11 @@ import {
   type VaporDirectiveNode,
   isBlockOperation,
 } from './ir'
-import { isConstantExpression, isStaticExpression } from './utils'
+import {
+  isConstantExpression,
+  isStaticExpression,
+  isTransitionNode,
+} from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
 import type { ImportItem } from '@vue/compiler-core'
 
@@ -422,7 +426,8 @@ export class TransformContext<T extends AllNode = AllNode> {
 
     return (
       this.node.type === NodeTypes.ELEMENT &&
-      this.node.tagType === ElementTypes.TEMPLATE &&
+      (this.node.tagType === ElementTypes.TEMPLATE ||
+        isTransitionNode(this.node)) &&
       !!this.parent &&
       this.isSingleRoot
     )
