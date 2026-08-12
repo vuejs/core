@@ -1698,11 +1698,11 @@ describe('vdomInterop', () => {
         const slots = useSlots()
         return createComponent(Inner, null, {
           $: [
-            () =>
-              createForSlots(slots, (_slot, name) => ({
-                name,
-                fn: () => createSlot(name),
-              })) as any,
+            createForSlots(
+              () => slots,
+              (_slot, name) => () => createSlot(() => name!.value),
+              (_slot, name) => name,
+            ) as any,
           ],
         })
       })
@@ -2106,16 +2106,16 @@ describe('vdomInterop', () => {
         setup() {
           return createComponent(VDomChild as any, null, {
             $: [
-              () =>
-                createForSlots(list.value, value => ({
-                  name: 'default',
-                  fn: () => {
-                    const n = template('<span> </span>')() as Element
-                    const t = txt(n) as Text
-                    renderEffect(() => setText(t, toDisplayString(value)))
-                    return n
-                  },
-                })),
+              createForSlots(
+                () => list.value,
+                value => () => {
+                  const n = template('<span> </span>')() as Element
+                  const t = txt(n) as Text
+                  renderEffect(() => setText(t, toDisplayString(value.value)))
+                  return n
+                },
+                () => 'default',
+              ),
             ],
           })
         },
@@ -2140,7 +2140,7 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<div><span>1</span></div>')
     })
 
-    test('dynamic slots via createForSlots should re-mount fragment slot in vdom child', async () => {
+    test('dynamic slots via createForSlots should update fragment slot in vdom child', async () => {
       const list = ref([0, 1, 2])
 
       const VDomChild = defineComponent({
@@ -2153,20 +2153,22 @@ describe('vdomInterop', () => {
         setup() {
           return createComponent(VDomChild as any, null, {
             $: [
-              () =>
-                createForSlots(list.value, value => ({
-                  name: 'default',
-                  fn: () =>
-                    createIf(
-                      () => true,
-                      () => {
-                        const n = template('<span> </span>')() as Element
-                        const t = txt(n) as Text
-                        renderEffect(() => setText(t, toDisplayString(value)))
-                        return n
-                      },
-                    ),
-                })),
+              createForSlots(
+                () => list.value,
+                value => () =>
+                  createIf(
+                    () => true,
+                    () => {
+                      const n = template('<span> </span>')() as Element
+                      const t = txt(n) as Text
+                      renderEffect(() =>
+                        setText(t, toDisplayString(value.value)),
+                      )
+                      return n
+                    },
+                  ),
+                () => 'default',
+              ),
             ],
           })
         },
@@ -2208,20 +2210,21 @@ describe('vdomInterop', () => {
         setup() {
           return createComponent(VDomChild as any, null, {
             $: [
-              () =>
-                createForSlots(list.value, value => ({
-                  name: 'default',
-                  fn: () => {
-                    const state = slotStates.get(value)!
-                    const n = template('<span> </span>')() as Element
-                    const t = txt(n) as Text
-                    renderEffect(() => {
-                      state.runs()
-                      setText(t, state.text.value)
-                    })
-                    return n
-                  },
-                })),
+              createForSlots(
+                () => list.value,
+                value => () => {
+                  const state = slotStates.get(value.value)!
+                  const n = template('<span> </span>')() as Element
+                  const t = txt(n) as Text
+                  renderEffect(() => {
+                    state.runs()
+                    setText(t, state.text.value)
+                  })
+                  return n
+                },
+                () => 'default',
+                value => value,
+              ),
             ],
           })
         },

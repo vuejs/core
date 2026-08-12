@@ -52,6 +52,7 @@ export interface IRSlotDynamicLoop {
   name: SimpleExpressionNode
   fn: SlotBlockIRNode
   loop: IRFor
+  keyProp?: SimpleExpressionNode
 }
 export interface IRSlotDynamicConditional {
   slotType: IRSlotType.CONDITIONAL

@@ -29,6 +29,7 @@ import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance } from './component'
 import {
   type DynamicSlot,
+  type VaporSlot,
   currentSlotOwner,
   setCurrentSlotOwner,
 } from './componentSlots'
@@ -788,17 +789,115 @@ function stopBlockScopes(blocks: ForBlock[]): void {
   }
 }
 
+function isSameMapKey(a: unknown, b: unknown): boolean {
+  return Object.is(a, b) || (a === 0 && b === 0)
+}
+
 export function createForSlots(
-  rawSource: Source,
-  getSlot: (item: any, key: any, index?: number) => DynamicSlot,
-): DynamicSlot[] {
-  const source = normalizeSource(rawSource)
-  const sourceLength = source.values.length
-  const slots = new Array<DynamicSlot>(sourceLength)
-  for (let i = 0; i < sourceLength; i++) {
-    slots[i] = getSlot(...getItem(source, i))
+  rawSource: () => Source,
+  renderSlot: (
+    item: ShallowRef,
+    key?: ShallowRef,
+    index?: ShallowRef,
+  ) => VaporSlot,
+  getName: (item: any, key: any, index?: number) => unknown,
+  getKey?: (item: any, key: any, index?: number) => unknown,
+): () => DynamicSlot[] {
+  type SlotRecord = DynamicSlot & {
+    rawIdentity: unknown
+    itemRef: ShallowRef
+    keyRef?: ShallowRef
+    indexRef?: ShallowRef
   }
-  return slots
+
+  let oldRecords: SlotRecord[] = []
+  const needKey = renderSlot.length > 1
+  const needIndex = renderSlot.length > 2
+
+  const update = (
+    record: SlotRecord,
+    [item, key, index]: ReturnType<typeof getItem>,
+  ) => {
+    if (!Object.is(record.itemRef.value, item)) {
+      record.itemRef.value = item
+    }
+    if (record.keyRef && !Object.is(record.keyRef.value, key)) {
+      record.keyRef.value = key
+    }
+    if (record.indexRef && !Object.is(record.indexRef.value, index)) {
+      record.indexRef.value = index
+    }
+  }
+
+  return () => {
+    const source = normalizeSource(rawSource())
+    const sourceLength = source.values.length
+    const names = new Array<string>(sourceLength)
+    const identities: unknown[] = getKey
+      ? new Array<unknown>(sourceLength)
+      : names
+    const items = new Array<ReturnType<typeof getItem>>(sourceLength)
+    let sameResolution = sourceLength === oldRecords.length
+
+    for (let i = 0; i < sourceLength; i++) {
+      const item = (items[i] = getItem(source, i))
+      const name = (names[i] = String(getName(...item)))
+      const identity = (identities[i] = getKey ? getKey(...item) : name)
+      if (
+        sameResolution &&
+        (!isSameMapKey(oldRecords[i].rawIdentity, identity) ||
+          oldRecords[i].name !== name)
+      ) {
+        sameResolution = false
+      }
+    }
+
+    if (sameResolution) {
+      const prevSub = setActiveSub()
+      for (let i = sourceLength - 1; i >= 0; i--) {
+        update(oldRecords[i], items[i])
+      }
+      setActiveSub(prevSub)
+      return oldRecords
+    }
+
+    const oldByIdentity = new Map<unknown, SlotRecord>()
+    for (let i = 0; i < oldRecords.length; i++) {
+      oldByIdentity.set(oldRecords[i].rawIdentity, oldRecords[i])
+    }
+
+    const records = new Array<SlotRecord>(sourceLength)
+    const prevSub = setActiveSub()
+    for (let i = sourceLength - 1; i >= 0; i--) {
+      const slotItem = items[i]
+      const rawIdentity = identities[i]
+      let record = oldByIdentity.get(rawIdentity)
+      if (record) {
+        oldByIdentity.delete(rawIdentity)
+        update(record, slotItem)
+        record.name = names[i]
+      } else {
+        const [item, key, index] = slotItem
+        const itemRef = shallowRef(item)
+        const keyRef = needKey ? shallowRef(key) : undefined
+        const indexRef = needIndex ? shallowRef(index) : undefined
+        record = {
+          rawIdentity,
+          itemRef,
+          keyRef,
+          indexRef,
+          name: names[i],
+          fn: renderSlot(itemRef, keyRef, indexRef),
+          // The item ref is stable for the lifetime of this slot record.
+          key: itemRef,
+        }
+      }
+      records[i] = record
+    }
+    setActiveSub(prevSub)
+    oldRecords = records
+    return records
+  }
 }
 
 function normalizeSource(source: any): ResolvedSource {

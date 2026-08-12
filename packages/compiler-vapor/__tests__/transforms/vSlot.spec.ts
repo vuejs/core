@@ -136,7 +136,7 @@ describe('compiler: transform slot', () => {
     expect(ir.block.dynamic).toMatchObject({
       children: [{ id: 2 }],
     })
-    expect(code).contains(`name: "default",`)
+    expect(code).contains(`(item) => ("default")`)
   })
 
   test('on-component default slot', () => {
@@ -473,8 +473,8 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: (_slotProps0) =>`)
-    expect(code).contains(`_setText(n0, _toDisplayString(_slotProps0.bar))`)
+    expect(code).contains(`(_slotProps1) =>`)
+    expect(code).contains(`_setText(n0, _toDisplayString(_slotProps1.bar))`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -492,6 +492,29 @@ describe('compiler: transform slot', () => {
             value: { content: 'item' },
             index: undefined,
           },
+        },
+      ],
+    })
+  })
+
+  test('dynamic slots name w/ keyed v-for', () => {
+    const { ir, code } = compileWithSlots(
+      `<Comp>
+        <template v-for="item in list" :key="item.id" #[item.name]>{{ item.label }}</template>
+      </Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.block.dynamic.children[0].operation).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Comp',
+      slots: [
+        {
+          name: { content: 'item.name' },
+          loop: {
+            source: { content: 'list' },
+            value: { content: 'item' },
+          },
+          keyProp: { content: 'item.id' },
         },
       ],
     })
@@ -1068,8 +1091,8 @@ describe('compiler: transform slot', () => {
         </Comp>
       `)
       expect(code).toContain(`$: [
-      () => (_createForSlots`)
-      expect(code).toContain(`fn: () =>`)
+      _createForSlots`)
+      expect(code).toContain(`=> () =>`)
       expect(code).toMatchSnapshot()
     })
 
