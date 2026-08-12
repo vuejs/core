@@ -2,7 +2,7 @@
 
 exports[`compiler: transition > basic 1`] = `
 "import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<h1>foo")
+const t0 = _template("<h1>foo", 1)
 
 export function render(_ctx) {
   const n1 = _createComponent(_VaporTransition, { persisted: "" }, () => {
@@ -16,7 +16,7 @@ export function render(_ctx) {
 
 exports[`compiler: transition > inject persisted when child has v-show 1`] = `
 "import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<div>")
+const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n1 = _createComponent(_VaporTransition, { persisted: "" }, () => {
@@ -30,10 +30,10 @@ export function render(_ctx) {
 
 exports[`compiler: transition > the v-if/else-if/else branches in Transition should ignore comments 1`] = `
 "import { VaporTransition as _VaporTransition, setInsertionState as _setInsertionState, createIf as _createIf, extend as _extend, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<div>hey", 2)
+const t0 = _template("<div>hey", 3)
 const t1 = _template("<p>", 2)
 const t2 = _template("<!-- this should not be ignored -->", 2)
-const t3 = _template("<div>")
+const t3 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n17 = _createComponent(_VaporTransition, null, _extend(() => {
@@ -64,7 +64,7 @@ export function render(_ctx) {
 
 exports[`compiler: transition > v-show + appear 1`] = `
 "import { VaporTransition as _VaporTransition, applyVShow as _applyVShow, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<h1>foo")
+const t0 = _template("<h1>foo", 1)
 
 export function render(_ctx) {
   const n1 = _createComponent(_VaporTransition, {
@@ -81,7 +81,7 @@ export function render(_ctx) {
 
 exports[`compiler: transition > work with dynamic keyed children 1`] = `
 "import { VaporTransition as _VaporTransition, createKeyedFragment as _createKeyedFragment, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<h1>foo", 2)
+const t0 = _template("<h1>foo", 3)
 
 export function render(_ctx) {
   const n2 = _createComponent(_VaporTransition, null, () => {
@@ -97,7 +97,7 @@ export function render(_ctx) {
 
 exports[`compiler: transition > work with v-if 1`] = `
 "import { VaporTransition as _VaporTransition, createIf as _createIf, extend as _extend, createComponent as _createComponent, template as _template } from 'vue';
-const t0 = _template("<h1>foo", 2)
+const t0 = _template("<h1>foo", 3)
 
 export function render(_ctx) {
   const n3 = _createComponent(_VaporTransition, null, _extend(() => {
