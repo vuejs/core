@@ -789,6 +789,10 @@ function stopBlockScopes(blocks: ForBlock[]): void {
   }
 }
 
+function isSameMapKey(a: unknown, b: unknown): boolean {
+  return Object.is(a, b) || (a === 0 && b === 0)
+}
+
 export function createForSlots(
   rawSource: () => Source,
   renderSlot: (
@@ -810,17 +814,51 @@ export function createForSlots(
   const needKey = renderSlot.length > 1
   const needIndex = renderSlot.length > 2
 
+  const update = (
+    record: SlotRecord,
+    [item, key, index]: ReturnType<typeof getItem>,
+  ) => {
+    if (!Object.is(record.itemRef.value, item)) {
+      record.itemRef.value = item
+    }
+    if (record.keyRef && !Object.is(record.keyRef.value, key)) {
+      record.keyRef.value = key
+    }
+    if (record.indexRef && !Object.is(record.indexRef.value, index)) {
+      record.indexRef.value = index
+    }
+  }
+
   return () => {
     const source = normalizeSource(rawSource())
     const sourceLength = source.values.length
     const names = new Array<string>(sourceLength)
-    const identities = new Array<unknown>(sourceLength)
+    const identities: unknown[] = getKey
+      ? new Array<unknown>(sourceLength)
+      : names
     const items = new Array<ReturnType<typeof getItem>>(sourceLength)
+    let sameResolution = sourceLength === oldRecords.length
 
     for (let i = 0; i < sourceLength; i++) {
       const item = (items[i] = getItem(source, i))
-      names[i] = String(getName(...item))
-      identities[i] = getKey ? getKey(...item) : names[i]
+      const name = (names[i] = String(getName(...item)))
+      const identity = (identities[i] = getKey ? getKey(...item) : name)
+      if (
+        sameResolution &&
+        (!isSameMapKey(oldRecords[i].rawIdentity, identity) ||
+          oldRecords[i].name !== name)
+      ) {
+        sameResolution = false
+      }
+    }
+
+    if (sameResolution) {
+      const prevSub = setActiveSub()
+      for (let i = sourceLength - 1; i >= 0; i--) {
+        update(oldRecords[i], items[i])
+      }
+      setActiveSub(prevSub)
+      return oldRecords
     }
 
     const oldByIdentity = new Map<unknown, SlotRecord>()
@@ -829,31 +867,17 @@ export function createForSlots(
     }
 
     const records = new Array<SlotRecord>(sourceLength)
-    // Ref value updates don't affect slot resolution. Only replace the result
-    // when its records, order, or names change.
-    let changed = sourceLength !== oldRecords.length
     const prevSub = setActiveSub()
     for (let i = sourceLength - 1; i >= 0; i--) {
-      const [item, key, index] = items[i]
+      const slotItem = items[i]
       const rawIdentity = identities[i]
       let record = oldByIdentity.get(rawIdentity)
       if (record) {
         oldByIdentity.delete(rawIdentity)
-        if (record !== oldRecords[i] || record.name !== names[i]) {
-          changed = true
-        }
-        if (!Object.is(record.itemRef.value, item)) {
-          record.itemRef.value = item
-        }
-        if (record.keyRef && !Object.is(record.keyRef.value, key)) {
-          record.keyRef.value = key
-        }
-        if (record.indexRef && !Object.is(record.indexRef.value, index)) {
-          record.indexRef.value = index
-        }
+        update(record, slotItem)
         record.name = names[i]
       } else {
-        changed = true
+        const [item, key, index] = slotItem
         const itemRef = shallowRef(item)
         const keyRef = needKey ? shallowRef(key) : undefined
         const indexRef = needIndex ? shallowRef(index) : undefined
@@ -871,7 +895,6 @@ export function createForSlots(
       records[i] = record
     }
     setActiveSub(prevSub)
-    if (!changed) return oldRecords
     oldRecords = records
     return records
   }
