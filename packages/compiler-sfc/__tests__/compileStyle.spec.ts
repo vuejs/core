@@ -196,63 +196,297 @@ color: red
   })
 
   // #15205
-  test(':deep() in a selector list with nested rules', () => {
-    const code = compileScoped(
-      `.a,
+  describe(':deep() in a selector list with nested rules', () => {
+    test('plain and :deep() members get their own copy of the body', () => {
+      expect(
+        compileScoped(
+          `.a,
 .b :deep(.c) {
   color: red;
   > span { color: blue; }
 }`,
-    )
-    // the plain member keeps normal scoped nesting semantics:
-    // .a[data-v-test] and .a > span[data-v-test]
-    expect(code).toContain('&[data-v-test]')
-    expect(code).toContain('> span[data-v-test]')
-    // the :deep() member keeps deep semantics:
-    // .b[data-v-test] .c and .b[data-v-test] .c > span
-    expect(code).toContain('.b[data-v-test] .c')
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a,
+        .b[data-v-test] .c {
+        &:where(.a) {
+        &[data-v-test] {
+          color: red;
+        }
+        > span[data-v-test] { color: blue;
+        }
+        }
+        &:where(.b[data-v-test] .c) {
+          color: red;
+        > span { color: blue;
+        }
+        }
+        }"
+      `)
+    })
 
-    // the position of the :deep() member in the list must not matter
-    const reversed = compileScoped(
-      `.b :deep(.c),
+    test('the position of the :deep() member does not matter', () => {
+      expect(
+        compileScoped(
+          `.b :deep(.c),
 .a {
   color: red;
   > span { color: blue; }
 }`,
-    )
-    expect(reversed).toContain('&[data-v-test]')
-    expect(reversed).toContain('> span[data-v-test]')
-    expect(reversed).toContain('.b[data-v-test] .c')
+        ),
+      ).toMatchInlineSnapshot(`
+        ".b[data-v-test] .c,
+        .a {
+        &:where(.b[data-v-test] .c) {
+          color: red;
+        > span { color: blue;
+        }
+        }
+        &:where(.a) {
+        &[data-v-test] {
+          color: red;
+        }
+        > span[data-v-test] { color: blue;
+        }
+        }
+        }"
+      `)
+    })
 
-    // plain members are grouped together, wherever they sit in the list
-    const threeMembers = compileScoped(
-      `.a,
+    test('plain members are grouped, wherever they sit in the list', () => {
+      expect(
+        compileScoped(
+          `.a,
 .b :deep(.c),
 .d {
   color: red;
   > span { color: blue; }
 }`,
-    )
-    expect(threeMembers).toContain('.a,\n.d {')
-    expect(threeMembers).toContain('> span[data-v-test]')
-    expect(threeMembers).toContain('.b[data-v-test] .c')
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a,
+        .b[data-v-test] .c,
+        .d {
+        &:where(.a, .d) {
+        &[data-v-test] {
+          color: red;
+        }
+        > span[data-v-test] { color: blue;
+        }
+        }
+        &:where(.b[data-v-test] .c) {
+          color: red;
+        > span { color: blue;
+        }
+        }
+        }"
+      `)
+    })
 
-    // nested rules below an at-rule count as nested rules too
-    const withAtRule = compileScoped(
-      `.a,
+    test('nested rules below an at-rule count as nested rules', () => {
+      expect(
+        compileScoped(
+          `.a,
 .b :deep(.c) {
   @media (min-width: 100px) {
     .z { color: pink; }
   }
 }`,
-    )
-    expect(withAtRule).toContain('.z[data-v-test]')
-    expect(withAtRule).toContain('.b[data-v-test] .c')
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a,
+        .b[data-v-test] .c {
+        &:where(.a) {
+        @media (min-width: 100px) {
+        .z[data-v-test] { color: pink;
+        }
+        }
+        }
+        &:where(.b[data-v-test] .c) {
+        @media (min-width: 100px) {
+        .z { color: pink;
+        }
+        }
+        }
+        }"
+      `)
+    })
 
-    // without nested rules there is nothing to disambiguate, so no split
-    expect(compileScoped(`.a, .b :deep(.c) { color: red; }`)).toMatch(
-      `.a[data-v-test], .b[data-v-test] .c { color: red;`,
-    )
+    // per the CSS nesting spec the specificity of `&` is the largest
+    // specificity in the parent selector list, so the list is kept whole and
+    // the branches are narrowed with `:where()`, which adds nothing on top.
+    // here `&` stays at (1,2,0) - the specificity of `#b[data-v-test] .c` -
+    // for both branches, and the only change to a nested rule is the scope
+    // attribute it is supposed to get
+    test('nesting specificity of the selector list is preserved', () => {
+      expect(
+        compileScoped(
+          `.a,
+#b :deep(.c) {
+  > span { color: blue; }
+}`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a,
+        #b[data-v-test] .c {
+        &:where(.a) {
+        > span[data-v-test] { color: blue;
+        }
+        }
+        &:where(#b[data-v-test] .c) {
+        > span { color: blue;
+        }
+        }
+        }"
+      `)
+    })
+
+    test('no nested rules - nothing to disambiguate, rule is left alone', () => {
+      expect(compileScoped(`.a, .b :deep(.c) { color: red; }`))
+        .toMatchInlineSnapshot(`
+        ".a[data-v-test], .b[data-v-test] .c { color: red;
+        }"
+      `)
+    })
+
+    test('every member is :deep() - rule is left alone', () => {
+      expect(
+        compileScoped(
+          `.a :deep(.x),
+.b :deep(.c) {
+  > span { color: blue; }
+}`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a[data-v-test] .x,
+        .b[data-v-test] .c {
+        > span { color: blue;
+        }
+        }"
+      `)
+    })
+
+    test('a mixed list below a :deep() rule stays deep', () => {
+      expect(
+        compileScoped(
+          `:deep(.p) {
+  .a,
+  .b :deep(.c) { > span { color: blue; } }
+}`,
+        ),
+      ).toMatchInlineSnapshot(`
+        "[data-v-test] .p {
+        .a,
+          .b[data-v-test] .c {
+        > span { color: blue;
+        }
+        }
+        }"
+      `)
+    })
+
+    // `:where()` is a forgiving selector list: it drops arguments it cannot
+    // parse instead of invalidating the rule, so a branch that cannot be
+    // expressed as a `:where()` argument is left alone rather than silently
+    // reduced to matching nothing
+    test('a member with a pseudo element is left alone', () => {
+      expect(
+        compileScoped(
+          `.a::before,
+.b :deep(.c) { > span { color: blue; } }`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a::before,
+        .b[data-v-test] .c {
+        > span { color: blue;
+        }
+        }"
+      `)
+      expect(
+        compileScoped(
+          `.a:before,
+.b :deep(.c) { > span { color: blue; } }`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a:before,
+        .b[data-v-test] .c {
+        > span { color: blue;
+        }
+        }"
+      `)
+    })
+
+    // inside a branch `&` would resolve against the mixed list itself instead
+    // of against the rule the member was written against
+    test('a member built on & is left alone', () => {
+      expect(
+        compileScoped(
+          `.p {
+  &.a,
+  &.b :deep(.c) { > span { color: blue; } }
+}`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ".p {
+        &.a,
+          &.b[data-v-test] .c {
+        > span { color: blue;
+        }
+        }
+        }"
+      `)
+    })
+
+    test('a member expanding into several selectors is left alone', () => {
+      expect(
+        compileScoped(
+          `:is(:deep(.foo), .bar) .baz,
+.a { > span { color: blue; } }`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ":is([data-v-test] .foo)[data-v-test] .baz, :is(.bar) .baz[data-v-test],
+        .a[data-v-test] {
+        > span { color: blue;
+        }
+        }"
+      `)
+    })
+
+    test('a :global() member is left alone', () => {
+      expect(
+        compileScoped(
+          `:global(.a),
+.b :deep(.c) { > span { color: blue; } }`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a,
+        .b[data-v-test] .c {
+        > span { color: blue;
+        }
+        }"
+      `)
+    })
+
+    test('keyframes do not count as nested rules', () => {
+      expect(
+        compileScoped(
+          `.a,
+.b :deep(.c) {
+  @keyframes x { from { opacity: 0; } to { opacity: 1; } }
+}`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a[data-v-test],
+        .b[data-v-test] .c {
+        @keyframes x-test {
+        from { opacity: 0;
+        }
+        to { opacity: 1;
+        }
+        }
+        }"
+      `)
+    })
   })
 
   test('::v-slotted', () => {
