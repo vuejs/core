@@ -311,8 +311,8 @@ export function createComponent(
         (isTransitionEnabled
           ? currentInstance && isVaporTransition(currentInstance!.type)
           : false)) &&
-      component.inheritAttrs !== false &&
       isVaporComponent(currentInstance) &&
+      currentInstance.type.inheritAttrs !== false &&
       currentInstance.hasFallthrough
     ) {
       // check if we are the single root of the parent

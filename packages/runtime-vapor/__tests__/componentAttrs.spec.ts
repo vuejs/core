@@ -1672,4 +1672,62 @@ describe('attribute fallthrough', () => {
     await nextTick()
     expect(host.innerHTML).toBe('<div><i>two</i></div><!--dynamic-component-->')
   })
+
+  // #15277
+  it('should pass fallthrough attrs to declared props with inheritAttrs: false', () => {
+    const Child = compile(
+      `<script setup vapor>
+        const { class: className } = defineProps({ class: String })
+        defineOptions({ inheritAttrs: false })
+      </script>
+      <template>
+        <div :class="className">class prop = {{ className ?? 'DROPPED' }}</div>
+      </template>`,
+      ref(null),
+    )
+    const Middle = compile(
+      `<template><components.Child /></template>`,
+      ref(null),
+      { Child },
+    )
+    const App = compile(
+      `<template><components.Middle class="forwarded-marker" /></template>`,
+      ref(null),
+      { Middle },
+    )
+
+    const { host } = define(App).render()
+    expect(host.innerHTML).toBe(
+      '<div class="forwarded-marker">class prop = forwarded-marker</div>',
+    )
+  })
+
+  it('should not pass attrs through a component with inheritAttrs: false', () => {
+    const Child = compile(
+      `<script setup vapor>
+        const { class: className } = defineProps({ class: String })
+      </script>
+      <template>
+        <div :class="className">class prop = {{ className ?? 'DROPPED' }}</div>
+      </template>`,
+      ref(null),
+    )
+    const Middle = compile(
+      `<script setup vapor>
+        const Child = _components.Child
+        defineOptions({ inheritAttrs: false })
+      </script>
+      <template><Child /></template>`,
+      ref(null),
+      { Child },
+    )
+    const App = compile(
+      `<template><components.Middle class="forwarded-marker" /></template>`,
+      ref(null),
+      { Middle },
+    )
+
+    const { host } = define(App).render()
+    expect(host.innerHTML).toBe('<div>class prop = DROPPED</div>')
+  })
 })
