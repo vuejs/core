@@ -70,6 +70,10 @@ import {
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
 import { setBlockKey } from './helpers/setKey'
 import { currentSlotBoundary, setCurrentSlotBoundary } from './slotBoundary'
+import {
+  type KeyedForSlotMetadata,
+  setKeyedForSlotMetadata,
+} from './componentProps'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -790,11 +794,30 @@ function stopBlockScopes(blocks: ForBlock[]): void {
 
 export function createForSlots(
   rawSource: Source,
-  getSlot: (item: any, key: any, index?: number) => DynamicSlot,
+  getSlot: (item: any, key: any, index?: any) => DynamicSlot,
+  getKey?: (item: any, key: any, index?: number) => any,
 ): DynamicSlot[] {
   const source = normalizeSource(rawSource)
   const sourceLength = source.values.length
   const slots = new Array<DynamicSlot>(sourceLength)
+  if (getKey) {
+    const metadata = new Array<KeyedForSlotMetadata>(sourceLength)
+    const needKey = getSlot.length > 1
+    const needIndex = getSlot.length > 2
+    for (let i = 0; i < sourceLength; i++) {
+      const item = getItem(source, i)
+      const refs: ShallowRef[] = [shallowRef(item[0])]
+      if (needKey) refs.push(shallowRef(item[1]))
+      if (needIndex) refs.push(shallowRef(item[2]))
+      slots[i] = getSlot(refs[0], refs[1], refs[2])
+      metadata[i] = {
+        key: getKey(...item),
+        refs,
+      }
+    }
+    setKeyedForSlotMetadata(slots, metadata)
+    return slots
+  }
   for (let i = 0; i < sourceLength; i++) {
     slots[i] = getSlot(...getItem(source, i))
   }

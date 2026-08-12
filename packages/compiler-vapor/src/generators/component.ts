@@ -694,6 +694,9 @@ function genLoopSlot(
   slot: IRSlotDynamicLoop,
   context: CodegenContext,
 ): CodeFragment[] {
+  const { keyProp } = slot
+  if (keyProp) return genKeyedLoopSlot(slot, context, keyProp)
+
   const { name, fn, loop } = slot
   const { value, key, index, source } = loop
   const rawValue = value && value.content
@@ -727,6 +730,81 @@ function genLoopSlot(
         ...slotExpr,
         ')',
       ],
+    ),
+  ]
+}
+
+function genKeyedLoopSlot(
+  { name, fn, loop }: IRSlotDynamicLoop,
+  context: CodegenContext,
+  keyProp: SimpleExpressionNode,
+): CodeFragment[] {
+  const { value, key, index, source } = loop
+  const rawValue = value && value.content
+  const rawKey = key && key.content
+  const rawIndex = index && index.content
+  const idToPathMap = parseValueDestructure(value, context)
+  const [depth, exitScope] = context.enterScope()
+  const itemVar = `_for_item${depth}`
+  const idMap = buildDestructureIdMap(
+    idToPathMap,
+    `${itemVar}.value`,
+    context.options.expressionPlugins,
+  )
+  idMap[itemVar] = null
+  const args = [itemVar]
+  if (rawKey) {
+    const keyVar = `_for_key${depth}`
+    args.push(keyVar)
+    idMap[rawKey] = `${keyVar}.value`
+    idMap[keyVar] = null
+  } else if (rawIndex) {
+    args.push('_')
+  }
+  if (rawIndex) {
+    const indexVar = `_for_index${depth}`
+    args.push(indexVar)
+    idMap[rawIndex] = `${indexVar}.value`
+    idMap[indexVar] = null
+  }
+  const slotExpr = genMulti(
+    DELIMITERS_OBJECT_NEWLINE,
+    ['name: ', ...context.withId(() => genExpression(name, context), idMap)],
+    [
+      'fn: ',
+      ...context.withId(() => genSlotBlockWithProps(fn, context, false), idMap),
+    ],
+  )
+  exitScope()
+
+  const renderSlot = [
+    ...genMulti(['(', ')', ', '], ...args),
+    ' => (',
+    ...slotExpr,
+    ')',
+  ]
+  const rawIdMap: Record<string, null> = {}
+  if (rawKey) rawIdMap[rawKey] = null
+  if (rawIndex) rawIdMap[rawIndex] = null
+  idToPathMap.forEach((_, id) => (rawIdMap[id] = null))
+  const getKey = [
+    ...genMulti(
+      ['(', ')', ', '],
+      rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
+      rawKey ? rawKey : rawIndex ? '__' : undefined,
+      rawIndex,
+    ),
+    ' => (',
+    ...context.withId(() => genExpression(keyProp, context), rawIdMap),
+    ')',
+  ]
+
+  return [
+    ...genCall(
+      context.helper('createForSlots'),
+      genExpression(source, context),
+      renderSlot,
+      getKey,
     ),
   ]
 }

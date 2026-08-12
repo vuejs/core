@@ -29,6 +29,7 @@ import {
 import {
   type ComputedRef,
   ReactiveFlags,
+  type ShallowRef,
   computed,
   onScopeDispose,
   shallowReactive,
@@ -46,6 +47,22 @@ export type RawProps = Record<string, unknown> & {
 export type DynamicPropsSource =
   | (() => Record<string, unknown>)
   | Record<string, unknown>
+
+export interface KeyedForSlotMetadata {
+  key: unknown
+  refs: ShallowRef[]
+}
+
+// Keep compiler-emitted slot descriptors public-shape compatible while giving
+// dynamic source stabilization enough state to advance keyed loop aliases.
+const keyedForSlotMetadata = new WeakMap<unknown[], KeyedForSlotMetadata[]>()
+
+export function setKeyedForSlotMetadata(
+  slots: unknown[],
+  metadata: KeyedForSlotMetadata[],
+): void {
+  keyedForSlotMetadata.set(slots, metadata)
+}
 
 export function isolatePropSources(rawProps: RawProps): RawProps {
   // Static values cannot change while cached and need no commit boundary.
@@ -267,6 +284,19 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
 }
 
 function stabilizeDynamicSourceValue<T>(oldValue: T | undefined, value: T): T {
+  if (isArray(oldValue) && isArray(value)) {
+    const oldMetadata = keyedForSlotMetadata.get(oldValue)
+    const newMetadata = keyedForSlotMetadata.get(value)
+    if (oldMetadata && newMetadata) {
+      return stabilizeKeyedForSlots(
+        oldValue,
+        value,
+        oldMetadata,
+        newMetadata,
+      ) as T
+    }
+  }
+
   if (!isPlainObject(oldValue) || !isPlainObject(value)) {
     return value
   }
@@ -291,6 +321,57 @@ function stabilizeDynamicSourceValue<T>(oldValue: T | undefined, value: T): T {
   }
 
   return oldValue
+}
+
+function stabilizeKeyedForSlots(
+  oldSlots: unknown[],
+  newSlots: unknown[],
+  oldMetadata: KeyedForSlotMetadata[],
+  newMetadata: KeyedForSlotMetadata[],
+): unknown[] {
+  const oldIndexes = new Map<unknown, number>()
+  for (let i = 0; i < oldMetadata.length; i++) {
+    oldIndexes.set(oldMetadata[i].key, i)
+  }
+
+  const slots = new Array(newSlots.length)
+  const metadata = new Array<KeyedForSlotMetadata>(newSlots.length)
+  let unchanged = oldSlots.length === newSlots.length
+
+  for (let i = 0; i < newSlots.length; i++) {
+    const newEntry = newMetadata[i]
+    const oldIndex = oldIndexes.get(newEntry.key)
+    if (oldIndex === undefined) {
+      slots[i] = newSlots[i]
+      metadata[i] = newEntry
+      unchanged = false
+      continue
+    }
+
+    oldIndexes.delete(newEntry.key)
+    const oldEntry = oldMetadata[oldIndex]
+    for (let j = 0; j < oldEntry.refs.length; j++) {
+      updateForSlotRef(oldEntry.refs[j], newEntry.refs[j])
+    }
+
+    const oldSlot = oldSlots[oldIndex] as { name: unknown }
+    const newSlot = newSlots[i] as { name: unknown }
+    if (!Object.is(oldSlot.name, newSlot.name)) {
+      oldSlot.name = newSlot.name
+      unchanged = false
+    }
+    if (oldIndex !== i) unchanged = false
+    slots[i] = oldSlot
+    metadata[i] = oldEntry
+  }
+
+  if (unchanged) return oldSlots
+  keyedForSlotMetadata.set(slots, metadata)
+  return slots
+}
+
+function updateForSlotRef(ref: ShallowRef, newRef: ShallowRef): void {
+  if (!Object.is(ref.value, newRef.value)) ref.value = newRef.value
 }
 
 export function getPropsProxyHandlers(

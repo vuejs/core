@@ -68,14 +68,14 @@ const t0 = _template(" ")
 export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, {
     $: [
-      () => (_createForSlots(_ctx.list, (item) => ({
-        name: item,
-        fn: (_slotProps0) => {
+      () => (_createForSlots(_ctx.list, (_for_item0) => ({
+        name: _for_item0.value,
+        fn: (_slotProps1) => {
           const n0 = t0()
-          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.bar)))
+          _renderEffect(() => _setText(n0, _toDisplayString(_slotProps1.bar)))
           return n0
         }
-      })))
+      }), (item) => (item)))
     ]
   }, true)
   return n2

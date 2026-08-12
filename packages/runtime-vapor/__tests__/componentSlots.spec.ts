@@ -6849,6 +6849,61 @@ describe('component: slots', () => {
       expect(instance.slots).not.toHaveProperty('1')
     })
 
+    // #15276
+    test('should preserve keyed slot content when source identities change', async () => {
+      const items = shallowRef([
+        { name: 'a', label: 'A' },
+        { name: 'b', label: 'B' },
+      ])
+      const Content = compile(
+        `<script setup vapor>
+        import { ref } from 'vue'
+        defineProps(['label'])
+        const count = ref(0)
+        </script>
+        <template>
+          <button @click="count++">{{ label }}:{{ count }}</button>
+        </template>`,
+        items,
+      )
+      const Child = compile(
+        `<template><slot name="a" /><slot name="b" /></template>`,
+        items,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template
+              v-for="item in data"
+              :key="item.name"
+              #[item.name]
+            >
+              <components.Content :label="item.label" />
+            </template>
+          </components.Child>
+        </template>`,
+        items,
+        { Child, Content },
+      )
+
+      const { host } = define(App).render()
+      const firstButton = host.querySelector('button')!
+      firstButton.click()
+      firstButton.click()
+      await nextTick()
+
+      expect(firstButton.textContent).toBe('A:2')
+
+      items.value = [
+        { name: 'a', label: 'A updated' },
+        { name: 'b', label: 'B updated' },
+      ]
+      await nextTick()
+
+      expect(host.querySelector('button')).toBe(firstButton)
+      expect(firstButton.textContent).toBe('A updated:2')
+    })
+
     test('should cache dynamic slot source result', async () => {
       const items = ref([1, 2, 3])
       let callCount = 0

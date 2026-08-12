@@ -468,13 +468,16 @@ describe('compiler: transform slot', () => {
   test('dynamic slots name w/ v-for', () => {
     const { ir, code } = compileWithSlots(
       `<Comp>
-        <template v-for="item in list" #[item]="{ bar }">{{ bar }}</template>
+        <template v-for="item in list" :key="item" #[item]="{ bar }">{{ bar }}</template>
       </Comp>`,
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: (_slotProps0) =>`)
-    expect(code).contains(`_setText(n0, _toDisplayString(_slotProps0.bar))`)
+    expect(code).contains(`fn: (_slotProps1) =>`)
+    expect(code).contains(`_setText(n0, _toDisplayString(_slotProps1.bar))`)
+    expect(code).contains(`(_for_item0) =>`)
+    expect(code).contains(`_for_item0.value`)
+    expect(code).contains(`(item) => (item)`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -487,6 +490,7 @@ describe('compiler: transform slot', () => {
             isStatic: false,
           },
           fn: { type: IRNodeTypes.BLOCK },
+          keyProp: { content: 'item' },
           loop: {
             source: { content: 'list' },
             value: { content: 'item' },

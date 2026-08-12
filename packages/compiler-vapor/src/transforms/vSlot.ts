@@ -23,7 +23,12 @@ import {
   type SlotBlockIRNode,
   type VaporDirectiveNode,
 } from '../ir'
-import { findDir, resolveExpression } from '../utils'
+import {
+  findDir,
+  findProp,
+  propToExpression,
+  resolveExpression,
+} from '../utils'
 import { markNonTemplate } from './transformText'
 import { ignoreComment } from './transformComment'
 
@@ -197,11 +202,13 @@ function transformTemplateSlot(
     }
   } else if (vFor) {
     if (vFor.forParseResult) {
+      const keyProp = findProp(node, 'key')
       registerDynamicSlot(slots, {
         slotType: IRSlotType.LOOP,
         name: arg!,
         fn: block,
         loop: vFor.forParseResult as IRFor,
+        keyProp: keyProp && propToExpression(keyProp),
       })
     } else {
       context.options.onError(
