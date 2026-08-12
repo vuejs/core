@@ -59,6 +59,35 @@ describe('createFor', () => {
     expect(getEffectsCount(filled.instance!.scope)).toBe(emptyCount)
   })
 
+  test('should not retain unmounted component items on parent scope', async () => {
+    const list = ref<number[]>([])
+    const Child = defineVaporComponent({
+      setup() {
+        return template('<span>child</span>')()
+      },
+    })
+
+    const { instance } = define(() => {
+      return createFor(
+        () => list.value,
+        () => createComponent(Child),
+        item => item,
+        VaporVForFlags.IS_COMPONENT,
+      )
+    }).render()
+
+    const emptyCount = instance!.scope.cleanupsLength
+
+    for (let i = 0; i < 3; i++) {
+      list.value = [1, 2, 3]
+      await nextTick()
+      list.value = []
+      await nextTick()
+    }
+
+    expect(instance!.scope.cleanupsLength).toBe(emptyCount)
+  })
+
   test('should stop DOM item scopes when parent scope is disposed', async () => {
     const show = ref(true)
     const list = ref([1, 2, 3])

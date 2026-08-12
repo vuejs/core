@@ -155,16 +155,14 @@ export const createFor = (
     warn('createFor() can only be used inside setup()')
   }
 
-  if (!isComponent) {
-    onScopeDispose(() => {
-      stopBlockScopes(oldBlocks)
-      if (newBlocks && newBlocks !== oldBlocks) {
-        stopBlockScopes(newBlocks)
-      }
-      oldBlocks = []
-      newBlocks = []
-    }, true)
-  }
+  onScopeDispose(() => {
+    stopBlockScopes(oldBlocks)
+    if (newBlocks && newBlocks !== oldBlocks) {
+      stopBlockScopes(newBlocks)
+    }
+    oldBlocks = []
+    newBlocks = []
+  }, true)
 
   const renderList = () => {
     const source = normalizeSource(src())
@@ -462,20 +460,14 @@ export const createFor = (
     const indexRef = needIndex ? shallowRef(index) : undefined
 
     let nodes: Block
-    let scope: EffectScope | undefined
-    if (isComponent) {
-      // component already has its own scope so no outer scope needed
-      nodes = renderItem(itemRef, keyRef as any, indexRef as any)
-    } else {
-      scope = new EffectScope(true)
-      try {
-        nodes = scope.run(() =>
-          renderItem(itemRef, keyRef as any, indexRef as any),
-        )!
-      } catch (err) {
-        scope.stop()
-        throw err
-      }
+    const scope = new EffectScope(true)
+    try {
+      nodes = scope.run(() =>
+        renderItem(itemRef, keyRef as any, indexRef as any),
+      )!
+    } catch (err) {
+      scope.stop()
+      throw err
     }
 
     const block = (newBlocks[idx] = new ForBlock(
@@ -630,9 +622,7 @@ export const createFor = (
   }
 
   const unmount = (block: ForBlock, doRemove = true) => {
-    if (!isComponent) {
-      block.scope!.stop()
-    }
+    block.scope!.stop()
     if (doRemove) {
       removeForBlock(block)
     }
