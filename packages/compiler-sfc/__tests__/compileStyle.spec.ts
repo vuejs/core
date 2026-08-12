@@ -467,6 +467,33 @@ color: red
       `)
     })
 
+    test('a member with :global() buried in a functional pseudo is left alone', () => {
+      expect(
+        compileScoped(
+          `:is(:global(.b)) :deep(.c),
+.a { > span { color: blue; } }`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ":is(.b) .c,
+        .a[data-v-test] {
+        > span { color: blue;
+        }
+        }"
+      `)
+      expect(
+        compileScoped(
+          `:is(:global(.b)) .x,
+.b :deep(.c) { > span { color: blue; } }`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ":is(:global(.b)) .x,
+        .b[data-v-test] .c {
+        > span { color: blue;
+        }
+        }"
+      `)
+    })
+
     test('keyframes do not count as nested rules', () => {
       expect(
         compileScoped(

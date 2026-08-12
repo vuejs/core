@@ -510,10 +510,16 @@ function isDeepSelector(node: selectorParser.Node): boolean {
 }
 
 function isGlobalSelector(node: selectorParser.Node): boolean {
-  return (
+  if (
     node.type === 'pseudo' &&
     (node.value === ':global' || node.value === '::v-global')
-  )
+  ) {
+    return true
+  }
+
+  return !!(
+    node as selectorParser.Node & { nodes?: selectorParser.Node[] }
+  ).nodes?.some(child => isGlobalSelector(child))
 }
 
 function isDeepContainerPseudo(
