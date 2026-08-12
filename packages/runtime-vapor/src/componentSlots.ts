@@ -92,7 +92,7 @@ export type StaticSlots = Record<string, VaporSlot>
 export type VaporSlot = BlockFn & {
   _?: VaporSlotFlags.NON_STABLE
 }
-export type DynamicSlot = { name: string; fn: VaporSlot }
+export type DynamicSlot = { name: string; fn: VaporSlot; key?: unknown }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
 export type DynamicSlotSource = StaticSlots | DynamicSlotFn
 
@@ -197,6 +197,16 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
 }
 
 export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
+  const slot = resolveSlot(target, key)
+  if (slot) {
+    return getOwnedSlot(target, key, isFunction(slot) ? slot : slot.fn)
+  }
+}
+
+function resolveSlot(
+  target: RawSlots,
+  key: string,
+): VaporSlot | DynamicSlot | undefined {
   if (key === '$') return
   const dynamicSources = target.$
   if (dynamicSources) {
@@ -212,20 +222,20 @@ export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
           if (isArray(slot)) {
             for (let j = slot.length - 1; j >= 0; j--) {
               if (String(slot[j].name) === key) {
-                return getOwnedSlot(target, key, slot[j].fn)
+                return slot[j]
               }
             }
           } else if (String(slot.name) === key) {
-            return getOwnedSlot(target, key, slot.fn)
+            return slot
           }
         }
       } else if (hasOwn(source, key)) {
-        return getOwnedSlot(target, key, source[key])
+        return source[key]
       }
     }
   }
   if (hasOwn(target, key)) {
-    return getOwnedSlot(target, key, target[key])
+    return target[key]
   }
 }
 
@@ -374,20 +384,31 @@ export function createSlot(
         return
       }
 
-      const slot = getSlot(rawSlots, slotName)
+      const resolvedSlot = resolveSlot(rawSlots, slotName)
+      const slot = resolvedSlot
+        ? getOwnedSlot(
+            rawSlots,
+            slotName,
+            isFunction(resolvedSlot) ? resolvedSlot : resolvedSlot.fn,
+          )
+        : undefined
       const render = slot ? getBoundSlot(slot) : undefined
+      const key =
+        resolvedSlot && !isFunction(resolvedSlot) && hasOwn(resolvedSlot, 'key')
+          ? resolvedSlot.key
+          : render || fallback
       if (slotFragment) {
-        slotFragment.updateSlot(render, fallback)
+        slotFragment.updateSlot(render, fallback, key)
       } else {
         // When no slot render exists, the fast path hands fallback to the
         // DynamicFragment; during hydration it owns the slot SSR range, so
         // empty dynamic roots get its close marker.
         if (isHydrating) {
           withHydratingSlotBoundary(() =>
-            dynamicFragment!.update(render || fallback),
+            dynamicFragment!.update(render || fallback, key),
           )
         } else {
-          dynamicFragment!.update(render || fallback)
+          dynamicFragment!.update(render || fallback, key)
         }
       }
     }

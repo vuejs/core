@@ -2699,11 +2699,11 @@ describe('component: slots', () => {
           default: () =>
             createComponent(Leaf, null, {
               $: [
-                () =>
-                  createForSlots(slots, (_slot, name) => ({
-                    name,
-                    fn: () => createSlot(name),
-                  })),
+                createForSlots(
+                  () => slots,
+                  (_slot, name) => () => createSlot(() => name!.value),
+                  (_slot, name) => name,
+                ),
               ],
             }),
         })
@@ -6141,16 +6141,17 @@ describe('component: slots', () => {
               null,
               {
                 $: [
-                  () =>
-                    createForSlots(values.value, value => ({
-                      name: 'default',
-                      fn: () => {
-                        if (value === 1) {
-                          throw new Error('slot boom')
-                        }
-                        return template('<span>ok</span>')()
-                      },
-                    })),
+                  createForSlots(
+                    () => values.value,
+                    value => () => {
+                      if (value.value === 1) {
+                        throw new Error('slot boom')
+                      }
+                      return template('<span>ok</span>')()
+                    },
+                    () => 'default',
+                    value => value,
+                  ),
                 ],
               },
               true,
@@ -6827,11 +6828,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(loop.value, (item, i) => ({
-                  name: item,
-                  fn: () => template(item + i)(),
-                })),
+              createForSlots(
+                () => loop.value,
+                (item, i) => () => template(item.value + i!.value)(),
+                item => item,
+              ),
             ],
           })
         },
@@ -6847,6 +6848,43 @@ describe('component: slots', () => {
       loop.value.shift()
       await nextTick()
       expect(instance.slots).not.toHaveProperty('1')
+    })
+
+    test('should preserve result identity when slot resolution is unchanged', () => {
+      const items = ref([
+        { id: 1, name: 'a', label: 'A0' },
+        { id: 2, name: 'b', label: 'B0' },
+      ])
+      let renderedItem: any
+      const source = createForSlots(
+        () => items.value,
+        item => () => {
+          renderedItem = item.value
+          return template('content')()
+        },
+        item => item.name,
+        item => item.id,
+      )
+
+      const first = source()
+      const firstSlot = first[0]
+      items.value = [
+        { id: 1, name: 'a', label: 'A1' },
+        { id: 2, name: 'b', label: 'B1' },
+      ]
+      const second = source()
+
+      expect(second).toBe(first)
+      expect(second[0]).toBe(firstSlot)
+      second[0].fn()
+      expect(renderedItem).toBe(items.value[0])
+
+      items.value.reverse()
+      const reordered = source()
+      expect(reordered).not.toBe(second)
+
+      items.value[0].name = 'c'
+      expect(source()).not.toBe(reordered)
     })
 
     test('should cache dynamic slot source result', async () => {
@@ -6875,11 +6913,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(getItems(), (item, i) => ({
-                  name: 'slot' + item,
-                  fn: () => template(String(item))(),
-                })),
+              createForSlots(
+                getItems,
+                item => () => template(String(item.value))(),
+                item => 'slot' + item,
+              ),
             ],
           })
         },
@@ -6918,11 +6956,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(getItems(), (item, i) => ({
-                  name: 'slot' + item,
-                  fn: () => template(String(item))(),
-                })),
+              createForSlots(
+                getItems,
+                item => () => template(String(item.value))(),
+                item => 'slot' + item,
+              ),
             ],
           })
         },
@@ -6961,11 +6999,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(items.value, item => ({
-                  name: 'slot' + item,
-                  fn: () => template('content' + item)(),
-                })),
+              createForSlots(
+                () => items.value,
+                item => () => template('content' + item.value)(),
+                item => 'slot' + item,
+              ),
             ],
           })
         },
@@ -7006,11 +7044,15 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(list.value, item => ({
-                  name: 'default',
-                  fn: () => template(String(item))(),
-                })),
+              createForSlots(
+                () => list.value,
+                item => () => {
+                  const n = template(' ')() as Text
+                  renderEffect(() => setText(n, String(item.value)))
+                  return n
+                },
+                () => 'default',
+              ),
             ],
           })
         },
@@ -7048,11 +7090,11 @@ describe('component: slots', () => {
         setup() {
           return createComponent(Child, null, {
             $: [
-              () =>
-                createForSlots(loop.value as any, (item, i) => ({
-                  name: item,
-                  fn: () => template(item + i)(),
-                })),
+              createForSlots(
+                () => loop.value as any,
+                (item, i) => () => template(item.value + i!.value)(),
+                item => item,
+              ),
             ],
           })
         },
@@ -7066,6 +7108,153 @@ describe('component: slots', () => {
       loop.value = null
       await nextTick()
       expect(instance.slots).toEqual({})
+    })
+
+    // #15276
+    test('should preserve keyed slot records across source updates', async () => {
+      const state = ref({
+        showA: false,
+        items: [
+          { id: 'a1', name: 'a', label: 'A0' },
+          { id: 'b1', name: 'b', label: 'B0' },
+        ],
+      })
+      const unmounted = vi.fn()
+      const Content = compile(
+        `<script setup vapor>
+        import { onUnmounted, ref } from 'vue'
+        const props = defineProps(['label'])
+        const count = ref(0)
+        onUnmounted(_components.unmounted)
+        </script>
+        <template>
+          <button @click="count++">{{ props.label }}:{{ count }}</button>
+        </template>`,
+        state,
+        { unmounted },
+      )
+      const Child = compile(
+        `<template>
+          <div id="b"><slot name="b" /></div>
+          <div v-if="data.showA" id="a"><slot name="a" /></div>
+        </template>`,
+        state,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template
+              v-for="item in data.items"
+              :key="item.id"
+              #[item.name]
+            >
+              <components.Content :label="item.label" />
+            </template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        state.value.items = [
+          { id: 'a1', name: 'a', label: 'A1' },
+          { id: 'b1', name: 'b', label: 'B1' },
+        ]
+        await nextTick()
+
+        state.value.showA = true
+        await nextTick()
+        const firstButton = root.querySelector<HTMLButtonElement>('#a button')!
+        expect(firstButton.textContent).toBe('A1:0')
+        firstButton.click()
+        firstButton.click()
+        await nextTick()
+
+        state.value.items = [
+          { id: 'a1', name: 'a', label: 'A2' },
+          { id: 'b1', name: 'b', label: 'B2' },
+        ]
+        await nextTick()
+
+        expect(root.querySelector('#a button')).toBe(firstButton)
+        expect(firstButton.textContent).toBe('A2:2')
+        expect(root.querySelector('#b')!.textContent).toBe('B2:0')
+        expect(unmounted).not.toHaveBeenCalled()
+
+        state.value.items = [
+          { id: 'a2', name: 'a', label: 'A3' },
+          { id: 'b1', name: 'b', label: 'B3' },
+        ]
+        await nextTick()
+
+        expect(root.querySelector('#a button')).not.toBe(firstButton)
+        expect(root.querySelector('#a')!.textContent).toBe('A3:0')
+        expect(unmounted).toHaveBeenCalledOnce()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('should preserve unkeyed slot content by name when reordered', async () => {
+      const items = ref([
+        { name: 'a', label: 'A0' },
+        { name: 'b', label: 'B0' },
+      ])
+      const Content = compile(
+        `<script setup vapor>
+        import { ref } from 'vue'
+        const props = defineProps(['label'])
+        const count = ref(0)
+        </script>
+        <template>
+          <button @click="count++">{{ props.label }}:{{ count }}</button>
+        </template>`,
+        items,
+      )
+      const Child = compile(
+        `<template><slot name="a" /><slot name="b" /></template>`,
+        items,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-for="item in data" #[item.name]>
+              <components.Content :label="item.label" />
+            </template>
+          </components.Child>
+        </template>`,
+        items,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const [buttonA, buttonB] = root.querySelectorAll('button')
+        buttonA.click()
+        buttonB.click()
+        buttonB.click()
+        await nextTick()
+
+        items.value = [
+          { name: 'b', label: 'B1' },
+          { name: 'a', label: 'A1' },
+        ]
+        await nextTick()
+
+        const buttons = root.querySelectorAll('button')
+        expect(buttons[0]).toBe(buttonA)
+        expect(buttons[0].textContent).toBe('A1:1')
+        expect(buttons[1]).toBe(buttonB)
+        expect(buttons[1].textContent).toBe('B1:2')
+      } finally {
+        app.unmount()
+      }
     })
 
     test('should remove teleported content when a dynamic v-for slot is removed', async () => {

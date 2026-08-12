@@ -29,6 +29,7 @@ import { queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance } from './component'
 import {
   type DynamicSlot,
+  type VaporSlot,
   currentSlotOwner,
   setCurrentSlotOwner,
 } from './componentSlots'
@@ -789,16 +790,90 @@ function stopBlockScopes(blocks: ForBlock[]): void {
 }
 
 export function createForSlots(
-  rawSource: Source,
-  getSlot: (item: any, key: any, index?: number) => DynamicSlot,
-): DynamicSlot[] {
-  const source = normalizeSource(rawSource)
-  const sourceLength = source.values.length
-  const slots = new Array<DynamicSlot>(sourceLength)
-  for (let i = 0; i < sourceLength; i++) {
-    slots[i] = getSlot(...getItem(source, i))
+  rawSource: () => Source,
+  renderSlot: (
+    item: ShallowRef,
+    key?: ShallowRef,
+    index?: ShallowRef,
+  ) => VaporSlot,
+  getName: (item: any, key: any, index?: number) => unknown,
+  getKey?: (item: any, key: any, index?: number) => unknown,
+): () => DynamicSlot[] {
+  type SlotRecord = DynamicSlot & {
+    rawIdentity: unknown
+    itemRef: ShallowRef
+    keyRef?: ShallowRef
+    indexRef?: ShallowRef
   }
-  return slots
+
+  let oldRecords: SlotRecord[] = []
+  const needKey = renderSlot.length > 1
+  const needIndex = renderSlot.length > 2
+
+  return () => {
+    const source = normalizeSource(rawSource())
+    const sourceLength = source.values.length
+    const names = new Array<string>(sourceLength)
+    const identities = new Array<unknown>(sourceLength)
+
+    for (let i = 0; i < sourceLength; i++) {
+      const item = getItem(source, i)
+      names[i] = String(getName(...item))
+      identities[i] = getKey ? getKey(...item) : names[i]
+    }
+
+    const oldByIdentity = new Map<unknown, SlotRecord>()
+    for (let i = 0; i < oldRecords.length; i++) {
+      oldByIdentity.set(oldRecords[i].rawIdentity, oldRecords[i])
+    }
+
+    const records = new Array<SlotRecord>(sourceLength)
+    // Ref value updates don't affect slot resolution. Only replace the result
+    // when its records, order, or names change.
+    let changed = sourceLength !== oldRecords.length
+    const prevSub = setActiveSub()
+    for (let i = sourceLength - 1; i >= 0; i--) {
+      const [item, key, index] = getItem(source, i)
+      const rawIdentity = identities[i]
+      let record = oldByIdentity.get(rawIdentity)
+      if (record) {
+        oldByIdentity.delete(rawIdentity)
+        if (record !== oldRecords[i] || record.name !== names[i]) {
+          changed = true
+        }
+        if (!Object.is(record.itemRef.value, item)) {
+          record.itemRef.value = item
+        }
+        if (record.keyRef && !Object.is(record.keyRef.value, key)) {
+          record.keyRef.value = key
+        }
+        if (record.indexRef && !Object.is(record.indexRef.value, index)) {
+          record.indexRef.value = index
+        }
+        record.name = names[i]
+      } else {
+        changed = true
+        const itemRef = shallowRef(item)
+        const keyRef = needKey ? shallowRef(key) : undefined
+        const indexRef = needIndex ? shallowRef(index) : undefined
+        record = {
+          rawIdentity,
+          itemRef,
+          keyRef,
+          indexRef,
+          name: names[i],
+          fn: renderSlot(itemRef, keyRef, indexRef),
+          // The item ref is stable for the lifetime of this slot record.
+          key: itemRef,
+        }
+      }
+      records[i] = record
+    }
+    setActiveSub(prevSub)
+    if (!changed) return oldRecords
+    oldRecords = records
+    return records
+  }
 }
 
 function normalizeSource(source: any): ResolvedSource {

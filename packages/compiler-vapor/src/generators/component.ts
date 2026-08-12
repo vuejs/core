@@ -651,7 +651,7 @@ function genDynamicSlots(
         ? genStaticSlots(slot, context)
         : slot.slotType === IRSlotType.EXPRESSION
           ? slot.slots.content
-          : genDynamicSlot(slot, context, true),
+          : genDynamicSlot(slot, context, slot.slotType !== IRSlotType.LOOP),
     ),
   )
 }
@@ -694,39 +694,75 @@ function genLoopSlot(
   slot: IRSlotDynamicLoop,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { name, fn, loop } = slot
+  const { name, fn, loop, keyProp } = slot
   const { value, key, index, source } = loop
   const rawValue = value && value.content
   const rawKey = key && key.content
   const rawIndex = index && index.content
 
-  const idMap: Record<string, string> = {}
-  if (rawValue) idMap[rawValue] = rawValue
-  if (rawKey) idMap[rawKey] = rawKey
-  if (rawIndex) idMap[rawIndex] = rawIndex
-  const slotExpr = genMulti(
-    DELIMITERS_OBJECT_NEWLINE,
-    ['name: ', ...context.withId(() => genExpression(name, context), idMap)],
-    [
-      'fn: ',
-      ...context.withId(() => genSlotBlockWithProps(fn, context, false), idMap),
-    ],
+  const idToPathMap = parseValueDestructure(value, context)
+  const [depth, exitScope] = context.enterScope()
+  const itemVar = `_for_item${depth}`
+  const idMap = buildDestructureIdMap(
+    idToPathMap,
+    `${itemVar}.value`,
+    context.options.expressionPlugins,
   )
+  idMap[itemVar] = null
+
+  const args = [itemVar]
+  if (rawKey) {
+    const keyVar = `_for_key${depth}`
+    args.push(keyVar)
+    idMap[rawKey] = `${keyVar}.value`
+    idMap[keyVar] = null
+  } else if (rawIndex) {
+    args.push('_')
+  }
+  if (rawIndex) {
+    const indexVar = `_for_index${depth}`
+    args.push(indexVar)
+    idMap[rawIndex] = `${indexVar}.value`
+    idMap[indexVar] = null
+  }
+
+  const renderSlot = [
+    ...genMulti(['(', ')', ', '], ...args),
+    ' => ',
+    ...context.withId(() => genSlotBlockWithProps(fn, context, false), idMap),
+  ]
+  exitScope()
+
+  const rawIdMap: Record<string, null> = {}
+  if (rawKey) rawIdMap[rawKey] = null
+  if (rawIndex) rawIdMap[rawIndex] = null
+  idToPathMap.forEach((_, id) => (rawIdMap[id] = null))
+  const rawParams = genMulti(
+    ['(', ')', ', '],
+    rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
+    rawKey ? rawKey : rawIndex ? '__' : undefined,
+    rawIndex,
+  )
+  const getName = [
+    ...rawParams,
+    ' => (',
+    ...context.withId(() => genExpression(name, context), rawIdMap),
+    ')',
+  ]
+  const getKey = keyProp && [
+    ...rawParams,
+    ' => (',
+    ...context.withId(() => genExpression(keyProp, context), rawIdMap),
+    ')',
+  ]
+
   return [
     ...genCall(
       context.helper('createForSlots'),
-      genExpression(source, context),
-      [
-        ...genMulti(
-          ['(', ')', ', '],
-          rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
-          rawKey ? rawKey : rawIndex ? '__' : undefined,
-          rawIndex,
-        ),
-        ' => (',
-        ...slotExpr,
-        ')',
-      ],
+      ['() => (', ...genExpression(source, context), ')'],
+      renderSlot,
+      getName,
+      getKey,
     ),
   ]
 }
