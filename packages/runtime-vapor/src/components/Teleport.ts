@@ -463,6 +463,7 @@ export class TeleportFragment extends RenderContextFragment {
     target: TeleportTargetElement,
     targetNode: Node | null,
   ): void {
+    if (!isHydrating) return
     let targetAnchor = targetNode
     while (targetAnchor) {
       if (targetAnchor.nodeType === 8) {
