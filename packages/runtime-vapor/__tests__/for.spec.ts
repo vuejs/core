@@ -20,6 +20,7 @@ import {
 import {
   type Ref,
   nextTick,
+  onMounted,
   onScopeDispose,
   onUnmounted,
   reactive,
@@ -118,8 +119,95 @@ describe('createFor', () => {
     expect(instance!.refs.children).toHaveLength(0)
   })
 
+  test('stops dynamic component effects when an item is removed', async () => {
+    const mountedA = vi.fn()
+    const mountedB = vi.fn()
+    const A = defineVaporComponent({
+      setup() {
+        onMounted(mountedA)
+        return template('<span>A</span>')()
+      },
+    })
+    const B = defineVaporComponent({
+      setup() {
+        onMounted(mountedB)
+        return template('<span>B</span>')()
+      },
+    })
+    const state = shallowRef({ items: [] as number[], type: A })
+    const App = compile(
+      `<template>
+        <component
+          :is="data.type"
+          v-for="item in data.items"
+          :key="item"
+        />
+      </template>`,
+      state,
+    )
+    const { app, html, instance } = define(App).render()
+    const effectBaseline = getEffectsCount(instance!.scope)
+
+    state.value = { items: [0, 1, 2], type: A }
+    await nextTick()
+
+    expect(mountedA).toHaveBeenCalledTimes(3)
+    expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
+
+    state.value = { items: [0, 1, 2], type: B }
+    await nextTick()
+
+    expect(mountedB).toHaveBeenCalledTimes(3)
+
+    state.value = { items: [], type: B }
+    await nextTick()
+    state.value = { items: [], type: A }
+    await nextTick()
+
+    expect(html()).toBe('<!--for-->')
+    expect(mountedA).toHaveBeenCalledTimes(3)
+    expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
+    app.unmount()
+  })
+
+  test('stops component v-show effects when an item is removed', async () => {
+    const state = ref({ items: [] as number[], visible: true })
+    const Child = compile(`<template><span>child</span></template>`, state)
+    const App = compile(
+      `<template>
+        <components.Child
+          v-for="item in data.items"
+          :key="item"
+          v-show="data.visible"
+        />
+      </template>`,
+      state,
+      { Child },
+    )
+    const { app, host, instance } = define(App).render()
+    const effectBaseline = getEffectsCount(instance!.scope)
+
+    state.value.items = [0, 1, 2]
+    await nextTick()
+    const removedNodes = [...host.querySelectorAll('span')]
+
+    expect(removedNodes).toHaveLength(3)
+    expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
+
+    state.value.items = []
+    await nextTick()
+    expect(removedNodes.every(node => !node.isConnected)).toBe(true)
+
+    state.value.visible = false
+    await nextTick()
+
+    expect(removedNodes.every(node => node.style.display === '')).toBe(true)
+    expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
+    app.unmount()
+  })
+
   test('removes component items before stopping their scope', async () => {
-    const state = ref({ items: [0] })
+    const state = ref({ items: [] as number[] })
     let child!: VaporComponentInstance
     const cleanup = vi.fn(() => {
       expect((child.block as Node).isConnected).toBe(false)
@@ -143,12 +231,19 @@ describe('createFor', () => {
       state,
       { Child, refFn },
     )
-    const { app } = define(App).render()
+    const { app, instance } = define(App).render()
+    const effectBaseline = getEffectsCount(instance!.scope)
+
+    state.value.items = [0]
+    await nextTick()
+
+    expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
 
     state.value.items = []
     await nextTick()
 
     expect(cleanup).toHaveBeenCalledOnce()
+    expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
     app.unmount()
   })
 
