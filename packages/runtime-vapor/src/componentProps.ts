@@ -196,9 +196,9 @@ export function resolveFunctionSource<T>(
   // where source was defined.
   const parent = currentInstance && currentInstance.parent
   if (parent) {
-    // create the computed in the parent's context so it is collected by the
-    // parent's scope rather than whatever scope happens to be active here
-    const prev = setCurrentInstance(parent)
+    // execute the source in the parent's context, but collect its cache in the
+    // reading component's scope
+    const prev = setCurrentInstance(parent, currentInstance!.scope)
     try {
       source._cache = computed(oldValue => {
         const prevInner = setCurrentInstance(parent)
