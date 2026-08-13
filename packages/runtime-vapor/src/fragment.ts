@@ -214,7 +214,7 @@ export class ForFragment extends VaporFragment<Block[]> {
 }
 
 export class ForBlock extends VaporFragment {
-  scope: EffectScope | undefined
+  cleanup: EffectScope | (() => void) | (() => void)[] | undefined
   key: any
   prev?: ForBlock
   next?: ForBlock
@@ -226,14 +226,14 @@ export class ForBlock extends VaporFragment {
 
   constructor(
     nodes: Block,
-    scope: EffectScope | undefined,
+    cleanup: ForBlock['cleanup'],
     item: ShallowRef<any>,
     key: ShallowRef<any> | undefined,
     index: ShallowRef<number | undefined> | undefined,
     renderKey: any,
   ) {
     super(nodes, FOR_ITEM)
-    this.scope = scope
+    this.cleanup = cleanup
     this.itemRef = item
     this.keyRef = key
     this.indexRef = index

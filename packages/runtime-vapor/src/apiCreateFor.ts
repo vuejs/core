@@ -1,6 +1,7 @@
 import {
   EffectScope,
   type ShallowRef,
+  getCurrentScope,
   isReactive,
   isReadonly,
   isShallow,
@@ -143,6 +144,7 @@ export const createFor = (
   )
   const instance = currentInstance!
   const isComponent = !!(flags & VaporVForFlags.IS_COMPONENT)
+  const ownerScope = isComponent ? getCurrentScope()! : undefined
   const canUseFastRemove =
     !!(flags & VaporVForFlags.FAST_REMOVE) && !isComponent
   const isSingleNode = !!(flags & VaporVForFlags.IS_SINGLE_NODE)
@@ -155,16 +157,14 @@ export const createFor = (
     warn('createFor() can only be used inside setup()')
   }
 
-  if (!isComponent) {
-    onScopeDispose(() => {
-      stopBlockScopes(oldBlocks)
-      if (newBlocks && newBlocks !== oldBlocks) {
-        stopBlockScopes(newBlocks)
-      }
-      oldBlocks = []
-      newBlocks = []
-    }, true)
-  }
+  onScopeDispose(() => {
+    cleanupBlocks(oldBlocks, isComponent)
+    if (newBlocks && newBlocks !== oldBlocks) {
+      cleanupBlocks(newBlocks, isComponent)
+    }
+    oldBlocks = []
+    newBlocks = []
+  }, true)
 
   const renderList = () => {
     const source = normalizeSource(src())
@@ -209,7 +209,7 @@ export const createFor = (
       } else if (!newLength) {
         // fast path for clearing all.
         // Fire reset listeners BEFORE per-item unmount so attached selectors
-        // bump their generation counter; the subsequent block.scope.stop()
+        // bump their generation counter; the subsequent item scope cleanup
         // calls then short-circuit their onScopeDispose deregisters instead
         // of doing N individual Map.delete() ops.
         if (frag.resetListeners) {
@@ -432,9 +432,9 @@ export const createFor = (
   const needIndex = renderItem.length > 2
 
   type InsertForBlock = (block: ForBlock, anchor: Node | undefined) => void
-  // IS_COMPONENT means the item owns its own scope, not that block.nodes is
-  // guaranteed to be a VaporComponentInstance. Component fallback may produce a
-  // plain DOM node, so component-shaped blocks still use the generic block path.
+  // IS_COMPONENT does not guarantee that block.nodes is a
+  // VaporComponentInstance. Component fallback may produce a plain DOM node, so
+  // component-shaped blocks still use the generic block path.
   const insertForBlock: InsertForBlock = isSingleNode
     ? (block, anchor) => insertNode(block.nodes as Node, parent!, anchor)
     : isFragment
@@ -462,12 +462,22 @@ export const createFor = (
     const indexRef = needIndex ? shallowRef(index) : undefined
 
     let nodes: Block
-    let scope: EffectScope | undefined
+    let cleanup: ForBlock['cleanup']
     if (isComponent) {
-      // component already has its own scope so no outer scope needed
+      // Component items skip per-item scopes. Transfer cleanups registered while
+      // rendering this item from the owner scope to its ForBlock instead.
+      const scope = ownerScope!
+      const cleanupStart = scope.cleanupsLength
       nodes = renderItem(itemRef, keyRef as any, indexRef as any)
+      const cleanupCount = scope.cleanupsLength - cleanupStart
+      if (cleanupCount) {
+        const cleanups = scope.cleanups
+        cleanup =
+          cleanupCount === 1 ? cleanups.pop()! : cleanups.splice(cleanupStart)
+        scope.cleanupsLength = cleanupStart
+      }
     } else {
-      scope = new EffectScope(true)
+      const scope = new EffectScope(true)
       try {
         nodes = scope.run(() =>
           renderItem(itemRef, keyRef as any, indexRef as any),
@@ -476,11 +486,12 @@ export const createFor = (
         scope.stop()
         throw err
       }
+      cleanup = scope
     }
 
     const block = (newBlocks[idx] = new ForBlock(
       nodes,
-      scope,
+      cleanup,
       itemRef,
       keyRef,
       indexRef,
@@ -631,10 +642,13 @@ export const createFor = (
 
   const unmount = (block: ForBlock, doRemove = true) => {
     if (!isComponent) {
-      block.scope!.stop()
+      ;(block.cleanup as EffectScope).stop()
     }
     if (doRemove) {
       removeForBlock(block)
+    }
+    if (isComponent) {
+      cleanupComponentBlock(block)
     }
   }
 
@@ -779,12 +793,30 @@ function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
   block.prevAnchor = block
 }
 
-function stopBlockScopes(blocks: ForBlock[]): void {
+function cleanupBlocks(blocks: ForBlock[], isComponent: boolean): void {
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
     if (block) {
-      const scope = block.scope
-      if (scope) scope.stop()
+      if (isComponent) cleanupComponentBlock(block)
+      else {
+        const cleanup = block.cleanup as EffectScope | undefined
+        if (cleanup) {
+          block.cleanup = undefined
+          cleanup.stop()
+        }
+      }
+    }
+  }
+}
+
+function cleanupComponentBlock(block: ForBlock): void {
+  const cleanup = block.cleanup
+  if (cleanup) {
+    block.cleanup = undefined
+    if (isArray(cleanup)) {
+      for (let i = 0; i < cleanup.length; i++) cleanup[i]()
+    } else {
+      ;(cleanup as () => void)()
     }
   }
 }

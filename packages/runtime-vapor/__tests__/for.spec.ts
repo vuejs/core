@@ -1,4 +1,5 @@
 import {
+  type VaporComponentInstance,
   child,
   createComponent,
   createDynamicComponent,
@@ -28,7 +29,7 @@ import {
   toDisplayString,
   triggerRef,
 } from '@vue/runtime-dom'
-import { makeRender, shuffle } from './_utils'
+import { compile, makeRender, shuffle } from './_utils'
 import { VaporVForFlags } from '@vue/shared'
 
 const define = makeRender()
@@ -1883,6 +1884,98 @@ describe('createFor', () => {
 
       expect(html()).toBe('<!--for-->')
       expect(unmounted).toHaveBeenCalledTimes(2)
+    })
+
+    test('component item cleanups do not accumulate in the owner scope', async () => {
+      const state = ref({
+        items: [] as number[],
+      })
+      const unmounted = vi.fn()
+      const Child = compile(
+        `<script setup vapor>
+        import { onUnmounted } from 'vue'
+        const props = defineProps(['index'])
+        onUnmounted(_components.unmounted)
+        </script>
+        <template><span>{{ props.index }}</span></template>`,
+        state,
+        { unmounted },
+      )
+      const App = compile(
+        `<template>
+          <components.Child
+            v-for="item in data.items"
+            :key="item"
+            :index="item"
+            ref="children"
+          />
+        </template>`,
+        state,
+        { Child },
+      )
+      const { app, instance } = define(App).render()
+      const cleanupBaseline = instance!.scope.cleanupsLength
+      const effectBaseline = getEffectsCount(instance!.scope)
+      const expectStableResources = () => {
+        expect(instance!.scope.cleanups).toHaveLength(cleanupBaseline)
+        expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
+        expect(instance!.refs.children).toHaveLength(state.value.items.length)
+      }
+
+      state.value.items = [0, 1, 2]
+      await nextTick()
+      expectStableResources()
+
+      state.value.items.splice(1, 1)
+      await nextTick()
+      expect(unmounted).toHaveBeenCalledOnce()
+      expectStableResources()
+
+      for (let id = 3; id < 6; id++) {
+        state.value.items = [state.value.items[1], id]
+        await nextTick()
+        expectStableResources()
+      }
+
+      expect(unmounted).toHaveBeenCalledTimes(4)
+
+      app.unmount()
+      await nextTick()
+
+      expect(unmounted).toHaveBeenCalledTimes(6)
+      expect(instance!.refs.children).toHaveLength(0)
+    })
+
+    test('removes component items before running captured cleanups', async () => {
+      const state = ref({ items: [0] })
+      let child!: VaporComponentInstance
+      const cleanup = vi.fn(() => {
+        expect((child.block as Node).isConnected).toBe(false)
+      })
+      const refFn = (value: VaporComponentInstance | null) => {
+        if (value) child = value
+        else cleanup()
+      }
+      const Child = compile(`<template><span /></template>`, state)
+      const App = compile(
+        `<template>
+          <components.Child
+            v-for="item in data.items"
+            :key="item"
+            :ref="components.refFn"
+          />
+        </template>`,
+        state,
+        { Child, refFn },
+      )
+      const { app } = define(App).render()
+      await nextTick()
+
+      state.value.items = []
+      await nextTick()
+
+      expect(cleanup).toHaveBeenCalledOnce()
+      app.unmount()
     })
 
     test('slot fallback fragments can be reordered and removed', async () => {
