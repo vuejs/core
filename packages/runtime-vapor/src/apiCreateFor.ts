@@ -622,9 +622,16 @@ export const createFor = (
   }
 
   const unmount = (block: ForBlock, doRemove = true) => {
-    block.scope!.stop()
+    if (!isComponent) {
+      block.scope!.stop()
+    }
     if (doRemove) {
       removeForBlock(block)
+    }
+    if (isComponent) {
+      // Component item cleanups such as template refs must observe the
+      // component after structural removal.
+      block.scope!.stop()
     }
   }
 

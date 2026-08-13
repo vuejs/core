@@ -1,4 +1,5 @@
 import {
+  type VaporComponentInstance,
   child,
   createComponent,
   createDynamicComponent,
@@ -28,7 +29,7 @@ import {
   toDisplayString,
   triggerRef,
 } from '@vue/runtime-dom'
-import { makeRender, shuffle } from './_utils'
+import { compile, makeRender, shuffle } from './_utils'
 import { VaporVForFlags } from '@vue/shared'
 
 const define = makeRender()
@@ -86,6 +87,40 @@ describe('createFor', () => {
     }
 
     expect(instance!.scope.cleanupsLength).toBe(emptyCount)
+  })
+
+  test('removes component items before stopping their scope', async () => {
+    const state = ref({ items: [0] })
+    let child!: VaporComponentInstance
+    const cleanup = vi.fn(() => {
+      expect((child.block as Node).isConnected).toBe(false)
+    })
+    const refFn = (value: VaporComponentInstance | null) => {
+      if (value) {
+        child = value
+      } else {
+        cleanup()
+      }
+    }
+    const Child = compile(`<template><span /></template>`, state)
+    const App = compile(
+      `<template>
+        <components.Child
+          v-for="item in data.items"
+          :key="item"
+          :ref="components.refFn"
+        />
+      </template>`,
+      state,
+      { Child, refFn },
+    )
+    const { app } = define(App).render()
+
+    state.value.items = []
+    await nextTick()
+
+    expect(cleanup).toHaveBeenCalledOnce()
+    app.unmount()
   })
 
   test('should stop DOM item scopes when parent scope is disposed', async () => {
