@@ -6,9 +6,11 @@ import {
   hasOwn,
   isArray,
   isFunction,
+  isObject,
   isPlainObject,
   isString,
   normalizeClass,
+  normalizeStyle,
 } from '@vue/shared'
 import type { VaporComponent, VaporComponentInstance } from './component'
 import {
@@ -319,10 +321,14 @@ export function getPropsProxyHandlers(
           !isEmitListener(emitsOptions, key)
       : (key: string | symbol) => isString(key)
 
-  // vdom normalizes class on the vnode, so prop resolution already receives a
-  // normalized value. Match that order here.
-  const normalizeRawProp = (key: string, value: unknown) =>
-    key === 'class' && value && !isString(value) ? normalizeClass(value) : value
+  // vdom normalizes class and style on the vnode, so prop resolution already
+  // receives normalized values. Match that order here.
+  const normalizeRawProp = (key: string, value: unknown) => {
+    if (!value) return value
+    if (key === 'class' && !isString(value)) return normalizeClass(value)
+    if (key === 'style' && isObject(value)) return normalizeStyle(value)
+    return value
+  }
 
   const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
     // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.

@@ -681,6 +681,62 @@ describe('component: props', () => {
     expect('Invalid prop').not.toHaveBeenWarned()
   })
 
+  // #15285
+  test('declared style prop should be normalized', () => {
+    const data = ref({ style: { color: 'red' } })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ style: { type: Object } })
+      </script>
+      <template><div>{{ JSON.stringify(props.style) }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template><Child style="font-weight:bold" :style="data.style" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe(
+      '<div>{"font-weight":"bold","color":"red"}</div>',
+    )
+    expect('Invalid prop').not.toHaveBeenWarned()
+  })
+
+  test('style prop should only normalize the value that was passed', () => {
+    let props: any
+    const fallback = ['color:red']
+    const { render } = define({
+      props: { style: { default: () => fallback } },
+      setup(_props: any) {
+        props = _props
+        return []
+      },
+    })
+
+    render({ style: () => 'color: red' })
+    expect(props.style).toBe('color: red')
+
+    // style is absent or empty here, so the default is used as-is
+    render()
+    expect(props.style).toBe(fallback)
+
+    render({ style: () => undefined })
+    expect(props.style).toBe(fallback)
+
+    render({ style: () => 42 })
+    expect(props.style).toBe(42)
+
+    const styleFn = () => {}
+    render({ style: () => styleFn })
+    expect(props.style).toBe(styleFn)
+  })
+
   describe('dynamic props source caching', () => {
     test('v-bind object should be cached when child accesses multiple props', () => {
       let sourceCallCount = 0
