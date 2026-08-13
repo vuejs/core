@@ -60,33 +60,62 @@ describe('createFor', () => {
     expect(getEffectsCount(filled.instance!.scope)).toBe(emptyCount)
   })
 
-  test('should not retain unmounted component items on parent scope', async () => {
-    const list = ref<number[]>([])
-    const Child = defineVaporComponent({
-      setup() {
-        return template('<span>child</span>')()
-      },
-    })
-
-    const { instance } = define(() => {
-      return createFor(
-        () => list.value,
-        () => createComponent(Child),
-        item => item,
-        VaporVForFlags.IS_COMPONENT,
-      )
-    }).render()
-
-    const emptyCount = instance!.scope.cleanupsLength
-
-    for (let i = 0; i < 3; i++) {
-      list.value = [1, 2, 3]
-      await nextTick()
-      list.value = []
-      await nextTick()
+  test('component item resources do not accumulate in the owner scope', async () => {
+    const state = ref({ items: [] as number[] })
+    const unmounted = vi.fn()
+    const Child = compile(
+      `<script setup vapor>
+      import { onUnmounted } from 'vue'
+      const props = defineProps(['index'])
+      onUnmounted(_components.unmounted)
+      </script>
+      <template><span>{{ props.index }}</span></template>`,
+      state,
+      { unmounted },
+    )
+    const App = compile(
+      `<template>
+        <components.Child
+          v-for="item in data.items"
+          :key="item"
+          :index="item"
+          ref="children"
+        />
+      </template>`,
+      state,
+      { Child },
+    )
+    const { app, instance } = define(App).render()
+    const cleanupBaseline = instance!.scope.cleanupsLength
+    const effectBaseline = getEffectsCount(instance!.scope)
+    const expectStableResources = () => {
+      expect(instance!.scope.cleanups).toHaveLength(cleanupBaseline)
+      expect(getEffectsCount(instance!.scope)).toBe(effectBaseline)
+      expect(instance!.refs.children).toHaveLength(state.value.items.length)
     }
 
-    expect(instance!.scope.cleanupsLength).toBe(emptyCount)
+    state.value.items = [0, 1, 2]
+    await nextTick()
+    expectStableResources()
+
+    state.value.items.splice(1, 1)
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledOnce()
+    expectStableResources()
+
+    for (let id = 3; id < 6; id++) {
+      state.value.items = [state.value.items[1], id]
+      await nextTick()
+      expectStableResources()
+    }
+
+    expect(unmounted).toHaveBeenCalledTimes(4)
+
+    app.unmount()
+    await nextTick()
+
+    expect(unmounted).toHaveBeenCalledTimes(6)
+    expect(instance!.refs.children).toHaveLength(0)
   })
 
   test('removes component items before stopping their scope', async () => {
