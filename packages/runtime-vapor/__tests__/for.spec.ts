@@ -170,6 +170,55 @@ describe('createFor', () => {
     app.unmount()
   })
 
+  test('does not retain prop source caches for native component fallbacks', async () => {
+    const state = ref({
+      items: [] as { id: number; value: string }[],
+    })
+    const Wrapper = compile(
+      `<template>
+        <section>
+          <component
+            :is="'div'"
+            v-for="item in data.items"
+            :key="item.id"
+            :data-id="item.value"
+          />
+        </section>
+      </template>`,
+      state,
+    )
+    const App = compile(
+      `<template><components.Wrapper ref="wrapper" /></template>`,
+      state,
+      { Wrapper },
+    )
+    const { app, host, instance } = define(App).render()
+    const wrapper = instance!.refs.wrapper as VaporComponentInstance
+    const cleanupBaseline = wrapper.scope.cleanupsLength
+    const effectBaseline = getEffectsCount(wrapper.scope)
+    const expectStableResources = () => {
+      expect(wrapper.scope.cleanups).toHaveLength(cleanupBaseline)
+      expect(getEffectsCount(wrapper.scope)).toBe(effectBaseline)
+    }
+
+    state.value.items = [{ id: 0, value: 'a' }]
+    await nextTick()
+
+    expect(host.querySelector('div')!.dataset.id).toBe('a')
+    expectStableResources()
+
+    state.value.items = [{ id: 0, value: 'b' }]
+    await nextTick()
+
+    expect(host.querySelector('div')!.dataset.id).toBe('b')
+
+    state.value.items = []
+    await nextTick()
+
+    expectStableResources()
+    app.unmount()
+  })
+
   test('stops component v-show effects when an item is removed', async () => {
     const state = ref({ items: [] as number[], visible: true })
     const Child = compile(`<template><span>child</span></template>`, state)

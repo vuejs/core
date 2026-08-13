@@ -430,9 +430,9 @@ export const createFor = (
   const needIndex = renderItem.length > 2
 
   type InsertForBlock = (block: ForBlock, anchor: Node | undefined) => void
-  // IS_COMPONENT means the item owns its own scope, not that block.nodes is
-  // guaranteed to be a VaporComponentInstance. Component fallback may produce a
-  // plain DOM node, so component-shaped blocks still use the generic block path.
+  // IS_COMPONENT requires component teardown ordering but does not guarantee
+  // that block.nodes is a VaporComponentInstance. Component fallback may
+  // produce a plain DOM node, so these blocks still use the generic block path.
   const insertForBlock: InsertForBlock = isSingleNode
     ? (block, anchor) => insertNode(block.nodes as Node, parent!, anchor)
     : isFragment
