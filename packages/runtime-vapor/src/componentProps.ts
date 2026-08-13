@@ -30,6 +30,7 @@ import {
   type ComputedRef,
   ReactiveFlags,
   computed,
+  getCurrentScope,
   onScopeDispose,
   shallowReactive,
 } from '@vue/reactivity'
@@ -197,8 +198,8 @@ export function resolveFunctionSource<T>(
   const parent = currentInstance && currentInstance.parent
   if (parent) {
     // execute the source in the parent's context, but collect its cache in the
-    // reading component's scope
-    const prev = setCurrentInstance(parent, currentInstance!.scope)
+    // active consumer scope
+    const prev = setCurrentInstance(parent, getCurrentScope())
     try {
       source._cache = computed(oldValue => {
         const prevInner = setCurrentInstance(parent)
