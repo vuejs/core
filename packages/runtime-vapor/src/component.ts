@@ -390,21 +390,36 @@ export function createComponent(
       return frag as any
     }
 
-    if (keepAliveCtx) {
+    let inputScope: EffectScope | undefined
+    if (
+      keepAliveCtx &&
+      ((rawProps && !once) || (rawSlots && (rawSlots as RawSlots).$))
+    ) {
       // The cached component keeps its detached scope active, so commit only
-      // its direct inputs through the KeepAlive branch scope. Descendants read
-      // from the same committed inputs and need no additional isolation.
+      // its direct inputs through a cache-owned scope. Descendants read from
+      // the same committed inputs and need no additional isolation.
       // v-once snapshots raw props in the instance constructor, so it does not
       // need a live commit effect after creation.
-      if (rawProps && !once) {
-        rawProps = keepAliveCtx.isolatePropSources(rawProps as RawProps)
-      }
+      const scope = new EffectScope(true)
+      let isolated = false
+      scope.run(() => {
+        if (rawProps && !once) {
+          const next = keepAliveCtx!.isolatePropSources(rawProps as RawProps)
+          isolated = next !== rawProps
+          rawProps = next
+        }
 
-      // Static slots are fixed function entries. Only `$` contains live slot
-      // descriptor sources that useSlots() can re-resolve while cached; slot
-      // function execution retains its existing closure semantics.
-      if (rawSlots && (rawSlots as RawSlots).$) {
-        rawSlots = keepAliveCtx.isolateSlotSources(rawSlots as RawSlots)
+        // Static slots are fixed function entries. Only `$` contains live slot
+        // descriptor sources that useSlots() can re-resolve while cached; slot
+        // function execution retains its existing closure semantics.
+        if (rawSlots && (rawSlots as RawSlots).$) {
+          const next = keepAliveCtx!.isolateSlotSources(rawSlots as RawSlots)
+          isolated = isolated || next !== rawSlots
+          rawSlots = next
+        }
+      })
+      if (isolated) {
+        inputScope = scope
       }
     }
 
@@ -416,6 +431,9 @@ export function createComponent(
       once,
       ce,
     )
+    if (inputScope) {
+      instance.inputScope = inputScope
+    }
 
     // Async wrappers are skipped here: their DynamicFragment resolves the outer
     // KeepAlive context from the wrapper's parent chain during setup.
@@ -773,6 +791,8 @@ export class VaporComponentInstance<
 
   // for keep-alive
   shapeFlag?: number
+  // Owns raw prop/slot isolation effects for cached components.
+  inputScope?: EffectScope
   $key?: any
   // Share deferred updates across async roots on the KeepAlive component-root
   // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
@@ -1372,6 +1392,10 @@ export function unmountComponent(
       invokeArrayFns(instance.bum)
     }
 
+    if (isKeepAliveEnabled) {
+      const inputScope = instance.inputScope
+      if (inputScope) inputScope.stop()
+    }
     instance.scope.stop()
 
     if (instance.um) {

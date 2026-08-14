@@ -138,11 +138,12 @@ export function isolatePropSources(rawProps: RawProps): RawProps {
   }
 
   // Each source keeps its original position and key spelling so prop/attr
-  // precedence is unchanged. The writer belongs to the KeepAlive branch scope,
-  // so deactivation pauses parent updates without pausing the component.
+  // precedence is unchanged. The writer belongs to the cached component's
+  // KeepAlive input scope, so deactivation pauses parent updates without
+  // pausing the component.
   // Source invalidations while this effect is paused still leave it dirty.
-  // Resuming the branch scope therefore schedules one commit with the latest
-  // raw props, while an unchanged cache entry needs no work on activation.
+  // Resuming the input scope therefore schedules one commit with the
+  // latest raw props, while an unchanged cache entry needs no work on activation.
   renderEffect(() => {
     if (committed) {
       for (const key in rawProps) {
