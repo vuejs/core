@@ -66,12 +66,14 @@ function isSameScopeIds(a: ScopeIdValue, b: ScopeIdValue): boolean {
   return true
 }
 
-const PENDING_SCOPE_ID_ROOT = true
+// An empty dynamic fragment still occupies the component's single-root slot,
+// so a future branch can inherit its scope IDs.
+const EMPTY_DYNAMIC_ROOT = true
 type ScopeIdRoot =
   | Element
   | VaporComponentInstance
   | InteropFragment
-  | typeof PENDING_SCOPE_ID_ROOT
+  | typeof EMPTY_DYNAMIC_ROOT
 
 function applyFragmentScopeIds(this: VaporFragment, block: Block): void {
   const componentRoot = this.scopeIdRoot
@@ -125,7 +127,7 @@ function resolveSingleScopeIdRoot(
     const root = resolveSingleScopeIdRoot(block.nodes, onFragment, instance)
     if (isDynamicFragment(block)) {
       if (onFragment) onFragment(block, instance!)
-      return root || PENDING_SCOPE_ID_ROOT
+      return root || EMPTY_DYNAMIC_ROOT
     }
     return root
   }
@@ -295,7 +297,7 @@ function applySingleRootScopeId(
   if (isArray(block) || isFragment(block)) {
     resolveSingleScopeIdRoot(block, registerFragmentComponentScopeId, instance)
   }
-  if (root === PENDING_SCOPE_ID_ROOT) {
+  if (root === EMPTY_DYNAMIC_ROOT) {
     return
   }
   if (root instanceof Element) {
@@ -336,7 +338,7 @@ export function setComponentScopeId(
     componentRoot = root
     root = resolveSingleScopeIdRoot(root.block)
   }
-  if (!root || root === PENDING_SCOPE_ID_ROOT || root instanceof Element) return
+  if (!root || root === EMPTY_DYNAMIC_ROOT || root instanceof Element) return
   root.scopeIdRoot = componentRoot
   root.applyScopeId = applyInteropScopeIds
   syncInteropFragmentScopeIds(root)
