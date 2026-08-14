@@ -791,6 +791,8 @@ export class VaporComponentInstance<
 
   // for keep-alive
   shapeFlag?: number
+  // Owns raw prop/slot isolation effects for cached components.
+  inputScope?: EffectScope
   $key?: any
   // Share deferred updates across async roots on the KeepAlive component-root
   // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
