@@ -107,6 +107,9 @@ export class VaporFragment<
   ) => void
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
   hydrate?(...args: any[]): void
+  applyScopeId?: (block: Block) => void
+  scopeIdRoot?: VaporComponentInstance
+  slottedScopeId?: VaporComponentInstance['scopeId']
   setRef?: (
     instance: VaporComponentInstance,
     ref: NodeRef,
@@ -443,6 +446,7 @@ export class DynamicFragment extends RenderContextFragment {
           )
         : renderBranch()
 
+      if (this.applyScopeId) this.applyScopeId(this.nodes)
       if (parent) {
         const onBeforeInsert = this.onBeforeInsert
         if (onBeforeInsert) {
@@ -835,6 +839,8 @@ export function isFragment(val: unknown): val is VaporFragment {
 
 export type InteropFragment<T extends Block = Block> = VaporFragment<T> & {
   vnode: VNode | null
+  scopeIdVNode?: VNode | null
+  scopeIdBase?: VaporComponentInstance['scopeId']
 }
 
 export function isInteropFragment(val: unknown): val is InteropFragment {

@@ -200,19 +200,19 @@ export class TeleportFragment extends RenderContextFragment {
 
   private handleChildrenUpdate(children: Block): void {
     const mountState = this.mountState
+    const prevNodes = this.nodes
+    this.nodes = children
+    if (this.applyScopeId) this.applyScopeId(children)
     if (
       isHydrating ||
       !this.parent ||
       mountState.location === TeleportMountLocation.None
     ) {
-      this.nodes = children
       return
     }
 
-    // teardown previous nodes
-    remove(this.nodes, mountState.container)
-    // mount new nodes
-    this.nodes = children
+    // teardown previous nodes, then mount the new ones
+    remove(prevNodes, mountState.container)
     const onBeforeInsert = this.onBeforeInsert
     if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(this.nodes))
     insert(children, mountState.container, mountState.anchor)

@@ -485,6 +485,9 @@ export const createFor = (
       applyTransitionHooks(block.nodes, frag.$transition)
     }
 
+    // apply scopeId
+    if (frag.applyScopeId) frag.applyScopeId(block.nodes)
+
     if (parent) {
       const onBeforeInsert = frag.onBeforeInsert
       if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(block.nodes))

@@ -45,7 +45,7 @@ import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 import { isInteropEnabled } from './vdomInteropState'
-import { setScopeId, trackScopeIdFragment } from './scopeId'
+import { applySlottedScopeId } from './scopeId'
 import { withHydratingSlotBoundary } from './dom/hydrateFragment'
 
 /**
@@ -280,7 +280,9 @@ export function createSlot(
   const rawSlots = instance.rawSlots
   const scopeId =
     !(flags & VaporSlotFlags.NO_SLOTTED) && instance.type.__scopeId
-  const slotScopeIds = scopeId ? [`${scopeId}-s`] : null
+  const slottedScopeId = scopeId ? `${scopeId}-s` : undefined
+  // VNode-format array, only for VDOM children created inside the slot render.
+  const slotScopeIds = slottedScopeId ? [slottedScopeId] : null
   const once = !!(flags & VaporSlotFlags.ONCE)
   const slotRoot = !!(flags & VaporSlotFlags.SLOT_ROOT)
   const sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
@@ -438,11 +440,14 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating) {
-    if (slotScopeIds) {
-      setScopeId(fragment, slotScopeIds)
-    }
+  if (isHydrating && isInteropEnabled && isInteropFragment(fragment)) {
+    fragment.hydrate!()
+  }
+  if (slottedScopeId) {
+    applySlottedScopeId(fragment, slottedScopeId)
+  }
 
+  if (!isHydrating) {
     // Custom-element outlets assign their native <slot> directly instead of
     // rendering through update(), so they still need this initial insertion
     // after adopting the template anchor.
@@ -454,14 +459,6 @@ export function createSlot(
       insert(fragment, _insertionParent, _insertionAnchor)
     }
   } else {
-    if (isInteropEnabled && isInteropFragment(fragment)) {
-      fragment.hydrate!()
-    }
-    // Hydrated slot roots already have SSR scope attrs. Only register tracking
-    // so future client-inserted slot branches receive the same ids.
-    if (slotScopeIds) {
-      trackScopeIdFragment(fragment, slotScopeIds)
-    }
     exitHydrationCursor(hydrationCursor)
   }
 

@@ -142,10 +142,10 @@ import {
 } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import {
+  type ScopeIdValue,
+  applyComponentRootScopeId,
+  applySlottedScopeId,
   getCurrentScopeId,
-  setComponentScopeId,
-  setScopeId,
-  trackComponentScopeId,
 } from './scopeId'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
@@ -757,7 +757,8 @@ export class VaporComponentInstance<
 
   slots: Slots
 
-  scopeId?: string | null
+  scopeId?: ScopeIdValue
+  inheritsScopeId?: true
 
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
@@ -1091,10 +1092,8 @@ export function createPlainElement(
   // mark single root
   ;(el as any).$root = isSingleRoot
 
-  if (!isHydrating) {
-    const scopeId = getCurrentScopeId()
-    if (scopeId) setScopeId(el, [scopeId])
-  }
+  const scopeId = getCurrentScopeId()
+  if (scopeId) applySlottedScopeId(el, scopeId)
 
   if (rawProps) {
     const setFn = () =>
@@ -1313,16 +1312,12 @@ export function mountComponent(
     startMeasure(instance, `mount`)
   }
   if (instance.bm) invokeArrayFns(instance.bm)
+  applyComponentRootScopeId(instance)
   if (!isHydrating) {
     // pass the owning suspense so enter transitions are skipped while
     // mounting into a pending suspense's hidden container (vdom parity);
     // the enter runs when the resolved branch is moved into the real tree.
     insert(instance.block, parent, anchor, instance.suspense)
-    setComponentScopeId(instance)
-  } else {
-    // Hydrated roots already have SSR scope attrs. Track dynamic roots so
-    // client-only branch switches keep inherited scope ids.
-    trackComponentScopeId(instance)
   }
   if (instance.m) {
     queuePostRenderEffect(instance.m!, undefined, instance.suspense)

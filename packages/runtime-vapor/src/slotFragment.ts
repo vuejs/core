@@ -19,6 +19,7 @@ import {
   isTransitionEnabled,
 } from './transition'
 import { setBlockKey } from './helpers/setKey'
+import type { VaporFragment } from './fragment'
 
 // Slot resolution.
 //
@@ -121,6 +122,8 @@ export interface SlotResolutionState {
   // Reentrancy guard for one atomic content/fallback reconciliation.
   isReconciling: boolean
   $transition?: VaporTransitionHooks
+  applyScopeId?: (block: Block) => void
+  scopeIdFragment?: VaporFragment
 
   getContent(): Block
   getParentNode(): ParentNode | null
@@ -136,6 +139,22 @@ export interface SlotResolutionState {
   // Reports an exposed-branch validity flip so an enclosing boundary can
   // recheck its own fallback decision.
   notifyExposedValidityChange(): void
+}
+
+// Publishes the winning branch to the host's exposed nodes, then runs the
+// host fragment's scopeId preparation on the just-materialized block so it is
+// ready before it can reach the DOM. The interop hosts keep their state
+// separate from the fragment and point back to it via scopeIdFragment;
+// SlotFragment is its own fragment.
+export function syncNodesAndApplyScopeId(
+  state: SlotResolutionState,
+  block: Block,
+): void {
+  state.syncNodes()
+  const host = state.scopeIdFragment || state
+  if (host.applyScopeId) {
+    host.applyScopeId(block)
+  }
 }
 
 // Entry point for validity-change notifications (boundary.markDirty). During
@@ -252,6 +271,7 @@ function commitSlotFallback(
   state.activeFallbackInvalidCallbacks = onContentInvalid
   state.fallbackScope = scope
   state.fallbackInserted = isHydrating
+  syncNodesAndApplyScopeId(state, block)
   if (isTransitionEnabled) {
     if (state.$transition) {
       // Match VDOM slot fallback branch identity so fallback enter does not
@@ -350,6 +370,7 @@ function recheckSlotResolutionNow(
     const content = state.getContent()
     const hadFallback = !!fallback
     clearSlotFallback(state)
+    syncNodesAndApplyScopeId(state, content)
     if (!isHydrating && hadFallback) {
       const parentNode = state.getParentNode()
       if (parentNode) {

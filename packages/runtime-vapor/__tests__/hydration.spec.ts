@@ -39,6 +39,7 @@ import {
 import {
   currentHydrationNode,
   hydrateNode,
+  isHydrating,
   setIsHydratingEnabled,
   validateHydrationTarget,
   withDeferredHydrationBoundary,
@@ -15977,5 +15978,147 @@ describe('placeholder unit alignment', () => {
     expect(container.innerHTML).toBe(
       `<div><h1>h</h1><!--[--><li>x</li><li>y</li><li>z</li><!--]--><p>t2</p></div>`,
     )
+  })
+})
+
+describe('scopeId hydration writes', () => {
+  test('does not rewrite slotted scopeId on adopted v-for roots', async () => {
+    const data = ref(1)
+    const childCode = `<template><slot /></template>`
+    const appCode = `<script setup vapor>
+      const data = _data
+      const components = _components
+    </script>
+    <template>
+      <components.Child>
+        <div v-for="i in data">item</div>
+      </components.Child>
+    </template>`
+
+    const ssrComponents: Record<string, any> = {}
+    ssrComponents.Child = compile(childCode, data, ssrComponents, {
+      vapor: true,
+      ssr: true,
+    })
+    ssrComponents.Child.__scopeId = 'child'
+    const ServerApp = compile(appCode, data, ssrComponents, {
+      vapor: true,
+      ssr: true,
+    })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(ServerApp),
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+
+    const clientComponents: Record<string, any> = {}
+    clientComponents.Child = compile(childCode, data, clientComponents, {
+      vapor: true,
+      ssr: false,
+    })
+    clientComponents.Child.__scopeId = 'child'
+    const ClientApp = compile(appCode, data, clientComponents, {
+      vapor: true,
+      ssr: false,
+    })
+
+    const setAttribute = vi.spyOn(Element.prototype, 'setAttribute')
+    try {
+      const app = createVaporSSRApp(ClientApp)
+      app.mount(container)
+
+      expect(setAttribute).not.toHaveBeenCalledWith('child-s', '')
+      app.unmount()
+    } finally {
+      setAttribute.mockRestore()
+    }
+  })
+
+  test('writes inherited scopeId to a recreated hydration root', () => {
+    const msg = ref('base')
+    const Child = defineVaporComponent({
+      __scopeId: 'child',
+      render: compileToVaporRender(`<div>{{ msg }}</div>`, {
+        bindingMetadata: {
+          msg: BindingTypes.SETUP_REF,
+        },
+        scopeId: 'child',
+      }),
+      setup() {
+        return { msg }
+      },
+    })
+    const Parent = defineVaporComponent({
+      __scopeId: 'parent',
+      setup() {
+        return createComponent(Child)
+      },
+    })
+    const container = document.createElement('div')
+    container.innerHTML = `<span child="" parent="">base</span>`
+    document.body.appendChild(container)
+
+    const app = createVaporSSRApp(Parent)
+    app.mount(container)
+
+    expect(container.innerHTML).toBe(`<div child="" parent="">base</div>`)
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    app.unmount()
+  })
+
+  test('writes scopeId to a recreated dynamic element', () => {
+    const App = defineVaporComponent({
+      __scopeId: 'parent',
+      setup() {
+        return createPlainElement('div')
+      },
+    })
+    const container = document.createElement('div')
+    container.innerHTML = `<span parent=""></span>`
+    document.body.appendChild(container)
+
+    const app = createVaporSSRApp(App)
+    app.mount(container)
+
+    expect(container.innerHTML).toBe(`<div parent=""></div>`)
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    app.unmount()
+  })
+
+  test('temporarily exits hydration while writing recreated scopeId', () => {
+    const states: boolean[] = []
+    let restored: boolean | undefined
+    const nativeSetAttribute = Element.prototype.setAttribute
+    const setAttribute = vi
+      .spyOn(Element.prototype, 'setAttribute')
+      .mockImplementation(function (this: Element, name, value) {
+        if (name === 'parent') states.push(isHydrating)
+        nativeSetAttribute.call(this, name, value)
+      })
+    const App = defineVaporComponent({
+      __scopeId: 'parent',
+      setup() {
+        const element = createPlainElement('div')
+        restored = isHydrating
+        return element
+      },
+    })
+    const container = document.createElement('div')
+    container.innerHTML = `<span parent=""></span>`
+    document.body.appendChild(container)
+
+    try {
+      const app = createVaporSSRApp(App)
+      app.mount(container)
+
+      expect(states).toEqual([false])
+      expect(restored).toBe(true)
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      app.unmount()
+    } finally {
+      setAttribute.mockRestore()
+    }
   })
 })
