@@ -410,10 +410,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
           scope.stop()
           return false
         }
-        // Component scopes are detached from this DynamicFragment scope.
-        // Pausing it freezes branch-owned input commits without pausing the
-        // cached component's own effects; those effects keep reading the last
-        // committed inputs, like a cached VNode whose props are not patched.
+        // Component and KeepAlive input scopes are detached from this
+        // DynamicFragment scope, so this only pauses branch-owned effects.
         scope.pause()
         cacheScope(cacheKey, frag.current, scope)
         return true
@@ -621,6 +619,8 @@ export function activate(
   anchor?: Node | null,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
+  const inputScope = instance.inputScope
+  if (inputScope) inputScope.resume()
   move(instance, parentNode, anchor, MoveType.ENTER, instance, parentSuspense)
 
   queuePostRenderEffect(
@@ -642,6 +642,8 @@ export function deactivate(
   container: ParentNode,
   parentSuspense: SuspenseBoundary | null = instance.suspense,
 ): void {
+  const inputScope = instance.inputScope
+  if (inputScope) inputScope.pause()
   // Clear refs before deactivation, matching VDOM core's unmount path
   // which calls setRef(null) before the deactivation check.
   unsetRef(instance)
@@ -684,9 +686,9 @@ function isolateSlotSources(rawSlots: RawSlots): RawSlots {
 
   const isolated = { ...rawSlots, $: isolatedSources } as RawSlots
   // VDOM materializes dynamic slots before caching a child. Commit Vapor's
-  // live slot descriptors through the branch scope so useSlots() observes the
-  // same last-patched slot table while deactivated. Slot functions themselves
-  // remain unchanged and retain their existing closure semantics.
+  // live slot descriptors through the input scope so useSlots() observes
+  // the same last-patched slot table while deactivated. Slot functions
+  // themselves remain unchanged and retain their existing closure semantics.
   renderEffect(() => {
     for (let i = 0; i < dynamicSources.length; i++) {
       const source = dynamicSources[i]

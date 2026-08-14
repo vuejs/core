@@ -1025,6 +1025,53 @@ describe('VaporKeepAlive', () => {
     expect(compHooks.mounted).toHaveBeenCalledTimes(1)
   })
 
+  test('should update props after reactivating a nested unkeyed v-if branch', async () => {
+    const mounted = vi.fn()
+    const Child = defineVaporComponent({
+      props: ['msg'],
+      setup(props) {
+        onMounted(mounted)
+        const n0 = template(`<div> </div>`)() as any
+        const x0 = child(n0) as any
+        renderEffect(() => setText(x0, props.msg))
+        return n0
+      },
+    })
+    const state = reactive({ outer: true, inner: true, msg: 'a' })
+    const App = compile(
+      `<script setup vapor>
+        const state = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <template v-if="state.outer">
+            <Child v-if="state.inner" :msg="state.msg" />
+          </template>
+        </KeepAlive>
+      </template>`,
+      state as any,
+      { Child },
+    )
+    const { host } = define(App).render()
+
+    expect(host.textContent).toBe('a')
+    expect(mounted).toHaveBeenCalledTimes(1)
+
+    state.inner = false
+    await nextTick()
+    expect(host.textContent).toBe('')
+
+    state.inner = true
+    await nextTick()
+    expect(host.textContent).toBe('a')
+    expect(mounted).toHaveBeenCalledTimes(1)
+
+    state.msg = 'b'
+    await nextTick()
+    expect(host.textContent).toBe('b')
+  })
+
   async function assertNameMatch(props: LooseRawProps) {
     const outerRef = ref(true)
     const viewRef = ref('one')
