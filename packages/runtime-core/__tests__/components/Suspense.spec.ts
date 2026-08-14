@@ -3376,4 +3376,41 @@ describe('Suspense', () => {
       expect(onEnter).not.toHaveBeenCalled()
     },
   )
+
+  test('does not duplicate appear hooks under a Fragment root', async () => {
+    const Async = defineAsyncComponent({
+      render: () => h('div', 'async'),
+    })
+    const onBeforeAppear = vi.fn()
+    const onAppear = vi.fn((_: unknown, done: () => void) => done())
+    const onEnter = vi.fn((_: unknown, done: () => void) => done())
+
+    const Comp = {
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () =>
+            h(Fragment, [
+              h(
+                BaseTransition,
+                { appear: true, onBeforeAppear, onAppear, onEnter },
+                () => h('div', 'sync'),
+              ),
+              h(Async),
+            ]),
+          fallback: () => h('div', 'fallback'),
+        }),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+
+    expect(onBeforeAppear).toHaveBeenCalledOnce()
+    expect(onAppear).toHaveBeenCalledOnce()
+    expect(onEnter).not.toHaveBeenCalled()
+  })
 })
