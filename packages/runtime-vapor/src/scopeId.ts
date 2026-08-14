@@ -169,6 +169,7 @@ function applyInteropFragmentScopeIds(
   instance: VaporComponentInstance,
 ): void {
   fragment.scopeIdRoot = instance
+  fragment.applyScopeId = applyInteropScopeIds
   syncInteropFragmentScopeIds(fragment)
   if (!fragment.vnode) {
     applySingleRootScopeId(fragment.nodes, instance)
@@ -191,7 +192,6 @@ function mergeInstanceScopeIds(
 }
 
 function syncInteropFragmentScopeIds(fragment: InteropFragment): void {
-  fragment.applyScopeId = applyInteropScopeIds
   const vnode = fragment.vnode
   if (!vnode) return
   if (fragment.scopeIdVNode !== vnode) {
@@ -258,6 +258,7 @@ export function applySlottedScopeId(
     if (merged === block.slottedScopeId) return
     block.slottedScopeId = merged
     if (isInteropEnabled && isInteropFragment(block)) {
+      block.applyScopeId = applyInteropScopeIds
       syncInteropFragmentScopeIds(block)
       return
     }
@@ -304,7 +305,7 @@ function applySingleRootScopeId(
     if (root.isMounted) {
       applySingleRootScopeId(root.block, root)
     }
-  } else {
+  } else if (isInteropEnabled) {
     applyInteropFragmentScopeIds(root, instance)
   }
 }
@@ -337,6 +338,7 @@ export function setComponentScopeId(
   }
   if (!root || root === PENDING_SCOPE_ID_ROOT || root instanceof Element) return
   root.scopeIdRoot = componentRoot
+  root.applyScopeId = applyInteropScopeIds
   syncInteropFragmentScopeIds(root)
 }
 
