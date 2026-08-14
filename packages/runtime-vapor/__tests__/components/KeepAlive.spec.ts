@@ -20,7 +20,12 @@ import {
   VaporVForFlags,
   extend,
 } from '@vue/shared'
-import type { LooseRawProps, VaporComponent } from '../../src/component'
+import {
+  type LooseRawProps,
+  type VaporComponent,
+  type VaporComponentInstance,
+  currentInstance,
+} from '../../src/component'
 import { compile, ifFlags, makeRender } from '../_utils'
 import { VaporKeepAlive } from '../../src/components/KeepAlive'
 import {
@@ -1023,6 +1028,50 @@ describe('VaporKeepAlive', () => {
     expect(html()).toBe('<div>comp</div><!--if--><!--if-->')
     expect(compHooks.activated).toHaveBeenCalledTimes(3)
     expect(compHooks.mounted).toHaveBeenCalledTimes(1)
+  })
+
+  test('should preserve component identity in nested keyed v-if branches', async () => {
+    const mounted = vi.fn()
+    let childInstance!: VaporComponentInstance
+    const Child = defineVaporComponent({
+      setup() {
+        childInstance = currentInstance! as VaporComponentInstance
+        onMounted(mounted)
+        return template(`<div>child</div>`)()
+      },
+    })
+    const state = reactive({ outer: true, inner: true })
+    const App = compile(
+      `<script setup vapor>
+        const state = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <KeepAlive>
+          <template v-if="state.outer">
+            <Child v-if="state.inner" />
+            <span v-else>inner-off</span>
+          </template>
+          <span v-else>outer-off</span>
+        </KeepAlive>
+      </template>`,
+      state as any,
+      { Child },
+    )
+    const { host } = define(App).render()
+
+    expect(host.textContent).toBe('child')
+    expect(mounted).toHaveBeenCalledTimes(1)
+    expect(childInstance.$key).toBe(0)
+
+    state.inner = false
+    await nextTick()
+    expect(host.textContent).toBe('inner-off')
+
+    state.inner = true
+    await nextTick()
+    expect(host.textContent).toBe('child')
+    expect(mounted).toHaveBeenCalledTimes(1)
   })
 
   async function assertNameMatch(props: LooseRawProps) {

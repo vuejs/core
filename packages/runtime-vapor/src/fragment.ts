@@ -418,14 +418,14 @@ export class DynamicFragment extends RenderContextFragment {
             this.scope,
           )
         } finally {
-          // propagate the fragment key onto freshly rendered nodes.
+          // Inherit the fragment key without overriding a child's own key.
           const key = this.keyed ? this.current : this.$key
           // Only propagate branch keys when Transition or KeepAlive consumes them.
           if (
             key !== undefined &&
             (transition || this.inTransition || keepAliveCtx)
           ) {
-            setBlockKey(this.nodes, key)
+            setBlockKey(this.nodes, key, false)
           }
 
           if (isTransitionEnabled && transition) {
