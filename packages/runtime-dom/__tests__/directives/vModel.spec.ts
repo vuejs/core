@@ -1317,6 +1317,52 @@ describe('vModel', () => {
     expect(bar.selected).toEqual(true)
   })
 
+  // #10505
+  it('multiple select should sync DOM when the Set model is overridden in the change handler', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: new Set() as Set<string> }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                multiple: true,
+                // a select that always forces its value back to {'foo'}
+                'onUpdate:modelValue': () => {
+                  this.value = new Set(['foo'])
+                },
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    // user picks 'bar', but the handler overrides the model to {'foo'}
+    foo.selected = false
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+
+    // the DOM should reflect the overridden model value, not the value the
+    // user just selected
+    expect(data.value).toMatchObject(new Set(['foo']))
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(false)
+  })
+
   it('multiple select uses current Array/Set model type', async () => {
     const component = defineComponent({
       data() {

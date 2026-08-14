@@ -45,6 +45,7 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
     [assignKey]: AssignerFn
     [initialValueKey]?: string
     _assigning?: boolean
+    _assignedValue?: any
   },
   any,
   Modifiers
@@ -240,13 +241,16 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o),
         )
-      el[assignKey](
-        el.multiple
-          ? isSet((el as any)._modelValue)
-            ? new Set(selectedVal)
-            : selectedVal
-          : selectedVal[0],
-      )
+      const assignedValue = el.multiple
+        ? isSet((el as any)._modelValue)
+          ? new Set(selectedVal)
+          : selectedVal
+        : selectedVal[0]
+      el[assignKey](assignedValue)
+      // remember the value just assigned by the user interaction so that the
+      // `updated` hook can detect when the model is later overridden (e.g.
+      // reset) inside the update handler. #10505
+      ;(el as any)._assignedValue = assignedValue
       el._assigning = true
       nextTick(() => {
         el._assigning = false
@@ -264,10 +268,28 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
-    if (!el._assigning) {
+    // Skip the redundant DOM sync only when the model still holds the value
+    // produced by the user's selection. If it was overridden during the
+    // update, the DOM must be re-synced. #10505
+    if (!el._assigning || !assignedValueEquals(value, el._assignedValue)) {
       setSelected(el, value)
     }
   },
+}
+
+// Compares the current model value against the value assigned by the user's
+// selection. `looseEqual` alone would treat any two `Set` values as equal,
+// because their `Object.keys` are always empty, so Set contents are compared
+// explicitly using the same `has` semantics as `setSelected`.
+function assignedValueEquals(a: any, b: any): boolean {
+  if (isSet(a) && isSet(b)) {
+    if (a.size !== b.size) return false
+    for (const item of a) {
+      if (!b.has(item)) return false
+    }
+    return true
+  }
+  return looseEqual(a, b)
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {
