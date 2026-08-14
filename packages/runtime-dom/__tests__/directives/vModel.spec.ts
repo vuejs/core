@@ -1358,7 +1358,53 @@ describe('vModel', () => {
 
     // the DOM should reflect the overridden model value, not the value the
     // user just selected
-    expect(data.value).toMatchObject(new Set(['foo']))
+    expect(Array.from(data.value)).toEqual(['foo'])
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(false)
+  })
+
+  // #10505
+  it('single select should sync DOM when the model is overridden in the change handler', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: null as string | null }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                // a select that always forces its value back to 'foo'
+                'onUpdate:modelValue': () => {
+                  this.value = 'foo'
+                },
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    // user picks 'bar', but the handler overrides the model back to 'foo'
+    foo.selected = false
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+
+    // the DOM should reflect the overridden model value ('foo'), not the
+    // value the user just selected ('bar')
+    expect(data.value).toEqual('foo')
+    expect(input.selectedIndex).toEqual(0)
     expect(foo.selected).toEqual(true)
     expect(bar.selected).toEqual(false)
   })
