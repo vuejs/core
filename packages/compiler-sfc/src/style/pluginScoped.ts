@@ -140,6 +140,9 @@ function splitMixedDeepRuleBody(id: string, rule: Rule): boolean {
       // a `:global()` member is neither scoped nor deep, so it belongs to
       // neither branch
       selector.some(isGlobalSelector) ||
+      // a `:slotted()` member gets its own `-s` attribute handling in
+      // rewriteSelector, which the branch wrapper cannot reproduce
+      selector.some(isSlottedSelector) ||
       // a member written on `&` refers to the selector list of the rule that
       // contains this one, but inside a branch wrapper it would resolve
       // against the mixed list itself
@@ -520,6 +523,19 @@ function isGlobalSelector(node: selectorParser.Node): boolean {
   return !!(
     node as selectorParser.Node & { nodes?: selectorParser.Node[] }
   ).nodes?.some(child => isGlobalSelector(child))
+}
+
+function isSlottedSelector(node: selectorParser.Node): boolean {
+  if (
+    node.type === 'pseudo' &&
+    (node.value === ':slotted' || node.value === '::v-slotted')
+  ) {
+    return true
+  }
+
+  return !!(
+    node as selectorParser.Node & { nodes?: selectorParser.Node[] }
+  ).nodes?.some(child => isSlottedSelector(child))
 }
 
 function isDeepContainerPseudo(

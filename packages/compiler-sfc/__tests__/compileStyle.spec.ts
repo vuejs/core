@@ -514,6 +514,24 @@ color: red
         }"
       `)
     })
+
+    // a `:slotted()` member gets its own `-s` attribute handling in
+    // rewriteSelector, which the branch wrapper cannot reproduce
+    test('a :slotted() member is left alone', () => {
+      expect(
+        compileScoped(
+          `.a,
+.b :deep(.c),
+:slotted(.e) { > span { color: blue; } }`,
+        ),
+      ).toMatchInlineSnapshot(`
+        ".a,
+        .b[data-v-test] .c,[data-v-test].e[data-v-test-s] {
+        > span { color: blue;
+        }
+        }"
+      `)
+    })
   })
 
   test('::v-slotted', () => {
