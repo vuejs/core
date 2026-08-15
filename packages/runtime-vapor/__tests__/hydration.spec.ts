@@ -13348,6 +13348,38 @@ describe('VDOM interop', () => {
     )
   })
 
+  test('hydrate direct v-once VDOM slot content inside Vapor Transition', async () => {
+    const { container } = await testWithVDOMApp(
+      `<script setup>
+        const components = _components
+      </script>
+      <template>
+        <components.VaporChild>
+          <button>content</button>
+        </components.VaporChild>
+      </template>`,
+      {
+        VaporChild: {
+          code: `<template>
+            <Transition>
+              <slot v-once />
+            </Transition>
+            <span id="after">after</span>
+          </template>`,
+          vapor: true,
+        },
+      },
+    )
+
+    expect(
+      '<transition> can only be used on a single element or component',
+    ).not.toHaveBeenWarned()
+    expect(container.querySelector('button')?.textContent).toBe('content')
+    expect(container.querySelector('#after')?.previousElementSibling).toBe(
+      container.querySelector('button'),
+    )
+  })
+
   test('hydrate Vapor Transition fallback in out-in mode', async () => {
     let leaveDone: (() => void) | undefined
     const onLeave = vi.fn((_el: Element, done: () => void) => {

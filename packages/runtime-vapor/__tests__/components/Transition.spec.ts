@@ -1311,6 +1311,47 @@ describe('Transition', () => {
     expect(onLeave).not.toHaveBeenCalled()
   })
 
+  test('preserves multi-element vdom slot content nested under transition root', () => {
+    const data = ref({})
+    const Child = compile(
+      `<script setup vapor>
+        defineProps({ show: Boolean })
+      </script>
+      <template>
+        <Transition>
+          <div v-if="show" class="with-transition">
+            <slot />
+          </div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const Child = _components.Child
+      </script>
+      <template>
+        <Child :show="true">
+          <button class="first">First</button>
+          <button class="last">Last</button>
+        </Child>
+      </template>`,
+      data,
+      { Child },
+      { vapor: false },
+    )
+    const { host } = defineInterop(App as any).render()
+
+    expect(
+      '<transition> can only be used on a single element or component',
+    ).not.toHaveBeenWarned()
+    expect(
+      Array.from(host.querySelectorAll('.with-transition > button')).map(
+        el => el.textContent,
+      ),
+    ).toEqual(['First', 'Last'])
+  })
+
   test('vdom slot content should participate in transitions', async () => {
     let enterDone: (() => void) | undefined
     let leaveDone: (() => void) | undefined
