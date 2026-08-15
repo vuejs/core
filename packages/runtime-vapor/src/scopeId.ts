@@ -9,6 +9,7 @@ import {
   isInteropFragment,
 } from './fragment'
 import type { Block } from './block'
+import { SLOT } from './fragmentFlags'
 import { isInteropEnabled } from './vdomInteropState'
 import { currentSlotOwner, getScopeOwner } from './componentSlots'
 import {
@@ -119,7 +120,9 @@ function resolveSingleScopeIdRoot(
   }
 
   if (isFragment(block)) {
-    if (isTeleportEnabled && isTeleportFragment(block)) {
+    // Match VDOM: renderSlot()'s Fragment stops component root scope IDs from
+    // reaching slot content or fallback.
+    if (block.__vf & SLOT || (isTeleportEnabled && isTeleportFragment(block))) {
       return
     }
     if (isInteropEnabled && isInteropFragment(block)) {
@@ -325,10 +328,9 @@ export function applyHydratingRootScopeId(
 export function applyComponentRootScopeId(
   instance: VaporComponentInstance,
 ): void {
-  // rawPropsRef doubles as the VDOM-created-instance marker: interop
-  // contributions can go from empty to non-empty on a later vnode update, so
-  // such instances must pre-register their root wiring even with no ids yet.
-  if (!instance.scopeId && !instance.inheritsScopeId && !instance.rawPropsRef) {
+  // Interop mounts use null for an empty contribution so future vnode updates
+  // still have root wiring; pure Vapor instances without ids use undefined.
+  if (instance.scopeId === undefined && !instance.inheritsScopeId) {
     return
   }
   applyRootScopeId(instance.block, instance)

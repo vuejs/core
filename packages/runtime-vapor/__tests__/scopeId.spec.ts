@@ -20,6 +20,7 @@ import {
   createFor,
   createIf,
   createSlot,
+  createVaporApp,
   defineVaporAsyncComponent,
   defineVaporComponent,
   renderEffect,
@@ -2279,5 +2280,64 @@ describe('vdom interop', () => {
     expect(content.hasAttribute('receiver-s')).toBe(true)
     expect(content.hasAttribute('receiver')).toBe(false)
     app.unmount()
+  })
+
+  test('matches VDOM root-only scopeId behavior for a root slot', async () => {
+    const data = ref({ show: true })
+    const makeApp = (vapor: boolean) => {
+      const source = (template: string) =>
+        vapor
+          ? template
+          : `<script setup>
+              const data = _data
+              const components = _components
+            </script>${template}`
+      const Receiver = compile(
+        source(`<template><slot><span>fallback</span></slot></template>`),
+        data,
+        {},
+        { vapor },
+      )
+      const Middle = compile(
+        source(`<template>
+          <components.Receiver>
+            <div v-if="data.show">content</div>
+          </components.Receiver>
+        </template>`),
+        data,
+        { Receiver },
+        { vapor },
+      )
+      const App = compile(
+        source(`<template><components.Middle /></template>`),
+        data,
+        { Middle },
+        { vapor },
+      )
+      App.__scopeId = 'grand'
+      return App
+    }
+
+    const vdomRoot = document.createElement('div')
+    const vdomApp = createApp(makeApp(false))
+    vdomApp.mount(vdomRoot)
+    const vaporRoot = document.createElement('div')
+    const vaporApp = createVaporApp(makeApp(true))
+    vaporApp.mount(vaporRoot)
+
+    expect(vdomRoot.firstElementChild!.tagName).toBe('DIV')
+    expect(vaporRoot.firstElementChild!.tagName).toBe('DIV')
+    expect(vdomRoot.firstElementChild!.hasAttribute('grand')).toBe(false)
+    expect(vaporRoot.firstElementChild!.hasAttribute('grand')).toBe(false)
+
+    data.value = { show: false }
+    await nextTick()
+    expect(vdomRoot.firstElementChild!.tagName).toBe('SPAN')
+    expect(vaporRoot.firstElementChild!.tagName).toBe('SPAN')
+    expect(vdomRoot.firstElementChild!.hasAttribute('grand')).toBe(false)
+    expect(vaporRoot.firstElementChild!.hasAttribute('grand')).toBe(false)
+
+    vdomApp.unmount()
+    vaporApp.unmount()
   })
 })
