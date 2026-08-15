@@ -440,11 +440,11 @@ export function createSlot(
     }
   }
 
-  if (isHydrating && isInteropEnabled && isInteropFragment(fragment)) {
-    fragment.hydrate!()
-  }
   if (slottedScopeId) {
     applySlottedScopeId(fragment, slottedScopeId)
+  }
+  if (isHydrating && isInteropEnabled && isInteropFragment(fragment)) {
+    fragment.hydrate!()
   }
 
   if (!isHydrating) {

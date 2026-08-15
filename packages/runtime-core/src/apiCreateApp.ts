@@ -213,6 +213,7 @@ export interface VaporInVdomInterface {
     anchor: any,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
   ): void
   hydrate(
     vnode: VNode,
@@ -229,6 +230,7 @@ export interface VaporInVdomInterface {
     node: any,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
   ): Node
   activate(
     vnode: VNode,

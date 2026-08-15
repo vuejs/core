@@ -1,4 +1,5 @@
 import { isArray, isString } from '@vue/shared'
+import { currentInstance } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import {
   type InteropFragment,
@@ -9,7 +10,7 @@ import {
 } from './fragment'
 import type { Block } from './block'
 import { isInteropEnabled } from './vdomInteropState'
-import { getScopeOwner } from './componentSlots'
+import { currentSlotOwner, getScopeOwner } from './componentSlots'
 import {
   isHydrating,
   isRecreatedNode,
@@ -17,19 +18,19 @@ import {
 } from './dom/hydration'
 import { isTeleportEnabled, isTeleportFragment } from './teleport'
 
-export type ScopeIdValue = string | readonly string[] | null | undefined
+export type ScopeId = string | readonly string[] | null | undefined
 
 function mergeScopeId(
-  scopeIds: ScopeIdValue,
+  scopeIds: ScopeId,
   scopeId: string,
-  owned?: boolean,
-): ScopeIdValue {
+  canMutate: boolean,
+): ScopeId {
   if (!scopeIds) return scopeId
   if (isString(scopeIds)) {
     return scopeIds === scopeId ? scopeIds : [scopeIds, scopeId]
   }
   if (scopeIds.includes(scopeId)) return scopeIds
-  if (owned) {
+  if (canMutate) {
     ;(scopeIds as string[]).push(scopeId)
     return scopeIds
   }
@@ -38,26 +39,30 @@ function mergeScopeId(
   return merged
 }
 
-export function mergeScopeIds(
-  current: ScopeIdValue,
-  incoming: ScopeIdValue,
-  owned: boolean = false,
-): ScopeIdValue {
+function mergeScopeIdsInternal(
+  current: ScopeId,
+  incoming: ScopeId,
+  canMutate: boolean,
+): ScopeId {
   if (!incoming || incoming.length === 0) return current
   if (!current) return incoming
   if (isString(incoming)) {
-    return mergeScopeId(current, incoming, owned)
+    return mergeScopeId(current, incoming, canMutate)
   }
-  let merged: ScopeIdValue = current
+  let merged: ScopeId = current
   for (let i = 0; i < incoming.length; i++) {
     // once merged diverges from current it is a locally created array,
     // so further ids can be pushed in place instead of copied per id
-    merged = mergeScopeId(merged, incoming[i], owned || merged !== current)
+    merged = mergeScopeId(merged, incoming[i], canMutate || merged !== current)
   }
   return merged
 }
 
-function isSameScopeIds(a: ScopeIdValue, b: ScopeIdValue): boolean {
+export function mergeScopeIds(current: ScopeId, incoming: ScopeId): ScopeId {
+  return mergeScopeIdsInternal(current, incoming, false)
+}
+
+export function isSameScopeIds(a: ScopeId, b: ScopeId): boolean {
   if (a === b) return true
   if (!isArray(a) || !isArray(b) || a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) {
@@ -66,39 +71,35 @@ function isSameScopeIds(a: ScopeIdValue, b: ScopeIdValue): boolean {
   return true
 }
 
-// An empty dynamic fragment still occupies the component's single-root slot,
-// so a future branch can inherit its scope IDs.
-const EMPTY_DYNAMIC_ROOT = true
-type ScopeIdRoot =
+// A dynamic fragment without a current scope root still occupies the
+// component's single-root slot, so a future branch can inherit its scope IDs.
+const DYNAMIC_ROOT_PLACEHOLDER = true
+type ScopeIdRootCandidate =
   | Element
   | VaporComponentInstance
   | InteropFragment
-  | typeof EMPTY_DYNAMIC_ROOT
+  | typeof DYNAMIC_ROOT_PLACEHOLDER
 
-function applyFragmentScopeIds(this: VaporFragment, block: Block): void {
-  const componentRoot = this.scopeIdRoot
-  if (componentRoot) {
-    applySingleRootScopeId(componentRoot.block, componentRoot)
+function applyFragmentScopeId(this: VaporFragment, block: Block): void {
+  if (isInteropEnabled && isInteropFragment(this) && this.vnode) {
+    this.syncScopeId()
+    return
+  }
+  const owner = this.scopeOwner
+  if (owner) {
+    applyRootScopeId(owner.block, owner)
   }
   if (this.slottedScopeId) {
     applySlottedScopeId(block, this.slottedScopeId)
   }
 }
 
-function registerFragmentComponentScopeId(
+function bindFragmentScopeIdOwner(
   fragment: VaporFragment,
   instance: VaporComponentInstance,
 ): void {
-  fragment.scopeIdRoot = instance
-  fragment.applyScopeId = applyFragmentScopeIds
-}
-
-function applyInteropScopeIds(this: InteropFragment, block: Block): void {
-  if (this.vnode) {
-    syncInteropFragmentScopeIds(this)
-  } else {
-    applyFragmentScopeIds.call(this, block)
-  }
+  fragment.scopeOwner = instance
+  fragment.applyScopeId = applyFragmentScopeId
 }
 
 function resolveSingleScopeIdRoot(
@@ -108,7 +109,7 @@ function resolveSingleScopeIdRoot(
     instance: VaporComponentInstance,
   ) => void,
   instance?: VaporComponentInstance,
-): ScopeIdRoot | undefined {
+): ScopeIdRootCandidate | undefined {
   if (block instanceof Element) {
     return block
   }
@@ -127,13 +128,13 @@ function resolveSingleScopeIdRoot(
     const root = resolveSingleScopeIdRoot(block.nodes, onFragment, instance)
     if (isDynamicFragment(block)) {
       if (onFragment) onFragment(block, instance!)
-      return root || EMPTY_DYNAMIC_ROOT
+      return root || DYNAMIC_ROOT_PLACEHOLDER
     }
     return root
   }
 
   if (isArray(block)) {
-    let root: ScopeIdRoot | undefined
+    let root: ScopeIdRootCandidate | undefined
     let hasComment = false
     for (let i = 0; i < block.length; i++) {
       const child = block[i]
@@ -159,7 +160,11 @@ function getScopeIdParent(
   if (
     !parent ||
     !isVaporComponent(parent) ||
-    resolveSingleScopeIdRoot(parent.block) !== instance
+    // parent.block is unassigned while the parent is still setting up (e.g.
+    // hydration-mismatch writes fired from a creation site). Until it exists,
+    // trust the creation-time inheritsScopeId flag (set through
+    // getHydratingScopeIdOwner) in place of the structural check.
+    (parent.block && resolveSingleScopeIdRoot(parent.block) !== instance)
   ) {
     return
   }
@@ -170,61 +175,36 @@ function applyInteropFragmentScopeIds(
   fragment: InteropFragment,
   instance: VaporComponentInstance,
 ): void {
-  fragment.scopeIdRoot = instance
-  fragment.applyScopeId = applyInteropScopeIds
-  syncInteropFragmentScopeIds(fragment)
-  if (!fragment.vnode) {
-    applySingleRootScopeId(fragment.nodes, instance)
+  bindFragmentScopeIdOwner(fragment, instance)
+  if (fragment.vnode) {
+    fragment.syncScopeId()
   }
+  // Keep the owner for later vnode-backed resolution, but do not descend
+  // root-only ids into a slot host's current vapor content or fallback.
 }
 
-function mergeInstanceScopeIds(
-  scopeIds: ScopeIdValue,
+export function mergeComponentScopeIds(
+  scopeIds: ScopeId,
   instance: VaporComponentInstance,
-): ScopeIdValue {
-  let owned = false
+): ScopeId {
+  let canMutate = false
   let current: VaporComponentInstance | undefined = instance
   while (current) {
     const previous = scopeIds
-    scopeIds = mergeScopeIds(scopeIds, current.scopeId, owned)
-    if (previous && scopeIds !== previous) owned = true
+    scopeIds = mergeScopeIdsInternal(scopeIds, current.scopeId, canMutate)
+    if (previous && scopeIds !== previous) canMutate = true
     current = getScopeIdParent(current)
   }
   return scopeIds
 }
 
-function syncInteropFragmentScopeIds(fragment: InteropFragment): void {
-  const vnode = fragment.vnode
-  if (!vnode) return
-  if (fragment.scopeIdVNode !== vnode) {
-    fragment.scopeIdVNode = vnode
-    fragment.scopeIdBase = vnode.slotScopeIds
-  }
-
-  let scopeIds = mergeScopeIds(fragment.scopeIdBase, fragment.slottedScopeId)
-  const componentRoot = fragment.scopeIdRoot
-  if (componentRoot) {
-    scopeIds = mergeInstanceScopeIds(scopeIds, componentRoot)
-  }
-  const existing = vnode.slotScopeIds
-  if (isString(scopeIds)) {
-    if (!existing || existing.length !== 1 || existing[0] !== scopeIds) {
-      vnode.slotScopeIds = [scopeIds]
-    }
-  } else if (!scopeIds) {
-    if (existing) vnode.slotScopeIds = null
-  } else if (!isSameScopeIds(existing, scopeIds)) {
-    vnode.slotScopeIds = scopeIds.slice()
-  }
-}
-
-function applyFlatScopeIds(element: Element, scopeIds: ScopeIdValue): void {
+function setElementScopeId(element: Element, scopeIds: ScopeId): void {
   if (!scopeIds) return
   // Adopted SSR elements already carry their scope attrs; only nodes recreated
   // by a hydration mismatch still need the client-side writes.
   if (isHydrating) {
     if (isRecreatedNode(element)) {
-      runWithoutHydration(() => applyFlatScopeIds(element, scopeIds))
+      runWithoutHydration(() => setElementScopeId(element, scopeIds))
     }
     return
   }
@@ -237,19 +217,16 @@ function applyFlatScopeIds(element: Element, scopeIds: ScopeIdValue): void {
   }
 }
 
-export function applySlottedScopeId(
-  block: Block,
-  scopeIds: ScopeIdValue,
-): void {
+export function applySlottedScopeId(block: Block, scopeIds: ScopeId): void {
   if (!scopeIds) return
   if (block instanceof Element) {
-    applyFlatScopeIds(block, scopeIds)
+    setElementScopeId(block, scopeIds)
   } else if (isVaporComponent(block)) {
     const merged = mergeScopeIds(block.scopeId, scopeIds)
     if (merged === block.scopeId) return
     block.scopeId = merged
     if (block.isMounted) {
-      applySingleRootScopeId(block.block, block)
+      applyRootScopeId(block.block, block)
     }
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
@@ -259,57 +236,90 @@ export function applySlottedScopeId(
     const merged = mergeScopeIds(block.slottedScopeId, scopeIds)
     if (merged === block.slottedScopeId) return
     block.slottedScopeId = merged
+    block.applyScopeId = applyFragmentScopeId
     if (isInteropEnabled && isInteropFragment(block)) {
-      block.applyScopeId = applyInteropScopeIds
-      syncInteropFragmentScopeIds(block)
-      return
+      if (block.vnode) block.syncScopeId()
+    } else {
+      applySlottedScopeId(block.nodes, scopeIds)
     }
-    block.applyScopeId = applyFragmentScopeIds
-    applySlottedScopeId(block.nodes, scopeIds)
   }
 }
 
-function applyInstanceScopeIds(
+function setComponentRootScopeId(
   element: Element,
   instance: VaporComponentInstance,
 ): void {
-  // Same guard as applyFlatScopeIds, hoisted so adopted SSR elements also
+  // Same guard as setElementScopeId, hoisted so adopted SSR elements also
   // skip the parent-chain walk.
   if (isHydrating) {
     if (isRecreatedNode(element)) {
-      runWithoutHydration(() => applyInstanceScopeIds(element, instance))
+      runWithoutHydration(() => setComponentRootScopeId(element, instance))
     }
     return
   }
   let current: VaporComponentInstance | undefined = instance
   while (current) {
-    applyFlatScopeIds(element, current.scopeId)
+    setElementScopeId(element, current.scopeId)
     current = getScopeIdParent(current)
   }
 }
 
-function applySingleRootScopeId(
+function applyRootScopeId(
   block: Block,
   instance: VaporComponentInstance,
 ): void {
-  const root = resolveSingleScopeIdRoot(block)
+  const root =
+    block instanceof Element ? block : resolveSingleScopeIdRoot(block)
   if (!root) return
   if (isArray(block) || isFragment(block)) {
-    resolveSingleScopeIdRoot(block, registerFragmentComponentScopeId, instance)
+    resolveSingleScopeIdRoot(block, bindFragmentScopeIdOwner, instance)
   }
-  if (root === EMPTY_DYNAMIC_ROOT) {
+  if (root === DYNAMIC_ROOT_PLACEHOLDER) {
     return
   }
   if (root instanceof Element) {
-    applyInstanceScopeIds(root, instance)
+    setComponentRootScopeId(root, instance)
   } else if (isVaporComponent(root)) {
     root.inheritsScopeId = true
     if (root.isMounted) {
-      applySingleRootScopeId(root.block, root)
+      applyRootScopeId(root.block, root)
     }
   } else if (isInteropEnabled) {
     applyInteropFragmentScopeIds(root, instance)
   }
+}
+
+/**
+ * Resolves the instance whose scope ids a hydrating single root inherits:
+ * the current instance, unless slot content or a non-vapor parent owns the
+ * creation site or the instance carries no ids to inherit.
+ */
+export function getHydratingScopeIdOwner(
+  isSingleRoot: boolean | undefined,
+): VaporComponentInstance | undefined {
+  if (
+    isSingleRoot &&
+    !currentSlotOwner &&
+    isVaporComponent(currentInstance) &&
+    (currentInstance.scopeId || currentInstance.inheritsScopeId)
+  ) {
+    return currentInstance
+  }
+}
+
+/**
+ * During hydration a component's root fragment hydrates before mountComponent
+ * gets to run applyComponentRootScopeId, so nodes recreated by a hydration
+ * mismatch would miss their scope attributes. Creation sites producing a
+ * component's single root wire the owner up front through this helper before
+ * the fragment hydrates.
+ */
+export function applyHydratingRootScopeId(
+  isSingleRoot: boolean | undefined,
+  block: Block,
+): void {
+  const owner = getHydratingScopeIdOwner(isSingleRoot)
+  if (owner) applyRootScopeId(block, owner)
 }
 
 export function applyComponentRootScopeId(
@@ -321,12 +331,12 @@ export function applyComponentRootScopeId(
   if (!instance.scopeId && !instance.inheritsScopeId && !instance.rawPropsRef) {
     return
   }
-  applySingleRootScopeId(instance.block, instance)
+  applyRootScopeId(instance.block, instance)
 }
 
-export function setComponentScopeId(
+export function setInteropComponentScopeId(
   instance: VaporComponentInstance,
-  scopeIds: ScopeIdValue,
+  scopeIds: ScopeId,
 ): void {
   if (isSameScopeIds(instance.scopeId, scopeIds)) return
   instance.scopeId = scopeIds
@@ -338,13 +348,14 @@ export function setComponentScopeId(
     componentRoot = root
     root = resolveSingleScopeIdRoot(root.block)
   }
-  if (!root || root === EMPTY_DYNAMIC_ROOT || root instanceof Element) return
-  root.scopeIdRoot = componentRoot
-  root.applyScopeId = applyInteropScopeIds
-  syncInteropFragmentScopeIds(root)
+  if (!root || root === DYNAMIC_ROOT_PLACEHOLDER || root instanceof Element) {
+    return
+  }
+  bindFragmentScopeIdOwner(root, componentRoot)
+  root.syncScopeId()
 }
 
 export function getCurrentScopeId(): string | undefined {
   const scopeOwner = getScopeOwner()
-  return scopeOwner ? scopeOwner.type.__scopeId : undefined
+  return isVaporComponent(scopeOwner) ? scopeOwner.type.__scopeId : undefined
 }

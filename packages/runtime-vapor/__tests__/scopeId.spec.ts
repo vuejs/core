@@ -1,5 +1,8 @@
 import {
+  Fragment,
   KeepAlive,
+  Teleport,
+  cloneVNode,
   createApp,
   h,
   nextTick,
@@ -141,7 +144,8 @@ describe('scopeId', () => {
     expect(html()).toBe(`<div child="" parent="" app=""></div>`)
   })
 
-  test('should not attach scopeId to nested multiple root components', () => {
+  test('should not attach scopeId to nested multiple root components', async () => {
+    const show = ref(false)
     const Child = defineVaporComponent({
       __scopeId: 'child',
       setup() {
@@ -153,8 +157,12 @@ describe('scopeId', () => {
       __scopeId: 'parent',
       setup() {
         const n0 = template('<div parent></div>')()
-        const n1 = createComponent(Child)
-        return [n0, n1]
+        const n1 = createIf(
+          () => show.value,
+          () => template('<span parent></span>', 1)(),
+        )
+        const n2 = createComponent(Child)
+        return [n0, n1, n2]
       },
     })
 
@@ -164,7 +172,16 @@ describe('scopeId', () => {
         return createComponent(Parent)
       },
     }).render()
-    expect(html()).toBe(`<div parent=""></div><div child="" parent=""></div>`)
+    expect(html()).toBe(
+      `<div parent=""></div><!--if--><div child="" parent=""></div>`,
+    )
+
+    show.value = true
+    await nextTick()
+
+    expect(html()).toBe(
+      `<div parent=""></div><span parent=""></span><!--if--><div child="" parent=""></div>`,
+    )
   })
 
   test('should attach scopeId to nested child component with insertion state', () => {
@@ -387,9 +404,9 @@ describe('scopeId', () => {
   })
 
   test(':slotted on dynamic slot outlet update', async () => {
-    const data = ref({ slotName: 'one' })
+    const data = ref({ slotName: 'missing' })
     const Child = compile(
-      `<template><slot :name="data.slotName" /></template>`,
+      `<template><slot :name="data.slotName"><span>fallback</span></slot></template>`,
       data,
     )
     Child.__scopeId = 'child'
@@ -405,14 +422,31 @@ describe('scopeId', () => {
       { Child },
     )
 
-    const { html } = define(Parent).render()
+    const { app, html } = define(Parent).render()
+    const setAttribute = vi.spyOn(Element.prototype, 'setAttribute')
 
-    expect(html()).toBe(`<div child-s="">one</div><!--slot-->`)
+    try {
+      expect(html()).toBe(`<span child-s="">fallback</span><!--slot-->`)
 
-    data.value = { slotName: 'two' }
-    await nextTick()
+      data.value = { slotName: 'one' }
+      await nextTick()
 
-    expect(html()).toBe(`<section child-s="">two</section><!--slot-->`)
+      expect(html()).toBe(`<div child-s="">one</div><!--slot-->`)
+      expect(
+        setAttribute.mock.calls.filter(([name]) => name === 'child-s'),
+      ).toHaveLength(1)
+
+      data.value = { slotName: 'two' }
+      await nextTick()
+
+      expect(html()).toBe(`<section child-s="">two</section><!--slot-->`)
+      expect(
+        setAttribute.mock.calls.filter(([name]) => name === 'child-s'),
+      ).toHaveLength(2)
+    } finally {
+      setAttribute.mockRestore()
+      app.unmount()
+    }
   })
 
   test(':slotted on v-for content added after mount', async () => {
@@ -744,36 +778,6 @@ describe('scopeId', () => {
         `<!--slot--></div>`,
     )
   })
-
-  test('should not inherit scopeId through one branch of a multi-root', async () => {
-    const show = ref(false)
-    const Child = defineVaporComponent({
-      __scopeId: 'child',
-      setup() {
-        return [
-          createIf(
-            () => show.value,
-            () => template('<div child></div>', 1)(),
-          ),
-          template('<span child></span>', 1)(),
-        ]
-      },
-    })
-
-    const { host } = define({
-      __scopeId: 'parent',
-      setup() {
-        return createComponent(Child)
-      },
-    }).render()
-
-    show.value = true
-    await nextTick()
-
-    expect(host.innerHTML).toBe(
-      `<div child=""></div><!--if--><span child=""></span>`,
-    )
-  })
 })
 
 describe('vdom interop', () => {
@@ -973,7 +977,7 @@ describe('vdom interop', () => {
 
     expect(root.innerHTML).toBe(
       `<div vdom-slot-owner="" vdom-parent="">` +
-        `<button vdom-slot-owner="" vdom-parent="" vdom-slot-owner-s=""></button>` +
+        `<button vdom-parent="" vdom-slot-owner-s=""></button>` +
         `</div>`,
     )
   })
@@ -1030,7 +1034,7 @@ describe('vdom interop', () => {
 
     expect(noSlottedRoot.root.innerHTML).toBe(
       `<div vdom-slot-owner="" vdom-parent="">` +
-        `<button vdom-slot-owner="" vdom-parent="">0</button>` +
+        `<button vdom-parent="">0</button>` +
         `</div>`,
     )
 
@@ -1040,7 +1044,7 @@ describe('vdom interop', () => {
 
     expect(noSlottedRoot.root.innerHTML).toBe(
       `<div vdom-slot-owner="" vdom-parent="">` +
-        `<button vdom-slot-owner="" vdom-parent="">1</button>` +
+        `<button vdom-parent="">1</button>` +
         `</div>`,
     )
 
@@ -1048,7 +1052,7 @@ describe('vdom interop', () => {
 
     expect(slottedRoot.root.innerHTML).toBe(
       `<div vdom-slot-owner="" vdom-parent="">` +
-        `<button vdom-slot-owner="" vdom-parent="" vdom-slot-owner-s="">0</button>` +
+        `<button vdom-parent="" vdom-slot-owner-s="">0</button>` +
         `</div>`,
     )
 
@@ -1058,7 +1062,7 @@ describe('vdom interop', () => {
 
     expect(slottedRoot.root.innerHTML).toBe(
       `<div vdom-slot-owner="" vdom-parent="">` +
-        `<button vdom-slot-owner="" vdom-parent="" vdom-slot-owner-s="">1</button>` +
+        `<button vdom-parent="" vdom-slot-owner-s="">1</button>` +
         `</div>`,
     )
   })
@@ -1103,7 +1107,7 @@ describe('vdom interop', () => {
 
     expect(root.innerHTML).toBe(
       `<div vdom-slot-owner="" vdom-parent="">` +
-        `<button vdom-slot-owner="" vdom-parent="" vdom-slot-owner-s="">base</button><!--if-->` +
+        `<button vdom-parent="" vdom-slot-owner-s="">base</button><!--if-->` +
         `</div>`,
     )
 
@@ -1112,7 +1116,7 @@ describe('vdom interop', () => {
 
     expect(root.innerHTML).toBe(
       `<div vdom-slot-owner="" vdom-parent="">` +
-        `<span vdom-slot-owner="" vdom-parent="" vdom-slot-owner-s="">alt</span><!--if-->` +
+        `<span vdom-parent="" vdom-slot-owner-s="">alt</span><!--if-->` +
         `</div>`,
     )
   })
@@ -1838,12 +1842,10 @@ describe('vdom interop', () => {
     expect(root.firstElementChild).toMatchObject({
       tagName: 'DIV',
     })
-    expect(root.firstElementChild?.getAttributeNames()).toEqual([
-      'vdom-child',
-      'middle-vapor',
-      'outer-vapor',
-      'outer-a',
-    ])
+    expect(root.firstElementChild!.hasAttribute('vdom-child')).toBe(true)
+    expect(root.firstElementChild!.hasAttribute('middle-vapor')).toBe(true)
+    expect(root.firstElementChild!.hasAttribute('outer-vapor')).toBe(true)
+    expect(root.firstElementChild!.hasAttribute('outer-a')).toBe(true)
 
     scopeId.value = 'outer-b'
     await nextTick()
@@ -1853,17 +1855,16 @@ describe('vdom interop', () => {
     expect(root.firstElementChild).toMatchObject({
       tagName: 'SECTION',
     })
-    expect(root.firstElementChild?.getAttributeNames()).toEqual([
-      'vdom-child',
-      'middle-vapor',
-      'outer-vapor',
-      'outer-b',
-    ])
+    expect(root.firstElementChild!.hasAttribute('vdom-child')).toBe(true)
+    expect(root.firstElementChild!.hasAttribute('middle-vapor')).toBe(true)
+    expect(root.firstElementChild!.hasAttribute('outer-vapor')).toBe(true)
+    expect(root.firstElementChild!.hasAttribute('outer-b')).toBe(true)
+    expect(root.firstElementChild!.hasAttribute('outer-a')).toBe(false)
 
     app.unmount()
   })
 
-  test('applies current component scopeIds to new VDOM slot content', async () => {
+  test('does not apply root-only component scopeId to VDOM slot content', async () => {
     const showAlt = ref(false)
     const VaporChild = defineVaporComponent({
       setup() {
@@ -1886,16 +1887,16 @@ describe('vdom interop', () => {
     const root = document.createElement('div')
     const app = createApp(App).use(vaporInteropPlugin)
     app.mount(root)
-    expect(root.innerHTML).toBe(`<div external="">base</div>`)
+    expect(root.innerHTML).toBe(`<div>base</div>`)
 
     showAlt.value = true
     await nextTick()
-    expect(root.innerHTML).toBe(`<section external="">alt</section>`)
+    expect(root.innerHTML).toBe(`<section>alt</section>`)
 
     app.unmount()
   })
 
-  test('applies component scopeId to an interop slot fallback created later', async () => {
+  test('does not apply root-only component scopeId to an interop slot fallback created later', async () => {
     const show = ref(true)
     const VaporChild = defineVaporComponent({
       setup() {
@@ -1922,16 +1923,16 @@ describe('vdom interop', () => {
     const root = document.createElement('div')
     const app = createApp(App).use(vaporInteropPlugin)
     app.mount(root)
-    expect(root.innerHTML).toBe(`<div external="">content</div>`)
+    expect(root.innerHTML).toBe(`<div>content</div>`)
 
     show.value = false
     await nextTick()
-    expect(root.innerHTML).toBe(`<span external="">fallback</span>`)
+    expect(root.innerHTML).toBe(`<span>fallback</span>`)
 
     app.unmount()
   })
 
-  test('applies component scopeId to VDOM slot fallback created later', async () => {
+  test('does not apply root-only component scopeId to VDOM slot fallback created later', async () => {
     const show = ref(true)
     const VDomOutlet = {
       setup(_: unknown, { slots }: any) {
@@ -1972,13 +1973,62 @@ describe('vdom interop', () => {
     const root = document.createElement('div')
     const app = createApp(App).use(vaporInteropPlugin)
     app.mount(root)
-    expect(root.innerHTML).toBe(`<div external="">content</div>`)
+    expect(root.innerHTML).toBe(`<div>content</div>`)
 
     show.value = false
     await nextTick()
-    expect(root.innerHTML).toBe(`<span external="">fallback</span>`)
+    expect(root.innerHTML).toBe(`<span>fallback</span>`)
 
     app.unmount()
+  })
+
+  test('matches VDOM root-only scopeId behavior for slot content and fallback', async () => {
+    const show = ref(true)
+    const VDOMChild = {
+      setup(_: unknown, { slots }: any) {
+        return () =>
+          renderSlot(slots, 'default', {}, () => [h('span', 'fallback')])
+      },
+    }
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return createSlot(
+          'default',
+          null,
+          () => template('<span>fallback</span>')(),
+          VaporSlotFlags.SLOT_ROOT,
+        ) as any
+      },
+    })
+    const createParent = (Child: any) => ({
+      setup() {
+        return () => {
+          const child = h(Child, null, {
+            default: () => (show.value ? h('div', 'content') : []),
+          })
+          child.scopeId = 'external'
+          return child
+        }
+      },
+    })
+
+    const vdomRoot = document.createElement('div')
+    const vdomApp = createApp(createParent(VDOMChild))
+    vdomApp.mount(vdomRoot)
+    const vaporRoot = document.createElement('div')
+    const vaporApp = createApp(createParent(VaporChild)).use(vaporInteropPlugin)
+    vaporApp.mount(vaporRoot)
+
+    expect(vdomRoot.innerHTML).toBe(`<div>content</div>`)
+    expect(vaporRoot.innerHTML).toBe(vdomRoot.innerHTML)
+
+    show.value = false
+    await nextTick()
+    expect(vdomRoot.innerHTML).toBe(`<span>fallback</span>`)
+    expect(vaporRoot.innerHTML).toBe(vdomRoot.innerHTML)
+
+    vdomApp.unmount()
+    vaporApp.unmount()
   })
 
   test('uses current scopeId for a cached component future root', async () => {
@@ -2026,6 +2076,208 @@ describe('vdom interop', () => {
     await nextTick()
 
     expect(root.innerHTML).toBe(`<section second="">alt</section><!--if-->`)
+    app.unmount()
+  })
+
+  test.each([
+    ['a single child', 1],
+    ['multiple children', 2],
+  ] as const)(
+    'matches VDOM component scopeId behavior for a Fragment with %s',
+    (_, childCount) => {
+      const renderFragment = () =>
+        h(Fragment, null, childCount === 1 ? [h('div')] : [h('div'), h('span')])
+      const VDOMChild = {
+        setup: () => renderFragment,
+      }
+      const VaporChild = defineVaporComponent({
+        setup() {
+          return createDynamicComponent(
+            renderFragment,
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          )
+        },
+      })
+      const createParent = (Child: any) => ({
+        __scopeId: 'external',
+        setup() {
+          return () => h(Child)
+        },
+      })
+
+      const vdomRoot = document.createElement('div')
+      const vdomApp = createApp(createParent(VDOMChild))
+      vdomApp.mount(vdomRoot)
+      expect(vdomRoot.children).toHaveLength(childCount)
+      for (const child of vdomRoot.children) {
+        expect(child.hasAttribute('external')).toBe(false)
+      }
+
+      const vaporRoot = document.createElement('div')
+      const vaporApp = createApp(createParent(VaporChild)).use(
+        vaporInteropPlugin,
+      )
+      vaporApp.mount(vaporRoot)
+      expect(vaporRoot.children).toHaveLength(childCount)
+      for (const child of vaporRoot.children) {
+        expect(child.hasAttribute('external')).toBe(false)
+      }
+
+      vdomApp.unmount()
+      vaporApp.unmount()
+    },
+  )
+
+  test('does not apply component scopeId to VDOM Teleport children', () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const VaporChild = defineVaporComponent({
+      setup() {
+        const vnode = h(Teleport, { to: target }, h('div'))
+        return createDynamicComponent(
+          () => vnode,
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
+      },
+    })
+    const App = {
+      __scopeId: 'external',
+      setup() {
+        return () => h(VaporChild as any)
+      },
+    }
+
+    const root = document.createElement('div')
+    const app = createApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+
+    expect(target.firstElementChild!.hasAttribute('external')).toBe(false)
+    app.unmount()
+    target.remove()
+  })
+
+  test('applies slotted scopeId to VDOM Teleport children', () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const Receiver = defineVaporComponent({
+      __scopeId: 'receiver',
+      setup() {
+        return createSlot('default', null, undefined, VaporSlotFlags.SLOT_ROOT)
+      },
+    })
+    const App = {
+      setup() {
+        return () =>
+          h(Receiver as any, null, {
+            default: () => h(Teleport, { to: target }, h('div')),
+          })
+      },
+    }
+
+    const root = document.createElement('div')
+    const app = createApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+
+    expect(target.firstElementChild!.hasAttribute('receiver-s')).toBe(true)
+    expect(target.firstElementChild!.hasAttribute('receiver')).toBe(false)
+    app.unmount()
+    target.remove()
+  })
+
+  test('does not retain fragment context when cloning a component VNode', () => {
+    const VDOMChild = {
+      setup() {
+        return () => h('div')
+      },
+    }
+    const source = h(VDOMChild)
+    const Receiver = defineVaporComponent({
+      __scopeId: 'receiver',
+      setup() {
+        return createSlot('default', null, undefined, VaporSlotFlags.SLOT_ROOT)
+      },
+    })
+    const ScopedApp = {
+      setup() {
+        return () =>
+          h(Receiver as any, null, {
+            default: () => h(Fragment, null, [source]),
+          })
+      },
+    }
+    const firstRoot = document.createElement('div')
+    const firstApp = createApp(ScopedApp).use(vaporInteropPlugin)
+    firstApp.mount(firstRoot)
+    expect(firstRoot.firstElementChild!.hasAttribute('receiver-s')).toBe(true)
+
+    const cloned = cloneVNode(source)
+    firstApp.unmount()
+    const PlainChild = defineVaporComponent({
+      setup() {
+        return createDynamicComponent(
+          () => cloned,
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
+      },
+    })
+    const PlainApp = {
+      setup() {
+        return () => h(PlainChild as any)
+      },
+    }
+    const secondRoot = document.createElement('div')
+    const secondApp = createApp(PlainApp).use(vaporInteropPlugin)
+    secondApp.mount(secondRoot)
+
+    expect(secondRoot.querySelector('div')!.hasAttribute('receiver-s')).toBe(
+      false,
+    )
+    secondApp.unmount()
+  })
+
+  test('applies slotted scopeId to forwarded vapor slot content', () => {
+    const Receiver = defineVaporComponent({
+      __scopeId: 'receiver',
+      setup() {
+        return createSlot('default', null, undefined, VaporSlotFlags.SLOT_ROOT)
+      },
+    })
+
+    // VDOM middle component forwarding the vapor-origin slots object, so the
+    // slot content reaching Receiver is a bare VaporSlot VNode.
+    const Middle = {
+      setup(_props: unknown, { slots }: any) {
+        return () => h(Receiver as any, null, slots)
+      },
+    }
+
+    const VaporSender = defineVaporComponent({
+      setup() {
+        return createComponent(Middle as any, null, {
+          default: () => template('<div class="content">content</div>', 1)(),
+        })
+      },
+    })
+
+    const App = {
+      setup() {
+        return () => h(VaporSender as any)
+      },
+    }
+
+    const root = document.createElement('div')
+    const app = createApp(App).use(vaporInteropPlugin)
+    app.mount(root)
+
+    const content = root.querySelector('.content')!
+    expect(content.hasAttribute('receiver-s')).toBe(true)
+    expect(content.hasAttribute('receiver')).toBe(false)
     app.unmount()
   })
 })

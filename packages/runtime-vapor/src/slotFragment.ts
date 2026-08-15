@@ -122,8 +122,7 @@ export interface SlotResolutionState {
   // Reentrancy guard for one atomic content/fallback reconciliation.
   isReconciling: boolean
   $transition?: VaporTransitionHooks
-  applyScopeId?: (block: Block) => void
-  scopeIdFragment?: VaporFragment
+  scopeIdHost?: VaporFragment
 
   getContent(): Block
   getParentNode(): ParentNode | null
@@ -144,14 +143,14 @@ export interface SlotResolutionState {
 // Publishes the winning branch to the host's exposed nodes, then runs the
 // host fragment's scopeId preparation on the just-materialized block so it is
 // ready before it can reach the DOM. The interop hosts keep their state
-// separate from the fragment and point back to it via scopeIdFragment;
+// separate from the fragment and point back to it via scopeIdHost;
 // SlotFragment is its own fragment.
 export function syncNodesAndApplyScopeId(
   state: SlotResolutionState,
   block: Block,
 ): void {
   state.syncNodes()
-  const host = state.scopeIdFragment || state
+  const host = (state.scopeIdHost || state) as VaporFragment
   if (host.applyScopeId) {
     host.applyScopeId(block)
   }
@@ -296,18 +295,18 @@ function commitSlotFallback(
 function renderAndCommitSlotFallback(
   state: SlotResolutionState,
   hadFallback: boolean,
-): void {
+): boolean {
   const result = renderFallbackInScope(state)
   clearSlotFallback(state)
-  if (result) {
-    commitSlotFallback(
-      state,
-      result.block,
-      result.scope,
-      result.onContentInvalid,
-      !hadFallback,
-    )
-  }
+  if (!result) return false
+  commitSlotFallback(
+    state,
+    result.block,
+    result.scope,
+    result.onContentInvalid,
+    !hadFallback,
+  )
+  return true
 }
 
 export function disposeSlotResolution(state: SlotResolutionState): void {
@@ -364,13 +363,14 @@ function recheckSlotResolutionNow(
     return
   }
 
+  let fallbackCommitted = false
   // Content wins over fallback. If fallback was mounted, content may need to
   // be inserted back because it can be invalid while fallback is active.
   if (contentValid) {
     const content = state.getContent()
     const hadFallback = !!fallback
     clearSlotFallback(state)
-    syncNodesAndApplyScopeId(state, content)
+    state.syncNodes()
     if (!isHydrating && hadFallback) {
       const parentNode = state.getParentNode()
       if (parentNode) {
@@ -386,17 +386,17 @@ function recheckSlotResolutionNow(
       // take over, keep it active. This is an internal fallback update, so its
       // anchors/effects must stay live until it becomes valid again.
       if (!fallbackValid && hasSlotFallback(state.boundary.parent)) {
-        renderAndCommitSlotFallback(state, true)
+        fallbackCommitted = renderAndCommitSlotFallback(state, true)
       } else if (force && fallbackValid) {
-        renderAndCommitSlotFallback(state, true)
+        fallbackCommitted = renderAndCommitSlotFallback(state, true)
       }
     } else if (fallbackValid) {
       insertActiveSlotFallback(state)
     } else if (force) {
-      renderAndCommitSlotFallback(state, true)
+      fallbackCommitted = renderAndCommitSlotFallback(state, true)
     }
   } else {
-    renderAndCommitSlotFallback(state, false)
+    fallbackCommitted = renderAndCommitSlotFallback(state, false)
   }
 
   const nextFallback = state.activeFallback
@@ -408,7 +408,7 @@ function recheckSlotResolutionNow(
           ? fallbackValid
           : isValidSlot(nextFallback)
         : state.isContentValid()
-  state.syncNodes()
+  if (!contentValid && !fallbackCommitted) state.syncNodes()
   state.lastNodesValid = nextNodesValid
   if (prevNodesValid !== nextNodesValid) {
     state.notifyExposedValidityChange()

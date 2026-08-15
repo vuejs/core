@@ -107,9 +107,11 @@ export class VaporFragment<
   ) => void
   remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
   hydrate?(...args: any[]): void
-  applyScopeId?: (block: Block) => void
-  scopeIdRoot?: VaporComponentInstance
+
+  applyScopeId?: (this: VaporFragment, block: Block) => void
+  scopeOwner?: VaporComponentInstance
   slottedScopeId?: VaporComponentInstance['scopeId']
+
   setRef?: (
     instance: VaporComponentInstance,
     ref: NodeRef,
@@ -839,8 +841,7 @@ export function isFragment(val: unknown): val is VaporFragment {
 
 export type InteropFragment<T extends Block = Block> = VaporFragment<T> & {
   vnode: VNode | null
-  scopeIdVNode?: VNode | null
-  scopeIdBase?: VaporComponentInstance['scopeId']
+  syncScopeId: (this: InteropFragment) => void
 }
 
 export function isInteropFragment(val: unknown): val is InteropFragment {

@@ -139,7 +139,7 @@ export class TeleportFragment extends RenderContextFragment {
     return this.anchor ? parentNode(this.anchor) : null
   }
 
-  get scopeOwner(): GenericComponentInstance | null {
+  get contentOwner(): GenericComponentInstance | null {
     return (this.slotOwner ||
       this.renderInstance) as GenericComponentInstance | null
   }
@@ -192,8 +192,8 @@ export class TeleportFragment extends RenderContextFragment {
   private bindChildren(block: Block): void {
     // register updateCssVars to nested fragments's update hooks so that
     // it will be called when root fragment changed
-    const scopeOwner = this.scopeOwner
-    if (scopeOwner && scopeOwner.ut) {
+    const contentOwner = this.contentOwner
+    if (contentOwner && contentOwner.ut) {
       this.registerUpdateCssVars(block)
     }
   }
@@ -273,11 +273,11 @@ export class TeleportFragment extends RenderContextFragment {
       this.prepareTargetAnchors(target)
 
       // track CE teleport targets
-      const scopeOwner = this.scopeOwner
-      if (scopeOwner && scopeOwner.isCE) {
+      const contentOwner = this.contentOwner
+      if (contentOwner && contentOwner.isCE) {
         ;(
-          scopeOwner.ce!._teleportTargets ||
-          (scopeOwner.ce!._teleportTargets = new Set())
+          contentOwner.ce!._teleportTargets ||
+          (contentOwner.ce!._teleportTargets = new Set())
         ).add(target)
       }
     }
@@ -587,7 +587,7 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   private updateCssVars(): void {
-    const ctx = this.scopeOwner
+    const ctx = this.contentOwner
     if (ctx && ctx.ut) {
       let node: Node | null | undefined
       let anchor: Node | null | undefined

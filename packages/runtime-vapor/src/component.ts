@@ -102,6 +102,7 @@ import {
   exitHydrationCursor,
   isComment,
   isHydrating,
+  isRecreatedNode,
   locateEndAnchor,
   markHydrationAnchor,
   nextLogicalSibling,
@@ -142,10 +143,12 @@ import {
 } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import {
-  type ScopeIdValue,
+  type ScopeId,
   applyComponentRootScopeId,
+  applyHydratingRootScopeId,
   applySlottedScopeId,
   getCurrentScopeId,
+  getHydratingScopeIdOwner,
 } from './scopeId'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
@@ -260,6 +263,7 @@ export function createComponent(
     emptyContext,
   managedMount = false,
   ce?: (instance: VaporComponentInstance) => void,
+  initialScopeId?: ScopeId,
 ): VaporComponentInstance {
   // A component created while rendering a v-once slot should receive frozen
   // parent inputs, but its own render effects should still be live.
@@ -356,6 +360,7 @@ export function createComponent(
           insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
         }
       } else {
+        applyHydratingRootScopeId(isSingleRoot, frag)
         frag.hydrate()
       }
       return frag
@@ -431,6 +436,14 @@ export function createComponent(
       once,
       ce,
     )
+    // An explicitly passed initialScopeId (the interop mount's vnode-derived
+    // ids, possibly null) replaces the ambient scope id captured by the
+    // constructor. Managed mounts without it (e.g. app hydration) keep the
+    // constructor's value so hydrate and mount produce the same DOM.
+    if (initialScopeId !== undefined) instance.scopeId = initialScopeId
+    if (isHydrating && getHydratingScopeIdOwner(isSingleRoot)) {
+      instance.inheritsScopeId = true
+    }
     if (inputScope) {
       instance.inputScope = inputScope
     }
@@ -757,7 +770,7 @@ export class VaporComponentInstance<
 
   slots: Slots
 
-  scopeId?: ScopeIdValue
+  scopeId?: ScopeId
   inheritsScopeId?: true
 
   // to hold vnode props / slots in vdom interop mode
@@ -1092,8 +1105,12 @@ export function createPlainElement(
   // mark single root
   ;(el as any).$root = isSingleRoot
 
-  const scopeId = getCurrentScopeId()
-  if (scopeId) applySlottedScopeId(el, scopeId)
+  // Same guard as setElementScopeId, hoisted so adopted SSR elements also
+  // skip the getCurrentScopeId lookup.
+  if (!isHydrating || isRecreatedNode(el)) {
+    const scopeId = getCurrentScopeId()
+    if (scopeId) applySlottedScopeId(el, scopeId)
+  }
 
   if (rawProps) {
     const setFn = () =>

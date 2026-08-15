@@ -42,6 +42,7 @@ import {
 import type { KeepAliveInstance } from './components/KeepAlive'
 import { isInteropEnabled } from './vdomInteropState'
 import { enableKeepAlive } from './keepAlive'
+import { applyHydratingRootScopeId } from './scopeId'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -103,6 +104,7 @@ export function createDynamicComponent(
 
         const frag = appContext.vdom.mountVNode(value, currentInstance)
         if (isHydrating) {
+          applyHydratingRootScopeId(isSingleRoot, frag)
           locateHydrationNode(shouldConsumeFragmentStart(value))
           frag.hydrate()
         }

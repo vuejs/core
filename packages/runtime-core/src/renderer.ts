@@ -467,6 +467,7 @@ function baseCreateRenderer(
           anchor,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
         )
         break
       default:
@@ -3002,8 +3003,10 @@ export function isVaporComponent(type: ConcreteComponent): boolean | undefined {
 export function getInheritedScopeIds(
   vnode: VNode,
   parentComponent: GenericComponentInstance | null,
-): string[] {
-  const inheritedScopeIds: string[] = []
+): readonly string[] {
+  // allocated lazily — most components carry no scope ids, and callers run
+  // this per patch. Callers must not mutate the (possibly shared) result.
+  let inheritedScopeIds: string[] | undefined
 
   let currentParent = parentComponent
   let currentVNode = vnode
@@ -3030,11 +3033,11 @@ export function getInheritedScopeIds(
       const parentVNode = currentParent.vnode!
 
       if (parentVNode.scopeId) {
-        inheritedScopeIds.push(parentVNode.scopeId)
+        ;(inheritedScopeIds ||= []).push(parentVNode.scopeId)
       }
 
       if (parentVNode.slotScopeIds) {
-        inheritedScopeIds.push(...parentVNode.slotScopeIds)
+        ;(inheritedScopeIds ||= []).push(...parentVNode.slotScopeIds)
       }
 
       currentVNode = parentVNode
@@ -3044,7 +3047,7 @@ export function getInheritedScopeIds(
     }
   }
 
-  return inheritedScopeIds
+  return inheritedScopeIds || EMPTY_ARR
 }
 
 function resolveAsyncComponentPlaceholder(anchorVnode: VNode) {

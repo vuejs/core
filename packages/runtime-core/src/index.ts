@@ -532,6 +532,10 @@ export { type RendererInternals, getInheritedScopeIds } from './renderer'
 /**
  * @internal
  */
+export { filterSingleRoot } from './componentRenderUtils'
+/**
+ * @internal
+ */
 export {
   baseNormalizePropsOptions,
   resolvePropValue,

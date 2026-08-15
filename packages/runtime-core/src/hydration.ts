@@ -287,6 +287,7 @@ export function createHydrationFunctions(
           node,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
         )
         break
       default:
@@ -499,6 +500,7 @@ export function createHydrationFunctions(
             transition,
           ) &&
           parentComponent &&
+          parentComponent.vnode &&
           parentComponent.vnode.props &&
           parentComponent.vnode.props.appear
 
@@ -837,7 +839,7 @@ export function createHydrationFunctions(
       slotScopeIds,
     )
     // the component vnode's el should be updated when a mismatch occurs.
-    if (parentComponent) {
+    if (parentComponent && parentComponent.vnode) {
       parentComponent.vnode.el = vnode.el
       updateHOCHostEl(parentComponent, vnode.el)
     }
@@ -879,9 +881,10 @@ export function createHydrationFunctions(
     }
 
     // update vnode
+    // the parent chain can cross vapor interop instances, which have no vnode
     let parent = parentComponent
     while (parent) {
-      if (parent.vnode.el === oldNode) {
+      if (parent.vnode && parent.vnode.el === oldNode) {
         parent.vnode.el = parent.subTree.el = newNode
       }
       parent = parent.parent as ComponentInternalInstance

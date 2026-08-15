@@ -23,6 +23,7 @@ import {
   nextTick,
   reactive,
   ref,
+  renderSlot,
   withDirectives,
 } from '@vue/runtime-dom'
 import { BindingTypes } from '@vue/compiler-dom'
@@ -16068,25 +16069,6 @@ describe('scopeId hydration writes', () => {
     app.unmount()
   })
 
-  test('writes scopeId to a recreated dynamic element', () => {
-    const App = defineVaporComponent({
-      __scopeId: 'parent',
-      setup() {
-        return createPlainElement('div')
-      },
-    })
-    const container = document.createElement('div')
-    container.innerHTML = `<span parent=""></span>`
-    document.body.appendChild(container)
-
-    const app = createVaporSSRApp(App)
-    app.mount(container)
-
-    expect(container.innerHTML).toBe(`<div parent=""></div>`)
-    expect(`Hydration node mismatch`).toHaveBeenWarned()
-    app.unmount()
-  })
-
   test('temporarily exits hydration while writing recreated scopeId', () => {
     const states: boolean[] = []
     let restored: boolean | undefined
@@ -16113,6 +16095,7 @@ describe('scopeId hydration writes', () => {
       const app = createVaporSSRApp(App)
       app.mount(container)
 
+      expect(container.innerHTML).toBe(`<div parent=""></div>`)
       expect(states).toEqual([false])
       expect(restored).toBe(true)
       expect(`Hydration node mismatch`).toHaveBeenWarned()
@@ -16120,5 +16103,182 @@ describe('scopeId hydration writes', () => {
     } finally {
       setAttribute.mockRestore()
     }
+  })
+
+  // renders App with interop on the "server", then rebuilds the markup in a
+  // fresh container ready for client hydration
+  function renderToHydrationContainer(App: any): HTMLElement {
+    const serverContainer = document.createElement('div')
+    const serverApp = runtimeDom
+      .createApp(App)
+      .use(runtimeVapor.vaporInteropPlugin)
+    serverApp.mount(serverContainer)
+    const html = serverContainer.innerHTML
+    serverApp.unmount()
+    const container = document.createElement('div')
+    container.innerHTML = html
+    document.body.appendChild(container)
+    return container
+  }
+
+  test('applies slotted scopeId before hydrating recreated VDOM content', () => {
+    const useDiv = ref(false)
+    const Receiver = compileVaporComponent(`<slot />`, useDiv)
+    Receiver.__scopeId = 'receiver'
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const components = _components
+      </script>
+      <template>
+        <components.Receiver>
+          <div v-if="data">content</div>
+          <span v-else>content</span>
+        </components.Receiver>
+      </template>`,
+      useDiv,
+      { Receiver },
+      { vapor: false },
+    )
+    App.__scopeId = 'owner'
+
+    const container = renderToHydrationContainer(App)
+
+    useDiv.value = true
+    const clientApp = createSSRApp(App).use(runtimeVapor.vaporInteropPlugin)
+    clientApp.mount(container)
+
+    expect(container.querySelector('div')!.hasAttribute('owner')).toBe(true)
+    expect(container.querySelector('div')!.hasAttribute('receiver-s')).toBe(
+      true,
+    )
+    expect(container.querySelector('div')!.hasAttribute('receiver')).toBe(false)
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    clientApp.unmount()
+  })
+
+  test('applies component scopeId before hydrating a recreated VDOM root', () => {
+    const useDiv = ref(false)
+    const VDOMRoot = compile(
+      `<script setup>
+        const data = _data
+      </script>
+      <template>
+        <div v-if="data">content</div>
+        <span v-else>content</span>
+      </template>`,
+      useDiv,
+      {},
+      { vapor: false },
+    )
+    const Middle = compileVaporComponent(`<components.VDOMRoot />`, useDiv, {
+      VDOMRoot,
+    })
+    const VaporChild = compileVaporComponent(`<components.Middle />`, useDiv, {
+      Middle,
+    })
+    const App = compile(
+      `<template><components.VaporChild /></template>`,
+      useDiv,
+      { VaporChild },
+      { vapor: false },
+    )
+    App.__scopeId = 'owner'
+
+    const container = renderToHydrationContainer(App)
+
+    useDiv.value = true
+    const clientApp = createSSRApp(App).use(runtimeVapor.vaporInteropPlugin)
+    clientApp.mount(container)
+
+    expect(container.querySelector('div')!.hasAttribute('owner')).toBe(true)
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    clientApp.unmount()
+  })
+
+  test('does not hydrate root-only component scopeId through a slot outlet', async () => {
+    const hasContent = ref(true)
+    const useDiv = ref(false)
+    const VDOMChild = defineComponent({
+      setup(_: unknown, { slots }) {
+        return () =>
+          renderSlot(slots, 'default', {}, () => [h('em', 'fallback')])
+      },
+    })
+    const VaporChild = compileVaporComponent(`<slot><em>fallback</em></slot>`)
+    const createParent = (Child: any) =>
+      defineComponent({
+        setup() {
+          return () => {
+            const child = h(Child, null, {
+              default: () =>
+                hasContent.value
+                  ? h(useDiv.value ? 'div' : 'span', 'content')
+                  : [],
+            })
+            child.scopeId = 'external'
+            return child
+          }
+        },
+      })
+
+    const VDOMApp = createParent(VDOMChild)
+    const VaporApp = createParent(VaporChild)
+    const vdomContainer = renderToHydrationContainer(VDOMApp)
+    const vaporContainer = renderToHydrationContainer(VaporApp)
+
+    useDiv.value = true
+    const vdomApp = createSSRApp(VDOMApp)
+    const vaporApp = createSSRApp(VaporApp).use(runtimeVapor.vaporInteropPlugin)
+    vdomApp.mount(vdomContainer)
+    vaporApp.mount(vaporContainer)
+    await nextTick()
+
+    expect(vdomContainer.innerHTML).toBe(`<div>content</div>`)
+    expect(vaporContainer.innerHTML).toBe(vdomContainer.innerHTML)
+    expect(vaporContainer.firstElementChild!.hasAttribute('external')).toBe(
+      false,
+    )
+
+    hasContent.value = false
+    await nextTick()
+    expect(vdomContainer.innerHTML).toBe(`<em>fallback</em>`)
+    expect(vaporContainer.innerHTML).toBe(vdomContainer.innerHTML)
+    expect(vaporContainer.firstElementChild!.hasAttribute('external')).toBe(
+      false,
+    )
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    vdomApp.unmount()
+    vaporApp.unmount()
+  })
+})
+
+describe('vdom interop template unwrapping', () => {
+  test('replaces <template> SSR wrappers under a vapor parent chain', () => {
+    const VDOMChild = defineComponent({
+      setup() {
+        return () => h('div', 'inner')
+      },
+    })
+    const VaporRoot = defineVaporComponent({
+      setup() {
+        return createComponent(VDOMChild as any, null, null, true)
+      },
+    })
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    // compiler-ssr wraps <Transition appear> content in a <template> wrapper;
+    // hydrateElement unwraps it via replaceNode, whose parent-chain walk must
+    // tolerate vnode-less vapor instances.
+    container.innerHTML = `<template><div>inner</div></template>`
+
+    const app = createVaporSSRApp(VaporRoot).use(
+      runtimeVapor.vaporInteropPlugin,
+    )
+    app.mount(container)
+
+    expect(container.innerHTML).toBe(`<div>inner</div>`)
+    app.unmount()
   })
 })
