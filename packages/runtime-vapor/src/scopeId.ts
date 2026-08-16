@@ -9,7 +9,7 @@ import {
   isInteropFragment,
 } from './fragment'
 import type { Block } from './block'
-import { SLOT } from './fragmentFlags'
+import { FOR_ITEM, SLOT } from './fragmentFlags'
 import { isInteropEnabled } from './vdomInteropState'
 import { currentSlotOwner, getScopeOwner } from './componentSlots'
 import {
@@ -236,6 +236,10 @@ export function applySlottedScopeId(block: Block, scopeIds: ScopeId): void {
       applySlottedScopeId(block[i], scopeIds)
     }
   } else if (isFragment(block)) {
+    if (block.__vf & FOR_ITEM) {
+      applySlottedScopeId(block.nodes, scopeIds)
+      return
+    }
     const merged = mergeScopeIds(block.slottedScopeId, scopeIds)
     if (merged === block.slottedScopeId) return
     block.slottedScopeId = merged

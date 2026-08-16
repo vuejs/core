@@ -779,6 +779,35 @@ describe('scopeId', () => {
         `<!--slot--></div>`,
     )
   })
+
+  test(':slotted on dynamic content inside v-for', async () => {
+    const data = ref([true])
+    const Child = compile(`<template><slot /></template>`, data)
+    Child.__scopeId = 'child'
+
+    const Parent = compile(
+      `<template>
+        <components.Child>
+          <template v-for="show in data">
+            <div v-if="show">on</div>
+            <span v-else>off</span>
+          </template>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+
+    const { app, host } = define(Parent).render()
+    expect(host.firstElementChild!.tagName).toBe('DIV')
+    expect(host.firstElementChild!.hasAttribute('child-s')).toBe(true)
+
+    data.value = [false]
+    await nextTick()
+    expect(host.firstElementChild!.tagName).toBe('SPAN')
+    expect(host.firstElementChild!.hasAttribute('child-s')).toBe(true)
+    app.unmount()
+  })
 })
 
 describe('vdom interop', () => {

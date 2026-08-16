@@ -2738,7 +2738,7 @@ function renderVaporSlot(
         }
         contentNodes = resolvedContent || EMPTY_BLOCK
         syncNodesAndApplyScopeId(slotResolutionState, contentNodes)
-        finishHydratingContent(isValidSlot(contentNodes))
+        if (finish) finishHydratingContent(isValidSlot(contentNodes))
         recheckSlotResolution(slotResolutionState, takePendingRecheck())
         return resolvedContent
       }
