@@ -2985,5 +2985,4 @@ describe('vdom interop', () => {
     expect(await run(false)).toBe(true)
     expect(await run(true)).toBe(true)
   })
-
 })

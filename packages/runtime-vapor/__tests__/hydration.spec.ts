@@ -16466,7 +16466,6 @@ describe('scopeId hydration writes', () => {
       container.remove()
     }
   })
-
 })
 
 describe('vdom interop template unwrapping', () => {
