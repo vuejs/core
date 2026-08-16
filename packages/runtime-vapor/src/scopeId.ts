@@ -81,15 +81,19 @@ type ScopeIdRootCandidate =
   | InteropFragment
   | typeof DYNAMIC_ROOT_PLACEHOLDER
 
-function applyFragmentScopeId(this: VaporFragment, block: Block): void {
+function applyFragmentRootScopeId(this: VaporFragment): true | undefined {
   if (isInteropEnabled && isInteropFragment(this) && this.vnode) {
     this.syncScopeId()
-    return
+    return true
   }
   const owner = this.scopeOwner
   if (owner) {
     applyRootScopeId(owner.block, owner)
   }
+}
+
+function applyFragmentScopeId(this: VaporFragment, block: Block): void {
+  if (applyFragmentRootScopeId.call(this)) return
   if (this.slottedScopeId) {
     applySlottedScopeId(block, this.slottedScopeId)
   }
@@ -100,7 +104,7 @@ function bindFragmentScopeIdOwner(
   instance: VaporComponentInstance,
 ): void {
   fragment.scopeOwner = instance
-  fragment.applyScopeId = applyFragmentScopeId
+  fragment.applyScopeId ||= applyFragmentRootScopeId
 }
 
 function resolveSingleScopeIdRoot(
