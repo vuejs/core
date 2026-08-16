@@ -1,9 +1,11 @@
 import {
   Fragment,
   KeepAlive,
+  Suspense,
   Teleport,
   cloneVNode,
   createApp,
+  defineComponent,
   h,
   nextTick,
   onUpdated,
@@ -49,6 +51,23 @@ function defineSlottedScopeProbe() {
   }
 }
 
+const externalScopeProbeConnections = ((
+  globalThis as any
+).__externalScopeProbeConnections ||= []) as boolean[]
+
+function defineExternalScopeProbe() {
+  if (!customElements.get('external-scope-probe')) {
+    customElements.define(
+      'external-scope-probe',
+      class extends HTMLElement {
+        connectedCallback() {
+          externalScopeProbeConnections.push(this.hasAttribute('external'))
+        }
+      },
+    )
+  }
+}
+
 describe('scopeId', () => {
   test('should attach scopeId to child component', () => {
     const Child = defineVaporComponent({
@@ -57,7 +76,6 @@ describe('scopeId', () => {
         return template('<div child></div>', 1)()
       },
     })
-
     const { html } = define({
       __scopeId: 'parent',
       setup() {
@@ -2368,5 +2386,604 @@ describe('vdom interop', () => {
 
     vdomApp.unmount()
     vaporApp.unmount()
+
+    // positive control: with an element root above the outlet, the same
+    // chain does deliver the id, so the negatives cannot pass vacuously
+    const makeControlApp = (vapor: boolean) => {
+      const source = (template: string) =>
+        vapor
+          ? template
+          : `<script setup>
+              const data = _data
+              const components = _components
+            </script>${template}`
+      const Receiver = compile(
+        source(`<template><slot><span>fallback</span></slot></template>`),
+        data,
+        {},
+        { vapor },
+      )
+      const Middle = compile(
+        source(`<template>
+          <div class="wrapper"><components.Receiver>
+            <div v-if="data.show">content</div>
+          </components.Receiver></div>
+        </template>`),
+        data,
+        { Receiver },
+        { vapor },
+      )
+      const App = compile(
+        source(`<template><components.Middle /></template>`),
+        data,
+        { Middle },
+        { vapor },
+      )
+      App.__scopeId = 'grand'
+      return App
+    }
+    const vdomControlRoot = document.createElement('div')
+    const vdomControlApp = createApp(makeControlApp(false))
+    vdomControlApp.mount(vdomControlRoot)
+    const vaporControlRoot = document.createElement('div')
+    const vaporControlApp = createVaporApp(makeControlApp(true))
+    vaporControlApp.mount(vaporControlRoot)
+    expect(
+      vdomControlRoot.querySelector('.wrapper')!.hasAttribute('grand'),
+    ).toBe(true)
+    expect(
+      vaporControlRoot.querySelector('.wrapper')!.hasAttribute('grand'),
+    ).toBe(true)
+    vdomControlApp.unmount()
+    vaporControlApp.unmount()
   })
+
+  test('applies inherited root-only scope id to the interop element root only', () => {
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return createDynamicComponent(
+          () => h('div', [h('span', 'x')]),
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
+      },
+    })
+    const root = document.createElement('div')
+    const app = createApp({
+      __scopeId: 'external',
+      render: () => h(VaporChild as any),
+    }).use(vaporInteropPlugin)
+    app.mount(root)
+    // VDOM control renders <div external><span>x</span></div>: the id stops
+    // at the effective root instead of broadcasting to descendants
+    expect(root.querySelector('div')!.hasAttribute('external')).toBe(true)
+    expect(root.querySelector('span')!.hasAttribute('external')).toBe(false)
+    app.unmount()
+  })
+
+  test('applies slotted scope id to interop content under an adopted slot anchor', () => {
+    const data = ref(0)
+    const Child = compile(
+      `<template><div><span/><slot/><b/></div></template>`,
+      data,
+    )
+    ;(Child as any).__scopeId = 'child'
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(Child as any, null, {
+          default: () => createDynamicComponent(() => h('p', 'x')),
+        })
+      },
+    })
+    const root = document.createElement('div')
+    const app = createApp({ render: () => h(Parent as any) }).use(
+      vaporInteropPlugin,
+    )
+    app.mount(root)
+    // the outlet adopts an in-DOM anchor, so the interop child mounts during
+    // the slot render — before the outlet's post-render id application
+    expect(root.querySelector('p')!.hasAttribute('child-s')).toBe(true)
+    app.unmount()
+  })
+
+  test(':slotted reaches slot content revealed after starting behind fallback', async () => {
+    const data = ref(false)
+    const Child = compile(`<template><slot><i>fb</i></slot></template>`, data)
+    ;(Child as any).__scopeId = 'child'
+    const Parent = compile(
+      `<template><components.Child><em v-if="data">c</em></components.Child></template>`,
+      data,
+      { Child },
+    )
+
+    const { html } = define(Parent).render()
+    expect(html()).toContain('fb')
+    expect(html()).toContain('child-s')
+
+    data.value = true
+    await nextTick()
+    // content parked behind the active fallback still received the slot's
+    // ids, so re-exposing it yields the same DOM as VDOM (<em child-s>)
+    expect(html()).toContain('<em')
+    expect(html()).toContain('child-s')
+  })
+
+  describe('slotted scope id depth parity with VDOM', () => {
+    const vdomCompile = (template: string, data: any, components: any = {}) =>
+      compile(
+        `<script setup>const data = _data; const components = _components;</script>` +
+          template,
+        data,
+        components,
+        { vapor: false },
+      )
+
+    // strip anchors, and the lexical scope attr the VDOM side applies at
+    // runtime from post-compile __scopeId (vapor bakes lexical ids at compile
+    // time, which the test compile helper does not do) — only slotted (-s)
+    // parity is under test
+    const strip = (html: string) =>
+      html.replace(/<!--[^>]*-->/g, '').replace(/ receiver=""/g, '')
+
+    const mountPair = (
+      makeSide: (vapor: boolean) => any,
+    ): { vdomHost: HTMLElement; host: HTMLElement } => {
+      const vdomHost = document.createElement('div')
+      createApp(makeSide(false)).mount(vdomHost)
+      const host = document.createElement('div')
+      createVaporApp(makeSide(true)).mount(host)
+      return { vdomHost, host }
+    }
+
+    const makeSides =
+      (
+        parentTemplate: string,
+        {
+          receiver = `<template><slot/></template>`,
+          data = ref<any>(0),
+          components = {} as Record<string, string>,
+        } = {},
+      ) =>
+      (vapor: boolean) => {
+        const c = vapor ? compile : vdomCompile
+        const compiled: Record<string, any> = {}
+        for (const name in components) {
+          compiled[name] = c(components[name], data)
+        }
+        const Receiver = c(receiver, data)
+        Receiver.__scopeId = 'receiver'
+        return c(parentTemplate, data, { Receiver, ...compiled })
+      }
+
+    test('slotted id reaches nested elements of slot content', () => {
+      const { vdomHost, host } = mountPair(
+        makeSides(
+          `<template><components.Receiver><div><span>x</span></div></components.Receiver></template>`,
+        ),
+      )
+      expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
+      expect(strip(host.innerHTML)).toContain('<span receiver-s="">x</span>')
+    })
+
+    test('component in slot content: root inherits, internals do not', () => {
+      const { vdomHost, host } = mountPair(
+        makeSides(
+          `<template><components.Receiver><div><components.Comp/></div></components.Receiver></template>`,
+          { components: { Comp: `<template><b><u>x</u></b></template>` } },
+        ),
+      )
+      expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
+    })
+
+    test('v-if branch inside slot content revealed after mount', async () => {
+      const data = ref(false)
+      const { vdomHost, host } = mountPair(
+        makeSides(
+          `<template><components.Receiver><div v-if="data"><span>x</span></div></components.Receiver></template>`,
+          { data },
+        ),
+      )
+      data.value = true
+      await nextTick()
+      expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
+      expect(strip(host.innerHTML)).toContain('receiver-s')
+    })
+
+    test('v-for items added after mount carry ids at depth', async () => {
+      const data = ref(0)
+      const { vdomHost, host } = mountPair(
+        makeSides(
+          `<template><components.Receiver><div v-for="i in data"><span>{{ i }}</span></div></components.Receiver></template>`,
+          { data },
+        ),
+      )
+      data.value = 2
+      await nextTick()
+      expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
+      expect(strip(host.innerHTML)).toContain('receiver-s')
+    })
+
+    test('fallback content carries ids at depth', () => {
+      const { vdomHost, host } = mountPair(
+        makeSides(`<template><components.Receiver/></template>`, {
+          receiver: `<template><slot><div><span>fb</span></div></slot></template>`,
+        }),
+      )
+      expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
+      expect(strip(host.innerHTML)).toContain('receiver-s')
+    })
+  })
+
+  test('applies a slot scope context change to a vdom component inside element-backed interop content', async () => {
+    // the kept slot content is an element-backed interop subtree; a vdom
+    // component inside it swaps its root after the context change and must
+    // inherit the fresh ids, like a VDOM subtree patched with them.
+    const run = async (vapor: boolean) => {
+      const noSlotted = ref(true)
+      const useB = ref(false)
+      const VdomInner = defineComponent({
+        setup() {
+          return () => (useB.value ? h('span', 'B') : h('em', 'A'))
+        },
+      })
+      const SlotOwner = {
+        __scopeId: 'owner',
+        setup(_: any, { slots }: any) {
+          return () =>
+            h(
+              'div',
+              null,
+              renderSlot(slots, 'default', {}, undefined, noSlotted.value),
+            )
+        },
+      }
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            SlotOwner as any,
+            null,
+            {
+              default: () =>
+                createDynamicComponent(() => h('div', null, [h(VdomInner)])),
+            },
+            true,
+          )
+        },
+      })
+      const VdomParent = {
+        setup() {
+          return () =>
+            h(SlotOwner, null, {
+              default: () => [h('div', null, [h(VdomInner)])],
+            })
+        },
+      }
+      const root = document.createElement('div')
+      const app = createApp({
+        render: () => h((vapor ? VaporParent : VdomParent) as any),
+      }).use(vaporInteropPlugin)
+      app.mount(root)
+
+      // context changes from no id to owner-s with the same slot function
+      noSlotted.value = false
+      await nextTick()
+      // the vdom component inside the element-backed subtree swaps its root
+      useB.value = true
+      await nextTick()
+      const span = root.querySelector('span')!
+      expect(span).toBeTruthy()
+      const has = span.hasAttribute('owner-s')
+      app.unmount()
+      return has
+    }
+    const vdom = await run(false)
+    expect(await run(true)).toBe(vdom)
+    expect(vdom).toBe(true)
+  })
+
+  test('applies inherited root-only scope id to the interop element root before insertion', () => {
+    // insertion-time observers (custom element connectedCallback, transition
+    // enter hooks) must already see the id, like VDOM stamping it in
+    // mountElement before hostInsert
+    defineExternalScopeProbe()
+    externalScopeProbeConnections.length = 0
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return createDynamicComponent(
+          () => h('external-scope-probe'),
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
+      },
+    })
+    const mountSide = (vapor: boolean) => {
+      const root = document.createElement('div')
+      document.body.appendChild(root)
+      const app = createApp({
+        __scopeId: 'external',
+        render: () =>
+          vapor ? h(VaporChild as any) : h('external-scope-probe'),
+      })
+      if (vapor) app.use(vaporInteropPlugin)
+      app.mount(root)
+      app.unmount()
+      root.remove()
+    }
+    // VDOM control: connectedCallback observes the id present
+    mountSide(false)
+    expect(externalScopeProbeConnections).toEqual([true])
+    mountSide(true)
+    expect(externalScopeProbeConnections).toEqual([true, true])
+  })
+
+  test('applies inherited root-only scope id to an async-resolved interop Suspense root', async () => {
+    const makeSide = () => {
+      let resolveSetup: (() => void) | undefined
+      const AsyncInner = {
+        async setup() {
+          await new Promise<void>(r => (resolveSetup = r))
+          return () => h('section', 'done')
+        },
+      }
+      const suspenseVNode = () =>
+        h(Suspense, null, {
+          default: () => h(AsyncInner),
+          fallback: () => h('div', 'loading'),
+        })
+      return { suspenseVNode, resolve: () => resolveSetup!() }
+    }
+
+    const vdomSide = makeSide()
+    const vdomRoot = document.createElement('div')
+    const vdomApp = createApp({
+      __scopeId: 'external',
+      render: () => h({ render: vdomSide.suspenseVNode }),
+    })
+    vdomApp.mount(vdomRoot)
+
+    const vaporSide = makeSide()
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return createDynamicComponent(
+          vaporSide.suspenseVNode,
+          null,
+          null,
+          VaporDynamicComponentFlags.SINGLE_ROOT,
+        )
+      },
+    })
+    const vaporRoot = document.createElement('div')
+    const vaporApp = createApp({
+      __scopeId: 'external',
+      render: () => h(VaporChild as any),
+    }).use(vaporInteropPlugin)
+    vaporApp.mount(vaporRoot)
+
+    // the fallback is the current effective root and inherits the id
+    expect(vdomRoot.querySelector('div')!.hasAttribute('external')).toBe(true)
+    expect(vaporRoot.querySelector('div')!.hasAttribute('external')).toBe(true)
+
+    vdomSide.resolve()
+    vaporSide.resolve()
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+
+    // the resolved branch becomes the effective root and inherits the id
+    expect(vdomRoot.querySelector('section')).toBeTruthy()
+    expect(vdomRoot.querySelector('section')!.hasAttribute('external')).toBe(
+      true,
+    )
+    expect(vaporRoot.querySelector('section')).toBeTruthy()
+    expect(vaporRoot.querySelector('section')!.hasAttribute('external')).toBe(
+      true,
+    )
+
+    vdomApp.unmount()
+    vaporApp.unmount()
+  })
+
+  // Full lifecycle matrix for slot scope context transitions under a stable
+  // slot function: every supported component-root representation, both
+  // future-root kinds, both context directions, always compared against the
+  // pure VDOM result. Invariant per cell: existing DOM keeps its mount-time
+  // ids, anything mounted afterwards receives the latest ids.
+  describe('slot scope context transition matrix', () => {
+    const flushPromises = () => new Promise(r => setTimeout(r))
+
+    const runCell = async (
+      shape: 'direct' | 'vnodeComp' | 'elementWrapped',
+      inner: 'dynRoot' | 'suspense',
+      vapor: boolean,
+      initialNoSlotted: boolean,
+    ) => {
+      const noSlotted = ref(initialNoSlotted)
+      const useSection = ref(false)
+      let resolveGate!: () => void
+      const gate = new Promise<void>(r => (resolveGate = r))
+
+      const renderInnerRoot = () =>
+        h(useSection.value ? 'section' : 'p', useSection.value ? 'B' : 'A')
+      const AsyncInner = defineComponent({
+        async setup() {
+          await gate
+          return () => h('section', 'resolved')
+        },
+      })
+      const renderSuspense = () =>
+        h(Suspense, null, {
+          default: () => h(AsyncInner),
+          fallback: () => h('p', 'loading'),
+        })
+      const innerRender = inner === 'dynRoot' ? renderInnerRoot : renderSuspense
+
+      const VaporInner = defineVaporComponent({
+        setup() {
+          return createDynamicComponent(innerRender)
+        },
+      })
+      const VdomInner = defineComponent({
+        setup() {
+          return innerRender
+        },
+      })
+      const Inner: any = vapor ? VaporInner : VdomInner
+
+      const vaporContent = {
+        direct: () => createComponent(Inner),
+        vnodeComp: () => createDynamicComponent(() => h(Inner)),
+        elementWrapped: () =>
+          createDynamicComponent(() => h('div', null, [h(Inner)])),
+      }[shape]
+      const vdomContent = {
+        direct: () => [h(Inner)],
+        vnodeComp: () => [h(Inner)],
+        elementWrapped: () => [h('div', null, [h(Inner)])],
+      }[shape]
+
+      const SlotOwner = {
+        __scopeId: 'owner',
+        setup(_: any, { slots }: any) {
+          return () =>
+            h(
+              'div',
+              null,
+              renderSlot(slots, 'default', {}, undefined, noSlotted.value),
+            )
+        },
+      }
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            SlotOwner as any,
+            null,
+            { default: vaporContent },
+            true,
+          )
+        },
+      })
+      const VdomParent = {
+        setup() {
+          return () => h(SlotOwner, null, { default: vdomContent })
+        },
+      }
+
+      const root = document.createElement('div')
+      const app = createApp({
+        render: () => h((vapor ? VaporParent : VdomParent) as any),
+      }).use(vaporInteropPlugin)
+      app.mount(root)
+
+      // context transition with the same slot function
+      noSlotted.value = !initialNoSlotted
+      await nextTick()
+
+      // the already-mounted root must keep its mount-time state
+      const existing = root.querySelector('p')!
+      expect(existing).toBeTruthy()
+      const existingHas = existing.hasAttribute('owner-s')
+
+      // materialize a new root after the transition
+      if (inner === 'dynRoot') {
+        useSection.value = true
+        await nextTick()
+      } else {
+        resolveGate()
+        await flushPromises()
+        await nextTick()
+      }
+      const fresh = root.querySelector('section')!
+      expect(fresh).toBeTruthy()
+      const freshHas = fresh.hasAttribute('owner-s')
+      app.unmount()
+      return { existingHas, freshHas }
+    }
+
+    for (const shape of ['direct', 'vnodeComp', 'elementWrapped'] as const) {
+      for (const inner of ['dynRoot', 'suspense'] as const) {
+        for (const initialNoSlotted of [true, false] as const) {
+          const dir = initialNoSlotted ? 'none -> id' : 'id -> none'
+          test(`${shape} / ${inner} / ${dir}`, async () => {
+            const vdom = await runCell(shape, inner, false, initialNoSlotted)
+            const vapor = await runCell(shape, inner, true, initialNoSlotted)
+            expect(vapor).toEqual(vdom)
+          })
+        }
+      }
+    }
+  })
+
+  test('applies an added slot scope context through nested vapor component roots', async () => {
+    const run = async (vapor: boolean) => {
+      const noSlotted = ref(true)
+      const show = ref(false)
+      const VaporLeaf = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => show.value,
+            () => template('<section>content</section>', 1)(),
+          )
+        },
+      })
+      const VaporMiddle = defineVaporComponent({
+        setup() {
+          return createComponent(VaporLeaf, null, null, true)
+        },
+      })
+      const VdomLeaf = defineComponent({
+        setup() {
+          return () => (show.value ? h('section', 'content') : null)
+        },
+      })
+      const VdomMiddle = defineComponent({
+        setup() {
+          return () => h(VdomLeaf)
+        },
+      })
+      const SlotOwner = {
+        __scopeId: 'owner',
+        setup(_: any, { slots }: any) {
+          return () =>
+            h(
+              'div',
+              null,
+              renderSlot(slots, 'default', {}, undefined, noSlotted.value),
+            )
+        },
+      }
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            SlotOwner as any,
+            null,
+            { default: () => createComponent(VaporMiddle, null, null, true) },
+            true,
+          )
+        },
+      })
+      const VdomParent = defineComponent({
+        setup() {
+          return () => h(SlotOwner, null, { default: () => [h(VdomMiddle)] })
+        },
+      })
+      const root = document.createElement('div')
+      const app = createApp({
+        render: () => h((vapor ? VaporParent : VdomParent) as any),
+      }).use(vaporInteropPlugin)
+      app.mount(root)
+
+      noSlotted.value = false
+      await nextTick()
+      show.value = true
+      await nextTick()
+      const hasScopeId = root.querySelector('section')!.hasAttribute('owner-s')
+      app.unmount()
+      return hasScopeId
+    }
+
+    expect(await run(false)).toBe(true)
+    expect(await run(true)).toBe(true)
+  })
+
 })

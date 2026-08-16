@@ -16045,6 +16045,12 @@ describe('scopeId hydration writes', () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
     container.innerHTML = html
+    // the test helper assigns __scopeId after compilation, so the SSR pass
+    // cannot emit the slotted attr itself; stamp it like a real scoped build
+    // would so adoption (rather than a dead channel) is what keeps it
+    container
+      .querySelectorAll('div')
+      .forEach(div => div.setAttribute('child-s', ''))
 
     const clientComponents: Record<string, any> = {}
     clientComponents.Child = compile(childCode, data, clientComponents, {
@@ -16063,9 +16069,13 @@ describe('scopeId hydration writes', () => {
       app.mount(container)
 
       expect(setAttribute).not.toHaveBeenCalledWith('child-s', '')
+      // the adopted DOM carries the SSR-emitted id, so the no-write above
+      // proves adoption rather than a silently dead channel
+      expect(container.querySelector('div')!.hasAttribute('child-s')).toBe(true)
       app.unmount()
     } finally {
       setAttribute.mockRestore()
+      container.remove()
     }
   })
 
@@ -16187,6 +16197,7 @@ describe('scopeId hydration writes', () => {
     expect(container.querySelector('div')!.hasAttribute('receiver')).toBe(false)
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     clientApp.unmount()
+    container.remove()
   })
 
   test('applies component scopeId before hydrating a recreated VDOM root', () => {
@@ -16226,6 +16237,7 @@ describe('scopeId hydration writes', () => {
     expect(container.querySelector('div')!.hasAttribute('owner')).toBe(true)
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     clientApp.unmount()
+    container.remove()
   })
 
   test('does not hydrate root-only component scopeId through a slot outlet', async () => {
@@ -16282,7 +16294,179 @@ describe('scopeId hydration writes', () => {
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     vdomApp.unmount()
     vaporApp.unmount()
+    vdomContainer.remove()
+    vaporContainer.remove()
   })
+
+  test('recreated mismatch nodes in a VDOM outlet fallback carry both slotted ids', async () => {
+    const data = ref(false)
+
+    const makeComponents = (ssr: boolean, fallbackTag: string) => {
+      const components: any = {}
+      const Outlet = compile(
+        `<script setup>const data = _data; const components = _components;</script>` +
+          `<template><slot><${fallbackTag}>fallback</${fallbackTag}></slot></template>`,
+        data,
+        components,
+        { vapor: false, ssr },
+      )
+      Outlet.__scopeId = 'outlet'
+      const Child = compile(
+        `<template><components.Outlet><slot/></components.Outlet></template>`,
+        data,
+        { Outlet },
+        { vapor: true, ssr },
+      )
+      ;(Child as any).__scopeId = 'child'
+      return { Child }
+    }
+
+    const appCode =
+      `<script setup>const data = _data; const components = _components;</script>` +
+      `<template><components.Child><b v-if="data">content</b></components.Child></template>`
+
+    // server renders the fallback as <b>, client expects <span> → mismatch
+    const ServerApp = compile(appCode, data, makeComponents(true, 'b'), {
+      vapor: false,
+      ssr: true,
+    })
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(ServerApp).use(runtimeVapor.vaporInteropPlugin),
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+
+    const ClientApp = compile(appCode, data, makeComponents(false, 'span'), {
+      vapor: false,
+      ssr: false,
+    })
+    const app = runtimeDom
+      .createSSRApp(ClientApp)
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+
+    // the recreated node gets both the requesting outlet's and the providing
+    // outlet's slotted ids as part of its creation context (CSR control:
+    // <span child-s outlet-s>fallback</span>)
+    const span = container.querySelector('span')!
+    expect(span).toBeTruthy()
+    expect(span.hasAttribute('child-s')).toBe(true)
+    expect(span.hasAttribute('outlet-s')).toBe(true)
+    expect(`Hydration node mismatch`).toHaveBeenWarned()
+    app.unmount()
+    container.remove()
+  })
+
+  test('does not propagate slotted ids through an adopted VDOM fallback component', async () => {
+    const data = ref(false)
+
+    const makeApp = (ssr: boolean) => {
+      const Fallback = compile(
+        `<template><span><i>inside</i></span></template>`,
+        data,
+        {},
+        { vapor: false, ssr },
+      )
+      Fallback.__scopeId = 'fallback'
+      const Outlet = compile(
+        `<script setup>const components = _components;</script>` +
+          `<template><slot><components.Fallback /></slot></template>`,
+        data,
+        { Fallback },
+        { vapor: false, ssr },
+      )
+      Outlet.__scopeId = 'outlet'
+      const Child = compile(
+        `<template><components.Outlet><slot/></components.Outlet></template>`,
+        data,
+        { Outlet },
+        { vapor: true, ssr },
+      )
+      ;(Child as any).__scopeId = 'child'
+      return compile(
+        `<script setup>const components = _components;</script>` +
+          `<template><components.Child /></template>`,
+        data,
+        { Child },
+        { vapor: false, ssr },
+      )
+    }
+
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom
+        .createSSRApp(makeApp(true))
+        .use(runtimeVapor.vaporInteropPlugin),
+    )
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+    const serverRoot = container.querySelector('span')!
+    // __scopeId is assigned after compilation in this test helper, so stamp
+    // the attributes that a real scoped SSR build would emit.
+    serverRoot.setAttribute('child-s', '')
+    serverRoot.setAttribute('outlet-s', '')
+
+    const setAttribute = vi.spyOn(Element.prototype, 'setAttribute')
+    const app = runtimeDom
+      .createSSRApp(makeApp(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+    try {
+      app.mount(container)
+
+      const span = container.querySelector('span')!
+      expect(span).toBe(serverRoot)
+      expect(setAttribute).not.toHaveBeenCalledWith('child-s', '')
+      expect(setAttribute).not.toHaveBeenCalledWith('outlet-s', '')
+      expect(span.hasAttribute('child-s')).toBe(true)
+      expect(span.hasAttribute('outlet-s')).toBe(true)
+      expect(span.querySelector('i')!.hasAttribute('child-s')).toBe(false)
+      expect(span.querySelector('i')!.hasAttribute('outlet-s')).toBe(false)
+      app.unmount()
+    } finally {
+      setAttribute.mockRestore()
+      container.remove()
+    }
+  })
+
+  test('applies slotted id to recovered teleport children when the target has no markers', async () => {
+    const data = ref(0)
+
+    const Child = compile(`<template><slot/></template>`, data, {}, {})
+    ;(Child as any).__scopeId = 'c'
+    const App = compile(
+      `<template><components.Child><Teleport to="#hydration-scope-modal"><div>x</div></Teleport></components.Child></template>`,
+      data,
+      { Child },
+    )
+
+    // client-side teleport target exists but carries no SSR markers, so the
+    // teleport takes the hydration recovery path and creates its children
+    const target = document.createElement('div')
+    target.id = 'hydration-scope-modal'
+    document.body.appendChild(target)
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML =
+      '<!--[--><!--teleport start--><!--teleport end--><!--]-->'
+
+    const app = createVaporSSRApp(App)
+    app.mount(container)
+
+    try {
+      const div = target.querySelector('div')!
+      expect(div).toBeTruthy()
+      expect(div.hasAttribute('c-s')).toBe(true)
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+    } finally {
+      app.unmount()
+      target.remove()
+      container.remove()
+    }
+  })
+
 })
 
 describe('vdom interop template unwrapping', () => {

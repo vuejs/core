@@ -279,6 +279,13 @@ export interface VNode<
    * @internal Vapor slot Block
    */
   vb?: any
+  /**
+   * @internal Vapor interop only. Root-only scope ids applied to this VNode's
+   * effective root before insertion, without propagating to descendants.
+   * Carriers are interop-private and patched by reference, so this metadata
+   * deliberately does not participate in cloneVNode.
+   */
+  vaporScopeId?: string[] | null
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically

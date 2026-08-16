@@ -2651,6 +2651,44 @@ describe('vdomInterop', () => {
       })
 
       describe('with VaporKeepAlive', () => {
+        it('mounts a slot with an active vapor fallback without treating it as cacheable', async () => {
+          const VaporChild = defineVaporComponent({
+            setup() {
+              return createComponent(VaporKeepAlive as any, null, {
+                default: () =>
+                  createSlot('default', null, () =>
+                    template('<span>fallback</span>')(),
+                  ),
+              })
+            },
+          })
+
+          const show = ref(false)
+          const { html } = define({
+            setup() {
+              return () =>
+                h(VaporChild as any, null, {
+                  default: () =>
+                    show.value
+                      ? [h('div', 'content')]
+                      : [createCommentVNode('v-if')],
+                })
+            },
+          }).render()
+
+          // the exposed block is a vnode-less interop fragment; KeepAlive
+          // must resolve through it instead of dereferencing frag.vnode
+          expect(html()).toContain('fallback')
+
+          show.value = true
+          await nextTick()
+          expect(html()).toContain('content')
+
+          show.value = false
+          await nextTick()
+          expect(html()).toContain('fallback')
+        })
+
         it('switch VNode with inner vapor components', async () => {
           const hooksA = {
             mounted: vi.fn(),

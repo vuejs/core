@@ -1,4 +1,4 @@
-import { isArray, isString } from '@vue/shared'
+import { ShapeFlags, isArray, isString } from '@vue/shared'
 import { currentInstance } from '@vue/runtime-dom'
 import { type VaporComponentInstance, isVaporComponent } from './component'
 import {
@@ -205,7 +205,7 @@ export function mergeComponentScopeIds(
   return scopeIds
 }
 
-function setElementScopeId(element: Element, scopeIds: ScopeId): void {
+export function setElementScopeId(element: Element, scopeIds: ScopeId): void {
   if (!scopeIds) return
   // Adopted SSR elements already carry their scope attrs; only nodes recreated
   // by a hydration mismatch still need the client-side writes.
@@ -224,10 +224,58 @@ function setElementScopeId(element: Element, scopeIds: ScopeId): void {
   }
 }
 
+function setMissingScopeId(
+  element: Element,
+  scopeIds: string | readonly string[],
+): boolean {
+  if (isString(scopeIds)) {
+    if (element.hasAttribute(scopeIds)) return false
+    element.setAttribute(scopeIds, '')
+    return true
+  }
+  let changed = false
+  for (let i = 0; i < scopeIds.length; i++) {
+    const scopeId = scopeIds[i]
+    if (!element.hasAttribute(scopeId)) {
+      element.setAttribute(scopeId, '')
+      changed = true
+    }
+  }
+  return changed
+}
+
+function setElementSlottedScopeId(
+  element: Element,
+  scopeIds: string | readonly string[],
+  isBlockRoot = false,
+): void {
+  if (isHydrating) {
+    if (isRecreatedNode(element)) {
+      runWithoutHydration(() =>
+        setElementSlottedScopeId(element, scopeIds, isBlockRoot),
+      )
+    }
+    return
+  }
+  const changed = setMissingScopeId(element, scopeIds)
+  // The block root may have been tagged by an earlier shallow pass, so it
+  // still traverses. Tagged descendants came from VDOM, which has already
+  // propagated the context. Vapor component roots terminate the channel.
+  if (!isBlockRoot && (!changed || (element as any).$root)) {
+    return
+  }
+  let child = element.firstElementChild
+  while (child) {
+    const next = child.nextElementSibling
+    setElementSlottedScopeId(child, scopeIds)
+    child = next
+  }
+}
+
 export function applySlottedScopeId(block: Block, scopeIds: ScopeId): void {
   if (!scopeIds) return
   if (block instanceof Element) {
-    setElementScopeId(block, scopeIds)
+    setElementSlottedScopeId(block, scopeIds, true)
   } else if (isVaporComponent(block)) {
     const merged = mergeScopeIds(block.scopeId, scopeIds)
     if (merged === block.scopeId) return
@@ -249,10 +297,134 @@ export function applySlottedScopeId(block: Block, scopeIds: ScopeId): void {
     block.slottedScopeId = merged
     block.applyScopeId = applyFragmentScopeId
     if (isInteropEnabled && isInteropFragment(block)) {
-      if (block.vnode) block.syncScopeId()
-    } else {
-      applySlottedScopeId(block.nodes, scopeIds)
+      if (block.vnode) {
+        block.syncScopeId()
+        // Component VNodes consume the ids through their own effective-root
+        // inheritance; element or vnode-less roots have no update channel, so
+        // already-mounted content is tagged directly below.
+        if (block.vnode.shapeFlag & ShapeFlags.COMPONENT) return
+      }
+    } else if (block.parkedContent) {
+      // Blocks parked outside `nodes` (slot content behind an active
+      // fallback) still need ids so their nested fragments stamp their own
+      // re-renders and the content re-exposes fully tagged.
+      const parked = block.parkedContent()
+      if (parked) applySlottedScopeId(parked, scopeIds)
     }
+    applySlottedScopeId(block.nodes, scopeIds)
+  }
+}
+
+// Update future mounts without touching existing elements: runtime-core
+// applies slotScopeIds at mount only.
+export function setFragmentSlottedScopeId(
+  fragment: VaporFragment,
+  scopeIds: ScopeId,
+): void {
+  if (isSameScopeIds(fragment.slottedScopeId, scopeIds)) return
+  fragment.slottedScopeId = scopeIds
+  fragment.applyScopeId = applyFragmentScopeId
+}
+
+function includesScopeId(
+  scopeIds: string | readonly string[],
+  scopeId: string,
+): boolean {
+  return isString(scopeIds) ? scopeIds === scopeId : scopeIds.includes(scopeId)
+}
+
+function removeScopeId(current: ScopeId, removed: ScopeId): ScopeId {
+  if (!current || !removed || removed.length === 0) return current
+  if (isString(current)) {
+    return includesScopeId(removed, current) ? null : current
+  }
+  const filtered = current.filter(id => !includesScopeId(removed, id))
+  if (filtered.length === current.length) return current
+  return filtered.length ? filtered : null
+}
+
+// Swaps one context contribution for another inside a stored id set:
+// contributions from other sources (an outlet's own ids, an outer ambient)
+// survive the exchange.
+export function replaceScopeId(
+  current: ScopeId,
+  prev: ScopeId,
+  next: ScopeId,
+): ScopeId {
+  if (isSameScopeIds(current, prev)) return next
+  return mergeScopeIds(removeScopeId(current, prev), next)
+}
+
+// A stable slot function keeps its block, so replace the old contribution
+// throughout that block for future mounts. Existing DOM remains unchanged.
+export function updateSlottedScopeId(
+  block: Block,
+  prev: ScopeId,
+  next: ScopeId,
+): void {
+  if ((!prev && !next) || isSameScopeIds(prev, next)) return
+  updateBlockSlottedScopeId(block, prev, next)
+}
+
+// Update the instance store used by future roots and republish mounted
+// interop-root metadata without touching existing DOM.
+function updateComponentSlottedScopeId(
+  instance: VaporComponentInstance,
+  prev: ScopeId,
+  next: ScopeId,
+): void {
+  setInteropComponentScopeId(
+    instance,
+    replaceScopeId(instance.scopeId, prev, next),
+  )
+}
+
+function updateBlockSlottedScopeId(
+  block: Block,
+  prev: ScopeId,
+  next: ScopeId,
+): void {
+  if (isVaporComponent(block)) {
+    updateComponentSlottedScopeId(block, prev, next)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      updateBlockSlottedScopeId(block[i], prev, next)
+    }
+  } else if (isFragment(block)) {
+    if (block.__vf & FOR_ITEM) {
+      updateBlockSlottedScopeId(block.nodes, prev, next)
+      return
+    }
+    const replaced = replaceScopeId(block.slottedScopeId, prev, next)
+    if (!isSameScopeIds(replaced, block.slottedScopeId)) {
+      block.slottedScopeId = replaced
+      block.applyScopeId = applyFragmentScopeId
+    }
+    if (isInteropEnabled && isInteropFragment(block)) {
+      const vnode = block.vnode
+      if (vnode) {
+        block.syncScopeId()
+        if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+          // Component VNodes consume the ids through their own effective-root
+          // inheritance; their subtree is not slot content of this context.
+          // A mounted vapor component behind the VNode additionally keeps
+          // its own store, which its future roots read.
+          const instance = vnode.component as unknown
+          if (isVaporComponent(instance)) {
+            updateComponentSlottedScopeId(instance, prev, next)
+          }
+          return
+        }
+        // An element-backed subtree holds VNode metadata (nested component
+        // and Fragment slotScopeIds) that future roots inherit; the block
+        // walk below only sees its DOM nodes.
+        block.updateScopeIdContext(prev, next)
+      }
+    } else if (block.parkedContent) {
+      const parked = block.parkedContent()
+      if (parked) updateBlockSlottedScopeId(parked, prev, next)
+    }
+    updateBlockSlottedScopeId(block.nodes, prev, next)
   }
 }
 
@@ -352,13 +524,23 @@ export function setInteropComponentScopeId(
   instance.scopeId = scopeIds
   if (!instance.isMounted) return
 
+  // Wire the whole root chain without touching mounted DOM. Each level first
+  // confirms the effective single root, then registers its dynamic path — the
+  // same two-pass rule as applyRootScopeId.
   let componentRoot = instance
-  let root = resolveSingleScopeIdRoot(instance.block)
-  while (root && isVaporComponent(root)) {
+  let root: ScopeIdRootCandidate | undefined
+  while (true) {
+    const block = componentRoot.block
+    root = block instanceof Element ? block : resolveSingleScopeIdRoot(block)
+    if (!root) return
+    if (isArray(block) || isFragment(block)) {
+      resolveSingleScopeIdRoot(block, bindFragmentScopeIdOwner, componentRoot)
+    }
+    if (!isVaporComponent(root)) break
+    root.inheritsScopeId = true
     componentRoot = root
-    root = resolveSingleScopeIdRoot(root.block)
   }
-  if (!root || root === DYNAMIC_ROOT_PLACEHOLDER || root instanceof Element) {
+  if (root === DYNAMIC_ROOT_PLACEHOLDER || root instanceof Element) {
     return
   }
   bindFragmentScopeIdOwner(root, componentRoot)

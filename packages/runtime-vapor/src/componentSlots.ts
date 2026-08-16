@@ -301,6 +301,13 @@ export function createSlot(
   let fragment: VaporFragment
   let isCustomElementSlot = false
   if (isRef(rawSlots._) && isInteropEnabled) {
+    if (
+      slottedScopeId &&
+      currentSlotBoundary &&
+      currentSlotBoundary.addSlottedScopeId
+    ) {
+      currentSlotBoundary.addSlottedScopeId(slottedScopeId)
+    }
     if (isHydrating) hydrationCursor = enterHydrationCursor()
     fragment = instance.appContext.vdom!.slot(
       rawSlots._,

@@ -84,6 +84,7 @@ import {
   type LooseRawSlots,
   type RawSlots,
   type StaticSlots,
+  currentSlotScopeIds,
   dynamicSlotsProxyHandlers,
   getSlot,
   inOnceSlot,
@@ -149,6 +150,7 @@ import {
   applySlottedScopeId,
   getCurrentScopeId,
   getHydratingScopeIdOwner,
+  setElementScopeId,
 } from './scopeId'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
@@ -389,6 +391,9 @@ export function createComponent(
           insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
         }
       } else {
+        if (currentSlotScopeIds) {
+          applySlottedScopeId(frag, currentSlotScopeIds)
+        }
         frag.hydrate()
       }
 
@@ -1109,7 +1114,7 @@ export function createPlainElement(
   // skip the getCurrentScopeId lookup.
   if (!isHydrating || isRecreatedNode(el)) {
     const scopeId = getCurrentScopeId()
-    if (scopeId) applySlottedScopeId(el, scopeId)
+    if (scopeId) setElementScopeId(el, scopeId)
   }
 
   if (rawProps) {

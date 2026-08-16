@@ -122,7 +122,7 @@ export interface SlotResolutionState {
   // Reentrancy guard for one atomic content/fallback reconciliation.
   isReconciling: boolean
   $transition?: VaporTransitionHooks
-  scopeIdHost?: VaporFragment
+  host?: VaporFragment
 
   getContent(): Block
   getParentNode(): ParentNode | null
@@ -140,17 +140,15 @@ export interface SlotResolutionState {
   notifyExposedValidityChange(): void
 }
 
-// Publishes the winning branch to the host's exposed nodes, then runs the
-// host fragment's scopeId preparation on the just-materialized block so it is
-// ready before it can reach the DOM. The interop hosts keep their state
-// separate from the fragment and point back to it via scopeIdHost;
-// SlotFragment is its own fragment.
-export function syncNodesAndApplyScopeId(
+// Publishes the winning branch to the host's exposed nodes, then prepares the
+// just-materialized block before it can reach the DOM. Interop hosts keep
+// their state separate from the fragment; SlotFragment is its own host.
+export function commitResolvedBlock(
   state: SlotResolutionState,
   block: Block,
 ): void {
   state.syncNodes()
-  const host = (state.scopeIdHost || state) as VaporFragment
+  const host = (state.host || state) as VaporFragment
   if (host.applyScopeId) {
     host.applyScopeId(block)
   }
@@ -270,7 +268,7 @@ function commitSlotFallback(
   state.activeFallbackInvalidCallbacks = onContentInvalid
   state.fallbackScope = scope
   state.fallbackInserted = isHydrating
-  syncNodesAndApplyScopeId(state, block)
+  commitResolvedBlock(state, block)
   if (isTransitionEnabled) {
     if (state.$transition) {
       // Match VDOM slot fallback branch identity so fallback enter does not

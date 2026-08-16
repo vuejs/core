@@ -594,7 +594,14 @@ function getInnerBlock(block: Block): InnerBlockResult {
   if (isVaporComponent(block)) {
     return [block, false]
   } else if (isInteropEnabled && isInteropFragment(block)) {
-    return [block, true]
+    // Only a component-backed VNode is a cacheable interop entry, matching
+    // VDOM KeepAlive treating non-component children as plain content. A slot
+    // host currently exposing a vapor fallback (vnode = null) or non-component
+    // VDOM content resolves through its exposed nodes instead.
+    if (block.vnode && block.vnode.shapeFlag & ShapeFlags.COMPONENT) {
+      return [block, true]
+    }
+    return getInnerBlock(block.nodes)
   } else if (isFragment(block)) {
     return getInnerBlock(block.nodes)
   }

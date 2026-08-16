@@ -111,6 +111,9 @@ export class VaporFragment<
   applyScopeId?: (this: VaporFragment, block: Block) => void
   scopeOwner?: VaporComponentInstance
   slottedScopeId?: VaporComponentInstance['scopeId']
+  // Optional protocol member: a block the fragment currently holds outside
+  // `nodes` that scope id application must still reach (see SlotFragment).
+  parkedContent?(): Block | undefined
 
   setRef?: (
     instance: VaporComponentInstance,
@@ -546,6 +549,12 @@ export class SlotFragment
     return false
   }
 
+  // The content branch is parked outside `nodes` while a fallback is active,
+  // but must still receive slotted scope ids (see applySlottedScopeId).
+  parkedContent(): Block | undefined {
+    return this.content !== this.nodes ? this.content : undefined
+  }
+
   get boundary(): SlotBoundaryContext {
     return (this.ownBoundary ||= {
       parent: this.inheritFallback ? this.slotBoundary : null,
@@ -842,6 +851,14 @@ export function isFragment(val: unknown): val is VaporFragment {
 export type InteropFragment<T extends Block = Block> = VaporFragment<T> & {
   vnode: VNode | null
   syncScopeId: (this: InteropFragment) => void
+  // Swaps the slotted-id context stored as VNode metadata inside the
+  // fragment's backing VNode tree, so future effective-root mounts in a
+  // kept subtree inherit the fresh context (see updateSlottedScopeId).
+  updateScopeIdContext: (
+    this: InteropFragment,
+    prev: VaporComponentInstance['scopeId'],
+    next: VaporComponentInstance['scopeId'],
+  ) => void
 }
 
 export function isInteropFragment(val: unknown): val is InteropFragment {

@@ -32,7 +32,6 @@ import {
   ensureRenderer,
   ensureValidVNode,
   ensureVaporSlotFallback,
-  filterSingleRoot,
   getInheritedScopeIds,
   getTransitionRawChildren,
   invokeDirectiveHook,
@@ -82,7 +81,10 @@ import {
   isSameScopeIds,
   mergeComponentScopeIds,
   mergeScopeIds,
+  replaceScopeId,
+  setFragmentSlottedScopeId,
   setInteropComponentScopeId,
+  updateSlottedScopeId,
 } from './scopeId'
 import type { LooseRawSlots } from './componentSlots'
 import {
@@ -99,7 +101,6 @@ import {
   EMPTY_ARR,
   EMPTY_OBJ,
   NOOP,
-  PatchFlags,
   ShapeFlags,
   extend,
   isArray,
@@ -156,13 +157,13 @@ import {
 } from './slotBoundary'
 import {
   type SlotResolutionState,
+  commitResolvedBlock,
   disposeSlotResolution,
   insertActiveSlotFallback,
   invalidateExposedSlotContent,
   leaveSlotFallback,
   markSlotResolutionDirty,
   recheckSlotResolution,
-  syncNodesAndApplyScopeId,
 } from './slotFragment'
 import {
   getCurrentSlotEndAnchor,
@@ -625,7 +626,21 @@ const vaporInteropImpl: VaporInVdomInterface = {
         n2.vb = n1.vb
         ;(vs2.ref = vs1.ref)!.value = n2.props
         vs2.scope = vs1.scope
-        syncInteropVaporSlotState(n1, n2)
+        const state = vs1.state as InteropVaporSlotState
+        vs2.state = state
+        state.localFallback.value = vs2.fallback
+        state.outletFallback.value = vs2.outletFallback
+        // The renderer's scope id context can change while the slot function
+        // stays identical (e.g. the outlet toggling renderSlot's noSlotted).
+        // Future mounts anywhere inside the kept block must see the fresh
+        // ids, so swap the previous context for the new one on the host and
+        // every nested fragment/component; existing elements keep their
+        // mount-time ids, matching VDOM's mount-only application.
+        const block = n2.vb!
+        const next = getInteropVaporSlotScopeIds(n2, slotScopeIds)
+        const prev = state.appliedScopeId
+        state.appliedScopeId = next
+        updateSlottedScopeId(block, prev, next)
       }
     }
   },
@@ -1052,6 +1067,8 @@ function createVNodeFragment(vnode: VNode): {
   const syncNodes = () => {
     frag.nodes = resolveVNodeNodes(vnode)
     contentResolved = true
+    // Republish root-only metadata after the backing VNode changes roots.
+    if (frag.scopeOwner) frag.syncScopeId!()
   }
   frag.isBlockValid = componentAsValid =>
     contentResolved ? isValidBlock(frag.nodes, componentAsValid) : true
@@ -1693,7 +1710,7 @@ function renderVDOMSlot(
     pendingRecheck: false,
     pendingRecheckForce: false,
     isReconciling: false,
-    scopeIdHost: frag,
+    host: frag,
     get $transition() {
       const transition = frag.$transition
       return transition && isVaporTransitionHooks(transition)
@@ -1899,7 +1916,7 @@ function renderVDOMSlot(
           removeRenderedContent(pending.placeholder, currentParentNode)
         }
         setRenderedContent(content || null, pending.contentValid)
-        syncNodesAndApplyScopeId(slotResolutionState, content || EMPTY_BLOCK)
+        commitResolvedBlock(slotResolutionState, content || EMPTY_BLOCK)
         if (content) {
           insert(content, currentParentNode, currentAnchor, suspense)
         }
@@ -2389,7 +2406,7 @@ function renderVDOMSlot(
                 removeRenderedContent(prevRendered, currentParentNode!)
               }
               setRenderedContent(slotContent, slotContentValid)
-              syncNodesAndApplyScopeId(slotResolutionState, slotContent)
+              commitResolvedBlock(slotResolutionState, slotContent)
               insert(slotContent, currentParentNode!, currentAnchor, suspense)
               finishContentUpdate()
               return
@@ -2495,6 +2512,7 @@ function createFallback(
   fallback: InteropSlotFallback,
   parentComponent: ComponentInternalInstance | null,
   isVNodeFallback: () => boolean,
+  host: InteropFragment,
 ): BlockFn {
   const internals = ensureRenderer().internals
   return () => {
@@ -2509,6 +2527,7 @@ function createFallback(
         },
         parentComponent,
       )
+      setFragmentSlottedScopeId(frag, host.slottedScopeId)
       if (isHydrating && frag.hydrate) {
         frag.hydrate()
       }
@@ -2528,6 +2547,10 @@ type InteropSlotFallback = {
 interface InteropVaporSlotState {
   localFallback: ShallowRef<InteropSlotFallback | undefined>
   outletFallback: ShallowRef<InteropSlotFallback | undefined>
+  // The scope-id context last delivered into the kept block, so a context
+  // change under the same slot function can swap exactly its own
+  // contribution (see vaporInteropImpl.slot's update branch).
+  appliedScopeId?: ScopeId
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -2541,16 +2564,6 @@ function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
     slot.state = state
   }
   return state
-}
-
-function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
-  const prevState = n1.vs!.state as InteropVaporSlotState | undefined
-  if (!prevState) {
-    return
-  }
-  n2.vs!.state = prevState
-  prevState.localFallback.value = n2.vs!.fallback
-  prevState.outletFallback.value = n2.vs!.outletFallback
 }
 
 function trackInteropFallbackChanges(
@@ -2603,11 +2616,14 @@ function renderVaporSlot(
     }
     const slotState = resolveInteropVaporSlotState(vnode)
     const scopeIds = getInteropVaporSlotScopeIds(vnode, contextScopeIds)
+    slotState.appliedScopeId = scopeIds
     // Most of the interop setup is shared, but slots that start with a local
     // VDOM fallback still need to let an inner SlotFragment own the active
     // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
     // fallback blocks that can later resolve to an empty vnode list.
     const frag = createInteropFragment()
+    // VDOM fallback hydration reads the renderer-derived ids before mounting.
+    setFragmentSlottedScopeId(frag, scopeIds)
     // Optimistic until content resolves into `frag.nodes`; see createVNodeFragment.
     let contentResolved = isHydrating
     frag.isBlockValid = componentAsValid =>
@@ -2671,6 +2687,11 @@ function renderVaporSlot(
       run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
       markDirty: markInteropSlotResolutionDirty,
       onContentInvalid,
+      addSlottedScopeId: scopeId =>
+        setFragmentSlottedScopeId(
+          frag,
+          mergeScopeIds(frag.slottedScopeId, scopeId),
+        ),
     }
     slotResolutionState = {
       boundary: localFallbackBoundary,
@@ -2679,7 +2700,7 @@ function renderVaporSlot(
       pendingRecheck: false,
       pendingRecheckForce: false,
       isReconciling: false,
-      scopeIdHost: frag,
+      host: frag,
       getContent: () => contentNodes,
       getParentNode: () => currentParentNode,
       getAnchor: () => currentAnchor,
@@ -2723,6 +2744,7 @@ function renderVaporSlot(
         () =>
           !!slotState.localFallback.value &&
           !!slotState.localFallback.value.__vdom,
+        frag,
       )
       outletFallback = createFallback(
         () => (slotState.outletFallback.value || renderEmptyVNodes)(),
@@ -2730,6 +2752,7 @@ function renderVaporSlot(
         () =>
           !!slotState.outletFallback.value &&
           !!slotState.outletFallback.value.__vdom,
+        frag,
       )
       const hasInteropFallback =
         !!slotState.localFallback.value || !!slotState.outletFallback.value
@@ -2752,7 +2775,7 @@ function renderVaporSlot(
           return resolvedContent
         }
         contentNodes = resolvedContent || EMPTY_BLOCK
-        syncNodesAndApplyScopeId(slotResolutionState, contentNodes)
+        commitResolvedBlock(slotResolutionState, contentNodes)
         if (finish) finishHydratingContent(isValidSlot(contentNodes))
         recheckSlotResolution(slotResolutionState, takePendingRecheck())
         return resolvedContent
@@ -3388,6 +3411,20 @@ function getInteropVaporSlotScopeIds(
   return mergeScopeIds(vnode.slotScopeIds, contextScopeIds)
 }
 
+// Scope id strings are compile-time constants, so memoize the VNode-format
+// arrays instead of allocating on every conversion.
+const slotScopeIdArrays = new Map<string, string[]>()
+
+function toSlotScopeIdsArray(scopeIds: ScopeId): string[] | null {
+  if (!scopeIds) return null
+  if (isString(scopeIds)) {
+    let array = slotScopeIdArrays.get(scopeIds)
+    if (!array) slotScopeIdArrays.set(scopeIds, (array = [scopeIds]))
+    return array
+  }
+  return scopeIds as string[]
+}
+
 // Maps slotScopeIds arrays seen before mount to their core-owned source, and
 // interop-written arrays to the source they were derived from. Later merges
 // can then replace the previous contribution instead of accumulating it.
@@ -3442,30 +3479,6 @@ function setInteropScopeIds(
   vnode.slotScopeIds = next
 }
 
-function canInheritOwnerScopeIds(vnode: VNode): boolean {
-  if (vnode.type === Fragment) {
-    // Root-only inherited ids stop at real fragments (slot outlets, v-for,
-    // multi-child content), matching VDOM's subtree-root chain. Only the
-    // dev-only comment-wrapper fragment resolves to its nested single root,
-    // via the same filterSingleRoot rules core applies — whose 'v-if' comment
-    // handling is dev-only by construction and cannot split dev and prod.
-    if (
-      !__DEV__ ||
-      vnode.patchFlag <= 0 ||
-      !(vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) ||
-      !isArray(vnode.children)
-    ) {
-      return false
-    }
-    const root = filterSingleRoot(vnode.children as VNodeArrayChildren, false)
-    return !!root && canInheritOwnerScopeIds(root)
-  }
-  return !!(
-    vnode.shapeFlag &
-    (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT | ShapeFlags.SUSPENSE)
-  )
-}
-
 // The single definition of a fragment's effective scope ids on top of a base:
 // both sinks (vnode write-back in syncInteropFragmentScopeIds and renderer
 // patch context in getInteropPatchScopeIds) must agree, since runtime-core
@@ -3482,13 +3495,80 @@ function mergeFragmentScopeIds(
   return scopeIds
 }
 
+// Update VNode metadata used by future mounts in a kept subtree. Existing
+// elements are skipped, but their children are traversed to reach components.
+function updateInteropScopeIdContext(
+  this: InteropFragment,
+  prev: ScopeId,
+  next: ScopeId,
+): void {
+  if (this.vnode) updateVNodeScopeIdContext(this.vnode, prev, next)
+}
+
+function updateVNodeScopeIdContext(
+  vnode: VNode,
+  prev: ScopeId,
+  next: ScopeId,
+): void {
+  const { shapeFlag } = vnode
+  if (shapeFlag & ShapeFlags.COMPONENT) {
+    vnode.slotScopeIds = toSlotScopeIdsArray(
+      replaceScopeId(vnode.slotScopeIds, prev, next),
+    )
+    // A mounted vapor component reads its scope context from the instance
+    // store, not the vnode metadata: apply the shared component rule there.
+    const instance = vnode.component as unknown
+    if (isVaporComponent(instance)) {
+      updateSlottedScopeId(instance, prev, next)
+    }
+    return
+  }
+  if (shapeFlag & ShapeFlags.SUSPENSE) {
+    if (vnode.ssContent) updateVNodeScopeIdContext(vnode.ssContent, prev, next)
+    if (vnode.ssFallback) {
+      updateVNodeScopeIdContext(vnode.ssFallback, prev, next)
+    }
+    return
+  }
+  if (vnode.type === Fragment && vnode.slotScopeIds) {
+    vnode.slotScopeIds = toSlotScopeIdsArray(
+      replaceScopeId(vnode.slotScopeIds, prev, next),
+    )
+  }
+  const children = vnode.children
+  if (isArray(children)) {
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      if (isVNode(child)) updateVNodeScopeIdContext(child, prev, next)
+    }
+  }
+}
+
 function syncInteropFragmentScopeIds(this: InteropFragment): void {
   const vnode = this.vnode
   // Fragment/element/Teleport scope IDs are passed as renderer context and
   // must not be written back to a caller-owned VNode. Component VNodes are the
   // exception: runtime-core stores inherited scope IDs on them so their own
   // effective root can consume the latest value on future updates.
-  if (!vnode || !(vnode.shapeFlag & ShapeFlags.COMPONENT)) return
+  if (!vnode) return
+  if (!(vnode.shapeFlag & ShapeFlags.COMPONENT)) {
+    // Owner root-only ids cannot ride the renderer patch context here — core
+    // would broadcast them to every descendant element (see
+    // getInteropPatchScopeIds). Publish them on the vnode instead: core
+    // applies them where the effective-root chain tops out at this vnode
+    // (element mount, a Suspense branch), before insertion and root-only.
+    const owner = this.scopeOwner
+    if (!owner) return
+    const scopeIds = (vnode.vaporScopeId = toSlotScopeIdsArray(
+      mergeComponentScopeIds(null, owner),
+    ))
+    // Suspense branches mount independently and must carry the latest ids.
+    if (vnode.shapeFlag & ShapeFlags.SUSPENSE) {
+      if (vnode.ssContent) vnode.ssContent.vaporScopeId = scopeIds
+      if (vnode.ssFallback) vnode.ssFallback.vaporScopeId = scopeIds
+    }
+    return
+  }
   // Before hydration starts, getInteropPatchScopeIds() will supply and preserve
   // the same context. Once a VNode has been hydrated, keep syncing metadata for
   // future root changes even while an outer hydration boundary is still active.
@@ -3519,7 +3599,13 @@ function getInteropPatchScopeIds(
   } else if (inherited === source) {
     directScopeIds = null
   }
-  const inheritOwner = !!fragment.scopeOwner && canInheritOwnerScopeIds(vnode)
+  // Owner root-only ids may only ride the patch context for component VNodes:
+  // runtime-core stores that context on the vnode and applies it to the
+  // component's effective root only. For every other VNode kind the context
+  // broadcasts into the whole subtree, so owner ids are stamped directly on
+  // the resolved root element instead (see syncInteropFragmentScopeIds).
+  const inheritOwner =
+    !!fragment.scopeOwner && !!(vnode.shapeFlag & ShapeFlags.COMPONENT)
   const scopeIds = mergeFragmentScopeIds(fragment, directScopeIds, inheritOwner)
   if (
     scopeIds &&
@@ -3544,6 +3630,10 @@ function createInteropFragment(
     VDOM,
   ) as RenderContextFragment<Block> & InteropFragment
   frag.vnode = vnode
+  // Adopt slot context before hydration because content can mount before the
+  // outlet's post-render scope application.
+  if (currentSlotScopeIds) frag.slottedScopeId = currentSlotScopeIds
   frag.syncScopeId = syncInteropFragmentScopeIds
+  frag.updateScopeIdContext = updateInteropScopeIdContext
   return frag
 }

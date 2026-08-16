@@ -3047,6 +3047,19 @@ export function getInheritedScopeIds(
     }
   }
 
+  // Vapor interop: a vnode mounted as a Vapor component's effective root
+  // carries the owner chain's root-only ids directly (they cannot ride the
+  // renderer's slotScopeIds context without broadcasting to descendants).
+  // They apply wherever the effective-root chain tops out at that vnode, so
+  // the root element receives them before insertion while descendants,
+  // whose chains stop earlier, never see them.
+  const vaporScopeId = currentVNode.vaporScopeId
+  if (vaporScopeId) {
+    for (let i = 0; i < vaporScopeId.length; i++) {
+      ;(inheritedScopeIds ||= []).push(vaporScopeId[i])
+    }
+  }
+
   return inheritedScopeIds || EMPTY_ARR
 }
 
