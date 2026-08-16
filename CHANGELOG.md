@@ -1,3 +1,20 @@
+# [3.6.0-rc.4](https://github.com/vuejs/core/compare/v3.6.0-rc.3...v3.6.0-rc.4) (2026-08-14)
+
+### Bug Fixes
+
+* **compiler-vapor:** preserve modifiers on merged event handlers ([#15265](https://github.com/vuejs/core/issues/15265)) ([d574d1d](https://github.com/vuejs/core/commit/d574d1d59a503b2200f16af84edb79843010c694)), closes [#15264](https://github.com/vuejs/core/issues/15264)
+* **compiler-vapor:** propagate component root through Transition ([#15275](https://github.com/vuejs/core/issues/15275)) ([0a65e60](https://github.com/vuejs/core/commit/0a65e60af86cadedab2531eb8c2b039dab179941)), closes [#15274](https://github.com/vuejs/core/issues/15274)
+* **runtime-vapor:** avoid redundant transition block resolution ([#15272](https://github.com/vuejs/core/issues/15272)) ([66cdfba](https://github.com/vuejs/core/commit/66cdfbae498bb601c3c4a3a03722207b76874754))
+* **runtime-vapor:** normalize declared style props (fix [#15285](https://github.com/vuejs/core/issues/15285)) ([#15286](https://github.com/vuejs/core/issues/15286)) ([75a8792](https://github.com/vuejs/core/commit/75a8792064fbbd2cb360477987ce06cfc7223b88))
+* **runtime-vapor:** preserve cached input effects across nested branch teardown ([#15293](https://github.com/vuejs/core/issues/15293)) ([cd8b8da](https://github.com/vuejs/core/commit/cd8b8dafb0edc8979b3cb8fca269aa320b4f6a6f))
+* **runtime-vapor:** preserve child keys in nested fragments ([#15292](https://github.com/vuejs/core/issues/15292)) ([17f69ca](https://github.com/vuejs/core/commit/17f69cae0c25d921c3fe713a16aa7c91282542cf))
+* **runtime-vapor:** release unmounted v-for component items from the parent scope ([7db1454](https://github.com/vuejs/core/commit/7db14544ea622297802635d7e953633f587a1c19))
+* **runtime-vapor:** remove v-for components before scope cleanup ([aac355d](https://github.com/vuejs/core/commit/aac355dcb0e8fe0d694699ea18ab59031f253cbe))
+* **runtime-vapor:** respect inheritAttrs ownership for component roots ([#15279](https://github.com/vuejs/core/issues/15279)) ([961eadb](https://github.com/vuejs/core/commit/961eadb1871caaf4e80240555d1bdb743420ddc2)), closes [#15277](https://github.com/vuejs/core/issues/15277)
+* **runtime-vapor:** scope fallback prop caches to active consumers ([e8a09b3](https://github.com/vuejs/core/commit/e8a09b3f42b83afa2add18c2e533f8163b44f934))
+* **runtime-vapor:** scope prop source caches to consumers ([22b9b41](https://github.com/vuejs/core/commit/22b9b41bc1457553dddf78ad2ab7992526e5ba41))
+* **vapor:** preserve dynamic v-for slot state ([#15280](https://github.com/vuejs/core/issues/15280)) ([38a095d](https://github.com/vuejs/core/commit/38a095dc3a8cff7060531a18c0fa5b7d42a1d66b)), closes [#15276](https://github.com/vuejs/core/issues/15276)
+
 # [3.6.0-rc.3](https://github.com/vuejs/core/compare/v3.6.0-rc.2...v3.6.0-rc.3) (2026-08-11)
 
 ### Bug Fixes
