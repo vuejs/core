@@ -628,18 +628,18 @@ export function hasFallthroughAttrs(
   comp: VaporComponent,
   rawProps: RawProps | null | undefined,
 ): boolean {
-  if (rawProps) {
-    // determine fallthrough
-    if (rawProps.$ || !comp.props) {
+  if (!rawProps) return false
+
+  // determine fallthrough
+  // A dynamic source can be empty initially and add attrs later, so its
+  // presence alone requires installing the fallthrough effect.
+  if (rawProps.$) return true
+
+  // check if rawProps contains any keys not declared
+  const propsOptions = comp.props && normalizePropsOptions(comp)[0]
+  for (const key in rawProps) {
+    if (!propsOptions || !hasOwn(propsOptions, camelize(key))) {
       return true
-    } else {
-      // check if rawProps contains any keys not declared
-      const propsOptions = normalizePropsOptions(comp)[0]!
-      for (const key in rawProps) {
-        if (!hasOwn(propsOptions, camelize(key))) {
-          return true
-        }
-      }
     }
   }
   return false

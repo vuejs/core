@@ -312,18 +312,18 @@ export function createComponent(
           ? currentInstance && isVaporTransition(currentInstance!.type)
           : false)) &&
       isVaporComponent(currentInstance) &&
-      currentInstance.type.inheritAttrs !== false &&
-      currentInstance.hasFallthrough
+      forwardsFallthroughAttrs(currentInstance)
     ) {
       // check if we are the single root of the parent
       // if yes, inject parent attrs as dynamic props source
-      const attrs = currentInstance.attrs
+      const owner = currentInstance
+      const getAttrs = () => resolveFallthroughAttrs(owner)
       if (rawProps && rawProps !== EMPTY_OBJ) {
         ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
-          () => attrs,
+          getAttrs,
         )
       } else {
-        rawProps = { $: [() => attrs] } as RawProps
+        rawProps = { $: [getAttrs] } as RawProps
       }
     }
 
@@ -631,13 +631,25 @@ export function setupComponent(
 
 export let isApplyingFallthroughProps = false
 
-export function shouldUseFunctionalFallthrough(
-  component: VaporComponent,
-): boolean {
+function shouldUseFunctionalFallthrough(component: VaporComponent): boolean {
   return (
     isFunction(component) &&
     !(isTransitionEnabled && isVaporTransition(component))
   )
+}
+
+export function forwardsFallthroughAttrs(
+  instance: VaporComponentInstance,
+): boolean {
+  return instance.hasFallthrough && instance.type.inheritAttrs !== false
+}
+
+function resolveFallthroughAttrs(
+  instance: VaporComponentInstance,
+): Record<string, any> {
+  return shouldUseFunctionalFallthrough(instance.type)
+    ? getFunctionalFallthrough(instance.attrs) || EMPTY_OBJ
+    : instance.attrs
 }
 
 export function applyFallthroughProps(
@@ -1550,17 +1562,10 @@ function handleSetupResult(
   }
 
   // single root, inherit attrs
-  if (
-    instance.hasFallthrough &&
-    component.inheritAttrs !== false &&
-    Object.keys(instance.attrs).length
-  ) {
-    const getFallthroughAttrs = shouldUseFunctionalFallthrough(component)
-      ? () => getFunctionalFallthrough(instance.attrs)
-      : () => instance.attrs
+  if (forwardsFallthroughAttrs(instance)) {
     // attach attrs to the root element, or to root dynamic fragments so they
     // can be (re-)applied during each branch update
-    applyFallthroughAttrs(instance.block, instance, getFallthroughAttrs)
+    applyFallthroughAttrs(instance.block, instance)
   }
 
   if (__DEV__) {
@@ -1575,7 +1580,6 @@ function handleSetupResult(
 function applyFallthroughAttrs(
   block: Block,
   instance: VaporComponentInstance,
-  getFallthroughAttrs: () => Record<string, any> | undefined,
   scope?: EffectScope,
 ): void {
   let hasSlotFragment = false
@@ -1601,28 +1605,22 @@ function applyFallthroughAttrs(
       // slot fragments warn instead of inheriting attrs, skip them
       if (!(frag.__vf & SLOT)) {
         // Nested dynamic fragments need their own fallthrough hook.
-        registerDynamicFragmentFallthroughAttrs(
-          frag,
-          instance,
-          getFallthroughAttrs,
-        )
+        registerDynamicFragmentFallthroughAttrs(frag, instance)
       }
     }
   }
 
   if (root && !hasSlotFragment) {
     const applyEffect = () =>
-      renderEffect(() => {
-        const attrs = getFallthroughAttrs()
-        if (attrs) applyFallthroughProps(root, attrs)
-      })
+      renderEffect(() =>
+        applyFallthroughProps(root, resolveFallthroughAttrs(instance)),
+      )
     // ensure the render effect is cleaned up when the branch scope is stopped
     scope ? scope.run(applyEffect) : applyEffect()
   } else if (__DEV__) {
     const accessedAttrs = instance.accessedAttrs
-    const fallthroughAttrs = getFallthroughAttrs()
+    const fallthroughAttrs = resolveFallthroughAttrs(instance)
     if (
-      fallthroughAttrs &&
       Object.keys(fallthroughAttrs).length &&
       (hasSlotFragment ||
         (dynamicRoot && dynamicRoot.hasNonSingleRoot) ||
@@ -1693,14 +1691,13 @@ function containsTeleportFragment(block: Block): boolean {
 function registerDynamicFragmentFallthroughAttrs(
   frag: DynamicFragment,
   instance: VaporComponentInstance,
-  getFallthroughAttrs: () => Record<string, any> | undefined,
 ): void {
   // avoid registering duplicate hooks
   if (frag.hasFallthroughAttrs) return
 
   frag.hasFallthroughAttrs = true
   ;(frag.onBeforeInsert ||= []).push(nodes =>
-    applyFallthroughAttrs(nodes, instance, getFallthroughAttrs, frag.scope!),
+    applyFallthroughAttrs(nodes, instance, frag.scope!),
   )
 }
 

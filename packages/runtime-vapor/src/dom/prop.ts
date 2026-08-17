@@ -4,6 +4,7 @@ import {
   camelize,
   canSetValueDirectly,
   getEscapedCssVarName,
+  hasOwn,
   includeBooleanAttr,
   isOn,
   isSpecialBooleanAttr,
@@ -16,13 +17,12 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { onBinding } from './event'
+import { onBinding, onRootBinding } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
   currentInstance,
   getAttributeMismatch,
-  isFunctionalFallthroughKey,
   isMapEqual,
   isMismatchAllowed,
   isSetEqual,
@@ -37,15 +37,17 @@ import {
   toClassSet,
   toStyleMap,
   unsafeToTrustedHTML,
+  vModelGetValue,
   vShowHidden,
+  vShowOriginalDisplay,
   warn,
   warnPropMismatch,
   xlinkNS,
 } from '@vue/runtime-dom'
 import {
   type VaporComponentInstance,
+  forwardsFallthroughAttrs,
   isApplyingFallthroughProps,
-  shouldUseFunctionalFallthrough,
 } from '../component'
 import {
   isHydrating,
@@ -56,26 +58,107 @@ import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
 
 type TargetElement = Element & {
+  // Inherited dynamic props currently applied through attrs fallthrough.
+  $dprops$?: Record<string, any>
+  // Latest local root props shadowed by fallthrough, restored on removal.
+  $lprops?: Record<string, LocalRootProp>
   $root?: true
   $html?: string
   $cls?: string
   $clsFlags?: number
+  // Local ($clsi/$styi) and inherited ($clsi$/$styi$) incremental caches.
+  $clsi?: string
+  $clsi$?: string
+  $styi?: NormalizedStyle
+  $styi$?: NormalizedStyle
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
 }
 
-const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
-  const instance = currentInstance! as VaporComponentInstance
+const enum LocalPropType {
+  ATTR,
+  DOM_PROP,
+  VALUE,
+}
+
+type LocalRootProp = [
+  type: LocalPropType,
+  value: any,
+  extra?: any,
+  removeAttr?: boolean,
+]
+
+function recordShadowedRootProp(
+  el: TargetElement,
+  key: string,
+  type: LocalPropType,
+  value: any,
+  extra?: any,
+): boolean {
+  const inherited = el.$dprops$
+  if (!isApplyingFallthroughProps && inherited && key in inherited) {
+    ;(el.$lprops || (el.$lprops = Object.create(null)))[key] = [
+      type,
+      value,
+      extra,
+    ]
+    return true
+  }
+  return false
+}
+
+// Keys whose local value flows through setAttr/setDOMProp/setValue — the
+// setters restoreLocalRootProp replays through. class/style/events merge
+// local and inherited values instead of shadowing.
+function isRestorableDynamicProp(key: string): boolean {
   return (
-    !isApplyingFallthroughProps &&
-    el.$root &&
-    instance.hasFallthrough &&
-    instance.type.inheritAttrs !== false &&
-    key in instance.attrs &&
-    (!shouldUseFunctionalFallthrough(instance.type) ||
-      isFunctionalFallthroughKey(key))
+    key[0] !== '.' &&
+    key[0] !== '^' &&
+    key !== 'class' &&
+    key !== 'style' &&
+    !isOn(key) &&
+    key !== 'innerHTML' &&
+    key !== 'textContent'
   )
+}
+
+function captureLocalRootProp(
+  el: TargetElement,
+  key: string,
+  isSVG: boolean,
+): void {
+  const local = el.$lprops || (el.$lprops = Object.create(null))
+  if (key in local) return
+
+  if (key === 'value' && canSetValueDirectly(el.tagName)) {
+    local[key] = [LocalPropType.VALUE, vModelGetValue(el as any)]
+  } else if (hasOwn(el, `$${key}`)) {
+    local[key] = [LocalPropType.ATTR, (el as any)[`$${key}`], isSVG]
+  } else if (el.hasAttribute(key)) {
+    local[key] = [LocalPropType.ATTR, el.getAttribute(key), isSVG]
+  } else if (key in el) {
+    local[key] = [LocalPropType.DOM_PROP, (el as any)[key], undefined, true]
+  } else {
+    local[key] = [LocalPropType.ATTR, null, isSVG]
+  }
+}
+
+function restoreLocalRootProp(el: TargetElement, key: string): boolean {
+  const local = el.$lprops
+  const entry = local && local[key]
+  if (!entry) return false
+
+  delete local[key]
+  if (entry[0] === LocalPropType.ATTR) {
+    setAttr(el, key, entry[1], entry[2])
+  } else if (entry[0] === LocalPropType.DOM_PROP) {
+    setDOMProp(el, key, entry[1], false, entry[2])
+    if (entry[3]) el.removeAttribute(key)
+  } else {
+    setValue(el, entry[1])
+  }
+  return true
 }
 
 export function setProp(el: any, key: string, value: any): void {
@@ -92,7 +175,7 @@ export function setAttr(
   value: any,
   isSVG: boolean = false,
 ): void {
-  if (shouldSkipFallthroughKey(el, key)) {
+  if (recordShadowedRootProp(el, key, LocalPropType.ATTR, value, isSVG)) {
     return
   }
 
@@ -142,7 +225,9 @@ export function setDOMProp(
   forceHydrate: boolean = false,
   attrName?: string,
 ): void {
-  if (shouldSkipFallthroughKey(el, key)) {
+  if (
+    recordShadowedRootProp(el, key, LocalPropType.DOM_PROP, value, attrName)
+  ) {
     return
   }
 
@@ -281,10 +366,25 @@ function setClassIncremental(
       el.classList.add(...nextList)
     }
     if (prev) {
+      const other = isApplyingFallthroughProps ? el.$clsi : el.$clsi$
+      let otherList: string[] | undefined
       for (const cls of prev.split(/\s+/)) {
-        if (!nextList.includes(cls)) el.classList.remove(cls)
+        if (
+          !nextList.includes(cls) &&
+          !(other && (otherList ||= other.split(/\s+/)).includes(cls))
+        ) {
+          el.classList.remove(cls)
+        }
       }
     }
+  }
+}
+
+// Record the classes the element carried before fallthrough first applied
+// (static template classes) so incremental removal keeps them.
+function seedLocalClass(el: TargetElement): void {
+  if (el.$clsi === undefined) {
+    el.$clsi = normalizeClass(el.getAttribute('class'))
   }
 }
 
@@ -351,21 +451,44 @@ export function setStyle(el: TargetElement, value: any): void {
   }
 }
 
-function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
+function setStyleIncremental(el: any, value: any): void {
   const cacheKey = `$styi${isApplyingFallthroughProps ? '$' : ''}`
+  const prev = el[cacheKey]
   const normalizedValue = isString(value)
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
+  el[cacheKey] = normalizedValue
 
   if (isHydrating && !isRecreatedNode(el)) {
     if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
       checkHydrationStyleMismatch(el, value, normalizedValue, true)
     }
-    el[cacheKey] = normalizedValue
     return
   }
 
-  patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+  if (!isApplyingFallthroughProps && el.$styi$ === undefined) {
+    patchStyle(el, prev, normalizedValue)
+    return
+  }
+
+  const next = normalizeStyle([el.$styi, el.$styi$]) as NormalizedStyle
+  patchStyle(el, el.$sty, (el.$sty = next))
+}
+
+// Record the styles the element carried before fallthrough first applied
+// (static template styles) so they participate in cache merging. The live
+// display value belongs to v-show when present, so seed the author's
+// display from the directive's own record instead.
+function seedLocalStyle(el: TargetElement): void {
+  if (el.$styi !== undefined) return
+  const style = el.getAttribute('style')
+  const parsed = style ? parseStringStyle(style) : undefined
+  if (parsed && vShowOriginalDisplay in el) {
+    const display = (el as any)[vShowOriginalDisplay]
+    if (display) parsed.display = display
+    else delete parsed.display
+  }
+  el.$sty = el.$styi = parsed
 }
 
 export function setValue(
@@ -373,7 +496,7 @@ export function setValue(
   value: any,
   forceHydrate: boolean = false,
 ): void {
-  if (shouldSkipFallthroughKey(el, 'value')) {
+  if (recordShadowedRootProp(el, 'value', LocalPropType.VALUE, value)) {
     return
   }
 
@@ -482,19 +605,34 @@ export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
   if (prevProps) {
     for (const key in prevProps) {
       if (!(key in props)) {
-        setDynamicProp(el, key, null, isSVG)
+        if (
+          !isApplyingFallthroughProps ||
+          !isRestorableDynamicProp(key) ||
+          !restoreLocalRootProp(el, key)
+        ) {
+          setDynamicProp(el, key, null, isSVG)
+        }
       }
     }
   }
 
   for (const key of Object.keys(props)) {
     const value = props[key]
+    const hadKey = prevProps && key in prevProps
     nextProps[key] = value
+    if (isApplyingFallthroughProps && !isHydrating && !hadKey) {
+      if (key === 'class') {
+        seedLocalClass(el)
+      } else if (key === 'style') {
+        seedLocalStyle(el)
+      } else if (isRestorableDynamicProp(key)) {
+        captureLocalRootProp(el, key, !!isSVG)
+      }
+    }
     // Events and objects can have stable identity with mutable internals, so
     // only skip unchanged primitive values.
     if (
-      prevProps &&
-      key in prevProps &&
+      hadKey &&
       !isOn(key) &&
       (value == null || typeof value !== 'object') &&
       Object.is(prevProps[key], value)
@@ -522,10 +660,24 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    if (shouldSkipFallthroughKey(el, key)) {
-      return
-    }
     const [event, options] = parseEventName(key)
+    if (el.$root) {
+      const instance = currentInstance as VaporComponentInstance | null
+      if (
+        isApplyingFallthroughProps ||
+        (instance && forwardsFallthroughAttrs(instance))
+      ) {
+        onRootBinding(
+          el,
+          key,
+          event,
+          value,
+          options,
+          isApplyingFallthroughProps,
+        )
+        return
+      }
+    }
     onBinding(el, event, value, options)
   } else if (
     // force hydrate v-bind with .prop modifiers
@@ -575,6 +727,8 @@ export function optimizePropertyLookup(): void {
   proto.$root = false
   proto.$clsFlags = undefined
   proto.$html = proto.$cls = proto.$sty = ''
+  proto.$dprops = proto.$dprops$ = proto.$lprops = proto.$evts = undefined
+  proto.$clsi = proto.$clsi$ = proto.$styi = proto.$styi$ = undefined
   // Initialize $txt to undefined instead of empty string to ensure setText()
   // properly updates the text node even when the value is empty string.
   // This prevents issues where setText(node, '') would be skipped because
