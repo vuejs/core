@@ -3274,4 +3274,84 @@ describe('vdom interop', () => {
     expect(expected).toEqual({ cached: false, fresh: true })
     expect(await run(true)).toEqual(expected)
   })
+
+  test('does not apply a nested forwarded outlet scopeId to receiver fallback', async () => {
+    const run = async (vapor: boolean) => {
+      const state = ref({ forward: true, content: true, alt: false })
+      const Receiver = defineComponent({
+        setup(_props, { slots }) {
+          return () =>
+            renderSlot(slots, 'default', {}, () => [
+              h(state.value.alt ? 'section' : 'i', 'fallback'),
+            ])
+        },
+      })
+      const source = vapor
+        ? `<template><components.Receiver><slot v-if="data.forward" /></components.Receiver></template>`
+        : `<script setup>const data = _data; const components = _components;</script><template><components.Receiver><slot v-if="data.forward" /></components.Receiver></template>`
+      const Forwarder = compile(source, state, { Receiver }, { vapor })
+      Forwarder.__scopeId = 'forwarder'
+      const root = document.createElement('div')
+      const slot = () => (state.value.content ? [h('p', 'content')] : [])
+      const app = createApp({
+        render() {
+          state.value.content
+          return h(Forwarder, null, { default: slot })
+        },
+      })
+      if (vapor) app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      const content = root.querySelector('p')!.hasAttribute('forwarder-s')
+      state.value = { forward: false, content: false, alt: false }
+      await nextTick()
+      const fallback = root.querySelector('i')!.hasAttribute('forwarder-s')
+      state.value = { forward: false, content: false, alt: true }
+      await nextTick()
+      const fresh = root.querySelector('section')!.hasAttribute('forwarder-s')
+      app.unmount()
+      return { content, fallback, fresh }
+    }
+
+    const expected = await run(false)
+    expect(expected).toEqual({
+      content: true,
+      fallback: false,
+      fresh: false,
+    })
+    expect(await run(true)).toEqual(expected)
+  })
+
+  test('does not apply a nested forwarded outlet scopeId to its static wrapper', () => {
+    const run = (vapor: boolean) => {
+      const Receiver = defineComponent({
+        setup(_props, { slots }) {
+          return () => renderSlot(slots, 'default')
+        },
+      })
+      const source = vapor
+        ? `<template><components.Receiver><div><slot /></div></components.Receiver></template>`
+        : `<script setup>const components = _components;</script><template><components.Receiver><div><slot /></div></components.Receiver></template>`
+      const Forwarder = compile(source, ref(), { Receiver }, { vapor })
+      Forwarder.__scopeId = 'forwarder'
+      const root = document.createElement('div')
+      const app = createApp({
+        render: () =>
+          h(Forwarder, null, { default: () => [h('p', 'content')] }),
+      })
+      if (vapor) app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      const result = {
+        wrapper: root.querySelector('div')!.hasAttribute('forwarder-s'),
+        content: root.querySelector('p')!.hasAttribute('forwarder-s'),
+      }
+      app.unmount()
+      return result
+    }
+
+    const expected = run(false)
+    expect(expected).toEqual({ wrapper: false, content: true })
+    expect(run(true)).toEqual(expected)
+  })
 })

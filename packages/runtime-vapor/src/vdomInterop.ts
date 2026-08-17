@@ -63,7 +63,7 @@ import {
   warn,
   withCtx,
 } from '@vue/runtime-dom'
-import { effectScope } from '@vue/reactivity'
+import { effectScope, getCurrentScope } from '@vue/reactivity'
 import {
   type LooseRawProps,
   type VaporComponent,
@@ -2693,8 +2693,13 @@ function renderVaporSlot(
       run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
       markDirty: markInteropSlotResolutionDirty,
       onContentInvalid,
-      addSlottedScopeId: source =>
-        setFragmentSlottedScopeIdSource(frag, source),
+      addSlottedScopeId: source => {
+        // VDOM stops forwarded slotScopeIds at a structural wrapper. Only an
+        // outlet created directly by this VaporSlot shares its render scope.
+        if (getCurrentScope() === vnode.vs!.scope) {
+          setFragmentSlottedScopeIdSource(frag, source)
+        }
+      },
     }
     slotResolutionState = {
       boundary: localFallbackBoundary,

@@ -334,6 +334,8 @@ export function createSlot(
   let isCustomElementSlot = false
   if (isRef(rawSlots._) && isInteropEnabled) {
     if (
+      slotRoot &&
+      !sharedFallback &&
       slottedScopeIdSource &&
       currentSlotBoundary &&
       currentSlotBoundary.addSlottedScopeId

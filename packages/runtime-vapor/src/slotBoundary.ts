@@ -19,8 +19,8 @@ export interface SlotBoundaryContext {
   // state machine (markSlotResolutionDirty).
   markDirty: (force?: boolean) => void
   onContentInvalid?: (() => void)[]
-  // Interop slot forwarding publishes the inner outlet's slotted id before a
-  // parent fallback mounts, matching VDOM's pre-patch slotScopeIds context.
+  // Direct interop slot forwarding publishes the inner outlet's slotted id
+  // before a parent fallback mounts.
   addSlottedScopeId?: (source: SlottedScopeIdSource) => void
 }
 
