@@ -1364,6 +1364,89 @@ describe('vModel', () => {
   })
 
   // #10505
+  it('multiple select should sync DOM when the Set model is mutated in the change handler', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: new Set(['foo']) as Set<string> }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                multiple: true,
+                // handler enforces "bar is never allowed" by mutating the
+                // Set it received, then assigning it
+                'onUpdate:modelValue': (v: Set<string>) => {
+                  v.delete('bar')
+                  this.value = v
+                },
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const foo = root.querySelector('option[value=foo]')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    // user picks both, handler strips 'bar' from the same Set object
+    foo.selected = true
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+
+    expect(Array.from(data.value)).toEqual(['foo'])
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(false)
+  })
+
+  // #10505
+  it('single select should sync DOM when the model is cleared in the change handler', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: 'foo' as string | null }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                value: null,
+                'onUpdate:modelValue': () => {
+                  this.value = null
+                },
+              },
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    const input = root.querySelector('select')
+    const bar = root.querySelector('option[value=bar]')
+    const data = root._vnode.component.data
+
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+
+    expect(data.value).toEqual(null)
+    expect(input.selectedIndex).toEqual(-1)
+  })
+
+  // #10505
   it('single select should sync DOM when the model is overridden in the change handler', async () => {
     const component = defineComponent({
       data() {

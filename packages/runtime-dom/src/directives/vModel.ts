@@ -246,11 +246,16 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
           ? new Set(selectedVal)
           : selectedVal
         : selectedVal[0]
-      el[assignKey](assignedValue)
-      // remember the value just assigned by the user interaction so that the
+      // remember the value assigned by the user interaction so that the
       // `updated` hook can detect when the model is later overridden (e.g.
-      // reset) inside the update handler. #10505
-      ;(el as any)._assignedValue = assignedValue
+      // reset) inside the update handler. Snapshot it BEFORE invoking the
+      // assigner, which may mutate the received value in place. #10505
+      ;(el as any)._assignedValue = isSet(assignedValue)
+        ? new Set(assignedValue)
+        : isArray(assignedValue)
+          ? assignedValue.slice()
+          : assignedValue
+      el[assignKey](assignedValue)
       el._assigning = true
       nextTick(() => {
         el._assigning = false
