@@ -1733,32 +1733,18 @@ describe('attribute fallthrough', () => {
     expect(host.innerHTML).toBe('<div>class prop = DROPPED</div>')
   })
 
-  it('should apply attrs added after an initially empty v-bind', async () => {
-    const attrs = ref<Record<string, string>>({})
-    const Child = compile(`<template><div id="child" /></template>`, ref(null))
-    const App = compile(
-      `<template><components.Child v-bind="data" /></template>`,
-      attrs,
-      { Child },
-    )
-
-    const { host } = define(App).render()
-    expect(host.innerHTML).toBe('<div id="child"></div>')
-
-    attrs.value = { id: 'parent' }
-    await nextTick()
-    expect(host.innerHTML).toBe('<div id="parent"></div>')
-  })
-
-  it('should restore the latest local value after an attr is removed', async () => {
+  it('should reconcile dynamic local and fallthrough attrs', async () => {
     const title = ref('child')
-    const attrs = ref<Record<string, string>>({
-      id: 'parent',
-      title: 'parent',
-      dir: 'rtl',
-    })
+    const attrs = ref<Record<string, any>>({})
     const Child = compile(
-      `<template><div id="child" :title="data" /></template>`,
+      `<template>
+        <div
+          id="child"
+          class="child"
+          style="color: red"
+          :title="data"
+        />
+      </template>`,
       title,
     )
     const App = compile(
@@ -1768,89 +1754,81 @@ describe('attribute fallthrough', () => {
     )
 
     const { host } = define(App).render()
-    expect(host.innerHTML).toBe(
-      '<div id="parent" title="parent" dir="rtl"></div>',
-    )
+    const el = host.firstElementChild as HTMLElement
+    expect(el.id).toBe('child')
+    expect(el.title).toBe('child')
+    expect(el.className).toBe('child')
+    expect(el.style.color).toBe('red')
+
+    attrs.value = {
+      id: 'parent',
+      title: 'parent',
+      class: 'child parent',
+      style: { color: 'blue' },
+    }
+    await nextTick()
+    expect(el.id).toBe('parent')
+    expect(el.title).toBe('parent')
 
     title.value = 'child-next'
     await nextTick()
-    expect(host.innerHTML).toBe(
-      '<div id="parent" title="parent" dir="rtl"></div>',
-    )
+    expect(el.title).toBe('parent')
 
     attrs.value = {}
     await nextTick()
-    expect(host.innerHTML).toBe('<div id="child" title="child-next"></div>')
+    expect(el.hasAttribute('id')).toBe(false)
+    expect(el.title).toBe('child-next')
+    expect(el.className).toBe('')
+    expect(el.style.color).toBe('')
   })
 
-  it('should apply local and fallthrough dynamic listeners', async () => {
-    const child = vi.fn()
-    const parent = vi.fn()
-    const parentListener = ref<any>(parent)
-    const Child = compile(
-      `<template><button v-bind="data" /></template>`,
-      ref({ onClick: child }),
-    )
+  it('should discard a local v-bind source removed while shadowed', async () => {
+    const local = ref<Record<string, string>>({ title: 'child' })
+    const attrs = ref<Record<string, string>>({ title: 'parent' })
+    const Child = compile(`<template><div v-bind="data" /></template>`, local)
     const App = compile(
-      `<template><components.Child :onClick="data" /></template>`,
-      parentListener,
+      `<template><components.Child v-bind="data" /></template>`,
+      attrs,
       { Child },
     )
 
     const { host } = define(App).render()
-    ;(host.firstElementChild as HTMLButtonElement).click()
-    expect(child).toHaveBeenCalledTimes(1)
-    expect(parent).toHaveBeenCalledTimes(1)
+    const el = host.firstElementChild as HTMLElement
+    expect(el.title).toBe('parent')
 
-    parentListener.value = undefined
+    local.value = {}
     await nextTick()
-    ;(host.firstElementChild as HTMLButtonElement).click()
-    expect(child).toHaveBeenCalledTimes(2)
-    expect(parent).toHaveBeenCalledTimes(1)
+    expect(el.title).toBe('parent')
+
+    attrs.value = {}
+    await nextTick()
+    expect(el.hasAttribute('title')).toBe(false)
   })
 
-  it('should preserve local listeners when $attrs is merged during render', () => {
-    const child = vi.fn()
-    const parent = vi.fn()
-    const Child = defineVaporComponent({
-      setup(_, { attrs }) {
-        const el = template('<button></button>', 1)() as Element
-        renderEffect(() => setDynamicProps(el, [{ onClick: child }, attrs]))
-        return el
-      },
-    })
-    const App = defineVaporComponent({
-      setup() {
-        return createComponent(Child, { onClick: () => parent })
-      },
-    })
-
-    const { host } = define(App).render()
-    ;(host.firstElementChild as HTMLButtonElement).click()
-
-    expect(child).toHaveBeenCalledTimes(1)
-    expect(parent).toHaveBeenCalledTimes(1)
-  })
-
-  it('should preserve listener order after a local listener update', async () => {
+  it('should merge and update local and fallthrough listeners', async () => {
     const calls: string[] = []
     const local = ref<{ onClick: (event: Event) => void }>({
-      onClick: () => {
-        calls.push('initial')
-      },
+      onClick: () => calls.push('local'),
     })
-    const parent = vi.fn(() => calls.push('parent'))
+    const parent = ref<((event: Event) => void) | undefined>(() =>
+      calls.push('parent'),
+    )
     const Child = compile(
       `<template><button v-bind="data" /></template>`,
       local,
     )
     const App = compile(
       `<template><components.Child :onClick="data" /></template>`,
-      ref(parent),
+      parent,
       { Child },
     )
 
     const { host } = define(App).render()
+    const button = host.firstElementChild as HTMLButtonElement
+    button.click()
+    expect(calls).toEqual(['local', 'parent'])
+
+    calls.length = 0
     local.value = {
       onClick(event: Event) {
         calls.push('local')
@@ -1858,10 +1836,14 @@ describe('attribute fallthrough', () => {
       },
     }
     await nextTick()
-    ;(host.firstElementChild as HTMLButtonElement).click()
-
+    button.click()
     expect(calls).toEqual(['local'])
-    expect(parent).not.toHaveBeenCalled()
+
+    calls.length = 0
+    parent.value = undefined
+    await nextTick()
+    button.click()
+    expect(calls).toEqual(['local'])
   })
 
   it('should preserve fallthrough once listeners across updates', async () => {
@@ -1889,24 +1871,13 @@ describe('attribute fallthrough', () => {
     expect(handler).toHaveBeenCalledTimes(1)
   })
 
-  it('should filter functional fallthrough on a component root', () => {
+  it('should filter and remove functional fallthrough on a component root', async () => {
+    const attrs = ref<Record<string, string>>({
+      id: 'blocked',
+      class: 'allowed',
+    })
     const Leaf = compile(`<template><div /></template>`, ref(null))
     const Functional = () => createComponent(Leaf, null, null, true)
-    const App = compile(
-      `<template>
-        <components.Functional id="blocked" class="allowed" />
-      </template>`,
-      ref(null),
-      { Functional },
-    )
-
-    const { host } = define(App).render()
-    expect(host.innerHTML).toBe('<div class="allowed"></div>')
-  })
-
-  it('should remove functional fallthrough when no whitelisted attrs remain', async () => {
-    const attrs = ref<Record<string, string>>({ class: 'parent' })
-    const Functional = () => template('<div></div>', 1)()
     const App = compile(
       `<template><components.Functional v-bind="data" /></template>`,
       attrs,
@@ -1914,7 +1885,7 @@ describe('attribute fallthrough', () => {
     )
 
     const { host } = define(App).render()
-    expect(host.innerHTML).toBe('<div class="parent"></div>')
+    expect(host.innerHTML).toBe('<div class="allowed"></div>')
 
     attrs.value = { id: 'blocked' }
     await nextTick()
@@ -1925,9 +1896,9 @@ describe('attribute fallthrough', () => {
 
   it('should preserve a class token still owned by fallthrough attrs', async () => {
     const childClass = ref('shared')
-    const parentClass = ref('static shared')
+    const parentClass = ref('shared parent')
     const Child = compile(
-      `<template><div class="static" :class="data" /></template>`,
+      `<template><div :class="data" /></template>`,
       childClass,
     )
     const App = compile(
@@ -1938,51 +1909,23 @@ describe('attribute fallthrough', () => {
 
     const { host } = define(App).render()
     const el = host.firstElementChild as HTMLElement
-    expect(el.className).toBe('static shared')
+    expect(el.className).toBe('shared parent')
 
     childClass.value = ''
     await nextTick()
-    expect(el.className).toBe('static shared')
+    expect(el.className).toBe('shared parent')
 
     parentClass.value = ''
     await nextTick()
-    expect(el.className).toBe('static')
+    expect(el.className).toBe('')
   })
 
   it('should preserve fallthrough style precedence across local updates', async () => {
-    const childStyle = ref<Record<string, string>>({ color: 'red' })
+    const childStyle = shallowRef({ color: 'red' })
     const parentStyle = ref<Record<string, string>>({
       color: 'blue',
       background: 'blue',
     })
-    const Child = compile(
-      `<template><div style="background: red" :style="data" /></template>`,
-      childStyle,
-    )
-    const App = compile(
-      `<template><components.Child :style="data" /></template>`,
-      parentStyle,
-      { Child },
-    )
-
-    const { host } = define(App).render()
-    const el = host.firstElementChild as HTMLElement
-    expect(el.style.color).toBe('blue')
-    expect(el.style.background).toBe('blue')
-
-    childStyle.value = { color: 'green' }
-    await nextTick()
-    expect(el.style.color).toBe('blue')
-
-    parentStyle.value = {}
-    await nextTick()
-    expect(el.style.color).toBe('green')
-    expect(el.style.background).toBe('red')
-  })
-
-  it('should update fallthrough style after in-place local mutations', async () => {
-    const childStyle = shallowRef({ color: 'red' })
-    const parentStyle = ref({ background: 'blue' })
     const Child = compile(
       `<template><div :style="data" /></template>`,
       childStyle,
@@ -1995,38 +1938,17 @@ describe('attribute fallthrough', () => {
 
     const { host } = define(App).render()
     const el = host.firstElementChild as HTMLElement
-    expect(el.style.color).toBe('red')
+    expect(el.style.color).toBe('blue')
     expect(el.style.background).toBe('blue')
 
     childStyle.value.color = 'green'
     triggerRef(childStyle)
     await nextTick()
-    expect(el.style.color).toBe('green')
-    expect(el.style.background).toBe('blue')
-  })
-
-  it('should ignore v-show display state when seeding fallthrough style caches', async () => {
-    const visible = ref(false)
-    const Child = compile(`<template><div v-show="data" /></template>`, visible)
-    const attrs = ref<Record<string, any>>({ style: { color: 'red' } })
-    const App = compile(
-      `<template><components.Child v-bind="data" /></template>`,
-      attrs,
-      { Child },
-    )
-
-    const { host } = define(App).render()
-    const el = host.firstElementChild as HTMLElement
-    expect(el.style.display).toBe('none')
-
-    visible.value = true
-    await nextTick()
-    expect(el.style.display).toBe('')
-    expect(el.style.color).toBe('red')
-
-    attrs.value = { style: { color: 'blue' } }
-    await nextTick()
-    expect(el.style.display).toBe('')
     expect(el.style.color).toBe('blue')
+
+    parentStyle.value = {}
+    await nextTick()
+    expect(el.style.color).toBe('green')
+    expect(el.style.background).toBe('')
   })
 })

@@ -631,7 +631,9 @@ export function setupComponent(
 
 export let isApplyingFallthroughProps = false
 
-function shouldUseFunctionalFallthrough(component: VaporComponent): boolean {
+export function shouldUseFunctionalFallthrough(
+  component: VaporComponent,
+): boolean {
   return (
     isFunction(component) &&
     !(isTransitionEnabled && isVaporTransition(component))

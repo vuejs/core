@@ -20,7 +20,8 @@ type RootEventBinding = [
 ]
 
 type RootEventElement = Element & {
-  // Local and inherited root handlers sharing one stable native listener.
+  // Lazily allocated only when dynamic local/fallthrough root handlers share
+  // one stable native listener.
   $evts?: Record<string, RootEventBinding>
 }
 
