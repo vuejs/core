@@ -15,6 +15,7 @@ import {
 import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { BindingTypes } from '@vue/compiler-dom'
 import {
+  VaporKeepAlive,
   VaporTeleport,
   VaporTransition,
   createComponent,
@@ -3195,5 +3196,82 @@ describe('vdom interop', () => {
 
     expect(await run(false)).toBe(true)
     expect(await run(true)).toBe(true)
+  })
+
+  test('matches VDOM slotted scopeId when reactivating a cached component', async () => {
+    const run = async (vapor: boolean) => {
+      const active = ref(true)
+      const showAlt = ref(false)
+      const noSlotted = ref(true)
+      const source = (template: string) =>
+        vapor
+          ? template
+          : `<script setup>const data = _data; const components = _components;</script>${template}`
+      const Child = compile(
+        source(
+          `<template><section v-if="data">fresh</section><div v-else>cached</div></template>`,
+        ),
+        showAlt,
+        {},
+        { vapor },
+      )
+      const Other = compile(
+        source(`<template><p>other</p></template>`),
+        ref(),
+        {},
+        {
+          vapor,
+        },
+      )
+      const SlotOwner = defineComponent({
+        __scopeId: 'owner',
+        setup(_props, { slots }) {
+          return () =>
+            renderSlot(slots, 'default', {}, undefined, noSlotted.value)
+        },
+      })
+      const Parent = compile(
+        source(
+          `<template>
+            <components.SlotOwner>
+              <components.KeepAliveImpl>
+                <components.Child v-if="data" />
+                <components.Other v-else />
+              </components.KeepAliveImpl>
+            </components.SlotOwner>
+          </template>`,
+        ),
+        active,
+        {
+          SlotOwner,
+          KeepAliveImpl: vapor ? VaporKeepAlive : KeepAlive,
+          Child,
+          Other,
+        },
+        { vapor },
+      )
+      const root = document.createElement('div')
+      const app = vapor ? createVaporApp(Parent) : createApp(Parent)
+      if (vapor) app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      active.value = false
+      await nextTick()
+      noSlotted.value = false
+      await nextTick()
+      active.value = true
+      await nextTick()
+      const cached = root.querySelector('div')!.hasAttribute('owner-s')
+
+      showAlt.value = true
+      await nextTick()
+      const fresh = root.querySelector('section')!.hasAttribute('owner-s')
+      app.unmount()
+      return { cached, fresh }
+    }
+
+    const expected = await run(false)
+    expect(expected).toEqual({ cached: false, fresh: true })
+    expect(await run(true)).toEqual(expected)
   })
 })

@@ -16466,6 +16466,56 @@ describe('scopeId hydration writes', () => {
       container.remove()
     }
   })
+
+  test('uses the latest slotted scopeId for teleport children created after hydration', async () => {
+    const run = async (vapor: boolean) => {
+      const show = ref(false)
+      const noSlotted = ref(false)
+      const targetId = `hydration-teleport-scope-${vapor ? 'vapor' : 'vdom'}`
+      const SlotOwner = defineComponent({
+        __scopeId: 'owner',
+        setup(_props, { slots }) {
+          return () =>
+            renderSlot(slots, 'default', {}, undefined, noSlotted.value)
+        },
+      })
+      const code =
+        `<script setup>const data = _data; const components = _components;</script>` +
+        `<template><components.SlotOwner><Teleport to="#${targetId}"><span v-if="data">late</span><i v-else>initial</i></Teleport></components.SlotOwner></template>`
+      const server = compile(code, show, { SlotOwner }, { vapor, ssr: true })
+      const ssrContext: Record<string, any> = {}
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(server).use(runtimeVapor.vaporInteropPlugin),
+        ssrContext,
+      )
+      const target = document.createElement('div')
+      target.id = targetId
+      target.innerHTML = ssrContext.teleports[`#${targetId}`]
+      document.body.appendChild(target)
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const client = compile(code, show, { SlotOwner }, { vapor })
+      const app = runtimeDom
+        .createSSRApp(client)
+        .use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+
+      noSlotted.value = true
+      await nextTick()
+      show.value = true
+      await nextTick()
+      const result = target.querySelector('span')!.hasAttribute('owner-s')
+      app.unmount()
+      container.remove()
+      target.remove()
+      return result
+    }
+
+    const expected = await run(false)
+    expect(expected).toBe(false)
+    expect(await run(true)).toBe(expected)
+  })
 })
 
 describe('vdom interop template unwrapping', () => {

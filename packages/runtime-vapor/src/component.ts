@@ -87,7 +87,6 @@ import {
   type StaticSlots,
   currentSlottedScopeIdSource,
   dynamicSlotsProxyHandlers,
-  getCurrentSlottedScopeId,
   getSlot,
   inOnceSlot,
   normalizeRawSlots,
@@ -150,10 +149,10 @@ import {
   type ScopeId,
   applyComponentRootScopeId,
   applyHydratingRootScopeId,
-  applySlottedScopeId,
   getCurrentScopeId,
   getHydratingScopeIdOwner,
   setElementScopeId,
+  syncComponentRootScopeId,
 } from './scopeId'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
@@ -350,7 +349,8 @@ export function createComponent(
       if (cached) {
         if (isVaporComponent(cached)) {
           cached.slottedScopeIdSource = currentSlottedScopeIdSource || undefined
-          applyComponentRootScopeId(cached)
+          // Cached DOM keeps its mount-time ids; only future roots are rewired.
+          syncComponentRootScopeId(cached)
         }
         // @ts-expect-error async wrappers cache their fragment
         return cached
@@ -400,10 +400,6 @@ export function createComponent(
           insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
         }
       } else {
-        const slottedScopeId = getCurrentSlottedScopeId()
-        if (slottedScopeId) {
-          applySlottedScopeId(frag, slottedScopeId)
-        }
         frag.hydrate()
       }
 

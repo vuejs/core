@@ -442,18 +442,34 @@ function updateComponentSlottedScopeId(
   )
 }
 
-// A pending VDOM root (notably Suspense) already owns VNodes for branches that
-// may mount later. Republish the live component context without rewriting an
-// existing element root or descending into component internals.
-function syncComponentRootScopeId(instance: VaporComponentInstance): void {
-  const block = instance.block
-  const root =
-    block instanceof Element ? block : resolveSingleScopeIdRoot(block)
-  if (isVaporComponent(root)) {
-    syncComponentRootScopeId(root)
-  } else if (isInteropEnabled && isInteropFragment(root)) {
-    applyInteropFragmentScopeIds(root, instance)
+// Refreshes future-root wiring without rewriting an existing element root.
+// Each level first confirms the effective single root, then registers its
+// dynamic path — the same two-pass rule as applyRootScopeId.
+export function syncComponentRootScopeId(
+  instance: VaporComponentInstance,
+): void {
+  let componentRoot = instance
+  let root: ScopeIdRootCandidate | undefined
+  while (true) {
+    const block = componentRoot.block
+    root = block instanceof Element ? block : resolveSingleScopeIdRoot(block)
+    if (!root) return
+    if (isArray(block) || isFragment(block)) {
+      resolveSingleScopeIdRoot(block, bindFragmentScopeIdOwner, componentRoot)
+    }
+    if (!isVaporComponent(root)) break
+    root.inheritsScopeId = true
+    componentRoot = root
   }
+  if (
+    root === DYNAMIC_ROOT_PLACEHOLDER ||
+    root instanceof Element ||
+    !isInteropEnabled
+  ) {
+    return
+  }
+  bindFragmentScopeIdOwner(root, componentRoot)
+  root.syncScopeId()
 }
 
 function updateBlockSlottedScopeId(
@@ -548,7 +564,11 @@ function applyRootScopeId(
   } else if (isVaporComponent(root)) {
     root.inheritsScopeId = true
     if (root.isMounted) {
-      applyRootScopeId(root.block, root)
+      if (root.shapeFlag! & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+        syncComponentRootScopeId(root)
+      } else {
+        applyRootScopeId(root.block, root)
+      }
     }
   } else if (isInteropEnabled) {
     applyInteropFragmentScopeIds(root, instance)
@@ -612,28 +632,7 @@ export function setInteropComponentScopeId(
   if (isSameScopeIds(instance.scopeId, scopeIds)) return
   instance.scopeId = scopeIds
   if (!instance.isMounted) return
-
-  // Wire the whole root chain without touching mounted DOM. Each level first
-  // confirms the effective single root, then registers its dynamic path — the
-  // same two-pass rule as applyRootScopeId.
-  let componentRoot = instance
-  let root: ScopeIdRootCandidate | undefined
-  while (true) {
-    const block = componentRoot.block
-    root = block instanceof Element ? block : resolveSingleScopeIdRoot(block)
-    if (!root) return
-    if (isArray(block) || isFragment(block)) {
-      resolveSingleScopeIdRoot(block, bindFragmentScopeIdOwner, componentRoot)
-    }
-    if (!isVaporComponent(root)) break
-    root.inheritsScopeId = true
-    componentRoot = root
-  }
-  if (root === DYNAMIC_ROOT_PLACEHOLDER || root instanceof Element) {
-    return
-  }
-  bindFragmentScopeIdOwner(root, componentRoot)
-  root.syncScopeId()
+  syncComponentRootScopeId(instance)
 }
 
 export function getCurrentScopeId(): string | undefined {
