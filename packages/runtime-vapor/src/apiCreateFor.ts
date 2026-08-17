@@ -31,7 +31,9 @@ import {
   type DynamicSlot,
   type VaporSlot,
   currentSlotOwner,
+  currentSlottedScopeIdSource,
   setCurrentSlotOwner,
+  setCurrentSlottedScopeIdSource,
 } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '@vue/shared'
@@ -150,6 +152,11 @@ export const createFor = (
 
   const slotOwner = currentSlotOwner
   const slotBoundary = currentSlotBoundary
+  const slottedScopeIdSource = currentSlottedScopeIdSource
+  if (slottedScopeIdSource) {
+    frag.slottedScopeIdSource = slottedScopeIdSource
+    frag.applyScopeId = slottedScopeIdSource.applyScopeId
+  }
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -644,6 +651,11 @@ export const createFor = (
     renderEffect(() => {
       if (!isMounted) return renderList()
       const prevOwner = setCurrentSlotOwner(slotOwner)
+      const restoreSlottedScopeIdSource =
+        currentSlottedScopeIdSource !== slottedScopeIdSource
+      const prevSlottedScopeIdSource = restoreSlottedScopeIdSource
+        ? setCurrentSlottedScopeIdSource(slottedScopeIdSource)
+        : null
       const restoreBoundary = currentSlotBoundary !== slotBoundary
       const prevBoundary = restoreBoundary
         ? setCurrentSlotBoundary(slotBoundary)
@@ -652,6 +664,9 @@ export const createFor = (
         renderList()
       } finally {
         if (restoreBoundary) setCurrentSlotBoundary(prevBoundary)
+        if (restoreSlottedScopeIdSource) {
+          setCurrentSlottedScopeIdSource(prevSlottedScopeIdSource)
+        }
         setCurrentSlotOwner(prevOwner)
       }
     })

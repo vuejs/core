@@ -83,13 +83,16 @@ import { setDynamicProps } from './dom/prop'
 import {
   type LooseRawSlots,
   type RawSlots,
+  type SlottedScopeIdSource,
   type StaticSlots,
-  currentSlotScopeIds,
+  currentSlottedScopeIdSource,
   dynamicSlotsProxyHandlers,
+  getCurrentSlottedScopeId,
   getSlot,
   inOnceSlot,
   normalizeRawSlots,
   setCurrentSlotOwner,
+  setCurrentSlottedScopeIdSource,
   withOnceSlot,
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
@@ -344,8 +347,14 @@ export function createComponent(
       const ctx = (currentInstance as KeepAliveInstance).ctx
       keepAliveCtx = ctx
       const cached = ctx.getCachedComponent(component)
-      // @ts-expect-error
-      if (cached) return cached
+      if (cached) {
+        if (isVaporComponent(cached)) {
+          cached.slottedScopeIdSource = currentSlottedScopeIdSource || undefined
+          applyComponentRootScopeId(cached)
+        }
+        // @ts-expect-error async wrappers cache their fragment
+        return cached
+      }
     }
 
     // vdom interop enabled and component is not an explicit vapor component
@@ -391,8 +400,9 @@ export function createComponent(
           insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
         }
       } else {
-        if (currentSlotScopeIds) {
-          applySlottedScopeId(frag, currentSlotScopeIds)
+        const slottedScopeId = getCurrentSlottedScopeId()
+        if (slottedScopeId) {
+          applySlottedScopeId(frag, slottedScopeId)
         }
         frag.hydrate()
       }
@@ -441,6 +451,10 @@ export function createComponent(
       once,
       ce,
     )
+    const slottedScopeIdSource = currentSlottedScopeIdSource
+    if (slottedScopeIdSource) {
+      instance.slottedScopeIdSource = slottedScopeIdSource
+    }
     // An explicitly passed initialScopeId (the interop mount's vnode-derived
     // ids, possibly null) replaces the ambient scope id captured by the
     // constructor. Managed mounts without it (e.g. app hydration) keep the
@@ -460,6 +474,10 @@ export function createComponent(
       if (keepAliveCtx) keepAliveCtx.processShapeFlag(instance)
     }
 
+    // A slot context applies to this component's effective root, not its
+    // render internals. The instance captured it above; clear the ambient value
+    // while creating the child block.
+    if (slottedScopeIdSource) setCurrentSlottedScopeIdSource(null)
     // reset currentSlotOwner to null to avoid affecting the child components
     const prevSlotOwner = setCurrentSlotOwner(null)
     let hasWarningContext = false
@@ -535,6 +553,9 @@ export function createComponent(
         }
       }
       setCurrentSlotOwner(prevSlotOwner)
+      if (slottedScopeIdSource) {
+        setCurrentSlottedScopeIdSource(slottedScopeIdSource)
+      }
       if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && hasParentSuspense) {
         setParentSuspense(prevSuspense)
         hasParentSuspense = false
@@ -776,6 +797,7 @@ export class VaporComponentInstance<
   slots: Slots
 
   scopeId?: ScopeId
+  slottedScopeIdSource?: SlottedScopeIdSource
   inheritsScopeId?: true
 
   // to hold vnode props / slots in vdom interop mode
@@ -955,7 +977,6 @@ export class VaporComponentInstance<
     ) as Slots
 
     this.scopeId = getCurrentScopeId()
-
     // apply custom element special handling
     if (ce) {
       ce(this)

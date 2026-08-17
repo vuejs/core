@@ -2985,4 +2985,215 @@ describe('vdom interop', () => {
     expect(await run(false)).toBe(true)
     expect(await run(true)).toBe(true)
   })
+
+  test('matches VDOM slotted scopeId for a late branch inside a static element', async () => {
+    const run = async (vapor: boolean) => {
+      const show = ref(false)
+      const source = (template: string) =>
+        vapor
+          ? template
+          : `<script setup>const data = _data; const components = _components;</script>${template}`
+      const Receiver = compile(
+        source(`<template><slot /></template>`),
+        show,
+        {},
+        { vapor },
+      )
+      Receiver.__scopeId = 'receiver'
+      const Parent = compile(
+        source(
+          `<template><components.Receiver><div><span v-if="data">late</span></div></components.Receiver></template>`,
+        ),
+        show,
+        { Receiver },
+        { vapor },
+      )
+      const root = document.createElement('div')
+      ;(vapor ? createVaporApp(Parent) : createApp(Parent)).mount(root)
+
+      show.value = true
+      await nextTick()
+      return root.querySelector('span')!.hasAttribute('receiver-s')
+    }
+
+    expect(await run(false)).toBe(true)
+    expect(await run(true)).toBe(true)
+  })
+
+  test('matches VDOM slotted scopeId for a component future root inside a static element', async () => {
+    const run = async (vapor: boolean) => {
+      const show = ref(false)
+      const source = (template: string) =>
+        vapor
+          ? template
+          : `<script setup>const data = _data; const components = _components;</script>${template}`
+      const Receiver = compile(
+        source(`<template><slot /></template>`),
+        show,
+        {},
+        { vapor },
+      )
+      Receiver.__scopeId = 'receiver'
+      const Inner = compile(
+        source(
+          `<template><span v-if="data"><u>late</u></span><i v-else>initial</i></template>`,
+        ),
+        show,
+        {},
+        { vapor },
+      )
+      const Parent = compile(
+        source(
+          `<template><components.Receiver><div><components.Inner /></div></components.Receiver></template>`,
+        ),
+        show,
+        { Receiver, Inner },
+        { vapor },
+      )
+      const root = document.createElement('div')
+      ;(vapor ? createVaporApp(Parent) : createApp(Parent)).mount(root)
+
+      show.value = true
+      await nextTick()
+      return {
+        root: root.querySelector('span')!.hasAttribute('receiver-s'),
+        child: root.querySelector('u')!.hasAttribute('receiver-s'),
+      }
+    }
+
+    expect(await run(false)).toEqual({ root: true, child: false })
+    expect(await run(true)).toEqual({ root: true, child: false })
+  })
+
+  test('matches VDOM slotted scopeId for a late v-for item inside a static element', async () => {
+    const run = async (vapor: boolean) => {
+      const count = ref(0)
+      const source = (template: string) =>
+        vapor
+          ? template
+          : `<script setup>const data = _data; const components = _components;</script>${template}`
+      const Receiver = compile(
+        source(`<template><slot /></template>`),
+        count,
+        {},
+        { vapor },
+      )
+      Receiver.__scopeId = 'receiver'
+      const Parent = compile(
+        source(
+          `<template><components.Receiver><div><span v-for="i in data">late</span></div></components.Receiver></template>`,
+        ),
+        count,
+        { Receiver },
+        { vapor },
+      )
+      const root = document.createElement('div')
+      ;(vapor ? createVaporApp(Parent) : createApp(Parent)).mount(root)
+
+      count.value++
+      await nextTick()
+      return root.querySelector('span')!.hasAttribute('receiver-s')
+    }
+
+    expect(await run(false)).toBe(true)
+    expect(await run(true)).toBe(true)
+  })
+
+  test.each([
+    [true, false],
+    [false, true],
+  ])(
+    'matches VDOM slotted scopeId after a kept slot context changes from %s to %s',
+    async (initialNoSlotted, nextNoSlotted) => {
+      const run = async (vapor: boolean) => {
+        const show = ref(false)
+        const noSlotted = ref(initialNoSlotted)
+        const SlotOwner = defineComponent({
+          __scopeId: 'owner',
+          setup(_props, { slots }) {
+            return () =>
+              h(
+                'div',
+                null,
+                renderSlot(
+                  slots,
+                  'default',
+                  {},
+                  () => [h('i', 'fallback')],
+                  noSlotted.value,
+                ),
+              )
+          },
+        })
+        const source = vapor
+          ? `<template><components.SlotOwner><section v-if="data">content</section></components.SlotOwner></template>`
+          : `<script setup>const data = _data; const components = _components;</script><template><components.SlotOwner><section v-if="data">content</section></components.SlotOwner></template>`
+        const Parent = compile(source, show, { SlotOwner }, { vapor })
+        const root = document.createElement('div')
+        const app = vapor ? createVaporApp(Parent) : createApp(Parent)
+        if (vapor) app.use(vaporInteropPlugin)
+        app.mount(root)
+
+        noSlotted.value = nextNoSlotted
+        await nextTick()
+        show.value = true
+        await nextTick()
+        const result = root.querySelector('section')!.hasAttribute('owner-s')
+        app.unmount()
+        return result
+      }
+
+      const expected = await run(false)
+      expect(expected).toBe(!nextNoSlotted)
+      expect(await run(true)).toBe(expected)
+    },
+  )
+
+  test('keeps equal slotted scopeId contributions from independent slot outlets', async () => {
+    const run = async (vapor: boolean) => {
+      const noSlotted = ref(false)
+      const showAlt = ref(false)
+      const Outer = defineComponent({
+        __scopeId: 'same',
+        setup(_props, { slots }) {
+          return () =>
+            h(
+              'div',
+              null,
+              renderSlot(slots, 'default', {}, undefined, noSlotted.value),
+            )
+        },
+      })
+      const source = vapor
+        ? `<template><components.Outer><slot /></components.Outer></template>`
+        : `<script setup>const components = _components;</script><template><components.Outer><slot /></components.Outer></template>`
+      const Forwarder = compile(source, ref(null), { Outer }, { vapor })
+      Forwarder.__scopeId = 'same'
+      const stableSlot = () =>
+        showAlt.value ? [h('span', 'new')] : [h('p', 'old')]
+      const App = defineComponent({
+        setup() {
+          return () => {
+            showAlt.value
+            return h(Forwarder as any, null, { default: stableSlot })
+          }
+        },
+      })
+      const root = document.createElement('div')
+      const app = createApp(App)
+      if (vapor) app.use(vaporInteropPlugin)
+      app.mount(root)
+
+      noSlotted.value = true
+      await nextTick()
+      showAlt.value = true
+      await nextTick()
+      const result = root.querySelector('span')!.hasAttribute('same-s')
+      app.unmount()
+      return result
+    }
+
+    expect(await run(false)).toBe(true)
+    expect(await run(true)).toBe(true)
+  })
 })

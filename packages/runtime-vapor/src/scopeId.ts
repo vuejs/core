@@ -11,7 +11,11 @@ import {
 import type { Block } from './block'
 import { FOR_ITEM, SLOT } from './fragmentFlags'
 import { isInteropEnabled } from './vdomInteropState'
-import { currentSlotOwner, getScopeOwner } from './componentSlots'
+import {
+  type SlottedScopeIdSource,
+  currentSlotOwner,
+  getScopeOwner,
+} from './componentSlots'
 import {
   isHydrating,
   isRecreatedNode,
@@ -94,9 +98,43 @@ function applyFragmentRootScopeId(this: VaporFragment): true | undefined {
 
 function applyFragmentScopeId(this: VaporFragment, block: Block): void {
   if (applyFragmentRootScopeId.call(this)) return
-  if (this.slottedScopeId) {
-    applySlottedScopeId(block, this.slottedScopeId)
+  const scopeIds = this.slottedScopeId
+  if (scopeIds) {
+    applySlottedScopeId(block, scopeIds)
   }
+  const source = this.slottedScopeIdSource
+  if (source) {
+    applyCurrentSlottedScopeId(block, getSlottedScopeId(source))
+  }
+}
+
+export function getSlottedScopeId(
+  source: SlottedScopeIdSource,
+): readonly string[] | null {
+  const parent = source.parent
+  return mergeScopeIds(
+    parent ? getSlottedScopeId(parent) : null,
+    source.value,
+  ) as readonly string[] | null
+}
+
+export function createSlottedScopeIdSource(
+  value: ScopeId,
+  parent: SlottedScopeIdSource | null,
+): SlottedScopeIdSource {
+  return {
+    value: value ? (isString(value) ? [value] : value) : null,
+    parent,
+    applyScopeId: applyFragmentScopeId,
+  }
+}
+
+export function setFragmentSlottedScopeIdSource(
+  fragment: VaporFragment,
+  source: SlottedScopeIdSource,
+): void {
+  fragment.slottedScopeIdSource = source
+  fragment.applyScopeId = source.applyScopeId
 }
 
 function bindFragmentScopeIdOwner(
@@ -199,6 +237,14 @@ export function mergeComponentScopeIds(
   while (current) {
     const previous = scopeIds
     scopeIds = mergeScopeIdsInternal(scopeIds, current.scopeId, canMutate)
+    const source = current.slottedScopeIdSource
+    if (source) {
+      scopeIds = mergeScopeIdsInternal(
+        scopeIds,
+        getSlottedScopeId(source),
+        canMutate || scopeIds !== previous,
+      )
+    }
     if (previous && scopeIds !== previous) canMutate = true
     current = getScopeIdParent(current)
   }
@@ -269,6 +315,19 @@ function setElementSlottedScopeId(
     const next = child.nextElementSibling
     setElementSlottedScopeId(child, scopeIds)
     child = next
+  }
+}
+
+function applyCurrentSlottedScopeId(block: Block, scopeIds: ScopeId): void {
+  if (!scopeIds) return
+  if (block instanceof Element) {
+    setElementSlottedScopeId(block, scopeIds, true)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      applyCurrentSlottedScopeId(block[i], scopeIds)
+    }
+  } else if (isFragment(block)) {
+    applyCurrentSlottedScopeId(block.nodes, scopeIds)
   }
 }
 
@@ -373,10 +432,28 @@ function updateComponentSlottedScopeId(
   prev: ScopeId,
   next: ScopeId,
 ): void {
+  if (instance.slottedScopeIdSource) {
+    syncComponentRootScopeId(instance)
+    return
+  }
   setInteropComponentScopeId(
     instance,
     replaceScopeId(instance.scopeId, prev, next),
   )
+}
+
+// A pending VDOM root (notably Suspense) already owns VNodes for branches that
+// may mount later. Republish the live component context without rewriting an
+// existing element root or descending into component internals.
+function syncComponentRootScopeId(instance: VaporComponentInstance): void {
+  const block = instance.block
+  const root =
+    block instanceof Element ? block : resolveSingleScopeIdRoot(block)
+  if (isVaporComponent(root)) {
+    syncComponentRootScopeId(root)
+  } else if (isInteropEnabled && isInteropFragment(root)) {
+    applyInteropFragmentScopeIds(root, instance)
+  }
 }
 
 function updateBlockSlottedScopeId(
@@ -395,10 +472,12 @@ function updateBlockSlottedScopeId(
       updateBlockSlottedScopeId(block.nodes, prev, next)
       return
     }
-    const replaced = replaceScopeId(block.slottedScopeId, prev, next)
-    if (!isSameScopeIds(replaced, block.slottedScopeId)) {
-      block.slottedScopeId = replaced
-      block.applyScopeId = applyFragmentScopeId
+    if (!block.slottedScopeIdSource) {
+      const replaced = replaceScopeId(block.slottedScopeId, prev, next)
+      if (!isSameScopeIds(replaced, block.slottedScopeId)) {
+        block.slottedScopeId = replaced
+        block.applyScopeId = applyFragmentScopeId
+      }
     }
     if (isInteropEnabled && isInteropFragment(block)) {
       const vnode = block.vnode
@@ -443,6 +522,10 @@ function setComponentRootScopeId(
   let current: VaporComponentInstance | undefined = instance
   while (current) {
     setElementScopeId(element, current.scopeId)
+    const source = current.slottedScopeIdSource
+    if (source) {
+      setElementScopeId(element, getSlottedScopeId(source))
+    }
     current = getScopeIdParent(current)
   }
 }
@@ -484,7 +567,9 @@ export function getHydratingScopeIdOwner(
     isSingleRoot &&
     !currentSlotOwner &&
     isVaporComponent(currentInstance) &&
-    (currentInstance.scopeId || currentInstance.inheritsScopeId)
+    (currentInstance.scopeId ||
+      currentInstance.slottedScopeIdSource ||
+      currentInstance.inheritsScopeId)
   ) {
     return currentInstance
   }
@@ -510,7 +595,11 @@ export function applyComponentRootScopeId(
 ): void {
   // Interop mounts use null for an empty contribution so future vnode updates
   // still have root wiring; pure Vapor instances without ids use undefined.
-  if (instance.scopeId === undefined && !instance.inheritsScopeId) {
+  if (
+    instance.scopeId === undefined &&
+    !instance.slottedScopeIdSource &&
+    !instance.inheritsScopeId
+  ) {
     return
   }
   applyRootScopeId(instance.block, instance)

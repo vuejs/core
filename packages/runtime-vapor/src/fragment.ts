@@ -36,7 +36,13 @@ import {
   locateHydrationNode,
   markHydrationAnchor,
 } from './dom/hydration'
-import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
+import {
+  type SlottedScopeIdSource,
+  currentSlotOwner,
+  currentSlottedScopeIdSource,
+  setCurrentSlotOwner,
+  setCurrentSlottedScopeIdSource,
+} from './componentSlots'
 import {
   type SlotBoundaryContext,
   currentSlotBoundary,
@@ -111,6 +117,7 @@ export class VaporFragment<
   applyScopeId?: (this: VaporFragment, block: Block) => void
   scopeOwner?: VaporComponentInstance
   slottedScopeId?: VaporComponentInstance['scopeId']
+  slottedScopeIdSource?: SlottedScopeIdSource
   // Optional protocol member: a block the fragment currently holds outside
   // `nodes` that scope id application must still reach (see SlotFragment).
   parkedContent?(): Block | undefined
@@ -152,6 +159,11 @@ export class RenderContextFragment<
 
   constructor(nodes: T, flags: number = FRAGMENT) {
     super(nodes, flags)
+    const source = currentSlottedScopeIdSource
+    if (source) {
+      this.slottedScopeIdSource = source
+      this.applyScopeId = source.applyScopeId
+    }
     if (isKeepAliveEnabled) {
       this.keepAliveCtx = getKeepAliveContext(currentInstance)
     }
@@ -181,15 +193,35 @@ export function runWithFragmentCtxOnly<R>(
   fragment: RenderContextFragment,
   fn: () => R,
 ): R {
+  const slottedScopeIdSource = fragment.slottedScopeIdSource
+  if (!slottedScopeIdSource) {
+    if (
+      currentSlotOwner === fragment.slotOwner &&
+      currentSlotBoundary === fragment.slotBoundary
+    ) {
+      return fn()
+    }
+    const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
+    const prevBoundary = setCurrentSlotBoundary(fragment.slotBoundary)
+    try {
+      return fn()
+    } finally {
+      setCurrentSlotBoundary(prevBoundary)
+      setCurrentSlotOwner(prevSlotOwner)
+    }
+  }
   // When ambient fragment context already matches, no ambient state needs
   // restoring. This keeps ordinary branch renders on the cheap path.
   if (
     currentSlotOwner === fragment.slotOwner &&
-    currentSlotBoundary === fragment.slotBoundary
+    currentSlotBoundary === fragment.slotBoundary &&
+    currentSlottedScopeIdSource === slottedScopeIdSource
   ) {
     return fn()
   }
 
+  const prevSlottedScopeIdSource =
+    setCurrentSlottedScopeIdSource(slottedScopeIdSource)
   const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
   const prevBoundary = setCurrentSlotBoundary(fragment.slotBoundary)
   try {
@@ -197,6 +229,7 @@ export function runWithFragmentCtxOnly<R>(
   } finally {
     setCurrentSlotBoundary(prevBoundary)
     setCurrentSlotOwner(prevSlotOwner)
+    setCurrentSlottedScopeIdSource(prevSlottedScopeIdSource)
   }
 }
 

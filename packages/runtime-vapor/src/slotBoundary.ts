@@ -1,6 +1,7 @@
 import type { EffectScope } from '@vue/reactivity'
 import { type BlockFn, isValidSlot } from './block'
 import type { VaporFragment } from './fragment'
+import type { SlottedScopeIdSource } from './componentSlots'
 
 // A slot boundary is one slot outlet's fallback-resolution point. `parent` is
 // the next boundary this outlet is allowed to inherit from; ownership caps set
@@ -20,7 +21,7 @@ export interface SlotBoundaryContext {
   onContentInvalid?: (() => void)[]
   // Interop slot forwarding publishes the inner outlet's slotted id before a
   // parent fallback mounts, matching VDOM's pre-patch slotScopeIds context.
-  addSlottedScopeId?: (scopeId: string) => void
+  addSlottedScopeId?: (source: SlottedScopeIdSource) => void
 }
 
 export let currentSlotBoundary: SlotBoundaryContext | null = null
