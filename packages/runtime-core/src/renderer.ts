@@ -3003,6 +3003,7 @@ export function isVaporComponent(type: ConcreteComponent): boolean | undefined {
 export function getInheritedScopeIds(
   vnode: VNode,
   parentComponent: GenericComponentInstance | null,
+  skipSlotScopeIds?: boolean,
 ): readonly string[] {
   // allocated lazily — most components carry no scope ids, and callers run
   // this per patch. Callers must not mutate the (possibly shared) result.
@@ -3036,7 +3037,7 @@ export function getInheritedScopeIds(
         ;(inheritedScopeIds ||= []).push(parentVNode.scopeId)
       }
 
-      if (parentVNode.slotScopeIds) {
+      if (parentVNode.slotScopeIds && !skipSlotScopeIds) {
         ;(inheritedScopeIds ||= []).push(...parentVNode.slotScopeIds)
       }
 

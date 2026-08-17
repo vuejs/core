@@ -235,17 +235,19 @@ export function mergeComponentScopeIds(
   let canMutate = false
   let current: VaporComponentInstance | undefined = instance
   while (current) {
-    const previous = scopeIds
+    let previous = scopeIds
     scopeIds = mergeScopeIdsInternal(scopeIds, current.scopeId, canMutate)
+    if (previous && scopeIds !== previous) canMutate = true
     const source = current.slottedScopeIdSource
     if (source) {
+      previous = scopeIds
       scopeIds = mergeScopeIdsInternal(
         scopeIds,
         getSlottedScopeId(source),
-        canMutate || scopeIds !== previous,
+        canMutate,
       )
+      if (previous && scopeIds !== previous) canMutate = true
     }
-    if (previous && scopeIds !== previous) canMutate = true
     current = getScopeIdParent(current)
   }
   return scopeIds

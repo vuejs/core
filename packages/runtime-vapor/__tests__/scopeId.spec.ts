@@ -33,6 +33,11 @@ import {
   vaporInteropPlugin,
 } from '../src'
 import { compile, compileToVaporRender, makeRender } from './_utils'
+import {
+  createSlottedScopeIdSource,
+  mergeComponentScopeIds,
+} from '../src/scopeId'
+import type { VaporComponentInstance } from '../src/component'
 
 const define = makeRender()
 const slottedScopeProbeConnections = ((
@@ -3353,5 +3358,87 @@ describe('vdom interop', () => {
     const expected = run(false)
     expect(expected).toEqual({ wrapper: false, content: true })
     expect(run(true)).toEqual(expected)
+  })
+
+  test.each([
+    [false, true],
+    [true, false],
+  ])(
+    'updates a nested Vapor root through a VDOM bridge when noSlotted changes from %s to %s',
+    async (initialNoSlotted, nextNoSlotted) => {
+      const run = async (vapor: boolean) => {
+        const state = ref({ noSlotted: initialNoSlotted, alt: false })
+        const source = (template: string) =>
+          vapor
+            ? template
+            : `<script setup>const data = _data; const components = _components;</script>${template}`
+        const Inner = compile(
+          source(
+            `<template><section v-if="data.alt">new</section><p v-else>old</p></template>`,
+          ),
+          state,
+          {},
+          { vapor },
+        )
+        const Bridge = defineComponent({
+          __scopeId: 'bridge',
+          setup() {
+            return () => h(Inner)
+          },
+        })
+        const SlotOwner = defineComponent({
+          __scopeId: 'owner',
+          setup(_props, { slots }) {
+            return () =>
+              renderSlot(slots, 'default', {}, undefined, state.value.noSlotted)
+          },
+        })
+        const Parent = compile(
+          source(
+            `<template><components.SlotOwner><div><components.Bridge /></div></components.SlotOwner></template>`,
+          ),
+          state,
+          { SlotOwner, Bridge },
+          { vapor },
+        )
+        Parent.__scopeId = 'parent'
+        const root = document.createElement('div')
+        const app = createApp(Parent)
+        if (vapor) app.use(vaporInteropPlugin)
+        app.mount(root)
+
+        state.value = { noSlotted: nextNoSlotted, alt: false }
+        await nextTick()
+        state.value = { noSlotted: nextNoSlotted, alt: true }
+        await nextTick()
+        const section = root.querySelector('section')!
+        const result = {
+          slotted: section.hasAttribute('owner-s'),
+          bridge: section.hasAttribute('bridge'),
+          parent: section.hasAttribute('parent'),
+        }
+        app.unmount()
+        return result
+      }
+
+      const expected = await run(false)
+      expect(expected).toEqual({
+        slotted: !nextNoSlotted,
+        bridge: true,
+        parent: true,
+      })
+      expect(await run(true)).toEqual(expected)
+    },
+  )
+
+  test('does not mutate a component scopeId array while merging a live source', () => {
+    const scopeId = Object.freeze(['base'])
+    const instance = {
+      scopeId,
+      slottedScopeIdSource: createSlottedScopeIdSource('live', null),
+    } as unknown as VaporComponentInstance
+
+    expect(mergeComponentScopeIds(null, instance)).toEqual(['base', 'live'])
+    expect(instance.scopeId).toBe(scopeId)
   })
 })

@@ -120,6 +120,7 @@ import {
   type RawSlots,
   type SlottedScopeIdSource,
   type VaporSlot,
+  currentSlottedScopeIdSource,
   dynamicSlotsProxyHandlers,
   getCurrentSlottedScopeId,
   getSlot,
@@ -353,7 +354,11 @@ const vaporInteropImpl: VaporInVdomInterface = {
     const propsRef = shallowRef(filterReservedProps(vnode.props))
     const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
     const rawSlots = createInteropRawSlots(slotsRef)
-    const scopeIds = getInteropVnodeScopeIds(vnode, parentComponent)
+    const scopeIds = getInteropVnodeScopeIds(
+      vnode,
+      parentComponent,
+      !!currentSlottedScopeIdSource,
+    )
 
     let prevSuspense: SuspenseBoundary | null = null
     if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
@@ -447,6 +452,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       getInteropVnodeScopeIds(
         n2,
         instance.parent as ComponentInternalInstance | null,
+        !!instance.slottedScopeIdSource,
       ),
     )
 
@@ -790,7 +796,11 @@ const vaporInteropImpl: VaporInVdomInterface = {
     const vnodeHookState = ensureVNodeHookState(instance, vnode)
     setInteropComponentScopeId(
       instance,
-      getInteropVnodeScopeIds(vnode, parentComponent),
+      getInteropVnodeScopeIds(
+        vnode,
+        parentComponent,
+        !!instance.slottedScopeIdSource,
+      ),
     )
     const rootEl = getTrackedInteropRootElement(instance)
     if (rootEl) {
@@ -3398,10 +3408,19 @@ function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
 function getInteropVnodeScopeIds(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
+  hasSlottedScopeIdSource: boolean,
 ): ScopeId {
   let scopeIds: ScopeId = vnode.scopeId
-  scopeIds = mergeScopeIds(scopeIds, vnode.slotScopeIds)
-  return mergeScopeIds(scopeIds, getInheritedScopeIds(vnode, parentComponent))
+  // A live Vapor source already owns the renderer's slotted context. Keep the
+  // flat instance state to independent lexical/root-only contributions so a
+  // later source update cannot leave behind a stale snapshot.
+  if (!hasSlottedScopeIdSource) {
+    scopeIds = mergeScopeIds(scopeIds, vnode.slotScopeIds)
+  }
+  return mergeScopeIds(
+    scopeIds,
+    getInheritedScopeIds(vnode, parentComponent, hasSlottedScopeIdSource),
+  )
 }
 
 function getInteropVaporSlotScopeIds(
