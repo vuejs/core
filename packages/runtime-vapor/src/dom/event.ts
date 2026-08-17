@@ -135,21 +135,15 @@ export function onRootBinding(
     )
   }
 
-  const eventMap = events!
+  // Keep the native listener stable across effect reruns, notably for `.once`.
+  // setDynamicProps explicitly clears this slot when the key is removed.
   const index = inherited ? 1 : 0
   binding[index] = handler
   binding[2] = mergeEventHandlers(binding[0], binding[1])
 
-  if (handler) {
-    onEffectCleanup(() => {
-      if (eventMap[rawName] !== binding || binding[index] !== handler) return
-      binding[index] = undefined
-      binding[2] = mergeEventHandlers(binding[0], binding[1])
-      if (!binding[2]) {
-        binding[3]()
-        delete eventMap[rawName]
-      }
-    })
+  if (!binding[2]) {
+    binding[3]()
+    delete events![rawName]
   }
 }
 

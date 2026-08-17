@@ -1864,6 +1864,31 @@ describe('attribute fallthrough', () => {
     expect(parent).not.toHaveBeenCalled()
   })
 
+  it('should preserve fallthrough once listeners across updates', async () => {
+    const handler = vi.fn()
+    const attrs = ref<Record<string, any>>({
+      onClickOnce: handler,
+      title: 'before',
+    })
+    const Child = compile(`<template><button /></template>`, ref(null))
+    const App = compile(
+      `<template><components.Child v-bind="data" /></template>`,
+      attrs,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+    const button = host.firstElementChild as HTMLButtonElement
+    button.click()
+    expect(handler).toHaveBeenCalledTimes(1)
+
+    attrs.value = { onClickOnce: handler, title: 'after' }
+    await nextTick()
+    expect(button.title).toBe('after')
+    button.click()
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
   it('should filter functional fallthrough on a component root', () => {
     const Leaf = compile(`<template><div /></template>`, ref(null))
     const Functional = () => createComponent(Leaf, null, null, true)
