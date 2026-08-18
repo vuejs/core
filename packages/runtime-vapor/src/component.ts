@@ -1787,9 +1787,13 @@ function resolveFallthroughRoot(
 
   if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
     if (isDynamicFragment(block)) {
-      // slot fragments warn instead of inheriting attrs
+      // Slot outlets warn instead of inheriting attrs, and the descent stops
+      // there: slot content is rendered by the parent, so fragments inside it
+      // must not register a fallthrough hook — a later branch switch would
+      // re-apply from the branch alone, with the slot boundary out of view.
       if (block.__vf & SLOT) {
         state.hasSlotFragment = true
+        return
       } else {
         ;(state.fragments ||= []).push(block)
         if (state.innermost && state.innermost.scope) {
