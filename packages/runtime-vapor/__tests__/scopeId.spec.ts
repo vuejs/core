@@ -2218,6 +2218,38 @@ describe('vdom interop', () => {
     app.unmount()
   })
 
+  test('does not publish root-only scope id to branches of a multi-root vapor child', () => {
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return [
+          createDynamicComponent(
+            () => h('div', 'a'),
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          ),
+          createDynamicComponent(
+            () => h('span', 'b'),
+            null,
+            null,
+            VaporDynamicComponentFlags.SINGLE_ROOT,
+          ),
+        ] as any
+      },
+    })
+    const root = document.createElement('div')
+    const app = createApp({
+      __scopeId: 'external',
+      render: () => h(VaporChild as any),
+    }).use(vaporInteropPlugin)
+    app.mount(root)
+    // VDOM control: a multi-root child inherits nothing. Publishing to a
+    // branch carrier before the multi-root verdict leaked [true, false].
+    expect(root.querySelector('div')!.hasAttribute('external')).toBe(false)
+    expect(root.querySelector('span')!.hasAttribute('external')).toBe(false)
+    app.unmount()
+  })
+
   test('applies inherited root-only scope id to an async-resolved interop Suspense root', async () => {
     const makeSide = () => {
       let resolveSetup: (() => void) | undefined

@@ -1527,6 +1527,7 @@ export function getRootElement(
         visitor.onDynamicFragment(block)
       }
       if (
+        isInteropEnabled &&
         visitor.onInteropFragment &&
         isInteropFragment(block) &&
         block.vnode
@@ -1546,21 +1547,23 @@ export function getRootElement(
   // the comment nodes and return a single root node.
   // align with vdom behavior
   if (isArray(block)) {
-    let singleRoot: Element | undefined
+    // Structure first, visit after: a multi-root array has no effective
+    // root, and firing the visitor on a branch before that verdict would
+    // leak side effects (owner registration, carrier publication) that
+    // multi-root semantics forbid.
+    let single: Block | undefined
     let hasComment = false
     for (const b of block) {
       if (b instanceof Comment) {
         hasComment = true
         continue
       }
-      const thisRoot = getRootElement(b, visitor)
-      // only return root if there is exactly one eligible root in the array
-      if (!thisRoot || singleRoot) {
-        return
-      }
-      singleRoot = thisRoot
+      // only a lone eligible branch alongside comments can hold the root
+      if (single !== undefined) return
+      single = b
     }
-    return hasComment ? singleRoot : undefined
+    if (!hasComment || single === undefined) return
+    return getRootElement(single, visitor)
   }
 }
 

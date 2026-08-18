@@ -109,7 +109,10 @@ function stampSlotContent(block: Block, scopeIds: string[]): void {
     }
   } else if (isArray(block)) {
     for (const b of block) stampSlotContent(b, scopeIds)
-  } else if (isFragment(block) && !isInteropFragment(block)) {
+  } else if (
+    isFragment(block) &&
+    !(isInteropEnabled && isInteropFragment(block))
+  ) {
     stampSlotContent(block.nodes, scopeIds)
   }
 }
