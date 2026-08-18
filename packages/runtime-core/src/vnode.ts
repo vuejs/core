@@ -195,6 +195,13 @@ export interface VNode<
    * @internal
    */
   slotScopeIds: string[] | null
+  /**
+   * Root-only scope ids published by the vapor interop onto vnodes serving
+   * as a vapor component's effective root; consumed by getInheritedScopeIds
+   * where the effective-root chain tops out (before insertion).
+   * @internal
+   */
+  vaporScopeIds?: string[]
   children: VNodeNormalizedChildren
   component: ComponentInternalInstance | null
   dirs: DirectiveBinding[] | null

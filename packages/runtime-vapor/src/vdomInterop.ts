@@ -74,7 +74,12 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { getCurrentScopeId, setScopeId } from './scopeId'
+import {
+  collectRootScopeIds,
+  currentSlotScopeIds,
+  getCurrentScopeId,
+  setPublishInteropScopeIds,
+} from './scopeId'
 import type { LooseRawSlots } from './componentSlots'
 import {
   type Block,
@@ -105,7 +110,6 @@ import {
 } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import {
-  currentSlotScopeIds,
   dynamicSlotsProxyHandlers,
   getSlot,
   withOnceSlot,
@@ -135,7 +139,7 @@ import {
   runWithFragmentCtxOnly,
   runWithRenderCtx,
 } from './fragment'
-import { VDOM } from './fragmentFlags'
+import { SLOT_OUTLET, VDOM } from './fragmentFlags'
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
@@ -363,13 +367,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
     const vnodeHookState = ensureVNodeHookState(instance, vnode)
-    const applyScopeId = (vnode: VNode) =>
-      setInteropVnodeScopeId(
-        instance,
-        vnode,
-        instance.parent as ComponentInternalInstance | null,
-      )
-    vnodeHookState.postRootSyncHooks.push(applyScopeId)
+    setInteropComponentScopeIds(instance, vnode)
 
     // copy the shape flag from the vdom component if inside a keep-alive
     if (parentComponent && isKeepAlive(parentComponent)) {
@@ -393,7 +391,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       setParentSuspense(prevSuspense)
     }
 
-    const rootEl = getRootElement(instance)
+    const rootEl = resolveInteropRootEl(instance)
     if (rootEl) {
       vnode.el = rootEl
     }
@@ -415,7 +413,6 @@ const vaporInteropImpl: VaporInVdomInterface = {
     }
 
     mountComponent(instance, container, selfAnchor)
-    if (!isHydrating) applyScopeId(vnodeHookState.vnode)
 
     simpleSetCurrentInstance(prev)
     return instance
@@ -453,11 +450,6 @@ const vaporInteropImpl: VaporInVdomInterface = {
       instance.rawSlotsRef!.value = normalizeInteropSlots(n2.children)
       queuePostFlushCb(() => {
         syncVNodeEl(n2, instance)
-        setInteropVnodeScopeId(
-          instance,
-          n2,
-          instance.parent as ComponentInternalInstance | null,
-        )
         if (!instance.isUpdating) {
           vnodeHookState.skipVnodeHooks = false
         }
@@ -546,10 +538,16 @@ const vaporInteropImpl: VaporInVdomInterface = {
     anchor,
     parentComponent,
     parentSuspense,
+    slotScopeIds,
   ) {
     if (!n1) {
       // mount
-      const slotBlock = renderVaporSlot(n2, parentComponent, parentSuspense)
+      const slotBlock = renderVaporSlot(
+        n2,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+      )
       const selfAnchor =
         // use fragment's anchor when possible
         (isFragment(slotBlock) ? slotBlock.anchor : undefined) ||
@@ -579,7 +577,12 @@ const vaporInteropImpl: VaporInVdomInterface = {
         // remove old vapor block
         remove(n1.vb!, parent)
         stopVaporSlotScope(n1)
-        const slotBlock = renderVaporSlot(n2, parentComponent, parentSuspense)
+        const slotBlock = renderVaporSlot(
+          n2,
+          parentComponent,
+          parentSuspense,
+          slotScopeIds,
+        )
         let newAnchor = isFragment(slotBlock) ? slotBlock.anchor : undefined
         let insertAnchor = nextSibling as Node
         if (newAnchor) {
@@ -679,7 +682,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
     return anchor
   },
 
-  hydrateSlot(vnode, node, parentComponent, parentSuspense) {
+  hydrateSlot(vnode, node, parentComponent, parentSuspense, slotScopeIds) {
     if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
       return node
     }
@@ -687,7 +690,12 @@ const vaporInteropImpl: VaporInVdomInterface = {
     let createdAnchor = false
     let resumeNode: Node | null = null
     vaporHydrateNode(node, () => {
-      vnode.vb = renderVaporSlot(vnode, parentComponent, parentSuspense)
+      vnode.vb = renderVaporSlot(
+        vnode,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+      )
       const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
       let anchor = fragmentAnchor || currentHydrationNode!
       const wrapped = isComment(node, '[') && isComment(anchor, ']')
@@ -976,7 +984,12 @@ function appendVnodeHook(
   key: 'onVnodeBeforeUpdate' | 'onVnodeUpdated',
   hook: () => void,
 ): void {
-  const props = (vnode.props ||= {})
+  let props = vnode.props
+  // The shared EMPTY_OBJ (frozen in dev only) and user-frozen props both need
+  // replacing with the vnode's own object.
+  if (!props || props === EMPTY_OBJ || !Object.isExtensible(props)) {
+    props = vnode.props = extend({}, props)
+  }
   const existing = props[key]
   props[key] = existing
     ? isArray(existing)
@@ -1006,7 +1019,7 @@ function trackFragmentVNodeUpdates(
 }
 
 function createVNodeFragment(vnode: VNode): {
-  frag: VaporFragment<Block>
+  frag: RenderContextFragment<Block>
   syncNodes: () => void
 } {
   const frag = createInteropFragment(EMPTY_BLOCK, vnode)
@@ -1080,7 +1093,7 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any)
+    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
     onScopeDispose(unmount, true)
     isMounted = true
     syncNodes()
@@ -1126,7 +1139,7 @@ function mountVNode(
           parentComponent as any,
           operationSuspense,
           undefined, // namespace
-          vnode.slotScopeIds,
+          frag.slotScopeIds,
         )
         onScopeDispose(unmount, true)
         isMounted = true
@@ -1294,7 +1307,7 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any)
+    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
     isMounted = true
     syncNodes()
   }
@@ -1567,7 +1580,9 @@ function renderVDOMSlot(
   adoptAnchor?: Node,
 ): VaporFragment {
   let suspense = currentParentSuspense || parentComponent.suspense
-  const frag = createInteropFragment()
+  // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
+  // establishes around this call) — the base patch context for content patches.
+  const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
   const isDirectSlotRoot = !!(slotRoot || sharedFallback || inheritFallback)
   // `isBlockValid` below reports VDOM-side validity (`contentState.valid`), not
   // `isValidBlock(frag.nodes)`: `frag.nodes` tracks the active fallback when one
@@ -1637,6 +1652,7 @@ function renderVDOMSlot(
     parent: inheritFallback ? slotBoundary : null,
     getFallback: (): BlockFn | undefined => localFallback,
     run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
+    getScopeIds: () => frag.slotScopeIds,
     markDirty: force => markSlotResolutionDirty(slotResolutionState, force),
     onContentInvalid,
   }
@@ -1783,7 +1799,7 @@ function renderVDOMSlot(
       parentComponent as any,
       suspense,
       undefined,
-      slotScopeIds,
+      concatInteropScopeIds(frag.slotScopeIds, slotScopeIds),
     )
     setRenderedContent(next, valid)
     finishContentUpdate()
@@ -2029,9 +2045,12 @@ function renderVDOMSlot(
                   hydrateVNode(
                     hydrationVNode,
                     parentComponent as any,
-                    hydrationVNode === hydratedContent
-                      ? null
-                      : hydratedContent.slotScopeIds,
+                    concatInteropScopeIds(
+                      frag.slotScopeIds,
+                      hydrationVNode === hydratedContent
+                        ? null
+                        : hydratedContent.slotScopeIds,
+                    ),
                   )
                 }
                 // Remember the slot outlet insertion point outside the hydrated VNode range.
@@ -2389,6 +2408,7 @@ export const vaporInteropPlugin: Plugin = app => {
     getInteropTransitionElement,
   )
   setInteropEnabled()
+  setPublishInteropScopeIds(publishVaporScopeIds)
   app._context.vapor = vaporInteropImpl
   const internals = ensureRenderer().internals
   app._context.vdom = {
@@ -2520,6 +2540,9 @@ function renderVaporSlot(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
+  // the raw slot patch context; kept off the vnode so cached/cloned VaporSlot
+  // vnodes never accumulate it
+  contextSlotScopeIds: string[] | null,
 ): Block {
   const prev = currentInstance
   let prevSuspense: SuspenseBoundary | null = null
@@ -2532,12 +2555,18 @@ function renderVaporSlot(
       return EMPTY_BLOCK
     }
     const slotState = resolveInteropVaporSlotState(vnode)
-    const scopeIds = getInteropVaporSlotScopeIds(vnode, parentComponent)
     // Most of the interop setup is shared, but slots that start with a local
     // VDOM fallback still need to let an inner SlotFragment own the active
     // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
     // fallback blocks that can later resolve to an empty vnode list.
-    const frag = createInteropFragment()
+    const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
+    // The vnode-derived slot context becomes the creation ambient for the
+    // vapor-rendered content, restored via the fragment's render seam.
+    frag.slotScopeIds = getInteropVaporSlotScopeIds(
+      vnode,
+      parentComponent,
+      contextSlotScopeIds,
+    )
     // Optimistic until content resolves into `frag.nodes`; see createVNodeFragment.
     let contentResolved = isHydrating
     frag.isBlockValid = componentAsValid =>
@@ -2590,6 +2619,7 @@ function renderVaporSlot(
       getFallback: () =>
         slotState.outletFallback.value ? outletFallback : undefined,
       run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
+      getScopeIds: () => frag.slotScopeIds,
       markDirty: markInteropSlotResolutionDirty,
     }
     const localFallbackBoundary: SlotBoundaryContext = {
@@ -2599,6 +2629,7 @@ function renderVaporSlot(
       getFallback: () =>
         slotState.localFallback.value ? localFallback : undefined,
       run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
+      getScopeIds: () => frag.slotScopeIds,
       markDirty: markInteropSlotResolutionDirty,
       onContentInvalid,
     }
@@ -2672,9 +2703,6 @@ function renderVaporSlot(
       const finalizeResolvedContent = (
         resolvedContent: Block | undefined,
       ): Block | undefined => {
-        if (resolvedContent && scopeIds) {
-          setScopeId(resolvedContent, scopeIds)
-        }
         if (hasInteropFallback && isSlotFragment(resolvedContent)) {
           finishHydratingContent(true)
           return resolvedContent
@@ -2803,8 +2831,18 @@ function invokeVaporSlot(vnode: VNode): Block {
   }
 }
 
+// The tracking callback keeps el-sync registered on any dynamic fragments
+// along the effective-root chain, including ones a root switch introduced.
+function resolveInteropRootEl(
+  instance: VaporComponentInstance,
+): Element | undefined {
+  return getRootElement(instance, {
+    onDynamicFragment: frag => registerInteropRootSync(instance, frag),
+  })
+}
+
 function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
-  const rootEl = getRootElement(instance)
+  const rootEl = resolveInteropRootEl(instance)
   if (rootEl) {
     vnode.el = rootEl
   } else {
@@ -2817,16 +2855,11 @@ function syncInteropRoot(instance: VaporComponentInstance): void {
   const state = vnodeHookStateMap.get(instance)
   if (!state) return
   syncVNodeEl(state.vnode, instance)
-  const hooks = state.postRootSyncHooks
-  for (let i = 0; i < hooks.length; i++) {
-    hooks[i](state.vnode)
-  }
 }
 
 interface VNodeHookState {
   vnode: VNode
   skipVnodeHooks: boolean
-  postRootSyncHooks: ((vnode: VNode) => void)[]
 }
 
 const vnodeHookStateMap = new WeakMap<VaporComponentInstance, VNodeHookState>()
@@ -2840,7 +2873,6 @@ function ensureVNodeHookState(
     state = {
       vnode,
       skipVnodeHooks: false,
-      postRootSyncHooks: [],
     }
     vnodeHookStateMap.set(instance, state)
     ;(instance.bu ||= []).push(() => {
@@ -2959,7 +2991,9 @@ function createVNodeChildrenFragment(
           const nextChildren = render()
           notifyBeforeUpdate()
           if (isHydrating) {
-            nextChildren.forEach(vnode => hydrateVNode(vnode, parentComponent))
+            nextChildren.forEach(vnode =>
+              hydrateVNode(vnode, parentComponent, frag.slotScopeIds),
+            )
             currentChildren = nextChildren
             currentVNode = createVNode(Fragment, null, nextChildren)
             currentParentNode = currentHydrationNode!.parentNode as ParentNode
@@ -3004,7 +3038,7 @@ function createVNodeChildrenFragment(
                 parentComponent,
                 suspense,
                 undefined,
-                null,
+                frag.slotScopeIds,
                 false,
               )
             }
@@ -3025,7 +3059,7 @@ function createVNodeChildrenFragment(
               parentComponent,
               suspense,
               undefined,
-              null,
+              frag.slotScopeIds,
               false,
             )
             currentChildren = nextChildren
@@ -3083,7 +3117,7 @@ function createVNodeChildrenFragment(
           parentComponent,
           suspense,
           undefined,
-          null,
+          frag.slotScopeIds,
           false,
         )
       }
@@ -3265,71 +3299,103 @@ function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
   return rawSlots as RawSlots
 }
 
-const interopScopeIdRootMap = new WeakMap<VaporComponentInstance, Element>()
-const interopScopeIdFragmentMap = new WeakMap<
+// vnode.el of an interop-mounted vapor component must follow its dynamic
+// root across branch switches.
+const interopRootSyncFragmentMap = new WeakMap<
   DynamicFragment,
   VaporComponentInstance
 >()
 
-function trackInteropScopeIdFragment(
+function registerInteropRootSync(
   instance: VaporComponentInstance,
   frag: DynamicFragment,
 ): void {
-  if (interopScopeIdFragmentMap.get(frag) === instance) return
-  interopScopeIdFragmentMap.set(frag, instance)
+  if (interopRootSyncFragmentMap.get(frag) === instance) return
+  interopRootSyncFragmentMap.set(frag, instance)
   ;(frag.onUpdated ||= []).push(() => syncInteropRoot(instance))
 }
 
-function setInteropVnodeScopeId(
+/**
+ * Stores the vnode-derived root-only ids on the instance. Metadata only:
+ * mountComponent and dynamic branch renders apply them pre-insert to roots
+ * that mount afterwards; kept roots keep their mount-time ids (VDOM parity).
+ */
+function setInteropComponentScopeIds(
   instance: VaporComponentInstance,
   vnode: VNode,
-  parentComponent: ComponentInternalInstance | null,
 ): void {
-  const root = getRootElement(instance, frag =>
-    trackInteropScopeIdFragment(instance, frag),
+  instance.scopeId = vnode.scopeId
+  const inherited = getInheritedScopeIds(
+    vnode,
+    instance.parent as ComponentInternalInstance | null,
   )
-  if (!root) {
-    interopScopeIdRootMap.delete(instance)
-    return
-  }
-  // VDOM applies scope ids when an element is mounted, not on same-root patch.
-  if (interopScopeIdRootMap.get(instance) === root) return
-  interopScopeIdRootMap.set(instance, root)
-
-  const scopeIds = getInteropVnodeScopeIds(vnode, parentComponent)
-  if (!scopeIds) return
-
-  for (let i = 0; i < scopeIds.length; i++) {
-    root.setAttribute(scopeIds[i], '')
-  }
+  instance.slotScopeIds = concatInteropScopeIds(
+    vnode.slotScopeIds,
+    inherited.length ? inherited : null,
+  )
 }
 
-function getInteropVnodeScopeIds(
-  vnode: VNode,
-  parentComponent: ComponentInternalInstance | null,
-): string[] | undefined {
-  const scopeIds: string[] = []
-  if (vnode.scopeId) scopeIds.push(vnode.scopeId)
-  if (vnode.slotScopeIds) scopeIds.push(...vnode.slotScopeIds)
-  scopeIds.push(...getInheritedScopeIds(vnode, parentComponent))
-  return scopeIds.length ? scopeIds : undefined
+function concatInteropScopeIds(
+  base: string[] | null,
+  own: string[] | null | undefined,
+): string[] | null {
+  // identity guard: a content vnode's recorded context can BE the base cell
+  // (stored by reference through the patch context) — self-concat would
+  // duplicate every id
+  return base
+    ? own && own.length && own !== base
+      ? base.concat(own)
+      : base
+    : own || null
 }
 
+/**
+ * Publishes root-only ids onto the interop vnode backing a vapor component's
+ * effective root, for core to apply at its own pre-insertion mount. A nested
+ * component crossed during the descent re-collects canonically — its climb
+ * carries every ancestor's contribution — superseding the caller's subset.
+ */
+function publishVaporScopeIds(block: Block, scopeIds: string[]): void {
+  let currentScopeIds = scopeIds
+  getRootElement(block, {
+    onComponent: instance => {
+      currentScopeIds = collectRootScopeIds(instance) || []
+    },
+    onInteropFragment: frag => {
+      setVNodeVaporScopeIds(frag.vnode!, currentScopeIds)
+    },
+    excludeSlotOutlets: true,
+  })
+}
+
+function setVNodeVaporScopeIds(vnode: VNode, scopeIds: string[]): void {
+  vnode.vaporScopeIds = scopeIds
+  // Pending suspense branches mount through core with no vapor seam between;
+  // forward so both branches inherit at their own mount.
+  if (vnode.ssContent) setVNodeVaporScopeIds(vnode.ssContent, scopeIds)
+  if (vnode.ssFallback) setVNodeVaporScopeIds(vnode.ssFallback, scopeIds)
+}
+
+// The single merge point for a vapor slot's id cell: raw patch context, the
+// vnode's own ids, then deep slot-content inheritance (root-only excluded).
 function getInteropVaporSlotScopeIds(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
-): string[] | undefined {
-  const scopeIds: string[] = []
-  if (vnode.slotScopeIds) scopeIds.push(...vnode.slotScopeIds)
-  scopeIds.push(...getInheritedScopeIds(vnode, parentComponent))
-  return scopeIds.length ? scopeIds : undefined
+  contextSlotScopeIds: string[] | null,
+): string[] | null {
+  const inherited = getInheritedScopeIds(vnode, parentComponent, false)
+  return concatInteropScopeIds(
+    concatInteropScopeIds(contextSlotScopeIds, vnode.slotScopeIds),
+    inherited.length ? inherited : null,
+  )
 }
 
 function createInteropFragment(
   nodes: Block = EMPTY_BLOCK,
   vnode: VNode | null = null,
+  extraFlags = 0,
 ): RenderContextFragment<Block> {
-  const frag = new RenderContextFragment<Block>(nodes, VDOM)
+  const frag = new RenderContextFragment<Block>(nodes, VDOM | extraFlags)
   frag.vnode = vnode
   return frag
 }

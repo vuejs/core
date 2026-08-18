@@ -102,6 +102,7 @@ import {
   exitHydrationCursor,
   isComment,
   isHydrating,
+  isRecreatedNode,
   locateEndAnchor,
   markHydrationAnchor,
   nextLogicalSibling,
@@ -129,7 +130,14 @@ import type {
   DefineVaporComponent,
   VaporRenderResult,
 } from './apiDefineComponent'
-import { DynamicFragment, isDynamicFragment, isFragment } from './fragment'
+import {
+  DynamicFragment,
+  type InteropFragment,
+  isDynamicFragment,
+  isFragment,
+  isInteropFragment,
+  isSlotOutletFragment,
+} from './fragment'
 import { SLOT } from './fragmentFlags'
 import { resolvePendingSlotContent } from './dom/hydrateFragment'
 import type { VaporElement } from './apiDefineCustomElement'
@@ -142,10 +150,12 @@ import {
 } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import {
+  applyComponentScopeIds,
+  currentSlotScopeIds,
   getCurrentScopeId,
-  setComponentScopeId,
-  setScopeId,
-  trackComponentScopeId,
+  hydrateComponentScopeIds,
+  setCurrentSlotScopeIds,
+  setElementScopeIds,
 } from './scopeId'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
@@ -444,6 +454,9 @@ export function createComponent(
 
     // reset currentSlotOwner to null to avoid affecting the child components
     const prevSlotOwner = setCurrentSlotOwner(null)
+    // Slot scope ids stop at component boundaries; the instance captured
+    // them above for root-only application.
+    const prevSlotScopeIds = setCurrentSlotScopeIds(null)
     let hasWarningContext = false
     let hasInitMeasure = false
     try {
@@ -516,6 +529,7 @@ export function createComponent(
           endMeasure(instance, 'init')
         }
       }
+      setCurrentSlotScopeIds(prevSlotScopeIds)
       setCurrentSlotOwner(prevSlotOwner)
       if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && hasParentSuspense) {
         setParentSuspense(prevSuspense)
@@ -758,6 +772,9 @@ export class VaporComponentInstance<
   slots: Slots
 
   scopeId?: string | null
+  // The slot scope context this instance was created in, applied to the
+  // effective root only (VDOM `-s` inheritance semantics).
+  slotScopeIds?: string[] | null
 
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
@@ -936,6 +953,7 @@ export class VaporComponentInstance<
     ) as Slots
 
     this.scopeId = getCurrentScopeId()
+    this.slotScopeIds = currentSlotScopeIds
 
     // apply custom element special handling
     if (ce) {
@@ -1091,9 +1109,12 @@ export function createPlainElement(
   // mark single root
   ;(el as any).$root = isSingleRoot
 
-  if (!isHydrating) {
+  // Adopted elements already carry SSR scope attrs; mismatch-recreated ones
+  // were client-built and stamp like a client render.
+  if (!isHydrating || isRecreatedNode(el)) {
     const scopeId = getCurrentScopeId()
-    if (scopeId) setScopeId(el, [scopeId])
+    if (scopeId) el.setAttribute(scopeId, '')
+    if (currentSlotScopeIds) setElementScopeIds(el, currentSlotScopeIds)
   }
 
   if (rawProps) {
@@ -1314,15 +1335,15 @@ export function mountComponent(
   }
   if (instance.bm) invokeArrayFns(instance.bm)
   if (!isHydrating) {
+    // Root-only ids (stamp + interop carriers) land before insertion; see
+    // applyRootScopeIds for the delegation rule.
+    applyComponentScopeIds(instance)
     // pass the owning suspense so enter transitions are skipped while
     // mounting into a pending suspense's hidden container (vdom parity);
     // the enter runs when the resolved branch is moved into the real tree.
     insert(instance.block, parent, anchor, instance.suspense)
-    setComponentScopeId(instance)
   } else {
-    // Hydrated roots already have SSR scope attrs. Track dynamic roots so
-    // client-only branch switches keep inherited scope ids.
-    trackComponentScopeId(instance)
+    hydrateComponentScopeIds(instance)
   }
   if (instance.m) {
     queuePostRenderEffect(instance.m!, undefined, instance.suspense)
@@ -1460,28 +1481,65 @@ export function getExposed(
   }
 }
 
+/**
+ * The single traversal of the effective-root chain. Every consumer of the
+ * chain — root element resolution, scope id owner registration, interop
+ * carrier publication, fallthrough attrs — walks through here so the chain
+ * rules (teleport exclusion, slot outlet breaks, comment-filtered arrays,
+ * component descent) are encoded exactly once.
+ */
+export interface RootChainVisitor {
+  onDynamicFragment?: (frag: DynamicFragment) => void
+  // Fired on component descent, including an entry block that is itself a
+  // component.
+  onComponent?: (instance: VaporComponentInstance) => void
+  // Fired at a vnode-backed interop fragment, terminating the descent there
+  // (the fragment carries the chain across into vdom).
+  onInteropFragment?: (frag: InteropFragment) => void
+  // Do not descend into nested components.
+  shallow?: boolean
+  // Slot outlets break the effective-root chain for scope id inheritance.
+  excludeSlotOutlets?: boolean
+}
+
 export function getRootElement(
   block: Block,
-  onDynamicFragment?: (frag: DynamicFragment) => void,
-  recurse: boolean = true,
+  visitor?: RootChainVisitor,
 ): Element | undefined {
   if (block instanceof Element) {
     return block
   }
 
-  if (recurse && isVaporComponent(block)) {
-    return getRootElement(block.block, onDynamicFragment, recurse)
+  if (isVaporComponent(block)) {
+    if (visitor) {
+      if (visitor.onComponent) visitor.onComponent(block)
+      if (visitor.shallow) return
+    }
+    return getRootElement(block.block, visitor)
   }
 
   if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
-    if (isDynamicFragment(block) && onDynamicFragment) {
-      onDynamicFragment(block)
+    if (visitor) {
+      if (visitor.excludeSlotOutlets && isSlotOutletFragment(block)) {
+        return
+      }
+      if (isDynamicFragment(block) && visitor.onDynamicFragment) {
+        visitor.onDynamicFragment(block)
+      }
+      if (
+        visitor.onInteropFragment &&
+        isInteropFragment(block) &&
+        block.vnode
+      ) {
+        visitor.onInteropFragment(block)
+        return
+      }
     }
     const { nodes } = block
     if (nodes instanceof Element && (nodes as any).$root) {
       return nodes
     }
-    return getRootElement(nodes, onDynamicFragment, recurse)
+    return getRootElement(nodes, visitor)
   }
 
   // The root node contains comments. It is necessary to filter out
@@ -1495,7 +1553,7 @@ export function getRootElement(
         hasComment = true
         continue
       }
-      const thisRoot = getRootElement(b, onDynamicFragment, recurse)
+      const thisRoot = getRootElement(b, visitor)
       // only return root if there is exactly one eligible root in the array
       if (!thisRoot || singleRoot) {
         return
@@ -1503,6 +1561,46 @@ export function getRootElement(
       singleRoot = thisRoot
     }
     return hasComment ? singleRoot : undefined
+  }
+}
+
+/**
+ * Descends the same effective-root rules as getRootElement but stops at the
+ * first component instead of resolving an element. Used to verify `child`
+ * sits on `parent`'s root chain when the chain passes through fragments
+ * (where `parent.block === child` cannot see the link).
+ */
+export function getRootChainComponent(
+  block: Block,
+): VaporComponentInstance | undefined {
+  while (true) {
+    if (isVaporComponent(block)) return block
+    if (
+      isFragment(block) &&
+      !(isTeleportEnabled && isTeleportFragment(block))
+    ) {
+      if (isSlotOutletFragment(block)) return
+      block = block.nodes
+      continue
+    }
+    if (isArray(block)) {
+      let single: Block | undefined
+      let hasComment = false
+      for (const b of block) {
+        if (b instanceof Comment) {
+          hasComment = true
+          continue
+        }
+        if (single !== undefined) return
+        single = b
+      }
+      if (hasComment && single !== undefined) {
+        block = single
+        continue
+      }
+      return
+    }
+    return
   }
 }
 
@@ -1580,17 +1678,16 @@ function applyFallthroughAttrs(
 ): void {
   let hasSlotFragment = false
   let dynamicFragments: DynamicFragment[] | undefined
-  const root = getRootElement(
-    block,
-    frag => {
+  const root = getRootElement(block, {
+    onDynamicFragment: frag => {
       if (frag.__vf & SLOT) {
         hasSlotFragment = true
       } else {
         ;(dynamicFragments ||= []).push(frag)
       }
     },
-    false,
-  )
+    shallow: true,
+  })
 
   const dynamicRoot = root ? undefined : getSingleDynamicRootChain(block)
   const fragmentsToRegister = root

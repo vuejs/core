@@ -467,6 +467,7 @@ function baseCreateRenderer(
           anchor,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
         )
         break
       default:
@@ -3002,6 +3003,7 @@ export function isVaporComponent(type: ConcreteComponent): boolean | undefined {
 export function getInheritedScopeIds(
   vnode: VNode,
   parentComponent: GenericComponentInstance | null,
+  includeVaporRootIds = true,
 ): string[] {
   const inheritedScopeIds: string[] = []
 
@@ -3042,6 +3044,13 @@ export function getInheritedScopeIds(
     } else {
       break
     }
+  }
+
+  // Where the chain tops out, append root-only ids published by the vapor
+  // interop so they land before insertion.
+  const vaporScopeIds = includeVaporRootIds && currentVNode.vaporScopeIds
+  if (vaporScopeIds) {
+    inheritedScopeIds.push(...vaporScopeIds)
   }
 
   return inheritedScopeIds

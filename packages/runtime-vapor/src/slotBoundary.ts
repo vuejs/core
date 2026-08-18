@@ -13,6 +13,10 @@ export interface SlotBoundaryContext {
   // late renders such as fallback bodies, and runs them in the provided effect
   // scope when one is provided.
   run<R>(fn: () => R, scope?: EffectScope): R
+  // The owning outlet's slot scope id cell. Fallback resolution renders under
+  // the REQUESTING outlet's cell (VDOM semantics: an inherited fallback gets
+  // the requester's slotted ids, which are a superset of every provider's).
+  getScopeIds?: () => string[] | null
   // Notifies the owning slot that the validity of a dynamic branch rendered
   // under this boundary may have changed; routes into the slot resolution
   // state machine (markSlotResolutionDirty).

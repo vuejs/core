@@ -33,6 +33,7 @@ import {
   currentSlotOwner,
   setCurrentSlotOwner,
 } from './componentSlots'
+import { currentSlotScopeIds, setCurrentSlotScopeIds } from './scopeId'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '@vue/shared'
 import {
@@ -150,6 +151,7 @@ export const createFor = (
 
   const slotOwner = currentSlotOwner
   const slotBoundary = currentSlotBoundary
+  const slotScopeIds = currentSlotScopeIds
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -645,9 +647,11 @@ export const createFor = (
       const prevBoundary = restoreBoundary
         ? setCurrentSlotBoundary(slotBoundary)
         : null
+      const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
       try {
         renderList()
       } finally {
+        setCurrentSlotScopeIds(prevSlotScopeIds)
         if (restoreBoundary) setCurrentSlotBoundary(prevBoundary)
         setCurrentSlotOwner(prevOwner)
       }

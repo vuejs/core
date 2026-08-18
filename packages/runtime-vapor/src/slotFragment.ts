@@ -8,6 +8,7 @@ import {
   removeAttachedNodes,
 } from './block'
 import { isHydrating } from './dom/hydration'
+import { renderWithSlotScopeIds } from './scopeId'
 import {
   type SlotBoundaryContext,
   hasSlotFallback,
@@ -52,6 +53,11 @@ function renderSlotFallback(
   scope: EffectScope,
 ): RenderedSlotFallback | undefined {
   let result: RenderedSlotFallback | undefined
+  // Fallbacks render with the REQUESTING outlet's slot scope ids (VDOM
+  // semantics for inherited fallbacks; the requester's cell already merges
+  // every provider's ids), while `run` keeps the provider's lexical context.
+  const scopeIds =
+    boundary && boundary.getScopeIds ? boundary.getScopeIds() : null
 
   while (boundary) {
     const current = boundary
@@ -60,6 +66,9 @@ function renderSlotFallback(
     if (localFallback) {
       let selected = false
       const onContentInvalid: (() => void)[] = []
+      const renderFallback = scopeIds
+        ? () => renderWithSlotScopeIds(scopeIds, localFallback)
+        : localFallback
       const content = current.run(
         () =>
           withSlotBoundary(
@@ -79,7 +88,7 @@ function renderSlotFallback(
                   !!force || (!selected && hasSlotFallback(current.parent)),
                 ),
             },
-            localFallback,
+            renderFallback,
           ),
         scope,
       )
