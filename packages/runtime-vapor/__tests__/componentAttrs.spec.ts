@@ -2140,4 +2140,38 @@ describe('attribute fallthrough', () => {
     expect(oneEl.isConnected).toBe(true)
     expect(oneEl.getAttribute('id')).toBe('b')
   })
+
+  it('should not inherit attrs into a dynamic branch inside slot content', async () => {
+    const show = ref(true)
+    const Child = compile(`<template><slot /></template>`, ref(null))
+    const Middle = compile(
+      `<script setup vapor>
+        const Child = _components.Child
+        const show = _data
+      </script>
+      <template>
+        <Child>
+          <div v-if="show">if</div>
+          <span v-else>else</span>
+        </Child>
+      </template>`,
+      show,
+      { Child },
+    )
+    const App = compile(
+      `<template><components.Middle class="parent" /></template>`,
+      ref(null),
+      { Middle },
+    )
+
+    const { host } = define(App).render()
+    // a slot outlet root cannot receive fallthrough attrs
+    expect(host.querySelector('div')!.className).toBe('')
+    expect(`Extraneous non-props attributes (class)`).toHaveBeenWarnedTimes(1)
+
+    // the slot boundary still holds after the inner branch switches
+    show.value = false
+    await nextTick()
+    expect(host.querySelector('span')!.className).toBe('')
+  })
 })
