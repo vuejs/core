@@ -3333,6 +3333,56 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toBe('<div data-msg="bar">bar</div>')
     })
+
+    it('should fallthrough attrs to a vnode root rendered by a dynamic component', async () => {
+      const id = ref('a')
+      const VaporChild = compile(
+        `<template><component :is="data" /></template>`,
+        ref(h('div', null, 'vnode')),
+      )
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporChild as any, { id: id.value })
+        },
+      }).render()
+
+      expect(html()).toBe('<div id="a">vnode</div><!--dynamic-component-->')
+
+      id.value = 'b'
+      await nextTick()
+      expect(html()).toBe('<div id="b">vnode</div><!--dynamic-component-->')
+    })
+
+    it('should fallthrough attrs to a component vnode root and keep its state', async () => {
+      const id = ref('a')
+      const VDomChild = defineComponent({
+        setup() {
+          const n = ref(0)
+          return () => h('div', { onClick: () => n.value++ }, String(n.value))
+        },
+      })
+      const VaporChild = compile(
+        `<template><component :is="data" /></template>`,
+        ref(h(VDomChild)),
+      )
+
+      const { html, host } = define({
+        setup() {
+          return () => h(VaporChild as any, { id: id.value })
+        },
+      }).render()
+
+      expect(html()).toBe('<div id="a">0</div><!--dynamic-component-->')
+      ;(host.children[0] as HTMLElement).click()
+      await nextTick()
+      expect(html()).toBe('<div id="a">1</div><!--dynamic-component-->')
+
+      // an attrs update must patch, not remount: the inner state survives
+      id.value = 'b'
+      await nextTick()
+      expect(html()).toBe('<div id="b">1</div><!--dynamic-component-->')
+    })
   })
 
   describe('async component', () => {
