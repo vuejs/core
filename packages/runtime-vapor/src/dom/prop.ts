@@ -16,7 +16,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { onBinding } from './event'
+import { onBinding, onRootBinding } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -56,26 +56,77 @@ import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
 
 type TargetElement = Element & {
+  // Inherited dynamic props currently applied through attrs fallthrough.
+  $dprops$?: Record<string, any>
+  // Only dynamic root bindings are sources. Static template attrs are DOM
+  // initialization and are intentionally not captured or restored after
+  // fallthrough overwrites them.
+  $lprops?: Record<string, LocalRootProp>
   $root?: true
   $html?: string
   $cls?: string
   $clsFlags?: number
+  // Local ($clsi/$styi) and inherited ($clsi$/$styi$) dynamic sources.
+  // Pure static class/style is emitted only into the template DOM and never
+  // seeds these caches, so fallthrough does not pay to snapshot or restore it.
+  $clsi?: string
+  $clsi$?: string
+  $styi?: NormalizedStyle
+  $styi$?: NormalizedStyle
   $sty?: NormalizedStyle | string | undefined
   value?: string
   _value?: any
 }
 
-const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
+const enum LocalPropType {
+  ATTR,
+  DOM_PROP,
+  VALUE,
+}
+
+type LocalRootProp = [type: LocalPropType, value: any, extra?: any]
+
+function recordLocalRootProp(
+  el: TargetElement,
+  key: string,
+  type: LocalPropType,
+  value: any,
+  extra?: any,
+): boolean {
+  if (isApplyingFallthroughProps) return false
+
   const instance = currentInstance! as VaporComponentInstance
-  return (
-    !isApplyingFallthroughProps &&
-    el.$root &&
-    instance.hasFallthrough &&
-    instance.type.inheritAttrs !== false &&
-    key in instance.attrs &&
-    (!shouldUseFunctionalFallthrough(instance.type) ||
-      isFunctionalFallthroughKey(key))
-  )
+  if (
+    !instance.hasFallthrough ||
+    instance.type.inheritAttrs === false ||
+    (shouldUseFunctionalFallthrough(instance.type) &&
+      !isFunctionalFallthroughKey(key))
+  ) {
+    return false
+  }
+
+  ;(el.$lprops || (el.$lprops = Object.create(null)))[key] = [
+    type,
+    value,
+    extra,
+  ]
+  const inherited = el.$dprops$
+  return !!(inherited && key in inherited)
+}
+
+function applyLocalRootProp(el: TargetElement, key: string): boolean {
+  const local = el.$lprops
+  const entry = local && local[key]
+  if (!entry) return false
+
+  if (entry[0] === LocalPropType.ATTR) {
+    setAttr(el, key, entry[1], entry[2])
+  } else if (entry[0] === LocalPropType.DOM_PROP) {
+    setDOMProp(el, key, entry[1], false, entry[2])
+  } else {
+    setValue(el, entry[1])
+  }
+  return true
 }
 
 export function setProp(el: any, key: string, value: any): void {
@@ -92,7 +143,10 @@ export function setAttr(
   value: any,
   isSVG: boolean = false,
 ): void {
-  if (shouldSkipFallthroughKey(el, key)) {
+  if (
+    el.$root &&
+    recordLocalRootProp(el, key, LocalPropType.ATTR, value, isSVG)
+  ) {
     return
   }
 
@@ -142,7 +196,10 @@ export function setDOMProp(
   forceHydrate: boolean = false,
   attrName?: string,
 ): void {
-  if (shouldSkipFallthroughKey(el, key)) {
+  if (
+    el.$root &&
+    recordLocalRootProp(el, key, LocalPropType.DOM_PROP, value, attrName)
+  ) {
     return
   }
 
@@ -281,8 +338,20 @@ function setClassIncremental(
       el.classList.add(...nextList)
     }
     if (prev) {
-      for (const cls of prev.split(/\s+/)) {
-        if (!nextList.includes(cls)) el.classList.remove(cls)
+      const other = isApplyingFallthroughProps ? el.$clsi : el.$clsi$
+      if (other) {
+        const otherList = other.split(/\s+/)
+        for (const cls of prev.split(/\s+/)) {
+          if (!nextList.includes(cls) && !otherList.includes(cls)) {
+            el.classList.remove(cls)
+          }
+        }
+      } else {
+        // Keep the original single-source fast path when no fallthrough class
+        // source is active.
+        for (const cls of prev.split(/\s+/)) {
+          if (!nextList.includes(cls)) el.classList.remove(cls)
+        }
       }
     }
   }
@@ -351,21 +420,36 @@ export function setStyle(el: TargetElement, value: any): void {
   }
 }
 
-function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
+function setStyleIncremental(el: any, value: any): void {
   const cacheKey = `$styi${isApplyingFallthroughProps ? '$' : ''}`
+  const prev = el[cacheKey]
   const normalizedValue = isString(value)
     ? parseStringStyle(value)
     : (normalizeStyle(value) as NormalizedStyle | undefined)
+  el[cacheKey] = normalizedValue
+  const hasInheritedSource = '$styi$' in el
 
   if (isHydrating && !isRecreatedNode(el)) {
     if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
       checkHydrationStyleMismatch(el, value, normalizedValue, true)
     }
-    el[cacheKey] = normalizedValue
+    if (hasInheritedSource) {
+      // Cache the expected merged sources for later updates without reading
+      // the hydrated DOM back as local ownership.
+      el.$sty = normalizeStyle([el.$styi, el.$styi$]) as NormalizedStyle
+    }
     return
   }
 
-  patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+  if (!hasInheritedSource) {
+    // Preserve the original local-only path until a fallthrough style source
+    // has actually been applied to this element.
+    patchStyle(el, prev, normalizedValue)
+    return
+  }
+
+  const next = normalizeStyle([el.$styi, el.$styi$]) as NormalizedStyle
+  patchStyle(el, el.$sty, (el.$sty = next))
 }
 
 export function setValue(
@@ -373,7 +457,10 @@ export function setValue(
   value: any,
   forceHydrate: boolean = false,
 ): void {
-  if (shouldSkipFallthroughKey(el, 'value')) {
+  if (
+    el.$root &&
+    recordLocalRootProp(el, 'value', LocalPropType.VALUE, value)
+  ) {
     return
   }
 
@@ -480,21 +567,37 @@ export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
   const nextProps: Record<string, any> = Object.create(null)
 
   if (prevProps) {
-    for (const key in prevProps) {
-      if (!(key in props)) {
-        setDynamicProp(el, key, null, isSVG)
+    if (isApplyingFallthroughProps) {
+      for (const key in prevProps) {
+        if (!(key in props) && !applyLocalRootProp(el, key)) {
+          setDynamicProp(el, key, null, isSVG)
+        }
+      }
+    } else if (el.$lprops) {
+      for (const key in prevProps) {
+        if (!(key in props)) {
+          setDynamicProp(el, key, null, isSVG)
+          delete el.$lprops[key]
+        }
+      }
+    } else {
+      // Keep the original removal loop when no local fallthrough source exists.
+      for (const key in prevProps) {
+        if (!(key in props)) {
+          setDynamicProp(el, key, null, isSVG)
+        }
       }
     }
   }
 
   for (const key of Object.keys(props)) {
     const value = props[key]
+    const hadKey = prevProps && key in prevProps
     nextProps[key] = value
     // Events and objects can have stable identity with mutable internals, so
     // only skip unchanged primitive values.
     if (
-      prevProps &&
-      key in prevProps &&
+      hadKey &&
       !isOn(key) &&
       (value == null || typeof value !== 'object') &&
       Object.is(prevProps[key], value)
@@ -522,10 +625,27 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    if (shouldSkipFallthroughKey(el, key)) {
-      return
-    }
     const [event, options] = parseEventName(key)
+    // Only dynamic root events need source merging. Direct compiled v-on uses
+    // on() instead, so it remains an independent native listener just like
+    // the non-fallthrough path.
+    if (el.$root) {
+      const instance = currentInstance! as VaporComponentInstance
+      if (
+        isApplyingFallthroughProps ||
+        (instance.hasFallthrough && instance.type.inheritAttrs !== false)
+      ) {
+        onRootBinding(
+          el,
+          key,
+          event,
+          value,
+          options,
+          isApplyingFallthroughProps,
+        )
+        return
+      }
+    }
     onBinding(el, event, value, options)
   } else if (
     // force hydrate v-bind with .prop modifiers

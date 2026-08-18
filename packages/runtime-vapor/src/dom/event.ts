@@ -12,6 +12,19 @@ type EventHandler = (...args: any[]) => any
 type EventHandlerValue = EventHandler | EventHandler[]
 type MaybeEventHandlerValue = EventHandlerValue | null | undefined
 
+type RootEventBinding = [
+  local: MaybeEventHandlerValue,
+  inherited: MaybeEventHandlerValue,
+  merged: MaybeEventHandlerValue,
+  remove: () => void,
+]
+
+type RootEventElement = Element & {
+  // Lazily allocated only when dynamic local/fallthrough root handlers share
+  // one stable native listener.
+  $evts?: Record<string, RootEventBinding>
+}
+
 export function addEventListener(
   el: Element,
   event: string,
@@ -48,6 +61,90 @@ export function onBinding(
     if (!handler) return
     const cleanup = addEventListener(el, event, createInvoker(handler), options)
     onEffectCleanup(cleanup)
+  }
+}
+
+function mergeEventHandlers(
+  local: MaybeEventHandlerValue,
+  inherited: MaybeEventHandlerValue,
+): MaybeEventHandlerValue {
+  if (!local) return inherited
+  if (
+    !inherited ||
+    local === inherited ||
+    (isArray(local) && local.includes(inherited as EventHandler))
+  ) {
+    return local
+  }
+  return ([] as EventHandler[]).concat(local as any, inherited as any)
+}
+
+function createRootEventInvoker(binding: RootEventBinding): EventHandler {
+  const instance = currentInstance!
+  return (event: Event) => {
+    const handler = binding[2]
+    if (isArray(handler)) {
+      const originalStop = event.stopImmediatePropagation
+      event.stopImmediatePropagation = () => {
+        originalStop.call(event)
+        ;(event as any)._stopped = true
+      }
+      const handlers = handler.slice()
+      const args = [event]
+      for (let i = 0; i < handlers.length; i++) {
+        if ((event as any)._stopped) break
+        const handler = handlers[i]
+        if (handler) {
+          callWithAsyncErrorHandling(
+            handler,
+            instance,
+            ErrorCodes.NATIVE_EVENT_HANDLER,
+            args,
+          )
+        }
+      }
+    } else if (handler) {
+      callWithAsyncErrorHandling(
+        handler,
+        instance,
+        ErrorCodes.NATIVE_EVENT_HANDLER,
+        [event],
+      )
+    }
+  }
+}
+
+export function onRootBinding(
+  el: RootEventElement,
+  rawName: string,
+  event: string,
+  handler: MaybeEventHandlerValue,
+  options: AddEventListenerOptions | undefined,
+  inherited: boolean,
+): void {
+  let events = el.$evts
+  let binding = events && events[rawName]
+  if (!binding) {
+    if (!handler) return
+    if (!events) events = el.$evts = Object.create(null)
+    binding = events![rawName] = [undefined, undefined, undefined, undefined!]
+    binding[3] = addEventListener(
+      el,
+      event,
+      createRootEventInvoker(binding),
+      options,
+    )
+  }
+
+  // Keep the native listener stable across effect reruns, notably for `.once`.
+  // setDynamicProps explicitly clears this slot when the key is removed.
+  const index = inherited ? 1 : 0
+  binding[index] = handler
+  binding[2] = mergeEventHandlers(binding[0], binding[1])
+
+  if (!binding[2]) {
+    binding[3]()
+    delete events![rawName]
   }
 }
 

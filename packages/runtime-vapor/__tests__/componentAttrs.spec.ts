@@ -3,6 +3,8 @@ import {
   nextTick,
   onUpdated,
   ref,
+  shallowRef,
+  triggerRef,
   withModifiers,
 } from '@vue/runtime-dom'
 import {
@@ -1729,5 +1731,224 @@ describe('attribute fallthrough', () => {
 
     const { host } = define(App).render()
     expect(host.innerHTML).toBe('<div>class prop = DROPPED</div>')
+  })
+
+  it('should reconcile dynamic local and fallthrough attrs', async () => {
+    const title = ref('child')
+    const attrs = ref<Record<string, any>>({})
+    const Child = compile(
+      `<template>
+        <div
+          id="child"
+          class="child"
+          style="color: red"
+          :title="data"
+        />
+      </template>`,
+      title,
+    )
+    const App = compile(
+      `<template><components.Child v-bind="data" /></template>`,
+      attrs,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+    const el = host.firstElementChild as HTMLElement
+    expect(el.id).toBe('child')
+    expect(el.title).toBe('child')
+    expect(el.className).toBe('child')
+    expect(el.style.color).toBe('red')
+
+    attrs.value = {
+      id: 'parent',
+      title: 'parent',
+      class: 'child parent',
+      style: { color: 'blue' },
+    }
+    await nextTick()
+    expect(el.id).toBe('parent')
+    expect(el.title).toBe('parent')
+
+    title.value = 'child-next'
+    await nextTick()
+    expect(el.title).toBe('parent')
+
+    attrs.value = {}
+    await nextTick()
+    expect(el.hasAttribute('id')).toBe(false)
+    expect(el.title).toBe('child-next')
+    expect(el.className).toBe('')
+    expect(el.style.color).toBe('')
+  })
+
+  it('should discard a local v-bind source removed while shadowed', async () => {
+    const local = ref<Record<string, string>>({ title: 'child' })
+    const attrs = ref<Record<string, string>>({ title: 'parent' })
+    const Child = compile(`<template><div v-bind="data" /></template>`, local)
+    const App = compile(
+      `<template><components.Child v-bind="data" /></template>`,
+      attrs,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+    const el = host.firstElementChild as HTMLElement
+    expect(el.title).toBe('parent')
+
+    local.value = {}
+    await nextTick()
+    expect(el.title).toBe('parent')
+
+    attrs.value = {}
+    await nextTick()
+    expect(el.hasAttribute('title')).toBe(false)
+  })
+
+  it('should merge and update local and fallthrough listeners', async () => {
+    const calls: string[] = []
+    const local = ref<{ onClick: (event: Event) => void }>({
+      onClick: () => calls.push('local'),
+    })
+    const parent = ref<((event: Event) => void) | undefined>(() =>
+      calls.push('parent'),
+    )
+    const Child = compile(
+      `<template><button v-bind="data" /></template>`,
+      local,
+    )
+    const App = compile(
+      `<template><components.Child :onClick="data" /></template>`,
+      parent,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+    const button = host.firstElementChild as HTMLButtonElement
+    button.click()
+    expect(calls).toEqual(['local', 'parent'])
+
+    calls.length = 0
+    local.value = {
+      onClick(event: Event) {
+        calls.push('local')
+        event.stopImmediatePropagation()
+      },
+    }
+    await nextTick()
+    button.click()
+    expect(calls).toEqual(['local'])
+
+    calls.length = 0
+    parent.value = undefined
+    await nextTick()
+    button.click()
+    expect(calls).toEqual(['local'])
+  })
+
+  it('should preserve fallthrough once listeners across updates', async () => {
+    const handler = vi.fn()
+    const attrs = ref<Record<string, any>>({
+      onClickOnce: handler,
+      title: 'before',
+    })
+    const Child = compile(`<template><button /></template>`, ref(null))
+    const App = compile(
+      `<template><components.Child v-bind="data" /></template>`,
+      attrs,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+    const button = host.firstElementChild as HTMLButtonElement
+    button.click()
+    expect(handler).toHaveBeenCalledTimes(1)
+
+    attrs.value = { onClickOnce: handler, title: 'after' }
+    await nextTick()
+    expect(button.title).toBe('after')
+    button.click()
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it('should filter and remove functional fallthrough on a component root', async () => {
+    const attrs = ref<Record<string, string>>({
+      id: 'blocked',
+      class: 'allowed',
+    })
+    const Leaf = compile(`<template><div /></template>`, ref(null))
+    const Functional = () => createComponent(Leaf, null, null, true)
+    const App = compile(
+      `<template><components.Functional v-bind="data" /></template>`,
+      attrs,
+      { Functional },
+    )
+
+    const { host } = define(App).render()
+    expect(host.innerHTML).toBe('<div class="allowed"></div>')
+
+    attrs.value = { id: 'blocked' }
+    await nextTick()
+    const el = host.firstElementChild as HTMLElement
+    expect(el.className).toBe('')
+    expect(el.hasAttribute('id')).toBe(false)
+  })
+
+  it('should preserve a class token still owned by fallthrough attrs', async () => {
+    const childClass = ref('shared')
+    const parentClass = ref('shared parent')
+    const Child = compile(
+      `<template><div :class="data" /></template>`,
+      childClass,
+    )
+    const App = compile(
+      `<template><components.Child :class="data" /></template>`,
+      parentClass,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+    const el = host.firstElementChild as HTMLElement
+    expect(el.className).toBe('shared parent')
+
+    childClass.value = ''
+    await nextTick()
+    expect(el.className).toBe('shared parent')
+
+    parentClass.value = ''
+    await nextTick()
+    expect(el.className).toBe('')
+  })
+
+  it('should preserve fallthrough style precedence across local updates', async () => {
+    const childStyle = shallowRef({ color: 'red' })
+    const parentStyle = ref<Record<string, string>>({
+      color: 'blue',
+      background: 'blue',
+    })
+    const Child = compile(
+      `<template><div :style="data" /></template>`,
+      childStyle,
+    )
+    const App = compile(
+      `<template><components.Child :style="data" /></template>`,
+      parentStyle,
+      { Child },
+    )
+
+    const { host } = define(App).render()
+    const el = host.firstElementChild as HTMLElement
+    expect(el.style.color).toBe('blue')
+    expect(el.style.background).toBe('blue')
+
+    childStyle.value.color = 'green'
+    triggerRef(childStyle)
+    await nextTick()
+    expect(el.style.color).toBe('blue')
+
+    parentStyle.value = {}
+    await nextTick()
+    expect(el.style.color).toBe('green')
+    expect(el.style.background).toBe('')
   })
 })
