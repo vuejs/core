@@ -27,6 +27,16 @@ import { remove } from '../block'
 
 const START_TAG_RE = /^<([^\s/>]+)/
 
+// In-place stamp installed by the scope id module while slotted ids are
+// live: mismatch-recreated subtrees stamp like a client mount.
+export let mismatchStampHook: ((node: Node) => void) | null = null
+
+export function setMismatchStampHook(
+  hook: ((node: Node) => void) | null,
+): void {
+  mismatchStampHook = hook
+}
+
 export let isHydratingEnabled = false
 
 export function setIsHydratingEnabled(value: boolean): void {
@@ -410,6 +420,9 @@ function handleMismatch(
     for (let i = 0; i < descendants.length; i++) {
       markRecreatedNode(descendants[i])
     }
+    // Recreated nodes carry no SSR scope attrs; run the same creation-time
+    // stamping a client render would, before server children are adopted in.
+    if (mismatchStampHook) mismatchStampHook(newNode)
   }
   if (adoptChildren && node.nodeType === 1 && !newNode.firstChild) {
     let child = node.firstChild

@@ -38,6 +38,11 @@ import {
 } from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
+  applyScopeIdOwners,
+  currentSlotScopeIds,
+  setCurrentSlotScopeIds,
+} from './scopeId'
+import {
   type SlotBoundaryContext,
   currentSlotBoundary,
   hasSlotFallback,
@@ -81,6 +86,7 @@ import {
   FRAGMENT,
   SLOT,
   SLOT_FRAGMENT,
+  SLOT_OUTLET,
   VDOM,
 } from './fragmentFlags'
 
@@ -141,6 +147,10 @@ export class RenderContextFragment<
   readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
   readonly keepAliveCtx?: VaporKeepAliveContext | null
   readonly slotBoundary: SlotBoundaryContext | null = currentSlotBoundary
+  // Captured by reference: slot outlets replace this with their merged id cell
+  // right after construction, so late renders (branch switches, deferred
+  // fallbacks) create their DOM under the outlet's slot scope context.
+  slotScopeIds: string[] | null = currentSlotScopeIds
 
   constructor(nodes: T, flags: number = FRAGMENT) {
     super(nodes, flags)
@@ -177,16 +187,19 @@ export function runWithFragmentCtxOnly<R>(
   // restoring. This keeps ordinary branch renders on the cheap path.
   if (
     currentSlotOwner === fragment.slotOwner &&
-    currentSlotBoundary === fragment.slotBoundary
+    currentSlotBoundary === fragment.slotBoundary &&
+    currentSlotScopeIds === fragment.slotScopeIds
   ) {
     return fn()
   }
 
   const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
   const prevBoundary = setCurrentSlotBoundary(fragment.slotBoundary)
+  const prevSlotScopeIds = setCurrentSlotScopeIds(fragment.slotScopeIds)
   try {
     return fn()
   } finally {
+    setCurrentSlotScopeIds(prevSlotScopeIds)
     setCurrentSlotBoundary(prevBoundary)
     setCurrentSlotOwner(prevSlotOwner)
   }
@@ -262,6 +275,9 @@ export class DynamicFragment extends RenderContextFragment {
   inTransition?: boolean
   // Fallthrough attrs hooks register branch-owned effects on insert.
   hasFallthroughAttrs?: true
+  // Ancestor instances whose root-only scope ids resolve through this
+  // fragment; branch switches re-apply them to the new root before insertion.
+  scopeIdOwners?: VaporComponentInstance[]
   // Whether update() ran before. The very first update renders as part of
   // the mount and must not fire onUpdated hooks; with an adopted template
   // anchor `parent` is non-null even then, so mount status can no longer be
@@ -443,6 +459,10 @@ export class DynamicFragment extends RenderContextFragment {
           )
         : renderBranch()
 
+      // Root-only inherited ids must land on the new branch's effective root
+      // before insertion so custom element callbacks observe them.
+      if (this.scopeIdOwners) applyScopeIdOwners(this.scopeIdOwners)
+
       if (parent) {
         const onBeforeInsert = this.onBeforeInsert
         if (onBeforeInsert) {
@@ -545,6 +565,7 @@ export class SlotFragment
       parent: this.inheritFallback ? this.slotBoundary : null,
       getFallback: () => this.localFallback,
       run: (fn, scope) => this.runWithRenderCtx(fn, scope),
+      getScopeIds: () => this.slotScopeIds,
       markDirty: force => markSlotResolutionDirty(this, force),
       onContentInvalid: this.onContentInvalid,
     })
@@ -833,12 +854,17 @@ export function isFragment(val: unknown): val is VaporFragment {
   return !!(val && (val as any).__vf)
 }
 
-export type InteropFragment<T extends Block = Block> = VaporFragment<T> & {
-  vnode: VNode | null
-}
+export type InteropFragment<T extends Block = Block> =
+  RenderContextFragment<T> & {
+    vnode: VNode | null
+  }
 
 export function isInteropFragment(val: unknown): val is InteropFragment {
   return !!(val && (val as any).__vf & VDOM)
+}
+
+export function isSlotOutletFragment(val: unknown): boolean {
+  return !!(val && (val as any).__vf & SLOT_OUTLET)
 }
 
 export function isDynamicFragment(val: unknown): val is DynamicFragment {

@@ -13,6 +13,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
+import { applyComponentScopeIds, setCurrentSlotScopeIds } from './scopeId'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
   const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
@@ -24,12 +25,17 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
   pushWarningContext(instance)
+  // The rerender recreates the component's own template window, where slot
+  // scope ids never apply; root-only ids are re-applied below.
+  const prevSlotScopeIds = setCurrentSlotScopeIds(null)
   try {
     devRender(instance)
   } finally {
+    setCurrentSlotScopeIds(prevSlotScopeIds)
     popWarningContext()
     restoreCurrentInstance(prev)
   }
+  applyComponentScopeIds(instance)
   insert(instance.block, parent, anchor)
 }
 

@@ -287,6 +287,7 @@ export function createHydrationFunctions(
           node,
           parentComponent,
           parentSuspense,
+          slotScopeIds,
         )
         break
       default:
@@ -837,7 +838,7 @@ export function createHydrationFunctions(
       slotScopeIds,
     )
     // the component vnode's el should be updated when a mismatch occurs.
-    if (parentComponent) {
+    if (parentComponent && parentComponent.vnode) {
       parentComponent.vnode.el = vnode.el
       updateHOCHostEl(parentComponent, vnode.el)
     }
@@ -881,7 +882,7 @@ export function createHydrationFunctions(
     // update vnode
     let parent = parentComponent
     while (parent) {
-      if (parent.vnode.el === oldNode) {
+      if (parent.vnode && parent.vnode.el === oldNode) {
         parent.vnode.el = parent.subTree.el = newNode
       }
       parent = parent.parent as ComponentInternalInstance
