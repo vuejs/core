@@ -24,6 +24,7 @@ import {
   VaporSlot as VaporSlotVNode,
   type VdomInVaporInterface,
   callWithAsyncErrorHandling,
+  cloneVNode,
   createCommentVNode,
   createInternalObject,
   createVNode,
@@ -1031,8 +1032,10 @@ function createVNodeFragment(vnode: VNode): {
   // boundary to recheck; starting invalid would instead mount-then-teardown the
   // fallback on every interop mount. Hydration starts resolved (SSR nodes exist).
   let contentResolved = isHydrating
+  // reads `frag.vnode` rather than the captured argument so it follows a
+  // fallthrough re-clone (see mountVNode)
   const syncNodes = () => {
-    frag.nodes = resolveVNodeNodes(vnode)
+    frag.nodes = resolveVNodeNodes(frag.vnode!)
     contentResolved = true
   }
   frag.isBlockValid = componentAsValid =>
@@ -1056,12 +1059,23 @@ function mountVNode(
   internals: RendererInternals,
   vnode: VNode,
   parentComponent: VaporComponentInstance | null,
+  getFallthroughAttrs?: () => Record<string, any>,
 ): VaporFragment {
   let suspense =
     currentParentSuspense || (parentComponent && parentComponent.suspense)
+  // A vnode standing in as a component's effective root inherits fallthrough
+  // attrs the same way VDOM does it — merged into the vnode's props
+  // (`cloneVNode` -> `mergeProps`), so mount and patch apply them natively
+  // instead of writing the DOM behind the renderer's back.
+  const baseVNode = vnode
+  if (getFallthroughAttrs) {
+    vnode = cloneVNode(baseVNode, getFallthroughAttrs())
+  }
   const { frag, syncNodes } = createVNodeFragment(vnode)
 
   let isMounted = false
+  let mountedParentNode: ParentNode | undefined
+  let mountedAnchor: Node | null = null
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     if (transition) setVNodeTransitionHooks(vnode, transition)
     const parentSuspense = resolveUnmountSuspense(suspense)
@@ -1158,9 +1172,49 @@ function mountVNode(
         )
       }
       simpleSetCurrentInstance(prev)
+      mountedParentNode = parentNode
+      mountedAnchor = anchor
     }
     syncNodes()
     if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+  }
+
+  if (getFallthroughAttrs) {
+    // Re-clone and let VDOM patch the change through, mirroring how a VDOM
+    // parent re-renders its root with fresh fallthrough attrs. The first run
+    // only establishes the dependency — the initial clone above already
+    // carries those attrs into the mount.
+    let applied = false
+    renderEffect(() => {
+      // clone on every run: merging the attrs is what reads them, and that
+      // read is the dependency this effect tracks
+      const next = cloneVNode(baseVNode, getFallthroughAttrs())
+      if (!applied) {
+        // the eager clone above already carries these attrs into the mount
+        applied = true
+        return
+      }
+      if (!isMounted || !mountedParentNode) return
+      const previous = vnode
+      vnode = next
+      trackFragmentVNodeUpdates(frag, vnode, syncNodes)
+      frag.vnode = vnode
+      frag.$key = vnode.key
+      const prevInstance = currentInstance
+      simpleSetCurrentInstance(parentComponent)
+      internals.p(
+        previous,
+        vnode,
+        mountedParentNode,
+        mountedAnchor,
+        parentComponent as any,
+        suspense,
+        undefined, // namespace
+        frag.slotScopeIds,
+      )
+      simpleSetCurrentInstance(prevInstance)
+      syncNodes()
+    })
   }
 
   frag.remove = unmount

@@ -14,6 +14,8 @@ import {
   type VaporComponentInstance,
   createComponentWithFallback,
   emptyContext,
+  isVaporComponent,
+  resolveFallthroughAttrs,
 } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
@@ -101,7 +103,21 @@ export function createDynamicComponent(
           if (frag) return frag
         }
 
-        const frag = appContext.vdom.mountVNode(value, currentInstance)
+        // A vnode standing in as this component's effective root inherits
+        // fallthrough attrs; the normal component path folds them into
+        // rawProps at creation, this one merges them into the vnode's props.
+        const owner =
+          isSingleRoot &&
+          isVaporComponent(currentInstance) &&
+          currentInstance.hasFallthrough &&
+          currentInstance.type.inheritAttrs !== false
+            ? currentInstance
+            : undefined
+        const frag = appContext.vdom.mountVNode(
+          value,
+          currentInstance,
+          owner && (() => resolveFallthroughAttrs(owner)),
+        )
         if (isHydrating) {
           locateHydrationNode(shouldConsumeFragmentStart(value))
           frag.hydrate()
