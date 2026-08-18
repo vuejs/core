@@ -45,6 +45,7 @@ import {
 import {
   type VaporComponentInstance,
   isApplyingFallthroughProps,
+  isDeclaredModelListener,
   shouldUseFunctionalFallthrough,
 } from '../component'
 import {
@@ -73,6 +74,9 @@ const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
     instance.hasFallthrough &&
     instance.type.inheritAttrs !== false &&
     key in instance.attrs &&
+    // skip only keys fallthrough will actually write: v-model listeners
+    // with a declared prop are filtered out of the fallthrough set
+    !isDeclaredModelListener(instance, key) &&
     (!shouldUseFunctionalFallthrough(instance.type) ||
       isFunctionalFallthroughKey(key))
   )

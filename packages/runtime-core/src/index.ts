@@ -705,6 +705,7 @@ export {
   warnExtraneousAttributes,
   getFunctionalFallthrough,
   isFunctionalFallthroughKey,
+  filterModelListeners,
   shouldUpdateComponent,
 } from './componentRenderUtils'
 
