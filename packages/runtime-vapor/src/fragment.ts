@@ -121,7 +121,6 @@ export class VaporFragment<
   ) => void
 
   // hooks
-  onBeforeInsert?: ((nodes: Block) => void)[]
   onRemove?: (() => void)[]
   onBeforeUpdate?: (() => void)[]
   onUpdated?: ((nodes?: Block) => void)[]
@@ -273,8 +272,12 @@ export class DynamicFragment extends RenderContextFragment {
   // dev-mode comment text and must not double as a category signal.
   nativeChildren?: boolean
   inTransition?: boolean
-  // Fallthrough attrs hooks register branch-owned effects on insert.
-  hasFallthroughAttrs?: true
+  // Fallthrough (re-)application for this fragment's branches, installed by
+  // the owning component when the fragment sits on its fallthrough root
+  // chain. Invoked inside the branch render ctx so created effects capture
+  // the correct instance and land in branch scopes; its presence also forces
+  // scopes for compiler-proven no-scope branches.
+  fallthrough?: (nodes: Block) => void
   // Ancestor instances whose root-only scope ids resolve through this
   // fragment; branch switches re-apply them to the new root before insertion.
   scopeIdOwners?: VaporComponentInstance[]
@@ -421,18 +424,23 @@ export class DynamicFragment extends RenderContextFragment {
       const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx : null
       // A compiler-proven static branch can skip its own EffectScope, but attrs
       // fallthrough still registers branch-owned cleanup.
-      const useScope = !noScope || !!this.hasFallthroughAttrs
+      const useScope = !noScope || !!this.fallthrough
       if (!keepAliveCtx) {
         this.scope = useScope ? new EffectScope() : undefined
       }
 
       const renderBranch = () => {
         try {
-          this.nodes = this.runWithRenderCtx(
-            () =>
-              (useScope ? this.scope!.run(render) : render()) || EMPTY_BLOCK,
-            this.scope,
-          )
+          this.nodes = this.runWithRenderCtx(() => {
+            const nodes =
+              (useScope ? this.scope!.run(render) : render()) || EMPTY_BLOCK
+            // (Re-)apply fallthrough attrs for the new branch inside the
+            // render ctx, before insertion. Disconnected renders are skipped
+            // on purpose: the enclosing application traverses into them and
+            // owns their first application.
+            if (parent && this.fallthrough) this.fallthrough(nodes)
+            return nodes
+          }, this.scope)
         } finally {
           // Inherit the fragment key without overriding a child's own key.
           const key = this.keyed ? this.current : this.$key
@@ -464,10 +472,6 @@ export class DynamicFragment extends RenderContextFragment {
       if (this.scopeIdOwners) applyScopeIdOwners(this.scopeIdOwners)
 
       if (parent) {
-        const onBeforeInsert = this.onBeforeInsert
-        if (onBeforeInsert) {
-          onBeforeInsert.forEach(hook => hook(this.nodes))
-        }
         insert(this.nodes, parent, this.anchor)
         if (removePrevious && keepAliveCtx) {
           // Publish the new cache entry only after it has been mounted.

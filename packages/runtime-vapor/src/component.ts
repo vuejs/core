@@ -1715,12 +1715,20 @@ function applyFallthroughAttrs(
 ): void {
   let hasSlotFragment = false
   let dynamicFragments: DynamicFragment[] | undefined
+  // The innermost dynamic fragment on the descent path owns the current
+  // root's residency, so the fallthrough effect must live in its branch
+  // scope. Track the nearest enclosing branch scope alongside it as the
+  // lifecycle parent for scopes retrofitted onto no-scope branches.
+  let innermost: DynamicFragment | undefined
+  let parentScope = scope
   const root = getRootElement(block, {
     onDynamicFragment: frag => {
       if (frag.__vf & SLOT) {
         hasSlotFragment = true
       } else {
         ;(dynamicFragments ||= []).push(frag)
+        if (innermost && innermost.scope) parentScope = innermost.scope
+        innermost = frag
       }
     },
     shallow: true,
@@ -1741,12 +1749,22 @@ function applyFallthroughAttrs(
   }
 
   if (root && !hasSlotFragment) {
+    let ownerScope = scope
+    if (innermost) {
+      // A compiler-proven no-scope branch may have rendered without a scope;
+      // create one so the effect dies with the branch — parented under the
+      // nearest enclosing branch scope so hierarchical pause/resume
+      // (KeepAlive caching) reaches it.
+      ownerScope = innermost.scope ||= parentScope
+        ? parentScope.run(() => new EffectScope())!
+        : new EffectScope()
+    }
     const applyEffect = () =>
       renderEffect(() =>
         applyFallthroughProps(root, resolveFallthroughAttrs(instance)),
       )
     // ensure the render effect is cleaned up when the branch scope is stopped
-    scope ? scope.run(applyEffect) : applyEffect()
+    ownerScope ? ownerScope.run(applyEffect) : applyEffect()
   } else if (__DEV__) {
     const accessedAttrs = instance.accessedAttrs
     const fallthroughAttrs = resolveFallthroughAttrs(instance)
@@ -1822,13 +1840,12 @@ function registerDynamicFragmentFallthroughAttrs(
   frag: DynamicFragment,
   instance: VaporComponentInstance,
 ): void {
-  // avoid registering duplicate hooks
-  if (frag.hasFallthroughAttrs) return
+  // one application per fragment: attrs fold at component boundaries, so
+  // only the first registering instance can sit on this fragment's chain
+  if (frag.fallthrough) return
 
-  frag.hasFallthroughAttrs = true
-  ;(frag.onBeforeInsert ||= []).push(nodes =>
-    applyFallthroughAttrs(nodes, instance, frag.scope!),
-  )
+  frag.fallthrough = nodes =>
+    applyFallthroughAttrs(nodes, instance, frag.scope!)
 }
 
 export interface DeferredKeepAliveUpdates {

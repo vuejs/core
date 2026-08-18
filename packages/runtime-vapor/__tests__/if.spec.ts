@@ -290,9 +290,11 @@ describe('createIf', () => {
     ).render()
 
     expect(host.innerHTML).toBe('<div id="a">foo</div><!--if-->')
-    expect(frag.scope).toBeUndefined()
+    // branch-owned from the first render on: the no-scope branch gets a
+    // retrofitted scope so the fallthrough effect dies with the branch
+    expect(frag.scope).toBeDefined()
     expect((frag as any).attrs).toBeUndefined()
-    expect((frag as any).hasFallthroughAttrs).toBe(true)
+    expect((frag as any).fallthrough).toBeTruthy()
 
     id.value = 'b'
     await nextTick()

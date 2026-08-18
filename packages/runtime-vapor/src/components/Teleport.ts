@@ -213,8 +213,6 @@ export class TeleportFragment extends RenderContextFragment {
     remove(this.nodes, mountState.container)
     // mount new nodes
     this.nodes = children
-    const onBeforeInsert = this.onBeforeInsert
-    if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(this.nodes))
     insert(children, mountState.container, mountState.anchor)
     this.bindChildren(this.nodes)
     this.updateCssVars()
@@ -237,8 +235,6 @@ export class TeleportFragment extends RenderContextFragment {
     if (this.mountState.location !== TeleportMountLocation.None) {
       move(this.nodes, parent, anchor, MoveType.REORDER)
     } else {
-      const onBeforeInsert = this.onBeforeInsert
-      if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(this.nodes))
       insert(this.nodes, parent, anchor)
     }
     this.mountState = { location, container: parent, anchor }

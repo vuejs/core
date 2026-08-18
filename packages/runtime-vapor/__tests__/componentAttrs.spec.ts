@@ -6,10 +6,12 @@ import {
   withModifiers,
 } from '@vue/runtime-dom'
 import {
+  VaporKeepAlive,
   VaporTeleport,
   createComponent,
   createDynamicComponent,
   createIf,
+  createKeyedFragment,
   createSlot,
   defineVaporComponent,
   delegateEvents,
@@ -22,7 +24,12 @@ import {
   template,
 } from '../src'
 import { compile, makeRender } from './_utils'
-import { VaporDynamicComponentFlags, stringifyStyle } from '@vue/shared'
+import {
+  VaporBlockShape,
+  VaporDynamicComponentFlags,
+  VaporIfFlags,
+  stringifyStyle,
+} from '@vue/shared'
 import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
@@ -1867,5 +1874,223 @@ describe('attribute fallthrough', () => {
     expect(node.getAttribute('id')).toBe('x')
     node.dispatchEvent(new CustomEvent('update:foo'))
     expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('should stop updating fallthrough attrs on a root detached by branch switch', async () => {
+    const show = ref(true)
+    const id = ref('a')
+    const t0 = template('<div>foo</div>', 1)
+    const { component: Child } = define({
+      setup() {
+        return createIf(
+          () => show.value,
+          () => t0(),
+        )
+      },
+    })
+    const { host } = define({
+      setup() {
+        return createComponent(Child, { id: () => id.value }, null, true)
+      },
+    }).render()
+
+    const initialRoot = host.querySelector('div')!
+    expect(initialRoot.getAttribute('id')).toBe('a')
+
+    show.value = false
+    await nextTick()
+    expect(initialRoot.isConnected).toBe(false)
+
+    id.value = 'b'
+    await nextTick()
+    // the branch scope owns the effect, so the detached root is not updated
+    expect(initialRoot.getAttribute('id')).toBe('a')
+
+    show.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="b">foo</div><!--if-->')
+  })
+
+  it('should stop updating fallthrough attrs on a detached nested branch root', async () => {
+    const outer = ref(true)
+    const inner = ref(true)
+    const id = ref('a')
+    const t0 = template('<div>outer</div>', 1)
+    const t1 = template('<p>inner</p>', 1)
+    const t2 = template('<span>inner-else</span>', 1)
+    const { component: Child } = define({
+      setup() {
+        return createIf(
+          () => outer.value,
+          () => t0(),
+          () =>
+            createIf(
+              () => inner.value,
+              () => t1(),
+              () => t2(),
+            ),
+        )
+      },
+    })
+    const { host } = define({
+      setup() {
+        return createComponent(Child, { id: () => id.value }, null, true)
+      },
+    }).render()
+
+    outer.value = false
+    await nextTick()
+    const innerEl = host.querySelector('p')!
+    expect(innerEl.getAttribute('id')).toBe('a')
+
+    // switching only the inner branch stops the inner branch scope, which
+    // owns the effect for the inner root
+    inner.value = false
+    await nextTick()
+    expect(innerEl.isConnected).toBe(false)
+
+    id.value = 'b'
+    await nextTick()
+    expect(innerEl.getAttribute('id')).toBe('a')
+    expect(host.querySelector('span')!.getAttribute('id')).toBe('b')
+  })
+
+  it('should scope fallthrough for no-scope nested branch roots', async () => {
+    const outer = ref(true)
+    const inner = ref(true)
+    const id = ref('a')
+    const t0 = template('<div>outer</div>', 1)
+    const t1 = template('<p>inner</p>', 1)
+    const t2 = template('<span>inner-else</span>', 1)
+    const noScopeIfElse =
+      VaporBlockShape.SINGLE_ROOT |
+      (VaporBlockShape.SINGLE_ROOT << 2) |
+      VaporIfFlags.TRUE_NO_SCOPE |
+      VaporIfFlags.FALSE_NO_SCOPE
+    const { component: Child } = define({
+      setup() {
+        return createIf(
+          () => outer.value,
+          () => t0(),
+          () =>
+            createIf(
+              () => inner.value,
+              () => t1(),
+              () => t2(),
+              noScopeIfElse,
+            ),
+        )
+      },
+    })
+    const { host } = define({
+      setup() {
+        return createComponent(Child, { id: () => id.value }, null, true)
+      },
+    }).render()
+
+    outer.value = false
+    await nextTick()
+    const innerEl = host.querySelector('p')!
+    expect(innerEl.getAttribute('id')).toBe('a')
+
+    // the no-scope inner branch received a retrofitted scope owning the
+    // effect; switching it stops that scope
+    inner.value = false
+    await nextTick()
+    expect(innerEl.isConnected).toBe(false)
+    id.value = 'b'
+    await nextTick()
+    expect(innerEl.getAttribute('id')).toBe('a')
+    const spanEl = host.querySelector('span')!
+    expect(spanEl.getAttribute('id')).toBe('b')
+
+    // switching the outer branch tears the nested chain down with it
+    outer.value = true
+    await nextTick()
+    expect(spanEl.isConnected).toBe(false)
+    id.value = 'c'
+    await nextTick()
+    expect(spanEl.getAttribute('id')).toBe('b')
+    expect(host.querySelector('div')!.getAttribute('id')).toBe('c')
+  })
+
+  it('should reapply fallthrough attrs across keyed root re-renders', async () => {
+    const key = ref(0)
+    const id = ref('a')
+    const t0 = template('<div>keyed</div>', 1)
+    const { component: Child } = define({
+      setup() {
+        return createKeyedFragment(
+          () => key.value,
+          () => t0(),
+        )
+      },
+    })
+    const { host } = define({
+      setup() {
+        return createComponent(Child, { id: () => id.value }, null, true)
+      },
+    }).render()
+    const first = host.querySelector('div')!
+    expect(first.getAttribute('id')).toBe('a')
+
+    key.value++
+    await nextTick()
+    const second = host.querySelector('div')!
+    expect(second).not.toBe(first)
+    expect(second.getAttribute('id')).toBe('a')
+
+    id.value = 'b'
+    await nextTick()
+    expect(second.getAttribute('id')).toBe('b')
+    // the replaced root's effect died with its branch scope
+    expect(first.getAttribute('id')).toBe('a')
+  })
+
+  it('should freeze fallthrough on KeepAlive-cached components and catch up on reactivation', async () => {
+    const current = ref('one')
+    const id = ref('a')
+    const One = defineVaporComponent({
+      name: 'One',
+      setup() {
+        return template('<div>one</div>', 1)()
+      },
+    })
+    const Two = defineVaporComponent({
+      name: 'Two',
+      setup() {
+        return template('<span>two</span>', 1)()
+      },
+    })
+    const views: Record<string, any> = { one: One, two: Two }
+    const { host } = define({
+      setup() {
+        return createComponent(VaporKeepAlive as any, null, {
+          default: () =>
+            createDynamicComponent(() => views[current.value], {
+              id: () => id.value,
+            }),
+        })
+      },
+    }).render()
+
+    const oneEl = host.querySelector('div')!
+    expect(oneEl.getAttribute('id')).toBe('a')
+
+    current.value = 'two'
+    await nextTick()
+    expect(oneEl.isConnected).toBe(false)
+
+    id.value = 'b'
+    await nextTick()
+    // cached: committed inputs are frozen, the cached root must not update
+    expect(oneEl.getAttribute('id')).toBe('a')
+    expect(host.querySelector('span')!.getAttribute('id')).toBe('b')
+
+    current.value = 'one'
+    await nextTick()
+    // reactivated: committed inputs resume and the effect catches up
+    expect(oneEl.isConnected).toBe(true)
+    expect(oneEl.getAttribute('id')).toBe('b')
   })
 })

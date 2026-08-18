@@ -488,8 +488,6 @@ export const createFor = (
     }
 
     if (parent) {
-      const onBeforeInsert = frag.onBeforeInsert
-      if (onBeforeInsert) onBeforeInsert.forEach(fn => fn(block.nodes))
       insertForBlock(block, anchor)
     }
 
