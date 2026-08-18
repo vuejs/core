@@ -629,16 +629,17 @@ export function hasFallthroughAttrs(
   rawProps: RawProps | null | undefined,
 ): boolean {
   if (rawProps) {
-    // determine fallthrough
-    if (rawProps.$ || !comp.props) {
+    // dynamic sources can produce attrs keys at any time
+    if (rawProps.$) {
       return true
-    } else {
-      // check if rawProps contains any keys not declared
-      const propsOptions = normalizePropsOptions(comp)[0]!
-      for (const key in rawProps) {
-        if (!hasOwn(propsOptions, camelize(key))) {
-          return true
-        }
+    }
+    // otherwise fallthrough potential requires an undeclared static key —
+    // static keys are fixed at creation, so an empty rawProps can never
+    // produce attrs later
+    const propsOptions = comp.props ? normalizePropsOptions(comp)[0]! : null
+    for (const key in rawProps) {
+      if (!propsOptions || !hasOwn(propsOptions, camelize(key))) {
+        return true
       }
     }
   }

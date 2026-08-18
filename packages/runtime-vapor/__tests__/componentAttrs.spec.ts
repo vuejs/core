@@ -1730,4 +1730,142 @@ describe('attribute fallthrough', () => {
     const { host } = define(App).render()
     expect(host.innerHTML).toBe('<div>class prop = DROPPED</div>')
   })
+
+  it('should apply dynamic attrs that appear after mount', async () => {
+    const t0 = template('<div>', 1)
+    const { component: Child } = define({
+      setup() {
+        return t0()
+      },
+    })
+
+    const attrs = ref<Record<string, any>>({})
+    const { host } = define({
+      setup() {
+        return createComponent(Child, { $: [() => attrs.value] }, null, true)
+      },
+    }).render()
+    expect(host.innerHTML).toBe('<div></div>')
+
+    attrs.value = { id: 'late' }
+    await nextTick()
+    expect(host.innerHTML).toBe('<div id="late"></div>')
+
+    attrs.value = {}
+    await nextTick()
+    expect(host.innerHTML).toBe('<div></div>')
+  })
+
+  it('should clean up functional fallthrough when allowed keys are removed', async () => {
+    const attrs = ref<Record<string, any>>({ class: 'foo' })
+    const Fn = () => template('<div>', 1)()
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Fn as any,
+          { $: [() => attrs.value] },
+          null,
+          true,
+        )
+      },
+    }).render()
+    const node = host.children[0] as HTMLElement
+    expect(node.className).toBe('foo')
+
+    // class removed; id is not a functional fallthrough key, so the
+    // resolved fallthrough set becomes empty and must still diff away
+    // the previously applied class
+    attrs.value = { id: 'x' }
+    await nextTick()
+    expect(node.className).toBe('')
+    expect(node.getAttribute('id')).toBe(null)
+  })
+
+  it('should filter functional fallthrough forwarded to a component root', () => {
+    const t0 = template('<div>', 1)
+    const { component: Inner } = define({
+      setup() {
+        return t0()
+      },
+    })
+    const Fn = () => createComponent(Inner, null, null, true)
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Fn as any,
+          { id: () => 'x', class: () => 'c' },
+          null,
+          true,
+        )
+      },
+    }).render()
+    const node = host.children[0] as HTMLElement
+    expect(node.getAttribute('class')).toBe('c')
+    expect(node.getAttribute('id')).toBe(null)
+  })
+
+  it('should not fallthrough v-model listeners with a declared prop', () => {
+    const declared = vi.fn()
+    const undeclared = vi.fn()
+    const t0 = template('<div>', 1)
+    const { component: Child } = define({
+      props: ['foo'],
+      setup() {
+        return t0()
+      },
+    })
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Child,
+          {
+            'onUpdate:foo': () => declared,
+            'onUpdate:bar': () => undeclared,
+            id: () => 'x',
+          },
+          null,
+          true,
+        )
+      },
+    }).render()
+    const node = host.children[0] as HTMLElement
+    expect(node.getAttribute('id')).toBe('x')
+    node.dispatchEvent(new CustomEvent('update:foo'))
+    expect(declared).not.toHaveBeenCalled()
+    node.dispatchEvent(new CustomEvent('update:bar'))
+    expect(undeclared).toHaveBeenCalled()
+  })
+
+  it('should not forward declared v-model listeners into a component root', () => {
+    const handler = vi.fn()
+    const t0 = template('<div>', 1)
+    const { component: Child } = define({
+      setup() {
+        return t0()
+      },
+    })
+    const { component: Middle } = define({
+      props: ['foo'],
+      setup() {
+        return createComponent(Child, null, null, true)
+      },
+    })
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Middle,
+          {
+            'onUpdate:foo': () => handler,
+            id: () => 'x',
+          },
+          null,
+          true,
+        )
+      },
+    }).render()
+    const node = host.children[0] as HTMLElement
+    expect(node.getAttribute('id')).toBe('x')
+    node.dispatchEvent(new CustomEvent('update:foo'))
+    expect(handler).not.toHaveBeenCalled()
+  })
 })

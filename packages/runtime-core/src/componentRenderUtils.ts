@@ -363,7 +363,10 @@ export const getFunctionalFallthrough = (attrs: Data): Data | undefined => {
   return res
 }
 
-const filterModelListeners = (attrs: Data, props: NormalizedProps): Data => {
+export const filterModelListeners = (
+  attrs: Data,
+  props: NormalizedProps,
+): Data => {
   const res: Data = {}
   for (const key in attrs) {
     if (!isModelListener(key) || !(key.slice(9) in props)) {
