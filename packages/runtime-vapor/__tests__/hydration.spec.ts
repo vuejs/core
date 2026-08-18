@@ -9359,7 +9359,9 @@ describe('Vapor Mode hydration', () => {
       container.innerHTML = '<my-element-7203></my-element-7203>'
       const app = createVaporSSRApp({
         setup() {
-          return createPlainElement('my-element-7203', { foo: () => msg.value })
+          return createPlainElement('my-element-7203', {
+            foo: () => msg.value,
+          })
         },
       })
       app.mount(container)
@@ -16045,6 +16047,7 @@ describe('scopeId hydration writes', () => {
     expect(container.innerHTML).toBe(`<div child="" parent="">base</div>`)
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     app.unmount()
+    container.remove()
   })
 
   test('writes recreated plain element scopeId without breaking hydration', () => {
@@ -16070,6 +16073,7 @@ describe('scopeId hydration writes', () => {
     expect(restored).toBe(true)
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     app.unmount()
+    container.remove()
   })
 
   // renders App with interop on the "server", then rebuilds the markup in a

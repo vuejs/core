@@ -2070,16 +2070,15 @@ describe('vdom interop', () => {
       { Child },
     )
 
-    const { html } = define(Parent).render()
-    expect(html()).toContain('fb')
-    expect(html()).toContain('child-s')
+    const { app, host } = define(Parent).render()
+    expect(host.querySelector('i')!.hasAttribute('child-s')).toBe(true)
 
     data.value = true
     await nextTick()
     // content parked behind the active fallback still received the slot's
     // ids, so re-exposing it yields the same DOM as VDOM (<em child-s>)
-    expect(html()).toContain('<em')
-    expect(html()).toContain('child-s')
+    expect(host.querySelector('em')!.hasAttribute('child-s')).toBe(true)
+    app.unmount()
   })
 
   describe('slotted scope id depth parity with VDOM', () => {
@@ -2099,14 +2098,21 @@ describe('vdom interop', () => {
     const strip = (html: string) =>
       html.replace(/<!--[^>]*-->/g, '').replace(/ receiver=""/g, '')
 
-    const mountPair = (
-      makeSide: (vapor: boolean) => any,
-    ): { vdomHost: HTMLElement; host: HTMLElement } => {
+    const mountPair = (makeSide: (vapor: boolean) => any) => {
       const vdomHost = document.createElement('div')
-      createApp(makeSide(false)).mount(vdomHost)
+      const vdomApp = createApp(makeSide(false))
+      vdomApp.mount(vdomHost)
       const host = document.createElement('div')
-      createVaporApp(makeSide(true)).mount(host)
-      return { vdomHost, host }
+      const app = createVaporApp(makeSide(true))
+      app.mount(host)
+      return {
+        vdomHost,
+        host,
+        unmount: () => {
+          vdomApp.unmount()
+          app.unmount()
+        },
+      }
     }
 
     const makeSides =
@@ -2130,25 +2136,27 @@ describe('vdom interop', () => {
       }
 
     test('slotted id reaches nested elements but not component internals', () => {
-      let { vdomHost, host } = mountPair(
+      let { vdomHost, host, unmount } = mountPair(
         makeSides(
           `<template><components.Receiver><div><span>x</span></div></components.Receiver></template>`,
         ),
       )
       expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
       expect(strip(host.innerHTML)).toContain('<span receiver-s="">x</span>')
-      ;({ vdomHost, host } = mountPair(
+      unmount()
+      ;({ vdomHost, host, unmount } = mountPair(
         makeSides(
           `<template><components.Receiver><div><components.Comp/></div></components.Receiver></template>`,
           { components: { Comp: `<template><b><u>x</u></b></template>` } },
         ),
       ))
       expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
+      unmount()
     })
 
     test('v-if / v-for content added after mount carries ids at depth', async () => {
       const show = ref(false)
-      let { vdomHost, host } = mountPair(
+      let { vdomHost, host, unmount } = mountPair(
         makeSides(
           `<template><components.Receiver><div v-if="data"><span>x</span></div></components.Receiver></template>`,
           { data: show },
@@ -2158,9 +2166,10 @@ describe('vdom interop', () => {
       await nextTick()
       expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
       expect(strip(host.innerHTML)).toContain('receiver-s')
+      unmount()
 
       const count = ref(0)
-      ;({ vdomHost, host } = mountPair(
+      ;({ vdomHost, host, unmount } = mountPair(
         makeSides(
           `<template><components.Receiver><div v-for="i in data"><span>{{ i }}</span></div></components.Receiver></template>`,
           { data: count },
@@ -2170,16 +2179,18 @@ describe('vdom interop', () => {
       await nextTick()
       expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
       expect(strip(host.innerHTML)).toContain('receiver-s')
+      unmount()
     })
 
     test('fallback content carries ids at depth', () => {
-      const { vdomHost, host } = mountPair(
+      const { vdomHost, host, unmount } = mountPair(
         makeSides(`<template><components.Receiver/></template>`, {
           receiver: `<template><slot><div><span>fb</span></div></slot></template>`,
         }),
       )
       expect(strip(host.innerHTML)).toBe(strip(vdomHost.innerHTML))
       expect(strip(host.innerHTML)).toContain('receiver-s')
+      unmount()
     })
   })
 
@@ -2312,31 +2323,38 @@ describe('vdom interop', () => {
         { vapor },
       )
       const root = document.createElement('div')
-      ;(vapor ? createVaporApp(Parent) : createApp(Parent)).mount(root)
+      const app = vapor ? createVaporApp(Parent) : createApp(Parent)
+      app.mount(root)
 
       data.value = 1
       await nextTick()
-      return root
+      return { root, app }
     }
 
     for (const vapor of [false, true]) {
       // late v-if branch
-      let root = await runCase(vapor, `<span v-if="data">late</span>`)
+      let { root, app } = await runCase(vapor, `<span v-if="data">late</span>`)
       expect(root.querySelector('span')!.hasAttribute('receiver-s')).toBe(true)
+      app.unmount()
 
       // component whose future root appears late: ids reach the new root
       // but not its internals
-      root = await runCase(
+      ;({ root, app } = await runCase(
         vapor,
         `<components.Inner />`,
         `<template><span v-if="data"><u>late</u></span><i v-else>initial</i></template>`,
-      )
+      ))
       expect(root.querySelector('span')!.hasAttribute('receiver-s')).toBe(true)
       expect(root.querySelector('u')!.hasAttribute('receiver-s')).toBe(false)
+      app.unmount()
 
       // late v-for item
-      root = await runCase(vapor, `<span v-for="i in data">late</span>`)
+      ;({ root, app } = await runCase(
+        vapor,
+        `<span v-for="i in data">late</span>`,
+      ))
       expect(root.querySelector('span')!.hasAttribute('receiver-s')).toBe(true)
+      app.unmount()
     }
   })
 
