@@ -17,6 +17,7 @@ import {
   EMPTY_OBJ,
   type IfAny,
   NOOP,
+  PatchFlags,
   type Prettify,
   type UnionToIntersection,
   extend,
@@ -51,11 +52,12 @@ import {
 } from './componentOptions'
 import type { EmitFn, EmitsOptions } from './componentEmits'
 import type { SlotsType, UnwrapSlotsType } from './componentSlots'
-import { markAttrsAccessed } from './componentRenderUtils'
+import { filterSingleRoot, markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
 import type { Directive } from './directives'
+import { Fragment, type VNodeArrayChildren } from './vnode'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -358,12 +360,33 @@ const getPublicInstance = (
   return getPublicInstance(i.parent)
 }
 
+// dev only: in dev mode, a leading comment before a component's single root
+// element is preserved and turns the root into a `DEV_ROOT_FRAGMENT`, whose
+// `vnode.el` is the fragment's anchor rather than the actual rendered
+// element. Resolve through to the real root here, mirroring the resolution
+// already done for attrs/scopeId fallthrough in `renderComponentRoot`.
+const getDevRootFragmentEl = (i: ComponentInternalInstance) => {
+  const { subTree } = i
+  if (
+    subTree &&
+    subTree.type === Fragment &&
+    subTree.patchFlag > 0 &&
+    subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
+    const realRoot = filterSingleRoot(subTree.children as VNodeArrayChildren)
+    if (realRoot) {
+      return realRoot.el
+    }
+  }
+  return i.vnode.el
+}
+
 export const publicPropertiesMap: PublicPropertiesMap =
   // Move PURE marker to new line to workaround compiler discarding it
   // due to type annotation
   /*@__PURE__*/ extend(Object.create(null), {
     $: i => i,
-    $el: i => i.vnode.el,
+    $el: i => (__DEV__ ? getDevRootFragmentEl(i) : i.vnode.el),
     $data: i => i.data,
     $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
     $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),

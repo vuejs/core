@@ -1,9 +1,14 @@
 import {
+  Fragment,
+  TestNodeTypes,
   createApp,
+  createCommentVNode,
+  createElementBlock,
   defineComponent,
   getCurrentInstance,
   h,
   nodeOps,
+  openBlock,
   render,
   shallowReadonly,
 } from '@vue/runtime-test'
@@ -11,6 +16,7 @@ import type {
   ComponentInternalInstance,
   ComponentOptions,
 } from '../src/component'
+import { PatchFlags } from '@vue/shared'
 
 describe('component: proxy', () => {
   test('data', () => {
@@ -105,6 +111,30 @@ describe('component: proxy', () => {
       return this
     })
     expect(nextTickThis).toBe(instanceProxy)
+  })
+
+  // #12680
+  test('$el should resolve to the real root element when root is a dev comment + single element fragment', () => {
+    let instanceProxy: any
+    const Comp = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'real root')],
+            PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
   })
 
   test('user attached properties', async () => {
