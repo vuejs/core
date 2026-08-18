@@ -1608,7 +1608,6 @@ describe('attribute fallthrough', () => {
 
   it('does not warn for filtered functional fallthrough on a text root', () => {
     const { component: Child } = define(() => template('child')())
-    Child.props = ['foo']
     const Parent = compile(
       `<template><components.Child v-text="data" /></template>`,
       ref('foo'),
@@ -1618,6 +1617,22 @@ describe('attribute fallthrough', () => {
     const { host } = define(Parent).render()
     expect(host.textContent).toBe('child')
     expect(`Extraneous non-props attributes`).not.toHaveBeenWarned()
+  })
+
+  it('warns for unfiltered functional fallthrough on a text root when props are declared', () => {
+    const { component: Child } = define(() => template('child')())
+    Child.props = ['foo']
+    const Parent = compile(
+      `<template><components.Child v-text="data" /></template>`,
+      ref('foo'),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.textContent).toBe('child')
+    // a functional component with declared props receives full fallthrough,
+    // and a text root cannot accept it — align with vdom's warning
+    expect(`Extraneous non-props attributes`).toHaveBeenWarned()
   })
 
   it('applies v-text fallthrough after switching dynamic components', async () => {
@@ -2045,6 +2060,38 @@ describe('attribute fallthrough', () => {
     expect(second.getAttribute('id')).toBe('b')
     // the replaced root's effect died with its branch scope
     expect(first.getAttribute('id')).toBe('a')
+  })
+
+  it('should allow all attrs on a bare functional component with declared props', async () => {
+    const Fn = ((props: any) => {
+      const n0 = template('<div>', 1)() as Element
+      renderEffect(() => setElementText(n0, props.foo))
+      return n0
+    }) as any
+    Fn.props = ['foo']
+
+    const id = ref('a')
+    const { host } = define({
+      setup() {
+        return createComponent(
+          Fn,
+          { foo: () => 1, id: () => id.value },
+          null,
+          true,
+        )
+      },
+    }).render()
+
+    const node = host.children[0] as HTMLElement
+    // vdom: a functional component that declares props receives full
+    // fallthrough, not just the class/style/listener whitelist
+    expect(node.getAttribute('id')).toBe('a')
+    expect(node.getAttribute('foo')).toBe(null) // declared prop
+    expect(node.textContent).toBe('1')
+
+    id.value = 'b'
+    await nextTick()
+    expect(node.getAttribute('id')).toBe('b')
   })
 
   it('should freeze fallthrough on KeepAlive-cached components and catch up on reactivation', async () => {

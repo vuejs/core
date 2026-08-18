@@ -655,6 +655,9 @@ export function shouldUseFunctionalFallthrough(
 ): boolean {
   return (
     isFunction(component) &&
+    // functional components that declare props receive full fallthrough,
+    // matching vdom (`Component.props ? attrs : getFunctionalFallthrough`)
+    !component.props &&
     !(isTransitionEnabled && isVaporTransition(component))
   )
 }
