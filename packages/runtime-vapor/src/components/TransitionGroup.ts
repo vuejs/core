@@ -155,11 +155,6 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       },
     })
 
-    renderEffect(
-      () => (cssTransitionProps = resolveTransitionProps(props)),
-      true,
-    )
-
     let prevChildren: ResolvedTransitionBlock[] = []
     // Multiple child owners can update in the same flush (e.g. a VDOM child
     // props update plus the surrounding v-for keyed diff). Keep the first old
@@ -241,11 +236,30 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
 
     onBeforeUpdate(beforeUpdate)
     onUpdated(updated)
+    const updateHooks: TransitionGroupUpdateHookRef = { beforeUpdate, updated }
 
     const frag = new DynamicFragment('transition-group')
     let currentTag: string | undefined
     let currentSlot: BlockFn | undefined
     let isMounted = false
+
+    renderEffect(() => {
+      cssTransitionProps = resolveTransitionProps(props)
+      // The shared baseResolveTransitionHooks destructures props eagerly, so
+      // hooks already applied to mounted children capture stale values when
+      // reactive transition props change. Mirror Transition's re-resolve by
+      // re-applying group hooks onto the current children. Children mid-leave
+      // are no longer collected and keep the hooks their leave started with.
+      if (isMounted) {
+        applyGroupTransitionHooks(
+          slottedBlock,
+          propsProxy,
+          state,
+          instance,
+          updateHooks,
+        )
+      }
+    }, true)
 
     renderEffect(() => {
       const tag = props.tag
@@ -279,7 +293,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
             propsProxy,
             state,
             instance,
-            { beforeUpdate, updated },
+            updateHooks,
           )
           if (container) {
             if (!isHydrating) insert(block, container)
@@ -448,12 +462,17 @@ function applyGroupTransitionHooks(
     const child = children[i]
     if (isValidTransitionBlock(child)) {
       if (child.$key != null) {
+        const prev = child.$transition
         child.$transition = resolveTransitionHooks(
           child,
           props,
           state,
           instance,
         )
+        // Carry the FLIP-measurement latch across hook re-resolution (a props
+        // re-apply or slot re-render can land between beforeUpdate and
+        // flushUpdated); flushUpdated resets it on the live hooks object.
+        if (prev && prev.disabled) child.$transition.disabled = true
       } else if (__DEV__) {
         warn(`<transition-group> children must be keyed`)
       }

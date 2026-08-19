@@ -233,6 +233,29 @@ describe('TransitionGroup', () => {
     expect(first.$transition.disabled).toBe(false)
   })
 
+  test('mounted children should react to transition prop changes', async () => {
+    const data = ref({ name: 'a', items: [1, 2, 3] })
+    const App = compile(
+      `<template>
+        <TransitionGroup :name="data.name">
+          <div v-for="item in data.items" :key="item">{{ item }}</div>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    const el = host.querySelectorAll('div')[2]
+
+    // change the transition name reactively without touching the list
+    data.value.name = 'b'
+    await nextTick()
+
+    // removing an already-mounted item must leave with the updated name
+    data.value.items = [1, 2]
+    await nextTick()
+    expect(el.className).toBe('b-leave-from b-leave-active')
+  })
+
   test('re-adding a leaving keyed component item early-removes the previous instance', async () => {
     let leaveDone: (() => void) | undefined
     const Comp = compile(
