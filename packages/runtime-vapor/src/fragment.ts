@@ -38,6 +38,11 @@ import {
 } from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
+  isSuspenseEnabled,
+  parentSuspense,
+  setParentSuspense,
+} from './suspense'
+import {
   applyScopeIdOwners,
   currentSlotScopeIds,
   setCurrentSlotScopeIds,
@@ -146,6 +151,14 @@ export class RenderContextFragment<
   readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
   readonly keepAliveCtx?: VaporKeepAliveContext | null
   readonly slotBoundary: SlotBoundaryContext | null = currentSlotBoundary
+  // The Suspense boundary this fragment renders *into*. Unlike
+  // `renderInstance.suspense` (the boundary its owner was mounted in), slot
+  // content can be declared outside a boundary and rendered inside one, so this
+  // has to be the ambient value at construction time. Restored alongside the
+  // other fragment-owned ambient state in `runWithFragmentCtxOnly`, so
+  // branches that first render during an update queue their post-render
+  // effects on the right boundary instead of the global queue.
+  readonly renderSuspense?: SuspenseBoundary | null
   // Captured by reference: slot outlets replace this with their merged id cell
   // right after construction, so late renders (branch switches, deferred
   // fallbacks) create their DOM under the outlet's slot scope context.
@@ -155,6 +168,9 @@ export class RenderContextFragment<
     super(nodes, flags)
     if (isKeepAliveEnabled) {
       this.keepAliveCtx = getKeepAliveContext(currentInstance)
+    }
+    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) {
+      this.renderSuspense = parentSuspense
     }
   }
 
@@ -184,7 +200,14 @@ export function runWithFragmentCtxOnly<R>(
 ): R {
   // When ambient fragment context already matches, no ambient state needs
   // restoring. This keeps ordinary branch renders on the cheap path.
+  const suspense =
+    __FEATURE_SUSPENSE__ && isSuspenseEnabled
+      ? fragment.renderSuspense || null
+      : null
+  const restoreSuspense =
+    __FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense !== suspense
   if (
+    !restoreSuspense &&
     currentSlotOwner === fragment.slotOwner &&
     currentSlotBoundary === fragment.slotBoundary &&
     currentSlotScopeIds === fragment.slotScopeIds
@@ -192,6 +215,7 @@ export function runWithFragmentCtxOnly<R>(
     return fn()
   }
 
+  const prevSuspense = restoreSuspense ? setParentSuspense(suspense) : null
   const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
   const prevBoundary = setCurrentSlotBoundary(fragment.slotBoundary)
   const prevSlotScopeIds = setCurrentSlotScopeIds(fragment.slotScopeIds)
@@ -201,6 +225,7 @@ export function runWithFragmentCtxOnly<R>(
     setCurrentSlotScopeIds(prevSlotScopeIds)
     setCurrentSlotBoundary(prevBoundary)
     setCurrentSlotOwner(prevSlotOwner)
+    if (restoreSuspense) setParentSuspense(prevSuspense)
   }
 }
 
