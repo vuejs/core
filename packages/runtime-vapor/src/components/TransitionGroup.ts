@@ -206,7 +206,12 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       )
       prevChildren.forEach(child => {
         child.$transition!.disabled = false
-        if (hasMove) callPendingCbs(child)
+        if (hasMove) {
+          // pending enter/move cbs live on the element, which for interop
+          // children is not the block itself
+          const el = getTransitionElement(child)
+          if (el) callPendingCbs(el)
+        }
       })
       if (!hasMove) {
         prevChildren = []
