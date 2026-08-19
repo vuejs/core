@@ -53,7 +53,7 @@ export function render(_ctx) {
 exports[`compiler: template ref transform > dynamic ref (inline mode) 1`] = `
 "
   const n0 = t0()
-  _setTemplateRefBinding(n0, () => foo, undefined, undefined, "foo")
+  _setTemplateRefBinding(n0, () => foo, undefined, "foo")
   return n0
 "
 `;
@@ -84,15 +84,14 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: template ref transform > dynamic ref in slot uses owner setter 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, setTemplateRefBinding as _setTemplateRefBinding, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+exports[`compiler: template ref transform > dynamic ref in slot needs no owner setter 1`] = `
+"import { setTemplateRefBinding as _setTemplateRefBinding, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
-  const _setTemplateRef = _createTemplateRefSetter()
   const n1 = _createAssetComponent("Comp", null, () => {
     const n0 = t0()
-    _setTemplateRefBinding(n0, () => _ctx.refName, _setTemplateRef)
+    _setTemplateRefBinding(n0, () => _ctx.refName)
     return n0
   }, true)
   return n1
@@ -135,15 +134,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: template ref transform > multiple static refs 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, template as _template } from 'vue';
+"import { setStaticTemplateRef as _setStaticTemplateRef, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
-  const _setTemplateRef = _createTemplateRefSetter()
   const n0 = t0()
   const n1 = t0()
-  _setTemplateRef(n0, "foo")
-  _setTemplateRef(n1, "bar")
+  _setStaticTemplateRef(n0, "foo")
+  _setStaticTemplateRef(n1, "bar")
   return [n0, n1]
 }"
 `;
@@ -164,14 +162,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: template ref transform > ref + v-if 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, createIf as _createIf, template as _template } from 'vue';
+"import { setStaticTemplateRef as _setStaticTemplateRef, createIf as _createIf, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
-  const _setTemplateRef = _createTemplateRefSetter()
   const n0 = _createIf(() => (true), () => {
     const n2 = t0()
-    _setTemplateRef(n2, "foo")
+    _setStaticTemplateRef(n2, "foo")
     return n2
   }, null, 17 /* TRUE_SINGLE_ROOT, ONCE */)
   return n0
@@ -221,15 +218,14 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: template ref transform > static ref in slot uses owner setter 1`] = `
-"import { createTemplateRefSetter as _createTemplateRefSetter, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+exports[`compiler: template ref transform > static ref in slot uses the stateless helper 1`] = `
+"import { setStaticTemplateRef as _setStaticTemplateRef, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("<div>")
 
 export function render(_ctx) {
-  const _setTemplateRef = _createTemplateRefSetter()
   const n1 = _createAssetComponent("Comp", null, () => {
     const n0 = t0()
-    _setTemplateRef(n0, "foo")
+    _setStaticTemplateRef(n0, "foo")
     return n0
   }, true)
   return n1

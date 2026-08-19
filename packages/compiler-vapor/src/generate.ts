@@ -3,14 +3,7 @@ import type {
   BaseCodegenResult,
   SimpleExpressionNode,
 } from '@vue/compiler-dom'
-import type {
-  BlockIRNode,
-  CoreHelper,
-  RootIRNode,
-  SetTemplateRefIRNode,
-  VaporHelper,
-} from './ir'
-import { IRNodeTypes } from './ir'
+import type { BlockIRNode, CoreHelper, RootIRNode, VaporHelper } from './ir'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
@@ -43,7 +36,6 @@ export class CodegenContext {
   helpers: Map<string, string> = new Map()
 
   needsTemplateRefSetter: boolean = false
-  staticTemplateRefHelperCandidate?: SetTemplateRefIRNode
   inSlotBlock: boolean = false
 
   helper = (name: CoreHelper | VaporHelper): string => {
@@ -232,9 +224,6 @@ export class CodegenContext {
         : [],
     )
     this.initNextIdMap()
-    this.staticTemplateRefHelperCandidate = getStaticTemplateRefHelperCandidate(
-      ir.block,
-    )
   }
 }
 
@@ -337,20 +326,4 @@ function genAssetImports({ ir }: CodegenContext) {
     imports += `import ${name} from '${assetImport.path}';\n`
   }
   return imports
-}
-
-function getStaticTemplateRefHelperCandidate(
-  block: BlockIRNode,
-): SetTemplateRefIRNode | undefined {
-  if (block.operation.length !== 1) return
-
-  const operation = block.operation[0]
-  if (
-    operation.type === IRNodeTypes.SET_TEMPLATE_REF &&
-    !operation.effect &&
-    !operation.refFor &&
-    operation.value.isStatic
-  ) {
-    return operation
-  }
 }

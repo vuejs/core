@@ -859,11 +859,12 @@ describe('api: template ref', () => {
         }
       },
       render() {
-        const setRef = createTemplateRefSetter()
         const n0 = createComponent(Child, null, {
           default: () => {
             n = document.createElement('div')
-            setTemplateRefBinding(n, () => refName.value, setRef)
+            // no owner setter threaded in: the helper resolves the ref owner
+            // itself via getScopeOwner()
+            setTemplateRefBinding(n, () => refName.value)
             return n
           },
         })
@@ -931,6 +932,48 @@ describe('api: template ref', () => {
 
     render()
     expect(r!.value).toBe(n)
+  })
+
+  // Compiled counterparts of the hand-written slot cases above: these exercise
+  // the real codegen path, where the ref owner is resolved at runtime by
+  // getScopeOwner() rather than threaded in from the owner's render scope.
+  test('compiled static ref inside slots binds to the owner', () => {
+    const data = ref(0)
+    const Child = compile(`<template><slot /></template>`, data)
+    const Parent = compile(
+      `<template>
+        <components.Child><div ref="foo">slotted</div></components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+
+    const { instance, host } = define(Parent).render()
+    const el = host.querySelector('div')
+    expect(el).not.toBe(null)
+    expect((instance as any).refs.foo).toBe(el)
+  })
+
+  test('compiled dynamic ref inside slots binds to the owner', async () => {
+    const data = ref({ name: 'foo' })
+    const Child = compile(`<template><slot /></template>`, data)
+    const Parent = compile(
+      `<template>
+        <components.Child><div :ref="data.name">slotted</div></components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+
+    const { instance, host } = define(Parent).render()
+    const el = host.querySelector('div')
+    const refs = (instance as any).refs
+    expect(refs.foo).toBe(el)
+
+    data.value = { name: 'bar' }
+    await nextTick()
+    expect(refs.foo).toBe(null)
+    expect(refs.bar).toBe(el)
   })
 
   test('work with dynamic component', async () => {
@@ -1860,6 +1903,41 @@ describe('interop: template ref', () => {
     expect(container.innerHTML).toBe(
       `<div><button class="btn"></button><div>bar</div></div>`,
     )
+  })
+
+  // Slot content declared by a Vapor owner but rendered by a VDOM child: the
+  // ref must land on the owner, not on the component executing the slot.
+  test('vapor app: ref in slot passed to vdom child binds to the owner', async () => {
+    const { container } = await testTemplateRefInterop(
+      `<script setup>
+        import { useTemplateRef } from 'vue'
+        const components = _components;
+        const elRef = useTemplateRef('el')
+        function click() {
+          elRef.value.textContent = 'changed'
+        }
+      </script>
+      <template>
+        <button class="btn" @click="click"></button>
+        <components.VdomChild><div ref="el">slotted</div></components.VdomChild>
+      </template>`,
+      {
+        VdomChild: {
+          code: `
+          <template>
+            <slot/>
+          </template>`,
+          vapor: false,
+        },
+      },
+      {},
+      { vapor: true },
+    )
+
+    expect(container.innerHTML).contains('slotted')
+    triggerEvent('click', container.querySelector('.btn')!)
+    await nextTick()
+    expect(container.innerHTML).contains('changed')
   })
 
   test('vapor app: static ref with vdom child', async () => {
