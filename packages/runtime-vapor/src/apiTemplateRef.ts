@@ -1,7 +1,6 @@
 import { type Ref, isRef, onScopeDispose } from '@vue/reactivity'
 import {
   type VaporComponentInstance,
-  currentInstance,
   getExposed,
   isVaporComponent,
 } from './component'
@@ -34,6 +33,7 @@ import {
   isFragment,
 } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
+import { getScopeOwner } from './componentSlots'
 import {
   type RefCleanupState,
   invalidatePendingRef,
@@ -58,7 +58,7 @@ export type setRefFn = (
   ref: NodeRef,
   refFor?: boolean,
   refKey?: string,
-) => NodeRef | undefined
+) => void
 
 interface TemplateRefState {
   suspense: SuspenseBoundary | null
@@ -77,6 +77,32 @@ function getTemplateRefUpdateFragment(el: RefEl): DynamicFragment | undefined {
   }
 }
 
+/**
+ * Async/dynamic component targets swap their inner block on update, so the ref
+ * has to be re-applied after the fragment settles. Registration is idempotent
+ * per (el, owner) pair: `getTemplateRefUpdateFragment` reads the async
+ * wrapper's mutable `block`, so the resolved fragment is compared by identity
+ * rather than with a "registered once" flag.
+ */
+function registerFragmentRefUpdate(
+  el: RefEl,
+  registeredFrag: DynamicFragment | undefined,
+  reapply: () => void,
+): DynamicFragment | undefined {
+  const frag = getTemplateRefUpdateFragment(el)
+  if (frag && registeredFrag !== frag) {
+    ;(frag.onUpdated ||= []).push(() => {
+      // KeepAlive clears refs on deactivation but keeps this fragment update
+      // callback alive. Skip re-applying refs for async/offscreen updates
+      // until the component is activated again.
+      if (isVaporComponent(el) && el.isDeactivated) return
+      reapply()
+    })
+    return frag
+  }
+  return registeredFrag
+}
+
 function ensureCleanup(el: RefEl): RefCleanupState {
   let cleanupRef = refCleanups.get(el)
   if (!cleanupRef) {
@@ -91,7 +117,7 @@ function ensureCleanup(el: RefEl): RefCleanupState {
 }
 
 export function createTemplateRefSetter(): setRefFn {
-  const instance = currentInstance as VaporComponentInstance
+  const instance = getScopeOwner()!
   const stateMap = new WeakMap<RefEl, TemplateRefState>()
 
   return (el, ref, refFor, refKey) => {
@@ -99,19 +125,7 @@ export function createTemplateRefSetter(): setRefFn {
     if (!state) {
       stateMap.set(el, (state = { ref, suspense: parentSuspense }))
     }
-    return setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
-  }
-}
-
-function createSingleTemplateRefSetter(): setRefFn {
-  const instance = currentInstance as VaporComponentInstance
-  let state: TemplateRefState | undefined
-
-  return (el, ref, refFor, refKey) => {
-    if (!state) {
-      state = { ref, suspense: parentSuspense }
-    }
-    return setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
+    setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
   }
 }
 
@@ -122,21 +136,16 @@ function setTemplateRefWithState(
   ref: NodeRef,
   refFor?: boolean,
   refKey?: string,
-): NodeRef | undefined {
+): void {
   state.ref = ref
   state.refFor = refFor
   state.refKey = refKey
 
-  // Re-apply refs after DynamicFragment updates.
-  const frag = getTemplateRefUpdateFragment(el)
-  if (frag && state.registeredFrag !== frag) {
-    state.registeredFrag = frag
-    ;(frag.onUpdated ||= []).push(() => {
-      // KeepAlive clears refs on deactivation but keeps this fragment update
-      // callback alive. Skip re-applying refs for async/offscreen updates
-      // until the component is activated again.
-      if (isVaporComponent(el) && el.isDeactivated) return
-      state.oldRef = setRef(
+  state.registeredFrag = registerFragmentRefUpdate(
+    el,
+    state.registeredFrag,
+    () => {
+      setRef(
         instance,
         state.suspense,
         el,
@@ -146,11 +155,12 @@ function setTemplateRefWithState(
         state.refKey,
         state.oldRefKey,
       )
-      state.oldRefKey = state.oldRef != null ? state.refKey : undefined
-    })
-  }
+      state.oldRef = state.ref
+      state.oldRefKey = state.ref != null ? state.refKey : undefined
+    },
+  )
 
-  const oldRef = setRef(
+  setRef(
     instance,
     state.suspense,
     el,
@@ -160,40 +170,46 @@ function setTemplateRefWithState(
     refKey,
     state.oldRefKey,
   )
-  state.oldRef = oldRef
-  state.oldRefKey = oldRef != null ? refKey : undefined
-  return oldRef
+  state.oldRef = ref
+  state.oldRefKey = ref != null ? refKey : undefined
 }
 
+/**
+ * Static refs never change value, so they need no old-ref tracking and no
+ * per-element state - only the fragment re-apply hook shared with the
+ * stateful path.
+ */
 export function setStaticTemplateRef(
   el: RefEl,
   ref: NodeRef,
   refFor?: boolean,
   refKey?: string,
-): NodeRef | undefined {
-  const instance = currentInstance as VaporComponentInstance
+): void {
+  const instance = getScopeOwner()!
   const suspense = parentSuspense
-  const oldRef = setRef(instance, suspense, el, ref, undefined, refFor, refKey)
-  const frag = getTemplateRefUpdateFragment(el)
-  if (frag) {
-    // Static refs do not need old-ref tracking, but async/dynamic component
-    // targets still need to re-apply the same ref after their fragment updates.
-    ;(frag.onUpdated ||= []).push(() => {
-      if (isVaporComponent(el) && el.isDeactivated) return
-      setRef(instance, suspense, el, ref, oldRef, refFor, refKey)
-    })
-  }
-  return oldRef
+  setRef(instance, suspense, el, ref, undefined, refFor, refKey)
+  registerFragmentRefUpdate(el, undefined, () => {
+    setRef(instance, suspense, el, ref, ref, refFor, refKey)
+  })
 }
 
 export function setTemplateRefBinding(
   el: RefEl,
   getter: () => any,
-  setter: setRefFn = createSingleTemplateRefSetter(),
   refFor?: boolean,
   refKey?: string,
 ): void {
-  renderEffect(() => setter(el, getter(), refFor, refKey))
+  // A single binding site targets a single element, so its state lives in this
+  // closure - no per-element map needed. The owner is captured here, during the
+  // synchronous block render, where `getScopeOwner()` still resolves the
+  // component that declared the ref rather than the one rendering it.
+  const instance = getScopeOwner()!
+  let state: TemplateRefState | undefined
+  renderEffect(() => {
+    const ref = getter()
+    if (!state) state = { ref, suspense: parentSuspense }
+    setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
+  })
 }
 
 /**
@@ -208,7 +224,9 @@ function setRef(
   refFor = false,
   refKey?: string,
   oldRefKey?: string,
-): NodeRef | undefined {
+): void {
+  // Single no-op guard for every path into ref application, including the
+  // fragment `onUpdated` callbacks that can fire after teardown.
   if (!instance || instance.isUnmounted) return
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
@@ -224,7 +242,7 @@ function setRef(
           : null
     if (target) {
       target.setRef!(instance, ref, refFor, refKey)
-      return ref
+      return
     }
   }
 
@@ -275,7 +293,7 @@ function setRef(
   }
 
   // dynamic ref can become null / undefined and should only clear old ref
-  if (ref == null) return ref
+  if (ref == null) return
 
   if (isFunction(ref)) {
     const invokeRefSetter = (value?: Element | Record<string, any> | null) => {
@@ -370,7 +388,6 @@ function setRef(
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }
   }
-  return ref
 }
 
 const getRefValue = (el: RefEl) => {

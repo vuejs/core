@@ -67,10 +67,11 @@ describe('compiler: template ref transform', () => {
       `<div ref="foo" /><div ref="bar" />`,
     )
     expect(code).matchSnapshot()
-    expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
-    expect(code).contains('_setTemplateRef(n0, "foo")')
-    expect(code).contains('_setTemplateRef(n1, "bar")')
-    expect(code).not.contains('_setStaticTemplateRef')
+    // every static ref lowers to the stateless helper, regardless of how many
+    // other operations the block has
+    expect(code).contains('_setStaticTemplateRef(n0, "foo")')
+    expect(code).contains('_setStaticTemplateRef(n1, "bar")')
+    expect(code).not.contains('_createTemplateRefSetter')
     expect(code).not.contains('_setTemplateRefBinding')
   })
 
@@ -149,7 +150,7 @@ describe('compiler: template ref transform', () => {
     })
     expect(code).matchSnapshot()
     expect(code).contains(
-      '_setTemplateRefBinding(n0, () => foo, undefined, undefined, "foo")',
+      '_setTemplateRefBinding(n0, () => foo, undefined, "foo")',
     )
     expect(code).not.contains('_createTemplateRefSetter')
   })
@@ -178,25 +179,24 @@ describe('compiler: template ref transform', () => {
     expect(code).not.contains('_setTemplateRefBinding')
   })
 
-  test('dynamic ref in slot uses owner setter', () => {
+  test('dynamic ref in slot needs no owner setter', () => {
     const { code } = compileWithTransformRef(
       `<Comp><div :ref="refName" /></Comp>`,
     )
 
     expect(code).toMatchSnapshot()
-    expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
-    expect(code).contains(
-      '_setTemplateRefBinding(n0, () => _ctx.refName, _setTemplateRef)',
-    )
+    // the helper resolves the ref owner at runtime via getScopeOwner(), so the
+    // owner's setter no longer has to be allocated and threaded into the slot
+    expect(code).contains('_setTemplateRefBinding(n0, () => _ctx.refName)')
+    expect(code).not.contains('_createTemplateRefSetter')
   })
 
-  test('static ref in slot uses owner setter', () => {
+  test('static ref in slot uses the stateless helper', () => {
     const { code } = compileWithTransformRef(`<Comp><div ref="foo" /></Comp>`)
 
     expect(code).toMatchSnapshot()
-    expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
-    expect(code).contains('_setTemplateRef(n0, "foo")')
-    expect(code).not.contains('_setStaticTemplateRef')
+    expect(code).contains('_setStaticTemplateRef(n0, "foo")')
+    expect(code).not.contains('_createTemplateRefSetter')
   })
 
   test('simple function ref', () => {
@@ -268,8 +268,8 @@ describe('compiler: template ref transform', () => {
       },
     ])
     expect(code).matchSnapshot()
-    expect(code).contains('const _setTemplateRef = _createTemplateRefSetter()')
-    expect(code).contains('_setTemplateRef(n2, "foo")')
+    expect(code).contains('_setStaticTemplateRef(n2, "foo")')
+    expect(code).not.contains('_createTemplateRefSetter')
   })
 
   test('ref + v-for', () => {

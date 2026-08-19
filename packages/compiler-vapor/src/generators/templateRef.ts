@@ -11,7 +11,10 @@ export function genSetTemplateRef(
   context: CodegenContext,
 ): CodeFragment[] {
   const [refValue, refKey] = genRefValue(oper.value, context)
-  if (context.staticTemplateRefHelperCandidate === oper) {
+  // A ref with a static value and no `ref_for` array membership never changes,
+  // so it needs no old-ref tracking: lower it to the stateless helper and skip
+  // the shared setter (and its per-element state map) entirely.
+  if (!oper.effect && !oper.refFor && oper.value.isStatic) {
     return genSetStaticTemplateRef(oper, refValue, refKey, context)
   }
 
@@ -51,19 +54,16 @@ export function genSetTemplateRefBinding(
   context: CodegenContext,
 ): CodeFragment[] {
   const [refValue, refKey] = genRefValue(oper.value, context)
-  const setter = context.inSlotBlock && setTemplateRefIdent
-  if (context.inSlotBlock) {
-    context.needsTemplateRefSetter = true
-  }
+  // No slot-block special case: the helper resolves the ref owner at runtime
+  // via `getScopeOwner()`, so slot content no longer has to be threaded through
+  // the owner's shared setter.
   return [
     NEWLINE,
     ...genCall(
       [context.helper('setTemplateRefBinding'), 'undefined'],
       `n${oper.element}`,
       ['() => ', ...refValue],
-      ...(setter || oper.refFor || refKey
-        ? [setter, oper.refFor && 'true', refKey]
-        : []),
+      ...(oper.refFor || refKey ? [oper.refFor && 'true', refKey] : []),
     ),
   ]
 }
