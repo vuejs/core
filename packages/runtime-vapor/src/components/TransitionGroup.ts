@@ -216,8 +216,9 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       prevChildren.forEach(recordPosition)
       const movedChildren = prevChildren.filter(applyTranslation)
 
-      // force reflow to put everything in position
-      forceReflow()
+      // force reflow to put everything in position; use the group's own
+      // document so this works inside iframes / foreign documents
+      forceReflow(firstChild)
 
       movedChildren.forEach(c =>
         handleMovedChildren(
