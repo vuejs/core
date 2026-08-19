@@ -11,6 +11,7 @@ import type { NodeTransform, TransformContext } from '../transform'
 import {
   type CompoundExpressionNode,
   ConstantTypes,
+  type ElementNode,
   type ExpressionNode,
   NodeTypes,
   type SimpleExpressionNode,
@@ -24,7 +25,7 @@ import {
   isStaticPropertyKey,
   walkIdentifiers,
 } from '../babelUtils'
-import { advancePositionWithClone, findDir, isSimpleIdentifier } from '../utils'
+import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
   genPropsAccessExp,
   hasOwn,
@@ -53,39 +54,44 @@ export const transformExpression: NodeTransform = (node, context) => {
       context,
     )
   } else if (node.type === NodeTypes.ELEMENT) {
-    // handle directives on element
-    const memo = findDir(node, 'memo')
-    for (let i = 0; i < node.props.length; i++) {
-      const dir = node.props[i]
-      // do not process for v-on & v-for since they are special handled
-      if (dir.type === NodeTypes.DIRECTIVE && dir.name !== 'for') {
-        const exp = dir.exp
-        const arg = dir.arg
-        // do not process exp if this is v-on:arg - we need special handling
-        // for wrapping inline statements.
-        if (
-          exp &&
-          exp.type === NodeTypes.SIMPLE_EXPRESSION &&
-          !(dir.name === 'on' && arg) &&
-          // key has been processed in transformFor(vMemo + vFor)
-          !(
-            memo &&
-            context.vForMemoKeyedNodes.has(node) &&
-            arg &&
-            arg.type === NodeTypes.SIMPLE_EXPRESSION &&
-            arg.content === 'key'
-          )
-        ) {
-          dir.exp = processExpression(
-            exp,
-            context,
-            // slot args must be processed as function params
-            dir.name === 'slot',
-          )
-        }
-        if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
-          dir.arg = processExpression(arg, context)
-        }
+    processElementDirectiveExpressions(node, context)
+  }
+}
+
+// Process the directive expressions of an element's props. Also called by
+// structural transforms that replace an element before it is traversed
+// (e.g. <template v-for>, see transformFor).
+export function processElementDirectiveExpressions(
+  node: ElementNode,
+  context: TransformContext,
+): void {
+  for (let i = 0; i < node.props.length; i++) {
+    const dir = node.props[i]
+    if (dir.type === NodeTypes.DIRECTIVE) {
+      const exp = dir.exp
+      const arg = dir.arg
+      // v-for and v-on:arg handle their own expressions
+      // (see processFor / transformOn)
+      if (
+        exp &&
+        exp.type === NodeTypes.SIMPLE_EXPRESSION &&
+        dir.name !== 'for' &&
+        !(dir.name === 'on' && arg)
+      ) {
+        dir.exp = processExpression(
+          exp,
+          context,
+          // slot args must be processed as function params
+          dir.name === 'slot',
+        )
+      }
+      if (
+        arg &&
+        arg.type === NodeTypes.SIMPLE_EXPRESSION &&
+        !arg.isStatic &&
+        dir.name !== 'for'
+      ) {
+        dir.arg = processExpression(arg, context)
       }
     }
   }

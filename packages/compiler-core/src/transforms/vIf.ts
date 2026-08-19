@@ -33,9 +33,9 @@ import { validateBrowserExpression } from '../validateExpression'
 import { cloneLoc } from '../parser'
 import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
 import {
-  findDir,
   findProp,
   getMemoedVNodeCall,
+  hasStructuralDirective,
   injectProp,
   isCommentOrWhitespace,
 } from '../utils'
@@ -210,7 +210,11 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     type: NodeTypes.IF_BRANCH,
     loc: node.loc,
     condition: dir.name === 'else' ? undefined : dir.exp,
-    children: isTemplateIf && !findDir(node, 'for') ? node.children : [node],
+    // lift the template's children only when no other structural
+    // directive remains on it - such a directive (e.g. v-for) will consume
+    // the template itself during its own transform
+    children:
+      isTemplateIf && !hasStructuralDirective(node) ? node.children : [node],
     userKey: findProp(node, `key`),
     isTemplateIf,
   }

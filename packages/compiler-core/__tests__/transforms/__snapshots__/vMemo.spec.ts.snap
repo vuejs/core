@@ -31,7 +31,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: v-memo transform > on template v-for 1`] = `
-"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, isMemoSame as _isMemoSame, withMemo as _withMemo } from "vue"
+"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, isMemoSame as _isMemoSame } from "vue"
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, [
@@ -47,7 +47,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: v-memo transform > on template v-for w/ compound key expression 1`] = `
-"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, isMemoSame as _isMemoSame, withMemo as _withMemo } from "vue"
+"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, isMemoSame as _isMemoSame } from "vue"
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, [
@@ -65,7 +65,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: v-memo transform > on v-for 1`] = `
-"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, createElementVNode as _createElementVNode, isMemoSame as _isMemoSame, withMemo as _withMemo } from "vue"
+"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, createElementVNode as _createElementVNode, isMemoSame as _isMemoSame } from "vue"
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, [
@@ -83,7 +83,7 @@ export function render(_ctx, _cache) {
 `;
 
 exports[`compiler: v-memo transform > on v-for w/ compound key expression 1`] = `
-"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, createElementVNode as _createElementVNode, isMemoSame as _isMemoSame, withMemo as _withMemo } from "vue"
+"import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, createElementVNode as _createElementVNode, isMemoSame as _isMemoSame } from "vue"
 
 export function render(_ctx, _cache) {
   return (_openBlock(), _createElementBlock("div", null, [

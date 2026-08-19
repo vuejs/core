@@ -16,13 +16,9 @@ import {
   type ForRenderListExpression,
   NodeTypes,
   type PlainElementNode,
-  type RenderSlotCall,
   type SimpleExpressionNode,
-  type SlotOutletNode,
   type VNodeCall,
-  createBlockStatement,
   createCallExpression,
-  createCompoundExpression,
   createFunctionExpression,
   createObjectExpression,
   createObjectProperty,
@@ -32,20 +28,12 @@ import {
   getVNodeHelper,
 } from '../ast'
 import { ErrorCodes, createCompilerError } from '../errors'
+import { findProp, injectProp, isTemplateNode } from '../utils'
+import { FRAGMENT, OPEN_BLOCK, RENDER_LIST } from '../runtimeHelpers'
 import {
-  findDir,
-  findProp,
-  injectProp,
-  isSlotOutlet,
-  isTemplateNode,
-} from '../utils'
-import {
-  FRAGMENT,
-  IS_MEMO_SAME,
-  OPEN_BLOCK,
-  RENDER_LIST,
-} from '../runtimeHelpers'
-import { processExpression } from './transformExpression'
+  processElementDirectiveExpressions,
+  processExpression,
+} from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { PatchFlags } from '@vue/shared'
 
@@ -60,10 +48,16 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
         forNode.source,
       ]) as ForRenderListExpression
       const isTemplate = isTemplateNode(node)
-      const memo = findDir(node, 'memo')
+      if (!__BROWSER__ && isTemplate) {
+        // #2085 / #5288 the template node is replaced by the ForNode below
+        // and never traversed, so its remaining binding expressions (e.g.
+        // :key, v-memo) won't be processed by the normal transforms. Run the
+        // shared prop processing here, while the v-for scope aliases are
+        // still registered.
+        processElementDirectiveExpressions(node, context)
+      }
       const keyProp = findProp(node, `key`, false, true)
-      const isDirKey = keyProp && keyProp.type === NodeTypes.DIRECTIVE
-      let keyExp =
+      const keyExp =
         keyProp &&
         (keyProp.type === NodeTypes.ATTRIBUTE
           ? keyProp.value
@@ -72,31 +66,6 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
           : keyProp.exp)
 
       const keyProperty = keyExp ? createObjectProperty(`key`, keyExp) : null
-
-      if (!__BROWSER__) {
-        // #2085 / #5288 process :key and v-memo expressions need to be
-        // processed on `<template v-for>`. In this case the node is discarded
-        // and never traversed so its binding expressions won't be processed
-        // by the normal transforms.
-        if (isTemplate && memo) {
-          memo.exp = processExpression(
-            memo.exp! as SimpleExpressionNode,
-            context,
-          )
-        }
-        if ((isTemplate || memo) && keyProperty && isDirKey) {
-          keyExp =
-            keyProp.exp =
-            keyProperty.value =
-              processExpression(
-                keyProperty.value as SimpleExpressionNode,
-                context,
-              )
-          if (memo) {
-            context.vForMemoKeyedNodes.add(node)
-          }
-        }
-      }
 
       const isStableFragment =
         forNode.source.type === NodeTypes.SIMPLE_EXPRESSION &&
@@ -146,24 +115,8 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
 
         const needFragmentWrapper =
           children.length !== 1 || children[0].type !== NodeTypes.ELEMENT
-        const slotOutlet = isSlotOutlet(node)
-          ? node
-          : isTemplate &&
-              node.children.length === 1 &&
-              isSlotOutlet(node.children[0])
-            ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
-            : null
 
-        if (slotOutlet) {
-          // <slot v-for="..."> or <template v-for="..."><slot/></template>
-          childBlock = slotOutlet.codegenNode as RenderSlotCall
-          if (isTemplate && keyProperty) {
-            // <template v-for="..." :key="..."><slot/></template>
-            // we need to inject the key to the renderSlot() call.
-            // the props for renderSlot is passed as the 3rd argument.
-            injectProp(childBlock, keyProperty, context)
-          }
-        } else if (needFragmentWrapper) {
+        if (needFragmentWrapper) {
           // <template v-for="..."> with text or multi-elements
           // should generate a fragment block for each loop
           childBlock = createVNodeCall(
@@ -179,16 +132,22 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
             false /* isComponent */,
           )
         } else {
-          // Normal element v-for. Directly use the child's codegenNode
-          // but mark it as a block.
+          // Normal element (or slot outlet) v-for. Directly use the child's
+          // codegenNode but mark it as a block. A slot outlet produces a
+          // renderSlot() call instead of a VNodeCall - it is already a
+          // block root, so it skips the block conversion below.
           childBlock = (children[0] as PlainElementNode)
             .codegenNode as VNodeCall
           if (isTemplate && keyProperty) {
             injectProp(childBlock, keyProperty, context)
           }
           const shouldUseBlock =
-            !isStableFragment || childBlock.isBlockRequired === true
-          if (childBlock.isBlock !== shouldUseBlock) {
+            childBlock.type === NodeTypes.VNODE_CALL &&
+            (!isStableFragment || childBlock.isBlockRequired === true)
+          if (
+            childBlock.type === NodeTypes.VNODE_CALL &&
+            childBlock.isBlock !== shouldUseBlock
+          ) {
             if (childBlock.isBlock) {
               // switch from block to vnode
               removeHelper(OPEN_BLOCK)
@@ -202,54 +161,28 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
               )
             }
           }
-          childBlock.isBlock = shouldUseBlock
-          if (childBlock.isBlock) {
-            helper(OPEN_BLOCK)
-            helper(getVNodeBlockHelper(context.inSSR, childBlock.isComponent))
-          } else {
-            helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
-            if (childBlock.needsPatch) {
-              childBlock.patchFlag = ((childBlock.patchFlag ?? 0) |
-                PatchFlags.NEED_PATCH) as PatchFlags
+          if (childBlock.type === NodeTypes.VNODE_CALL) {
+            childBlock.isBlock = shouldUseBlock
+            if (childBlock.isBlock) {
+              helper(OPEN_BLOCK)
+              helper(getVNodeBlockHelper(context.inSSR, childBlock.isComponent))
+            } else {
+              helper(getVNodeHelper(context.inSSR, childBlock.isComponent))
+              if (childBlock.needsPatch) {
+                childBlock.patchFlag = ((childBlock.patchFlag ?? 0) |
+                  PatchFlags.NEED_PATCH) as PatchFlags
+              }
             }
           }
         }
 
-        if (memo) {
-          const loop = createFunctionExpression(
-            createForLoopParams(forNode.parseResult, [
-              createSimpleExpression(`_cached`),
-            ]),
-          )
-          loop.body = createBlockStatement([
-            createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
-            createCompoundExpression([
-              `if (_cached && _cached.el`,
-              ...(keyExp ? [` && _cached.key === `, keyExp] : []),
-              ` && ${context.helperString(
-                IS_MEMO_SAME,
-              )}(_cached, _memo)) return _cached`,
-            ]),
-            createCompoundExpression([`const _item = `, childBlock as any]),
-            createSimpleExpression(`_item.memo = _memo`),
-            createSimpleExpression(`return _item`),
-          ])
-          renderExp.arguments.push(
-            loop as ForIteratorExpression,
-            createSimpleExpression(`_cache`),
-            createSimpleExpression(String(context.cached.length)),
-          )
-          // increment cache count
-          context.cached.push(null)
-        } else {
-          renderExp.arguments.push(
-            createFunctionExpression(
-              createForLoopParams(forNode.parseResult),
-              childBlock,
-              true /* force newline */,
-            ) as ForIteratorExpression,
-          )
-        }
+        renderExp.arguments.push(
+          createFunctionExpression(
+            createForLoopParams(forNode.parseResult),
+            childBlock,
+            true /* force newline */,
+          ) as ForIteratorExpression,
+        )
       }
     })
   },

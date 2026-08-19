@@ -280,6 +280,16 @@ export function assert(condition: boolean, msg?: string): void {
   }
 }
 
+// Matches directives that manipulate the structural position of their
+// host element (v-if / v-else-if / v-else / v-for).
+const structuralDirNameRE = /^(?:if|else|else-if|for)$/
+
+export function hasStructuralDirective(node: ElementNode): boolean {
+  return node.props.some(
+    p => p.type === NodeTypes.DIRECTIVE && structuralDirNameRE.test(p.name),
+  )
+}
+
 export function findDir(
   node: ElementNode,
   name: string | RegExp,
