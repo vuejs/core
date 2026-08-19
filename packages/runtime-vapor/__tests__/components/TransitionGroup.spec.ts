@@ -233,6 +233,39 @@ describe('TransitionGroup', () => {
     expect(first.$transition.disabled).toBe(false)
   })
 
+  test('skips group hook and owner bookkeeping on ForBlock wrappers', () => {
+    const items = ref([1, 2])
+    let list: any
+
+    define({
+      setup() {
+        list = createFor(
+          () => items.value,
+          item => {
+            const el = template(`<div></div>`)()
+            el.textContent = String(item.value)
+            return el
+          },
+          item => item,
+        )
+        return createComponent(VaporTransitionGroup, null, {
+          default: () => list,
+        })
+      },
+    }).render()
+
+    const forBlock = list.nodes[0][0]
+    // the wrapper itself has no transition consumers: it overrides neither
+    // insert nor remove (the only fragment $transition readers) and its
+    // update hook arrays are never invoked
+    expect(forBlock.$transition).toBeUndefined()
+    expect(forBlock.onBeforeUpdate).toBeUndefined()
+    expect(forBlock.onUpdated).toBeUndefined()
+    // while its element child carries the group hooks and the derived key
+    expect(forBlock.nodes.$transition).toBeDefined()
+    expect(forBlock.nodes.$key).toBe(1)
+  })
+
   test('mounted children should react to transition prop changes', async () => {
     const data = ref({ name: 'a', items: [1, 2, 3] })
     const App = compile(

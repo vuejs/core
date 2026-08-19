@@ -399,14 +399,21 @@ function collectTransitionBlocks(
       collectTransitionBlocks(block[i], children, onFragment, onUpdateOwner)
     }
   } else if (isFragment(block)) {
-    if (onFragment) onFragment(block)
-    if (onUpdateOwner) onUpdateOwner(block)
+    // ForBlock wrappers have no transition consumers of their own: they
+    // override neither insert nor remove (the only readers of fragment
+    // $transition) and their update hook arrays are never invoked. Skip the
+    // per-item hook/owner bookkeeping and only collect their contents.
+    const isItem = isForBlock(block)
+    if (!isItem) {
+      if (onFragment) onFragment(block)
+      if (onUpdateOwner) onUpdateOwner(block)
+    }
     if (isInteropEnabled && block.vnode) {
       children.push(block)
     } else {
       const start = children.length
       collectTransitionBlocks(block.nodes, children, onFragment, onUpdateOwner)
-      if (isForBlock(block)) {
+      if (isItem) {
         const count = children.length - start
         for (let i = start; i < children.length; i++) {
           children[i].$key =
