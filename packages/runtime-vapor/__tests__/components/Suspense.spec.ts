@@ -1,5 +1,6 @@
 import {
   KeepAlive,
+  type Ref,
   Suspense,
   createApp,
   createSSRApp,
@@ -14,6 +15,7 @@ import {
   reactive,
   ref,
 } from '@vue/runtime-dom'
+import type { Block } from '../../src/block'
 import {
   VaporKeepAlive,
   VaporTeleport,
@@ -21,6 +23,8 @@ import {
   createComponent,
   createDynamicComponent,
   createFor,
+  createIf,
+  createSlot,
   createTemplateRefSetter,
   defineVaporComponent,
   renderEffect,
@@ -414,6 +418,206 @@ describe('effects in pending branches', () => {
 
     await nextTick()
     expect(elementRef.value).toBe(null)
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  // A branch that first renders during an update goes through
+  // runWithRenderCtx(), which has to restore the Suspense boundary the
+  // fragment renders into - otherwise the branch's post-render effects land on
+  // the global queue and the ref is applied while the boundary is still
+  // pending. VDOM defers it; Vapor must too.
+  test('late branch template ref uses the rendering suspense boundary', async () => {
+    const asyncSetup = deferred()
+    const show = ref(false)
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VaporChild = defineVaporComponent({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createIf(
+          () => show.value,
+          () => {
+            const el = template('<div>branch</div>')() as Element
+            setRef(el, elementRef)
+            return el
+          },
+        )
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    // the boundary has never resolved: flipping the branch on renders it
+    // inside the still-pending boundary
+    show.value = true
+    await nextTick()
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  function lateBranchRef(
+    show: Ref<boolean>,
+    elementRef: Ref<Element | null>,
+  ): Block {
+    const setRef = createTemplateRefSetter()
+    return createIf(
+      () => show.value,
+      () => {
+        const el = template('<div>branch</div>')() as Element
+        setRef(el, elementRef)
+        return el
+      },
+    )
+  }
+
+  test('late branch in slot content rendered inside a vdom suspense', async () => {
+    const asyncSetup = deferred()
+    const show = ref(false)
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    // the boundary lives in the child; the slot content is declared by the
+    // vapor owner *outside* it
+    const VDomHost = defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          h(Suspense, null, {
+            default: () => h('div', [slots.default!(), h(AsyncSibling)]),
+            fallback: () => h('span', 'loading'),
+          })
+      },
+    })
+    const VaporOwner = defineVaporComponent({
+      setup() {
+        return createComponent(VDomHost as any, null, {
+          default: () => lateBranchRef(show, elementRef),
+        })
+      },
+    })
+
+    const host = document.createElement('div')
+    const app = createApp({ render: () => h(VaporOwner as any) })
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    show.value = true
+    await nextTick()
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  test('late branch under a vdom suspense hosted by a vapor app', async () => {
+    const asyncSetup = deferred()
+    const show = ref(false)
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VaporInner = defineVaporComponent({
+      setup: () => lateBranchRef(show, elementRef),
+    })
+    const VDomBridge = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporInner as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const VaporRoot = defineVaporComponent({
+      setup: () => createComponent(VDomBridge as any),
+    })
+
+    const host = document.createElement('div')
+    const app = runtimeVapor.createVaporApp(VaporRoot)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    show.value = true
+    await nextTick()
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
+    app.unmount()
+  })
+
+  test('late branch in a vapor child rendering vdom slot content', async () => {
+    const asyncSetup = deferred()
+    const show = ref(false)
+    const elementRef = ref<Element | null>(null)
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const VaporChild = defineVaporComponent({
+      setup: () => [createSlot('default'), lateBranchRef(show, elementRef)],
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () =>
+            h('div', [
+              h(VaporChild as any, null, {
+                default: () => h('em', 'from vdom owner'),
+              }),
+              h(AsyncSibling),
+            ]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    show.value = true
+    await nextTick()
+    await nextTick()
+    expect(elementRef.value).toBe(null)
+
     asyncSetup.resolve()
     await flushResolution(asyncSetup.promise)
     expect(elementRef.value).toBeInstanceOf(HTMLDivElement)
