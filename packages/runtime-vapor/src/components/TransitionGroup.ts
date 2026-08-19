@@ -167,7 +167,14 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       if (isUpdatePending) return
       isUpdatePending = true
       prevChildren = []
-      const children = resolveTransitionBlocks(slottedBlock)
+      // collect-only: the snapshot loop below reads elements and existing
+      // hooks; skip owner tracking and key-inheritance bookkeeping.
+      const children = resolveTransitionBlocks(
+        slottedBlock,
+        undefined,
+        undefined,
+        true,
+      )
       for (let i = 0; i < children.length; i++) {
         const child = children[i]
         const el =
@@ -357,8 +364,14 @@ export function resolveTransitionBlocks(
   block: Block,
   onFragment?: (frag: VaporFragment) => void,
   onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
+  // collect elements only, skipping key/type inheritance side effects
+  collectOnly = false,
 ): ResolvedTransitionBlock[] {
   const children: ResolvedTransitionBlock[] = []
+  if (collectOnly) {
+    collectTransitionBlocks(block, children, onFragment, onUpdateOwner, true)
+    return children
+  }
   const prevGeneration = currentTransitionKeyGeneration
   currentTransitionKeyGeneration = ++transitionKeyGeneration
   try {
@@ -374,6 +387,7 @@ function collectTransitionBlocks(
   children: ResolvedTransitionBlock[],
   onFragment?: (frag: VaporFragment) => void,
   onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
+  collectOnly = false,
 ): void {
   if (block instanceof Node) {
     if (block instanceof Element) children.push(block)
@@ -387,16 +401,25 @@ function collectTransitionBlocks(
       children,
       onFragment,
       isRootSlot ? onUpdateOwner : undefined,
+      collectOnly,
     )
-    if (!isRootSlot) {
-      for (let i = start; i < children.length; i++) {
-        setTransitionType(children[i], block.type)
+    if (!collectOnly) {
+      if (!isRootSlot) {
+        for (let i = start; i < children.length; i++) {
+          setTransitionType(children[i], block.type)
+        }
       }
+      inheritTransitionKey(children, start, block.$key)
     }
-    inheritTransitionKey(children, start, block.$key)
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
-      collectTransitionBlocks(block[i], children, onFragment, onUpdateOwner)
+      collectTransitionBlocks(
+        block[i],
+        children,
+        onFragment,
+        onUpdateOwner,
+        collectOnly,
+      )
     }
   } else if (isFragment(block)) {
     // ForBlock wrappers have no transition consumers of their own: they
@@ -412,8 +435,16 @@ function collectTransitionBlocks(
       children.push(block)
     } else {
       const start = children.length
-      collectTransitionBlocks(block.nodes, children, onFragment, onUpdateOwner)
-      if (isItem) {
+      collectTransitionBlocks(
+        block.nodes,
+        children,
+        onFragment,
+        onUpdateOwner,
+        collectOnly,
+      )
+      if (collectOnly) {
+        // element collection only; keys were stamped by the apply pass
+      } else if (isItem) {
         const count = children.length - start
         for (let i = start; i < children.length; i++) {
           children[i].$key =
