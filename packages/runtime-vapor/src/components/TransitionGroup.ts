@@ -23,7 +23,7 @@ import {
   vShowHidden,
   warn,
 } from '@vue/runtime-dom'
-import { extend, isArray } from '@vue/shared'
+import { extend, isArray, isFunction } from '@vue/shared'
 import {
   type Block,
   type BlockFn,
@@ -44,7 +44,7 @@ import {
   type VaporComponentOptions,
   isVaporComponent,
 } from '../component'
-import { resolveDynamicProps } from '../componentProps'
+import { type RawProps, resolveDynamicProps } from '../componentProps'
 import { setForHydrationAnchorResolver } from '../apiCreateFor'
 import { createComment, createElement, createTextNode } from '../dom/node'
 import {
@@ -544,43 +544,59 @@ function trackTransitionGroupUpdate(
     return
   }
 
-  transitionGroupUpdateOwnerMap.set(owner, updateHooks)
   if (isFragment(owner)) {
+    transitionGroupUpdateOwnerMap.set(owner, updateHooks)
     ;(owner.onBeforeUpdate ||= []).push(() => updateHooks.beforeUpdate())
     ;(owner.onUpdated ||= []).push(() => updateHooks.updated())
-  } else {
-    // A component child can update from parent-driven props without re-running
-    // the surrounding v-for fragment. Track raw props directly instead of
-    // using component updated hooks, because child-local state updates should
-    // not trigger TransitionGroup move bookkeeping. This matches VDOM behavior.
-    let isPending = false
+    return
+  }
+
+  // Fully static raw props can never notify - skip the tracking effect.
+  if (!hasDynamicPropsSource(owner.rawProps)) return
+
+  transitionGroupUpdateOwnerMap.set(owner, updateHooks)
+  // A component child can update from parent-driven props without re-running
+  // the surrounding v-for fragment. Track raw props directly instead of
+  // using component updated hooks, because child-local state updates should
+  // not trigger TransitionGroup move bookkeeping. This matches VDOM behavior.
+  let isPending = false
+  owner.scope.run(() => {
+    const effect = new ReactiveEffect(() => {
+      // Dynamic prop sources are resolved as child props, so the getter
+      // must run with the child instance while the effect itself remains
+      // owned by the child scope for teardown.
+      const prev = setCurrentInstance(owner, owner.scope)
+      try {
+        resolveDynamicProps(owner.rawProps)
+      } finally {
+        restoreCurrentInstance(prev)
+      }
+    })
     const flushUpdated = () => {
       isPending = false
+      // Deferred re-track: `dirty` stays set until this run and `isPending`
+      // short-circuits the notifies in between, so a batch touching N props
+      // of one child resolves them once instead of N times.
+      if (effect.active) effect.run()
       updateHooks.updated()
     }
-    owner.scope.run(() => {
-      const effect = new ReactiveEffect(() => {
-        // Dynamic prop sources are resolved as child props, so the getter
-        // must run with the child instance while the effect itself remains
-        // owned by the child scope for teardown.
-        const prev = setCurrentInstance(owner, owner.scope)
-        try {
-          resolveDynamicProps(owner.rawProps)
-        } finally {
-          restoreCurrentInstance(prev)
-        }
-      })
-      effect.notify = () => {
-        if (effect.flags & EffectFlags.PAUSED || !effect.dirty) return
-        effect.run()
-        if (isPending) return
-        isPending = true
-        updateHooks.beforeUpdate()
-        queuePostFlushCb(flushUpdated)
-      }
-      effect.run()
-    })
+    effect.notify = () => {
+      if (effect.flags & EffectFlags.PAUSED || !effect.dirty) return
+      if (isPending) return
+      isPending = true
+      updateHooks.beforeUpdate()
+      queuePostFlushCb(flushUpdated)
+    }
+    effect.run()
+  })
+}
+
+function hasDynamicPropsSource(props: RawProps): boolean {
+  if (props.$) return true
+  for (const key in props) {
+    if (key !== '$' && isFunction(props[key])) return true
   }
+  return false
 }
 
 function recordPosition(c: ResolvedTransitionBlock) {
