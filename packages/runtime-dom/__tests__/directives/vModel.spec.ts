@@ -1317,179 +1317,288 @@ describe('vModel', () => {
     expect(bar.selected).toEqual(true)
   })
 
-  // #10505
-  it('multiple select should sync DOM when the Set model is overridden in the change handler', async () => {
+  function mountSelectModel(
+    initialValue: any,
+    update: (value: any) => any,
+    multiple = false,
+    optionValues: any[] = ['foo', 'bar'],
+  ) {
     const component = defineComponent({
-      data() {
-        return { value: new Set() as Set<string> }
-      },
+      data: () => ({ value: initialValue }),
       render() {
-        return [
-          withVModel(
-            h(
-              'select',
-              {
-                value: null,
-                multiple: true,
-                // a select that always forces its value back to {'foo'}
-                'onUpdate:modelValue': () => {
-                  this.value = new Set(['foo'])
-                },
+        return withVModel(
+          h(
+            'select',
+            {
+              multiple,
+              'onUpdate:modelValue': (value: any) => {
+                this.value = update(value)
               },
-              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
-            ),
-            this.value,
+            },
+            optionValues.map(value => h('option', { value })),
           ),
-        ]
+          this.value,
+        )
       },
     })
     render(h(component), root)
+    const input = root.querySelector('select') as HTMLSelectElement
+    return { input, options: input.options, data: root._vnode.component.data }
+  }
 
-    const input = root.querySelector('select')
-    const foo = root.querySelector('option[value=foo]')
-    const bar = root.querySelector('option[value=bar]')
-    const data = root._vnode.component.data
+  function trackSelectedWrites(input: HTMLSelectElement) {
+    const selected = Object.getOwnPropertyDescriptor(
+      HTMLOptionElement.prototype,
+      'selected',
+    )!
+    let writes = 0
+    for (const option of input.options) {
+      Object.defineProperty(option, 'selected', {
+        configurable: true,
+        get: selected.get,
+        set(value) {
+          writes++
+          selected.set!.call(this, value)
+        },
+      })
+    }
+    return () => writes
+  }
 
-    // user picks 'bar', but the handler overrides the model to {'foo'}
-    foo.selected = false
+  it('should sync a multiple select when the Set model is overridden', async () => {
+    const { input, options, data } = mountSelectModel(
+      new Set<string>(),
+      () => new Set(['foo']),
+      true,
+    )
+    const foo = options[0]
+    const bar = options[1]
+
     bar.selected = true
     triggerEvent('change', input)
     await nextTick()
 
-    // the DOM should reflect the overridden model value, not the value the
-    // user just selected
     expect(Array.from(data.value)).toEqual(['foo'])
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(false)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(false)
   })
 
-  // #10505
-  it('multiple select should sync DOM when the Set model is mutated in the change handler', async () => {
+  it('should clear a single select when a native change handler clears the model', async () => {
     const component = defineComponent({
       data() {
-        return { value: new Set(['foo']) as Set<string> }
+        return { value: null as string | null }
       },
       render() {
-        return [
-          withVModel(
-            h(
-              'select',
-              {
-                multiple: true,
-                // handler enforces "bar is never allowed" by mutating the
-                // Set it received, then assigning it
-                'onUpdate:modelValue': (v: Set<string>) => {
-                  v.delete('bar')
-                  this.value = v
-                },
+        return withVModel(
+          h(
+            'select',
+            {
+              'onUpdate:modelValue': setValue.bind(this),
+              onChange: () => {
+                this.value = null
               },
-              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
-            ),
-            this.value,
+            },
+            [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
           ),
-        ]
+          this.value,
+        )
       },
     })
     render(h(component), root)
-
-    const input = root.querySelector('select')
-    const foo = root.querySelector('option[value=foo]')
-    const bar = root.querySelector('option[value=bar]')
+    const input = root.querySelector('select') as HTMLSelectElement
     const data = root._vnode.component.data
 
-    // user picks both, handler strips 'bar' from the same Set object
+    input.options[1].selected = true
+    triggerEvent('change', input)
+    await nextTick()
+
+    expect(data.value).toBe(null)
+    expect(input.selectedIndex).toBe(-1)
+  })
+
+  it('should preserve the selected option when duplicate values exist', async () => {
+    const { input, options, data } = mountSelectModel(
+      null,
+      value => value,
+      false,
+      ['foo', 'foo'],
+    )
+
+    options[1].selected = true
+    triggerEvent('change', input)
+    await nextTick()
+
+    expect(data.value).toBe('foo')
+    expect(input.selectedIndex).toBe(1)
+  })
+
+  it('should resync when a multiple select becomes single during the pending update', async () => {
+    const component = defineComponent({
+      data() {
+        return { value: [] as string[], multiple: true }
+      },
+      render() {
+        return withVModel(
+          h(
+            'select',
+            {
+              multiple: this.multiple,
+              'onUpdate:modelValue': (value: string[]) => {
+                this.value = value
+                this.multiple = false
+              },
+            },
+            [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
+          ),
+          this.value,
+        )
+      },
+    })
+    render(h(component), root)
+    const input = root.querySelector('select') as HTMLSelectElement
+    const data = root._vnode.component.data
+
+    input.options[1].selected = true
+    triggerEvent('change', input)
+    await nextTick()
+
+    expect(data.value).toEqual(['bar'])
+    expect(input.multiple).toBe(false)
+    expect(input.selectedIndex).toBe(-1)
+  })
+
+  it('should snapshot an emitted Array before the change handler mutates it', async () => {
+    const { input, options, data } = mountSelectModel(
+      ['foo'],
+      (value: string[]) => {
+        value.pop()
+        return value
+      },
+      true,
+    )
+    const foo = options[0]
+    const bar = options[1]
+
+    foo.selected = true
+    bar.selected = true
+    triggerEvent('change', input)
+    await nextTick()
+
+    expect(data.value).toEqual(['foo'])
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(false)
+  })
+
+  it('should resync after the emitted Set is mutated in the change handler', async () => {
+    const { input, options, data } = mountSelectModel(
+      new Set(['foo']),
+      (value: Set<string>) => {
+        value.delete('bar')
+        return value
+      },
+      true,
+    )
+    const foo = options[0]
+    const bar = options[1]
+
     foo.selected = true
     bar.selected = true
     triggerEvent('change', input)
     await nextTick()
 
     expect(Array.from(data.value)).toEqual(['foo'])
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(false)
+    expect(foo.selected).toBe(true)
+    expect(bar.selected).toBe(false)
   })
 
-  // #10505
-  it('single select should sync DOM when the model is cleared in the change handler', async () => {
-    const component = defineComponent({
-      data() {
-        return { value: 'foo' as string | null }
-      },
-      render() {
-        return [
-          withVModel(
-            h(
-              'select',
-              {
-                value: null,
-                'onUpdate:modelValue': () => {
-                  this.value = null
-                },
-              },
-              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
-            ),
-            this.value,
-          ),
-        ]
-      },
-    })
-    render(h(component), root)
+  it('should not rewrite options after assigning a Set of objects', async () => {
+    const fooValue = { id: 'foo' }
+    const barValue = { id: 'bar' }
+    const { input, options } = mountSelectModel(
+      new Set([fooValue]),
+      value => value,
+      true,
+      [fooValue, barValue],
+    )
 
-    const input = root.querySelector('select')
-    const bar = root.querySelector('option[value=bar]')
-    const data = root._vnode.component.data
-
-    bar.selected = true
+    options[0].selected = false
+    options[1].selected = true
+    const getWrites = trackSelectedWrites(input)
     triggerEvent('change', input)
     await nextTick()
 
-    expect(data.value).toEqual(null)
-    expect(input.selectedIndex).toEqual(-1)
+    expect(getWrites()).toBe(0)
   })
 
-  // #10505
-  it('single select should sync DOM when the model is overridden in the change handler', async () => {
-    const component = defineComponent({
-      data() {
-        return { value: null as string | null }
-      },
-      render() {
-        return [
-          withVModel(
-            h(
-              'select',
-              {
-                value: null,
-                // a select that always forces its value back to 'foo'
-                'onUpdate:modelValue': () => {
-                  this.value = 'foo'
-                },
-              },
-              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
-            ),
-            this.value,
-          ),
-        ]
-      },
-    })
-    render(h(component), root)
+  it('should not rewrite options after assigning an Array of objects', async () => {
+    const fooValue = { id: 'foo' }
+    const barValue = { id: 'bar' }
+    const { input, options } = mountSelectModel([], value => value, true, [
+      fooValue,
+      barValue,
+    ])
 
-    const input = root.querySelector('select')
-    const foo = root.querySelector('option[value=foo]')
-    const bar = root.querySelector('option[value=bar]')
-    const data = root._vnode.component.data
-
-    // user picks 'bar', but the handler overrides the model back to 'foo'
-    foo.selected = false
-    bar.selected = true
+    options[1].selected = true
+    const getWrites = trackSelectedWrites(input)
     triggerEvent('change', input)
     await nextTick()
 
-    // the DOM should reflect the overridden model value ('foo'), not the
-    // value the user just selected ('bar')
-    expect(data.value).toEqual('foo')
-    expect(input.selectedIndex).toEqual(0)
-    expect(foo.selected).toEqual(true)
-    expect(bar.selected).toEqual(false)
+    expect(getWrites()).toBe(0)
+  })
+
+  it('should not rewrite options for a primitive Array model', async () => {
+    const optionValues = Array.from({ length: 10 }, (_, i) => i)
+    const { input, options, data } = mountSelectModel(
+      [],
+      value => value,
+      true,
+      optionValues,
+    )
+
+    for (let i = 0; i < 5; i++) options[i].selected = true
+    const getWrites = trackSelectedWrites(input)
+    triggerEvent('change', input)
+    await nextTick()
+
+    expect(data.value).toHaveLength(5)
+    expect(getWrites()).toBe(0)
+  })
+
+  it('should clear the pending assignment when the assigner throws', async () => {
+    const error = new Error('assign failed')
+    const component = defineComponent({
+      data: () => ({ value: [] }),
+      render() {
+        return withVModel(
+          h(
+            'select',
+            {
+              multiple: true,
+              'onUpdate:modelValue': () => {
+                throw error
+              },
+            },
+            [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
+          ),
+          this.value,
+        )
+      },
+    })
+    render(h(component), root)
+    const input = root.querySelector('select') as HTMLSelectElement
+    const onError = vi.fn((event: ErrorEvent) => event.preventDefault())
+    window.addEventListener('error', onError)
+
+    try {
+      input.options[1].selected = true
+      triggerEvent('change', input)
+      await nextTick()
+
+      expect(onError).toHaveBeenCalled()
+      expect((input as any)._pendingValue).toBeUndefined()
+    } finally {
+      window.removeEventListener('error', onError)
+    }
   })
 
   it('multiple select uses current Array/Set model type', async () => {

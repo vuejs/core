@@ -44,8 +44,7 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & {
     [assignKey]: AssignerFn
     [initialValueKey]?: string
-    _assigning?: boolean
-    _assignedValue?: any
+    _pendingValue?: [multiple: boolean, value: any]
   },
   any,
   Modifiers
@@ -241,25 +240,31 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o),
         )
-      const assignedValue = el.multiple
+      const multiple = el.multiple
+      const assignedValue = multiple
         ? isSet((el as any)._modelValue)
           ? new Set(selectedVal)
           : selectedVal
         : selectedVal[0]
-      // remember the value assigned by the user interaction so that the
-      // `updated` hook can detect when the model is later overridden (e.g.
-      // reset) inside the update handler. Snapshot it BEFORE invoking the
-      // assigner, which may mutate the received value in place. #10505
-      ;(el as any)._assignedValue = isSet(assignedValue)
-        ? new Set(assignedValue)
-        : isArray(assignedValue)
-          ? assignedValue.slice()
-          : assignedValue
-      el[assignKey](assignedValue)
-      el._assigning = true
-      nextTick(() => {
-        el._assigning = false
-      })
+      // Array models receive selectedVal directly, so snapshot it before user
+      // code can mutate it. Set models already receive a fresh Set.
+      const pending = (el._pendingValue = [
+        multiple,
+        multiple
+          ? isArray(assignedValue)
+            ? selectedVal.slice()
+            : selectedVal
+          : assignedValue,
+      ])
+      try {
+        el[assignKey](assignedValue)
+      } finally {
+        nextTick(() => {
+          if (el._pendingValue === pending) {
+            el._pendingValue = undefined
+          }
+        })
+      }
     })
     el[assignKey] = getModelAssigner(vnode)
   },
@@ -273,28 +278,33 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
-    // Skip the redundant DOM sync only when the model still holds the value
-    // produced by the user's selection. If it was overridden during the
-    // update, the DOM must be re-synced. #10505
-    if (!el._assigning || !assignedValueEquals(value, el._assignedValue)) {
+    const pending = el._pendingValue
+    el._pendingValue = undefined
+    if (
+      !pending ||
+      pending[0] !== el.multiple ||
+      !isSameSelectValue(value, pending[1], pending[0])
+    ) {
       setSelected(el, value)
     }
   },
 }
 
-// Compares the current model value against the value assigned by the user's
-// selection. `looseEqual` alone would treat any two `Set` values as equal,
-// because their `Object.keys` are always empty, so Set contents are compared
-// explicitly using the same `has` semantics as `setSelected`.
-function assignedValueEquals(a: any, b: any): boolean {
-  if (isSet(a) && isSet(b)) {
-    if (a.size !== b.size) return false
-    for (const item of a) {
-      if (!b.has(item)) return false
+function isSameSelectValue(
+  value: any,
+  assignedValue: any,
+  multiple: boolean,
+): boolean {
+  if (!multiple) return looseEqual(value, assignedValue)
+  if (isArray(value)) return looseEqual(value, assignedValue)
+  if (isSet(value)) {
+    if (value.size !== assignedValue.length) return false
+    for (const item of assignedValue) {
+      if (!value.has(item)) return false
     }
     return true
   }
-  return looseEqual(a, b)
+  return false
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {
