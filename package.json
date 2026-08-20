@@ -114,5 +114,10 @@
     "typescript-eslint": "^8.65.0",
     "vite": "catalog:",
     "vitest": "^4.1.10"
+  },
+  "pnpm": {
+    "overrides": {
+      "nanoid": "3.3.18"
+    }
   }
 }
