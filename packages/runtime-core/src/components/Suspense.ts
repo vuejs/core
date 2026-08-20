@@ -266,7 +266,13 @@ function patchSuspense(
         // because we aren't actually showing a fallback content when
         // patchSuspense is called. In such case, patch of fallback content
         // should be no op
-        if (!isHydrating) {
+        // The same applies while the fallback mount is deferred to the leaving
+        // branch's afterLeave (out-in transition): activeBranch is still the
+        // leaving content, not the fallback. Patching it with the fallback here
+        // would hijack activeBranch, and resolve() would then attach the
+        // content move to an afterLeave that never fires, permanently dropping
+        // the resolved branch.
+        if (!isHydrating && !suspense.isFallbackMountPending) {
           patch(
             activeBranch,
             newFallback,
@@ -316,7 +322,9 @@ function patchSuspense(
         )
         if (suspense.deps <= 0) {
           suspense.resolve()
-        } else {
+        } else if (!suspense.isFallbackMountPending) {
+          // while the fallback mount is deferred to the leaving branch's
+          // afterLeave, activeBranch is still the leaving content — see above
           patch(
             activeBranch,
             newFallback,
