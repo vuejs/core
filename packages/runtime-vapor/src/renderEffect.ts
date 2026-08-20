@@ -23,7 +23,10 @@ import { isSuspenseEnabled } from './suspense'
 
 export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
-  job: SchedulerJob
+  // Created lazily on first notify: most render effects are never
+  // scheduled individually, so eagerly allocating the job closure at
+  // creation time is pure overhead in list-mount hot paths.
+  job?: SchedulerJob
   updateJob?: SchedulerJob
   render: () => void
   // Creation order within the owning component.
@@ -36,31 +39,6 @@ export class RenderEffect extends ReactiveEffect {
     this.order = instance ? instance.effectCount++ : 0
     if (__DEV__ && !__TEST__ && !this.subs && !isVaporComponent(instance)) {
       warn('renderEffect called without active EffectScope or Vapor instance.')
-    }
-
-    const job: SchedulerJob = () => {
-      // The job may already be queued when its owning scope is paused.
-      if (!(this.flags & EffectFlags.PAUSED) && this.dirty) {
-        // A pending KeepAlive async root defers updates along its root chain.
-        const deferred =
-          __FEATURE_SUSPENSE__ &&
-          isSuspenseEnabled &&
-          this.i &&
-          this.i.deferredKeepAliveUpdates
-        if (deferred) {
-          if (isDeferredKeepAliveStateLive(deferred)) {
-            deferred.effects.push(this.job)
-            return
-          }
-          // The pending root can no longer resolve through this state
-          // (unmounted early or superseded suspense cycle) - drop the stale
-          // state and replay its buffered updates together with this job in
-          // scheduler order (this job re-enters with the state cleared).
-          settleDeferredKeepAliveUpdates(deferred, this.job)
-          return
-        }
-        this.run()
-      }
     }
 
     if (instance) {
@@ -77,17 +55,44 @@ export class RenderEffect extends ReactiveEffect {
       if (__DEV__) {
         ;(instance.renderEffects ||= []).push(this)
       }
-      job.i = instance
     }
 
-    this.job = job
     this.i = instance
 
     // Allow self re-queue when render/hook logic mutates reactive state.
     // Safe in Vapor because updates are always async via queueJob(), and
     // isUpdating prevents duplicate bu/u hooks on re-entry.
     this.flags |= EffectFlags.ALLOW_RECURSE
-    this.job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+  }
+
+  createJob(): SchedulerJob {
+    const job: SchedulerJob = () => {
+      // The job may already be queued when its owning scope is paused.
+      if (!(this.flags & EffectFlags.PAUSED) && this.dirty) {
+        // A pending KeepAlive async root defers updates along its root chain.
+        const deferred =
+          __FEATURE_SUSPENSE__ &&
+          isSuspenseEnabled &&
+          this.i &&
+          this.i.deferredKeepAliveUpdates
+        if (deferred) {
+          if (isDeferredKeepAliveStateLive(deferred)) {
+            deferred.effects.push(this.job!)
+            return
+          }
+          // The pending root can no longer resolve through this state
+          // (unmounted early or superseded suspense cycle) - drop the stale
+          // state and replay its buffered updates together with this job in
+          // scheduler order (this job re-enters with the state cleared).
+          settleDeferredKeepAliveUpdates(deferred, this.job!)
+          return
+        }
+        this.run()
+      }
+    }
+    if (this.i) job.i = this.i
+    job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+    return (this.job = job)
   }
 
   fn(): void {
@@ -132,7 +137,12 @@ export class RenderEffect extends ReactiveEffect {
   notify(): void {
     const flags = this.flags
     if (!(flags & EffectFlags.PAUSED)) {
-      queueJob(this.job, this.i ? this.i.uid : undefined, false, this.order)
+      queueJob(
+        this.job || this.createJob(),
+        this.i ? this.i.uid : undefined,
+        false,
+        this.order,
+      )
     }
   }
 }

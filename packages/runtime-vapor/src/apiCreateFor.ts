@@ -6,6 +6,7 @@ import {
   isShallow,
   onScopeDispose,
   setActiveSub,
+  setCurrentScope,
   shallowReadArray,
   shallowRef,
   toReactive,
@@ -168,6 +169,7 @@ export const createFor = (
 
   const renderList = () => {
     const source = normalizeSource(src())
+    const sourceKeys = source.keys
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
@@ -179,7 +181,9 @@ export const createFor = (
     if (getKey) {
       newKeys = new Array(newLength)
       for (let i = 0; i < newLength; i++) {
-        newKeys[i] = getKey(...getItem(source, i))
+        newKeys[i] = sourceKeys
+          ? getKey(getItemValue(source, i), sourceKeys[i], i)
+          : getKey(getItemValue(source, i), i, undefined)
       }
     }
 
@@ -195,17 +199,13 @@ export const createFor = (
       if (isHydrating) {
         hydrateList(source, newLength)
       } else {
-        for (let i = 0; i < newLength; i++) {
-          mount(source, i)
-        }
+        mountAll(source, newLength)
       }
     } else {
       parent = parentAnchor!.parentNode
       if (!oldLength) {
         // fast path for all new
-        for (let i = 0; i < newLength; i++) {
-          mount(source, i)
-        }
+        mountAll(source, newLength)
       } else if (!newLength) {
         // fast path for clearing all.
         // Fire reset listeners BEFORE per-item unmount so attached selectors
@@ -227,11 +227,10 @@ export const createFor = (
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
         for (let i = 0; i < commonLength; i++) {
-          const item = getItem(source, i)
-          update((newBlocks[i] = oldBlocks[i]), ...item)
+          updateAt((newBlocks[i] = oldBlocks[i]), source, i)
         }
         for (let i = oldLength; i < newLength; i++) {
-          mount(source, i)
+          mountAt(source, i)
         }
         for (let i = newLength; i < oldLength; i++) {
           unmount(oldBlocks[i])
@@ -255,24 +254,22 @@ export const createFor = (
         }
 
         const commonLength = Math.min(oldLength, newLength)
-        const oldKeyIndexPairs: [any, number][] = new Array(oldLength)
-        const queuedBlocks: [
-          index: number,
-          item: ReturnType<typeof getItem>,
-          key: any,
-        ][] = new Array(newLength)
+        // parallel arrays holding blocks that need a mount or a move, in
+        // ascending index order. `queuedReuse[q]` distinguishes them after
+        // the reuse pass: a ForBlock means move, undefined means mount.
+        const queuedIndices: number[] = new Array(newLength)
+        const queuedItems: any[] = new Array(newLength)
+        const queuedReuse: (ForBlock | undefined)[] = new Array(newLength)
 
         let endOffset = 0
-        let queuedBlocksLength = 0
-        let oldKeyIndexPairsLength = 0
+        let queuedLength = 0
 
         while (endOffset < commonLength) {
           const index = newLength - endOffset - 1
-          const item = getItem(source, index)
           const key = newKeys![index]
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
           if (existingBlock.key !== key) break
-          update(existingBlock, ...item)
+          updateAt(existingBlock, source, index)
           newBlocks[index] = existingBlock
           endOffset++
         }
@@ -281,60 +278,48 @@ export const createFor = (
         const e2 = oldLength - endOffset
         const e3 = newLength - endOffset
 
+        const oldKeyIndexMap = new Map<any, number>()
+
         for (let i = 0; i < e1; i++) {
-          const currentItem = getItem(source, i)
           const currentKey = newKeys![i]
           const oldBlock = oldBlocks[i]
-          const oldKey = oldBlock.key
-          if (oldKey === currentKey) {
-            update((newBlocks[i] = oldBlock), ...currentItem)
+          if (oldBlock.key === currentKey) {
+            updateAt((newBlocks[i] = oldBlock), source, i)
           } else {
-            queuedBlocks[queuedBlocksLength++] = [i, currentItem, currentKey]
-            oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldKey, i]
+            queuedIndices[queuedLength] = i
+            queuedItems[queuedLength++] = getItemValue(source, i)
+            oldKeyIndexMap.set(oldBlock.key, i)
           }
         }
 
         for (let i = e1; i < e2; i++) {
-          oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldBlocks[i].key, i]
+          oldKeyIndexMap.set(oldBlocks[i].key, i)
         }
 
         for (let i = e1; i < e3; i++) {
-          const blockItem = getItem(source, i)
-          const blockKey = newKeys![i]
-          queuedBlocks[queuedBlocksLength++] = [i, blockItem, blockKey]
+          queuedIndices[queuedLength] = i
+          queuedItems[queuedLength++] = getItemValue(source, i)
         }
-
-        queuedBlocks.length = queuedBlocksLength
-        oldKeyIndexPairs.length = oldKeyIndexPairsLength
-
-        interface MountOper {
-          source: ResolvedSource
-          index: number
-          item: ReturnType<typeof getItem>
-          key: any
-        }
-        interface MoveOper {
-          index: number
-          block: ForBlock
-        }
-
-        const oldKeyIndexMap = new Map(oldKeyIndexPairs)
-        const opers: (MountOper | MoveOper)[] = new Array(queuedBlocks.length)
 
         let mountCounter = 0
-        let opersLength = 0
 
-        for (let i = queuedBlocks.length - 1; i >= 0; i--) {
-          const [index, item, key] = queuedBlocks[i]
+        for (let q = queuedLength - 1; q >= 0; q--) {
+          const index = queuedIndices[q]
+          const key = newKeys![index]
           const oldIndex = oldKeyIndexMap.get(key)
           if (oldIndex !== undefined) {
             oldKeyIndexMap.delete(key)
             const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
-            update(reusedBlock, ...item)
-            opers[opersLength++] = { index, block: reusedBlock }
+            update(
+              reusedBlock,
+              queuedItems[q],
+              sourceKeys ? sourceKeys[index] : index,
+              sourceKeys ? index : undefined,
+            )
+            queuedReuse[q] = reusedBlock
           } else {
+            queuedReuse[q] = undefined
             mountCounter++
-            opers[opersLength++] = { source, index, item, key }
           }
         }
 
@@ -356,19 +341,22 @@ export const createFor = (
           parent!.appendChild(parentAnchor)
         }
 
-        if (opers.length === mountCounter) {
-          for (const { source, index, item, key } of opers as MountOper[]) {
+        if (mountCounter === queuedLength) {
+          // mounts only, no moves: mount back-to-front so each row can
+          // anchor on the one after it
+          for (let q = queuedLength - 1; q >= 0; q--) {
+            const index = queuedIndices[q]
             mount(
               source,
               index,
               index < newLength - 1
                 ? getBlockFirstNode(newBlocks[index + 1].nodes)
                 : parentAnchor,
-              item,
-              key,
+              queuedItems[q],
+              newKeys![index],
             )
           }
-        } else if (opers.length) {
+        } else if (queuedLength) {
           let anchor = oldBlocks[0]
           let blocksTail: ForBlock | undefined
           for (let i = 0; i < oldLength; i++) {
@@ -384,34 +372,45 @@ export const createFor = (
             }
             blocksTail = block
           }
-          for (const action of opers) {
-            const { index } = action
+          for (let q = queuedLength - 1; q >= 0; q--) {
+            const index = queuedIndices[q]
+            const reused = queuedReuse[q]
             if (index < newLength - 1) {
               const nextBlock = newBlocks[index + 1]
               let anchorNode = getBlockFirstNode(nextBlock.prevAnchor!.nodes)
               if (!anchorNode.parentNode)
                 anchorNode = getBlockFirstNode(nextBlock.nodes)
-              if ('source' in action) {
-                const { item, key } = action
-                const block = mount(source, index, anchorNode, item, key)
+              if (reused === undefined) {
+                const block = mount(
+                  source,
+                  index,
+                  anchorNode,
+                  queuedItems[q],
+                  newKeys![index],
+                )
                 moveLink(block, nextBlock.prev, nextBlock)
-              } else if (action.block.next !== nextBlock) {
-                insertForBlock(action.block, anchorNode)
-                moveLink(action.block, nextBlock.prev, nextBlock)
+              } else if (reused.next !== nextBlock) {
+                insertForBlock(reused, anchorNode)
+                moveLink(reused, nextBlock.prev, nextBlock)
               }
-            } else if ('source' in action) {
-              const { item, key } = action
-              const block = mount(source, index, parentAnchor, item, key)
+            } else if (reused === undefined) {
+              const block = mount(
+                source,
+                index,
+                parentAnchor,
+                queuedItems[q],
+                newKeys![index],
+              )
               moveLink(block, blocksTail)
               blocksTail = block
-            } else if (action.block.next !== undefined) {
+            } else if (reused.next !== undefined) {
               let anchorNode = anchor
                 ? getBlockFirstNode(anchor.nodes)
                 : parentAnchor
               if (!anchorNode.parentNode) anchorNode = parentAnchor
-              insertForBlock(action.block, anchorNode)
-              moveLink(action.block, blocksTail)
-              blocksTail = action.block
+              insertForBlock(reused, anchorNode)
+              moveLink(reused, blocksTail)
+              blocksTail = reused
             }
           }
           for (const block of newBlocks) {
@@ -452,24 +451,29 @@ export const createFor = (
   const mount = (
     source: ResolvedSource,
     idx: number,
-    anchor: Node | undefined = parentAnchor,
-    [item, key, index] = getItem(source, idx),
-    key2 = newKeys ? newKeys[idx] : getKey && getKey(item, key, index),
+    anchor: Node | undefined,
+    item: any,
+    key2: any,
   ): ForBlock => {
+    const keys = source.keys
     const itemRef = shallowRef(item)
     // avoid creating refs if the render fn doesn't need it
-    const keyRef = needKey ? shallowRef(key) : undefined
-    const indexRef = needIndex ? shallowRef(index) : undefined
+    const keyRef = needKey ? shallowRef(keys ? keys[idx] : idx) : undefined
+    const indexRef = needIndex ? shallowRef(keys ? idx : undefined) : undefined
 
     let nodes: Block
     const scope = new EffectScope(true)
+    const prevScope = setCurrentScope(scope)
     try {
-      nodes = scope.run(() =>
-        renderItem(itemRef, keyRef as any, indexRef as any),
-      )!
+      nodes = renderItem(itemRef, keyRef as any, indexRef as any)
     } catch (err) {
+      // restore before stopping so scope cleanups never observe the dying
+      // scope as current (matches the previous scope.run() ordering)
+      setCurrentScope(prevScope)
       scope.stop()
       throw err
+    } finally {
+      setCurrentScope(prevScope)
     }
 
     const block = (newBlocks[idx] = new ForBlock(
@@ -494,6 +498,35 @@ export const createFor = (
     return block
   }
 
+  const mountAt = (source: ResolvedSource, idx: number): ForBlock =>
+    mount(
+      source,
+      idx,
+      parentAnchor,
+      getItemValue(source, idx),
+      newKeys ? newKeys[idx] : undefined,
+    )
+
+  const mountAll = (source: ResolvedSource, newLength: number): void => {
+    for (let i = 0; i < newLength; i++) {
+      mountAt(source, i)
+    }
+  }
+
+  const updateAt = (
+    block: ForBlock,
+    source: ResolvedSource,
+    idx: number,
+  ): void => {
+    const keys = source.keys
+    update(
+      block,
+      getItemValue(source, idx),
+      keys ? keys[idx] : idx,
+      keys ? idx : undefined,
+    )
+  }
+
   function hydrateList(source: ResolvedSource, newLength: number): void {
     const hydrationStart = currentHydrationNode!
     let exitHydrationBoundary: (() => void) | undefined
@@ -513,7 +546,7 @@ export const createFor = (
       if (emptyLocalRange && newLength) {
         reuseBoundaryClose(hydrationStart)
         for (let i = 0; i < newLength; i++) {
-          mount(source, i)
+          mountAt(source, i)
         }
         setCurrentHydrationNode(parentAnchor)
       } else {
@@ -524,7 +557,7 @@ export const createFor = (
           } else {
             nextNode = nextLogicalSibling(currentHydrationNode!)
           }
-          mount(source, i)
+          mountAt(source, i)
           if (nextNode) setCurrentHydrationNode(nextNode)
         }
 
@@ -943,17 +976,24 @@ function normalizeSource(source: any): ResolvedSource {
   }
 }
 
-function getItem(
-  { keys, values, needsWrap, isReadonlySource }: ResolvedSource,
+function getItemValue(
+  { values, needsWrap, isReadonlySource }: ResolvedSource,
   idx: number,
-): [item: any, key: any, index?: number] {
-  const value = needsWrap
+): any {
+  return needsWrap
     ? isReadonlySource
       ? toReadonly(toReactive(values[idx]))
       : toReactive(values[idx])
     : values[idx]
-  if (keys) {
-    return [value, keys[idx], idx]
+}
+
+function getItem(
+  source: ResolvedSource,
+  idx: number,
+): [item: any, key: any, index?: number] {
+  const value = getItemValue(source, idx)
+  if (source.keys) {
+    return [value, source.keys[idx], idx]
   } else {
     return [value, idx, undefined]
   }

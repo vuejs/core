@@ -26,13 +26,14 @@ export function on(
   el: Element,
   event: string,
   handler: EventHandlerValue,
-  options: AddEventListenerOptions = {},
+  options?: AddEventListenerOptions,
 ): void {
   if (isArray(handler)) {
     handler.forEach(fn => on(el, event, fn, options))
   } else {
     if (!handler) return
-    addEventListener(el, event, createInvoker(handler), options)
+    // no cleanup closure: static listeners live and die with the element
+    el.addEventListener(event, createInvoker(handler), options)
   }
 }
 
@@ -40,7 +41,7 @@ export function onBinding(
   el: Element,
   event: string,
   handler: EventHandlerValue,
-  options: AddEventListenerOptions = {},
+  options?: AddEventListenerOptions,
 ): void {
   if (isArray(handler)) {
     handler.forEach(fn => onBinding(el, event, fn, options))
