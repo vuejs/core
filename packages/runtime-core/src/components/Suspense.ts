@@ -674,10 +674,14 @@ function createSuspenseBoundary(
         if (!suspense.isInFallback) {
           return
         }
+        // a parent update may have produced a newer fallback vnode while the
+        // mount was deferred (its patch is skipped during that window), so
+        // mount the latest one
+        const latestFallback = suspense.vnode.ssFallback!
         // mount the fallback tree
         patch(
           null,
-          fallbackVNode,
+          latestFallback,
           container,
           anchor,
           parentComponent,
@@ -686,7 +690,7 @@ function createSuspenseBoundary(
           slotScopeIds,
           optimized,
         )
-        setActiveBranch(suspense, fallbackVNode)
+        setActiveBranch(suspense, latestFallback)
       }
 
       const delayEnter =
