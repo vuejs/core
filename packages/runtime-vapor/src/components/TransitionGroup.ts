@@ -54,6 +54,7 @@ import {
   isFragment,
   isSlotFragment,
 } from '../fragment'
+import { DYNAMIC, OWNS_ANCHOR } from '../fragmentFlags'
 import {
   type DefineVaporComponent,
   defineVaporComponent,
@@ -251,7 +252,10 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     onUpdated(updated)
     const updateHooks: TransitionGroupUpdateHookRef = { beforeUpdate, updated }
 
-    const frag = new DynamicFragment('transition-group')
+    const frag = new DynamicFragment(
+      DYNAMIC | OWNS_ANCHOR,
+      __DEV__ ? 'transition-group' : undefined,
+    )
     let currentTag: string | undefined
     let currentSlot: BlockFn | undefined
     let isMounted = false

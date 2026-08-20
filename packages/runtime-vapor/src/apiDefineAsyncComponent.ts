@@ -19,6 +19,7 @@ import {
 } from './component'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
+import { DYNAMIC, OWNS_ANCHOR } from './fragmentFlags'
 import {
   hydrateNode,
   isComment,
@@ -111,10 +112,10 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         TransitionOptions
       markAsyncBoundary(instance)
 
-      const frag =
-        __DEV__ || isHydrating
-          ? new DynamicFragment('async component')
-          : new DynamicFragment()
+      const frag = new DynamicFragment(
+        DYNAMIC | OWNS_ANCHOR,
+        __DEV__ ? 'async component' : undefined,
+      )
 
       // already resolved
       let resolvedComp = getResolvedComp()

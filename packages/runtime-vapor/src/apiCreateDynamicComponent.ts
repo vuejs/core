@@ -41,6 +41,7 @@ import {
   type VaporFragment,
   isAdoptedAnchor,
 } from './fragment'
+import { DYNAMIC, OWNS_ANCHOR } from './fragmentFlags'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import { isInteropEnabled } from './vdomInteropState'
 import { enableKeepAlive } from './keepAlive'
@@ -62,7 +63,8 @@ export function createDynamicComponent(
     : null
 
   const frag = new DynamicFragment(
-    isHydrating || __DEV__ ? 'dynamic-component' : undefined,
+    DYNAMIC | OWNS_ANCHOR,
+    __DEV__ ? 'dynamic-component' : undefined,
     false,
     true,
     slotRoot,

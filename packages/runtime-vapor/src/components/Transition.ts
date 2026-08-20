@@ -55,6 +55,7 @@ import {
   isFragment,
   isSlotFragment,
 } from '../fragment'
+import { DYNAMIC, OWNS_ANCHOR } from '../fragmentFlags'
 import {
   currentHydrationNode,
   isHydrating,
@@ -165,7 +166,10 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // Dynamic slot sources can add/remove the default slot after setup, so
     // Transition needs a DynamicFragment to drive enter/leave on updates.
     if (instance.rawSlots.$) {
-      const frag = new DynamicFragment('transition')
+      const frag = new DynamicFragment(
+        DYNAMIC | OWNS_ANCHOR,
+        __DEV__ ? 'transition' : undefined,
+      )
       let isMounted = false
       renderEffect(() => {
         if (!frag.$transition) {
