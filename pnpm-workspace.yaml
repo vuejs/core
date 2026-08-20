@@ -31,3 +31,5 @@ peerDependencyRules:
     '@typescript-eslint/utils>eslint': '^9.0.0'
 
 minimumReleaseAge: 1440
+
+trustPolicy: no-downgrade
