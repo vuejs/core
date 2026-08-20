@@ -30,4 +30,8 @@ peerDependencyRules:
     '@typescript-eslint/type-utils>eslint': '^9.0.0'
     '@typescript-eslint/utils>eslint': '^9.0.0'
 
-minimumReleaseAge: 1440
+minimumReleaseAge: 10080
+
+trustPolicy: no-downgrade
+
+blockExoticSubdeps: true
