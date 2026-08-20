@@ -108,6 +108,18 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` fooBar="ok"`)
   })
 
+  test('handle attr named hasOwnProperty on custom elements', () => {
+    expect(
+      ssrRenderAttrs(
+        {
+          hasOwnProperty: 'value',
+          id: 'safe',
+        },
+        'my-el',
+      ),
+    ).toBe(` hasOwnProperty="value" id="safe"`)
+  })
+
   test('preserve name on svg elements', () => {
     expect(
       ssrRenderAttrs(

@@ -1,4 +1,5 @@
 import { makeMap } from './makeMap'
+import { hasOwn } from './general'
 
 /**
  * On the client we only need to offer special cases for boolean attributes that
@@ -37,7 +38,7 @@ const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u000d\u0020]/
 const attrValidationCache: Record<string, boolean> = {}
 
 export function isSSRSafeAttrName(name: string): boolean {
-  if (attrValidationCache.hasOwnProperty(name)) {
+  if (hasOwn(attrValidationCache, name)) {
     return attrValidationCache[name]
   }
   const isUnsafe = unsafeAttrCharRE.test(name)
