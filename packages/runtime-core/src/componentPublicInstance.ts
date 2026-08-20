@@ -19,6 +19,7 @@ import {
   NOOP,
   PatchFlags,
   type Prettify,
+  ShapeFlags,
   type UnionToIntersection,
   extend,
   hasOwn,
@@ -57,7 +58,7 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
 import type { Directive } from './directives'
-import { Fragment, type VNodeArrayChildren } from './vnode'
+import { Fragment, type VNode, type VNodeArrayChildren } from './vnode'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -363,23 +364,28 @@ const getPublicInstance = (
 // dev only: in dev mode, a leading comment before a component's single root
 // element is preserved and turns the root into a `DEV_ROOT_FRAGMENT`, whose
 // `vnode.el` is the fragment's anchor rather than the actual rendered
-// element. Resolve through to the real root here, mirroring the resolution
+// element. In addition, the real root may itself be a single-root component
+// (or another `DEV_ROOT_FRAGMENT`), so both layers need to be unwrapped
+// recursively to reach the actual rendered element, mirroring the resolution
 // already done for attrs/scopeId fallthrough in `renderComponentRoot`.
-const getDevRootFragmentEl = (i: ComponentInternalInstance) => {
-  const { subTree } = i
+const resolveRootEl = (vnode: VNode): any => {
   if (
-    subTree &&
-    subTree.type === Fragment &&
-    subTree.patchFlag > 0 &&
-    subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+    vnode.type === Fragment &&
+    vnode.patchFlag > 0 &&
+    vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
   ) {
-    const realRoot = filterSingleRoot(subTree.children as VNodeArrayChildren)
+    const realRoot = filterSingleRoot(vnode.children as VNodeArrayChildren)
     if (realRoot) {
-      return realRoot.el
+      return resolveRootEl(realRoot)
     }
+  } else if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+    return resolveRootEl(vnode.component.subTree)
   }
-  return i.vnode.el
+  return vnode.el
 }
+
+const getDevRootFragmentEl = (i: ComponentInternalInstance) =>
+  i.subTree ? resolveRootEl(i.subTree) : i.vnode.el
 
 export const publicPropertiesMap: PublicPropertiesMap =
   // Move PURE marker to new line to workaround compiler discarding it

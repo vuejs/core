@@ -124,7 +124,7 @@ describe('component: proxy', () => {
             Fragment,
             null,
             [createCommentVNode(' comment '), h('div', 'real root')],
-            PatchFlags.DEV_ROOT_FRAGMENT,
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
           )
         )
       },
@@ -133,6 +133,72 @@ describe('component: proxy', () => {
       },
     }
     render(h(Comp), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  // #12680
+  test('$el should resolve through a single-root child component to its real root element', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () => h(Inner)
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Outer), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  // #12680
+  test('$el should resolve through nested dev comment fragments across component boundaries', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h(Inner)],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Outer), nodeOps.createElement('div'))
     expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
     expect(instanceProxy.$el.tag).toBe('div')
   })
