@@ -409,6 +409,11 @@ export function getBlockFirstNode(block: Block): Node {
   } else if (isVaporComponent(block)) {
     return getBlockFirstNode(getComponentPhysicalBlock(block))
   } else {
+    if (isTeleportEnabled && isTeleportFragment(block)) {
+      // teleported content lives in the target container; in the main view
+      // the fragment starts at its placeholder
+      return (block.placeholder || block.anchor)!
+    }
     const nodes = block.nodes
     // Empty fragments may keep their insertion anchor in `anchor` or in
     // `nodes` (ForFragment).

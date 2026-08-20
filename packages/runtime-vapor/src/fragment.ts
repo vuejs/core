@@ -253,9 +253,6 @@ export class ForFragment extends VaporFragment<Block[]> {
 export class ForBlock extends VaporFragment {
   scope: EffectScope | undefined
   key: any
-  prev?: ForBlock
-  next?: ForBlock
-  prevAnchor?: ForBlock
 
   itemRef: ShallowRef<any>
   keyRef: ShallowRef<any> | undefined

@@ -27,7 +27,7 @@ import {
   removeNode,
 } from './block'
 import { queuePostFlushCb, warn } from '@vue/runtime-dom'
-import { currentInstance } from './component'
+import { currentInstance, isVaporComponent } from './component'
 import {
   type DynamicSlot,
   type VaporSlot,
@@ -255,11 +255,12 @@ export const createFor = (
 
         const commonLength = Math.min(oldLength, newLength)
         // parallel arrays holding blocks that need a mount or a move, in
-        // ascending index order. `queuedReuse[q]` distinguishes them after
-        // the reuse pass: a ForBlock means move, undefined means mount.
+        // ascending index order. After the reuse pass `queuedOldIndex[q]`
+        // distinguishes them: the block's old position for a reuse (its
+        // ForBlock is already in `newBlocks`), or -1 for a fresh mount.
         const queuedIndices: number[] = new Array(newLength)
         const queuedItems: any[] = new Array(newLength)
-        const queuedReuse: (ForBlock | undefined)[] = new Array(newLength)
+        const queuedOldIndex: number[] = new Array(newLength)
 
         let endOffset = 0
         let queuedLength = 0
@@ -316,9 +317,9 @@ export const createFor = (
               sourceKeys ? sourceKeys[index] : index,
               sourceKeys ? index : undefined,
             )
-            queuedReuse[q] = reusedBlock
+            queuedOldIndex[q] = oldIndex
           } else {
-            queuedReuse[q] = undefined
+            queuedOldIndex[q] = -1
             mountCounter++
           }
         }
@@ -341,80 +342,111 @@ export const createFor = (
           parent!.appendChild(parentAnchor)
         }
 
-        if (mountCounter === queuedLength) {
-          // mounts only, no moves: mount back-to-front so each row can
-          // anchor on the one after it
-          for (let q = queuedLength - 1; q >= 0; q--) {
-            const index = queuedIndices[q]
-            mount(
-              source,
-              index,
-              index < newLength - 1
-                ? getBlockFirstNode(newBlocks[index + 1].nodes)
-                : parentAnchor,
-              queuedItems[q],
-              newKeys![index],
-            )
-          }
-        } else if (queuedLength) {
-          let anchor = oldBlocks[0]
-          let blocksTail: ForBlock | undefined
-          for (let i = 0; i < oldLength; i++) {
-            const block = oldBlocks[i]
-            if (oldKeyIndexMap.has(block.key)) {
-              continue
+        // Decide which reused blocks may stay in place. In-place matched
+        // (stationary) blocks partition the queued indices into segments of
+        // consecutive positions; within a segment, the longest increasing
+        // subsequence of old indices — bounded by the old positions of the
+        // stationary neighbors — is already in relative order, so only the
+        // blocks outside it need a DOM move. This is move-count optimal
+        // (like vdom's LIS) but works on the queued set alone, so an
+        // untouched majority (e.g. a swap of two rows) costs O(queued),
+        // not O(length).
+        let keep: boolean[] | undefined
+        if (mountCounter !== queuedLength) {
+          keep = new Array(queuedLength)
+          const tailValues: number[] = []
+          const tailPositions: number[] = []
+          const lisParent: number[] = new Array(queuedLength)
+          let seg = 0
+          while (seg < queuedLength) {
+            let segEnd = seg
+            while (
+              segEnd + 1 < queuedLength &&
+              queuedIndices[segEnd + 1] === queuedIndices[segEnd] + 1
+            ) {
+              segEnd++
             }
-            block.prevAnchor = anchor
-            anchor = oldBlocks[i + 1]
-            if (blocksTail !== undefined) {
-              blocksTail.next = block
-              block.prev = blocksTail
-            }
-            blocksTail = block
-          }
-          for (let q = queuedLength - 1; q >= 0; q--) {
-            const index = queuedIndices[q]
-            const reused = queuedReuse[q]
-            if (index < newLength - 1) {
-              const nextBlock = newBlocks[index + 1]
-              let anchorNode = getBlockFirstNode(nextBlock.prevAnchor!.nodes)
-              if (!anchorNode.parentNode)
-                anchorNode = getBlockFirstNode(nextBlock.nodes)
-              if (reused === undefined) {
-                const block = mount(
-                  source,
-                  index,
-                  anchorNode,
-                  queuedItems[q],
-                  newKeys![index],
-                )
-                moveLink(block, nextBlock.prev, nextBlock)
-              } else if (reused.next !== nextBlock) {
-                insertForBlock(reused, anchorNode)
-                moveLink(reused, nextBlock.prev, nextBlock)
+            // prefix stationaries sit at their own index in both lists; the
+            // first suffix stationary (index e3) sits at old index e2. With
+            // no bounding stationary the bounds are -1 / e2 == oldLength.
+            const lowerBound = queuedIndices[seg] - 1
+            const nextIndex = queuedIndices[segEnd] + 1
+            const upperBound = nextIndex < e3 ? nextIndex : e2
+            tailValues.length = tailPositions.length = 0
+            for (let q = seg; q <= segEnd; q++) {
+              keep[q] = false
+              const oldIndex = queuedOldIndex[q]
+              if (
+                oldIndex <= lowerBound ||
+                oldIndex >= upperBound ||
+                oldIndex < 0
+              ) {
+                continue
               }
-            } else if (reused === undefined) {
-              const block = mount(
-                source,
-                index,
-                parentAnchor,
-                queuedItems[q],
-                newKeys![index],
-              )
-              moveLink(block, blocksTail)
-              blocksTail = block
-            } else if (reused.next !== undefined) {
-              let anchorNode = anchor
-                ? getBlockFirstNode(anchor.nodes)
-                : parentAnchor
-              if (!anchorNode.parentNode) anchorNode = parentAnchor
-              insertForBlock(reused, anchorNode)
-              moveLink(reused, blocksTail)
-              blocksTail = reused
+              let lo = 0
+              let hi = tailValues.length
+              while (lo < hi) {
+                const mid = (lo + hi) >> 1
+                if (tailValues[mid] < oldIndex) lo = mid + 1
+                else hi = mid
+              }
+              tailValues[lo] = oldIndex
+              lisParent[q] = lo > 0 ? tailPositions[lo - 1] : -1
+              tailPositions[lo] = q
+            }
+            for (
+              let q = tailValues.length
+                ? tailPositions[tailValues.length - 1]
+                : -1;
+              q !== -1;
+              q = lisParent[q]
+            ) {
+              keep[q] = true
+            }
+            seg = segEnd + 1
+          }
+        }
+
+        // Under TransitionGroup, removed rows stay in the DOM while their
+        // leave transition runs. Match vdom ordering: rows moving or
+        // mounting next to such a ghost land in front of it, so the ghost
+        // is the one displaced (and FLIP-moved), not the live row.
+        let ghostNodes: Set<Node> | undefined
+        if (keep && isTransitionEnabled && frag.$transition) {
+          for (const leftoverIndex of oldKeyIndexMap.values()) {
+            const nodes = oldBlocks[leftoverIndex].nodes
+            if (isSingleNode) {
+              ;(ghostNodes ||= new Set()).add(nodes as Node)
+            } else {
+              collectBlockNodes(nodes, (ghostNodes ||= new Set()))
             }
           }
-          for (const block of newBlocks) {
-            block.prevAnchor = block.next = block.prev = undefined
+        }
+
+        // apply back-to-front so every block can anchor on the finalized
+        // block after it (kept blocks count as finalized: relative order
+        // among all unmoved blocks is already correct)
+        for (let q = queuedLength - 1; q >= 0; q--) {
+          const isReuse = queuedOldIndex[q] >= 0
+          if (isReuse && keep![q]) continue
+          const index = queuedIndices[q]
+          let anchorNode =
+            index < newLength - 1
+              ? getBlockFirstNode(newBlocks[index + 1].nodes)
+              : parentAnchor
+          if (ghostNodes) {
+            // step in front of the contiguous run of leaving ghosts that
+            // precedes the target position
+            let prev = anchorNode.previousSibling
+            while (prev && ghostNodes.has(prev)) {
+              anchorNode = prev
+              prev = prev.previousSibling
+            }
+          }
+          if (isReuse) {
+            insertForBlock(newBlocks[index], anchorNode)
+          } else {
+            mount(source, index, anchorNode, queuedItems[q], newKeys![index])
           }
         }
       }
@@ -795,20 +827,19 @@ export function createSelector(source: () => any): ForSelector {
   return register
 }
 
-function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
-  const { prev: oldPrev, next: oldNext } = block
-  if (oldPrev) oldPrev.next = oldNext
-  if (oldNext) {
-    oldNext.prev = oldPrev
-    if (block.prevAnchor !== block) {
-      oldNext.prevAnchor = block.prevAnchor
+function collectBlockNodes(block: Block, set: Set<Node>): void {
+  if (block instanceof Node) {
+    set.add(block)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) {
+      collectBlockNodes(block[i], set)
     }
+  } else if (isVaporComponent(block)) {
+    if (block.block) collectBlockNodes(block.block, set)
+  } else {
+    collectBlockNodes(block.nodes, set)
+    if (block.anchor) set.add(block.anchor)
   }
-  if (newPrev) newPrev.next = block
-  if (newNext) newNext.prev = block
-  block.prev = newPrev
-  block.next = newNext
-  block.prevAnchor = block
 }
 
 function stopBlockScopes(blocks: ForBlock[]): void {

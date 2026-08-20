@@ -2277,6 +2277,70 @@ describe('createFor', () => {
       )
     })
   })
+
+  describe('minimal DOM moves', () => {
+    // Reordering must only move the blocks that are out of relative order
+    // (LIS-style), not every block between the old and new position.
+    async function countMoves(from: number[], to: number[]) {
+      const list = ref(from)
+      const { host } = define(() =>
+        createFor(
+          () => list.value,
+          item => {
+            const span = document.createElement('span')
+            renderEffect(() => {
+              span.textContent = `${item.value}`
+            })
+            return span
+          },
+          item => item,
+        ),
+      ).render()
+
+      const original = host.insertBefore.bind(host)
+      let count = 0
+      host.insertBefore = ((node: Node, anchor: Node | null) => {
+        count++
+        return original(node, anchor)
+      }) as any
+
+      list.value = to
+      await nextTick()
+      expect(
+        Array.from(host.querySelectorAll('span')).map(s =>
+          Number(s.textContent),
+        ),
+      ).toEqual(to)
+      return count
+    }
+
+    const range = (n: number) => Array.from({ length: n }, (_, i) => i)
+
+    test('moving a row backward performs a single move', async () => {
+      const to = range(50)
+      to.unshift(to.pop()!)
+      expect(await countMoves(range(50), to)).toBe(1)
+    })
+
+    test('moving a middle row to the front performs a single move', async () => {
+      const to = range(50)
+      const [x] = to.splice(25, 1)
+      to.unshift(x)
+      expect(await countMoves(range(50), to)).toBe(1)
+    })
+
+    test('moving a row forward performs a single move', async () => {
+      const to = range(50)
+      to.push(to.shift()!)
+      expect(await countMoves(range(50), to)).toBe(1)
+    })
+
+    test('swapping two rows moves only those rows', async () => {
+      const to = range(50)
+      ;[to[1], to[48]] = [to[48], to[1]]
+      expect(await countMoves(range(50), to)).toBe(2)
+    })
+  })
 })
 
 function getEffectsCount(scope: { deps: any }) {
