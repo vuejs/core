@@ -24,7 +24,7 @@ import {
 } from './node'
 import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
 import type { DynamicFragment } from '../fragment'
-import { SLOT } from '../fragmentFlags'
+import { IF, OWNS_ANCHOR, SLOT } from '../fragmentFlags'
 
 interface HydratingSlotBoundaryState {
   endAnchor: Node | null
@@ -216,15 +216,24 @@ export function queueAnchorInsert(
   }
 }
 
+/**
+ * Whether `node` can serve as `frag`'s anchor. Beyond the SSR candidates
+ * (`<!---->` and a fragment close), dev builds also accept a runtime anchor
+ * this fragment kind already created: those carry the fragment's debug label
+ * as their comment data, where prod uses unlabeled text nodes.
+ */
 function isReusableAnchorCandidate(
   node: Node | null,
-  anchorLabel?: string,
+  frag?: DynamicFragment,
 ): node is Comment {
   return (
     !!node &&
     (isComment(node, '') ||
       isComment(node, ']') ||
-      (anchorLabel !== undefined && isComment(node, anchorLabel)))
+      (__DEV__ &&
+        frag !== undefined &&
+        frag.anchorLabel !== undefined &&
+        isComment(node, frag.anchorLabel)))
   )
 }
 
@@ -312,12 +321,9 @@ export function resolveDynamicAnchor(
   frag: DynamicFragment,
   isEmpty: boolean,
 ): AnchorPlan {
-  const anchorLabel = frag.anchorLabel
+  const flags = frag.__vf
   const isNativeChildren = !!frag.nativeChildren
-  // A fragment owns/manages its own dynamic anchor when it carries a label or
-  // is a native-children fragment. Both branches are explicit so a future
-  // truthiness check on the (possibly empty) label can't silently exclude one.
-  const ownsDynamicAnchor = anchorLabel !== undefined || isNativeChildren
+  const ownsDynamicAnchor = !!(flags & OWNS_ANCHOR)
 
   // A render function can still produce invalid slot content. Keep its anchor
   // pending just like an empty branch so fallback cleanup cannot detach the
@@ -357,7 +363,8 @@ export function resolveDynamicAnchor(
       return reuseOrCreateAfterAnchor(currentHydrationNode)
     }
     if (
-      anchorLabel &&
+      ownsDynamicAnchor &&
+      !isNativeChildren &&
       currentHydrationNode &&
       isComment(currentHydrationNode, 'teleport anchor')
     ) {
@@ -375,7 +382,7 @@ export function resolveDynamicAnchor(
       }
     }
     if (
-      !(frag.__vf & SLOT) &&
+      !(flags & SLOT) &&
       ownsDynamicAnchor &&
       currentHydrationNode &&
       !isComment(currentHydrationNode, ']')
@@ -396,10 +403,7 @@ export function resolveDynamicAnchor(
 
       if (parentNode) {
         const anchor = nextLogicalSibling(currentHydrationNode)
-        if (
-          isReusableAnchorCandidate(anchor, anchorLabel) &&
-          getParentNode(anchor)
-        ) {
+        if (isReusableAnchorCandidate(anchor, frag) && getParentNode(anchor)) {
           return reuseOrCreateAfterAnchor(anchor, true)
         }
         return {
@@ -421,7 +425,7 @@ export function resolveDynamicAnchor(
     ownsDynamicAnchor &&
     !isValidBlock(frag.nodes) &&
     frag.nodes instanceof Comment &&
-    isReusableAnchorCandidate(frag.nodes, anchorLabel) &&
+    isReusableAnchorCandidate(frag.nodes, frag) &&
     getParentNode(frag.nodes)
   ) {
     return reuseOrCreateAfterAnchor(frag.nodes, true)
@@ -453,7 +457,7 @@ export function resolveDynamicAnchor(
   }
 
   const currentSlotEndAnchor = getCurrentSlotEndAnchor()
-  const isSlot = !!(frag.__vf & SLOT)
+  const isSlot = !!(flags & SLOT)
   const slotAnchor = isSlot ? currentSlotEndAnchor : null
 
   // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
@@ -461,7 +465,7 @@ export function resolveDynamicAnchor(
   // create a fresh runtime anchor after it when another fragment already did.
   if (
     (isSlot && slotAnchor) ||
-    (anchorLabel === 'if' && isArray(frag.nodes) && frag.nodes.length > 1)
+    (!!(flags & IF) && isArray(frag.nodes) && frag.nodes.length > 1)
   ) {
     const anchor = locateHydrationBoundaryClose(
       slotAnchor || currentHydrationNode!,
@@ -471,7 +475,7 @@ export function resolveDynamicAnchor(
       return reuseOrCreateAfterAnchor(anchor)
     } else if (__DEV__) {
       throw new Error(
-        `Failed to locate ${anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
+        `Failed to locate ${frag.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
       )
     }
   }
@@ -533,7 +537,7 @@ export function executeAnchorPlan(
             if (
               node &&
               nodeParent === plan.parent &&
-              isReusableAnchorCandidate(node, frag.anchorLabel)
+              isReusableAnchorCandidate(node, frag)
             ) {
               if (isHydrationAnchor(node)) {
                 const nextNode = node.nextSibling

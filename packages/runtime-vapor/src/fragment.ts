@@ -89,6 +89,7 @@ import {
   FOR,
   FOR_ITEM,
   FRAGMENT,
+  OWNS_ANCHOR,
   SLOT,
   SLOT_FRAGMENT,
   SLOT_OUTLET,
@@ -283,15 +284,14 @@ export class DynamicFragment extends RenderContextFragment {
   // Owned by the Transition module (deferBranchUpdateDuringLeave /
   // removeBranchWithLeave); the core update pipeline never touches it.
   pending?: { render?: BlockFn; key: any; noScope: boolean }
+  // Debug text for the runtime anchor comment, dev builds only. Never a
+  // category signal: everything hydration branches on lives in `__vf`.
   anchorLabel?: string
   keyed?: boolean
   // Marks the generic dynamic fragment that createPlainElement creates for the
   // default-slot children of a dynamic element resolved to a native tag
-  // (`rawSlots.$`). Unlike labeled control-flow fragments it has no
-  // SSR-provided anchor, so hydration injects and then reuses its own runtime
-  // anchor. Hydration logic must branch on this marker, never on
-  // `anchorLabel === ''` — the empty string is only this fragment's (empty)
-  // dev-mode comment text and must not double as a category signal.
+  // (`rawSlots.$`). Unlike control-flow fragments it has no SSR-provided
+  // anchor, so hydration injects and then reuses its own runtime anchor.
   nativeChildren?: boolean
   inTransition?: boolean
   // Fallthrough (re-)application for this fragment's branches, installed by
@@ -309,13 +309,13 @@ export class DynamicFragment extends RenderContextFragment {
   // inferred from the anchor being detached.
   everUpdated = false
   constructor(
+    flags: number = DYNAMIC,
     anchorLabel?: string,
     keyed: boolean = false,
     locate: boolean = true,
     trackSlotBoundary: boolean = false,
     onInvalid?: () => void,
     adoptAnchor?: Node,
-    flags: number = DYNAMIC,
   ) {
     super(EMPTY_BLOCK, flags)
     if (keyed) this.keyed = true
@@ -326,12 +326,11 @@ export class DynamicFragment extends RenderContextFragment {
     ) {
       this.inTransition = true
     }
+    if (__DEV__) this.anchorLabel = anchorLabel
     if (isHydrating) {
-      this.anchorLabel = anchorLabel
       if (locate) locateHydrationNode()
     } else {
       this.anchor = resolveFragmentAnchor(adoptAnchor, anchorLabel)
-      if (__DEV__) this.anchorLabel = anchorLabel
     }
     if (trackSlotBoundary) trackSlotBoundaryDirtying(this, onInvalid)
   }
@@ -546,13 +545,13 @@ export class SlotFragment
     adoptAnchor?: Node,
   ) {
     super(
-      isHydrating || __DEV__ ? 'slot' : undefined,
+      SLOT_FRAGMENT | OWNS_ANCHOR,
+      __DEV__ ? 'slot' : undefined,
       false,
       false,
       false,
       undefined,
       adoptAnchor,
-      SLOT_FRAGMENT,
     )
     if (sharedFallback) {
       if (this.slotBoundary) {

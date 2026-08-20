@@ -57,6 +57,7 @@ import {
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
 import { DynamicFragment, SlotFragment, isSlotFragment } from '../src/fragment'
+import { DYNAMIC, IF, OWNS_ANCHOR } from '../src/fragmentFlags'
 import {
   type SlotBoundaryContext,
   currentSlotBoundary,
@@ -364,7 +365,12 @@ describe('component: slots', () => {
         parentBoundary,
         () => new SlotFragment(false, false, true),
       )
-      const child = new DynamicFragment('if', false, false)
+      const child = new DynamicFragment(
+        DYNAMIC | OWNS_ANCHOR | IF,
+        'if',
+        false,
+        false,
+      )
       let initialized = false
 
       frag.updateSlot(undefined, () => {
@@ -1259,7 +1265,12 @@ describe('component: slots', () => {
           withHydratingSlotBoundary(() => {
             const finish = startPendingSlotContent(start)
             try {
-              frag = new DynamicFragment('if', false, false)
+              frag = new DynamicFragment(
+                DYNAMIC | OWNS_ANCHOR | IF,
+                'if',
+                false,
+                false,
+              )
               hydrateDynamicFragmentAnchor(frag, true)
             } finally {
               finish(false)
@@ -1291,9 +1302,19 @@ describe('component: slots', () => {
           withHydratingSlotBoundary(() => {
             const finish = startPendingSlotContent(start)
             try {
-              firstFrag = new DynamicFragment('if', false, false)
+              firstFrag = new DynamicFragment(
+                DYNAMIC | OWNS_ANCHOR | IF,
+                'if',
+                false,
+                false,
+              )
               hydrateDynamicFragmentAnchor(firstFrag, true)
-              secondFrag = new DynamicFragment('if', false, false)
+              secondFrag = new DynamicFragment(
+                DYNAMIC | OWNS_ANCHOR | IF,
+                'if',
+                false,
+                false,
+              )
               hydrateDynamicFragmentAnchor(secondFrag, true)
               finish(true)
             } finally {

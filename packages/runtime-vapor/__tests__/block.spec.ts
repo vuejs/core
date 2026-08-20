@@ -21,6 +21,7 @@ import {
   isInteropFragment,
   isSlotFragment,
 } from '../src/fragment'
+import { DYNAMIC } from '../src/fragmentFlags'
 import { TeleportFragment } from '../src/components/Teleport'
 import { isTeleportFragment } from '../src/teleport'
 
@@ -137,7 +138,7 @@ describe('block + node ops', () => {
 describe('fragment protocol flags', () => {
   test('identify constructor-owned roles without class or shape checks', () => {
     const fragment = new VaporFragment(node1)
-    const dynamic = new DynamicFragment(undefined, false, false)
+    const dynamic = new DynamicFragment(DYNAMIC, undefined, false, false)
     const slot = new SlotFragment()
     const forFragment = new ForFragment([], false)
     const forBlock = new ForBlock(

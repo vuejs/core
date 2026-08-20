@@ -17,6 +17,7 @@ import {
   withDeferredHydrationBoundary,
 } from '../../src/dom/hydration'
 import { DynamicFragment } from '../../src/fragment'
+import { DYNAMIC, IF, OWNS_ANCHOR } from '../../src/fragmentFlags'
 import {
   compileVaporComponent,
   formatHtml,
@@ -246,7 +247,12 @@ describe('Vapor Mode hydration', () => {
       setIsHydratingEnabled(true)
       try {
         hydrateNode(anchor, () => {
-          const fragment = new DynamicFragment('if', false, false)
+          const fragment = new DynamicFragment(
+            DYNAMIC | OWNS_ANCHOR | IF,
+            'if',
+            false,
+            false,
+          )
           fragment.anchor = anchor
           withDeferredHydrationBoundary(() => {
             fragment.update(() => template('<span>foo</span>')())

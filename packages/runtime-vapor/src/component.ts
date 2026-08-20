@@ -140,7 +140,7 @@ import {
   isInteropFragment,
   isSlotOutletFragment,
 } from './fragment'
-import { SLOT } from './fragmentFlags'
+import { DYNAMIC, OWNS_ANCHOR, SLOT } from './fragmentFlags'
 import { resolvePendingSlotContent } from './dom/hydrateFragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import {
@@ -1112,9 +1112,13 @@ export function createComponentWithFallback(
 function isReusableNullComponentAnchor(node: Node): boolean {
   return (
     isComment(node, '') ||
-    isComment(node, 'dynamic-component') ||
-    isComment(node, 'async component') ||
-    isComment(node, 'keyed')
+    // Dev-only: a runtime anchor an enclosing dynamic fragment already created
+    // carries that fragment's debug label as its comment data. Prod builds
+    // create unlabeled text nodes, so these comparisons never match there.
+    (__DEV__ &&
+      (isComment(node, 'dynamic-component') ||
+        isComment(node, 'async component') ||
+        isComment(node, 'keyed')))
   )
 }
 
@@ -1184,11 +1188,12 @@ export function createPlainElement(
     if (rawSlots.$) {
       // Dynamic element children don't own an SSR slot-range anchor, so flag
       // this as a native-children fragment. Hydration keys off `nativeChildren`
-      // (not the label) to inject/reuse its own anchor instead of trying to
-      // reuse SlotFragment-style anchors. The hydrating label stays empty so
-      // the runtime anchor renders as `<!---->`.
+      // to inject/reuse its own anchor instead of trying to reuse
+      // SlotFragment-style anchors. The hydrating label stays empty so the
+      // runtime anchor renders as `<!---->`.
       const frag = new DynamicFragment(
-        isHydrating ? '' : __DEV__ ? 'slot' : undefined,
+        DYNAMIC | OWNS_ANCHOR,
+        __DEV__ ? (isHydrating ? '' : 'slot') : undefined,
       )
       frag.nativeChildren = true
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
