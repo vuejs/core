@@ -2,6 +2,7 @@ import {
   type App,
   type ComponentInternalInstance,
   type ConcreteComponent,
+  type ElementNamespace,
   ErrorCodes,
   Fragment,
   type FunctionalComponent,
@@ -33,6 +34,7 @@ import {
   ensureRenderer,
   ensureValidVNode,
   ensureVaporSlotFallback,
+  getContainerType,
   getInheritedScopeIds,
   getTransitionRawChildren,
   invokeDirectiveHook,
@@ -1076,6 +1078,12 @@ function mountVNode(
   let isMounted = false
   let mountedParentNode: ParentNode | undefined
   let mountedAnchor: Node | null = null
+  // The insertion container is the authority for the element namespace: it sees
+  // through component boundaries and runtime-resolved targets, which neither a
+  // compile-time constant nor a plumbed parameter can. Captured once at mount
+  // and reused for later patches, mirroring how VDOM closes the mount-time
+  // namespace over a component's render effect.
+  let namespace: ElementNamespace
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
     if (transition) setVNodeTransitionHooks(vnode, transition)
     const parentSuspense = resolveUnmountSuspense(suspense)
@@ -1145,6 +1153,7 @@ function mountVNode(
       simpleSetCurrentInstance(parentComponent)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
+        namespace = getContainerType(parentNode as Element)
         internals.p(
           null,
           vnode,
@@ -1152,7 +1161,7 @@ function mountVNode(
           anchor,
           parentComponent as any,
           operationSuspense,
-          undefined, // namespace
+          namespace,
           frag.slotScopeIds,
         )
         onScopeDispose(unmount, true)
@@ -1209,7 +1218,7 @@ function mountVNode(
         mountedAnchor,
         parentComponent as any,
         suspense,
-        undefined, // namespace
+        namespace,
         frag.slotScopeIds,
       )
       simpleSetCurrentInstance(prevInstance)
@@ -1401,7 +1410,7 @@ function createVDOMComponent(
           anchor,
           parentComponent as any,
           operationSuspense,
-          undefined,
+          getContainerType(parentNode as Element),
           false,
         )
         // set ref
@@ -1650,6 +1659,10 @@ function renderVDOMSlot(
     rendered: null as VNode | Block | null,
   }
   let currentParentNode: ParentNode | null = null
+  // Captured from the real DOM container on insert. `currentParentNode` is not
+  // a safe source here: it is swapped to a detached DocumentFragment while
+  // content is parked for a shared fallback (see `sharedContentStorage`).
+  let slotNamespace: ElementNamespace
   let currentAnchor: Node | null = null
   let sharedContentStorage: DocumentFragment | undefined
   let disposed = false
@@ -1852,7 +1865,7 @@ function renderVDOMSlot(
       currentAnchor,
       parentComponent as any,
       suspense,
-      undefined,
+      slotNamespace,
       concatInteropScopeIds(frag.slotScopeIds, slotScopeIds),
     )
     setRenderedContent(next, valid)
@@ -1936,6 +1949,7 @@ function renderVDOMSlot(
     currentAnchor = anchor
 
     if (!isMounted) {
+      slotNamespace = getContainerType(parentNode as Element)
       scope.run(render)
       isMounted = true
     } else {
@@ -2319,7 +2333,7 @@ function renderVDOMSlot(
                       currentAnchor,
                       parentComponent as any,
                       suspense,
-                      undefined,
+                      slotNamespace,
                       null,
                     )
                     return
@@ -2367,7 +2381,7 @@ function renderVDOMSlot(
                   currentAnchor,
                   parentComponent as any,
                   suspense,
-                  undefined,
+                  slotNamespace,
                   null,
                 )
                 return
@@ -2417,11 +2431,20 @@ function renderVDOMSlot(
 
   frag.hydrate = () => {
     if (!isHydrating) return
+    // Resolve the namespace from the SSR container before rendering: a
+    // deferred shared fallback parks content in a detached DocumentFragment
+    // and points `currentParentNode` at it, which would report HTML for
+    // content that belongs under an <svg>/<math>.
+    const hydrationParent =
+      currentHydrationNode && currentHydrationNode.parentNode
     scope.run(render)
     if (!currentParentNode) {
       currentAnchor = getCurrentSlotEndAnchor() || currentHydrationNode
       currentParentNode = currentAnchor!.parentNode as ParentNode
     }
+    slotNamespace = getContainerType(
+      (hydrationParent || currentParentNode) as Element,
+    )
     if (contentState.valid && fallback && !inheritFallback && !frag.anchor) {
       // Insert an outlet-owned anchor after traversal so it cannot shift
       // hydration indices.
@@ -2984,6 +3007,9 @@ function createVNodeChildrenFragment(
   let currentVNode: VNode | null = null
   let currentChildren: VNode[] = EMPTY_VNODES
   let currentParentNode: ParentNode | null = null
+  // Captured once from the real DOM container, mirroring how VDOM closes the
+  // mount-time namespace over a component's render effect.
+  let childrenNamespace: ElementNamespace
   let currentAnchor: Node | null = null
   let isMounted = false
   let isRenderEffectStarted = false
@@ -3051,6 +3077,7 @@ function createVNodeChildrenFragment(
             currentChildren = nextChildren
             currentVNode = createVNode(Fragment, null, nextChildren)
             currentParentNode = currentHydrationNode!.parentNode as ParentNode
+            childrenNamespace = getContainerType(currentParentNode as Element)
             currentAnchor = currentHydrationNode
             // Slot fallback hydration can leave an inner empty-branch anchor
             // immediately before the enclosing slot end anchor. Fragment
@@ -3091,7 +3118,7 @@ function createVNodeChildrenFragment(
                 currentAnchor,
                 parentComponent,
                 suspense,
-                undefined,
+                childrenNamespace,
                 frag.slotScopeIds,
                 false,
               )
@@ -3112,7 +3139,7 @@ function createVNodeChildrenFragment(
               currentAnchor,
               parentComponent,
               suspense,
-              undefined,
+              childrenNamespace,
               frag.slotScopeIds,
               false,
             )
@@ -3153,6 +3180,7 @@ function createVNodeChildrenFragment(
     currentParentNode = parentNode
     currentAnchor = anchor
     if (!isMounted) {
+      childrenNamespace = getContainerType(parentNode as Element)
       startRenderEffect()
       if (currentVNode) {
         trackSlotVNodeUpdatesWithRefresh(
@@ -3170,7 +3198,7 @@ function createVNodeChildrenFragment(
           currentAnchor,
           parentComponent,
           suspense,
-          undefined,
+          childrenNamespace,
           frag.slotScopeIds,
           false,
         )

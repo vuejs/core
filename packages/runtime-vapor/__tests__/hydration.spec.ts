@@ -4801,6 +4801,48 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('B')
     })
 
+    // The deferred shared fallback parks content in a detached
+    // DocumentFragment during hydration, so the slot's namespace has to come
+    // from the SSR container captured before rendering, not from
+    // `currentParentNode`.
+    test('shared roots parked during hydration keep the svg namespace', async () => {
+      const data = reactive({ showA: false, showB: false })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components; const data = _data</script>
+        <template>
+          <components.Carrier>
+            <template #a><circle v-if="data.showA" /></template>
+            <template #b><rect v-if="data.showB" /></template>
+          </components.Carrier>
+        </template>`,
+        {
+          Receiver: `<template><svg><slot><text>fb</text></slot></svg></template>`,
+          Carrier: `<script setup>const components = _components</script>
+          <template>
+            <components.Receiver>
+              <slot name="a" />
+              <slot name="b" />
+            </components.Receiver>
+          </template>`,
+        },
+        data,
+      )
+      expect(container.textContent).toBe('fb')
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.showA = true
+      await nextTick()
+      expect(container.querySelector('circle')!.namespaceURI).toBe(
+        'http://www.w3.org/2000/svg',
+      )
+
+      data.showB = true
+      await nextTick()
+      expect(container.querySelector('rect')!.namespaceURI).toBe(
+        'http://www.w3.org/2000/svg',
+      )
+    })
+
     test('vdom shared roots hydrate from receiver fallback', async () => {
       const data = reactive({ mount: true, showA: false, showB: false })
       const { app, container } = await testWithVDOMApp(
