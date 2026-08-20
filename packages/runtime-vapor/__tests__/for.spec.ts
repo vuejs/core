@@ -2329,6 +2329,8 @@ describe('createFor', () => {
       expect(await countMoves(range(50), to)).toBe(1)
     })
 
+    // coverage guards: already optimal before the LIS rewrite, kept so a
+    // regression in forward moves / 2-element swaps stays caught
     test('moving a row forward performs a single move', async () => {
       const to = range(50)
       to.push(to.shift()!)
@@ -2339,6 +2341,32 @@ describe('createFor', () => {
       const to = range(50)
       ;[to[1], to[48]] = [to[48], to[1]]
       expect(await countMoves(range(50), to)).toBe(2)
+    })
+
+    test('reordering past a row that renders nothing keeps rows anchored', async () => {
+      const list = ref([1, 2, 3])
+      const { host } = define(() =>
+        createFor(
+          () => list.value,
+          item => {
+            if (item.value === 2) return [] as any
+            const span = document.createElement('span')
+            renderEffect(() => {
+              span.textContent = `${item.value}`
+            })
+            return span
+          },
+          item => item,
+        ),
+      ).render()
+
+      expect(host.innerHTML).toBe('<span>1</span><span>3</span><!--for-->')
+
+      // the empty block yields no anchor node; rows must still land inside
+      // the v-for range instead of being appended past its anchor
+      list.value = [3, 2, 1]
+      await nextTick()
+      expect(host.innerHTML).toBe('<span>3</span><span>1</span><!--for-->')
     })
   })
 })

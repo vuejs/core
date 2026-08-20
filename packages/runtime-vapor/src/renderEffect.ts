@@ -58,6 +58,7 @@ export class RenderEffect extends ReactiveEffect {
     }
 
     this.i = instance
+    this.job = undefined
 
     // Allow self re-queue when render/hook logic mutates reactive state.
     // Safe in Vapor because updates are always async via queueJob(), and

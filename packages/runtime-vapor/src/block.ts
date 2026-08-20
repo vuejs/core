@@ -411,8 +411,10 @@ export function getBlockFirstNode(block: Block): Node {
   } else {
     if (isTeleportEnabled && isTeleportFragment(block)) {
       // teleported content lives in the target container; in the main view
-      // the fragment starts at its placeholder
-      return (block.placeholder || block.anchor)!
+      // the fragment starts at its placeholder. Both markers are absent while
+      // hydrating and after removal, so fall through to the generic path.
+      const marker = block.placeholder || block.anchor
+      if (marker) return marker
     }
     const nodes = block.nodes
     // Empty fragments may keep their insertion anchor in `anchor` or in
