@@ -2431,12 +2431,20 @@ function renderVDOMSlot(
 
   frag.hydrate = () => {
     if (!isHydrating) return
+    // Resolve the namespace from the SSR container before rendering: a
+    // deferred shared fallback parks content in a detached DocumentFragment
+    // and points `currentParentNode` at it, which would report HTML for
+    // content that belongs under an <svg>/<math>.
+    const hydrationParent =
+      currentHydrationNode && currentHydrationNode.parentNode
     scope.run(render)
     if (!currentParentNode) {
       currentAnchor = getCurrentSlotEndAnchor() || currentHydrationNode
       currentParentNode = currentAnchor!.parentNode as ParentNode
     }
-    slotNamespace = getContainerType(currentParentNode as Element)
+    slotNamespace = getContainerType(
+      (hydrationParent || currentParentNode) as Element,
+    )
     if (contentState.valid && fallback && !inheritFallback && !frag.anchor) {
       // Insert an outlet-owned anchor after traversal so it cannot shift
       // hydration indices.
