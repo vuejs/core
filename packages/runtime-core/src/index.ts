@@ -680,6 +680,10 @@ export { createCanSetSetupRefChecker } from './rendererTemplateRef'
  * @internal
  */
 export { isTemplateNode } from './hydration'
+/**
+ * @internal
+ */
+export { getContainerType } from './hydration'
 
 /**
  * @internal

@@ -38,6 +38,7 @@ import {
   stringifyStyle,
 } from '@vue/shared'
 import {
+  type ElementNamespace,
   type RendererInternals,
   getVaporInterface,
   needTransition,
@@ -92,12 +93,24 @@ const isSVGContainer = (container: Element) =>
   container.namespaceURI!.includes('svg') &&
   container.tagName !== 'foreignObject'
 
-const isMathMLContainer = (container: Element) =>
-  container.namespaceURI!.includes('MathML')
+const isMathMLContainer = (container: Element) => {
+  if (!container.namespaceURI!.includes('MathML')) return false
+  // <annotation-xml encoding="...html"> switches its children back to HTML,
+  // mirroring `resolveChildrenNamespace` on the mount path.
+  if (container.tagName !== 'annotation-xml') return true
+  const encoding = container.getAttribute('encoding')
+  return !encoding || !encoding.includes('html')
+}
 
-const getContainerType = (
+/**
+ * Resolve the element namespace a container's children should be created in.
+ * The live DOM is the source of truth, so this also covers containers that are
+ * only known at runtime (interop boundaries, teleport targets).
+ * @internal
+ */
+export const getContainerType = (
   container: Element | ShadowRoot,
-): 'svg' | 'mathml' | undefined => {
+): ElementNamespace => {
   if (container.nodeType !== DOMNodeTypes.ELEMENT) return undefined
   if (isSVGContainer(container as Element)) return 'svg'
   if (isMathMLContainer(container as Element)) return 'mathml'
