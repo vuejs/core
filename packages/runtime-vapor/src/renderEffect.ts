@@ -78,14 +78,14 @@ export class RenderEffect extends ReactiveEffect {
           this.i.deferredKeepAliveUpdates
         if (deferred) {
           if (isDeferredKeepAliveStateLive(deferred)) {
-            deferred.effects.push(this.job!)
+            deferred.effects.push(job)
             return
           }
           // The pending root can no longer resolve through this state
           // (unmounted early or superseded suspense cycle) - drop the stale
           // state and replay its buffered updates together with this job in
           // scheduler order (this job re-enters with the state cleared).
-          settleDeferredKeepAliveUpdates(deferred, this.job!)
+          settleDeferredKeepAliveUpdates(deferred, job)
           return
         }
         this.run()

@@ -11,7 +11,6 @@ import {
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
 import { looseEqual } from '@vue/shared'
-import { addEventListener } from '../dom/event'
 import { traverse } from '@vue/reactivity'
 
 type VaporModelDirective<
@@ -72,7 +71,8 @@ export const applyRadioModel: VaporModelDirective<HTMLInputElement> = (
   get,
   set,
 ) => {
-  addEventListener(el, 'change', () => set(vModelGetValue(el)))
+  // static listener: lives and dies with the element, no disposer needed
+  el.addEventListener('change', () => set(vModelGetValue(el)))
   ensureMounted(() => {
     let value: any
     renderEffect(() => {

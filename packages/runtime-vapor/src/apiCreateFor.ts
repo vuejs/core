@@ -13,7 +13,7 @@ import {
   toReadonly,
   watch,
 } from '@vue/reactivity'
-import { isArray, isObject, isString } from '@vue/shared'
+import { getSequence, isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -27,7 +27,7 @@ import {
   removeNode,
 } from './block'
 import { queuePostFlushCb, warn } from '@vue/runtime-dom'
-import { currentInstance, isVaporComponent } from './component'
+import { currentInstance } from './component'
 import {
   type DynamicSlot,
   type VaporSlot,
@@ -71,7 +71,6 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
-import { isTeleportEnabled, isTeleportFragment } from './teleport'
 import { setBlockKey } from './helpers/setKey'
 import { currentSlotBoundary, setCurrentSlotBoundary } from './slotBoundary'
 
@@ -231,7 +230,7 @@ export const createFor = (
           updateAt((newBlocks[i] = oldBlocks[i]), source, i)
         }
         for (let i = oldLength; i < newLength; i++) {
-          mountAt(source, i)
+          mount(source, i, parentAnchor)
         }
         for (let i = newLength; i < oldLength; i++) {
           unmount(oldBlocks[i])
@@ -256,7 +255,6 @@ export const createFor = (
 
         const commonLength = Math.min(oldLength, newLength)
         let endOffset = 0
-        let queuedLength = 0
 
         while (endOffset < commonLength) {
           const index = newLength - endOffset - 1
@@ -273,13 +271,12 @@ export const createFor = (
         const e3 = newLength - endOffset
 
         // parallel arrays holding blocks that need a mount or a move, in
-        // ascending index order; the suffix scan above already excluded
-        // everything from e3 on. After the reuse pass `queuedOldIndex[q]`
-        // distinguishes them: the block's old position for a reuse (its
-        // ForBlock is already in `newBlocks`), or -1 for a fresh mount.
-        const queuedIndices: number[] = new Array(e3)
-        const queuedOldIndex: number[] = new Array(e3)
-
+        // ascending index order (built packed, so a small change in a large
+        // list only allocates for the actual churn). After the reuse pass
+        // `queuedOldIndex[q]` distinguishes them: the block's old position
+        // for a reuse (its ForBlock is already in `newBlocks`), or -1 for a
+        // fresh mount.
+        const queuedIndices: number[] = []
         const oldKeyIndexMap = new Map<any, number>()
 
         for (let i = 0; i < e1; i++) {
@@ -288,7 +285,7 @@ export const createFor = (
           if (oldBlock.key === currentKey) {
             updateAt((newBlocks[i] = oldBlock), source, i)
           } else {
-            queuedIndices[queuedLength++] = i
+            queuedIndices.push(i)
             oldKeyIndexMap.set(oldBlock.key, i)
           }
         }
@@ -298,23 +295,33 @@ export const createFor = (
         }
 
         for (let i = e1; i < e3; i++) {
-          queuedIndices[queuedLength++] = i
+          queuedIndices.push(i)
         }
 
+        const queuedLength = queuedIndices.length
+        const queuedOldIndex: number[] = new Array(queuedLength)
         let mountCounter = 0
 
-        for (let q = queuedLength - 1; q >= 0; q--) {
-          const index = queuedIndices[q]
-          const key = newKeys![index]
-          const oldIndex = oldKeyIndexMap.get(key)
-          if (oldIndex !== undefined) {
-            oldKeyIndexMap.delete(key)
-            const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
-            updateAt(reusedBlock, source, index)
-            queuedOldIndex[q] = oldIndex
-          } else {
-            queuedOldIndex[q] = -1
-            mountCounter++
+        if (oldKeyIndexMap.size === 0) {
+          // pure append/replace: nothing to pair up. Plain loop over fill():
+          // the inlined monomorphic store beats the generic builtin on a
+          // freshly allocated (holey) array.
+          for (let q = 0; q < queuedLength; q++) queuedOldIndex[q] = -1
+          mountCounter = queuedLength
+        } else {
+          for (let q = queuedLength - 1; q >= 0; q--) {
+            const index = queuedIndices[q]
+            const key = newKeys![index]
+            const oldIndex = oldKeyIndexMap.get(key)
+            if (oldIndex !== undefined) {
+              oldKeyIndexMap.delete(key)
+              const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
+              updateAt(reusedBlock, source, index)
+              queuedOldIndex[q] = oldIndex
+            } else {
+              queuedOldIndex[q] = -1
+              mountCounter++
+            }
           }
         }
 
@@ -349,12 +356,18 @@ export const createFor = (
         // no work here — but a coincidental in-place match inside an
         // otherwise heavily shuffled range splits a segment and can cost
         // more moves than vdom's unpinned whole-range LIS.
-        let keep: boolean[] | undefined
+        let sequence: number[] | undefined
+        let sequenceInput: number[] | undefined
         if (mountCounter !== queuedLength) {
-          keep = new Array(queuedLength)
-          const tailValues: number[] = []
-          const tailPositions: number[] = []
-          const lisParent: number[] = new Array(queuedLength)
+          // `getSequence` input: the old position (+1, so 0 stays free as its
+          // "skip" marker) of every block that is allowed to stay put, and 0
+          // for the rest. Because a segment's eligible old indices all lie
+          // between its two bounding stationaries, and those bounds never
+          // overlap between segments, every value in one segment is smaller
+          // than every value in the next — so one whole-array LIS yields the
+          // same answer as running it per segment.
+          sequenceInput = new Array(queuedLength)
+          let eligible = 0
           let seg = 0
           while (seg < queuedLength) {
             let segEnd = seg
@@ -370,107 +383,85 @@ export const createFor = (
             const lowerBound = queuedIndices[seg] - 1
             const nextIndex = queuedIndices[segEnd] + 1
             const upperBound = nextIndex < e3 ? nextIndex : e2
-            tailValues.length = tailPositions.length = 0
             for (let q = seg; q <= segEnd; q++) {
-              keep[q] = false
               const oldIndex = queuedOldIndex[q]
               if (
+                oldIndex < 0 ||
                 oldIndex <= lowerBound ||
-                oldIndex >= upperBound ||
-                oldIndex < 0
+                oldIndex >= upperBound
               ) {
-                continue
+                sequenceInput[q] = 0
+              } else {
+                sequenceInput[q] = oldIndex + 1
+                eligible++
               }
-              let lo = 0
-              let hi = tailValues.length
-              while (lo < hi) {
-                const mid = (lo + hi) >> 1
-                if (tailValues[mid] < oldIndex) lo = mid + 1
-                else hi = mid
-              }
-              tailValues[lo] = oldIndex
-              lisParent[q] = lo > 0 ? tailPositions[lo - 1] : -1
-              tailPositions[lo] = q
-            }
-            for (
-              let q = tailValues.length
-                ? tailPositions[tailValues.length - 1]
-                : -1;
-              q !== -1;
-              q = lisParent[q]
-            ) {
-              keep[q] = true
             }
             seg = segEnd + 1
           }
-        }
 
-        // Rows removed under a leave transition stay in the DOM until the
-        // animation ends. Only the tail needs special handling: a row landing
-        // at the end would otherwise be inserted at `parentAnchor`, i.e.
-        // *after* those still-animating rows, which reorders them relative to
-        // a surviving neighbor they used to follow. Mid-list insertions anchor
-        // on the next live row, matching vdom (which never steps over leaving
-        // elements either), so ghosts keep their place there.
-        // Only a row landing at the tail while a leave transition is running
-        // needs the ghost set, so it is built on first use rather than per
-        // patch (lists without <TransitionGroup> never build it at all).
-        const hasGhosts = isTransitionEnabled && !!frag.$transition
-        let tailGhostNodes: Set<Node> | undefined
+          if (eligible) sequence = getSequence(sequenceInput)
+        }
 
         // apply back-to-front so every block can anchor on the finalized
         // block after it (kept blocks count as finalized: relative order
         // among all unmoved blocks is already correct)
+        let sequenceEnd = sequence ? sequence.length - 1 : -1
+        // nearest attached node at positions >= scanFrom; positions past it
+        // are already scanned, keeping the whole pass O(newLength) even
+        // across runs of blocks that render nothing
+        let scanFrom = newLength
+        let cachedAnchor: Node | undefined
         for (let q = queuedLength - 1; q >= 0; q--) {
-          const isReuse = queuedOldIndex[q] >= 0
-          if (isReuse && keep![q]) continue
           const index = queuedIndices[q]
+          let isKept = false
+          if (sequenceEnd >= 0 && sequence![sequenceEnd] === q) {
+            sequenceEnd--
+            // `getSequence` seeds its result with index 0, so it can report
+            // a leading entry that was never selected; skip that marker
+            isKept = sequenceInput![q] !== 0
+          }
 
           // A block that renders nothing has no first node, so look past it
           // for the next attached one.
           let anchorNode: Node | undefined
-          for (let i = index + 1; i < newLength; i++) {
+          for (let i = index + 1; i < scanFrom; i++) {
             const node = getBlockFirstNode(newBlocks[i].nodes)
             if (node && node.parentNode) {
               anchorNode = node
               break
             }
           }
-
           if (anchorNode === undefined) {
-            // landing at the tail: step in front of rows still leaving, which
-            // `parentAnchor` alone would place this row after
-            anchorNode = parentAnchor
-            if (hasGhosts) {
-              if (!tailGhostNodes) {
-                tailGhostNodes = new Set()
-                for (const leftoverIndex of oldKeyIndexMap.values()) {
-                  const nodes = oldBlocks[leftoverIndex].nodes
-                  if (isSingleNode) {
-                    tailGhostNodes.add(nodes as Node)
-                  } else {
-                    collectBlockNodes(nodes, tailGhostNodes)
-                  }
+            if (cachedAnchor === undefined) {
+              // Landing at the tail. Rows removed under a leave transition
+              // stay in the DOM until their animation ends, and
+              // `parentAnchor` alone would place this row after them,
+              // reordering them relative to a surviving neighbor they used
+              // to follow (mid-list insertions anchor on the next live row,
+              // matching vdom, so ghosts keep their place there). Ghosts
+              // never move, so the run adjacent to the anchor is exactly
+              // the trailing run of leftovers in old order — step in front
+              // of it.
+              cachedAnchor = parentAnchor
+              if (isTransitionEnabled && frag.$transition) {
+                for (let i = e2 - 1; i >= 0; i--) {
+                  const oldBlock = oldBlocks[i]
+                  if (!oldKeyIndexMap.has(oldBlock.key)) break
+                  const first = getBlockFirstNode(oldBlock.nodes)
+                  if (first && first.parentNode) cachedAnchor = first
                 }
               }
-              let prev = anchorNode.previousSibling
-              while (prev && tailGhostNodes.has(prev)) {
-                anchorNode = prev
-                prev = prev.previousSibling
-              }
             }
+            anchorNode = cachedAnchor
           }
+          scanFrom = index + 1
+          cachedAnchor = anchorNode
 
-          if (isReuse) {
+          if (isKept) continue
+          if (queuedOldIndex[q] >= 0) {
             insertForBlock(newBlocks[index], anchorNode)
           } else {
-            mount(
-              source,
-              index,
-              anchorNode,
-              getItemValue(source, index),
-              newKeys![index],
-            )
+            mount(source, index, anchorNode)
           }
         }
       }
@@ -508,11 +499,9 @@ export const createFor = (
     source: ResolvedSource,
     idx: number,
     anchor: Node | undefined,
-    item: any,
-    key2: any,
   ): ForBlock => {
     const keys = source.keys
-    const itemRef = shallowRef(item)
+    const itemRef = shallowRef(getItemValue(source, idx))
     // avoid creating refs if the render fn doesn't need it
     const keyRef = needKey ? shallowRef(keys ? keys[idx] : idx) : undefined
     const indexRef = needIndex ? shallowRef(keys ? idx : undefined) : undefined
@@ -520,16 +509,15 @@ export const createFor = (
     let nodes: Block
     const scope = new EffectScope(true)
     const prevScope = setCurrentScope(scope)
+    let ok = false
     try {
       nodes = renderItem(itemRef, keyRef as any, indexRef as any)
-    } catch (err) {
+      ok = true
+    } finally {
       // restore before stopping so scope cleanups never observe the dying
       // scope as current (matches the previous scope.run() ordering)
       setCurrentScope(prevScope)
-      scope.stop()
-      throw err
-    } finally {
-      setCurrentScope(prevScope)
+      if (!ok) scope.stop()
     }
 
     const block = (newBlocks[idx] = new ForBlock(
@@ -538,7 +526,7 @@ export const createFor = (
       itemRef,
       keyRef,
       indexRef,
-      key2,
+      newKeys ? newKeys[idx] : undefined,
     ))
 
     // apply transition for new nodes
@@ -554,18 +542,9 @@ export const createFor = (
     return block
   }
 
-  const mountAt = (source: ResolvedSource, idx: number): ForBlock =>
-    mount(
-      source,
-      idx,
-      parentAnchor,
-      getItemValue(source, idx),
-      newKeys ? newKeys[idx] : undefined,
-    )
-
   const mountAll = (source: ResolvedSource, newLength: number): void => {
     for (let i = 0; i < newLength; i++) {
-      mountAt(source, i)
+      mount(source, i, parentAnchor)
     }
   }
 
@@ -602,7 +581,7 @@ export const createFor = (
       if (emptyLocalRange && newLength) {
         reuseBoundaryClose(hydrationStart)
         for (let i = 0; i < newLength; i++) {
-          mountAt(source, i)
+          mount(source, i, parentAnchor)
         }
         setCurrentHydrationNode(parentAnchor)
       } else {
@@ -613,7 +592,7 @@ export const createFor = (
           } else {
             nextNode = nextLogicalSibling(currentHydrationNode!)
           }
-          mountAt(source, i)
+          mount(source, i, parentAnchor)
           if (nextNode) setCurrentHydrationNode(nextNode)
         }
 
@@ -849,30 +828,6 @@ export function createSelector(source: () => any): ForSelector {
     generation++
   }
   return register
-}
-
-// Collects a block's own nodes in the main view, so a sibling walk can tell
-// which nodes belong to a row that is still leaving.
-function collectBlockNodes(block: Block, set: Set<Node>): void {
-  if (!block) {
-    return
-  } else if (block instanceof Node) {
-    set.add(block)
-  } else if (isArray(block)) {
-    for (let i = 0; i < block.length; i++) {
-      collectBlockNodes(block[i], set)
-    }
-  } else if (isVaporComponent(block)) {
-    if (block.block) collectBlockNodes(block.block, set)
-  } else if (isTeleportEnabled && isTeleportFragment(block)) {
-    // teleported content lives in the target container; only the main-view
-    // markers can appear as siblings here
-    if (block.placeholder) set.add(block.placeholder)
-    if (block.anchor) set.add(block.anchor)
-  } else {
-    collectBlockNodes(block.nodes, set)
-    if (block.anchor) set.add(block.anchor)
-  }
 }
 
 function stopBlockScopes(blocks: ForBlock[]): void {
