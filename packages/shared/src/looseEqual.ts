@@ -14,11 +14,18 @@ function looseCompareCollections(
   b: Map<any, any> | Set<any>,
 ) {
   if (a.size !== b.size) return false
-  const unmatched = Array.from(b)
+  const candidates = Array.from(b)
+  const matched = new Uint8Array(candidates.length)
   for (const item of a) {
-    const index = unmatched.findIndex(other => looseEqual(item, other))
+    let index = -1
+    for (let i = 0; i < candidates.length; i++) {
+      if (!matched[i] && looseEqual(item, candidates[i])) {
+        index = i
+        break
+      }
+    }
     if (index < 0) return false
-    unmatched.splice(index, 1)
+    matched[index] = 1
   }
   return true
 }
