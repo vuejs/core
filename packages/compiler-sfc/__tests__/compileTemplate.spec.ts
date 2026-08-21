@@ -4,6 +4,7 @@ import {
   type SFCTemplateCompileOptions,
   compileTemplate,
 } from '../src/compileTemplate'
+import { BindingTypes, ErrorCodes } from '@vue/compiler-core'
 import { type SFCTemplateBlock, parse } from '../src/parse'
 import { compileScript } from '../src'
 import { getPositionInCode } from './utils'
@@ -24,6 +25,51 @@ test('should work', () => {
   expect(result.source).toBe(source)
   // should expose render fn
   expect(result.code).toMatch(`export function render(`)
+})
+
+test('error ambiguous script setup component reference in dev', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<popup-status/>`,
+    compilerOptions: {
+      bindingMetadata: {
+        popupStatus: BindingTypes.SETUP_CONST,
+        PopupStatus: BindingTypes.SETUP_MAYBE_REF,
+      },
+    },
+  })
+
+  expect(result.errors.length).toBe(1)
+  expect(result.errors[0]).toMatchObject({
+    code: ErrorCodes.X_SETUP_TEMPLATE_REFERENCE_CONFLICT,
+  })
+  expect((result.errors[0] as SyntaxError).message).toContain(
+    `Component tag <popup-status> matches multiple script setup bindings: "popupStatus", "PopupStatus".`,
+  )
+  expect(result.tips.length).toBe(0)
+  expect(result.code).toContain(`_createBlock($setup["popupStatus"])`)
+})
+
+test('warn ambiguous script setup directive reference in production', () => {
+  const result = compile({
+    filename: 'example.vue',
+    source: `<div v-popup-status/>`,
+    isProd: true,
+    compilerOptions: {
+      bindingMetadata: {
+        vPopupStatus: BindingTypes.SETUP_CONST,
+        VPopupStatus: BindingTypes.SETUP_MAYBE_REF,
+      },
+    },
+  })
+
+  expect(result.errors.length).toBe(0)
+  expect(result.tips.length).toBe(1)
+  expect(result.tips[0]).toContain(
+    `Custom directive v-popup-status matches multiple script setup bindings: "vPopupStatus", "VPopupStatus".`,
+  )
+  expect(result.code).toContain(`_withDirectives`)
+  expect(result.code).toContain(`$setup["vPopupStatus"]`)
 })
 
 // #6807
