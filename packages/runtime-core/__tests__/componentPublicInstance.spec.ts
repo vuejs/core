@@ -1,5 +1,6 @@
 import {
   Fragment,
+  Suspense,
   TestNodeTypes,
   createApp,
   createCommentVNode,
@@ -201,6 +202,78 @@ describe('component: proxy', () => {
     render(h(Outer), nodeOps.createElement('div'))
     expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
     expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  test('$el access should be safe while a root child component is mounting', () => {
+    const Child = {
+      setup() {
+        getCurrentInstance()!.parent!.proxy!.$el
+        return () => h('div')
+      },
+    }
+    const Parent = {
+      setup: () => () => h(Child),
+    }
+
+    expect(() => render(h(Parent), nodeOps.createElement('div'))).not.toThrow()
+  })
+
+  test('$el should resolve through a Suspense root', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: () => h(Inner),
+          })
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+
+    render(h(Outer), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  test('$el should preserve the unresolved async root value without a dev root fragment', () => {
+    let instance: ComponentInternalInstance
+    let instanceProxy: any
+    const Child = {
+      name: 'Child',
+      async setup() {
+        await new Promise(() => {})
+      },
+    }
+    const Parent = {
+      setup: () => () => h(Child),
+      mounted() {
+        instance = getCurrentInstance()!
+        instanceProxy = this
+      },
+    }
+
+    render(h(Parent), nodeOps.createElement('div'))
+
+    expect(
+      `A component with async setup() must be nested in a <Suspense>`,
+    ).toHaveBeenWarned()
+    expect(instance!.vnode.el).toBeNull()
+    expect(instanceProxy.$el === instance!.vnode.el).toBe(true)
   })
 
   test('user attached properties', async () => {

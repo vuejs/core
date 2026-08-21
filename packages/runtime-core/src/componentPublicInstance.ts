@@ -19,7 +19,6 @@ import {
   NOOP,
   PatchFlags,
   type Prettify,
-  ShapeFlags,
   type UnionToIntersection,
   extend,
   hasOwn,
@@ -58,7 +57,7 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
 import type { Directive } from './directives'
-import { Fragment, type VNode, type VNodeArrayChildren } from './vnode'
+import type { VNode, VNodeArrayChildren } from './vnode'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -361,31 +360,43 @@ const getPublicInstance = (
   return getPublicInstance(i.parent)
 }
 
-// dev only: in dev mode, a leading comment before a component's single root
-// element is preserved and turns the root into a `DEV_ROOT_FRAGMENT`, whose
-// `vnode.el` is the fragment's anchor rather than the actual rendered
-// element. In addition, the real root may itself be a single-root component
-// (or another `DEV_ROOT_FRAGMENT`), so both layers need to be unwrapped
-// recursively to reach the actual rendered element, mirroring the resolution
-// already done for attrs/scopeId fallthrough in `renderComponentRoot`.
-const resolveRootEl = (vnode: VNode): any => {
-  if (
-    vnode.type === Fragment &&
-    vnode.patchFlag > 0 &&
-    vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
-  ) {
-    const realRoot = filterSingleRoot(vnode.children as VNodeArrayChildren)
-    if (realRoot) {
-      return resolveRootEl(realRoot)
+// Component and Suspense roots can hide a dev root fragment. Only return a
+// resolved element after finding one so other root chains keep their existing
+// `$el` semantics.
+const resolveDevRootEl = (vnode: VNode): VNode['el'] | undefined => {
+  let found = false
+
+  while (true) {
+    if (vnode.patchFlag > 0 && vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
+      const root = filterSingleRoot(vnode.children as VNodeArrayChildren)
+      if (!root) {
+        return
+      }
+      vnode = root
+      found = true
+      continue
     }
-  } else if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
-    return resolveRootEl(vnode.component.subTree)
+
+    const component = vnode.component
+    if (component && component.subTree) {
+      vnode = component.subTree
+      continue
+    }
+
+    const suspense = vnode.suspense
+    if (suspense && suspense.activeBranch) {
+      vnode = suspense.activeBranch
+      continue
+    }
+
+    return found ? vnode.el : undefined
   }
-  return vnode.el
 }
 
-const getDevRootFragmentEl = (i: ComponentInternalInstance) =>
-  i.subTree ? resolveRootEl(i.subTree) : i.vnode.el
+const getDevRootFragmentEl = (i: ComponentInternalInstance) => {
+  const el = i.subTree && resolveDevRootEl(i.subTree)
+  return el === undefined ? i.vnode.el : el
+}
 
 export const publicPropertiesMap: PublicPropertiesMap =
   // Move PURE marker to new line to workaround compiler discarding it
