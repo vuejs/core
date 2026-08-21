@@ -2277,6 +2277,119 @@ describe('createFor', () => {
       )
     })
   })
+
+  describe('no cascading DOM moves', () => {
+    // Reordering must only move the blocks that are out of relative order
+    // (LIS-style), not every block between the old and new position.
+    async function countMoves(from: number[], to: number[]) {
+      const list = ref(from)
+      const { host } = define(() =>
+        createFor(
+          () => list.value,
+          item => {
+            const span = document.createElement('span')
+            renderEffect(() => {
+              span.textContent = `${item.value}`
+            })
+            return span
+          },
+          item => item,
+        ),
+      ).render()
+
+      const original = host.insertBefore.bind(host)
+      let count = 0
+      host.insertBefore = ((node: Node, anchor: Node | null) => {
+        count++
+        return original(node, anchor)
+      }) as any
+
+      list.value = to
+      await nextTick()
+      expect(
+        Array.from(host.querySelectorAll('span')).map(s =>
+          Number(s.textContent),
+        ),
+      ).toEqual(to)
+      return count
+    }
+
+    const range = (n: number) => Array.from({ length: n }, (_, i) => i)
+
+    test('moving a row backward performs a single move', async () => {
+      const to = range(50)
+      to.unshift(to.pop()!)
+      expect(await countMoves(range(50), to)).toBe(1)
+    })
+
+    test('moving a middle row to the front performs a single move', async () => {
+      const to = range(50)
+      const [x] = to.splice(25, 1)
+      to.unshift(x)
+      expect(await countMoves(range(50), to)).toBe(1)
+    })
+
+    // coverage guards: already optimal before the LIS rewrite, kept so a
+    // regression in forward moves / 2-element swaps stays caught
+    test('moving a row forward performs a single move', async () => {
+      const to = range(50)
+      to.push(to.shift()!)
+      expect(await countMoves(range(50), to)).toBe(1)
+    })
+
+    test('swapping two rows moves only those rows', async () => {
+      const to = range(50)
+      ;[to[1], to[48]] = [to[48], to[1]]
+      expect(await countMoves(range(50), to)).toBe(2)
+    })
+
+    // reviewer's counterexample: a coincidental in-place match in the middle
+    // of a shuffled range used to split the plan and cost ~2x the moves
+    test('a stationary row in the middle does not cascade moves', async () => {
+      expect(
+        await countMoves(
+          [0, 1, 2, 3, 4, 5, 6, 7, 8],
+          [5, 6, 7, 8, 4, 0, 1, 2, 3],
+        ),
+      ).toBe(5)
+    })
+
+    // a removal can leave an in-place match to the right of the moved row:
+    // the plan has to cover it, or the row is judged already in order
+    test('moving a reused row before a stationary one while removing', async () => {
+      expect(await countMoves([0, 1, 2], [2, 1])).toBe(1)
+    })
+
+    test('keeps a reused run in place when the row after it moves', async () => {
+      expect(await countMoves([0, 1, 2, 3, 4], [3, 4, 2])).toBe(1)
+    })
+
+    test('reordering past a row that renders nothing keeps rows anchored', async () => {
+      const list = ref([1, 2, 3])
+      const { host } = define(() =>
+        createFor(
+          () => list.value,
+          item => {
+            if (item.value === 2) return [] as any
+            const span = document.createElement('span')
+            renderEffect(() => {
+              span.textContent = `${item.value}`
+            })
+            return span
+          },
+          item => item,
+        ),
+      ).render()
+
+      expect(host.innerHTML).toBe('<span>1</span><span>3</span><!--for-->')
+
+      // the empty block yields no anchor node; rows must still land inside
+      // the v-for range instead of being appended past its anchor
+      list.value = [3, 2, 1]
+      await nextTick()
+      expect(host.innerHTML).toBe('<span>3</span><span>1</span><!--for-->')
+    })
+  })
 })
 
 function getEffectsCount(scope: { deps: any }) {

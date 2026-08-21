@@ -6,13 +6,20 @@ import {
   isShallow,
   onScopeDispose,
   setActiveSub,
+  setCurrentScope,
   shallowReadArray,
   shallowRef,
   toReactive,
   toReadonly,
   watch,
 } from '@vue/reactivity'
-import { isArray, isObject, isString } from '@vue/shared'
+import {
+  EMPTY_ARR,
+  getSequence,
+  isArray,
+  isObject,
+  isString,
+} from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -168,6 +175,7 @@ export const createFor = (
 
   const renderList = () => {
     const source = normalizeSource(src())
+    const sourceKeys = source.keys
     const newLength = source.values.length
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
@@ -179,7 +187,10 @@ export const createFor = (
     if (getKey) {
       newKeys = new Array(newLength)
       for (let i = 0; i < newLength; i++) {
-        newKeys[i] = getKey(...getItem(source, i))
+        const value = getItemValue(source, i)
+        newKeys[i] = sourceKeys
+          ? getKey(value, sourceKeys[i], i)
+          : getKey(value, i, undefined)
       }
     }
 
@@ -195,17 +206,13 @@ export const createFor = (
       if (isHydrating) {
         hydrateList(source, newLength)
       } else {
-        for (let i = 0; i < newLength; i++) {
-          mount(source, i)
-        }
+        mountAll(source, newLength)
       }
     } else {
       parent = parentAnchor!.parentNode
       if (!oldLength) {
         // fast path for all new
-        for (let i = 0; i < newLength; i++) {
-          mount(source, i)
-        }
+        mountAll(source, newLength)
       } else if (!newLength) {
         // fast path for clearing all.
         // Fire reset listeners BEFORE per-item unmount so attached selectors
@@ -227,11 +234,10 @@ export const createFor = (
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
         for (let i = 0; i < commonLength; i++) {
-          const item = getItem(source, i)
-          update((newBlocks[i] = oldBlocks[i]), ...item)
+          updateAt((newBlocks[i] = oldBlocks[i]), source, i)
         }
         for (let i = oldLength; i < newLength; i++) {
-          mount(source, i)
+          mount(source, i, parentAnchor)
         }
         for (let i = newLength; i < oldLength; i++) {
           unmount(oldBlocks[i])
@@ -255,24 +261,14 @@ export const createFor = (
         }
 
         const commonLength = Math.min(oldLength, newLength)
-        const oldKeyIndexPairs: [any, number][] = new Array(oldLength)
-        const queuedBlocks: [
-          index: number,
-          item: ReturnType<typeof getItem>,
-          key: any,
-        ][] = new Array(newLength)
-
         let endOffset = 0
-        let queuedBlocksLength = 0
-        let oldKeyIndexPairsLength = 0
 
         while (endOffset < commonLength) {
           const index = newLength - endOffset - 1
-          const item = getItem(source, index)
           const key = newKeys![index]
           const existingBlock = oldBlocks[oldLength - endOffset - 1]
           if (existingBlock.key !== key) break
-          update(existingBlock, ...item)
+          updateAt(existingBlock, source, index)
           newBlocks[index] = existingBlock
           endOffset++
         }
@@ -281,60 +277,59 @@ export const createFor = (
         const e2 = oldLength - endOffset
         const e3 = newLength - endOffset
 
+        // new indices needing a mount or a move, ascending (built packed, so a
+        // small change in a large list only allocates for the actual churn)
+        const queuedIndices: number[] = []
+        const oldKeyIndexMap = new Map<any, number>()
+
         for (let i = 0; i < e1; i++) {
-          const currentItem = getItem(source, i)
           const currentKey = newKeys![i]
           const oldBlock = oldBlocks[i]
-          const oldKey = oldBlock.key
-          if (oldKey === currentKey) {
-            update((newBlocks[i] = oldBlock), ...currentItem)
+          if (oldBlock.key === currentKey) {
+            updateAt((newBlocks[i] = oldBlock), source, i)
           } else {
-            queuedBlocks[queuedBlocksLength++] = [i, currentItem, currentKey]
-            oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldKey, i]
+            queuedIndices.push(i)
+            oldKeyIndexMap.set(oldBlock.key, i)
           }
         }
 
         for (let i = e1; i < e2; i++) {
-          oldKeyIndexPairs[oldKeyIndexPairsLength++] = [oldBlocks[i].key, i]
+          oldKeyIndexMap.set(oldBlocks[i].key, i)
         }
 
         for (let i = e1; i < e3; i++) {
-          const blockItem = getItem(source, i)
-          const blockKey = newKeys![i]
-          queuedBlocks[queuedBlocksLength++] = [i, blockItem, blockKey]
+          queuedIndices.push(i)
         }
 
-        queuedBlocks.length = queuedBlocksLength
-        oldKeyIndexPairs.length = oldKeyIndexPairsLength
-
-        interface MountOper {
-          source: ResolvedSource
-          index: number
-          item: ReturnType<typeof getItem>
-          key: any
-        }
-        interface MoveOper {
-          index: number
-          block: ForBlock
-        }
-
-        const oldKeyIndexMap = new Map(oldKeyIndexPairs)
-        const opers: (MountOper | MoveOper)[] = new Array(queuedBlocks.length)
-
+        let queuedLength = queuedIndices.length
+        // `getSequence` input, doubling as the old-position record: the
+        // block's old index + 1 (0 stays free as the "skip" marker, and also
+        // marks a fresh mount). The bounds filter below zeroes reuses that may
+        // not stay put; the apply pass tells move from mount by
+        // `newBlocks[index]`, which the reuse pass has already filled in.
+        let sources: number[] = EMPTY_ARR as unknown as number[]
         let mountCounter = 0
-        let opersLength = 0
 
-        for (let i = queuedBlocks.length - 1; i >= 0; i--) {
-          const [index, item, key] = queuedBlocks[i]
-          const oldIndex = oldKeyIndexMap.get(key)
-          if (oldIndex !== undefined) {
-            oldKeyIndexMap.delete(key)
-            const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
-            update(reusedBlock, ...item)
-            opers[opersLength++] = { index, block: reusedBlock }
-          } else {
-            mountCounter++
-            opers[opersLength++] = { source, index, item, key }
+        if (oldKeyIndexMap.size === 0) {
+          // pure append/replace: nothing to pair up, so every queued index is
+          // a mount, the planner below is skipped and `sources` is never
+          // read - don't build it
+          mountCounter = queuedLength
+        } else {
+          sources = new Array(queuedLength)
+          for (let q = queuedLength - 1; q >= 0; q--) {
+            const index = queuedIndices[q]
+            const key = newKeys![index]
+            const oldIndex = oldKeyIndexMap.get(key)
+            if (oldIndex !== undefined) {
+              oldKeyIndexMap.delete(key)
+              const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
+              updateAt(reusedBlock, source, index)
+              sources[q] = oldIndex + 1
+            } else {
+              sources[q] = 0
+              mountCounter++
+            }
           }
         }
 
@@ -345,86 +340,107 @@ export const createFor = (
         if (useFastRemove && frag.resetListeners) {
           for (const fn of frag.resetListeners) fn()
         }
-        for (const leftoverIndex of oldKeyIndexMap.values()) {
-          unmount(
-            oldBlocks[leftoverIndex],
-            !(useFastRemove && canUseFastRemove),
-          )
+        if (oldKeyIndexMap.size) {
+          for (const leftoverIndex of oldKeyIndexMap.values()) {
+            unmount(
+              oldBlocks[leftoverIndex],
+              !(useFastRemove && canUseFastRemove),
+            )
+          }
         }
         if (useFastRemove && canUseFastRemove) {
           parent!.textContent = ''
           parent!.appendChild(parentAnchor)
         }
 
-        if (opers.length === mountCounter) {
-          for (const { source, index, item, key } of opers as MountOper[]) {
-            mount(
-              source,
-              index,
-              index < newLength - 1
-                ? getBlockFirstNode(newBlocks[index + 1].nodes)
-                : parentAnchor,
-              item,
-              key,
-            )
+        let sequence: number[] | undefined
+        const hasReuse = mountCounter !== queuedLength
+        if (hasReuse) {
+          sequence = planMoves(queuedIndices, sources, e2, e3)
+          // the dense planner expands both arrays in place
+          queuedLength = queuedIndices.length
+        }
+        // reuses exist and none of them moved: every one of them stays put
+        const allKept = hasReuse && sequence === undefined
+
+        // apply back-to-front so every block can anchor on the finalized
+        // block after it (kept blocks count as finalized: relative order
+        // among all unmoved blocks is already correct)
+        let sequenceEnd = sequence ? sequence.length - 1 : -1
+        // nearest attached node at positions >= scanFrom; positions past it
+        // are already scanned, keeping the whole pass O(newLength) even
+        // across runs of blocks that render nothing
+        let scanFrom = newLength
+        let cachedAnchor: Node | undefined
+        for (let q = queuedLength - 1; q >= 0; q--) {
+          const index = queuedIndices[q]
+          let isKept = allKept && sources[q] !== 0
+          if (sequenceEnd >= 0 && sequence![sequenceEnd] === q) {
+            sequenceEnd--
+            // `getSequence` seeds its result with index 0, so it can report
+            // a leading entry that was never selected; skip that marker
+            isKept = sources[q] !== 0
           }
-        } else if (opers.length) {
-          let anchor = oldBlocks[0]
-          let blocksTail: ForBlock | undefined
-          for (let i = 0; i < oldLength; i++) {
-            const block = oldBlocks[i]
-            if (oldKeyIndexMap.has(block.key)) {
-              continue
+          // `scanFrom`/`cachedAnchor` stay where they are: the next block
+          // that does move rescans the wider range, and each position is
+          // still visited at most once.
+          if (isKept) continue
+
+          // A block that renders nothing has no first node, so look past it
+          // for the next attached one.
+          let anchorNode: Node | undefined
+          for (let i = index + 1; i < scanFrom; i++) {
+            const node = getBlockFirstNode(newBlocks[i].nodes)
+            // must be attached to *this* list's parent: a node that is still
+            // connected elsewhere (teleport target, suspense pending
+            // container, keep-alive storage) would make insertBefore throw
+            if (node && node.parentNode === parent) {
+              anchorNode = node
+              break
             }
-            block.prevAnchor = anchor
-            anchor = oldBlocks[i + 1]
-            if (blocksTail !== undefined) {
-              blocksTail.next = block
-              block.prev = blocksTail
-            }
-            blocksTail = block
           }
-          for (const action of opers) {
-            const { index } = action
-            if (index < newLength - 1) {
-              const nextBlock = newBlocks[index + 1]
-              let anchorNode = getBlockFirstNode(nextBlock.prevAnchor!.nodes)
-              if (!anchorNode.parentNode)
-                anchorNode = getBlockFirstNode(nextBlock.nodes)
-              if ('source' in action) {
-                const { item, key } = action
-                const block = mount(source, index, anchorNode, item, key)
-                moveLink(block, nextBlock.prev, nextBlock)
-              } else if (action.block.next !== nextBlock) {
-                insertForBlock(action.block, anchorNode)
-                moveLink(action.block, nextBlock.prev, nextBlock)
+          if (anchorNode === undefined) {
+            if (cachedAnchor === undefined) {
+              // Landing at the tail. Rows removed under a leave transition
+              // stay in the DOM until their animation ends, and
+              // `parentAnchor` alone would place this row after them,
+              // reordering them relative to a surviving neighbor they used
+              // to follow (mid-list insertions anchor on the next live row,
+              // matching vdom, so ghosts keep their place there). Ghosts
+              // never move, so the run adjacent to the anchor is exactly
+              // the trailing run of leftovers in old order — step in front
+              // of it.
+              cachedAnchor = parentAnchor
+              if (isTransitionEnabled && frag.$transition) {
+                for (let i = e2 - 1; i >= 0; i--) {
+                  const oldBlock = oldBlocks[i]
+                  if (!oldKeyIndexMap.has(oldBlock.key)) break
+                  const first = getBlockFirstNode(oldBlock.nodes)
+                  if (first && first.parentNode === parent) cachedAnchor = first
+                }
               }
-            } else if ('source' in action) {
-              const { item, key } = action
-              const block = mount(source, index, parentAnchor, item, key)
-              moveLink(block, blocksTail)
-              blocksTail = block
-            } else if (action.block.next !== undefined) {
-              let anchorNode = anchor
-                ? getBlockFirstNode(anchor.nodes)
-                : parentAnchor
-              if (!anchorNode.parentNode) anchorNode = parentAnchor
-              insertForBlock(action.block, anchorNode)
-              moveLink(action.block, blocksTail)
-              blocksTail = action.block
             }
+            anchorNode = cachedAnchor
           }
-          for (const block of newBlocks) {
-            block.prevAnchor = block.next = block.prev = undefined
+          scanFrom = index + 1
+          cachedAnchor = anchorNode
+
+          const block = newBlocks[index]
+          if (block !== undefined) {
+            insertForBlock(block, anchorNode)
+          } else {
+            mount(source, index, anchorNode)
           }
         }
       }
     }
 
-    frag.nodes = [(oldBlocks = newBlocks)]
-    if (parentAnchor) frag.nodes.push(parentAnchor)
+    oldBlocks = newBlocks
+    frag.nodes = parentAnchor ? [newBlocks, parentAnchor] : [newBlocks]
 
-    if (wasMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+    if (wasMounted && frag.onUpdated) {
+      for (const fn of frag.onUpdated) fn()
+    }
     setActiveSub(prevSub)
   }
 
@@ -452,24 +468,26 @@ export const createFor = (
   const mount = (
     source: ResolvedSource,
     idx: number,
-    anchor: Node | undefined = parentAnchor,
-    [item, key, index] = getItem(source, idx),
-    key2 = newKeys ? newKeys[idx] : getKey && getKey(item, key, index),
+    anchor: Node | undefined,
   ): ForBlock => {
-    const itemRef = shallowRef(item)
+    const keys = source.keys
+    const itemRef = shallowRef(getItemValue(source, idx))
     // avoid creating refs if the render fn doesn't need it
-    const keyRef = needKey ? shallowRef(key) : undefined
-    const indexRef = needIndex ? shallowRef(index) : undefined
+    const keyRef = needKey ? shallowRef(keys ? keys[idx] : idx) : undefined
+    const indexRef = needIndex ? shallowRef(keys ? idx : undefined) : undefined
 
     let nodes: Block
     const scope = new EffectScope(true)
+    const prevScope = setCurrentScope(scope)
+    let ok = false
     try {
-      nodes = scope.run(() =>
-        renderItem(itemRef, keyRef as any, indexRef as any),
-      )!
-    } catch (err) {
-      scope.stop()
-      throw err
+      nodes = renderItem(itemRef, keyRef as any, indexRef as any)
+      ok = true
+    } finally {
+      // restore before stopping so scope cleanups never observe the dying
+      // scope as current (matches the previous scope.run() ordering)
+      setCurrentScope(prevScope)
+      if (!ok) scope.stop()
     }
 
     const block = (newBlocks[idx] = new ForBlock(
@@ -478,7 +496,7 @@ export const createFor = (
       itemRef,
       keyRef,
       indexRef,
-      key2,
+      newKeys ? newKeys[idx] : undefined,
     ))
 
     // apply transition for new nodes
@@ -492,6 +510,26 @@ export const createFor = (
     }
 
     return block
+  }
+
+  const mountAll = (source: ResolvedSource, newLength: number): void => {
+    for (let i = 0; i < newLength; i++) {
+      mount(source, i, parentAnchor)
+    }
+  }
+
+  const updateAt = (
+    block: ForBlock,
+    source: ResolvedSource,
+    idx: number,
+  ): void => {
+    const keys = source.keys
+    update(
+      block,
+      getItemValue(source, idx),
+      keys ? keys[idx] : idx,
+      keys ? idx : undefined,
+    )
   }
 
   function hydrateList(source: ResolvedSource, newLength: number): void {
@@ -512,9 +550,7 @@ export const createFor = (
     try {
       if (emptyLocalRange && newLength) {
         reuseBoundaryClose(hydrationStart)
-        for (let i = 0; i < newLength; i++) {
-          mount(source, i)
-        }
+        mountAll(source, newLength)
         setCurrentHydrationNode(parentAnchor)
       } else {
         for (let i = 0; i < newLength; i++) {
@@ -524,7 +560,7 @@ export const createFor = (
           } else {
             nextNode = nextLogicalSibling(currentHydrationNode!)
           }
-          mount(source, i)
+          mount(source, i, parentAnchor)
           if (nextNode) setCurrentHydrationNode(nextNode)
         }
 
@@ -762,20 +798,112 @@ export function createSelector(source: () => any): ForSelector {
   return register
 }
 
-function moveLink(block: ForBlock, newPrev?: ForBlock, newNext?: ForBlock) {
-  const { prev: oldPrev, next: oldNext } = block
-  if (oldPrev) oldPrev.next = oldNext
-  if (oldNext) {
-    oldNext.prev = oldPrev
-    if (block.prevAnchor !== block) {
-      oldNext.prevAnchor = block.prevAnchor
+/**
+ * Decides which reused blocks may stay where they are: the longest increasing
+ * subsequence of their old indices is already in relative order, so only the
+ * blocks outside it need a DOM move. Returns that subsequence as indices into
+ * `sources`, or `undefined` when no reused block has to move at all.
+ *
+ * Two planners, picked by how dense the change is across the range it touches:
+ *
+ * - dense (the queued indices cover at least half of the range they span):
+ *   pull the in-place matches in that range into the plan too and run an
+ *   unbounded LIS, which is move-count minimal like vdom's. The range is at
+ *   most `2 * queuedIndices.length` wide here, so this stays O(queued).
+ * - sparse (a couple of rows moved across an otherwise untouched list, e.g. a
+ *   far swap): keep the in-place matches pinned, which costs nothing but
+ *   bounds each segment's LIS by its stationary neighbours. Not minimal in
+ *   general, but it never walks the untouched majority.
+ *
+ * Both arrays are expanded in place on the dense path.
+ */
+function planMoves(
+  queuedIndices: number[],
+  sources: number[],
+  e2: number,
+  e3: number,
+): number[] | undefined {
+  let queuedLength = queuedIndices.length
+  // The dense range runs from the first queued index to the start of the
+  // synchronized suffix: an in-place match on either side of a queued block
+  // still constrains where it may land, so the plan has to cover them all,
+  // not just the ones between the first and last queued index.
+  const firstIndex = queuedIndices[0]
+  const denseLength = e3 - firstIndex
+  const isDense = queuedLength * 2 >= denseLength
+
+  // if the eligible old positions already ascend, they are all in relative
+  // order and every one of them stays put - no LIS needed
+  let moved = false
+  let maxSource = 0
+
+  if (isDense) {
+    // Expand in place, back to front so the tail writes never clobber entries
+    // still to be read. Every position in the range that is not queued is a
+    // same-index in-place match, so it needs no lookup.
+    let read = queuedLength - 1
+    queuedIndices.length = sources.length = denseLength
+    for (
+      let write = denseLength - 1, index = e3 - 1;
+      write >= 0;
+      write--, index--
+    ) {
+      if (read >= 0 && queuedIndices[read] === index) {
+        sources[write] = sources[read--]
+      } else {
+        sources[write] = index + 1
+      }
+      queuedIndices[write] = index
+    }
+    queuedLength = denseLength
+
+    // no bounds: every reuse competes for the LIS
+    for (let q = 0; q < queuedLength; q++) {
+      const value = sources[q]
+      if (value !== 0) {
+        if (value < maxSource) moved = true
+        else maxSource = value
+      }
+    }
+  } else {
+    // in-place matches partition the queued indices into segments of
+    // consecutive positions, and bound each segment's eligible old indices.
+    // Because those bounds never overlap between segments, one whole-array
+    // LIS still yields the same answer as running it per segment.
+    let seg = 0
+    while (seg < queuedLength) {
+      let segEnd = seg
+      while (
+        segEnd + 1 < queuedLength &&
+        queuedIndices[segEnd + 1] === queuedIndices[segEnd] + 1
+      ) {
+        segEnd++
+      }
+      // prefix stationaries sit at their own index in both lists; the first
+      // suffix stationary (index e3) sits at old index e2. With no bounding
+      // stationary the bounds are -1 / e2 == oldLength.
+      const lowerBound = queuedIndices[seg] - 1
+      const nextIndex = queuedIndices[segEnd] + 1
+      const upperBound = nextIndex < e3 ? nextIndex : e2
+      for (let q = seg; q <= segEnd; q++) {
+        const value = sources[q]
+        // a mount has value 0, i.e. an old index of -1, which the lower
+        // bound (>= -1) already rejects
+        const oldIndex = value - 1
+        if (oldIndex <= lowerBound || oldIndex >= upperBound) {
+          sources[q] = 0
+        } else {
+          if (value < maxSource) moved = true
+          else maxSource = value
+        }
+      }
+      seg = segEnd + 1
     }
   }
-  if (newPrev) newPrev.next = block
-  if (newNext) newNext.prev = block
-  block.prev = newPrev
-  block.next = newNext
-  block.prevAnchor = block
+
+  // `moved` can only be set by the second non-zero value onwards, so it
+  // already implies there is something to keep
+  return moved ? getSequence(sources) : undefined
 }
 
 function stopBlockScopes(blocks: ForBlock[]): void {
@@ -943,17 +1071,24 @@ function normalizeSource(source: any): ResolvedSource {
   }
 }
 
-function getItem(
-  { keys, values, needsWrap, isReadonlySource }: ResolvedSource,
+function getItemValue(
+  { values, needsWrap, isReadonlySource }: ResolvedSource,
   idx: number,
-): [item: any, key: any, index?: number] {
-  const value = needsWrap
+): any {
+  return needsWrap
     ? isReadonlySource
       ? toReadonly(toReactive(values[idx]))
       : toReactive(values[idx])
     : values[idx]
-  if (keys) {
-    return [value, keys[idx], idx]
+}
+
+function getItem(
+  source: ResolvedSource,
+  idx: number,
+): [item: any, key: any, index?: number] {
+  const value = getItemValue(source, idx)
+  if (source.keys) {
+    return [value, source.keys[idx], idx]
   } else {
     return [value, idx, undefined]
   }

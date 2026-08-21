@@ -1895,6 +1895,44 @@ test('should not duplicate main-view anchors when keyed list reorders teleport r
   expect(countAnchors('end')).toBe(2)
 })
 
+test('should anchor mid-list reorders on the teleport main-view placeholder', async () => {
+  const target = document.createElement('div')
+  const items = ref([
+    { id: 'one', text: 'one' },
+    { id: 'two', text: 'two' },
+    { id: 'three', text: 'three' },
+  ])
+
+  const { host } = define(() =>
+    createFor(
+      () => items.value,
+      item =>
+        createComponent(
+          VaporTeleport,
+          { to: () => target },
+          { default: () => template(item.value.text)() },
+        ),
+      item => item.id,
+    ),
+  ).render()
+
+  const countAnchors = (label: 'start' | 'end') =>
+    (host.innerHTML.match(new RegExp(`<!--teleport ${label}-->`, 'g')) || [])
+      .length
+
+  expect(countAnchors('start')).toBe(3)
+  expect(target.textContent).toBe('onetwothree')
+
+  // the moved row must resolve its anchor through the following teleport
+  // row's main-view placeholder, not its teleported content
+  items.value = [items.value[1], items.value[0], items.value[2]]
+  await nextTick()
+
+  expect(countAnchors('start')).toBe(3)
+  expect(countAnchors('end')).toBe(3)
+  expect(target.textContent).toBe('onetwothree')
+})
+
 test('should not move target children when keyed list reorders enabled teleport roots', async () => {
   const target = document.createElement('div')
   const items = ref([

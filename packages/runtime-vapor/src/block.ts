@@ -397,7 +397,12 @@ export function normalizeBlock(block: Block): Node[] {
   return nodes
 }
 
-export function getBlockFirstNode(block: Block): Node {
+/**
+ * First node of a block as it appears in its own container, or `undefined`
+ * when the block has no node there: an empty array of blocks, or a block
+ * whose content lives elsewhere (a teleport target) and has no marker left.
+ */
+export function getBlockFirstNode(block: Block): Node | undefined {
   if (block instanceof Node) {
     return block
   } else if (isArray(block)) {
@@ -405,10 +410,17 @@ export function getBlockFirstNode(block: Block): Node {
       const anchor = getBlockFirstNode(block[i])
       if (anchor) return anchor
     }
-    return undefined!
+    return undefined
   } else if (isVaporComponent(block)) {
     return getBlockFirstNode(getComponentPhysicalBlock(block))
   } else {
+    if (isTeleportEnabled && isTeleportFragment(block)) {
+      // teleported content lives in the target container; in the main view
+      // the fragment starts at its placeholder. Both markers are absent while
+      // hydrating and after removal, so fall through to the generic path.
+      const marker = block.placeholder || block.anchor
+      if (marker) return marker
+    }
     const nodes = block.nodes
     // Empty fragments may keep their insertion anchor in `anchor` or in
     // `nodes` (ForFragment).
