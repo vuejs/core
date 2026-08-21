@@ -1639,6 +1639,45 @@ describe('SSR hydration', () => {
     resolve({})
   })
 
+  test('move async wrapper before load (fragment)', async () => {
+    let resolve: any
+    const Comp = vi.fn(() => [h('i', 'one'), h('b', 'two')])
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r
+        }),
+    )
+
+    const reverse = ref(false)
+    const root = document.createElement('div')
+    root.innerHTML =
+      '<div><span>tail</span><!--[--><i>one</i><b>two</b><!--]--></div>'
+
+    createSSRApp({
+      render() {
+        const asyncComp = h(AsyncComp, { key: 'async' })
+        const sibling = h('span', { key: 'sibling' }, 'tail')
+        return h(
+          'div',
+          reverse.value ? [asyncComp, sibling] : [sibling, asyncComp],
+        )
+      },
+    }).mount(root)
+
+    reverse.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      '<div><!--[--><i>one</i><b>two</b><!--]--><span>tail</span></div>',
+    )
+    resolve(Comp)
+    await new Promise(r => setTimeout(r))
+    expect(Comp).toHaveBeenCalled()
+    expect(root.innerHTML).toBe(
+      '<div><!--[--><i>one</i><b>two</b><!--]--><span>tail</span></div>',
+    )
+  })
+
   test('elements with camel-case in svg ', () => {
     const { vnode, container } = mountWithHydration(
       '<animateTransform></animateTransform>',
