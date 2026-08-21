@@ -13,7 +13,13 @@ import {
   toReadonly,
   watch,
 } from '@vue/reactivity'
-import { getSequence, isArray, isObject, isString } from '@vue/shared'
+import {
+  EMPTY_ARR,
+  getSequence,
+  isArray,
+  isObject,
+  isString,
+} from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -181,9 +187,10 @@ export const createFor = (
     if (getKey) {
       newKeys = new Array(newLength)
       for (let i = 0; i < newLength; i++) {
+        const value = getItemValue(source, i)
         newKeys[i] = sourceKeys
-          ? getKey(getItemValue(source, i), sourceKeys[i], i)
-          : getKey(getItemValue(source, i), i, undefined)
+          ? getKey(value, sourceKeys[i], i)
+          : getKey(value, i, undefined)
       }
     }
 
@@ -275,15 +282,11 @@ export const createFor = (
         const queuedIndices: number[] = []
         const oldKeyIndexMap = new Map<any, number>()
 
-        // in-place matches, remembered so a dense reorder can pull them into
-        // the move plan (they sit at the same index in both lists)
-        let stationaryIndices: number[] | undefined
         for (let i = 0; i < e1; i++) {
           const currentKey = newKeys![i]
           const oldBlock = oldBlocks[i]
           if (oldBlock.key === currentKey) {
             updateAt((newBlocks[i] = oldBlock), source, i)
-            ;(stationaryIndices ||= []).push(i)
           } else {
             queuedIndices.push(i)
             oldKeyIndexMap.set(oldBlock.key, i)
@@ -304,16 +307,16 @@ export const createFor = (
         // marks a fresh mount). The bounds filter below zeroes reuses that may
         // not stay put; the apply pass tells move from mount by
         // `newBlocks[index]`, which the reuse pass has already filled in.
-        const sources: number[] = new Array(queuedLength)
+        let sources: number[] = EMPTY_ARR as unknown as number[]
         let mountCounter = 0
 
         if (oldKeyIndexMap.size === 0) {
-          // pure append/replace: nothing to pair up. Plain loop over fill():
-          // the inlined monomorphic store beats the generic builtin on a
-          // freshly allocated (holey) array.
-          for (let q = 0; q < queuedLength; q++) sources[q] = 0
+          // pure append/replace: nothing to pair up, so every queued index is
+          // a mount, the planner below is skipped and `sources` is never
+          // read - don't build it
           mountCounter = queuedLength
         } else {
+          sources = new Array(queuedLength)
           for (let q = queuedLength - 1; q >= 0; q--) {
             const index = queuedIndices[q]
             const key = newKeys![index]
@@ -337,114 +340,28 @@ export const createFor = (
         if (useFastRemove && frag.resetListeners) {
           for (const fn of frag.resetListeners) fn()
         }
-        for (const leftoverIndex of oldKeyIndexMap.values()) {
-          unmount(
-            oldBlocks[leftoverIndex],
-            !(useFastRemove && canUseFastRemove),
-          )
+        if (oldKeyIndexMap.size) {
+          for (const leftoverIndex of oldKeyIndexMap.values()) {
+            unmount(
+              oldBlocks[leftoverIndex],
+              !(useFastRemove && canUseFastRemove),
+            )
+          }
         }
         if (useFastRemove && canUseFastRemove) {
           parent!.textContent = ''
           parent!.appendChild(parentAnchor)
         }
 
-        // Decide which reused blocks may stay in place: the longest
-        // increasing subsequence of old indices is already in relative order,
-        // so only the blocks outside it need a DOM move.
-        //
-        // Two planners, picked by how dense the change is across the range it
-        // touches:
-        //
-        // - dense (the changed indices cover at least half their own span):
-        //   pull the in-place matches inside that span into the plan too and
-        //   run an unbounded LIS, which is move-count minimal like vdom's.
-        //   `span <= 2 * queuedLength` here, so this stays O(queued).
-        // - sparse (a couple of rows moved across an otherwise untouched
-        //   list, e.g. a far swap): keep the in-place matches pinned, which
-        //   costs nothing but bounds each segment's LIS by its stationary
-        //   neighbours. Not minimal in general, but it never walks the
-        //   untouched majority.
         let sequence: number[] | undefined
-        let allKept = false
-        if (mountCounter !== queuedLength) {
-          const span = queuedIndices[queuedLength - 1] - queuedIndices[0] + 1
-          if (stationaryIndices && queuedLength * 2 >= span) {
-            // dense: merge the stationaries inside the span into the plan,
-            // keeping both parallel arrays in ascending index order
-            const firstIndex = queuedIndices[0]
-            const lastIndex = queuedIndices[queuedLength - 1]
-            for (let i = 0; i < stationaryIndices.length; i++) {
-              const index = stationaryIndices[i]
-              if (index > firstIndex && index < lastIndex) {
-                queuedIndices.push(index)
-                // a prefix stationary sits at the same index in both lists
-                sources.push(index + 1)
-              }
-            }
-            if (queuedIndices.length !== queuedLength) {
-              sortQueueByIndex(queuedIndices, sources)
-              queuedLength = queuedIndices.length
-            }
-          }
-
-          let eligible = 0
-          // if the eligible old positions already ascend, they are all in
-          // relative order and every one of them stays put — no LIS needed
-          let moved = false
-          let maxSource = 0
-          if (queuedLength * 2 >= span) {
-            // dense: no bounds, every reuse competes for the LIS
-            for (let q = 0; q < queuedLength; q++) {
-              const value = sources[q]
-              if (value !== 0) {
-                eligible++
-                if (value < maxSource) moved = true
-                else maxSource = value
-              }
-            }
-          } else {
-            // sparse: in-place matches partition the queued indices into
-            // segments of consecutive positions, and bound each segment's
-            // eligible old indices. Because those bounds never overlap
-            // between segments, one whole-array LIS still yields the same
-            // answer as running it per segment.
-            let seg = 0
-            while (seg < queuedLength) {
-              let segEnd = seg
-              while (
-                segEnd + 1 < queuedLength &&
-                queuedIndices[segEnd + 1] === queuedIndices[segEnd] + 1
-              ) {
-                segEnd++
-              }
-              // prefix stationaries sit at their own index in both lists; the
-              // first suffix stationary (index e3) sits at old index e2. With
-              // no bounding stationary the bounds are -1 / e2 == oldLength.
-              const lowerBound = queuedIndices[seg] - 1
-              const nextIndex = queuedIndices[segEnd] + 1
-              const upperBound = nextIndex < e3 ? nextIndex : e2
-              for (let q = seg; q <= segEnd; q++) {
-                const value = sources[q]
-                const oldIndex = value - 1
-                if (
-                  oldIndex < 0 ||
-                  oldIndex <= lowerBound ||
-                  oldIndex >= upperBound
-                ) {
-                  sources[q] = 0
-                } else {
-                  eligible++
-                  if (value < maxSource) moved = true
-                  else maxSource = value
-                }
-              }
-              seg = segEnd + 1
-            }
-          }
-
-          if (eligible && moved) sequence = getSequence(sources)
-          else if (eligible) allKept = true
+        const hasReuse = mountCounter !== queuedLength
+        if (hasReuse) {
+          sequence = planMoves(queuedIndices, sources, e2, e3)
+          // the dense planner expands both arrays in place
+          queuedLength = queuedIndices.length
         }
+        // reuses exist and none of them moved: every one of them stays put
+        const allKept = hasReuse && sequence === undefined
 
         // apply back-to-front so every block can anchor on the finalized
         // block after it (kept blocks count as finalized: relative order
@@ -464,6 +381,10 @@ export const createFor = (
             // a leading entry that was never selected; skip that marker
             isKept = sources[q] !== 0
           }
+          // `scanFrom`/`cachedAnchor` stay where they are: the next block
+          // that does move rescans the wider range, and each position is
+          // still visited at most once.
+          if (isKept) continue
 
           // A block that renders nothing has no first node, so look past it
           // for the next attached one.
@@ -504,9 +425,9 @@ export const createFor = (
           scanFrom = index + 1
           cachedAnchor = anchorNode
 
-          if (isKept) continue
-          if (newBlocks[index] !== undefined) {
-            insertForBlock(newBlocks[index], anchorNode)
+          const block = newBlocks[index]
+          if (block !== undefined) {
+            insertForBlock(block, anchorNode)
           } else {
             mount(source, index, anchorNode)
           }
@@ -514,10 +435,12 @@ export const createFor = (
       }
     }
 
-    frag.nodes = [(oldBlocks = newBlocks)]
-    if (parentAnchor) frag.nodes.push(parentAnchor)
+    oldBlocks = newBlocks
+    frag.nodes = parentAnchor ? [newBlocks, parentAnchor] : [newBlocks]
 
-    if (wasMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+    if (wasMounted && frag.onUpdated) {
+      for (const fn of frag.onUpdated) fn()
+    }
     setActiveSub(prevSub)
   }
 
@@ -627,9 +550,7 @@ export const createFor = (
     try {
       if (emptyLocalRange && newLength) {
         reuseBoundaryClose(hydrationStart)
-        for (let i = 0; i < newLength; i++) {
-          mount(source, i, parentAnchor)
-        }
+        mountAll(source, newLength)
         setCurrentHydrationNode(parentAnchor)
       } else {
         for (let i = 0; i < newLength; i++) {
@@ -877,22 +798,112 @@ export function createSelector(source: () => any): ForSelector {
   return register
 }
 
-// Restores ascending index order after the dense planner appended the
-// stationaries; both arrays move together. The appended tail is itself sorted
-// and usually short, so insertion sort runs near-linearly here.
-function sortQueueByIndex(indices: number[], oldIndices: number[]): void {
-  for (let i = 1; i < indices.length; i++) {
-    const index = indices[i]
-    const oldIndex = oldIndices[i]
-    let j = i - 1
-    while (j >= 0 && indices[j] > index) {
-      indices[j + 1] = indices[j]
-      oldIndices[j + 1] = oldIndices[j]
-      j--
+/**
+ * Decides which reused blocks may stay where they are: the longest increasing
+ * subsequence of their old indices is already in relative order, so only the
+ * blocks outside it need a DOM move. Returns that subsequence as indices into
+ * `sources`, or `undefined` when no reused block has to move at all.
+ *
+ * Two planners, picked by how dense the change is across the range it touches:
+ *
+ * - dense (the queued indices cover at least half of the range they span):
+ *   pull the in-place matches in that range into the plan too and run an
+ *   unbounded LIS, which is move-count minimal like vdom's. The range is at
+ *   most `2 * queuedIndices.length` wide here, so this stays O(queued).
+ * - sparse (a couple of rows moved across an otherwise untouched list, e.g. a
+ *   far swap): keep the in-place matches pinned, which costs nothing but
+ *   bounds each segment's LIS by its stationary neighbours. Not minimal in
+ *   general, but it never walks the untouched majority.
+ *
+ * Both arrays are expanded in place on the dense path.
+ */
+function planMoves(
+  queuedIndices: number[],
+  sources: number[],
+  e2: number,
+  e3: number,
+): number[] | undefined {
+  let queuedLength = queuedIndices.length
+  // The dense range runs from the first queued index to the start of the
+  // synchronized suffix: an in-place match on either side of a queued block
+  // still constrains where it may land, so the plan has to cover them all,
+  // not just the ones between the first and last queued index.
+  const firstIndex = queuedIndices[0]
+  const denseLength = e3 - firstIndex
+  const isDense = queuedLength * 2 >= denseLength
+
+  // if the eligible old positions already ascend, they are all in relative
+  // order and every one of them stays put - no LIS needed
+  let moved = false
+  let maxSource = 0
+
+  if (isDense) {
+    // Expand in place, back to front so the tail writes never clobber entries
+    // still to be read. Every position in the range that is not queued is a
+    // same-index in-place match, so it needs no lookup.
+    let read = queuedLength - 1
+    queuedIndices.length = sources.length = denseLength
+    for (
+      let write = denseLength - 1, index = e3 - 1;
+      write >= 0;
+      write--, index--
+    ) {
+      if (read >= 0 && queuedIndices[read] === index) {
+        sources[write] = sources[read--]
+      } else {
+        sources[write] = index + 1
+      }
+      queuedIndices[write] = index
     }
-    indices[j + 1] = index
-    oldIndices[j + 1] = oldIndex
+    queuedLength = denseLength
+
+    // no bounds: every reuse competes for the LIS
+    for (let q = 0; q < queuedLength; q++) {
+      const value = sources[q]
+      if (value !== 0) {
+        if (value < maxSource) moved = true
+        else maxSource = value
+      }
+    }
+  } else {
+    // in-place matches partition the queued indices into segments of
+    // consecutive positions, and bound each segment's eligible old indices.
+    // Because those bounds never overlap between segments, one whole-array
+    // LIS still yields the same answer as running it per segment.
+    let seg = 0
+    while (seg < queuedLength) {
+      let segEnd = seg
+      while (
+        segEnd + 1 < queuedLength &&
+        queuedIndices[segEnd + 1] === queuedIndices[segEnd] + 1
+      ) {
+        segEnd++
+      }
+      // prefix stationaries sit at their own index in both lists; the first
+      // suffix stationary (index e3) sits at old index e2. With no bounding
+      // stationary the bounds are -1 / e2 == oldLength.
+      const lowerBound = queuedIndices[seg] - 1
+      const nextIndex = queuedIndices[segEnd] + 1
+      const upperBound = nextIndex < e3 ? nextIndex : e2
+      for (let q = seg; q <= segEnd; q++) {
+        const value = sources[q]
+        // a mount has value 0, i.e. an old index of -1, which the lower
+        // bound (>= -1) already rejects
+        const oldIndex = value - 1
+        if (oldIndex <= lowerBound || oldIndex >= upperBound) {
+          sources[q] = 0
+        } else {
+          if (value < maxSource) moved = true
+          else maxSource = value
+        }
+      }
+      seg = segEnd + 1
+    }
   }
+
+  // `moved` can only be set by the second non-zero value onwards, so it
+  // already implies there is something to keep
+  return moved ? getSequence(sources) : undefined
 }
 
 function stopBlockScopes(blocks: ForBlock[]): void {

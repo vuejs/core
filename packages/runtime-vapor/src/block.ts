@@ -397,7 +397,12 @@ export function normalizeBlock(block: Block): Node[] {
   return nodes
 }
 
-export function getBlockFirstNode(block: Block): Node {
+/**
+ * First node of a block as it appears in its own container, or `undefined`
+ * when the block has no node there: an empty array of blocks, or a block
+ * whose content lives elsewhere (a teleport target) and has no marker left.
+ */
+export function getBlockFirstNode(block: Block): Node | undefined {
   if (block instanceof Node) {
     return block
   } else if (isArray(block)) {
@@ -405,7 +410,7 @@ export function getBlockFirstNode(block: Block): Node {
       const anchor = getBlockFirstNode(block[i])
       if (anchor) return anchor
     }
-    return undefined!
+    return undefined
   } else if (isVaporComponent(block)) {
     return getBlockFirstNode(getComponentPhysicalBlock(block))
   } else {

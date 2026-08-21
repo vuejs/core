@@ -2354,6 +2354,16 @@ describe('createFor', () => {
       ).toBe(5)
     })
 
+    // a removal can leave an in-place match to the right of the moved row:
+    // the plan has to cover it, or the row is judged already in order
+    test('moving a reused row before a stationary one while removing', async () => {
+      expect(await countMoves([0, 1, 2], [2, 1])).toBe(1)
+    })
+
+    test('keeps a reused run in place when the row after it moves', async () => {
+      expect(await countMoves([0, 1, 2, 3, 4], [3, 4, 2])).toBe(1)
+    })
+
     test('reordering past a row that renders nothing keeps rows anchored', async () => {
       const list = ref([1, 2, 3])
       const { host } = define(() =>

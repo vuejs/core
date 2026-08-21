@@ -25,7 +25,8 @@ export class RenderEffect extends ReactiveEffect {
   i: VaporComponentInstance | null
   // Created lazily on first notify: most render effects are never
   // scheduled individually, so eagerly allocating the job closure at
-  // creation time is pure overhead in list-mount hot paths.
+  // creation time is pure overhead in list-mount hot paths. The constructor
+  // still primes the field to keep every instance on one hidden class.
   job?: SchedulerJob
   updateJob?: SchedulerJob
   render: () => void
