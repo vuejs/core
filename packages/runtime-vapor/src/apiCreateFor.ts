@@ -270,12 +270,8 @@ export const createFor = (
         const e2 = oldLength - endOffset
         const e3 = newLength - endOffset
 
-        // parallel arrays holding blocks that need a mount or a move, in
-        // ascending index order (built packed, so a small change in a large
-        // list only allocates for the actual churn). After the reuse pass
-        // `queuedOldIndex[q]` distinguishes them: the block's old position
-        // for a reuse (its ForBlock is already in `newBlocks`), or -1 for a
-        // fresh mount.
+        // new indices needing a mount or a move, ascending (built packed, so a
+        // small change in a large list only allocates for the actual churn)
         const queuedIndices: number[] = []
         const oldKeyIndexMap = new Map<any, number>()
 
@@ -303,14 +299,19 @@ export const createFor = (
         }
 
         let queuedLength = queuedIndices.length
-        const queuedOldIndex: number[] = new Array(queuedLength)
+        // `getSequence` input, doubling as the old-position record: the
+        // block's old index + 1 (0 stays free as the "skip" marker, and also
+        // marks a fresh mount). The bounds filter below zeroes reuses that may
+        // not stay put; the apply pass tells move from mount by
+        // `newBlocks[index]`, which the reuse pass has already filled in.
+        const sources: number[] = new Array(queuedLength)
         let mountCounter = 0
 
         if (oldKeyIndexMap.size === 0) {
           // pure append/replace: nothing to pair up. Plain loop over fill():
           // the inlined monomorphic store beats the generic builtin on a
           // freshly allocated (holey) array.
-          for (let q = 0; q < queuedLength; q++) queuedOldIndex[q] = -1
+          for (let q = 0; q < queuedLength; q++) sources[q] = 0
           mountCounter = queuedLength
         } else {
           for (let q = queuedLength - 1; q >= 0; q--) {
@@ -321,9 +322,9 @@ export const createFor = (
               oldKeyIndexMap.delete(key)
               const reusedBlock = (newBlocks[index] = oldBlocks[oldIndex])
               updateAt(reusedBlock, source, index)
-              queuedOldIndex[q] = oldIndex
+              sources[q] = oldIndex + 1
             } else {
-              queuedOldIndex[q] = -1
+              sources[q] = 0
               mountCounter++
             }
           }
@@ -364,7 +365,7 @@ export const createFor = (
         //   neighbours. Not minimal in general, but it never walks the
         //   untouched majority.
         let sequence: number[] | undefined
-        let sequenceInput: number[] | undefined
+        let allKept = false
         if (mountCounter !== queuedLength) {
           const span = queuedIndices[queuedLength - 1] - queuedIndices[0] + 1
           if (stationaryIndices && queuedLength * 2 >= span) {
@@ -377,28 +378,28 @@ export const createFor = (
               if (index > firstIndex && index < lastIndex) {
                 queuedIndices.push(index)
                 // a prefix stationary sits at the same index in both lists
-                queuedOldIndex.push(index)
+                sources.push(index + 1)
               }
             }
             if (queuedIndices.length !== queuedLength) {
-              sortQueueByIndex(queuedIndices, queuedOldIndex)
+              sortQueueByIndex(queuedIndices, sources)
               queuedLength = queuedIndices.length
             }
           }
 
-          // `getSequence` input: the old position (+1, so 0 stays free as its
-          // "skip" marker) of every block allowed to stay put, 0 for the rest.
-          sequenceInput = new Array(queuedLength)
           let eligible = 0
+          // if the eligible old positions already ascend, they are all in
+          // relative order and every one of them stays put — no LIS needed
+          let moved = false
+          let maxSource = 0
           if (queuedLength * 2 >= span) {
             // dense: no bounds, every reuse competes for the LIS
             for (let q = 0; q < queuedLength; q++) {
-              const oldIndex = queuedOldIndex[q]
-              if (oldIndex < 0) {
-                sequenceInput[q] = 0
-              } else {
-                sequenceInput[q] = oldIndex + 1
+              const value = sources[q]
+              if (value !== 0) {
                 eligible++
+                if (value < maxSource) moved = true
+                else maxSource = value
               }
             }
           } else {
@@ -423,23 +424,26 @@ export const createFor = (
               const nextIndex = queuedIndices[segEnd] + 1
               const upperBound = nextIndex < e3 ? nextIndex : e2
               for (let q = seg; q <= segEnd; q++) {
-                const oldIndex = queuedOldIndex[q]
+                const value = sources[q]
+                const oldIndex = value - 1
                 if (
                   oldIndex < 0 ||
                   oldIndex <= lowerBound ||
                   oldIndex >= upperBound
                 ) {
-                  sequenceInput[q] = 0
+                  sources[q] = 0
                 } else {
-                  sequenceInput[q] = oldIndex + 1
                   eligible++
+                  if (value < maxSource) moved = true
+                  else maxSource = value
                 }
               }
               seg = segEnd + 1
             }
           }
 
-          if (eligible) sequence = getSequence(sequenceInput)
+          if (eligible && moved) sequence = getSequence(sources)
+          else if (eligible) allKept = true
         }
 
         // apply back-to-front so every block can anchor on the finalized
@@ -453,12 +457,12 @@ export const createFor = (
         let cachedAnchor: Node | undefined
         for (let q = queuedLength - 1; q >= 0; q--) {
           const index = queuedIndices[q]
-          let isKept = false
+          let isKept = allKept && sources[q] !== 0
           if (sequenceEnd >= 0 && sequence![sequenceEnd] === q) {
             sequenceEnd--
             // `getSequence` seeds its result with index 0, so it can report
             // a leading entry that was never selected; skip that marker
-            isKept = sequenceInput![q] !== 0
+            isKept = sources[q] !== 0
           }
 
           // A block that renders nothing has no first node, so look past it
@@ -501,7 +505,7 @@ export const createFor = (
           cachedAnchor = anchorNode
 
           if (isKept) continue
-          if (queuedOldIndex[q] >= 0) {
+          if (newBlocks[index] !== undefined) {
             insertForBlock(newBlocks[index], anchorNode)
           } else {
             mount(source, index, anchorNode)
