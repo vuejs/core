@@ -132,6 +132,30 @@ describe('ssr: directives', () => {
       ).toBe(
         `<select multiple><option value="0" selected></option><option value="1" selected></option></select>`,
       )
+
+      // Set model, same as the Array case above
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: new Set(['0', '1']) }),
+            template: `<select multiple v-model="model"><option value="0"></option><option value="1"></option></select>`,
+          }),
+        ),
+      ).toBe(
+        `<select multiple><option value="0" selected></option><option value="1" selected></option></select>`,
+      )
+
+      // only one of the two options is in the Set
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: new Set(['1']) }),
+            template: `<select multiple v-model="model"><option value="0"></option><option value="1"></option></select>`,
+          }),
+        ),
+      ).toBe(
+        `<select multiple><option value="0"></option><option value="1" selected></option></select>`,
+      )
     })
 
     test('checkbox', async () => {
@@ -166,6 +190,42 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ checked: [] }),
+            template: `<input type="checkbox" value="foo" v-model="checked">`,
+          }),
+        ),
+      ).toBe(`<input type="checkbox" value="foo">`)
+
+      // Set model: only the checkbox whose value is in the Set should be checked
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ checked: new Set(['foo']) }),
+            template: `<input type="checkbox" value="foo" v-model="checked">`,
+          }),
+        ),
+      ).toBe(`<input type="checkbox" value="foo" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ checked: new Set(['apple']) }),
+            template:
+              `<div>` +
+              `<input type="checkbox" value="apple" v-model="checked">` +
+              `<input type="checkbox" value="banana" v-model="checked">` +
+              `</div>`,
+          }),
+        ),
+      ).toBe(
+        `<div><input type="checkbox" value="apple" checked><input type="checkbox" value="banana"></div>`,
+      )
+
+      // an empty Set is still a Set, not falsy like an empty Array vs `[]`
+      // truthiness check - none of the checkboxes should render checked
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ checked: new Set() }),
             template: `<input type="checkbox" value="foo" v-model="checked">`,
           }),
         ),
@@ -232,6 +292,24 @@ describe('ssr: directives', () => {
       expect(
         await renderToString(
           createApp({
+            data: () => ({ type: 'checkbox', model: new Set(['hello']) }),
+            template: `<input :type="type" value="hello" v-model="model">`,
+          }),
+        ),
+      ).toBe(`<input type="checkbox" value="hello" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ type: 'checkbox', model: new Set() }),
+            template: `<input :type="type" value="hello" v-model="model">`,
+          }),
+        ),
+      ).toBe(`<input type="checkbox" value="hello">`)
+
+      expect(
+        await renderToString(
+          createApp({
             data: () => ({ type: 'radio', model: 'hello' }),
             template: `<input :type="type" value="hello" v-model="model">`,
           }),
@@ -260,6 +338,30 @@ describe('ssr: directives', () => {
           }),
         ),
       ).toBe(`<input type="radio" value="hello" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({
+              obj: { type: 'checkbox', value: 'hello' },
+              model: new Set(['hello']),
+            }),
+            template: `<input v-bind="obj" v-model="model">`,
+          }),
+        ),
+      ).toBe(`<input type="checkbox" value="hello" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({
+              obj: { type: 'checkbox', value: 'hello' },
+              model: new Set(),
+            }),
+            template: `<input v-bind="obj" v-model="model">`,
+          }),
+        ),
+      ).toBe(`<input type="checkbox" value="hello">`)
     })
   })
 
