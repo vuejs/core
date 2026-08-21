@@ -1,3 +1,26 @@
+# [3.6.0-rc.5](https://github.com/vuejs/core/compare/v3.6.0-rc.4...v3.6.0-rc.5) (2026-08-21)
+
+### Bug Fixes
+
+* **runtime-vapor:** align attrs fallthrough semantics with vdom ([293ca1c](https://github.com/vuejs/core/commit/293ca1ca3c8f49afcda69356bee5689b1d552488))
+* **runtime-vapor:** branch-scope ownership for fallthrough attr effects ([be7157e](https://github.com/vuejs/core/commit/be7157e7076a26263ec41637b7229ded3e697d6e))
+* **runtime-vapor:** fallthrough attrs onto interop vnode roots ([5073eb5](https://github.com/vuejs/core/commit/5073eb5bcb9b5ea6b3371d63413536d5bc2bc26c))
+* **runtime-vapor:** flush pending transition cbs on the resolved element ([f2fa54d](https://github.com/vuejs/core/commit/f2fa54df3e29511111be92263e154442e4f89293))
+* **runtime-vapor:** full fallthrough for functional components with declared props ([ef83790](https://github.com/vuejs/core/commit/ef8379038774e8c59afc6df1d647d848f97dec60))
+* **runtime-vapor:** preserve nested vdom slot content ([#15304](https://github.com/vuejs/core/issues/15304)) ([1a2de08](https://github.com/vuejs/core/commit/1a2de08c0b3ebfebe2fa07ed2b545df17073fea4)), closes [#15303](https://github.com/vuejs/core/issues/15303)
+* **runtime-vapor:** re-resolve transition hooks on prop change ([d3fde91](https://github.com/vuejs/core/commit/d3fde917f036b9473d2441b8862c571d396784da))
+* **runtime-vapor:** reflow the TransitionGroup's own document for moves ([36dd186](https://github.com/vuejs/core/commit/36dd18616f664f88a262fb20b609a6071dbf3c20))
+* **runtime-vapor:** resolve element namespace at interop boundaries ([#15321](https://github.com/vuejs/core/issues/15321)) ([e86e35b](https://github.com/vuejs/core/commit/e86e35b1232de6f554b54d1ccf6118362ace94c3))
+* **runtime-vapor:** restore rendering suspense boundary in fragment ctx ([5c2805d](https://github.com/vuejs/core/commit/5c2805dbaf2ece13736ae3fbe2bac849c814c304))
+* **runtime-vapor:** stop fallthrough resolution at slot outlets ([10f666e](https://github.com/vuejs/core/commit/10f666e67c39cc8781acb647b4f58302ff173daa))
+
+### Performance Improvements
+
+* **runtime-vapor:** collect-only child snapshot in TransitionGroup beforeUpdate ([744d64d](https://github.com/vuejs/core/commit/744d64dbac14c806003970a1214b69f84451eeae))
+* **runtime-vapor:** skip TransitionGroup bookkeeping on ForBlock wrappers ([2c914ef](https://github.com/vuejs/core/commit/2c914ef8a2b9cda8af0a029fac2083be321d268d))
+* **runtime-vapor:** trim TransitionGroup per-child props tracking ([c526d45](https://github.com/vuejs/core/commit/c526d45227770a533105bf95045f13b5d83c9cfb))
+* **runtime-vapor:** trim v-for hot-path allocations ([#15329](https://github.com/vuejs/core/issues/15329)) ([8d83bb2](https://github.com/vuejs/core/commit/8d83bb2df065260e0c532489a8e7c0cac4a89728))
+
 # [3.6.0-rc.4](https://github.com/vuejs/core/compare/v3.6.0-rc.3...v3.6.0-rc.4) (2026-08-14)
 
 ### Bug Fixes
