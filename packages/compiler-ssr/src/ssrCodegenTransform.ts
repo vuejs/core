@@ -4,6 +4,7 @@ import {
   type CompilerError,
   type CompilerOptions,
   ElementTypes,
+  type ExpressionNode,
   type IfStatement,
   type JSChildNode,
   NodeTypes,
@@ -84,7 +85,7 @@ export interface SSRTransformContext {
   onError: (error: CompilerError) => void
   helper<T extends symbol>(name: T): T
   pushStringPart(part: TemplateLiteral['elements'][0]): void
-  pushStatement(statement: IfStatement | CallExpression): void
+  pushStatement(statement: IfStatement | CallExpression | ExpressionNode): void
 }
 
 function createSSRTransformContext(
