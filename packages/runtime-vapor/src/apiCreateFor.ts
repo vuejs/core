@@ -279,11 +279,15 @@ export const createFor = (
         const queuedIndices: number[] = []
         const oldKeyIndexMap = new Map<any, number>()
 
+        // in-place matches, remembered so a dense reorder can pull them into
+        // the move plan (they sit at the same index in both lists)
+        let stationaryIndices: number[] | undefined
         for (let i = 0; i < e1; i++) {
           const currentKey = newKeys![i]
           const oldBlock = oldBlocks[i]
           if (oldBlock.key === currentKey) {
             updateAt((newBlocks[i] = oldBlock), source, i)
+            ;(stationaryIndices ||= []).push(i)
           } else {
             queuedIndices.push(i)
             oldKeyIndexMap.set(oldBlock.key, i)
@@ -298,7 +302,7 @@ export const createFor = (
           queuedIndices.push(i)
         }
 
-        const queuedLength = queuedIndices.length
+        let queuedLength = queuedIndices.length
         const queuedOldIndex: number[] = new Array(queuedLength)
         let mountCounter = 0
 
@@ -343,60 +347,96 @@ export const createFor = (
           parent!.appendChild(parentAnchor)
         }
 
-        // Decide which reused blocks may stay in place. In-place matched
-        // (stationary) blocks partition the queued indices into segments of
-        // consecutive positions; within a segment, the longest increasing
-        // subsequence of old indices — bounded by the old positions of the
-        // stationary neighbors — is already in relative order, so only the
-        // blocks outside it need a DOM move.
+        // Decide which reused blocks may stay in place: the longest
+        // increasing subsequence of old indices is already in relative order,
+        // so only the blocks outside it need a DOM move.
         //
-        // This is a heuristic, not a minimum: pinning every stationary block
-        // is what keeps the cost O(queued) rather than O(length), so a
-        // near-untouched list (a two-row swap, a single removal) does almost
-        // no work here — but a coincidental in-place match inside an
-        // otherwise heavily shuffled range splits a segment and can cost
-        // more moves than vdom's unpinned whole-range LIS.
+        // Two planners, picked by how dense the change is across the range it
+        // touches:
+        //
+        // - dense (the changed indices cover at least half their own span):
+        //   pull the in-place matches inside that span into the plan too and
+        //   run an unbounded LIS, which is move-count minimal like vdom's.
+        //   `span <= 2 * queuedLength` here, so this stays O(queued).
+        // - sparse (a couple of rows moved across an otherwise untouched
+        //   list, e.g. a far swap): keep the in-place matches pinned, which
+        //   costs nothing but bounds each segment's LIS by its stationary
+        //   neighbours. Not minimal in general, but it never walks the
+        //   untouched majority.
         let sequence: number[] | undefined
         let sequenceInput: number[] | undefined
         if (mountCounter !== queuedLength) {
+          const span = queuedIndices[queuedLength - 1] - queuedIndices[0] + 1
+          if (stationaryIndices && queuedLength * 2 >= span) {
+            // dense: merge the stationaries inside the span into the plan,
+            // keeping both parallel arrays in ascending index order
+            const firstIndex = queuedIndices[0]
+            const lastIndex = queuedIndices[queuedLength - 1]
+            for (let i = 0; i < stationaryIndices.length; i++) {
+              const index = stationaryIndices[i]
+              if (index > firstIndex && index < lastIndex) {
+                queuedIndices.push(index)
+                // a prefix stationary sits at the same index in both lists
+                queuedOldIndex.push(index)
+              }
+            }
+            if (queuedIndices.length !== queuedLength) {
+              sortQueueByIndex(queuedIndices, queuedOldIndex)
+              queuedLength = queuedIndices.length
+            }
+          }
+
           // `getSequence` input: the old position (+1, so 0 stays free as its
-          // "skip" marker) of every block that is allowed to stay put, and 0
-          // for the rest. Because a segment's eligible old indices all lie
-          // between its two bounding stationaries, and those bounds never
-          // overlap between segments, every value in one segment is smaller
-          // than every value in the next — so one whole-array LIS yields the
-          // same answer as running it per segment.
+          // "skip" marker) of every block allowed to stay put, 0 for the rest.
           sequenceInput = new Array(queuedLength)
           let eligible = 0
-          let seg = 0
-          while (seg < queuedLength) {
-            let segEnd = seg
-            while (
-              segEnd + 1 < queuedLength &&
-              queuedIndices[segEnd + 1] === queuedIndices[segEnd] + 1
-            ) {
-              segEnd++
-            }
-            // prefix stationaries sit at their own index in both lists; the
-            // first suffix stationary (index e3) sits at old index e2. With
-            // no bounding stationary the bounds are -1 / e2 == oldLength.
-            const lowerBound = queuedIndices[seg] - 1
-            const nextIndex = queuedIndices[segEnd] + 1
-            const upperBound = nextIndex < e3 ? nextIndex : e2
-            for (let q = seg; q <= segEnd; q++) {
+          if (queuedLength * 2 >= span) {
+            // dense: no bounds, every reuse competes for the LIS
+            for (let q = 0; q < queuedLength; q++) {
               const oldIndex = queuedOldIndex[q]
-              if (
-                oldIndex < 0 ||
-                oldIndex <= lowerBound ||
-                oldIndex >= upperBound
-              ) {
+              if (oldIndex < 0) {
                 sequenceInput[q] = 0
               } else {
                 sequenceInput[q] = oldIndex + 1
                 eligible++
               }
             }
-            seg = segEnd + 1
+          } else {
+            // sparse: in-place matches partition the queued indices into
+            // segments of consecutive positions, and bound each segment's
+            // eligible old indices. Because those bounds never overlap
+            // between segments, one whole-array LIS still yields the same
+            // answer as running it per segment.
+            let seg = 0
+            while (seg < queuedLength) {
+              let segEnd = seg
+              while (
+                segEnd + 1 < queuedLength &&
+                queuedIndices[segEnd + 1] === queuedIndices[segEnd] + 1
+              ) {
+                segEnd++
+              }
+              // prefix stationaries sit at their own index in both lists; the
+              // first suffix stationary (index e3) sits at old index e2. With
+              // no bounding stationary the bounds are -1 / e2 == oldLength.
+              const lowerBound = queuedIndices[seg] - 1
+              const nextIndex = queuedIndices[segEnd] + 1
+              const upperBound = nextIndex < e3 ? nextIndex : e2
+              for (let q = seg; q <= segEnd; q++) {
+                const oldIndex = queuedOldIndex[q]
+                if (
+                  oldIndex < 0 ||
+                  oldIndex <= lowerBound ||
+                  oldIndex >= upperBound
+                ) {
+                  sequenceInput[q] = 0
+                } else {
+                  sequenceInput[q] = oldIndex + 1
+                  eligible++
+                }
+              }
+              seg = segEnd + 1
+            }
           }
 
           if (eligible) sequence = getSequence(sequenceInput)
@@ -426,7 +466,10 @@ export const createFor = (
           let anchorNode: Node | undefined
           for (let i = index + 1; i < scanFrom; i++) {
             const node = getBlockFirstNode(newBlocks[i].nodes)
-            if (node && node.parentNode) {
+            // must be attached to *this* list's parent: a node that is still
+            // connected elsewhere (teleport target, suspense pending
+            // container, keep-alive storage) would make insertBefore throw
+            if (node && node.parentNode === parent) {
               anchorNode = node
               break
             }
@@ -448,7 +491,7 @@ export const createFor = (
                   const oldBlock = oldBlocks[i]
                   if (!oldKeyIndexMap.has(oldBlock.key)) break
                   const first = getBlockFirstNode(oldBlock.nodes)
-                  if (first && first.parentNode) cachedAnchor = first
+                  if (first && first.parentNode === parent) cachedAnchor = first
                 }
               }
             }
@@ -828,6 +871,24 @@ export function createSelector(source: () => any): ForSelector {
     generation++
   }
   return register
+}
+
+// Restores ascending index order after the dense planner appended the
+// stationaries; both arrays move together. The appended tail is itself sorted
+// and usually short, so insertion sort runs near-linearly here.
+function sortQueueByIndex(indices: number[], oldIndices: number[]): void {
+  for (let i = 1; i < indices.length; i++) {
+    const index = indices[i]
+    const oldIndex = oldIndices[i]
+    let j = i - 1
+    while (j >= 0 && indices[j] > index) {
+      indices[j + 1] = indices[j]
+      oldIndices[j + 1] = oldIndices[j]
+      j--
+    }
+    indices[j + 1] = index
+    oldIndices[j + 1] = oldIndex
+  }
 }
 
 function stopBlockScopes(blocks: ForBlock[]): void {

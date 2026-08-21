@@ -2278,7 +2278,7 @@ describe('createFor', () => {
     })
   })
 
-  describe('minimal DOM moves', () => {
+  describe('no cascading DOM moves', () => {
     // Reordering must only move the blocks that are out of relative order
     // (LIS-style), not every block between the old and new position.
     async function countMoves(from: number[], to: number[]) {
@@ -2341,6 +2341,17 @@ describe('createFor', () => {
       const to = range(50)
       ;[to[1], to[48]] = [to[48], to[1]]
       expect(await countMoves(range(50), to)).toBe(2)
+    })
+
+    // reviewer's counterexample: a coincidental in-place match in the middle
+    // of a shuffled range used to split the plan and cost ~2x the moves
+    test('a stationary row in the middle does not cascade moves', async () => {
+      expect(
+        await countMoves(
+          [0, 1, 2, 3, 4, 5, 6, 7, 8],
+          [5, 6, 7, 8, 4, 0, 1, 2, 3],
+        ),
+      ).toBe(5)
     })
 
     test('reordering past a row that renders nothing keeps rows anchored', async () => {
