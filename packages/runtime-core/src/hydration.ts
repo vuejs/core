@@ -11,7 +11,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance, ComponentOptions } from './component'
+import type { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -309,10 +309,12 @@ export function createHydrationFunctions(
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
-          if (
-            isAsyncWrapper(vnode) &&
-            !(vnode.type as ComponentOptions).__asyncResolved
-          ) {
+          //
+          // This covers two cases, both of which leave subTree unset:
+          // - the component has not resolved yet
+          // - the component has resolved, but uses a lazy hydration strategy
+          //   that has not fired yet, so hydrating its subtree was deferred
+          if (isAsyncWrapper(vnode) && !vnode.component!.subTree) {
             let subTree
             if (isFragmentStart) {
               subTree = createVNode(Fragment)
