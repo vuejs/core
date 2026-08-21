@@ -3,6 +3,7 @@
  */
 
 import {
+  BaseTransition,
   type ComponentOptions,
   Fragment,
   KeepAlive,
@@ -3272,5 +3273,144 @@ describe('Suspense', () => {
       await nextTick()
       expect(updateSpy).not.toHaveBeenCalled()
     })
+  })
+
+  // #12435
+  test('appear hooks are called for a Transition nested under an element', async () => {
+    const Async = defineAsyncComponent({
+      render: () => h('div', 'async'),
+    })
+    const onBeforeAppear = vi.fn()
+    const onAppear = vi.fn((_: unknown, done: () => void) => done())
+    const onEnter = vi.fn((_: unknown, done: () => void) => done())
+
+    const Comp = {
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () =>
+            h('div', [
+              h(
+                BaseTransition,
+                { appear: true, onBeforeAppear, onAppear, onEnter },
+                () => h(Async),
+              ),
+            ]),
+          fallback: () => h('div', 'fallback'),
+        }),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<div><div>async</div></div>`)
+    expect(onBeforeAppear).toHaveBeenCalledOnce()
+    expect(onAppear).toHaveBeenCalledOnce()
+    expect(onEnter).not.toHaveBeenCalled()
+  })
+
+  test.each([false, true])(
+    'uses the latest nested Transition hooks after a pending update (persisted: %s)',
+    async persistedAfterUpdate => {
+      let resolveAsync!: () => void
+      const Async = {
+        setup: () => {
+          const dependency = new Promise<() => ReturnType<typeof h>>(
+            resolve => {
+              resolveAsync = () => resolve(() => h('div', 'async'))
+            },
+          )
+          deps.push(dependency.then(() => Promise.resolve()))
+          return dependency
+        },
+      }
+      const text = ref('one')
+      const persisted = ref(false)
+      const onBeforeAppear = vi.fn()
+      const onAppear = vi.fn((_: unknown, done: () => void) => done())
+      const onEnter = vi.fn((_: unknown, done: () => void) => done())
+
+      const Comp = {
+        setup: () => () =>
+          h(Suspense, null, {
+            default: () =>
+              h('div', [
+                h(
+                  BaseTransition,
+                  {
+                    appear: true,
+                    persisted: persisted.value,
+                    onBeforeAppear,
+                    onAppear,
+                    onEnter,
+                  },
+                  () => h('div', text.value),
+                ),
+                h(Async),
+              ]),
+            fallback: () => h('div', 'fallback'),
+          }),
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+      text.value = 'two'
+      persisted.value = persistedAfterUpdate
+      await nextTick()
+      resolveAsync()
+      await Promise.all(deps)
+      await nextTick()
+      await nextTick()
+
+      expect(serializeInner(root)).toBe(
+        `<div><div>two</div><div>async</div></div>`,
+      )
+      expect(onBeforeAppear).toHaveBeenCalledTimes(persistedAfterUpdate ? 0 : 1)
+      expect(onAppear).toHaveBeenCalledTimes(persistedAfterUpdate ? 0 : 1)
+      expect(onEnter).not.toHaveBeenCalled()
+    },
+  )
+
+  test('does not duplicate appear hooks under a Fragment root', async () => {
+    const Async = defineAsyncComponent({
+      render: () => h('div', 'async'),
+    })
+    const onBeforeAppear = vi.fn()
+    const onAppear = vi.fn((_: unknown, done: () => void) => done())
+    const onEnter = vi.fn((_: unknown, done: () => void) => done())
+
+    const Comp = {
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () =>
+            h(Fragment, [
+              h(
+                BaseTransition,
+                { appear: true, onBeforeAppear, onAppear, onEnter },
+                () => h('div', 'sync'),
+              ),
+              h(Async),
+            ]),
+          fallback: () => h('div', 'fallback'),
+        }),
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    await nextTick()
+
+    expect(onBeforeAppear).toHaveBeenCalledOnce()
+    expect(onAppear).toHaveBeenCalledOnce()
+    expect(onEnter).not.toHaveBeenCalled()
   })
 })
