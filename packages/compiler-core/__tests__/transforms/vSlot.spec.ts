@@ -759,6 +759,63 @@ describe('compiler: transform component slots', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  // #14425
+  test('conditional slot between static slots preserves template order', () => {
+    const { slots } = parseWithSlots(
+      `<Comp>
+        <template #foo>foo</template>
+        <template #baz v-if="ok">baz</template>
+        <template #bar>bar</template>
+      </Comp>`,
+    )
+    expect(slots).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: CREATE_SLOTS,
+      arguments: [
+        createObjectMatcher({
+          foo: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            returns: [{ type: NodeTypes.TEXT, content: `foo` }],
+          },
+          bar: {
+            type: NodeTypes.JS_FUNCTION_EXPRESSION,
+            returns: [{ type: NodeTypes.TEXT, content: `bar` }],
+          },
+          _: `[2 /* DYNAMIC */]`,
+        }),
+        {
+          type: NodeTypes.JS_ARRAY_EXPRESSION,
+          elements: [
+            {
+              type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+              test: { content: `ok` },
+              consequent: createObjectMatcher({
+                name: `baz`,
+                fn: {
+                  type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                  returns: [{ type: NodeTypes.TEXT, content: `baz` }],
+                },
+                key: `0`,
+              }),
+              alternate: {
+                content: `undefined`,
+                isStatic: false,
+              },
+            },
+          ],
+        },
+        {
+          type: NodeTypes.JS_ARRAY_EXPRESSION,
+          elements: [
+            { content: `foo`, isStatic: true },
+            { content: `baz`, isStatic: true },
+            { content: `bar`, isStatic: true },
+          ],
+        },
+      ],
+    })
+  })
+
   test('named slot with v-for w/ prefixIdentifiers: true', () => {
     const { root, slots } = parseWithSlots(
       `<Comp>
