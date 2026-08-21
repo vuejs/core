@@ -521,6 +521,11 @@ export interface ComponentInternalInstance {
   isUnmounted: boolean
   isDeactivated: boolean
   /**
+   * KeepAlive deferred update replay job.
+   * @internal
+   */
+  keepAliveReplayJob: SchedulerJob | null
+  /**
    * @internal
    */
   [LifecycleHooks.BEFORE_CREATE]: LifecycleHook
@@ -684,6 +689,7 @@ export function createComponentInstance(
     isMounted: false,
     isUnmounted: false,
     isDeactivated: false,
+    keepAliveReplayJob: null,
     bc: null,
     c: null,
     bm: null,
