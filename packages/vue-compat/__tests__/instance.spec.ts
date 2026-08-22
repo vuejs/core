@@ -309,6 +309,49 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
   })
 })
 
+describe('RENDER_FUNCTION', () => {
+  test('should not auto invoke scoped slot accessed via $slots in a render function', () => {
+    new Vue({
+      template: `<child v-slot="{ msg }">{{ msg }}</child>`,
+      components: {
+        child: {
+          compatConfig: { MODE: 2 },
+          render() {
+            expect(() => this.$slots.default).not.toThrow()
+            expect(this.$slots.default).toBeTypeOf('function')
+          },
+        },
+      },
+    }).$mount()
+
+    expect(
+      deprecationData[DeprecationTypes.RENDER_FUNCTION].message,
+    ).toHaveBeenWarned()
+  })
+
+  test('should auto invoke non-scoped slot accessed via $slots in a render function', () => {
+    const DEFAULT_SLOT_CONTENTS = 'foo'
+
+    new Vue({
+      template: `<child>${DEFAULT_SLOT_CONTENTS}</child>`,
+      components: {
+        child: {
+          compatConfig: { MODE: 2 },
+          render() {
+            expect(this.$slots.default[0].children).toEqual(
+              DEFAULT_SLOT_CONTENTS,
+            )
+          },
+        },
+      },
+    }).$mount()
+
+    expect(
+      deprecationData[DeprecationTypes.RENDER_FUNCTION].message,
+    ).toHaveBeenWarned()
+  })
+})
+
 test('INSTANCE_ATTR_CLASS_STYLE', () => {
   const vm = new Vue({
     template: `<child class="foo" style="color:red" id="ok" />`,
