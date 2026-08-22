@@ -17,7 +17,7 @@ export function createSSRCompilerError(
 }
 
 export enum SSRErrorCodes {
-  X_SSR_UNSAFE_ATTR_NAME = 65 /* DOMErrorCodes.__EXTEND_POINT__ */,
+  X_SSR_UNSAFE_ATTR_NAME = 66 /* DOMErrorCodes.__EXTEND_POINT__ */,
   X_SSR_NO_TELEPORT_TARGET,
   X_SSR_INVALID_AST_NODE,
 }
