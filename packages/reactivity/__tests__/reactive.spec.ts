@@ -315,6 +315,26 @@ describe('reactivity/reactive', () => {
     expect(reactive(d)).toBe(d)
   })
 
+  test('non-extensible objects should warn and be returned as-is', () => {
+    const sealed = Object.seal({ foo: 1 })
+    expect(reactive(sealed)).toBe(sealed)
+    expect(
+      `Target is not extensible and will not be made reactive: `,
+    ).toHaveBeenWarnedLast()
+
+    const frozen = Object.freeze({ foo: 1 })
+    expect(reactive(frozen)).toBe(frozen)
+    expect(
+      `Target is not extensible and will not be made reactive: `,
+    ).toHaveBeenWarnedLast()
+
+    const nonExtensible = Object.preventExtensions({ foo: 1 })
+    expect(readonly(nonExtensible)).toBe(nonExtensible)
+    expect(
+      `Target is not extensible and will not be made readonly: `,
+    ).toHaveBeenWarnedLast()
+  })
+
   test('markRaw', () => {
     const obj = reactive({
       foo: { a: 1 },
@@ -353,6 +373,9 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.foo)).toBe(false)
     expect(isReactive(obj.bar)).toBe(false)
     expect(isReactive(obj.baz)).toBe(false)
+    expect(
+      `Target is not extensible and will not be made reactive: `,
+    ).toHaveBeenWarned()
   })
 
   test('should not observe objects with __v_skip', () => {

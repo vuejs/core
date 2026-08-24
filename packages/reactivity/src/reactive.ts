@@ -285,7 +285,18 @@ function createReactiveObject(
     return target
   }
   // only specific value types can be observed.
-  if (target[ReactiveFlags.SKIP] || !Object.isExtensible(target)) {
+  if (target[ReactiveFlags.SKIP]) {
+    return target
+  }
+  if (!Object.isExtensible(target)) {
+    if (__DEV__) {
+      warn(
+        `Target is not extensible and will not be made ${
+          isReadonly ? 'readonly' : 'reactive'
+        }: `,
+        target,
+      )
+    }
     return target
   }
   // target already has corresponding Proxy
