@@ -303,14 +303,45 @@ export type AnchorPlan =
       cleanupContainer?: ParentNode
     }
 
-export function resolveDynamicAnchor(
+/*
+ * ## Anchor resolution protocol
+ *
+ * SSR output carries no dedicated anchors for dynamic blocks — only fragment
+ * markers (`<!--[-->` / `<!--]-->`), empty placeholders (`<!---->`) and
+ * teleport markers. Every dynamic fragment must therefore *infer* its anchor
+ * from what the server happened to render, or create one of its own.
+ * `resolveDynamicAnchor` encodes that inference as an ordered rule list;
+ * the first rule that recognises the situation returns the plan.
+ *
+ * 1. `planPendingSlotDecision` — slot content vs fallback is still
+ *    undecided, so claiming anything now could steal the fallback's nodes.
+ *    Defer the whole decision (`pending`).
+ * 2. `planReuseInjectedAnchor` — a native-children fragment finds the anchor
+ *    `createPlainElement` seeded for it still under the cursor: adopt it.
+ * 3. `planEmptyBranch` — the client rendered nothing. Claim a reusable SSR
+ *    comment at the cursor, insert before a structural teleport anchor, or
+ *    trim the unclaimed SSR range the empty branch leaves behind.
+ * 4. `planRestartFromRuntimeComment` — the block is a bare runtime comment
+ *    (an empty branch created earlier in this same pass): reuse it if it is
+ *    still in the DOM, otherwise restart from the cursor and trim.
+ * 5. `planReuseBoundaryClose` — slots and multi-root `v-if` branches sit in
+ *    an SSR `<!--[-->…<!--]-->` range whose close marker is a stable anchor.
+ * 6. `planFromBlockBoundary` — fallback: derive parent/next from the
+ *    hydrated block itself (dynamic component, async component, keyed
+ *    fragment with single-root content).
+ *
+ * Marker discipline: a plan that adopts an SSR node claims it with
+ * `claimAnchor` (it keeps its logical position); a plan that creates a
+ * runtime anchor claims it with `claimUntrackedAnchor` (it holds no
+ * position, traversal skips it). `executeAnchorPlan` owns those side
+ * effects; the rules above are pure queries.
+ */
+
+/** Rule 1: the enclosing slot has not decided content vs fallback yet. */
+function planPendingSlotDecision(
   frag: DynamicFragment,
   isEmpty: boolean,
-): AnchorPlan {
-  const flags = frag.__vf
-  const isNativeChildren = !!frag.nativeChildren
-  const ownsDynamicAnchor = !!(flags & OWNS_ANCHOR)
-
+): AnchorPlan | undefined {
   // A render function can still produce invalid slot content. Keep its anchor
   // pending just like an empty branch so fallback cleanup cannot detach the
   // insertion point before the runtime anchor is created.
@@ -320,87 +351,106 @@ export function resolveDynamicAnchor(
     if (node) {
       const parent = getParentNode(node)
       if (parent) {
-        return {
-          kind: 'pending',
-          parent,
-          slotEnd,
-        }
+        return { kind: 'pending', parent, slotEnd }
       }
     }
   }
+}
 
+/** Rule 2: adopt the anchor createPlainElement injected for native children. */
+function planReuseInjectedAnchor(
+  frag: DynamicFragment,
+): AnchorPlan | undefined {
   // Native-children fragments get a runtime anchor injected by
   // createPlainElement when SSR rendered no default-slot content. Whenever the
   // cursor still points at that injected anchor — the branch stayed empty, or
-  // it revived and hydrated its content ahead of the anchor — adopt it directly
-  // instead of creating a second one.
+  // it revived and hydrated its content ahead of the anchor — adopt it
+  // directly instead of creating a second one.
   if (
-    isNativeChildren &&
+    frag.nativeChildren &&
     isClaimedAnchor(currentHydrationNode) &&
     getParentNode(currentHydrationNode!)
   ) {
     return { kind: 'reuse', node: currentHydrationNode! }
   }
+}
+
+/** Rule 3: the client rendered nothing for this branch. */
+function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
+  const flags = frag.__vf
 
   // Empty fragments claim a current SSR anchor candidate directly. Later
   // fragments that need the same candidate create a fresh anchor after it.
-  if (isEmpty) {
-    if (isReusableAnchorCandidate(currentHydrationNode)) {
-      return reuseOrCreateAfterAnchor(currentHydrationNode)
-    }
-    if (
-      ownsDynamicAnchor &&
-      !isNativeChildren &&
-      currentHydrationNode &&
-      isComment(currentHydrationNode, 'teleport anchor')
-    ) {
-      const parentNode = getParentNode(currentHydrationNode)
-      if (parentNode) {
-        // Target-side teleport anchors are structural. Empty dynamic
-        // fragments insert their own anchor before the target anchor
-        // instead of consuming it as mismatched SSR content.
-        return {
-          kind: 'create',
-          parent: parentNode,
-          next: currentHydrationNode,
-          mark: currentHydrationNode,
-        }
-      }
-    }
-    if (
-      !(flags & SLOT) &&
-      ownsDynamicAnchor &&
-      currentHydrationNode &&
-      !isComment(currentHydrationNode, ']')
-    ) {
-      const parentNode = getParentNode(currentHydrationNode)
-      // Empty branch against non-empty SSR output has no block node to
-      // derive an insertion point from, so use the current hydration range.
-      if (isNativeChildren && parentNode) {
-        return {
-          kind: 'create-cleanup',
-          parent: parentNode,
-          next: null,
-          cleanupStart: currentHydrationNode,
-          cleanupUntil: null,
-          cleanupContainer: parentNode,
-        }
-      }
+  if (isReusableAnchorCandidate(currentHydrationNode)) {
+    return reuseOrCreateAfterAnchor(currentHydrationNode)
+  }
 
-      if (parentNode) {
-        const anchor = nextLogicalSibling(currentHydrationNode)
-        if (isReusableAnchorCandidate(anchor, frag) && getParentNode(anchor)) {
-          return reuseOrCreateAfterAnchor(anchor, true)
-        }
-        return {
-          kind: 'create-cleanup',
-          parent: parentNode,
-          next: anchor,
-          cleanupStart: currentHydrationNode,
-          cleanupUntil: anchor,
-        }
+  if (!(flags & OWNS_ANCHOR)) return
+
+  if (
+    !frag.nativeChildren &&
+    currentHydrationNode &&
+    isComment(currentHydrationNode, 'teleport anchor')
+  ) {
+    const parentNode = getParentNode(currentHydrationNode)
+    if (parentNode) {
+      // Target-side teleport anchors are structural. Empty dynamic
+      // fragments insert their own anchor before the target anchor
+      // instead of consuming it as mismatched SSR content.
+      return {
+        kind: 'create',
+        parent: parentNode,
+        next: currentHydrationNode,
+        mark: currentHydrationNode,
       }
     }
+  }
+
+  if (
+    !(flags & SLOT) &&
+    currentHydrationNode &&
+    !isComment(currentHydrationNode, ']')
+  ) {
+    const parentNode = getParentNode(currentHydrationNode)
+    // Empty branch against non-empty SSR output has no block node to
+    // derive an insertion point from, so use the current hydration range.
+    if (frag.nativeChildren && parentNode) {
+      return {
+        kind: 'create-cleanup',
+        parent: parentNode,
+        next: null,
+        cleanupStart: currentHydrationNode,
+        cleanupUntil: null,
+        cleanupContainer: parentNode,
+      }
+    }
+
+    if (parentNode) {
+      const anchor = nextLogicalSibling(currentHydrationNode)
+      if (isReusableAnchorCandidate(anchor, frag) && getParentNode(anchor)) {
+        return reuseOrCreateAfterAnchor(anchor, true)
+      }
+      return {
+        kind: 'create-cleanup',
+        parent: parentNode,
+        next: anchor,
+        cleanupStart: currentHydrationNode,
+        cleanupUntil: anchor,
+      }
+    }
+  }
+}
+
+/** Rule 4: the block is a bare runtime comment from earlier in this pass. */
+function planRestartFromRuntimeComment(
+  frag: DynamicFragment,
+): AnchorPlan | undefined {
+  if (
+    !(frag.__vf & OWNS_ANCHOR) ||
+    isValidBlock(frag.nodes) ||
+    !(frag.nodes instanceof Comment)
+  ) {
+    return
   }
 
   // Reuse an existing SSR comment anchor for empty dynamic-component /
@@ -408,9 +458,6 @@ export function resolveDynamicAnchor(
   // end up creating a detached runtime anchor and lose the parent/sibling
   // position needed for same-hydration branch flips.
   if (
-    ownsDynamicAnchor &&
-    !isValidBlock(frag.nodes) &&
-    frag.nodes instanceof Comment &&
     isReusableAnchorCandidate(frag.nodes, frag) &&
     getParentNode(frag.nodes)
   ) {
@@ -422,13 +469,7 @@ export function resolveDynamicAnchor(
   // derive the insertion point from the current hydration cursor rather
   // than from the detached block node, and let boundary cleanup trim the
   // SSR range before the next logical sibling.
-  if (
-    ownsDynamicAnchor &&
-    !isValidBlock(frag.nodes) &&
-    frag.nodes instanceof Comment &&
-    !getParentNode(frag.nodes) &&
-    currentHydrationNode
-  ) {
+  if (!getParentNode(frag.nodes) && currentHydrationNode) {
     const parentNode = getParentNode(currentHydrationNode)
     const nextNode = nextLogicalSibling(currentHydrationNode)
     if (parentNode) {
@@ -441,16 +482,19 @@ export function resolveDynamicAnchor(
       }
     }
   }
+}
 
+/** Rule 5: slots and multi-root `v-if` reuse their SSR range's close marker. */
+function planReuseBoundaryClose(frag: DynamicFragment): AnchorPlan | undefined {
   // Non-null only for slots, so it doubles as the "is a slot" test below.
-  const slotAnchor = flags & SLOT ? getCurrentSlotEndAnchor() : null
+  const slotAnchor = frag.__vf & SLOT ? getCurrentSlotEndAnchor() : null
 
   // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
   // The close marker is a valid stable anchor candidate: reuse it once, or
   // create a fresh runtime anchor after it when another fragment already did.
   if (
     slotAnchor ||
-    (!!(flags & IF) && isArray(frag.nodes) && frag.nodes.length > 1)
+    (!!(frag.__vf & IF) && isArray(frag.nodes) && frag.nodes.length > 1)
   ) {
     const anchor = locateHydrationBoundaryClose(
       slotAnchor || currentHydrationNode!,
@@ -464,11 +508,27 @@ export function resolveDynamicAnchor(
       )
     }
   }
+}
 
-  // Otherwise, create a new anchor.
-  // This covers: dynamic-component, async component, keyed fragment.
+/** Rule 6: derive the anchor position from the hydrated block itself. */
+function planFromBlockBoundary(frag: DynamicFragment): AnchorPlan {
+  // Covers: dynamic component, async component, keyed fragment.
   const node = findBlockBoundary(frag.nodes)
   return { kind: 'create', parent: node.parentNode!, next: node.nextNode }
+}
+
+export function resolveDynamicAnchor(
+  frag: DynamicFragment,
+  isEmpty: boolean,
+): AnchorPlan {
+  return (
+    planPendingSlotDecision(frag, isEmpty) ||
+    planReuseInjectedAnchor(frag) ||
+    (isEmpty ? planEmptyBranch(frag) : undefined) ||
+    planRestartFromRuntimeComment(frag) ||
+    planReuseBoundaryClose(frag) ||
+    planFromBlockBoundary(frag)
+  )
 }
 
 export function executeAnchorPlan(

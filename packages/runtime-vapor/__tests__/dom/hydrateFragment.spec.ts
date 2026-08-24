@@ -355,6 +355,39 @@ describe('resolveDynamicAnchor', () => {
     expect(create.resetNodes).toBe(true)
   })
 
+  test('native-children fragment adopts its injected seed anchor', () => {
+    const host = document.createElement('div')
+    const seed = claimAnchor(document.createTextNode(''))
+    host.append(seed)
+
+    const frag = new DynamicFragment(DYNAMIC | OWNS_ANCHOR, '', false, false)
+    frag.nativeChildren = true
+    const plan = resolveWithCursor(seed, () => resolveDynamicAnchor(frag, true))
+
+    const reuse = expectKind(plan, 'reuse')
+    expect(reuse.node).toBe(seed)
+  })
+
+  test('empty native-children fragment trims the whole container tail', () => {
+    const host = document.createElement('div')
+    const first = document.createElement('span')
+    const second = document.createElement('b')
+    host.append(first, second)
+
+    const frag = new DynamicFragment(DYNAMIC | OWNS_ANCHOR, '', false, false)
+    frag.nativeChildren = true
+    const plan = resolveWithCursor(first, () =>
+      resolveDynamicAnchor(frag, true),
+    )
+
+    const create = expectKind(plan, 'create-cleanup')
+    expect(create.parent).toBe(host)
+    expect(create.next).toBeNull()
+    expect(create.cleanupStart).toBe(first)
+    expect(create.cleanupUntil).toBeNull()
+    expect(create.cleanupContainer).toBe(host)
+  })
+
   test('keyed fragment creates from its block boundary', () => {
     const host = document.createElement('div')
     const el = document.createElement('span')
