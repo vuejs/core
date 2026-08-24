@@ -21,6 +21,7 @@ import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
   ExtractPropTypes,
+  ExtractPublicPropTypes,
 } from './componentProps'
 import type {
   EmitsOptions,
@@ -139,6 +140,10 @@ export type DefineSetupFnComponent<
 type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
   Readonly<EmitsToProps<Emits>>
 
+type PublicRuntimeProps<O extends ComponentObjectPropsOptions> = {
+  [K in keyof ExtractPublicPropTypes<O>]: ExtractPublicPropTypes<O>[K]
+}
+
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
 // options (provided as the argument). The returned value has artificial types
@@ -162,6 +167,25 @@ export function defineComponent<
     slots?: S
   },
 ): DefineSetupFnComponent<Props, E, S>
+// function syntax + object runtime props, unannotated setup:
+// infer public/setup props from ExtractPublicPropTypes (#13964)
+export function defineComponent<
+  RuntimePropsOptions extends ComponentObjectPropsOptions,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  S extends SlotsType = {},
+>(
+  setup: (
+    props: PublicRuntimeProps<RuntimePropsOptions>,
+    ctx: SetupContext<E, S>,
+  ) => RenderFunction | Promise<RenderFunction>,
+  options: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+    props: RuntimePropsOptions
+    emits?: E | EE[]
+    slots?: S
+  },
+): DefineSetupFnComponent<PublicRuntimeProps<RuntimePropsOptions>, E, S>
+// function syntax + object runtime props, annotated setup
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},

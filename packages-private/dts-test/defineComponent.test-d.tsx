@@ -1544,6 +1544,32 @@ describe('function syntax w/ runtime props', () => {
   // @ts-expect-error bar doesn't exist
   expectType<JSX.Element>(<Comp3 msg="1" bar="2" />)
 
+  // #13964 function syntax: optional runtime props must stay optional
+  const CompOptional = defineComponent(
+    props => {
+      expectType<string | undefined>(props.p1)
+      expectType<number | undefined>(props.p2)
+      expectType<boolean | undefined>(props.p3)
+      expectType<string>(props.p4)
+      return () => {}
+    },
+    {
+      props: {
+        p1: String,
+        p2: { type: Number },
+        p3: { type: Boolean, required: false },
+        p4: { type: String, required: true },
+      },
+    },
+  )
+
+  expectType<JSX.Element>(<CompOptional p4="ok" />)
+  expectType<JSX.Element>(<CompOptional p1="a" p2={1} p3={false} p4="ok" />)
+  // @ts-expect-error p4 is required
+  expectType<JSX.Element>(<CompOptional />)
+  // @ts-expect-error p4 type is incorrect
+  expectType<JSX.Element>(<CompOptional p4={1} />)
+
   // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {
@@ -1554,13 +1580,13 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error prop type mismatch
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
     {
       props: {
-        // @ts-expect-error prop type mismatch
         msg: Number,
       },
     },
