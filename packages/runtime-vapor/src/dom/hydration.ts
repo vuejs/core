@@ -289,7 +289,7 @@ export function advanceHydrationNode(node: Node): void {
 export type HydrationCursor = {
   start: Node | null
   resume: Node | null | undefined
-  /** dev-only: set once the cursor is handed back, to catch double exits */
+  /** dev-only: set once handed back, so a second exit can be caught */
   exited?: boolean
 }
 
@@ -319,23 +319,24 @@ export function captureHydrationCursor(): HydrationCursor {
 }
 
 export function exitHydrationCursor(cursor: HydrationCursor | null): void {
-  if (cursor) {
-    if (__DEV__) {
-      if (cursor.exited) {
-        warn(
-          `Hydration cursor was exited twice. The second restore rewinds the ` +
-            `cursor over nodes a sibling has already claimed. ` +
-            `This is likely a Vue internal bug.`,
-        )
-      } else {
-        // count each cursor once, or a double exit would mask a leak
-        cursor.exited = true
-        liveCursors--
-      }
+  if (!cursor) return
+  if (__DEV__) {
+    if (cursor.exited) {
+      // Restoring twice rewinds the cursor over nodes a sibling has already
+      // claimed. Only a Vue-internal bug gets here, and the warning turns it
+      // into a test failure, so guarding dev alone is enough — prod carries
+      // neither the flag nor the branch.
+      warn(
+        `Hydration cursor was exited twice. This is likely a Vue internal bug.`,
+      )
+      return
     }
-    if (cursor.resume !== undefined) {
-      setCurrentHydrationNode(cursor.resume)
-    }
+    // count each cursor once, or a double exit would mask a leak
+    cursor.exited = true
+    liveCursors--
+  }
+  if (cursor.resume !== undefined) {
+    setCurrentHydrationNode(cursor.resume)
   }
 }
 
