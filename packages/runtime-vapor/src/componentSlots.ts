@@ -39,7 +39,7 @@ import {
   finishBlockCreation,
   isInteropFragment,
 } from './fragment'
-import { OWNS_ANCHOR, SLOT_FRAGMENT } from './fragmentFlags'
+import { SLOT_FRAGMENT } from './fragmentFlags'
 import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
@@ -345,7 +345,7 @@ export function createSlot(
       // Fast path: DynamicFragment is enough, but hydration still enters the
       // slot boundary so it can own the SSR close marker.
       dynamicFragment = new DynamicFragment(
-        SLOT_FRAGMENT | OWNS_ANCHOR,
+        SLOT_FRAGMENT,
         __DEV__ ? 'slot' : undefined,
         false,
         false,

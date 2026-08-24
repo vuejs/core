@@ -7,10 +7,10 @@ export const TELEPORT: number = 1 << 5
 export const VDOM: number = 1 << 6
 export const SLOT_OUTLET: number = 1 << 7
 /**
- * The fragment manages its own dynamic anchor instead of deriving one from an
- * SSR structural marker. Set by every dynamic fragment kind that can hydrate;
- * `resolveDynamicAnchor` uses it to decide whether an empty branch may claim or
- * create an anchor of its own.
+ * The fragment manages its own dynamic anchor. A class invariant of
+ * `DynamicFragment` — its constructor sets `DYNAMIC | OWNS_ANCHOR`
+ * unconditionally, so call sites pass subtype bits only and the runtime no
+ * longer branches on this bit.
  */
 export const OWNS_ANCHOR: number = 1 << 8
 /** `v-if` fragment: a multi-root branch reuses the SSR `<!--]-->` close. */

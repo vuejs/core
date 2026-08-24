@@ -14,7 +14,7 @@ import {
 } from './insertionState'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment, finishBlockCreation } from './fragment'
-import { DYNAMIC, IF, OWNS_ANCHOR } from './fragmentFlags'
+import { IF } from './fragmentFlags'
 import { createComment, createTextNode } from './dom/node'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 
@@ -57,7 +57,7 @@ export function createIf(
     const keyBase = keyed ? (index - 1) * 2 : 0
     const trackSlotBoundary = !!(flags & VaporIfFlags.SLOT_ROOT)
     const dynamicFragment = new DynamicFragment(
-      DYNAMIC | OWNS_ANCHOR | IF,
+      IF,
       __DEV__ ? 'if' : undefined,
       keyed,
       false,

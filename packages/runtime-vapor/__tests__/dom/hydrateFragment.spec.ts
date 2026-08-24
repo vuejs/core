@@ -40,6 +40,20 @@ function expectKind<K extends AnchorPlan['kind']>(
   return plan as Extract<AnchorPlan, { kind: K }>
 }
 
+describe('DynamicFragment flags', () => {
+  test('constructor holds the DYNAMIC | OWNS_ANCHOR invariant', () => {
+    expect(
+      new DynamicFragment(0, undefined, false, false).__vf & DYNAMIC,
+    ).toBeTruthy()
+    expect(
+      new DynamicFragment(0, undefined, false, false).__vf & OWNS_ANCHOR,
+    ).toBeTruthy()
+    expect(
+      new DynamicFragment(IF, undefined, false, false).__vf & IF,
+    ).toBeTruthy()
+  })
+})
+
 describe('resolveDynamicAnchor', () => {
   test('empty branch reuses SSR placeholder comment', () => {
     const host = document.createElement('div')
@@ -47,10 +61,7 @@ describe('resolveDynamicAnchor', () => {
     host.append(placeholder)
 
     const plan = resolveWithCursor(placeholder, () =>
-      resolveDynamicAnchor(
-        new DynamicFragment(DYNAMIC | OWNS_ANCHOR | IF, 'if', false, false),
-        true,
-      ),
+      resolveDynamicAnchor(new DynamicFragment(IF, 'if', false, false), true),
     )
 
     const reuse = expectKind(plan, 'reuse')
@@ -64,10 +75,7 @@ describe('resolveDynamicAnchor', () => {
     host.append(target)
 
     const plan = resolveWithCursor(target, () =>
-      resolveDynamicAnchor(
-        new DynamicFragment(DYNAMIC | OWNS_ANCHOR | IF, 'if', false, false),
-        true,
-      ),
+      resolveDynamicAnchor(new DynamicFragment(IF, 'if', false, false), true),
     )
 
     const create = expectKind(plan, 'create')
@@ -83,10 +91,7 @@ describe('resolveDynamicAnchor', () => {
     host.append(stale, anchor)
 
     const plan = resolveWithCursor(stale, () =>
-      resolveDynamicAnchor(
-        new DynamicFragment(DYNAMIC | OWNS_ANCHOR | IF, 'if', false, false),
-        true,
-      ),
+      resolveDynamicAnchor(new DynamicFragment(IF, 'if', false, false), true),
     )
 
     const reuse = expectKind(plan, 'reuse')
@@ -101,10 +106,7 @@ describe('resolveDynamicAnchor', () => {
     host.append(stale, footer)
 
     const plan = resolveWithCursor(stale, () =>
-      resolveDynamicAnchor(
-        new DynamicFragment(DYNAMIC | OWNS_ANCHOR | IF, 'if', false, false),
-        true,
-      ),
+      resolveDynamicAnchor(new DynamicFragment(IF, 'if', false, false), true),
     )
 
     const cleanup = expectKind(plan, 'create-cleanup')
@@ -122,12 +124,7 @@ describe('resolveDynamicAnchor', () => {
     host.append(comment)
 
     const plan = resolveWithCursor(comment, () => {
-      const frag = new DynamicFragment(
-        DYNAMIC | OWNS_ANCHOR,
-        'dynamic-component',
-        false,
-        false,
-      )
+      const frag = new DynamicFragment(0, 'dynamic-component', false, false)
       frag.nodes = comment
       return resolveDynamicAnchor(frag, false)
     })
@@ -144,12 +141,7 @@ describe('resolveDynamicAnchor', () => {
     host.append(stale, footer)
 
     const plan = resolveWithCursor(stale, () => {
-      const frag = new DynamicFragment(
-        DYNAMIC | OWNS_ANCHOR | IF,
-        'if',
-        false,
-        false,
-      )
+      const frag = new DynamicFragment(IF, 'if', false, false)
       frag.nodes = document.createComment('')
       return resolveDynamicAnchor(frag, false)
     })
@@ -209,7 +201,7 @@ describe('resolveDynamicAnchor', () => {
         const finish = startPendingSlotContent(start)
         try {
           return resolveDynamicAnchor(
-            new DynamicFragment(DYNAMIC | OWNS_ANCHOR | IF, 'if', false, false),
+            new DynamicFragment(IF, 'if', false, false),
             true,
           )
         } finally {
@@ -233,12 +225,7 @@ describe('resolveDynamicAnchor', () => {
       withHydratingSlotBoundary(() => {
         const finish = startPendingSlotContent(start)
         try {
-          const frag = new DynamicFragment(
-            DYNAMIC | OWNS_ANCHOR,
-            'keyed',
-            false,
-            false,
-          )
+          const frag = new DynamicFragment(0, 'keyed', false, false)
           frag.nodes = document.createComment('')
           return resolveDynamicAnchor(frag, false)
         } finally {
@@ -262,12 +249,7 @@ describe('resolveDynamicAnchor', () => {
         const finish = startPendingSlotContent(anchor)
         try {
           setCurrentHydrationNode(null)
-          const frag = new DynamicFragment(
-            DYNAMIC | OWNS_ANCHOR,
-            'keyed',
-            false,
-            false,
-          )
+          const frag = new DynamicFragment(0, 'keyed', false, false)
           frag.nodes = anchor
           return resolveDynamicAnchor(frag, false)
         } finally {
@@ -325,10 +307,7 @@ describe('resolveDynamicAnchor', () => {
 
     const plan = resolveWithCursor(start, () =>
       withHydratingSlotBoundary(() =>
-        resolveDynamicAnchor(
-          new DynamicFragment(DYNAMIC | OWNS_ANCHOR | IF, 'if', false, false),
-          true,
-        ),
+        resolveDynamicAnchor(new DynamicFragment(IF, 'if', false, false), true),
       ),
     )
 
@@ -344,12 +323,7 @@ describe('resolveDynamicAnchor', () => {
     host.append(comment, footer)
 
     const plan = resolveWithCursor(comment, () => {
-      const frag = new DynamicFragment(
-        DYNAMIC | OWNS_ANCHOR,
-        'dynamic-component',
-        false,
-        false,
-      )
+      const frag = new DynamicFragment(0, 'dynamic-component', false, false)
       frag.nodes = comment
       return resolveDynamicAnchor(frag, false)
     })
@@ -365,12 +339,7 @@ describe('resolveDynamicAnchor', () => {
     const seed = claimAnchor(document.createTextNode(''))
     host.append(seed)
 
-    const frag = new DynamicFragment(
-      DYNAMIC | OWNS_ANCHOR | NATIVE_CHILDREN,
-      '',
-      false,
-      false,
-    )
+    const frag = new DynamicFragment(NATIVE_CHILDREN, '', false, false)
     const plan = resolveWithCursor(seed, () => resolveDynamicAnchor(frag, true))
 
     const reuse = expectKind(plan, 'reuse')
@@ -383,12 +352,7 @@ describe('resolveDynamicAnchor', () => {
     const second = document.createElement('b')
     host.append(first, second)
 
-    const frag = new DynamicFragment(
-      DYNAMIC | OWNS_ANCHOR | NATIVE_CHILDREN,
-      '',
-      false,
-      false,
-    )
+    const frag = new DynamicFragment(NATIVE_CHILDREN, '', false, false)
     const plan = resolveWithCursor(first, () =>
       resolveDynamicAnchor(frag, true),
     )
@@ -408,12 +372,7 @@ describe('resolveDynamicAnchor', () => {
     host.append(el, footer)
 
     const plan = resolveWithCursor(el, () => {
-      const frag = new DynamicFragment(
-        DYNAMIC | OWNS_ANCHOR,
-        'keyed',
-        false,
-        false,
-      )
+      const frag = new DynamicFragment(0, 'keyed', false, false)
       frag.nodes = el
       return resolveDynamicAnchor(frag, false)
     })

@@ -40,7 +40,6 @@ import {
   type VaporFragment,
   finishBlockCreation,
 } from './fragment'
-import { DYNAMIC, OWNS_ANCHOR } from './fragmentFlags'
 import type { KeepAliveInstance } from './components/KeepAlive'
 import { isInteropEnabled } from './vdomInteropState'
 import { enableKeepAlive } from './keepAlive'
@@ -62,7 +61,7 @@ export function createDynamicComponent(
     : null
 
   const frag = new DynamicFragment(
-    DYNAMIC | OWNS_ANCHOR,
+    0,
     __DEV__ ? 'dynamic-component' : undefined,
     false,
     true,
