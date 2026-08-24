@@ -63,6 +63,56 @@ describe('mismatch handling', () => {
   //   expect(container.innerHTML).toBe('<div><span>foo</span></div>')
   //   expect(`Hydration children mismatch`).toHaveBeenWarned()
   // })
+  test('not enough children: dynamic text child', async () => {
+    const data = ref({ t: 'foo' })
+    const { container } = await mountWithHydration(
+      `<div></div>`,
+      `<div>{{ data.t }}</div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe('<div>foo</div>')
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+
+    data.value.t = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe('<div>bar</div>')
+  })
+
+  test('not enough children: empty dynamic block', async () => {
+    const data = ref({ a: false })
+    const { container } = await mountWithHydration(
+      `<div></div>`,
+      `<div><span v-if="data.a">A</span></div>`,
+      data,
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    data.value.a = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div><span>A</span><!--if--></div>')
+  })
+
+  // Trimming block 1's range leaves the container holding nothing but its
+  // synchronously inserted untracked anchor; block 2 must still locate its
+  // logical unit without crashing, and later updates must land in order.
+  test('sibling dynamic blocks against fewer server children', async () => {
+    const data = ref({ a: false, b: false })
+    const { container } = await mountWithHydration(
+      `<div><span>x</span></div>`,
+      `<div><span v-if="data.a">A</span><span v-if="data.b">B</span></div>`,
+      data,
+    )
+    expect(`Hydration children mismatch`).toHaveBeenWarned()
+
+    data.value.a = true
+    await nextTick()
+    data.value.b = true
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><span>A</span><!--if--><span>B</span><!--if--></div>',
+    )
+  })
+
   test('complete mismatch', async () => {
     const data = ref('span')
     const { container } = await mountWithHydration(
