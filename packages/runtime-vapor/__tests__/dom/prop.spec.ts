@@ -467,7 +467,7 @@ describe('patchProp', () => {
 
       const img = document.createElement('img')
       setProp(img, 'width', 0)
-      expect(img.hasAttribute('width')).toBe(false) // skipped
+      expect(img.getAttribute('width')).toBe('0')
 
       setProp(img, 'width', null)
       expect(img.hasAttribute('width')).toBe(false)
@@ -478,6 +478,20 @@ describe('patchProp', () => {
       expect(img.hasAttribute('width')).toBe(false)
       setProp(img, 'width', 1)
       expect(img.hasAttribute('width')).toBe(true)
+    })
+
+    test('should set prop whose value matches the element default', () => {
+      const input = document.createElement('input')
+      setProp(input, 'type', 'text')
+      expect(input.getAttribute('type')).toBe('text')
+
+      const button = document.createElement('button')
+      setProp(button, 'type', 'submit')
+      expect(button.getAttribute('type')).toBe('submit')
+
+      const form = document.createElement('form')
+      setProp(form, 'method', 'get')
+      expect(form.getAttribute('method')).toBe('get')
     })
 
     test('should warn when set prop error', () => {

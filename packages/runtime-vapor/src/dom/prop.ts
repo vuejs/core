@@ -159,9 +159,10 @@ export function setDOMProp(
   }
 
   const prev = el[key]
-  if (value === prev) {
+  if (value === prev && `$${key}` in el) {
     return
   }
+  el[`$${key}`] = value
 
   let needRemove = false
   if (value === '' || value == null) {
