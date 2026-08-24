@@ -327,9 +327,11 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
             `cursor over nodes a sibling has already claimed. ` +
             `This is likely a Vue internal bug.`,
         )
+      } else {
+        // count each cursor once, or a double exit would mask a leak
+        cursor.exited = true
+        liveCursors--
       }
-      cursor.exited = true
-      liveCursors--
     }
     if (cursor.resume !== undefined) {
       setCurrentHydrationNode(cursor.resume)
