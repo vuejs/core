@@ -71,7 +71,7 @@ const staticMarkup = `<div class="wrap">${range(
 
 const Bare = component(`<li class="row"><span>s</span></li>`)
 const Row = component(`<li class="row"><slot/></li>`)
-const Card = component(`<li class="row"><slot><em>fallback</em></slot></li>`)
+const Card = component(`<li class="row"><slot><span>s</span></slot></li>`)
 
 export const fixtures: HydrationFixture[] = [
   // Static markup: the ceiling for the STATIC template fast path, which skips
@@ -153,12 +153,15 @@ export const fixtures: HydrationFixture[] = [
       () => `<li class="row"><!--[--><span>s</span><!--]--></li>`,
     )}<!--]--></ul>`,
   },
+  // No content is passed, so SSR renders the fallback and the client takes
+  // the fallback-wins path — same DOM as ladder 3, isolating the fallback
+  // resolution cost from the outlet cost.
   {
-    name: 'ladder 4: + slot fallback',
-    comp: component(
-      `<ul><Card v-for="item in items" :key="item"><span>s</span></Card></ul>`,
-      { items, Card },
-    ),
+    name: 'ladder 4: + slot fallback (fallback wins)',
+    comp: component(`<ul><Card v-for="item in items" :key="item" /></ul>`, {
+      items,
+      Card,
+    }),
     html: `<ul><!--[-->${range(
       () => `<li class="row"><!--[--><span>s</span><!--]--></li>`,
     )}<!--]--></ul>`,
