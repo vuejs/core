@@ -1,5 +1,5 @@
 import { bench, describe } from 'vitest'
-import { createVaporSSRApp } from '../../src'
+import { createVaporApp, createVaporSSRApp } from '../../src'
 import { type HydrationFixture, fixtures } from './hydration.fixtures'
 
 /**
@@ -10,6 +10,11 @@ import { type HydrationFixture, fixtures } from './hydration.fixtures'
  * scenario parses once into a prototype container and clones it per iteration.
  * Every scenario ships a `clone only` control measuring that clone + attach +
  * detach with no hydration — subtract it for the hydration cost itself.
+ *
+ * A third `client render` bench mounts the same component into an empty
+ * container with no server markup. Hydration minus client render is the cost
+ * that is actually hydration's to optimise; everything else is the component
+ * tree costing what it costs.
  *
  * Fixtures (and the guarantee that they hydrate cleanly rather than falling
  * into mismatch recovery) live in `hydration.fixtures.ts`.
@@ -55,5 +60,18 @@ for (const fixture of fixtures) {
     )
 
     bench('clone only', () => prepare().remove(), OPTIONS)
+
+    bench(
+      'client render',
+      () => {
+        const container = document.createElement('div')
+        document.body.appendChild(container)
+        const app = createVaporApp(fixture.comp)
+        app.mount(container)
+        app.unmount()
+        container.remove()
+      },
+      OPTIONS,
+    )
   })
 }
