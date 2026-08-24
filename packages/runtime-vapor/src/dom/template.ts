@@ -1,10 +1,12 @@
 import {
+  type AdoptTarget,
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
   hydrateTextNode,
   isComment,
   isHydrating,
+  parseAdoptTarget,
   resolveHydrationTarget,
   validateHydrationTarget,
 } from './hydration'
@@ -30,6 +32,9 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   const root = !!(flags & TemplateFlags.ROOT)
   const isStatic = !!(flags & TemplateFlags.STATIC)
   let node: Node
+  // parsed once on first hydration adoption; every later instance of this
+  // template compares against the cached form instead of re-scanning `html`
+  let adoptTarget: AdoptTarget | undefined
   return (): Node & { $root?: true } => {
     if (isHydrating) {
       // Comment templates may be empty branch anchors. Only real DOM/text
@@ -68,7 +73,13 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
         advanceHydrationNode(adopted)
       } else {
         // do not assign `adopted` to `node`, or CSR clones would duplicate children.
-        adopted = adoptTemplate(currentHydrationNode!, html, false, ns)!
+        adopted = adoptTemplate(
+          currentHydrationNode!,
+          html,
+          false,
+          ns,
+          (adoptTarget ||= parseAdoptTarget(html)),
+        )!
       }
       if (root) (adopted as any).$root = true
       return adopted

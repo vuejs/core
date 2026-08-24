@@ -91,6 +91,7 @@ function performHydration<T>(
   if (!isOptimized) {
     adoptTemplate = adoptTemplateImpl
     locateHydrationNode = locateHydrationNodeImpl
+    parseAdoptTarget = parseAdoptTargetImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$idx = undefined
@@ -156,13 +157,32 @@ export function enterAsyncHydration(node: Node): () => void {
   }
 }
 
+/**
+ * Per-template parse of what a template string expects to adopt, so hot
+ * per-instance adoption compares integers and identities instead of
+ * re-scanning the string. `template()` computes this once per template
+ * factory and passes it back in on every adoption.
+ */
+export interface AdoptTarget {
+  /** expected nodeType: 1 element, 3 text, 8 comment */
+  type: number
+  /** lowercase tag name for elements, null when not applicable */
+  tag: string | null
+  /** uppercase tag name — matches `tagName` for HTML elements directly */
+  tagUpper: string | null
+  /** whitespace-only text template (empty slot text handling) */
+  blank: boolean
+}
+
 export let adoptTemplate: (
   node: Node,
   template: string,
   adoptChildren?: boolean,
   ns?: Namespace,
+  target?: AdoptTarget,
 ) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
+export let parseAdoptTarget: (template: string) => AdoptTarget
 
 const enum AnchorFlags {
   // A node claimed as a fragment's insertion anchor. Mismatch recovery and
@@ -265,11 +285,14 @@ function adoptTemplateImpl(
   template: string,
   adoptChildren = false,
   ns?: Namespace,
+  // callers with dynamic template strings (createPlainElement,
+  // TransitionGroup) omit this and parse per call
+  target: AdoptTarget = parseAdoptTargetImpl(template),
 ): Node | null {
-  if (!(template[0] === '<' && template[1] === '!')) {
+  if (target.type !== 8 /* Comment */) {
     // empty text node in slot
     if (
-      template.trim() === '' &&
+      target.blank &&
       isComment(node, ']') &&
       isComment(node.previousSibling!, '[')
     ) {
@@ -279,7 +302,7 @@ function adoptTemplateImpl(
     node = resolveHydrationTarget(node)
   }
 
-  if (!matchesHydrationTarget(node, template)) {
+  if (!matchesAdoptTarget(node, target)) {
     node = handleMismatch(node, template, adoptChildren, ns)
   }
 
@@ -458,43 +481,53 @@ function handleMismatch(
   return newNode
 }
 
+function parseAdoptTargetImpl(template: string): AdoptTarget {
+  let type: number
+  let tag: string | null = null
+  let tagUpper: string | null = null
+  let blank = false
+  if (template[0] !== '<') {
+    type = 3 // Text
+    blank = template.trim() === ''
+  } else if (template[1] === '!') {
+    type = 8 // Comment
+  } else {
+    type = 1 // Element
+    const match = START_TAG_RE.exec(template)
+    if (match) {
+      tag = match[1].toLowerCase()
+      tagUpper = match[1].toUpperCase()
+    }
+  }
+  return { type, tag, tagUpper, blank }
+}
+
 /**
  * Whether a server-rendered node can be adopted for the given client
  * template: the node type must match the template's expected type, and
  * element tags must match exactly — a prefix check is not enough
  * (e.g. a server `<i>` must not be adopted for a client `<ins>`).
+ * The uppercase identity compare handles HTML elements without allocating;
+ * the lowercase fallback covers case-preserving foreign elements (SVG/MathML).
  */
-function matchesHydrationTarget(node: Node, template: string): boolean {
-  let expectedType: number
-  if (template[0] !== '<') {
-    // text
-    expectedType = 3
-  } else if (template[1] === '!') {
-    // comment
-    expectedType = 8
-  } else {
-    // element
-    expectedType = 1
-  }
-
-  if (node.nodeType !== expectedType) {
+function matchesAdoptTarget(node: Node, target: AdoptTarget): boolean {
+  if (node.nodeType !== target.type) {
     return false
   }
 
-  if (expectedType !== 1) {
+  if (target.type !== 1) {
     return true
   }
 
-  const match = START_TAG_RE.exec(template)
-  const expectedTag = match && match[1]
   return (
-    !expectedTag ||
-    (node as Element).tagName.toLowerCase() === expectedTag.toLowerCase()
+    !target.tag ||
+    (node as Element).tagName === target.tagUpper ||
+    (node as Element).tagName.toLowerCase() === target.tag
   )
 }
 
 export function validateHydrationTarget(node: Node, template: string): void {
-  if (!matchesHydrationTarget(node, template)) {
+  if (!matchesAdoptTarget(node, parseAdoptTargetImpl(template))) {
     warnHydrationNodeMismatch(node, template)
   }
 }
