@@ -29,12 +29,13 @@ import type { VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
   advanceHydrationNode,
+  claimAnchor,
+  claimUntrackedAnchor,
   currentHydrationNode,
   isComment,
   isHydrating,
   locateEndAnchor,
   locateHydrationNode,
-  markHydrationAnchor,
 } from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
@@ -706,7 +707,7 @@ export class SlotFragment
                 ? locateEndAnchor(contentStart)
                 : null
             if (end) {
-              this.anchor = markHydrationAnchor(end)
+              this.anchor = claimAnchor(end)
               advanceHydrationNode(end)
             } else {
               hydrateDynamicFragmentAnchor(this, !isValidBlock(this.nodes))
@@ -723,7 +724,7 @@ export class SlotFragment
               // determines whether this root actually owns the range.
               advanceHydrationNode(end)
             }
-            const anchor = markHydrationAnchor(
+            const anchor = claimUntrackedAnchor(
               __DEV__
                 ? createComment(this.anchorLabel ?? '')
                 : createTextNode(),
@@ -731,7 +732,7 @@ export class SlotFragment
             this.anchor = anchor
             const previous = slotEnd && slotEnd.previousSibling
             if (previous && isComment(previous, ']')) {
-              markHydrationAnchor(previous)
+              claimAnchor(previous)
             }
             const attachContent = () => {
               const candidate = end && end !== slotEnd ? end : null
@@ -744,7 +745,7 @@ export class SlotFragment
               if (!parent) return
 
               if (candidate) {
-                this.anchor = markHydrationAnchor(candidate)
+                this.anchor = claimAnchor(candidate)
               } else {
                 parent.insertBefore(anchor, insertionAnchor)
               }
@@ -756,7 +757,7 @@ export class SlotFragment
             })
             if (!queued) {
               if (end && end !== slotEnd) {
-                markHydrationAnchor(end)
+                claimAnchor(end)
               }
               queuePostFlushCb(attachContent)
             }
@@ -764,7 +765,7 @@ export class SlotFragment
             // Empty forwarded content should not claim the receiver slot's
             // SSR close marker. Queue its runtime anchor before that marker so
             // fallback hydration can finish first and the final DOM matches CSR.
-            const anchor = (this.anchor = markHydrationAnchor(
+            const anchor = (this.anchor = claimUntrackedAnchor(
               __DEV__
                 ? createComment(this.anchorLabel ?? '')
                 : createTextNode(),
@@ -779,7 +780,7 @@ export class SlotFragment
                 // close. This forwarded slot does not own that marker, but
                 // boundary cleanup runs before the queued anchor is inserted,
                 // so mark it now.
-                markHydrationAnchor(previous)
+                claimAnchor(previous)
               }
 
               queuePostFlushCb(() => {
@@ -861,14 +862,18 @@ export function resolveFragmentAnchor(
 }
 
 /**
- * Whether a fragment adopted the captured insertion anchor as its own, which
- * means it rendered in place and the creator must skip its trailing insert.
+ * Whether a fragment adopted the captured insertion anchor — the template
+ * `<!>` placeholder — as its own, which means it rendered in place and the
+ * creator must skip its trailing insert. Unrelated to hydration's
+ * `isClaimedAnchor` / `isUntrackedAnchor`, which are about anchor nodes marked
+ * during a hydration pass.
+ *
  * The insertion anchor must be checked non-null: append inserts capture no
  * anchor, and fragments without a client anchor (vdom interop slots, any
  * fragment during hydration) would otherwise compare undefined === undefined
  * and falsely skip their only insertion.
  */
-export function isAdoptedAnchor(
+export function isAdoptedPlaceholder(
   fragmentAnchor: Node | undefined,
   insertionAnchor: Node | undefined,
 ): boolean {

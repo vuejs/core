@@ -95,7 +95,7 @@ function performHydration<T>(
     ;(Comment.prototype as any).$fe = undefined
     ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
-    ;(Node.prototype as any).$vha = undefined
+    ;(Node.prototype as any).$vha = 0
     ;(Node.prototype as any).$rcn = undefined
 
     isOptimized = true
@@ -132,10 +132,6 @@ let asyncHydrationIsEnabled = false
 let asyncHydrationIsHydrating = false
 let asyncHydrationNode: Node | null = null
 
-export function isInAsyncHydration(): boolean {
-  return deferredHydrationBoundaryDepth > 0 || pendingAsyncHydrationResets > 0
-}
-
 export function enterAsyncHydration(node: Node): () => void {
   if (pendingAsyncHydrationResets++ === 0) {
     asyncHydrationIsEnabled = isHydratingEnabled
@@ -168,10 +164,23 @@ export let adoptTemplate: (
 ) => Node | null
 export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
 
+const enum AnchorFlags {
+  // A node claimed as a fragment's insertion anchor. Mismatch recovery and
+  // boundary cleanup must keep it in place instead of trimming it as
+  // unclaimed server content. Says nothing about where the node came from:
+  // most are adopted from server output, but a few are created by the client
+  // to stand in at a position the server left empty (the native-children seed
+  // in `component.ts`, teleport target anchors), and those still count as
+  // server positions for traversal.
+  ANCHOR = 1,
+  // The anchor occupies no SSR logical position, so every traversal primitive
+  // steps over it. This — not being client-created — is what lets an anchor be
+  // inserted the moment it is resolved instead of after the hydration pass.
+  UNTRACKED = 2,
+}
+
 type Anchor = Node & {
-  // Runtime-created or reused hydration anchor that mismatch recovery and
-  // boundary cleanup must keep in place.
-  $vha?: 1
+  $vha?: number
 
   // cached matching fragment end to avoid repeated traversal on nested
   // comment fragments.
@@ -195,7 +204,7 @@ export function setCurrentHydrationNode(node: Node | null): void {
 }
 
 export function advanceHydrationNode(node: Node): void {
-  let next = node.nextSibling
+  let next = skipUntrackedAnchors(node.nextSibling)
   if (next && currentHydrationNode === next) {
     return
   }
@@ -204,7 +213,7 @@ export function advanceHydrationNode(node: Node): void {
     const parent = node.parentNode
     if (!parent) break
     node = parent
-    next = node.nextSibling
+    next = skipUntrackedAnchors(node.nextSibling)
   }
   if (currentHydrationNode !== next) {
     currentHydrationNode = next
@@ -279,11 +288,21 @@ function adoptTemplateImpl(
 }
 
 export function nextLogicalSibling(node: Node): Node | null {
-  return isComment(node, '[')
-    ? locateEndAnchor(node)!.nextSibling
-    : isComment(node, 'teleport start')
-      ? locateEndAnchor(node, 'teleport start', 'teleport end')!.nextSibling
-      : node.nextSibling
+  return skipUntrackedAnchors(
+    isComment(node, '[')
+      ? locateEndAnchor(node)!.nextSibling
+      : isComment(node, 'teleport start')
+        ? locateEndAnchor(node, 'teleport start', 'teleport end')!.nextSibling
+        : node.nextSibling,
+  )
+}
+
+/** Advance past anchors that occupy no SSR logical position. */
+export function skipUntrackedAnchors(node: Node | null): Node | null {
+  while (node !== null && (node as Anchor).$vha! & AnchorFlags.UNTRACKED) {
+    node = node.nextSibling
+  }
+  return node
 }
 
 function locateHydrationNodeImpl(consumeFragmentStart = false) {
@@ -384,7 +403,7 @@ function handleMismatch(
   // Reused hydration anchors are structural boundaries, not replaceable
   // content. Mismatch recovery inserts the new node before the anchor and
   // keeps the anchor in place.
-  const shouldPreserveAnchor = isHydrationAnchor(node)
+  const shouldPreserveAnchor = isClaimedAnchor(node)
   const container = parentNode(node)!
   const next = shouldPreserveAnchor ? node : _next(node)
   if (!shouldPreserveAnchor) {
@@ -587,7 +606,7 @@ export function cleanupHydrationTail(
     let cur: Node | null = node
     let hasRemovableNode = false
     while (cur && cur !== close) {
-      if (!isHydrationAnchor(cur)) {
+      if (!isClaimedAnchor(cur)) {
         hasRemovableNode = true
       }
       cur = nextLogicalSibling(cur)
@@ -616,7 +635,7 @@ export function cleanupHydrationTail(
     (!container || current.parentNode === container)
   ) {
     const next = nextLogicalSibling(current)
-    if (!isHydrationAnchor(current)) {
+    if (!isClaimedAnchor(current)) {
       removeHydrationNode(current, close)
     }
     current = next
@@ -627,13 +646,31 @@ export function cleanupHydrationTail(
   }
 }
 
-export function markHydrationAnchor<T extends Node>(node: T): T {
-  ;(node as Anchor).$vha = 1
+/**
+ * Claim a node as some fragment's insertion anchor. Usually server output
+ * adopted during the pass; use `claimUntrackedAnchor` for nodes the client makes.
+ */
+export function claimAnchor<T extends Node>(node: T): T {
+  ;(node as Anchor).$vha! |= AnchorFlags.ANCHOR
   return node
 }
 
-export function isHydrationAnchor(node: Node | null | undefined): boolean {
-  return !!node && (node as Anchor).$vha === 1
+/**
+ * Claim a node as an anchor that holds no SSR logical position, so hydration
+ * traversal steps over it and inserting one mid-pass cannot shift the
+ * positions the server output defines. See `AnchorFlags.UNTRACKED`.
+ */
+export function claimUntrackedAnchor<T extends Node>(node: T): T {
+  ;(node as Anchor).$vha! |= AnchorFlags.ANCHOR | AnchorFlags.UNTRACKED
+  return node
+}
+
+/**
+ * Whether some fragment owns this node as its insertion anchor, whatever its
+ * origin. Cleanup and mismatch recovery must leave it in place.
+ */
+export function isClaimedAnchor(node: Node | null | undefined): boolean {
+  return !!node && !!((node as Anchor).$vha! & AnchorFlags.ANCHOR)
 }
 
 function markRecreatedNode<T extends Node>(node: T): T {
@@ -647,24 +684,29 @@ export function isRecreatedNode(node: Node | null | undefined): boolean {
 
 export function resolveHydrationTarget(node: Node): Node {
   while (true) {
-    if (isHydrationAnchor(node)) {
+    // One read covers both anchor questions: an untracked anchor holds no
+    // server position and is stepped over rather than offered up for adoption
+    // (which would report a spurious mismatch); any other claimed anchor is
+    // the target itself. Unlike `skipUntrackedAnchors`, a trailing run of
+    // anchors resolves to the last one — the caller needs a node, not null.
+    const flags = (node as Anchor).$vha!
+    if (flags) {
+      if (!(flags & AnchorFlags.UNTRACKED)) return node
+    } else if (
+      !(
+        node.nodeType === 8 &&
+        ((node as Comment).data === '[' ||
+          (node as Comment).data === ']' ||
+          (node as Comment).data === 'teleport start' ||
+          (node as Comment).data === 'teleport end')
+      )
+    ) {
       return node
     }
 
-    if (
-      node.nodeType === 8 &&
-      ((node as Comment).data === '[' ||
-        (node as Comment).data === ']' ||
-        (node as Comment).data === 'teleport start' ||
-        (node as Comment).data === 'teleport end')
-    ) {
-      const next = node.nextSibling
-      if (!next) return node
-      node = next
-      continue
-    }
-
-    return node
+    const next = node.nextSibling
+    if (!next) return node
+    node = next
   }
 }
 

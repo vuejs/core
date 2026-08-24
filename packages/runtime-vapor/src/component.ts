@@ -98,6 +98,7 @@ import {
   type HydrationCursor,
   adoptTemplate,
   advanceHydrationNode,
+  claimAnchor,
   currentHydrationNode,
   enterHydrationBoundary,
   enterHydrationCursor,
@@ -106,7 +107,6 @@ import {
   isHydrating,
   isRecreatedNode,
   locateEndAnchor,
-  markHydrationAnchor,
   nextLogicalSibling,
   setCurrentHydrationNode,
   withDeferredHydrationBoundary,
@@ -296,7 +296,7 @@ export function createComponent(
     if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
       hydrationClose = locateEndAnchor(currentHydrationNode!)
       exitHydrationBoundary = enterHydrationBoundary(
-        hydrationClose && markHydrationAnchor(hydrationClose),
+        hydrationClose && claimAnchor(hydrationClose),
       )
       setCurrentHydrationNode(currentHydrationNode!.nextSibling)
     }
@@ -1180,7 +1180,7 @@ export function createPlainElement(
         // SSR may omit default-slot nodes for dynamic native children.
         // Seed a local anchor so the inner fragment can locate and reuse it.
         child = el.appendChild(
-          markHydrationAnchor(__DEV__ ? createComment('') : createTextNode()),
+          claimAnchor(__DEV__ ? createComment('') : createTextNode()),
         )
       }
       setCurrentHydrationNode(child)

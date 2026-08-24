@@ -1,5 +1,9 @@
 import type { ChildItem, InsertionParent } from '../insertionState'
-import { isHydrating, nextLogicalSibling } from './hydration'
+import {
+  isHydrating,
+  nextLogicalSibling,
+  skipUntrackedAnchors,
+} from './hydration'
 
 /*@__NO_SIDE_EFFECTS__*/
 export function createElement(tagName: string): HTMLElement {
@@ -83,14 +87,15 @@ export function locateChildByLogicalIndex(
   parent: InsertionParent,
   logicalIndex: number,
 ): Node | null {
-  let child = (parent.$llc || parent.firstChild) as ChildItem
+  let child = (parent.$llc ||
+    skipUntrackedAnchors(parent.firstChild)) as ChildItem
   let fromIndex = child.$idx || 0
 
   // if target index is less than cached index, start from the beginning.
   // this can happen when child/nthChild/next updates $llc to a later node
   // before an earlier dynamic node is hydrated
   if (logicalIndex < fromIndex) {
-    child = parent.firstChild as ChildItem
+    child = skipUntrackedAnchors(parent.firstChild) as ChildItem
     fromIndex = 0
   }
 

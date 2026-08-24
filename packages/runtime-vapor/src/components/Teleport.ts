@@ -38,10 +38,10 @@ import {
 } from '../fragment'
 import {
   advanceHydrationNode,
+  claimAnchor,
   currentHydrationNode,
   isComment,
   isHydrating,
-  markHydrationAnchor,
   runWithoutHydration,
   setCurrentHydrationNode,
 } from '../dom/hydration'
@@ -466,7 +466,7 @@ export class TeleportFragment extends RenderContextFragment {
         if ((targetAnchor as Comment).data === 'teleport start anchor') {
           this.targetStart = targetAnchor
         } else if ((targetAnchor as Comment).data === 'teleport anchor') {
-          this.targetAnchor = markHydrationAnchor(targetAnchor)
+          this.targetAnchor = claimAnchor(targetAnchor)
           target._lpa = this.targetAnchor.nextSibling
           break
         }
@@ -482,7 +482,7 @@ export class TeleportFragment extends RenderContextFragment {
     if (!isHydrating) return
     let nextNode = this.placeholder!.nextSibling!
     setCurrentHydrationNode(nextNode)
-    this.anchor = markHydrationAnchor(locateTeleportEndAnchor(nextNode)!)
+    this.anchor = claimAnchor(locateTeleportEndAnchor(nextNode)!)
     this.mountState = {
       location: TeleportMountLocation.Main,
       container: parentNode(this.anchor)!,
@@ -500,9 +500,7 @@ export class TeleportFragment extends RenderContextFragment {
   private mountChildren(target: Node): void {
     if (!isHydrating) return
     target.appendChild((this.targetStart = createTextNode('')))
-    target.appendChild(
-      (this.targetAnchor = markHydrationAnchor(createTextNode(''))),
-    )
+    target.appendChild((this.targetAnchor = claimAnchor(createTextNode(''))))
     this.mountState = {
       location: TeleportMountLocation.Target,
       container: target as ParentNode,
@@ -540,7 +538,7 @@ export class TeleportFragment extends RenderContextFragment {
           targetNode,
         )
       } else {
-        this.anchor = markHydrationAnchor(
+        this.anchor = claimAnchor(
           locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
         )
         this.hydrateTargetAnchors(target as TeleportTargetElement, targetNode)
@@ -571,7 +569,7 @@ export class TeleportFragment extends RenderContextFragment {
       // Align with VDOM Teleport hydration: keep main-view markers only and
       // avoid mounting children inline or eagerly initializing them when the
       // target is missing.
-      this.anchor = markHydrationAnchor(
+      this.anchor = claimAnchor(
         locateTeleportEndAnchor(currentHydrationNode!.nextSibling!)!,
       )
     }

@@ -573,12 +573,15 @@ describe('VDOM interop', () => {
     `,
     )
 
+    // The dynamic component's own anchor sits directly after its content and
+    // before the enclosing slot's anchor, so a branch switch inserts inside
+    // the slot range rather than after it.
     expect(formatNodeList(container.childNodes)).toEqual([
       '<!--[-->',
       '<div>foo</div>',
       'text("")',
-      'text("")',
       '<!--dynamic-component-->',
+      'text("")',
       '<!--]-->',
     ])
 

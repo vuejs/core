@@ -1,18 +1,17 @@
 import { isArray } from '@vue/shared'
-import { queueJob, queuePostFlushCb } from '@vue/runtime-dom'
 import {
   advanceHydrationNode,
+  claimAnchor,
+  claimUntrackedAnchor,
   cleanupHydrationTail,
   currentHydrationNode,
   enterHydrationBoundary,
+  isClaimedAnchor,
   isComment,
-  isHydrationAnchor,
-  isInAsyncHydration,
   isInDeferredHydrationBoundary,
   locateEndAnchor,
   locateHydrationBoundaryClose,
   locateHydrationNode,
-  markHydrationAnchor,
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from './hydration'
@@ -187,33 +186,21 @@ export function isPendingSlotContent(): boolean {
   return !!(state && state.pending)
 }
 
-export function queueAnchorInsert(
+/**
+ * Insert an anchor at a position resolved during the hydration pass. Untracked
+ * anchors hold no SSR logical position, so traversal steps over them and the
+ * insert can happen right away. `nextNode` may already have been trimmed by
+ * boundary cleanup, in which case the anchor is appended instead.
+ */
+export function insertUntrackedAnchor(
   parentNode: Node,
   nextNode: Node | null,
-  createAnchor: () => Node,
-  fallbackNextNode?: Node | null,
+  anchor: Node,
 ): void {
-  // Create the runtime anchor during the queued insertion so hydration
-  // traversal never observes it before it is in its final position.
-  const insertAnchor = () => {
-    let anchor =
-      nextNode && getParentNode(nextNode) === parentNode ? nextNode : null
-    if (
-      !anchor &&
-      fallbackNextNode &&
-      getParentNode(fallbackNextNode) === parentNode
-    ) {
-      anchor = fallbackNextNode
-    }
-    parentNode.insertBefore(createAnchor(), anchor)
-  }
-  if (isInAsyncHydration()) {
-    // Async hydration can queue a branch update before post-flush. Queue its
-    // structural anchor as a pre job so the update sees a live insertion point.
-    queueJob(insertAnchor, undefined, true)
-  } else {
-    queuePostFlushCb(insertAnchor)
-  }
+  parentNode.insertBefore(
+    anchor,
+    nextNode && getParentNode(nextNode) === parentNode ? nextNode : null,
+  )
 }
 
 /**
@@ -242,7 +229,7 @@ function reuseOrCreateAfterAnchor(
   resetNodes?: boolean,
 ): AnchorPlan {
   const parent = getParentNode(node)
-  return isHydrationAnchor(node) && parent
+  return isClaimedAnchor(node) && parent
     ? { kind: 'create', parent, next: node.nextSibling, resetNodes }
     : { kind: 'reuse', node, resetNodes }
 }
@@ -273,7 +260,7 @@ export function prepareDeferredHydrationAnchor(
         ? slotEndAnchor
         : null)
     if (anchor) {
-      setCurrentHydrationNode(markHydrationAnchor(anchor))
+      setCurrentHydrationNode(claimAnchor(anchor))
     }
   }
 
@@ -296,14 +283,13 @@ export type AnchorPlan =
       parent: Node
       slotEnd: Node | null
     }
-  // Insert a fresh runtime anchor before `next` once insertion flushes.
+  // Insert a fresh runtime anchor before `next`.
   // `mark` keeps an SSR node structural so boundary cleanup preserves it.
   | {
       kind: 'create'
       parent: Node
       next: Node | null
       mark?: Node
-      fallbackNext?: Node | null
       resetNodes?: boolean
     }
   // Trim unclaimed SSR content first, then insert a fresh runtime anchor.
@@ -350,7 +336,7 @@ export function resolveDynamicAnchor(
   // instead of creating a second one.
   if (
     isNativeChildren &&
-    isHydrationAnchor(currentHydrationNode) &&
+    isClaimedAnchor(currentHydrationNode) &&
     getParentNode(currentHydrationNode!)
   ) {
     return { kind: 'reuse', node: currentHydrationNode! }
@@ -456,15 +442,14 @@ export function resolveDynamicAnchor(
     }
   }
 
-  const currentSlotEndAnchor = getCurrentSlotEndAnchor()
-  const isSlot = !!(flags & SLOT)
-  const slotAnchor = isSlot ? currentSlotEndAnchor : null
+  // Non-null only for slots, so it doubles as the "is a slot" test below.
+  const slotAnchor = flags & SLOT ? getCurrentSlotEndAnchor() : null
 
   // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
   // The close marker is a valid stable anchor candidate: reuse it once, or
   // create a fresh runtime anchor after it when another fragment already did.
   if (
-    (isSlot && slotAnchor) ||
+    slotAnchor ||
     (!!(flags & IF) && isArray(frag.nodes) && frag.nodes.length > 1)
   ) {
     const anchor = locateHydrationBoundaryClose(
@@ -483,20 +468,7 @@ export function resolveDynamicAnchor(
   // Otherwise, create a new anchor.
   // This covers: dynamic-component, async component, keyed fragment.
   const node = findBlockBoundary(frag.nodes)
-  const parentNode = node.parentNode
-  const nextNode = node.nextNode
-  let fallbackNext: Node | null = null
-  if (
-    currentSlotEndAnchor &&
-    nextNode === currentHydrationNode &&
-    parentNode &&
-    getParentNode(currentSlotEndAnchor) === parentNode
-  ) {
-    // `nextNode` can be stale fallback DOM that slot cleanup removes before the
-    // queued anchor insertion flushes. Keep the anchor inside the slot range.
-    fallbackNext = currentSlotEndAnchor
-  }
-  return { kind: 'create', parent: parentNode!, next: nextNode, fallbackNext }
+  return { kind: 'create', parent: node.parentNode!, next: node.nextNode }
 }
 
 export function executeAnchorPlan(
@@ -507,7 +479,7 @@ export function executeAnchorPlan(
   let exitHydrationBoundary: (() => void) | undefined
 
   const createRuntimeAnchor = (): Node =>
-    (frag.anchor = markHydrationAnchor(
+    (frag.anchor = claimUntrackedAnchor(
       __DEV__ ? createComment(frag.anchorLabel ?? '') : createTextNode(),
     ))
 
@@ -515,7 +487,7 @@ export function executeAnchorPlan(
     switch (plan.kind) {
       case 'reuse': {
         if (plan.resetNodes) frag.nodes = EMPTY_BLOCK
-        frag.anchor = markHydrationAnchor(plan.node)
+        frag.anchor = claimAnchor(plan.node)
         if (currentHydrationNode === frag.anchor) {
           advanceHydrationNode(frag.anchor)
         } else {
@@ -539,12 +511,12 @@ export function executeAnchorPlan(
               nodeParent === plan.parent &&
               isReusableAnchorCandidate(node, frag)
             ) {
-              if (isHydrationAnchor(node)) {
+              if (isClaimedAnchor(node)) {
                 const nextNode = node.nextSibling
                 advanceHydrationNode(node)
                 nodeParent.insertBefore(createRuntimeAnchor(), nextNode)
               } else {
-                frag.anchor = markHydrationAnchor(node)
+                frag.anchor = claimAnchor(node)
                 advanceHydrationNode(node)
               }
               return
@@ -553,13 +525,11 @@ export function executeAnchorPlan(
             // of a reusable content anchor. Create this invalid branch's
             // runtime anchor before that DOM so later updates have a stable
             // insertion point.
-            const anchor =
-              node && nodeParent === plan.parent
-                ? node
-                : slotEnd && getParentNode(slotEnd) === plan.parent
-                  ? slotEnd
-                  : null
-            plan.parent.insertBefore(createRuntimeAnchor(), anchor)
+            insertUntrackedAnchor(
+              plan.parent,
+              node && nodeParent === plan.parent ? node : slotEnd,
+              createRuntimeAnchor(),
+            )
           },
           onFallback: () => {
             // Match CSR by always creating the content fragment anchor, even
@@ -571,19 +541,14 @@ export function executeAnchorPlan(
       }
       case 'create': {
         if (plan.resetNodes) frag.nodes = EMPTY_BLOCK
-        if (plan.mark) markHydrationAnchor(plan.mark)
-        queueAnchorInsert(
-          plan.parent,
-          plan.next,
-          createRuntimeAnchor,
-          plan.fallbackNext,
-        )
+        if (plan.mark) claimAnchor(plan.mark)
+        insertUntrackedAnchor(plan.parent, plan.next, createRuntimeAnchor())
         break
       }
       case 'create-cleanup': {
         frag.nodes = EMPTY_BLOCK
-        // The runtime anchor is inserted later. Until then, advance the cache
-        // to the surviving next sibling, or clear it when cleanup reaches the tail.
+        // Advance the cache to the surviving next sibling, or clear it when
+        // cleanup reaches the tail.
         const cleanupParent = getParentNode(plan.cleanupStart)
         if (cleanupParent) {
           updateLastLocatedLogicalChild(
@@ -599,7 +564,7 @@ export function executeAnchorPlan(
           cleanupHydrationTail(plan.cleanupStart, plan.cleanupContainer)
           setCurrentHydrationNode(null)
         }
-        queueAnchorInsert(plan.parent, plan.next, createRuntimeAnchor)
+        insertUntrackedAnchor(plan.parent, plan.next, createRuntimeAnchor())
         break
       }
     }

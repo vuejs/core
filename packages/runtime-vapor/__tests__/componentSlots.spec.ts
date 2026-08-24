@@ -52,7 +52,7 @@ import {
 } from '../src/block'
 import {
   hydrateNode,
-  isHydrationAnchor,
+  isClaimedAnchor,
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
@@ -1196,7 +1196,7 @@ describe('component: slots', () => {
 
       expect(host.innerHTML).toBe('<!--[--><!--]--><footer>footer</footer>')
       expect(frag.anchor).toBe(end)
-      expect(isHydrationAnchor(end)).toBe(true)
+      expect(isClaimedAnchor(end)).toBe(true)
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     })
 
@@ -1220,7 +1220,7 @@ describe('component: slots', () => {
       }
 
       expect(frag.anchor).toBe(end)
-      expect(isHydrationAnchor(end)).toBe(true)
+      expect(isClaimedAnchor(end)).toBe(true)
     })
 
     test('non-forwarded empty slot hydration cleans stale content before close anchor', () => {
@@ -1248,7 +1248,7 @@ describe('component: slots', () => {
 
       expect(host.innerHTML).toBe('<!--[--><!--]--><footer>footer</footer>')
       expect(frag.anchor).toBe(end)
-      expect(isHydrationAnchor(end)).toBe(true)
+      expect(isClaimedAnchor(end)).toBe(true)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
 

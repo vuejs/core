@@ -62,10 +62,10 @@ import {
 import { EffectFlags, ReactiveEffect } from '@vue/reactivity'
 import {
   adoptTemplate,
+  claimAnchor,
   cleanupHydrationTail,
   currentHydrationNode,
   isHydrating,
-  markHydrationAnchor,
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from '../dom/hydration'
@@ -111,7 +111,7 @@ function ensureForHydrationAnchorResolver(): void {
       anchorNode.parentNode === container
         ? anchorNode
         : null
-    const parentAnchor = markHydrationAnchor(
+    const parentAnchor = claimAnchor(
       __DEV__ ? createComment('for') : createTextNode(),
     )
     container.insertBefore(parentAnchor, anchor)

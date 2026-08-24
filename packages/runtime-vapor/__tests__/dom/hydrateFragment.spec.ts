@@ -1,8 +1,8 @@
 import { DynamicFragment, SlotFragment } from '../../src/fragment'
 import { DYNAMIC, IF, OWNS_ANCHOR } from '../../src/fragmentFlags'
 import {
+  claimAnchor,
   hydrateNode,
-  markHydrationAnchor,
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../../src/dom/hydration'
@@ -176,7 +176,7 @@ describe('resolveDynamicAnchor', () => {
   test('empty slot creates after an already reused boundary close anchor', () => {
     const host = document.createElement('div')
     const start = document.createComment('[')
-    const end = markHydrationAnchor(document.createComment(']'))
+    const end = claimAnchor(document.createComment(']'))
     const footer = document.createElement('footer')
     host.append(start, end, footer)
 
@@ -334,7 +334,7 @@ describe('resolveDynamicAnchor', () => {
 
   test('empty fragment creates after an already reused placeholder', () => {
     const host = document.createElement('div')
-    const comment = markHydrationAnchor(document.createComment(''))
+    const comment = claimAnchor(document.createComment(''))
     const footer = document.createElement('footer')
     host.append(comment, footer)
 

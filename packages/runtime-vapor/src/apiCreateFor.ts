@@ -46,6 +46,8 @@ import { VaporVForFlags } from '@vue/shared'
 import {
   type HydrationCursor,
   advanceHydrationNode,
+  claimAnchor,
+  claimUntrackedAnchor,
   currentHydrationNode,
   enterHydrationBoundary,
   enterHydrationCursor,
@@ -53,7 +55,6 @@ import {
   isComment,
   isHydrating,
   locateHydrationBoundaryClose,
-  markHydrationAnchor,
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
@@ -61,7 +62,7 @@ import {
   ForBlock,
   ForFragment,
   type VaporFragment,
-  isAdoptedAnchor,
+  isAdoptedPlaceholder,
   resolveFragmentAnchor,
 } from './fragment'
 import {
@@ -543,7 +544,7 @@ export const createFor = (
     const slotFallbackRange = isPendingSlotContent() && slotEndAnchor
 
     const reuseBoundaryClose = (close: Node): void => {
-      parentAnchor = markHydrationAnchor(close)
+      parentAnchor = claimAnchor(close)
       exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
     }
 
@@ -555,7 +556,7 @@ export const createFor = (
       } else {
         for (let i = 0; i < newLength; i++) {
           if (isComment(currentHydrationNode!, ']')) {
-            nextNode = markHydrationAnchor(currentHydrationNode!)
+            nextNode = claimAnchor(currentHydrationNode!)
             setCurrentHydrationNode(nextNode)
           } else {
             nextNode = nextLogicalSibling(currentHydrationNode!)
@@ -588,7 +589,7 @@ export const createFor = (
                 hydrationStart !== slotEndAnchor
                 ? hydrationStart.nextSibling!
                 : slotEndAnchor!
-          parentAnchor = markHydrationAnchor(
+          parentAnchor = claimUntrackedAnchor(
             __DEV__ ? createComment('for') : createTextNode(),
           )
           const hydrationAnchor = parentAnchor
@@ -694,7 +695,10 @@ export const createFor = (
 
   if (!isHydrating) {
     // adopted lists mount their items in place through the template anchor
-    if (_insertionParent && !isAdoptedAnchor(parentAnchor!, _insertionAnchor)) {
+    if (
+      _insertionParent &&
+      !isAdoptedPlaceholder(parentAnchor!, _insertionAnchor)
+    ) {
       insert(frag, _insertionParent, _insertionAnchor)
     }
   } else {

@@ -5,7 +5,7 @@ import {
   exitHydrationCursor,
   isHydrating,
 } from './dom/hydration'
-import { DynamicFragment, isAdoptedAnchor } from './fragment'
+import { DynamicFragment, isAdoptedPlaceholder } from './fragment'
 import { DYNAMIC, OWNS_ANCHOR } from './fragmentFlags'
 import {
   insertionAnchor,
@@ -55,7 +55,10 @@ export function createKeyedFragment(
 
   if (!isHydrating) {
     // adopted fragments render in place through their template anchor
-    if (_insertionParent && !isAdoptedAnchor(frag.anchor, _insertionAnchor)) {
+    if (
+      _insertionParent &&
+      !isAdoptedPlaceholder(frag.anchor, _insertionAnchor)
+    ) {
       insert(frag, _insertionParent, _insertionAnchor)
     }
   } else {
