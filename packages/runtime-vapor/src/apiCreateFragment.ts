@@ -5,7 +5,6 @@ import {
   isHydrating,
 } from './dom/hydration'
 import { DynamicFragment, finishBlockCreation } from './fragment'
-import { DYNAMIC, OWNS_ANCHOR } from './fragmentFlags'
 import {
   insertionAnchor,
   insertionParent,
@@ -36,7 +35,7 @@ export function createKeyedFragment(
     : null
 
   const frag = new DynamicFragment(
-    DYNAMIC | OWNS_ANCHOR,
+    0,
     __DEV__ ? 'keyed' : undefined,
     true,
     true,

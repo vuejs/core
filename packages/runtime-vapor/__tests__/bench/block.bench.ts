@@ -14,7 +14,6 @@ import {
   VaporComponentInstance,
 } from '../../src/component'
 import { DynamicFragment, ForBlock, VaporFragment } from '../../src/fragment'
-import { DYNAMIC, OWNS_ANCHOR } from '../../src/fragmentFlags'
 
 const DOM_BATCH = 1000
 
@@ -34,12 +33,7 @@ function createComponent(node: Node): VaporComponentInstance {
 }
 
 function createDynamicFragment(node: Node): DynamicFragment {
-  const fragment = new DynamicFragment(
-    DYNAMIC | OWNS_ANCHOR,
-    'dynamic-component',
-    false,
-    false,
-  )
+  const fragment = new DynamicFragment(0, 'dynamic-component', false, false)
   fragment.nodes = node
   return fragment
 }

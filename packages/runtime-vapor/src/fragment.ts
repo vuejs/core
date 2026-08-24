@@ -307,7 +307,9 @@ export class DynamicFragment extends RenderContextFragment {
   // inferred from the anchor being detached.
   everUpdated = false
   constructor(
-    flags: number,
+    // subtype bits only (IF, NATIVE_CHILDREN, SLOT_FRAGMENT...); the class
+    // invariant DYNAMIC | OWNS_ANCHOR is added here so it cannot be forgotten
+    flags: number = 0,
     anchorLabel?: string,
     keyed: boolean = false,
     locate: boolean = true,
@@ -315,7 +317,7 @@ export class DynamicFragment extends RenderContextFragment {
     onInvalid?: () => void,
     adoptAnchor?: Node,
   ) {
-    super(EMPTY_BLOCK, flags)
+    super(EMPTY_BLOCK, DYNAMIC | OWNS_ANCHOR | flags)
     if (keyed) this.keyed = true
     if (
       isTransitionEnabled &&
@@ -543,7 +545,7 @@ export class SlotFragment
     adoptAnchor?: Node,
   ) {
     super(
-      SLOT_FRAGMENT | OWNS_ANCHOR,
+      SLOT_FRAGMENT,
       __DEV__ ? 'slot' : undefined,
       false,
       false,

@@ -23,7 +23,7 @@ import {
 } from './node'
 import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
 import type { DynamicFragment } from '../fragment'
-import { IF, NATIVE_CHILDREN, OWNS_ANCHOR, SLOT } from '../fragmentFlags'
+import { IF, NATIVE_CHILDREN, SLOT } from '../fragmentFlags'
 
 interface DeferredSlotAnchor {
   onContent: () => void
@@ -430,8 +430,6 @@ function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
     return reuseOrCreateAfterAnchor(currentHydrationNode)
   }
 
-  if (!(flags & OWNS_ANCHOR)) return
-
   if (
     !(flags & NATIVE_CHILDREN) &&
     currentHydrationNode &&
@@ -495,11 +493,7 @@ function planTrimFromCursor(parent: Node, next: Node | null): AnchorPlan {
 function planRestartFromRuntimeComment(
   frag: DynamicFragment,
 ): AnchorPlan | undefined {
-  if (
-    !(frag.__vf & OWNS_ANCHOR) ||
-    isValidBlock(frag.nodes) ||
-    !(frag.nodes instanceof Comment)
-  ) {
+  if (isValidBlock(frag.nodes) || !(frag.nodes instanceof Comment)) {
     return
   }
 
