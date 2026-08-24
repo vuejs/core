@@ -47,7 +47,7 @@ export function txt(node: ParentNode): Node {
 /*@__NO_SIDE_EFFECTS__*/
 export function child(node: InsertionParent): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, 0)
+    return locateChildByLogicalIndex(node, 0)!
   }
   return _child(node)
 }
@@ -55,7 +55,7 @@ export function child(node: InsertionParent): Node {
 /*@__NO_SIDE_EFFECTS__*/
 export function nthChild(node: InsertionParent, i: number): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, i)
+    return locateChildByLogicalIndex(node, i)!
   }
   return node.childNodes[i]
 }
@@ -86,15 +86,15 @@ export function _next(node: Node): Node {
 export function locateChildByLogicalIndex(
   parent: InsertionParent,
   logicalIndex: number,
-): Node {
+): Node | null {
   let child = (parent.$llc ||
     skipUntrackedAnchors(parent.firstChild)) as ChildItem
-  let fromIndex = child ? child.$idx || 0 : 0
+  let fromIndex = child.$idx || 0
 
   // if target index is less than cached index, start from the beginning.
   // this can happen when child/nthChild/next updates $llc to a later node
   // before an earlier dynamic node is hydrated
-  if (child && logicalIndex < fromIndex) {
+  if (logicalIndex < fromIndex) {
     child = skipUntrackedAnchors(parent.firstChild) as ChildItem
     fromIndex = 0
   }
@@ -110,14 +110,7 @@ export function locateChildByLogicalIndex(
     fromIndex++
   }
 
-  // The server rendered fewer logical children than the client expects —
-  // a children mismatch, or nothing but untracked anchors left after an
-  // earlier sibling trimmed its range. Seed a placeholder at the tail so the
-  // regular per-node mismatch recovery rebuilds and warns in place instead
-  // of crashing on a missing node.
-  const placeholder = parent.appendChild(createTextNode()) as Node as ChildItem
-  placeholder.$idx = logicalIndex
-  return (parent.$llc = placeholder)
+  return null
 }
 
 // Hydration mismatch recovery and other DOM mutations can replace or remove
