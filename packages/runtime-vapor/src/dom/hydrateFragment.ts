@@ -25,27 +25,132 @@ import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
 import type { DynamicFragment } from '../fragment'
 import { IF, OWNS_ANCHOR, SLOT } from '../fragmentFlags'
 
-interface HydratingSlotBoundaryState {
-  endAnchor: Node | null
-  // Slot content is still resolving whether it should claim the SSR range.
-  pending: boolean
-  pendingAnchors: PendingSlotContentAnchor[] | null
-}
-
-let currentHydratingSlotBoundaryState: HydratingSlotBoundaryState | null = null
-
-interface PendingSlotContentAnchor {
+interface DeferredSlotAnchor {
   onContent: () => void
   onFallback: () => void
 }
 
+/*
+ * ## Slot hydration session (two-phase commit)
+ *
+ * SSR output does not distinguish slot content from slot fallback, but
+ * claiming server nodes is destructive (the cursor advances, anchors get
+ * claimed). So while a slot is still deciding which side owns its SSR range,
+ * anchor claims are *deferred* into a ledger and settled once the decision
+ * lands. A session is that ledger plus the boundary's end anchor.
+ *
+ * Structure:
+ * - One session per slot boundary, stacked for nesting
+ *   (`currentSlotHydrationSession` is the top; the previous top is restored
+ *   by the `with*` wrappers below).
+ * - Within a session, `beginSegment` opens a nested pending window
+ *   (LIFO, closed by the returned `finish(contentValid)`).
+ * - `defer()` records an anchor claim in the innermost pending window;
+ *   with no window open it refuses and the caller acts immediately.
+ *
+ * Settlement rules:
+ * - Content proves valid → the *entire* ledger settles as content, outer
+ *   segments included: once real content exists anywhere in the boundary,
+ *   every deferred SSR candidate belongs to the content side.
+ *   `markContentSettled()` (real DOM/text rendered — see `template()` and
+ *   `createComponent`, the only two signal sources) does the same.
+ * - Content proves invalid → only the innermost segment's entries roll back
+ *   to their fallback action; entries deferred by outer segments stay pending
+ *   for the outer decision. The cursor rewinds to the segment's start.
+ * - A pending *boundary* that ends still undecided hands its ledger to the
+ *   parent boundary (`adoptInto`), whose enclosing segment settles it.
+ */
+class SlotHydrationSession {
+  private deferred: DeferredSlotAnchor[] | null = null
+
+  constructor(
+    readonly endAnchor: Node | null,
+    public pending: boolean,
+  ) {}
+
+  /** Record a claim in the ledger; false = no pending window, act now. */
+  defer(anchor: DeferredSlotAnchor): boolean {
+    if (!this.pending) return false
+    ;(this.deferred ||= []).push(anchor)
+    return true
+  }
+
+  /**
+   * Settle ledger entries. `from > 0` (only ever passed for an invalid
+   * inner segment) rolls back just that segment's tail of the ledger.
+   */
+  private settle(contentValid: boolean, from = 0): void {
+    const deferred = this.deferred
+    if (!deferred) return
+    const batch = from ? deferred.splice(from) : deferred
+    if (!from) this.deferred = null
+    for (let i = 0; i < batch.length; i++) {
+      if (contentValid) {
+        batch[i].onContent()
+      } else {
+        batch[i].onFallback()
+      }
+    }
+  }
+
+  /**
+   * Open a pending window. The returned `finish` is idempotent and applies
+   * the settlement rules above; on invalid content it also rewinds the
+   * cursor to `start` so fallback hydrates the range content walked over.
+   */
+  beginSegment(start: Node | null): (contentValid: boolean) => void {
+    const prevPending = this.pending
+    const watermark = this.deferred ? this.deferred.length : 0
+    this.pending = true
+    let active = true
+    return contentValid => {
+      if (!active) return
+      active = false
+      this.settle(contentValid, !contentValid && prevPending ? watermark : 0)
+      this.pending = prevPending
+      if (!contentValid) {
+        setCurrentHydrationNode(start)
+      }
+    }
+  }
+
+  /** Content rendered somewhere in this boundary: settle everything now. */
+  markContentSettled(): void {
+    if (this.pending) this.settleAsContent()
+  }
+
+  /**
+   * Unconditional variant for a child boundary that settled: the parent's
+   * ledger settles as content even if the parent itself was not pending —
+   * it may hold entries adopted from an earlier undecided child.
+   */
+  settleAsContent(): void {
+    this.settle(true)
+    this.pending = false
+  }
+
+  /** Boundary ended still undecided: its ledger becomes the parent's. */
+  adoptInto(parent: SlotHydrationSession): void {
+    if (this.deferred) {
+      ;(parent.deferred ||= []).push(...this.deferred)
+      this.deferred = null
+    }
+  }
+}
+
+let currentSlotHydrationSession: SlotHydrationSession | null = null
+
 export function getCurrentSlotEndAnchor(): Node | null {
-  return currentHydratingSlotBoundaryState
-    ? currentHydratingSlotBoundaryState.endAnchor
+  return currentSlotHydrationSession
+    ? currentSlotHydrationSession.endAnchor
     : null
 }
 
-export function withHydratingSlotBoundary<R>(fn: () => R): R {
+/** Locate this boundary's SSR range and consume its opening marker. */
+function enterSlotBoundaryRange(): {
+  endAnchor: Node | null
+  exitHydrationBoundary: (() => void) | undefined
+} {
   let endAnchor = getCurrentSlotEndAnchor()
   let exitHydrationBoundary: (() => void) | undefined
 
@@ -55,39 +160,34 @@ export function withHydratingSlotBoundary<R>(fn: () => R): R {
     setCurrentHydrationNode(currentHydrationNode.nextSibling)
     exitHydrationBoundary = enterHydrationBoundary(endAnchor)
   }
-  const prevState = currentHydratingSlotBoundaryState
-  currentHydratingSlotBoundaryState = {
-    endAnchor,
-    pending: false,
-    pendingAnchors: null,
-  }
+  return { endAnchor, exitHydrationBoundary }
+}
+
+export function withHydratingSlotBoundary<R>(fn: () => R): R {
+  const { endAnchor, exitHydrationBoundary } = enterSlotBoundaryRange()
+  const prevSession = currentSlotHydrationSession
+  currentSlotHydrationSession = new SlotHydrationSession(endAnchor, false)
 
   try {
     return fn()
   } finally {
-    currentHydratingSlotBoundaryState = prevState
+    currentSlotHydrationSession = prevSession
     exitHydrationBoundary && exitHydrationBoundary()
   }
 }
 
+/**
+ * A boundary that starts undecided (forwarded interop slots): if `fn`
+ * completes without settling, the range stays unclaimed — the ledger is
+ * adopted by the parent boundary and the cursor rewinds. If it settles,
+ * the parent's own pending window settles as content along with it.
+ */
 export function withPendingHydratingSlotBoundary<R>(fn: () => R): R {
-  const pendingParent = currentHydratingSlotBoundaryState!
+  const parentSession = currentSlotHydrationSession!
   const contentStart = currentHydrationNode
-  let endAnchor = getCurrentSlotEndAnchor()
-  let exitHydrationBoundary: (() => void) | undefined
-
-  locateHydrationNode()
-  if (isComment(currentHydrationNode!, '[')) {
-    endAnchor = locateEndAnchor(currentHydrationNode)
-    setCurrentHydrationNode(currentHydrationNode.nextSibling)
-    exitHydrationBoundary = enterHydrationBoundary(endAnchor)
-  }
-  const state: HydratingSlotBoundaryState = {
-    endAnchor,
-    pending: true,
-    pendingAnchors: null,
-  }
-  currentHydratingSlotBoundaryState = state
+  const { endAnchor, exitHydrationBoundary } = enterSlotBoundaryRange()
+  const session = new SlotHydrationSession(endAnchor, true)
+  currentSlotHydrationSession = session
   let completed = false
 
   try {
@@ -95,95 +195,45 @@ export function withPendingHydratingSlotBoundary<R>(fn: () => R): R {
     completed = true
     return result
   } finally {
-    currentHydratingSlotBoundaryState = pendingParent
+    currentSlotHydrationSession = parentSession
     if (!completed) {
       exitHydrationBoundary && exitHydrationBoundary()
-    } else if (state.pending) {
-      if (state.pendingAnchors) {
-        ;(pendingParent.pendingAnchors ||= []).push(...state.pendingAnchors)
-      }
+    } else if (session.pending) {
+      session.adoptInto(parentSession)
       setCurrentHydrationNode(contentStart)
     } else {
       exitHydrationBoundary && exitHydrationBoundary()
-      resolvePendingSlotContentAnchors(pendingParent, true)
-      pendingParent.pending = false
-    }
-  }
-}
-
-function resolvePendingSlotContentAnchors(
-  state: HydratingSlotBoundaryState,
-  contentValid: boolean,
-  startIndex: number = 0,
-): void {
-  // Empty fragments rendered before the slot decision wait until content wins
-  // before claiming the current SSR anchor candidate.
-  const pendingAnchors = state.pendingAnchors
-  if (!pendingAnchors) return
-  const anchors = startIndex
-    ? pendingAnchors.splice(startIndex)
-    : pendingAnchors
-  if (!startIndex) state.pendingAnchors = null
-  for (let i = 0; i < anchors.length; i++) {
-    const pendingAnchor = anchors[i]
-    if (contentValid) {
-      pendingAnchor.onContent()
-    } else {
-      pendingAnchor.onFallback()
+      parentSession.settleAsContent()
     }
   }
 }
 
 export function queuePendingSlotContentAnchor(
-  anchor: PendingSlotContentAnchor,
+  anchor: DeferredSlotAnchor,
 ): boolean {
-  const state = currentHydratingSlotBoundaryState
-  if (state && state.pending) {
-    ;(state.pendingAnchors ||= []).push(anchor)
-    return true
-  }
-  return false
+  const session = currentSlotHydrationSession
+  return !!session && session.defer(anchor)
 }
 
 // Slot content with fallback is unresolved until it creates a valid node.
-// While unresolved, empty content branches must not consume fallback SSR anchors.
+// While unresolved, empty content branches must not consume fallback SSR
+// anchors.
 export function startPendingSlotContent(
   start: Node | null,
 ): (contentValid: boolean) => void {
-  const state = currentHydratingSlotBoundaryState
-  if (!state) return () => {}
-  const prevPending = state.pending
-  const pendingAnchorStart = state.pendingAnchors
-    ? state.pendingAnchors.length
-    : 0
-  state.pending = true
-  let active = true
-  return contentValid => {
-    if (!active) return
-    active = false
-    resolvePendingSlotContentAnchors(
-      state,
-      contentValid,
-      !contentValid && prevPending ? pendingAnchorStart : 0,
-    )
-    state.pending = prevPending
-    if (!contentValid) {
-      setCurrentHydrationNode(start)
-    }
-  }
+  const session = currentSlotHydrationSession
+  if (!session) return () => {}
+  return session.beginSegment(start)
 }
 
 export function resolvePendingSlotContent(): void {
-  const state = currentHydratingSlotBoundaryState
-  if (state && state.pending) {
-    resolvePendingSlotContentAnchors(state, true)
-    state.pending = false
-  }
+  const session = currentSlotHydrationSession
+  if (session) session.markContentSettled()
 }
 
 export function isPendingSlotContent(): boolean {
-  const state = currentHydratingSlotBoundaryState
-  return !!(state && state.pending)
+  const session = currentSlotHydrationSession
+  return !!(session && session.pending)
 }
 
 /**
