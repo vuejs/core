@@ -18,7 +18,7 @@ import { defineVaporComponent } from '../../src'
  * with no mismatch and reproduces its own markup.
  */
 
-export const N = 250
+const N = 250
 
 function compileToRender(
   template: string,

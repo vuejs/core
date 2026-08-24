@@ -1,5 +1,10 @@
 import { DynamicFragment, SlotFragment } from '../../src/fragment'
-import { DYNAMIC, IF, OWNS_ANCHOR } from '../../src/fragmentFlags'
+import {
+  DYNAMIC,
+  IF,
+  NATIVE_CHILDREN,
+  OWNS_ANCHOR,
+} from '../../src/fragmentFlags'
 import {
   claimAnchor,
   hydrateNode,
@@ -360,8 +365,12 @@ describe('resolveDynamicAnchor', () => {
     const seed = claimAnchor(document.createTextNode(''))
     host.append(seed)
 
-    const frag = new DynamicFragment(DYNAMIC | OWNS_ANCHOR, '', false, false)
-    frag.nativeChildren = true
+    const frag = new DynamicFragment(
+      DYNAMIC | OWNS_ANCHOR | NATIVE_CHILDREN,
+      '',
+      false,
+      false,
+    )
     const plan = resolveWithCursor(seed, () => resolveDynamicAnchor(frag, true))
 
     const reuse = expectKind(plan, 'reuse')
@@ -374,8 +383,12 @@ describe('resolveDynamicAnchor', () => {
     const second = document.createElement('b')
     host.append(first, second)
 
-    const frag = new DynamicFragment(DYNAMIC | OWNS_ANCHOR, '', false, false)
-    frag.nativeChildren = true
+    const frag = new DynamicFragment(
+      DYNAMIC | OWNS_ANCHOR | NATIVE_CHILDREN,
+      '',
+      false,
+      false,
+    )
     const plan = resolveWithCursor(first, () =>
       resolveDynamicAnchor(frag, true),
     )

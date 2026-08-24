@@ -4,6 +4,7 @@ import {
   advanceHydrationNode,
   currentHydrationNode,
   enterHydrationCursor,
+  isComment,
   isHydrating,
 } from './dom/hydration'
 import {
@@ -92,12 +93,7 @@ export function createIf(
   // that comment. Claim it before restoring the outer cursor.
   if (isHydrating && branchShape === VaporBlockShape.EMPTY && hydrationCursor) {
     const start = hydrationCursor.start
-    if (
-      start &&
-      currentHydrationNode === start &&
-      start.nodeType === 8 &&
-      (start as Comment).data === ''
-    ) {
+    if (start && currentHydrationNode === start && isComment(start, '')) {
       advanceHydrationNode(start)
     }
   }

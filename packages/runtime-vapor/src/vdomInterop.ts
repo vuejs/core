@@ -2171,7 +2171,7 @@ function renderVDOMSlot(
                 if (candidateEnd && currentHydrationNode === candidateEnd) {
                   advanceHydrationNode(candidateEnd)
                 }
-                const anchor = createTextNode()
+                const anchor = claimUntrackedAnchor(createTextNode())
                 const detachedParent = document.createDocumentFragment()
                 detachedParent.appendChild(anchor)
                 currentParentNode = detachedParent

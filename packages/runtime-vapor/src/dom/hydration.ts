@@ -141,7 +141,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
 }
 
 export function hydrateNode(node: Node, fn: () => void): void {
-  const setup = () => (currentHydrationNode = skipUntrackedAnchors(node))
+  const setup = () => setCurrentHydrationNode(node)
   const cleanup = () => {}
   return performHydration(fn, setup, cleanup)
 }
@@ -164,7 +164,7 @@ export function enterAsyncHydration(node: Node): () => void {
   }
 
   setIsHydrating(true)
-  currentHydrationNode = skipUntrackedAnchors(node)
+  setCurrentHydrationNode(node)
 
   return () => {
     pendingAsyncHydrationResets--
@@ -278,7 +278,8 @@ export function advanceHydrationNode(node: Node): void {
  *   consume the insertion state before the inner path is known.
  * - `exitHydrationCursor(cursor)` — restore the enclosing scope's resume point.
  *   Every cursor from either constructor must reach this exactly once;
- *   `finishBlockCreation` in `fragment.ts` is the shared tail that does it.
+ *   `finishBlockCreation` in `fragment.ts` is the shared tail for the
+ *   block-creating APIs.
  *
  * `resume` distinguishes two states that look alike and are not:
  * `undefined` means "this scope had no insertion parent, so let whatever the
@@ -416,7 +417,7 @@ function locateHydrationNodeImpl(consumeFragmentStart = false) {
   }
 
   resetInsertionState()
-  currentHydrationNode = skipUntrackedAnchors(node)
+  setCurrentHydrationNode(node)
 }
 
 export function locateEndAnchor(
@@ -757,7 +758,7 @@ export function claimAnchor<T extends Node>(node: T): T {
  * positions the server output defines. See `AnchorFlags.UNTRACKED`.
  */
 export function claimUntrackedAnchor<T extends Node>(node: T): T {
-  ;(node as Anchor).$vha! |= AnchorFlags.ANCHOR | AnchorFlags.UNTRACKED
+  ;(node as Anchor).$vha = AnchorFlags.ANCHOR | AnchorFlags.UNTRACKED
   return node
 }
 

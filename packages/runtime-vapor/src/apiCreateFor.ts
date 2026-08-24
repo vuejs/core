@@ -603,6 +603,8 @@ export const createFor = (
             const parentNode = anchor.parentNode
             if (parentNode) parentNode.insertBefore(hydrationAnchor, anchor)
           }
+          // Post-flush even after the verdict: the reference node's final
+          // position is only stable once the whole pass has finished.
           const queued = queuePendingSlotContentAnchor({
             onContent: () => queuePostFlushCb(attachAnchor),
             onFallback: () => {},
