@@ -30,14 +30,13 @@ import {
   type HydrationCursor,
   captureHydrationCursor,
   enterHydrationCursor,
-  exitHydrationCursor,
   isHydrating,
 } from './dom/hydration'
 import {
   DynamicFragment,
   SlotFragment,
   type VaporFragment,
-  isAdoptedPlaceholder,
+  finishBlockCreation,
   isInteropFragment,
 } from './fragment'
 import { OWNS_ANCHOR, SLOT_FRAGMENT } from './fragmentFlags'
@@ -455,23 +454,21 @@ export function createSlot(
     }
   }
 
-  if (!isHydrating) {
-    // Custom-element outlets assign their native <slot> directly instead of
-    // rendering through update(), so they still need this initial insertion
-    // after adopting the template anchor.
-    if (
-      _insertionParent &&
-      (isCustomElementSlot ||
-        !isAdoptedPlaceholder(fragment.anchor, _insertionAnchor))
-    ) {
-      insert(fragment, _insertionParent, _insertionAnchor)
-    }
-  } else {
-    if (isInteropEnabled && isInteropFragment(fragment)) {
-      fragment.hydrate!()
-    }
-    exitHydrationCursor(hydrationCursor)
+  if (isHydrating && isInteropEnabled && isInteropFragment(fragment)) {
+    fragment.hydrate!()
   }
+
+  // Custom-element outlets assign their native <slot> directly instead of
+  // rendering through update(), so they still need this initial insertion even
+  // after adopting the template anchor.
+  finishBlockCreation(
+    fragment,
+    fragment.anchor,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+    isCustomElementSlot,
+  )
 
   return fragment
 }

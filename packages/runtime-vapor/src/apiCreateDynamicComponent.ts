@@ -9,7 +9,7 @@ import {
   setCurrentRenderingInstance,
 } from '@vue/runtime-dom'
 import { ShapeFlags, VaporDynamicComponentFlags } from '@vue/shared'
-import { insert, isBlock, removeNode } from './block'
+import { isBlock, removeNode } from './block'
 import {
   type VaporComponentInstance,
   createComponentWithFallback,
@@ -32,14 +32,13 @@ import {
 import {
   type HydrationCursor,
   captureHydrationCursor,
-  exitHydrationCursor,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
 import {
   DynamicFragment,
   type VaporFragment,
-  isAdoptedPlaceholder,
+  finishBlockCreation,
 } from './fragment'
 import { DYNAMIC, OWNS_ANCHOR } from './fragmentFlags'
 import type { KeepAliveInstance } from './components/KeepAlive'
@@ -141,17 +140,13 @@ export function createDynamicComponent(
   if (once) renderFn()
   else renderEffect(renderFn)
 
-  if (!isHydrating) {
-    // adopted fragments render in place through their template anchor
-    if (
-      _insertionParent &&
-      !isAdoptedPlaceholder(frag.anchor, _insertionAnchor)
-    ) {
-      insert(frag, _insertionParent, _insertionAnchor)
-    }
-  } else {
-    exitHydrationCursor(hydrationCursor)
-  }
+  finishBlockCreation(
+    frag,
+    frag.anchor,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+  )
   return frag
 }
 

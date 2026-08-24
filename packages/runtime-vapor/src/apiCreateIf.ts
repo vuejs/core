@@ -1,10 +1,9 @@
-import { type Block, type BlockFn, insert, removeNode } from './block'
+import { type Block, type BlockFn, removeNode } from './block'
 import {
   type HydrationCursor,
   advanceHydrationNode,
   currentHydrationNode,
   enterHydrationCursor,
-  exitHydrationCursor,
   isHydrating,
 } from './dom/hydration'
 import {
@@ -13,7 +12,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
-import { DynamicFragment, isAdoptedPlaceholder } from './fragment'
+import { DynamicFragment, finishBlockCreation } from './fragment'
 import { DYNAMIC, IF, OWNS_ANCHOR } from './fragmentFlags'
 import { createComment, createTextNode } from './dom/node'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
@@ -31,7 +30,8 @@ export function createIf(
   if (!isHydrating) resetInsertionState()
   let hydrationCursor: HydrationCursor | null = null
   let branchShape: VaporBlockShape | undefined
-  let adopted = false
+  // the fragment's own anchor, when it has one; the `v-if` once path has none
+  let anchor: Node | undefined
 
   let frag: Block
   if (flags & VaporIfFlags.ONCE) {
@@ -70,7 +70,7 @@ export function createIf(
         : undefined,
       _insertionAnchor,
     )
-    adopted = isAdoptedPlaceholder(dynamicFragment.anchor, _insertionAnchor)
+    anchor = dynamicFragment.anchor
     frag = dynamicFragment
     renderEffect(() => {
       const ok = condition()
@@ -88,27 +88,27 @@ export function createIf(
     })
   }
 
-  if (!isHydrating) {
-    // adopted fragments render in place through their template anchor
-    if (_insertionParent && !adopted) {
-      insert(frag, _insertionParent, _insertionAnchor)
+  // SSR empty branches render as <!---->, and no template adoption consumes
+  // that comment. Claim it before restoring the outer cursor.
+  if (isHydrating && branchShape === VaporBlockShape.EMPTY && hydrationCursor) {
+    const start = hydrationCursor.start
+    if (
+      start &&
+      currentHydrationNode === start &&
+      start.nodeType === 8 &&
+      (start as Comment).data === ''
+    ) {
+      advanceHydrationNode(start)
     }
-  } else {
-    // SSR empty branches render as <!---->, and no template adoption consumes
-    // that comment. Claim it before restoring the outer cursor.
-    if (branchShape === VaporBlockShape.EMPTY && hydrationCursor) {
-      const start = hydrationCursor.start
-      if (
-        start &&
-        currentHydrationNode === start &&
-        start.nodeType === 8 &&
-        (start as Comment).data === ''
-      ) {
-        advanceHydrationNode(start)
-      }
-    }
-    exitHydrationCursor(hydrationCursor)
   }
+
+  finishBlockCreation(
+    frag,
+    anchor,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+  )
 
   return frag
 }

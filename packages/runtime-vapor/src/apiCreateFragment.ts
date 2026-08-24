@@ -1,11 +1,10 @@
-import { type Block, type BlockFn, insert, removeNode } from './block'
+import { type Block, type BlockFn, removeNode } from './block'
 import {
   type HydrationCursor,
   captureHydrationCursor,
-  exitHydrationCursor,
   isHydrating,
 } from './dom/hydration'
-import { DynamicFragment, isAdoptedPlaceholder } from './fragment'
+import { DynamicFragment, finishBlockCreation } from './fragment'
 import { DYNAMIC, OWNS_ANCHOR } from './fragmentFlags'
 import {
   insertionAnchor,
@@ -53,16 +52,12 @@ export function createKeyedFragment(
 
   renderEffect(() => frag.update(render, key()))
 
-  if (!isHydrating) {
-    // adopted fragments render in place through their template anchor
-    if (
-      _insertionParent &&
-      !isAdoptedPlaceholder(frag.anchor, _insertionAnchor)
-    ) {
-      insert(frag, _insertionParent, _insertionAnchor)
-    }
-  } else {
-    exitHydrationCursor(hydrationCursor)
-  }
+  finishBlockCreation(
+    frag,
+    frag.anchor,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+  )
   return frag
 }
