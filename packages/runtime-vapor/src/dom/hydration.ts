@@ -141,7 +141,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
 }
 
 export function hydrateNode(node: Node, fn: () => void): void {
-  const setup = () => (currentHydrationNode = node)
+  const setup = () => (currentHydrationNode = skipUntrackedAnchors(node))
   const cleanup = () => {}
   return performHydration(fn, setup, cleanup)
 }
@@ -164,7 +164,7 @@ export function enterAsyncHydration(node: Node): () => void {
   }
 
   setIsHydrating(true)
-  currentHydrationNode = node
+  currentHydrationNode = skipUntrackedAnchors(node)
 
   return () => {
     pendingAsyncHydrationResets--
@@ -240,7 +240,7 @@ export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
 export function setCurrentHydrationNode(node: Node | null): void {
-  currentHydrationNode = node
+  currentHydrationNode = skipUntrackedAnchors(node)
 }
 
 export function advanceHydrationNode(node: Node): void {
@@ -416,7 +416,7 @@ function locateHydrationNodeImpl(consumeFragmentStart = false) {
   }
 
   resetInsertionState()
-  currentHydrationNode = node
+  currentHydrationNode = skipUntrackedAnchors(node)
 }
 
 export function locateEndAnchor(
@@ -740,11 +740,14 @@ export function cleanupHydrationTail(
 }
 
 /**
- * Claim a node as some fragment's insertion anchor. Usually server output
- * adopted during the pass; use `claimUntrackedAnchor` for nodes the client makes.
+ * Claim a node as some fragment's insertion anchor standing AT an SSR
+ * logical position. Claiming a previously untracked anchor promotes it into
+ * the position stream — a revived deferred branch does this when its runtime
+ * anchor takes over the logical unit the branch occupies. Use
+ * `claimUntrackedAnchor` for an anchor that must stay invisible to traversal.
  */
 export function claimAnchor<T extends Node>(node: T): T {
-  ;(node as Anchor).$vha! |= AnchorFlags.ANCHOR
+  ;(node as Anchor).$vha = AnchorFlags.ANCHOR
   return node
 }
 
