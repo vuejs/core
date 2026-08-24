@@ -51,7 +51,6 @@ import {
   currentHydrationNode,
   enterHydrationBoundary,
   enterHydrationCursor,
-  exitHydrationCursor,
   isComment,
   isHydrating,
   locateHydrationBoundaryClose,
@@ -62,7 +61,7 @@ import {
   ForBlock,
   ForFragment,
   type VaporFragment,
-  isAdoptedPlaceholder,
+  finishBlockCreation,
   resolveFragmentAnchor,
 } from './fragment'
 import {
@@ -693,20 +692,21 @@ export const createFor = (
     })
   }
 
-  if (!isHydrating) {
-    // adopted lists mount their items in place through the template anchor
-    if (
-      _insertionParent &&
-      !isAdoptedPlaceholder(parentAnchor!, _insertionAnchor)
-    ) {
-      insert(frag, _insertionParent, _insertionAnchor)
-    }
-  } else {
-    if (!pendingHydrationAnchor && currentHydrationNode === parentAnchor!) {
-      advanceHydrationNode(parentAnchor!)
-    }
-    exitHydrationCursor(hydrationCursor)
+  if (
+    isHydrating &&
+    !pendingHydrationAnchor &&
+    currentHydrationNode === parentAnchor!
+  ) {
+    advanceHydrationNode(parentAnchor!)
   }
+
+  finishBlockCreation(
+    frag,
+    parentAnchor!,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+  )
 
   return frag
 }

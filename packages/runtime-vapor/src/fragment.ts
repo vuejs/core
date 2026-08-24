@@ -28,10 +28,12 @@ import {
 import type { VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  type HydrationCursor,
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
   currentHydrationNode,
+  exitHydrationCursor,
   isComment,
   isHydrating,
   locateEndAnchor,
@@ -878,6 +880,40 @@ export function isAdoptedPlaceholder(
   insertionAnchor: Node | undefined,
 ): boolean {
   return !!insertionAnchor && fragmentAnchor === insertionAnchor
+}
+
+/**
+ * Shared tail for every block-creating API (`createIf`, `createFor`,
+ * `createKeyedFragment`, `createDynamicComponent`, slot outlets): the block is
+ * built, now hand it over to the scope that asked for it.
+ *
+ * Client render: insert it at the captured insertion point, unless it adopted
+ * that point's `<!>` placeholder as its own anchor and therefore already
+ * rendered in place. Hydration: there is nothing to insert — the block adopted
+ * server nodes where they already stood — so hand back the cursor instead.
+ *
+ * Site-specific hydration work (claiming a leftover `<!---->`, advancing past
+ * an anchor, running an interop fragment's `hydrate()`) belongs *before* this
+ * call, guarded by `isHydrating`; keeping it out of here avoids allocating a
+ * callback on the client-render path, which never needs one.
+ */
+export function finishBlockCreation(
+  block: Block,
+  anchor: Node | undefined,
+  cursor: HydrationCursor | null,
+  insertionParent: ParentNode | undefined,
+  insertionAnchor: Node | undefined,
+  /** force insertion even when the anchor was adopted (custom element slots) */
+  force?: boolean,
+): void {
+  if (isHydrating) {
+    exitHydrationCursor(cursor)
+  } else if (
+    insertionParent &&
+    (force || !isAdoptedPlaceholder(anchor, insertionAnchor))
+  ) {
+    insert(block, insertionParent, insertionAnchor)
+  }
 }
 
 export function isFragment(val: unknown): val is VaporFragment {

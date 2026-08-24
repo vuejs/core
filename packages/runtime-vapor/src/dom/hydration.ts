@@ -83,6 +83,13 @@ export function runWithoutHydration(fn: () => any): any {
 
 let isOptimized = false
 
+// dev-only: cursors handed out but not yet handed back, checked when the
+// outermost hydration pass finishes. A leaked cursor means some enclosing
+// scope never had its resume point restored, which shows up far away as a
+// drifted cursor.
+let liveCursors = 0
+let hydrationDepth = 0
+
 function performHydration<T>(
   fn: () => T,
   setup: () => void,
@@ -104,6 +111,7 @@ function performHydration<T>(
   const prev = setIsHydrating(true)
   const prevHydrationNode = currentHydrationNode
   currentHydrationNode = null
+  if (__DEV__) hydrationDepth++
   try {
     setup()
     return fn()
@@ -111,6 +119,18 @@ function performHydration<T>(
     cleanup()
     currentHydrationNode = prevHydrationNode
     setIsHydrating(prev)
+    if (__DEV__) {
+      if (--hydrationDepth === 0) {
+        if (liveCursors > 0) {
+          warn(
+            `${liveCursors} hydration cursor(s) were never exited. The ` +
+              `enclosing scope's resume point is lost, so the cursor will ` +
+              `drift. This is likely a Vue internal bug.`,
+          )
+        }
+        liveCursors = 0
+      }
+    }
   }
 }
 
@@ -240,11 +260,36 @@ export function advanceHydrationNode(node: Node): void {
   }
 }
 
+/**
+ * ## Cursor protocol
+ *
+ * Hydration walks the server DOM once through a single module-level cursor
+ * (`currentHydrationNode`). Every block-creating API borrows it and must hand
+ * it back, which is what these three helpers express:
+ *
+ * - `enterHydrationCursor(consumeFragmentStart)` — locate this block's own
+ *   start node *and* remember where the enclosing scope should resume. Pass
+ *   `true` when the block's server output is wrapped in `<!--[-->…<!--]-->`
+ *   and the body should start after the opening marker (multi-root branches,
+ *   `v-for` lists).
+ * - `captureHydrationCursor()` — remember the resume point *without* locating
+ *   a start node, for wrappers whose inner owner locates its own start later
+ *   (dynamic components, keyed fragments, slot outlets). Locating early would
+ *   consume the insertion state before the inner path is known.
+ * - `exitHydrationCursor(cursor)` — restore the enclosing scope's resume point.
+ *   Every cursor from either constructor must reach this exactly once;
+ *   `finishBlockCreation` in `fragment.ts` is the shared tail that does it.
+ *
+ * `resume` distinguishes two states that look alike and are not:
+ * `undefined` means "this scope had no insertion parent, so let whatever the
+ * body advanced to stand", while `null` is a real resume point meaning "the
+ * enclosing scope has no next node". Collapsing them strands the cursor.
+ */
 export type HydrationCursor = {
   start: Node | null
-  // `undefined` means this scope follows the cursor advanced by its body.
-  // `null` is a real resume point: the outer scope has no next node.
   resume: Node | null | undefined
+  /** dev-only: set once the cursor is handed back, to catch double exits */
+  exited?: boolean
 }
 
 export function enterHydrationCursor(
@@ -252,6 +297,7 @@ export function enterHydrationCursor(
 ): HydrationCursor {
   const resume = insertionParent ? currentHydrationNode : undefined
   locateHydrationNode(consumeFragmentStart)
+  if (__DEV__) liveCursors++
   return {
     start: currentHydrationNode,
     resume,
@@ -264,6 +310,7 @@ export function enterHydrationCursor(
  * This avoids consuming insertion state too early.
  */
 export function captureHydrationCursor(): HydrationCursor {
+  if (__DEV__) liveCursors++
   return {
     start: null,
     resume: insertionParent ? currentHydrationNode : undefined,
@@ -271,8 +318,21 @@ export function captureHydrationCursor(): HydrationCursor {
 }
 
 export function exitHydrationCursor(cursor: HydrationCursor | null): void {
-  if (cursor && cursor.resume !== undefined) {
-    setCurrentHydrationNode(cursor.resume)
+  if (cursor) {
+    if (__DEV__) {
+      if (cursor.exited) {
+        warn(
+          `Hydration cursor was exited twice. The second restore rewinds the ` +
+            `cursor over nodes a sibling has already claimed. ` +
+            `This is likely a Vue internal bug.`,
+        )
+      }
+      cursor.exited = true
+      liveCursors--
+    }
+    if (cursor.resume !== undefined) {
+      setCurrentHydrationNode(cursor.resume)
+    }
   }
 }
 
