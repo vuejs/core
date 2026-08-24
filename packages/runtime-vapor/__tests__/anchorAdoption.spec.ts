@@ -17,7 +17,7 @@ import {
 import { nextTick, ref, shallowRef } from '@vue/runtime-dom'
 import { makeRender } from './_utils'
 import { defineVaporComponent } from '../src/apiDefineComponent'
-import { isAdoptedAnchor } from '../src/fragment'
+import { isAdoptedPlaceholder } from '../src/fragment'
 import {
   insertionAnchor,
   insertionIndex,
@@ -329,16 +329,16 @@ describe('setInsertionState decode', () => {
   })
 })
 
-describe('isAdoptedAnchor', () => {
+describe('isAdoptedPlaceholder', () => {
   test('requires a real insertion anchor', () => {
     const anchor = document.createComment('')
-    expect(isAdoptedAnchor(anchor, anchor)).toBe(true)
-    expect(isAdoptedAnchor(document.createComment(''), anchor)).toBe(false)
+    expect(isAdoptedPlaceholder(anchor, anchor)).toBe(true)
+    expect(isAdoptedPlaceholder(document.createComment(''), anchor)).toBe(false)
     // append inserts / interop fragments / hydration: both sides can be
     // undefined and must not read as adoption
-    expect(isAdoptedAnchor(undefined, undefined)).toBe(false)
-    expect(isAdoptedAnchor(anchor, undefined)).toBe(false)
-    expect(isAdoptedAnchor(undefined, anchor)).toBe(false)
+    expect(isAdoptedPlaceholder(undefined, undefined)).toBe(false)
+    expect(isAdoptedPlaceholder(anchor, undefined)).toBe(false)
+    expect(isAdoptedPlaceholder(undefined, anchor)).toBe(false)
   })
 })
 

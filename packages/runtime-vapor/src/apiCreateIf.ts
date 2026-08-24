@@ -13,7 +13,7 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { renderEffect } from './renderEffect'
-import { DynamicFragment, isAdoptedAnchor } from './fragment'
+import { DynamicFragment, isAdoptedPlaceholder } from './fragment'
 import { DYNAMIC, IF, OWNS_ANCHOR } from './fragmentFlags'
 import { createComment, createTextNode } from './dom/node'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
@@ -70,7 +70,7 @@ export function createIf(
         : undefined,
       _insertionAnchor,
     )
-    adopted = isAdoptedAnchor(dynamicFragment.anchor, _insertionAnchor)
+    adopted = isAdoptedPlaceholder(dynamicFragment.anchor, _insertionAnchor)
     frag = dynamicFragment
     renderEffect(() => {
       const ok = condition()

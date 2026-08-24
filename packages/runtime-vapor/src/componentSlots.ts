@@ -37,7 +37,7 @@ import {
   DynamicFragment,
   SlotFragment,
   type VaporFragment,
-  isAdoptedAnchor,
+  isAdoptedPlaceholder,
   isInteropFragment,
 } from './fragment'
 import { OWNS_ANCHOR, SLOT_FRAGMENT } from './fragmentFlags'
@@ -462,7 +462,7 @@ export function createSlot(
     if (
       _insertionParent &&
       (isCustomElementSlot ||
-        !isAdoptedAnchor(fragment.anchor, _insertionAnchor))
+        !isAdoptedPlaceholder(fragment.anchor, _insertionAnchor))
     ) {
       insert(fragment, _insertionParent, _insertionAnchor)
     }

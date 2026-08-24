@@ -122,12 +122,13 @@ import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
 import {
   advanceHydrationNode,
+  claimAnchor,
+  claimUntrackedAnchor,
   currentHydrationNode,
+  isClaimedAnchor,
   isComment,
   isHydrating,
-  isHydrationAnchor,
   locateEndAnchor,
-  markHydrationAnchor,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -161,8 +162,8 @@ import {
 } from './slotFragment'
 import {
   getCurrentSlotEndAnchor,
+  insertUntrackedAnchor,
   isPendingSlotContent,
-  queueAnchorInsert,
   queuePendingSlotContentAnchor,
   resolvePendingSlotContent,
   startPendingSlotContent,
@@ -2146,7 +2147,7 @@ function renderVDOMSlot(
                 // The candidate range belongs to the exposed local fallback,
                 // not to the invalid raw VDOM content or the parent aggregate.
                 withHydratingSlotBoundary(() => finishContentUpdate(true))
-                frag.anchor = currentAnchor = markHydrationAnchor(candidateEnd)
+                frag.anchor = currentAnchor = claimAnchor(candidateEnd)
                 currentParentNode = candidateEnd.parentNode as ParentNode
                 advanceHydrationNode(candidateEnd)
               } else {
@@ -2156,7 +2157,7 @@ function renderVDOMSlot(
               if (deferSharedContent && exposedValid && candidateEnd) {
                 // The local fallback won this candidate range. Keep its close
                 // marker as the host anchor for later invalid-to-valid updates.
-                frag.anchor = currentAnchor = markHydrationAnchor(candidateEnd)
+                frag.anchor = currentAnchor = claimAnchor(candidateEnd)
                 currentParentNode = candidateEnd.parentNode as ParentNode
               }
               if (
@@ -2177,7 +2178,7 @@ function renderVDOMSlot(
                 currentAnchor = anchor
                 const previous = slotEnd && slotEnd.previousSibling
                 if (previous && isComment(previous, ']')) {
-                  markHydrationAnchor(previous)
+                  claimAnchor(previous)
                 }
                 const attachAnchor = () => {
                   const insertionAnchor =
@@ -2188,8 +2189,7 @@ function renderVDOMSlot(
                   const parent = insertionAnchor && insertionAnchor.parentNode
                   if (parent) {
                     if (candidateEnd) {
-                      frag.anchor = currentAnchor =
-                        markHydrationAnchor(candidateEnd)
+                      frag.anchor = currentAnchor = claimAnchor(candidateEnd)
                       if (currentHydrationNode === contentStart) {
                         advanceHydrationNode(candidateEnd)
                       }
@@ -2446,12 +2446,11 @@ function renderVDOMSlot(
       (hydrationParent || currentParentNode) as Element,
     )
     if (contentState.valid && fallback && !inheritFallback && !frag.anchor) {
-      // Insert an outlet-owned anchor after traversal so it cannot shift
-      // hydration indices.
-      queueAnchorInsert(currentParentNode, currentAnchor, () => {
-        return (frag.anchor = currentAnchor =
-          markHydrationAnchor(createTextNode()))
-      })
+      // The outlet owns this anchor; as an untracked anchor it is invisible
+      // to hydration traversal, so it cannot shift hydration indices.
+      const outletAnchor = claimUntrackedAnchor(createTextNode())
+      insertUntrackedAnchor(currentParentNode, currentAnchor, outletAnchor)
+      frag.anchor = currentAnchor = outletAnchor
     }
     isMounted = true
   }
@@ -3086,7 +3085,7 @@ function createVNodeChildrenFragment(
             if (
               frag.slotBoundary &&
               currentAnchor &&
-              isHydrationAnchor(currentAnchor) &&
+              isClaimedAnchor(currentAnchor) &&
               currentAnchor !== getCurrentSlotEndAnchor() &&
               currentAnchor.nextSibling
             ) {
