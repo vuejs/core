@@ -428,6 +428,22 @@ describe('patchProp', () => {
       expect(option.value).toBe('bar')
       expect(option.getAttribute('value')).toBe('bar')
     })
+
+    test('should set value as attribute so form reset works', () => {
+      const form = document.createElement('form')
+      const el = document.createElement('input')
+      el.type = 'range'
+      el.min = '0'
+      el.max = '100'
+      form.appendChild(el)
+
+      setValue(el, 30)
+      expect(el.getAttribute('value')).toBe('30')
+
+      el.value = '80'
+      form.reset()
+      expect(el.value).toBe('30')
+    })
   })
 
   describe('setDOMProp', () => {
