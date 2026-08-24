@@ -15,5 +15,10 @@ export const SLOT_OUTLET: number = 1 << 7
 export const OWNS_ANCHOR: number = 1 << 8
 /** `v-if` fragment: a multi-root branch reuses the SSR `<!--]-->` close. */
 export const IF: number = 1 << 9
+/**
+ * Default-slot children of a dynamic element resolved to a native tag. Has no
+ * SSR-provided anchor; hydration injects and reuses its own runtime anchor.
+ */
+export const NATIVE_CHILDREN: number = 1 << 10
 
 export const SLOT_FRAGMENT: number = DYNAMIC | SLOT | SLOT_OUTLET

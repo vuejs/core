@@ -23,7 +23,7 @@ import {
 } from './node'
 import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
 import type { DynamicFragment } from '../fragment'
-import { IF, OWNS_ANCHOR, SLOT } from '../fragmentFlags'
+import { IF, NATIVE_CHILDREN, OWNS_ANCHOR, SLOT } from '../fragmentFlags'
 
 interface DeferredSlotAnchor {
   onContent: () => void
@@ -112,11 +112,6 @@ class SlotHydrationSession {
         setCurrentHydrationNode(start)
       }
     }
-  }
-
-  /** Content rendered somewhere in this boundary: settle everything now. */
-  markContentSettled(): void {
-    if (this.pending) this.settleAsContent()
   }
 
   /**
@@ -228,7 +223,7 @@ export function startPendingSlotContent(
 
 export function resolvePendingSlotContent(): void {
   const session = currentSlotHydrationSession
-  if (session) session.markContentSettled()
+  if (session && session.pending) session.settleAsContent()
 }
 
 export function isPendingSlotContent(): boolean {
@@ -417,7 +412,7 @@ function planReuseInjectedAnchor(
   // it revived and hydrated its content ahead of the anchor — adopt it
   // directly instead of creating a second one.
   if (
-    frag.nativeChildren &&
+    frag.__vf & NATIVE_CHILDREN &&
     isClaimedAnchor(currentHydrationNode) &&
     getParentNode(currentHydrationNode!)
   ) {
@@ -438,7 +433,7 @@ function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
   if (!(flags & OWNS_ANCHOR)) return
 
   if (
-    !frag.nativeChildren &&
+    !(flags & NATIVE_CHILDREN) &&
     currentHydrationNode &&
     isComment(currentHydrationNode, 'teleport anchor')
   ) {
@@ -464,7 +459,7 @@ function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
     const parentNode = getParentNode(currentHydrationNode)
     // Empty branch against non-empty SSR output has no block node to
     // derive an insertion point from, so use the current hydration range.
-    if (frag.nativeChildren && parentNode) {
+    if (flags & NATIVE_CHILDREN && parentNode) {
       return {
         kind: 'create-cleanup',
         parent: parentNode,
@@ -480,14 +475,19 @@ function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
       if (isReusableAnchorCandidate(anchor, frag) && getParentNode(anchor)) {
         return reuseOrCreateAfterAnchor(anchor, true)
       }
-      return {
-        kind: 'create-cleanup',
-        parent: parentNode,
-        next: anchor,
-        cleanupStart: currentHydrationNode,
-        cleanupUntil: anchor,
-      }
+      return planTrimFromCursor(parentNode, anchor)
     }
+  }
+}
+
+/** Trim the unclaimed SSR range at the cursor, then create a fresh anchor. */
+function planTrimFromCursor(parent: Node, next: Node | null): AnchorPlan {
+  return {
+    kind: 'create-cleanup',
+    parent,
+    next,
+    cleanupStart: currentHydrationNode!,
+    cleanupUntil: next,
   }
 }
 
@@ -521,15 +521,11 @@ function planRestartFromRuntimeComment(
   // SSR range before the next logical sibling.
   if (!getParentNode(frag.nodes) && currentHydrationNode) {
     const parentNode = getParentNode(currentHydrationNode)
-    const nextNode = nextLogicalSibling(currentHydrationNode)
     if (parentNode) {
-      return {
-        kind: 'create-cleanup',
-        parent: parentNode,
-        next: nextNode,
-        cleanupStart: currentHydrationNode,
-        cleanupUntil: nextNode,
-      }
+      return planTrimFromCursor(
+        parentNode,
+        nextLogicalSibling(currentHydrationNode),
+      )
     }
   }
 }

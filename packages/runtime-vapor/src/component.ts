@@ -135,12 +135,13 @@ import type {
 import {
   DynamicFragment,
   type InteropFragment,
+  finishBlockCreation,
   isDynamicFragment,
   isFragment,
   isInteropFragment,
   isSlotOutletFragment,
 } from './fragment'
-import { DYNAMIC, OWNS_ANCHOR, SLOT } from './fragmentFlags'
+import { DYNAMIC, NATIVE_CHILDREN, OWNS_ANCHOR, SLOT } from './fragmentFlags'
 import { resolvePendingSlotContent } from './dom/hydrateFragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import {
@@ -1192,10 +1193,9 @@ export function createPlainElement(
       // SlotFragment-style anchors. The hydrating label stays empty so the
       // runtime anchor renders as `<!---->`.
       const frag = new DynamicFragment(
-        DYNAMIC | OWNS_ANCHOR,
+        DYNAMIC | OWNS_ANCHOR | NATIVE_CHILDREN,
         __DEV__ ? (isHydrating ? '' : 'slot') : undefined,
       )
-      frag.nativeChildren = true
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
     } else {
@@ -1210,11 +1210,13 @@ export function createPlainElement(
     }
   }
 
-  if (!isHydrating) {
-    if (_insertionParent) insert(el, _insertionParent, _insertionAnchor)
-  } else {
-    exitHydrationCursor(hydrationCursor)
-  }
+  finishBlockCreation(
+    el,
+    undefined,
+    hydrationCursor,
+    _insertionParent,
+    _insertionAnchor,
+  )
 
   return el
 }

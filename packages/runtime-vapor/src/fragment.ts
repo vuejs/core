@@ -291,11 +291,6 @@ export class DynamicFragment extends RenderContextFragment {
   // category signal: everything hydration branches on lives in `__vf`.
   anchorLabel?: string
   keyed?: boolean
-  // Marks the generic dynamic fragment that createPlainElement creates for the
-  // default-slot children of a dynamic element resolved to a native tag
-  // (`rawSlots.$`). Unlike control-flow fragments it has no SSR-provided
-  // anchor, so hydration injects and then reuses its own runtime anchor.
-  nativeChildren?: boolean
   inTransition?: boolean
   // Fallthrough (re-)application for this fragment's branches, installed by
   // the owning component when the fragment sits on its fallthrough root
@@ -312,7 +307,7 @@ export class DynamicFragment extends RenderContextFragment {
   // inferred from the anchor being detached.
   everUpdated = false
   constructor(
-    flags: number = DYNAMIC,
+    flags: number,
     anchorLabel?: string,
     keyed: boolean = false,
     locate: boolean = true,
@@ -753,6 +748,8 @@ export class SlotFragment
               }
               move(this.nodes, parent, this.anchor)
             }
+            // Post-flush even after the verdict: the reference node's final
+            // position is only stable once the whole pass has finished.
             const queued = queuePendingSlotContentAnchor({
               onContent: attachContent,
               onFallback: () => {},
@@ -867,8 +864,8 @@ export function resolveFragmentAnchor(
  * Whether a fragment adopted the captured insertion anchor — the template
  * `<!>` placeholder — as its own, which means it rendered in place and the
  * creator must skip its trailing insert. Unrelated to hydration's
- * `isClaimedAnchor` / `isUntrackedAnchor`, which are about anchor nodes marked
- * during a hydration pass.
+ * `isClaimedAnchor` / `skipUntrackedAnchors`, which are about anchor nodes
+ * marked during a hydration pass.
  *
  * The insertion anchor must be checked non-null: append inserts capture no
  * anchor, and fragments without a client anchor (vdom interop slots, any
