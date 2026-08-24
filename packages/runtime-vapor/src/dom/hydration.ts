@@ -821,7 +821,23 @@ export function enterHydrationBoundary(close: Node | null): () => void {
     // no unclaimed SSR nodes left to trim. Single-root paths commonly end up
     // here, so there is no children-count mismatch to report.
     const node = currentHydrationNode
-    if (close && node && node !== close) {
+    if (
+      close &&
+      node &&
+      node !== close &&
+      // The cursor can also have advanced *past* `close`: a fragment that
+      // claims the close marker as its own anchor moves beyond it, and
+      // `advanceHydrationNode` climbs to the parent's next sibling at the end
+      // of a child list. `cleanupHydrationTail` detects that and bails, but
+      // only after walking forward for a node that is already behind us —
+      // once per boundary, which is quadratic over a list of them. Ask the
+      // DOM instead.
+      !(
+        (
+          close.compareDocumentPosition(node) & 4
+        ) /* DOCUMENT_POSITION_FOLLOWING */
+      )
+    ) {
       cleanupHydrationTail(node, undefined, close)
     }
   }

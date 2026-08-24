@@ -69,8 +69,9 @@ const staticMarkup = `<div class="wrap">${range(
   i => `<section class="row"><h3>heading ${i}</h3><p>body ${i}</p></section>`,
 )}</div>`
 
+const Bare = component(`<li class="row"><span>s</span></li>`)
 const Row = component(`<li class="row"><slot/></li>`)
-const Card = component(`<div class="card"><slot><em>fallback</em></slot></div>`)
+const Card = component(`<li class="row"><slot><em>fallback</em></slot></li>`)
 
 export const fixtures: HydrationFixture[] = [
   // Static markup: the ceiling for the STATIC template fast path, which skips
@@ -118,28 +119,48 @@ export const fixtures: HydrationFixture[] = [
         : `<!----><b>static ${i}</b>`,
     )}</div>`,
   },
-  // A component boundary per row: enterHydrationCursor/exitHydrationCursor plus
-  // slot content per row.
+  // --- isolation ladder -------------------------------------------------
+  // Four scenarios over identical per-item content, each adding one layer.
+  // Subtracting neighbours attributes cost to the layer that was added:
+  //   (2)-(1) bare component boundary, (3)-(2) slot outlet, (4)-(3) fallback.
   {
-    name: 'component items',
+    name: 'ladder 1: plain element',
     comp: component(
-      `<ul><Row v-for="item in items" :key="item">{{ item }}</Row></ul>`,
+      `<ul><li class="row" v-for="item in items" :key="item"><span>s</span></li></ul>`,
+      { items },
+    ),
+    html: `<ul><!--[-->${range(
+      () => `<li class="row"><span>s</span></li>`,
+    )}<!--]--></ul>`,
+  },
+  {
+    name: 'ladder 2: + component boundary',
+    comp: component(`<ul><Bare v-for="item in items" :key="item" /></ul>`, {
+      items,
+      Bare,
+    }),
+    html: `<ul><!--[-->${range(
+      () => `<li class="row"><span>s</span></li>`,
+    )}<!--]--></ul>`,
+  },
+  {
+    name: 'ladder 3: + slot outlet',
+    comp: component(
+      `<ul><Row v-for="item in items" :key="item"><span>s</span></Row></ul>`,
       { items, Row },
     ),
     html: `<ul><!--[-->${range(
-      i => `<li class="row"><!--[-->item ${i}<!--]--></li>`,
+      () => `<li class="row"><!--[--><span>s</span><!--]--></li>`,
     )}<!--]--></ul>`,
   },
-  // Slot outlets with fallback keep the pending content-vs-fallback machinery
-  // live for every outlet.
   {
-    name: 'slots with fallback',
+    name: 'ladder 4: + slot fallback',
     comp: component(
-      `<div><Card v-for="item in items" :key="item"><span>{{ item }}</span></Card></div>`,
+      `<ul><Card v-for="item in items" :key="item"><span>s</span></Card></ul>`,
       { items, Card },
     ),
-    html: `<div><!--[-->${range(
-      i => `<div class="card"><!--[--><span>item ${i}</span><!--]--></div>`,
-    )}<!--]--></div>`,
+    html: `<ul><!--[-->${range(
+      () => `<li class="row"><!--[--><span>s</span><!--]--></li>`,
+    )}<!--]--></ul>`,
   },
 ]
