@@ -480,6 +480,7 @@ describe('patchProp', () => {
       expect(img.hasAttribute('width')).toBe(true)
     })
 
+    // #15339
     test('should set prop whose value matches the element default', () => {
       const input = document.createElement('input')
       setProp(input, 'type', 'text')
