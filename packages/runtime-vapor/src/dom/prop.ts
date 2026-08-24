@@ -400,7 +400,7 @@ export function setValue(
   if (oldValue !== newValue) {
     el.value = newValue
   }
-  // #6007 also set form state as attributes so they work with
+  // #6007 also set value as an attribute so it works with
   // <input type="reset"> or libs / extensions that expect attributes
   if (value == null) {
     el.removeAttribute('value')
