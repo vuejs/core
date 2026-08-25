@@ -418,6 +418,12 @@ describe('patchProp', () => {
       expect(el.value).toBe(obj.toString())
       expect((el as any)._value).toBe(obj)
 
+      const div = document.createElement('div')
+      const symbol = Symbol('foo')
+      setValue(div, symbol)
+      expect((div as any).value).toBe(symbol)
+      expect(div.getAttribute('value')).toBe(symbol.toString())
+
       const option = document.createElement('option')
       setElementText(option, 'foo')
       expect(option.value).toBe('foo')

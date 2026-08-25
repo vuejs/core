@@ -405,7 +405,7 @@ export function setValue(
   if (value == null) {
     el.removeAttribute('value')
   } else {
-    el.setAttribute('value', newValue)
+    el.setAttribute('value', isSymbol(newValue) ? String(newValue) : newValue)
   }
 }
 
