@@ -158,18 +158,17 @@ export function setDOMProp(
     }
   }
 
-  // the initial set must go through even when the value matches the property
-  // default, since reflected attributes only exist once assigned
+  // DOM properties may normalize values differently from reflected attributes,
+  // so compare against the previous binding and always perform the initial set.
   const cacheKey = `$p$${key}`
-  const prev = el[key]
-  if (value === prev && cacheKey in el) {
+  if (value === el[cacheKey] && cacheKey in el) {
     return
   }
   el[cacheKey] = value
 
   let needRemove = false
   if (value === '' || value == null) {
-    const type = typeof prev
+    const type = typeof el[key]
     if (type === 'boolean') {
       value = includeBooleanAttr(value)
     } else if (value == null && type === 'string') {
