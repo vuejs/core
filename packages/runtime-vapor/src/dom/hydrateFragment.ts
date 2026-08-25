@@ -426,7 +426,7 @@ function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
 
   // Empty fragments claim a current SSR anchor candidate directly. Later
   // fragments that need the same candidate create a fresh anchor after it.
-  if (isReusableAnchorCandidate(currentHydrationNode)) {
+  if (isReusableAnchorCandidate(currentHydrationNode, frag)) {
     return reuseOrCreateAfterAnchor(currentHydrationNode)
   }
 

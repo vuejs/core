@@ -11,6 +11,7 @@ import {
   createComponentWithFallback,
   createDynamicComponent,
   createSlot,
+  createVaporApp,
   defineVaporComponent,
   insert,
   renderEffect,
@@ -19,7 +20,7 @@ import {
   setInsertionState,
   template,
 } from '../src'
-import { makeRender } from './_utils'
+import { compile, makeRender } from './_utils'
 
 const define = makeRender()
 
@@ -46,6 +47,61 @@ describe('api: createDynamicComponent', () => {
     val.value = 'foo'
     await nextTick()
     expect(html()).toBe('<foo></foo><!--dynamic-component-->')
+  })
+
+  test('null renders as an empty branch', async () => {
+    const val = shallowRef<any>(null)
+
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(() => val.value)
+      },
+    }).render()
+
+    // no placeholder node — the fragment anchor is the only structural node
+    expect(html()).toBe('<!--dynamic-component-->')
+
+    val.value = A
+    await nextTick()
+    expect(html()).toBe('AAA<!--dynamic-component-->')
+
+    val.value = null
+    await nextTick()
+    expect(html()).toBe('<!--dynamic-component-->')
+  })
+
+  // Coverage guard: dev was already correct here (the old placeholder was a
+  // Comment, which isValidSlot treats as invalid). The bug this protects
+  // against was prod-only — an empty-Text placeholder counted as valid slot
+  // content and suppressed the fallback — and is now impossible because a
+  // null branch keeps nodes as EMPTY_BLOCK in both builds.
+  test('null as slot root shows fallback', async () => {
+    const data = ref({ view: null as any })
+    const comps: any = {}
+    comps.Child = compile(
+      `<template><slot>FALLBACK</slot></template>`,
+      data,
+      comps,
+    )
+    const App = compile(
+      `<template><components.Child><component :is="data.view" /></components.Child></template>`,
+      data,
+      comps,
+    )
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    createVaporApp(App).mount(host)
+
+    expect(host.textContent).toBe('FALLBACK')
+
+    data.value.view = 'b'
+    await nextTick()
+    expect(host.querySelector('b')).toBeTruthy()
+
+    data.value.view = null
+    await nextTick()
+    expect(host.textContent).toBe('FALLBACK')
+    host.remove()
   })
 
   test('global registration', async () => {
