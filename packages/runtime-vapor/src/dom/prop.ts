@@ -158,10 +158,14 @@ export function setDOMProp(
     }
   }
 
+  // the initial set must go through even when the value matches the property
+  // default, since reflected attributes only exist once assigned
+  const cacheKey = `$p$${key}`
   const prev = el[key]
-  if (value === prev) {
+  if (value === prev && cacheKey in el) {
     return
   }
+  el[cacheKey] = value
 
   let needRemove = false
   if (value === '' || value == null) {
