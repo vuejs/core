@@ -31,7 +31,7 @@ export const transformVBindShorthand: NodeTransform = (node, context) => {
               arg.loc,
             ),
           )
-          prop.exp = createSimpleExpression('', true, arg.loc)
+          prop.exp = createSimpleExpression('undefined', false, arg.loc)
         } else {
           const propName = camelize((arg as SimpleExpressionNode).content)
           if (
@@ -47,7 +47,7 @@ export const transformVBindShorthand: NodeTransform = (node, context) => {
                 arg.loc,
               ),
             )
-            prop.exp = createSimpleExpression('', true, arg.loc)
+            prop.exp = createSimpleExpression('undefined', false, arg.loc)
           }
         }
       }
