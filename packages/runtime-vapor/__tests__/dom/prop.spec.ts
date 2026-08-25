@@ -485,7 +485,7 @@ describe('patchProp', () => {
       expect(el.hasAttribute('id')).toBe(false)
 
       setProp(el, 'id', '')
-      expect(el.hasAttribute('id')).toBe(false)
+      expect(el.hasAttribute('id')).toBe(true)
 
       const img = document.createElement('img')
       setProp(img, 'width', 0)
@@ -493,13 +493,15 @@ describe('patchProp', () => {
 
       setProp(img, 'width', null)
       expect(img.hasAttribute('width')).toBe(false)
+      setProp(img, 'width', 0)
+      expect(img.getAttribute('width')).toBe('0')
       setProp(img, 'width', 1)
       expect(img.hasAttribute('width')).toBe(true)
 
       setProp(img, 'width', undefined)
       expect(img.hasAttribute('width')).toBe(false)
-      setProp(img, 'width', 1)
-      expect(img.hasAttribute('width')).toBe(true)
+      setProp(img, 'width', 0)
+      expect(img.getAttribute('width')).toBe('0')
     })
 
     // #15339

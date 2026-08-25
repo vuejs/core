@@ -958,6 +958,20 @@ describe('component', () => {
     expect(ownerAfterThrow).toBe(owner)
     expect(suspenseAfterThrow).toBe(previousSuspense)
   })
+
+  it('should write reflected prop when normalized value is unchanged', async () => {
+    const type = ref('invalid')
+    const Comp = compile(`<template><input :type="data" /></template>`, type)
+    const { host } = define(Comp).render()
+    const input = host.firstChild as HTMLInputElement
+
+    expect(input.type).toBe('text')
+    expect(input.getAttribute('type')).toBe('invalid')
+
+    type.value = 'text'
+    await nextTick()
+    expect(input.getAttribute('type')).toBe('text')
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {
