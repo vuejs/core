@@ -2,6 +2,7 @@ import { type Block, type BlockFn, removeNode } from './block'
 import {
   type HydrationCursor,
   advanceHydrationNode,
+  claimUntrackedAnchor,
   currentHydrationNode,
   enterHydrationCursor,
   isComment,
@@ -47,7 +48,11 @@ export function createIf(
       ? b1()
       : b2
         ? b2()
-        : [__DEV__ ? createComment('if') : createTextNode()]
+        : [
+            claimUntrackedAnchor(
+              __DEV__ ? createComment('if') : createTextNode(),
+            ),
+          ]
   } else {
     // DynamicFragment should be keyed for correct transition behavior
     // and KeepAlive cache identity. The encoded value is index + 1, so 0 is
