@@ -101,7 +101,7 @@ export function createDynamicComponent(
         ? value
         : withScopeOwner(scopeOwner, () => resolveDynamicComponent(value))
     if (resolved === NULL_DYNAMIC_COMPONENT) {
-      frag.update(undefined, value)
+      frag.update(undefined, resolved)
       return
     }
     frag.update(() => {
