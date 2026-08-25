@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   Fragment,
+  NULL_DYNAMIC_COMPONENT,
   type VNode,
   currentInstance,
   isKeepAlive,
@@ -68,9 +69,9 @@ export function createDynamicComponent(
     slotRoot,
     slotRoot
       ? () => {
-          // A null <component :is> branch has a branch placeholder in `nodes`
+          // A single-node block (e.g. a router view block) sits in `nodes`
           // in addition to the DynamicFragment anchor. Remove both so slot
-          // fallback does not expose the placeholder as content.
+          // fallback does not expose it as content.
           const nodes = frag.nodes
           if (nodes instanceof Node) {
             const parent = nodes.parentNode
@@ -89,6 +90,20 @@ export function createDynamicComponent(
     const value = getter()
     const appContext =
       (currentInstance && currentInstance.appContext) || emptyContext
+    // Resolve before update: a null dynamic component is an empty branch
+    // (nodes stays EMPTY_BLOCK, the fragment anchor is the only structural
+    // node), the same shape as v-if=false. Rendering a fake placeholder node
+    // instead would put a build-dependent node (dev comment / prod text) into
+    // the semantic content tree — prod hydration then mistakes the detached
+    // text for valid content and crashes deriving an anchor from it.
+    const resolved =
+      isBlock(value) || (isInteropEnabled && appContext.vdom && isVNode(value))
+        ? value
+        : withScopeOwner(scopeOwner, () => resolveDynamicComponent(value))
+    if (resolved === NULL_DYNAMIC_COMPONENT) {
+      frag.update(undefined, value)
+      return
+    }
     frag.update(() => {
       // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
       if (isBlock(value)) return value
@@ -126,7 +141,7 @@ export function createDynamicComponent(
       }
 
       return createComponentWithFallback(
-        withScopeOwner(scopeOwner, () => resolveDynamicComponent(value)),
+        resolved,
         rawProps,
         normalizedRawSlots,
         isSingleRoot,
