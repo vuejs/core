@@ -40,6 +40,14 @@ export const transformVBindShorthand: NodeTransform = (node, context) => {
             propName[0] === '-'
           ) {
             prop.exp = createSimpleExpression(propName, false, arg.loc)
+          } else {
+            context.onError(
+              createCompilerError(
+                ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+                arg.loc,
+              ),
+            )
+            prop.exp = createSimpleExpression('', true, arg.loc)
           }
         }
       }
