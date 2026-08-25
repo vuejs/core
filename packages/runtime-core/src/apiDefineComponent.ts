@@ -176,7 +176,7 @@ export function defineComponent<
   S extends SlotsType = {},
 >(
   setup: (
-    props: PublicRuntimeProps<RuntimePropsOptions>,
+    props: Readonly<PublicRuntimeProps<RuntimePropsOptions>>,
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {

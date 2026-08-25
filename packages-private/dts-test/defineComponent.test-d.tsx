@@ -1551,6 +1551,8 @@ describe('function syntax w/ runtime props', () => {
       expectType<number | undefined>(props.p2)
       expectType<boolean | undefined>(props.p3)
       expectType<string>(props.p4)
+      // @ts-expect-error props should be readonly
+      props.p4 = 'value'
       return () => {}
     },
     {
