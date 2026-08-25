@@ -1,10 +1,5 @@
 import { DynamicFragment, SlotFragment } from '../../src/fragment'
-import {
-  DYNAMIC,
-  IF,
-  NATIVE_CHILDREN,
-  OWNS_ANCHOR,
-} from '../../src/fragmentFlags'
+import { DYNAMIC, IF, NATIVE_CHILDREN } from '../../src/fragmentFlags'
 import {
   claimAnchor,
   hydrateNode,
@@ -41,12 +36,9 @@ function expectKind<K extends AnchorPlan['kind']>(
 }
 
 describe('DynamicFragment flags', () => {
-  test('constructor holds the DYNAMIC | OWNS_ANCHOR invariant', () => {
+  test('constructor holds the DYNAMIC invariant', () => {
     expect(
       new DynamicFragment(0, undefined, false, false).__vf & DYNAMIC,
-    ).toBeTruthy()
-    expect(
-      new DynamicFragment(0, undefined, false, false).__vf & OWNS_ANCHOR,
     ).toBeTruthy()
     expect(
       new DynamicFragment(IF, undefined, false, false).__vf & IF,

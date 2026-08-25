@@ -92,7 +92,6 @@ import {
   FOR,
   FOR_ITEM,
   FRAGMENT,
-  OWNS_ANCHOR,
   SLOT,
   SLOT_FRAGMENT,
   SLOT_OUTLET,
@@ -308,7 +307,7 @@ export class DynamicFragment extends RenderContextFragment {
   everUpdated = false
   constructor(
     // subtype bits only (IF, NATIVE_CHILDREN, SLOT_FRAGMENT...); the class
-    // invariant DYNAMIC | OWNS_ANCHOR is added here so it cannot be forgotten
+    // invariant DYNAMIC is added here so it cannot be forgotten
     flags: number = 0,
     anchorLabel?: string,
     keyed: boolean = false,
@@ -317,7 +316,7 @@ export class DynamicFragment extends RenderContextFragment {
     onInvalid?: () => void,
     adoptAnchor?: Node,
   ) {
-    super(EMPTY_BLOCK, DYNAMIC | OWNS_ANCHOR | flags)
+    super(EMPTY_BLOCK, DYNAMIC | flags)
     if (keyed) this.keyed = true
     if (
       isTransitionEnabled &&
