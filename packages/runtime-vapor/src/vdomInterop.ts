@@ -779,6 +779,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
           [vnode, cached],
         )
       }
+      if (vnode.ibu) vnode.ibu()
       if (vnode.dirs) {
         invokeDirectiveHook(vnode, cached, parentComponent, 'beforeUpdate')
       }
@@ -802,6 +803,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
               [vnode, cached],
             )
           }
+          if (vnode.iu) vnode.iu()
         },
         undefined,
         parentSuspense,
@@ -983,43 +985,26 @@ function removeAttachedNodes(block: Block, parent: ParentNode): void {
   }
 }
 
-function appendVnodeHook(
-  vnode: VNode,
-  key: 'onVnodeBeforeUpdate' | 'onVnodeUpdated',
-  hook: () => void,
-): void {
-  let props = vnode.props
-  // The shared EMPTY_OBJ (frozen in dev only) and user-frozen props both need
-  // replacing with the vnode's own object.
-  if (!props || props === EMPTY_OBJ || !Object.isExtensible(props)) {
-    props = vnode.props = extend({}, props)
-  }
-  const existing = props[key]
-  props[key] = existing
-    ? isArray(existing)
-      ? [...existing, hook]
-      : [existing, hook]
-    : hook
-}
-
 function trackFragmentVNodeUpdates(
   frag: VaporFragment,
   vnode: VNode,
   syncNodes: () => void,
 ): void {
-  const beforeUpdate = () => {
+  // `ibu`/`iu` are the interop-internal notification channel the renderer
+  // fires alongside the public vnode hooks. Assignment (never append) keeps
+  // the channel single-owner: re-tracking replaces a stale callback instead
+  // of accumulating, and user props stay untouched.
+  vnode.ibu = () => {
     if (frag.onBeforeUpdate) {
       frag.onBeforeUpdate.forEach(bu => bu())
     }
   }
-  const updated = () => {
+  vnode.iu = () => {
     syncNodes()
     if (frag.onUpdated) {
       frag.onUpdated.forEach(u => u())
     }
   }
-  appendVnodeHook(vnode, 'onVnodeBeforeUpdate', beforeUpdate)
-  appendVnodeHook(vnode, 'onVnodeUpdated', updated)
 }
 
 function createVNodeFragment(vnode: VNode): {
@@ -1612,11 +1597,13 @@ function trackSlotVNodeUpdatesWithRefresh(
   refresh: () => void,
   beforeUpdate?: () => void,
 ): void {
-  const onUpdated = () => refresh()
-
+  // Fragment patches fire no notifications, so subscribe every top-level
+  // range participant (element/component children); a component child's
+  // self-update must still refresh the snapshot. cloneVNode carries the
+  // fields so renderer-internal clones of mounted children keep notifying.
   const track = (node: VNode) => {
-    if (beforeUpdate) appendVnodeHook(node, 'onVnodeBeforeUpdate', beforeUpdate)
-    appendVnodeHook(node, 'onVnodeUpdated', onUpdated)
+    if (beforeUpdate) node.ibu = beforeUpdate
+    node.iu = refresh
     if (node.type === Fragment && isArray(node.children)) {
       node.children.forEach(child => {
         if (isVNode(child)) track(child)
@@ -2963,6 +2950,7 @@ function ensureVNodeHookState(
           [state!.vnode, state!.vnode],
         )
       }
+      if (state!.vnode.ibu) state!.vnode.ibu()
     })
 
     // Sync the outer component vnode before running any updated hooks. Hooks
@@ -2983,6 +2971,7 @@ function ensureVNodeHookState(
           [state!.vnode, state!.vnode],
         )
       }
+      if (state!.vnode.iu) state!.vnode.iu()
     })
   } else {
     state.vnode = vnode
