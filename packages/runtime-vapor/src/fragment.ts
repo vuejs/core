@@ -857,9 +857,11 @@ export function resolveFragmentAnchor(
 ): Node {
   if (adopt && adopt.nodeType === 8 /* Comment */) {
     if (__DEV__ && anchorLabel) (adopt as Comment).data = anchorLabel
-    return adopt
+    return claimUntrackedAnchor(adopt)
   }
-  return __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode()
+  return claimUntrackedAnchor(
+    __DEV__ && anchorLabel ? createComment(anchorLabel) : createTextNode(),
+  )
 }
 
 /**

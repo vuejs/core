@@ -51,6 +51,7 @@ import {
   isValidSlot,
 } from '../src/block'
 import {
+  claimUntrackedAnchor,
   hydrateNode,
   isClaimedAnchor,
   setCurrentHydrationNode,
@@ -233,6 +234,17 @@ describe('component: slots', () => {
       insert(frag, container)
 
       expect(container.innerHTML).toBe('fallback<!--slot-->')
+    })
+
+    test('claimed structural anchors are not valid blocks', () => {
+      // Prod anchors are text nodes; without the claim marker they read as
+      // renderable content and suppress slot fallback in prod only.
+      expect(
+        isValidBlock(claimUntrackedAnchor(document.createTextNode(''))),
+      ).toBe(false)
+      expect(
+        isValidSlot([[], claimUntrackedAnchor(document.createTextNode(''))]),
+      ).toBe(false)
     })
 
     test('slot fragment validity uses active fallback output', () => {

@@ -5,7 +5,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { isComment, isHydrating } from './dom/hydration'
+import { isClaimedAnchor, isComment, isHydrating } from './dom/hydration'
 import {
   MoveType,
   type TransitionHooks,
@@ -80,7 +80,9 @@ export function isValidBlock(
   if (!block) {
     return false
   } else if (block instanceof Node) {
-    return !(block instanceof Comment)
+    // Claimed structural anchors are text nodes in prod; excluding them by
+    // marker keeps validity identical across dev (comment) and prod shapes.
+    return !(block instanceof Comment) && !isClaimedAnchor(block)
   } else if (isVaporComponent(block)) {
     return componentAsValid || isValidBlock(block.block, componentAsValid)
   } else if (isArray(block)) {
