@@ -22,6 +22,7 @@ import type {
   ExtractDefaultPropTypes,
   ExtractPropTypes,
   ExtractPublicPropTypes,
+  Prop,
 } from './componentProps'
 import type {
   EmitsOptions,
@@ -145,13 +146,35 @@ export type DefineSetupFnComponent<
 type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
   Readonly<EmitsToProps<Emits>>
 
-type PublicRuntimeProps<O extends ComponentObjectPropsOptions> = {
-  [K in keyof ExtractPublicPropTypes<O>]: ExtractPublicPropTypes<O>[K]
+// ComponentObjectPropsOptions<P> widens values to `Prop<P[K]> | null`.
+// Detect that mapped form so we don't run Extract* on it again.
+type PropValueType<V> = [Exclude<V, undefined>] extends [Prop<infer T> | null]
+  ? [Prop<T> | null] extends [Exclude<V, undefined>]
+    ? T
+    : never
+  : never
+
+type PreTypedProps<O> = {
+  [K in keyof O]: PropValueType<O[K]>
 }
 
-type ResolvedRuntimeProps<O extends ComponentObjectPropsOptions> = Readonly<
-  LooseRequired<Readonly<ExtractPropTypes<O>>>
->
+type IsPreTypedRuntimeProps<O> = [keyof O] extends [never]
+  ? false
+  : false extends {
+        [K in keyof O]-?: [PropValueType<O[K]>] extends [never] ? false : true
+      }[keyof O]
+    ? false
+    : true
+
+type PublicRuntimeProps<O extends ComponentObjectPropsOptions> =
+  IsPreTypedRuntimeProps<O> extends true
+    ? { [K in keyof PreTypedProps<O>]: PreTypedProps<O>[K] }
+    : { [K in keyof ExtractPublicPropTypes<O>]: ExtractPublicPropTypes<O>[K] }
+
+type ResolvedRuntimeProps<O extends ComponentObjectPropsOptions> =
+  IsPreTypedRuntimeProps<O> extends true
+    ? Readonly<LooseRequired<Readonly<PreTypedProps<O>>>>
+    : Readonly<LooseRequired<Readonly<ExtractPropTypes<O>>>>
 
 type IsEqual<X, Y> =
   (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2

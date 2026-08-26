@@ -1,5 +1,6 @@
 import {
   type Component,
+  type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentPublicInstance,
   type PropType,
@@ -1618,6 +1619,20 @@ describe('function syntax w/ runtime props', () => {
   )
   expectType<JSX.Element>(<CompExactOptional />)
   expectType<JSX.Element>(<CompExactOptional msg="ok" />)
+
+  const runtimeProps: ComponentObjectPropsOptions<{ msg: string }> = {
+    msg: { type: String, required: true },
+  }
+  const CompHoisted = defineComponent(
+    props => {
+      expectType<string>(props.msg)
+      return () => {}
+    },
+    { props: runtimeProps },
+  )
+  expectType<JSX.Element>(<CompHoisted msg="ok" />)
+  // @ts-expect-error msg is required
+  expectType<JSX.Element>(<CompHoisted />)
 
   // @ts-expect-error string prop names don't match
   defineComponent(
