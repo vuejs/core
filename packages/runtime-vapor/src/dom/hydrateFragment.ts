@@ -221,6 +221,35 @@ export function startPendingSlotContent(
   return session.beginSegment(start)
 }
 
+export interface PendingSlotContentGuard {
+  /** Resolve the pending fallback-vs-content decision; later calls no-op. */
+  finish(contentValid: boolean): void
+  /** finally-path safety: resolve as valid content unless already resolved. */
+  settle(): void
+}
+
+/**
+ * Wraps startPendingSlotContent's one-shot protocol: the decision must be
+ * resolved exactly once, and an abandoned render (throw) must resolve it as
+ * content so the enclosing slot hydration session can continue. Inactive
+ * guards (`shouldDefer` false) are inert.
+ */
+export function startPendingSlotContentGuard(
+  shouldDefer: boolean,
+  start: Node | null,
+): PendingSlotContentGuard {
+  let finish: ((contentValid: boolean) => void) | null = shouldDefer
+    ? startPendingSlotContent(start)
+    : null
+  const resolve = (contentValid: boolean): void => {
+    if (finish) {
+      finish(contentValid)
+      finish = null
+    }
+  }
+  return { finish: resolve, settle: () => resolve(true) }
+}
+
 export function resolvePendingSlotContent(): void {
   const session = currentSlotHydrationSession
   if (session && session.pending) session.settleAsContent()

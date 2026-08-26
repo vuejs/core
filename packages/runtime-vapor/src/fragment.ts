@@ -36,7 +36,7 @@ import {
   exitHydrationCursor,
   isComment,
   isHydrating,
-  locateEndAnchor,
+  locateFragmentEnd,
   locateHydrationNode,
 } from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
@@ -64,7 +64,7 @@ import {
   hydrateDynamicFragmentAnchor,
   prepareDeferredHydrationAnchor,
   queuePendingSlotContentAnchor,
-  startPendingSlotContent,
+  startPendingSlotContentGuard,
   withHydratingSlotBoundary,
 } from './dom/hydrateFragment'
 import {
@@ -671,22 +671,17 @@ export class SlotFragment
     key: any,
   ): { contentStart: Node | null; contentValid: boolean } {
     const contentStart = currentHydrationNode
-    let finish: ((contentValid: boolean) => void) | null = null
+    const pending = startPendingSlotContentGuard(
+      this.sharedFallback || hasSlotFallback(this.boundary),
+      contentStart,
+    )
     try {
-      if (this.sharedFallback || hasSlotFallback(this.boundary)) {
-        finish = startPendingSlotContent(contentStart)
-      }
       this.updateContent(render, key)
       const contentValid = isValidSlot(this.content)
-      if (finish) {
-        finish(contentValid)
-        finish = null
-      }
+      pending.finish(contentValid)
       return { contentStart, contentValid }
     } finally {
-      if (finish) {
-        finish(true)
-      }
+      pending.settle()
     }
   }
 
@@ -724,10 +719,7 @@ export class SlotFragment
             this.lastNodesValid = contentValid
           }
           if (exposedValid) {
-            const end =
-              contentStart && isComment(contentStart, '[')
-                ? locateEndAnchor(contentStart)
-                : null
+            const end = locateFragmentEnd(contentStart)
             if (end) {
               this.anchor = claimAnchor(end)
               advanceHydrationNode(end)
@@ -736,10 +728,7 @@ export class SlotFragment
             }
           } else if (this.sharedFallback) {
             const slotEnd = getCurrentSlotEndAnchor()
-            const end =
-              contentStart && isComment(contentStart, '[')
-                ? locateEndAnchor(contentStart)
-                : null
+            const end = locateFragmentEnd(contentStart)
             if (end && end !== slotEnd) {
               // Move past this candidate range so later sibling roots hydrate
               // from their own position. The parent aggregate decision below

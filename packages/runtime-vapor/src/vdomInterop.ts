@@ -129,6 +129,7 @@ import {
   isComment,
   isHydrating,
   locateEndAnchor,
+  locateFragmentEnd,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -167,7 +168,7 @@ import {
   isPendingSlotContent,
   queuePendingSlotContentAnchor,
   resolvePendingSlotContent,
-  startPendingSlotContent,
+  startPendingSlotContentGuard,
   withHydratingSlotBoundary,
   withPendingHydratingSlotBoundary,
 } from './dom/hydrateFragment'
@@ -2379,10 +2380,7 @@ class VDOMSlotOutlet {
       resolvePendingSlotContent()
     }
     const contentStart = currentHydrationNode
-    const contentEnd =
-      contentStart && isComment(contentStart, '[')
-        ? locateEndAnchor(contentStart)
-        : null
+    const contentEnd = locateFragmentEnd(contentStart)
     const slotEnd = getCurrentSlotEndAnchor()
     const candidateEnd =
       contentEnd && contentEnd !== slotEnd ? contentEnd : null
@@ -2902,21 +2900,16 @@ function renderVaporSlot(
         !!slotState.localFallback.value || !!slotState.outletFallback.value
       slotResolutionState.pendingRecheck = false
       slotResolutionState.pendingRecheckForce = false
-      let finish: ((contentValid: boolean) => void) | undefined
-      const finishHydratingContent = (contentValid: boolean): void => {
-        if (!finish) return
-        finish(contentValid)
-        finish = undefined
-      }
+      let pending = startPendingSlotContentGuard(false, null)
       const finalizeResolvedContent = (
         resolvedContent: Block | undefined,
       ): Block | undefined => {
         if (hasInteropFallback && isSlotFragment(resolvedContent)) {
-          finishHydratingContent(true)
+          pending.finish(true)
           return resolvedContent
         }
         content.nodes = resolvedContent || EMPTY_BLOCK
-        finishHydratingContent(isValidSlot(content.nodes))
+        pending.finish(isValidSlot(content.nodes))
         recheckSlotResolution(slotResolutionState, takePendingRecheck())
         return resolvedContent
       }
@@ -2927,9 +2920,10 @@ function renderVaporSlot(
           resolvedContent = withHydratingSlotBoundary(() => {
             // SSR may currently contain fallback DOM. Delay empty content
             // anchors until rendered content proves whether it should win.
-            if (hasSlotFallback(localFallbackBoundary)) {
-              finish = startPendingSlotContent(currentHydrationNode)
-            }
+            pending = startPendingSlotContentGuard(
+              hasSlotFallback(localFallbackBoundary),
+              currentHydrationNode,
+            )
             try {
               return finalizeResolvedContent(
                 runWithFragmentCtxOnly(frag, () => {
@@ -2941,7 +2935,7 @@ function renderVaporSlot(
                 }),
               )
             } finally {
-              finishHydratingContent(true)
+              pending.settle()
             }
           })
         } else {

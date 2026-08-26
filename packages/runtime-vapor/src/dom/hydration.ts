@@ -423,6 +423,15 @@ function locateHydrationNodeImpl(consumeFragmentStart = false) {
   setCurrentHydrationNode(node)
 }
 
+/**
+ * The end anchor of the SSR fragment starting at `node`, or null when `node`
+ * is not a fragment start. The candidate-range shape every slot host checks
+ * before claiming hydrated content.
+ */
+export function locateFragmentEnd(node: Node | null): Node | null {
+  return node && isComment(node, '[') ? locateEndAnchor(node) : null
+}
+
 export function locateEndAnchor(
   node: CommentAnchor,
   open = '[',
