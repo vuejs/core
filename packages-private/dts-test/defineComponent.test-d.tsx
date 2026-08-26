@@ -1597,6 +1597,28 @@ describe('function syntax w/ runtime props', () => {
   })
   expectType<JSX.Element>(<CompAnnotated />)
 
+  // annotation equal to resolved setup type: public contract is still ExtractPublicPropTypes
+  const CompExactBool = defineComponent(
+    (_: Readonly<{ flag: boolean }>) => () => {},
+    { props: { flag: Boolean } },
+  )
+  expectType<JSX.Element>(<CompExactBool />)
+  expectType<JSX.Element>(<CompExactBool flag={true} />)
+
+  const CompExactDefault = defineComponent(
+    (_: Readonly<{ foo: string }>) => () => {},
+    { props: { foo: { type: String, default: 'x' } } },
+  )
+  expectType<JSX.Element>(<CompExactDefault />)
+  expectType<JSX.Element>(<CompExactDefault foo="y" />)
+
+  const CompExactOptional = defineComponent(
+    (_: Readonly<{ msg: string | undefined }>) => () => {},
+    { props: { msg: String } },
+  )
+  expectType<JSX.Element>(<CompExactOptional />)
+  expectType<JSX.Element>(<CompExactOptional msg="ok" />)
+
   // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {

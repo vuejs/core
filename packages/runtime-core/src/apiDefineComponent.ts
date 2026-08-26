@@ -182,7 +182,9 @@ export function defineComponent<
   },
 ): DefineSetupFnComponent<Props, E, S>
 // function syntax + object runtime props, unannotated setup:
-// setup gets resolved/internal props; public contract stays ExtractPublicPropTypes (#13964)
+// setup gets resolved/internal props; public contract stays ExtractPublicPropTypes (#13964).
+// An explicit annotation that is exactly the resolved setup type cannot be
+// distinguished from unannotated inference, so it also uses the public contract.
 export function defineComponent<
   RuntimePropsOptions extends ComponentObjectPropsOptions,
   E extends EmitsOptions = {},
