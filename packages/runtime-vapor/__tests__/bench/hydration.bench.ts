@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest'
+import { bench, describe } from 'vite-plus/test'
 import { createVaporApp, createVaporSSRApp } from '../../src'
 import { type HydrationFixture, fixtures } from './hydration.fixtures'
 

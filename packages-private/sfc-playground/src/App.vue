@@ -59,27 +59,25 @@ if (hash.startsWith('__SSR__')) {
 const files: StoreState['files'] = ref(Object.create(null))
 
 // enable experimental features
-const sfcOptions = computed(
-  (): SFCOptions => ({
-    script: {
-      inlineTemplate: productionMode.value,
-      isProd: productionMode.value,
-      propsDestructure: true,
-      // vapor: useVaporMode.value,
+const sfcOptions = computed((): SFCOptions => ({
+  script: {
+    inlineTemplate: productionMode.value,
+    isProd: productionMode.value,
+    propsDestructure: true,
+    // vapor: useVaporMode.value,
+  },
+  style: {
+    isProd: productionMode.value,
+  },
+  template: {
+    // vapor: useVaporMode.value,
+    isProd: productionMode.value,
+    compilerOptions: {
+      isCustomElement: (tag: string) =>
+        tag === 'mjx-container' || tag.startsWith('custom-'),
     },
-    style: {
-      isProd: productionMode.value,
-    },
-    template: {
-      // vapor: useVaporMode.value,
-      isProd: productionMode.value,
-      compilerOptions: {
-        isCustomElement: (tag: string) =>
-          tag === 'mjx-container' || tag.startsWith('custom-'),
-      },
-    },
-  }),
-)
+  },
+}))
 
 const store = useStore(
   {

@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest'
+import { bench, describe } from 'vite-plus/test'
 
 import { createBuffer as _createBuffer } from '../src/render'
 

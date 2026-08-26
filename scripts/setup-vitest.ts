@@ -1,4 +1,4 @@
-import type { MockInstance } from 'vitest'
+import type { MockInstance } from 'vite-plus/test'
 
 declare module 'vitest' {
   interface Matchers<T = any> extends CustomMatchers<T> {}

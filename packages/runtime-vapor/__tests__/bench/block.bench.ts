@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest'
+import { bench, describe } from 'vite-plus/test'
 import { shallowRef } from '@vue/reactivity'
 import {
   type Block,

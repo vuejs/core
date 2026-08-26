@@ -1,4 +1,4 @@
-import { type Locator, page, userEvent } from 'vitest/browser'
+import { type Locator, page, userEvent } from 'vite-plus/test/browser'
 
 export const css = (css: string) => page.getByCSS(css)
 export const html = (selector: string) => css(selector).element().innerHTML

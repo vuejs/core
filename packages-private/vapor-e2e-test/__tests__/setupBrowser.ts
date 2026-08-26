@@ -1,4 +1,4 @@
-import { type Locator, locators } from 'vitest/browser'
+import { type Locator, locators } from 'vite-plus/test/browser'
 
 locators.extend({
   getByCSS(css: string) {

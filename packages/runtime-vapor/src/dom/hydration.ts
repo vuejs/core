@@ -840,9 +840,8 @@ export function enterHydrationBoundary(close: Node | null): () => void {
       // once per boundary, which is quadratic over a list of them. Ask the
       // DOM instead.
       !(
-        (
-          close.compareDocumentPosition(node) & 4
-        ) /* DOCUMENT_POSITION_FOLLOWING */
+        close.compareDocumentPosition(node) &
+        4 /* DOCUMENT_POSITION_FOLLOWING */
       )
     ) {
       cleanupHydrationTail(node, undefined, close)
