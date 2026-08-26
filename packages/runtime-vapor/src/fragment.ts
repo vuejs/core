@@ -710,6 +710,7 @@ export class SlotFragment
             slotRender,
             key,
           )
+          const end = locateFragmentEnd(contentStart)
           let exposedValid = contentValid
           if (this.sharedFallback) {
             recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)
@@ -719,7 +720,6 @@ export class SlotFragment
             this.lastNodesValid = contentValid
           }
           if (exposedValid) {
-            const end = locateFragmentEnd(contentStart)
             if (end) {
               this.anchor = claimAnchor(end)
               advanceHydrationNode(end)
@@ -728,12 +728,12 @@ export class SlotFragment
             }
           } else if (this.sharedFallback) {
             const slotEnd = getCurrentSlotEndAnchor()
-            const end = locateFragmentEnd(contentStart)
-            if (end && end !== slotEnd) {
+            const candidate = end && end !== slotEnd ? end : null
+            if (candidate) {
               // Move past this candidate range so later sibling roots hydrate
               // from their own position. The parent aggregate decision below
               // determines whether this root actually owns the range.
-              advanceHydrationNode(end)
+              advanceHydrationNode(candidate)
             }
             const anchor = claimUntrackedAnchor(
               __DEV__
@@ -746,7 +746,7 @@ export class SlotFragment
               contentStart,
               slotEnd,
               anchor,
-              end && end !== slotEnd ? end : null,
+              candidate,
               candidate => (this.anchor = claimAnchor(candidate)),
               () => this.nodes,
             )
@@ -757,8 +757,8 @@ export class SlotFragment
               onFallback: () => {},
             })
             if (!queued) {
-              if (end && end !== slotEnd) {
-                claimAnchor(end)
+              if (candidate) {
+                claimAnchor(candidate)
               }
               queuePostFlushCb(attachContent)
             }
@@ -829,7 +829,7 @@ export class SlotFragment
   }
 
   syncNodes(): void {
-    this.nodes = resolveExposedSlotNodes(this, this.content)
+    this.nodes = resolveExposedSlotNodes(this)
   }
 
   notifyExposedValidityChange(): void {

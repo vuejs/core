@@ -147,21 +147,18 @@ export interface SlotResolutionState {
   notifyExposedValidityChange(): void
 }
 
-// Entry point for validity-change notifications (boundary.markDirty). During
-// reconciliation or a host content update, fold notifications into the
-// in-flight operation instead of recursing.
 /**
  * The winning exposed branch for a slot host: the committed fallback while one
  * is active, the resolved content otherwise. Every host's `syncNodes` points
  * its exposed nodes here.
  */
-export function resolveExposedSlotNodes(
-  state: SlotResolutionState,
-  content: Block,
-): Block {
-  return state.activeFallback || content
+export function resolveExposedSlotNodes(state: SlotResolutionState): Block {
+  return state.activeFallback || state.getContent()
 }
 
+// Entry point for validity-change notifications (boundary.markDirty). During
+// reconciliation or a host content update, fold notifications into the
+// in-flight operation instead of recursing.
 export function markSlotResolutionDirty(
   state: SlotResolutionState,
   force: boolean = false,

@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { NOOP, isArray } from '@vue/shared'
 import {
   advanceHydrationNode,
   claimAnchor,
@@ -216,9 +216,6 @@ export function queuePendingSlotContentAnchor(
   return !!session && session.defer(anchor)
 }
 
-// Slot content with fallback is unresolved until it creates a valid node.
-// While unresolved, empty content branches must not consume fallback SSR
-// anchors.
 /**
  * Builds the attach step of a deferred shared-fallback decision. Once the
  * winning side is known, resolve the reference node, then either claim the
@@ -248,7 +245,7 @@ export function createDeferredSlotAttach(
     if (candidate) {
       anchor = claimCandidate(candidate)
     } else {
-      parent.insertBefore(runtimeAnchor, insertionAnchor)
+      insertUntrackedAnchor(parent, insertionAnchor, runtimeAnchor)
       anchor = runtimeAnchor
     }
     if (onAttached) onAttached(parent)
@@ -274,7 +271,7 @@ export function claimPrecedingFragmentClose(slotEnd: Node | null): void {
  * range's end when one exists, otherwise the (still-attached) content start,
  * otherwise the receiver slot's end anchor.
  */
-export function resolveDeferredInsertionAnchor(
+function resolveDeferredInsertionAnchor(
   candidate: Node | null,
   contentStart: Node | null,
   slotEnd: Node | null,
@@ -285,6 +282,9 @@ export function resolveDeferredInsertionAnchor(
   )
 }
 
+// Slot content with fallback is unresolved until it creates a valid node.
+// While unresolved, empty content branches must not consume fallback SSR
+// anchors.
 export function startPendingSlotContent(
   start: Node | null,
 ): (contentValid: boolean) => void {
@@ -306,13 +306,18 @@ export interface PendingSlotContentGuard {
  * content so the enclosing slot hydration session can continue. Inactive
  * guards (`shouldDefer` false) are inert.
  */
+export const INERT_PENDING_SLOT_CONTENT: PendingSlotContentGuard = {
+  finish: NOOP,
+  settle: NOOP,
+}
+
 export function startPendingSlotContentGuard(
   shouldDefer: boolean,
   start: Node | null,
 ): PendingSlotContentGuard {
-  let finish: ((contentValid: boolean) => void) | null = shouldDefer
-    ? startPendingSlotContent(start)
-    : null
+  if (!shouldDefer) return INERT_PENDING_SLOT_CONTENT
+  let finish: ((contentValid: boolean) => void) | null =
+    startPendingSlotContent(start)
   const resolve = (contentValid: boolean): void => {
     if (finish) {
       finish(contentValid)
