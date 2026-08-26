@@ -195,6 +195,30 @@ export function runWithRenderCtx<R>(
   }
 }
 
+/**
+ * The one construction point for a slot host's boundary context, shared by
+ * SlotFragment and both vdom-interop slot hosts. `run` and `getScopeIds`
+ * always come from the host fragment's render seam; `parent`, `getFallback`
+ * and `markDirty` stay host-specific (ownership caps, fallback sources and
+ * dirty batching differ per host).
+ */
+export function createSlotBoundary(
+  fragment: RenderContextFragment,
+  parent: SlotBoundaryContext | null,
+  getFallback: () => BlockFn | undefined,
+  markDirty: (force?: boolean) => void,
+  onContentInvalid?: (() => void)[],
+): SlotBoundaryContext {
+  return {
+    parent,
+    getFallback,
+    run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
+    getScopeIds: () => fragment.slotScopeIds,
+    markDirty,
+    onContentInvalid,
+  }
+}
+
 // Restores fragment-owned ambient state only. The caller must already have the
 // correct currentInstance / currentScope; use runWithRenderCtx for late renders.
 export function runWithFragmentCtxOnly<R>(
@@ -585,14 +609,13 @@ export class SlotFragment
   }
 
   get boundary(): SlotBoundaryContext {
-    return (this.ownBoundary ||= {
-      parent: this.inheritFallback ? this.slotBoundary : null,
-      getFallback: () => this.localFallback,
-      run: (fn, scope) => this.runWithRenderCtx(fn, scope),
-      getScopeIds: () => this.slotScopeIds,
-      markDirty: force => markSlotResolutionDirty(this, force),
-      onContentInvalid: this.onContentInvalid,
-    })
+    return (this.ownBoundary ||= createSlotBoundary(
+      this,
+      this.inheritFallback ? this.slotBoundary : null,
+      () => this.localFallback,
+      force => markSlotResolutionDirty(this, force),
+      this.onContentInvalid,
+    ))
   }
 
   private insertSlot(

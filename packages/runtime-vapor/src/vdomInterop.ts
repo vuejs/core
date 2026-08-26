@@ -137,11 +137,11 @@ import {
   RenderContextFragment,
   type SlotFragment,
   type VaporFragment,
+  createSlotBoundary,
   isFragment,
   isSlotFragment,
   resolveFragmentAnchor,
   runWithFragmentCtxOnly,
-  runWithRenderCtx,
 } from './fragment'
 import { SLOT_OUTLET, VDOM } from './fragmentFlags'
 import {
@@ -1783,14 +1783,13 @@ class VDOMSlotOutlet {
           ? isValidBlock(this.resolution.activeFallback, componentAsValid)
           : this.content.valid,
       )
-    this.boundary = {
-      parent: inheritFallback ? slotBoundary : null,
-      getFallback: (): BlockFn | undefined => this.localFallback,
-      run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
-      getScopeIds: () => frag.slotScopeIds,
-      markDirty: force => markSlotResolutionDirty(this.resolution, force),
-      onContentInvalid: [() => this.cleanupInvalidContent()],
-    }
+    this.boundary = createSlotBoundary(
+      frag,
+      inheritFallback ? slotBoundary : null,
+      (): BlockFn | undefined => this.localFallback,
+      force => markSlotResolutionDirty(this.resolution, force),
+      [() => this.cleanupInvalidContent()],
+    )
     this.resolution = createSlotResolutionState(
       this.boundary,
       {
@@ -2831,27 +2830,19 @@ function renderVaporSlot(
         markSlotResolutionDirty(target, force)
       })
     }
-    const outletFallbackBoundary: SlotBoundaryContext = {
-      get parent() {
-        return slotBoundary
-      },
-      getFallback: () =>
-        slotState.outletFallback.value ? outletFallback : undefined,
-      run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
-      getScopeIds: () => frag.slotScopeIds,
-      markDirty: markInteropSlotResolutionDirty,
-    }
-    const localFallbackBoundary: SlotBoundaryContext = {
-      get parent() {
-        return outletFallbackBoundary
-      },
-      getFallback: () =>
-        slotState.localFallback.value ? localFallback : undefined,
-      run: (fn, scope) => runWithRenderCtx(frag, fn, scope),
-      getScopeIds: () => frag.slotScopeIds,
-      markDirty: markInteropSlotResolutionDirty,
+    const outletFallbackBoundary = createSlotBoundary(
+      frag,
+      slotBoundary,
+      () => (slotState.outletFallback.value ? outletFallback : undefined),
+      markInteropSlotResolutionDirty,
+    )
+    const localFallbackBoundary = createSlotBoundary(
+      frag,
+      outletFallbackBoundary,
+      () => (slotState.localFallback.value ? localFallback : undefined),
+      markInteropSlotResolutionDirty,
       onContentInvalid,
-    }
+    )
     slotResolutionState = createSlotResolutionState(localFallbackBoundary, {
       getContent: () => content.nodes,
       getParentNode: () => currentParentNode,
