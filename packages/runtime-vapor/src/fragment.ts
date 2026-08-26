@@ -9,7 +9,6 @@ import {
   insert,
   isValidBlock,
   isValidSlot,
-  move,
   remove,
   removeAttachedNodes,
   removeNode,
@@ -34,9 +33,8 @@ import {
   claimUntrackedAnchor,
   currentHydrationNode,
   exitHydrationCursor,
-  isComment,
   isHydrating,
-  locateEndAnchor,
+  locateFragmentEnd,
   locateHydrationNode,
 } from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
@@ -60,11 +58,13 @@ import {
   withSlotBoundary,
 } from './slotBoundary'
 import {
+  claimPrecedingFragmentClose,
+  createDeferredSlotAttach,
   getCurrentSlotEndAnchor,
   hydrateDynamicFragmentAnchor,
   prepareDeferredHydrationAnchor,
   queuePendingSlotContentAnchor,
-  startPendingSlotContent,
+  startPendingSlotContentGuard,
   withHydratingSlotBoundary,
 } from './dom/hydrateFragment'
 import {
@@ -73,6 +73,7 @@ import {
   invalidateExposedSlotContent,
   markSlotResolutionDirty,
   recheckSlotResolution,
+  resolveExposedSlotNodes,
 } from './slotFragment'
 import { setBlockKey } from './helpers/setKey'
 import {
@@ -192,6 +193,30 @@ export function runWithRenderCtx<R>(
     return runWithFragmentCtxOnly(fragment, fn)
   } finally {
     restoreCurrentInstance(prevInstance)
+  }
+}
+
+/**
+ * The one construction point for a slot host's boundary context, shared by
+ * SlotFragment and both vdom-interop slot hosts. `run` and `getScopeIds`
+ * always come from the host fragment's render seam; `parent`, `getFallback`
+ * and `markDirty` stay host-specific (ownership caps, fallback sources and
+ * dirty batching differ per host).
+ */
+export function createSlotBoundary(
+  fragment: RenderContextFragment,
+  parent: SlotBoundaryContext | null,
+  getFallback: () => BlockFn | undefined,
+  markDirty: (force?: boolean) => void,
+  onContentInvalid?: (() => void)[],
+): SlotBoundaryContext {
+  return {
+    parent,
+    getFallback,
+    run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
+    getScopeIds: () => fragment.slotScopeIds,
+    markDirty,
+    onContentInvalid,
   }
 }
 
@@ -585,14 +610,13 @@ export class SlotFragment
   }
 
   get boundary(): SlotBoundaryContext {
-    return (this.ownBoundary ||= {
-      parent: this.inheritFallback ? this.slotBoundary : null,
-      getFallback: () => this.localFallback,
-      run: (fn, scope) => this.runWithRenderCtx(fn, scope),
-      getScopeIds: () => this.slotScopeIds,
-      markDirty: force => markSlotResolutionDirty(this, force),
-      onContentInvalid: this.onContentInvalid,
-    })
+    return (this.ownBoundary ||= createSlotBoundary(
+      this,
+      this.inheritFallback ? this.slotBoundary : null,
+      () => this.localFallback,
+      force => markSlotResolutionDirty(this, force),
+      this.onContentInvalid,
+    ))
   }
 
   private insertSlot(
@@ -647,22 +671,17 @@ export class SlotFragment
     key: any,
   ): { contentStart: Node | null; contentValid: boolean } {
     const contentStart = currentHydrationNode
-    let finish: ((contentValid: boolean) => void) | null = null
+    const pending = startPendingSlotContentGuard(
+      this.sharedFallback || hasSlotFallback(this.boundary),
+      contentStart,
+    )
     try {
-      if (this.sharedFallback || hasSlotFallback(this.boundary)) {
-        finish = startPendingSlotContent(contentStart)
-      }
       this.updateContent(render, key)
       const contentValid = isValidSlot(this.content)
-      if (finish) {
-        finish(contentValid)
-        finish = null
-      }
+      pending.finish(contentValid)
       return { contentStart, contentValid }
     } finally {
-      if (finish) {
-        finish(true)
-      }
+      pending.settle()
     }
   }
 
@@ -691,6 +710,7 @@ export class SlotFragment
             slotRender,
             key,
           )
+          const end = locateFragmentEnd(contentStart)
           let exposedValid = contentValid
           if (this.sharedFallback) {
             recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)
@@ -700,10 +720,6 @@ export class SlotFragment
             this.lastNodesValid = contentValid
           }
           if (exposedValid) {
-            const end =
-              contentStart && isComment(contentStart, '[')
-                ? locateEndAnchor(contentStart)
-                : null
             if (end) {
               this.anchor = claimAnchor(end)
               advanceHydrationNode(end)
@@ -712,15 +728,12 @@ export class SlotFragment
             }
           } else if (this.sharedFallback) {
             const slotEnd = getCurrentSlotEndAnchor()
-            const end =
-              contentStart && isComment(contentStart, '[')
-                ? locateEndAnchor(contentStart)
-                : null
-            if (end && end !== slotEnd) {
+            const candidate = end && end !== slotEnd ? end : null
+            if (candidate) {
               // Move past this candidate range so later sibling roots hydrate
               // from their own position. The parent aggregate decision below
               // determines whether this root actually owns the range.
-              advanceHydrationNode(end)
+              advanceHydrationNode(candidate)
             }
             const anchor = claimUntrackedAnchor(
               __DEV__
@@ -728,27 +741,15 @@ export class SlotFragment
                 : createTextNode(),
             )
             this.anchor = anchor
-            const previous = slotEnd && slotEnd.previousSibling
-            if (previous && isComment(previous, ']')) {
-              claimAnchor(previous)
-            }
-            const attachContent = () => {
-              const candidate = end && end !== slotEnd ? end : null
-              const insertionAnchor =
-                candidate ||
-                (contentStart && contentStart.parentNode
-                  ? contentStart
-                  : slotEnd)
-              const parent = insertionAnchor && insertionAnchor.parentNode
-              if (!parent) return
-
-              if (candidate) {
-                this.anchor = claimAnchor(candidate)
-              } else {
-                parent.insertBefore(anchor, insertionAnchor)
-              }
-              move(this.nodes, parent, this.anchor)
-            }
+            claimPrecedingFragmentClose(slotEnd)
+            const attachContent = createDeferredSlotAttach(
+              contentStart,
+              slotEnd,
+              anchor,
+              candidate,
+              candidate => (this.anchor = claimAnchor(candidate)),
+              () => this.nodes,
+            )
             // Post-flush even after the verdict: the reference node's final
             // position is only stable once the whole pass has finished.
             const queued = queuePendingSlotContentAnchor({
@@ -756,8 +757,8 @@ export class SlotFragment
               onFallback: () => {},
             })
             if (!queued) {
-              if (end && end !== slotEnd) {
-                claimAnchor(end)
+              if (candidate) {
+                claimAnchor(candidate)
               }
               queuePostFlushCb(attachContent)
             }
@@ -773,15 +774,10 @@ export class SlotFragment
             const slotEnd = getCurrentSlotEndAnchor()
             const parent = slotEnd && slotEnd.parentNode
             if (parent) {
-              const previous = slotEnd.previousSibling
-              if (previous && isComment(previous, ']')) {
-                // When the receiver fallback is a fragment, the node right
-                // before the receiver slot end is the fallback fragment's SSR
-                // close. This forwarded slot does not own that marker, but
-                // boundary cleanup runs before the queued anchor is inserted,
-                // so mark it now.
-                claimAnchor(previous)
-              }
+              // When the receiver fallback is a fragment, the node right
+              // before the receiver slot end is the fallback fragment's SSR
+              // close.
+              claimPrecedingFragmentClose(slotEnd)
 
               queuePostFlushCb(() => {
                 if (slotEnd.parentNode === parent) {
@@ -833,7 +829,7 @@ export class SlotFragment
   }
 
   syncNodes(): void {
-    this.nodes = this.activeFallback || this.content
+    this.nodes = resolveExposedSlotNodes(this)
   }
 
   notifyExposedValidityChange(): void {

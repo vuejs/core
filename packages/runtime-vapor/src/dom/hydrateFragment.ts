@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { NOOP, isArray } from '@vue/shared'
 import {
   advanceHydrationNode,
   claimAnchor,
@@ -21,7 +21,13 @@ import {
   parentNode as getParentNode,
   updateLastLocatedLogicalChild,
 } from './node'
-import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
+import {
+  type Block,
+  EMPTY_BLOCK,
+  findBlockBoundary,
+  isValidBlock,
+  move,
+} from '../block'
 import type { DynamicFragment } from '../fragment'
 import { IF, NATIVE_CHILDREN, SLOT } from '../fragmentFlags'
 
@@ -210,6 +216,72 @@ export function queuePendingSlotContentAnchor(
   return !!session && session.defer(anchor)
 }
 
+/**
+ * Builds the attach step of a deferred shared-fallback decision. Once the
+ * winning side is known, resolve the reference node, then either claim the
+ * candidate SSR range's end anchor (when this host won one) or insert the
+ * runtime anchor, and move the host's nodes into place. The claim itself
+ * stays host-specific: which anchor fields it publishes and whether the
+ * hydration cursor must advance differ per host.
+ */
+export function createDeferredSlotAttach(
+  contentStart: Node | null,
+  slotEnd: Node | null,
+  runtimeAnchor: Node,
+  candidate: Node | null,
+  claimCandidate: (candidate: Node) => Node,
+  getNodes: () => Block,
+  onAttached?: (parent: ParentNode) => void,
+): () => void {
+  return () => {
+    const insertionAnchor = resolveDeferredInsertionAnchor(
+      candidate,
+      contentStart,
+      slotEnd,
+    )
+    const parent = insertionAnchor && insertionAnchor.parentNode
+    if (!parent) return
+    let anchor: Node
+    if (candidate) {
+      anchor = claimCandidate(candidate)
+    } else {
+      insertUntrackedAnchor(parent, insertionAnchor, runtimeAnchor)
+      anchor = runtimeAnchor
+    }
+    if (onAttached) onAttached(parent)
+    move(getNodes(), parent, anchor)
+  }
+}
+
+/**
+ * Claims the SSR fragment close marker directly preceding a receiver slot's
+ * end anchor. Slot content hydrating inside the receiver does not own that
+ * marker, but boundary cleanup can run before deferred anchors are inserted,
+ * so it must be marked as claimed up front.
+ */
+export function claimPrecedingFragmentClose(slotEnd: Node | null): void {
+  const previous = slotEnd && slotEnd.previousSibling
+  if (previous && isComment(previous, ']')) {
+    claimAnchor(previous)
+  }
+}
+
+/**
+ * The reference node a deferred slot anchor attaches before: the candidate
+ * range's end when one exists, otherwise the (still-attached) content start,
+ * otherwise the receiver slot's end anchor.
+ */
+function resolveDeferredInsertionAnchor(
+  candidate: Node | null,
+  contentStart: Node | null,
+  slotEnd: Node | null,
+): Node | null {
+  return (
+    candidate ||
+    (contentStart && contentStart.parentNode ? contentStart : slotEnd)
+  )
+}
+
 // Slot content with fallback is unresolved until it creates a valid node.
 // While unresolved, empty content branches must not consume fallback SSR
 // anchors.
@@ -219,6 +291,40 @@ export function startPendingSlotContent(
   const session = currentSlotHydrationSession
   if (!session) return () => {}
   return session.beginSegment(start)
+}
+
+export interface PendingSlotContentGuard {
+  /** Resolve the pending fallback-vs-content decision; later calls no-op. */
+  finish(contentValid: boolean): void
+  /** finally-path safety: resolve as valid content unless already resolved. */
+  settle(): void
+}
+
+/**
+ * Wraps startPendingSlotContent's one-shot protocol: the decision must be
+ * resolved exactly once, and an abandoned render (throw) must resolve it as
+ * content so the enclosing slot hydration session can continue. Inactive
+ * guards (`shouldDefer` false) are inert.
+ */
+export const INERT_PENDING_SLOT_CONTENT: PendingSlotContentGuard = {
+  finish: NOOP,
+  settle: NOOP,
+}
+
+export function startPendingSlotContentGuard(
+  shouldDefer: boolean,
+  start: Node | null,
+): PendingSlotContentGuard {
+  if (!shouldDefer) return INERT_PENDING_SLOT_CONTENT
+  let finish: ((contentValid: boolean) => void) | null =
+    startPendingSlotContent(start)
+  const resolve = (contentValid: boolean): void => {
+    if (finish) {
+      finish(contentValid)
+      finish = null
+    }
+  }
+  return { finish: resolve, settle: () => resolve(true) }
 }
 
 export function resolvePendingSlotContent(): void {
