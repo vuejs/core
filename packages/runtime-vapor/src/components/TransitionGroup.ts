@@ -434,7 +434,7 @@ function collectTransitionBlocks(
       if (onFragment) onFragment(block)
       if (onUpdateOwner) onUpdateOwner(block)
     }
-    if (isInteropEnabled && block.vnode) {
+    if (isInteropEnabled && block.hasVDOMContent && block.hasVDOMContent()) {
       children.push(block)
     } else {
       const start = children.length

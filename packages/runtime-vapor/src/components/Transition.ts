@@ -35,8 +35,6 @@ import {
 } from '../block'
 import {
   displayName,
-  getInteropTransitionElement,
-  getInteropTransitionType,
   isVaporTransition,
   registerTransitionHooks,
 } from '../transition'
@@ -243,8 +241,8 @@ function getTransitionType(block: ResolvedTransitionBlock): any {
   const type = transitionTypeMap.get(block)
   if (type !== undefined) return type
   if (block instanceof Element) return block.localName
-  if (isInteropEnabled && isFragment(block) && block.vnode) {
-    const type = getInteropTransitionType(block.vnode)
+  if (isInteropEnabled && isFragment(block) && block.getTransitionType) {
+    const type = block.getTransitionType()
     if (type !== undefined) return type
   }
   return block
@@ -684,9 +682,9 @@ function collectFragmentTransitionBlocks(
   onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
 ): void {
-  if (isInteropEnabled && block.vnode) {
+  if (isInteropEnabled && block.hasVDOMContent && block.hasVDOMContent()) {
     children.push(block)
-    const type = getInteropTransitionType(block.vnode)
+    const type = block.getTransitionType!()
     if (type !== undefined) setTransitionType(block, type)
     return
   }
@@ -728,9 +726,14 @@ export function setTransitionHooks(
 export function isValidTransitionBlock(
   block: Block,
 ): block is ResolvedTransitionBlock {
-  return !!(
+  return (
     block instanceof Element ||
-    (isInteropEnabled && isFragment(block) && block.vnode)
+    !!(
+      isInteropEnabled &&
+      isFragment(block) &&
+      block.hasVDOMContent &&
+      block.hasVDOMContent()
+    )
   )
 }
 
@@ -740,8 +743,8 @@ export function getTransitionElement(
   if (block instanceof Element) return block
 
   // vdom interop
-  if (isInteropEnabled && isFragment(block) && block.vnode) {
-    return getInteropTransitionElement(block.vnode)
+  if (isInteropEnabled && isFragment(block) && block.getTransitionElement) {
+    return block.getTransitionElement()
   }
 }
 

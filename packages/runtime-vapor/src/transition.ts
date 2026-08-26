@@ -1,4 +1,3 @@
-import type { VNode } from '@vue/runtime-dom'
 import type { Block, BlockFn } from './block'
 import type { VaporTransitionHooks } from './block'
 import type { FunctionalVaporComponent, VaporComponent } from './component'
@@ -38,12 +37,6 @@ export let applyTransitionLeaveHooks: ApplyTransitionLeaveHooksFn
 export let deferBranchUpdateDuringLeave: DeferBranchUpdateDuringLeaveFn
 export let removeBranchWithLeave: RemoveBranchWithLeaveFn
 
-type GetInteropTransitionTypeFn = (vnode: VNode) => VNode['type'] | undefined
-type GetInteropTransitionElementFn = (vnode: VNode) => Element | undefined
-
-export let getInteropTransitionType: GetInteropTransitionTypeFn
-export let getInteropTransitionElement: GetInteropTransitionElementFn
-
 export let isTransitionEnabled = false
 
 export function registerTransitionHooks(
@@ -57,14 +50,6 @@ export function registerTransitionHooks(
   applyTransitionLeaveHooks = applyLeaveHooks
   deferBranchUpdateDuringLeave = deferBranchUpdate
   removeBranchWithLeave = removeBranch
-}
-
-export function registerTransitionInterop(
-  getType: GetInteropTransitionTypeFn,
-  getElement: GetInteropTransitionElementFn,
-): void {
-  getInteropTransitionType = getType
-  getInteropTransitionElement = getElement
 }
 
 export const displayName = 'VaporTransition'
