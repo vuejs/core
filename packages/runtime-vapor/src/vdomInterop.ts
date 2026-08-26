@@ -207,7 +207,8 @@ import {
   currentUnmountSuspense,
   enableSuspense,
   isSuspenseEnabled,
-  setCurrentUnmountSuspense,
+  resolveUnmountSuspense,
+  runWithUnmountSuspense,
   setParentSuspense,
 } from './suspense'
 
@@ -321,19 +322,6 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
     }
   }
   return filtered
-}
-
-function unmountVaporInteropWithParentSuspense(
-  vnode: VNode,
-  doRemove: boolean | undefined,
-  parentSuspense: SuspenseBoundary | null,
-): void {
-  const prev = setCurrentUnmountSuspense(parentSuspense)
-  try {
-    vaporInteropImpl.unmount(vnode, doRemove, parentSuspense)
-  } finally {
-    setCurrentUnmountSuspense(prev)
-  }
 }
 
 // mounting vapor components and slots in vdom
@@ -482,7 +470,9 @@ const vaporInteropImpl: VaporInVdomInterface = {
       isSuspenseEnabled &&
       currentUnmountSuspense !== parentSuspense
     ) {
-      unmountVaporInteropWithParentSuspense(vnode, doRemove, parentSuspense)
+      runWithUnmountSuspense(parentSuspense, () =>
+        vaporInteropImpl.unmount(vnode, doRemove, parentSuspense),
+      )
       return
     }
 
@@ -1069,14 +1059,6 @@ function createVNodeFragment(vnode: VNode): {
     content.resolved ? isValidBlock(frag.nodes, componentAsValid) : true
   trackFragmentVNodeUpdates(frag, vnode, syncNodes)
   return { frag, syncNodes }
-}
-
-function resolveUnmountSuspense(
-  suspense: SuspenseBoundary | null,
-): SuspenseBoundary | null {
-  return currentUnmountSuspense === undefined
-    ? suspense
-    : currentUnmountSuspense
 }
 
 /**

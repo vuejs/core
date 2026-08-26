@@ -22,7 +22,7 @@ import {
 import { isTeleportEnabled, isTeleportFragment } from './teleport'
 import { isTransitionEnabled } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
-import { currentUnmountSuspense, isSuspenseEnabled } from './suspense'
+import { isSuspenseEnabled, resolveUnmountSuspense } from './suspense'
 
 export interface VaporTransitionHooks extends TransitionHooks {
   __vapor: true
@@ -288,16 +288,13 @@ export function remove(block: Block, parent?: ParentNode): void {
   if (block instanceof Node) {
     removeNode(block, parent)
   } else if (isVaporComponent(block)) {
-    if (
-      __FEATURE_SUSPENSE__ &&
-      isSuspenseEnabled &&
-      isInteropEnabled &&
-      currentUnmountSuspense !== undefined
-    ) {
-      unmountComponent(block, parent, currentUnmountSuspense)
-    } else {
-      unmountComponent(block, parent)
-    }
+    unmountComponent(
+      block,
+      parent,
+      __FEATURE_SUSPENSE__ && isSuspenseEnabled && isInteropEnabled
+        ? resolveUnmountSuspense(block.suspense)
+        : block.suspense,
+    )
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
       remove(block[i], parent)

@@ -148,7 +148,8 @@ import {
   currentUnmountSuspense,
   isSuspenseEnabled,
   parentSuspense,
-  setCurrentUnmountSuspense,
+  resolveUnmountSuspense,
+  runWithUnmountSuspense,
   setParentSuspense,
 } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
@@ -544,11 +545,13 @@ export function createComponent(
     }
     onScopeDispose(
       () =>
-        __FEATURE_SUSPENSE__ &&
-        isInteropEnabled &&
-        currentUnmountSuspense !== undefined
-          ? unmountComponent(instance, undefined, currentUnmountSuspense)
-          : unmountComponent(instance),
+        unmountComponent(
+          instance,
+          undefined,
+          __FEATURE_SUSPENSE__ && isInteropEnabled
+            ? resolveUnmountSuspense(instance.suspense)
+            : instance.suspense,
+        ),
       true,
     )
 
@@ -1422,7 +1425,9 @@ export function unmountComponent(
     isInteropEnabled &&
     currentUnmountSuspense !== parentSuspense
   ) {
-    unmountComponentWithParentSuspense(instance, parentNode, parentSuspense)
+    runWithUnmountSuspense(parentSuspense, () =>
+      unmountComponent(instance, parentNode, parentSuspense),
+    )
     return
   }
 
@@ -1502,19 +1507,6 @@ export function unmountComponent(
   if (pendingAsyncSetup) {
     instance.restoreAsyncContext = undefined
     instance.deferredHydrationBoundary = undefined
-  }
-}
-
-function unmountComponentWithParentSuspense(
-  instance: VaporComponentInstance,
-  parentNode: ParentNode | undefined,
-  parentSuspense: SuspenseBoundary | null,
-): void {
-  const prev = setCurrentUnmountSuspense(parentSuspense)
-  try {
-    unmountComponent(instance, parentNode, parentSuspense)
-  } finally {
-    setCurrentUnmountSuspense(prev)
   }
 }
 

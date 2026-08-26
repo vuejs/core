@@ -28,7 +28,7 @@ export function setParentSuspense(
   }
 }
 
-export function setCurrentUnmountSuspense(
+function setCurrentUnmountSuspense(
   suspense: SuspenseBoundary | null | undefined,
 ): SuspenseBoundary | null | undefined {
   try {
@@ -36,4 +36,35 @@ export function setCurrentUnmountSuspense(
   } finally {
     currentUnmountSuspense = suspense
   }
+}
+
+/**
+ * Establishes `suspense` as the active unmount pass's boundary around `fn`.
+ * The single entry point for the ambient: unmountComponent and the interop
+ * vnode unmount re-enter through this when their explicit argument differs
+ * from the active pass.
+ */
+export function runWithUnmountSuspense<T>(
+  suspense: SuspenseBoundary | null,
+  fn: () => T,
+): T {
+  const prev = setCurrentUnmountSuspense(suspense)
+  try {
+    return fn()
+  } finally {
+    setCurrentUnmountSuspense(prev)
+  }
+}
+
+/**
+ * The effective boundary for a teardown reached without a parameter channel —
+ * scope-disposal callbacks and block removal: the active unmount pass's
+ * boundary when one is set, the caller's fallback otherwise.
+ */
+export function resolveUnmountSuspense(
+  fallback: SuspenseBoundary | null,
+): SuspenseBoundary | null {
+  return currentUnmountSuspense === undefined
+    ? fallback
+    : currentUnmountSuspense
 }
