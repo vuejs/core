@@ -24,6 +24,7 @@ import {
   type VaporInVdomInterface,
   VaporSlot as VaporSlotVNode,
   type VdomInVaporInterface,
+  type VdomSlotOptions,
   callWithAsyncErrorHandling,
   cloneVNode,
   createCommentVNode,
@@ -226,6 +227,13 @@ function isVaporTransitionHooks(
   return !!hooks && (hooks as VaporTransitionHooks).__vapor === true
 }
 
+// runtime-core types `vnode.component` as its own instance; on a vapor vnode
+// it holds the vapor instance, and that union is not nameable cross-package.
+// The one cast, named.
+function getVaporInstance(vnode: VNode): VaporComponentInstance {
+  return vnode.component as any
+}
+
 function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
@@ -328,8 +336,8 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
 const vaporInteropImpl: VaporInVdomInterface = {
   mount(
     vnode,
-    container,
-    anchor,
+    container: ParentNode,
+    anchor: Node | null,
     parentComponent,
     parentSuspense,
     onBeforeMount,
@@ -427,7 +435,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
     n2.el = n1.el
     n2.anchor = n1.anchor
 
-    const instance = n2.component as any as VaporComponentInstance
+    const instance = getVaporInstance(n2)
     const vnodeHookState = ensureVNodeHookState(instance, n2)
 
     if (shouldUpdate) {
@@ -477,7 +485,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
     }
 
     const container = doRemove ? vnode.anchor!.parentNode : undefined
-    const instance = vnode.component as any as VaporComponentInstance
+    const instance = getVaporInstance(vnode)
     let slotStartAnchor: Node | null = null
     if (instance) {
       const anchor = vnode.anchor as Node | null
@@ -543,8 +551,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
   slot(
     n1: VNode,
     n2: VNode,
-    container,
-    anchor,
+    container: ParentNode,
+    anchor: Node | null,
     parentComponent,
     parentSuspense,
     slotScopeIds,
@@ -620,7 +628,13 @@ const vaporInteropImpl: VaporInVdomInterface = {
     }
   },
 
-  move(vnode, container, anchor, moveType, parentSuspense) {
+  move(
+    vnode,
+    container: ParentNode,
+    anchor: Node | null,
+    moveType,
+    parentSuspense,
+  ) {
     const block = vnode.vb || (vnode.component as any)
     // Resolved Vapor blocks exclude the VDOM-owned opening marker, but a
     // pending hydration range includes it. Avoid moving `vnode.el` twice.
@@ -654,9 +668,9 @@ const vaporInteropImpl: VaporInVdomInterface = {
 
   hydrate(
     vnode,
-    node,
-    container,
-    anchor,
+    node: Node,
+    container: ParentNode,
+    anchor: Node | null,
     parentComponent,
     parentSuspense,
     onBeforeMount,
@@ -691,7 +705,13 @@ const vaporInteropImpl: VaporInVdomInterface = {
     return anchor
   },
 
-  hydrateSlot(vnode, node, parentComponent, parentSuspense, slotScopeIds) {
+  hydrateSlot(
+    vnode,
+    node: Node,
+    parentComponent,
+    parentSuspense,
+    slotScopeIds,
+  ) {
     if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
       return node
     }
@@ -747,14 +767,20 @@ const vaporInteropImpl: VaporInVdomInterface = {
     setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
   },
 
-  activate(vnode, container, anchor, parentComponent, parentSuspense) {
+  activate(
+    vnode,
+    container: ParentNode,
+    anchor: Node | null,
+    parentComponent,
+    parentSuspense,
+  ) {
     const cached = (parentComponent.ctx as KeepAliveContext).getCachedComponent(
       vnode,
     )
     vnode.el = cached.el
     vnode.component = cached.component
     vnode.anchor = cached.anchor
-    const instance = vnode.component as any as VaporComponentInstance
+    const instance = getVaporInstance(vnode)
     const vnodeHookState = ensureVNodeHookState(instance, vnode)
     const rootEl = getRootElement(instance)
     if (rootEl) {
@@ -836,8 +862,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
     }
   },
 
-  deactivate(vnode, container, parentSuspense) {
-    const instance = vnode.component as any as VaporComponentInstance
+  deactivate(vnode, container: ParentNode, parentSuspense) {
+    const instance = getVaporInstance(vnode)
     deactivate(instance, container, parentSuspense)
     insert(vnode.anchor as any, container)
     queuePostRenderEffect(
@@ -1716,19 +1742,26 @@ interface PendingOutIn {
  * - `hydrateContent` — the one-shot SSR range claimer
  * - fallback plumbing through slotFragment's SlotResolutionState protocol
  */
+interface VaporVdomSlotOptions extends VdomSlotOptions {
+  fallback?: VaporSlot
+}
+
 function renderVDOMSlot(
   internals: RendererInternals,
   slotsRef: ShallowRef<Slots>,
   name: string | (() => string),
   props: Record<string, any>,
   parentComponent: VaporComponentInstance,
-  fallback?: VaporSlot,
-  once?: boolean,
-  slotRoot?: boolean,
-  sharedFallback?: boolean,
-  inheritFallback?: boolean,
-  adoptAnchor?: Node,
+  options: VaporVdomSlotOptions = EMPTY_OBJ,
 ): VaporFragment {
+  const {
+    fallback,
+    once,
+    slotRoot,
+    sharedFallback,
+    inheritFallback,
+    adoptAnchor,
+  } = options
   let suspense = currentParentSuspense || parentComponent.suspense
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
