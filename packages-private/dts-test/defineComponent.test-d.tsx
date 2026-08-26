@@ -1549,7 +1549,7 @@ describe('function syntax w/ runtime props', () => {
     props => {
       expectType<string | undefined>(props.p1)
       expectType<number | undefined>(props.p2)
-      expectType<boolean | undefined>(props.p3)
+      expectType<boolean>(props.p3)
       expectType<string>(props.p4)
       // @ts-expect-error props should be readonly
       props.p4 = 'value'
@@ -1571,6 +1571,31 @@ describe('function syntax w/ runtime props', () => {
   expectType<JSX.Element>(<CompOptional />)
   // @ts-expect-error p4 type is incorrect
   expectType<JSX.Element>(<CompOptional p4={1} />)
+
+  // resolved setup vs public contract: Boolean / default are present in setup
+  const CompResolved = defineComponent(
+    props => {
+      expectType<boolean>(props.flag)
+      expectType<string>(props.foo)
+      return () => {}
+    },
+    {
+      props: {
+        flag: Boolean,
+        foo: { type: String, default: 'x' },
+      },
+    },
+  )
+  expectType<JSX.Element>(<CompResolved />)
+  expectType<JSX.Element>(<CompResolved flag={true} foo="y" />)
+
+  // annotated setup must keep the existing object-props overload
+  const CompAnnotated = defineComponent((_: { msg?: string }) => () => {}, {
+    props: {
+      msg: { type: String, required: true },
+    },
+  })
+  expectType<JSX.Element>(<CompAnnotated />)
 
   // @ts-expect-error string prop names don't match
   defineComponent(
