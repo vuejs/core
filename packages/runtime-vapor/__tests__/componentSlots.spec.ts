@@ -1376,7 +1376,7 @@ describe('component: slots', () => {
         default: () => [h('div', text.value)],
       })
       const frag = withSlotBoundary(boundary, () =>
-        vdom.slot(slotsRef, 'default', {}, instance, undefined, false, true),
+        vdom.slot(slotsRef, 'default', {}, instance, { slotRoot: true }),
       )
       const host = document.createElement('div')
 
@@ -1436,15 +1436,10 @@ describe('component: slots', () => {
         default: () => (show.value ? [h('div', 'content')] : []),
       })
       const frag = withSlotBoundary(boundary, () =>
-        vdom.slot(
-          slotsRef,
-          'default',
-          {},
-          instance,
-          () => template('fallback')(),
-          false,
-          true,
-        ),
+        vdom.slot(slotsRef, 'default', {}, instance, {
+          fallback: () => template('fallback')(),
+          slotRoot: true,
+        }),
       )
       const host = document.createElement('div')
 
@@ -1773,7 +1768,7 @@ describe('component: slots', () => {
         default: () => (show.value ? [h('div', 'content')] : []),
       })
       const frag = withSlotBoundary(boundary, () =>
-        vdom.slot(slotsRef, 'default', {}, instance, undefined, false, true),
+        vdom.slot(slotsRef, 'default', {}, instance, { slotRoot: true }),
       )
       const host = document.createElement('div')
 

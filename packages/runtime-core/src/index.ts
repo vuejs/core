@@ -524,6 +524,7 @@ export { type NormalizedPropsOptions } from './componentProps'
 export {
   type VaporInVdomInterface,
   type VdomInVaporInterface,
+  type VdomSlotOptions,
 } from './apiCreateApp'
 /**
  * @internal

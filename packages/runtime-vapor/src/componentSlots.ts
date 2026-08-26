@@ -309,12 +309,14 @@ export function createSlot(
         name,
         slotProps,
         instance,
-        fallback,
-        once,
-        slotRoot,
-        sharedFallback,
-        inheritFallback,
-        _insertionAnchor,
+        {
+          fallback,
+          once,
+          slotRoot,
+          sharedFallback,
+          inheritFallback,
+          adoptAnchor: _insertionAnchor,
+        },
       )
     } finally {
       setCurrentSlotScopeIds(prevSlotScopeIds)

@@ -17,7 +17,13 @@ import type {
   ComponentPublicInstance,
 } from './componentPublicInstance'
 import { type Directive, validateDirectiveName } from './directives'
-import type { ElementNamespace, MoveType, RootRenderFunction } from './renderer'
+import type {
+  ElementNamespace,
+  MoveType,
+  RendererElement,
+  RendererNode,
+  RootRenderFunction,
+} from './renderer'
 import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import type { VNode } from './vnode'
@@ -180,8 +186,8 @@ export interface AppConfig extends GenericAppConfig {
 export interface VaporInVdomInterface {
   mount(
     vnode: VNode,
-    container: any,
-    anchor: any,
+    container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     onBeforeMount?: () => void,
@@ -201,53 +207,66 @@ export interface VaporInVdomInterface {
   ): void
   move(
     vnode: VNode,
-    container: any,
-    anchor: any,
+    container: RendererElement,
+    anchor: RendererNode | null,
     moveType: MoveType,
     parentSuspense: SuspenseBoundary | null,
   ): void
   slot(
     n1: VNode | null,
     n2: VNode,
-    container: any,
-    anchor: any,
+    container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
   ): void
   hydrate(
     vnode: VNode,
-    node: any,
-    container: any,
-    anchor: any,
+    node: Node,
+    container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     onBeforeMount?: () => void,
     onVnodeBeforeMount?: () => void,
-  ): Node
+  ): Node | null
   hydrateSlot(
     vnode: VNode,
-    node: any,
+    node: Node,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
-  ): Node
+  ): Node | null
   activate(
     vnode: VNode,
-    container: any,
-    anchor: any,
+    container: RendererElement,
+    anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance,
     parentSuspense: SuspenseBoundary | null,
   ): void
   deactivate(
     vnode: VNode,
-    container: any,
+    container: RendererElement,
     parentSuspense: SuspenseBoundary | null,
   ): void
   setTransitionHooks(
     component: ComponentInternalInstance,
     transition: TransitionHooks,
   ): void
+}
+
+/**
+ * Options for rendering a VDOM slot inside vapor. The booleans describe the
+ * outlet's position in the fallback chain; see renderVDOMSlot.
+ */
+export interface VdomSlotOptions {
+  fallback?: (...args: any[]) => any // VaporSlot
+  once?: boolean
+  slotRoot?: boolean
+  sharedFallback?: boolean
+  inheritFallback?: boolean
+  adoptAnchor?: Node
 }
 
 /**
@@ -266,12 +285,7 @@ export interface VdomInVaporInterface {
     name: string | (() => string),
     props: Record<string, any>,
     parentComponent: any, // VaporComponentInstance
-    fallback?: any, // VaporSlot
-    once?: boolean,
-    slotRoot?: boolean,
-    sharedFallback?: boolean,
-    inheritFallback?: boolean,
-    adoptAnchor?: Node,
+    options?: VdomSlotOptions,
   ) => any
   mountVNode: (
     vnode: VNode,
