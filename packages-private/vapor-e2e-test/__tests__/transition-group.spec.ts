@@ -1,5 +1,5 @@
 import { createVaporApp, next, nextTick, vaporInteropPlugin } from 'vue'
-import { expect } from 'vitest'
+import { expect } from 'vite-plus/test'
 import App from '../transition-group/App.vue'
 import '../../../packages/vue/__tests__/e2e/style.css'
 import {

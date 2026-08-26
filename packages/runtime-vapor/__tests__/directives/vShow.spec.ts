@@ -7,7 +7,7 @@ import {
   template,
 } from '../../src'
 import { type VShowElement, nextTick, ref } from 'vue'
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vite-plus/test'
 import { makeRender } from '../_utils'
 
 const define = makeRender()

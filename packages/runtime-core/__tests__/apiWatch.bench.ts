@@ -1,5 +1,5 @@
 import { nextTick, ref, watch, watchEffect } from '../src'
-import { bench } from 'vitest'
+import { bench } from 'vite-plus/test'
 
 bench('create watcher', () => {
   const v = ref(100)

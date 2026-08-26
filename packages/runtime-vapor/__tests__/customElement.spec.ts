@@ -1,4 +1,4 @@
-import type { MockedFunction } from 'vitest'
+import type { MockedFunction } from 'vite-plus/test'
 import type { VaporElement } from '../src/apiDefineCustomElement'
 import { VaporSlotFlags } from '@vue/shared'
 import {

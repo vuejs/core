@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest'
+import { bench, describe } from 'vite-plus/test'
 
 import { type SSRBuffer, createBuffer } from '../src/render'
 import { unrollBuffer as _unrollBuffer } from '../src/renderToString'

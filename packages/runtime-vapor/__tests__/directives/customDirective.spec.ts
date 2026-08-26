@@ -8,7 +8,7 @@ import {
   withVaporDirectives,
 } from '../../src'
 import { currentInstance, nextTick, watchEffect } from '@vue/runtime-dom'
-import type { Mock } from 'vitest'
+import type { Mock } from 'vite-plus/test'
 import { compile, makeRender } from '../_utils'
 
 const define = makeRender()

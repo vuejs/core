@@ -12,7 +12,7 @@ import {
 } from '../src'
 import { nextTick, ref } from '@vue/runtime-dom'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
-import type { Mock } from 'vitest'
+import type { Mock } from 'vite-plus/test'
 import { compile, ifFlags, makeRender } from './_utils'
 import { setElementText } from '../src/dom/prop'
 import type { DynamicFragment } from '../src/fragment'

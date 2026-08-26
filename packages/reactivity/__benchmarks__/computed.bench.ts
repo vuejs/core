@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest'
+import { bench, describe } from 'vite-plus/test'
 import type { ComputedRef, Ref } from '../src'
 import { computed, effect, ref } from '../dist/reactivity.esm-browser.prod'
 

@@ -1,4 +1,4 @@
-import { cdp } from 'vitest/browser'
+import { cdp } from 'vite-plus/test/browser'
 
 export const E2E_TIMEOUT: number = 30 * 1000
 

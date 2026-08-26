@@ -1,4 +1,4 @@
-import { bench } from 'vitest'
+import { bench } from 'vite-plus/test'
 import { reactive } from '../dist/reactivity.esm-browser.prod'
 
 bench('create reactive obj', () => {

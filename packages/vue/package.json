@@ -110,5 +110,8 @@
     "typescript": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
   }
 }

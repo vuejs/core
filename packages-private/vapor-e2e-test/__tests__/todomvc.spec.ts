@@ -1,4 +1,4 @@
-import { userEvent } from 'vitest/browser'
+import { userEvent } from 'vite-plus/test/browser'
 import { createVaporApp } from 'vue'
 import App from '../todomvc/App.vue'
 import 'todomvc-app-css/index.css'
