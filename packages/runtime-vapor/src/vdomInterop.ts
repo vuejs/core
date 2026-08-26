@@ -2369,6 +2369,11 @@ class VDOMSlotOutlet {
     slotContent: VNode | Block | undefined,
     slotContentValid: boolean,
   ): void {
+    // Only reachable while hydrating (renderContent gates the call), but the
+    // guard must also live here: class methods are never dropped by DCE, so
+    // without it this body would be the one live reference keeping the whole
+    // hydration graph in CSR bundles where `isHydrating` folds to false.
+    if (!isHydrating) return
     const { frag, boundary } = this
     if (slotContentValid && isPendingSlotContent()) {
       resolvePendingSlotContent()
