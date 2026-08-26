@@ -261,7 +261,7 @@ export interface VaporInVdomInterface {
  * outlet's position in the fallback chain; see renderVDOMSlot.
  */
 export interface VdomSlotOptions {
-  fallback?: any // VaporSlot
+  fallback?: (...args: any[]) => any // VaporSlot
   once?: boolean
   slotRoot?: boolean
   sharedFallback?: boolean

@@ -549,7 +549,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
    * vapor slot in vdom
    */
   slot(
-    n1: VNode,
+    n1: VNode | null,
     n2: VNode,
     container: ParentNode,
     anchor: Node | null,
