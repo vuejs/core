@@ -164,11 +164,11 @@ import {
 } from './slotFragment'
 import {
   claimPrecedingFragmentClose,
+  createDeferredSlotAttach,
   getCurrentSlotEndAnchor,
   insertUntrackedAnchor,
   isPendingSlotContent,
   queuePendingSlotContentAnchor,
-  resolveDeferredInsertionAnchor,
   resolvePendingSlotContent,
   startPendingSlotContentGuard,
   withHydratingSlotBoundary,
@@ -2504,26 +2504,23 @@ class VDOMSlotOutlet {
       this.parentNode = detachedParent
       this.anchor = anchor
       claimPrecedingFragmentClose(slotEnd)
-      const attachAnchor = () => {
-        const insertionAnchor = resolveDeferredInsertionAnchor(
-          candidateEnd,
-          contentStart,
-          slotEnd,
-        )
-        const parent = insertionAnchor && insertionAnchor.parentNode
-        if (parent) {
-          if (candidateEnd) {
-            frag.anchor = this.anchor = claimAnchor(candidateEnd)
-            if (currentHydrationNode === contentStart) {
-              advanceHydrationNode(candidateEnd)
-            }
-          } else {
-            parent.insertBefore(anchor, insertionAnchor)
+      const attachAnchor = createDeferredSlotAttach(
+        contentStart,
+        slotEnd,
+        anchor,
+        candidateEnd,
+        candidate => {
+          frag.anchor = this.anchor = claimAnchor(candidate)
+          if (currentHydrationNode === contentStart) {
+            advanceHydrationNode(candidate)
           }
+          return this.anchor
+        },
+        () => frag.nodes,
+        parent => {
           this.parentNode = parent
-          move(frag.nodes, parent, this.anchor)
-        }
-      }
+        },
+      )
       const queued = queuePendingSlotContentAnchor({
         onContent: () => {
           attachAnchor()

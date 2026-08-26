@@ -9,7 +9,6 @@ import {
   insert,
   isValidBlock,
   isValidSlot,
-  move,
   remove,
   removeAttachedNodes,
   removeNode,
@@ -60,11 +59,11 @@ import {
 } from './slotBoundary'
 import {
   claimPrecedingFragmentClose,
+  createDeferredSlotAttach,
   getCurrentSlotEndAnchor,
   hydrateDynamicFragmentAnchor,
   prepareDeferredHydrationAnchor,
   queuePendingSlotContentAnchor,
-  resolveDeferredInsertionAnchor,
   startPendingSlotContentGuard,
   withHydratingSlotBoundary,
 } from './dom/hydrateFragment'
@@ -743,23 +742,14 @@ export class SlotFragment
             )
             this.anchor = anchor
             claimPrecedingFragmentClose(slotEnd)
-            const attachContent = () => {
-              const candidate = end && end !== slotEnd ? end : null
-              const insertionAnchor = resolveDeferredInsertionAnchor(
-                candidate,
-                contentStart,
-                slotEnd,
-              )
-              const parent = insertionAnchor && insertionAnchor.parentNode
-              if (!parent) return
-
-              if (candidate) {
-                this.anchor = claimAnchor(candidate)
-              } else {
-                parent.insertBefore(anchor, insertionAnchor)
-              }
-              move(this.nodes, parent, this.anchor)
-            }
+            const attachContent = createDeferredSlotAttach(
+              contentStart,
+              slotEnd,
+              anchor,
+              end && end !== slotEnd ? end : null,
+              candidate => (this.anchor = claimAnchor(candidate)),
+              () => this.nodes,
+            )
             // Post-flush even after the verdict: the reference node's final
             // position is only stable once the whole pass has finished.
             const queued = queuePendingSlotContentAnchor({

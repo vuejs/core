@@ -21,7 +21,13 @@ import {
   parentNode as getParentNode,
   updateLastLocatedLogicalChild,
 } from './node'
-import { EMPTY_BLOCK, findBlockBoundary, isValidBlock } from '../block'
+import {
+  type Block,
+  EMPTY_BLOCK,
+  findBlockBoundary,
+  isValidBlock,
+  move,
+} from '../block'
 import type { DynamicFragment } from '../fragment'
 import { IF, NATIVE_CHILDREN, SLOT } from '../fragmentFlags'
 
@@ -213,6 +219,43 @@ export function queuePendingSlotContentAnchor(
 // Slot content with fallback is unresolved until it creates a valid node.
 // While unresolved, empty content branches must not consume fallback SSR
 // anchors.
+/**
+ * Builds the attach step of a deferred shared-fallback decision. Once the
+ * winning side is known, resolve the reference node, then either claim the
+ * candidate SSR range's end anchor (when this host won one) or insert the
+ * runtime anchor, and move the host's nodes into place. The claim itself
+ * stays host-specific: which anchor fields it publishes and whether the
+ * hydration cursor must advance differ per host.
+ */
+export function createDeferredSlotAttach(
+  contentStart: Node | null,
+  slotEnd: Node | null,
+  runtimeAnchor: Node,
+  candidate: Node | null,
+  claimCandidate: (candidate: Node) => Node,
+  getNodes: () => Block,
+  onAttached?: (parent: ParentNode) => void,
+): () => void {
+  return () => {
+    const insertionAnchor = resolveDeferredInsertionAnchor(
+      candidate,
+      contentStart,
+      slotEnd,
+    )
+    const parent = insertionAnchor && insertionAnchor.parentNode
+    if (!parent) return
+    let anchor: Node
+    if (candidate) {
+      anchor = claimCandidate(candidate)
+    } else {
+      parent.insertBefore(runtimeAnchor, insertionAnchor)
+      anchor = runtimeAnchor
+    }
+    if (onAttached) onAttached(parent)
+    move(getNodes(), parent, anchor)
+  }
+}
+
 /**
  * Claims the SSR fragment close marker directly preceding a receiver slot's
  * end anchor. Slot content hydrating inside the receiver does not own that
