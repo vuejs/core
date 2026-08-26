@@ -34,7 +34,6 @@ import {
   claimUntrackedAnchor,
   currentHydrationNode,
   exitHydrationCursor,
-  isComment,
   isHydrating,
   locateFragmentEnd,
   locateHydrationNode,
@@ -60,10 +59,12 @@ import {
   withSlotBoundary,
 } from './slotBoundary'
 import {
+  claimPrecedingFragmentClose,
   getCurrentSlotEndAnchor,
   hydrateDynamicFragmentAnchor,
   prepareDeferredHydrationAnchor,
   queuePendingSlotContentAnchor,
+  resolveDeferredInsertionAnchor,
   startPendingSlotContentGuard,
   withHydratingSlotBoundary,
 } from './dom/hydrateFragment'
@@ -741,17 +742,14 @@ export class SlotFragment
                 : createTextNode(),
             )
             this.anchor = anchor
-            const previous = slotEnd && slotEnd.previousSibling
-            if (previous && isComment(previous, ']')) {
-              claimAnchor(previous)
-            }
+            claimPrecedingFragmentClose(slotEnd)
             const attachContent = () => {
               const candidate = end && end !== slotEnd ? end : null
-              const insertionAnchor =
-                candidate ||
-                (contentStart && contentStart.parentNode
-                  ? contentStart
-                  : slotEnd)
+              const insertionAnchor = resolveDeferredInsertionAnchor(
+                candidate,
+                contentStart,
+                slotEnd,
+              )
               const parent = insertionAnchor && insertionAnchor.parentNode
               if (!parent) return
 
@@ -786,15 +784,10 @@ export class SlotFragment
             const slotEnd = getCurrentSlotEndAnchor()
             const parent = slotEnd && slotEnd.parentNode
             if (parent) {
-              const previous = slotEnd.previousSibling
-              if (previous && isComment(previous, ']')) {
-                // When the receiver fallback is a fragment, the node right
-                // before the receiver slot end is the fallback fragment's SSR
-                // close. This forwarded slot does not own that marker, but
-                // boundary cleanup runs before the queued anchor is inserted,
-                // so mark it now.
-                claimAnchor(previous)
-              }
+              // When the receiver fallback is a fragment, the node right
+              // before the receiver slot end is the fallback fragment's SSR
+              // close.
+              claimPrecedingFragmentClose(slotEnd)
 
               queuePostFlushCb(() => {
                 if (slotEnd.parentNode === parent) {

@@ -213,6 +213,35 @@ export function queuePendingSlotContentAnchor(
 // Slot content with fallback is unresolved until it creates a valid node.
 // While unresolved, empty content branches must not consume fallback SSR
 // anchors.
+/**
+ * Claims the SSR fragment close marker directly preceding a receiver slot's
+ * end anchor. Slot content hydrating inside the receiver does not own that
+ * marker, but boundary cleanup can run before deferred anchors are inserted,
+ * so it must be marked as claimed up front.
+ */
+export function claimPrecedingFragmentClose(slotEnd: Node | null): void {
+  const previous = slotEnd && slotEnd.previousSibling
+  if (previous && isComment(previous, ']')) {
+    claimAnchor(previous)
+  }
+}
+
+/**
+ * The reference node a deferred slot anchor attaches before: the candidate
+ * range's end when one exists, otherwise the (still-attached) content start,
+ * otherwise the receiver slot's end anchor.
+ */
+export function resolveDeferredInsertionAnchor(
+  candidate: Node | null,
+  contentStart: Node | null,
+  slotEnd: Node | null,
+): Node | null {
+  return (
+    candidate ||
+    (contentStart && contentStart.parentNode ? contentStart : slotEnd)
+  )
+}
+
 export function startPendingSlotContent(
   start: Node | null,
 ): (contentValid: boolean) => void {

@@ -163,10 +163,12 @@ import {
   resolveExposedSlotNodes,
 } from './slotFragment'
 import {
+  claimPrecedingFragmentClose,
   getCurrentSlotEndAnchor,
   insertUntrackedAnchor,
   isPendingSlotContent,
   queuePendingSlotContentAnchor,
+  resolveDeferredInsertionAnchor,
   resolvePendingSlotContent,
   startPendingSlotContentGuard,
   withHydratingSlotBoundary,
@@ -975,6 +977,12 @@ function resolveVNodeNodes(vnode: VNode): Block {
   return vnode.el as Block
 }
 
+// Deliberately shallower than block.ts's removeAttachedNodes (which this
+// local declaration shadows): interop node snapshots (resolveVNodeNodes) can
+// embed live vapor component/fragment entries whose DOM teardown belongs to
+// their own owners (the VDOM renderer / block removal). This detaches only
+// loose top-level DOM nodes, recursing through arrays — never into block
+// structures. Do not "dedupe" the two.
 function removeAttachedNodes(block: Block, parent: ParentNode): void {
   if (block instanceof Node) {
     if (block.parentNode === parent) {
@@ -2495,14 +2503,13 @@ class VDOMSlotOutlet {
       detachedParent.appendChild(anchor)
       this.parentNode = detachedParent
       this.anchor = anchor
-      const previous = slotEnd && slotEnd.previousSibling
-      if (previous && isComment(previous, ']')) {
-        claimAnchor(previous)
-      }
+      claimPrecedingFragmentClose(slotEnd)
       const attachAnchor = () => {
-        const insertionAnchor =
-          candidateEnd ||
-          (contentStart && contentStart.parentNode ? contentStart : slotEnd)
+        const insertionAnchor = resolveDeferredInsertionAnchor(
+          candidateEnd,
+          contentStart,
+          slotEnd,
+        )
         const parent = insertionAnchor && insertionAnchor.parentNode
         if (parent) {
           if (candidateEnd) {
