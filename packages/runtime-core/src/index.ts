@@ -623,7 +623,12 @@ export {
 /**
  * @internal
  */
-export { ensureValidVNode, ensureVaporSlotFallback } from './helpers/renderSlot'
+export {
+  ensureValidVNode,
+  ensureVaporSlotFallback,
+  rawVaporSlotKey,
+  vdomSlotFallbackKey,
+} from './helpers/renderSlot'
 /**
  * @internal
  */

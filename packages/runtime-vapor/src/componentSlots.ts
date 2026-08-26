@@ -17,7 +17,6 @@ import {
   type GenericComponentInstance,
   currentInstance,
   isAsyncWrapper,
-  isRef,
 } from '@vue/runtime-dom'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
@@ -43,7 +42,7 @@ import { SLOT_FRAGMENT } from './fragmentFlags'
 import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
-import { isInteropEnabled } from './vdomInteropState'
+import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
 import {
   currentSlotScopeIds,
   renderWithSlotScopeIds,
@@ -297,14 +296,16 @@ export function createSlot(
 
   let fragment: VaporFragment
   let isCustomElementSlot = false
-  if (isRef(rawSlots._) && isInteropEnabled) {
+  const interopSlotsSource =
+    isInteropEnabled && (rawSlots as any)[interopSlotsKey]
+  if (interopSlotsSource) {
     if (isHydrating) hydrationCursor = enterHydrationCursor()
     // Establish the outlet cell as the creation ambient; the interop slot
     // captures it as the base patch context for the vdom-rendered content.
     const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
     try {
       fragment = instance.appContext.vdom!.slot(
-        rawSlots._,
+        interopSlotsSource,
         name,
         slotProps,
         instance,

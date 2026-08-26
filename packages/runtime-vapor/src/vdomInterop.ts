@@ -51,6 +51,7 @@ import {
   prepareTransitionSwitch,
   queuePostFlushCb,
   queuePostRenderEffect,
+  rawVaporSlotKey,
   renderSlot,
   resolveTransitionChild,
   restoreCurrentInstance,
@@ -63,6 +64,7 @@ import {
   activate as vdomActivate,
   deactivate as vdomDeactivate,
   setRef as vdomSetRef,
+  vdomSlotFallbackKey,
   warn,
   withCtx,
 } from '@vue/runtime-dom'
@@ -185,7 +187,11 @@ import {
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
 import { isVaporTransition, registerTransitionInterop } from './transition'
-import { interopKey, setInteropEnabled } from './vdomInteropState'
+import {
+  interopKey,
+  interopSlotsKey,
+  setInteropEnabled,
+} from './vdomInteropState'
 import {
   type KeepAliveInstance,
   activate,
@@ -898,7 +904,7 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
         ? getSlot(target, key)
         : target[key]
     if (isFunction(slot)) {
-      slot.__vapor = true
+      ;(slot as any)[rawVaporSlotKey] = slot
       let wrappers = vaporSlotWrappersCache.get(target)
       if (!wrappers) vaporSlotWrappersCache.set(target, (wrappers = new Map()))
       const cached = wrappers.get(key)
@@ -911,7 +917,7 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
       const wrapped = (props?: Record<string, any>) => [
         renderSlot({ [key]: slot }, key as string, props),
       ]
-      ;(wrapped as any).__vs = slot
+      ;(wrapped as any)[rawVaporSlotKey] = slot
       wrappers.set(key, { slot, wrapped })
       return wrapped
     }
@@ -2629,7 +2635,7 @@ const renderEmptyVNodes = (): VNodeArrayChildren => EMPTY_VNODES
 
 type InteropSlotFallback = {
   (): any
-  __vdom?: boolean
+  [vdomSlotFallbackKey]?: boolean
 }
 
 interface InteropVaporSlotState {
@@ -2821,14 +2827,14 @@ function renderVaporSlot(
         parentComponent,
         () =>
           !!slotState.localFallback.value &&
-          !!slotState.localFallback.value.__vdom,
+          !!slotState.localFallback.value[vdomSlotFallbackKey],
       )
       outletFallback = createFallback(
         () => (slotState.outletFallback.value || renderEmptyVNodes)(),
         parentComponent,
         () =>
           !!slotState.outletFallback.value &&
-          !!slotState.outletFallback.value.__vdom,
+          !!slotState.outletFallback.value[vdomSlotFallbackKey],
       )
       const hasInteropFallback =
         !!slotState.localFallback.value || !!slotState.outletFallback.value
@@ -3330,7 +3336,7 @@ function normalizeInteropSlots(rawSlots: any): any {
       // Already-normalized VDOM slots and Vapor slots carry their own runtime
       // protocol markers, so keep them intact.
       normalized[key] =
-        (slot as any).__vapor || (slot as any).__vs || (slot as any)._n
+        (slot as any)[rawVaporSlotKey] || (slot as any)._n
           ? slot
           : normalizeInteropSlot(slot, rawSlots._ctx)
     } else if (slot != null) {
@@ -3434,16 +3440,14 @@ const interopSlotsSourceHandlers: ProxyHandler<ShallowRef<Slots>> = {
 }
 
 function createInteropRawSlots(slotsRef: ShallowRef<Slots>): RawSlots {
-  // `_` keeps direct <slot> outlets on the VDOM slot path; `$` exposes live
-  // slot keys to Vapor useSlots() / dynamic forwarding.
-  const rawSlots = {
+  // `interopSlotsKey` keeps direct <slot> outlets on the VDOM slot path
+  // (createSlot reads it); `$` exposes live slot keys to Vapor useSlots() /
+  // dynamic forwarding. The symbol key is invisible to string-keyed slot
+  // enumeration, so no defineProperty hiding is needed.
+  return {
     $: [new Proxy(slotsRef, interopSlotsSourceHandlers)],
-  } as any
-  Object.defineProperty(rawSlots, '_', {
-    value: slotsRef, // pass the slots ref
-    configurable: true,
-  })
-  return rawSlots as RawSlots
+    [interopSlotsKey]: slotsRef,
+  } as any as RawSlots
 }
 
 // vnode.el of an interop-mounted vapor component must follow its dynamic
