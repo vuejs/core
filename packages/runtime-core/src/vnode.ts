@@ -286,6 +286,19 @@ export interface VNode<
    * @internal Vapor slot Block
    */
   vb?: any
+  /**
+   * @internal vapor interop only — internal before-update notification, fired
+   * before this vnode is patched (alongside onVnodeBeforeUpdate). Single-owner:
+   * the interop layer assigns (never appends) so re-tracking replaces the
+   * previous callback.
+   */
+  ibu?: () => void
+  /**
+   * @internal vapor interop only — internal updated notification, fired after
+   * this vnode is patched (alongside onVnodeUpdated) so the interop layer can
+   * refresh its snapshot of the DOM range. Single-owner; see `ibu`.
+   */
+  iu?: () => void
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically
@@ -783,6 +796,11 @@ export function cloneVNode<T, U>(
     vi: vnode.vi,
     vs: cloneVaporSlotMeta(vnode as VNode),
     vb: vnode.vb,
+    // interop range tracking must survive renderer-internal clones of mounted
+    // vnodes (cloneIfMounted / normalizeVNode), or nested updates would stop
+    // notifying after the first re-render of cached children.
+    ibu: vnode.ibu,
+    iu: vnode.iu,
   }
 
   // if the vnode will be replaced by the cloned one, it is necessary

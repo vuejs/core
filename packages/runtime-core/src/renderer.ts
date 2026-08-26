@@ -873,6 +873,7 @@ function baseCreateRenderer(
     if ((vnodeHook = newProps.onVnodeBeforeUpdate)) {
       invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
     }
+    if (n2.ibu) n2.ibu()
     if (dirs) {
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
@@ -986,10 +987,11 @@ function baseCreateRenderer(
       patchProps(el, oldProps, newProps, parentComponent, namespace)
     }
 
-    if ((vnodeHook = newProps.onVnodeUpdated) || dirs) {
+    if ((vnodeHook = newProps.onVnodeUpdated) || dirs || n2.iu) {
       queuePostRenderEffect(
         () => {
           vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
+          n2.iu && n2.iu()
           dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
         },
         undefined,
@@ -1269,15 +1271,17 @@ function baseCreateRenderer(
             if (vnodeBeforeUpdateHook) {
               invokeVNodeHook(vnodeBeforeUpdateHook, parentComponent, n2, n1)
             }
+            if (n2.ibu) n2.ibu()
           },
         )
         const vnodeUpdatedHook = n2.props && n2.props.onVnodeUpdated
-        if (shouldUpdate && (vnodeUpdatedHook || n2.dirs)) {
+        if (shouldUpdate && (vnodeUpdatedHook || n2.dirs || n2.iu)) {
           queuePostRenderEffect(
             () => {
               n2.dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
               vnodeUpdatedHook &&
                 invokeVNodeHook(vnodeUpdatedHook, parentComponent, n2, n1)
+              n2.iu && n2.iu()
             },
             undefined,
             parentSuspense,
@@ -1718,6 +1722,7 @@ function baseCreateRenderer(
         if ((vnodeHook = next.props && next.props.onVnodeBeforeUpdate)) {
           invokeVNodeHook(vnodeHook, parent, next, vnode)
         }
+        if (next.ibu) next.ibu()
         if (
           __COMPAT__ &&
           isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
@@ -1766,9 +1771,12 @@ function baseCreateRenderer(
           queuePostRenderEffect(u, undefined, parentSuspense)
         }
         // onVnodeUpdated
-        if ((vnodeHook = next.props && next.props.onVnodeUpdated)) {
+        if ((vnodeHook = next.props && next.props.onVnodeUpdated) || next.iu) {
           queuePostRenderEffect(
-            () => invokeVNodeHook(vnodeHook!, parent, next!, vnode),
+            () => {
+              vnodeHook && invokeVNodeHook(vnodeHook, parent, next!, vnode)
+              next!.iu && next!.iu()
+            },
             undefined,
             parentSuspense,
           )
