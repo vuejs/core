@@ -31,7 +31,7 @@ export function setBlockKey(
   } else {
     if (!overwrite && block.$key != null) return
     block.$key = key
-    if (isInteropEnabled && block.vnode) block.vnode.key = key
+    if (isInteropEnabled && block.setKey) block.setKey(key)
     setBlockKey(block.nodes, key, overwrite)
   }
 }

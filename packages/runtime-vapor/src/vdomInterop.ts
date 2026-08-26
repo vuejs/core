@@ -186,7 +186,7 @@ import {
   resolveTransitionBlock,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
-import { isVaporTransition, registerTransitionInterop } from './transition'
+import { isVaporTransition } from './transition'
 import {
   interopKey,
   interopSlotsKey,
@@ -2565,10 +2565,6 @@ export const vaporInteropPlugin: Plugin = app => {
   if (__FEATURE_SUSPENSE__) {
     enableSuspense()
   }
-  registerTransitionInterop(
-    getInteropTransitionType,
-    getInteropTransitionElement,
-  )
   setInteropEnabled()
   setPublishInteropScopeIds(publishVaporScopeIds)
   app._context.vapor = vaporInteropImpl
@@ -3541,6 +3537,25 @@ function getInteropVaporSlotScopeIds(
   )
 }
 
+// Interop fragment protocol: shared implementations (no per-fragment
+// closures) over the backing vnode. All report "nothing" while the fragment
+// exposes vapor fallback content (vnode === null).
+function interopHasVDOMContent(this: VaporFragment): boolean {
+  return !!this.vnode
+}
+
+function interopSetKey(this: VaporFragment, key: any): void {
+  if (this.vnode) this.vnode.key = key
+}
+
+function interopGetTransitionType(this: VaporFragment): any {
+  return this.vnode ? getInteropTransitionType(this.vnode) : undefined
+}
+
+function interopGetTransitionElement(this: VaporFragment): Element | undefined {
+  return this.vnode ? getInteropTransitionElement(this.vnode) : undefined
+}
+
 function createInteropFragment(
   nodes: Block = EMPTY_BLOCK,
   vnode: VNode | null = null,
@@ -3548,5 +3563,9 @@ function createInteropFragment(
 ): RenderContextFragment<Block> {
   const frag = new RenderContextFragment<Block>(nodes, VDOM | extraFlags)
   frag.vnode = vnode
+  frag.hasVDOMContent = interopHasVDOMContent
+  frag.setKey = interopSetKey
+  frag.getTransitionType = interopGetTransitionType
+  frag.getTransitionElement = interopGetTransitionElement
   return frag
 }

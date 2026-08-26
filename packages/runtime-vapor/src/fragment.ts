@@ -128,6 +128,19 @@ export class VaporFragment<
     refFor: boolean,
     refKey: string | undefined,
   ) => void
+  /**
+   * @internal vdom interop protocol, implemented by interop fragments so
+   * structural features act on VDOM-backed content without reaching into the
+   * backing vnode. `hasVDOMContent` is dynamic: an interop slot fragment
+   * exposing a vapor fallback has no backing vnode at that moment.
+   */
+  hasVDOMContent?: (this: VaporFragment) => boolean
+  /** @internal mirrors a block key onto the backing vnode for keyed paths */
+  setKey?: (this: VaporFragment, key: any) => void
+  /** @internal resolved transition child type of the backing vnode */
+  getTransitionType?: (this: VaporFragment) => any
+  /** @internal live transition element of the backing vnode's subtree */
+  getTransitionElement?: (this: VaporFragment) => Element | undefined
 
   // hooks
   onRemove?: (() => void)[]

@@ -53,6 +53,10 @@ describe('helpers: setBlockKey', () => {
     setInteropEnabled()
     const frag = new VaporFragment(template(`<div></div>`)() as any)
     frag.vnode = h('div', { key: 'old' })
+    // interop fragments install the key-sync protocol (createInteropFragment)
+    frag.setKey = function (key) {
+      if (this.vnode) this.vnode.key = key
+    }
 
     setBlockKey(frag, 'foo')
 
