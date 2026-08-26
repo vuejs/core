@@ -159,6 +159,7 @@ import {
   leaveSlotFallback,
   markSlotResolutionDirty,
   recheckSlotResolution,
+  resolveExposedSlotNodes,
 } from './slotFragment'
 import {
   getCurrentSlotEndAnchor,
@@ -1800,7 +1801,10 @@ class VDOMSlotOutlet {
         isDisposed: () => this.disposed,
         isContentValid: () => this.content.valid,
         syncNodes: () => {
-          frag.nodes = this.resolution.activeFallback || this.content.nodes
+          frag.nodes = resolveExposedSlotNodes(
+            this.resolution,
+            this.content.nodes,
+          )
         },
         notifyExposedValidityChange: () => {
           if (slotRoot && !this.isContentUpdateRecheck && slotBoundary) {
@@ -2851,7 +2855,7 @@ function renderVaporSlot(
       isDisposed: () => disposed,
       isContentValid: () => isValidSlot(content.nodes),
       syncNodes: () => {
-        frag.nodes = slotResolutionState.activeFallback || content.nodes
+        frag.nodes = resolveExposedSlotNodes(slotResolutionState, content.nodes)
         content.resolved = true
       },
       notifyExposedValidityChange: () => {

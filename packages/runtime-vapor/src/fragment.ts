@@ -73,6 +73,7 @@ import {
   invalidateExposedSlotContent,
   markSlotResolutionDirty,
   recheckSlotResolution,
+  resolveExposedSlotNodes,
 } from './slotFragment'
 import { setBlockKey } from './helpers/setKey'
 import {
@@ -856,7 +857,7 @@ export class SlotFragment
   }
 
   syncNodes(): void {
-    this.nodes = this.activeFallback || this.content
+    this.nodes = resolveExposedSlotNodes(this, this.content)
   }
 
   notifyExposedValidityChange(): void {
