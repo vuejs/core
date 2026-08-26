@@ -362,9 +362,9 @@ type PropsWithDefaults<
   BKeys extends keyof T,
 > = T extends unknown
   ? Readonly<MappedOmit<T, keyof Defaults>> & {
-      readonly [K in keyof Defaults as K extends keyof T
-        ? K
-        : never]-?: K extends keyof T
+      readonly [
+        K in keyof Defaults as K extends keyof T ? K : never
+      ]-?: K extends keyof T
         ? Defaults[K] extends undefined
           ? IfAny<Defaults[K], NotUndefined<T[K]>, T[K]>
           : NotUndefined<T[K]>
