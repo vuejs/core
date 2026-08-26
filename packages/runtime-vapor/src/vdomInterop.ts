@@ -451,7 +451,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
           n2.dirs = null
         }
       }
-      vnodeHookState.skipVnodeHooks = true
+      vnodeHookState.pendingVNodeUpdate = n2
       if (n2.transition && instance.block) {
         ensureTransitionHooksRegistered()
         setVaporTransitionHooks(instance, n2.transition as VaporTransitionHooks)
@@ -460,8 +460,11 @@ const vaporInteropImpl: VaporInVdomInterface = {
       instance.rawSlotsRef!.value = normalizeInteropSlots(n2.children)
       queuePostFlushCb(() => {
         syncVNodeEl(n2, instance)
-        if (!instance.isUpdating) {
-          vnodeHookState.skipVnodeHooks = false
+        // The ref writes scheduled no render effect (no `u` will consume the
+        // token) when the instance is not mid-update by post-flush time; a
+        // newer driven update owns the slot if the token is no longer ours.
+        if (vnodeHookState.pendingVNodeUpdate === n2 && !instance.isUpdating) {
+          vnodeHookState.pendingVNodeUpdate = null
         }
       })
     }
@@ -772,7 +775,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
     }
     const shouldUpdate = shouldUpdateComponent(cached, vnode)
     if (shouldUpdate) {
-      vnodeHookState.skipVnodeHooks = true
+      vnodeHookState.pendingVNodeUpdate = vnode
       instance.rawPropsRef!.value = filterReservedProps(vnode.props)
       instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
       const vnodeBeforeUpdateHook =
@@ -791,8 +794,11 @@ const vaporInteropImpl: VaporInVdomInterface = {
       }
       queuePostFlushCb(() => {
         syncVNodeEl(vnode, instance)
-        if (!instance.isUpdating) {
-          vnodeHookState.skipVnodeHooks = false
+        if (
+          vnodeHookState.pendingVNodeUpdate === vnode &&
+          !instance.isUpdating
+        ) {
+          vnodeHookState.pendingVNodeUpdate = null
         }
       })
       queuePostRenderEffect(
@@ -2989,7 +2995,12 @@ function syncInteropRoot(instance: VaporComponentInstance): void {
 
 interface VNodeHookState {
   vnode: VNode
-  skipVnodeHooks: boolean
+  // The vnode whose renderer-driven update is in flight. Its vapor flush must
+  // not re-fire the vnode hooks the renderer already owns for that patch:
+  // `bu` skips while it is set and `u` consumes it. The post-flush fallback
+  // in update()/activate() clears only its own token — identity, not timing,
+  // decides — covering ref writes that scheduled no render effect.
+  pendingVNodeUpdate: VNode | null
 }
 
 const vnodeHookStateMap = new WeakMap<VaporComponentInstance, VNodeHookState>()
@@ -3002,11 +3013,11 @@ function ensureVNodeHookState(
   if (!state) {
     state = {
       vnode,
-      skipVnodeHooks: false,
+      pendingVNodeUpdate: null,
     }
     vnodeHookStateMap.set(instance, state)
     ;(instance.bu ||= []).push(() => {
-      if (state!.skipVnodeHooks) return
+      if (state!.pendingVNodeUpdate) return
       const vnodeHook =
         state!.vnode.props && state!.vnode.props.onVnodeBeforeUpdate
       if (vnodeHook) {
@@ -3025,8 +3036,8 @@ function ensureVNodeHookState(
     // after the sync and before component updated hooks / onVnodeUpdated.
     ;(instance.u ||= []).unshift(() => syncInteropRoot(instance))
     instance.u.push(() => {
-      if (state!.skipVnodeHooks) {
-        state!.skipVnodeHooks = false
+      if (state!.pendingVNodeUpdate) {
+        state!.pendingVNodeUpdate = null
         return
       }
       const vnodeHook = state!.vnode.props && state!.vnode.props.onVnodeUpdated
