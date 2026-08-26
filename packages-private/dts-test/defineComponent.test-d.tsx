@@ -1634,6 +1634,23 @@ describe('function syntax w/ runtime props', () => {
   // @ts-expect-error msg is required
   expectType<JSX.Element>(<CompHoisted />)
 
+  const mixedProps = { ...runtimeProps, count: Number }
+  const CompMixed = defineComponent(
+    props => {
+      expectType<string>(props.msg)
+      expectType<number | undefined>(props.count)
+      return () => {}
+    },
+    { props: mixedProps },
+  )
+  expectType<JSX.Element>(<CompMixed msg="ok" />)
+  // @ts-expect-error msg is required
+  expectType<JSX.Element>(<CompMixed />)
+
+  const resolvedVm = {} as InstanceType<typeof CompResolved>
+  expectType<boolean>(resolvedVm.flag)
+  expectType<string>(resolvedVm.foo)
+
   // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {

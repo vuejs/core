@@ -125,23 +125,27 @@ export type DefineSetupFnComponent<
   S extends SlotsType = SlotsType,
   Props = P & EmitsToProps<E>,
   PP = PublicProps,
-> = new (
-  props: Props & PP,
-) => CreateComponentPublicInstanceWithMixins<
-  Props,
-  {},
-  {},
-  {},
-  {},
-  ComponentOptionsMixin,
-  ComponentOptionsMixin,
-  E,
-  PP,
-  {},
-  false,
-  {},
-  S
->
+  InstanceProps = Props,
+> = new (props: Props & PP) => Omit<
+  CreateComponentPublicInstanceWithMixins<
+    InstanceProps,
+    {},
+    {},
+    {},
+    {},
+    ComponentOptionsMixin,
+    ComponentOptionsMixin,
+    E,
+    PP,
+    {},
+    false,
+    {},
+    S
+  >,
+  '$props'
+> & {
+  $props: Props & PP
+}
 
 type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
   Readonly<EmitsToProps<Emits>>
@@ -154,27 +158,28 @@ type PropValueType<V> = [Exclude<V, undefined>] extends [Prop<infer T> | null]
     : never
   : never
 
+type PreTypedKeys<O> = {
+  [K in keyof O]-?: [PropValueType<O[K]>] extends [never] ? never : K
+}[keyof O]
+
+type LiteralRuntimePropKeys<O> = Exclude<keyof O, PreTypedKeys<O>>
+
 type PreTypedProps<O> = {
-  [K in keyof O]: PropValueType<O[K]>
+  [K in keyof Pick<O, PreTypedKeys<O>>]: PropValueType<O[K]>
 }
 
-type IsPreTypedRuntimeProps<O> = [keyof O] extends [never]
-  ? false
-  : false extends {
-        [K in keyof O]-?: [PropValueType<O[K]>] extends [never] ? false : true
-      }[keyof O]
-    ? false
-    : true
+type LiteralRuntimePropsOptions<O> = {
+  [K in keyof Pick<O, LiteralRuntimePropKeys<O>>]: O[K]
+}
 
 type PublicRuntimeProps<O extends ComponentObjectPropsOptions> =
-  IsPreTypedRuntimeProps<O> extends true
-    ? { [K in keyof PreTypedProps<O>]: PreTypedProps<O>[K] }
-    : { [K in keyof ExtractPublicPropTypes<O>]: ExtractPublicPropTypes<O>[K] }
+  PreTypedProps<O> & ExtractPublicPropTypes<LiteralRuntimePropsOptions<O>>
 
-type ResolvedRuntimeProps<O extends ComponentObjectPropsOptions> =
-  IsPreTypedRuntimeProps<O> extends true
-    ? Readonly<LooseRequired<Readonly<PreTypedProps<O>>>>
-    : Readonly<LooseRequired<Readonly<ExtractPropTypes<O>>>>
+type ResolvedRuntimeProps<O extends ComponentObjectPropsOptions> = Readonly<
+  LooseRequired<
+    Readonly<PreTypedProps<O> & ExtractPropTypes<LiteralRuntimePropsOptions<O>>>
+  >
+>
 
 type IsEqual<X, Y> =
   (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
@@ -226,7 +231,14 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   },
-): DefineSetupFnComponent<PublicRuntimeProps<RuntimePropsOptions>, E, S>
+): DefineSetupFnComponent<
+  PublicRuntimeProps<RuntimePropsOptions>,
+  E,
+  S,
+  PublicRuntimeProps<RuntimePropsOptions> & EmitsToProps<E>,
+  PublicProps,
+  ToResolvedProps<ResolvedRuntimeProps<RuntimePropsOptions>, E>
+>
 // function syntax + object runtime props, annotated setup
 export function defineComponent<
   Props extends Record<string, any>,
