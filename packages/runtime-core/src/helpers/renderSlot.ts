@@ -21,9 +21,25 @@ import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import type { Data } from '../component'
 
+/**
+ * Links a slot function to its raw vapor slot: a raw vapor slot carries
+ * itself, and the wrapper the interop slots proxy hands out carries the raw
+ * slot it wraps — one lookup answers both "is this a vapor slot" and
+ * "which one".
+ * @internal vapor interop only
+ */
+export const rawVaporSlotKey: unique symbol = Symbol(`rawVaporSlot`)
+
+/**
+ * Marks a compiler-generated slot fallback as VDOM-rendered so the vapor
+ * interop fallback chain renders it through the VDOM renderer.
+ * @internal vapor interop only
+ */
+export const vdomSlotFallbackKey: unique symbol = Symbol(`vdomSlotFallback`)
+
 type SlotFallback = {
   (): VNodeArrayChildren
-  __vdom?: boolean
+  [vdomSlotFallbackKey]?: boolean
 }
 
 /**
@@ -49,13 +65,10 @@ export function renderSlot(
   if (props == null) props = {}
 
   let slot = slots[name]
-  if (fallback) fallback.__vdom = true
+  if (fallback) fallback[vdomSlotFallbackKey] = true
 
   // vapor slots rendered in vdom
-  // __vs: original vapor slot stored on a wrapper from vaporSlotsProxyHandler
-  // __vapor: marker indicating the slot itself is an original vapor slot
-  const vaporSlot =
-    slot && ((slot as any).__vs || ((slot as any).__vapor ? slot : null))
+  const vaporSlot = slot && (slot as any)[rawVaporSlotKey]
   if (vaporSlot) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
     ret.vs = { slot: vaporSlot, fallback }

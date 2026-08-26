@@ -380,7 +380,11 @@ export {
 } from './componentRenderContext'
 export { renderList } from './helpers/renderList'
 export { toHandlers } from './helpers/toHandlers'
-export { renderSlot } from './helpers/renderSlot'
+export {
+  renderSlot,
+  rawVaporSlotKey,
+  vdomSlotFallbackKey,
+} from './helpers/renderSlot'
 export { createSlots } from './helpers/createSlots'
 export { withMemo, isMemoSame } from './helpers/withMemo'
 export {
