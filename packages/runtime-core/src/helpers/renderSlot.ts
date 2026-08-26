@@ -25,15 +25,14 @@ import type { Data } from '../component'
  * Links a slot function to its raw vapor slot: a raw vapor slot carries
  * itself, and the wrapper the interop slots proxy hands out carries the raw
  * slot it wraps — one lookup answers both "is this a vapor slot" and
- * "which one".
- * @internal vapor interop only
+ * "which one". Internal to vapor interop.
  */
 export const rawVaporSlotKey: unique symbol = Symbol(`rawVaporSlot`)
 
 /**
  * Marks a compiler-generated slot fallback as VDOM-rendered so the vapor
- * interop fallback chain renders it through the VDOM renderer.
- * @internal vapor interop only
+ * interop fallback chain renders it through the VDOM renderer. Internal to
+ * vapor interop.
  */
 export const vdomSlotFallbackKey: unique symbol = Symbol(`vdomSlotFallback`)
 
