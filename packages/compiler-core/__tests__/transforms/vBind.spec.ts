@@ -435,6 +435,7 @@ describe('compiler: transform v-bind', () => {
   test('error on invalid argument for same-name shorthand', () => {
     const onError = vi.fn()
     parseWithVBind(`<div v-bind:[arg] />`, { onError })
+    expect(onError).toHaveBeenCalledTimes(1)
     expect(onError.mock.calls[0][0]).toMatchObject({
       code: ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
       loc: {
@@ -448,5 +449,30 @@ describe('compiler: transform v-bind', () => {
         },
       },
     })
+  })
+
+  test('error on invalid static argument for same-name shorthand', () => {
+    const onError = vi.fn()
+    expect(() => parseWithVBind(`<div :2xl />`, { onError })).not.toThrow()
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+      message:
+        "v-bind with same-name shorthand only allows static arguments that start with a valid identifier character or '-'.",
+    })
+  })
+
+  test('error on invalid static argument in browser build', () => {
+    try {
+      __BROWSER__ = true
+      const onError = vi.fn()
+      expect(() => parseWithVBind(`<div :2xl />`, { onError })).not.toThrow()
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError.mock.calls[0][0]).toMatchObject({
+        code: ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+      })
+    } finally {
+      __BROWSER__ = false
+    }
   })
 })
