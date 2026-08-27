@@ -44,7 +44,7 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & {
     [assignKey]: AssignerFn
     [initialValueKey]?: string
-    _assigning?: boolean
+    _pendingValue?: [multiple: boolean, value: any]
   },
   any,
   Modifiers
@@ -240,17 +240,31 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o),
         )
-      el[assignKey](
-        el.multiple
-          ? isSet((el as any)._modelValue)
-            ? new Set(selectedVal)
+      const multiple = el.multiple
+      const assignedValue = multiple
+        ? isSet((el as any)._modelValue)
+          ? new Set(selectedVal)
+          : selectedVal
+        : selectedVal[0]
+      // Array models receive selectedVal directly, so snapshot it before user
+      // code can mutate it. Set models already receive a fresh Set.
+      const pending = (el._pendingValue = [
+        multiple,
+        multiple
+          ? isArray(assignedValue)
+            ? selectedVal.slice()
             : selectedVal
-          : selectedVal[0],
-      )
-      el._assigning = true
-      nextTick(() => {
-        el._assigning = false
-      })
+          : assignedValue,
+      ])
+      try {
+        el[assignKey](assignedValue)
+      } finally {
+        nextTick(() => {
+          if (el._pendingValue === pending) {
+            el._pendingValue = undefined
+          }
+        })
+      }
     })
     el[assignKey] = getModelAssigner(vnode)
   },
@@ -264,10 +278,33 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
-    if (!el._assigning) {
+    const pending = el._pendingValue
+    el._pendingValue = undefined
+    if (
+      !pending ||
+      pending[0] !== el.multiple ||
+      !isSameSelectValue(value, pending[1], pending[0])
+    ) {
       setSelected(el, value)
     }
   },
+}
+
+function isSameSelectValue(
+  value: any,
+  assignedValue: any,
+  multiple: boolean,
+): boolean {
+  if (!multiple) return looseEqual(value, assignedValue)
+  if (isArray(value)) return looseEqual(value, assignedValue)
+  if (isSet(value)) {
+    if (value.size !== assignedValue.length) return false
+    for (const item of assignedValue) {
+      if (!value.has(item)) return false
+    }
+    return true
+  }
+  return false
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {
