@@ -3,6 +3,7 @@ import {
   type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentPublicInstance,
+  type DefineSetupFnComponent,
   type PropType,
   type SetupContext,
   type Slots,
@@ -1424,6 +1425,14 @@ describe('function syntax w/ emits', () => {
 })
 
 describe('function syntax w/ runtime props', () => {
+  type AnySetupInstance = InstanceType<DefineSetupFnComponent<any>>
+  expectType<IsAny<AnySetupInstance>>(true)
+
+  const CompAny = defineComponent((_props: any) => () => {}, {
+    props: { msg: String },
+  })
+  expectType<IsAny<InstanceType<typeof CompAny>>>(true)
+
   // with runtime props, the runtime props must match
   // manual type declaration
   const Comp1 = defineComponent(
@@ -1646,6 +1655,38 @@ describe('function syntax w/ runtime props', () => {
   expectType<JSX.Element>(<CompMixed msg="ok" />)
   // @ts-expect-error msg is required
   expectType<JSX.Element>(<CompMixed />)
+
+  const narrowedRuntimeProps: Record<'msg', PropType<string> | null> = {
+    msg: String,
+  }
+  const CompNarrowed = defineComponent(
+    props => {
+      expectType<string>(props.msg)
+      return () => {}
+    },
+    { props: narrowedRuntimeProps },
+  )
+  expectType<JSX.Element>(<CompNarrowed msg="ok" />)
+  // @ts-expect-error msg is required
+  expectType<JSX.Element>(<CompNarrowed />)
+  // @ts-expect-error msg must use the inferred string payload
+  expectType<JSX.Element>(<CompNarrowed msg={1} />)
+
+  const neverRuntimeProps: ComponentObjectPropsOptions<{ value: never }> = {
+    value: { type: null, required: true },
+  }
+  const CompNever = defineComponent(
+    props => {
+      expectType<never>(props.value)
+      return () => {}
+    },
+    { props: neverRuntimeProps },
+  )
+  expectType<JSX.Element>(<CompNever value={undefined as never} />)
+  // @ts-expect-error value remains required
+  expectType<JSX.Element>(<CompNever />)
+  // @ts-expect-error value retains the never payload
+  expectType<JSX.Element>(<CompNever value="nope" />)
 
   const resolvedVm = {} as InstanceType<typeof CompResolved>
   expectType<boolean>(resolvedVm.flag)

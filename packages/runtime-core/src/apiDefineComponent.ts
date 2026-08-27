@@ -23,6 +23,7 @@ import type {
   ExtractPropTypes,
   ExtractPublicPropTypes,
   Prop,
+  PropType,
 } from './componentProps'
 import type {
   EmitsOptions,
@@ -125,6 +126,30 @@ export type DefineSetupFnComponent<
   S extends SlotsType = SlotsType,
   Props = P & EmitsToProps<E>,
   PP = PublicProps,
+> = new (
+  props: Props & PP,
+) => CreateComponentPublicInstanceWithMixins<
+  Props,
+  {},
+  {},
+  {},
+  {},
+  ComponentOptionsMixin,
+  ComponentOptionsMixin,
+  E,
+  PP,
+  {},
+  false,
+  {},
+  S
+>
+
+type DefineSetupFnComponentWithInstanceProps<
+  P extends Record<string, any>,
+  E extends EmitsOptions,
+  S extends SlotsType,
+  Props,
+  PP = PublicProps,
   InstanceProps = Props,
 > = new (props: Props & PP) => Omit<
   CreateComponentPublicInstanceWithMixins<
@@ -150,16 +175,28 @@ export type DefineSetupFnComponent<
 type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
   Readonly<EmitsToProps<Emits>>
 
-// ComponentObjectPropsOptions<P> widens values to `Prop<P[K]> | null`.
-// Detect that mapped form so we don't run Extract* on it again.
-type PropValueType<V> = [Exclude<V, undefined>] extends [Prop<infer T> | null]
+// Detect both ComponentObjectPropsOptions<P> and its PropType-only narrowed
+// form. Keep match state separate because `never` is a valid inferred payload.
+type PropValueMatch<V> = [Exclude<V, undefined>] extends [Prop<infer T> | null]
   ? [Prop<T> | null] extends [Exclude<V, undefined>]
+    ? { matched: true; value: T }
+    : [Exclude<V, undefined>] extends [PropType<infer U> | null]
+      ? [PropType<U> | null] extends [Exclude<V, undefined>]
+        ? { matched: true; value: U }
+        : { matched: false }
+      : { matched: false }
+  : { matched: false }
+
+type PropValueType<V> =
+  PropValueMatch<V> extends {
+    matched: true
+    value: infer T
+  }
     ? T
     : never
-  : never
 
 type PreTypedKeys<O> = {
-  [K in keyof O]-?: [PropValueType<O[K]>] extends [never] ? never : K
+  [K in keyof O]-?: PropValueMatch<O[K]> extends { matched: true } ? K : never
 }[keyof O]
 
 type LiteralRuntimePropKeys<O> = Exclude<keyof O, PreTypedKeys<O>>
@@ -231,7 +268,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   },
-): DefineSetupFnComponent<
+): DefineSetupFnComponentWithInstanceProps<
   PublicRuntimeProps<RuntimePropsOptions>,
   E,
   S,
