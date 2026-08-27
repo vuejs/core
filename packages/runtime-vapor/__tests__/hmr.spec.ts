@@ -27,6 +27,7 @@ import {
   defineVaporAsyncComponent,
   defineVaporComponent,
   delegateEvents,
+  insert,
   renderEffect,
   setText,
   template,
@@ -368,6 +369,140 @@ describe('hot module replacement', () => {
       '[HMR] Something went wrong during Vue component hot-reload.',
     ).toHaveBeenWarned()
     expect(leakedInstance).toBe(null)
+  })
+
+  test('rerender should preserve fallthrough attrs', () => {
+    const root = document.createElement('div')
+    const childId = 'test-rerender-fallthrough-child'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>child</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      components: { Child },
+      render: compileToFunction(`<Child class="test" />`),
+    })
+
+    define(Parent).create().mount(root)
+    expect(root.innerHTML).toBe(`<div class="test">child</div>`)
+
+    rerender(childId, compileToFunction(`<div>child2</div>`))
+    expect(root.innerHTML).toBe(`<div class="test">child2</div>`)
+  })
+
+  test('reload child under setup-only parent should preserve parent fallthrough attrs', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-reload-setup-only-fallthrough-child'
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<span>old</span>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      setup() {
+        const el = template('<b></b>')() as ParentNode
+        insert(createComponent(Child), el)
+        return el
+      },
+    })
+
+    const GrandParent = defineVaporComponent({
+      components: { Parent: Parent as any },
+      render: compileToFunction(`<Parent class="test" />`),
+    })
+
+    define(GrandParent).create().mount(root)
+    expect(root.innerHTML).toBe(`<b class="test"><span>old</span></b>`)
+
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      render: compileToFunction(`<span>new</span>`),
+    })
+    await nextTick()
+    expect(root.innerHTML).toBe(`<b class="test"><span>new</span></b>`)
+  })
+
+  test('rerender should tear down element-nested child components', async () => {
+    const root = document.createElement('div')
+    const parentId = 'test-rerender-nested-teardown-parent'
+    const external = ref(0)
+    const effectSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const unmountSpy = vi.fn()
+
+    const Child = defineVaporComponent({
+      setup() {
+        watchEffect(() => effectSpy(external.value))
+        onMounted(mountSpy)
+        onUnmounted(unmountSpy)
+      },
+      render: () => template('<i>c</i>')(),
+    })
+
+    const Parent = defineVaporComponent({
+      __hmrId: parentId,
+      components: { Child },
+      // element-nested child: not part of the parent's logical block graph
+      render: compileToFunction(`<div>x<Child/></div>`),
+    })
+    createRecord(parentId, Parent as any)
+
+    const { app } = define(Parent).create().mount(root)
+    await nextTick()
+    expect(effectSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+
+    rerender(parentId, compileToFunction(`<div>y<Child/></div>`))
+    await nextTick()
+    expect(root.innerHTML).toBe(`<div>y<i>c</i></div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(2)
+    expect(effectSpy).toHaveBeenCalledTimes(2)
+    external.value++
+    await nextTick()
+    expect(effectSpy).toHaveBeenCalledTimes(3)
+
+    app.unmount()
+    await nextTick()
+    expect(unmountSpy).toHaveBeenCalledTimes(2)
+  })
+
+  test('rerender should unregister replaced child instances from hmr records', () => {
+    const root = document.createElement('div')
+    const parentId = 'test-rerender-unregister-parent'
+    const childId = 'test-rerender-unregister-child'
+    const renderSpy = vi.fn()
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<span>v1</span>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<div>x<Child/></div>`),
+    })
+    createRecord(parentId, Parent as any)
+
+    define(Parent).create().mount(root)
+    rerender(parentId, compileToFunction(`<div>y<Child/></div>`))
+    expect(root.innerHTML).toBe(`<div>y<span>v1</span></div>`)
+
+    // a leaked old instance would invoke the new render a second time
+    rerender(childId, () => {
+      renderSpy()
+      return template('<span>v2</span>')()
+    })
+    expect(root.innerHTML).toBe(`<div>y<span>v2</span></div>`)
+    expect(renderSpy).toHaveBeenCalledTimes(1)
   })
 
   // the vapor fast path rerenders parents synchronously; re-running a mounted
@@ -717,19 +852,27 @@ describe('hot module replacement', () => {
     expect(activeSpy).toHaveBeenCalledTimes(1)
     expect(deactivatedSpy).toHaveBeenCalledTimes(0)
 
-    // should not unmount when toggling
+    // should not unmount when toggling; the recreated content keeps its
+    // transition hooks
     triggerEvent('click', root.children[0] as Element)
     await nextTick()
+    expect(root.innerHTML).toBe(
+      `<button></button><div class="v-leave-from v-leave-active">1</div><!--if-->`,
+    )
+    await timeout()
     expect(root.innerHTML).toBe(`<button></button><!--if-->`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(1)
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
 
-    // should not mount when toggling
+    // should not mount when toggling; enter classes stay in place - jsdom
+    // never fires transitionend
     triggerEvent('click', root.children[0] as Element)
     await nextTick()
-    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(root.innerHTML).toBe(
+      `<button></button><div class="v-enter-from v-enter-active">1</div><!--if-->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(2)
@@ -809,10 +952,13 @@ describe('hot module replacement', () => {
     expect(activeSpy).toHaveBeenCalledTimes(1)
     expect(deactivatedSpy).toHaveBeenCalledTimes(1)
 
-    // should not mount when toggling
+    // should not mount when toggling; enter classes stay in place - jsdom
+    // never fires transitionend
     triggerEvent('click', root.children[0] as Element)
     await nextTick()
-    expect(root.innerHTML).toBe(`<button></button><div>1</div><!--if-->`)
+    expect(root.innerHTML).toBe(
+      `<button></button><div class="v-enter-from v-enter-active">1</div><!--if-->`,
+    )
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(2)
