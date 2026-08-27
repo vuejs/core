@@ -579,6 +579,7 @@ function createSuspenseBoundary(
                 vnode.ssFallback.el = null
               }
             }
+            activeBranch!.transition!.afterLeave = undefined
           }
         }
         // unmount current active tree
