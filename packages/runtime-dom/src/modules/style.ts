@@ -99,7 +99,12 @@ function setStyle(
     }
     if (name.startsWith('--')) {
       // custom property definition
-      style.setProperty(name, val)
+      if (importantRE.test(val)) {
+        // !important
+        style.setProperty(name, val.replace(importantRE, ''), 'important')
+      } else {
+        style.setProperty(name, val)
+      }
     } else {
       const prefixed = autoPrefix(style, name)
       if (importantRE.test(val)) {
