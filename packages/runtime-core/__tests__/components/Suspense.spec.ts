@@ -2111,6 +2111,77 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>async2</div>`)
   })
 
+  // #15288
+  test('KeepAlive + Suspense switch while ancestor is pending', async () => {
+    let resolveRootDep!: (comp: ComponentOptions) => void
+    const rootDep = new Promise<ComponentOptions>(resolve => {
+      resolveRootDep = resolve
+    })
+    const RootDep = defineAsyncComp(() => rootDep)
+    const makePage = (name: string) =>
+      defineAsyncComponent({
+        render: () => h('div', `page ${name}`),
+      })
+    const PageA = makePage('A')
+    const PageB = makePage('B')
+    const page = shallowRef(PageA)
+    const key = ref('a')
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return h(Suspense, null, {
+          default: h('div', [
+            h(RootDep),
+            h(KeepAlive, null, {
+              default: () =>
+                h(Suspense, null, {
+                  default: h(page.value, { key: key.value }),
+                }),
+            }),
+          ]),
+          fallback: h('div', 'loading'),
+        })
+      },
+    }
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe('<div>loading</div>')
+
+    await Promise.all(deps)
+    await nextTick()
+
+    page.value = PageB
+    key.value = 'b'
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>loading</div>')
+
+    resolveRootDep({
+      render: () => h('div', 'root'),
+    })
+    await rootDep
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      '<div><div>root</div><div>page A</div></div>',
+    )
+
+    page.value = PageA
+    key.value = 'a'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      '<div><div>root</div><div>page A</div></div>',
+    )
+
+    page.value = PageB
+    key.value = 'b'
+    await nextTick()
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      '<div><div>root</div><div>page B</div></div>',
+    )
+  })
+
   test('KeepAlive + Suspense + comment slot', async () => {
     const toggle = ref(false)
     const Async = defineAsyncComponent({
