@@ -1,3 +1,19 @@
+## [3.5.42](https://github.com/vuejs/core/compare/v3.5.41...v3.5.42) (2026-08-27)
+
+### Bug Fixes
+
+* **hydration:** handle async component unmount before lazy hydration ([#15252](https://github.com/vuejs/core/issues/15252)) ([6e1814a](https://github.com/vuejs/core/commit/6e1814aa355aad8dd32a89873e95267297ae0609))
+* **hydration:** handle moving unresolved async fragment ([#15263](https://github.com/vuejs/core/issues/15263)) ([a72036f](https://github.com/vuejs/core/commit/a72036f66bcb9a4f3b3737cda19eeba1bc531e15))
+* **runtime-core:** avoid caching unmounted suspense children ([#15291](https://github.com/vuejs/core/issues/15291)) ([b535917](https://github.com/vuejs/core/commit/b535917d46d5c6e28c1d3b9185bfa1665127c73a)), closes [#15288](https://github.com/vuejs/core/issues/15288)
+* **runtime-core:** keep .trim result when combined with .number v-model modifier ([#15346](https://github.com/vuejs/core/issues/15346)) ([f8d42e1](https://github.com/vuejs/core/commit/f8d42e1cf2a0ccb43c50fad6e972cb130c53824e))
+* **runtime-core:** resolve $el for dev root comment fragment ([#15313](https://github.com/vuejs/core/issues/15313)) ([8654f35](https://github.com/vuejs/core/commit/8654f35118a1165ac30fd398ceaff8849c44d9d5)), closes [#12680](https://github.com/vuejs/core/issues/12680)
+* **runtime-dom:** support !important on CSS custom properties in style binding ([#15348](https://github.com/vuejs/core/issues/15348)) ([31da934](https://github.com/vuejs/core/commit/31da934fcbe73ab8ed187bf820c80b24ced474be))
+* **server-renderer:** reject CR in attribute names ([#15266](https://github.com/vuejs/core/issues/15266)) ([a2b40db](https://github.com/vuejs/core/commit/a2b40db9a83b36ed9da3a16403cf8f040262d73f))
+* **shared:** correctly compare Map and Set values ([#15328](https://github.com/vuejs/core/issues/15328)) ([ef82a26](https://github.com/vuejs/core/commit/ef82a26775952a665545d3771788bd23b2efec91)), closes [#15320](https://github.com/vuejs/core/issues/15320)
+* **suspense:** don't treat the leaving branch as the fallback while its mount is pending ([#15333](https://github.com/vuejs/core/issues/15333)) ([cd19745](https://github.com/vuejs/core/commit/cd1974562357dd73101d048f207a694a4e5310ec)), closes [#15332](https://github.com/vuejs/core/issues/15332)
+* **v-model:** re-sync select when model is overridden in change handler ([#15298](https://github.com/vuejs/core/issues/15298)) ([6eaecc1](https://github.com/vuejs/core/commit/6eaecc14d8151a7d258b80ce0519e5ecc17a2bef)), closes [#10505](https://github.com/vuejs/core/issues/10505)
+
+
 ## [3.5.41](https://github.com/vuejs/core/compare/v3.5.40...v3.5.41) (2026-08-05)
 
 ### Bug Fixes

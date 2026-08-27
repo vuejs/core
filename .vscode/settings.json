@@ -1,13 +1,7 @@
 {
   // Use the project's typescript version
-  "typescript.tsdk": "node_modules/typescript/lib",
-
-  "cSpell.enabledFileTypes": {
-    "markdown": true,
-    "plaintext": true,
-    "text": true,
-    "yml": true
-  },
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "cSpell.enabledLanguageIds": ["markdown", "plaintext", "text", "yml"],
   "prettier.enable": false,
   "eslint.enable": false,
   "oxc.enable": true,

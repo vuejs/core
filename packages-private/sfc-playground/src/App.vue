@@ -3,9 +3,9 @@ import Header from './Header.vue'
 import {
   Repl,
   type SFCOptions,
+  type StoreState,
   useStore,
   useVueImportMap,
-  StoreState,
 } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
 import { ref, watchEffect, onMounted, computed, watch } from 'vue'
@@ -19,6 +19,8 @@ window.addEventListener('resize', setVH)
 setVH()
 
 const useSSRMode = ref(false)
+
+const DEFAULT_TYPESCRIPT_VERSION = '6.0.3'
 
 const AUTO_SAVE_STORAGE_KEY = 'vue-sfc-playground-auto-save'
 const initAutoSave: boolean = JSON.parse(
@@ -84,6 +86,7 @@ const store = useStore(
     files,
     vueVersion,
     builtinImportMap: importMap,
+    typescriptVersion: ref(DEFAULT_TYPESCRIPT_VERSION),
     sfcOptions,
   },
   hash,

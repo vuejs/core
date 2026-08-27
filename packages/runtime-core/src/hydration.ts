@@ -12,11 +12,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type {
-  ComponentInternalInstance,
-  ComponentOptions,
-  ConcreteComponent,
-} from './component'
+import type { ComponentInternalInstance, ConcreteComponent } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -406,17 +402,18 @@ export function createHydrationFunctions(
             // #3787
             // An async component may move or unmount before its render effect
             // exists, so keep a placeholder vnode that matches its adopted DOM.
-            // The wrapper check preserves lazy hydration behavior; asyncDep
-            // covers plain async setup under Suspense.
+            //
+            // This covers unresolved async wrappers, lazy hydration wrappers
+            // whose subtree was deferred, and plain async setup under Suspense.
             const component = vnode.component!
             if (
-              (isAsyncWrapper(vnode) &&
-                !(vnode.type as ComponentOptions).__asyncResolved) ||
-              (component.asyncDep && !component.asyncResolved)
+              !component.subTree &&
+              (isAsyncWrapper(vnode) ||
+                (component.asyncDep && !component.asyncResolved))
             ) {
               let subTree
               if (isFragmentStart) {
-                subTree = createVNode(Fragment)
+                subTree = createVNode(Static)
                 subTree.anchor = nextNode
                   ? nextNode.previousSibling
                   : container.lastChild

@@ -220,10 +220,10 @@ const KeepAliveImpl: ComponentOptions = {
         if (isSuspense(keepAliveInstance.subTree.type)) {
           queuePostRenderEffect(
             () => {
-              cache.set(
-                pendingCacheKey!,
-                getInnerChild(keepAliveInstance.subTree),
-              )
+              const vnode = getInnerChild(keepAliveInstance.subTree)
+              if (vnode.component) {
+                cache.set(pendingCacheKey!, vnode)
+              }
             },
             undefined,
             keepAliveInstance.subTree.suspense,

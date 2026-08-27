@@ -18,6 +18,7 @@ import {
   EMPTY_OBJ,
   type IfAny,
   NOOP,
+  PatchFlags,
   type Prettify,
   type UnionToIntersection,
   extend,
@@ -52,11 +53,12 @@ import {
 } from './componentOptions'
 import type { EmitFn, EmitsOptions } from './componentEmits'
 import type { SlotsType, UnwrapSlotsType } from './componentSlots'
-import { markAttrsAccessed } from './componentRenderUtils'
+import { filterSingleRoot, markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
 import type { Directive } from './directives'
+import type { VNode, VNodeArrayChildren } from './vnode'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -360,6 +362,44 @@ const getPublicInstance = (
   return getPublicInstance(i.parent)
 }
 
+// Component and Suspense roots can hide a dev root fragment. Only return a
+// resolved element after finding one so other root chains keep their existing
+// `$el` semantics.
+const resolveDevRootEl = (vnode: VNode): VNode['el'] | undefined => {
+  let found = false
+
+  while (true) {
+    if (vnode.patchFlag > 0 && vnode.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
+      const root = filterSingleRoot(vnode.children as VNodeArrayChildren)
+      if (!root) {
+        return
+      }
+      vnode = root
+      found = true
+      continue
+    }
+
+    const component = vnode.component
+    if (component && component.subTree) {
+      vnode = component.subTree
+      continue
+    }
+
+    const suspense = vnode.suspense
+    if (suspense && suspense.activeBranch) {
+      vnode = suspense.activeBranch
+      continue
+    }
+
+    return found ? vnode.el : undefined
+  }
+}
+
+const getDevRootFragmentEl = (i: ComponentInternalInstance) => {
+  const el = i.subTree && resolveDevRootEl(i.subTree)
+  return el === undefined ? i.vnode.el : el
+}
+
 // https://github.com/rolldown/rolldown/issues/7666
 // Lazy init to break circular dependency for rolldown tree-shaking
 // Circular:
@@ -372,7 +412,7 @@ export const getPublicPropertiesMap = (): PublicPropertiesMap => {
   if (!publicPropertiesMap) {
     publicPropertiesMap = extend(Object.create(null), {
       $: i => i,
-      $el: i => i.vnode.el,
+      $el: i => (__DEV__ ? getDevRootFragmentEl(i) : i.vnode.el),
       $data: i => i.data,
       $props: i => (__DEV__ ? shallowReadonly(i.props) : i.props),
       $attrs: i => (__DEV__ ? shallowReadonly(i.attrs) : i.attrs),

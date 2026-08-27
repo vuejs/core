@@ -48,3 +48,5 @@ minimumReleaseAgeExclude:
 overrides:
   vite@*: 'catalog:'
   vitest@*: 'catalog:'
+
+trustPolicy: no-downgrade

@@ -2169,6 +2169,156 @@ describe('e2e: Transition', () => {
       E2E_TIMEOUT,
     )
 
+    // a parent update arriving while the timed-out fallback swap is waiting
+    // for the leaving branch's afterLeave must not drop the resolved branch
+    test(
+      'parent update during timed-out fallback swap with out-in transition',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, shallowRef, ref, h, defineAsyncComponent } = (
+            window as any
+          ).Vue
+          const One = {
+            setup() {
+              return () => h('div', { class: 'test' }, 'one')
+            },
+          }
+          const Two = {
+            async setup() {
+              return () => h('div', { class: 'test' }, 'two')
+            },
+          }
+          const AsyncTwo = defineAsyncComponent(
+            () =>
+              new Promise(res => {
+                ;(window as any).resolveTwo = () => res(Two as any)
+              }),
+          )
+          createApp({
+            template: `
+              <div id="container">
+                <transition mode="out-in" :duration="300">
+                  <Suspense :timeout="10">
+                    <component :is="view" :key="name" :data-tick="tick"/>
+                    <template #fallback><div class="fallback">loading</div></template>
+                  </Suspense>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+              <button id="tickBtn" @click="tick++">tick</button>
+            `,
+            setup: () => {
+              const view = shallowRef(One)
+              const name = ref('one')
+              const tick = ref(0)
+              const click = () => {
+                view.value = AsyncTwo
+                name.value = 'two'
+              }
+              return { view, name, tick, click }
+            },
+          }).mount('#app')
+        })
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div class="test" data-tick="0">one</div>',
+        )
+
+        // navigate to the cold async branch; timeout=10 starts the fallback
+        // swap and the old branch's leave transition
+        await click('#toggleBtn')
+        await timeout(10 + buffer)
+        // unrelated parent re-render while the fallback mount is deferred to
+        // the leaving branch's afterLeave
+        await click('#tickBtn')
+        // the async branch resolves while the leave is still in progress
+        await page().evaluate(() => (window as any).resolveTwo())
+        await transitionFinish(300)
+        await transitionFinish(300)
+        await nextTick()
+        expect(await html('#container')).toContain('two')
+        expect(await html('#container')).not.toContain('loading')
+      },
+      E2E_TIMEOUT,
+    )
+
+    // a parent update that changes the fallback content while its mount is
+    // deferred must mount the latest fallback, not the stale one
+    test(
+      'fallback updated by parent while its mount is deferred',
+      async () => {
+        await page().evaluate(() => {
+          const { createApp, shallowRef, ref, h, defineAsyncComponent } = (
+            window as any
+          ).Vue
+          const One = {
+            setup() {
+              return () => h('div', { class: 'test' }, 'one')
+            },
+          }
+          const Two = {
+            async setup() {
+              return () => h('div', { class: 'test' }, 'two')
+            },
+          }
+          const AsyncTwo = defineAsyncComponent(
+            () =>
+              new Promise(res => {
+                ;(window as any).resolveTwo = () => res(Two as any)
+              }),
+          )
+          createApp({
+            template: `
+              <div id="container">
+                <transition mode="out-in" :duration="300">
+                  <Suspense :timeout="10">
+                    <component :is="view" :key="name" :data-tick="tick"/>
+                    <template #fallback><div class="fallback">loading {{ tick }}</div></template>
+                  </Suspense>
+                </transition>
+              </div>
+              <button id="toggleBtn" @click="click">button</button>
+              <button id="tickBtn" @click="tick++">tick</button>
+            `,
+            setup: () => {
+              const view = shallowRef(One)
+              const name = ref('one')
+              const tick = ref(0)
+              const click = () => {
+                view.value = AsyncTwo
+                name.value = 'two'
+              }
+              return { view, name, tick, click }
+            },
+          }).mount('#app')
+        })
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div class="test" data-tick="0">one</div>',
+        )
+
+        // navigate to the cold async branch; the fallback mount is deferred
+        // to the old branch's afterLeave
+        await click('#toggleBtn')
+        await timeout(10 + buffer)
+        // parent update changes the fallback content while its mount is
+        // still deferred
+        await click('#tickBtn')
+        // let the leave finish so the (latest) fallback mounts
+        await transitionFinish(300)
+        await nextTick()
+        expect(await html('#container')).toContain('loading 1')
+        // the async branch resolves after the leave completed
+        await page().evaluate(() => (window as any).resolveTwo())
+        await transitionFinish(300)
+        await transitionFinish(300)
+        await nextTick()
+        expect(await html('#container')).toContain('two')
+        expect(await html('#container')).not.toContain('loading')
+      },
+      E2E_TIMEOUT,
+    )
+
     // #14640
     test(
       'switch suspense branches after teleport updates before pending mount finishes',

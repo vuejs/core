@@ -186,7 +186,7 @@ export function baseEmit(
       args = rawArgs.map(a => (isString(a) ? a.trim() : a))
     }
     if (modifiers.number) {
-      args = rawArgs.map(looseToNumber)
+      args = args.map(looseToNumber)
     }
   }
 

@@ -118,6 +118,17 @@ describe('ssr: renderAttrs', () => {
       ),
     ).toBe(` viewBox="foo"`)
   })
+
+  test('ignore attr names containing carriage returns', () => {
+    expect(
+      ssrRenderAttrs({
+        id: 'safe',
+        ['x\rautofocus\ronfocus']: 'alert(1)',
+      }),
+    ).toBe(` id="safe"`)
+    expect(`unsafe attribute name`).toHaveBeenWarned()
+    expect(`Skipped rendering unsafe attribute name`).toHaveBeenWarned()
+  })
 })
 
 describe('ssr: renderAttr', () => {

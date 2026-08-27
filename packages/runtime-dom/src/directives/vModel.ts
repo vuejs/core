@@ -44,7 +44,7 @@ type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
   T & {
     [assignKey]: AssignerFn
     [initialValueKey]?: string
-    _assigning?: boolean
+    _pendingValue?: [multiple: boolean, value: any]
   },
   any,
   Modifiers
@@ -312,7 +312,10 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
  * @internal
  */
 export const vModelSelectInit = (
-  el: HTMLSelectElement & { [assignKey]?: AssignerFn; _assigning?: boolean },
+  el: HTMLSelectElement & {
+    [assignKey]?: AssignerFn
+    _pendingValue?: [multiple: boolean, value: any]
+  },
   value: any,
   number: boolean | undefined,
   set?: (v: any) => void,
@@ -324,26 +327,72 @@ export const vModelSelectInit = (
       .map((o: HTMLOptionElement) =>
         number ? looseToNumber(getValue(o)) : getValue(o),
       )
-    ;(set || el[assignKey]!)(
-      el.multiple
-        ? isSet((el as any)._modelValue)
-          ? new Set(selectedVal)
+    const multiple = el.multiple
+    const assignedValue = multiple
+      ? isSet((el as any)._modelValue)
+        ? new Set(selectedVal)
+        : selectedVal
+      : selectedVal[0]
+    const pending = (el._pendingValue = [
+      multiple,
+      multiple
+        ? isArray(assignedValue)
+          ? selectedVal.slice()
           : selectedVal
-        : selectedVal[0],
-    )
-    el._assigning = true
-    nextTick(() => {
-      el._assigning = false
-    })
+        : assignedValue,
+    ])
+    try {
+      ;(set || el[assignKey]!)(assignedValue)
+    } finally {
+      nextTick(() => {
+        if (el._pendingValue === pending) {
+          el._pendingValue = undefined
+        }
+      })
+    }
   })
+}
+
+function isSameSelectValue(
+  value: any,
+  assignedValue: any,
+  multiple: boolean,
+): boolean {
+  if (!multiple) return looseEqual(value, assignedValue)
+  if (isArray(value)) return looseEqual(value, assignedValue)
+  if (isSet(value)) {
+    if (value.size !== assignedValue.length) return false
+    for (const item of assignedValue) {
+      if (!value.has(item)) return false
+    }
+    return true
+  }
+  return false
 }
 
 /**
  * @internal
  */
-export const vModelSetSelected = (el: HTMLSelectElement, value: any): void => {
+export const vModelSetSelected = (
+  el: HTMLSelectElement & {
+    _pendingValue?: [multiple: boolean, value: any]
+  },
+  value: any,
+): void => {
   ;(el as any)._modelValue = value
-  if ((el as any)._assigning) return
+  const pending = el._pendingValue
+  el._pendingValue = undefined
+  if (
+    pending &&
+    pending[0] === el.multiple &&
+    isSameSelectValue(value, pending[1], pending[0])
+  ) {
+    return
+  }
+  setSelected(el, value)
+}
+
+function setSelected(el: HTMLSelectElement, value: any) {
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {
