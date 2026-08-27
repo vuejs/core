@@ -317,7 +317,9 @@ export function createHydrationFunctions(
           if (isAsyncWrapper(vnode) && !vnode.component!.subTree) {
             let subTree
             if (isFragmentStart) {
-              subTree = createVNode(Fragment)
+              // the async component has no child vnodes yet, so represent its
+              // adopted DOM as an opaque range that can be moved or removed
+              subTree = createVNode(Static)
               subTree.anchor = nextNode
                 ? nextNode.previousSibling
                 : container.lastChild
