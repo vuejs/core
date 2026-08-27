@@ -14,7 +14,11 @@ import {
   createSimpleExpression,
   isStaticExp,
 } from '@vue/compiler-core'
-import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../runtimeHelpers'
+import {
+  V_ON_WITH_DYNAMIC_EVENT_MODIFIERS,
+  V_ON_WITH_KEYS,
+  V_ON_WITH_MODIFIERS,
+} from '../runtimeHelpers'
 import { capitalize, makeMap } from '@vue/shared'
 
 const isEventOptionModifier = /*@__PURE__*/ makeMap(`passive,once,capture`)
@@ -144,7 +148,11 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
       const modifierPostfix = eventOptionModifiers.map(capitalize).join('')
       key = isStaticExp(key)
         ? createSimpleExpression(`${key.content}${modifierPostfix}`, true)
-        : createCompoundExpression([`(`, key, `) + "${modifierPostfix}"`])
+        : createCompoundExpression([
+            `${context.helperString(V_ON_WITH_DYNAMIC_EVENT_MODIFIERS)}(`,
+            key,
+            `, "${modifierPostfix}")`,
+          ])
     }
 
     return {
