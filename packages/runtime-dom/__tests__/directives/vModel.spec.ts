@@ -1874,4 +1874,32 @@ describe('vModel', () => {
     await nextTick()
     expect(foo.checked).toEqual(false)
   })
+
+  // #15320
+  it('selects the matching option when values are maps', () => {
+    const mapA = new Map([['id', 1]])
+    const mapB = new Map([['id', 2]])
+    const value = ref(mapB)
+    const component = defineComponent(
+      () => () =>
+        withVModel(
+          h(
+            'select',
+            {
+              'onUpdate:modelValue': (val: Map<string, number>) =>
+                (value.value = val),
+            },
+            [
+              h('option', { value: mapA }, 'A'),
+              h('option', { value: mapB }, 'B'),
+            ],
+          ),
+          value.value,
+        ),
+    )
+
+    render(h(component), root)
+
+    expect(root.querySelector('select').selectedIndex).toBe(1)
+  })
 })
