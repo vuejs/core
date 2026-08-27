@@ -3170,7 +3170,7 @@ describe('VaporKeepAlive', () => {
 
     const toggle = ref(true)
     const { instance } = define({
-      setup() {
+      render() {
         return createComponent(VaporKeepAlive, null, {
           default: () =>
             createIf(
@@ -3194,9 +3194,13 @@ describe('VaporKeepAlive', () => {
     keepAliveInstance.hmrRerender!()
     await nextTick()
 
-    expect(cache.size).toBe(1)
-    const keyA2 = Array.from(cache.keys())[0]
-    const cachedA2 = cache.get(keyA2)
+    // the rerender goes through the parent, replacing the KeepAlive instance
+    const newKeepAliveInstance = instance!.block as any
+    expect(newKeepAliveInstance).not.toBe(keepAliveInstance)
+    const newCache = newKeepAliveInstance.__v_cache as Map<any, any>
+    expect(newCache.size).toBe(1)
+    const keyA2 = Array.from(newCache.keys())[0]
+    const cachedA2 = newCache.get(keyA2)
     expect(keyA2).toBe(keyA1)
     expect(cachedA2).not.toBe(cachedA1)
   })

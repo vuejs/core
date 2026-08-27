@@ -1,5 +1,6 @@
 import {
   type AsyncComponentInternalOptions,
+  type ComponentCustomElementInterface,
   type ComponentInternalInstance,
   type ComponentInternalOptions,
   type ComponentObjectPropsOptions,
@@ -79,7 +80,7 @@ import {
   setupPropsValidation,
   snapshotRawProps,
 } from './componentProps'
-import { type RenderEffect, renderEffect } from './renderEffect'
+import { renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
 import { setDynamicProps } from './dom/prop'
 import {
@@ -753,8 +754,23 @@ function callRender(
 
 /**
  * dev only
+ * Runs devRender with everything it creates owned by a fresh per-render
+ * scope, so HMR rerender can tear down one generation by stopping the
+ * scope - including components nested inside elements, which the block
+ * graph cannot reach.
  */
-export function devRender(instance: VaporComponentInstance): void {
+export function runDevRender(instance: VaporComponentInstance): void {
+  // reset per-render dev state, preserving the optional-props marker
+  // (attrs === props installs no tracking proxy)
+  instance.accessedAttrs = instance.props === instance.attrs
+  const scope = (instance.renderScope = new EffectScope())
+  scope.run(() => devRender(instance))
+}
+
+/**
+ * dev only
+ */
+function devRender(instance: VaporComponentInstance): void {
   const prev = setCurrentRenderingInstance(
     instance as unknown as ComponentInternalInstance,
   )
@@ -862,6 +878,8 @@ export class VaporComponentInstance<
   // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
   deferredKeepAliveUpdates?: DeferredKeepAliveUpdates
 
+  ce?: ComponentCustomElementInterface
+
   // for v-once: caches props/attrs values to ensure they remain frozen
   // even when the component re-renders due to local state changes
   oncePropsCache?: Record<string | symbol, any>
@@ -902,7 +920,7 @@ export class VaporComponentInstance<
   emitsOptions?: ObjectEmitsOptions | null
   isSingleRoot?: boolean
   // for HMR rerender
-  renderEffects?: RenderEffect[]
+  renderScope?: EffectScope
 
   /**
    * dev only flag to track whether $attrs was used during render.
@@ -1676,7 +1694,7 @@ function handleSetupResult(
       }
       if (__DEV__) {
         instance.setupState = createDevSetupStateProxy(proxyRefs(setupResult))
-        devRender(instance)
+        runDevRender(instance)
       } else {
         // component has a render function but no setup function
         // (typically components with only a template and no state)
@@ -1688,17 +1706,27 @@ function handleSetupResult(
     instance.block = setupResult as Block
   }
 
-  // single root, inherit attrs. Gate on fallthrough *potential* only:
-  // attrs may be empty now and gain keys later, so emptiness is handled
-  // reactively inside the render effect.
-  if (instance.hasFallthrough && component.inheritAttrs !== false) {
-    // attach attrs to the root element, or to root dynamic fragments so they
-    // can be (re-)applied during each branch update
-    applyFallthroughAttrs(instance.block, instance)
-  }
+  applyComponentFallthrough(instance)
 
   if (__DEV__) {
     popWarningContext()
+  }
+}
+
+// single root, inherit attrs. Gate on fallthrough *potential* only:
+// attrs may be empty now and gain keys later, so emptiness is handled
+// reactively inside the render effect.
+export function applyComponentFallthrough(
+  instance: VaporComponentInstance,
+): void {
+  if (instance.hasFallthrough && instance.type.inheritAttrs !== false) {
+    // attach attrs to the root element, or to root dynamic fragments so they
+    // can be (re-)applied during each branch update
+    applyFallthroughAttrs(
+      instance.block,
+      instance,
+      __DEV__ ? instance.renderScope : undefined,
+    )
   }
 }
 

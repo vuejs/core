@@ -1453,19 +1453,20 @@ describe('api: template ref', () => {
 
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledTimes(0)
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    const { cleanups } = (app._instance as any).renderScope
+    expect(cleanups.length).toBe(1)
 
     toggle.value = false
     await nextTick()
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledTimes(1)
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    expect(cleanups.length).toBe(1)
 
     toggle.value = true
     await nextTick()
     expect(fn1).toHaveBeenCalledTimes(2)
     expect(fn2).toHaveBeenCalledTimes(1)
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    expect(cleanups.length).toBe(1)
 
     app.unmount()
     await nextTick()
@@ -1496,13 +1497,14 @@ describe('api: template ref', () => {
 
     expect(el1.value).toBe(host.children[0])
     expect(el2.value).toBe(null)
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    const { cleanups } = (app._instance as any).renderScope
+    expect(cleanups.length).toBe(1)
 
     toggle.value = false
     await nextTick()
     expect(el1.value).toBe(null)
     expect(el2.value).toBe(host.children[0])
-    expect(app._instance!.scope.cleanups.length).toBe(1)
+    expect(cleanups.length).toBe(1)
 
     app.unmount()
     await nextTick()

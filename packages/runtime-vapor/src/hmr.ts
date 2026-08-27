@@ -8,19 +8,29 @@ import { findBlockBoundary, insert, remove } from './block'
 import {
   type VaporComponent,
   type VaporComponentInstance,
+  applyComponentFallthrough,
   createComponent,
-  devRender,
   mountComponent,
+  runDevRender,
   unmountComponent,
 } from './component'
 import { applyComponentScopeIds, setCurrentSlotScopeIds } from './scopeId'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
+  // A component without a separate render function (built-ins like
+  // KeepAlive, reached via reload delegation) cannot re-run its template
+  // alone - degrade to reload semantics through the nearest vapor parent.
+  // Terminal cases (custom element root, vdom parent) fall through to an
+  // in-place setup re-run.
+  if (!instance.type.render) {
+    const parent = instance.parent
+    if (parent && parent.vapor) return parent.hmrRerender!()
+    if (!parent && !instance.ce) return instance.hmrReload!(instance.type)
+  }
   const { parentNode, nextNode: anchor } = findBlockBoundary(instance.block)
   const parent = parentNode as ParentNode
-  if (instance.renderEffects) {
-    instance.renderEffects.forEach(e => e.stop())
-    instance.renderEffects.length = 0
+  if (instance.renderScope) {
+    instance.renderScope.stop()
   }
   remove(instance.block, parent)
   const prev = setCurrentInstance(instance)
@@ -29,7 +39,8 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   // scope ids never apply; root-only ids are re-applied below.
   const prevSlotScopeIds = setCurrentSlotScopeIds(null)
   try {
-    devRender(instance)
+    runDevRender(instance)
+    applyComponentFallthrough(instance)
   } finally {
     setCurrentSlotScopeIds(prevSlotScopeIds)
     popWarningContext()

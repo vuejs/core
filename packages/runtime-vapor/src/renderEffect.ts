@@ -42,20 +42,13 @@ export class RenderEffect extends ReactiveEffect {
       warn('renderEffect called without active EffectScope or Vapor instance.')
     }
 
-    if (instance) {
-      if (__DEV__ && !noLifecycle) {
-        this.onTrack = instance.rtc
-          ? e => invokeArrayFns(instance.rtc!, e)
-          : void 0
-        this.onTrigger = instance.rtg
-          ? e => invokeArrayFns(instance.rtg!, e)
-          : void 0
-      }
-
-      // register effect for HMR rerender cleanup
-      if (__DEV__) {
-        ;(instance.renderEffects ||= []).push(this)
-      }
+    if (__DEV__ && instance && !noLifecycle) {
+      this.onTrack = instance.rtc
+        ? e => invokeArrayFns(instance.rtc!, e)
+        : void 0
+      this.onTrigger = instance.rtg
+        ? e => invokeArrayFns(instance.rtg!, e)
+        : void 0
     }
 
     this.i = instance
