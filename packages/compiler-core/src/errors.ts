@@ -161,9 +161,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT]: `<template v-for> key should be placed on the <template> tag.`,
   [ErrorCodes.X_V_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
-  [ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT]:
-    `v-bind with same-name shorthand only allows static arguments that ` +
-    `start with a valid identifier character or '-'.`,
+  [ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT]: `v-bind with same-name shorthand only allows static argument.`,
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
