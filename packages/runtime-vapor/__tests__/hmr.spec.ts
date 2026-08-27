@@ -370,6 +370,123 @@ describe('hot module replacement', () => {
     expect(leakedInstance).toBe(null)
   })
 
+  // the vapor fast path rerenders parents synchronously; re-running a mounted
+  // parent's setup (e.g. its provide() calls) is only exempt from misuse
+  // warnings while the hmr updating flag is set
+  test('reload with vapor fast path should set hmr updating state', async () => {
+    const childId = 'test-fast-path-reload-hmr-flag'
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: compileToFunction(`<div>foo</div>`),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      setup() {
+        provide('foo', 'bar')
+        return createComponent(Child)
+      },
+    })
+
+    const { html } = define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(html()).toBe('<div>foo</div>')
+
+    // __vapor is present on real plugin payloads and selects the fast path
+    reload(childId, {
+      __vapor: true,
+      __hmrId: childId,
+      render: compileToFunction(`<div>bar</div>`),
+    })
+
+    await nextTick()
+    expect(html()).toBe('<div>bar</div>')
+    expect('provide() can only be used inside setup()').not.toHaveBeenWarned()
+  })
+
+  test('failed rerender should still reset hmr updating state', async () => {
+    const root = document.createElement('div')
+    const id = 'test-failed-rerender-hmr-flag'
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const Comp = defineVaporComponent({
+      __hmrId: id,
+      render: () => template('ok')(),
+    })
+    createRecord(id, Comp as any)
+
+    const app = createVaporApp(Comp)
+    app.mount(root)
+
+    rerender(id, () => {
+      throw new Error('hmr rerender error')
+    })
+    errorSpy.mockRestore()
+    expect(
+      'Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
+    expect(
+      '[HMR] Something went wrong during Vue component hot-reload.',
+    ).toHaveBeenWarned()
+    await nextTick()
+
+    // the flag must not leak past the failed update: provide() misuse on a
+    // mounted instance is only exempt from the warning while it is set
+    setCurrentInstance((app as any)._instance)
+    provide('foo', 'bar')
+    setCurrentInstance(null, undefined)
+    expect('provide() can only be used inside setup()').toHaveBeenWarned()
+  })
+
+  test('failed queued reload should still reset hmr updating state', async () => {
+    const root = document.createElement('div')
+    const childId = 'test-failed-queued-reload-hmr-flag'
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const Child = defineVaporComponent({
+      __hmrId: childId,
+      render: () => template('old')(),
+    })
+    createRecord(childId, Child as any)
+
+    const Parent = defineVaporComponent({
+      render: () => createComponent(Child),
+    })
+
+    const app = createVaporApp(Parent)
+    app.mount(root)
+
+    // no __vapor on the payload -> fallback path -> queued parent update
+    reload(childId, {
+      __hmrId: childId,
+      setup() {
+        throw new Error('hmr reload error')
+      },
+      render: () => template('new')(),
+    })
+    // the queued parent rerender rethrows the setup error in tests
+    await nextTick().catch(() => {})
+    errorSpy.mockRestore()
+    expect(
+      'Unhandled error during execution of setup function',
+    ).toHaveBeenWarned()
+    expect(
+      'Unhandled error during execution of render function',
+    ).toHaveBeenWarned()
+    expect(
+      'Unhandled error during execution of scheduler flush',
+    ).toHaveBeenWarned()
+
+    setCurrentInstance((app as any)._instance)
+    provide('foo', 'bar')
+    setCurrentInstance(null, undefined)
+    expect('provide() can only be used inside setup()').toHaveBeenWarned()
+  })
+
   test('reload KeepAlive slot', async () => {
     const root = document.createElement('div')
     document.body.appendChild(root)

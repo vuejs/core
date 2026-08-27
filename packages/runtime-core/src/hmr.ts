@@ -58,6 +58,27 @@ if (__DEV__) {
   } as HMRRuntime
 }
 
+// Run one HMR update pass with `isHmrUpdating` set. On success the flag is
+// kept through the tick so queued follow-up work (forced child updates,
+// interop re-renders) is still covered; a failed pass has no follow-up work,
+// so reset immediately rather than leaving the flag permanently set.
+function runWithHmrUpdating(fn: () => void): void {
+  isHmrUpdating = true
+  let done = false
+  try {
+    fn()
+    done = true
+  } finally {
+    if (done) {
+      nextTick(() => {
+        isHmrUpdating = false
+      })
+    } else {
+      isHmrUpdating = false
+    }
+  }
+}
+
 const map: Map<
   string,
   {
@@ -128,19 +149,17 @@ function rerender(id: string, newRender?: Function): void {
       normalizeClassComponent(instance.type as HMRComponent).render = newRender
     }
     // this flag forces child components with slot content to update
-    isHmrUpdating = true
-    if (instance.vapor) {
-      if (!instance.isUnmounted) instance.hmrRerender!()
-    } else {
-      const i = instance as ComponentInternalInstance
-      // #13771 don't update if the job is already disposed
-      if (!(i.effect.flags! & EffectFlags.STOP)) {
-        i.renderCache = []
-        i.effect.run()
+    runWithHmrUpdating(() => {
+      if (instance.vapor) {
+        if (!instance.isUnmounted) instance.hmrRerender!()
+      } else {
+        const i = instance as ComponentInternalInstance
+        // #13771 don't update if the job is already disposed
+        if (!(i.effect.flags! & EffectFlags.STOP)) {
+          i.renderCache = []
+          i.effect.run()
+        }
       }
-    }
-    nextTick(() => {
-      isHmrUpdating = false
     })
   })
 }
@@ -175,22 +194,27 @@ function reload(id: string, newComp: HMRComponent): void {
     }
     const dirtyInstances = new Set(instances)
     const rerenderedParents = new Set<GenericComponentInstance>()
-    for (const instance of instances) {
-      const parent = instance.parent
-      if (parent) {
-        // A dirty ancestor will recreate this child. Otherwise, each parent
-        // only needs one rerender for this HMR record.
-        if (
-          !hasDirtyAncestor(instance, dirtyInstances) &&
-          !rerenderedParents.has(parent)
-        ) {
-          rerenderedParents.add(parent)
-          parent.hmrRerender!()
+    // parent rerenders re-run the setup/render of mounted instances, which is
+    // only exempt from mounted-state dev checks (e.g. provide()) while the
+    // hmr flag is set - same as the other update paths
+    runWithHmrUpdating(() => {
+      for (const instance of instances) {
+        const parent = instance.parent
+        if (parent) {
+          // A dirty ancestor will recreate this child. Otherwise, each parent
+          // only needs one rerender for this HMR record.
+          if (
+            !hasDirtyAncestor(instance, dirtyInstances) &&
+            !rerenderedParents.has(parent)
+          ) {
+            rerenderedParents.add(parent)
+            parent.hmrRerender!()
+          }
+        } else {
+          instance.hmrReload!(newComp)
         }
-      } else {
-        instance.hmrReload!(newComp)
       }
-    }
+    })
   } else {
     const parentUpdates = new Map<
       GenericComponentInstance,
@@ -255,23 +279,24 @@ function reload(id: string, newComp: HMRComponent): void {
     }
     parentUpdates.forEach((updates, parent) => {
       queueJob(() => {
-        isHmrUpdating = true
-        if (parent.vapor) {
-          parent.hmrRerender!()
-        } else {
-          const i = parent as ComponentInternalInstance
-          if (!(i.effect.flags! & EffectFlags.STOP)) {
-            i.renderCache = []
-            i.effect.run()
-          }
+        try {
+          runWithHmrUpdating(() => {
+            if (parent.vapor) {
+              parent.hmrRerender!()
+            } else {
+              const i = parent as ComponentInternalInstance
+              if (!(i.effect.flags! & EffectFlags.STOP)) {
+                i.renderCache = []
+                i.effect.run()
+              }
+            }
+          })
+        } finally {
+          // #6930, #11248 avoid infinite recursion
+          updates.forEach(([instance, dirtyInstances]) => {
+            dirtyInstances.delete(instance)
+          })
         }
-        nextTick(() => {
-          isHmrUpdating = false
-        })
-        // #6930, #11248 avoid infinite recursion
-        updates.forEach(([instance, dirtyInstances]) => {
-          dirtyInstances.delete(instance)
-        })
       })
     })
   }
