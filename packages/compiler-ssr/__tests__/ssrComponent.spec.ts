@@ -76,6 +76,16 @@ describe('ssr: components', () => {
           }, _attrs), null), _parent)
         }"
       `)
+
+    expect(compile(`<component :is="foo" v-html="html" />`).code)
+      .toMatchInlineSnapshot(`
+        "const { resolveDynamicComponent: _resolveDynamicComponent, mergeProps: _mergeProps, createVNode: _createVNode } = require("vue")
+        const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.foo), _mergeProps({ innerHTML: _ctx.html }, _attrs), null), _parent)
+        }"
+      `)
   })
 
   describe('slots', () => {
