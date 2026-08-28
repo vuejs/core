@@ -1,3 +1,26 @@
+# [3.6.0-rc.6](https://github.com/vuejs/core/compare/v3.6.0-rc.5...v3.6.0-rc.6) (2026-08-28)
+
+### Bug Fixes
+
+* **hmr:** cover vapor fast-path reload with the hmr updating flag and reset it on failed updates ([991a885](https://github.com/vuejs/core/commit/991a885bb13185020f4b9d7d77dc1b0c3d9b49d1))
+* **runtime-vapor:** align DOM prop updates with VDOM ([#15343](https://github.com/vuejs/core/issues/15343)) ([84833e2](https://github.com/vuejs/core/commit/84833e2453e12bdd68b31e09512fc036990e4b60))
+* **runtime-vapor:** claim runtime structural anchors so block validity matches across builds ([2473b78](https://github.com/vuejs/core/commit/2473b781032a82c02172470c600cbe38d0204fc6))
+* **runtime-vapor:** clear v-for index alias for non-object sources ([#15364](https://github.com/vuejs/core/issues/15364)) ([f945b0e](https://github.com/vuejs/core/commit/f945b0edb587efc03a7e50c680906562c1da9fb1))
+* **runtime-vapor:** count each hydration cursor exit once ([7710394](https://github.com/vuejs/core/commit/7710394c3ce6794752e1273218236a5477e3fb66))
+* **runtime-vapor:** do not skip the initial DOM prop set ([#15341](https://github.com/vuejs/core/issues/15341)) ([64671b5](https://github.com/vuejs/core/commit/64671b5c54bae054f454bb35e20e680046d473af)), closes [#15339](https://github.com/vuejs/core/issues/15339)
+* **runtime-vapor:** key the null dynamic component branch by its resolved sentinel ([7c8d34a](https://github.com/vuejs/core/commit/7c8d34a13fa0b47bf22eefeb9c79db9374f10048))
+* **runtime-vapor:** own each dev render generation with a render scope for HMR ([9ab65a1](https://github.com/vuejs/core/commit/9ab65a1e443c3a87f60fb628193ece792cbdccfc))
+* **runtime-vapor:** render a null dynamic component as an empty branch ([a447d80](https://github.com/vuejs/core/commit/a447d806fb304a8af2265ee85d43280bc11b019a))
+* **runtime-vapor:** set value as attribute so form reset restores it ([#15340](https://github.com/vuejs/core/issues/15340)) ([23a2b2c](https://github.com/vuejs/core/commit/23a2b2ca7c36c15cd774daa313fbad32e44e3dfb)), closes [#15338](https://github.com/vuejs/core/issues/15338)
+* **runtime-vapor:** skip the restore on a second cursor exit ([9e6d1e5](https://github.com/vuejs/core/commit/9e6d1e5634eca58c692a56d4aaa90b465a375c93))
+* **scheduler:** restore scheduler state after flush errors ([70bd789](https://github.com/vuejs/core/commit/70bd789b9636e7fd74a136991a4ee78bef060a3c))
+
+### Performance Improvements
+
+* **runtime-vapor:** avoid quadratic scan when leaving a hydration boundary ([9905d7d](https://github.com/vuejs/core/commit/9905d7d6973b425fb808520e00ac4399e681f635))
+* **runtime-vapor:** cache template adopt target ([29ed4b0](https://github.com/vuejs/core/commit/29ed4b0bcd774fc83a5a21587c1a26ff70a325f6))
+
+
 # [3.6.0-rc.5](https://github.com/vuejs/core/compare/v3.6.0-rc.4...v3.6.0-rc.5) (2026-08-21)
 
 ### Bug Fixes
