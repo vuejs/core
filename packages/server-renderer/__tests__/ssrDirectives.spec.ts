@@ -296,6 +296,28 @@ describe('ssr: directives', () => {
         ),
       ).toBe(`<textarea>hello</textarea>`)
     })
+
+    test('dynamic component with v-html', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ tag: 'span', foo: '<b>hello</b>' }),
+            template: `<component :is="tag" v-html="foo"/>`,
+          }),
+        ),
+      ).toBe(`<span><b>hello</b></span>`)
+    })
+
+    test('dynamic component with v-text', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ tag: 'span', foo: '<b>hello</b>' }),
+            template: `<component :is="tag" v-text="foo"/>`,
+          }),
+        ),
+      ).toBe(`<span>&lt;b&gt;hello&lt;/b&gt;</span>`)
+    })
   })
 
   describe('vnode v-show', () => {

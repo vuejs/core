@@ -26,6 +26,8 @@ import { ssrTransformIf } from './transforms/ssrVIf'
 import { ssrTransformFor } from './transforms/ssrVFor'
 import { ssrTransformModel } from './transforms/ssrVModel'
 import { ssrTransformShow } from './transforms/ssrVShow'
+import { ssrTransformHtml } from './transforms/ssrVHtml'
+import { ssrTransformText } from './transforms/ssrVText'
 import { ssrInjectFallthroughAttrs } from './transforms/ssrInjectFallthroughAttrs'
 import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
 
@@ -77,6 +79,9 @@ export function compile(
       // model and show have dedicated SSR handling
       model: ssrTransformModel,
       show: ssrTransformShow,
+      // html and text only need handling on components
+      html: ssrTransformHtml,
+      text: ssrTransformText,
       // the following are ignored during SSR
       // on: noopDirectiveTransform,
       cloak: noopDirectiveTransform,
