@@ -654,7 +654,7 @@ export const createFor = (
     if (keyRef && newKey !== undefined && newKey !== keyRef.value) {
       keyRef.value = newKey
     }
-    if (indexRef && newIndex !== undefined && newIndex !== indexRef.value) {
+    if (indexRef && newIndex !== indexRef.value) {
       indexRef.value = newIndex
     }
   }

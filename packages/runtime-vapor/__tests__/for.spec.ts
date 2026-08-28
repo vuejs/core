@@ -407,6 +407,30 @@ describe('createFor', () => {
     ])
   })
 
+  test('should clear index ref when source switches from object to array', async () => {
+    const source = ref<any>({ x: 'A' })
+
+    const { host } = define(() => {
+      return createFor(
+        () => source.value,
+        (item, key, index) => {
+          const div = document.createElement('div')
+          renderEffect(() => {
+            div.textContent = `${item.value}-${key.value}-${String(index.value)}`
+          })
+          return div
+        },
+      )
+    }).render()
+
+    expect(host.innerHTML).toBe('<div>A-x-0</div><!--for-->')
+
+    source.value = ['B']
+    await nextTick()
+
+    expect(host.innerHTML).toBe('<div>B-0-undefined</div><!--for-->')
+  })
+
   test('array source', async () => {
     const list = ref([{ name: '1' }, { name: '2' }, { name: '3' }])
     function reverse() {
