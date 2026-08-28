@@ -53,6 +53,31 @@ describe('ssr: components', () => {
       `)
   })
 
+  test('v-html/v-text on component', () => {
+    expect(compile(`<foo v-html="html" />`).code).toMatchInlineSnapshot(`
+      "const { resolveComponent: _resolveComponent, mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        const _component_foo = _resolveComponent("foo")
+
+        _push(_ssrRenderComponent(_component_foo, _mergeProps({ innerHTML: _ctx.html }, _attrs), null, _parent))
+      }"
+    `)
+
+    expect(compile(`<component :is="foo" v-text="text" />`).code)
+      .toMatchInlineSnapshot(`
+        "const { resolveDynamicComponent: _resolveDynamicComponent, toDisplayString: _toDisplayString, mergeProps: _mergeProps, createVNode: _createVNode } = require("vue")
+        const { ssrRenderVNode: _ssrRenderVNode } = require("vue/server-renderer")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _ssrRenderVNode(_push, _createVNode(_resolveDynamicComponent(_ctx.foo), _mergeProps({
+            textContent: _toDisplayString(_ctx.text)
+          }, _attrs), null), _parent)
+        }"
+      `)
+  })
+
   describe('slots', () => {
     test('implicit default slot', () => {
       expect(compile(`<foo>hello<div/></foo>`).code).toMatchInlineSnapshot(`
