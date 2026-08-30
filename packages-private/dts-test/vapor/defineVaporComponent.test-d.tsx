@@ -629,6 +629,10 @@ describe('async setup', () => {
     // setup context properties should be mutable
     vm.exposed.a.value = 2
   }
+
+  defineVaporComponent(async (props: { foo: 1 }) => <div></div>, {
+    props: ['foo'],
+  })
 })
 
 // #5948
