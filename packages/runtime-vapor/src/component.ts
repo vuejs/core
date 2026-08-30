@@ -220,11 +220,11 @@ export interface VaporComponentOptions<
       emit: EmitFn<Emits>
       slots: Slots
       attrs: Record<string, any>
-      expose: <T extends Record<string, any> = Exposed>(exposed: T) => void
+      expose: (exposed: Exposed) => void
     },
-  ) => TypeBlock | Exposed | Promise<Exposed> | void
+  ) => VaporRenderResult<TypeBlock> | Exposed | Promise<Exposed> | void
   render?(
-    ctx: Block extends Exposed
+    ctx: Exposed extends VaporRenderResult
       ? Record<string, any>
       : ShallowUnwrapRef<Exposed>,
     props: Readonly<InferredProps>,
@@ -910,7 +910,7 @@ export class VaporComponentInstance<
   effectCount = 0
 
   // dev only
-  setupState?: Block extends Exposed
+  setupState?: Exposed extends VaporRenderResult
     ? Record<string, any>
     : ShallowUnwrapRef<Exposed>
   devtoolsRawSetupState?: any

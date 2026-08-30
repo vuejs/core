@@ -801,7 +801,7 @@ describe('function syntax w/ expose', () => {
       expose({
         msg: props.msg,
       })
-      return []
+      return <div></div>
     },
   )
   const foo = new Foo()
@@ -1138,6 +1138,23 @@ describe('expose typing', () => {
 
   expectType<number>(bar.exposeProxy!.a)
   expectType<string>(bar.exposeProxy!.b)
+
+  // typed expose in options
+  const Baz = defineVaporComponent({
+    setup(
+      props: { msg: string },
+      { expose }: { expose: (exposed: { a: number; b: string }) => void },
+    ) {
+      expose({ a: 1, b: '' })
+      return <div></div>
+    },
+  })
+  const baz = new Baz()
+  // internal should still be exposed
+  baz.props
+
+  expectType<number>(foo.exposeProxy!.a)
+  expectType<string>(foo.exposeProxy!.b)
 })
 
 describe('Custom options', () => {
