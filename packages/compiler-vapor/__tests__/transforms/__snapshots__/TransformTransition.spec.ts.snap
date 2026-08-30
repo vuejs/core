@@ -28,6 +28,36 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transition > should drop comment children to match vdom runtime and SSR behavior 1`] = `
+"import { VaporTransition as _VaporTransition, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<div>foo", 3)
+
+export function render(_ctx) {
+  const n2 = _createComponent(_VaporTransition, null, () => {
+    const n1 = t0()
+    return n1
+  }, true)
+  return n2
+}"
+`;
+
+exports[`compiler: transition > should drop comment children to match vdom runtime and SSR behavior 2`] = `
+"import { VaporTransitionGroup as _VaporTransitionGroup, setBlockKey as _setBlockKey, createComponent as _createComponent, template as _template } from 'vue';
+const t0 = _template("<li>a</li>")
+const t1 = _template("<li>b")
+
+export function render(_ctx) {
+  const n3 = _createComponent(_VaporTransitionGroup, { tag: "ul" }, () => {
+    const n1 = t0()
+    const n2 = t1()
+    _setBlockKey(n1, "a")
+    _setBlockKey(n2, "b")
+    return [n1, n2]
+  }, true)
+  return n3
+}"
+`;
+
 exports[`compiler: transition > the v-if/else-if/else branches in Transition should ignore comments 1`] = `
 "import { VaporTransition as _VaporTransition, setInsertionState as _setInsertionState, createIf as _createIf, extend as _extend, createComponent as _createComponent, template as _template } from 'vue';
 const t0 = _template("<div>hey", 3)

@@ -473,6 +473,43 @@ describe('Vapor Mode hydration', () => {
       ).not.toHaveBeenWarned()
     })
 
+    // #15372
+    test('should drop comment children to stay in sync with SSR output', async () => {
+      const data = ref({
+        items: ['a', 'b', 'c'],
+      })
+      const code = `
+        <TransitionGroup :css="false" tag="ul">
+          <!-- comment -->
+          <li v-for="item in data.items" :key="item">{{ item }}</li>
+        </TransitionGroup>
+      `
+      const SSRComp = compileVaporComponent(code, data, undefined, true)
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRComp),
+      )
+      // SSR deliberately omits comment children of TransitionGroup (#11961)
+      expect(html).not.toContain('comment')
+
+      const { container } = await mountWithHydration(html, code, data)
+      const ul = container.querySelector('ul')!
+
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>a</li><li>b</li><li>c</li><!--for-->"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+
+      data.value.items.push('d')
+      await nextTick()
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
+        `"<li>a</li><li>b</li><li>c</li><li>d</li><!--for-->"`,
+      )
+    })
+
     test('with tag should hydrate empty claimed container for flattened v-for children', async () => {
       const data = ref({
         items: [] as number[],
