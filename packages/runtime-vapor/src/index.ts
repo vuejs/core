@@ -3,6 +3,7 @@ export { createVaporApp, createVaporSSRApp } from './apiCreateApp'
 export {
   defineVaporComponent,
   type DefineVaporComponent,
+  type DefineVaporSetupFnComponent,
   type VaporPublicProps,
   type VaporRenderResult,
 } from './apiDefineComponent'
