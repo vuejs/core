@@ -26,6 +26,8 @@ import {
 import {
   findDir,
   findProp,
+  isTransitionGroupNode,
+  isTransitionNode,
   propToExpression,
   resolveExpression,
 } from '../utils'
@@ -74,6 +76,10 @@ function transformComponentSlot(
   const { children } = node
   const arg = dir && dir.arg
   const hasTemplateSlots = children.some(isSlotTemplateChild)
+  // Transition/TransitionGroup filter out comment children at runtime in
+  // vdom mode and SSR omits them (#5351, #11961), so drop them here to keep
+  // client render and hydration in sync with the server output (#15372)
+  const isTransitionHost = isTransitionNode(node) || isTransitionGroupNode(node)
 
   // whitespace: 'preserve'
   const emptyTextNodes: TemplateChildNode[] = []
@@ -81,7 +87,10 @@ function transformComponentSlot(
     if (isSlotTemplateChild(n)) {
       return false
     }
-    if (n.type === NodeTypes.COMMENT && hasTemplateSlots) {
+    if (
+      n.type === NodeTypes.COMMENT &&
+      (hasTemplateSlots || isTransitionHost)
+    ) {
       ignoreComment(n, context)
       return false
     }
