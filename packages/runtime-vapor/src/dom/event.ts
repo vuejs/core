@@ -12,6 +12,15 @@ type EventHandler = (...args: any[]) => any
 type EventHandlerValue = EventHandler | EventHandler[]
 type MaybeEventHandlerValue = EventHandlerValue | null | undefined
 
+type OnceState = { remaining: number }
+
+const onceStates = new WeakMap<Element, Map<string, OnceState>>()
+
+const countHandlers = (handler: EventHandlerValue): number =>
+  isArray(handler)
+    ? handler.reduce((count, fn) => count + countHandlers(fn), 0)
+    : 1
+
 export function addEventListener(
   el: Element,
   event: string,
@@ -42,14 +51,44 @@ export function onBinding(
   event: string,
   handler: EventHandlerValue,
   options?: AddEventListenerOptions,
+  onceKey?: string,
 ): void {
-  if (isArray(handler)) {
-    handler.forEach(fn => onBinding(el, event, fn, options))
-  } else {
-    if (!handler) return
-    const cleanup = addEventListener(el, event, createInvoker(handler), options)
-    onEffectCleanup(cleanup)
+  const stateKey = onceKey && options && options.once ? onceKey : undefined
+  if (!handler) {
+    if (stateKey) {
+      const states = onceStates.get(el)
+      if (states) states.delete(stateKey)
+    }
+    return
   }
+
+  const onceState = stateKey ? { remaining: countHandlers(handler) } : undefined
+  if (stateKey) {
+    let states = onceStates.get(el)
+    if (!states) onceStates.set(el, (states = new Map()))
+    states.set(stateKey, onceState!)
+  }
+
+  const bind = (value: EventHandlerValue): void => {
+    if (isArray(value)) {
+      value.forEach(bind)
+    } else {
+      const cleanup = addEventListener(
+        el,
+        event,
+        createInvoker(value, onceState && (() => onceState.remaining--)),
+        options,
+      )
+      onEffectCleanup(cleanup)
+    }
+  }
+  bind(handler)
+}
+
+export function isOnceListenerConsumed(el: Element, onceKey: string): boolean {
+  const states = onceStates.get(el)
+  const state = states && states.get(onceKey)
+  return !!state && state.remaining === 0
 }
 
 export function delegate(el: any, event: string, handler: EventHandler): void {
@@ -154,13 +193,18 @@ export function withVaporKeys<T extends (event: KeyboardEvent) => any>(
   ) as T
 }
 
-export function createInvoker(handler: MaybeEventHandlerValue): EventHandler {
+export function createInvoker(
+  handler: MaybeEventHandlerValue,
+  onInvoke?: () => void,
+): EventHandler {
   const i = currentInstance!
-  return (...args: any[]) =>
-    callWithAsyncErrorHandling(
+  return (...args: any[]) => {
+    if (onInvoke) onInvoke()
+    return callWithAsyncErrorHandling(
       handler as EventHandlerValue,
       i,
       ErrorCodes.NATIVE_EVENT_HANDLER,
       args,
     )
+  }
 }

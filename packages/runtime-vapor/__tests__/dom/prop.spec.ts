@@ -827,6 +827,44 @@ describe('patchProp', () => {
       scope.stop()
     })
 
+    test('should preserve once listeners through updates before first click', async () => {
+      const el = document.createElement('button')
+      const count = ref(0)
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onClickOnce: handler }])
+          el.title = String(count.value)
+        })
+      })
+      count.value++
+      await nextTick()
+      el.click()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
+    test('should preserve consumed once array listeners through effect updates', async () => {
+      const el = document.createElement('button')
+      const count = ref(0)
+      const handler = vi.fn()
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onClickOnce: [handler] }])
+          el.title = String(count.value)
+        })
+      })
+      el.click()
+      count.value++
+      await nextTick()
+      el.click()
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
     test('should restore fallthrough state when dynamic props throw', () => {
       const el = document.createElement('div')
       const attrs: Record<string, any> = {}

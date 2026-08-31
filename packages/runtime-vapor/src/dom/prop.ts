@@ -16,7 +16,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { onBinding } from './event'
+import { isOnceListenerConsumed, onBinding } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -508,13 +508,27 @@ export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
     // reset its once state.
     const isEvent = isOn(key)
     const eventOptions = isEvent ? parseEventName(key)[1] : undefined
+    const isConsumedOnce =
+      isEvent &&
+      eventOptions &&
+      'once' in eventOptions &&
+      eventOptions.once &&
+      isOnceListenerConsumed(el, key)
+    const prevValue = prevProps && prevProps[key]
+    const sameValue =
+      Object.is(prevValue, value) ||
+      (isConsumedOnce &&
+        Array.isArray(prevValue) &&
+        Array.isArray(value) &&
+        prevValue.length === value.length &&
+        prevValue.every((v: any, i: number) => Object.is(v, value[i])))
     if (
       prevProps &&
       key in prevProps &&
-      (!isEvent ||
-        (eventOptions && 'once' in eventOptions && eventOptions.once)) &&
-      (value == null || typeof value !== 'object') &&
-      Object.is(prevProps[key], value)
+      ((!isEvent && (value == null || typeof value !== 'object')) ||
+        (isConsumedOnce &&
+          (typeof value === 'function' || Array.isArray(value)))) &&
+      sameValue
     ) {
       continue
     }
@@ -543,7 +557,7 @@ export function setDynamicProp(
       return
     }
     const [event, options] = parseEventName(key)
-    onBinding(el, event, value, options)
+    onBinding(el, event, value, options, key)
   } else if (
     // force hydrate v-bind with .prop modifiers
     (forceHydrate = key[0] === '.')
