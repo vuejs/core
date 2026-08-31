@@ -501,15 +501,12 @@ export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
   for (const key of Object.keys(props)) {
     const value = props[key]
     nextProps[key] = value
-    if (isOn(key)) {
-      setEvent(el, key, value, nextProps, prevProps)
-      continue
-    }
-    // Objects can have stable identity with mutable internals, so only skip
-    // unchanged primitive values.
+    // Events and objects can have stable identity with mutable internals, so
+    // only skip unchanged primitive values.
     if (
       prevProps &&
       key in prevProps &&
+      !isOn(key) &&
       (value == null || typeof value !== 'object') &&
       Object.is(prevProps[key], value)
     ) {
@@ -536,7 +533,11 @@ export function setDynamicProp(
   } else if (key === 'style') {
     setStyle(el, value)
   } else if (isOn(key)) {
-    setEvent(el, key, value)
+    if (shouldSkipFallthroughKey(el, key)) {
+      return
+    }
+    const [event, options] = parseEventName(key)
+    onBinding(el, event, value, options)
   } else if (
     // force hydrate v-bind with .prop modifiers
     (forceHydrate = key[0] === '.')
@@ -733,34 +734,4 @@ function shouldForceHydrate(el: Element, key: string): boolean {
     // force hydrate custom element dynamic props
     tagName.includes('-')
   )
-}
-
-function setEvent(
-  el: TargetElement,
-  key: string,
-  value: any,
-  propCache?: Record<string, any>,
-  prevProps?: Record<string, any>,
-): void {
-  if (shouldSkipFallthroughKey(el, key)) {
-    return
-  }
-  const [event, options] = parseEventName(key)
-  const eventOptions = options as AddEventListenerOptions | undefined
-  if (eventOptions && eventOptions.once && propCache) {
-    propCache[key] = !!prevProps && prevProps[key] === true
-    // #15378 avoid binding the same event twice when the once binding is already fired
-    if (!propCache[key] && value) {
-      onBinding(
-        el,
-        event,
-        // mark the once binding as fired
-        () => (propCache[key] = true),
-        eventOptions,
-      )
-      onBinding(el, event, value, eventOptions)
-    }
-  } else {
-    onBinding(el, event, value, eventOptions)
-  }
 }

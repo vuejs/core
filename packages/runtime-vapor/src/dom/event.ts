@@ -4,6 +4,7 @@ import {
   ErrorCodes,
   callWithAsyncErrorHandling,
   currentInstance,
+  parseEventName,
   withKeys as withDomKeys,
   withModifiers as withDomModifiers,
 } from '@vue/runtime-dom'
@@ -45,11 +46,21 @@ export function onBinding(
 ): void {
   if (isArray(handler)) {
     handler.forEach(fn => onBinding(el, event, fn, options))
-  } else {
-    if (!handler) return
-    const cleanup = addEventListener(el, event, createInvoker(handler), options)
-    onEffectCleanup(cleanup)
+    return
   }
+  if (!handler) return
+  if (options && options.once) {
+    // #15378 avoid re-registering invoked once listeners on effect re-runs
+    const firedKey = `$evtonce_${options.capture ? 1 : 0}_${event}`
+    if ((el as any)[firedKey]) return
+    const invoker = handler
+    handler = (...args: any[]) => {
+      ;(el as any)[firedKey] = true
+      return invoker(...args)
+    }
+  }
+  const cleanup = addEventListener(el, event, createInvoker(handler), options)
+  onEffectCleanup(cleanup)
 }
 
 export function delegate(el: any, event: string, handler: EventHandler): void {
@@ -126,7 +137,8 @@ export function setDynamicEvents(
   events: Record<string, EventHandlerValue>,
 ): void {
   for (const name in events) {
-    onBinding(el, name, events[name])
+    const [event, options] = parseEventName(`on:${name}`)
+    onBinding(el, event, events[name], options)
   }
 }
 
