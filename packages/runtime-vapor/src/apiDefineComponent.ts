@@ -111,7 +111,10 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => VaporRenderResult<TypeBlock> | void,
+  ) =>
+    | VaporRenderResult<TypeBlock>
+    | Promise<VaporRenderResult<TypeBlock>>
+    | void,
   extraOptions?: VaporComponentOptions<
     (keyof NoInfer<Props>)[],
     Emits,
@@ -137,7 +140,10 @@ export function defineVaporComponent<
       attrs: Record<string, any>
       expose: (exposed: Exposed) => void
     },
-  ) => VaporRenderResult<TypeBlock> | void,
+  ) =>
+    | VaporRenderResult<TypeBlock>
+    | Promise<VaporRenderResult<TypeBlock>>
+    | void,
   extraOptions?: VaporComponentOptions<
     ComponentObjectPropsOptions<Props>,
     Emits,
