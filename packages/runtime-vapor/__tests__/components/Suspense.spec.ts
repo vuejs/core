@@ -767,21 +767,16 @@ describe('effects in pending branches', () => {
     const asyncSetup = deferred()
     const target = document.createElement('div')
     document.body.appendChild(target)
-    const showTeleport = ref(false)
+    const data = ref({ show: false, target })
 
-    const VaporChild = defineVaporComponent({
-      setup() {
-        return createIf(
-          () => showTeleport.value,
-          () =>
-            createComponent(
-              VaporTeleport,
-              { to: () => target },
-              { default: () => template('<div>teleported</div>')() },
-            ),
-        )
-      },
-    })
+    const VaporChild = compile(
+      `<template>
+        <Teleport v-if="data.show" :to="data.target">
+          <div>teleported</div>
+        </Teleport>
+      </template>`,
+      data,
+    )
     const AsyncSibling = defineComponent({
       async setup() {
         await asyncSetup.promise
@@ -805,7 +800,7 @@ describe('effects in pending branches', () => {
 
     // reveal the teleport while the boundary is still pending: the deferred
     // target mount must buffer on the boundary, not the global queue
-    showTeleport.value = true
+    data.value.show = true
     await nextTick()
     expect(target.textContent).toBe('')
 
