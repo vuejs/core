@@ -805,6 +805,28 @@ describe('patchProp', () => {
       scope.stop()
     })
 
+    test('should not re-register unchanged once listeners on effect updates', async () => {
+      const el = document.createElement('button')
+      const count = ref(0)
+      const handler = vi.fn(() => count.value++)
+      const scope = effectScope()
+      scope.run(() => {
+        renderEffect(() => {
+          setDynamicProps(el, [{ onClickOnce: handler }])
+          // Keep the dynamic props and an unrelated reactive binding in the
+          // same effect, as generated Vapor code does for this case.
+          el.title = String(count.value)
+        })
+      })
+
+      el.click()
+      await nextTick()
+      el.click()
+
+      expect(handler).toHaveBeenCalledTimes(1)
+      scope.stop()
+    })
+
     test('should restore fallthrough state when dynamic props throw', () => {
       const el = document.createElement('div')
       const attrs: Record<string, any> = {}

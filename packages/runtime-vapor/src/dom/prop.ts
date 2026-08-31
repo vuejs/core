@@ -502,11 +502,17 @@ export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
     const value = props[key]
     nextProps[key] = value
     // Events and objects can have stable identity with mutable internals, so
-    // only skip unchanged primitive values.
+    // only skip unchanged primitive values. A native `.once` listener is
+    // consumed by the browser after the first dispatch; re-registering the
+    // same binding when an unrelated dependency updates would incorrectly
+    // reset its once state.
+    const isEvent = isOn(key)
+    const eventOptions = isEvent ? parseEventName(key)[1] : undefined
     if (
       prevProps &&
       key in prevProps &&
-      !isOn(key) &&
+      (!isEvent ||
+        (eventOptions && 'once' in eventOptions && eventOptions.once)) &&
       (value == null || typeof value !== 'object') &&
       Object.is(prevProps[key], value)
     ) {
