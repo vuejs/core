@@ -370,8 +370,9 @@ function isReusableAnchorCandidate(
       isComment(node, ']') ||
       (__DEV__ &&
         frag !== undefined &&
-        frag.anchorLabel !== undefined &&
-        isComment(node, frag.anchorLabel)))
+        ((frag.__vf & IF && isComment(node, 'v-if')) ||
+          (frag.anchorLabel !== undefined &&
+            isComment(node, frag.anchorLabel)))))
   )
 }
 

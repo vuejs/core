@@ -816,6 +816,30 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('dynamic native element with empty v-if child', async () => {
+      const { container, data, html } = await testHydration(
+        `<template>
+          <component :is="data ? 'section' : 'div'">
+            <span v-if="data" class="badge">named</span>
+          </component>
+        </template>`,
+        {},
+        ref(false),
+      )
+
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(html).toBe(`<div><!--v-if--></div>`)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><!--v-if--></div><!--dynamic-component-->"`,
+      )
+
+      data.value = true
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<section><span class="badge">named</span><!--if--></section><!--dynamic-component-->"`,
+      )
+    })
+
     test('in ssr slot vnode fallback', async () => {
       const { container, data } = await testHydration(
         `<template>
