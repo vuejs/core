@@ -50,6 +50,7 @@ import type { RawSlots } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
 import { enableTeleport } from '../teleport'
 import { TELEPORT } from '../fragmentFlags'
+import { isSuspenseEnabled } from '../suspense'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -304,7 +305,10 @@ export class TeleportFragment extends RenderContextFragment {
     queuePostRenderEffect(
       this.mountToTargetJob,
       undefined,
-      this.parentSuspense || null,
+      this.parentSuspense !== undefined
+        ? this.parentSuspense
+        : (__FEATURE_SUSPENSE__ && isSuspenseEnabled && this.renderSuspense) ||
+            null,
     )
   }
 
@@ -313,6 +317,7 @@ export class TeleportFragment extends RenderContextFragment {
     if (target) {
       this.ensureChildrenInitialized()
       this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
+      this.cancelMountToTarget()
     } else {
       if (__DEV__) {
         warn(
@@ -365,7 +370,7 @@ export class TeleportFragment extends RenderContextFragment {
   ): void => {
     if (isHydrating) return
 
-    this.parentSuspense = parentSuspense
+    if (parentSuspense !== undefined) this.parentSuspense = parentSuspense
 
     const wasMountedInTarget =
       this.mountState.location === TeleportMountLocation.Target
