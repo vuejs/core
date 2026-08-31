@@ -2012,6 +2012,59 @@ test('should delay child setup until teleport target becomes available', async (
   expect(targetEl.innerHTML).toBe('<div>three</div>')
 })
 
+test('should stop effects of the previous children render when the slot re-runs', async () => {
+  const target = document.createElement('div')
+  const flag = ref(true)
+  const msg = ref('one')
+  const unmounted = vi.fn()
+  let effectRuns = 0
+
+  const Inner = defineVaporComponent({
+    setup() {
+      onUnmounted(unmounted)
+      return template('<span>inner</span>')()
+    },
+  })
+
+  const makeContent = (label: string) => {
+    const n0 = template('<div> </div>')() as any
+    const x0 = child(n0) as any
+    renderEffect(() => {
+      effectRuns++
+      setText(x0, `${label}:${msg.value}`)
+    })
+    return [n0, createComp(Inner)]
+  }
+
+  define({
+    setup() {
+      return createComp(
+        VaporTeleport,
+        { to: () => target },
+        // the slot reads flag.value synchronously, so the children effect
+        // re-runs the whole slot on toggle
+        { default: () => (flag.value ? makeContent('a') : makeContent('b')) },
+      )
+    },
+  }).render()
+
+  expect(target.innerHTML).toBe('<div>a:one</div><span>inner</span>')
+
+  flag.value = false
+  await nextTick()
+  expect(target.innerHTML).toBe('<div>b:one</div><span>inner</span>')
+  // the replaced component unmounted exactly once
+  expect(unmounted).toHaveBeenCalledTimes(1)
+
+  // the previous run's render effect must be stopped: a dependency write
+  // may only run the live effect, and must not touch detached nodes
+  effectRuns = 0
+  msg.value = 'two'
+  await nextTick()
+  expect(target.innerHTML).toBe('<div>b:two</div><span>inner</span>')
+  expect(effectRuns).toBe(1)
+})
+
 test('should cache delayed teleported child under KeepAlive once target becomes available', async () => {
   const show = ref(true)
   const target = ref<any>('#missing-teleport-target-keepalive')
