@@ -414,4 +414,31 @@ describe('dom event', () => {
 
     expect(calls).toEqual(['child', 'parent'])
   })
+
+  test('does not rebind a once handler in dynamic props after firing', async () => {
+    const hits = ref(0)
+    const onOnce = () => hits.value++
+    const Comp = defineVaporComponent({
+      setup() {
+        return { hits, onOnce }
+      },
+      render: compileToVaporRender(
+        `<button v-bind="{ onClickOnce: onOnce }" /><p>{{ hits }}</p>`,
+        {
+          bindingMetadata: {
+            hits: BindingTypes.SETUP_REF,
+            onOnce: BindingTypes.SETUP_CONST,
+          },
+        },
+      ),
+    })
+    const { host } = define(Comp).render()
+    const button = host.querySelector('button')!
+
+    button.click()
+    await nextTick()
+    button.click()
+
+    expect(hits.value).toBe(1)
+  })
 })
