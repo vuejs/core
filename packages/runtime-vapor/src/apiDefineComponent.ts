@@ -216,7 +216,7 @@ export function defineVaporComponent<
   ResolvedEmits,
   RuntimeEmitsKeys,
   Slots,
-  Block extends Exposed ? Record<string, any> : Exposed,
+  Exposed extends VaporRenderResult ? Record<string, any> : Exposed,
   TypeBlock,
   TypeRefs,
   // MakeDefaultsOptional - if TypeProps is provided, set to false to use
