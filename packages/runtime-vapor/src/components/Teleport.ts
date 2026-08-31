@@ -1,4 +1,9 @@
-import { getCurrentScope, pauseTracking, resetTracking } from '@vue/reactivity'
+import {
+  EffectScope,
+  getCurrentScope,
+  pauseTracking,
+  resetTracking,
+} from '@vue/reactivity'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -50,6 +55,7 @@ import type { RawSlots } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
 import { enableTeleport } from '../teleport'
 import { TELEPORT } from '../fragmentFlags'
+import { isSuspenseEnabled } from '../suspense'
 
 const VaporTeleportImpl = {
   name: 'VaporTeleport',
@@ -88,6 +94,9 @@ export class TeleportFragment extends RenderContextFragment {
   isDisabled?: boolean
   private childrenInitialized = false
   private readonly childrenScope = getCurrentScope()
+  // One scope per slot run, so a re-run can stop the previous run's effects
+  // (the DynamicFragment branch-scope discipline, and the same field name).
+  private scope?: EffectScope
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -156,13 +165,20 @@ export class TeleportFragment extends RenderContextFragment {
       // init and slot re-runs, where new nodes capture the ambient context.
       // The equality fast path keeps the synchronous first run free.
       renderEffect(() =>
-        runWithFragmentCtxOnly(this, () =>
+        runWithFragmentCtxOnly(this, () => {
+          // Stop the previous run's effects before tearing down its nodes;
+          // components unmount here, handleChildrenUpdate detaches the DOM.
+          const prevScope = this.scope
+          if (prevScope) prevScope.stop()
+          const scope = (this.scope = new EffectScope())
           this.handleChildrenUpdate(
-            this.rawSlots && this.rawSlots.default
-              ? (this.rawSlots.default as BlockFn)()
-              : [],
-          ),
-        ),
+            scope.run(() =>
+              this.rawSlots && this.rawSlots.default
+                ? (this.rawSlots.default as BlockFn)()
+                : [],
+            ) || [],
+          )
+        }),
       )
       this.bindChildren(this.nodes)
     } finally {
@@ -304,7 +320,10 @@ export class TeleportFragment extends RenderContextFragment {
     queuePostRenderEffect(
       this.mountToTargetJob,
       undefined,
-      this.parentSuspense || null,
+      this.parentSuspense !== undefined
+        ? this.parentSuspense
+        : (__FEATURE_SUSPENSE__ && isSuspenseEnabled && this.renderSuspense) ||
+            null,
     )
   }
 
@@ -313,6 +332,7 @@ export class TeleportFragment extends RenderContextFragment {
     if (target) {
       this.ensureChildrenInitialized()
       this.mount(target, this.targetAnchor!, TeleportMountLocation.Target)
+      this.cancelMountToTarget()
     } else {
       if (__DEV__) {
         warn(
@@ -365,7 +385,9 @@ export class TeleportFragment extends RenderContextFragment {
   ): void => {
     if (isHydrating) return
 
-    this.parentSuspense = parentSuspense
+    // Re-inserts without an explicit boundary (branch renders, v-for
+    // reorders, KeepAlive moves) must not clear a previously known one.
+    if (parentSuspense !== undefined) this.parentSuspense = parentSuspense
 
     const wasMountedInTarget =
       this.mountState.location === TeleportMountLocation.Target
@@ -432,6 +454,13 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   dispose = (): void => {
+    // Block removal may run without the owning scope stopping; the run scope
+    // must not outlive the children it rendered.
+    const scope = this.scope
+    if (scope) {
+      this.scope = undefined
+      scope.stop()
+    }
     const mountState = this.mountState
     if (this.nodes && mountState.location === TeleportMountLocation.Main) {
       remove(this.nodes, mountState.container)

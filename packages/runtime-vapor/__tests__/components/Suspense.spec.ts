@@ -763,6 +763,59 @@ describe('effects in pending branches', () => {
     target.remove()
   })
 
+  test('teleport revealed by a branch update inside a pending boundary waits for resolve', async () => {
+    const asyncSetup = deferred()
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const showTeleport = ref(false)
+
+    const VaporChild = defineVaporComponent({
+      setup() {
+        return createIf(
+          () => showTeleport.value,
+          () =>
+            createComponent(
+              VaporTeleport,
+              { to: () => target },
+              { default: () => template('<div>teleported</div>')() },
+            ),
+        )
+      },
+    })
+    const AsyncSibling = defineComponent({
+      async setup() {
+        await asyncSetup.promise
+        return () => h('span', 'async')
+      },
+    })
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h('div', [h(VaporChild as any), h(AsyncSibling)]),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+
+    await nextTick()
+    expect(target.textContent).toBe('')
+
+    // reveal the teleport while the boundary is still pending: the deferred
+    // target mount must buffer on the boundary, not the global queue
+    showTeleport.value = true
+    await nextTick()
+    expect(target.textContent).toBe('')
+
+    asyncSetup.resolve()
+    await flushResolution(asyncSetup.promise)
+    expect(target.textContent).toBe('teleported')
+    app.unmount()
+    target.remove()
+  })
+
   test('unmounted hook waits when a child is removed from the pending branch', async () => {
     const asyncSetup = deferred()
     const show = ref(true)
