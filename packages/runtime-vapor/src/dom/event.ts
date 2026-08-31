@@ -1,9 +1,10 @@
 import { onEffectCleanup } from '@vue/reactivity'
-import { isArray } from '@vue/shared'
+import { isArray, toHandlerKey } from '@vue/shared'
 import {
   ErrorCodes,
   callWithAsyncErrorHandling,
   currentInstance,
+  parseEventName,
   withKeys as withDomKeys,
   withModifiers as withDomModifiers,
 } from '@vue/runtime-dom'
@@ -125,8 +126,39 @@ export function setDynamicEvents(
   el: HTMLElement,
   events: Record<string, EventHandlerValue>,
 ): void {
+  const cacheKey = '$devents'
+  const prevEvents = (el as any)[cacheKey] as Record<string, any> | undefined
+  const nextEvents: Record<string, any> = Object.create(null)
   for (const name in events) {
-    onBinding(el, name, events[name])
+    setEvent(el, toHandlerKey(name), events[name], nextEvents, prevEvents)
+  }
+  ;(el as any)[cacheKey] = nextEvents
+}
+
+export function setEvent(
+  el: Element,
+  key: string,
+  value: any,
+  propCache?: Record<string, any>,
+  prevProps?: Record<string, any>,
+): void {
+  const [event, options] = parseEventName(key)
+  const eventOptions = options as AddEventListenerOptions | undefined
+  if (eventOptions && eventOptions.once && propCache) {
+    propCache[key] = !!prevProps && prevProps[key] === true
+    // #15378 avoid binding the same event twice when the once binding is already fired
+    if (!propCache[key] && value) {
+      onBinding(
+        el,
+        event,
+        // mark the once binding as fired
+        () => (propCache[key] = true),
+        eventOptions,
+      )
+      onBinding(el, event, value, eventOptions)
+    }
+  } else {
+    onBinding(el, event, value, eventOptions)
   }
 }
 

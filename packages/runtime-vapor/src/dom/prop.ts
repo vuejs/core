@@ -16,7 +16,7 @@ import {
   stringifyStyle,
   toDisplayString,
 } from '@vue/shared'
-import { onBinding } from './event'
+import { setEvent as setEventBinding } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -29,7 +29,6 @@ import {
   isValidHtmlOrSvgAttribute,
   logMismatchError,
   mergeProps,
-  parseEventName,
   patchStyle,
   queuePostFlushCb,
   shouldSetAsProp,
@@ -745,22 +744,5 @@ function setEvent(
   if (shouldSkipFallthroughKey(el, key)) {
     return
   }
-  const [event, options] = parseEventName(key)
-  const eventOptions = options as AddEventListenerOptions | undefined
-  if (eventOptions && eventOptions.once && propCache) {
-    propCache[key] = !!prevProps && prevProps[key] === true
-    // #15378 avoid binding the same event twice when the once binding is already fired
-    if (!propCache[key] && value) {
-      onBinding(
-        el,
-        event,
-        // mark the once binding as fired
-        () => (propCache[key] = true),
-        eventOptions,
-      )
-      onBinding(el, event, value, eventOptions)
-    }
-  } else {
-    onBinding(el, event, value, eventOptions)
-  }
+  setEventBinding(el, key, value, propCache, prevProps)
 }

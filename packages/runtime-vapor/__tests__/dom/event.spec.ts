@@ -441,4 +441,33 @@ describe('dom event', () => {
 
     expect(hits.value).toBe(1)
   })
+
+  test('parses once modifiers in v-on object expressions', async () => {
+    const hits = ref(0)
+    const Comp = defineVaporComponent({
+      setup() {
+        return {
+          hits,
+          onOnce: () => hits.value++,
+        }
+      },
+      render: compileToVaporRender(
+        `<button v-on="{ clickOnce: onOnce }" /><p>{{ hits }}</p>`,
+        {
+          bindingMetadata: {
+            hits: BindingTypes.SETUP_REF,
+            onOnce: BindingTypes.SETUP_CONST,
+          },
+        },
+      ),
+    })
+    const { host } = define(Comp).render()
+    const button = host.querySelector('button')!
+
+    button.click()
+    await nextTick()
+    button.click()
+
+    expect(hits.value).toBe(1)
+  })
 })
