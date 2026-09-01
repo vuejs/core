@@ -14,5 +14,12 @@ export const IF: number = 1 << 8
  */
 export const NATIVE_CHILDREN: number = 1 << 9
 
+/**
+ * Set only by the SlotFragment class: the fragment runs the slot resolution
+ * state machine (SlotResolutionState). Fast-path outlet fragments carry SLOT
+ * but not this bit.
+ */
+export const SLOT_RESOLVER: number = 1 << 10
+
 // Subtype bits only — the DynamicFragment constructor adds DYNAMIC itself.
 export const SLOT_FRAGMENT: number = SLOT | SLOT_OUTLET
