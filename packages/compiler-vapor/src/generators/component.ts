@@ -832,7 +832,11 @@ function genSlotBlockWithProps(
   // Dynamic slot sources keep rawSlots.$, so runtime stays conservative.
   if (emitNonStableFlag && !hasStableRoot) {
     blockFn = genCall(context.helper('extend'), blockFn, [
-      `{ _: ${genFlags(VaporSlotStability.NON_STABLE, ['NON_STABLE'])} }`,
+      `{ _: ${
+        __DEV__
+          ? genFlags(VaporSlotStability.NON_STABLE, ['NON_STABLE'])
+          : VaporSlotStability.NON_STABLE
+      } }`,
     ])
   }
   exitSlotBlock()
