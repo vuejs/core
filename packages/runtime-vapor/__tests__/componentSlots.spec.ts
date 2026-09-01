@@ -1795,6 +1795,37 @@ describe('component: slots', () => {
       expect(boundary.markDirty).toHaveBeenCalledTimes(2)
     })
 
+    test('vdom slot without flags or fallback renders content outside the boundary chain', () => {
+      // Mirror of the vapor fast path: an outlet that joins no fallback
+      // arbitration must not interpose its own dead-end boundary, so nested
+      // outlets classify identically under both hosts. Hand-written: needs
+      // to observe the ambient boundary from inside the slot function.
+      let observedBoundary: SlotBoundaryContext | null | undefined
+      const instance = renderWithSlots({})
+      const app = createApp({ render: () => null })
+      app.use(vaporInteropPlugin)
+      const vdom = (app._context as any).vdom
+      const slotsRef = shallowRef({
+        default: () => {
+          observedBoundary = currentSlotBoundary
+          return [h('div', 'content')]
+        },
+      })
+      const frag = vdom.slot(slotsRef, 'default', {}, instance, {})
+      const host = document.createElement('div')
+      insert(frag, host)
+
+      expect(observedBoundary).toBe(null)
+      expect(host.innerHTML).toContain('<div>content</div>')
+
+      // An arbitrating outlet keeps its own boundary around content.
+      const fragWithFallback = vdom.slot(slotsRef, 'default', {}, instance, {
+        fallback: () => template('fallback')(),
+      })
+      insert(fragWithFallback, host)
+      expect(observedBoundary).not.toBe(null)
+    })
+
     test('compiled vdom slot propagates nested fallback validity changes', async () => {
       const show = ref(true)
       const Receiver = compile(
