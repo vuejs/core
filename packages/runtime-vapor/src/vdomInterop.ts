@@ -106,6 +106,7 @@ import {
   VaporSlotFlags,
   extend,
   isArray,
+  isForwardedSlot,
   isFunction,
   isObject,
   isReservedProp,
@@ -1766,7 +1767,7 @@ function renderVDOMSlot(
   // establishes around this call) — the base patch context for content
   // patches.
   const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
-  const isDirectSlotRoot = !!(flags & VaporSlotFlags.FORWARDED)
+  const isDirectSlotRoot = isForwardedSlot(flags)
   const slotBoundary = frag.slotBoundary
   const content = new InteropContentState()
   const scope = effectScope()

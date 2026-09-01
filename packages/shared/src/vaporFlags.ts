@@ -115,16 +115,17 @@ export enum VaporSlotFlags {
   SHARED_FALLBACK = 1 << 3,
 }
 
+export function isForwardedSlot(flags: number): boolean {
+  return !!(flags & (VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK))
+}
+
 export function slotInheritsFallback(flags: number): boolean {
-  return (
-    !!(flags & VaporSlotFlags.FORWARDED) &&
-    !(flags & VaporSlotFlags.SHARED_FALLBACK)
-  )
+  return isForwardedSlot(flags) && !(flags & VaporSlotFlags.SHARED_FALLBACK)
 }
 
 // v-once content never changes validity, so it has nothing to notify.
 export function slotNotifiesBoundary(flags: number): boolean {
-  return !!(flags & VaporSlotFlags.FORWARDED) && !(flags & VaporSlotFlags.ONCE)
+  return isForwardedSlot(flags) && !(flags & VaporSlotFlags.ONCE)
 }
 
 /**
