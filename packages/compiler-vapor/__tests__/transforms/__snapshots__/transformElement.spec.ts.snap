@@ -151,7 +151,7 @@ export function render(_ctx) {
       return n3
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n1
-  }, { _: 8 /* NON_STABLE */ }))
+  }, { _: 1 /* NON_STABLE */ }))
   return [n0, n5]
 }"
 `;

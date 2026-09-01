@@ -87,7 +87,7 @@ export function render(_ctx) {
       return n15
     }, 645 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, SLOT_ROOT, KEYED_INDEX_1 */), 389 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, SLOT_ROOT, KEYED_INDEX_0 */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n17
 }"
 `;
@@ -136,7 +136,7 @@ export function render(_ctx) {
       return n2
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n3
 }"
 `;

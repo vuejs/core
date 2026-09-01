@@ -42,7 +42,7 @@ export function render(_ctx) {
       return n3
     }, null, 17 /* TRUE_SINGLE_ROOT, ONCE */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   _withVaporDirectives(n4, [[_directive_test]])
   return n4
 }"

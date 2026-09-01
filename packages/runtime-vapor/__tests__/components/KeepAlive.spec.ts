@@ -16,7 +16,7 @@ import {
 } from 'vue'
 import {
   VaporBlockShape,
-  VaporSlotFlags,
+  VaporSlotStability,
   VaporVForFlags,
   extend,
 } from '@vue/shared'
@@ -51,7 +51,7 @@ const define = makeRender()
 const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 const singleRootIfElse =
   VaporBlockShape.SINGLE_ROOT | (VaporBlockShape.SINGLE_ROOT << 2)
-const nonStableSlot = { _: VaporSlotFlags.NON_STABLE } as const
+const nonStableSlot = { _: VaporSlotStability.NON_STABLE } as const
 
 describe('VaporKeepAlive', () => {
   let one: VaporComponent

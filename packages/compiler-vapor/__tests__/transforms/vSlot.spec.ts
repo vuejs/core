@@ -2,6 +2,7 @@ import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
   VaporDynamicComponentFlags,
   VaporSlotFlags,
+  VaporSlotStability,
   VaporVForFlags,
 } from '@vue/shared'
 import {
@@ -22,7 +23,7 @@ import {
 import { makeCompile } from './_utils'
 
 const dynamicSlotRootFlag = `${VaporDynamicComponentFlags.SLOT_ROOT} /* SLOT_ROOT */`
-const slotNonStableFlag = `_: ${VaporSlotFlags.NON_STABLE} /* NON_STABLE */`
+const slotNonStableFlag = `_: ${VaporSlotStability.NON_STABLE} /* NON_STABLE */`
 const slotRootFlag = `${VaporSlotFlags.SLOT_ROOT} /* SLOT_ROOT */`
 const inheritedFallbackSlotRootFlag = `${VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.INHERIT_FALLBACK} /* SLOT_ROOT, INHERIT_FALLBACK */`
 const sharedFallbackSlotRootFlag = `${VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.SHARED_FALLBACK} /* SLOT_ROOT, SHARED_FALLBACK */`

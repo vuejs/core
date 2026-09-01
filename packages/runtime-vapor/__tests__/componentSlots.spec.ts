@@ -38,6 +38,7 @@ import {
   VaporBlockShape,
   VaporIfFlags,
   VaporSlotFlags,
+  VaporSlotStability,
   VaporVForFlags,
   extend,
 } from '@vue/shared'
@@ -84,7 +85,7 @@ const keyedIfShape =
 const slotRootIfShape = VaporBlockShape.SINGLE_ROOT | VaporIfFlags.SLOT_ROOT
 const keyedSlotRootIfShape = keyedIfShape | VaporIfFlags.SLOT_ROOT
 const slotRootForFlags = VaporVForFlags.SLOT_ROOT
-const nonStableSlot = { _: VaporSlotFlags.NON_STABLE } as const
+const nonStableSlot = { _: VaporSlotStability.NON_STABLE } as const
 const inheritedFallbackSlotRootFlags =
   VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.INHERIT_FALLBACK
 const createInheritedSlotRoot = (name: string, fallback?: BlockFn) =>
@@ -3914,7 +3915,7 @@ describe('component: slots', () => {
         test('non-stable slot with fallback uses slot fragment', () => {
           let slotBlock!: Block
           const slot = (() => template('<p>A</p>')()) as BlockFn
-          ;(slot as any)._ = VaporSlotFlags.NON_STABLE
+          ;(slot as any)._ = VaporSlotStability.NON_STABLE
           const Comp = defineVaporComponent(() => {
             return (slotBlock = createSlot('default', null, () =>
               template('fallback')(),
