@@ -32,6 +32,7 @@ import {
   INDENT_START,
   NEWLINE,
   genCall,
+  genFlags,
   genMulti,
 } from './utils'
 import { genExpression, genVarName } from './expression'
@@ -180,7 +181,7 @@ function genDynamicComponentFlags(
     return false
   }
 
-  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
+  return genFlags(flags, names)
 }
 
 function getUniqueHandlerName(context: CodegenContext, name: string): string {
@@ -831,7 +832,7 @@ function genSlotBlockWithProps(
   // Dynamic slot sources keep rawSlots.$, so runtime stays conservative.
   if (emitNonStableFlag && !hasStableRoot) {
     blockFn = genCall(context.helper('extend'), blockFn, [
-      `{ _: ${VaporSlotStability.NON_STABLE}${__DEV__ ? ` /* NON_STABLE */` : ``} }`,
+      `{ _: ${genFlags(VaporSlotStability.NON_STABLE, ['NON_STABLE'])} }`,
     ])
   }
   exitSlotBlock()

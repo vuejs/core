@@ -3,7 +3,13 @@ import type { SlotOutletIRNode } from '../ir'
 import { VaporSlotFlags } from '@vue/shared'
 import { genBlock, markSlotRootOperations } from './block'
 import { genExpression } from './expression'
-import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
+import {
+  type CodeFragment,
+  NEWLINE,
+  buildCodeFragment,
+  genCall,
+  genFlags,
+} from './utils'
 import { genRawProps } from './component'
 
 export function genSlotOutlet(
@@ -70,5 +76,5 @@ function genSlotFlags(flags: number): string | undefined {
     names.push('SHARED_FALLBACK')
   }
 
-  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
+  return genFlags(flags, names)
 }

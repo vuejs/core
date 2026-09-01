@@ -19,6 +19,7 @@ import {
   INDENT_START,
   NEWLINE,
   genCall,
+  genFlags,
   genMulti,
   getParserOptions,
 } from './utils'
@@ -237,7 +238,7 @@ function genForFlags(
     return undefined
   }
 
-  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
+  return genFlags(flags, names)
 }
 
 function isSingleNodeBlock(block: BlockIRNode): boolean {
