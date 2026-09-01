@@ -257,15 +257,13 @@ export interface VaporInVdomInterface {
 }
 
 /**
- * Options for rendering a VDOM slot inside vapor. The booleans describe the
- * outlet's position in the fallback chain; see renderVDOMSlot.
+ * Options for rendering a VDOM slot inside vapor. `flags` carries the
+ * outlet's VaporSlotFlags describing its position in the fallback chain;
+ * see renderVDOMSlot.
  */
 export interface VdomSlotOptions {
   fallback?: (...args: any[]) => any // VaporSlot
-  once?: boolean
-  slotRoot?: boolean
-  sharedFallback?: boolean
-  inheritFallback?: boolean
+  flags?: number
   adoptAnchor?: Node
 }
 

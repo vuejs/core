@@ -104,13 +104,15 @@ export enum TemplateFlags {
 export enum VaporSlotFlags {
   NO_SLOTTED = 1,
   ONCE = 1 << 1,
-  SLOT_ROOT = 1 << 2,
-  // Multiple independently invalid roots share one enclosing fallback
-  // decision instead of resolving that fallback from each root.
-  SHARED_FALLBACK = 1 << 4,
-  // The outlet is the only forwarded root, so it may resolve an enclosing
-  // fallback after its own local fallback is exhausted.
-  INHERIT_FALLBACK = 1 << 5,
+  // The outlet is a dynamic root on a forwarded slot chain. It exposes its
+  // content validity to the enclosing boundary (unless ONCE) and, without
+  // SHARED_FALLBACK, may resolve an enclosing fallback after its own local
+  // fallback is exhausted.
+  FORWARDED = 1 << 2,
+  // Implies FORWARDED: multiple independently invalid roots share one
+  // enclosing fallback decision instead of resolving that fallback from each
+  // root.
+  SHARED_FALLBACK = 1 << 3,
 }
 
 /**

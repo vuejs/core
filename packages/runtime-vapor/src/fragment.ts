@@ -1,4 +1,5 @@
 import { EffectScope, type ShallowRef, setActiveSub } from '@vue/reactivity'
+import { VaporSlotFlags } from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -576,13 +577,13 @@ export class SlotFragment
   private localFallback?: BlockFn
   private isUpdating = false
   private ownBoundary?: SlotBoundaryContext
-  // Slot-root outlets expose their content validity to the enclosing boundary.
-  constructor(
-    private readonly notifyParentBoundary: boolean = false,
-    private readonly sharedFallback: boolean = false,
-    private readonly inheritFallback: boolean = false,
-    adoptAnchor?: Node,
-  ) {
+  // Decoded from VaporSlotFlags: forwarded roots expose their content
+  // validity to the enclosing boundary (unless once, whose content never
+  // changes validity) and resolve fallback in shared or inherit mode.
+  private readonly notifyParentBoundary: boolean
+  private readonly sharedFallback: boolean
+  private readonly inheritFallback: boolean
+  constructor(flags: number = 0, adoptAnchor?: Node) {
     super(
       SLOT_FRAGMENT,
       __DEV__ ? 'slot' : undefined,
@@ -592,6 +593,15 @@ export class SlotFragment
       undefined,
       adoptAnchor,
     )
+    const forwarded = !!(
+      flags &
+      (VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK)
+    )
+    const sharedFallback = (this.sharedFallback = !!(
+      flags & VaporSlotFlags.SHARED_FALLBACK
+    ))
+    this.inheritFallback = forwarded && !sharedFallback
+    this.notifyParentBoundary = forwarded && !(flags & VaporSlotFlags.ONCE)
     if (sharedFallback) {
       if (this.slotBoundary) {
         registerContentInvalid(

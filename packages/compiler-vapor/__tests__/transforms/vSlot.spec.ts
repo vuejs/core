@@ -24,9 +24,8 @@ import { makeCompile } from './_utils'
 
 const dynamicSlotRootFlag = `${VaporDynamicComponentFlags.SLOT_ROOT} /* SLOT_ROOT */`
 const slotNonStableFlag = `_: ${VaporSlotStability.NON_STABLE} /* NON_STABLE */`
-const slotRootFlag = `${VaporSlotFlags.SLOT_ROOT} /* SLOT_ROOT */`
-const inheritedFallbackSlotRootFlag = `${VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.INHERIT_FALLBACK} /* SLOT_ROOT, INHERIT_FALLBACK */`
-const sharedFallbackSlotRootFlag = `${VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.SHARED_FALLBACK} /* SLOT_ROOT, SHARED_FALLBACK */`
+const forwardedFlag = `${VaporSlotFlags.FORWARDED} /* FORWARDED */`
+const sharedFallbackFlag = `${VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK} /* FORWARDED, SHARED_FALLBACK */`
 const keyedSlotRootCallRE =
   /const (n\d+) = _createKeyedFragment\([\s\S]*?\n\s*}, true\)\n\s*return \1/
 
@@ -745,7 +744,7 @@ describe('compiler: transform slot', () => {
       const { code } = compileWithSlots(`<Comp><slot/></Comp>`)
       expect(code).toContain(slotNonStableFlag)
       expect(code).toContain(
-        `_createSlot("default", null, null, ${inheritedFallbackSlotRootFlag})`,
+        `_createSlot("default", null, null, ${forwardedFlag})`,
       )
       expect(code).toMatchSnapshot()
     })
@@ -754,7 +753,7 @@ describe('compiler: transform slot', () => {
       const { code } = compileWithSlots(`<Comp><slot/><span/></Comp>`)
 
       expect(code).not.toContain('SLOT_ROOT')
-      expect(code).not.toContain('INHERIT_FALLBACK')
+      expect(code).not.toContain('FORWARDED')
       expect(code).not.toContain(slotNonStableFlag)
     })
 
@@ -764,13 +763,13 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code.match(/SHARED_FALLBACK/g)).toHaveLength(2)
-      expect(code).toContain(sharedFallbackSlotRootFlag)
+      expect(code).toContain(sharedFallbackFlag)
     })
 
     test('slot root shares fallback with a dynamic sibling', () => {
       const { code } = compileWithSlots(`<Comp><slot/><span v-if="ok"/></Comp>`)
 
-      expect(code).toContain(sharedFallbackSlotRootFlag)
+      expect(code).toContain(sharedFallbackFlag)
     })
 
     test('v-once slot root shares fallback without update tracking', () => {
@@ -779,15 +778,13 @@ describe('compiler: transform slot', () => {
       )
 
       expect(code.match(/SHARED_FALLBACK/g)).toHaveLength(2)
-      expect(code).toContain('ONCE, SHARED_FALLBACK')
-      expect(code).not.toContain('ONCE, SLOT_ROOT')
+      expect(code).toContain('ONCE, FORWARDED, SHARED_FALLBACK')
     })
 
     test('v-once unique slot root inherits fallback without update tracking', () => {
       const { code } = compileVapor(`<Comp><slot v-once /></Comp>`)
 
-      expect(code).toContain('ONCE, INHERIT_FALLBACK')
-      expect(code).not.toContain('ONCE, SLOT_ROOT')
+      expect(code).toContain('ONCE, FORWARDED')
     })
 
     test.each([
@@ -805,10 +802,7 @@ describe('compiler: transform slot', () => {
         const { code } = compileWithSlots(source)
 
         expect(code).toContain('SLOT_ROOT')
-        expect(code).not.toContain(
-          `_createSlot("default", null, null, ${slotRootFlag})`,
-        )
-        expect(code).not.toContain('INHERIT_FALLBACK')
+        expect(code).not.toContain('FORWARDED')
       },
     )
 
@@ -826,7 +820,7 @@ describe('compiler: transform slot', () => {
       })
 
       expect(code).toContain(
-        `_createSlot("default", null, null, ${inheritedFallbackSlotRootFlag})`,
+        `_createSlot("default", null, null, ${forwardedFlag})`,
       )
       expect(code).toMatch(keyedSlotRootCallRE)
     })

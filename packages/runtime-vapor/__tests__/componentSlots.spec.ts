@@ -86,8 +86,7 @@ const slotRootIfShape = VaporBlockShape.SINGLE_ROOT | VaporIfFlags.SLOT_ROOT
 const keyedSlotRootIfShape = keyedIfShape | VaporIfFlags.SLOT_ROOT
 const slotRootForFlags = VaporVForFlags.SLOT_ROOT
 const nonStableSlot = { _: VaporSlotStability.NON_STABLE } as const
-const inheritedFallbackSlotRootFlags =
-  VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.INHERIT_FALLBACK
+const inheritedFallbackSlotRootFlags = VaporSlotFlags.FORWARDED
 const createInheritedSlotRoot = (name: string, fallback?: BlockFn) =>
   createSlot(name, null, fallback, inheritedFallbackSlotRootFlags)
 
@@ -266,7 +265,7 @@ describe('component: slots', () => {
       }
       const frag = withSlotBoundary(
         parentBoundary,
-        () => new SlotFragment(true),
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
       )
       const fallback = () => document.createTextNode('fallback')
 
@@ -307,7 +306,7 @@ describe('component: slots', () => {
       }
       const frag = withSlotBoundary(
         parentBoundary,
-        () => new SlotFragment(false, false, true),
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
       )
 
       frag.updateSlot(undefined, localFallback)
@@ -331,7 +330,10 @@ describe('component: slots', () => {
       }
       const frag = withSlotBoundary(
         parentBoundary,
-        () => new SlotFragment(true, true),
+        () =>
+          new SlotFragment(
+            VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK,
+          ),
       )
 
       frag.updateSlot(undefined, localFallback)
@@ -350,7 +352,7 @@ describe('component: slots', () => {
       }
       const frag = withSlotBoundary(
         parentBoundary,
-        () => new SlotFragment(false, false, true),
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
       )
       let fallbackBoundary: any
 
@@ -376,7 +378,7 @@ describe('component: slots', () => {
       }
       const frag = withSlotBoundary(
         parentBoundary,
-        () => new SlotFragment(false, false, true),
+        () => new SlotFragment(VaporSlotFlags.FORWARDED),
       )
       const child = new DynamicFragment(IF, 'if', false, false)
       let initialized = false
@@ -1068,7 +1070,7 @@ describe('component: slots', () => {
       }
       const Child = defineVaporComponent(() =>
         withSlotBoundary(boundary, () =>
-          createSlot('default', null, undefined, VaporSlotFlags.SLOT_ROOT),
+          createSlot('default', null, undefined, VaporSlotFlags.FORWARDED),
         ),
       )
 
@@ -1377,7 +1379,9 @@ describe('component: slots', () => {
         default: () => [h('div', text.value)],
       })
       const frag = withSlotBoundary(boundary, () =>
-        vdom.slot(slotsRef, 'default', {}, instance, { slotRoot: true }),
+        vdom.slot(slotsRef, 'default', {}, instance, {
+          flags: VaporSlotFlags.FORWARDED,
+        }),
       )
       const host = document.createElement('div')
 
@@ -1439,7 +1443,7 @@ describe('component: slots', () => {
       const frag = withSlotBoundary(boundary, () =>
         vdom.slot(slotsRef, 'default', {}, instance, {
           fallback: () => template('fallback')(),
-          slotRoot: true,
+          flags: VaporSlotFlags.FORWARDED,
         }),
       )
       const host = document.createElement('div')
@@ -1769,7 +1773,9 @@ describe('component: slots', () => {
         default: () => (show.value ? [h('div', 'content')] : []),
       })
       const frag = withSlotBoundary(boundary, () =>
-        vdom.slot(slotsRef, 'default', {}, instance, { slotRoot: true }),
+        vdom.slot(slotsRef, 'default', {}, instance, {
+          flags: VaporSlotFlags.FORWARDED,
+        }),
       )
       const host = document.createElement('div')
 
@@ -3844,7 +3850,7 @@ describe('component: slots', () => {
               'default',
               null,
               undefined,
-              VaporSlotFlags.SLOT_ROOT,
+              VaporSlotFlags.FORWARDED,
             ))
           })
 
