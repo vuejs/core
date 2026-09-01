@@ -5196,6 +5196,42 @@ describe('component: slots', () => {
         expect(root.innerHTML).toBe('<p>alt fallback</p><!--slot-->')
       })
 
+      test('vdom fallback ownership ignores fast-path outlet fragments', async () => {
+        const text = ref('fallback')
+
+        const VdomSlotWithFallback = {
+          render(this: any) {
+            return renderSlot(this.$slots, 'foo', {}, () => [
+              h('div', text.value),
+            ])
+          },
+        }
+
+        const VaporParent = defineVaporComponent({
+          setup() {
+            return createComponent(
+              VdomSlotWithFallback,
+              null,
+              // Unmarked outlet without fallback: a fast-path DynamicFragment,
+              // which must not be mistaken for a SlotFragment that could own
+              // the vdom fallback decision. Hand-written on purpose: the
+              // compiler marks every root outlet FORWARDED, so this shape is
+              // only reachable through hand-written render functions.
+              { foo: () => createSlot('foo') },
+              true,
+            )
+          },
+        })
+
+        const root = document.createElement('div')
+        createVaporApp(VaporParent).use(vaporInteropPlugin).mount(root)
+        expect(root.textContent).toBe('fallback')
+
+        text.value = 'updated fallback'
+        await nextTick()
+        expect(root.textContent).toBe('updated fallback')
+      })
+
       test('vdom fallback for renderVaporSlot is evaluated once on initial mount', async () => {
         const fallbackText = ref('fallback')
         const fallbackSpy = vi.fn(() => [h('div', fallbackText.value)])
