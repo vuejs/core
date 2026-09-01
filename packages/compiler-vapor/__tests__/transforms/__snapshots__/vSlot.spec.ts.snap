@@ -158,7 +158,7 @@ export function render(_ctx) {
     const n1 = _createComponentWithFallback(_component_Comp, null, _extend(() => {
       const n0 = _createSlot("default", null, null, 36 /* SLOT_ROOT, INHERIT_FALLBACK */)
       return n0
-    }, { _: 8 /* NON_STABLE */ }))
+    }, { _: 1 /* NON_STABLE */ }))
     return n1
   }, true)
   return n2
@@ -172,7 +172,7 @@ export function render(_ctx) {
   const n1 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createSlot("default", null, null, 36 /* SLOT_ROOT, INHERIT_FALLBACK */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n1
 }"
 `;
@@ -184,7 +184,7 @@ export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createSlot("default", null, null, 36 /* SLOT_ROOT, INHERIT_FALLBACK */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n2
 }"
 `;
@@ -199,7 +199,7 @@ export function render(_ctx) {
       return n2
     }, undefined, 48 /* IS_FRAGMENT, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n3
 }"
 `;
@@ -214,7 +214,7 @@ export function render(_ctx) {
       return n2
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n3
 }"
 `;
@@ -262,7 +262,7 @@ export function render(_ctx) {
   const n2 = _createAssetComponent("Foo", null, {
     "header": _extend(() => {
       return []
-    }, { _: 8 /* NON_STABLE */ }),
+    }, { _: 1 /* NON_STABLE */ }),
     "default": () => {
       const n1 = _createComponentWithFallback(_component_Bar)
       return n1
@@ -350,7 +350,7 @@ export function render(_ctx) {
   const n1 = _createAssetComponent("Comp", null, {
     "nav-bar-title-before": _extend(() => {
       return []
-    }, { _: 8 /* NON_STABLE */ })
+    }, { _: 1 /* NON_STABLE */ })
   }, true)
   return n1
 }"
@@ -405,7 +405,7 @@ export function render(_ctx) {
       return n2
     }, 36 /* SLOT_ROOT, INHERIT_FALLBACK */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n5
 }"
 `;
@@ -440,7 +440,7 @@ export function render(_ctx) {
       return n2
     }, undefined, 40 /* IS_SINGLE_NODE, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n3
 }"
 `;
@@ -456,7 +456,7 @@ export function render(_ctx) {
       return n2
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n3
 }"
 `;
@@ -468,7 +468,7 @@ export function render(_ctx) {
   const n1 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 4 /* SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n1
 }"
 `;
@@ -503,7 +503,7 @@ export function render(_ctx) {
       return n3
     }, undefined, 40 /* IS_SINGLE_NODE, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n5
 }"
 `;
@@ -522,7 +522,7 @@ export function render(_ctx) {
       return n3
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n5
 }"
 `;
@@ -553,7 +553,7 @@ export function render(_ctx) {
       return n3
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n5
 }"
 `;
@@ -612,7 +612,7 @@ export function render(_ctx) {
       return n6
     }, null, 129 /* TRUE_SINGLE_ROOT, SLOT_ROOT */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n8
 }"
 `;
@@ -651,7 +651,7 @@ export function render(_ctx) {
   const n2 = _createAssetComponent("Comp", null, _extend(() => {
     const n0 = _createSlot("default", null, null, 36 /* SLOT_ROOT, INHERIT_FALLBACK */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n2
 }"
 `;
@@ -671,7 +671,7 @@ export function render(_ctx) {
     const x0 = _txt(n0)
     _renderEffect(() => _setText(x0, _toDisplayString(_ctx.item)))
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n4
 }"
 `;
@@ -691,7 +691,7 @@ export function render(_ctx) {
       return n4
     }, 389 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, SLOT_ROOT, KEYED_INDEX_0 */)
     return n0
-  }, { _: 8 /* NON_STABLE */ }), true)
+  }, { _: 1 /* NON_STABLE */ }), true)
   return n7
 }"
 `;

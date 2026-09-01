@@ -2,6 +2,7 @@ import {
   EMPTY_OBJ,
   NO,
   VaporSlotFlags,
+  VaporSlotStability,
   hasOwn,
   isArray,
   isFunction,
@@ -80,7 +81,7 @@ export type LooseRawSlots =
 export type StaticSlots = Record<string, VaporSlot>
 
 export type VaporSlot = BlockFn & {
-  _?: VaporSlotFlags.NON_STABLE
+  _?: VaporSlotStability.NON_STABLE
 }
 export type DynamicSlot = { name: string; fn: VaporSlot; key?: unknown }
 export type DynamicSlotFn = () => DynamicSlot | DynamicSlot[]
@@ -502,5 +503,5 @@ function shouldUseSlotFragment(
   if (!slot) return false
 
   // Non-stable slot content can become invalid, making fallback reachable.
-  return slot._ === VaporSlotFlags.NON_STABLE
+  return slot._ === VaporSlotStability.NON_STABLE
 }

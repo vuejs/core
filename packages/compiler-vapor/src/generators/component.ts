@@ -1,6 +1,6 @@
 import {
   VaporDynamicComponentFlags,
-  VaporSlotFlags,
+  VaporSlotStability,
   camelize,
   extend,
   getModifierPropName,
@@ -831,30 +831,11 @@ function genSlotBlockWithProps(
   // Dynamic slot sources keep rawSlots.$, so runtime stays conservative.
   if (emitNonStableFlag && !hasStableRoot) {
     blockFn = genCall(context.helper('extend'), blockFn, [
-      `{ _: ${genSlotFlags(VaporSlotFlags.NON_STABLE)} }`,
+      `{ _: ${VaporSlotStability.NON_STABLE}${__DEV__ ? ` /* NON_STABLE */` : ``} }`,
     ])
   }
   exitSlotBlock()
   exitScope && exitScope()
 
   return blockFn
-}
-
-function genSlotFlags(flags: number): string {
-  const names: string[] = []
-
-  if (flags & VaporSlotFlags.NO_SLOTTED) {
-    names.push('NO_SLOTTED')
-  }
-  if (flags & VaporSlotFlags.ONCE) {
-    names.push('ONCE')
-  }
-  if (flags & VaporSlotFlags.SLOT_ROOT) {
-    names.push('SLOT_ROOT')
-  }
-  if (flags & VaporSlotFlags.NON_STABLE) {
-    names.push('NON_STABLE')
-  }
-
-  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
 }
