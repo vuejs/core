@@ -1069,9 +1069,7 @@ describe('component: slots', () => {
         markDirty,
       }
       const Child = defineVaporComponent(() =>
-        withSlotBoundary(boundary, () =>
-          createSlot('default', null, undefined, VaporSlotFlags.FORWARDED),
-        ),
+        withSlotBoundary(boundary, () => createInheritedSlotRoot('default')),
       )
 
       define(() =>
@@ -3877,12 +3875,7 @@ describe('component: slots', () => {
           let slotBlock!: Block
           let observedBoundary: SlotBoundaryContext | null | undefined
           const Comp = defineVaporComponent(() => {
-            return (slotBlock = createSlot(
-              'default',
-              null,
-              undefined,
-              VaporSlotFlags.FORWARDED,
-            ))
+            return (slotBlock = createInheritedSlotRoot('default'))
           })
 
           define(() =>
@@ -4065,12 +4058,7 @@ describe('component: slots', () => {
           }
           const Comp = defineVaporComponent(() =>
             withSlotBoundary(boundary, () => [
-              (forwardedBlock = createSlot(
-                'a',
-                null,
-                undefined,
-                VaporSlotFlags.FORWARDED,
-              )),
+              (forwardedBlock = createInheritedSlotRoot('a')),
               (fallbackBlock = createSlot('b', null, () =>
                 template('fallback')(),
               )),
