@@ -222,3 +222,8 @@ export function codeFragmentToString(
     })
   }
 }
+
+/** Formats a numeric flags argument with its dev-only name annotation. */
+export function genFlags(flags: number, names: string[]): string {
+  return __DEV__ ? `${flags} /* ${names.join(', ')} */` : String(flags)
+}

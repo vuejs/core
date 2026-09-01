@@ -3,7 +3,13 @@ import { IRNodeTypes, type IfIRNode } from '../ir'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 import { genBlock } from './block'
 import { genExpression } from './expression'
-import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
+import {
+  type CodeFragment,
+  NEWLINE,
+  buildCodeFragment,
+  genCall,
+  genFlags,
+} from './utils'
 
 export function genIf(
   oper: IfIRNode,
@@ -76,9 +82,7 @@ function genIfFlags(
     return false
   }
 
-  return __DEV__
-    ? `${flags} /* ${genIfFlagNames(once, slotRoot, index, blockShape)} */`
-    : String(flags)
+  return genFlags(flags, genIfFlagNames(once, slotRoot, index, blockShape))
 }
 
 function genIfFlagNames(
@@ -86,7 +90,7 @@ function genIfFlagNames(
   slotRoot: boolean | undefined,
   index: number | undefined,
   blockShape: number,
-): string {
+): string[] {
   const names = [`TRUE_${genBlockShapeName(blockShape)}`]
   const falseShape = blockShape >> 2
   const hasFalseBranch = (falseShape & 0b11) !== VaporBlockShape.EMPTY
@@ -112,7 +116,7 @@ function genIfFlagNames(
     names.push(`KEYED_INDEX_${index}`)
   }
 
-  return names.join(', ')
+  return names
 }
 
 function genBlockShapeName(flags: number): string {
