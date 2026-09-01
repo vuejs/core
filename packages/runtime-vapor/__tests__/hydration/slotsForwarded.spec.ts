@@ -378,7 +378,21 @@ describe('Vapor Mode hydration', () => {
       data.branch = false
       await nextTick()
       expect(container.textContent).toBe('receiver fallback')
-      expect(container.innerHTML.match(/<!--slot-->/g)).toHaveLength(1)
+      // The receiver outlet claims its own SSR close marker as anchor
+      // instead of allocating a runtime <!--slot--> comment.
+      expect(container.innerHTML.match(/<!--slot-->/g)).toBeNull()
+
+      data.branch = true
+      await nextTick()
+      expect(container.querySelector('div')!.textContent).toBe('content')
+
+      data.show = false
+      await nextTick()
+      expect(container.querySelector('div')!.textContent).toBe('')
+
+      data.branch = false
+      await nextTick()
+      expect(container.textContent).toBe('receiver fallback')
     })
 
     test('nested fallbacks stay within a shared boundary during hydration', async () => {
