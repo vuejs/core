@@ -240,7 +240,7 @@ function getVaporInstance(vnode: VNode): VaporComponentInstance {
 function prepareInteropSlotTransition(
   frag: RenderContextFragment,
   vnode: VNode,
-  isDirectSlotRoot: boolean,
+  forwarded: boolean,
   previous: VNode | undefined,
   resumeAfterLeave: () => void,
   delayedLeaveSource?: TransitionHooks,
@@ -258,12 +258,12 @@ function prepareInteropSlotTransition(
   if (transition && transition.applyGroup) return
 
   // The slot can render before VaporTransition propagates its hooks, notably
-  // during hydration, but a direct slot root must already use
+  // during hydration, but a forwarded slot root must already use
   // BaseTransition's branch shape.
   if (
     !transition &&
     !(
-      isDirectSlotRoot &&
+      forwarded &&
       instance &&
       isVaporTransition(instance.type as VaporComponent)
     )
@@ -1760,14 +1760,14 @@ function renderVDOMSlot(
   const { fallback, flags = 0, adoptAnchor } = options
   const once = !!(flags & VaporSlotFlags.ONCE)
   const sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
+  const forwarded = isForwardedSlot(flags)
   const inheritFallback = slotInheritsFallback(flags)
-  const slotRoot = slotNotifiesBoundary(flags)
+  const notifiesBoundary = slotNotifiesBoundary(flags)
   let suspense = currentParentSuspense || parentComponent.suspense
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
   // patches.
   const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
-  const isDirectSlotRoot = isForwardedSlot(flags)
   const slotBoundary = frag.slotBoundary
   const content = new InteropContentState()
   const scope = effectScope()
@@ -1809,7 +1809,7 @@ function renderVDOMSlot(
   // renders its content outside the boundary chain, so nested outlets
   // classify identically under both hosts and validity flips inside the
   // content never notify the dead-end own boundary.
-  const contentBoundary = isDirectSlotRoot || fallback ? boundary : null
+  const contentBoundary = forwarded || fallback ? boundary : null
   slotResolutionState = createSlotResolutionState(boundary, {
     getContent: () => content.nodes,
     getParentNode: () => currentParentNode,
@@ -1821,7 +1821,7 @@ function renderVDOMSlot(
       frag.nodes = resolveExposedSlotNodes(slotResolutionState)
     },
     notifyExposedValidityChange: () => {
-      if (slotRoot && !isContentUpdateRecheck && slotBoundary) {
+      if (notifiesBoundary && !isContentUpdateRecheck && slotBoundary) {
         slotBoundary.markDirty()
       }
     },
@@ -1830,7 +1830,7 @@ function renderVDOMSlot(
   if (sharedFallback && slotBoundary) {
     registerContentInvalid(slotBoundary, parkSharedContent, frag)
   }
-  if (slotRoot) {
+  if (notifiesBoundary) {
     trackSlotBoundaryDirtying(
       frag,
       sharedFallback ? undefined : cleanupInvalidContent,
@@ -2091,7 +2091,7 @@ function renderVDOMSlot(
           prepareInteropSlotTransition(
             frag,
             pendingContent,
-            isDirectSlotRoot,
+            forwarded,
             undefined,
             NOOP,
           ) || pendingContent
@@ -2249,7 +2249,7 @@ function renderVDOMSlot(
           prepareInteropSlotTransition(
             frag,
             slotContent,
-            isDirectSlotRoot,
+            forwarded,
             undefined,
             NOOP,
           ) || createCommentVNode()
@@ -2277,7 +2277,7 @@ function renderVDOMSlot(
     const transitionChild = prepareInteropSlotTransition(
       frag,
       slotContent,
-      isDirectSlotRoot,
+      forwarded,
       prevVNode || undefined,
       resumeOutIn,
       delayedLeaveSource,
@@ -2434,7 +2434,7 @@ function renderVDOMSlot(
       const transitionChild = prepareInteropSlotTransition(
         frag,
         hydratedContent,
-        isDirectSlotRoot,
+        forwarded,
         undefined,
         NOOP,
       )
