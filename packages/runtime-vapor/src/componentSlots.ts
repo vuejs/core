@@ -499,10 +499,12 @@ function shouldUseSlotFragment(
   // Dynamic names and dynamic slot sources still need runtime resolution.
   if (isFunction(name) || rawSlots.$) return true
 
-  const slot = getSlot(rawSlots, name)
+  // Raw resolution only: the stability marker lives on the raw function, so
+  // the owner wrapper is left for renderSlot's single synchronous first run.
+  const slot = resolveSlot(rawSlots, name)
   // No matching static slot means fallback is the only possible branch.
   if (!slot) return false
 
   // Non-stable slot content can become invalid, making fallback reachable.
-  return slot._ === VaporSlotStability.NON_STABLE
+  return (isFunction(slot) ? slot : slot.fn)._ === VaporSlotStability.NON_STABLE
 }
