@@ -101,6 +101,7 @@ import {
   SLOT,
   SLOT_FRAGMENT,
   SLOT_OUTLET,
+  SLOT_RESOLVER,
   VDOM,
 } from './fragmentFlags'
 
@@ -591,7 +592,7 @@ export class SlotFragment
   private readonly inheritFallback: boolean
   constructor(flags: number = 0, adoptAnchor?: Node) {
     super(
-      SLOT_FRAGMENT,
+      SLOT_FRAGMENT | SLOT_RESOLVER,
       __DEV__ ? 'slot' : undefined,
       false,
       false,
@@ -968,4 +969,8 @@ export function isForBlock(val: unknown): val is ForBlock {
 
 export function isSlotFragment(val: unknown): val is SlotFragment {
   return !!(val && (val as any).__vf & SLOT)
+}
+
+export function isSlotResolver(val: unknown): val is SlotFragment {
+  return !!(val && (val as any).__vf & SLOT_RESOLVER)
 }
