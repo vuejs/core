@@ -281,9 +281,6 @@ export function createSlot(
       : [`${scopeId}-s`]
     : outerSlotScopeIds
   const once = !!(flags & VaporSlotFlags.ONCE)
-  const slotRoot = !!(flags & VaporSlotFlags.SLOT_ROOT)
-  const sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
-  const inheritFallback = !!(flags & VaporSlotFlags.INHERIT_FALLBACK)
   const slotProps = rawProps
     ? new Proxy(
         once ? snapshotRawProps(rawProps as RawProps) : rawProps,
@@ -312,10 +309,7 @@ export function createSlot(
         instance,
         {
           fallback,
-          once,
-          slotRoot,
-          sharedFallback,
-          inheritFallback,
+          flags,
           adoptAnchor: _insertionAnchor,
         },
       )
@@ -335,12 +329,7 @@ export function createSlot(
       isCustomElementSlot,
     )
     const slotFragment = needsSlotFragment
-      ? new SlotFragment(
-          slotRoot,
-          sharedFallback,
-          inheritFallback,
-          _insertionAnchor,
-        )
+      ? new SlotFragment(flags, _insertionAnchor)
       : undefined
     let dynamicFragment: DynamicFragment | undefined
     if (slotFragment) {

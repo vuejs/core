@@ -103,6 +103,7 @@ import {
   EMPTY_OBJ,
   NOOP,
   ShapeFlags,
+  VaporSlotFlags,
   extend,
   isArray,
   isFunction,
@@ -1754,20 +1755,22 @@ function renderVDOMSlot(
   parentComponent: VaporComponentInstance,
   options: VaporVdomSlotOptions = EMPTY_OBJ,
 ): VaporFragment {
-  const {
-    fallback,
-    once,
-    slotRoot,
-    sharedFallback,
-    inheritFallback,
-    adoptAnchor,
-  } = options
+  const { fallback, flags = 0, adoptAnchor } = options
+  const once = !!(flags & VaporSlotFlags.ONCE)
+  const forwarded = !!(
+    flags &
+    (VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK)
+  )
+  const sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
+  const inheritFallback = forwarded && !sharedFallback
+  // v-once content never changes validity, so there is nothing to notify.
+  const slotRoot = forwarded && !once
   let suspense = currentParentSuspense || parentComponent.suspense
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
   // patches.
   const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
-  const isDirectSlotRoot = !!(slotRoot || sharedFallback || inheritFallback)
+  const isDirectSlotRoot = forwarded
   const slotBoundary = frag.slotBoundary
   const content = new InteropContentState()
   const scope = effectScope()

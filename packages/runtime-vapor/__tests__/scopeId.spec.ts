@@ -1665,7 +1665,7 @@ describe('vdom interop', () => {
                   'default',
                   null,
                   undefined,
-                  VaporSlotFlags.SLOT_ROOT | VaporSlotFlags.INHERIT_FALLBACK,
+                  VaporSlotFlags.FORWARDED,
                 ),
             },
             true,
@@ -1695,7 +1695,7 @@ describe('vdom interop', () => {
           'default',
           null,
           () => template('<span>fallback</span>')(),
-          VaporSlotFlags.SLOT_ROOT,
+          VaporSlotFlags.FORWARDED,
         ) as any
       },
     })
@@ -1816,7 +1816,7 @@ describe('vdom interop', () => {
     const Receiver = defineVaporComponent({
       __scopeId: 'receiver',
       setup() {
-        return createSlot('default', null, undefined, VaporSlotFlags.SLOT_ROOT)
+        return createSlot('default', null, undefined, VaporSlotFlags.FORWARDED)
       },
     })
     app = mountApp({
@@ -1843,7 +1843,7 @@ describe('vdom interop', () => {
     const Receiver = defineVaporComponent({
       __scopeId: 'receiver',
       setup() {
-        return createSlot('default', null, undefined, VaporSlotFlags.SLOT_ROOT)
+        return createSlot('default', null, undefined, VaporSlotFlags.FORWARDED)
       },
     })
     const ScopedApp = {
@@ -1890,7 +1890,7 @@ describe('vdom interop', () => {
     const Receiver = defineVaporComponent({
       __scopeId: 'receiver',
       setup() {
-        return createSlot('default', null, undefined, VaporSlotFlags.SLOT_ROOT)
+        return createSlot('default', null, undefined, VaporSlotFlags.FORWARDED)
       },
     })
 

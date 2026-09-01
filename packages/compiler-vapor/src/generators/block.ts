@@ -251,13 +251,9 @@ export function markSlotRootOperations(
     } else if (operation.type === IRNodeTypes.CREATE_COMPONENT_NODE) {
       markSlotRootComponent(operation)
     } else if (operation.type === IRNodeTypes.SLOT_OUTLET_NODE) {
-      if (!(operation.flags & VaporSlotFlags.ONCE)) {
-        operation.flags |= VaporSlotFlags.SLOT_ROOT
-      }
+      operation.flags |= VaporSlotFlags.FORWARDED
       if (sharedFallback) {
         operation.flags |= VaporSlotFlags.SHARED_FALLBACK
-      } else {
-        operation.flags |= VaporSlotFlags.INHERIT_FALLBACK
       }
     }
   }
