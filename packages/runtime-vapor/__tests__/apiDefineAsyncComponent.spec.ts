@@ -841,8 +841,8 @@ describe('api: defineAsyncComponent', () => {
     expect(refA.value).toBe(null)
     expect(refB.value.id).toBe('foo')
 
-    const onUpdated = asyncWrapper.block.onUpdated
-    if (onUpdated) onUpdated.forEach((hook: any) => hook())
+    const updatedHooks = asyncWrapper.block.u
+    if (updatedHooks) updatedHooks.forEach((hook: any) => hook())
     await nextTick()
 
     expect(refA.value).toBe(null)

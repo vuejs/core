@@ -168,7 +168,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       // TODO suspense
       // Skip caching during out-in transition leaving phase.
       // The correct component will be cached after renderBranch completes
-      // via the Fragment's onUpdated hook.
+      // via the Fragment's updated hook.
       if (isDynamicFragment(block)) {
         const transition = block.$transition
         if (
@@ -466,10 +466,10 @@ function registerDynamicFragmentHooks(
 ): DynamicFragment | undefined {
   if (!isDynamicFragment(block)) return
 
-  ;(block.onUpdated ||= []).unshift(() => {
+  ;(block.u ||= []).unshift(() => {
     if (block.$transition && block.$transition.mode === 'out-in') {
       // For out-in transition, call cacheBlock after renderBranch completes
-      // because KeepAlive's onUpdated fires before the deferred rendering finishes.
+      // because KeepAlive's updated hook fires before the deferred rendering finishes.
       keepAliveCtx.cacheBlock(block)
     }
   })

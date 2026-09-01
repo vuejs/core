@@ -208,8 +208,8 @@ describe('vdomInterop', () => {
       app.mount(host)
 
       const calls: string[] = []
-      frag.onBeforeUpdate = [() => calls.push('beforeUpdate')]
-      frag.onUpdated = [() => calls.push('updated')]
+      frag.bu = [() => calls.push('beforeUpdate')]
+      frag.u = [() => calls.push('updated')]
 
       const getNodes = () =>
         (Array.isArray(frag.nodes) ? frag.nodes : [frag.nodes]).filter(Boolean)

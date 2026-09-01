@@ -62,10 +62,10 @@ export function trackSlotBoundaryDirtying(
   }
 
   let prevValid: boolean
-  ;(fragment.onBeforeUpdate ||= []).push(() => {
+  ;(fragment.bu ||= []).push(() => {
     prevValid = isValidSlot(fragment)
   })
-  ;(fragment.onUpdated ||= []).push(() => {
+  ;(fragment.u ||= []).push(() => {
     if (isValidSlot(fragment) !== prevValid) {
       boundary.markDirty()
     }
@@ -85,7 +85,7 @@ export function registerContentInvalid(
   }
   // The callback belongs to the slot-root fragment; remove it with that
   // fragment so stale branches do not stay on a long-lived boundary.
-  ;(fragment.onRemove ||= []).push(unregister)
+  ;(fragment.bum ||= []).push(unregister)
 }
 
 export function hasSlotFallback(

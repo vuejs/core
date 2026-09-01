@@ -259,8 +259,8 @@ describe('TransitionGroup', () => {
     // insert nor remove (the only fragment $transition readers) and its
     // update hook arrays are never invoked
     expect(forBlock.$transition).toBeUndefined()
-    expect(forBlock.onBeforeUpdate).toBeUndefined()
-    expect(forBlock.onUpdated).toBeUndefined()
+    expect(forBlock.bu).toBeUndefined()
+    expect(forBlock.u).toBeUndefined()
     // while its element child carries the group hooks and the derived key
     expect(forBlock.nodes.$transition).toBeDefined()
     expect(forBlock.nodes.$key).toBe(1)

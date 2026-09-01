@@ -196,9 +196,9 @@ export const createFor = (
 
     const prevSub = setActiveSub()
     const wasMounted = isMounted
-    if (wasMounted && frag.onBeforeUpdate) {
-      for (let i = 0; i < frag.onBeforeUpdate.length; i++) {
-        frag.onBeforeUpdate[i]()
+    if (wasMounted && frag.bu) {
+      for (let i = 0; i < frag.bu.length; i++) {
+        frag.bu[i]()
       }
     }
     if (!wasMounted) {
@@ -438,8 +438,8 @@ export const createFor = (
     oldBlocks = newBlocks
     frag.nodes = parentAnchor ? [newBlocks, parentAnchor] : [newBlocks]
 
-    if (wasMounted && frag.onUpdated) {
-      for (const fn of frag.onUpdated) fn()
+    if (wasMounted && frag.u) {
+      for (const fn of frag.u) fn()
     }
     setActiveSub(prevSub)
   }

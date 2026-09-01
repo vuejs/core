@@ -1035,14 +1035,14 @@ function trackFragmentVNodeUpdates(
   // the channel single-owner: re-tracking replaces a stale callback instead
   // of accumulating, and user props stay untouched.
   vnode.ibu = () => {
-    if (frag.onBeforeUpdate) {
-      frag.onBeforeUpdate.forEach(bu => bu())
+    if (frag.bu) {
+      frag.bu.forEach(hook => hook())
     }
   }
   vnode.iu = () => {
     syncNodes()
-    if (frag.onUpdated) {
-      frag.onUpdated.forEach(u => u())
+    if (frag.u) {
+      frag.u.forEach(hook => hook())
     }
   }
 }
@@ -1218,7 +1218,7 @@ function mountVNode(
       mountedAnchor = anchor
     }
     syncNodes()
-    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+    if (isMounted && frag.u) frag.u.forEach(hook => hook())
   }
 
   if (getFallthroughAttrs) {
@@ -1467,7 +1467,7 @@ function createVDOMComponent(
     }
 
     syncNodes()
-    if (isMounted && frag.onUpdated) frag.onUpdated.forEach(m => m())
+    if (isMounted && frag.u) frag.u.forEach(hook => hook())
   }
 
   frag.remove = unmount
@@ -1992,14 +1992,14 @@ function renderVDOMSlot(
 
   function notifyUpdated(): void {
     syncInteropRoot(parentComponent)
-    if (isMounted && frag.onUpdated) {
-      frag.onUpdated.forEach(u => u())
+    if (isMounted && frag.u) {
+      frag.u.forEach(hook => hook())
     }
   }
 
   function notifyBeforeUpdate(): void {
-    if (isMounted && frag.onBeforeUpdate) {
-      frag.onBeforeUpdate.forEach(bu => bu())
+    if (isMounted && frag.bu) {
+      frag.bu.forEach(hook => hook())
     }
   }
 
@@ -3134,13 +3134,13 @@ function createVNodeChildrenFragment(
     if (validityChanged && frag.slotBoundary) {
       frag.slotBoundary.markDirty()
     }
-    if (isMounted && frag.onUpdated) {
-      frag.onUpdated.forEach(hook => hook())
+    if (isMounted && frag.u) {
+      frag.u.forEach(hook => hook())
     }
   }
   const notifyBeforeUpdate = (): void => {
-    if (isMounted && frag.onBeforeUpdate) {
-      frag.onBeforeUpdate.forEach(hook => hook())
+    if (isMounted && frag.bu) {
+      frag.bu.forEach(hook => hook())
     }
   }
 
@@ -3231,8 +3231,8 @@ function createVNodeChildrenFragment(
 
           const validityChanged = syncResolvedNodesAndCleanup()
           if (isHydrating) {
-            if (isMounted && frag.onUpdated) {
-              frag.onUpdated.forEach(hook => hook())
+            if (isMounted && frag.u) {
+              frag.u.forEach(hook => hook())
             }
           } else {
             notifyUpdated(validityChanged)
@@ -3474,7 +3474,7 @@ function registerInteropRootSync(
 ): void {
   if (interopRootSyncFragmentMap.get(frag) === instance) return
   interopRootSyncFragmentMap.set(frag, instance)
-  ;(frag.onUpdated ||= []).push(() => syncInteropRoot(instance))
+  ;(frag.u ||= []).push(() => syncInteropRoot(instance))
 }
 
 /**

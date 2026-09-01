@@ -352,10 +352,10 @@ export function removeFragment(
   block: VaporFragment | DynamicFragment,
   parent?: ParentNode,
 ): void {
-  const onRemove = block.onRemove
-  if (onRemove) {
-    for (let i = 0; i < onRemove.length; i++) {
-      onRemove[i]()
+  const bum = block.bum
+  if (bum) {
+    for (let i = 0; i < bum.length; i++) {
+      bum[i]()
     }
   }
   if (block.remove) {

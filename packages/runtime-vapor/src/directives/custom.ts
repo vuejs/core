@@ -146,7 +146,7 @@ export function withVaporDirectives(
     if (!trackedBlocks.has(block)) {
       trackedBlocks.add(block)
       // Re-resolve the root element when the fragment updates
-      ;(block.onUpdated ||= []).push(applyDirectives)
+      ;(block.u ||= []).push(applyDirectives)
     }
 
     return (

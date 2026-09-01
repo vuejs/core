@@ -160,15 +160,15 @@ describe('api: template ref', () => {
       },
     })
     render()
-    const updateHook = frag.onUpdated![0]
+    const updateHook = frag.u![0]
 
-    expect(frag.onUpdated).toHaveLength(1)
+    expect(frag.u).toHaveLength(1)
 
     refKey.value = 'bar'
     await nextTick()
 
-    expect(frag.onUpdated).toHaveLength(1)
-    expect(frag.onUpdated![0]).toBe(updateHook)
+    expect(frag.u).toHaveLength(1)
+    expect(frag.u![0]).toBe(updateHook)
     expect(fooEl.value).toBe(null)
     expect(barEl.value).not.toBe(null)
   })
@@ -1223,7 +1223,7 @@ describe('api: template ref', () => {
     expect(refNames).toContain('two')
   })
 
-  test('dynamic component should not register duplicate onUpdated handlers for refs', async () => {
+  test('dynamic component should not register duplicate updated handlers for refs', async () => {
     const One = defineVaporComponent({
       setup() {
         return template('<div>one</div>')()
@@ -1254,15 +1254,15 @@ describe('api: template ref', () => {
       },
     }).render()
 
-    expect(frag.onUpdated.length).toBe(1)
+    expect(frag.u.length).toBe(1)
 
     useA.value = false
     await nextTick()
-    expect(frag.onUpdated.length).toBe(1)
+    expect(frag.u.length).toBe(1)
 
     view.value = 1
     await nextTick()
-    expect(frag.onUpdated.length).toBe(1)
+    expect(frag.u.length).toBe(1)
   })
 
   test('dynamic component function ref should cleanup old branch with null', async () => {

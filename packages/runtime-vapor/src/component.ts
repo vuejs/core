@@ -897,8 +897,8 @@ export class VaporComponentInstance<
   m?: LifecycleHook // LifecycleHooks.MOUNTED
   bu?: LifecycleHook // LifecycleHooks.BEFORE_UPDATE
   u?: LifecycleHook // LifecycleHooks.UPDATED
-  um?: LifecycleHook // LifecycleHooks.BEFORE_UNMOUNT
-  bum?: LifecycleHook // LifecycleHooks.UNMOUNTED
+  bum?: LifecycleHook // LifecycleHooks.BEFORE_UNMOUNT
+  um?: LifecycleHook // LifecycleHooks.UNMOUNTED
   da?: LifecycleHook // LifecycleHooks.DEACTIVATED
   a?: LifecycleHook // LifecycleHooks.ACTIVATED
   rtg?: LifecycleHook // LifecycleHooks.RENDER_TRACKED

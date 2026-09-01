@@ -194,9 +194,7 @@ export class TeleportFragment extends RenderContextFragment {
 
   private registerUpdateCssVars(block: Block) {
     if (isFragment(block)) {
-      ;(block.onUpdated || (block.onUpdated = [])).push(() =>
-        this.updateCssVars(),
-      )
+      ;(block.u || (block.u = [])).push(() => this.updateCssVars())
       this.registerUpdateCssVars(block.nodes)
     } else if (isVaporComponent(block)) {
       this.registerUpdateCssVars(block.block)

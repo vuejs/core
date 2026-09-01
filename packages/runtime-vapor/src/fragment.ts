@@ -142,10 +142,12 @@ export class VaporFragment<
   /** @internal live transition element of the backing vnode's subtree */
   getTransitionElement?: (this: VaporFragment) => Element | undefined
 
-  // hooks
-  onRemove?: (() => void)[]
-  onBeforeUpdate?: (() => void)[]
-  onUpdated?: ((nodes?: Block) => void)[]
+  /** beforeUnmount */
+  bum?: (() => void)[]
+  /** beforeUpdate */
+  bu?: (() => void)[]
+  /** updated */
+  u?: ((nodes?: Block) => void)[]
 
   constructor(nodes: T, flags: number = FRAGMENT) {
     this.nodes = nodes
@@ -339,7 +341,7 @@ export class DynamicFragment extends RenderContextFragment {
   // fragment; branch switches re-apply them to the new root before insertion.
   scopeIdOwners?: VaporComponentInstance[]
   // Whether update() ran before. The very first update renders as part of
-  // the mount and must not fire onUpdated hooks; with an adopted template
+  // the mount and must not fire updated hooks; with an adopted template
   // anchor `parent` is non-null even then, so mount status can no longer be
   // inferred from the anchor being detached.
   everUpdated = false
@@ -393,10 +395,10 @@ export class DynamicFragment extends RenderContextFragment {
     const transition = isTransitionEnabled ? this.$transition : undefined
     const wasMounted = this.current !== undefined
     if (wasMounted) {
-      const onBeforeUpdate = this.onBeforeUpdate
-      if (onBeforeUpdate) {
-        for (let i = 0; i < onBeforeUpdate.length; i++) {
-          onBeforeUpdate[i]()
+      const bu = this.bu
+      if (bu) {
+        for (let i = 0; i < bu.length; i++) {
+          bu[i]()
         }
       }
     }
@@ -542,9 +544,9 @@ export class DynamicFragment extends RenderContextFragment {
       if (removePrevious) removePrevious()
     }
 
-    const onUpdated = this.onUpdated
-    if (notifyUpdated && onUpdated) {
-      onUpdated.forEach(hook => hook(this.nodes))
+    const u = this.u
+    if (notifyUpdated && u) {
+      u.forEach(hook => hook(this.nodes))
     }
   }
 }

@@ -212,7 +212,7 @@ describe('createIf', () => {
     expect(html()).toBe('<p>bar</p>')
   })
 
-  test('should trigger fragment onUpdated when branch becomes empty', async () => {
+  test('should trigger fragment updated hook when branch becomes empty', async () => {
     const show = ref(true)
     const onUpdated = vi.fn()
     let frag!: DynamicFragment
@@ -222,7 +222,7 @@ describe('createIf', () => {
         () => show.value,
         () => template('<div>foo</div>')(),
       ) as DynamicFragment
-      frag.onUpdated = [onUpdated]
+      frag.u = [onUpdated]
       return frag
     }).render()
 

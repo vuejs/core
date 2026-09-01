@@ -549,8 +549,8 @@ function trackTransitionGroupUpdate(
 
   if (isFragment(owner)) {
     transitionGroupUpdateOwnerMap.set(owner, updateHooks)
-    ;(owner.onBeforeUpdate ||= []).push(() => updateHooks.beforeUpdate())
-    ;(owner.onUpdated ||= []).push(() => updateHooks.updated())
+    ;(owner.bu ||= []).push(() => updateHooks.beforeUpdate())
+    ;(owner.u ||= []).push(() => updateHooks.updated())
     return
   }
 

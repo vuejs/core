@@ -91,7 +91,7 @@ function registerFragmentRefUpdate(
 ): DynamicFragment | undefined {
   const frag = getTemplateRefUpdateFragment(el)
   if (frag && registeredFrag !== frag) {
-    ;(frag.onUpdated ||= []).push(() => {
+    ;(frag.u ||= []).push(() => {
       // KeepAlive clears refs on deactivation but keeps this fragment update
       // callback alive. Skip re-applying refs for async/offscreen updates
       // until the component is activated again.
@@ -226,7 +226,7 @@ function setRef(
   oldRefKey?: string,
 ): void {
   // Single no-op guard for every path into ref application, including the
-  // fragment `onUpdated` callbacks that can fire after teardown.
+  // fragment updated callbacks that can fire after teardown.
   if (!instance || instance.isUnmounted) return
 
   const setupState: any = __DEV__ ? instance.setupState || {} : null
