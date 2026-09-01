@@ -1805,6 +1805,11 @@ function renderVDOMSlot(
     force => markSlotResolutionDirty(slotResolutionState, force),
     [cleanupInvalidContent],
   )
+  // Mirrors the vapor fast path: an outlet joining no fallback arbitration
+  // renders its content outside the boundary chain, so nested outlets
+  // classify identically under both hosts and validity flips inside the
+  // content never notify the dead-end own boundary.
+  const contentBoundary = isDirectSlotRoot || fallback ? boundary : null
   slotResolutionState = createSlotResolutionState(boundary, {
     getContent: () => content.nodes,
     getParentNode: () => currentParentNode,
@@ -2123,7 +2128,7 @@ function renderVDOMSlot(
   function renderContent(): void {
     notifyBeforeUpdate()
     runWithFragmentCtxOnly(frag, () =>
-      withSlotBoundary(boundary, () => {
+      withSlotBoundary(contentBoundary, () => {
         const { content: slotContent, valid: slotContentValid } =
           resolveSlotContent()
 
