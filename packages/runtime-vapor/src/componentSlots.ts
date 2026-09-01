@@ -326,6 +326,7 @@ export function createSlot(
       rawSlots,
       name,
       fallback,
+      flags,
       isCustomElementSlot,
     )
     const slotFragment = needsSlotFragment
@@ -346,6 +347,9 @@ export function createSlot(
         undefined,
         _insertionAnchor,
       )
+      // A fast-path outlet joins no fallback arbitration, so its content must
+      // not render under (or attach dirty-tracking to) an enclosing boundary.
+      dynamicFragment.slotBoundary = null
       fragment = dynamicFragment
     }
     // Replace the construction-time capture with the outlet cell so late
@@ -470,13 +474,18 @@ function shouldUseSlotFragment(
   rawSlots: RawSlots,
   name: string | (() => string),
   fallback: VaporSlot | undefined,
+  flags: number,
   isCustomElementSlot: boolean,
 ): boolean {
   // Native CE slots render a real <slot>, so SlotFragment owns fallback.
   if (isCustomElementSlot) return true
 
-  // Nested fallback resolution must preserve the boundary chain.
-  if (currentSlotBoundary) return true
+  // Under an enclosing boundary, only outlets that join fallback arbitration
+  // must preserve the chain: compiler-marked forwarded roots, or a local
+  // fallback feeding nested resolution.
+  if (currentSlotBoundary) {
+    return !!(fallback || flags & VaporSlotFlags.FORWARDED)
+  }
 
   // Without fallback, there is no fallback branch to track.
   if (!fallback) return false

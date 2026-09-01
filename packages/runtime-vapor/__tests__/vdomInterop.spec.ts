@@ -68,7 +68,6 @@ import {
 } from '../src'
 
 const define = makeInteropRender()
-const inheritedFallbackSlotRootFlags = VaporSlotFlags.FORWARDED
 
 describe('vdomInterop', () => {
   describe('key', () => {
@@ -1528,12 +1527,7 @@ describe('vdomInterop', () => {
             null,
             {
               bar: () =>
-                createSlot(
-                  'bar',
-                  null,
-                  undefined,
-                  inheritedFallbackSlotRootFlags,
-                ),
+                createSlot('bar', null, undefined, VaporSlotFlags.FORWARDED),
             },
             true,
           )
@@ -4421,7 +4415,7 @@ describe('vdomInterop', () => {
                           'default',
                           null,
                           undefined,
-                          inheritedFallbackSlotRootFlags,
+                          VaporSlotFlags.FORWARDED,
                         ),
                     },
                     true,

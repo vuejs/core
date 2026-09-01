@@ -1,5 +1,9 @@
 import { EffectScope, type ShallowRef, setActiveSub } from '@vue/reactivity'
-import { VaporSlotFlags } from '@vue/shared'
+import {
+  VaporSlotFlags,
+  slotInheritsFallback,
+  slotNotifiesBoundary,
+} from '@vue/shared'
 import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
@@ -170,7 +174,9 @@ export class RenderContextFragment<
   readonly renderInstance: GenericComponentInstance | null = currentInstance
   readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
   readonly keepAliveCtx?: VaporKeepAliveContext | null
-  readonly slotBoundary: SlotBoundaryContext | null = currentSlotBoundary
+  // Captured by reference: fast-path slot outlets null this right after
+  // construction — they join no fallback arbitration (see createSlot).
+  slotBoundary: SlotBoundaryContext | null = currentSlotBoundary
   // The Suspense boundary this fragment renders *into*. Unlike
   // `renderInstance.suspense` (the boundary its owner was mounted in), slot
   // content can be declared outside a boundary and rendered inside one, so this
@@ -593,16 +599,10 @@ export class SlotFragment
       undefined,
       adoptAnchor,
     )
-    const forwarded = !!(
-      flags &
-      (VaporSlotFlags.FORWARDED | VaporSlotFlags.SHARED_FALLBACK)
-    )
-    const sharedFallback = (this.sharedFallback = !!(
-      flags & VaporSlotFlags.SHARED_FALLBACK
-    ))
-    this.inheritFallback = forwarded && !sharedFallback
-    this.notifyParentBoundary = forwarded && !(flags & VaporSlotFlags.ONCE)
-    if (sharedFallback) {
+    this.sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
+    this.inheritFallback = slotInheritsFallback(flags)
+    this.notifyParentBoundary = slotNotifiesBoundary(flags)
+    if (this.sharedFallback) {
       if (this.slotBoundary) {
         registerContentInvalid(
           this.slotBoundary,

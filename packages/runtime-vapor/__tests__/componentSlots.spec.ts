@@ -28,6 +28,7 @@ import {
   h,
   nextTick,
   onScopeDispose,
+  reactive,
   ref,
   renderSlot,
   shallowRef,
@@ -86,9 +87,8 @@ const slotRootIfShape = VaporBlockShape.SINGLE_ROOT | VaporIfFlags.SLOT_ROOT
 const keyedSlotRootIfShape = keyedIfShape | VaporIfFlags.SLOT_ROOT
 const slotRootForFlags = VaporVForFlags.SLOT_ROOT
 const nonStableSlot = { _: VaporSlotStability.NON_STABLE } as const
-const inheritedFallbackSlotRootFlags = VaporSlotFlags.FORWARDED
 const createInheritedSlotRoot = (name: string, fallback?: BlockFn) =>
-  createSlot(name, null, fallback, inheritedFallbackSlotRootFlags)
+  createSlot(name, null, fallback, VaporSlotFlags.FORWARDED)
 
 function renderWithSlots(slots: any): any {
   let instance: any
@@ -3867,6 +3867,147 @@ describe('component: slots', () => {
           expect(slotBlock).not.toBeInstanceOf(SlotFragment)
           expect(isSlotFragment(slotBlock)).toBe(true)
           expect(observedBoundary).toBe(null)
+        })
+
+        test('unmarked outlet without fallback takes the fast path under an enclosing boundary', async () => {
+          let slotBlock!: Block
+          let observedBoundary: SlotBoundaryContext | null | undefined
+          const markDirty = vi.fn()
+          const boundary: SlotBoundaryContext = {
+            parent: null,
+            getFallback: () => undefined,
+            run: fn => fn(),
+            markDirty,
+          }
+          const show = ref(true)
+          const Comp = defineVaporComponent(() => {
+            return (slotBlock = withSlotBoundary(boundary, () =>
+              createSlot('default'),
+            ))
+          })
+
+          const { host } = define(() =>
+            createComponent(Comp, null, {
+              default: () => {
+                observedBoundary = currentSlotBoundary
+                return createIf(
+                  () => show.value,
+                  () => template('<span>content</span>')(),
+                  undefined,
+                  slotRootIfShape,
+                )
+              },
+            }),
+          ).render()
+
+          expect(slotBlock).toBeInstanceOf(DynamicFragment)
+          expect(slotBlock).not.toBeInstanceOf(SlotFragment)
+          // The fast-path fragment captures a null boundary, so content
+          // renders outside the enclosing resolution and its marked roots
+          // attach no dirty-tracking to it.
+          expect(observedBoundary).toBe(null)
+          expect(host.innerHTML).toBe(
+            '<span>content</span><!--if--><!--slot-->',
+          )
+
+          show.value = false
+          await nextTick()
+          expect(host.innerHTML).toBe('<!--if--><!--slot-->')
+
+          show.value = true
+          await nextTick()
+          expect(host.innerHTML).toBe(
+            '<span>content</span><!--if--><!--slot-->',
+          )
+          expect(markDirty).not.toHaveBeenCalled()
+        })
+
+        test('compiled component outlet inside slot content takes the fast path', async () => {
+          const data: any = reactive({ branch: true, show: true })
+          let cardBlock: Block | undefined
+          const Card = compile(`<template><slot /></template>`, data)
+          const CardSpy = extend({}, Card, {
+            setup(props: any, ctx: any) {
+              return (cardBlock = Card.setup(props, ctx))
+            },
+          })
+          const Receiver = compile(
+            `<template><slot><b>receiver fallback</b></slot></template>`,
+            data,
+          )
+          const App = compile(
+            `<template>
+              <components.Receiver>
+                <components.Card v-if="data.branch">
+                  <span v-if="data.show">content</span>
+                </components.Card>
+              </components.Receiver>
+            </template>`,
+            data,
+            { Receiver, Card: CardSpy },
+          )
+
+          const { host } = define(() => createComponent(App)).render()
+
+          // Card's own outlet is unmarked and has no fallback, so even under
+          // the receiver's boundary it takes the fast path.
+          expect(cardBlock).toBeInstanceOf(DynamicFragment)
+          expect(cardBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.textContent).toBe('content')
+
+          // The marked v-if at Card's consumer content root updates in place
+          // without disturbing the receiver's arbitration.
+          data.show = false
+          await nextTick()
+          expect(host.textContent).toBe('')
+
+          data.branch = false
+          await nextTick()
+          expect(host.textContent).toBe('receiver fallback')
+
+          data.branch = true
+          data.show = true
+          await nextTick()
+          expect(host.textContent).toBe('content')
+        })
+
+        // Coverage guard for the conservative branches of
+        // shouldUseSlotFragment; always green today, pins the split matrix.
+        // The FORWARDED-on-own-template-outlet pairing is synthetic (the
+        // compiler only marks forwarded roots inside slot blocks); the split
+        // decision reads flags and fallback alone, which is what this pins.
+        test('outlets participating in fallback arbitration keep the slot fragment under a boundary', () => {
+          let forwardedBlock!: Block
+          let fallbackBlock!: Block
+          const boundary: SlotBoundaryContext = {
+            parent: null,
+            getFallback: () => undefined,
+            run: fn => fn(),
+            markDirty: vi.fn(),
+          }
+          const Comp = defineVaporComponent(() =>
+            withSlotBoundary(boundary, () => [
+              (forwardedBlock = createSlot(
+                'a',
+                null,
+                undefined,
+                VaporSlotFlags.FORWARDED,
+              )),
+              (fallbackBlock = createSlot('b', null, () =>
+                template('fallback')(),
+              )),
+            ]),
+          )
+
+          define(() =>
+            createComponent(Comp, null, {
+              a: () => template('a')(),
+              b: () => template('b')(),
+            }),
+          ).render()
+
+          expect(forwardedBlock).toBeInstanceOf(SlotFragment)
+          expect(fallbackBlock).toBeInstanceOf(SlotFragment)
         })
 
         test('slot with fallback and explicit empty slots', () => {
