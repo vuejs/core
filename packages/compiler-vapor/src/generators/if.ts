@@ -82,7 +82,9 @@ function genIfFlags(
     return false
   }
 
-  return genFlags(flags, genIfFlagNames(once, slotRoot, index, blockShape))
+  return __DEV__
+    ? genFlags(flags, genIfFlagNames(once, slotRoot, index, blockShape))
+    : String(flags)
 }
 
 function genIfFlagNames(
