@@ -143,11 +143,10 @@ import {
 import {
   type DynamicFragment,
   RenderContextFragment,
-  type SlotFragment,
+  SlotFragment,
   type VaporFragment,
   createSlotBoundary,
   isFragment,
-  isSlotFragment,
   resolveFragmentAnchor,
   runWithFragmentCtxOnly,
 } from './fragment'
@@ -2855,7 +2854,9 @@ function renderVaporSlot(
       const finalizeResolvedContent = (
         resolvedContent: Block | undefined,
       ): Block | undefined => {
-        if (hasInteropFallback && isSlotFragment(resolvedContent)) {
+        // Instance check, not the __vf bit test: fast-path outlet fragments
+        // carry the SLOT bit but own no fallback arbitration to delegate to.
+        if (hasInteropFallback && resolvedContent instanceof SlotFragment) {
           pending.finish(true)
           return resolvedContent
         }
@@ -2908,7 +2909,7 @@ function renderVaporSlot(
           onScopeDispose(() => dispose(), true)
         })
       }
-      if (hasInteropFallback && isSlotFragment(resolvedContent)) {
+      if (hasInteropFallback && resolvedContent instanceof SlotFragment) {
         ownedSlotFragment = resolvedContent
         trackInteropFallbackChanges(vnode.vs!.scope, slotState, () =>
           markInteropSlotResolutionDirty(),
