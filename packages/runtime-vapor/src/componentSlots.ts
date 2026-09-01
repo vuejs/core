@@ -481,12 +481,11 @@ function shouldUseSlotFragment(
   // Native CE slots render a real <slot>, so SlotFragment owns fallback.
   if (isCustomElementSlot) return true
 
-  // Under an enclosing boundary, only outlets that join fallback arbitration
-  // must preserve the chain: compiler-marked forwarded roots, or a local
-  // fallback feeding nested resolution.
-  if (currentSlotBoundary) {
-    return !!fallback || isForwardedSlot(flags)
-  }
+  // Compiler-marked forwarded roots must preserve the enclosing boundary
+  // chain. Everything below is boundary-independent: a non-forwarded outlet
+  // never chains outward, so local fallback reachability follows the same
+  // static analysis with or without an enclosing boundary.
+  if (currentSlotBoundary && isForwardedSlot(flags)) return true
 
   // Without fallback, there is no fallback branch to track.
   if (!fallback) return false
