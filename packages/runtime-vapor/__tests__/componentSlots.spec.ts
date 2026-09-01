@@ -4002,15 +4002,61 @@ describe('component: slots', () => {
           expect(host.textContent).toBe('content')
         })
 
-        // Coverage guard for the conservative branches of
-        // shouldUseSlotFragment; always green today, pins the split matrix.
+        test('compiled outlet with fallback and stable content takes the fast path under a boundary', async () => {
+          const data: any = reactive({ branch: true })
+          let cardBlock: Block | undefined
+          const Card = compile(
+            `<template><slot><b>card fallback</b></slot></template>`,
+            data,
+          )
+          const CardSpy = extend({}, Card, {
+            setup(props: any, ctx: any) {
+              return (cardBlock = Card.setup(props, ctx))
+            },
+          })
+          const Receiver = compile(
+            `<template><slot><i>receiver fallback</i></slot></template>`,
+            data,
+          )
+          const App = compile(
+            `<template>
+              <components.Receiver>
+                <components.Card v-if="data.branch">
+                  <span>content</span>
+                </components.Card>
+              </components.Receiver>
+            </template>`,
+            data,
+            { Receiver, Card: CardSpy },
+          )
+
+          const { host } = define(() => createComponent(App)).render()
+
+          // Provided stable content keeps Card's local fallback unreachable,
+          // so the enclosing boundary does not force the slot fragment.
+          expect(cardBlock).not.toBeInstanceOf(SlotFragment)
+          expect(host.textContent).toBe('content')
+
+          data.branch = false
+          await nextTick()
+          expect(host.textContent).toBe('receiver fallback')
+
+          data.branch = true
+          await nextTick()
+          expect(host.textContent).toBe('content')
+        })
+
+        // Coverage guard for the split matrix of shouldUseSlotFragment.
         // The FORWARDED-on-own-template-outlet pairing is synthetic (the
         // compiler only marks forwarded roots inside slot blocks); the split
         // decision reads flags and fallback alone, which is what this pins.
         test('outlets participating in fallback arbitration keep the slot fragment under a boundary', () => {
           let forwardedBlock!: Block
           let fallbackBlock!: Block
+          let nonStableFallbackBlock!: Block
           let loneSharedBlock!: Block
+          const nonStableSlotFn = (() => template('d')()) as BlockFn
+          ;(nonStableSlotFn as any)._ = VaporSlotStability.NON_STABLE
           const boundary: SlotBoundaryContext = {
             parent: null,
             getFallback: () => undefined,
@@ -4028,6 +4074,11 @@ describe('component: slots', () => {
               (fallbackBlock = createSlot('b', null, () =>
                 template('fallback')(),
               )),
+              (nonStableFallbackBlock = createSlot('d', null, () =>
+                template('fallback')(),
+              )),
+              // Hand-written flags may carry the lone SHARED_FALLBACK bit;
+              // isForwardedSlot normalizes it as forwarded.
               (loneSharedBlock = createSlot(
                 'c',
                 null,
@@ -4042,11 +4093,16 @@ describe('component: slots', () => {
               a: () => template('a')(),
               b: () => template('b')(),
               c: () => template('c')(),
+              d: nonStableSlotFn,
             }),
           ).render()
 
           expect(forwardedBlock).toBeInstanceOf(SlotFragment)
-          expect(fallbackBlock).toBeInstanceOf(SlotFragment)
+          // Local fallback reachability is boundary-independent: a provided
+          // stable slot keeps the fallback unreachable, so the fast path
+          // applies; a non-stable slot keeps SlotFragment arbitration.
+          expect(fallbackBlock).not.toBeInstanceOf(SlotFragment)
+          expect(nonStableFallbackBlock).toBeInstanceOf(SlotFragment)
           expect(loneSharedBlock).toBeInstanceOf(SlotFragment)
         })
 
