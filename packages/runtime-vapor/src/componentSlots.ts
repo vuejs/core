@@ -288,11 +288,6 @@ export function createSlot(
         rawPropsProxyHandlers,
       )
     : EMPTY_OBJ
-  if (once && fallback) {
-    const originalFallback = fallback
-    fallback = (...args: any[]) => withOnceSlot(() => originalFallback(...args))
-  }
-
   let fragment: VaporFragment
   let isCustomElementSlot = false
   const interopSlotsSource =
@@ -318,6 +313,13 @@ export function createSlot(
       setCurrentSlotScopeIds(prevSlotScopeIds)
     }
   } else {
+    // renderVDOMSlot wraps its fallback from flags itself, so only the
+    // non-interop paths wrap here.
+    if (once && fallback) {
+      const originalFallback = fallback
+      fallback = (...args: any[]) =>
+        withOnceSlot(() => originalFallback(...args))
+    }
     if (isHydrating) hydrationCursor = captureHydrationCursor()
     isCustomElementSlot = !!(
       (instance as GenericComponentInstance).ce ||
@@ -379,12 +381,13 @@ export function createSlot(
         if (once) setSlotProps()
         else renderEffect(setSlotProps)
         if (fallback) {
+          const fallbackFn = fallback
           // The fallback renders outside the fragment's own render seam, so
           // establish the outlet cell explicitly around it.
           const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
           try {
             withSlotBoundary(slotFragment!.slotBoundary, () => {
-              const fallbackBlock = fallback()
+              const fallbackBlock = fallbackFn()
               // Keep the live fallback block on the SlotFragment itself. The
               // native slot outlet is temporary and gets removed by CE slot
               // replacement, but the fragment remains Vapor's long-lived
