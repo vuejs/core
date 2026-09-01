@@ -784,7 +784,10 @@ describe('compiler: transform slot', () => {
     test('v-once unique slot root inherits fallback without update tracking', () => {
       const { code } = compileVapor(`<Comp><slot v-once /></Comp>`)
 
+      // 'ONCE, FORWARDED' alone would also match the shared-mode emission
+      // 'ONCE, FORWARDED, SHARED_FALLBACK', so pin inherit mode explicitly.
       expect(code).toContain('ONCE, FORWARDED')
+      expect(code).not.toContain('SHARED_FALLBACK')
     })
 
     test.each([

@@ -3979,6 +3979,7 @@ describe('component: slots', () => {
         test('outlets participating in fallback arbitration keep the slot fragment under a boundary', () => {
           let forwardedBlock!: Block
           let fallbackBlock!: Block
+          let loneSharedBlock!: Block
           const boundary: SlotBoundaryContext = {
             parent: null,
             getFallback: () => undefined,
@@ -3996,6 +3997,12 @@ describe('component: slots', () => {
               (fallbackBlock = createSlot('b', null, () =>
                 template('fallback')(),
               )),
+              (loneSharedBlock = createSlot(
+                'c',
+                null,
+                undefined,
+                VaporSlotFlags.SHARED_FALLBACK,
+              )),
             ]),
           )
 
@@ -4003,11 +4010,13 @@ describe('component: slots', () => {
             createComponent(Comp, null, {
               a: () => template('a')(),
               b: () => template('b')(),
+              c: () => template('c')(),
             }),
           ).render()
 
           expect(forwardedBlock).toBeInstanceOf(SlotFragment)
           expect(fallbackBlock).toBeInstanceOf(SlotFragment)
+          expect(loneSharedBlock).toBeInstanceOf(SlotFragment)
         })
 
         test('slot with fallback and explicit empty slots', () => {

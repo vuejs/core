@@ -5,6 +5,7 @@ import {
   VaporSlotStability,
   hasOwn,
   isArray,
+  isForwardedSlot,
   isFunction,
 } from '@vue/shared'
 import { type Block, type BlockFn, insert } from './block'
@@ -484,7 +485,7 @@ function shouldUseSlotFragment(
   // must preserve the chain: compiler-marked forwarded roots, or a local
   // fallback feeding nested resolution.
   if (currentSlotBoundary) {
-    return !!(fallback || flags & VaporSlotFlags.FORWARDED)
+    return !!fallback || isForwardedSlot(flags)
   }
 
   // Without fallback, there is no fallback branch to track.
