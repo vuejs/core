@@ -836,6 +836,24 @@ describe('createFor', () => {
     expect(host.innerHTML).toBe('<!--for-->')
   })
 
+  test('de-structured rest does not include inherited properties', () => {
+    const item = Object.create({ inherited: 'prototype' })
+    item.id = 1
+    item.name = 'own'
+    const data = ref({ items: [item] })
+    const { id, ...rest } = item
+    expect(id).toBe(1)
+    expect(rest).toEqual({ name: 'own' })
+    const App = compile(
+      `<template><div v-for="({ id, ...rest }) in data.items">{{ rest.inherited || 'none' }}:{{ rest.name }}</div></template>`,
+      data,
+    )
+
+    const { host } = define(App).render()
+
+    expect(host.textContent).toBe('none:own')
+  })
+
   test('de-structured value (default value)', async () => {
     const list = ref<any[]>([{ name: '1' }, { name: '2' }, { name: '3' }])
     const getDefault = vi.fn(() => '0')

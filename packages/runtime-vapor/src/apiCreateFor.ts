@@ -1103,7 +1103,7 @@ function getItem(
 // runtime helper for rest element destructure
 export function getRestElement(val: any, keys: string[]): any {
   const res: any = {}
-  for (const key in val) {
+  for (const key of Object.keys(val)) {
     if (!keys.includes(key)) res[key] = val[key]
   }
   return res
