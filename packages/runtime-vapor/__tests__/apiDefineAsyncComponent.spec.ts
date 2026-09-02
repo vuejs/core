@@ -1,5 +1,9 @@
-import { nextTick, onActivated, ref } from '@vue/runtime-dom'
-import { type VaporComponent, createComponent } from '../src/component'
+import { nextTick, onActivated, onMounted, ref, useId } from '@vue/runtime-dom'
+import {
+  type VaporComponent,
+  type VaporComponentInstance,
+  createComponent,
+} from '../src/component'
 import { defineVaporAsyncComponent } from '../src/apiDefineAsyncComponent'
 import { makeRender } from './_utils'
 import {
@@ -53,7 +57,7 @@ describe('api: defineAsyncComponent', () => {
     // already resolved component should update on nextTick
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('resolved<!--async component--><!--if-->')
+    expect(html()).toBe('resolved<!--if-->')
   })
 
   test('with loading component', async () => {
@@ -98,7 +102,7 @@ describe('api: defineAsyncComponent', () => {
     // state
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('resolved<!--async component--><!--if-->')
+    expect(html()).toBe('resolved<!--if-->')
   })
 
   test('with loading component + explicit delay (0)', async () => {
@@ -139,7 +143,7 @@ describe('api: defineAsyncComponent', () => {
     // state
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('resolved<!--async component--><!--if-->')
+    expect(html()).toBe('resolved<!--if-->')
   })
 
   test('passes props and slots to loading component', async () => {
@@ -816,7 +820,7 @@ describe('api: defineAsyncComponent', () => {
     // already resolved component should update on nextTick
     toggle.value = true
     await nextTick()
-    expect(root.innerHTML).toBe('resolved<!--async component--><!--if-->')
+    expect(root.innerHTML).toBe('resolved<!--if-->')
     expect(fooRef.value.id).toBe('foo')
   })
 
@@ -1005,6 +1009,75 @@ describe('api: defineAsyncComponent', () => {
 
   test.todo('suspense with error handling', async () => {})
 
+  test('resolved async component is created as its resolved component', async () => {
+    let parent: VaporComponentInstance
+    let appInstance: VaporComponentInstance
+    const Inner = defineVaporComponent({
+      setup(_, instance) {
+        parent = (instance as unknown as VaporComponentInstance)
+          .parent as VaporComponentInstance
+        return template('resolved')()
+      },
+    })
+    const Foo = defineVaporAsyncComponent(() => Promise.resolve(Inner))
+
+    const toggle = ref(true)
+    const { html } = define({
+      setup(_, instance) {
+        appInstance = instance as unknown as VaporComponentInstance
+        return createIf(
+          () => toggle.value,
+          () => createComponent(Foo),
+        )
+      },
+    }).render()
+    expect(html()).toBe('<!--async component--><!--if-->')
+
+    await timeout()
+    expect(html()).toBe('resolved<!--async component--><!--if-->')
+    expect(parent!.type).toBe(Foo)
+
+    toggle.value = false
+    await nextTick()
+    toggle.value = true
+    await nextTick()
+    // no wrapper instance and no wrapper anchor once resolved
+    expect(html()).toBe('resolved<!--if-->')
+    expect(parent!).toBe(appInstance!)
+  })
+
+  test('useId is stable between pending and resolved mounts', async () => {
+    const ids: string[] = []
+    const Inner = defineVaporComponent({
+      setup() {
+        ids.push(useId())
+        return template('inner')()
+      },
+    })
+    const Sibling = defineVaporComponent({
+      setup() {
+        ids.push(useId())
+        return template('sibling')()
+      },
+    })
+    const Foo = defineVaporAsyncComponent(() => Promise.resolve(Inner))
+    const App = defineVaporComponent({
+      setup() {
+        return [createComponent(Foo), createComponent(Sibling)]
+      },
+    })
+
+    define(App).render({}, document.createElement('div'))
+    await timeout()
+    // the pending mount renders Inner after Sibling, so compare as sets
+    const pendingIds = ids.splice(0).sort()
+    expect(pendingIds).toHaveLength(2)
+
+    define(App).render({}, document.createElement('div'))
+    await timeout()
+    expect(ids.sort()).toEqual(pendingIds)
+  })
+
   test('with KeepAlive', async () => {
     const spy = vi.fn()
     let resolve: (comp: VaporComponent) => void
@@ -1060,6 +1133,61 @@ describe('api: defineAsyncComponent', () => {
     toggle.value = false
     await timeout()
     expect(html()).toBe('Bar<!--async component--><!--if-->')
+  })
+
+  test('with KeepAlive: reuses a resolved async component cached under its resolved component', async () => {
+    const mounted = vi.fn()
+    const activated = vi.fn()
+    const Inner = defineVaporComponent({
+      setup(_, { expose }) {
+        const count = ref(0)
+        expose({ inc: () => count.value++ })
+        onMounted(mounted)
+        onActivated(activated)
+        const n = template(' ')() as Text
+        renderEffect(() => setElementText(n, String(count.value)))
+        return n
+      },
+    })
+    const Foo = defineVaporAsyncComponent(() => Promise.resolve(Inner))
+    // resolve before the KeepAlive child is ever created
+    await (Foo as any).__asyncLoader()
+
+    const toggle = ref(true)
+    const fooRef = ref<any>(null)
+    const { html } = define({
+      setup() {
+        const setRef = createTemplateRefSetter()
+        return createComponent(VaporKeepAlive, null, {
+          default: () =>
+            createIf(
+              () => toggle.value,
+              () => {
+                const n0 = createComponent(Foo)
+                setRef(n0, fooRef)
+                return n0
+              },
+            ),
+        })
+      },
+    }).render()
+    expect(html()).toBe('0<!--if-->')
+    expect(mounted).toHaveBeenCalledTimes(1)
+    expect(activated).toHaveBeenCalledTimes(1)
+
+    fooRef.value.inc()
+    await nextTick()
+    expect(html()).toBe('1<!--if-->')
+
+    toggle.value = false
+    await nextTick()
+    expect(html()).toBe('<!--if-->')
+
+    toggle.value = true
+    await nextTick()
+    expect(html()).toBe('1<!--if-->')
+    expect(mounted).toHaveBeenCalledTimes(1)
+    expect(activated).toHaveBeenCalledTimes(2)
   })
 
   test('with KeepAlive + include', async () => {

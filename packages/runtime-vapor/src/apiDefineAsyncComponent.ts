@@ -16,6 +16,7 @@ import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
+  enableAsyncComponent,
 } from './component'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
@@ -41,6 +42,7 @@ const enum AsyncBranch {
 export function defineVaporAsyncComponent<T extends VaporComponent>(
   source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
 ): T {
+  enableAsyncComponent()
   const {
     load,
     getResolvedComp,

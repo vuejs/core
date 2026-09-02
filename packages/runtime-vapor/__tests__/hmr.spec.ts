@@ -1416,9 +1416,7 @@ describe('hot module replacement', () => {
 
     await timeout()
 
-    expect(root.innerHTML).toBe(
-      `<div>1</div><!--async component--><div>1</div><!--async component-->`,
-    )
+    expect(root.innerHTML).toBe(`<div>1</div><div>1</div>`)
   })
 
   test.todo('reload async child wrapped in Suspense + KeepAlive', async () => {

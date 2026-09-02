@@ -264,6 +264,12 @@ export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
 }
 
+export let isAsyncComponentEnabled = false
+
+export function enableAsyncComponent(): void {
+  isAsyncComponentEnabled = true
+}
+
 export function createComponent(
   component: VaporComponent,
   rawProps?: LooseRawProps | null,
@@ -360,6 +366,23 @@ export function createComponent(
       if (cached) return cached
     }
 
+    // A resolved async component is created as its resolved component: with
+    // no diffing there is nothing for a wrapper to be the stable identity of.
+    // Hydration keeps the wrapper so the lazy path owns the adopted DOM, and
+    // so does an inner mounted through vdom interop, whose useId boundary is
+    // the wrapper.
+    let asyncBoundary = false
+    if (isAsyncComponentEnabled && component.__asyncLoader && !isHydrating) {
+      const resolved = component.__asyncResolved
+      if (
+        resolved &&
+        !(isInteropEnabled && appContext.vdom && !resolved.__vapor)
+      ) {
+        component = resolved
+        asyncBoundary = true
+      }
+    }
+
     // vdom interop enabled and component is not an explicit vapor component
     if (isInteropEnabled && appContext.vdom && !component.__vapor) {
       const frag = appContext.vdom.mount(
@@ -452,6 +475,7 @@ export function createComponent(
     if (inputScope) {
       instance.inputScope = inputScope
     }
+    if (asyncBoundary) markAsyncBoundary(instance)
 
     // Async wrappers are skipped here: their DynamicFragment resolves the outer
     // KeepAlive context from the wrapper's parent chain during setup.
