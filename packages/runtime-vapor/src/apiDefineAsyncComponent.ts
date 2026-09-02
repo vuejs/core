@@ -70,6 +70,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // early return allows tree-shaking of hydration logic when not used
       if (!isHydrating) return
 
+      // Nothing to defer: hydrate in place like a plain component.
+      if (!hydrateStrategy && getResolvedComp()) return hydrate()
+
       // Create placeholder block that matches the adopted DOM.
       // The async component may get unmounted before its inner component is loaded,
       // so we need to give it a placeholder block.
