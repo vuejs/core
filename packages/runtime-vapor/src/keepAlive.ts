@@ -29,6 +29,8 @@ export interface VaporKeepAliveContext {
   getStorageContainer(): ParentNode
 }
 
+import { isAsyncComponentEnabled } from './asyncComponentState'
+
 export let isKeepAliveEnabled = false
 export let currentCacheKey: any | undefined
 
@@ -47,7 +49,12 @@ export function getKeepAliveContext(
   let owner = instance
   // Async wrappers are transparent for KeepAlive context lookup: their setup
   // and resolved renders still belong to the outer KeepAlive owner.
-  while (owner && owner.vapor && isAsyncWrapper(owner)) {
+  while (
+    isAsyncComponentEnabled &&
+    owner &&
+    owner.vapor &&
+    isAsyncWrapper(owner)
+  ) {
     owner = owner.parent
   }
 

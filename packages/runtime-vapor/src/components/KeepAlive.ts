@@ -27,6 +27,7 @@ import {
   type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
+import { isAsyncComponentEnabled } from '../asyncComponentState'
 import { isolatePropSources, resolveFunctionSource } from '../componentProps'
 import type { DynamicSlotFn, RawSlots } from '../componentSlots'
 import {
@@ -537,7 +538,7 @@ const unsetShapeFlag = (cached: VaporComponentInstance | VaporFragment) => {
     resetShapeFlag(cached)
     // for async components, also reset the inner resolved component's
     // shapeFlag.
-    if (isAsyncWrapper(cached)) {
+    if (isAsyncComponentEnabled && isAsyncWrapper(cached)) {
       const [inner] = getInnerBlock(cached.block)
       if (inner && isVaporComponent(inner)) {
         resetShapeFlag(inner)

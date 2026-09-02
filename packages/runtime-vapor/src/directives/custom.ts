@@ -16,6 +16,7 @@ import {
   getRootElement,
   isVaporComponent,
 } from '../component'
+import { isAsyncComponentEnabled } from '../asyncComponentState'
 import { type VaporFragment, isFragment, isInteropFragment } from '../fragment'
 import { isInteropEnabled } from '../vdomInteropState'
 
@@ -128,6 +129,7 @@ export function withVaporDirectives(
 
       // Async wrappers keep an empty fragment until a renderable branch is available
       return (
+        isAsyncComponentEnabled &&
         isAsyncWrapper(block) &&
         isFragment(innerBlock) &&
         innerBlock.nodes === EMPTY_BLOCK

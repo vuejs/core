@@ -124,6 +124,7 @@ import {
   getKeepAliveContext,
   isKeepAliveEnabled,
 } from './keepAlive'
+import { isAsyncComponentEnabled } from './asyncComponentState'
 import {
   insertionAnchor,
   insertionParent,
@@ -262,12 +263,6 @@ interface SharedInternalOptions {
 // wider types to make `createComponent` ergonomic in tests and internal call sites.
 export type LooseRawProps = Record<string, unknown> & {
   $?: DynamicPropsSource[]
-}
-
-export let isAsyncComponentEnabled = false
-
-export function enableAsyncComponent(): void {
-  isAsyncComponentEnabled = true
 }
 
 // Not an explicit vapor component: mounted through vdom interop.
@@ -483,7 +478,10 @@ export function createComponent(
 
     // Async wrappers are skipped here: their DynamicFragment resolves the outer
     // KeepAlive context from the wrapper's parent chain during setup.
-    if (isKeepAliveEnabled && !isAsyncWrapper(instance)) {
+    if (
+      isKeepAliveEnabled &&
+      !(isAsyncComponentEnabled && isAsyncWrapper(instance))
+    ) {
       keepAliveCtx ||= getKeepAliveContext(currentInstance)
       if (keepAliveCtx) keepAliveCtx.processShapeFlag(instance)
     }
@@ -514,7 +512,12 @@ export function createComponent(
       }
 
       // hydrating async component
-      if (isHydrating && isAsyncWrapper(instance) && component.__asyncHydrate) {
+      if (
+        isHydrating &&
+        isAsyncComponentEnabled &&
+        isAsyncWrapper(instance) &&
+        component.__asyncHydrate
+      ) {
         const setup = () => setupComponent(instance, component)
         component.__asyncHydrate(
           currentHydrationNode as Element,
@@ -643,7 +646,10 @@ export function setupComponent(
 
   const isAsyncSetup = isPromise(setupResult)
 
-  if ((isAsyncSetup || instance.sp) && !isAsyncWrapper(instance)) {
+  if (
+    (isAsyncSetup || instance.sp) &&
+    !(isAsyncComponentEnabled && isAsyncWrapper(instance))
+  ) {
     // async setup / serverPrefetch, mark as async boundary for useId()
     markAsyncBoundary(instance)
   }

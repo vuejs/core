@@ -5,6 +5,7 @@ import {
   isVaporComponent,
 } from './component'
 import { getAsyncWrapperInner } from './apiDefineAsyncComponent'
+import { isAsyncComponentEnabled } from './asyncComponentState'
 import {
   ErrorCodes,
   type SchedulerJob,
@@ -73,7 +74,7 @@ interface TemplateRefState {
 
 function getTemplateRefUpdateFragment(el: RefEl): DynamicFragment | undefined {
   if (isDynamicFragment(el)) return el
-  if (isVaporComponent(el) && isAsyncWrapper(el)) {
+  if (isAsyncComponentEnabled && isVaporComponent(el) && isAsyncWrapper(el)) {
     return el.block as DynamicFragment
   }
 }
@@ -393,7 +394,7 @@ function setRef(
 
 const getRefValue = (el: RefEl) => {
   if (isVaporComponent(el)) {
-    if (isAsyncWrapper(el)) {
+    if (isAsyncComponentEnabled && isAsyncWrapper(el)) {
       const inner = getAsyncWrapperInner(el)
       // unsettled: return null so the ref gets cleared
       if (inner === undefined) return null
