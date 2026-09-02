@@ -1728,6 +1728,34 @@ describe('defineVaporCustomElement', () => {
           `</div>`,
       )
     })
+
+    test('with slots and shadowRoot: false', async () => {
+      const E = defineVaporCustomElement(
+        defineVaporAsyncComponent(() =>
+          Promise.resolve(
+            defineVaporComponent({
+              setup() {
+                return createSlot('default')
+              },
+            }),
+          ),
+        ),
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-async-light-dom-slots', E)
+      container.innerHTML =
+        `<my-el-async-light-dom-slots>` +
+        `<span>content</span>` +
+        `</my-el-async-light-dom-slots>`
+
+      await new Promise(r => setTimeout(r))
+
+      // the resolved def replaces `_def`, so the shadow root decision must
+      // come from the root actually created for the host
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot).toBe(null)
+      expect(e.innerHTML).toBe(`<span>content</span><!--slot-->`)
+    })
   })
 
   describe('shadowRoot: false', () => {
@@ -1988,13 +2016,99 @@ describe('defineVaporCustomElement', () => {
       expect(e.innerHTML).toBe(
         `<my-child data-v-app=""><span>default</span><!--slot--></my-child><!--slot-->`,
       )
+      // light DOM content renders in place as part of the parent's mount, so
+      // the nested element connects and mounts before the parent's own
+      // mounted hook, like a regular child component
       expect(calls).toEqual([
         'parent rendering',
-        'parent mounted',
         'child rendering',
         'child mounted',
+        'parent mounted',
       ])
       app.unmount()
+    })
+
+    test('dynamic slot name re-projects light DOM content', async () => {
+      const name = ref('a')
+      const E = defineVaporCustomElement(
+        { setup: () => createSlot(() => name.value) },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-shadowroot-false-dynamic-name', E)
+      container.innerHTML =
+        `<my-el-shadowroot-false-dynamic-name>` +
+        `<div slot="a">A</div><div slot="b">B</div>` +
+        `</my-el-shadowroot-false-dynamic-name>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.innerHTML).toBe(`<div slot="a">A</div><!--slot-->`)
+
+      name.value = 'b'
+      await nextTick()
+      expect(e.innerHTML).toBe(`<div slot="b">B</div><!--slot-->`)
+
+      name.value = 'a'
+      await nextTick()
+      expect(e.innerHTML).toBe(`<div slot="a">A</div><!--slot-->`)
+    })
+
+    test('forwarded slot revealed by a child update renders light DOM content', async () => {
+      const show = ref(false)
+      const Child = defineVaporComponent({
+        setup() {
+          return createIf(
+            () => show.value,
+            () => createSlot('default'),
+          )
+        },
+      })
+      const E = defineVaporCustomElement(
+        {
+          setup() {
+            return createComponent(Child, null, {
+              default: () => createSlot('default'),
+            })
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-shadowroot-false-forwarded', E)
+      container.innerHTML =
+        `<my-el-shadowroot-false-forwarded>` +
+        `<b>hi</b>` +
+        `</my-el-shadowroot-false-forwarded>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.innerHTML).toBe(`<!--if-->`)
+
+      show.value = true
+      await nextTick()
+      expect(e.innerHTML).toBe(`<b>hi</b><!--slot--><!--slot--><!--if-->`)
+
+      show.value = false
+      await nextTick()
+      expect(e.innerHTML).toBe(`<!--if-->`)
+
+      show.value = true
+      await nextTick()
+      expect(e.innerHTML).toBe(`<b>hi</b><!--slot--><!--slot--><!--if-->`)
+    })
+
+    test('exposes light DOM slots to setup', () => {
+      let keys: string[] = []
+      const E = defineVaporCustomElement(
+        {
+          setup(_: any, { slots }: any) {
+            keys = Object.keys(slots)
+            return createSlot('default')
+          },
+        },
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-shadowroot-false-slot-keys', E)
+      container.innerHTML =
+        `<my-el-shadowroot-false-slot-keys>` +
+        `text<div slot="named"></div>` +
+        `</my-el-shadowroot-false-slot-keys>`
+      expect(keys).toEqual(['default', 'named'])
     })
 
     test('render nested Teleport w/ shadowRoot false', async () => {

@@ -568,10 +568,6 @@ export class SlotFragment
   implements SlotResolutionState
 {
   private disposed = false
-  // Custom elements with `shadowRoot: false` replace their native slot outlet
-  // after mount. Keep the live fallback block on the fragment so CE slot sync
-  // can preserve block ownership after the outlet node is gone.
-  customElementFallback?: Block
   activeFallback: Block | null = null
   fallbackInserted = false
   fallbackScope?: EffectScope

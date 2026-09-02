@@ -18,7 +18,6 @@ import {
   type VaporComponentOptions,
   createComponent,
 } from './component'
-import type { Block } from './block'
 import { withHydration } from './dom/hydration'
 import type {
   DefineVaporComponent,
@@ -26,7 +25,6 @@ import type {
   VaporRenderResult,
 } from './apiDefineComponent'
 import type { StaticSlots } from './componentSlots'
-import { isFragment, isSlotFragment } from './fragment'
 
 export type VaporElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VaporElement & P
@@ -238,12 +236,6 @@ export class VaporElement extends VueElementBase<
     }
 
     this._app!.mount(this._root)
-
-    // Render slots immediately after mount for shadowRoot: false
-    // This ensures correct lifecycle order for nested custom elements
-    if (!this.shadowRoot) {
-      this._renderSlots()
-    }
   }
 
   protected _update(): void {
@@ -264,78 +256,53 @@ export class VaporElement extends VueElementBase<
     this._app = this._instance = null
   }
 
-  /**
-   * Only called when shadowRoot is false
-   */
-  protected _updateSlotNodes(
-    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
-  ): void {
-    this._updateFragmentNodes(
-      (this._instance! as VaporComponentInstance).block,
-      replacements,
-    )
-  }
-
-  /**
-   * Replace slot nodes with their replace content
-   * @internal
-   */
-  private _updateFragmentNodes(
-    block: Block,
-    replacements: Map<Node, { nodes: Node[]; usedFallback: boolean }>,
-  ): void {
-    if (Array.isArray(block)) {
-      block.forEach(item => this._updateFragmentNodes(item, replacements))
-      return
-    }
-
-    if (!isFragment(block)) return
-    const { nodes } = block
-    if (nodes instanceof HTMLSlotElement) {
-      const replacement = replacements.get(nodes)
-      if (!replacement) return
-
-      // Slotted content can be represented as plain nodes, but fallback must
-      // stay as its live block so nested updates and unmounting keep using the
-      // current owner rather than a stale DOM snapshot.
-      if (
-        replacement.usedFallback &&
-        isSlotFragment(block) &&
-        block.customElementFallback
-      ) {
-        this._updateFragmentNodes(block.customElementFallback, replacements)
-        block.nodes = block.customElementFallback
-      } else {
-        block.nodes = replacement.nodes
-      }
-    } else if (Array.isArray(nodes)) {
-      nodes.forEach(item => this._updateFragmentNodes(item, replacements))
-    } else {
-      this._updateFragmentNodes(nodes, replacements)
-    }
-  }
-
   private _createComponent() {
     const ce = (instance: VaporComponentInstance) => {
       this._app!._ceComponent = this._instance = instance
-      // For shadowRoot: false, _renderSlots is called synchronously after mount
-      // in _mount() to ensure correct lifecycle order
-      if (!this.shadowRoot) {
-        // Still set updated hooks for subsequent updates
-        this._instance!.u = [this._renderSlots.bind(this)]
-      }
       this._processInstance()
     }
 
     createComponent(
       this._def,
       this._props,
-      undefined,
+      this.shadowRoot ? undefined : this._createSlots(),
       undefined,
       undefined,
       this._app!._context,
       false,
       ce,
     )
+  }
+
+  /**
+   * Only called when shadowRoot is false. The light DOM children parsed on
+   * connect become static slots, so `<slot/>` outlets render them in place
+   * through the normal slot pipeline instead of a native outlet that has to
+   * be replaced after mount.
+   */
+  private _createSlots(): StaticSlots | undefined {
+    const parsed = this._slots
+    if (!parsed) return
+    const scopeId = this._def.__scopeId
+    let slots: StaticSlots | undefined
+    for (const name in parsed) {
+      const nodes = parsed[name]
+      // for :slotted css
+      if (scopeId) {
+        const id = scopeId + '-s'
+        for (const n of nodes) {
+          if (n.nodeType === 1) {
+            ;(n as Element).setAttribute(id, '')
+            const walker = document.createTreeWalker(n, 1)
+            let child
+            while ((child = walker.nextNode())) {
+              ;(child as Element).setAttribute(id, '')
+            }
+          }
+        }
+      }
+      ;(slots || (slots = {}))[name] = () => nodes
+    }
+    return slots
   }
 }

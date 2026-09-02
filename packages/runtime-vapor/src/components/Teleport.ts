@@ -281,15 +281,6 @@ export class TeleportFragment extends RenderContextFragment {
     ))
     if (target) {
       this.prepareTargetAnchors(target)
-
-      // track CE teleport targets
-      const scopeOwner = this.scopeOwner
-      if (scopeOwner && scopeOwner.isCE) {
-        ;(
-          scopeOwner.ce!._teleportTargets ||
-          (scopeOwner.ce!._teleportTargets = new Set())
-        ).add(target)
-      }
     }
     return target
   }

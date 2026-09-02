@@ -321,10 +321,13 @@ export function createSlot(
         withOnceSlot(() => originalFallback(...args))
     }
     if (isHydrating) hydrationCursor = captureHydrationCursor()
-    isCustomElementSlot = !!(
+    const ce =
       (instance as GenericComponentInstance).ce ||
       (instance.parent && isAsyncWrapper(instance.parent) && instance.parent.ce)
-    )
+    // Only shadow DOM needs a native <slot> for projection. Without a shadow
+    // root the host hands its light DOM children over as static slots, so the
+    // outlet resolves them like any other slot.
+    isCustomElementSlot = !!(ce && ce._hasShadowRoot())
     const needsSlotFragment = shouldUseSlotFragment(
       rawSlots,
       name,
@@ -362,11 +365,11 @@ export function createSlot(
     const isDynamicName = isFunction(name)
 
     const renderSlot = () => {
-      // in custom element mode, render <slot/> as actual slot outlets
-      // because in shadowRoot: false mode the slot element gets
-      // replaced by injected content. The outlet is created once: a dynamic
-      // name is read inside the prop effect rather than re-running this
-      // function, which would pile up orphan outlets and fallbacks.
+      // in custom element mode, render <slot/> as an actual slot outlet so
+      // the shadow root projects light DOM content natively. The outlet is
+      // created once: a dynamic name is read inside the prop effect rather
+      // than re-running this function, which would pile up orphan outlets
+      // and fallbacks.
       if (isCustomElementSlot) {
         const el = createElement('slot')
         if (slotScopeIds) setElementScopeIds(el, slotScopeIds)
@@ -388,13 +391,7 @@ export function createSlot(
           const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
           try {
             withSlotBoundary(slotFragment!.slotBoundary, () => {
-              const fallbackBlock = fallbackFn()
-              // Keep the live fallback block on the SlotFragment itself. The
-              // native slot outlet is temporary and gets removed by CE slot
-              // replacement, but the fragment remains Vapor's long-lived
-              // owner.
-              slotFragment!.customElementFallback = fallbackBlock
-              insert(fallbackBlock, el)
+              insert(fallbackFn(), el)
             })
           } finally {
             setCurrentSlotScopeIds(prevSlotScopeIds)
