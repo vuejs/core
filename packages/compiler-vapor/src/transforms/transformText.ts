@@ -129,8 +129,15 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
 
   const literalValues = values.map(v => getLiteralExpressionValue(v))
   const allLiteral = literalValues.every(v => v != null)
-  if (allLiteral && parentNode.type !== NodeTypes.ROOT) {
-    const text = literalValues.join('')
+  const text = allLiteral ? literalValues.join('') : null
+  const isElementChild =
+    parentNode.type === NodeTypes.ELEMENT &&
+    parentNode.tagType === ElementTypes.ELEMENT
+  if (
+    text !== null &&
+    parentNode.type !== NodeTypes.ROOT &&
+    (isElementChild || text !== '')
+  ) {
     if (
       parentNode.type === NodeTypes.ELEMENT &&
       shouldUseCreateElement(
@@ -145,9 +152,6 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
       )
       return
     }
-    const isElementChild =
-      parentNode.type === NodeTypes.ELEMENT &&
-      parentNode.tagType === ElementTypes.ELEMENT
     context.template += isElementChild ? escapeHtml(text) : text
     return
   }

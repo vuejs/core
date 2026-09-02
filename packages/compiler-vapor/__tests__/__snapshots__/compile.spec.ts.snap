@@ -210,6 +210,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > empty literal component slot as text 1`] = `
+"import { setText as _setText, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n1 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    _setText(n0, '')
+    return n0
+  }, true)
+  return n1
+}"
+`;
+
 exports[`compile > execution order > basic 1`] = `
 "import { txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)

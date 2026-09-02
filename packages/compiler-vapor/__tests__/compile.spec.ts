@@ -46,6 +46,11 @@ describe('compile', () => {
     expect(code).matchSnapshot()
   })
 
+  test('empty literal component slot as text', () => {
+    const code = compile(`<Comp>{{ '' }}</Comp>`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('bindings', () => {
     const code = compile(`<div>count is {{ count }}.</div>`, {
       bindingMetadata: {
