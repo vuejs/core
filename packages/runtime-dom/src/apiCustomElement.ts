@@ -779,7 +779,10 @@ export abstract class VueElementBase<
    * @internal
    */
   _hasShadowRoot(): boolean {
-    return this._def.shadowRoot !== false
+    // `_def` is replaced by the resolved async component, which does not
+    // carry the host's shadowRoot option, so consult the root actually
+    // created for this host.
+    return this._root !== this
   }
 
   /**

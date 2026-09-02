@@ -1728,6 +1728,34 @@ describe('defineVaporCustomElement', () => {
           `</div>`,
       )
     })
+
+    test('with slots and shadowRoot: false', async () => {
+      const E = defineVaporCustomElement(
+        defineVaporAsyncComponent(() =>
+          Promise.resolve(
+            defineVaporComponent({
+              setup() {
+                return createSlot('default')
+              },
+            }),
+          ),
+        ),
+        { shadowRoot: false },
+      )
+      customElements.define('my-el-async-light-dom-slots', E)
+      container.innerHTML =
+        `<my-el-async-light-dom-slots>` +
+        `<span>content</span>` +
+        `</my-el-async-light-dom-slots>`
+
+      await new Promise(r => setTimeout(r))
+
+      // the resolved def replaces `_def`, so the shadow root decision must
+      // come from the root actually created for the host
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot).toBe(null)
+      expect(e.innerHTML).toBe(`<span>content</span><!--slot-->`)
+    })
   })
 
   describe('shadowRoot: false', () => {
