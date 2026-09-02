@@ -2174,4 +2174,20 @@ describe('attribute fallthrough', () => {
     await nextTick()
     expect(host.querySelector('span')!.className).toBe('')
   })
+
+  it('should preserve style merging order from static and v-bind props', () => {
+    const Child = defineVaporComponent({
+      setup() {
+        return template('<div></div>')()
+      },
+    })
+    const Parent = compile(
+      '<template><components.Child style="color:red" v-bind="data.attrs" /></template>',
+      { attrs: { style: { color: 'blue' } } } as any,
+      { Child },
+    )
+
+    const { html } = define(Parent).render()
+    expect(html()).toBe('<div style="color: blue;"></div>')
+  })
 })

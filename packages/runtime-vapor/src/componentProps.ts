@@ -540,7 +540,7 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
       if (source && hasOwn(source, key)) {
         const value = isDynamic ? source[key] : resolveSource(source[key])
         if (merged) {
-          merged.push(value)
+          merged.unshift(value)
         } else {
           return value
         }
@@ -550,7 +550,7 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
   if (hasOwn(rawProps, key)) {
     const value = resolveSource(rawProps[key])
     if (merged) {
-      merged.push(value)
+      merged.unshift(value)
     } else {
       return value
     }
