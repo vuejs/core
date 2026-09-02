@@ -147,18 +147,26 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       }
 
       if (__FEATURE_SUSPENSE__ && suspensible && instance.suspense) {
+        // The loader settles outside any render context: render the branch
+        // under the wrapper's scope so it owns it, and not at all once the
+        // wrapper was unmounted while loading (Suspense discards the result).
+        const renderBranch = (render: () => VaporComponentInstance) => {
+          if (!instance.isUnmounted) {
+            instance.scope.run(() => frag.update(render))
+          }
+        }
         return load()
           .then(() => {
             resolvedComp = getResolvedComp()
             if (resolvedComp) {
-              frag.update(() => createInnerComp(resolvedComp!, instance))
+              renderBranch(() => createInnerComp(resolvedComp!, instance))
             }
             return frag
           })
           .catch(err => {
             onError(err)
             if (errorComponent) {
-              frag.update(() =>
+              renderBranch(() =>
                 createErrorComp(errorComponent, instance, () => err),
               )
             }
