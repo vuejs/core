@@ -122,6 +122,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         getResolvedComp,
         load,
         hydrateStrategy,
+        false,
       )
     },
 
