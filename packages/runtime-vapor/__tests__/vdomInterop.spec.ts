@@ -39,7 +39,7 @@ import {
 import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
 import { compile, makeInteropRender } from './_utils'
-import { isInteropFragment } from '../src/fragment'
+import { type DynamicFragment, isInteropFragment } from '../src/fragment'
 import {
   type VaporComponentInstance,
   type VaporDirective,
@@ -6087,6 +6087,97 @@ describe('vdomInterop', () => {
       await nextTick()
 
       expect(html()).toContain('<div><button>click</button></div>')
+    })
+
+    test('does not render a vapor async wrapper unmounted while loading inside VDOM Suspense', async () => {
+      const innerSetup = vi.fn()
+      let resolve!: (comp: any) => void
+      const VaporAsyncChild = defineVaporAsyncComponent(
+        () =>
+          new Promise(r => {
+            resolve = r
+          }),
+      )
+      const Inner = defineVaporComponent({
+        setup() {
+          innerSetup()
+          return template('<div>inner</div>')()
+        },
+      })
+      const show = ref(true)
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () =>
+                createIf(
+                  () => show.value,
+                  () => createComponent(VaporAsyncChild, null, null, true),
+                ),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+      expect(html()).toContain('loading')
+
+      show.value = false
+      await nextTick()
+      resolve(Inner)
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+
+      expect(innerSetup).not.toHaveBeenCalled()
+      expect(html()).not.toContain('inner')
+    })
+
+    test('owns the resolved branch of a vapor async wrapper inside VDOM Suspense', async () => {
+      let wrapper!: VaporComponentInstance
+      const VaporAsyncChild = defineVaporAsyncComponent(() =>
+        Promise.resolve(
+          defineVaporComponent({
+            setup(_, instance) {
+              wrapper = (instance as any).parent
+              return template('<div>inner</div>')()
+            },
+          }) as any,
+        ),
+      )
+      const VaporParent = defineVaporComponent({
+        setup() {
+          return createComponent(
+            Suspense as any,
+            null,
+            {
+              default: () => createComponent(VaporAsyncChild, null, null, true),
+              fallback: () => template('loading')(),
+            },
+            true,
+          )
+        },
+      })
+
+      const { html } = define({
+        setup() {
+          return () => h(VaporParent as any)
+        },
+      }).render()
+      await new Promise(r => setTimeout(r))
+      await nextTick()
+      expect(html()).toContain('<div>inner</div>')
+
+      // the branch rendered after the loader settled is owned by the wrapper
+      const frag = wrapper.block as DynamicFragment
+      expect((frag.scope as any).subs.sub).toBe(wrapper.scope)
     })
 
     test('renders error component for vapor async wrapper inside VDOM Suspense', async () => {
