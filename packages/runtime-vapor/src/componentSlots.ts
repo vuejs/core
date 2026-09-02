@@ -45,6 +45,7 @@ import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
+import { isAsyncComponentEnabled } from './asyncComponentState'
 import {
   currentSlotScopeIds,
   renderWithSlotScopeIds,
@@ -321,9 +322,14 @@ export function createSlot(
         withOnceSlot(() => originalFallback(...args))
     }
     if (isHydrating) hydrationCursor = captureHydrationCursor()
+    // A definition that resolves to another async wrapper mounts that wrapper
+    // with the custom element callback, so its inner reads `ce` from it.
     const ce =
       (instance as GenericComponentInstance).ce ||
-      (instance.parent && isAsyncWrapper(instance.parent) && instance.parent.ce)
+      (isAsyncComponentEnabled &&
+        instance.parent &&
+        isAsyncWrapper(instance.parent) &&
+        instance.parent.ce)
     // Only shadow DOM needs a native <slot> for projection. Without a shadow
     // root the host hands its light DOM children over as static slots, so the
     // outlet resolves them like any other slot.

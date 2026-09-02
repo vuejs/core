@@ -16,8 +16,8 @@ import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
-  enableAsyncComponent,
 } from './component'
+import { enableAsyncComponent } from './asyncComponentState'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment, isDynamicFragment } from './fragment'
 import {
