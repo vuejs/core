@@ -362,15 +362,16 @@ export function createSlot(
     const isDynamicName = isFunction(name)
 
     const renderSlot = () => {
-      const slotName = isFunction(name) ? name() : name
-
       // in custom element mode, render <slot/> as actual slot outlets
       // because in shadowRoot: false mode the slot element gets
-      // replaced by injected content
+      // replaced by injected content. The outlet is created once: a dynamic
+      // name is read inside the prop effect rather than re-running this
+      // function, which would pile up orphan outlets and fallbacks.
       if (isCustomElementSlot) {
         const el = createElement('slot')
         if (slotScopeIds) setElementScopeIds(el, slotScopeIds)
         const setSlotProps = () => {
+          const slotName = isFunction(name) ? name() : name
           setDynamicProps(el, [
             slotProps,
             slotName !== 'default' ? { name: slotName } : {},
@@ -403,6 +404,7 @@ export function createSlot(
         return
       }
 
+      const slotName = isFunction(name) ? name() : name
       const resolvedSlot = resolveSlot(rawSlots, slotName)
       const slot = resolvedSlot
         ? getOwnedSlot(
@@ -448,7 +450,7 @@ export function createSlot(
     }
 
     // dynamic slot name or has dynamicSlots
-    if (!once && (isDynamicName || rawSlots.$)) {
+    if (!once && !isCustomElementSlot && (isDynamicName || rawSlots.$)) {
       renderEffect(renderSlot)
     } else {
       renderSlot()
