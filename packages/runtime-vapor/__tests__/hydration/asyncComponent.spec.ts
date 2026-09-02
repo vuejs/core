@@ -974,6 +974,9 @@ describe('Vapor Mode hydration', () => {
       await new Promise(r => setTimeout(r))
       expect(refs.comp).toBeTruthy()
       expect(refs.comp.type).toBe(Comp)
+      // vapor props flow reactively, so the wrapper never needs the vdom-only
+      // "patched before lazy hydration" update hook
+      expect((app._instance as any).block.bu).toBeUndefined()
     })
 
     test('deferred async component stays unresolved for its consumers after a sibling resolved the loader', async () => {

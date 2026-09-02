@@ -77,6 +77,7 @@ export function defineAsyncComponent<
         getResolvedComp,
         load,
         hydrateStrategy,
+        true,
       )
     },
 
@@ -324,10 +325,16 @@ export function performAsyncHydrate(
   getResolvedComp: () => GenericComponent | undefined,
   load: () => Promise<GenericComponent>,
   hydrateStrategy: HydrationStrategy | undefined,
+  // vdom: a parent update before lazy hydration ran has already patched the
+  // subtree, so hydrating on top of it would mismatch. Vapor props flow
+  // reactively and need no such guard.
+  skipIfUpdated: boolean,
 ): void {
   const wasConnected = el.isConnected
   let patched = false
-  ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
+  if (skipIfUpdated) {
+    ;(instance.bu || (instance.bu = [])).push(() => (patched = true))
+  }
   const performHydrate = () => {
     // skip hydration if the component has been patched
     if (patched) {
