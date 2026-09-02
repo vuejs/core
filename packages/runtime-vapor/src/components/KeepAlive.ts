@@ -360,13 +360,12 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return cache.get(comp.key ?? currentCacheKey ?? comp.type)
         }
         const branchKey = key ?? currentCacheKey
-        if (branchKey != null) return cache.get(branchKey)
-        return (
-          cache.get(comp) ||
-          // An async component is cached as its wrapper when it entered
-          // pending, and as its resolved component when it was created resolved.
-          cache.get((comp as AsyncComponentInternalOptions).__asyncResolved)
-        )
+        return branchKey != null
+          ? cache.get(branchKey)
+          : cache.get(comp) ||
+              // An async component is cached as its wrapper when it entered
+              // pending, and as its resolved component when it was created resolved.
+              cache.get((comp as AsyncComponentInternalOptions).__asyncResolved)
       },
       activate: (instance, parentNode, anchor, parentSuspense) => {
         current = instance
