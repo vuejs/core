@@ -993,7 +993,9 @@ export class VaporComponentInstance<
       this.isOnce && rawProps
         ? snapshotRawProps(rawProps)
         : rawProps || EMPTY_OBJ
-    this.hasFallthrough = hasFallthroughAttrs(comp, this.rawProps)
+    // a custom element host mutates its props object after creation, so its
+    // attrs key set is never static
+    this.hasFallthrough = !!ce || hasFallthroughAttrs(comp, this.rawProps)
     if (rawProps || comp.props) {
       const [propsHandlers, attrsHandlers] = getPropsProxyHandlers(comp)
       this.attrs = new Proxy(this, attrsHandlers)
