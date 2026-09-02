@@ -1310,18 +1310,16 @@ describe('vapor transition', () => {
       await nextTick()
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-from v-enter-active">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-from v-enter-active">vapor compA</div><!--if-->',
       )
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-active v-enter-to">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-active v-enter-to">vapor compA</div><!--if-->',
       )
       await transitionFinish()
       await expect
         .element(css(containerSelector))
-        .toContainHTML(
-          '<div class="">vapor compA</div><!--async component--><!--if-->',
-        )
+        .toContainHTML('<div class="">vapor compA</div><!--if-->')
     })
 
     test('apply transition to pre-resolved async component', async () => {
@@ -1341,18 +1339,16 @@ describe('vapor transition', () => {
       await nextTick()
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-from v-enter-active">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-from v-enter-active">vapor compA</div><!--if-->',
       )
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-active v-enter-to">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-active v-enter-to">vapor compA</div><!--if-->',
       )
       await transitionFinish()
       await expect
         .element(css(containerSelector))
-        .toContainHTML(
-          '<div class="">vapor compA</div><!--async component--><!--if-->',
-        )
+        .toContainHTML('<div class="">vapor compA</div><!--if-->')
 
       // leave
       click(btnSelector)
@@ -1373,18 +1369,16 @@ describe('vapor transition', () => {
       await nextTick()
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-from v-enter-active">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-from v-enter-active">vapor compA</div><!--if-->',
       )
       await nextFrame()
       expect(html(containerSelector)).toContain(
-        '<div class="v-enter-active v-enter-to">vapor compA</div><!--async component--><!--if-->',
+        '<div class="v-enter-active v-enter-to">vapor compA</div><!--if-->',
       )
       await transitionFinish()
       await expect
         .element(css(containerSelector))
-        .toContainHTML(
-          '<div class="">vapor compA</div><!--async component--><!--if-->',
-        )
+        .toContainHTML('<div class="">vapor compA</div><!--if-->')
     })
 
     test(
