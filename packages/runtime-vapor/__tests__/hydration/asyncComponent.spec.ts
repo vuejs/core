@@ -1028,5 +1028,58 @@ describe('Vapor Mode hydration', () => {
         '<!--[--><span>inner</span><!--async component--><span>inner</span><!--async component--><!--]-->',
       )
     })
+
+    test('async component without a strategy hydrates in place when created resolved', async () => {
+      const data = ref({ spy: vi.fn() })
+      const innerCode = `<button @click="data.spy">inner</button>`
+      const outerCode = `<div><components.Inner/></div>`
+      const appCode = `<components.Outer/><span>after</span>`
+
+      const SSRInner = defineAsyncComponent(() =>
+        Promise.resolve(
+          compileVaporComponent(innerCode, data, undefined, true),
+        ),
+      )
+      const SSROuter = defineAsyncComponent(() =>
+        Promise.resolve(
+          compileVaporComponent(outerCode, data, { Inner: SSRInner }, true),
+        ),
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(
+          compileVaporComponent(appCode, data, { Outer: SSROuter }, true),
+        ),
+      )
+
+      const InnerComp = compileVaporComponent(innerCode, data)
+      // no strategy: resolved before the deferred Outer creates it
+      const Inner = defineVaporAsyncComponent(() => Promise.resolve(InnerComp))
+      await (Inner as any).__asyncLoader()
+      let doHydrate: (() => void) | undefined
+      const Outer = defineVaporAsyncComponent({
+        loader: () =>
+          Promise.resolve(compileVaporComponent(outerCode, data, { Inner })),
+        hydrate(hydrate) {
+          doHydrate = hydrate
+        },
+      })
+      const App = compileVaporComponent(appCode, data, { Outer })
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+      await new Promise(r => setTimeout(r))
+
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).not.toHaveBeenCalled()
+
+      doHydrate!()
+      await new Promise(r => setTimeout(r))
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).toHaveBeenCalledTimes(1)
+      expect(container.innerHTML).toBe(
+        '<!--[--><div><button>inner</button><!--async component--></div><!--async component--><span>after</span><!--]-->',
+      )
+    })
   })
 })

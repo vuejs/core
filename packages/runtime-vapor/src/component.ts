@@ -270,6 +270,14 @@ export function enableAsyncComponent(): void {
   isAsyncComponentEnabled = true
 }
 
+// Not an explicit vapor component: mounted through vdom interop.
+function usesVdomInterop(
+  component: VaporComponent,
+  appContext: GenericAppContext,
+): boolean {
+  return isInteropEnabled && !!appContext.vdom && !component.__vapor
+}
+
 export function createComponent(
   component: VaporComponent,
   rawProps?: LooseRawProps | null,
@@ -372,20 +380,16 @@ export function createComponent(
     // so does an inner mounted through vdom interop, whose useId boundary is
     // the wrapper.
     let asyncBoundary = false
-    if (isAsyncComponentEnabled && component.__asyncLoader && !isHydrating) {
+    if (isAsyncComponentEnabled && !isHydrating) {
       const resolved = component.__asyncResolved
-      if (
-        resolved &&
-        !(isInteropEnabled && appContext.vdom && !resolved.__vapor)
-      ) {
+      if (resolved && !usesVdomInterop(resolved, appContext)) {
         component = resolved
         asyncBoundary = true
       }
     }
 
-    // vdom interop enabled and component is not an explicit vapor component
-    if (isInteropEnabled && appContext.vdom && !component.__vapor) {
-      const frag = appContext.vdom.mount(
+    if (usesVdomInterop(component, appContext)) {
+      const frag = appContext.vdom!.mount(
         component as any,
         currentInstance as any,
         rawProps,

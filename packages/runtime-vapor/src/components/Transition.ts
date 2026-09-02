@@ -43,6 +43,7 @@ import {
   type VaporComponentInstance,
   isVaporComponent,
 } from '../component'
+import { getAsyncWrapperInner } from '../apiDefineAsyncComponent'
 import { isArray } from '@vue/shared'
 import { renderEffect } from '../renderEffect'
 import {
@@ -629,16 +630,15 @@ function collectComponentTransitionBlocks(
   children: ResolvedTransitionBlock[],
 ): void {
   if (isAsyncWrapper(block)) {
-    const frag = block.block as DynamicFragment
-    // unresolved, or resolved but this wrapper's own branch has not settled
-    // (deferred hydration): set transition hooks on the fragment
-    if (!block.type.__asyncResolved || frag.current === undefined) {
-      if (onFragment && isFragment(frag)) onFragment(frag)
+    const inner = getAsyncWrapperInner(block)
+    if (inner === undefined) {
+      // unsettled: set transition hooks on the wrapper's fragment
+      if (onFragment && isFragment(block.block)) onFragment(block.block)
       return
     }
 
     const start = children.length
-    collectTransitionBlocks(frag.nodes, onFragment, children)
+    collectTransitionBlocks(inner, onFragment, children)
     inheritSingleComponentKey(children[start], block)
     return
   }

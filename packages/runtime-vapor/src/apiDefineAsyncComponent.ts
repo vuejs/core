@@ -73,16 +73,14 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // early return allows tree-shaking of hydration logic when not used
       if (!isHydrating) return
 
-      // Nothing to defer: hydrate in place like a plain component.
-      if (!hydrateStrategy && getResolvedComp()) return hydrate()
-
       // Placeholder for the deferred period: the wrapper's own fragment,
       // holding the adopted DOM. The wrapper can be moved or unmounted before
       // setup runs, and template refs / transitions register on the fragment
       // that setup will settle rather than on a stand-in.
+      const endAnchor = isComment(el, '[') ? locateEndAnchor(el)! : null
       let nodes: Block
-      if (isComment(el, '[')) {
-        const end = _next(locateEndAnchor(el)!)
+      if (endAnchor) {
+        const end = _next(endAnchor)
         const range = (nodes = [el as Node])
         let cur = el as Node
         while (true) {
@@ -115,9 +113,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       instance.isMounted = true
 
       // Advance current hydration node to the nextSibling
-      setCurrentHydrationNode(
-        isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
-      )
+      setCurrentHydrationNode(endAnchor || el.nextSibling)
 
       performAsyncHydrate(
         el,
@@ -180,7 +176,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         // The loader settles outside any render context: render the branch
         // under the wrapper's scope so it owns it, and not at all once the
         // wrapper was unmounted while loading (Suspense discards the result).
-        const renderBranch = (render: () => VaporComponentInstance) => {
+        const renderContent = (render: () => VaporComponentInstance) => {
           if (!instance.isUnmounted) {
             instance.scope.run(() => frag.update(render))
           }
@@ -189,14 +185,14 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           .then(() => {
             resolvedComp = getResolvedComp()
             if (resolvedComp) {
-              renderBranch(() => createInnerComp(resolvedComp!, instance))
+              renderContent(() => createInnerComp(resolvedComp!, instance))
             }
             return frag
           })
           .catch(err => {
             onError(err)
             if (errorComponent) {
-              renderBranch(() =>
+              renderContent(() =>
                 createErrorComp(errorComponent, instance, () => err),
               )
             }
@@ -253,6 +249,24 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       return frag
     },
   }) as T
+}
+
+/**
+ * The block an async wrapper has settled on, or undefined while it is
+ * unresolved or (under deferred hydration) resolved but not set up yet.
+ * Consumers reading through the wrapper treat undefined as unresolved.
+ */
+export function getAsyncWrapperInner(
+  instance: VaporComponentInstance,
+): Block | undefined {
+  const frag = instance.block
+  if (
+    isDynamicFragment(frag) &&
+    frag.current !== undefined &&
+    instance.type.__asyncResolved
+  ) {
+    return frag.nodes
+  }
 }
 
 function createErrorComp(
