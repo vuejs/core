@@ -2424,12 +2424,12 @@ describe('VaporKeepAlive', () => {
 
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>0</p><!--if-->')
     expect(loaderCallCount).toBe(2)
 
     instanceRef.value.inc()
     await nextTick()
-    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>1</p><!--if-->')
 
     toggle.value = false
     await nextTick()
@@ -2437,7 +2437,7 @@ describe('VaporKeepAlive', () => {
 
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('<p>1</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>1</p><!--if-->')
     expect(loaderCallCount).toBe(2)
   })
 
@@ -2561,7 +2561,7 @@ describe('VaporKeepAlive', () => {
 
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>0</p><!--if-->')
     expect(loader).toHaveBeenCalledTimes(1)
   })
 
@@ -2663,7 +2663,7 @@ describe('VaporKeepAlive', () => {
 
     toggle.value = true
     await nextTick()
-    expect(html()).toBe('<p>0</p><!--async component--><!--if-->')
+    expect(html()).toBe('<p>0</p><!--if-->')
     expect(loaderCallCount).toBe(2)
   })
 
@@ -2732,7 +2732,7 @@ describe('VaporKeepAlive', () => {
     // Toggle on - should remount, NOT activate from cache
     toggle.value = true
     await nextTick()
-    expect(html()).toBe(`<div>Bar</div><!--async component--><!--if-->`)
+    expect(html()).toBe(`<div>Bar</div><!--if-->`)
     expect(mounted).toHaveBeenCalledTimes(2) // Should be called again
     expect(activated).toHaveBeenCalledTimes(0)
   })

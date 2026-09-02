@@ -16,6 +16,7 @@ import {
   type VaporComponent,
   type VaporComponentInstance,
   createComponent,
+  enableAsyncComponent,
 } from './component'
 import { renderEffect } from './renderEffect'
 import { DynamicFragment } from './fragment'
@@ -41,6 +42,7 @@ const enum AsyncBranch {
 export function defineVaporAsyncComponent<T extends VaporComponent>(
   source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
 ): T {
+  enableAsyncComponent()
   const {
     load,
     getResolvedComp,
@@ -125,7 +127,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         __DEV__ ? 'async component' : undefined,
       )
 
-      // already resolved
+      // already resolved: only reached where createComponent keeps the
+      // wrapper (hydration, vdom interop inners); a resolved CSR mount is
+      // created as the resolved component and never enters this setup
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
         frag.update(() => createInnerComp(resolvedComp!, instance))
