@@ -538,6 +538,91 @@ describe('api: defineAsyncComponent', () => {
     expect(root.innerHTML).toBe('resolved<!--async component-->')
   })
 
+  test('timeout without error component keeps the loading component mounted', async () => {
+    let resolve: (comp: VaporComponent) => void
+    const loadingSetup = vi.fn()
+    const Loading = defineVaporComponent({
+      setup() {
+        loadingSetup()
+        return template('loading')()
+      },
+    })
+    const Foo = defineVaporAsyncComponent({
+      loader: () =>
+        new Promise(_resolve => {
+          resolve = _resolve as any
+        }),
+      delay: 1,
+      timeout: 16,
+      loadingComponent: Loading,
+    })
+
+    const root = document.createElement('div')
+    const { app, mount } = define({
+      setup() {
+        return createComponent(Foo)
+      },
+    }).create()
+    app.config.errorHandler = vi.fn()
+    mount(root)
+    await timeout(1)
+    expect(root.innerHTML).toBe('loading<!--async component-->')
+    expect(loadingSetup).toHaveBeenCalledTimes(1)
+
+    await timeout(16)
+    expect(root.innerHTML).toBe('loading<!--async component-->')
+    // the branch did not change, so the loading component must not be
+    // torn down and recreated
+    expect(loadingSetup).toHaveBeenCalledTimes(1)
+
+    resolve!(() => template('resolved')())
+    await timeout()
+    expect(root.innerHTML).toBe('resolved<!--async component-->')
+  })
+
+  test('error component receives a later error in place', async () => {
+    let reject: (e: Error) => void
+    const errorSetup = vi.fn()
+    const ErrorComp = defineVaporComponent({
+      props: { error: Object },
+      setup(props: { error: Error }) {
+        errorSetup()
+        const n = template(' ')() as Text
+        renderEffect(() => setElementText(n, props.error.message))
+        return n
+      },
+    })
+    const Foo = defineVaporAsyncComponent({
+      loader: () =>
+        new Promise((_resolve, _reject) => {
+          reject = _reject
+        }),
+      timeout: 1,
+      errorComponent: ErrorComp,
+    })
+
+    const root = document.createElement('div')
+    const { app, mount } = define({
+      setup() {
+        return createComponent(Foo)
+      },
+    }).create()
+    app.config.errorHandler = vi.fn()
+    mount(root)
+
+    await timeout(1)
+    expect(root.innerHTML).toBe(
+      'Async component timed out after 1ms.<!--async component-->',
+    )
+    expect(errorSetup).toHaveBeenCalledTimes(1)
+
+    // the pending loader rejects after the timeout: same branch, new error
+    reject!(new Error('loader failed'))
+    await timeout()
+    expect(root.innerHTML).toBe('loader failed<!--async component-->')
+    expect(errorSetup).toHaveBeenCalledTimes(1)
+  })
+
   test('retry (success)', async () => {
     let loaderCallCount = 0
     let resolve: (comp: VaporComponent) => void
