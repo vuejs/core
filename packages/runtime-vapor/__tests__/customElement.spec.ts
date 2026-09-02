@@ -639,6 +639,32 @@ describe('defineVaporCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div foo="changed">changed</div>')
     })
 
+    test('attr added after mount falls through when none existed at mount', async () => {
+      const E = defineVaporCustomElement({
+        props: { msg: String },
+        setup(props: any) {
+          const n0 = template('<div> </div>', 1)() as any
+          const x0 = txt(n0) as any
+          renderEffect(() => setText(x0, toDisplayString(props.msg)))
+          return n0
+        },
+      })
+      customElements.define('my-el-late-attr', E)
+      container.innerHTML = `<my-el-late-attr></my-el-late-attr>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
+
+      e.setAttribute('foo', 'bar')
+      await nextTick()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div foo="bar"></div>')
+
+      e.removeAttribute('foo')
+      await nextTick()
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe('<div></div>')
+    })
+
     test('non-declared properties should not show up in $attrs', () => {
       const e = new E()
       // @ts-expect-error
