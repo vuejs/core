@@ -486,12 +486,7 @@ export function createComponent(
       }
 
       // hydrating async component
-      if (
-        isHydrating &&
-        isAsyncWrapper(instance) &&
-        component.__asyncHydrate &&
-        !component.__asyncResolved
-      ) {
+      if (isHydrating && isAsyncWrapper(instance) && component.__asyncHydrate) {
         const setup = () => setupComponent(instance, component)
         component.__asyncHydrate(
           currentHydrationNode as Element,

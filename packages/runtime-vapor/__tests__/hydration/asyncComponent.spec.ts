@@ -799,5 +799,135 @@ describe('Vapor Mode hydration', () => {
       triggerEvent('click', container.querySelector('button')!)
       expect(data.value.spy).toHaveBeenCalledTimes(1)
     })
+
+    test('hydrate strategy applies to an async component created after its loader resolved', async () => {
+      const data = ref({ spy: vi.fn() })
+      const innerCode = `<button @click="data.spy">inner</button>`
+      const outerCode = `<div><components.Inner/></div>`
+      const appCode = `<components.Inner/><components.Outer/>`
+
+      // server render
+      const SSRInner = defineAsyncComponent(() =>
+        Promise.resolve(
+          compileVaporComponent(innerCode, data, undefined, true),
+        ),
+      )
+      const SSROuter = defineAsyncComponent(() =>
+        Promise.resolve(
+          compileVaporComponent(outerCode, data, { Inner: SSRInner }, true),
+        ),
+      )
+      const SSRApp = compileVaporComponent(
+        appCode,
+        data,
+        { Inner: SSRInner, Outer: SSROuter },
+        true,
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      expect(html).toMatchInlineSnapshot(
+        `"<!--[--><button>inner</button><div><button>inner</button></div><!--]-->"`,
+      )
+
+      // hydration
+      let resolveInner: any
+      let resolveOuter: any
+      const innerHydrates: (() => void)[] = []
+      const Inner = defineVaporAsyncComponent({
+        loader: () =>
+          new Promise(r => {
+            resolveInner = r
+          }),
+        hydrate(hydrate) {
+          innerHydrates.push(hydrate)
+        },
+      })
+      const Outer = defineVaporAsyncComponent({
+        loader: () =>
+          new Promise(r => {
+            resolveOuter = r
+          }),
+        hydrate(hydrate) {
+          hydrate()
+        },
+      })
+      const App = compileVaporComponent(appCode, data, { Inner, Outer })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+      const buttons = () => container.querySelectorAll('button')
+
+      resolveInner(compileVaporComponent(innerCode, data))
+      await new Promise(r => setTimeout(r))
+      expect(innerHydrates.length).toBe(1)
+
+      resolveOuter(compileVaporComponent(outerCode, data, { Inner }))
+      await new Promise(r => setTimeout(r))
+      // the nested Inner is created while its loader is already resolved;
+      // it must still defer to its hydration strategy
+      expect(innerHydrates.length).toBe(2)
+      triggerEvent('click', buttons()[1])
+      expect(data.value.spy).not.toHaveBeenCalled()
+
+      innerHydrates[1]()
+      await new Promise(r => setTimeout(r))
+      triggerEvent('click', buttons()[1])
+      expect(data.value.spy).toHaveBeenCalledTimes(1)
+
+      innerHydrates[0]()
+      await new Promise(r => setTimeout(r))
+      triggerEvent('click', buttons()[0])
+      expect(data.value.spy).toHaveBeenCalledTimes(2)
+    })
+
+    // a synchronous strategy on an already-resolved wrapper re-enters
+    // hydration inside the enclosing pass
+    test('synchronous hydrate strategy on an already-resolved async component', async () => {
+      const data = ref({ spy: vi.fn() })
+      const compCode = `<button @click="data.spy">hello</button>`
+      const appCode = `<div><components.AsyncComp/></div><span>after</span>`
+
+      const SSRAsync = defineAsyncComponent(() =>
+        Promise.resolve(compileVaporComponent(compCode, data, undefined, true)),
+      )
+      const SSRApp = compileVaporComponent(
+        appCode,
+        data,
+        { AsyncComp: SSRAsync },
+        true,
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(SSRApp),
+      )
+      expect(html).toMatchInlineSnapshot(
+        `"<!--[--><div><button>hello</button></div><span>after</span><!--]-->"`,
+      )
+
+      const strategy = vi.fn((hydrate: () => void) => hydrate())
+      const AsyncComp = defineVaporAsyncComponent({
+        loader: () => Promise.resolve(compileVaporComponent(compCode, data)),
+        hydrate: strategy,
+      })
+      // resolve before hydration starts
+      await (AsyncComp as any).__asyncLoader()
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+
+      expect(strategy).toHaveBeenCalledTimes(1)
+      // the wrapper's runtime anchor lands after the hydrated content and the
+      // enclosing pass resumes at the trailing sibling
+      expect(container.innerHTML).toBe(
+        `<!--[--><div><button>hello</button><!--async component--></div><span>after</span><!--]-->`,
+      )
+      triggerEvent('click', container.querySelector('button')!)
+      expect(data.value.spy).toHaveBeenCalledTimes(1)
+    })
   })
 })
