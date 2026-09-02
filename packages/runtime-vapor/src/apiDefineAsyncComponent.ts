@@ -127,7 +127,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         __DEV__ ? 'async component' : undefined,
       )
 
-      // already resolved
+      // already resolved: only reached where createComponent keeps the
+      // wrapper (hydration, vdom interop inners); a resolved CSR mount is
+      // created as the resolved component and never enters this setup
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
         frag.update(() => createInnerComp(resolvedComp!, instance))
