@@ -4,6 +4,7 @@ import {
   getExposed,
   isVaporComponent,
 } from './component'
+import { getAsyncWrapperInner } from './apiDefineAsyncComponent'
 import {
   ErrorCodes,
   type SchedulerJob,
@@ -393,9 +394,10 @@ function setRef(
 const getRefValue = (el: RefEl) => {
   if (isVaporComponent(el)) {
     if (isAsyncWrapper(el)) {
-      // unresolved async wrapper: return null so ref gets cleared
-      if (!el.type.__asyncResolved) return null
-      return getRefValue((el.block as DynamicFragment).nodes as RefEl)
+      const inner = getAsyncWrapperInner(el)
+      // unsettled: return null so the ref gets cleared
+      if (inner === undefined) return null
+      return getRefValue(inner as RefEl)
     }
     return getExposed(el) || el
   } else if (isTeleportEnabled && isTeleportFragment(el)) {

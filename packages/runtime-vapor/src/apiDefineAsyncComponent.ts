@@ -19,16 +19,17 @@ import {
   enableAsyncComponent,
 } from './component'
 import { renderEffect } from './renderEffect'
-import { DynamicFragment } from './fragment'
+import { DynamicFragment, isDynamicFragment } from './fragment'
 import {
   hydrateNode,
   isComment,
   isHydrating,
   locateEndAnchor,
+  locateHydrationNode,
   setCurrentHydrationNode,
   withDeferredHydrationBoundary,
 } from './dom/hydration'
-import type { TransitionOptions } from './block'
+import { type Block, EMPTY_BLOCK, type TransitionOptions } from './block'
 import { _next } from './dom/node'
 import { isKeepAliveEnabled } from './keepAlive'
 
@@ -72,26 +73,39 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // early return allows tree-shaking of hydration logic when not used
       if (!isHydrating) return
 
-      // Nothing to defer: hydrate in place like a plain component.
-      if (!hydrateStrategy && getResolvedComp()) return hydrate()
-
-      // Create placeholder block that matches the adopted DOM.
-      // The async component may get unmounted before its inner component is loaded,
-      // so we need to give it a placeholder block.
-      if (isComment(el, '[')) {
-        const end = _next(locateEndAnchor(el)!)
-        const block = (instance.block = [el as Node])
+      // Placeholder for the deferred period: the wrapper's own fragment,
+      // holding the adopted DOM. The wrapper can be moved or unmounted before
+      // setup runs, and template refs / transitions register on the fragment
+      // that setup will settle rather than on a stand-in.
+      const endAnchor = isComment(el, '[') ? locateEndAnchor(el)! : null
+      let nodes: Block
+      if (endAnchor) {
+        const end = _next(endAnchor)
+        const range = (nodes = [el as Node])
         let cur = el as Node
         while (true) {
           let n = _next(cur)
           if (n && n !== end) {
-            block.push((cur = n))
+            range.push((cur = n))
           } else {
             break
           }
         }
       } else {
-        instance.block = el
+        nodes = el
+      }
+      const prev = setCurrentInstance(instance)
+      try {
+        const frag = new DynamicFragment(
+          0,
+          __DEV__ ? 'async component' : undefined,
+          false,
+          false,
+        )
+        frag.nodes = nodes
+        instance.block = frag
+      } finally {
+        restoreCurrentInstance(prev)
       }
 
       // Mark as mounted to ensure it can be unmounted before
@@ -99,9 +113,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       instance.isMounted = true
 
       // Advance current hydration node to the nextSibling
-      setCurrentHydrationNode(
-        isComment(el, '[') ? locateEndAnchor(el)! : el.nextSibling,
-      )
+      setCurrentHydrationNode(endAnchor || el.nextSibling)
 
       performAsyncHydrate(
         el,
@@ -122,10 +134,18 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         TransitionOptions
       markAsyncBoundary(instance)
 
-      const frag = new DynamicFragment(
-        0,
-        __DEV__ ? 'async component' : undefined,
-      )
+      // Deferred hydration hands over its placeholder (see __asyncHydrate)
+      // so hooks registered on it while setup was pending apply to the
+      // branch settled here.
+      const placeholder = instance.block
+      let frag: DynamicFragment
+      if (isHydrating && isDynamicFragment(placeholder)) {
+        frag = placeholder
+        frag.nodes = EMPTY_BLOCK
+        locateHydrationNode()
+      } else {
+        frag = new DynamicFragment(0, __DEV__ ? 'async component' : undefined)
+      }
 
       // already resolved: only reached where createComponent keeps the
       // wrapper (hydration, vdom interop inners); a resolved CSR mount is
@@ -133,6 +153,12 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       let resolvedComp = getResolvedComp()
       if (resolvedComp) {
         frag.update(() => createInnerComp(resolvedComp!, instance))
+        if (frag === placeholder) {
+          // the first render settles the placeholder; renderBranch itself
+          // treats a first render as mount-time and stays silent
+          const u = frag.u
+          if (u) u.forEach(hook => hook(frag.nodes))
+        }
         return frag
       }
 
@@ -223,6 +249,24 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       return frag
     },
   }) as T
+}
+
+/**
+ * The block an async wrapper has settled on, or undefined while it is
+ * unresolved or (under deferred hydration) resolved but not set up yet.
+ * Consumers reading through the wrapper treat undefined as unresolved.
+ */
+export function getAsyncWrapperInner(
+  instance: VaporComponentInstance,
+): Block | undefined {
+  const frag = instance.block
+  if (
+    isDynamicFragment(frag) &&
+    frag.current !== undefined &&
+    instance.type.__asyncResolved
+  ) {
+    return frag.nodes
+  }
 }
 
 function createErrorComp(
