@@ -629,18 +629,16 @@ function collectComponentTransitionBlocks(
   children: ResolvedTransitionBlock[],
 ): void {
   if (isAsyncWrapper(block)) {
-    // for unresolved async wrapper, set transition hooks on inner fragment
-    if (!block.type.__asyncResolved) {
-      if (onFragment) onFragment(block.block! as DynamicFragment)
+    const frag = block.block as DynamicFragment
+    // unresolved, or resolved but this wrapper's own branch has not settled
+    // (deferred hydration): set transition hooks on the fragment
+    if (!block.type.__asyncResolved || frag.current === undefined) {
+      if (onFragment && isFragment(frag)) onFragment(frag)
       return
     }
 
     const start = children.length
-    collectTransitionBlocks(
-      (block.block! as DynamicFragment).nodes,
-      onFragment,
-      children,
-    )
+    collectTransitionBlocks(frag.nodes, onFragment, children)
     inheritSingleComponentKey(children[start], block)
     return
   }

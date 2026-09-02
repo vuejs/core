@@ -929,5 +929,104 @@ describe('Vapor Mode hydration', () => {
       triggerEvent('click', container.querySelector('button')!)
       expect(data.value.spy).toHaveBeenCalledTimes(1)
     })
+
+    test('template ref on a lazily hydrated async component', async () => {
+      const data = ref({})
+      const compCode = `<span>inner</span>`
+      const appCode = `<components.AsyncComp ref="comp"/>`
+
+      const SSRAsync = defineAsyncComponent(() =>
+        Promise.resolve(compileVaporComponent(compCode, data, undefined, true)),
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(
+          compileVaporComponent(appCode, data, { AsyncComp: SSRAsync }, true),
+        ),
+      )
+
+      let resolve: any
+      let doHydrate: (() => void) | undefined
+      const Comp = compileVaporComponent(compCode, data)
+      const AsyncComp = defineVaporAsyncComponent({
+        loader: () =>
+          new Promise(r => {
+            resolve = r
+          }),
+        hydrate(hydrate) {
+          doHydrate = hydrate
+        },
+      })
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = createVaporSSRApp(App)
+      app.mount(container)
+      const refs = (app._instance as any).refs
+
+      expect(refs.comp).toBeFalsy()
+      resolve(Comp)
+      await new Promise(r => setTimeout(r))
+      // resolved, but hydration is still deferred by the strategy
+      expect(refs.comp).toBeFalsy()
+
+      doHydrate!()
+      await new Promise(r => setTimeout(r))
+      expect(refs.comp).toBeTruthy()
+      expect(refs.comp.type).toBe(Comp)
+    })
+
+    test('deferred async component stays unresolved for its consumers after a sibling resolved the loader', async () => {
+      const data = ref({})
+      const compCode = `<span>inner</span>`
+      const appCode = `<components.AsyncComp ref="a"/><components.AsyncComp ref="b"/>`
+
+      const SSRAsync = defineAsyncComponent(() =>
+        Promise.resolve(compileVaporComponent(compCode, data, undefined, true)),
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(
+          compileVaporComponent(appCode, data, { AsyncComp: SSRAsync }, true),
+        ),
+      )
+
+      let resolve: any
+      const hydrates: (() => void)[] = []
+      const Comp = compileVaporComponent(compCode, data)
+      const AsyncComp = defineVaporAsyncComponent({
+        loader: () =>
+          new Promise(r => {
+            resolve = r
+          }),
+        hydrate(hydrate) {
+          hydrates.push(hydrate)
+        },
+      })
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      const app = createVaporSSRApp(App)
+      app.mount(container)
+      const refs = (app._instance as any).refs
+
+      resolve(Comp)
+      await new Promise(r => setTimeout(r))
+      expect(hydrates.length).toBe(2)
+
+      hydrates[0]()
+      await new Promise(r => setTimeout(r))
+      expect(refs.a.type).toBe(Comp)
+      // b's loader is resolved but its own hydration has not run: no ref yet,
+      // and never the raw SSR node
+      expect(refs.b == null).toBe(true)
+
+      hydrates[1]()
+      await new Promise(r => setTimeout(r))
+      expect(refs.b.type).toBe(Comp)
+      expect(container.innerHTML).toBe(
+        '<!--[--><span>inner</span><!--async component--><span>inner</span><!--async component--><!--]-->',
+      )
+    })
   })
 })
