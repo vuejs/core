@@ -919,6 +919,40 @@ describe('defineVaporCustomElement', () => {
       )
     })
 
+    test('dynamic slot name updates the native outlet in place', async () => {
+      const name = ref('a')
+      const fallback = vi.fn(() => template('<i>fallback</i>')())
+      const E = defineVaporCustomElement({
+        setup() {
+          return createSlot(() => name.value, null, fallback)
+        },
+      })
+      customElements.define('my-el-dynamic-slot-name', E)
+      container.innerHTML =
+        `<my-el-dynamic-slot-name>` +
+        `<div slot="b">b</div>` +
+        `</my-el-dynamic-slot-name>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<slot name="a"><i>fallback</i></slot><!--slot-->`,
+      )
+      expect(fallback).toHaveBeenCalledTimes(1)
+
+      name.value = 'b'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<slot name="b"><i>fallback</i></slot><!--slot-->`,
+      )
+      // the outlet is updated in place, not re-created
+      expect(fallback).toHaveBeenCalledTimes(1)
+
+      name.value = 'default'
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<slot><i>fallback</i></slot><!--slot-->`,
+      )
+    })
+
     test('applies v-once to slot props', async () => {
       const foo = ref('foo')
       const E = defineVaporCustomElement({
