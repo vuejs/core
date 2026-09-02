@@ -31,6 +31,12 @@ import type { TransitionOptions } from './block'
 import { _next } from './dom/node'
 import { isKeepAliveEnabled } from './keepAlive'
 
+const enum AsyncBranch {
+  RESOLVED = 1,
+  ERROR,
+  LOADING,
+}
+
 /*@ __NO_SIDE_EFFECTS__ */
 export function defineVaporAsyncComponent<T extends VaporComponent>(
   source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
@@ -145,7 +151,9 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
           .catch(err => {
             onError(err)
             if (errorComponent) {
-              frag.update(() => createErrorComp(errorComponent, instance, err))
+              frag.update(() =>
+                createErrorComp(errorComponent, instance, () => err),
+              )
             }
             return frag
           })
@@ -175,16 +183,22 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       renderEffect(() => {
         resolvedComp = getResolvedComp()
         let render
+        let key
         if (loaded.value && resolvedComp) {
           render = () => createInnerComp(resolvedComp!, instance)
+          key = AsyncBranch.RESOLVED
         } else if (error.value && errorComponent) {
-          const err = error.value
-          render = () => createErrorComp(errorComponent, instance, err)
+          render = () =>
+            createErrorComp(errorComponent, instance, () => error.value!)
+          key = AsyncBranch.ERROR
         } else if (loadingComponent && !delayed.value) {
           render = () => createInnerComp(loadingComponent, instance)
+          key = AsyncBranch.LOADING
         }
 
-        frag.update(render)
+        // Keyed by branch so a state change that lands on the same branch
+        // updates in place instead of recreating it.
+        frag.update(render, key)
         // Manually trigger cacheBlock for KeepAlive
         if (isKeepAliveEnabled && frag.keepAliveCtx) {
           frag.keepAliveCtx.cacheBlock()
@@ -199,12 +213,12 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
 function createErrorComp(
   comp: VaporComponent,
   parent: VaporComponentInstance & TransitionOptions,
-  error: Error,
+  getError: () => Error,
 ): VaporComponentInstance {
   return createInnerComp(
     comp,
     parent,
-    { error: () => error },
+    { error: getError },
     // Avoid wrapper slot fallthrough
     {},
   )
