@@ -328,13 +328,11 @@ export function createSlot(
     // root the host hands its light DOM children over as static slots, so the
     // outlet resolves them like any other slot.
     isCustomElementSlot = !!(ce && ce._hasShadowRoot())
-    const needsSlotFragment = shouldUseSlotFragment(
-      rawSlots,
-      name,
-      fallback,
-      flags,
-      isCustomElementSlot,
-    )
+    // A native <slot> hands fallback to the browser, so there is nothing for
+    // a SlotFragment to arbitrate.
+    const needsSlotFragment =
+      !isCustomElementSlot &&
+      shouldUseSlotFragment(rawSlots, name, fallback, flags)
     const slotFragment = needsSlotFragment
       ? new SlotFragment(flags, _insertionAnchor)
       : undefined
@@ -387,10 +385,11 @@ export function createSlot(
         if (fallback) {
           const fallbackFn = fallback
           // The fallback renders outside the fragment's own render seam, so
-          // establish the outlet cell explicitly around it.
+          // establish the outlet cell explicitly around it. Like any fast-path
+          // outlet it must not render under an enclosing boundary.
           const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
           try {
-            withSlotBoundary(slotFragment!.slotBoundary, () => {
+            withSlotBoundary(null, () => {
               insert(fallbackFn(), el)
             })
           } finally {
@@ -478,11 +477,7 @@ function shouldUseSlotFragment(
   name: string | (() => string),
   fallback: VaporSlot | undefined,
   flags: number,
-  isCustomElementSlot: boolean,
 ): boolean {
-  // Native CE slots render a real <slot>, so SlotFragment owns fallback.
-  if (isCustomElementSlot) return true
-
   // Compiler-marked forwarded roots must preserve the enclosing boundary
   // chain. Everything below is boundary-independent: a non-forwarded outlet
   // never chains outward, so local fallback reachability follows the same
