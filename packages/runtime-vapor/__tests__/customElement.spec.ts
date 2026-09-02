@@ -1,5 +1,6 @@
 import type { MockedFunction } from 'vite-plus/test'
 import type { VaporElement } from '../src/apiDefineCustomElement'
+import { DynamicFragment, SlotFragment } from '../src/fragment'
 import { VaporSlotFlags } from '@vue/shared'
 import {
   type HMRRuntime,
@@ -917,6 +918,61 @@ describe('defineVaporCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot class="bar"></slot><!--slot--></div>`,
       )
+    })
+
+    test('native outlet uses the fast-path fragment', () => {
+      let block: any
+      const E = defineVaporCustomElement({
+        setup() {
+          block = createSlot('default', null, () =>
+            template('<i>fallback</i>')(),
+          )
+          return block
+        },
+      })
+      customElements.define('my-el-native-slot-fast-path', E)
+      container.innerHTML = `<my-el-native-slot-fast-path></my-el-native-slot-fast-path>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<slot><i>fallback</i></slot><!--slot-->`,
+      )
+      // the browser decides fallback visibility, so no SlotFragment is needed
+      expect(block).toBeInstanceOf(DynamicFragment)
+      expect(block).not.toBeInstanceOf(SlotFragment)
+    })
+
+    test('native outlet forwarded through a child slot', async () => {
+      const Child = defineVaporComponent({
+        setup() {
+          return createSlot('default', null, () =>
+            template('<i>child fallback</i>')(),
+          )
+        },
+      })
+      const E = defineVaporCustomElement({
+        setup() {
+          return createComponent(Child, null, {
+            default: () =>
+              createSlot('default', null, undefined, VaporSlotFlags.FORWARDED),
+          })
+        },
+      })
+      customElements.define('my-el-native-slot-forwarded', E)
+      container.innerHTML =
+        `<my-el-native-slot-forwarded>` +
+        `<span>content</span>` +
+        `</my-el-native-slot-forwarded>`
+      const e = container.childNodes[0] as VaporElement
+      // the native outlet is valid content for the child's boundary, so the
+      // child fallback stays hidden and the light DOM is projected
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<slot></slot><!--slot--><!--slot-->`,
+      )
+      expect(
+        (e.shadowRoot!.querySelector('slot') as HTMLSlotElement)
+          .assignedNodes()
+          .map(n => (n as Element).outerHTML),
+      ).toEqual([`<span>content</span>`])
     })
 
     test('dynamic slot name updates the native outlet in place', async () => {
