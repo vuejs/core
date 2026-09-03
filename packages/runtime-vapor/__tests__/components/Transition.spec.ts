@@ -630,15 +630,42 @@ describe('Transition', () => {
     expect(onAppear).not.toHaveBeenCalled()
   })
 
-  test('dynamic slot branch swaps preserve persisted hooks for slot-root v-show', async () => {
-    const data = ref({
-      branch: true,
-      show: true,
-    })
+  // Runtime-derived persisted (slot-propagated roots): independent of
+  // `appear`/`mode`, structural when a v-if/v-for/dynamic-slot boundary sits
+  // between Transition and the v-show target.
+  test('slotted v-if root with v-show leaves on removal with appear', async () => {
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ visible: true, onLeave })
+    const Child = compile(
+      `<template><div v-if="data.visible" v-show="true">foo</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @leave="data.onLeave">
+          <components.Child />
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    data.value.visible = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')).toBeNull()
+  })
+
+  test('dynamic slot swap of v-show roots animates with appear', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ branch: true, show: true, onEnter, onLeave })
     const Child = compile(`<template><slot /></template>`, data)
     const App = compile(
       `<template>
-        <Transition appear>
+        <Transition appear :css="false" @enter="data.onEnter" @leave="data.onLeave">
           <template #default v-if="data.branch">
             <components.Child>
               <div v-show="data.show">foo</div>
@@ -654,22 +681,186 @@ describe('Transition', () => {
       data,
       { Child },
     )
-    const { host, instance } = define(App as any).render()
-    const transitionFragment = (instance!.block as any).block
-    const getTransitionOwner = () =>
-      transitionFragment.nodes?.$transition
-        ? transitionFragment.nodes
-        : transitionFragment.nodes?.block
-
+    const { host } = define(App as any).render()
     await nextTick()
-
-    expect(getTransitionOwner()?.$transition?.persisted).toBe(true)
+    onEnter.mockClear()
 
     data.value.branch = false
     await nextTick()
-
     expect(host.textContent).toContain('bar')
-    expect(getTransitionOwner()?.$transition?.persisted).toBe(true)
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(onEnter).toHaveBeenCalledOnce()
+    onEnter.mockClear()
+    onLeave.mockClear()
+
+    // the new root keeps v-show driven transitions
+    data.value.show = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.style.display).toBe('none')
+
+    data.value.show = true
+    await nextTick()
+    expect(onEnter).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')?.style.display).toBe('')
+  })
+
+  test('dynamic slot removal of a v-show root leaves with appear', async () => {
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ branch: true, onLeave })
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @leave="data.onLeave">
+          <template #default v-if="data.branch">
+            <components.Child>
+              <div v-show="true">foo</div>
+            </components.Child>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    data.value.branch = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(host.querySelector('div')).toBeNull()
+  })
+
+  test.each([false, true])(
+    'slotted v-show component with dynamic root swaps branch as persisted (appear: %s)',
+    async appear => {
+      const onEnter = vi.fn((_el: Element, done: () => void) => done())
+      const onLeave = vi.fn((_el: Element, done: () => void) => done())
+      const data = ref({ ok: true, onEnter, onLeave })
+      const Child = compile(`<template><slot /></template>`, data)
+      const Inner = compile(
+        `<template><div v-if="data.ok">foo</div><span v-else>bar</span></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <Transition :appear="${appear}" :css="false" @enter="data.onEnter" @leave="data.onLeave">
+            <components.Child>
+              <components.Inner v-show="true" />
+            </components.Child>
+          </Transition>
+        </template>`,
+        data,
+        { Child, Inner },
+      )
+      const { host } = define(App as any).render()
+      await nextTick()
+      onEnter.mockClear()
+
+      data.value.ok = false
+      await nextTick()
+      expect(host.querySelector('span')?.textContent).toBe('bar')
+      // same as a direct `<Inner v-show>` child: the new root enters, the
+      // old root is removed without a leave
+      expect(onEnter).toHaveBeenCalledOnce()
+      expect(onLeave).not.toHaveBeenCalled()
+    },
+  )
+
+  test.each(['direct', 'slotted'])(
+    'hidden v-show component with dynamic root swaps branch without hooks (%s)',
+    async placement => {
+      const onBeforeEnter = vi.fn()
+      const onBeforeLeave = vi.fn()
+      const data = ref({ ok: true, onBeforeEnter, onBeforeLeave })
+      const Child = compile(`<template><slot /></template>`, data)
+      const Inner = compile(
+        `<template><div v-if="data.ok">foo</div><span v-else>bar</span></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <Transition :css="false" @before-enter="data.onBeforeEnter" @before-leave="data.onBeforeLeave">
+            ${
+              placement === 'slotted'
+                ? '<components.Child><components.Inner v-show="false" /></components.Child>'
+                : '<components.Inner v-show="false" />'
+            }
+          </Transition>
+        </template>`,
+        data,
+        { Child, Inner },
+      )
+      const { host } = define(App as any).render()
+      await nextTick()
+
+      data.value.ok = false
+      await nextTick()
+      expect(host.querySelector('span')?.style.display).toBe('none')
+      expect(onBeforeEnter).not.toHaveBeenCalled()
+      expect(onBeforeLeave).not.toHaveBeenCalled()
+    },
+  )
+
+  test('appear on a persisted root without v-show does not enter', async () => {
+    const onBeforeAppear = vi.fn()
+    const data = ref({ onBeforeAppear })
+    const App = compile(
+      `<template>
+        <Transition appear persisted :css="false" @before-appear="data.onBeforeAppear">
+          <div>foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+    await nextTick()
+    expect(onBeforeAppear).not.toHaveBeenCalled()
+  })
+
+  test('appear on a v-if root with v-show enters once', async () => {
+    const onBeforeAppear = vi.fn()
+    const onAppear = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ visible: true, onBeforeAppear, onAppear })
+    const App = compile(
+      `<template>
+        <Transition appear :css="false" @before-appear="data.onBeforeAppear" @appear="data.onAppear">
+          <div v-if="data.visible" v-show="true">foo</div>
+        </Transition>
+      </template>`,
+      data,
+    )
+    define(App as any).render()
+    await nextTick()
+    expect(onBeforeAppear).toHaveBeenCalledOnce()
+    expect(onAppear).toHaveBeenCalledOnce()
+  })
+
+  test('out-in mode does not stall on a persisted root branch swap', async () => {
+    const data = ref({ ok: true })
+    const Inner = compile(
+      `<template><div v-if="data.ok">foo</div><span v-else>bar</span></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false">
+          <components.Inner v-show="true" />
+        </Transition>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const { host } = define(App as any).render()
+    await nextTick()
+
+    data.value.ok = false
+    await nextTick()
+    expect(host.querySelector('span')?.textContent).toBe('bar')
+
+    data.value.ok = true
+    await nextTick()
+    expect(host.querySelector('div')?.textContent).toBe('foo')
   })
 
   test('does not leak persisted from a v-show branch onto a non-v-show root', async () => {

@@ -14,13 +14,11 @@ import {
   isAsyncWrapper,
   isTemplateNode,
   leaveCbKey,
-  onBeforeMount,
   queuePostRenderEffect,
   resolveTransitionProps,
   restoreCurrentInstance,
   setCurrentInstance,
   useTransitionState,
-  vShowOriginalDisplay,
   warn,
 } from '@vue/runtime-dom'
 import { computed } from '@vue/reactivity'
@@ -30,6 +28,7 @@ import {
   type TransitionBlock,
   type TransitionOptions,
   type VaporTransitionHooks,
+  type VaporTransitionState,
   isValidBlock,
   remove,
 } from '../block'
@@ -61,7 +60,6 @@ import {
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import { updateLastLocatedLogicalChild } from '../dom/node'
-import { type PendingVShow, setCurrentPendingVShows } from '../directives/vShow'
 import { isInteropEnabled } from '../vdomInteropState'
 
 export type ResolvedTransitionBlock = (
@@ -149,7 +147,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     const performAppear = isHydrating
       ? hydrateTransitionImpl(instance.suspense)
       : undefined
-    const state = useTransitionState()
+    const state: VaporTransitionState = useTransitionState()
     const { mode } = props
     __DEV__ && checkTransitionMode(mode)
 
@@ -160,12 +158,12 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
       },
     })
 
-    const shouldCaptureVShow = !isHydrating && !!props.appear
     const shouldPerformAppear = !!props.appear && !!performAppear
     // Dynamic slot sources can add/remove the default slot after setup, so
     // Transition needs a DynamicFragment to drive enter/leave on updates.
     if (instance.rawSlots.$) {
       const frag = new DynamicFragment(0, __DEV__ ? 'transition' : undefined)
+      state.root = frag
       let isMounted = false
       renderEffect(() => {
         if (!frag.$transition) {
@@ -180,32 +178,15 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
           // so keep it in sync when Transition mode changes reactively.
           frag.$transition.mode = resolvedProps.value.mode
         }
-        const [, pendingVShows] = capturePendingVShows(
-          shouldCaptureVShow && !isMounted,
-          () => frag.update(slots.default),
-        )
-        if (pendingVShows && pendingVShows.length) {
-          let hasStructuralRoot = false
-          const root = resolveTransitionBlock(frag.nodes, fragment => {
-            hasStructuralRoot ||= isStructuralTransitionFragment(fragment)
-          })
-          applyPendingVShows(
-            frag.$transition!,
-            root,
-            pendingVShows,
-            hasStructuralRoot,
-          )
-        }
+        frag.update(slots.default)
         if (!isMounted && shouldPerformAppear) performAppear(frag.$transition!)
         isMounted = true
       })
       return frag
     }
 
-    const [children, pendingVShows] = capturePendingVShows(
-      shouldCaptureVShow,
-      () => ((slots.default && slots.default()) || []) as any as Block,
-    )
+    const children = ((slots.default && slots.default()) || []) as any as Block
+    state.root = children
 
     let appliedHooks = {
       __vapor: true,
@@ -220,18 +201,13 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // props eagerly, so propsProxy alone can't keep an already-applied hooks
     // closure live; re-applying rebinds the root element's (and any inner
     // fragment's) $transition to fresh closures, mirroring VDOM's per-render
-    // re-resolve. Reusing appliedHooks preserves runtime state (persisted /
-    // delayedLeave) across re-resolves.
+    // re-resolve. Reusing appliedHooks preserves runtime state (delayedLeave)
+    // across re-resolves.
     renderEffect(() => {
-      const { hooks, root, hasStructuralRoot } = applyResolvedTransitionHooks(
-        children,
-        appliedHooks,
-      )
-      appliedHooks = hooks
+      appliedHooks = applyTransitionHooksImpl(children, appliedHooks)
       if (!isMounted) {
         isMounted = true
-        applyPendingVShows(hooks, root, pendingVShows, hasStructuralRoot)
-        if (shouldPerformAppear) performAppear(hooks)
+        if (shouldPerformAppear) performAppear(appliedHooks)
       }
     })
     return children
@@ -337,7 +313,7 @@ const getTransitionHooksContext = (
 export function resolveTransitionHooks(
   block: ResolvedTransitionBlock,
   props: TransitionProps,
-  state: TransitionState,
+  state: VaporTransitionState,
   instance: GenericComponentInstance,
   postClone?: (hooks: TransitionHooks) => void,
 ): VaporTransitionHooks {
@@ -355,6 +331,7 @@ export function resolveTransitionHooks(
     instance,
   ) as VaporTransitionHooks
   hooks.__vapor = true
+  hooks.persisted = hooks.persisted || !!state.persisted
   hooks.state = state
   hooks.props = props
   hooks.instance = instance as VaporComponentInstance
@@ -365,24 +342,13 @@ export function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
 ): VaporTransitionHooks {
-  return applyResolvedTransitionHooks(block, hooks).hooks
-}
-
-function applyResolvedTransitionHooks(
-  block: Block,
-  hooks: VaporTransitionHooks,
-): {
-  hooks: VaporTransitionHooks
-  root?: ResolvedTransitionBlock
-  hasStructuralRoot: boolean
-} {
   // filter out comment nodes
   if (isArray(block)) {
     block = block.filter(b => !(b instanceof Comment))
     if (block.length === 1) {
       block = block[0]
     } else if (block.length === 0) {
-      return { hooks, hasStructuralRoot: false }
+      return hooks
     }
   }
 
@@ -396,15 +362,13 @@ function applyResolvedTransitionHooks(
       (isVaporComponent(block) && isSlotFragment(block.block)))
   ) {
     hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
-    return { hooks, hasStructuralRoot: false }
+    return hooks
   }
 
   const fragments: VaporFragment[] = []
-  let hasStructuralRoot = false
-  const child = resolveTransitionBlock(block, fragment => {
-    fragments.push(fragment)
-    hasStructuralRoot ||= isStructuralTransitionFragment(fragment)
-  })
+  const child = resolveTransitionBlock(block, fragment =>
+    fragments.push(fragment),
+  )
   if (!child) {
     // set transition hooks on fragments for later use
     fragments.forEach(f => (f.$transition = hooks))
@@ -412,10 +376,11 @@ function applyResolvedTransitionHooks(
     if (__DEV__ && fragments.length === 0) {
       warn('Transition component has no valid child element')
     }
-    return { hooks, hasStructuralRoot }
+    return hooks
   }
 
   const { props, instance, state, delayedLeave } = hooks
+  state.persisted = isPersistedRoot(state.root)
   let resolvedHooks = resolveTransitionHooks(
     child,
     props,
@@ -423,34 +388,39 @@ function applyResolvedTransitionHooks(
     instance,
     hooks => (resolvedHooks = hooks as VaporTransitionHooks),
   )
-  // Dynamic slot / branch swaps replace the active hook object. The previously
-  // derived persisted state (slot/component-root v-show, detected only at mount
-  // via applyPendingVShows) must carry forward when the new root is *also* a
-  // v-show root, but must NOT leak onto a structural root — otherwise that
-  // root's removal would wrongly skip its leave animation. Gating the
-  // carry-forward on both the current root's v-show marker and its ownership
-  // keeps the latch tied to the live root; mount/non-appear paths are untouched
-  // because they never have a latched `hooks.persisted` to carry.
-  resolvedHooks.persisted =
-    resolvedHooks.persisted ||
-    (!hasStructuralRoot && hooks.persisted && hasVShowMarker(child))
   resolvedHooks.delayedLeave = delayedLeave
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))
-
-  return {
-    hooks: resolvedHooks,
-    root: child,
-    hasStructuralRoot,
-  }
+  return resolvedHooks
 }
 
-function isStructuralTransitionFragment(fragment: VaporFragment): boolean {
-  return !!(
-    isDynamicFragment(fragment) &&
-    !isSlotFragment(fragment) &&
-    fragment.inTransition
-  )
+// Runtime equivalent of the compiler's persisted rule for roots the compiler
+// can't see (slot content): the v-show target is reached from Transition's
+// root through components and slot outlets only; a v-if / v-for / dynamic
+// slot boundary before it makes the root structural. Walked from the root on
+// every apply so branch swaps can't latch a stale result.
+function isPersistedRoot(block: Block | undefined): boolean {
+  while (block) {
+    if ((block as TransitionOptions).$vshow) return true
+    if (isVaporComponent(block)) {
+      if (isVaporTransition(block.type)) return false
+      block =
+        isAsyncComponentEnabled && isAsyncWrapper(block)
+          ? getAsyncWrapperInner(block)
+          : block.block
+    } else if (isArray(block)) {
+      block = block.find(b => !(b instanceof Comment))
+    } else if (
+      isFragment(block) &&
+      (isSlotFragment(block) ||
+        !(isDynamicFragment(block) || isForFragment(block)))
+    ) {
+      block = block.nodes
+    } else {
+      return false
+    }
+  }
+  return false
 }
 
 export function applyTransitionLeaveHooksImpl(
@@ -551,6 +521,9 @@ function removeBranchWithLeaveImpl(
   const mode = transition.mode
   if (
     mode &&
+    // persisted roots are toggled in place; mode only sequences structural
+    // swaps, and a skipped persisted leave would never fire afterLeave.
+    !transition.persisted &&
     // in-out only works when there is an incoming branch to trigger
     // delayedLeave; otherwise the current branch should leave immediately.
     (mode !== 'in-out' || render) &&
@@ -745,79 +718,4 @@ export function getTransitionElement(
   if (isInteropEnabled && isFragment(block) && block.getTransitionElement) {
     return block.getTransitionElement()
   }
-}
-
-function capturePendingVShows<T>(
-  enabled: boolean,
-  render: () => T,
-): [block: T, pendingVShows: PendingVShow[] | undefined] {
-  if (!enabled) {
-    return [render(), undefined]
-  }
-
-  const pendingVShows: PendingVShow[] = []
-  const prev = setCurrentPendingVShows(pendingVShows)
-  try {
-    return [render(), pendingVShows]
-  } finally {
-    setCurrentPendingVShows(prev)
-  }
-}
-
-function applyPendingVShows(
-  hooks: VaporTransitionHooks,
-  root: ResolvedTransitionBlock | undefined,
-  pendingVShows: PendingVShow[] | undefined,
-  hasStructuralRoot: boolean,
-): void {
-  if (!pendingVShows) return
-
-  if (root) {
-    // Keep compiler-injected persisted for direct v-show children, and
-    // additionally treat slot/component roots as persisted when their
-    // deferred v-show target resolves to the same transition root.
-    hooks.persisted =
-      hooks.persisted ||
-      (!hasStructuralRoot &&
-        pendingVShows.some(
-          pending =>
-            pending.target === root ||
-            resolveTransitionBlock(pending.target) === root,
-        ))
-  }
-
-  onBeforeMount(() => {
-    // Flush the deferred initial v-show display writes before mount so hooks are
-    // ready, then run enter after DOM insertion but before mounted state flips.
-    let enterCbs: (() => void)[] | undefined
-    pendingVShows.forEach(pending => {
-      const enterCb = pending.apply()
-      if (enterCb) {
-        ;(enterCbs ||= []).push(enterCb)
-      }
-    })
-    pendingVShows.length = 0
-    if (enterCbs) {
-      const cbs = enterCbs
-      queuePostRenderEffect(
-        () => cbs.forEach(cb => cb()),
-        -1,
-        hooks.instance.suspense,
-      )
-    }
-  })
-}
-
-// Whether the resolved root is (still) a v-show-persisted element. v-show's
-// setDisplay tags the leaf element with `vShowOriginalDisplay` on its first
-// run, which on branch/slot updates happens during render (before hooks are
-// applied), so it doubles as a "this root is persisted" marker without
-// re-running the mount-only applyPendingVShows derivation.
-function hasVShowMarker(block: Block | undefined): boolean {
-  if (!block) return false
-  if (block instanceof Element) return vShowOriginalDisplay in block
-  if (isVaporComponent(block)) return hasVShowMarker(block.block)
-  if (isArray(block)) return block.length === 1 && hasVShowMarker(block[0])
-  if (isFragment(block)) return hasVShowMarker(block.nodes)
-  return false
 }
