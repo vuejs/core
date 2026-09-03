@@ -1506,6 +1506,57 @@ describe('VaporKeepAlive', () => {
       await nextTick()
       expect(host.innerHTML).toBe('')
     })
+    // #14031
+    test('relocates a persisted transition root on deactivate/activate', async () => {
+      const onBeforeLeave = vi.fn()
+      const onLeave = vi.fn((_el: Element, done: () => void) => done())
+      const onBeforeEnter = vi.fn()
+      const onEnter = vi.fn((_el: Element, done: () => void) => done())
+      const CompA = compile(
+        `<template><div v-show="true">A</div></template>`,
+        ref(),
+      )
+      const CompB = compile(`<template><span>B</span></template>`, ref())
+      const data = shallowRef({
+        current: CompA,
+        onBeforeLeave,
+        onLeave,
+        onBeforeEnter,
+        onEnter,
+      })
+      const App = compile(
+        `<template>
+          <Transition
+            persisted
+            :css="false"
+            @before-leave="data.onBeforeLeave"
+            @leave="data.onLeave"
+            @before-enter="data.onBeforeEnter"
+            @enter="data.onEnter"
+          >
+            <KeepAlive>
+              <component :is="data.current" />
+            </KeepAlive>
+          </Transition>
+        </template>`,
+        data,
+      )
+      const { host } = define(App as any).render()
+      await nextTick()
+
+      data.value = { ...data.value, current: CompB }
+      await nextTick()
+      expect(host.innerHTML).toBe('<span>B</span><!--dynamic-component-->')
+      expect(onBeforeLeave).not.toHaveBeenCalled()
+      expect(onLeave).not.toHaveBeenCalled()
+
+      data.value = { ...data.value, current: CompA }
+      await nextTick()
+      expect(host.innerHTML).toBe('<div>A</div><!--dynamic-component-->')
+      expect(onBeforeEnter).not.toHaveBeenCalled()
+      expect(onEnter).not.toHaveBeenCalled()
+    })
+
     test('unmounts an incoming branch superseded during mount', async () => {
       const deactivatedB = vi.fn()
       const unmountedB = vi.fn()

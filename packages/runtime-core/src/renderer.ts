@@ -2345,38 +2345,19 @@ function baseCreateRenderer(
           true,
         )
       } else {
-        const { leave, delayLeave, afterLeave } = transition!
-        const remove = () => {
-          if (vnode.ctx!.isUnmounted) {
-            hostRemove(el!)
-          } else {
-            hostInsert(el!, container, anchor)
-          }
-        }
-        const performLeave = () => {
-          // #13153 move kept-alive node before v-show transition leave finishes
-          // it needs to call the leaving callback to ensure element's `display`
-          // is `none`
-          const wasLeaving = el!._isLeaving || !!el![leaveCbKey]
-          if (el!._isLeaving) {
-            el![leaveCbKey](true /* cancelled */)
-          }
-          // #14031 without a pending leave, persisted transitions should skip
-          // directive-owned leave hooks and just relocate.
-          if (transition!.persisted && !wasLeaving) {
-            remove()
-          } else {
-            leave(el!, () => {
-              remove()
-              afterLeave && afterLeave()
-            })
-          }
-        }
-        if (delayLeave) {
-          delayLeave(el!, remove, performLeave)
-        } else {
-          performLeave()
-        }
+        performTransitionLeave(
+          el!,
+          transition!,
+          () => {
+            if (vnode.ctx!.isUnmounted) {
+              hostRemove(el!)
+            } else {
+              hostInsert(el!, container, anchor)
+            }
+          },
+          true,
+          true,
+        )
       }
     } else {
       hostInsert(el!, container, anchor)
@@ -2954,7 +2935,11 @@ export function performTransitionLeave(
 ): void {
   const performRemove = () => {
     remove()
-    if (transition && !transition.persisted && transition.afterLeave) {
+    if (
+      transition &&
+      (force || !transition.persisted) &&
+      transition.afterLeave
+    ) {
       transition.afterLeave()
     }
   }
@@ -2965,10 +2950,17 @@ export function performTransitionLeave(
       // #13153 move kept-alive node before v-show transition leave finishes
       // it needs to call the leaving callback to ensure element's `display`
       // is `none`
+      const wasLeaving = el!._isLeaving || !!el![leaveCbKey]
       if (el!._isLeaving && force) {
         el![leaveCbKey](true /* cancelled */)
       }
-      leave(el, performRemove)
+      // #14031 without a pending leave, persisted transitions should skip
+      // directive-owned leave hooks and just relocate.
+      if (force && transition.persisted && !wasLeaving) {
+        remove()
+      } else {
+        leave(el, performRemove)
+      }
     }
     if (delayLeave) {
       delayLeave(el, performRemove, performLeave)

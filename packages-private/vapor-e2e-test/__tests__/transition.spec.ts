@@ -1165,16 +1165,12 @@ describe('vapor transition', () => {
             `<h2>This is page1</h2>` +
             `<button id="changeShowBtn">false</button><!--dynamic-component-->`,
         )
-        await nextFrame()
-        expect(html(containerSelector)).toContain(
-          `<div class="test-leave-active test-leave-to"><h2>I shouldn't show </h2></div>` +
-            `<h2>This is page1</h2>` +
-            `<button id="changeShowBtn">false</button><!--dynamic-component-->`,
-        )
 
-        // switch to page2, before leave finishes
-        // expect v-show element's display to be none
-        await css(btnToggle).click()
+        // switch to page2 while the leave is still in flight (#13153): the
+        // pending leave is cancelled (display: none) and restarted for the
+        // move. Once a leave has finished, a persisted root only relocates
+        // (#14031), so switch right away instead of waiting another frame.
+        click(btnToggle)
         await nextTick()
         await expect
           .element(css(containerSelector))
