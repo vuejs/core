@@ -86,6 +86,7 @@ export {
   traverse,
   onWatcherCleanup,
   WatchErrorCodes,
+  type MultiWatchSources,
   type WatchOptions,
   type WatchScheduler,
   type WatchStopHandle,
