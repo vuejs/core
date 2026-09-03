@@ -1,5 +1,6 @@
 import {
   Comment,
+  Fragment,
   type VNode,
   type VNodeProps,
   closeBlock,
@@ -63,6 +64,10 @@ let suspenseId = 0
  * For testing only
  */
 export const resetSuspenseId = (): number => (suspenseId = 0)
+
+// suspense branch id for transitions deferred during hidden mount
+export const suspenseDeferredTransitions: WeakMap<RendererElement, number> =
+  new WeakMap()
 
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
@@ -156,6 +161,44 @@ function triggerEvent(
   const eventListener = vnode.props && vnode.props[name]
   if (isFunction(eventListener)) {
     eventListener()
+  }
+}
+
+function triggerDeferredTransitions(
+  vnode: VNode,
+  pendingId: number,
+  isMoveRoot = true,
+) {
+  const { shapeFlag, transition, children, el } = vnode
+  if (shapeFlag & ShapeFlags.COMPONENT) {
+    triggerDeferredTransitions(vnode.component!.subTree, pendingId, isMoveRoot)
+    return
+  }
+  if (shapeFlag & (ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE)) {
+    return
+  }
+  if (isMoveRoot && vnode.type === Fragment) {
+    for (const child of children as VNode[]) {
+      triggerDeferredTransitions(child, pendingId)
+    }
+    return
+  }
+  if (
+    !isMoveRoot &&
+    shapeFlag & ShapeFlags.ELEMENT &&
+    transition &&
+    suspenseDeferredTransitions.get(el!) === pendingId
+  ) {
+    suspenseDeferredTransitions.delete(el!)
+    if (!transition.persisted) {
+      transition.beforeEnter(el!)
+      queuePostRenderEffect(() => transition.enter(el!), null)
+    }
+  }
+  if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    for (const child of children as VNode[]) {
+      triggerDeferredTransitions(child, pendingId, false)
+    }
   }
 }
 
@@ -565,6 +608,7 @@ function createSuspenseBoundary(
         if (delayEnter) {
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
+              triggerDeferredTransitions(pendingBranch!, pendingId)
               move(
                 pendingBranch!,
                 container,
@@ -608,6 +652,7 @@ function createSuspenseBoundary(
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
+          triggerDeferredTransitions(pendingBranch!, pendingId)
           move(pendingBranch!, container, anchor, MoveType.ENTER)
         }
       }
