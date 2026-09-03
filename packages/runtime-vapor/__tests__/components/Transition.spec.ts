@@ -863,6 +863,38 @@ describe('Transition', () => {
     expect(host.querySelector('div')?.textContent).toBe('foo')
   })
 
+  test('unmount during an out-in leave does not resume the pending branch', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      b: 1,
+      onLeave: (_el: Element, done: () => void) => {
+        leaveDone = done
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition mode="out-in" :css="false" @leave="data.onLeave">
+          <div v-if="data.b === 1">one</div>
+          <span v-else>two</span>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host, app } = define(App as any).render()
+    await nextTick()
+
+    data.value.b = 2
+    await nextTick()
+    expect(host.innerHTML).toBe('<div>one</div><!--if-->')
+
+    app.unmount()
+    expect(host.innerHTML).toBe('')
+
+    // the pending leave callback from the interrupted leave
+    expect(() => leaveDone!()).not.toThrow()
+    expect(host.innerHTML).toBe('')
+  })
+
   test('does not leak persisted from a v-show branch onto a non-v-show root', async () => {
     let leaveCalls = 0
     let leaveDone: (() => void) | undefined

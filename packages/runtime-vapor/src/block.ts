@@ -379,7 +379,8 @@ export function removeNode(block: Node, parent?: ParentNode): void {
     performTransitionLeave(
       block,
       (block as TransitionBlock).$transition as TransitionHooks,
-      () => parent && parent.removeChild(block),
+      // deferred: an unmount may have removed the node meanwhile
+      () => parent && block.parentNode === parent && parent.removeChild(block),
     )
   } else {
     parent && parent.removeChild(block)

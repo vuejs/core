@@ -533,6 +533,9 @@ function removeBranchWithLeaveImpl(
   ) {
     const instance = currentInstance
     applyTransitionLeaveHooksImpl(frag.nodes, transition, () => {
+      // Unmounting cuts the leave short and runs afterLeave synchronously;
+      // the pending branch must not be rendered into the torn-down tree.
+      if (transition.state.isUnmounting) return
       // By the time this deferred out-in branch runs, the renderEffect
       // has finished and currentInstance may have changed, so restore
       // the captured instance.
