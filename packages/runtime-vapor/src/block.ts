@@ -264,7 +264,7 @@ export function move(
               parent.insertBefore(block, anchor as Node)
             }
           },
-          parentSuspense,
+          true,
           true,
         )
       }
