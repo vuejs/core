@@ -11,8 +11,11 @@ import {
   type TransitionHooks,
   type TransitionProps,
   type TransitionState,
+  type VShowElement,
   performTransitionEnter,
   performTransitionLeave,
+  queuePostRenderEffect,
+  vShowHidden,
 } from '@vue/runtime-dom'
 import {
   type DynamicFragment,
@@ -24,9 +27,16 @@ import { isTransitionEnabled } from './transition'
 import { isInteropEnabled } from './vdomInteropState'
 import { isSuspenseEnabled, resolveUnmountSuspense } from './suspense'
 
+export interface VaporTransitionState extends TransitionState {
+  // Transition's own root block; persisted derivation walks from here on
+  // every apply, and hooks resolved afterwards fold the result in.
+  root?: Block
+  persisted?: boolean
+}
+
 export interface VaporTransitionHooks extends TransitionHooks {
   __vapor: true
-  state: TransitionState
+  state: VaporTransitionState
   props: TransitionProps
   instance: VaporComponentInstance
   // Temporarily skips enter/move during TransitionGroup FLIP measurement.
@@ -44,6 +54,8 @@ export interface VaporTransitionHooks extends TransitionHooks {
 export interface TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks
+  // v-show is applied to this block (set by applyVShow after unwrapping)
+  $vshow?: true
 }
 
 export type TransitionBlock = (
@@ -138,18 +150,28 @@ export function insertNode(
 ): void {
   if (!isHydrating) {
     // only apply transition on Element nodes
-    if (
-      isTransitionEnabled &&
-      block instanceof Element &&
-      (block as TransitionBlock).$transition &&
-      !(block as TransitionBlock).$transition!.disabled
-    ) {
-      performTransitionEnter(
-        block,
-        (block as TransitionBlock).$transition as TransitionHooks,
-        () => parent.insertBefore(block, anchor as Node),
-        parentSuspense,
-      )
+    const transition =
+      isTransitionEnabled && block instanceof Element
+        ? (block as TransitionBlock).$transition
+        : undefined
+    if (transition && !transition.disabled) {
+      const insert = () => parent.insertBefore(block, anchor)
+      if (isVShowMountEnter(block as Element, transition)) {
+        transition.beforeEnter(block)
+        insert()
+        queuePostRenderEffect(
+          () => transition.enter(block),
+          undefined,
+          parentSuspense,
+        )
+      } else {
+        performTransitionEnter(
+          block,
+          transition as TransitionHooks,
+          insert,
+          parentSuspense,
+        )
+      }
     } else if (block !== anchor) {
       // `block === anchor` happens when a fragment's own anchor travels
       // inside its `nodes` (ForFragment, vdom interop fragments), when a
@@ -159,6 +181,22 @@ export function insertNode(
       parent.insertBefore(block, anchor)
     }
   }
+}
+
+// A persisted root is v-show-owned: vdom's directive enters it on mount when
+// shown (not suspense-gated; the queued enter waits for the boundary), but
+// vapor's v-show can't (hooks attach after render), so the renderer does it.
+// Elements touched only by vdom's directive carry no `$vshow`, so foreign
+// hooks keep the persisted skip.
+function isVShowMountEnter(
+  el: Element,
+  transition: VaporTransitionHooks,
+): boolean {
+  return (
+    transition.persisted &&
+    !!(el as TransitionBlock).$vshow &&
+    !(el as VShowElement)[vShowHidden]
+  )
 }
 
 export function insertFragment(
