@@ -55,6 +55,7 @@ import {
   isComment,
   isHydrating,
   locateHydrationBoundaryClose,
+  markerlessHydrationContainer,
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
@@ -88,19 +89,6 @@ type ResolvedSource = {
   needsWrap: boolean
   isReadonlySource: boolean
   keys?: string[]
-}
-
-type ForHydrationAnchorResolver = (
-  hydrationStart: Node,
-  anchorNode: Node | null | undefined,
-) => Node | undefined
-
-let resolveForHydrationAnchor: ForHydrationAnchorResolver | undefined
-
-export function setForHydrationAnchorResolver(
-  resolver: ForHydrationAnchorResolver,
-): void {
-  resolveForHydrationAnchor = resolver
 }
 
 export const createFor = (
@@ -549,15 +537,26 @@ export const createFor = (
           if (nextNode) setCurrentHydrationNode(nextNode)
         }
 
-        // special handling transition-group + v-for, without <!--]--> marker
-        const resolvedAnchor =
-          resolveForHydrationAnchor &&
-          resolveForHydrationAnchor(
-            hydrationStart,
-            newLength ? nextNode : currentHydrationNode,
+        const container = markerlessHydrationContainer
+        const ref = newLength ? nextNode : currentHydrationNode
+        if (
+          container &&
+          (hydrationStart === container ||
+            hydrationStart.parentNode === container) &&
+          // slot content keeps its own markers unless it is a single
+          // fragment; a close marker right after the rows is then ours
+          !(ref && isComment(ref, ']'))
+        ) {
+          // a direct child of a container rendered without fragment markers
+          parentAnchor = claimAnchor(
+            __DEV__ ? createComment('for') : createTextNode(),
           )
-        if (resolvedAnchor) {
-          parentAnchor = resolvedAnchor
+          container.insertBefore(
+            parentAnchor,
+            ref && ref !== container && ref.parentNode === container
+              ? ref
+              : null,
+          )
           pendingHydrationAnchor = true
         } else if (slotFallbackRange && !isValidSlot(newBlocks)) {
           // Slot fallback can fall through an empty/invalid `v-for`. In that

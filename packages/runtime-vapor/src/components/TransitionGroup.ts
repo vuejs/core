@@ -47,8 +47,7 @@ import {
   isVaporComponent,
 } from '../component'
 import { type RawProps, resolveDynamicProps } from '../componentProps'
-import { setForHydrationAnchorResolver } from '../apiCreateFor'
-import { createComment, createElement, createTextNode } from '../dom/node'
+import { createElement } from '../dom/node'
 import {
   DynamicFragment,
   type VaporFragment,
@@ -63,12 +62,12 @@ import {
 import { EffectFlags, ReactiveEffect } from '@vue/reactivity'
 import {
   adoptTemplate,
-  claimAnchor,
   cleanupHydrationTail,
   currentHydrationNode,
   isHydrating,
   nextLogicalSibling,
   setCurrentHydrationNode,
+  setMarkerlessHydrationContainer,
 } from '../dom/hydration'
 import { isTransitionEnabled, registerTransitionHooks } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
@@ -89,36 +88,6 @@ const transitionGroupUpdateOwnerMap = new WeakMap<
   TransitionGroupUpdateOwner,
   TransitionGroupUpdateHookRef
 >()
-
-let isForHydrationAnchorResolverRegistered = false
-let currentForHydrationContainer: ParentNode | undefined
-
-function ensureForHydrationAnchorResolver(): void {
-  if (isForHydrationAnchorResolverRegistered) return
-  isForHydrationAnchorResolverRegistered = true
-  setForHydrationAnchorResolver((hydrationStart, anchorNode) => {
-    const container = currentForHydrationContainer
-    if (!container) return
-    if (
-      hydrationStart !== container &&
-      hydrationStart.parentNode !== container
-    ) {
-      return
-    }
-
-    const anchor =
-      anchorNode &&
-      anchorNode !== container &&
-      anchorNode.parentNode === container
-        ? anchorNode
-        : null
-    const parentAnchor = claimAnchor(
-      __DEV__ ? createComment('for') : createTextNode(),
-    )
-    container.insertBefore(parentAnchor, anchor)
-    return parentAnchor
-  })
-}
 
 const decorate = <T extends VaporComponentOptions>(t: T): T => {
   delete (t.props! as any).mode
@@ -286,13 +255,11 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           : createElement(tag)
         : undefined
       let nextNode: Node | null = null
-      let prevForHydrationContainer: ParentNode | undefined
+      let prevMarkerlessContainer: ParentNode | null = null
       if (isHydrating && container) {
-        // `transition-group + v-for` SSR output does not include `<!--]-->`.
-        // Expose the container so `v-for` hydration can create its own anchor.
-        ensureForHydrationAnchorResolver()
-        prevForHydrationContainer = currentForHydrationContainer
-        currentForHydrationContainer = container
+        // SSR flattens the children into the container without fragment
+        // markers; the cursor sits on the container itself when it is empty.
+        prevMarkerlessContainer = setMarkerlessHydrationContainer(container)
         nextNode = nextLogicalSibling(container)
         setCurrentHydrationNode(container.firstChild || container)
       }
@@ -327,7 +294,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
         }
       } finally {
         if (isHydrating && container) {
-          currentForHydrationContainer = prevForHydrationContainer
+          setMarkerlessHydrationContainer(prevMarkerlessContainer)
           setCurrentHydrationNode(nextNode)
         }
       }
