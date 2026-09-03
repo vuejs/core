@@ -206,6 +206,34 @@ describe('TransitionGroup', () => {
     expect(nodes[1].$transition).toBeDefined()
   })
 
+  test('rows landing at the tail go after leaving rows (vdom order)', async () => {
+    // leave is held open so removed rows stay in the DOM as ghosts
+    const data = ref<any>({
+      items: ['a', 'b', 'c'],
+      onLeave: (_el: Element, _done: () => void) => {},
+    })
+    const App = compile(
+      `<template>
+        <TransitionGroup tag="div" :css="false" @leave="data.onLeave">
+          <div v-for="i in data.items" :key="i">{{ i }}</div>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    const text = () => host.querySelector('div')!.textContent
+
+    // remove the tail row and append a new one
+    data.value.items = ['a', 'b', 'd']
+    await nextTick()
+    expect(text()).toBe('abcd')
+
+    // move an existing row to the tail past the leaving one
+    data.value.items = ['b', 'd', 'a']
+    await nextTick()
+    expect(text()).toBe('bcda')
+  })
+
   test('keyed reorder does not run enter hooks on relocated rows', async () => {
     const onBeforeEnter = vi.fn()
     const data = ref<any>({ items: ['a', 'b', 'c'], onBeforeEnter })

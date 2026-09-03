@@ -401,26 +401,9 @@ export const createFor = (
             }
           }
           if (anchorNode === undefined) {
-            if (cachedAnchor === undefined) {
-              // Landing at the tail. Rows removed under a leave transition
-              // stay in the DOM until their animation ends, and
-              // `parentAnchor` alone would place this row after them,
-              // reordering them relative to a surviving neighbor they used
-              // to follow (mid-list insertions anchor on the next live row,
-              // matching vdom, so ghosts keep their place there). Ghosts
-              // never move, so the run adjacent to the anchor is exactly
-              // the trailing run of leftovers in old order — step in front
-              // of it.
-              cachedAnchor = parentAnchor
-              if (isTransitionEnabled && frag.$transition) {
-                for (let i = e2 - 1; i >= 0; i--) {
-                  const oldBlock = oldBlocks[i]
-                  if (!oldKeyIndexMap.has(oldBlock.key)) break
-                  const first = getBlockFirstNode(oldBlock.nodes)
-                  if (first && first.parentNode === parent) cachedAnchor = first
-                }
-              }
-            }
+            // Landing at the tail: after any rows still leaving, as vdom
+            // anchors on the fragment end.
+            if (cachedAnchor === undefined) cachedAnchor = parentAnchor
             anchorNode = cachedAnchor
           }
           scanFrom = index + 1

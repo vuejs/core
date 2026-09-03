@@ -484,6 +484,44 @@ describe('vapor transition-group', () => {
   )
 
   test(
+    'enter + leave at tail',
+    async () => {
+      const btnSelector = '.enter-leave-at-tail > button'
+      const containerSelector = '.enter-leave-at-tail > div'
+
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">c</div>`,
+        )
+
+      // the new row lands after the leaving tail row, as in vdom
+      click(btnSelector)
+      await nextTick()
+      await nextFrame()
+      expect(html(containerSelector)).toContain(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test test-leave-from test-leave-active">c</div>` +
+          `<div class="test test-enter-from test-enter-active">d</div>` +
+          `<!--for--><!--transition-group-->`,
+      )
+
+      await transitionFinish()
+      await expect
+        .element(css(containerSelector))
+        .toContainHTML(
+          `<div class="test">a</div>` +
+            `<div class="test">b</div>` +
+            `<div class="test">d</div>`,
+        )
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'appear',
     async () => {
       const btnSelector = '.appear > button'
