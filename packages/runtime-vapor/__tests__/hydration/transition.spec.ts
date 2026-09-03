@@ -473,6 +473,43 @@ describe('Vapor Mode hydration', () => {
       ).not.toHaveBeenWarned()
     })
 
+    test('with tag should reuse the close marker kept by slot content', async () => {
+      // SSR only strips the slot fragment markers when the slot renders a
+      // single fragment; with a trailing sibling the v-for keeps its own
+      const data = ref({
+        items: [1, 2],
+        tail: 'tail',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <li v-for="item in data.items" :key="item">{{ item }}</li>
+            <li key="tail">{{ data.tail }}</li>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      // the SSR close marker is the list anchor; no extra `<!--for-->`
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><!--]--><!--slot--><li>tail</li>`,
+      )
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--slot--><li>tail updated</li>`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
     // #15372
     test('should drop comment children to stay in sync with SSR output', async () => {
       const data = ref({

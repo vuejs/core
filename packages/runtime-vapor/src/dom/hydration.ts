@@ -239,6 +239,21 @@ type CommentAnchor = Comment & Anchor
 export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
+// Element whose direct children were server-rendered without fragment
+// markers (TransitionGroup flattens them): a list hydrating in it has no
+// close marker of its own unless the slot content kept one.
+export let markerlessHydrationContainer: ParentNode | null = null
+
+export function setMarkerlessHydrationContainer(
+  container: ParentNode | null,
+): ParentNode | null {
+  try {
+    return markerlessHydrationContainer
+  } finally {
+    markerlessHydrationContainer = container
+  }
+}
+
 export function setCurrentHydrationNode(node: Node | null): void {
   currentHydrationNode = skipUntrackedAnchors(node)
 }
