@@ -660,13 +660,17 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
     case NodeTypes.ELEMENT:
     case NodeTypes.IF:
     case NodeTypes.FOR:
-      __DEV__ &&
-        assert(
-          node.codegenNode != null,
-          `Codegen node is missing for element/if/for node. ` +
-            `Apply appropriate transforms first.`,
-        )
-      genNode(node.codegenNode!, context)
+      // A codegenNode is normally produced by the structural transforms. It can
+      // legitimately be absent when the node carried an invalid structural
+      // directive (e.g. a misplaced v-slot, or a v-else/v-else-if with no
+      // adjacent v-if) whose transform reported a compiler error but left the
+      // node in the tree. With a non-throwing `onError`, that node still reaches
+      // codegen, so emit a placeholder instead of crashing.
+      if (node.codegenNode == null) {
+        context.push(`null`, NewlineType.None, node)
+        break
+      }
+      genNode(node.codegenNode, context)
       break
     case NodeTypes.TEXT:
       genText(node, context)
