@@ -556,7 +556,7 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     }
   }
   if (merged && merged.length) {
-    return merged
+    return merged.reverse()
   }
 }
 
