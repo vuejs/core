@@ -734,6 +734,36 @@ describe('vapor transition-group', () => {
       )
   })
 
+  // an attribute update on a plain element child re-runs a TransitionGroup
+  // owned effect, which is what triggers the FLIP measurement (vdom: the
+  // group re-renders because the slot read the changed value)
+  test('same-key element move after class change', async () => {
+    const btnSelector = '.same-key-element-move-after-class-change > button'
+    const containerSelector = '.same-key-element-move-after-class-change > div'
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item closed" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed" id="item-2"><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+
+    click(btnSelector)
+    await nextTick()
+    await nextFrame()
+
+    await expect
+      .element(css(containerSelector))
+      .toContainHTML(
+        `<div class="item-wrapper">` +
+          `<div class="item opened" id="item-1"><div class="item-inner">item 1</div></div>` +
+          `<div class="item closed group-move" id="item-2" style=""><div class="item-inner">item 2</div></div>` +
+          `<!--for--></div><!--transition-group-->`,
+      )
+  })
+
   test('same-key component move after prop change', async () => {
     const btnSelector = '.same-key-component-move-after-prop-change > button'
     const containerSelector = '.same-key-component-move-after-prop-change > div'
