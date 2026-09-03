@@ -537,15 +537,16 @@ export const createFor = (
           if (nextNode) setCurrentHydrationNode(nextNode)
         }
 
+        // special handling transition-group + v-for, without <!--]--> marker
         const container = markerlessHydrationContainer
-        const ref = newLength ? nextNode : currentHydrationNode
+        const curNode = newLength ? nextNode : currentHydrationNode
         if (
           container &&
           (hydrationStart === container ||
             hydrationStart.parentNode === container) &&
           // slot content keeps its own markers unless it is a single
           // fragment; a close marker right after the rows is then ours
-          !(ref && isComment(ref, ']'))
+          !(curNode && isComment(curNode, ']'))
         ) {
           // a direct child of a container rendered without fragment markers
           parentAnchor = claimAnchor(
@@ -553,8 +554,8 @@ export const createFor = (
           )
           container.insertBefore(
             parentAnchor,
-            ref && ref !== container && ref.parentNode === container
-              ? ref
+            curNode && curNode !== container && curNode.parentNode === container
+              ? curNode
               : null,
           )
           pendingHydrationAnchor = true
