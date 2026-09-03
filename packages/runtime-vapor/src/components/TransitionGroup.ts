@@ -35,6 +35,8 @@ import {
   type ResolvedTransitionBlock,
   applyTransitionHooksImpl,
   getTransitionElement,
+  getTransitionKey,
+  groupTransitionKeys,
   isValidTransitionBlock,
   resolveTransitionHooks,
   setTransitionType,
@@ -345,18 +347,9 @@ export const VaporTransitionGroup: DefineVaporComponent<
   TransitionGroupProps
 > = /*@__PURE__*/ decorate(VaporTransitionGroupImpl)
 
-type InheritedTransitionKeyRecord = {
-  generation: number
-  rawBaseKey: any
-  inheritedKey: string
-}
-
-const inheritedTransitionKeyMap = new WeakMap<
-  ResolvedTransitionBlock,
-  InheritedTransitionKeyRecord
->()
-let transitionKeyGeneration = 0
-let currentTransitionKeyGeneration = 0
+// Composed keys of the current resolution pass. Owners compose bottom-up, so
+// a child under nested keyed owners reads its inner composition here first.
+type ComposedKeys = Map<ResolvedTransitionBlock, any>
 
 export function resolveTransitionBlocks(
   block: Block,
@@ -367,17 +360,21 @@ export function resolveTransitionBlocks(
 ): ResolvedTransitionBlock[] {
   const children: ResolvedTransitionBlock[] = []
   if (collectOnly) {
-    collectTransitionBlocks(block, children, onFragment, onUpdateOwner, true)
-    return children
-  }
-  const prevGeneration = currentTransitionKeyGeneration
-  currentTransitionKeyGeneration = ++transitionKeyGeneration
-  try {
     collectTransitionBlocks(block, children, onFragment, onUpdateOwner)
     return children
-  } finally {
-    currentTransitionKeyGeneration = prevGeneration
   }
+  const composed: ComposedKeys = new Map()
+  collectTransitionBlocks(block, children, onFragment, onUpdateOwner, composed)
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    const key = composed.get(child)
+    if (key !== undefined) {
+      groupTransitionKeys.set(child, key)
+    } else {
+      groupTransitionKeys.delete(child)
+    }
+  }
+  return children
 }
 
 function collectTransitionBlocks(
@@ -385,7 +382,7 @@ function collectTransitionBlocks(
   children: ResolvedTransitionBlock[],
   onFragment?: (frag: VaporFragment) => void,
   onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
-  collectOnly = false,
+  composed?: ComposedKeys,
 ): void {
   if (block instanceof Node) {
     if (block instanceof Element) children.push(block)
@@ -399,15 +396,15 @@ function collectTransitionBlocks(
       children,
       onFragment,
       isRootSlot ? onUpdateOwner : undefined,
-      collectOnly,
+      composed,
     )
-    if (!collectOnly) {
+    if (composed) {
       if (!isRootSlot) {
         for (let i = start; i < children.length; i++) {
           setTransitionType(children[i], block.type)
         }
       }
-      inheritTransitionKey(children, start, block.$key)
+      inheritTransitionKey(children, start, block.$key, composed)
     }
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
@@ -416,7 +413,7 @@ function collectTransitionBlocks(
         children,
         onFragment,
         onUpdateOwner,
-        collectOnly,
+        composed,
       )
     }
   } else if (isFragment(block)) {
@@ -438,20 +435,22 @@ function collectTransitionBlocks(
         children,
         onFragment,
         onUpdateOwner,
-        collectOnly,
+        composed,
       )
-      if (collectOnly) {
-        // element collection only; keys were stamped by the apply pass
+      if (!composed) {
+        // element collection only; keys were resolved by the apply pass
       } else if (isItem) {
         const count = children.length - start
-        for (let i = start; i < children.length; i++) {
-          children[i].$key =
-            block.key != null && count > 1
-              ? `${block.key}:${i - start}`
-              : block.key
+        if (count === 1) {
+          // the row key is the single root's own key
+          children[start].$key = block.key
+        } else if (block.key != null) {
+          for (let i = start; i < children.length; i++) {
+            composed.set(children[i], `${block.key}:${i - start}`)
+          }
         }
       } else {
-        inheritTransitionKey(children, start, block.$key)
+        inheritTransitionKey(children, start, block.$key, composed)
       }
     }
   }
@@ -461,29 +460,15 @@ function inheritTransitionKey(
   children: ResolvedTransitionBlock[],
   start: number,
   key: any,
+  composed: ComposedKeys,
 ): void {
-  if (key == null || start === children.length) return
+  if (key == null) return
   for (let i = start; i < children.length; i++) {
     const child = children[i]
-    let record = inheritedTransitionKeyMap.get(child)
-    let baseKey
-    if (record && record.generation === currentTransitionKeyGeneration) {
-      baseKey = child.$key != null ? child.$key : i - start
-    } else {
-      if (!record || !Object.is(child.$key, record.inheritedKey)) {
-        record = {
-          generation: currentTransitionKeyGeneration,
-          rawBaseKey: child.$key != null ? child.$key : i - start,
-          inheritedKey: '',
-        }
-        inheritedTransitionKeyMap.set(child, record)
-      } else {
-        record.generation = currentTransitionKeyGeneration
-      }
-      baseKey = record.rawBaseKey
-    }
-    record.inheritedKey = String(key) + String(baseKey)
-    child.$key = record.inheritedKey
+    const inner = composed.get(child)
+    const base =
+      inner !== undefined ? inner : child.$key != null ? child.$key : i - start
+    composed.set(child, String(key) + String(base))
   }
 }
 
@@ -503,7 +488,7 @@ function applyGroupTransitionHooks(
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (isValidTransitionBlock(child)) {
-      if (child.$key != null) {
+      if (getTransitionKey(child) != null) {
         child.$transition = resolveTransitionHooks(
           child,
           props,

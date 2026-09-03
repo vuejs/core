@@ -271,11 +271,21 @@ function getLeaveElement(
   }
 }
 
+// TransitionGroup composes owner keys onto its children (vdom's
+// getTransitionRawChildren) without touching the block's own `$key`.
+export const groupTransitionKeys: WeakMap<ResolvedTransitionBlock, any> =
+  new WeakMap()
+
+export function getTransitionKey(block: ResolvedTransitionBlock): any {
+  const key = groupTransitionKeys.get(block)
+  return key !== undefined ? key : block.$key
+}
+
 const getTransitionHooksContext = (
   block: ResolvedTransitionBlock,
   state: TransitionState,
 ) => {
-  const key = String(block.$key)
+  const key = String(getTransitionKey(block))
   const leavingNodes = getLeavingNodesForType(state, block)
   const context: TransitionHooksContext = {
     isLeaving: () => leavingNodes[key] === block,
@@ -294,7 +304,10 @@ const getTransitionHooksContext = (
       // String($key), which coerces e.g. 1 and '1' into the same slot. Compare
       // the raw keys so a number-keyed leaving node isn't force-removed by a
       // string-keyed entering node (and vice versa).
-      if (leavingNode && leavingNode.$key === block.$key) {
+      if (
+        leavingNode &&
+        getTransitionKey(leavingNode) === getTransitionKey(block)
+      ) {
         const el = getLeaveElement(leavingNode)
         if (el && el[leaveCbKey]) {
           // force early removal (not cancelled)
@@ -439,7 +452,7 @@ export function applyTransitionLeaveHooksImpl(
       delayedLeave,
     ) => {
       const leavingNodes = getLeavingNodesForType(state, leavingBlock)
-      const leavingKey = String(leavingBlock.$key)
+      const leavingKey = String(getTransitionKey(leavingBlock))
       leavingNodes[leavingKey] = leavingBlock
       // Bind cleanup to this specific handoff so an older leave callback
       // cannot clear a newer delayedLeave during rapid toggles.

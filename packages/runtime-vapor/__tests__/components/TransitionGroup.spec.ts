@@ -9,6 +9,7 @@ import {
   template,
 } from '../../src'
 import { defineComponent, h, nextTick, ref } from '@vue/runtime-dom'
+import { getTransitionKey } from '../../src/components/Transition'
 import { compile, makeInteropRender, makeRender } from '../_utils'
 
 const define = makeRender()
@@ -35,7 +36,9 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(child.block.$key).toBe('foo0')
+    expect(getTransitionKey(child.block)).toBe('foo0')
+    // the composed key never overwrites the block's own key
+    expect(child.block.$key).toBeUndefined()
     expect(child.block.$transition).toBeDefined()
   })
 
@@ -55,7 +58,7 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(frag.nodes.$key).toBe('foo0')
+    expect(getTransitionKey(frag.nodes)).toBe('foo0')
     expect(frag.nodes.$transition).toBeDefined()
   })
 
@@ -82,8 +85,8 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(child.block[0].$key).toBe('foo0')
-    expect(child.block[1].$key).toBe('foo1')
+    expect(getTransitionKey(child.block[0])).toBe('foo0')
+    expect(getTransitionKey(child.block[1])).toBe('foo1')
     expect(child.block[0].$transition).toBeDefined()
     expect(child.block[1].$transition).toBeDefined()
   })
@@ -110,8 +113,8 @@ describe('TransitionGroup', () => {
       },
     }).render()
 
-    expect(child.block[0].$key).toBe('fooa')
-    expect(child.block[1].$key).toBe('foob')
+    expect(getTransitionKey(child.block[0])).toBe('fooa')
+    expect(getTransitionKey(child.block[1])).toBe('foob')
     expect(child.block[0].$transition).toBeDefined()
     expect(child.block[1].$transition).toBeDefined()
   })
@@ -197,8 +200,8 @@ describe('TransitionGroup', () => {
 
     const nodes = list.nodes[0][0].nodes
 
-    expect(nodes[0].$key).toBe('1:0')
-    expect(nodes[1].$key).toBe('1:1')
+    expect(getTransitionKey(nodes[0])).toBe('1:0')
+    expect(getTransitionKey(nodes[1])).toBe('1:1')
     expect(nodes[0].$transition).toBeDefined()
     expect(nodes[1].$transition).toBeDefined()
   })

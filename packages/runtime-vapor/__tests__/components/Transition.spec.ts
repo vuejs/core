@@ -4,7 +4,10 @@ import {
   setBlockKey,
   template,
 } from '../../src'
-import { resolveTransitionBlock } from '../../src/components/Transition'
+import {
+  getTransitionKey,
+  resolveTransitionBlock,
+} from '../../src/components/Transition'
 import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
 import {
   Fragment,
@@ -206,8 +209,8 @@ describe('Transition', () => {
 
     const resolved = resolveTransitionBlocks(child)
     expect(resolved).toEqual([child.block[1], child.block[2]])
-    expect(child.block[1].$key).toBe('foo0')
-    expect(child.block[2].$key).toBe('foo1')
+    expect(getTransitionKey(child.block[1])).toBe('foo0')
+    expect(getTransitionKey(child.block[2])).toBe('foo1')
   })
 
   test('keeps inherited group keys stable across repeated resolutions', () => {
@@ -235,8 +238,8 @@ describe('Transition', () => {
     resolveTransitionBlocks(child)
     resolveTransitionBlocks(child)
 
-    expect(child.block[1].$key).toBe('foo0')
-    expect(child.block[2].$key).toBe('foo1')
+    expect(getTransitionKey(child.block[1])).toBe('foo0')
+    expect(getTransitionKey(child.block[2])).toBe('foo1')
   })
 
   test('treats null group owner key as absent', () => {
@@ -260,8 +263,8 @@ describe('Transition', () => {
 
     resolveTransitionBlocks(child)
 
-    expect(child.block[0].$key).toBeUndefined()
-    expect(child.block[1].$key).toBeUndefined()
+    expect(getTransitionKey(child.block[0])).toBeUndefined()
+    expect(getTransitionKey(child.block[1])).toBeUndefined()
   })
 
   test('composes nested group key prefixes', () => {
@@ -285,8 +288,8 @@ describe('Transition', () => {
 
     const resolved = resolveTransitionBlocks(child)
 
-    expect(resolved[0].$key).toBe('foo0')
-    expect(resolved[1].$key).toBe('foobar')
+    expect(getTransitionKey(resolved[0])).toBe('foo0')
+    expect(getTransitionKey(resolved[1])).toBe('foobar')
   })
 
   test('allows empty transition content', async () => {
