@@ -187,9 +187,6 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           !(el as VShowElement)[vShowHidden]
         ) {
           prevChildren.push(child)
-          // Skip enter/move while children are placed for FLIP measurement.
-          // Leave still needs to run for removed children.
-          child.$transition!.disabled = true
           positionMap.set(child, el.getBoundingClientRect())
         }
       }
@@ -211,19 +208,17 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           moveClass,
         )
       )
-      prevChildren.forEach(child => {
-        child.$transition!.disabled = false
-        if (hasMove) {
-          // pending enter/move cbs live on the element, which for interop
-          // children is not the block itself
-          const el = getTransitionElement(child)
-          if (el) callPendingCbs(el)
-        }
-      })
       if (!hasMove) {
         prevChildren = []
         return
       }
+
+      prevChildren.forEach(child => {
+        // pending enter/move cbs live on the element, which for interop
+        // children is not the block itself
+        const el = getTransitionElement(child)
+        if (el) callPendingCbs(el)
+      })
 
       prevChildren.forEach(recordPosition)
       const movedChildren = prevChildren.filter(applyTranslation)
@@ -509,17 +504,12 @@ function applyGroupTransitionHooks(
     const child = children[i]
     if (isValidTransitionBlock(child)) {
       if (child.$key != null) {
-        const prev = child.$transition
         child.$transition = resolveTransitionHooks(
           child,
           props,
           state,
           instance,
         )
-        // Carry the FLIP-measurement latch across hook re-resolution (a props
-        // re-apply or slot re-render can land between beforeUpdate and
-        // flushUpdated); flushUpdated resets it on the live hooks object.
-        if (prev && prev.disabled) child.$transition.disabled = true
       } else if (__DEV__) {
         warn(`<transition-group> children must be keyed`)
       }
