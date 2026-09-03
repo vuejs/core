@@ -274,7 +274,7 @@ export function createPathGetter(
   const segments = path.split('.')
   return (): WatchSource | WatchSource[] | WatchEffect | object => {
     let cur = ctx
-    for (let i = 0; i < segments.length && cur; i++) {
+    for (let i = 0; i < segments.length && cur != null; i++) {
       cur = cur[segments[i] as keyof typeof cur]
     }
     return cur

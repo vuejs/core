@@ -25,7 +25,9 @@ export function patchStyle(el: Element, prev: Style, next: Style): void {
         }
       } else {
         for (const prevStyle of prev.split(';')) {
-          const key = prevStyle.slice(0, prevStyle.indexOf(':')).trim()
+          const colonIndex = prevStyle.indexOf(':')
+          if (colonIndex < 0) continue
+          const key = prevStyle.slice(0, colonIndex).trim()
           if (next[key] == null) {
             setStyle(style, key, '')
           }
