@@ -39,9 +39,6 @@ export interface VaporTransitionHooks extends TransitionHooks {
   state: VaporTransitionState
   props: TransitionProps
   instance: VaporComponentInstance
-  // Temporarily skips enter/move during TransitionGroup FLIP measurement.
-  // Leave transitions intentionally ignore this flag.
-  disabled?: boolean
   // TransitionGroup sets this to handle applying hooks to list children
   applyGroup?: (
     block: Block,
@@ -154,7 +151,7 @@ export function insertNode(
       isTransitionEnabled && block instanceof Element
         ? (block as TransitionBlock).$transition
         : undefined
-    if (transition && !transition.disabled) {
+    if (transition) {
       const insert = () => parent.insertBefore(block, anchor)
       if (isVShowMountEnter(block as Element, transition)) {
         transition.beforeEnter(block)
@@ -236,7 +233,6 @@ export function move(
       isTransitionEnabled &&
       block instanceof Element &&
       (block as TransitionBlock).$transition &&
-      !(block as TransitionBlock).$transition!.disabled &&
       moveType !== MoveType.REORDER
     ) {
       if (moveType === MoveType.ENTER) {

@@ -203,34 +203,29 @@ describe('TransitionGroup', () => {
     expect(nodes[1].$transition).toBeDefined()
   })
 
-  test('restores disabled transition hooks when no move transform is available', async () => {
-    const items = ref([1, 2])
-    let list: any
-
-    define({
-      setup() {
-        list = createFor(
-          () => items.value,
-          item => {
-            const el = template(`<div></div>`)()
-            el.textContent = String(item.value)
-            return el
-          },
-          item => item,
-        )
-        return createComponent(VaporTransitionGroup, null, {
-          default: () => list,
-        })
-      },
-    }).render()
-
-    const first = list.nodes[0][0].nodes
-
-    items.value = [2, 1]
-    await nextTick()
+  test('keyed reorder does not run enter hooks on relocated rows', async () => {
+    const onBeforeEnter = vi.fn()
+    const data = ref<any>({ items: ['a', 'b', 'c'], onBeforeEnter })
+    const App = compile(
+      `<template>
+        <TransitionGroup tag="div" :css="false" @before-enter="data.onBeforeEnter">
+          <div v-for="i in data.items" :key="i">{{ i }}</div>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
     await nextTick()
 
-    expect(first.$transition.disabled).toBe(false)
+    data.value.items = ['c', 'a', 'b']
+    await nextTick()
+    expect(host.querySelector('div')!.textContent).toBe('cab')
+    expect(onBeforeEnter).not.toHaveBeenCalled()
+
+    // a new row still enters
+    data.value.items = ['c', 'a', 'b', 'd']
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledOnce()
   })
 
   test('skips group hook and owner bookkeeping on ForBlock wrappers', () => {

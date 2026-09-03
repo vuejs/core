@@ -1321,7 +1321,6 @@ describe('effects in pending branches', () => {
   test('transition-group move processing waits for the branch to resolve', async () => {
     const asyncSetup = deferred()
     const items = ref([1, 2])
-    let first!: any
     const VaporChild = defineVaporComponent({
       setup() {
         const list = createFor(
@@ -1333,7 +1332,6 @@ describe('effects in pending branches', () => {
           },
           item => item,
         )
-        first = (list.nodes as any)[0][0].nodes
         return createComponent(VaporTransitionGroup, null, {
           default: () => list,
         })
@@ -1358,13 +1356,22 @@ describe('effects in pending branches', () => {
     app.mount(host)
 
     await nextTick()
+    // The position snapshot stays pending until the deferred flush runs, so a
+    // second update while the boundary is pending must not measure again.
+    const measure = vi.spyOn(Element.prototype, 'getBoundingClientRect')
     items.value = [2, 1]
     await nextTick()
-    expect(first.$transition.disabled).toBe(true)
+    expect(measure).toHaveBeenCalledTimes(2)
+    items.value = [1, 2]
+    await nextTick()
+    expect(measure).toHaveBeenCalledTimes(2)
 
     asyncSetup.resolve()
     await flushResolution(asyncSetup.promise)
-    expect(first.$transition.disabled).toBe(false)
+    items.value = [2, 1]
+    await nextTick()
+    expect(measure).toHaveBeenCalledTimes(4)
+    measure.mockRestore()
     app.unmount()
   })
 

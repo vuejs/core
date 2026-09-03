@@ -28,11 +28,12 @@ import {
   insertFragment,
   insertNode,
   isValidSlot,
+  move,
   remove,
   removeFragment,
   removeNode,
 } from './block'
-import { queuePostFlushCb, warn } from '@vue/runtime-dom'
+import { MoveType, queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance } from './component'
 import {
   type DynamicSlot,
@@ -427,7 +428,8 @@ export const createFor = (
 
           const block = newBlocks[index]
           if (block !== undefined) {
-            insertForBlock(block, anchorNode)
+            // relocating an existing row is not a structural enter
+            move(block.nodes, parent!, anchorNode, MoveType.REORDER)
           } else {
             mount(source, index, anchorNode)
           }
