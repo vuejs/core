@@ -243,10 +243,12 @@ export function createAppContext(): AppContext {
   }
 }
 
-export type CreateAppFunction<HostElement> = (
-  rootComponent: Component,
-  rootProps?: Data | null,
-) => App<HostElement>
+export interface CreateAppFunction<HostElement> {
+  <Props extends Data = Data>(
+    rootComponent: Component<Props>,
+    rootProps?: Props | null,
+  ): App<HostElement>
+}
 
 let uid = 0
 
