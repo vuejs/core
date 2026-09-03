@@ -234,6 +234,55 @@ describe('TransitionGroup', () => {
     expect(text()).toBe('bcda')
   })
 
+  // vdom re-renders the group (and measures) when the slot's own reads change,
+  // which for a component child means its props; child-local state does not
+  test('measures on component prop changes but not on child-local state', async () => {
+    const data = ref({ items: [{ id: 1, opened: false }] })
+    const Item = compile(
+      `<script vapor>
+        import { ref } from 'vue'
+        const data = _data
+        const props = defineProps({ opened: Boolean })
+        const local = ref(0)
+        window.__bumpLocal = () => local.value++
+      </script>
+      <template><div :class="{ opened: props.opened, odd: local % 2 }">item</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <TransitionGroup tag="div">
+          <components.Item v-for="i in data.items" :key="i.id" :opened="i.opened" />
+        </TransitionGroup>
+      </template>`,
+      data,
+      { Item },
+    )
+    define(App as any).render()
+    await nextTick()
+    const measure = vi.spyOn(Element.prototype, 'getBoundingClientRect')
+
+    data.value.items[0].opened = true
+    await nextTick()
+    expect(measure).toHaveBeenCalledTimes(1)
+
+    ;(window as any).__bumpLocal()
+    await nextTick()
+    expect(measure).toHaveBeenCalledTimes(1)
+
+    // the prop tracking dies with the row
+    const removed = data.value.items[0]
+    data.value.items = []
+    await nextTick()
+    measure.mockClear()
+    removed.opened = false
+    await nextTick()
+    expect(measure).not.toHaveBeenCalled()
+
+    measure.mockRestore()
+    delete (window as any).__bumpLocal
+  })
+
   test('keyed reorder does not run enter hooks on relocated rows', async () => {
     const onBeforeEnter = vi.fn()
     const data = ref<any>({ items: ['a', 'b', 'c'], onBeforeEnter })

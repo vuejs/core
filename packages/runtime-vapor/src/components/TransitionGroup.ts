@@ -14,7 +14,6 @@ import {
   hasCSSTransform,
   onBeforeUpdate,
   onUpdated,
-  queuePostFlushCb,
   queuePostRenderEffect,
   resolveTransitionProps,
   restoreCurrentInstance,
@@ -59,7 +58,6 @@ import {
   type DefineVaporComponent,
   defineVaporComponent,
 } from '../apiDefineComponent'
-import { EffectFlags, ReactiveEffect } from '@vue/reactivity'
 import {
   adoptTemplate,
   cleanupHydrationTail,
@@ -77,17 +75,13 @@ const newPositionMap = new WeakMap<TransitionBlock, DOMRect>()
 
 type TransitionGroupUpdateOwner = VaporFragment | VaporComponentInstance
 
-type TransitionGroupUpdateHookRef = {
+type TransitionGroupUpdateHooks = {
   beforeUpdate: () => void
   updated: () => void
 }
 
-// Each owner installs its update callback once. The stored hook object lets
-// that callback keep pointing at the latest TransitionGroup update hooks.
-const transitionGroupUpdateOwnerMap = new WeakMap<
-  TransitionGroupUpdateOwner,
-  TransitionGroupUpdateHookRef
->()
+// owners whose updates already report to their TransitionGroup
+const trackedTransitionGroupOwners = new WeakSet<TransitionGroupUpdateOwner>()
 
 const decorate = <T extends VaporComponentOptions>(t: T): T => {
   delete (t.props! as any).mode
@@ -215,7 +209,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
 
     onBeforeUpdate(beforeUpdate)
     onUpdated(updated)
-    const updateHooks: TransitionGroupUpdateHookRef = { beforeUpdate, updated }
+    const updateHooks: TransitionGroupUpdateHooks = { beforeUpdate, updated }
 
     const frag = new DynamicFragment(
       0,
@@ -444,13 +438,13 @@ function applyGroupTransitionHooks(
   props: TransitionProps,
   state: TransitionState,
   instance: VaporComponentInstance,
-  updateHooks: TransitionGroupUpdateHookRef,
+  updateHooks: TransitionGroupUpdateHooks,
 ): ResolvedTransitionBlock[] {
   const fragments: VaporFragment[] = []
   const children = resolveTransitionBlocks(
     block,
     frag => fragments.push(frag),
-    owner => trackTransitionGroupUpdate(owner, updateHooks),
+    owner => trackTransitionGroupUpdate(owner, instance, updateHooks),
   )
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
@@ -480,36 +474,34 @@ function applyGroupTransitionHooks(
 
 function trackTransitionGroupUpdate(
   owner: TransitionGroupUpdateOwner,
-  updateHooks: TransitionGroupUpdateHookRef,
+  instance: VaporComponentInstance,
+  updateHooks: TransitionGroupUpdateHooks,
 ): void {
-  const registeredHooks = transitionGroupUpdateOwnerMap.get(owner)
-  if (registeredHooks) {
-    registeredHooks.beforeUpdate = updateHooks.beforeUpdate
-    registeredHooks.updated = updateHooks.updated
-    return
-  }
+  if (trackedTransitionGroupOwners.has(owner)) return
 
   if (isFragment(owner)) {
-    transitionGroupUpdateOwnerMap.set(owner, updateHooks)
-    ;(owner.bu ||= []).push(() => updateHooks.beforeUpdate())
-    ;(owner.u ||= []).push(() => updateHooks.updated())
+    trackedTransitionGroupOwners.add(owner)
+    ;(owner.bu ||= []).push(updateHooks.beforeUpdate)
+    ;(owner.u ||= []).push(updateHooks.updated)
     return
   }
 
   // Fully static raw props can never notify - skip the tracking effect.
   if (!hasDynamicPropsSource(owner.rawProps)) return
+  trackedTransitionGroupOwners.add(owner)
 
-  transitionGroupUpdateOwnerMap.set(owner, updateHooks)
   // A component child can update from parent-driven props without re-running
   // the surrounding v-for fragment. Track raw props directly instead of
   // using component updated hooks, because child-local state updates should
   // not trigger TransitionGroup move bookkeeping. This matches VDOM behavior.
-  let isPending = false
-  owner.scope.run(() => {
-    const effect = new ReactiveEffect(() => {
-      // Dynamic prop sources are resolved as child props, so the getter
-      // must run with the child instance while the effect itself remains
-      // owned by the child scope for teardown.
+  // The effect belongs to the group instance, so its runs report through the
+  // group's own beforeUpdate/updated hooks and the scheduler orders it ahead
+  // of the child's effects; it lives in the child's scope to die with the row.
+  const prevGroup = setCurrentInstance(instance, owner.scope)
+  try {
+    renderEffect(() => {
+      // dynamic prop sources resolve as child props: run the getters as the
+      // child instance
       const prev = setCurrentInstance(owner, owner.scope)
       try {
         resolveDynamicProps(owner.rawProps)
@@ -517,23 +509,9 @@ function trackTransitionGroupUpdate(
         restoreCurrentInstance(prev)
       }
     })
-    const flushUpdated = () => {
-      isPending = false
-      // Deferred re-track: `dirty` stays set until this run and `isPending`
-      // short-circuits the notifies in between, so a batch touching N props
-      // of one child resolves them once instead of N times.
-      if (effect.active) effect.run()
-      updateHooks.updated()
-    }
-    effect.notify = () => {
-      if (effect.flags & EffectFlags.PAUSED || !effect.dirty) return
-      if (isPending) return
-      isPending = true
-      updateHooks.beforeUpdate()
-      queuePostFlushCb(flushUpdated)
-    }
-    effect.run()
-  })
+  } finally {
+    restoreCurrentInstance(prevGroup)
+  }
 }
 
 function hasDynamicPropsSource(props: RawProps): boolean {
