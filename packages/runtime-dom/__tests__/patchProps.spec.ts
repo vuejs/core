@@ -275,6 +275,16 @@ describe('runtime-dom: props patching', () => {
     expect(el.getAttribute('x')).toBe('2')
   })
 
+  test('force patch as attribute still normalizes class and style', () => {
+    const el = document.createElement('div')
+    patchProp(el, '^class', null, { foo: true, bar: false })
+    expect(el.className).toBe('foo')
+    patchProp(el, '^class', null, ['foo', 'bar'])
+    expect(el.className).toBe('foo bar')
+    patchProp(el, '^style', null, { fontSize: '12px' })
+    expect(el.style.fontSize).toBe('12px')
+  })
+
   test('input with size (number property)', () => {
     const el = document.createElement('input')
     patchProp(el, 'size', null, 100)

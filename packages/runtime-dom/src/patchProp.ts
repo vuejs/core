@@ -9,6 +9,8 @@ import {
   isModelListener,
   isOn,
   isString,
+  normalizeClass,
+  normalizeStyle,
 } from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
 import type { VueElement } from './apiCustomElement'
@@ -31,6 +33,18 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentComponent,
 ) => {
   const isSVG = namespace === 'svg'
+  // `class` and `style` are attributes already, so `.attr` only has to strip
+  // the modifier. createVNode normalizes `class`/`style` only, so the raw
+  // value still has to be normalized here - `ssrRenderAttrs` does the same by
+  // routing `^class`/`^style` through ssrRenderClass/ssrRenderStyle.
+  if (
+    key.charCodeAt(0) === 94 /* ^ */ &&
+    (key === '^class' || key === '^style')
+  ) {
+    key = key.slice(1)
+    nextValue =
+      key === 'class' ? normalizeClass(nextValue) : normalizeStyle(nextValue)
+  }
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {
