@@ -178,7 +178,17 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
           // so keep it in sync when Transition mode changes reactively.
           frag.$transition.mode = resolvedProps.value.mode
         }
+        const prevNodes = frag.nodes
         frag.update(slots.default)
+        // Reactive prop changes without a branch re-render: rebind the current
+        // root to fresh closures, since baseResolveTransitionHooks captures
+        // props eagerly (renderBranch already rebinds when it re-renders).
+        if (isMounted && frag.nodes === prevNodes && !state.isLeaving) {
+          frag.$transition = applyTransitionHooksImpl(
+            frag.nodes,
+            frag.$transition,
+          )
+        }
         if (!isMounted && shouldPerformAppear) performAppear(frag.$transition!)
         isMounted = true
       })
@@ -263,10 +273,7 @@ function getLeaveElement(
 
 const getTransitionHooksContext = (
   block: ResolvedTransitionBlock,
-  props: TransitionProps,
   state: TransitionState,
-  instance: GenericComponentInstance,
-  postClone: ((hooks: TransitionHooks) => void) | undefined,
 ) => {
   const key = String(block.$key)
   const leavingNodes = getLeavingNodesForType(state, block)
@@ -295,17 +302,6 @@ const getTransitionHooksContext = (
         }
       }
     },
-    cloneHooks: block => {
-      const hooks = resolveTransitionHooks(
-        block,
-        props,
-        state,
-        instance,
-        postClone,
-      )
-      if (postClone) postClone(hooks)
-      return hooks
-    },
   }
   return context
 }
@@ -315,15 +311,8 @@ export function resolveTransitionHooks(
   props: TransitionProps,
   state: VaporTransitionState,
   instance: GenericComponentInstance,
-  postClone?: (hooks: TransitionHooks) => void,
 ): VaporTransitionHooks {
-  const context = getTransitionHooksContext(
-    block,
-    props,
-    state,
-    instance,
-    postClone,
-  )
+  const context = getTransitionHooksContext(block, state)
   const hooks = baseResolveTransitionHooks(
     context,
     props,
@@ -381,13 +370,7 @@ export function applyTransitionHooksImpl(
 
   const { props, instance, state, delayedLeave } = hooks
   state.persisted = isPersistedRoot(state.root)
-  let resolvedHooks = resolveTransitionHooks(
-    child,
-    props,
-    state,
-    instance,
-    hooks => (resolvedHooks = hooks as VaporTransitionHooks),
-  )
+  const resolvedHooks = resolveTransitionHooks(child, props, state, instance)
   resolvedHooks.delayedLeave = delayedLeave
   child.$transition = resolvedHooks
   fragments.forEach(f => (f.$transition = resolvedHooks))

@@ -2117,6 +2117,30 @@ describe('Transition', () => {
     expect(el.className).toBe('b-leave-from b-leave-active')
   })
 
+  test('dynamic default slot child should react to transition prop changes', async () => {
+    const data = ref({ name: 'a', branch: true, show: true })
+    const App = compile(
+      `<template>
+        <Transition :name="data.name">
+          <template #default v-if="data.branch">
+            <div v-show="data.show">foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    const el = host.querySelector('div')!
+
+    // hooks were resolved when the branch rendered with the old name
+    data.value.name = 'b'
+    await nextTick()
+
+    data.value.show = false
+    await nextTick()
+    expect(el.className).toBe('b-leave-from b-leave-active')
+  })
+
   // #15274
   test('should merge fallthrough class with a transition child root', async () => {
     const data = ref({

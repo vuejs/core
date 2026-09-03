@@ -254,7 +254,8 @@ export interface TransitionHooksContext {
   setLeavingNodeCache: (node: any) => void
   unsetLeavingNodeCache: (node: any) => void
   earlyRemove: () => void
-  cloneHooks: (node: any) => TransitionHooks
+  // vnode-only: vapor hooks live on blocks and are never cloned
+  cloneHooks?: (node: any) => TransitionHooks
 }
 
 // The transition hooks are attached to the vnode as vnode.transition
@@ -451,7 +452,7 @@ export function baseResolveTransitionHooks(
     },
 
     clone(node) {
-      return cloneHooks(node)
+      return cloneHooks ? cloneHooks(node) : hooks
     },
   }
 
