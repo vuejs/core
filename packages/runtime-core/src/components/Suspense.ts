@@ -246,6 +246,9 @@ function patchSuspense(
     suspense.pendingBranch = newBranch
     if (isSameVNodeType(pendingBranch, newBranch)) {
       // same root type but content may have changed.
+      // hold the boundary pending across the patch: a nested branch that
+      // resolves in here must not resolve it before later siblings register.
+      suspense.deps++
       patch(
         pendingBranch,
         newBranch,
@@ -257,6 +260,7 @@ function patchSuspense(
         slotScopeIds,
         optimized,
       )
+      suspense.deps--
       if (suspense.deps <= 0) {
         suspense.resolve()
       } else if (isInFallback) {
