@@ -2419,9 +2419,14 @@ describe('compiler: parse', () => {
         ...options,
       })
 
-    test('should still remove whitespaces at start/end inside an element', () => {
+    test('should preserve whitespaces at start/end inside a non-root element', () => {
       const ast = parse(`<div>   <span/>    </div>`)
-      expect((ast.children[0] as ElementNode).children.length).toBe(1)
+      expect((ast.children[0] as ElementNode).children.length).toBe(3)
+    })
+
+    test('should remove whitespaces at start/end inside a root element', () => {
+      const ast = parse(`   <span/>    `)
+      expect(ast.children).toMatchObject([{ type: NodeTypes.ELEMENT }])
     })
 
     test('should preserve whitespaces w/ newline between elements', () => {
@@ -2433,6 +2438,48 @@ describe('compiler: parse', () => {
         NodeTypes.ELEMENT,
         NodeTypes.TEXT,
         NodeTypes.ELEMENT,
+      ])
+    })
+
+    test('should preserve surrounding whitespace for element with text between comments', () => {
+      const ast = parse(`<div>   <!--comment-->Hi<!--comment--> </div>`)
+      expect(ast.children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            { type: NodeTypes.TEXT, content: ' ' },
+            { type: NodeTypes.COMMENT, content: 'comment' },
+            { type: NodeTypes.TEXT, content: 'Hi' },
+            { type: NodeTypes.COMMENT, content: 'comment' },
+            { type: NodeTypes.TEXT, content: ' ' },
+          ],
+        },
+      ])
+    })
+
+    test('should preserve surrounding whitespace for element with text between comments and newlines', () => {
+      const ast = parse(`<div>\n <!--comment-->Hi<!--comment-->\n</div>`)
+      expect(ast.children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [
+            { type: NodeTypes.TEXT, content: ' ' },
+            { type: NodeTypes.COMMENT, content: 'comment' },
+            { type: NodeTypes.TEXT, content: 'Hi' },
+            { type: NodeTypes.COMMENT, content: 'comment' },
+            { type: NodeTypes.TEXT, content: ' ' },
+          ],
+        },
+      ])
+    })
+
+    test('should preserve whitespace for single element of only whitespace', () => {
+      const ast = parse(`<div> </div>`)
+      expect(ast.children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [{ type: NodeTypes.TEXT, content: ' ' }],
+        },
       ])
     })
 
