@@ -56,6 +56,35 @@ function castValue(value: string, trim?: boolean, number?: boolean | null) {
   return value
 }
 
+const stripASCIIWhitespace = (value: string) =>
+  value.replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g, '')
+
+// Returns what the browser exposes as `value` for the server-rendered
+// `defaultValue`, or undefined for types whose value sanitization algorithm
+// rewrites the value in ways `defaultValue` cannot be compared against
+// (number, date, color, range...).
+// https://html.spec.whatwg.org/multipage/input.html#value-sanitization-algorithm
+function sanitizeDefaultValue(
+  el: HTMLInputElement | HTMLTextAreaElement,
+): string | undefined {
+  const value = el.defaultValue
+  switch (el.type) {
+    case 'textarea':
+      return value.replace(/\r\n?/g, '\n')
+    case 'text':
+    case 'search':
+    case 'tel':
+    case 'password':
+      return value.replace(/[\r\n]/g, '')
+    case 'url':
+      return stripASCIIWhitespace(value.replace(/[\r\n]/g, ''))
+    case 'email':
+      return (el as HTMLInputElement).multiple
+        ? value.split(',').map(stripASCIIWhitespace).join(',')
+        : stripASCIIWhitespace(value.replace(/[\r\n]/g, ''))
+  }
+}
+
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
@@ -65,13 +94,7 @@ export const vModelText: ModelDirective<
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
     // During hydration, created runs on an element already in the DOM.
     if (el.parentNode) {
-      if (el.type === 'text') {
-        // Text inputs strip CR/LF from value, while defaultValue retains them.
-        el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
-      } else if (el.type === 'textarea') {
-        // Textareas normalize CRLF/CR to LF in value.
-        el[initialValueKey] = el.defaultValue.replace(/\r\n?/g, '\n')
-      }
+      el[initialValueKey] = sanitizeDefaultValue(el)
     }
     el[assignKey] = getModelAssigner(vnode)
     const castToNumber =
@@ -100,11 +123,7 @@ export const vModelText: ModelDirective<
     const newValue = value == null ? '' : value
     const initialValue = el[initialValueKey]
     delete el[initialValueKey]
-    if (
-      initialValue !== undefined &&
-      (el.type === 'text' || el.type === 'textarea') &&
-      el.value !== initialValue
-    ) {
+    if (initialValue !== undefined && el.value !== initialValue) {
       el[assignKey](castValue(el.value, trim, number))
     } else {
       el.value = newValue

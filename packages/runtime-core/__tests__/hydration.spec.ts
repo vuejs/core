@@ -1822,6 +1822,57 @@ describe('SSR hydration', () => {
     expect(state.text).toBe('user value')
   })
 
+  test.each(['search', 'tel', 'password', 'email', 'url'] as const)(
+    'preserves text entered before v-model hydration on type="%s"',
+    async type => {
+      const state = reactive({ text: 'server value' })
+      const App = {
+        setup: () => state,
+        template: `<input type="${type}" v-model="text">`,
+      }
+      const container = document.createElement('div')
+      container.innerHTML = await renderToString(h(App))
+      const input = container.firstChild as HTMLInputElement
+      input.value = 'user value'
+
+      createSSRApp(App).mount(container)
+      await nextTick()
+
+      expect(input.value).toBe('user value')
+      expect(state.text).toBe('user value')
+    },
+  )
+
+  test('keeps bound value when a url input only differs by whitespace', async () => {
+    const state = reactive({ text: ' https://server.com ' })
+    const App = {
+      setup: () => state,
+      template: `<input type="url" v-model="text">`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(state.text).toBe(' https://server.com ')
+  })
+
+  test('keeps bound value when a multiple email input only differs by whitespace', async () => {
+    const state = reactive({ text: ' a@b.com , c@d.com ' })
+    const App = {
+      setup: () => state,
+      template: `<input type="email" multiple v-model="text">`,
+    }
+    const container = document.createElement('div')
+    container.innerHTML = await renderToString(h(App))
+
+    createSSRApp(App).mount(container)
+    await nextTick()
+
+    expect(state.text).toBe(' a@b.com , c@d.com ')
+  })
+
   test('force hydrate checkbox with indeterminate', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" indeterminate>',
