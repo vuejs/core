@@ -1,5 +1,6 @@
 import {
   type AttributeNode,
+  CommentTypes,
   ConstantTypes,
   type DirectiveNode,
   type ElementNode,
@@ -417,6 +418,16 @@ const tokenizer = new Tokenizer(stack, {
         loc: getLoc(start - 4, end + 3),
       })
     }
+  },
+
+  onjslinecomment(start, end) {
+    currentRoot!.comments.push({
+      type: NodeTypes.COMMENT,
+      kind: CommentTypes.IN_TAG_LINE,
+      content: getSlice(start, end),
+      contentLoc: getLoc(start, end),
+      loc: getLoc(start - 2, end),
+    })
   },
 
   onend() {
