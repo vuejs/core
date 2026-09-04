@@ -739,6 +739,64 @@ describe('Vapor Mode hydration', () => {
       ).not.toHaveBeenWarned()
     })
 
+    test('with tag should anchor the slot inside the container under an outer slot', async () => {
+      const data = ref({ items: [1, 2] })
+      const { container } = await testHydration(
+        `<template>
+          <components.Wrapper>
+            <components.Child>
+              <li v-for="item in data.items" :key="item">{{ item }}</li>
+            </components.Child>
+          </components.Wrapper>
+        </template>`,
+        {
+          Wrapper: `<template><div><slot /></div></template>`,
+          Child: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const div = container.querySelector('div')!
+      expect(div.innerHTML).toBe(
+        `<!--[--><ul css="false"><li>1</li><li>2</li><!--for--><!--slot--></ul><!--transition-group--><!--]-->`,
+      )
+      data.value.items.push(3)
+      await nextTick()
+      expect(div.innerHTML).toBe(
+        `<!--[--><ul css="false"><li>1</li><li>2</li><li>3</li><!--for--><!--slot--></ul><!--transition-group--><!--]-->`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should reuse the placeholder of an empty slot list', async () => {
+      const data = ref({ items: [] as number[] })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <li v-for="item in data.items" :key="item">{{ item }}</li>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(`<!----><!--slot-->`)
+      data.value.items.push(3)
+      await nextTick()
+      expect(ul.innerHTML).toBe(`<li>3</li><!----><!--slot-->`)
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
     // #15372
     test('should drop comment children to stay in sync with SSR output', async () => {
       const data = ref({

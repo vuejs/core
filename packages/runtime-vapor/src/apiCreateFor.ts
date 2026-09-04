@@ -536,18 +536,27 @@ export const createFor = (
         if (nextNode) setCurrentHydrationNode(nextNode)
       }
 
-      // special handling transition-group + v-for, without <!--]--> marker
-      const container = markerlessHydrationContainer
-      if (container && !claim.start) {
-        const afterRows = currentHydrationNode
-        parentAnchor = claimAnchor(
-          __DEV__ ? createComment('for') : createTextNode(),
-        )
-        container.insertBefore(
-          parentAnchor,
-          afterRows && afterRows.parentNode === container ? afterRows : null,
-        )
-        pendingHydrationAnchor = true
+      if (claim.start) {
+        // the list owns its SSR range: its close marker is the anchor
+        parentAnchor = claimAnchor(locateEndAnchor(claim.start)!)
+        exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+
+        // optimization: cache the fragment end anchor as $llc (last logical child)
+        // so that locateChildByLogicalIndex can skip the entire fragment.
+        // For anchored inserts, reuse the unit index the locator stamped on
+        // the anchor; if it is unstamped (reached via a cache-missed
+        // `next()`), leave `$llc` untouched — `0` is a valid unit index, so
+        // a fallback would alias a stale cache entry to "unit 0", while
+        // skipping the install only costs a restart walk.
+        if (_insertionParent) {
+          const idx = _insertionAnchor
+            ? (_insertionAnchor as any as ChildItem).$idx
+            : _insertionIndex || 0
+          if (idx !== undefined) {
+            ;(parentAnchor as any as ChildItem).$idx = idx
+            _insertionParent.$llc = parentAnchor
+          }
+        }
       } else if (slotFallbackRange && !isValidSlot(newBlocks)) {
         // Slot fallback can fall through an empty/invalid `v-for`. In that
         // case SSR only rendered the parent slot range, so this `v-for` has no
@@ -584,33 +593,32 @@ export const createFor = (
           onFallback: () => {},
         })
         if (!queued) queuePostFlushCb(attachAnchor)
+      } else if (markerlessHydrationContainer) {
+        // special handling transition-group + v-for, without <!--]--> marker
+        const afterRows = currentHydrationNode
+        if (!newLength && afterRows && isComment(afterRows, '')) {
+          // the server rendered the empty transition slot as a placeholder
+          parentAnchor = claimAnchor(afterRows)
+        } else {
+          parentAnchor = claimAnchor(
+            __DEV__ ? createComment('for') : createTextNode(),
+          )
+          markerlessHydrationContainer.insertBefore(
+            parentAnchor,
+            afterRows && afterRows.parentNode === markerlessHydrationContainer
+              ? afterRows
+              : null,
+          )
+          pendingHydrationAnchor = true
+        }
       } else {
-        parentAnchor = claimAnchor(
-          (claim.start && locateEndAnchor(claim.start)) ||
-            currentHydrationNode!,
-        )
+        // mismatch recovery: nothing to reuse, adopt whatever the cursor sits on
+        parentAnchor = claimAnchor(currentHydrationNode!)
         exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
         if (__DEV__ && !isComment(parentAnchor, ']')) {
           throw new Error(
             `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
           )
-        }
-
-        // optimization: cache the fragment end anchor as $llc (last logical child)
-        // so that locateChildByLogicalIndex can skip the entire fragment.
-        // For anchored inserts, reuse the unit index the locator stamped on
-        // the anchor; if it is unstamped (reached via a cache-missed
-        // `next()`), leave `$llc` untouched — `0` is a valid unit index, so
-        // a fallback would alias a stale cache entry to "unit 0", while
-        // skipping the install only costs a restart walk.
-        if (_insertionParent && isComment(parentAnchor, ']')) {
-          const idx = _insertionAnchor
-            ? (_insertionAnchor as any as ChildItem).$idx
-            : _insertionIndex || 0
-          if (idx !== undefined) {
-            ;(parentAnchor as any as ChildItem).$idx = idx
-            _insertionParent.$llc = parentAnchor
-          }
         }
       }
     } finally {

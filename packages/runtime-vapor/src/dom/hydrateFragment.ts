@@ -81,12 +81,13 @@ class SlotHydrationSession {
    * range over mid-content (see `FragmentClaim`).
    */
   get endAnchor(): Node | null {
+    return this.ownEndAnchor || (this.parent ? this.parent.endAnchor : null)
+  }
+
+  /** The close marker of the range this boundary itself owns, if any. */
+  get ownEndAnchor(): Node | null {
     const start = this.claim.start
-    return start
-      ? locateEndAnchor(start)
-      : this.parent
-        ? this.parent.endAnchor
-        : null
+    return start ? locateEndAnchor(start) : null
   }
 
   /** Record a claim in the ledger; false = no pending window, act now. */
@@ -159,6 +160,12 @@ let currentSlotHydrationSession: SlotHydrationSession | null = null
 export function getCurrentSlotEndAnchor(): Node | null {
   return currentSlotHydrationSession
     ? currentSlotHydrationSession.endAnchor
+    : null
+}
+
+function getCurrentSlotOwnEndAnchor(): Node | null {
+  return currentSlotHydrationSession
+    ? currentSlotHydrationSession.ownEndAnchor
     : null
 }
 
@@ -490,17 +497,20 @@ export type AnchorPlan =
  *    Defer the whole decision (`pending`).
  * 2. `planReuseInjectedAnchor` — a native-children fragment finds the anchor
  *    `createPlainElement` seeded for it still under the cursor: adopt it.
- * 3. `planEmptyBranch` — the client rendered nothing. Claim a reusable SSR
- *    comment at the cursor, insert before a structural teleport anchor, or
- *    trim the unclaimed SSR range the empty branch leaves behind.
- * 4. `planRestartFromRuntimeComment` — the block is a bare runtime comment
+ * 3. `planReuseOwnClose` — the fragment claimed its own SSR
+ *    `<!--[-->…<!--]-->` range (slot outlets, multi-root `v-if` branches,
+ *    see `FragmentClaim`): its close marker is the anchor, whatever the
+ *    content turned out to be.
+ * 4. `planEmptyBranch` — the client rendered nothing and owns no range.
+ *    Claim a reusable SSR comment at the cursor, insert before a structural
+ *    teleport anchor, or trim the unclaimed SSR range the empty branch
+ *    leaves behind.
+ * 5. `planRestartFromRuntimeComment` — the block is a bare runtime comment
  *    (an empty branch created earlier in this same pass): reuse it if it is
  *    still in the DOM, otherwise restart from the cursor and trim.
- * 5. `planReuseBoundaryClose` — slots and multi-root `v-if` branches sit in
- *    an SSR `<!--[-->…<!--]-->` range whose close marker is a stable anchor.
  * 6. `planFromBlockBoundary` — fallback: derive parent/next from the
  *    hydrated block itself (dynamic component, async component, keyed
- *    fragment with single-root content).
+ *    fragment with single-root content, anything whose range was stripped).
  *
  * Marker discipline: a plan that adopts an SSR node claims it with
  * `claimAnchor` (it keeps its logical position); a plan that creates a
@@ -547,7 +557,28 @@ function planReuseInjectedAnchor(
   }
 }
 
-/** Rule 3: the client rendered nothing for this branch. */
+/** Rule 3: the fragment owns an SSR range; its close marker is the anchor. */
+function planReuseOwnClose(frag: DynamicFragment): AnchorPlan | undefined {
+  const close =
+    frag.__vf & SLOT
+      ? getCurrentSlotOwnEndAnchor()
+      : frag.hydrationClaim && frag.hydrationClaim.start
+        ? locateEndAnchor(frag.hydrationClaim.start)
+        : null
+  if (close) {
+    if (isComment(close, ']')) {
+      // reuse it once, or create a fresh runtime anchor after it when the
+      // pending slot machinery already claimed it
+      return reuseOrCreateAfterAnchor(close)
+    } else if (__DEV__) {
+      throw new Error(
+        `Failed to locate ${frag.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
+      )
+    }
+  }
+}
+
+/** Rule 4: the client rendered nothing and owns no range. */
 function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
   const flags = frag.__vf
 
@@ -616,7 +647,7 @@ function planTrimFromCursor(parent: Node, next: Node | null): AnchorPlan {
   }
 }
 
-/** Rule 4: the block is a bare runtime comment from earlier in this pass. */
+/** Rule 5: the block is a bare runtime comment from earlier in this pass. */
 function planRestartFromRuntimeComment(
   frag: DynamicFragment,
 ): AnchorPlan | undefined {
@@ -651,29 +682,6 @@ function planRestartFromRuntimeComment(
   }
 }
 
-/** Rule 5: slots and multi-root `v-if` reuse their SSR range's close marker. */
-function planReuseBoundaryClose(frag: DynamicFragment): AnchorPlan | undefined {
-  // Non-null only for slots, so it doubles as the "is a slot" test below.
-  const slotAnchor = frag.__vf & SLOT ? getCurrentSlotEndAnchor() : null
-
-  // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
-  // The close marker is a valid stable anchor candidate: reuse it once, or
-  // create a fresh runtime anchor after it when another fragment already did.
-  // A branch entered as a transition child, or whose claim was taken over
-  // (see `FragmentClaim`), has none.
-  const ifStart = frag.hydrationClaim ? frag.hydrationClaim.start : null
-  if (slotAnchor || ifStart) {
-    const anchor = slotAnchor || locateEndAnchor(ifStart!)
-    if (isComment(anchor!, ']')) {
-      return reuseOrCreateAfterAnchor(anchor)
-    } else if (__DEV__) {
-      throw new Error(
-        `Failed to locate ${frag.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
-      )
-    }
-  }
-}
-
 /** Rule 6: derive the anchor position from the hydrated block itself. */
 function planFromBlockBoundary(frag: DynamicFragment): AnchorPlan {
   // Covers: dynamic component, async component, keyed fragment.
@@ -688,9 +696,9 @@ export function resolveDynamicAnchor(
   return (
     planPendingSlotDecision(frag, isEmpty) ||
     planReuseInjectedAnchor(frag) ||
+    planReuseOwnClose(frag) ||
     (isEmpty ? planEmptyBranch(frag) : undefined) ||
     planRestartFromRuntimeComment(frag) ||
-    planReuseBoundaryClose(frag) ||
     planFromBlockBoundary(frag)
   )
 }
