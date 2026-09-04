@@ -259,19 +259,23 @@ export function setMarkerlessHydrationContainer(
  * Direct children of a TransitionGroup container are server-rendered without
  * fragment markers of their own (compiler-ssr disables nested fragments
  * there), so a `v-if`, `v-for` or slot outlet entered as one must not claim
- * the `[` under its cursor. The group arms the flag around its children; the
- * cursor protocol hands it to each block entered at that level and clears it
- * for the block's own content (`enterBlockScope`). Component roots keep their
+ * the `[` under its cursor. The group arms `Pending` around its children;
+ * opening a block scope turns it into `Child` for that block and clears it
+ * for the block's own content (`openBlockScope`). Component roots keep their
  * markers and claim regardless.
  */
-let transitionChildPending = false
-let isTransitionChild = false
+const enum TransitionChild {
+  None,
+  Pending,
+  Child,
+}
+let transitionChild = TransitionChild.None
 
 export function setTransitionChildPending(pending: boolean): boolean {
   try {
-    return transitionChildPending
+    return transitionChild === TransitionChild.Pending
   } finally {
-    transitionChildPending = pending
+    transitionChild = pending ? TransitionChild.Pending : TransitionChild.None
   }
 }
 
@@ -295,7 +299,7 @@ let innermostFragmentClaim: FragmentClaim | null = null
  */
 function claimFragmentStart(claim: FragmentClaim): void {
   const node = currentHydrationNode
-  if (!node || isTransitionChild) return
+  if (!node || transitionChild === TransitionChild.Child) return
   if (isComment(node, '[')) {
     claim.start = node
     setCurrentHydrationNode(node.nextSibling)
@@ -365,8 +369,7 @@ export type HydrationCursor = {
   start: Node | null
   resume: Node | null | undefined
   /** the enclosing block's scope, restored on exit (see `openBlockScope`) */
-  transitionChildPending: boolean
-  isTransitionChild: boolean
+  transitionChild: TransitionChild
   innermostFragmentClaim: FragmentClaim | null
   /** dev-only: set once handed back, so a second exit can be caught */
   exited?: boolean
@@ -380,9 +383,12 @@ export type HydrationCursor = {
  * content.
  */
 function openBlockScope(keepsMarkers?: boolean): void {
-  isTransitionChild =
-    transitionChildPending && !insertionParent && !keepsMarkers
-  transitionChildPending = false
+  transitionChild =
+    transitionChild === TransitionChild.Pending &&
+    !insertionParent &&
+    !keepsMarkers
+      ? TransitionChild.Child
+      : TransitionChild.None
 }
 
 export function enterHydrationCursor(
@@ -407,8 +413,7 @@ export function captureHydrationCursor(
   const cursor: HydrationCursor = {
     start: null,
     resume: insertionParent ? currentHydrationNode : undefined,
-    transitionChildPending,
-    isTransitionChild,
+    transitionChild,
     innermostFragmentClaim,
   }
   openBlockScope(keepsMarkers)
@@ -432,8 +437,7 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
     cursor.exited = true
     liveCursors--
   }
-  transitionChildPending = cursor.transitionChildPending
-  isTransitionChild = cursor.isTransitionChild
+  transitionChild = cursor.transitionChild
   innermostFragmentClaim = cursor.innermostFragmentClaim
   if (cursor.resume !== undefined) {
     setCurrentHydrationNode(cursor.resume)
