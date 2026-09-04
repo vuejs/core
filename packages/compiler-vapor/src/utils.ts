@@ -5,6 +5,7 @@ import {
   BindingTypes,
   type ElementNode,
   NodeTypes,
+  type RootNode,
   type SimpleExpressionNode,
   findDir as _findDir,
   findProp as _findProp,
@@ -124,6 +125,14 @@ export function isInTransition(
 
 export function isTransitionNode(node: ElementNode): boolean {
   return node.type === NodeTypes.ELEMENT && isTransitionTag(node.tag)
+}
+
+/** Transition or TransitionGroup: hosts whose children render specially. */
+export function isTransitionHostNode(node: RootNode | ElementNode): boolean {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    (isTransitionTag(node.tag) || isTransitionGroupTag(node.tag))
+  )
 }
 
 export function isTransitionGroupNode(node: ElementNode): boolean {
