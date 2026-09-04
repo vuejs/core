@@ -755,6 +755,14 @@ function createSuspenseBoundary(
           // still be set when Suspense re-enters another component's render path.
           // Clear it first.
           unsetCurrentInstance()
+          // removed in place while still pending: `isUnmounted` is only set
+          // on resolve, so bail here but still release the dep.
+          if (hydratedEl && !parentNode(hydratedEl)) {
+            if (isInPendingSuspense && --suspense.deps === 0) {
+              suspense.resolve()
+            }
+            return
+          }
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance
