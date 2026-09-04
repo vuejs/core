@@ -108,10 +108,13 @@ export const SuspenseImpl = {
       //  2. mounting along with the pendingBranch of parentSuspense
       // it is necessary to skip the current patch to avoid multiple mounts
       // of inner components.
+      // but not while the parent is hydrating: its pending branch is the
+      // adopted SSR DOM, never mounted again, so skipping leaves it stale.
       if (
         parentSuspense &&
         parentSuspense.deps > 0 &&
-        !n1.suspense!.isInFallback
+        !n1.suspense!.isInFallback &&
+        !parentSuspense.isHydrating
       ) {
         n2.suspense = n1.suspense!
         n2.suspense.vnode = n2
@@ -246,6 +249,9 @@ function patchSuspense(
     suspense.pendingBranch = newBranch
     if (isSameVNodeType(pendingBranch, newBranch)) {
       // same root type but content may have changed.
+      // hold the boundary pending across the patch: a nested branch that
+      // resolves in here must not resolve it before later siblings register.
+      suspense.deps++
       patch(
         pendingBranch,
         newBranch,
@@ -257,6 +263,7 @@ function patchSuspense(
         slotScopeIds,
         optimized,
       )
+      suspense.deps--
       if (suspense.deps <= 0) {
         suspense.resolve()
       } else if (isInFallback) {
@@ -748,6 +755,14 @@ function createSuspenseBoundary(
           // still be set when Suspense re-enters another component's render path.
           // Clear it first.
           unsetCurrentInstance()
+          // removed in place while still pending: `isUnmounted` is only set
+          // on resolve, so bail here but still release the dep.
+          if (hydratedEl && !parentNode(hydratedEl)) {
+            if (isInPendingSuspense && --suspense.deps === 0) {
+              suspense.resolve()
+            }
+            return
+          }
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance
