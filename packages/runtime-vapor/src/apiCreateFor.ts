@@ -57,6 +57,7 @@ import {
   isHydrating,
   locateEndAnchor,
   markerlessHydrationContainer,
+  nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
@@ -107,7 +108,8 @@ export const createFor = (
   let hydrationCursor: HydrationCursor | null = null
   let hydrationClaim: FragmentClaim | undefined
   if (isHydrating) {
-    hydrationCursor = enterHydrationCursor((hydrationClaim = { start: null }))
+    hydrationClaim = { start: null }
+    hydrationCursor = enterHydrationCursor(hydrationClaim)
   } else {
     resetInsertionState()
   }
@@ -511,26 +513,22 @@ export const createFor = (
     const hydrationStart = currentHydrationNode!
     const claim = hydrationClaim!
     let exitHydrationBoundary: (() => void) | undefined
-    let nextNode
     const slotEndAnchor = getCurrentSlotEndAnchor()
     const slotFallbackRange = isPendingSlotContent() && slotEndAnchor
 
     try {
       for (let i = 0; i < newLength; i++) {
         const node = currentHydrationNode!
+        // an unwrapped row is a single node: its own hydration moves on
+        let nextNode: Node | null = null
         if (isComment(node, ']')) {
           // fewer server rows: the rest mount before the close marker
           nextNode = claimAnchor(node)
           setCurrentHydrationNode(nextNode)
-        } else if (wrappedRows && claim.start && isComment(node, '[')) {
-          // the row resumes after its wrapper's close marker; a markerless
-          // list loses its row wrappers along with its own markers
-          const rowEnd = locateEndAnchor(node)
+        } else if (wrappedRows && isComment(node, '[')) {
+          // the row resumes after its wrapper's close marker
+          nextNode = nextLogicalSibling(node)
           setCurrentHydrationNode(node.nextSibling)
-          nextNode = rowEnd && rowEnd.nextSibling
-        } else {
-          // an unwrapped row is a single node: its own hydration moves on
-          nextNode = null
         }
         mount(source, i, parentAnchor)
         if (nextNode) setCurrentHydrationNode(nextNode)
@@ -612,7 +610,8 @@ export const createFor = (
           pendingHydrationAnchor = true
         }
       } else {
-        // mismatch recovery: nothing to reuse, adopt whatever the cursor sits on
+        // a marked list always finds its own range: only malformed server
+        // output gets here. Adopt the cursor so prod keeps going.
         parentAnchor = claimAnchor(currentHydrationNode!)
         exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
         if (__DEV__ && !isComment(parentAnchor, ']')) {

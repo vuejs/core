@@ -201,10 +201,7 @@ export let adoptTemplate: (
   ns?: Namespace,
   target?: AdoptTarget,
 ) => Node | null
-export let locateHydrationNode: (
-  claim?: FragmentClaim,
-  keepsMarkers?: boolean,
-) => void
+export let locateHydrationNode: (claim?: FragmentClaim) => void
 export let parseAdoptTarget: (template: string) => AdoptTarget
 
 const enum AnchorFlags {
@@ -296,9 +293,9 @@ let innermostFragmentClaim: FragmentClaim | null = null
  * Consume the fragment start under the cursor for `claim`, or take over the
  * one the enclosing block consumed when nothing was hydrated in between.
  */
-function claimFragmentStart(claim: FragmentClaim, keepsMarkers?: boolean) {
+function claimFragmentStart(claim: FragmentClaim): void {
   const node = currentHydrationNode
-  if (!node || (isTransitionChild && !keepsMarkers)) return
+  if (!node || isTransitionChild) return
   if (isComment(node, '[')) {
     claim.start = node
     setCurrentHydrationNode(node.nextSibling)
@@ -367,48 +364,35 @@ export function advanceHydrationNode(node: Node): void {
 export type HydrationCursor = {
   start: Node | null
   resume: Node | null | undefined
-  /** the enclosing block's scope, restored on exit */
-  scope: BlockScope
+  /** the enclosing block's scope, restored on exit (see `openBlockScope`) */
+  transitionChildPending: boolean
+  isTransitionChild: boolean
+  innermostFragmentClaim: FragmentClaim | null
   /** dev-only: set once handed back, so a second exit can be caught */
   exited?: boolean
 }
 
-type BlockScope = {
-  transitionChildPending: boolean
-  isTransitionChild: boolean
-  innermostFragmentClaim: FragmentClaim | null
-}
-
 /**
  * Open the block being entered: it is a transition child when the flag was
- * armed for its level (element children carry insertion state and are not),
- * and its own content is not. Claims registered while it is open are only
- * takeover targets for its content.
+ * armed for its level (element children carry insertion state and are not)
+ * unless it keeps its markers (component roots); its own content is not.
+ * Claims registered while it is open are only takeover targets for its
+ * content.
  */
-function enterBlockScope(): BlockScope {
-  const scope = {
-    transitionChildPending,
-    isTransitionChild,
-    innermostFragmentClaim,
-  }
-  isTransitionChild = transitionChildPending && !insertionParent
+function openBlockScope(keepsMarkers?: boolean): void {
+  isTransitionChild =
+    transitionChildPending && !insertionParent && !keepsMarkers
   transitionChildPending = false
-  return scope
 }
 
 export function enterHydrationCursor(
   claim?: FragmentClaim,
   keepsMarkers?: boolean,
 ): HydrationCursor {
-  const resume = insertionParent ? currentHydrationNode : undefined
-  const scope = enterBlockScope()
-  locateHydrationNode(claim, keepsMarkers)
-  if (__DEV__) liveCursors++
-  return {
-    start: currentHydrationNode,
-    resume,
-    scope,
-  }
+  const cursor = captureHydrationCursor(keepsMarkers)
+  locateHydrationNode(claim)
+  cursor.start = currentHydrationNode
+  return cursor
 }
 
 /**
@@ -416,13 +400,19 @@ export function enterHydrationCursor(
  * locates the local start later, after the selected inner path is known.
  * This avoids consuming insertion state too early.
  */
-export function captureHydrationCursor(): HydrationCursor {
+export function captureHydrationCursor(
+  keepsMarkers?: boolean,
+): HydrationCursor {
   if (__DEV__) liveCursors++
-  return {
+  const cursor: HydrationCursor = {
     start: null,
     resume: insertionParent ? currentHydrationNode : undefined,
-    scope: enterBlockScope(),
+    transitionChildPending,
+    isTransitionChild,
+    innermostFragmentClaim,
   }
+  openBlockScope(keepsMarkers)
+  return cursor
 }
 
 export function exitHydrationCursor(cursor: HydrationCursor | null): void {
@@ -442,10 +432,9 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
     cursor.exited = true
     liveCursors--
   }
-  const scope = cursor.scope
-  transitionChildPending = scope.transitionChildPending
-  isTransitionChild = scope.isTransitionChild
-  innermostFragmentClaim = scope.innermostFragmentClaim
+  transitionChildPending = cursor.transitionChildPending
+  isTransitionChild = cursor.isTransitionChild
+  innermostFragmentClaim = cursor.innermostFragmentClaim
   if (cursor.resume !== undefined) {
     setCurrentHydrationNode(cursor.resume)
   }
@@ -503,10 +492,7 @@ export function skipUntrackedAnchors(node: Node | null): Node | null {
   return node
 }
 
-function locateHydrationNodeImpl(
-  claim?: FragmentClaim,
-  keepsMarkers?: boolean,
-) {
+function locateHydrationNodeImpl(claim?: FragmentClaim) {
   let node: Node | null
 
   if (insertionAnchor) {
@@ -530,7 +516,7 @@ function locateHydrationNodeImpl(
 
   resetInsertionState()
   setCurrentHydrationNode(node)
-  if (claim) claimFragmentStart(claim, keepsMarkers)
+  if (claim) claimFragmentStart(claim)
 }
 
 /**

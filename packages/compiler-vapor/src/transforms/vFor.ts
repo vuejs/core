@@ -17,7 +17,14 @@ import {
   IRNodeTypes,
   type VaporDirectiveNode,
 } from '../ir'
-import { findProp, isStaticExpression, propToExpression } from '../utils'
+import {
+  findDir,
+  findProp,
+  isStaticExpression,
+  isTransitionGroupNode,
+  isTransitionNode,
+  propToExpression,
+} from '../utils'
 import { newBlock, wrapTemplate } from './utils'
 
 export const transformVFor: NodeTransform = createStructuralDirectiveTransform(
@@ -52,24 +59,21 @@ export function processFor(
     node.tagType === ElementTypes.COMPONENT ||
     // template v-for with a single component child
     isTemplateWithSingleComponent(node)
-  // mirrors compiler-ssr: a row that is not a single element renders as a
-  // fragment. Structural directives on a template child turn it into an
-  // if/for node by the time SSR decides, so they count here as well.
-  const rowChildren =
-    node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
-  const rowChild = rowChildren[0]
+  // mirrors compiler-ssr: a template row that is not a single element renders
+  // as a fragment, except under Transition/TransitionGroup, whose children
+  // render without nested fragment markers. A structural directive on the
+  // child turns it into an if/for node by the time SSR decides, so it counts.
+  const parentNode = context.parent && context.parent.node
   const wrappedRows =
-    rowChildren.length !== 1 ||
-    rowChild.type !== NodeTypes.ELEMENT ||
-    (rowChild !== node &&
-      rowChild.props.some(
-        p =>
-          p.type === NodeTypes.DIRECTIVE &&
-          (p.name === 'if' ||
-            p.name === 'else-if' ||
-            p.name === 'else' ||
-            p.name === 'for'),
-      ))
+    node.tagType === ElementTypes.TEMPLATE &&
+    !(
+      parentNode &&
+      (isTransitionNode(parentNode as ElementNode) ||
+        isTransitionGroupNode(parentNode as ElementNode))
+    ) &&
+    (node.children.length !== 1 ||
+      node.children[0].type !== NodeTypes.ELEMENT ||
+      !!findDir(node.children[0], /^(?:if|else(?:-if)?|for)$/, true))
   context.node = node = wrapTemplate(node, ['for', 'key'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()

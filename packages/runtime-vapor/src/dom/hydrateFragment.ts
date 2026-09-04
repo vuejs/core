@@ -10,7 +10,7 @@ import {
   isClaimedAnchor,
   isComment,
   isInDeferredHydrationBoundary,
-  locateEndAnchor,
+  locateFragmentEnd,
   locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
@@ -43,7 +43,8 @@ interface DeferredSlotAnchor {
  * claiming server nodes is destructive (the cursor advances, anchors get
  * claimed). So while a slot is still deciding which side owns its SSR range,
  * anchor claims are *deferred* into a ledger and settled once the decision
- * lands. A session is that ledger plus the boundary's end anchor.
+ * lands. A session is that ledger plus the boundary's claim on its SSR range,
+ * from which its end anchor derives (or is inherited).
  *
  * Structure:
  * - One session per slot boundary, stacked for nesting
@@ -86,8 +87,13 @@ class SlotHydrationSession {
 
   /** The close marker of the range this boundary itself owns, if any. */
   get ownEndAnchor(): Node | null {
-    const start = this.claim.start
-    return start ? locateEndAnchor(start) : null
+    return locateFragmentEnd(this.claim.start)
+  }
+
+  /** Trim the range's unclaimed tail; a range the content took over has none. */
+  exitBoundary(): void {
+    const close = this.ownEndAnchor
+    if (close) enterHydrationBoundary(close)()
   }
 
   /** Record a claim in the ledger; false = no pending window, act now. */
@@ -163,44 +169,23 @@ export function getCurrentSlotEndAnchor(): Node | null {
     : null
 }
 
-function getCurrentSlotOwnEndAnchor(): Node | null {
-  return currentSlotHydrationSession
-    ? currentSlotHydrationSession.ownEndAnchor
-    : null
-}
-
 /** Locate this boundary's SSR range and consume its opening marker. */
-function enterSlotBoundaryRange(pending: boolean): {
-  session: SlotHydrationSession
-  exit: () => void
-} {
+function enterSlotBoundaryRange(pending: boolean): SlotHydrationSession {
   const claim: FragmentClaim = { start: null }
   locateHydrationNode(claim)
-  const session = new SlotHydrationSession(
-    claim,
-    currentSlotHydrationSession,
-    pending,
-  )
-  return {
-    session,
-    // trim the range's unclaimed tail; nothing to trim once the content's
-    // first block owns the range
-    exit: () => {
-      if (claim.start) enterHydrationBoundary(session.endAnchor)()
-    },
-  }
+  return new SlotHydrationSession(claim, currentSlotHydrationSession, pending)
 }
 
 export function withHydratingSlotBoundary<R>(fn: () => R): R {
-  const range = enterSlotBoundaryRange(false)
+  const session = enterSlotBoundaryRange(false)
   const prevSession = currentSlotHydrationSession
-  currentSlotHydrationSession = range.session
+  currentSlotHydrationSession = session
 
   try {
     return fn()
   } finally {
     currentSlotHydrationSession = prevSession
-    range.exit()
+    session.exitBoundary()
   }
 }
 
@@ -213,8 +198,7 @@ export function withHydratingSlotBoundary<R>(fn: () => R): R {
 export function withPendingHydratingSlotBoundary<R>(fn: () => R): R {
   const parentSession = currentSlotHydrationSession!
   const contentStart = currentHydrationNode
-  const range = enterSlotBoundaryRange(true)
-  const session = range.session
+  const session = enterSlotBoundaryRange(true)
   currentSlotHydrationSession = session
   let completed = false
 
@@ -225,12 +209,12 @@ export function withPendingHydratingSlotBoundary<R>(fn: () => R): R {
   } finally {
     currentSlotHydrationSession = parentSession
     if (!completed) {
-      range.exit()
+      session.exitBoundary()
     } else if (session.pending) {
       session.adoptInto(parentSession)
       setCurrentHydrationNode(contentStart)
     } else {
-      range.exit()
+      session.exitBoundary()
       parentSession.settleAsContent()
     }
   }
@@ -559,23 +543,17 @@ function planReuseInjectedAnchor(
 
 /** Rule 3: the fragment owns an SSR range; its close marker is the anchor. */
 function planReuseOwnClose(frag: DynamicFragment): AnchorPlan | undefined {
+  // a slot reads the current session: the forwarded path in `fragment.ts`
+  // opens none of its own and resolves against the enclosing boundary
   const close =
     frag.__vf & SLOT
-      ? getCurrentSlotOwnEndAnchor()
-      : frag.hydrationClaim && frag.hydrationClaim.start
-        ? locateEndAnchor(frag.hydrationClaim.start)
-        : null
-  if (close) {
-    if (isComment(close, ']')) {
-      // reuse it once, or create a fresh runtime anchor after it when the
-      // pending slot machinery already claimed it
-      return reuseOrCreateAfterAnchor(close)
-    } else if (__DEV__) {
-      throw new Error(
-        `Failed to locate ${frag.anchorLabel} fragment anchor. this is likely a Vue internal bug.`,
-      )
-    }
-  }
+      ? currentSlotHydrationSession && currentSlotHydrationSession.ownEndAnchor
+      : locateFragmentEnd(
+          frag.hydrationClaim ? frag.hydrationClaim.start : null,
+        )
+  // reuse it once, or create a fresh runtime anchor after it when the pending
+  // slot machinery already claimed it
+  if (close) return reuseOrCreateAfterAnchor(close)
 }
 
 /** Rule 4: the client rendered nothing and owns no range. */
@@ -684,7 +662,8 @@ function planRestartFromRuntimeComment(
 
 /** Rule 6: derive the anchor position from the hydrated block itself. */
 function planFromBlockBoundary(frag: DynamicFragment): AnchorPlan {
-  // Covers: dynamic component, async component, keyed fragment.
+  // Covers: dynamic component, async component, keyed fragment, and any
+  // fragment whose SSR range was stripped.
   const node = findBlockBoundary(frag.nodes)
   return { kind: 'create', parent: node.parentNode!, next: node.nextNode }
 }

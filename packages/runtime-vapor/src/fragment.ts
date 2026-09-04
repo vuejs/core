@@ -40,7 +40,7 @@ import {
   currentHydrationNode,
   exitHydrationCursor,
   isHydrating,
-  locateEndAnchor,
+  locateFragmentEnd,
   locateHydrationNode,
 } from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
@@ -745,7 +745,7 @@ export class SlotFragment
             slotRender,
             key,
           )
-          const end = claim.start ? locateEndAnchor(claim.start) : null
+          const end = locateFragmentEnd(claim.start)
           let exposedValid = contentValid
           if (this.sharedFallback) {
             recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)
