@@ -1,5 +1,6 @@
-import { NOOP, isArray } from '@vue/shared'
+import { NOOP } from '@vue/shared'
 import {
+  type FragmentClaim,
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
@@ -70,9 +71,24 @@ class SlotHydrationSession {
   private deferred: DeferredSlotAnchor[] | null = null
 
   constructor(
-    readonly endAnchor: Node | null,
+    private readonly claim: FragmentClaim,
+    private readonly parent: SlotHydrationSession | null,
     public pending: boolean,
   ) {}
+
+  /**
+   * The boundary's SSR close marker while it owns its range, else the
+   * inherited one. Derived on read: the content's first block may take the
+   * range over mid-content (see `FragmentClaim`).
+   */
+  get endAnchor(): Node | null {
+    const start = this.claim.start
+    return start
+      ? locateEndAnchor(start)
+      : this.parent
+        ? this.parent.endAnchor
+        : null
+  }
 
   /** Record a claim in the ledger; false = no pending window, act now. */
   defer(anchor: DeferredSlotAnchor): boolean {
@@ -148,32 +164,37 @@ export function getCurrentSlotEndAnchor(): Node | null {
 }
 
 /** Locate this boundary's SSR range and consume its opening marker. */
-function enterSlotBoundaryRange(): {
-  endAnchor: Node | null
-  exitHydrationBoundary: (() => void) | undefined
+function enterSlotBoundaryRange(pending: boolean): {
+  session: SlotHydrationSession
+  exit: () => void
 } {
-  let endAnchor = getCurrentSlotEndAnchor()
-  let exitHydrationBoundary: (() => void) | undefined
-
-  locateHydrationNode()
-  if (isComment(currentHydrationNode!, '[')) {
-    endAnchor = locateEndAnchor(currentHydrationNode)
-    setCurrentHydrationNode(currentHydrationNode.nextSibling)
-    exitHydrationBoundary = enterHydrationBoundary(endAnchor)
+  const claim: FragmentClaim = { start: null }
+  locateHydrationNode(claim)
+  const session = new SlotHydrationSession(
+    claim,
+    currentSlotHydrationSession,
+    pending,
+  )
+  return {
+    session,
+    // trim the range's unclaimed tail; nothing to trim once the content's
+    // first block owns the range
+    exit: () => {
+      if (claim.start) enterHydrationBoundary(session.endAnchor)()
+    },
   }
-  return { endAnchor, exitHydrationBoundary }
 }
 
 export function withHydratingSlotBoundary<R>(fn: () => R): R {
-  const { endAnchor, exitHydrationBoundary } = enterSlotBoundaryRange()
+  const range = enterSlotBoundaryRange(false)
   const prevSession = currentSlotHydrationSession
-  currentSlotHydrationSession = new SlotHydrationSession(endAnchor, false)
+  currentSlotHydrationSession = range.session
 
   try {
     return fn()
   } finally {
     currentSlotHydrationSession = prevSession
-    exitHydrationBoundary && exitHydrationBoundary()
+    range.exit()
   }
 }
 
@@ -186,8 +207,8 @@ export function withHydratingSlotBoundary<R>(fn: () => R): R {
 export function withPendingHydratingSlotBoundary<R>(fn: () => R): R {
   const parentSession = currentSlotHydrationSession!
   const contentStart = currentHydrationNode
-  const { endAnchor, exitHydrationBoundary } = enterSlotBoundaryRange()
-  const session = new SlotHydrationSession(endAnchor, true)
+  const range = enterSlotBoundaryRange(true)
+  const session = range.session
   currentSlotHydrationSession = session
   let completed = false
 
@@ -198,12 +219,12 @@ export function withPendingHydratingSlotBoundary<R>(fn: () => R): R {
   } finally {
     currentSlotHydrationSession = parentSession
     if (!completed) {
-      exitHydrationBoundary && exitHydrationBoundary()
+      range.exit()
     } else if (session.pending) {
       session.adoptInto(parentSession)
       setCurrentHydrationNode(contentStart)
     } else {
-      exitHydrationBoundary && exitHydrationBoundary()
+      range.exit()
       parentSession.settleAsContent()
     }
   }
@@ -639,14 +660,10 @@ function planReuseBoundaryClose(frag: DynamicFragment): AnchorPlan | undefined {
   // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
   // The close marker is a valid stable anchor candidate: reuse it once, or
   // create a fresh runtime anchor after it when another fragment already did.
-  if (
-    slotAnchor ||
-    (!!(frag.__vf & IF) && isArray(frag.nodes) && frag.nodes.length > 1)
-  ) {
-    const anchor = locateHydrationBoundaryClose(
-      slotAnchor || currentHydrationNode!,
-      slotAnchor || null,
-    )
+  // A branch whose claim was taken over (see `FragmentClaim`) has none.
+  if (slotAnchor || (frag.hydrationClaim && frag.hydrationClaim.start)) {
+    const anchor =
+      slotAnchor || locateHydrationBoundaryClose(currentHydrationNode!)
     if (isComment(anchor!, ']')) {
       return reuseOrCreateAfterAnchor(anchor)
     } else if (__DEV__) {

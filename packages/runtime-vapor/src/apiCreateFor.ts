@@ -45,6 +45,7 @@ import { currentSlotScopeIds, setCurrentSlotScopeIds } from './scopeId'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '@vue/shared'
 import {
+  type FragmentClaim,
   type HydrationCursor,
   advanceHydrationNode,
   claimAnchor,
@@ -105,8 +106,9 @@ export const createFor = (
   const _insertionAnchor = insertionAnchor
   const _insertionIndex = insertionIndex
   let hydrationCursor: HydrationCursor | null = null
+  let hydrationClaim: FragmentClaim | undefined
   if (isHydrating) {
-    hydrationCursor = enterHydrationCursor(true)
+    hydrationCursor = enterHydrationCursor((hydrationClaim = { start: null }))
   } else {
     resetInsertionState()
   }
@@ -507,118 +509,106 @@ export const createFor = (
 
   function hydrateList(source: ResolvedSource, newLength: number): void {
     const hydrationStart = currentHydrationNode!
+    const claim = hydrationClaim!
     let exitHydrationBoundary: (() => void) | undefined
     let nextNode
-    const emptyLocalRange =
-      isComment(hydrationStart, ']') &&
-      isComment(hydrationStart.previousSibling!, '[')
     const slotEndAnchor = getCurrentSlotEndAnchor()
     const slotFallbackRange = isPendingSlotContent() && slotEndAnchor
 
-    const reuseBoundaryClose = (close: Node): void => {
-      parentAnchor = claimAnchor(close)
-      exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
-    }
-
     try {
-      if (emptyLocalRange && newLength) {
-        reuseBoundaryClose(hydrationStart)
-        mountAll(source, newLength)
-        setCurrentHydrationNode(parentAnchor)
+      for (let i = 0; i < newLength; i++) {
+        const ownedStart = claim.start
+        if (isComment(currentHydrationNode!, ']')) {
+          nextNode = claimAnchor(currentHydrationNode!)
+          setCurrentHydrationNode(nextNode)
+        } else if (markerlessHydrationContainer && !ownedStart) {
+          // rows of a markerless list have no wrappers either: the row's
+          // own hydration decides where the next one starts
+          nextNode = null
+        } else {
+          nextNode = nextLogicalSibling(currentHydrationNode!)
+        }
+        mount(source, i, parentAnchor)
+        // the row's content took the opening marker over (see
+        // `FragmentClaim`): this list is markerless after all
+        if (nextNode && !(ownedStart && !claim.start)) {
+          setCurrentHydrationNode(nextNode)
+        }
+      }
+
+      // special handling transition-group + v-for, without <!--]--> marker
+      const container = markerlessHydrationContainer
+      if (container && !claim.start) {
+        const afterRows = currentHydrationNode
+        parentAnchor = claimAnchor(
+          __DEV__ ? createComment('for') : createTextNode(),
+        )
+        container.insertBefore(
+          parentAnchor,
+          afterRows && afterRows.parentNode === container ? afterRows : null,
+        )
+        pendingHydrationAnchor = true
+      } else if (slotFallbackRange && !isValidSlot(newBlocks)) {
+        // Slot fallback can fall through an empty/invalid `v-for`. In that
+        // case SSR only rendered the parent slot range, so this `v-for` has no
+        // own `<!--]-->` to reuse. Keep its runtime anchor detached if
+        // fallback wins; if content wins, insert it at the local slot-content
+        // boundary below.
+        const anchor =
+          // The invalid list still consumed local SSR item ranges.
+          currentHydrationNode !== hydrationStart
+            ? currentHydrationNode!
+            : // Empty source with trailing slot siblings.
+              hydrationStart !== slotEndAnchor
+              ? hydrationStart.nextSibling!
+              : slotEndAnchor!
+        parentAnchor = claimUntrackedAnchor(
+          __DEV__ ? createComment('for') : createTextNode(),
+        )
+        const hydrationAnchor = parentAnchor
+        pendingHydrationAnchor = true
+        if (
+          currentHydrationNode === hydrationStart ||
+          currentHydrationNode === slotEndAnchor
+        ) {
+          setCurrentHydrationNode(hydrationStart)
+        }
+        const attachAnchor = () => {
+          const parentNode = anchor.parentNode
+          if (parentNode) parentNode.insertBefore(hydrationAnchor, anchor)
+        }
+        // Post-flush even after the verdict: the reference node's final
+        // position is only stable once the whole pass has finished.
+        const queued = queuePendingSlotContentAnchor({
+          onContent: () => queuePostFlushCb(attachAnchor),
+          onFallback: () => {},
+        })
+        if (!queued) queuePostFlushCb(attachAnchor)
       } else {
-        for (let i = 0; i < newLength; i++) {
-          if (isComment(currentHydrationNode!, ']')) {
-            nextNode = claimAnchor(currentHydrationNode!)
-            setCurrentHydrationNode(nextNode)
-          } else {
-            nextNode = nextLogicalSibling(currentHydrationNode!)
-          }
-          mount(source, i, parentAnchor)
-          if (nextNode) setCurrentHydrationNode(nextNode)
+        parentAnchor = claimAnchor(
+          locateHydrationBoundaryClose(currentHydrationNode!),
+        )
+        exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+        if (__DEV__ && !isComment(parentAnchor, ']')) {
+          throw new Error(
+            `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
+          )
         }
 
-        // special handling transition-group + v-for, without <!--]--> marker
-        const container = markerlessHydrationContainer
-        const curNode = newLength ? nextNode : currentHydrationNode
-        if (
-          container &&
-          (hydrationStart === container ||
-            hydrationStart.parentNode === container) &&
-          // slot content keeps its own markers unless it is a single
-          // fragment; a close marker right after the rows is then ours
-          !(curNode && isComment(curNode, ']'))
-        ) {
-          // a direct child of a container rendered without fragment markers
-          parentAnchor = claimAnchor(
-            __DEV__ ? createComment('for') : createTextNode(),
-          )
-          container.insertBefore(
-            parentAnchor,
-            curNode && curNode !== container && curNode.parentNode === container
-              ? curNode
-              : null,
-          )
-          pendingHydrationAnchor = true
-        } else if (slotFallbackRange && !isValidSlot(newBlocks)) {
-          // Slot fallback can fall through an empty/invalid `v-for`. In that
-          // case SSR only rendered the parent slot range, so this `v-for` has no
-          // own `<!--]-->` to reuse. Keep its runtime anchor detached if
-          // fallback wins; if content wins, insert it at the local slot-content
-          // boundary below.
-          const anchor =
-            // The invalid list still consumed local SSR item ranges.
-            currentHydrationNode !== hydrationStart
-              ? currentHydrationNode!
-              : // Empty source with trailing slot siblings.
-                hydrationStart !== slotEndAnchor
-                ? hydrationStart.nextSibling!
-                : slotEndAnchor!
-          parentAnchor = claimUntrackedAnchor(
-            __DEV__ ? createComment('for') : createTextNode(),
-          )
-          const hydrationAnchor = parentAnchor
-          pendingHydrationAnchor = true
-          if (
-            currentHydrationNode === hydrationStart ||
-            currentHydrationNode === slotEndAnchor
-          ) {
-            setCurrentHydrationNode(hydrationStart)
-          }
-          const attachAnchor = () => {
-            const parentNode = anchor.parentNode
-            if (parentNode) parentNode.insertBefore(hydrationAnchor, anchor)
-          }
-          // Post-flush even after the verdict: the reference node's final
-          // position is only stable once the whole pass has finished.
-          const queued = queuePendingSlotContentAnchor({
-            onContent: () => queuePostFlushCb(attachAnchor),
-            onFallback: () => {},
-          })
-          if (!queued) queuePostFlushCb(attachAnchor)
-        } else {
-          const close = locateHydrationBoundaryClose(currentHydrationNode!)
-          reuseBoundaryClose(close)
-          if (__DEV__ && !isComment(parentAnchor, ']')) {
-            throw new Error(
-              `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
-            )
-          }
-
-          // optimization: cache the fragment end anchor as $llc (last logical child)
-          // so that locateChildByLogicalIndex can skip the entire fragment.
-          // For anchored inserts, reuse the unit index the locator stamped on
-          // the anchor; if it is unstamped (reached via a cache-missed
-          // `next()`), leave `$llc` untouched — `0` is a valid unit index, so
-          // a fallback would alias a stale cache entry to "unit 0", while
-          // skipping the install only costs a restart walk.
-          if (_insertionParent && isComment(parentAnchor, ']')) {
-            const idx = _insertionAnchor
-              ? (_insertionAnchor as any as ChildItem).$idx
-              : _insertionIndex || 0
-            if (idx !== undefined) {
-              ;(parentAnchor as any as ChildItem).$idx = idx
-              _insertionParent.$llc = parentAnchor
-            }
+        // optimization: cache the fragment end anchor as $llc (last logical child)
+        // so that locateChildByLogicalIndex can skip the entire fragment.
+        // For anchored inserts, reuse the unit index the locator stamped on
+        // the anchor; if it is unstamped (reached via a cache-missed
+        // `next()`), leave `$llc` untouched — `0` is a valid unit index, so
+        // a fallback would alias a stale cache entry to "unit 0", while
+        // skipping the install only costs a restart walk.
+        if (_insertionParent && isComment(parentAnchor, ']')) {
+          const idx = _insertionAnchor
+            ? (_insertionAnchor as any as ChildItem).$idx
+            : _insertionIndex || 0
+          if (idx !== undefined) {
+            ;(parentAnchor as any as ChildItem).$idx = idx
+            _insertionParent.$llc = parentAnchor
           }
         }
       }

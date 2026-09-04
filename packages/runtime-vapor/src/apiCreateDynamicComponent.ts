@@ -134,7 +134,9 @@ export function createDynamicComponent(
           owner && (() => resolveFallthroughAttrs(owner)),
         )
         if (isHydrating) {
-          locateHydrationNode(shouldConsumeFragmentStart(value))
+          locateHydrationNode(
+            shouldConsumeFragmentStart(value) ? { start: null } : undefined,
+          )
           frag.hydrate()
         }
         return frag

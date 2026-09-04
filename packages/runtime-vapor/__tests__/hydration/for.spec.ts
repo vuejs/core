@@ -385,6 +385,37 @@ describe('Vapor Mode hydration', () => {
       `)
     })
 
+    test('multi-root v-if as a keyed template row', async () => {
+      const data = ref({ items: [1, 2], show: true })
+      const { container } = await testHydration(
+        `<template>
+          <ul>
+            <template v-for="item in data.items" :key="item">
+              <template v-if="data.show">
+                <li>{{ item }}a</li>
+                <li>{{ item }}b</li>
+              </template>
+            </template>
+          </ul>
+        </template>`,
+        {},
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><!--[--><li>1a</li><li>1b</li><!--]--><!--]--><!--[--><!--[--><li>2a</li><li>2b</li><!--]--><!--]--><!--]-->`,
+      )
+      data.value.show = false
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><!--[--><!--]--><!--]--><!--[--><!--[--><!--]--><!--]--><!--]-->`,
+      )
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
     test('with non-hydration node', async () => {
       const data = ref({ show: true, msg: 'foo' })
       const { container } = await testHydration(

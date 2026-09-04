@@ -201,7 +201,7 @@ export let adoptTemplate: (
   ns?: Namespace,
   target?: AdoptTarget,
 ) => Node | null
-export let locateHydrationNode: (consumeFragmentStart?: boolean) => void
+export let locateHydrationNode: (claim?: FragmentClaim) => void
 export let parseAdoptTarget: (template: string) => AdoptTarget
 
 const enum AnchorFlags {
@@ -251,7 +251,46 @@ export function setMarkerlessHydrationContainer(
     return markerlessHydrationContainer
   } finally {
     markerlessHydrationContainer = container
+    innermostFragmentClaim = null
   }
+}
+
+/**
+ * A block's claim on the `<!--[-->` opening its SSR range. In a markerless
+ * container the server strips only the outermost markers, so a marker
+ * consumed by an outer block belongs to the innermost block that starts right
+ * after it: that block takes the claim over and the outer one loses its
+ * `start`. Owners read `start` late for that reason.
+ */
+export interface FragmentClaim {
+  start: CommentAnchor | null
+}
+
+let innermostFragmentClaim: FragmentClaim | null = null
+
+/**
+ * Consume the fragment start under the cursor for `claim`, or take over the
+ * one the enclosing block consumed when nothing was hydrated in between.
+ */
+function claimFragmentStart(claim: FragmentClaim): void {
+  const node = currentHydrationNode
+  if (!node) return
+  if (isComment(node, '[')) {
+    claim.start = node
+    setCurrentHydrationNode(node.nextSibling)
+  } else {
+    const outer = innermostFragmentClaim
+    if (
+      !outer ||
+      !outer.start ||
+      node !== skipUntrackedAnchors(outer.start.nextSibling)
+    ) {
+      return
+    }
+    claim.start = outer.start
+    outer.start = null
+  }
+  if (markerlessHydrationContainer) innermostFragmentClaim = claim
 }
 
 export function setCurrentHydrationNode(node: Node | null): void {
@@ -282,11 +321,11 @@ export function advanceHydrationNode(node: Node): void {
  * (`currentHydrationNode`). Every block-creating API borrows it and must hand
  * it back, which is what these three helpers express:
  *
- * - `enterHydrationCursor(consumeFragmentStart)` — locate this block's own
- *   start node *and* remember where the enclosing scope should resume. Pass
- *   `true` when the block's server output is wrapped in `<!--[-->…<!--]-->`
- *   and the body should start after the opening marker (multi-root branches,
- *   `v-for` lists).
+ * - `enterHydrationCursor(claim)` — locate this block's own start node *and*
+ *   remember where the enclosing scope should resume. Pass a `FragmentClaim`
+ *   when the block's server output is wrapped in `<!--[-->…<!--]-->` and the
+ *   body should start after the opening marker (multi-root branches, `v-for`
+ *   lists); the claim records whether the block owns the marker.
  * - `captureHydrationCursor()` — remember the resume point *without* locating
  *   a start node, for wrappers whose inner owner locates its own start later
  *   (dynamic components, keyed fragments, slot outlets). Locating early would
@@ -308,11 +347,9 @@ export type HydrationCursor = {
   exited?: boolean
 }
 
-export function enterHydrationCursor(
-  consumeFragmentStart = false,
-): HydrationCursor {
+export function enterHydrationCursor(claim?: FragmentClaim): HydrationCursor {
   const resume = insertionParent ? currentHydrationNode : undefined
-  locateHydrationNode(consumeFragmentStart)
+  locateHydrationNode(claim)
   if (__DEV__) liveCursors++
   return {
     start: currentHydrationNode,
@@ -407,7 +444,7 @@ export function skipUntrackedAnchors(node: Node | null): Node | null {
   return node
 }
 
-function locateHydrationNodeImpl(consumeFragmentStart = false) {
+function locateHydrationNodeImpl(claim?: FragmentClaim) {
   let node: Node | null
 
   if (insertionAnchor) {
@@ -422,11 +459,6 @@ function locateHydrationNodeImpl(consumeFragmentStart = false) {
     node = currentHydrationNode
   }
 
-  // consume fragment start anchor if needed
-  if (consumeFragmentStart && node && isComment(node, '[')) {
-    node = node.nextSibling
-  }
-
   if (__DEV__ && !node) {
     throw new Error(
       `No current hydration node was found.\n` +
@@ -436,6 +468,7 @@ function locateHydrationNodeImpl(consumeFragmentStart = false) {
 
   resetInsertionState()
   setCurrentHydrationNode(node)
+  if (claim) claimFragmentStart(claim)
 }
 
 /**
@@ -474,28 +507,12 @@ export function locateEndAnchor(
 }
 
 // Find the SSR close marker for the current owner.
-export function locateHydrationBoundaryClose(
-  node: Node,
-  closeHint: Node | null = null,
-): Node {
-  let close = closeHint
-  if (!close || !isComment(close, ']')) {
-    if (isComment(node, ']')) {
-      close = node
-    } else {
-      let candidate = nextLogicalSibling(node)
-      while (candidate && !isComment(candidate, ']')) {
-        candidate = nextLogicalSibling(candidate)
-      }
-      close = candidate
-    }
+export function locateHydrationBoundaryClose(node: Node): Node {
+  let close: Node | null = node
+  while (close && !isComment(close, ']')) {
+    close = nextLogicalSibling(close)
   }
-
-  if (!close) {
-    return node
-  }
-
-  return close
+  return close || node
 }
 
 function handleMismatch(

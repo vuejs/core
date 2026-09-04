@@ -32,6 +32,7 @@ import {
 import type { VaporComponentInstance } from './component'
 import type { NodeRef } from './apiTemplateRef'
 import {
+  type FragmentClaim,
   type HydrationCursor,
   advanceHydrationNode,
   claimAnchor,
@@ -39,7 +40,7 @@ import {
   currentHydrationNode,
   exitHydrationCursor,
   isHydrating,
-  locateFragmentEnd,
+  locateEndAnchor,
   locateHydrationNode,
 } from './dom/hydration'
 import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
@@ -341,6 +342,8 @@ export class DynamicFragment extends RenderContextFragment {
   anchorLabel?: string
   keyed?: boolean
   inTransition?: boolean
+  /** hydration: this `v-if` branch's claim on its SSR range */
+  hydrationClaim?: FragmentClaim
   // Fallthrough (re-)application for this fragment's branches, installed by
   // the owning component when the fragment sits on its fallthrough root
   // chain. Invoked inside the branch render ctx so created effects capture
@@ -736,11 +739,13 @@ export class SlotFragment
         // their exposed branch. The receiver decides its fallback after all
         // shared roots have reported their final content/local-fallback result.
         if (this.sharedFallback || (this.inheritFallback && !fallback)) {
+          const claim: FragmentClaim = { start: null }
+          locateHydrationNode(claim)
           const { contentStart, contentValid } = this.updateHydratingContent(
             slotRender,
             key,
           )
-          const end = locateFragmentEnd(contentStart)
+          const end = claim.start ? locateEndAnchor(claim.start) : null
           let exposedValid = contentValid
           if (this.sharedFallback) {
             recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)

@@ -41,7 +41,9 @@ export function createIf(
     if (isHydrating) {
       branchShape = decodeIfShape(flags, ok)
       hydrationCursor = enterHydrationCursor(
-        branchShape === VaporBlockShape.MULTI_ROOT,
+        branchShape === VaporBlockShape.MULTI_ROOT
+          ? { start: null }
+          : undefined,
       )
     }
     frag = ok
@@ -82,9 +84,11 @@ export function createIf(
       const ok = condition()
       if (isHydrating) {
         branchShape = decodeIfShape(flags, ok)
-        hydrationCursor = enterHydrationCursor(
-          branchShape === VaporBlockShape.MULTI_ROOT,
-        )
+        dynamicFragment.hydrationClaim =
+          branchShape === VaporBlockShape.MULTI_ROOT
+            ? { start: null }
+            : undefined
+        hydrationCursor = enterHydrationCursor(dynamicFragment.hydrationClaim)
       }
       dynamicFragment.update(
         ok ? b1 : b2,
