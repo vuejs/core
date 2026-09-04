@@ -55,7 +55,7 @@ import {
   enterHydrationCursor,
   isComment,
   isHydrating,
-  locateEndAnchor,
+  locateClaimedEnd,
   markerlessHydrationContainer,
   nextLogicalSibling,
   setCurrentHydrationNode,
@@ -536,7 +536,7 @@ export const createFor = (
 
       if (claim.start) {
         // the list owns its SSR range: its close marker is the anchor
-        parentAnchor = claimAnchor(locateEndAnchor(claim.start)!)
+        parentAnchor = claimAnchor(locateClaimedEnd(claim.start)!)
         exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
 
         // optimization: cache the fragment end anchor as $llc (last logical child)

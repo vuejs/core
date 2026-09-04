@@ -542,7 +542,12 @@ export function locateEndAnchor(
   while ((node = _next(node) as CommentAnchor) && stack.length > 0) {
     if (node.nodeType === 8) {
       if (node.data === open) {
-        stack.push(node)
+        // a nested range walked before is skipped through its cached end
+        if (node.$fe) {
+          node = node.$fe as CommentAnchor
+        } else {
+          stack.push(node)
+        }
       } else if (node.data === close) {
         const matchingOpen = stack.pop()!
         matchingOpen.$fe = node
@@ -552,6 +557,18 @@ export function locateEndAnchor(
   }
 
   return null
+}
+
+/**
+ * The close marker of a claimed range once its content hydrated. The cursor
+ * normally rests on it, so only a mismatch pays for the walk from `start`.
+ */
+export function locateClaimedEnd(start: CommentAnchor): Node | null {
+  const node = currentHydrationNode
+  if (node && isComment(node, ']') && !isClaimedAnchor(node)) {
+    return (start.$fe = node)
+  }
+  return locateEndAnchor(start)
 }
 
 function handleMismatch(

@@ -10,6 +10,7 @@ import {
   isClaimedAnchor,
   isComment,
   isInDeferredHydrationBoundary,
+  locateClaimedEnd,
   locateFragmentEnd,
   locateHydrationNode,
   nextLogicalSibling,
@@ -548,9 +549,9 @@ function planReuseOwnClose(frag: DynamicFragment): AnchorPlan | undefined {
   const close =
     frag.__vf & SLOT
       ? currentSlotHydrationSession && currentSlotHydrationSession.ownEndAnchor
-      : locateFragmentEnd(
-          frag.hydrationClaim ? frag.hydrationClaim.start : null,
-        )
+      : frag.hydrationClaim && frag.hydrationClaim.start
+        ? locateClaimedEnd(frag.hydrationClaim.start)
+        : null
   // reuse it once, or create a fresh runtime anchor after it when the pending
   // slot machinery already claimed it
   if (close) return reuseOrCreateAfterAnchor(close)
