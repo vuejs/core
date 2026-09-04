@@ -66,6 +66,7 @@ import {
   nextLogicalSibling,
   setCurrentHydrationNode,
   setMarkerlessHydrationContainer,
+  setTransitionChildPending,
 } from '../dom/hydration'
 import { isTransitionEnabled, registerTransitionHooks } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
@@ -250,10 +251,12 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
         : undefined
       let nextNode: Node | null = null
       let prevMarkerlessContainer: ParentNode | null = null
+      let prevTransitionChildPending = false
       if (isHydrating && container) {
         // SSR flattens the children into the container without fragment
         // markers; the cursor sits on the container itself when it is empty.
         prevMarkerlessContainer = setMarkerlessHydrationContainer(container)
+        prevTransitionChildPending = setTransitionChildPending(true)
         nextNode = nextLogicalSibling(container)
         setCurrentHydrationNode(container.firstChild || container)
       }
@@ -289,6 +292,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       } finally {
         if (isHydrating && container) {
           setMarkerlessHydrationContainer(prevMarkerlessContainer)
+          setTransitionChildPending(prevTransitionChildPending)
           setCurrentHydrationNode(nextNode)
         }
       }

@@ -26,8 +26,7 @@ import {
 import {
   findDir,
   findProp,
-  isTransitionGroupNode,
-  isTransitionNode,
+  isTransitionHostNode,
   propToExpression,
   resolveExpression,
 } from '../utils'
@@ -79,7 +78,7 @@ function transformComponentSlot(
   // Transition/TransitionGroup filter out comment children at runtime in
   // vdom mode and SSR omits them (#5351, #11961), so drop them here to keep
   // client render and hydration in sync with the server output (#15372)
-  const isTransitionHost = isTransitionNode(node) || isTransitionGroupNode(node)
+  const isTransitionHost = isTransitionHostNode(node)
 
   // whitespace: 'preserve'
   const emptyTextNodes: TemplateChildNode[] = []

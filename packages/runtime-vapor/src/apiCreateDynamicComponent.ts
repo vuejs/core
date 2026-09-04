@@ -33,6 +33,7 @@ import {
 import {
   type HydrationCursor,
   captureHydrationCursor,
+  createFragmentClaim,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
@@ -134,7 +135,11 @@ export function createDynamicComponent(
           owner && (() => resolveFallthroughAttrs(owner)),
         )
         if (isHydrating) {
-          locateHydrationNode(shouldConsumeFragmentStart(value))
+          locateHydrationNode(
+            shouldConsumeFragmentStart(value)
+              ? createFragmentClaim()
+              : undefined,
+          )
           frag.hydrate()
         }
         return frag

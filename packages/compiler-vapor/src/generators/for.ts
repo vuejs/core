@@ -46,6 +46,7 @@ export function genFor(
     component,
     onlyChild,
     slotRoot,
+    wrappedRows,
   } = oper
 
   const rawValue = value && value.content
@@ -149,6 +150,7 @@ export function genFor(
     !component && isSingleNodeBlock(render),
     once,
     slotRoot,
+    wrappedRows,
   )
 
   const onResetCalls: CodeFragment[] = []
@@ -205,6 +207,7 @@ function genForFlags(
   isSingleNode: boolean,
   once: boolean | undefined,
   slotRoot: boolean | undefined,
+  wrappedRows: boolean,
 ): string | undefined {
   let flags = 0
   const names: string[] = []
@@ -232,6 +235,10 @@ function genForFlags(
   if (slotRoot) {
     flags |= VaporVForFlags.SLOT_ROOT
     names.push('SLOT_ROOT')
+  }
+  if (wrappedRows) {
+    flags |= VaporVForFlags.WRAPPED_ROWS
+    names.push('WRAPPED_ROWS')
   }
 
   if (!flags) {

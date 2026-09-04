@@ -45,16 +45,18 @@ import { currentSlotScopeIds, setCurrentSlotScopeIds } from './scopeId'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '@vue/shared'
 import {
+  type FragmentClaim,
   type HydrationCursor,
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
+  createFragmentClaim,
   currentHydrationNode,
   enterHydrationBoundary,
   enterHydrationCursor,
   isComment,
   isHydrating,
-  locateHydrationBoundaryClose,
+  locateClaimedEnd,
   markerlessHydrationContainer,
   nextLogicalSibling,
   setCurrentHydrationNode,
@@ -105,8 +107,10 @@ export const createFor = (
   const _insertionAnchor = insertionAnchor
   const _insertionIndex = insertionIndex
   let hydrationCursor: HydrationCursor | null = null
+  let hydrationClaim: FragmentClaim | undefined
   if (isHydrating) {
-    hydrationCursor = enterHydrationCursor(true)
+    hydrationClaim = createFragmentClaim()
+    hydrationCursor = enterHydrationCursor(hydrationClaim)
   } else {
     resetInsertionState()
   }
@@ -144,6 +148,7 @@ export const createFor = (
     !!(flags & VaporVForFlags.FAST_REMOVE) && !isComponent
   const isSingleNode = !!(flags & VaporVForFlags.IS_SINGLE_NODE)
   const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
+  const wrappedRows = !!(flags & VaporVForFlags.WRAPPED_ROWS)
 
   const slotOwner = currentSlotOwner
   const slotBoundary = currentSlotBoundary
@@ -507,120 +512,118 @@ export const createFor = (
 
   function hydrateList(source: ResolvedSource, newLength: number): void {
     const hydrationStart = currentHydrationNode!
+    const claim = hydrationClaim!
     let exitHydrationBoundary: (() => void) | undefined
-    let nextNode
-    const emptyLocalRange =
-      isComment(hydrationStart, ']') &&
-      isComment(hydrationStart.previousSibling!, '[')
     const slotEndAnchor = getCurrentSlotEndAnchor()
     const slotFallbackRange = isPendingSlotContent() && slotEndAnchor
 
+    // claiming a close marker as the anchor also bounds the cleanup to it
     const reuseBoundaryClose = (close: Node): void => {
       parentAnchor = claimAnchor(close)
       exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
     }
 
     try {
-      if (emptyLocalRange && newLength) {
-        reuseBoundaryClose(hydrationStart)
-        mountAll(source, newLength)
-        setCurrentHydrationNode(parentAnchor)
-      } else {
-        for (let i = 0; i < newLength; i++) {
-          if (isComment(currentHydrationNode!, ']')) {
-            nextNode = claimAnchor(currentHydrationNode!)
-            setCurrentHydrationNode(nextNode)
-          } else {
-            nextNode = nextLogicalSibling(currentHydrationNode!)
-          }
-          mount(source, i, parentAnchor)
-          if (nextNode) setCurrentHydrationNode(nextNode)
+      for (let i = 0; i < newLength; i++) {
+        const node = currentHydrationNode!
+        // an unwrapped row is a single node: its own hydration moves on
+        let nextNode: Node | null = null
+        if (isComment(node, ']')) {
+          // fewer server rows: the rest mount before the close marker
+          nextNode = claimAnchor(node)
+        } else if (wrappedRows && isComment(node, '[')) {
+          // the row resumes after its wrapper's close marker
+          nextNode = nextLogicalSibling(node)
+          setCurrentHydrationNode(node.nextSibling)
         }
+        mount(source, i, parentAnchor)
+        if (nextNode) setCurrentHydrationNode(nextNode)
+      }
 
-        // special handling transition-group + v-for, without <!--]--> marker
-        const container = markerlessHydrationContainer
-        const curNode = newLength ? nextNode : currentHydrationNode
+      if (claim.start) {
+        // the list owns its SSR range: its close marker is the anchor
+        reuseBoundaryClose(locateClaimedEnd(claim.start)!)
+
+        // optimization: cache the fragment end anchor as $llc (last logical child)
+        // so that locateChildByLogicalIndex can skip the entire fragment.
+        // For anchored inserts, reuse the unit index the locator stamped on
+        // the anchor; if it is unstamped (reached via a cache-missed
+        // `next()`), leave `$llc` untouched — `0` is a valid unit index, so
+        // a fallback would alias a stale cache entry to "unit 0", while
+        // skipping the install only costs a restart walk.
+        if (_insertionParent) {
+          const idx = _insertionAnchor
+            ? (_insertionAnchor as any as ChildItem).$idx
+            : _insertionIndex || 0
+          if (idx !== undefined) {
+            ;(parentAnchor as any as ChildItem).$idx = idx
+            _insertionParent.$llc = parentAnchor
+          }
+        }
+      } else if (slotFallbackRange && !isValidSlot(newBlocks)) {
+        // Slot fallback can fall through an empty/invalid `v-for`. In that
+        // case SSR only rendered the parent slot range, so this `v-for` has no
+        // own `<!--]-->` to reuse. Keep its runtime anchor detached if
+        // fallback wins; if content wins, insert it at the local slot-content
+        // boundary below.
+        const anchor =
+          // The invalid list still consumed local SSR item ranges.
+          currentHydrationNode !== hydrationStart
+            ? currentHydrationNode!
+            : // Empty source with trailing slot siblings.
+              hydrationStart !== slotEndAnchor
+              ? hydrationStart.nextSibling!
+              : slotEndAnchor!
+        parentAnchor = claimUntrackedAnchor(
+          __DEV__ ? createComment('for') : createTextNode(),
+        )
+        const hydrationAnchor = parentAnchor
+        pendingHydrationAnchor = true
         if (
-          container &&
-          (hydrationStart === container ||
-            hydrationStart.parentNode === container) &&
-          // slot content keeps its own markers unless it is a single
-          // fragment; a close marker right after the rows is then ours
-          !(curNode && isComment(curNode, ']'))
+          currentHydrationNode === hydrationStart ||
+          currentHydrationNode === slotEndAnchor
         ) {
-          // a direct child of a container rendered without fragment markers
+          setCurrentHydrationNode(hydrationStart)
+        }
+        const attachAnchor = () => {
+          const parentNode = anchor.parentNode
+          if (parentNode) parentNode.insertBefore(hydrationAnchor, anchor)
+        }
+        // Post-flush even after the verdict: the reference node's final
+        // position is only stable once the whole pass has finished.
+        const queued = queuePendingSlotContentAnchor({
+          onContent: () => queuePostFlushCb(attachAnchor),
+          onFallback: () => {},
+        })
+        if (!queued) queuePostFlushCb(attachAnchor)
+      } else if (markerlessHydrationContainer) {
+        // special handling transition-group + v-for, without <!--]--> marker
+        const afterRows = currentHydrationNode
+        if (!newLength && afterRows && isComment(afterRows, '')) {
+          // the server rendered the empty transition slot as a placeholder
+          parentAnchor = claimAnchor(afterRows)
+        } else {
           parentAnchor = claimAnchor(
             __DEV__ ? createComment('for') : createTextNode(),
           )
-          container.insertBefore(
+          markerlessHydrationContainer.insertBefore(
             parentAnchor,
-            curNode && curNode !== container && curNode.parentNode === container
-              ? curNode
+            afterRows && afterRows.parentNode === markerlessHydrationContainer
+              ? afterRows
               : null,
           )
           pendingHydrationAnchor = true
-        } else if (slotFallbackRange && !isValidSlot(newBlocks)) {
-          // Slot fallback can fall through an empty/invalid `v-for`. In that
-          // case SSR only rendered the parent slot range, so this `v-for` has no
-          // own `<!--]-->` to reuse. Keep its runtime anchor detached if
-          // fallback wins; if content wins, insert it at the local slot-content
-          // boundary below.
-          const anchor =
-            // The invalid list still consumed local SSR item ranges.
-            currentHydrationNode !== hydrationStart
-              ? currentHydrationNode!
-              : // Empty source with trailing slot siblings.
-                hydrationStart !== slotEndAnchor
-                ? hydrationStart.nextSibling!
-                : slotEndAnchor!
-          parentAnchor = claimUntrackedAnchor(
-            __DEV__ ? createComment('for') : createTextNode(),
-          )
-          const hydrationAnchor = parentAnchor
-          pendingHydrationAnchor = true
-          if (
-            currentHydrationNode === hydrationStart ||
-            currentHydrationNode === slotEndAnchor
-          ) {
-            setCurrentHydrationNode(hydrationStart)
-          }
-          const attachAnchor = () => {
-            const parentNode = anchor.parentNode
-            if (parentNode) parentNode.insertBefore(hydrationAnchor, anchor)
-          }
-          // Post-flush even after the verdict: the reference node's final
-          // position is only stable once the whole pass has finished.
-          const queued = queuePendingSlotContentAnchor({
-            onContent: () => queuePostFlushCb(attachAnchor),
-            onFallback: () => {},
-          })
-          if (!queued) queuePostFlushCb(attachAnchor)
-        } else {
-          const close = locateHydrationBoundaryClose(currentHydrationNode!)
-          reuseBoundaryClose(close)
-          if (__DEV__ && !isComment(parentAnchor, ']')) {
-            throw new Error(
-              `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
-            )
-          }
-
-          // optimization: cache the fragment end anchor as $llc (last logical child)
-          // so that locateChildByLogicalIndex can skip the entire fragment.
-          // For anchored inserts, reuse the unit index the locator stamped on
-          // the anchor; if it is unstamped (reached via a cache-missed
-          // `next()`), leave `$llc` untouched — `0` is a valid unit index, so
-          // a fallback would alias a stale cache entry to "unit 0", while
-          // skipping the install only costs a restart walk.
-          if (_insertionParent && isComment(parentAnchor, ']')) {
-            const idx = _insertionAnchor
-              ? (_insertionAnchor as any as ChildItem).$idx
-              : _insertionIndex || 0
-            if (idx !== undefined) {
-              ;(parentAnchor as any as ChildItem).$idx = idx
-              _insertionParent.$llc = parentAnchor
-            }
-          }
         }
+      } else {
+        // a marked list always finds its own range: only malformed server
+        // output gets here. Adopt the cursor so prod keeps going.
+        const close = currentHydrationNode!
+        if (__DEV__ && !isComment(close, ']')) {
+          throw new Error(
+            `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
+          )
+        }
+        reuseBoundaryClose(close)
       }
     } finally {
       exitHydrationBoundary && exitHydrationBoundary()

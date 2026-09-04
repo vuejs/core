@@ -495,16 +495,303 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       const ul = container.querySelector('ul')!
-      // the SSR close marker is the list anchor; no extra `<!--for-->`
+      // the SSR close marker is the list anchor (no extra `<!--for-->`), and
+      // the slot anchor follows all of the slot content
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><!--]--><!--slot--><li>tail</li>`,
+        `<!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--slot-->`,
       )
       data.value.items.push(3)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--slot--><li>tail updated</li>`,
+        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--slot-->`,
       )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should keep the forwarded slot anchors after mixed slot content', async () => {
+      const data = ref({
+        items: [1, 2],
+        tail: 'tail',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Outer>
+            <li v-for="item in data.items" :key="item">{{ item }}</li>
+            <li key="tail">{{ data.tail }}</li>
+          </components.Outer>
+        </template>`,
+        {
+          Outer: `<template><components.Inner><slot /></components.Inner></template>`,
+          Inner: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--slot--><!--slot-->`,
+      )
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--slot--><!--slot-->`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should keep the forwarded slot anchors after mixed slot content with an inherited fallback', async () => {
+      const data = ref({
+        items: [1, 2],
+        tail: 'tail',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Outer>
+            <li v-for="item in data.items" :key="item">{{ item }}</li>
+            <li key="tail">{{ data.tail }}</li>
+          </components.Outer>
+        </template>`,
+        {
+          Outer: `<template><components.Inner><slot /></components.Inner></template>`,
+          Inner: `<template>
+            <TransitionGroup :css="false" tag="ul">
+              <slot><li>empty</li></slot>
+            </TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--slot--><!--slot-->`,
+      )
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--slot--><!--slot-->`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should reuse the markers a forwarded slot kept', async () => {
+      const data = ref({
+        items: [1, 2],
+        tail: 'tail',
+      })
+      const { container } = await testHydration(
+        `<template>
+          <components.Outer>
+            <li v-for="item in data.items" :key="item">{{ item }}</li>
+            <li key="tail">{{ data.tail }}</li>
+          </components.Outer>
+        </template>`,
+        {
+          // the sibling after the outlet keeps the outlet's own SSR markers
+          Outer: `<template>
+            <components.Inner><slot /><li key="last">last</li></components.Inner>
+          </template>`,
+          Inner: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]--><li>last</li><!--slot-->`,
+      )
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]--><li>last</li><!--slot-->`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should hydrate a multi-root v-if branch without markers', async () => {
+      const data = ref({ show: true, tail: 'tail' })
+      const { container } = await testHydration(
+        `<template>
+          <TransitionGroup :css="false" tag="ul">
+            <template v-if="data.show">
+              <li key="a">a</li>
+              <li key="b">b</li>
+            </template>
+            <li key="tail">{{ data.tail }}</li>
+          </TransitionGroup>
+        </template>`,
+        {},
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(`<li>a</li><li>b</li><!--if--><li>tail</li>`)
+      data.value.show = false
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(`<!--if--><li>tail updated</li>`)
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should hydrate a multi-root v-if branch that starts with a list', async () => {
+      const data = ref({ show: true, items: [1, 2], tail: 'tail' })
+      const { container } = await testHydration(
+        `<template>
+          <TransitionGroup :css="false" tag="ul">
+            <template v-if="data.show">
+              <li v-for="item in data.items" :key="item">{{ item }}</li>
+              <li key="tail">{{ data.tail }}</li>
+            </template>
+          </TransitionGroup>
+        </template>`,
+        {},
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--if-->`,
+      )
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--if-->`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should hydrate rows that are lists', async () => {
+      const data = ref({ groups: [[1, 2], [3]], tail: 'tail' })
+      const { container } = await testHydration(
+        `<template>
+          <TransitionGroup :css="false" tag="ul">
+            <template v-for="group in data.groups" :key="group[0]">
+              <li v-for="item in group" :key="item">{{ item }}</li>
+            </template>
+            <li key="tail">{{ data.tail }}</li>
+          </TransitionGroup>
+        </template>`,
+        {},
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><!--]--><!--[--><li>3</li><!--]--><!--for--><li>tail</li>`,
+      )
+      data.value.groups[0].push(9)
+      data.value.groups.push([4])
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>1</li><li>2</li><li>9</li><!--]--><!--[--><li>3</li><!--]--><li>4</li><!--for--><!--for--><li>tail updated</li>`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should hydrate slot rows the server wrapped', async () => {
+      const data = ref({ items: [1, 2], show: true, tail: 'tail' })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template v-for="item in data.items" :key="item">
+              <template v-if="data.show"><li>{{ item }}</li></template>
+            </template>
+            <li key="tail">{{ data.tail }}</li>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><li>1</li><!--if--><!--]--><!--[--><li>2</li><!--if--><!--]--><!--]--><li>tail</li><!--slot-->`,
+      )
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><li>1</li><!--if--><!--]--><!--[--><li>2</li><!--if--><!--]--><li>3</li><!--if--><!--]--><li>tail updated</li><!--slot-->`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should anchor the slot inside the container under an outer slot', async () => {
+      const data = ref({ items: [1, 2] })
+      const { container } = await testHydration(
+        `<template>
+          <components.Wrapper>
+            <components.Child>
+              <li v-for="item in data.items" :key="item">{{ item }}</li>
+            </components.Child>
+          </components.Wrapper>
+        </template>`,
+        {
+          Wrapper: `<template><div><slot /></div></template>`,
+          Child: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const div = container.querySelector('div')!
+      expect(div.innerHTML).toBe(
+        `<!--[--><ul css="false"><li>1</li><li>2</li><!--for--><!--slot--></ul><!--transition-group--><!--]-->`,
+      )
+      data.value.items.push(3)
+      await nextTick()
+      expect(div.innerHTML).toBe(
+        `<!--[--><ul css="false"><li>1</li><li>2</li><li>3</li><!--for--><!--slot--></ul><!--transition-group--><!--]-->`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should reuse the placeholder of an empty slot list', async () => {
+      const data = ref({ items: [] as number[] })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <li v-for="item in data.items" :key="item">{{ item }}</li>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(`<!----><!--slot-->`)
+      data.value.items.push(3)
+      await nextTick()
+      expect(ul.innerHTML).toBe(`<li>3</li><!----><!--slot-->`)
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       expect(
         `Hydration completed but contains mismatches.`,
       ).not.toHaveBeenWarned()

@@ -521,7 +521,7 @@ describe('compiler: v-for', () => {
     )
     expect(code).matchSnapshot()
     expect(code).toContain(
-      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT | VaporVForFlags.WRAPPED_ROWS} /* IS_FRAGMENT, WRAPPED_ROWS */)`,
     )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
@@ -540,7 +540,7 @@ describe('compiler: v-for', () => {
     )
     expect(code).matchSnapshot()
     expect(code).toContain(
-      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT | VaporVForFlags.WRAPPED_ROWS} /* IS_FRAGMENT, WRAPPED_ROWS */)`,
     )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic
@@ -548,6 +548,13 @@ describe('compiler: v-for', () => {
     ).toMatchObject({
       type: IRNodeTypes.FOR,
     })
+  })
+
+  test('v-for on template under a transition group has no wrapped rows', () => {
+    const { code } = compileWithVFor(
+      `<TransitionGroup tag="ul"><template v-for="item in items"><li>{{ item }}</li><li>b</li></template></TransitionGroup>`,
+    )
+    expect(code).not.toContain('WRAPPED_ROWS')
   })
 
   test('v-for on template with keyed child marks fragment block', () => {
