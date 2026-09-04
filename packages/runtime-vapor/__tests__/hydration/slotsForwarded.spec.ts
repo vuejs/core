@@ -1,4 +1,4 @@
-import { nextTick, reactive } from '@vue/runtime-dom'
+import { nextTick, reactive, ref } from '@vue/runtime-dom'
 import {
   formatHtml,
   setupHydrationTest,
@@ -156,6 +156,35 @@ describe('Vapor Mode hydration', () => {
         expect(container.textContent).toBe('content')
       },
     )
+
+    test('forwarded slot with inherited fallback keeps mixed content in order', async () => {
+      const data = ref({ items: [1, 2], tail: 'tail' })
+      const { container } = await testHydration(
+        `<template>
+          <components.Outer>
+            <li v-for="item in data.items" :key="item">{{ item }}</li>
+            <li key="tail">{{ data.tail }}</li>
+          </components.Outer>
+        </template>`,
+        {
+          Outer: `<template><components.Inner><slot /></components.Inner></template>`,
+          Inner: `<template><ul><slot><li>empty</li></slot></ul></template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]--><!--]-->`,
+      )
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]--><!--]-->`,
+      )
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
 
     test('forwarded keyed root slot tracks fallback across hydration and key updates', async () => {
       const data = reactive({ show: false, key: 0 })
