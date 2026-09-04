@@ -5,6 +5,7 @@ import {
   claimAnchor,
   claimUntrackedAnchor,
   cleanupHydrationTail,
+  createFragmentClaim,
   currentHydrationNode,
   enterHydrationBoundary,
   isClaimedAnchor,
@@ -15,6 +16,7 @@ import {
   locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
+  trimHydrationBoundary,
 } from './hydration'
 import {
   createComment,
@@ -94,7 +96,7 @@ class SlotHydrationSession {
   /** Trim the range's unclaimed tail; a range the content took over has none. */
   exitBoundary(): void {
     const close = this.ownEndAnchor
-    if (close) enterHydrationBoundary(close)()
+    if (close) trimHydrationBoundary(close)
   }
 
   /** Record a claim in the ledger; false = no pending window, act now. */
@@ -172,7 +174,7 @@ export function getCurrentSlotEndAnchor(): Node | null {
 
 /** Locate this boundary's SSR range and consume its opening marker. */
 function enterSlotBoundaryRange(pending: boolean): SlotHydrationSession {
-  const claim: FragmentClaim = { start: null }
+  const claim = createFragmentClaim()
   locateHydrationNode(claim)
   return new SlotHydrationSession(claim, currentSlotHydrationSession, pending)
 }

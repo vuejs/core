@@ -50,6 +50,7 @@ import {
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
+  createFragmentClaim,
   currentHydrationNode,
   enterHydrationBoundary,
   enterHydrationCursor,
@@ -108,7 +109,7 @@ export const createFor = (
   let hydrationCursor: HydrationCursor | null = null
   let hydrationClaim: FragmentClaim | undefined
   if (isHydrating) {
-    hydrationClaim = { start: null }
+    hydrationClaim = createFragmentClaim()
     hydrationCursor = enterHydrationCursor(hydrationClaim)
   } else {
     resetInsertionState()
@@ -516,6 +517,12 @@ export const createFor = (
     const slotEndAnchor = getCurrentSlotEndAnchor()
     const slotFallbackRange = isPendingSlotContent() && slotEndAnchor
 
+    // claiming a close marker as the anchor also bounds the cleanup to it
+    const reuseBoundaryClose = (close: Node): void => {
+      parentAnchor = claimAnchor(close)
+      exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+    }
+
     try {
       for (let i = 0; i < newLength; i++) {
         const node = currentHydrationNode!
@@ -524,7 +531,6 @@ export const createFor = (
         if (isComment(node, ']')) {
           // fewer server rows: the rest mount before the close marker
           nextNode = claimAnchor(node)
-          setCurrentHydrationNode(nextNode)
         } else if (wrappedRows && isComment(node, '[')) {
           // the row resumes after its wrapper's close marker
           nextNode = nextLogicalSibling(node)
@@ -536,8 +542,7 @@ export const createFor = (
 
       if (claim.start) {
         // the list owns its SSR range: its close marker is the anchor
-        parentAnchor = claimAnchor(locateClaimedEnd(claim.start)!)
-        exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
+        reuseBoundaryClose(locateClaimedEnd(claim.start)!)
 
         // optimization: cache the fragment end anchor as $llc (last logical child)
         // so that locateChildByLogicalIndex can skip the entire fragment.
@@ -612,13 +617,13 @@ export const createFor = (
       } else {
         // a marked list always finds its own range: only malformed server
         // output gets here. Adopt the cursor so prod keeps going.
-        parentAnchor = claimAnchor(currentHydrationNode!)
-        exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
-        if (__DEV__ && !isComment(parentAnchor, ']')) {
+        const close = currentHydrationNode!
+        if (__DEV__ && !isComment(close, ']')) {
           throw new Error(
             `v-for fragment anchor node was not found. this is likely a Vue internal bug.`,
           )
         }
+        reuseBoundaryClose(close)
       }
     } finally {
       exitHydrationBoundary && exitHydrationBoundary()

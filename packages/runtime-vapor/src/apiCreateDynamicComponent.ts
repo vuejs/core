@@ -33,6 +33,7 @@ import {
 import {
   type HydrationCursor,
   captureHydrationCursor,
+  createFragmentClaim,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
@@ -135,7 +136,9 @@ export function createDynamicComponent(
         )
         if (isHydrating) {
           locateHydrationNode(
-            shouldConsumeFragmentStart(value) ? { start: null } : undefined,
+            shouldConsumeFragmentStart(value)
+              ? createFragmentClaim()
+              : undefined,
           )
           frag.hydrate()
         }

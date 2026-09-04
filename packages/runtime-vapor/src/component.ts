@@ -101,6 +101,7 @@ import {
   adoptTemplate,
   advanceHydrationNode,
   claimAnchor,
+  createFragmentClaim,
   currentHydrationNode,
   enterHydrationBoundary,
   enterHydrationCursor,
@@ -306,7 +307,7 @@ export function createComponent(
   }
   if (isHydrating) {
     resolvePendingSlotContent()
-    if (component.__multiRoot) hydrationClaim = { start: null }
+    if (component.__multiRoot) hydrationClaim = createFragmentClaim()
     hydrationCursor = enterHydrationCursor(hydrationClaim, true)
     if (hydrationClaim && hydrationClaim.start) {
       hydrationClose = locateEndAnchor(hydrationClaim.start)

@@ -3,6 +3,7 @@ import {
   type HydrationCursor,
   advanceHydrationNode,
   claimUntrackedAnchor,
+  createFragmentClaim,
   currentHydrationNode,
   enterHydrationCursor,
   isComment,
@@ -42,7 +43,7 @@ export function createIf(
       branchShape = decodeIfShape(flags, ok)
       hydrationCursor = enterHydrationCursor(
         branchShape === VaporBlockShape.MULTI_ROOT
-          ? { start: null }
+          ? createFragmentClaim()
           : undefined,
       )
     }
@@ -86,7 +87,7 @@ export function createIf(
         branchShape = decodeIfShape(flags, ok)
         dynamicFragment.hydrationClaim =
           branchShape === VaporBlockShape.MULTI_ROOT
-            ? { start: null }
+            ? createFragmentClaim()
             : undefined
         hydrationCursor = enterHydrationCursor(dynamicFragment.hydrationClaim)
       }

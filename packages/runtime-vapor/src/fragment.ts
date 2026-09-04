@@ -37,6 +37,7 @@ import {
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
+  createFragmentClaim,
   currentHydrationNode,
   exitHydrationCursor,
   isHydrating,
@@ -739,7 +740,7 @@ export class SlotFragment
         // their exposed branch. The receiver decides its fallback after all
         // shared roots have reported their final content/local-fallback result.
         if (this.sharedFallback || (this.inheritFallback && !fallback)) {
-          const claim: FragmentClaim = { start: null }
+          const claim = createFragmentClaim()
           locateHydrationNode(claim)
           const { contentStart, contentValid } = this.updateHydratingContent(
             slotRender,
