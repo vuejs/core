@@ -56,7 +56,6 @@ import {
   isComment,
   isHydrating,
   locateEndAnchor,
-  locateHydrationBoundaryClose,
   markerlessHydrationContainer,
   setCurrentHydrationNode,
 } from './dom/hydration'
@@ -587,7 +586,8 @@ export const createFor = (
         if (!queued) queuePostFlushCb(attachAnchor)
       } else {
         parentAnchor = claimAnchor(
-          locateHydrationBoundaryClose(currentHydrationNode!),
+          (claim.start && locateEndAnchor(claim.start)) ||
+            currentHydrationNode!,
         )
         exitHydrationBoundary = enterHydrationBoundary(parentAnchor)
         if (__DEV__ && !isComment(parentAnchor, ']')) {

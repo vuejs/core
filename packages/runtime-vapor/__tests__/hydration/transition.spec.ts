@@ -608,13 +608,13 @@ describe('Vapor Mode hydration', () => {
       )
       const ul = container.querySelector('ul')!
       expect(ul.innerHTML).toBe(
-        `<!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]--><!--slot--><li>last</li>`,
+        `<!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]--><li>last</li><!--slot-->`,
       )
       data.value.items.push(3)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]--><!--slot--><li>last</li>`,
+        `<!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]--><li>last</li><!--slot-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -700,6 +700,39 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(ul.innerHTML).toBe(
         `<!--[--><li>1</li><li>2</li><li>9</li><!--]--><!--[--><li>3</li><!--]--><li>4</li><!--for--><!--for--><li>tail updated</li>`,
+      )
+      expect(
+        `Hydration completed but contains mismatches.`,
+      ).not.toHaveBeenWarned()
+    })
+
+    test('with tag should hydrate slot rows the server wrapped', async () => {
+      const data = ref({ items: [1, 2], show: true, tail: 'tail' })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template v-for="item in data.items" :key="item">
+              <template v-if="data.show"><li>{{ item }}</li></template>
+            </template>
+            <li key="tail">{{ data.tail }}</li>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><li>1</li><!--if--><!--]--><!--[--><li>2</li><!--if--><!--]--><!--]--><li>tail</li><!--slot-->`,
+      )
+      data.value.items.push(3)
+      data.value.tail = 'tail updated'
+      await nextTick()
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><li>1</li><!--if--><!--]--><!--[--><li>2</li><!--if--><!--]--><li>3</li><!--if--><!--]--><li>tail updated</li><!--slot-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,

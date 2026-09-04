@@ -11,7 +11,6 @@ import {
   isComment,
   isInDeferredHydrationBoundary,
   locateEndAnchor,
-  locateHydrationBoundaryClose,
   locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
@@ -660,10 +659,11 @@ function planReuseBoundaryClose(frag: DynamicFragment): AnchorPlan | undefined {
   // SSR wraps slots and multi-root `v-if` branches with `<!--[-->...<!--]-->`.
   // The close marker is a valid stable anchor candidate: reuse it once, or
   // create a fresh runtime anchor after it when another fragment already did.
-  // A branch whose claim was taken over (see `FragmentClaim`) has none.
-  if (slotAnchor || (frag.hydrationClaim && frag.hydrationClaim.start)) {
-    const anchor =
-      slotAnchor || locateHydrationBoundaryClose(currentHydrationNode!)
+  // A branch entered as a transition child, or whose claim was taken over
+  // (see `FragmentClaim`), has none.
+  const ifStart = frag.hydrationClaim ? frag.hydrationClaim.start : null
+  if (slotAnchor || ifStart) {
+    const anchor = slotAnchor || locateEndAnchor(ifStart!)
     if (isComment(anchor!, ']')) {
       return reuseOrCreateAfterAnchor(anchor)
     } else if (__DEV__) {

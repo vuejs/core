@@ -96,6 +96,7 @@ import {
 } from './componentSlots'
 import { hmrReload, hmrRerender } from './hmr'
 import {
+  type FragmentClaim,
   type HydrationCursor,
   adoptTemplate,
   advanceHydrationNode,
@@ -293,6 +294,7 @@ export function createComponent(
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   let hydrationClose: Node | null = null
+  let hydrationClaim: FragmentClaim | undefined
   let hydrationCursor: HydrationCursor | null = null
   let exitHydrationBoundary: (() => void) | undefined
   let deferHydrationBoundary = false
@@ -304,13 +306,13 @@ export function createComponent(
   }
   if (isHydrating) {
     resolvePendingSlotContent()
-    hydrationCursor = enterHydrationCursor()
-    if (component.__multiRoot && isComment(currentHydrationNode!, '[')) {
-      hydrationClose = locateEndAnchor(currentHydrationNode!)
+    if (component.__multiRoot) hydrationClaim = { start: null }
+    hydrationCursor = enterHydrationCursor(hydrationClaim, true)
+    if (hydrationClaim && hydrationClaim.start) {
+      hydrationClose = locateEndAnchor(hydrationClaim.start)
       exitHydrationBoundary = enterHydrationBoundary(
         hydrationClose && claimAnchor(hydrationClose),
       )
-      setCurrentHydrationNode(currentHydrationNode!.nextSibling)
     }
   } else {
     resetInsertionState()
@@ -543,7 +545,8 @@ export function createComponent(
           // Async setup cannot create `block` yet. Capture the adopted SSR
           // range for pending move/removal before hydration advances past it.
           const pendingBlock: Node[] = []
-          let node = hydrationCursor!.start!
+          let node: Node =
+            (hydrationClaim && hydrationClaim.start) || hydrationCursor!.start!
           const hydrationNext = nextLogicalSibling(node)
           do {
             pendingBlock.push(node)

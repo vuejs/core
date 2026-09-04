@@ -201,7 +201,10 @@ export let adoptTemplate: (
   ns?: Namespace,
   target?: AdoptTarget,
 ) => Node | null
-export let locateHydrationNode: (claim?: FragmentClaim) => void
+export let locateHydrationNode: (
+  claim?: FragmentClaim,
+  keepsMarkers?: boolean,
+) => void
 export let parseAdoptTarget: (template: string) => AdoptTarget
 
 const enum AnchorFlags {
@@ -256,11 +259,32 @@ export function setMarkerlessHydrationContainer(
 }
 
 /**
+ * Direct children of a TransitionGroup container are server-rendered without
+ * fragment markers of their own (compiler-ssr disables nested fragments
+ * there), so a `v-if`, `v-for` or slot outlet entered as one must not claim
+ * the `[` under its cursor. The group arms the flag around its children; the
+ * cursor protocol hands it to each block entered at that level and clears it
+ * for the block's own content (`enterBlockScope`). Component roots keep their
+ * markers and claim regardless.
+ */
+let transitionChildPending = false
+let isTransitionChild = false
+
+export function setTransitionChildPending(pending: boolean): boolean {
+  try {
+    return transitionChildPending
+  } finally {
+    transitionChildPending = pending
+  }
+}
+
+/**
  * A block's claim on the `<!--[-->` opening its SSR range. In a markerless
- * container the server strips only the outermost markers, so a marker
- * consumed by an outer block belongs to the innermost block that starts right
- * after it: that block takes the claim over and the outer one loses its
- * `start`. Owners read `start` late for that reason.
+ * container the server also strips the range of a slot outlet that is the
+ * single fragment of a transition slot's content, so a marker consumed by
+ * such an outlet belongs to the innermost block that starts right after it:
+ * that block takes the claim over and the outer one loses its `start`.
+ * Owners read `start` late for that reason.
  */
 export interface FragmentClaim {
   start: CommentAnchor | null
@@ -272,9 +296,9 @@ let innermostFragmentClaim: FragmentClaim | null = null
  * Consume the fragment start under the cursor for `claim`, or take over the
  * one the enclosing block consumed when nothing was hydrated in between.
  */
-function claimFragmentStart(claim: FragmentClaim): void {
+function claimFragmentStart(claim: FragmentClaim, keepsMarkers?: boolean) {
   const node = currentHydrationNode
-  if (!node) return
+  if (!node || (isTransitionChild && !keepsMarkers)) return
   if (isComment(node, '[')) {
     claim.start = node
     setCurrentHydrationNode(node.nextSibling)
@@ -343,17 +367,47 @@ export function advanceHydrationNode(node: Node): void {
 export type HydrationCursor = {
   start: Node | null
   resume: Node | null | undefined
+  /** the enclosing block's scope, restored on exit */
+  scope: BlockScope
   /** dev-only: set once handed back, so a second exit can be caught */
   exited?: boolean
 }
 
-export function enterHydrationCursor(claim?: FragmentClaim): HydrationCursor {
+type BlockScope = {
+  transitionChildPending: boolean
+  isTransitionChild: boolean
+  innermostFragmentClaim: FragmentClaim | null
+}
+
+/**
+ * Open the block being entered: it is a transition child when the flag was
+ * armed for its level (element children carry insertion state and are not),
+ * and its own content is not. Claims registered while it is open are only
+ * takeover targets for its content.
+ */
+function enterBlockScope(): BlockScope {
+  const scope = {
+    transitionChildPending,
+    isTransitionChild,
+    innermostFragmentClaim,
+  }
+  isTransitionChild = transitionChildPending && !insertionParent
+  transitionChildPending = false
+  return scope
+}
+
+export function enterHydrationCursor(
+  claim?: FragmentClaim,
+  keepsMarkers?: boolean,
+): HydrationCursor {
   const resume = insertionParent ? currentHydrationNode : undefined
-  locateHydrationNode(claim)
+  const scope = enterBlockScope()
+  locateHydrationNode(claim, keepsMarkers)
   if (__DEV__) liveCursors++
   return {
     start: currentHydrationNode,
     resume,
+    scope,
   }
 }
 
@@ -367,6 +421,7 @@ export function captureHydrationCursor(): HydrationCursor {
   return {
     start: null,
     resume: insertionParent ? currentHydrationNode : undefined,
+    scope: enterBlockScope(),
   }
 }
 
@@ -387,6 +442,10 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
     cursor.exited = true
     liveCursors--
   }
+  const scope = cursor.scope
+  transitionChildPending = scope.transitionChildPending
+  isTransitionChild = scope.isTransitionChild
+  innermostFragmentClaim = scope.innermostFragmentClaim
   if (cursor.resume !== undefined) {
     setCurrentHydrationNode(cursor.resume)
   }
@@ -444,7 +503,10 @@ export function skipUntrackedAnchors(node: Node | null): Node | null {
   return node
 }
 
-function locateHydrationNodeImpl(claim?: FragmentClaim) {
+function locateHydrationNodeImpl(
+  claim?: FragmentClaim,
+  keepsMarkers?: boolean,
+) {
   let node: Node | null
 
   if (insertionAnchor) {
@@ -468,7 +530,7 @@ function locateHydrationNodeImpl(claim?: FragmentClaim) {
 
   resetInsertionState()
   setCurrentHydrationNode(node)
-  if (claim) claimFragmentStart(claim)
+  if (claim) claimFragmentStart(claim, keepsMarkers)
 }
 
 /**
@@ -504,15 +566,6 @@ export function locateEndAnchor(
   }
 
   return null
-}
-
-// Find the SSR close marker for the current owner.
-export function locateHydrationBoundaryClose(node: Node): Node {
-  let close: Node | null = node
-  while (close && !isComment(close, ']')) {
-    close = nextLogicalSibling(close)
-  }
-  return close || node
 }
 
 function handleMismatch(
