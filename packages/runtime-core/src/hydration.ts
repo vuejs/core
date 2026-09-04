@@ -328,8 +328,14 @@ export function createHydrationFunctions(
                 ? nextNode.previousSibling
                 : container.lastChild
             } else {
+              // mirror the adopted node's type so the placeholder behaves like
+              // the rendered root would (transition hooks assume an element)
               subTree =
-                node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+                node.nodeType === DOMNodeTypes.TEXT
+                  ? createTextVNode('')
+                  : createVNode(
+                      node.nodeType === DOMNodeTypes.COMMENT ? VComment : 'div',
+                    )
             }
             subTree.el = node
             vnode.component!.subTree = subTree
