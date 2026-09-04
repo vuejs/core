@@ -126,6 +126,7 @@ export interface ForIRNode
   slotRoot?: boolean
   component: boolean
   onlyChild: boolean
+  wrappedRows: boolean
 }
 
 export interface KeyIRNode extends BaseIRNode, EffectBoundary, InsertionState {

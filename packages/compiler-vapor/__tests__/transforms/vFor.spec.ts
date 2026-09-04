@@ -521,7 +521,7 @@ describe('compiler: v-for', () => {
     )
     expect(code).matchSnapshot()
     expect(code).toContain(
-      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT | VaporVForFlags.WRAPPED_ROWS} /* IS_FRAGMENT, WRAPPED_ROWS */)`,
     )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).component,
@@ -540,7 +540,7 @@ describe('compiler: v-for', () => {
     )
     expect(code).matchSnapshot()
     expect(code).toContain(
-      `}, undefined, ${VaporVForFlags.IS_FRAGMENT} /* IS_FRAGMENT */)`,
+      `}, undefined, ${VaporVForFlags.IS_FRAGMENT | VaporVForFlags.WRAPPED_ROWS} /* IS_FRAGMENT, WRAPPED_ROWS */)`,
     )
     expect(
       (ir.block.dynamic.children[0].operation as ForIRNode).render.dynamic

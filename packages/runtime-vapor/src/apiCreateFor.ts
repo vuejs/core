@@ -55,9 +55,9 @@ import {
   enterHydrationCursor,
   isComment,
   isHydrating,
+  locateEndAnchor,
   locateHydrationBoundaryClose,
   markerlessHydrationContainer,
-  nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
 import {
@@ -146,6 +146,7 @@ export const createFor = (
     !!(flags & VaporVForFlags.FAST_REMOVE) && !isComponent
   const isSingleNode = !!(flags & VaporVForFlags.IS_SINGLE_NODE)
   const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
+  const wrappedRows = !!(flags & VaporVForFlags.WRAPPED_ROWS)
 
   const slotOwner = currentSlotOwner
   const slotBoundary = currentSlotBoundary
@@ -517,23 +518,23 @@ export const createFor = (
 
     try {
       for (let i = 0; i < newLength; i++) {
-        const ownedStart = claim.start
-        if (isComment(currentHydrationNode!, ']')) {
-          nextNode = claimAnchor(currentHydrationNode!)
+        const node = currentHydrationNode!
+        if (isComment(node, ']')) {
+          // fewer server rows: the rest mount before the close marker
+          nextNode = claimAnchor(node)
           setCurrentHydrationNode(nextNode)
-        } else if (markerlessHydrationContainer && !ownedStart) {
-          // rows of a markerless list have no wrappers either: the row's
-          // own hydration decides where the next one starts
-          nextNode = null
+        } else if (wrappedRows && claim.start && isComment(node, '[')) {
+          // the row resumes after its wrapper's close marker; a markerless
+          // list loses its row wrappers along with its own markers
+          const rowEnd = locateEndAnchor(node)
+          setCurrentHydrationNode(node.nextSibling)
+          nextNode = rowEnd && rowEnd.nextSibling
         } else {
-          nextNode = nextLogicalSibling(currentHydrationNode!)
+          // an unwrapped row is a single node: its own hydration moves on
+          nextNode = null
         }
         mount(source, i, parentAnchor)
-        // the row's content took the opening marker over (see
-        // `FragmentClaim`): this list is markerless after all
-        if (nextNode && !(ownedStart && !claim.start)) {
-          setCurrentHydrationNode(nextNode)
-        }
+        if (nextNode) setCurrentHydrationNode(nextNode)
       }
 
       // special handling transition-group + v-for, without <!--]--> marker

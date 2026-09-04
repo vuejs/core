@@ -33,6 +33,13 @@ export enum VaporVForFlags {
    * validity.
    */
   SLOT_ROOT = 1 << 5,
+  /**
+   * The server wraps every row in `<!--[-->...<!--]-->`: the row template is
+   * not a single element (compiler-ssr `needFragmentWrapper`). Hydration
+   * treats a leading `<!--[-->` as the row wrapper rather than as the row
+   * content's own marker.
+   */
+  WRAPPED_ROWS = 1 << 6,
 }
 
 export enum VaporBlockShape {

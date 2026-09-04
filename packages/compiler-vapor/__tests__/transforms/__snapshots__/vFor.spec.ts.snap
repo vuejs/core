@@ -403,7 +403,7 @@ export function render(_ctx) {
       return n6
     }, 266 /* TRUE_MULTI_ROOT, FALSE_MULTI_ROOT, KEYED_INDEX_0 */)
     return n2
-  }, undefined, 16 /* IS_FRAGMENT */)
+  }, undefined, 80 /* IS_FRAGMENT, WRAPPED_ROWS */)
   return n0
 }"
 `;
@@ -439,7 +439,7 @@ export function render(_ctx) {
       return n4
     }, undefined, 8 /* IS_SINGLE_NODE */)
     return n2
-  }, undefined, 16 /* IS_FRAGMENT */)
+  }, undefined, 80 /* IS_FRAGMENT, WRAPPED_ROWS */)
   return n0
 }"
 `;
@@ -477,7 +477,7 @@ export function render(_ctx) {
       _setText(x3, _toDisplayString(_item))
     })
     return [n2, n3]
-  })
+  }, undefined, 64 /* WRAPPED_ROWS */)
   return n0
 }"
 `;

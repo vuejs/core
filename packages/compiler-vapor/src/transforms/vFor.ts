@@ -52,6 +52,24 @@ export function processFor(
     node.tagType === ElementTypes.COMPONENT ||
     // template v-for with a single component child
     isTemplateWithSingleComponent(node)
+  // mirrors compiler-ssr: a row that is not a single element renders as a
+  // fragment. Structural directives on a template child turn it into an
+  // if/for node by the time SSR decides, so they count here as well.
+  const rowChildren =
+    node.tagType === ElementTypes.TEMPLATE ? node.children : [node]
+  const rowChild = rowChildren[0]
+  const wrappedRows =
+    rowChildren.length !== 1 ||
+    rowChild.type !== NodeTypes.ELEMENT ||
+    (rowChild !== node &&
+      rowChild.props.some(
+        p =>
+          p.type === NodeTypes.DIRECTIVE &&
+          (p.name === 'if' ||
+            p.name === 'else-if' ||
+            p.name === 'else' ||
+            p.name === 'for'),
+      ))
   context.node = node = wrapTemplate(node, ['for', 'key'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
@@ -89,6 +107,7 @@ export function processFor(
         ),
       component: isComponent,
       onlyChild: !!isOnlyChild,
+      wrappedRows,
     }
   }
 }
