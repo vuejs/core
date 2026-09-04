@@ -1,3 +1,42 @@
+# [3.6.0-rc.7](https://github.com/vuejs/core/compare/v3.6.0-rc.6...v3.6.0-rc.7) (2026-09-04)
+
+### Bug Fixes
+
+* **compiler-vapor:** drop comment children of Transition/TransitionGroup ([#15374](https://github.com/vuejs/core/issues/15374)) ([3495d0b](https://github.com/vuejs/core/commit/3495d0bdc098a7e8c6269c967b12dcba5ffea7c2)), closes [#15372](https://github.com/vuejs/core/issues/15372)
+* **compiler-vapor:** preserve empty text nodes in component slots ([#15393](https://github.com/vuejs/core/issues/15393)) ([67abeb6](https://github.com/vuejs/core/commit/67abeb6253e2e0280733d70ffe763df00e227a29))
+* **runtime-core:** relocate persisted transition roots on forced leave ([#15415](https://github.com/vuejs/core/issues/15415)) ([17811d8](https://github.com/vuejs/core/commit/17811d87cacbb99ae735f690c1543c002549ee91))
+* **runtime-vapor:** apply hydration strategies to resolved async components ([#15402](https://github.com/vuejs/core/issues/15402)) ([00657e3](https://github.com/vuejs/core/commit/00657e37669df8e818bb2ce1f5c16c7d81643908))
+* **runtime-vapor:** avoid re-registering fired once listeners ([#15386](https://github.com/vuejs/core/issues/15386)) ([092b428](https://github.com/vuejs/core/commit/092b42879ae8cdbb672c92896b6295af02bc0e16)), closes [#15378](https://github.com/vuejs/core/issues/15378)
+* **runtime-vapor:** avoid rebinding fired once handlers in dynamic props ([#15383](https://github.com/vuejs/core/issues/15383)) ([8ac7525](https://github.com/vuejs/core/commit/8ac7525e609a73833892babec424c6def7695d47)), closes [#15378](https://github.com/vuejs/core/issues/15378)
+* **runtime-vapor:** buffer deferred teleport target mounts on the suspense boundary ([#15387](https://github.com/vuejs/core/issues/15387)) ([fb78bb0](https://github.com/vuejs/core/commit/fb78bb0388760c884c58ba69f24909be561416d6))
+* **runtime-vapor:** de-structured rest does not include inherited properties ([#15390](https://github.com/vuejs/core/issues/15390)) ([c973649](https://github.com/vuejs/core/commit/c9736498f4794c93fa2083ca6a31a894d6c3c888))
+* **runtime-vapor:** derive transition persisted deterministically and let the renderer own v-show enter ([#15412](https://github.com/vuejs/core/issues/15412)) ([01b41a8](https://github.com/vuejs/core/commit/01b41a82daa15b1057afd53f4a980af67dcd8fbb))
+* **runtime-vapor:** gate interop fallback delegation with a SLOT_RESOLVER bit ([8f5e9e9](https://github.com/vuejs/core/commit/8f5e9e9e1dea3839d61a8437afde0129b234f1f2))
+* **runtime-vapor:** harden slot fast-path gates ([cc4ac6c](https://github.com/vuejs/core/commit/cc4ac6cff73c153de2b9016fb58f01118e2d0fc5))
+* **runtime-vapor:** keep async wrapper hooks across deferred hydration ([#15406](https://github.com/vuejs/core/issues/15406)) ([29fa76a](https://github.com/vuejs/core/commit/29fa76acdea3d8dabe899bc35551bbce54baff9d))
+* **runtime-vapor:** keep fallthrough live for custom element root instances ([#15392](https://github.com/vuejs/core/issues/15392)) ([e8e4044](https://github.com/vuejs/core/commit/e8e40445536489461848a01c27a7dc2be089f5ba))
+* **runtime-vapor:** key async component branches by state ([#15401](https://github.com/vuejs/core/issues/15401)) ([ee99fe5](https://github.com/vuejs/core/commit/ee99fe5262fbeb44b330f644ac75cf58fc9535de))
+* **runtime-vapor:** land v-for rows after leaving rows at the list tail ([ff0adb8](https://github.com/vuejs/core/commit/ff0adb8079546e3b256c1ed496a02c92d205d442))
+* **runtime-vapor:** rebind transition hooks on prop change for dynamic slot roots ([#15416](https://github.com/vuejs/core/issues/15416)) ([d7d5f7d](https://github.com/vuejs/core/commit/d7d5f7d7002843e0f01d92626efc1b00bd3510fd))
+* **runtime-vapor:** relocate v-for rows as reorders instead of enters ([78ff63b](https://github.com/vuejs/core/commit/78ff63b8f91d6b0460217fdb3f6b8c7050f7dd5b))
+* **runtime-vapor:** resolve hydration anchors by SSR fragment range ownership ([#15428](https://github.com/vuejs/core/issues/15428)) ([3cff593](https://github.com/vuejs/core/commit/3cff5931343cf542e59e251714016df408d89a59))
+* **runtime-vapor:** reuse SSR v-if anchors in dynamic elements ([#15373](https://github.com/vuejs/core/issues/15373)) ([f5a92ee](https://github.com/vuejs/core/commit/f5a92eef63c0b59df3b901029f83377ea4e8e355)), closes [#15371](https://github.com/vuejs/core/issues/15371)
+* **runtime-vapor:** scope each teleport children render so slot re-runs stop stale effects ([#15388](https://github.com/vuejs/core/issues/15388)) ([7120725](https://github.com/vuejs/core/commit/71207256955b4f7c4147c2a28ab22664e5e0748e))
+* **runtime-vapor:** should preserve style merging order from static and v-bind props ([#15409](https://github.com/vuejs/core/issues/15409)) ([29f2410](https://github.com/vuejs/core/commit/29f2410b01519bdbba925c7d63a23e9746da5847))
+* **runtime-vapor:** skip rendering an async wrapper unmounted while loading under Suspense ([#15405](https://github.com/vuejs/core/issues/15405)) ([eb3f096](https://github.com/vuejs/core/commit/eb3f096c4d500d6d4875f4f94d9c3aa904e985f3))
+* **runtime-vapor:** stop resuming an out-in branch after unmount ([#15413](https://github.com/vuejs/core/issues/15413)) ([fcae0e9](https://github.com/vuejs/core/commit/fcae0e90264f3491df4c8eb0cfe2869a38181847))
+* **runtime-vapor:** update custom element slot outlet name in place ([#15394](https://github.com/vuejs/core/issues/15394)) ([ccb121e](https://github.com/vuejs/core/commit/ccb121e83350a06428565a5541e2ee03626e4e2e))
+
+### Performance Improvements
+
+* **runtime-vapor:** apply slot stability analysis under an enclosing boundary ([4b3adcb](https://github.com/vuejs/core/commit/4b3adcb1429ab6c36cab2b145345d7b818b6a10f))
+* **runtime-vapor:** gate async wrapper branches for tree-shaking ([#15408](https://github.com/vuejs/core/issues/15408)) ([783cc7a](https://github.com/vuejs/core/commit/783cc7a318b067685e6a73374a6b8482a6c288e6))
+* **runtime-vapor:** mirror the slot fast path in the interop outlet ([ec89023](https://github.com/vuejs/core/commit/ec890236c683d65010387d6a83af69658134cdf0))
+* **runtime-vapor:** resolve raw slots in the fast-path decision ([947b0fc](https://github.com/vuejs/core/commit/947b0fc0454be59c3c8920a338d8fc0551dc31c6))
+* **runtime-vapor:** take the slot fast path for unmarked outlets under a boundary ([2774aab](https://github.com/vuejs/core/commit/2774aab7eda52fb9336757e70b57cf8553a338fa))
+* **runtime-vapor:** take the slot fast path for unmarked outlets under a boundary ([9d7d446](https://github.com/vuejs/core/commit/9d7d446f2e2bb7a5ebf6f53f7b2c1adc2e0cf550))
+* **runtime-vapor:** wrap once slot fallbacks once on the interop path ([5a06a63](https://github.com/vuejs/core/commit/5a06a6357ebdec83bbebe555a0781cd07e29d5db))
+
 # [3.6.0-rc.6](https://github.com/vuejs/core/compare/v3.6.0-rc.5...v3.6.0-rc.6) (2026-08-28)
 
 ### Bug Fixes
