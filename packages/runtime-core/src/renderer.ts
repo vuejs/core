@@ -2364,6 +2364,11 @@ function baseCreateRenderer(
       // so that scheduler will no longer invoke it
       job.flags! |= SchedulerJobFlags.DISPOSED
       unmount(subTree, instance, parentSuspense, doRemove)
+    } else if (instance.vnode.el && subTree) {
+      // hydration was interrupted before this component rendered (`vnode.el`
+      // is only set this early when hydrating) - unmount the placeholder
+      // covering the claimed DOM
+      unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
     if (um) {

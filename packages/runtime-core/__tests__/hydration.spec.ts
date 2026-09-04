@@ -3,11 +3,13 @@
  */
 
 import {
+  type Component,
   type ObjectDirective,
   Suspense,
   Teleport,
   Transition,
   type VNode,
+  type VNodeChild,
   createBlock,
   createCommentVNode,
   createElementBlock,
@@ -18,6 +20,7 @@ import {
   createVNode,
   defineAsyncComponent,
   defineComponent,
+  getCurrentInstance,
   h,
   hydrateOnVisible,
   nextTick,
@@ -31,6 +34,7 @@ import {
   useCssVars,
   vModelCheckbox,
   vShow,
+  withAsyncContext,
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
@@ -74,6 +78,75 @@ function mountWithHydration(html: string, render: () => any) {
 const triggerEvent = (type: string, el: Element) => {
   const event = new Event(type)
   el.dispatchEvent(event)
+}
+
+type SuspenseGate = (name?: string) => Promise<void>
+
+/**
+ * The Suspense hydration tests below need the app twice: rendered on the server
+ * with every async gate already resolved, then hydrated over that markup with
+ * the gates held open, so the boundary stays pending for as long as the test
+ * needs. `makeApp` is called once per side; whatever it returns next to `App`
+ * (refs, spies) is the client side's, and `release(name)` settles one gate.
+ */
+async function hydrateSuspenseApp<S extends object>(
+  makeApp: (gate: SuspenseGate) => { App: Component } & S,
+): Promise<
+  {
+    container: HTMLElement
+    ssrHtml: string
+    release: (name?: string) => void
+  } & S
+> {
+  const ssrHtml = await renderToString(h(makeApp(() => Promise.resolve()).App))
+  const container = document.createElement('div')
+  container.innerHTML = ssrHtml
+
+  const held: Record<string, Promise<void>> = {}
+  const release: Record<string, () => void> = {}
+  const client = makeApp(
+    (name = 'default') =>
+      (held[name] ||= new Promise<void>(r => (release[name] = r))),
+  )
+  createSSRApp(client.App).mount(container)
+  await nextTick()
+  return {
+    ...client,
+    container,
+    ssrHtml,
+    release: (name = 'default') => release[name](),
+  }
+}
+
+/**
+ * The shape that keeps a root <Suspense> pending for a whole hydration: a
+ * nested suspensible boundary inside it holding the content the test toggles.
+ * Only the inner view tracks that state, so an update patches the nested
+ * boundary directly - the shape a router-driven <RouterView> takes.
+ */
+function nestedSuspenseApp(opts: {
+  content: () => VNodeChild
+  onRootResolve?: () => void
+  onNestedResolve?: () => void
+  // props for a <Transition> wrapped around the nested boundary
+  transition?: Record<string, unknown>
+}): Component {
+  const View = defineComponent({
+    setup() {
+      const inner = () =>
+        h(
+          Suspense,
+          { suspensible: true, onResolve: opts.onNestedResolve },
+          { default: opts.content },
+        )
+      return () =>
+        opts.transition ? h(Transition, opts.transition, inner) : inner()
+    },
+  })
+  return defineComponent({
+    setup: () => () =>
+      h(Suspense, { onResolve: opts.onRootResolve }, () => h(View)),
+  })
 }
 
 describe('SSR hydration', () => {
@@ -1048,6 +1121,545 @@ describe('SSR hydration', () => {
     triggerEvent('click', container.querySelector('span')!)
     await nextTick()
     expect(container.innerHTML).toBe(`<span>1</span>`)
+  })
+
+  // updating the content of a nested suspensible suspense while the root
+  // suspense is still hydrating must be patched through: the root suspense
+  // keeps pending deps for the whole hydration, so the skip introduced for
+  // #8678 would drop the update and leave the stale SSR DOM on screen
+  // forever (e.g. a router navigation before hydration finishes)
+  test('Suspense: update nested suspensible suspense during hydration', async () => {
+    // hand-rolled rather than nestedSuspenseApp(): `route` is read in the root
+    // App's own render, so the update reaches the nested boundary through the
+    // root's same-root patch instead of patching it directly
+    const {
+      container,
+      ssrHtml,
+      route,
+      release,
+      onRootResolve,
+      onNestedResolve,
+    } = await hydrateSuspenseApp(gate => {
+      const route = ref('a')
+      const onRootResolve = vi.fn()
+      const onNestedResolve = vi.fn()
+
+      const AsyncChild = defineComponent({
+        async setup() {
+          await gate()
+          return () => h('div', 'async child')
+        },
+      })
+      const PageA = defineComponent({
+        setup: () => () => h('div', [h('span', 'page a'), h(AsyncChild)]),
+      })
+      const PageB = defineComponent({
+        setup: () => () => h('div', [h('span', 'page b')]),
+      })
+
+      const App = defineComponent({
+        setup() {
+          return () =>
+            h(
+              Suspense,
+              { onResolve: onRootResolve },
+              {
+                default: () =>
+                  h(
+                    Suspense,
+                    { suspensible: true, onResolve: onNestedResolve },
+                    {
+                      default: () =>
+                        route.value === 'a'
+                          ? h(PageA, { key: 'a' })
+                          : h(PageB, { key: 'b' }),
+                    },
+                  ),
+              },
+            )
+        },
+      })
+
+      return { App, route, onRootResolve, onNestedResolve }
+    })
+
+    expect(ssrHtml).toBe(`<div><span>page a</span><div>async child</div></div>`)
+    expect(onRootResolve).not.toHaveBeenCalled()
+    expect(container.innerHTML).toBe(
+      `<div><span>page a</span><div>async child</div></div>`,
+    )
+
+    // toggle the nested suspense content while hydration is still pending:
+    // the stale SSR branch is unmounted and the new content shows immediately
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onNestedResolve).toHaveBeenCalledTimes(1)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+
+    // the late-resolving abandoned branch must not resurrect the old content
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onNestedResolve).toHaveBeenCalledTimes(1)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // a nested suspense that was already toggled once during hydration has
+  // isHydrating unset, but while the root suspense is still hydrating a
+  // second toggle must also be patched through (checked via
+  // parentSuspense.isHydrating): the first toggle may leave the boundary
+  // pending on an async branch, and dropping the second toggle would strand
+  // the view on the stale SSR DOM until that abandoned branch resolves
+  test('Suspense: update nested suspensible suspense twice during hydration', async () => {
+    const { container, ssrHtml, route, release, onRootResolve, onChildSetup } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onRootResolve = vi.fn()
+        const onChildSetup = vi.fn()
+
+        const asyncChild = (name: string, text: string) =>
+          defineComponent({
+            async setup() {
+              onChildSetup(text)
+              await gate(name)
+              return () => h('div', text)
+            },
+          })
+        const HydrationChild = asyncChild('hydration', 'hydration child')
+        const TargetChild = asyncChild('target', 'target child')
+
+        const PageA = defineComponent({
+          setup: () => () => h('div', [h('span', 'page a'), h(HydrationChild)]),
+        })
+        const PageB = defineComponent({
+          setup: () => () => h('div', [h('span', 'page b'), h(TargetChild)]),
+        })
+        const PageC = defineComponent({
+          setup: () => () => h('div', [h('span', 'page c')]),
+        })
+
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          content: () =>
+            route.value === 'a'
+              ? h(PageA, { key: 'a' })
+              : route.value === 'b'
+                ? h(PageB, { key: 'b' })
+                : h(PageC, { key: 'c' }),
+        })
+
+        return { App, route, onRootResolve, onChildSetup }
+      })
+
+    expect(ssrHtml).toBe(
+      `<div><span>page a</span><div>hydration child</div></div>`,
+    )
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    // first toggle while hydrating: the target is mounted but pends on its
+    // async child, so the SSR DOM of page a stays visible and the boundary is
+    // no longer hydrating
+    route.value = 'b'
+    await nextTick()
+    expect(onChildSetup).toHaveBeenCalledWith('target child')
+    expect(container.innerHTML).toBe(
+      `<div><span>page a</span><div>hydration child</div></div>`,
+    )
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    // second toggle while the root suspense is still hydrating
+    route.value = 'c'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page c</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+
+    // neither abandoned branch may resurrect once its gate resolves
+    release('target')
+    release('hydration')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page c</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // the common case: navigate during hydration to a page that is itself
+  // async, then let it load. the SSR DOM stays until the target's async setup
+  // resolves, then the target replaces it and the root resolves exactly once
+  test('Suspense: update nested suspensible suspense during hydration to an async target', async () => {
+    const { container, ssrHtml, route, release, onRootResolve } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onRootResolve = vi.fn()
+
+        const HydrationChild = defineComponent({
+          async setup() {
+            await gate('hydration')
+            return () => h('div', 'hydration child')
+          },
+        })
+        const TargetChild = defineComponent({
+          async setup() {
+            await gate('target')
+            return () => h('div', 'target child')
+          },
+        })
+
+        const PageA = defineComponent({
+          setup: () => () => h('div', [h('span', 'page a'), h(HydrationChild)]),
+        })
+        const PageB = defineComponent({
+          setup: () => () => h('div', [h('span', 'page b'), h(TargetChild)]),
+        })
+
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          content: () =>
+            route.value === 'a'
+              ? h(PageA, { key: 'a' })
+              : h(PageB, { key: 'b' }),
+        })
+
+        return { App, route, onRootResolve }
+      })
+
+    expect(ssrHtml).toBe(
+      `<div><span>page a</span><div>hydration child</div></div>`,
+    )
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    // the target pends on its own async child: the SSR DOM stays visible
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><span>page a</span><div>hydration child</div></div>`,
+    )
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    // the target finishes loading: it replaces the SSR DOM and hydration
+    // completes without waiting for the abandoned branch
+    release('target')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(
+      `<div><span>page b</span><div>target child</div></div>`,
+    )
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+
+    // the abandoned branch resolving must not resurrect the old content
+    release('hydration')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(
+      `<div><span>page b</span><div>target child</div></div>`,
+    )
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // an interrupted async setup() component may have claimed a multi-node
+  // fragment; its hydration placeholder must cover the whole range so the
+  // toggle removes every claimed node and anchors the new branch correctly
+  test('Suspense: update nested suspensible suspense during hydration with a multi-root async branch root', async () => {
+    const { container, ssrHtml, route, release, onRootResolve } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onRootResolve = vi.fn()
+
+        const PageA = defineComponent({
+          async setup() {
+            await gate()
+            return () => [h('span', 'page a1'), h('span', 'page a2')]
+          },
+        })
+        const PageB = defineComponent({
+          setup: () => () => h('div', [h('span', 'page b')]),
+        })
+
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          content: () =>
+            route.value === 'a'
+              ? h(PageA, { key: 'a' })
+              : h(PageB, { key: 'b' }),
+        })
+
+        return { App, route, onRootResolve }
+      })
+
+    expect(ssrHtml).toBe(
+      `<!--[--><span>page a1</span><span>page a2</span><!--]-->`,
+    )
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // a single hydrating suspense toggled away from a branch root whose async
+  // setup() is still pending used to crash resolving: the component never
+  // rendered, so there was nothing to compute the move anchor from
+  test('Suspense: toggle a hydrating suspense away from an unresolved async branch root', async () => {
+    const { container, ssrHtml, route, release, onResolve } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onResolve = vi.fn()
+
+        const PageA = defineComponent({
+          async setup() {
+            await gate()
+            return () => h('div', [h('span', 'page a')])
+          },
+        })
+        const PageB = defineComponent({
+          setup: () => () => h('div', [h('span', 'page b')]),
+        })
+
+        const App = defineComponent({
+          setup() {
+            return () =>
+              h(
+                Suspense,
+                { onResolve },
+                {
+                  default: () =>
+                    route.value === 'a'
+                      ? h(PageA, { key: 'a' })
+                      : h(PageB, { key: 'b' }),
+                },
+              )
+          },
+        })
+
+        return { App, route, onResolve }
+      })
+
+    expect(ssrHtml).toBe(`<div><span>page a</span></div>`)
+    expect(onResolve).not.toHaveBeenCalled()
+
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // same for an async component wrapper that has not loaded yet: it already
+  // had a hydration placeholder (#3787), but without a render job the
+  // placeholder was never unmounted, so the SSR DOM stayed next to the new
+  // branch
+  test('Suspense: toggle a hydrating suspense away from an unloaded async component', async () => {
+    const { container, ssrHtml, route, release, onResolve } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onResolve = vi.fn()
+
+        const PageAInner = defineComponent({
+          setup: () => () => h('div', [h('span', 'page a')]),
+        })
+        const PageA = defineAsyncComponent(() => gate().then(() => PageAInner))
+        const PageB = defineComponent({
+          setup: () => () => h('div', [h('span', 'page b')]),
+        })
+
+        const App = defineComponent({
+          setup() {
+            return () =>
+              h(
+                Suspense,
+                { onResolve },
+                {
+                  default: () =>
+                    route.value === 'a'
+                      ? h(PageA, { key: 'a' })
+                      : h(PageB, { key: 'b' }),
+                },
+              )
+          },
+        })
+
+        return { App, route, onResolve }
+      })
+
+    expect(ssrHtml).toBe(`<div><span>page a</span></div>`)
+    expect(onResolve).not.toHaveBeenCalled()
+
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+
+    // the abandoned chunk finishing must not resurrect the old branch
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // a component whose async setup() is still pending can be unmounted in
+  // place while its boundary keeps hydrating (e.g. a v-if inside the pending
+  // branch). its claimed DOM is torn down through the placeholder, but
+  // `isUnmounted` is only set once the boundary resolves, so the late
+  // registerDep callback would still hydrate the component into the detached
+  // nodes - which throws for a multi-root component, so the dep was never
+  // released and both boundaries stayed pending forever
+  test('Suspense: remove an unresolved multi-root async component in place during hydration', async () => {
+    const { container, ssrHtml, show, release, onRootResolve } =
+      await hydrateSuspenseApp(gate => {
+        const show = ref(true)
+        const onRootResolve = vi.fn()
+
+        const AsyncChild = defineComponent({
+          async setup() {
+            await gate()
+            return () => [h('span', 'child 1'), h('span', 'child 2')]
+          },
+        })
+
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          content: () =>
+            h('div', [show.value ? h(AsyncChild) : null, h('span', 'rest')]),
+        })
+
+        return { App, show, onRootResolve }
+      })
+
+    expect(ssrHtml).toBe(
+      `<div><!--[--><span>child 1</span><span>child 2</span><!--]--><span>rest</span></div>`,
+    )
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    // remove the pending component in place: its whole claimed range goes,
+    // the boundary keeps waiting for the abandoned dep
+    show.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><!----><span>rest</span></div>`)
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    // the abandoned setup() resolving must release the dep without touching
+    // the detached DOM, so hydration can finish
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><!----><span>rest</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // the same in-place removal of a single-root component: hydrating it into
+  // the detached node would not throw, but it would run the component's
+  // render for nothing. the dep must be released without rendering
+  test('Suspense: remove an unresolved async component in place during hydration', async () => {
+    const { container, ssrHtml, show, render, release, onRootResolve } =
+      await hydrateSuspenseApp(gate => {
+        const show = ref(true)
+        const render = vi.fn(() => h('span', 'child'))
+        const onRootResolve = vi.fn()
+
+        const AsyncChild = defineComponent({
+          async setup() {
+            await gate()
+            return render
+          },
+        })
+
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          content: () =>
+            h('div', [show.value ? h(AsyncChild) : null, h('span', 'rest')]),
+        })
+
+        return { App, show, render, onRootResolve }
+      })
+
+    expect(ssrHtml).toBe(`<div><span>child</span><span>rest</span></div>`)
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    show.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><!----><span>rest</span></div>`)
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(render).not.toHaveBeenCalled()
+    expect(container.innerHTML).toBe(`<div><!----><span>rest</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // releasing the dep of a component removed in place may resolve the boundary
+  // synchronously; that must not happen while a sibling top-level-await
+  // component is still the current instance (withAsyncContext restores it and
+  // defers the cleanup to a later microtask)
+  test('Suspense: resolve after an in-place removal during hydration does not leak a sibling as the current instance', async () => {
+    const seen: unknown[] = []
+    const { container, ssrHtml, show, release } = await hydrateSuspenseApp(
+      gate => {
+        const show = ref(true)
+
+        // compiled shape of a <script setup> top-level await
+        const A = defineComponent({
+          async setup() {
+            let __temp: any, __restore: any
+            ;[__temp, __restore] = withAsyncContext(() => gate('a'))
+            __temp = await __temp
+            __restore()
+            return () => h('div', 'A')
+          },
+        })
+        const B = defineComponent({
+          async setup() {
+            await gate('b')
+            return () => h('div', 'B')
+          },
+        })
+
+        const View = defineComponent({
+          setup: () => () =>
+            h('div', [
+              h(
+                Suspense,
+                {
+                  suspensible: true,
+                  onResolve: () => seen.push(getCurrentInstance()),
+                },
+                {
+                  default: () =>
+                    h('div', [show.value ? h(B) : null, h('span', 'rest')]),
+                },
+              ),
+              h(Suspense, { suspensible: true }, () => h(A)),
+            ]),
+        })
+        const App = defineComponent({
+          setup: () => () => h(Suspense, null, () => h(View)),
+        })
+
+        return { App, show }
+      },
+    )
+
+    expect(ssrHtml).toBe(
+      `<div><div><div>B</div><span>rest</span></div><div>A</div></div>`,
+    )
+
+    // remove B in place while pending, then let B settle right before A's
+    // setup restores A as the current instance
+    show.value = false
+    await nextTick()
+    release('b')
+    release('a')
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(
+      `<div><div><!----><span>rest</span></div><div>A</div></div>`,
+    )
+    expect(seen).toEqual([null])
   })
 
   test('Suspense (full integration)', async () => {
