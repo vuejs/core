@@ -1313,8 +1313,7 @@ export function mountComponent(
 
     const suspense = instance.suspense
     const deferred = isKeepAliveEnabled && deferKeepAliveRenderEffects(instance)
-    // `createComponent` captured the SSR range when setup suspended mid-pass.
-    const hydrating = !!instance.pendingBlock
+    const hydrating = isHydrating
     if (!hydrating) {
       // Keep a placeholder in the DOM while async setup is pending so
       // sibling insertion and moves use the component's current position.
