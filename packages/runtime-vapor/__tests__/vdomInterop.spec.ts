@@ -33,6 +33,7 @@ import {
   useSlots,
   useTemplateRef,
   vShow,
+  withAsyncContext,
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
@@ -63,7 +64,6 @@ import {
   template,
   txt,
   vaporInteropPlugin,
-  withAsyncContext,
   withVaporDirectives,
 } from '../src'
 

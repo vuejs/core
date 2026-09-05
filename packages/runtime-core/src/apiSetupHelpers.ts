@@ -535,10 +535,6 @@ export function createPropsRestProxy(
 export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   const ctx = getCurrentGenericInstance()!
   const inSSRSetup = isInSSRComponentSetup
-  const restoreAsyncContext =
-    ctx && ctx.restoreAsyncContext
-      ? ctx.restoreAsyncContext.bind(ctx)
-      : undefined
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
@@ -552,16 +548,12 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   }
 
   const restore = () => {
-    const resetStoppedScope = ctx && !ctx.scope.active ? ctx.scope : undefined
+    const stoppedScope = ctx && !ctx.scope.active ? ctx.scope : undefined
     setCurrentInstance(ctx)
     if (inSSRSetup) {
       setInSSRSetupState(true)
     }
-    const reset = restoreAsyncContext && restoreAsyncContext()
-    return () => {
-      if (reset) reset()
-      if (resetStoppedScope) resetStoppedScope.reset()
-    }
+    return stoppedScope
   }
 
   // Never restore a captured "prev" instance here: in concurrent async setup
@@ -576,12 +568,12 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
 
   if (isPromise(awaitable)) {
     awaitable = awaitable.catch(e => {
-      const reset = restore()
+      const stoppedScope = restore()
       // Defer cleanup so the async function's catch continuation
       // still runs with the restored instance.
       Promise.resolve().then(() =>
         Promise.resolve().then(() => {
-          if (reset) reset()
+          if (stoppedScope) stoppedScope.reset()
           cleanup()
         }),
       )
@@ -591,10 +583,10 @@ export function withAsyncContext(getAwaitable: () => any): [any, () => void] {
   return [
     awaitable,
     () => {
-      const reset = restore()
+      const stoppedScope = restore()
       // Keep instance for the current continuation, then cleanup.
       Promise.resolve().then(() => {
-        if (reset) reset()
+        if (stoppedScope) stoppedScope.reset()
         cleanup()
       })
     },

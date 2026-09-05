@@ -146,37 +146,6 @@ export function hydrateNode(node: Node, fn: () => void): void {
   return performHydration(fn, setup, cleanup)
 }
 
-// withAsyncContext defers cleanup, so async hydration continuations may overlap.
-// Preserve the state captured before the first restore as their shared baseline.
-let pendingAsyncHydrationResets = 0
-let asyncHydrationIsEnabled = false
-let asyncHydrationIsHydrating = false
-let asyncHydrationNode: Node | null = null
-
-export function enterAsyncHydration(node: Node): () => void {
-  if (pendingAsyncHydrationResets++ === 0) {
-    asyncHydrationIsEnabled = isHydratingEnabled
-    asyncHydrationIsHydrating = isHydrating
-    asyncHydrationNode = currentHydrationNode
-  }
-  if (!isHydratingEnabled) {
-    setIsHydratingEnabled(true)
-  }
-
-  setIsHydrating(true)
-  setCurrentHydrationNode(node)
-
-  return () => {
-    pendingAsyncHydrationResets--
-    // Restore the shared baseline instead of another continuation's state.
-    currentHydrationNode = asyncHydrationNode
-    setIsHydrating(asyncHydrationIsHydrating)
-    if (!asyncHydrationIsEnabled) {
-      setIsHydratingEnabled(false)
-    }
-  }
-}
-
 /**
  * Per-template parse of what a template string expects to adopt, so hot
  * per-instance adoption compares integers and identities instead of

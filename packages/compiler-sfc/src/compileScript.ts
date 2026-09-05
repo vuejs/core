@@ -1038,7 +1038,10 @@ export function compileScript(
       ) {
         ctx.helperImports.delete('unref')
       }
-      returned = code
+      // An async setup resumes in a microtask with no ambient insertion or
+      // hydration state, so it must not render there. Return the template as
+      // a render closure; the runtime invokes it once setup has settled.
+      returned = vapor && !ssr && hasAwait ? `return () => {${code}}` : code
     } else {
       returned = `() => {}`
     }
