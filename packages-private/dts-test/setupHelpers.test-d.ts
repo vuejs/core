@@ -1,4 +1,5 @@
 import {
+  type PropType,
   type Ref,
   type Slots,
   type VNode,
@@ -31,6 +32,16 @@ describe('defineProps w/ type declaration', () => {
 
   expectType<boolean>(props.bool)
   expectType<boolean>(props.boolAndUndefined)
+})
+
+describe('defineProps w/ never prop', () => {
+  const props = defineProps<{
+    foo?: never
+    bar: number
+  }>()
+
+  expectType<never | undefined>(props.foo)
+  expectType<number>(props.bar)
 })
 
 describe('defineProps w/ generics', () => {
@@ -411,6 +422,26 @@ describe('defineModel', () => {
   const countDefault = defineModel<number>('count', { default: 1 })
   expectType<Ref<number>>(countDefault)
 
+  const inferredNamedArrayDefault = defineModel('items', {
+    type: Array as PropType<string[]>,
+    default: () => [],
+  })
+  expectType<Ref<string[]>>(inferredNamedArrayDefault)
+
+  const inferredArrayDefault = defineModel({
+    type: Array as PropType<string[]>,
+    default: () => [],
+  })
+  expectType<Ref<string[]>>(inferredArrayDefault)
+
+  const arrayDefault = defineModel<number[]>({ default: () => [] })
+  expectType<Ref<number[]>>(arrayDefault)
+
+  const objectDefault = defineModel<{ foo: string }>({
+    default: () => ({ foo: 'bar' }),
+  })
+  expectType<Ref<{ foo: string }>>(objectDefault)
+
   // infer type from default
   const inferred = defineModel({ default: 123 })
   expectType<Ref<number | undefined>>(inferred)
@@ -450,6 +481,15 @@ describe('defineModel', () => {
 
   // @ts-expect-error type / default mismatch
   defineModel<string>({ default: 123 })
+  // @ts-expect-error runtime type / default mismatch
+  defineModel('items', {
+    type: Array as PropType<string[]>,
+    default: () => [1],
+  })
+  // @ts-expect-error raw array defaults must use a factory
+  defineModel<number[]>({ default: [] })
+  // @ts-expect-error raw object defaults must use a factory
+  defineModel<{ foo: string }>({ default: { foo: 'bar' } })
   // @ts-expect-error unknown props option
   defineModel({ foo: 123 })
 

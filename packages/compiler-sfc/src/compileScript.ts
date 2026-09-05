@@ -64,7 +64,10 @@ import {
   isTS,
 } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
-import { isImportUsed } from './script/importUsageCheck'
+import {
+  isImportUsed,
+  resolveTemplateVModelIdentifiers,
+} from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
@@ -263,7 +266,7 @@ export function compileScript(
       !sfc.template.src &&
       !sfc.template.lang
     ) {
-      isUsedInTemplate = isImportUsed(local, sfc)
+      isUsedInTemplate = isImportUsed(local, sfc, options.templateOptions)
     }
 
     ctx.userImports[local] = {
@@ -760,6 +763,58 @@ export function compileScript(
     ctx.bindingMetadata[key] = setupBindings[key]
   }
 
+  // #11265, https://github.com/vitejs/rolldown-vite/issues/432
+  // 6.1 demote `const foo = reactive()` to `let` when used as v-model target.
+  // In non-inline template compilation, v-model assigns via `$setup.foo = $event`,
+  // which requires a SETUP_LET binding (getter + setter) to keep script state in sync.
+  // In inline mode, it generates `foo = $event`, which also requires `let`.
+  if (sfc.template && !sfc.template.src && sfc.template.ast) {
+    const vModelIds = resolveTemplateVModelIdentifiers(
+      sfc,
+      options.templateOptions,
+    )
+    if (vModelIds.size) {
+      const toDemote = new Set<string>()
+      for (const id of vModelIds) {
+        if (setupBindings[id] === BindingTypes.SETUP_REACTIVE_CONST) {
+          toDemote.add(id)
+        }
+      }
+
+      if (toDemote.size) {
+        for (const node of scriptSetupAst.body) {
+          if (
+            node.type === 'VariableDeclaration' &&
+            node.kind === 'const' &&
+            !node.declare
+          ) {
+            const demotedInDecl: string[] = []
+            for (const decl of node.declarations) {
+              if (decl.id.type === 'Identifier' && toDemote.has(decl.id.name)) {
+                demotedInDecl.push(decl.id.name)
+              }
+            }
+            if (demotedInDecl.length) {
+              ctx.s.overwrite(
+                node.start! + startOffset,
+                node.start! + startOffset + 'const'.length,
+                'let',
+              )
+              for (const id of demotedInDecl) {
+                setupBindings[id] = BindingTypes.SETUP_LET
+                ctx.bindingMetadata[id] = BindingTypes.SETUP_LET
+                warnOnce(
+                  `\`v-model\` cannot update a \`const\` reactive binding \`${id}\`. ` +
+                    `The compiler has transformed it to \`let\` to make the update work.`,
+                )
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   // 7. inject `useCssVars` calls
   if (
     sfc.cssVars.length &&
@@ -833,6 +888,8 @@ export function compileScript(
   let templateMap
   // 9. generate return statement
   let returned
+  // ensure props bindings register before compile template in inline mode
+  const propsDecl = genRuntimeProps(ctx)
   if (
     !options.inlineTemplate ||
     (!sfc.template && ctx.hasDefaultExportRender)
@@ -965,7 +1022,6 @@ export function compileScript(
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
 
-  const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
   const emitsDecl = genRuntimeEmits(ctx)

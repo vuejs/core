@@ -12,6 +12,24 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`stringify static html > eligible content + v-once node 1`] = `
+"const { setBlockTracking: _setBlockTracking, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
+
+return function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock("div", null, [
+    _cache[0] || (
+      _setBlockTracking(-1, true),
+      (_cache[0] = _createElementVNode("div", null, [
+        _createTextVNode(_toDisplayString(_ctx.msg), 1 /* TEXT */)
+      ])).cacheIndex = 0,
+      _setBlockTracking(1),
+      _cache[0]
+    ),
+    _cache[1] || (_cache[1] = _createStaticVNode("<span class=\\"foo\\">foo</span><span class=\\"foo\\">foo</span><span class=\\"foo\\">foo</span><span class=\\"foo\\">foo</span><span class=\\"foo\\">foo</span>", 5))
+  ]))
+}"
+`;
+
 exports[`stringify static html > escape 1`] = `
 "const { toDisplayString: _toDisplayString, normalizeClass: _normalizeClass, createElementVNode: _createElementVNode, createStaticVNode: _createStaticVNode, openBlock: _openBlock, createElementBlock: _createElementBlock } = Vue
 

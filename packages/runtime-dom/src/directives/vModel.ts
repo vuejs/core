@@ -38,12 +38,23 @@ function onCompositionEnd(e: Event) {
 }
 
 const assignKey: unique symbol = Symbol('_assign')
+const initialValueKey: unique symbol = Symbol('_initialValue')
 
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<
-  T & { [assignKey]: AssignerFn; _assigning?: boolean },
+  T & {
+    [assignKey]: AssignerFn
+    [initialValueKey]?: string
+    _pendingValue?: [multiple: boolean, value: any]
+  },
   any,
   Modifiers
 >
+
+function castValue(value: string, trim?: boolean, number?: boolean | null) {
+  if (trim) value = value.trim()
+  if (number) value = looseToNumber(value)
+  return value
+}
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
@@ -52,23 +63,26 @@ export const vModelText: ModelDirective<
   'trim' | 'number' | 'lazy'
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
+    // During hydration, created runs on an element already in the DOM.
+    if (el.parentNode) {
+      if (el.type === 'text') {
+        // Text inputs strip CR/LF from value, while defaultValue retains them.
+        el[initialValueKey] = el.defaultValue.replace(/[\r\n]/g, '')
+      } else if (el.type === 'textarea') {
+        // Textareas normalize CRLF/CR to LF in value.
+        el[initialValueKey] = el.defaultValue.replace(/\r\n?/g, '\n')
+      }
+    }
     el[assignKey] = getModelAssigner(vnode)
     const castToNumber =
       number || (vnode.props && vnode.props.type === 'number')
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
-      let domValue: string | number = el.value
-      if (trim) {
-        domValue = domValue.trim()
-      }
-      if (castToNumber) {
-        domValue = looseToNumber(domValue)
-      }
-      el[assignKey](domValue)
+      el[assignKey](castValue(el.value, trim, castToNumber))
     })
-    if (trim) {
+    if (trim || castToNumber) {
       addEventListener(el, 'change', () => {
-        el.value = el.value.trim()
+        el.value = castValue(el.value, trim, castToNumber)
       })
     }
     if (!lazy) {
@@ -82,8 +96,19 @@ export const vModelText: ModelDirective<
     }
   },
   // set value on mounted so it's after min/max for type="range"
-  mounted(el, { value }) {
-    el.value = value == null ? '' : value
+  mounted(el, { value, modifiers: { trim, number } }) {
+    const newValue = value == null ? '' : value
+    const initialValue = el[initialValueKey]
+    delete el[initialValueKey]
+    if (
+      initialValue !== undefined &&
+      (el.type === 'text' || el.type === 'textarea') &&
+      el.value !== initialValue
+    ) {
+      el[assignKey](castValue(el.value, trim, number))
+    } else {
+      el.value = newValue
+    }
   },
   beforeUpdate(
     el,
@@ -103,7 +128,12 @@ export const vModelText: ModelDirective<
       return
     }
 
-    if (document.activeElement === el && el.type !== 'range') {
+    const rootNode = el.getRootNode()
+    if (
+      (rootNode instanceof Document || rootNode instanceof ShadowRoot) &&
+      rootNode.activeElement === el &&
+      el.type !== 'range'
+    ) {
       // #8546
       if (lazy && value === oldValue) {
         return
@@ -203,24 +233,38 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
-    const isSetModel = isSet(value)
+    ;(el as any)._modelValue = value
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o),
         )
-      el[assignKey](
-        el.multiple
-          ? isSetModel
-            ? new Set(selectedVal)
+      const multiple = el.multiple
+      const assignedValue = multiple
+        ? isSet((el as any)._modelValue)
+          ? new Set(selectedVal)
+          : selectedVal
+        : selectedVal[0]
+      // Array models receive selectedVal directly, so snapshot it before user
+      // code can mutate it. Set models already receive a fresh Set.
+      const pending = (el._pendingValue = [
+        multiple,
+        multiple
+          ? isArray(assignedValue)
+            ? selectedVal.slice()
             : selectedVal
-          : selectedVal[0],
-      )
-      el._assigning = true
-      nextTick(() => {
-        el._assigning = false
-      })
+          : assignedValue,
+      ])
+      try {
+        el[assignKey](assignedValue)
+      } finally {
+        nextTick(() => {
+          if (el._pendingValue === pending) {
+            el._pendingValue = undefined
+          }
+        })
+      }
     })
     el[assignKey] = getModelAssigner(vnode)
   },
@@ -229,14 +273,38 @@ export const vModelSelect: ModelDirective<HTMLSelectElement, 'number'> = {
   mounted(el, { value }) {
     setSelected(el, value)
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(el, { value }, vnode) {
+    ;(el as any)._modelValue = value
     el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
-    if (!el._assigning) {
+    const pending = el._pendingValue
+    el._pendingValue = undefined
+    if (
+      !pending ||
+      pending[0] !== el.multiple ||
+      !isSameSelectValue(value, pending[1], pending[0])
+    ) {
       setSelected(el, value)
     }
   },
+}
+
+function isSameSelectValue(
+  value: any,
+  assignedValue: any,
+  multiple: boolean,
+): boolean {
+  if (!multiple) return looseEqual(value, assignedValue)
+  if (isArray(value)) return looseEqual(value, assignedValue)
+  if (isSet(value)) {
+    if (value.size !== assignedValue.length) return false
+    for (const item of assignedValue) {
+      if (!value.has(item)) return false
+    }
+    return true
+  }
+  return false
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {

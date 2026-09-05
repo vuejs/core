@@ -1,4 +1,5 @@
 import { configDefaults, defineConfig } from 'vitest/config'
+import { playwright } from '@vitest/browser-playwright'
 import { entries } from './scripts/aliases.js'
 
 export default defineConfig({
@@ -56,7 +57,21 @@ export default defineConfig({
             ...configDefaults.exclude,
             '**/e2e/**',
             '**/{vue,vue-compat,runtime-dom}/**',
+            'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+            'packages/server-renderer/__tests__/ssrRender.spec.ts',
           ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'unit-gc',
+          pool: 'forks',
+          include: [
+            'packages/server-renderer/__tests__/ssrWatch.spec.ts',
+            'packages/server-renderer/__tests__/ssrRender.spec.ts',
+          ],
+          execArgv: ['--expose-gc'],
         },
       },
       {
@@ -73,12 +88,31 @@ export default defineConfig({
         test: {
           name: 'e2e',
           environment: 'jsdom',
-          poolOptions: {
-            threads: {
-              singleThread: !!process.env.CI,
-            },
-          },
+          isolate: true,
           include: ['packages/vue/__tests__/e2e/*.spec.ts'],
+          exclude: [
+            'packages/vue/__tests__/e2e/Transition.spec.ts',
+            'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        define: {
+          __BROWSER__: true,
+        },
+        test: {
+          name: 'e2e-browser',
+          include: [
+            'packages/vue/__tests__/e2e/Transition.spec.ts',
+            'packages/vue/__tests__/e2e/TransitionGroup.spec.ts',
+          ],
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            instances: [{ browser: 'chromium' }],
+          },
         },
       },
     ],

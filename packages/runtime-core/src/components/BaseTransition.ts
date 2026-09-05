@@ -10,6 +10,7 @@ import {
   type VNode,
   type VNodeArrayChildren,
   cloneVNode,
+  createCommentVNode,
   isSameVNodeType,
 } from '../vnode'
 import { warn } from '../warning'
@@ -21,6 +22,7 @@ import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { isTeleport } from './Teleport'
 import type { RendererElement } from '../renderer'
 import { SchedulerJobFlags } from '../scheduler'
+import { isHmrUpdating } from '../hmr'
 
 type Hook<T = () => void> = T | T[]
 
@@ -154,11 +156,18 @@ const BaseTransitionImpl: ComponentOptions = {
     return () => {
       const children =
         slots.default && getTransitionRawChildren(slots.default(), true)
-      if (!children || !children.length) {
+      const child =
+        children && children.length
+          ? findNonCommentChild(children)
+          : // Keep explicit default-slot conditionals on the same transition path
+            // as regular v-if branches, which render a comment placeholder.
+            instance.subTree
+            ? createCommentVNode()
+            : undefined
+      if (!child) {
         return
       }
 
-      const child: VNode = findNonCommentChild(children)
       // there's no need to track reactivity for these props so use the raw
       // props for a bit better perf
       const rawProps = toRaw(props)
@@ -400,6 +409,8 @@ export function resolveTransitionHooks(
     },
 
     enter(el) {
+      // prevent enter if leave is in progress
+      if (!isHmrUpdating && leavingVNodesCache[key] === vnode) return
       let hook = onEnter
       let afterHook = onAfterEnter
       let cancelHook = onEnterCancelled
@@ -413,7 +424,7 @@ export function resolveTransitionHooks(
         }
       }
       let called = false
-      const done = (el[enterCbKey] = (cancelled?) => {
+      el[enterCbKey] = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -425,7 +436,8 @@ export function resolveTransitionHooks(
           hooks.delayedLeave()
         }
         el[enterCbKey] = undefined
-      })
+      }
+      const done = el[enterCbKey]!.bind(null, false)
       if (hook) {
         callAsyncHook(hook, [el, done])
       } else {
@@ -443,7 +455,7 @@ export function resolveTransitionHooks(
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const done = (el[leaveCbKey] = (cancelled?) => {
+      el[leaveCbKey] = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -456,7 +468,8 @@ export function resolveTransitionHooks(
         if (leavingVNodesCache[key] === vnode) {
           delete leavingVNodesCache[key]
         }
-      })
+      }
+      const done = el[leaveCbKey]!.bind(null, false)
       leavingVNodesCache[key] = vnode
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
@@ -493,7 +506,7 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
   }
 }
 
-function getInnerChild(vnode: VNode): VNode | undefined {
+export function getInnerChild(vnode: VNode): VNode | undefined {
   if (!isKeepAlive(vnode)) {
     if (isTeleport(vnode.type) && vnode.children) {
       return findNonCommentChild(vnode.children as VNode[])
@@ -525,7 +538,11 @@ function getInnerChild(vnode: VNode): VNode | undefined {
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks): void {
   if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
     vnode.transition = hooks
-    setTransitionHooks(vnode.component.subTree, hooks)
+    const subTree = vnode.component.subTree
+    setTransitionHooks(
+      isTeleport(subTree.type) ? getInnerChild(subTree) || subTree : subTree,
+      hooks,
+    )
   } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)

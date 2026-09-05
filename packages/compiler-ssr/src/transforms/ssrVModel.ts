@@ -22,7 +22,7 @@ import {
   SSR_LOOSE_EQUAL,
   SSR_RENDER_DYNAMIC_MODEL,
 } from '../runtimeHelpers'
-import type { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
+import type { DirectiveTransformResult } from '../../../compiler-core/src/transform'
 
 export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   const model = dir.exp!
@@ -83,11 +83,11 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
 
   if (node.tagType === ElementTypes.ELEMENT) {
     const res: DirectiveTransformResult = { props: [] }
-    const defaultProps = [
-      // default value binding for text type inputs
-      createObjectProperty(`value`, model),
-    ]
     if (node.tag === 'input') {
+      const defaultProps = [
+        // default value binding for text type inputs
+        createObjectProperty(`value`, model),
+      ]
       const type = findProp(node, 'type')
       if (type) {
         const value = findValueBinding(node)

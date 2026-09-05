@@ -41,22 +41,30 @@ export function ssrRenderAttrs(
   isTransitionGroup?: boolean,
 ): string {
   let ret = ''
-  for (const key in props) {
+  for (let key in props) {
     if (
       shouldIgnoreProp(key) ||
       isOn(key) ||
       (tag === 'textarea' && key === 'value') ||
-      (isTransitionGroup && isTransitionGroupProp(camelize(key)))
+      (isTransitionGroup && isTransitionGroupProp(camelize(key))) ||
+      // force as property (not rendered in SSR)
+      key.startsWith('.')
     ) {
       continue
     }
     const value = props[key]
+    // force as attribute
+    if (key.startsWith('^')) key = key.slice(1)
     if (key === 'class') {
       ret += ` class="${ssrRenderClass(value)}"`
     } else if (key === 'style') {
       ret += ` style="${ssrRenderStyle(value)}"`
     } else if (key === 'className') {
-      ret += ` class="${String(value)}"`
+      // className should not go through ssrRenderClass which normalizes non-string
+      // values into strings. it should coerce directly into strings
+      if (value != null) {
+        ret += ` class="${escapeHtml(String(value))}"`
+      }
     } else {
       ret += ssrRenderDynamicAttr(key, value, tag)
     }
@@ -77,7 +85,11 @@ export function ssrRenderDynamicAttr(
     tag && (tag.indexOf('-') > 0 || isSVGTag(tag))
       ? key // preserve raw name on custom elements and svg
       : propsToAttrMap[key] || key.toLowerCase()
-  if (isBooleanAttr(attrKey)) {
+  if (
+    isBooleanAttr(attrKey) ||
+    (attrKey === 'hidden' &&
+      (typeof value === 'boolean' || typeof value === 'number'))
+  ) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``
   } else if (isSSRSafeAttrName(attrKey)) {
     return value === '' ? ` ${attrKey}` : ` ${attrKey}="${escapeHtml(value)}"`

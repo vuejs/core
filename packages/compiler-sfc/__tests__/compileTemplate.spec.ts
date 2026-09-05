@@ -512,3 +512,22 @@ test('non-identifier expression in legacy filter syntax', () => {
     babelParse(compilationResult.code, { sourceType: 'module' })
   }).not.toThrow()
 })
+
+test('prefixing props edge case in inline mode', () => {
+  const src = `
+  <script setup lang="ts">
+    defineProps<{ Foo: { Bar: unknown } }>()
+  </script>
+  <template>
+    <Foo.Bar/>
+  </template>
+  `
+  const { descriptor } = parse(src)
+  const { content } = compileScript(descriptor, {
+    id: 'xxx',
+    inlineTemplate: true,
+  })
+
+  expect(content).toMatchSnapshot()
+  expect(content).toMatch(`__props["Foo"]).Bar`)
+})

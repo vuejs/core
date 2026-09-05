@@ -7,6 +7,7 @@ declare const window: Window & {
   isRootMounted: boolean
   teardownCalled?: boolean
   show: Ref<boolean>
+  resolveLoader: () => void
 }
 
 describe('async component hydration strategies', () => {
@@ -29,9 +30,11 @@ describe('async component hydration strategies', () => {
     await goToCase('idle')
     // not hydrated yet
     expect(await page().evaluate(() => window.isHydrated)).toBe(false)
+    // trigger loader
+    await page().evaluate(() => window.resolveLoader())
     // wait for hydration
     await page().waitForFunction(() => window.isHydrated)
-    // assert message order: hyration should happen after already queued main thread work
+    // assert message order: hydration should happen after already queued main thread work
     expect(messages.slice(1)).toMatchObject(['resolve', 'busy', 'hydrated'])
     await assertHydrationSuccess()
   })

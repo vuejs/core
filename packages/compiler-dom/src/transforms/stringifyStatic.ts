@@ -17,10 +17,12 @@ import {
   type TextCallNode,
   type TransformContext,
   createCallExpression,
+  findDir,
   isStaticArgOf,
 } from '@vue/compiler-core'
 import {
   escapeHtml,
+  includeBooleanAttr,
   isArray,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -213,6 +215,11 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
     return false
   }
 
+  // v-once nodes should not be stringified
+  if (node.type === NodeTypes.ELEMENT && findDir(node, 'once', true)) {
+    return false
+  }
+
   if (node.type === NodeTypes.TEXT_CALL) {
     return [1, 0]
   }
@@ -341,7 +348,8 @@ function stringifyElement(
         }
         // #6568
         if (
-          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
+          (isBooleanAttr((p.arg as SimpleExpressionNode).content) ||
+            (p.arg as SimpleExpressionNode).content === 'hidden') &&
           exp.content === 'false'
         ) {
           continue
@@ -350,6 +358,13 @@ function stringifyElement(
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
           const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          if (
+            arg === 'hidden' &&
+            typeof evaluated === 'number' &&
+            !includeBooleanAttr(evaluated)
+          ) {
+            continue
+          }
           if (arg === 'class') {
             evaluated = normalizeClass(evaluated)
           } else if (arg === 'style') {

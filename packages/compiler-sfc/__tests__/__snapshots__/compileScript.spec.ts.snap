@@ -639,6 +639,44 @@ return { foo, bar, baz, y, z }
 }"
 `;
 
+exports[`SFC compile <script setup> > demote const reactive binding to let when used in v-model (inlineTemplate) 1`] = `
+"import { unref as _unref, resolveComponent as _resolveComponent, isRef as _isRef, openBlock as _openBlock, createBlock as _createBlock } from "vue"
+
+import { reactive } from 'vue'
+      
+export default {
+  setup(__props) {
+
+      let name = reactive({ first: 'john', last: 'doe' })
+      
+return (_ctx, _cache) => {
+  const _component_MyComponent = _resolveComponent("MyComponent")
+
+  return (_openBlock(), _createBlock(_component_MyComponent, {
+    modelValue: _unref(name),
+    "onUpdate:modelValue": _cache[0] || (_cache[0] = $event => (_isRef(name) ? (name).value = $event : name = $event))
+  }, null, 8 /* PROPS */, ["modelValue"]))
+}
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > demote const reactive binding to let when used in v-model 1`] = `
+"import { reactive } from 'vue'
+      
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      let name = reactive({ first: 'john', last: 'doe' })
+      
+return { get name() { return name }, set name(v) { name = v }, reactive }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > errors > should allow defineProps/Emit() referencing imported binding 1`] = `
 "import { bar } from './bar'
         

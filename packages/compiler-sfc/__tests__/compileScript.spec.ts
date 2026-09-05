@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { BindingTypes } from '@vue/compiler-core'
 import {
   assertCode,
@@ -6,6 +7,17 @@ import {
   mockId,
 } from './utils'
 import { type RawSourceMap, SourceMapConsumer } from 'source-map-js'
+import { compileScript, compileTemplate, parse } from '../src'
+import { templateAnalysisCache } from '../src/script/importUsageCheck'
+
+vi.mock('../src/warn', () => ({
+  warn: vi.fn(),
+  warnOnce: vi.fn(),
+}))
+
+import { warnOnce } from '../src/warn'
+
+const warnOnceMock = vi.mocked(warnOnce)
 
 describe('SFC compile <script setup>', () => {
   test('should compile JS syntax', () => {
@@ -72,6 +84,77 @@ describe('SFC compile <script setup>', () => {
       z: BindingTypes.SETUP_MAYBE_REF,
     })
     assertCode(content)
+  })
+
+  test('demote const reactive binding to let when used in v-model', () => {
+    warnOnceMock.mockClear()
+    const { content, bindings } = compile(`
+      <script setup>
+      import { reactive } from 'vue'
+      const name = reactive({ first: 'john', last: 'doe' })
+      </script>
+
+      <template>
+        <MyComponent v-model="name" />
+      </template>
+    `)
+
+    expect(content).toMatch(
+      `let name = reactive({ first: 'john', last: 'doe' })`,
+    )
+    expect(bindings!.name).toBe(BindingTypes.SETUP_LET)
+    expect(warnOnceMock).toHaveBeenCalledTimes(1)
+    expect(warnOnceMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '`v-model` cannot update a `const` reactive binding',
+      ),
+    )
+    assertCode(content)
+  })
+
+  test('demote const reactive binding to let when used in v-model (inlineTemplate)', () => {
+    warnOnceMock.mockClear()
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      import { reactive } from 'vue'
+      const name = reactive({ first: 'john', last: 'doe' })
+      </script>
+
+      <template>
+        <MyComponent v-model="name" />
+      </template>
+      `,
+      { inlineTemplate: true },
+    )
+
+    expect(content).toMatch(
+      `let name = reactive({ first: 'john', last: 'doe' })`,
+    )
+    expect(bindings!.name).toBe(BindingTypes.SETUP_LET)
+    expect(warnOnceMock).toHaveBeenCalledTimes(1)
+    expect(warnOnceMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '`v-model` cannot update a `const` reactive binding',
+      ),
+    )
+    assertCode(content)
+  })
+
+  test('v-model should error on literal const bindings', () => {
+    expect(() =>
+      compile(
+        `
+        <script setup>
+        const foo = 1
+        </script>
+        <template>
+          <input v-model="foo" />
+        </template>
+        `,
+        { inlineTemplate: true },
+      ),
+    ).toThrow('v-model cannot be used on a const binding')
   })
 
   describe('<script> and <script setup> co-usage', () => {
@@ -262,6 +345,43 @@ describe('SFC compile <script setup>', () => {
         `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`,
       )
       expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
+    })
+
+    test('should re-analyze a transformed template after cache invalidation', () => {
+      const delimiters: [string, string] = ['[[', ']]']
+      const { descriptor } = parse(
+        `
+        <script setup lang="ts">
+        import { cachedMsg } from './cachedMsg'
+        </script>
+        <template><p>[[ cachedMsg ]]</p></template>
+        `,
+        { templateParseOptions: { delimiters } },
+      )
+
+      const templateOptions = { compilerOptions: { delimiters } }
+      compileScript(descriptor, { id: mockId, templateOptions })
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(true)
+
+      compileTemplate({
+        filename: 'example.vue',
+        id: mockId,
+        source: descriptor.template!.content,
+        ast: descriptor.template!.ast,
+        compilerOptions: { delimiters },
+      })
+      expect(descriptor.template!.ast!.transformed).toBe(true)
+
+      templateAnalysisCache.clear()
+      expect(templateAnalysisCache.has(descriptor.template!.content)).toBe(
+        false,
+      )
+
+      const { content } = compileScript(descriptor, {
+        id: mockId,
+        templateOptions,
+      })
+      expect(content).toMatch(`return { get cachedMsg() { return cachedMsg } }`)
     })
 
     test('import dedupe between <script> and <script setup>', () => {

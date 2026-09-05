@@ -259,7 +259,7 @@ function createConfig(format, output, plugins = []) {
       'source-map-js',
       '@babel/parser',
       'estree-walker',
-      'entities/lib/decode.js',
+      'entities/decode',
     ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {

@@ -21,20 +21,21 @@ jobs:
     environment: Release
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: '.node-version'
           registry-url: 'https://registry.npmjs.org'
-          cache: 'pnpm'
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Update npm
         run: npm i -g npm@latest
@@ -46,7 +47,7 @@ jobs:
 
       - name: Create GitHub release
         id: release_tag
-        uses: yyx990803/release-tag@master
+        uses: yyx990803/release-tag@8cccf7c5aa332d71d222df46677f70f77a8d2dc0 # v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

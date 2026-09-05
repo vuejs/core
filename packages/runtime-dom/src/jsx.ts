@@ -29,7 +29,8 @@
 import type * as CSS from 'csstype'
 
 export interface CSSProperties
-  extends CSS.Properties<string | number>,
+  extends
+    CSS.Properties<string | number>,
     CSS.PropertiesHyphen<string | number> {
   /**
    * The index signature was removed to enable closed typing for style
@@ -85,13 +86,7 @@ export interface AriaAttributes {
   'aria-controls'?: string | undefined
   /** Indicates the element that represents the current item within a container or set of related elements. */
   'aria-current'?:
-    | Booleanish
-    | 'page'
-    | 'step'
-    | 'location'
-    | 'date'
-    | 'time'
-    | undefined
+    Booleanish | 'page' | 'step' | 'location' | 'date' | 'time' | undefined
   /**
    * Identifies the element (or elements) that describes the object.
    * @see aria-labelledby
@@ -112,13 +107,7 @@ export interface AriaAttributes {
    * @deprecated in ARIA 1.1
    */
   'aria-dropeffect'?:
-    | 'none'
-    | 'copy'
-    | 'execute'
-    | 'link'
-    | 'move'
-    | 'popup'
-    | undefined
+    'none' | 'copy' | 'execute' | 'link' | 'move' | 'popup' | undefined
   /**
    * Identifies the element that provides an error message for the object.
    * @see aria-invalid @see aria-describedby.
@@ -138,13 +127,7 @@ export interface AriaAttributes {
   'aria-grabbed'?: Booleanish | undefined
   /** Indicates the availability and type of interactive popup element, such as menu or dialog, that can be triggered by an element. */
   'aria-haspopup'?:
-    | Booleanish
-    | 'menu'
-    | 'listbox'
-    | 'tree'
-    | 'grid'
-    | 'dialog'
-    | undefined
+    Booleanish | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog' | undefined
   /**
    * Indicates whether the element is exposed to an accessibility API.
    * @see aria-disabled.
@@ -267,17 +250,16 @@ export interface AriaAttributes {
 
 // Vue's style normalization supports nested arrays
 export type StyleValue =
-  | false
-  | null
-  | undefined
-  | string
-  | CSSProperties
-  | Array<StyleValue>
+  false | null | undefined | string | CSSProperties | Array<StyleValue>
+
+// Support for `class` attribute
+export type ClassValue =
+  false | null | undefined | string | Record<string, any> | Array<ClassValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string | undefined
 
-  class?: any
+  class?: ClassValue | undefined
   style?: StyleValue | undefined
 
   // Standard HTML Attributes
@@ -286,6 +268,19 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   contextmenu?: string | undefined
   dir?: string | undefined
   draggable?: Booleanish | undefined
+  enterkeyhint?:
+    | 'enter'
+    | 'done'
+    | 'go'
+    | 'next'
+    | 'previous'
+    | 'search'
+    | 'send'
+    | undefined
+  /**
+   * @deprecated Use `enterkeyhint` instead.
+   */
+  enterKeyHint?: HTMLAttributes['enterkeyhint']
   hidden?: Booleanish | '' | 'hidden' | 'until-found' | undefined
   id?: string | undefined
   inert?: Booleanish | undefined
@@ -346,6 +341,14 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
    * @see https://html.spec.whatwg.org/multipage/custom-elements.html#attr-is
    */
   is?: string | undefined
+  /**
+   * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/exportparts
+   */
+  exportparts?: string
+  /**
+   * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/part
+   */
+  part?: string
 }
 
 type HTMLAttributeReferrerPolicy =
@@ -430,7 +433,6 @@ export interface DataHTMLAttributes extends HTMLAttributes {
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   name?: string | undefined
   open?: Booleanish | undefined
-  onToggle?: ((payload: ToggleEvent) => void) | undefined
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
@@ -441,6 +443,7 @@ export interface DelHTMLAttributes extends HTMLAttributes {
 export interface DialogHTMLAttributes extends HTMLAttributes {
   open?: Booleanish | undefined
   onClose?: ((payload: Event) => void) | undefined
+  onCancel?: ((payload: Event) => void) | undefined
 }
 
 export interface EmbedHTMLAttributes extends HTMLAttributes {
@@ -498,6 +501,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   alt?: string | undefined
   crossorigin?: 'anonymous' | 'use-credentials' | '' | undefined
   decoding?: 'async' | 'auto' | 'sync' | undefined
+  fetchpriority?: 'high' | 'low' | 'auto' | undefined
   height?: Numberish | undefined
   loading?: 'eager' | 'lazy' | undefined
   referrerpolicy?: HTMLAttributeReferrerPolicy | undefined
@@ -538,24 +542,77 @@ export type InputTypeHTMLAttribute =
   | 'week'
   | (string & {})
 
+type AutoFillAddressKind = 'billing' | 'shipping'
+type AutoFillBase = '' | 'off' | 'on'
+type AutoFillContactField =
+  | 'email'
+  | 'tel'
+  | 'tel-area-code'
+  | 'tel-country-code'
+  | 'tel-extension'
+  | 'tel-local'
+  | 'tel-local-prefix'
+  | 'tel-local-suffix'
+  | 'tel-national'
+type AutoFillContactKind = 'home' | 'mobile' | 'work'
+type AutoFillCredentialField = 'webauthn'
+type AutoFillNormalField =
+  | 'additional-name'
+  | 'address-level1'
+  | 'address-level2'
+  | 'address-level3'
+  | 'address-level4'
+  | 'address-line1'
+  | 'address-line2'
+  | 'address-line3'
+  | 'bday-day'
+  | 'bday-month'
+  | 'bday-year'
+  | 'cc-csc'
+  | 'cc-exp'
+  | 'cc-exp-month'
+  | 'cc-exp-year'
+  | 'cc-family-name'
+  | 'cc-given-name'
+  | 'cc-name'
+  | 'cc-number'
+  | 'cc-type'
+  | 'country'
+  | 'country-name'
+  | 'current-password'
+  | 'family-name'
+  | 'given-name'
+  | 'honorific-prefix'
+  | 'honorific-suffix'
+  | 'name'
+  | 'new-password'
+  | 'one-time-code'
+  | 'organization'
+  | 'postal-code'
+  | 'street-address'
+  | 'transaction-amount'
+  | 'transaction-currency'
+  | 'username'
+type OptionalPrefixToken<T extends string> = `${T} ` | ''
+type OptionalPostfixToken<T extends string> = ` ${T}` | ''
+type AutoFillField =
+  | AutoFillNormalField
+  | `${OptionalPrefixToken<AutoFillContactKind>}${AutoFillContactField}`
+type AutoFillSection = `section-${string}`
+type AutoFill =
+  | AutoFillBase
+  | `${OptionalPrefixToken<AutoFillSection>}${OptionalPrefixToken<AutoFillAddressKind>}${AutoFillField}${OptionalPostfixToken<AutoFillCredentialField>}`
+export type InputAutoCompleteAttribute = AutoFill | (string & {})
+
 export interface InputHTMLAttributes extends HTMLAttributes {
   accept?: string | undefined
   alt?: string | undefined
-  autocomplete?: string | undefined
+  autocomplete?: InputAutoCompleteAttribute | undefined
   autofocus?: Booleanish | undefined
   capture?: boolean | 'user' | 'environment' | undefined // https://www.w3.org/tr/html-media-capture/#the-capture-attribute
   checked?: Booleanish | any[] | Set<any> | undefined // for IDE v-model multi-checkbox support
   crossorigin?: string | undefined
   disabled?: Booleanish | undefined
-  enterKeyHint?:
-    | 'enter'
-    | 'done'
-    | 'go'
-    | 'next'
-    | 'previous'
-    | 'search'
-    | 'send'
-    | undefined
   form?: string | undefined
   formaction?: string | undefined
   formenctype?: string | undefined
@@ -581,6 +638,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   type?: InputTypeHTMLAttribute | undefined
   value?: any // we support :value to be bound to anything w/ v-model
   width?: Numberish | undefined
+  onCancel?: ((payload: Event) => void) | undefined
 }
 
 export interface KeygenHTMLAttributes extends HTMLAttributes {
@@ -839,7 +897,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
    * SVG Styling Attributes
    * @see https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
    */
-  class?: any
+  class?: ClassValue | undefined
   style?: StyleValue | undefined
 
   color?: string | undefined
@@ -903,11 +961,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   'clip-rule'?: Numberish | undefined
   'color-interpolation'?: Numberish | undefined
   'color-interpolation-filters'?:
-    | 'auto'
-    | 'sRGB'
-    | 'linearRGB'
-    | 'inherit'
-    | undefined
+    'auto' | 'sRGB' | 'linearRGB' | 'inherit' | undefined
   'color-profile'?: Numberish | undefined
   'color-rendering'?: Numberish | undefined
   contentScriptType?: Numberish | undefined
@@ -1287,6 +1341,7 @@ export interface IntrinsicElementAttributes {
   polyline: SVGAttributes
   radialGradient: SVGAttributes
   rect: SVGAttributes
+  set: SVGAttributes
   stop: SVGAttributes
   switch: SVGAttributes
   symbol: SVGAttributes
@@ -1327,10 +1382,15 @@ export interface Events {
   // form events
   onChange: Event
   onBeforeinput: InputEvent
-  onInput: Event
+  onFormdata: FormDataEvent
+  onInput: InputEvent
   onReset: Event
   onSubmit: SubmitEvent
   onInvalid: Event
+
+  // fullscreen events
+  onFullscreenchange: Event
+  onFullscreenerror: Event
 
   // image events
   onLoad: Event
@@ -1342,9 +1402,6 @@ export interface Events {
   onKeyup: KeyboardEvent
 
   // mouse events
-  onAuxclick: PointerEvent
-  onClick: PointerEvent
-  onContextmenu: PointerEvent
   onDblclick: MouseEvent
   onMousedown: MouseEvent
   onMouseenter: MouseEvent
@@ -1392,6 +1449,11 @@ export interface Events {
   onTouchstart: TouchEvent
 
   // pointer events
+  onAuxclick: PointerEvent
+  onClick: PointerEvent
+  onContextmenu: PointerEvent
+  onGotpointercapture: PointerEvent
+  onLostpointercapture: PointerEvent
   onPointerdown: PointerEvent
   onPointermove: PointerEvent
   onPointerup: PointerEvent
@@ -1401,16 +1463,26 @@ export interface Events {
   onPointerover: PointerEvent
   onPointerout: PointerEvent
 
+  // popover events
+  onBeforetoggle: ToggleEvent
+  onToggle: ToggleEvent
+
   // wheel events
   onWheel: WheelEvent
 
   // animation events
+  onAnimationcancel: AnimationEvent
   onAnimationstart: AnimationEvent
   onAnimationend: AnimationEvent
   onAnimationiteration: AnimationEvent
 
+  // security policy events
+  onSecuritypolicyviolation: SecurityPolicyViolationEvent
+
   // transition events
+  onTransitioncancel: TransitionEvent
   onTransitionend: TransitionEvent
+  onTransitionrun: TransitionEvent
   onTransitionstart: TransitionEvent
 }
 
@@ -1422,7 +1494,7 @@ type EventHandlers<E> = {
 
 import type { VNodeRef } from '@vue/runtime-core'
 
-export type ReservedProps = {
+export interface ReservedProps {
   key?: PropertyKey | undefined
   ref?: VNodeRef | undefined
   ref_for?: boolean | undefined

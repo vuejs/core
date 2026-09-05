@@ -50,7 +50,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
   ): Directive<HostElement, Value, Modifiers, Arg> | undefined
@@ -58,7 +58,7 @@ export interface App<HostElement = any> {
     HostElement = any,
     Value = any,
     Modifiers extends string = string,
-    Arg extends string = string,
+    Arg = any,
   >(
     name: string,
     directive: Directive<HostElement, Value, Modifiers, Arg>,
