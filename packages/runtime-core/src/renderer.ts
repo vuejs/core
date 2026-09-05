@@ -2183,18 +2183,9 @@ function baseCreateRenderer(
     }
 
     // #6593 should clean memo cache when unmount
-    if (cacheIndex != null) {
-      const cache = (vnode.ctx || parentComponent)!.renderCache
-      const cached = cache[cacheIndex] as VNode | undefined
-      // A cloned slot can belong to a different mounted instance.
-      if (
-        cached &&
-        (cached.component
-          ? cached.component === vnode.component
-          : cached.el === vnode.el)
-      ) {
-        cache[cacheIndex] = undefined
-      }
+    // Slot receivers must not invalidate caches owned by the slot author.
+    if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) {
+      parentComponent!.renderCache[cacheIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
