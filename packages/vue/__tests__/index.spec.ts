@@ -1,6 +1,6 @@
 import { BindingTypes, type CompilerOptions } from '@vue/compiler-core'
 import { compile } from '@vue/compiler-dom'
-import { EMPTY_ARR } from '@vue/shared'
+import { EMPTY_ARR, PatchFlags } from '@vue/shared'
 import { type VNode, createApp, nextTick, reactive, ref } from '../src'
 import * as Vue from '../src'
 import type { InternalRenderFunction } from '../../runtime-core/src/component'
@@ -288,6 +288,157 @@ describe('compiler + runtime integration', () => {
     ok.value = false
     await nextTick()
     expect(container.innerHTML).toBe(`<div>false<div>true</div></div>`)
+  })
+
+  test.each([
+    '<div><Child v-once />{{ count }}</div>',
+    '<Child v-once />{{ count }}',
+  ])('unmounts a v-once child after rerendering: %s', async template => {
+    const count = ref(0)
+    const unmounted = vi.fn()
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: { template: 'child', unmounted },
+      },
+      setup: () => ({ count }),
+      template,
+    })
+
+    app.mount(container)
+    expect(container.textContent).toBe('child0')
+    count.value++
+    await nextTick()
+    expect(container.textContent).toBe('child1')
+
+    app.unmount()
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  test('unmounts separate instances of a v-once slot', async () => {
+    const show = ref(true)
+    const unmounted = vi.fn()
+    let id = 0
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: {
+          data: () => ({ id: ++id }),
+          template: '{{ id }}',
+          unmounted() {
+            unmounted(this.id)
+          },
+        },
+        Twice: {
+          setup(_, { slots }) {
+            return () =>
+              Vue.h('div', [
+                show.value ? Vue.h('section', slots.default!()) : null,
+                Vue.h('aside', slots.default!()),
+              ])
+          },
+        },
+      },
+      template: '<Twice><Child v-once /></Twice>',
+    })
+
+    app.mount(container)
+    expect(container.textContent).toBe('12')
+    show.value = false
+    await nextTick()
+    expect(container.textContent).toBe('2')
+    expect(unmounted).toHaveBeenCalledTimes(1)
+    expect(unmounted).toHaveBeenNthCalledWith(1, 1)
+    app.unmount()
+    expect(unmounted).toHaveBeenCalledTimes(2)
+    expect(unmounted).toHaveBeenNthCalledWith(2, 2)
+  })
+
+  test.each([
+    [0, '<Child v-once :value="count" />'],
+    [1, '<Child v-once :value="count" />'],
+    [0, '<p v-once>{{ count }}</p>'],
+    [1, '<p v-once>{{ count }}</p>'],
+  ])(
+    'preserves cached slot content after removing outlet %i: %s',
+    async (removeIndex, template) => {
+      const show = ref(true)
+      const count = ref(0)
+      const tick = ref(0)
+      const container = document.createElement('div')
+      const app = createApp({
+        components: {
+          Child: { props: ['value'], template: '<p>{{ value }}</p>' },
+          Twice: {
+            setup(_, { slots }) {
+              return () => {
+                tick.value
+                return Vue.h(
+                  'div',
+                  ['section', 'aside'].map((tag, index) =>
+                    show.value || index !== removeIndex
+                      ? Vue.h(tag, slots.default!())
+                      : null,
+                  ),
+                )
+              }
+            },
+          },
+        },
+        setup: () => ({ count }),
+        template: `<Twice>${template}</Twice>`,
+      })
+
+      app.mount(container)
+      expect(container.textContent).toBe('00')
+      show.value = false
+      await nextTick()
+      expect(container.textContent).toBe('0')
+      count.value++
+      tick.value++
+      await nextTick()
+      expect(container.textContent).toBe('0')
+      show.value = true
+      await nextTick()
+      expect(container.textContent).toBe('00')
+      app.unmount()
+    },
+  )
+
+  test('does not clear the receiver cache when a cloned v-once slot unmounts', async () => {
+    const show = ref(true)
+    const count = ref(0)
+    const render = compileToFunction(
+      '<div><p v-once>{{ count }}</p><section><slot /></section><aside v-if="show"><slot /></aside><b>{{ count }}</b></div>',
+    )
+    const fullDiffRender: InternalRenderFunction = (...args) => {
+      const vnode = render(...args) as VNode
+      vnode.patchFlag = PatchFlags.BAIL
+      return vnode
+    }
+    fullDiffRender._rc = true
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: { template: 'child' },
+        Twice: {
+          setup: () => ({ count, show }),
+          render: fullDiffRender,
+        },
+      },
+      setup: () => ({ enabled: true }),
+      template:
+        '<Twice><template #default v-if="enabled"><Child v-once /></template></Twice>',
+    })
+
+    app.mount(container)
+    show.value = false
+    await nextTick()
+    count.value++
+    await nextTick()
+    expect(container.querySelector('p')!.textContent).toBe('0')
+    expect(container.querySelector('b')!.textContent).toBe('1')
+    app.unmount()
   })
 
   test('v-for + v-once', async () => {

@@ -1313,58 +1313,75 @@ describe('renderer: optimized mode', () => {
     expect(inner(root)).toBe('<div><!--comment--><div>bar</div></div>')
   })
 
-  test('should not take unmount children fast path if children contain cached nodes', async () => {
-    const show = ref(true)
-    const spyUnmounted = vi.fn()
+  test.each(['block', 'full diff', 'disabled tracking'])(
+    'should unmount cached children after %s updates',
+    async mode => {
+      const show = ref(true)
+      const count = ref(0)
+      const spyUnmounted = vi.fn()
 
-    const Child = {
-      setup() {
-        onUnmounted(spyUnmounted)
-        return () => createVNode('div', null, 'Child')
-      },
-    }
+      const Child = {
+        setup() {
+          onUnmounted(spyUnmounted)
+          return () => createVNode('div', null, 'Child')
+        },
+      }
 
-    const app = createApp({
-      render(_: any, cache: any) {
-        return show.value
-          ? (openBlock(),
-            createBlock('div', null, [
-              createVNode('div', null, [
-                cache[0] ||
-                  (setBlockTracking(-1, true),
-                  ((cache[0] = createVNode('div', null, [
-                    createVNode(Child),
-                  ])).cacheIndex = 0),
-                  setBlockTracking(1),
-                  cache[0]),
-              ]),
-            ]))
-          : createCommentVNode('v-if', true)
-      },
-    })
+      const app = createApp({
+        render(_: any, cache: any) {
+          return show.value
+            ? (openBlock(mode === 'disabled tracking' && count.value === 1),
+              createBlock('div', null, [
+                createVNode('div', null, [
+                  cache[0] ||
+                    (setBlockTracking(-1, true),
+                    ((cache[0] = createVNode('div', null, [
+                      createVNode(Child),
+                    ])).cacheIndex = 0),
+                    setBlockTracking(1),
+                    cache[0]),
+                ]),
+                createTextVNode(String(count.value), PatchFlags.TEXT),
+                // Exercise the non-isomorphic block fallback as well as block patching.
+                ...(mode === 'full diff' && count.value
+                  ? [createTextVNode('', PatchFlags.TEXT)]
+                  : []),
+              ]))
+            : createCommentVNode('v-if', true)
+        },
+      })
 
-    app.mount(root)
-    expect(inner(root)).toBe(
-      '<div><div><div><div>Child</div></div></div></div>',
-    )
+      app.mount(root)
+      expect(inner(root)).toBe(
+        '<div><div><div><div>Child</div></div></div>0</div>',
+      )
 
-    show.value = false
-    await nextTick()
-    expect(inner(root)).toBe('<!--v-if-->')
-    expect(spyUnmounted).toHaveBeenCalledTimes(1)
+      count.value++
+      await nextTick()
+      count.value++
+      await nextTick()
+      expect(inner(root)).toBe(
+        '<div><div><div><div>Child</div></div></div>2</div>',
+      )
 
-    show.value = true
-    await nextTick()
-    expect(inner(root)).toBe(
-      '<div><div><div><div>Child</div></div></div></div>',
-    )
+      show.value = false
+      await nextTick()
+      expect(inner(root)).toBe('<!--v-if-->')
+      expect(spyUnmounted).toHaveBeenCalledTimes(1)
 
-    // should unmount again, this verifies previous cache was properly cleared
-    show.value = false
-    await nextTick()
-    expect(inner(root)).toBe('<!--v-if-->')
-    expect(spyUnmounted).toHaveBeenCalledTimes(2)
-  })
+      show.value = true
+      await nextTick()
+      expect(inner(root)).toBe(
+        '<div><div><div><div>Child</div></div></div>2</div>',
+      )
+
+      // should unmount again, this verifies previous cache was properly cleared
+      show.value = false
+      await nextTick()
+      expect(inner(root)).toBe('<!--v-if-->')
+      expect(spyUnmounted).toHaveBeenCalledTimes(2)
+    },
+  )
 
   // #12371
   test('unmount children when the user calls a compiled slot', async () => {
