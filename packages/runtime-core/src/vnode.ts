@@ -737,6 +737,7 @@ export function cloneVNode<T, U>(
     anchor: vnode.anchor,
     ctx: vnode.ctx,
     ce: vnode.ce,
+    cacheIndex: vnode.cacheIndex,
   }
 
   // if the vnode will be replaced by the cloned one, it is necessary

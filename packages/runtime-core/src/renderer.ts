@@ -403,6 +403,19 @@ function baseCreateRenderer(
       n2.dynamicChildren = null
     }
 
+    // Cached v-once nodes skip block tracking on subsequent renders.
+    if (
+      n2.dynamicChildren &&
+      n1 &&
+      n1.dynamicChildren &&
+      n1.dynamicChildren.hasOnce
+    ) {
+      if (n2.dynamicChildren === (EMPTY_ARR as any)) {
+        n2.dynamicChildren = []
+      }
+      n2.dynamicChildren.hasOnce = true
+    }
+
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
@@ -2171,7 +2184,7 @@ function baseCreateRenderer(
 
     // #6593 should clean memo cache when unmount
     if (cacheIndex != null) {
-      parentComponent!.renderCache[cacheIndex] = undefined
+      ;(vnode.ctx || parentComponent)!.renderCache[cacheIndex] = undefined
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
