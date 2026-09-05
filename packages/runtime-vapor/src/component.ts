@@ -46,7 +46,14 @@ import {
   warn,
   warnExtraneousAttributes,
 } from '@vue/runtime-dom'
-import { type Block, findBlockBoundary, insert, isBlock, remove } from './block'
+import {
+  type Block,
+  findBlockBoundary,
+  getBlockFirstNode,
+  insert,
+  isBlock,
+  remove,
+} from './block'
 import {
   type ShallowRef,
   markRaw,
@@ -106,6 +113,7 @@ import {
   enterHydrationBoundary,
   enterHydrationCursor,
   exitHydrationCursor,
+  hydrateNode,
   isComment,
   isHydrating,
   isRecreatedNode,
@@ -294,27 +302,10 @@ export function createComponent(
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
-  let hydrationClose: Node | null = null
-  let hydrationClaim: FragmentClaim | undefined
-  let hydrationCursor: HydrationCursor | null = null
-  let exitHydrationBoundary: (() => void) | undefined
-  let deferHydrationBoundary = false
-  const finalizeHydrationBoundary = () => {
-    exitHydrationBoundary && exitHydrationBoundary()
-    if (hydrationClose && currentHydrationNode === hydrationClose) {
-      advanceHydrationNode(hydrationClose)
-    }
-  }
+  let hydration: ComponentHydration | null = null
+  let pendingAsyncHydration = false
   if (isHydrating) {
-    resolvePendingSlotContent()
-    if (component.__multiRoot) hydrationClaim = createFragmentClaim()
-    hydrationCursor = enterHydrationCursor(hydrationClaim, true)
-    if (hydrationClaim && hydrationClaim.start) {
-      hydrationClose = locateEndAnchor(hydrationClaim.start)
-      exitHydrationBoundary = enterHydrationBoundary(
-        hydrationClose && claimAnchor(hydrationClose),
-      )
-    }
+    hydration = enterComponentHydration(component)
   } else {
     resetInsertionState()
   }
@@ -546,8 +537,8 @@ export function createComponent(
           // Async setup cannot create `block` yet. Capture the adopted SSR
           // range for pending move/removal before hydration advances past it.
           const pendingBlock: Node[] = []
-          let node: Node =
-            (hydrationClaim && hydrationClaim.start) || hydrationCursor!.start!
+          const { claim, cursor } = hydration!
+          let node: Node = (claim && claim.start) || cursor.start!
           const hydrationNext = nextLogicalSibling(node)
           do {
             pendingBlock.push(node)
@@ -556,6 +547,7 @@ export function createComponent(
           instance.pendingBlock =
             pendingBlock.length === 1 ? pendingBlock[0] : pendingBlock
           advanceHydrationNode(pendingBlock[pendingBlock.length - 1])
+          pendingAsyncHydration = true
         }
       }
     } finally {
@@ -590,42 +582,53 @@ export function createComponent(
       mountComponent(instance, _insertionParent!, _insertionAnchor)
     }
 
-    if (
-      __FEATURE_SUSPENSE__ &&
-      isSuspenseEnabled &&
-      isHydrating &&
-      hydrationClose &&
-      instance.suspense &&
-      instance.asyncDep &&
-      !instance.asyncResolved &&
-      instance.restoreAsyncContext
-    ) {
-      deferHydrationBoundary = true
-      instance.deferredHydrationBoundary = () => {
-        if (
-          instance.block &&
-          hydrationClose &&
-          findBlockBoundary(instance.block).nextNode ===
-            hydrationClose.nextSibling
-        ) {
-          setCurrentHydrationNode(hydrationClose)
-        }
-        finalizeHydrationBoundary()
-      }
-      exitHydrationCursor(hydrationCursor)
-    }
-
     return instance
   } finally {
     if (hasParentSuspense) {
       setParentSuspense(prevSuspense)
     }
-    if (isHydrating && !deferHydrationBoundary) {
-      // Boundary cleanup still needs the component-local cursor. Only after
-      // that do we restore the outer cursor's resume point.
-      finalizeHydrationBoundary()
-      exitHydrationCursor(hydrationCursor)
-    }
+    // A pending async setup owns its range until its deferred render
+    // re-enters it, so only the cursor is handed back here.
+    if (hydration) hydration.exit(!pendingAsyncHydration)
+  }
+}
+
+interface ComponentHydration {
+  /** owns the range's opening `[` when the component is multi-root */
+  claim: FragmentClaim | undefined
+  cursor: HydrationCursor
+  /**
+   * Hand the cursor back; with `finalizeBoundary` the unclaimed tail of the
+   * range is trimmed first and the cursor moves past the close marker.
+   */
+  exit(finalizeBoundary: boolean): void
+}
+
+/**
+ * Open a component's SSR range: locate its start, claim its markers and set
+ * up boundary cleanup. Shared by creation and by the deferred render of an
+ * async setup, which re-enters the range once setup has settled.
+ */
+function enterComponentHydration(
+  component: VaporComponent,
+): ComponentHydration {
+  resolvePendingSlotContent()
+  const claim = component.__multiRoot ? createFragmentClaim() : undefined
+  const cursor = enterHydrationCursor(claim, true)
+  const close = claim && claim.start ? locateEndAnchor(claim.start) : null
+  const trimBoundary = close
+    ? enterHydrationBoundary(claimAnchor(close))
+    : undefined
+  return {
+    claim,
+    cursor,
+    exit(finalizeBoundary) {
+      if (finalizeBoundary) {
+        if (trimBoundary) trimBoundary()
+        if (close && currentHydrationNode === close) advanceHydrationNode(close)
+      }
+      exitHydrationCursor(cursor)
+    },
   }
 }
 
@@ -897,8 +900,6 @@ export class VaporComponentInstance<
   asyncDep: Promise<any> | null
   asyncResolved: boolean
   asyncDepRegistered?: boolean
-  restoreAsyncContext?: () => void | (() => void)
-  deferredHydrationBoundary?: () => void
 
   hasFallthrough: boolean
 
@@ -1312,7 +1313,8 @@ export function mountComponent(
 
     const suspense = instance.suspense
     const deferred = isKeepAliveEnabled && deferKeepAliveRenderEffects(instance)
-    const hydrating = isHydrating
+    // `createComponent` captured the SSR range when setup suspended mid-pass.
+    const hydrating = !!instance.pendingBlock
     if (!hydrating) {
       // Keep a placeholder in the DOM while async setup is pending so
       // sibling insertion and moves use the component's current position.
@@ -1327,10 +1329,6 @@ export function mountComponent(
       if (asyncSetupFinished) return
       asyncSetupFinished = true
       instance.asyncResolved = true
-      // Restore hydrating mode for the final mount so stale-generation
-      // recovery does not fall back to fresh DOM insertion.
-      const reset =
-        instance.restoreAsyncContext && instance.restoreAsyncContext()
       // handleSetupResult may invoke the render function, which creates
       // render effects that must be owned by this instance and its scope.
       const handleResult = () => {
@@ -1348,26 +1346,28 @@ export function mountComponent(
         // Use the pending DOM's live boundary because it may have moved while
         // setup was suspended.
         const { parentNode, nextNode } = findBlockBoundary(pendingBlock)
+        const renderAndMount = () => {
+          handleResult()
+          mountComponent(instance, parentNode as ParentNode, nextNode)
+        }
         if (hydrating) {
-          withDeferredHydrationBoundary(() => {
-            handleResult()
-            mountComponent(instance, parentNode as ParentNode, nextNode)
-            if (instance.deferredHydrationBoundary) {
-              instance.deferredHydrationBoundary()
+          // Render in a pass of its own over the pending SSR range, the way
+          // vdom hydrates an async subtree once its setup settles, so no
+          // hydration state has to survive the setup's microtasks.
+          hydrateNode(getBlockFirstNode(pendingBlock)!, () => {
+            const hydration = enterComponentHydration(component)
+            try {
+              withDeferredHydrationBoundary(renderAndMount)
+            } finally {
+              hydration.exit(true)
             }
           })
         } else {
-          handleResult()
-          mountComponent(instance, parentNode as ParentNode, nextNode)
+          renderAndMount()
           remove(pendingBlock, parentNode as ParentNode)
         }
       } finally {
-        if (hydrating) {
-          instance.pendingBlock = undefined
-          instance.deferredHydrationBoundary = undefined
-        }
-        instance.restoreAsyncContext = undefined
-        if (reset) reset()
+        if (hydrating) instance.pendingBlock = undefined
       }
     }
 
@@ -1557,10 +1557,6 @@ export function unmountComponent(
   } else if (parentNode) {
     if (instance.block) remove(instance.block, parentNode)
   }
-  if (pendingAsyncSetup) {
-    instance.restoreAsyncContext = undefined
-    instance.deferredHydrationBoundary = undefined
-  }
 }
 
 export function getExposed(
@@ -1707,7 +1703,19 @@ function handleSetupResult(
     pushWarningContext(instance)
   }
 
-  if (!isBlock(setupResult)) {
+  if (isBlock(setupResult)) {
+    instance.block = setupResult as Block
+  } else if (isFunction(setupResult) && instance.asyncDep) {
+    // An async setup hands its template back as a render closure (compiled
+    // output, or hand-written like vdom) since it cannot render in a
+    // continuation; render now, under the instance.
+    instance.block =
+      callWithErrorHandling(
+        setupResult,
+        instance,
+        ErrorCodes.RENDER_FUNCTION,
+      ) || []
+  } else {
     if (isFunction(component)) {
       if (__DEV__) {
         warn(`Functional vapor component must return a block directly.`)
@@ -1737,8 +1745,6 @@ function handleSetupResult(
           callRender(component.render, instance, setupResult) || []
       }
     }
-  } else {
-    instance.block = setupResult as Block
   }
 
   applyComponentFallthrough(instance)

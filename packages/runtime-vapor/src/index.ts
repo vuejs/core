@@ -76,7 +76,6 @@ export {
 export { useVaporCssVars } from './helpers/useCssVars'
 export { setBlockKey } from './helpers/setKey'
 export { createDynamicComponent } from './apiCreateDynamicComponent'
-export { withAsyncContext } from './apiSetupHelpers'
 export { applyVShow } from './directives/vShow'
 export {
   applyTextModel,

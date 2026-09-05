@@ -605,6 +605,35 @@ return {  }
 }"
 `;
 
+exports[`SFC compile <script setup> > async/await detection > vapor: returns the template as a render closure 1`] = `
+"import { withAsyncContext as _withAsyncContext } from 'vue'
+import { txt as _txt, unref as _unref, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div> ", 1)
+
+export default {
+  __vapor: true,
+  async setup(__props) {
+
+let __temp, __restore
+
+        const msg = (
+  ([__temp,__restore] = _withAsyncContext(() => Promise.resolve('hi'))),
+  __temp = await __temp,
+  __restore(),
+  __temp
+)
+        
+return () => {
+  const n0 = t0()
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_unref(msg))))
+  return n0
+}
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > async/await detection > variable 1`] = `
 "import { withAsyncContext as _withAsyncContext } from 'vue'
 
