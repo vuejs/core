@@ -7,6 +7,34 @@ import {
 import { escapeHtml } from '@vue/shared'
 
 describe('ssr: renderAttrs', () => {
+  test('filters TransitionGroup props while preserving fallthrough attrs', () => {
+    expect(
+      ssrRenderAttrs(
+        {
+          name: 'list',
+          tag: 'ul',
+          appear: true,
+          css: false,
+          duration: 300,
+          moveClass: 'move',
+          'enter-from-class': 'enter',
+          mode: 'x',
+          id: 'list',
+          class: ['one', 'two'],
+          'data-test': 'value',
+        },
+        'ul',
+        true,
+      ),
+    ).toBe(' mode="x" id="list" class="one two" data-test="value"')
+  })
+
+  test.each([undefined, false])('ordinary element with flag %s', flag => {
+    expect(ssrRenderAttrs({ name: 'field', type: 'text' }, 'input', flag)).toBe(
+      ' name="field" type="text"',
+    )
+  })
+
   test('ignore reserved props', () => {
     expect(
       ssrRenderAttrs({

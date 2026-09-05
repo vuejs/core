@@ -7,6 +7,7 @@ import {
   type TransformContext,
   buildProps,
   createCallExpression,
+  createSimpleExpression,
   findProp,
 } from '@vue/compiler-dom'
 import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
@@ -45,6 +46,10 @@ export function ssrTransformTransitionGroup(
       if (props || directives.length) {
         propsExp = createCallExpression(context.helper(SSR_RENDER_ATTRS), [
           buildSSRProps(props, directives, context),
+          tag.type === NodeTypes.ATTRIBUTE
+            ? createSimpleExpression(tag.value!.content, true)
+            : tag.exp!,
+          `true` /* isTransitionGroup */,
         ])
       }
       wipMap.set(node, {
