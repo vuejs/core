@@ -354,6 +354,42 @@ describe('compiler + runtime integration', () => {
     expect(unmounted).toHaveBeenNthCalledWith(2, 2)
   })
 
+  test('preserves a mounted v-once slot when a duplicate is removed', async () => {
+    const show = ref(true)
+    const count = ref(0)
+    const tick = ref(0)
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: { props: ['value'], template: '<p>{{ value }}</p>' },
+        Twice: {
+          setup(_, { slots }) {
+            return () => {
+              tick.value
+              return Vue.h('div', [
+                Vue.h('section', slots.default!()),
+                show.value ? Vue.h('aside', slots.default!()) : null,
+              ])
+            }
+          },
+        },
+      },
+      setup: () => ({ count }),
+      template: '<Twice><Child v-once :value="count" /></Twice>',
+    })
+
+    app.mount(container)
+    expect(container.textContent).toBe('00')
+    show.value = false
+    await nextTick()
+    expect(container.textContent).toBe('0')
+    count.value++
+    tick.value++
+    await nextTick()
+    expect(container.textContent).toBe('0')
+    app.unmount()
+  })
+
   test('clears a cloned v-once slot from its owner cache', async () => {
     const show = ref(true)
     const count = ref(0)
