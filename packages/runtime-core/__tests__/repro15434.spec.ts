@@ -1,7 +1,7 @@
 import {
   type ComponentOptions,
-  type VNode,
   KeepAlive,
+  type VNode,
   createRenderer,
   defineComponent,
   h,
@@ -86,7 +86,11 @@ describe('issue #15434 keep-alive / onActivated async re-render', () => {
     const list = ref([1, 2, 3])
     const Comp = defineComponent({
       setup() {
-        return () => h('ul', list.value.map(i => h('li', { key: i }, i)))
+        return () =>
+          h(
+            'ul',
+            list.value.map(i => h('li', { key: i }, i)),
+          )
       },
     })
 
