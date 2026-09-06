@@ -2268,6 +2268,15 @@ function baseCreateRenderer(
 
   const remove: RemoveFn = vnode => {
     const { type, el, anchor, transition } = vnode
+    // The vnode was never mounted into the DOM (its `el` is null). This can
+    // happen when a keep-alive cached component is re-activated and an async
+    // re-render scheduled from `onActivated` patches against a subtree whose
+    // children were not yet mounted (see #15434). There is nothing to detach
+    // from the DOM, so bail out instead of calling hostRemove(null), which
+    // would throw in real DOM environments and corrupt the whole tree.
+    if (el == null) {
+      return
+    }
     if (type === Fragment) {
       if (
         __DEV__ &&
