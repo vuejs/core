@@ -1690,6 +1690,38 @@ describe('compiler: element transform', () => {
     expect(code).not.toContain('_txt(n0)')
   })
 
+  test('nested custom element with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      '<div><my-custom-element><span>{{ msg }}</span></my-custom-element></div>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_setInsertionState(n')
+    expect(code).toContain('createPlainElement("my-custom-element"')
+    expect(code).not.toContain('_nthChild(')
+  })
+
+  test('nested plain template element with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      '<div><template><span>{{ msg }}</span></template></div>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_setInsertionState(n')
+    expect(code).toContain('createPlainElement("template"')
+    expect(code).not.toContain('_nthChild(')
+  })
+
+  test('nested plain template element anchored before a template sibling', () => {
+    const { code } = compileWithElementTransform(
+      '<div><template><span>{{ msg }}</span></template><b/></div>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_template("<div><!><b>')
+    expect(code).toContain('createPlainElement("template"')
+  })
+
   test('svg', () => {
     const t = `<svg><circle r="40"></circle></svg>`
     const { code, ir } = compileWithElementTransform(t)

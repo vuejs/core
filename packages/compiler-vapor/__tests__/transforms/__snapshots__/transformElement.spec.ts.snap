@@ -908,6 +908,58 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > nested custom element with dynamic child 1`] = `
+"import { setInsertionState as _setInsertionState, createPlainElement as _createPlainElement, insert as _insert, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<span> ")
+const t1 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n2 = t1()
+  _setInsertionState(n2)
+  const n1 = _createPlainElement("my-custom-element")
+  const n0 = t0()
+  _insert(n0, n1)
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n2
+}"
+`;
+
+exports[`compiler: element transform > nested plain template element anchored before a template sibling 1`] = `
+"import { child as _child, setInsertionState as _setInsertionState, createPlainElement as _createPlainElement, insert as _insert, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<span> ")
+const t1 = _template("<div><!><b>", 1)
+
+export function render(_ctx) {
+  const n3 = t1()
+  const n2 = _child(n3)
+  _setInsertionState(n3, n2)
+  const n1 = _createPlainElement("template")
+  const n0 = t0()
+  _insert(n0, n1)
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n3
+}"
+`;
+
+exports[`compiler: element transform > nested plain template element with dynamic child 1`] = `
+"import { setInsertionState as _setInsertionState, createPlainElement as _createPlainElement, insert as _insert, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<span> ")
+const t1 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n2 = t1()
+  _setInsertionState(n2)
+  const n1 = _createPlainElement("template")
+  const n0 = t0()
+  _insert(n0, n1)
+  const x0 = _txt(n0)
+  _renderEffect(() => _setText(x0, _toDisplayString(_ctx.msg)))
+  return n2
+}"
+`;
+
 exports[`compiler: element transform > object literal v-bind before dynamic key tracks the original source 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
