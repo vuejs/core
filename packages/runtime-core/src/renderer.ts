@@ -1292,6 +1292,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           pushWarningContext(n2)
         }
+        n2.el = n1.el
         updateComponentPreRender(instance, n2, optimized)
         if (__DEV__) {
           popWarningContext()

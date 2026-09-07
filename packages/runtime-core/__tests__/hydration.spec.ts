@@ -1648,6 +1648,50 @@ describe('SSR hydration', () => {
     expect(onRootResolve).toHaveBeenCalledTimes(1)
   })
 
+  test('Suspense: remove an unresolved async component after an update during hydration', async () => {
+    const { container, ssrHtml, show, msg, release, onRootResolve } =
+      await hydrateSuspenseApp(gate => {
+        const show = ref(true)
+        const msg = ref('one')
+        const onRootResolve = vi.fn()
+
+        const AsyncChild = defineComponent({
+          props: ['msg'],
+          async setup(props) {
+            await gate()
+            return () => h('span', props.msg)
+          },
+        })
+
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          content: () =>
+            h('div', [
+              show.value ? h(AsyncChild, { msg: msg.value }) : null,
+              h('span', 'rest'),
+            ]),
+        })
+
+        return { App, show, msg, onRootResolve }
+      })
+
+    expect(ssrHtml).toBe(`<div><span>one</span><span>rest</span></div>`)
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    // replace the pending component vnode before removing it
+    msg.value = 'two'
+    await nextTick()
+    show.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><!----><span>rest</span></div>`)
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><!----><span>rest</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
   // releasing the dep of a component removed in place may resolve the boundary
   // synchronously; that must not happen while a sibling top-level-await
   // component is still the current instance (withAsyncContext restores it and
