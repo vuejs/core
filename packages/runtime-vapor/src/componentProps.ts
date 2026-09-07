@@ -232,7 +232,7 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
   const snapshot: RawProps = Object.create(null)
   for (const key in rawProps) {
     if (key !== '$') {
-      snapshot[key] = freezeValue(readSource(rawProps[key]))
+      snapshot[key] = freezeValue(key, readSource(rawProps[key]))
     }
   }
 
@@ -250,6 +250,7 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
       const value: Record<string, unknown> = Object.create(null)
       for (const key in resolved) {
         value[key] = freezeValue(
+          key,
           isDynamic ? resolved[key] : readSource(resolved[key]),
         )
       }
@@ -271,7 +272,8 @@ function readSource<T>(source: T | (() => T)): T {
   return isFunction(source) ? (source as () => T)() : source
 }
 
-function freezeValue(value: unknown): unknown {
+function freezeValue(key: string, value: unknown): unknown {
+  if (key === 'class' && value && !isString(value)) return normalizeClass(value)
   return isFunction(value) ? () => value : value
 }
 

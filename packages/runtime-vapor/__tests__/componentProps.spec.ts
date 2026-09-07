@@ -1004,4 +1004,43 @@ describe('component: props', () => {
       })
     })
   })
+
+  test.each([
+    ':class="data.classes"',
+    ':class="[data.classes]"',
+    'v-bind="data.input"',
+    'v-bind="{}" :class="data.classes"',
+    ':[data.key]="data.classes"',
+  ])('v-once snapshots normalized declared class props (%s)', async binding => {
+    const classes = { active: true }
+    const data = ref({
+      classes,
+      input: { class: classes },
+      key: 'class',
+      readClass: () => '',
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ class: String })
+        _data.value.readClass = () => props.class
+      </script>
+      <template><div>{{ props.class }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child v-once ${binding} /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(data.value.readClass()).toBe('active')
+    expect(host.innerHTML).toBe('<div>active</div>')
+
+    data.value.classes.active = false
+    await nextTick()
+
+    expect.soft(data.value.readClass()).toBe('active')
+    expect.soft(host.innerHTML).toBe('<div>active</div>')
+  })
 })
