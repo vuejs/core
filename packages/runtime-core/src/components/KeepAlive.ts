@@ -248,7 +248,10 @@ const KeepAliveImpl: ComponentOptions = {
         // avoid caching vnode that not been mounted
         if (isSuspense(instance.subTree.type)) {
           queuePostRenderEffect(() => {
-            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
+            const vnode = getInnerChild(instance.subTree)
+            if (vnode.component) {
+              cache.set(pendingCacheKey!, vnode)
+            }
           }, instance.subTree.suspense)
         } else {
           cache.set(pendingCacheKey, getInnerChild(instance.subTree))

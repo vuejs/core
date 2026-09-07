@@ -481,6 +481,29 @@ describe('component: emit', () => {
     expect(fn2).toHaveBeenCalledWith(1)
   })
 
+  test('.trim and .number modifiers should keep trim for non-numeric values', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', '  hello  ')
+      },
+    })
+
+    const fn = vi.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true, number: true },
+        'onUpdate:modelValue': fn,
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn).toHaveBeenCalledWith('hello')
+  })
+
   test('only trim string parameter when work with v-model on component', () => {
     const Foo = defineComponent({
       render() {},

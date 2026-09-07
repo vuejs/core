@@ -1288,10 +1288,13 @@ function baseCreateRenderer(
         !instance.asyncResolved
       ) {
         // async & still pending - just update props and slots
-        // since the component's reactive effect for render isn't set-up yet
+        // since the component's reactive effect for render isn't set-up yet.
+        // carry over the el adopted during hydration: if hydration is
+        // interrupted, teardown of the claimed DOM depends on it
         if (__DEV__) {
           pushWarningContext(n2)
         }
+        n2.el = n1.el
         updateComponentPreRender(instance, n2, optimized)
         if (__DEV__) {
           popWarningContext()
@@ -2291,6 +2294,11 @@ function baseCreateRenderer(
 
     if (type === Static) {
       removeStaticNode(vnode)
+      // An opaque hydration placeholder cannot animate, but its removal must
+      // still release an out-in transition waiting for the claimed DOM.
+      if (transition && !transition.persisted && transition.afterLeave) {
+        transition.afterLeave()
+      }
       return
     }
 
@@ -2363,6 +2371,12 @@ function baseCreateRenderer(
     if (job) {
       // so that scheduler will no longer invoke it
       job.flags! |= SchedulerJobFlags.DISPOSED
+      unmount(subTree, instance, parentSuspense, doRemove)
+    } else if (instance.vnode.el && subTree) {
+      // hydration was interrupted before this component rendered (`vnode.el`
+      // is only set this early when hydrating) - unmount the placeholder
+      // covering the claimed DOM, carrying the root's transition hooks
+      subTree.transition = instance.vnode.transition
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook

@@ -11,7 +11,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance, ComponentOptions } from './component'
+import type { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -309,19 +309,33 @@ export function createHydrationFunctions(
           // if component is async, it may get moved / unmounted before its
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
+          //
+          // This covers three cases, all of which leave subTree unset:
+          // - the component has not resolved yet
+          // - the component has resolved, but uses a lazy hydration strategy
+          //   that has not fired yet, so hydrating its subtree was deferred
+          // - the component's own async setup() has not resolved yet
           if (
-            isAsyncWrapper(vnode) &&
-            !(vnode.type as ComponentOptions).__asyncResolved
+            (isAsyncWrapper(vnode) || vnode.component!.asyncDep) &&
+            !vnode.component!.subTree
           ) {
             let subTree
             if (isFragmentStart) {
-              subTree = createVNode(Fragment)
+              // the async component has no child vnodes yet, so represent its
+              // adopted DOM as an opaque range that can be moved or removed
+              subTree = createVNode(Static)
               subTree.anchor = nextNode
                 ? nextNode.previousSibling
                 : container.lastChild
             } else {
+              // mirror the adopted node's type so the placeholder behaves like
+              // the rendered root would (transition hooks assume an element)
               subTree =
-                node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+                node.nodeType === DOMNodeTypes.TEXT
+                  ? createTextVNode('')
+                  : createVNode(
+                      node.nodeType === DOMNodeTypes.COMMENT ? VComment : 'div',
+                    )
             }
             subTree.el = node
             vnode.component!.subTree = subTree
