@@ -7,7 +7,9 @@ export type UnionToIntersection<U> = (
   : never
 
 // make keys required but keep undefined values
-export type LooseRequired<T> = { [P in keyof (T & Required<T>)]: T[P] }
+export type LooseRequired<T> = {
+  [P in keyof (T & { [P in keyof T]-?: unknown })]: T[P]
+}
 
 // If the type T accepts type "any", output type Y, otherwise output type N.
 // https://stackoverflow.com/questions/49927523/disallow-call-with-any/49928360#49928360
