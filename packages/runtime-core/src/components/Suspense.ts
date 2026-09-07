@@ -108,10 +108,13 @@ export const SuspenseImpl = {
       //  2. mounting along with the pendingBranch of parentSuspense
       // it is necessary to skip the current patch to avoid multiple mounts
       // of inner components.
+      // but not while the parent is hydrating: its pending branch is the
+      // adopted SSR DOM, never mounted again, so skipping leaves it stale.
       if (
         parentSuspense &&
         parentSuspense.deps > 0 &&
-        !n1.suspense!.isInFallback
+        !n1.suspense!.isInFallback &&
+        !parentSuspense.isHydrating
       ) {
         n2.suspense = n1.suspense!
         n2.suspense.vnode = n2
@@ -651,6 +654,7 @@ function createSuspenseBoundary(
           parentSuspense.pendingBranch &&
           parentSuspenseId === parentSuspense.pendingId
         ) {
+          parentSuspenseId = undefined
           parentSuspense.deps--
           if (parentSuspense.deps === 0 && !sync) {
             parentSuspense.resolve()
