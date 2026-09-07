@@ -2190,4 +2190,56 @@ describe('attribute fallthrough', () => {
     const { html } = define(Parent).render()
     expect(html()).toBe('<div style="color: blue;"></div>')
   })
+
+  // #15442
+  it.each([true, false])(
+    'should merge static component listeners with v-on object bindings (static first: %s)',
+    async staticFirst => {
+      const calls: string[] = []
+      const onStatic = () => calls.push('static')
+      const onObject = () => calls.push('object')
+      const onExtra = () => calls.push('extra')
+      const data = ref<{
+        onStatic: () => void
+        listeners: Record<string, Function | Function[] | null | undefined>
+      }>({ onStatic, listeners: { click: onObject } })
+      const Child = compile(
+        '<template><button>click</button></template>',
+        ref(null),
+      )
+      const bindings = staticFirst
+        ? '@click="data.onStatic" v-on="data.listeners"'
+        : 'v-on="data.listeners" @click="data.onStatic"'
+      const Parent = compile(
+        `<template><components.Child ${bindings} /></template>`,
+        data,
+        { Child },
+      )
+
+      const { host } = define(Parent).render()
+      const button = host.querySelector('button')!
+      button.click()
+      expect(calls).toEqual(
+        staticFirst ? ['static', 'object'] : ['object', 'static'],
+      )
+
+      calls.length = 0
+      data.value.listeners.click = [onObject, onExtra]
+      await nextTick()
+      button.click()
+      expect(calls).toEqual(
+        staticFirst
+          ? ['static', 'object', 'extra']
+          : ['object', 'extra', 'static'],
+      )
+
+      for (const listeners of [{ click: onStatic }, { click: null }, {}]) {
+        calls.length = 0
+        data.value.listeners = listeners
+        await nextTick()
+        button.click()
+        expect(calls).toEqual(['static'])
+      }
+    },
+  )
 })

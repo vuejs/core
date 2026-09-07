@@ -1,8 +1,7 @@
 import { type ObjectEmitsOptions, baseEmit } from '@vue/runtime-dom'
 import type { VaporComponent, VaporComponentInstance } from './component'
-import { EMPTY_OBJ, hasOwn, isArray, isFunction, isOn } from '@vue/shared'
-import { type RawProps, resolveSource } from './componentProps'
-import { interopKey, isInteropEnabled } from './vdomInteropState'
+import { EMPTY_OBJ, isArray } from '@vue/shared'
+import { getAttrFromRawProps } from './componentProps'
 
 /**
  * The logic from core isn't too reusable so it's better to duplicate here
@@ -35,25 +34,8 @@ export function emit(
   baseEmit(
     instance,
     instance.rawProps || EMPTY_OBJ,
-    propGetter,
+    getAttrFromRawProps,
     event,
     ...rawArgs,
   )
-}
-
-function propGetter(rawProps: RawProps, key: string) {
-  const dynamicSources = rawProps.$
-  if (dynamicSources) {
-    let i = dynamicSources.length
-    while (i--) {
-      const source = resolveSource(dynamicSources[i])
-      if (source && hasOwn(source, key))
-        // for props passed from VDOM component, no need to resolve
-        return (isInteropEnabled && dynamicSources[interopKey]) ||
-          (isOn(key) && isFunction(dynamicSources[i]))
-          ? source[key]
-          : resolveSource(source[key])
-    }
-  }
-  return rawProps[key] && resolveSource(rawProps[key])
 }

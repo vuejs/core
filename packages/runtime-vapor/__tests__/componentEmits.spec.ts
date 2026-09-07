@@ -608,4 +608,32 @@ describe('component: emit', () => {
     expect(calls).toEqual(['change:true'])
     expect(host.innerHTML).toBe('<!--if-->')
   })
+
+  // #15442
+  test('should merge once listeners from v-on objects', () => {
+    const onStatic = vi.fn()
+    const onObject = vi.fn()
+    const Child = compile(
+      `<script setup vapor>defineEmits(['ready'])</script>
+        <template><button @click="$emit('ready', 1)">emit</button></template>`,
+      ref(null),
+    )
+    const Parent = compile(
+      `<template>
+          <components.Child @ready.once="data.onStatic" v-on="data.listeners" />
+        </template>`,
+      ref({ onStatic, listeners: { readyOnce: onObject } }),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    const button = host.querySelector('button')!
+    button.click()
+    expect(onStatic).toHaveBeenCalledExactlyOnceWith(1)
+    expect(onObject).toHaveBeenCalledExactlyOnceWith(1)
+
+    button.click()
+    expect(onStatic).toHaveBeenCalledTimes(1)
+    expect(onObject).toHaveBeenCalledTimes(1)
+  })
 })

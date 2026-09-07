@@ -956,6 +956,22 @@ describe('component: props', () => {
       expect(host.innerHTML).toBe('<div id="foo" class="bar">foo-bar</div>')
     })
 
+    test('resolveDynamicProps merges event listeners across sources', () => {
+      const first = vi.fn()
+      const second = vi.fn()
+      const third = vi.fn()
+      expect(
+        resolveDynamicProps({
+          onClick: () => first,
+          $: [
+            () => ({ onClick: [second, third] }),
+            { onClick: () => first },
+            () => ({ onClick: null }),
+          ],
+        }).onClick,
+      ).toEqual([first, second, third])
+    })
+
     test('resolveDynamicProps supports direct values in static object sources', () => {
       expect(
         resolveDynamicProps({
