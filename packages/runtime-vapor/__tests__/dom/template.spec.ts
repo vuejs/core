@@ -1,4 +1,6 @@
 import { template } from '../../src/dom/template'
+import { nextTick, ref } from '@vue/runtime-dom'
+import { compile, makeRender } from '../_utils'
 import { child, next, nthChild } from '../../src/dom/node'
 
 describe('api: template', () => {
@@ -60,5 +62,32 @@ describe('api: template', () => {
       expect(root.getAttribute('id')).toBe('foo>bar')
       expect(root.getAttribute('class')).toBe('has whitespace')
     }
+  })
+})
+
+describe('createElement-backed children', () => {
+  const define = makeRender()
+
+  test('nested plain <template> element inserts and updates its children', async () => {
+    const data = ref({ msg: 'a' })
+    const { host } = define(
+      compile(
+        `<template><div><template><i>{{ data.msg }}</i></template><b/></div></template>`,
+        data,
+      ),
+    ).render()
+    // children are inserted as child nodes (like vdom's createElement path),
+    // which template serialization does not show; the `<!>` placeholder that
+    // anchored the insertion stays in place.
+    expect(host.innerHTML).toBe(
+      '<div><template></template><!----><b></b></div>',
+    )
+    const tpl = host.querySelector('template')!
+    expect(tpl.childNodes.length).toBe(1)
+    expect(tpl.firstChild!.textContent).toBe('a')
+
+    data.value.msg = 'b'
+    await nextTick()
+    expect(tpl.firstChild!.textContent).toBe('b')
   })
 })
