@@ -654,6 +654,7 @@ function createSuspenseBoundary(
           parentSuspense.pendingBranch &&
           parentSuspenseId === parentSuspense.pendingId
         ) {
+          parentSuspenseId = undefined
           parentSuspense.deps--
           if (parentSuspense.deps === 0 && !sync) {
             parentSuspense.resolve()

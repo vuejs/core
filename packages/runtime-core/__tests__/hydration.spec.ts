@@ -1204,6 +1204,60 @@ describe('SSR hydration', () => {
     expect(onRootResolve).toHaveBeenCalledTimes(1)
   })
 
+  test('Suspense: updating resolved nested suspense does not resolve hydrating parent', async () => {
+    const { container, route, release, onRootResolve } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onRootResolve = vi.fn()
+
+        const AsyncSibling = defineComponent({
+          async setup() {
+            await gate()
+            return () => h('span', 'async sibling')
+          },
+        })
+        const PageA = defineComponent({
+          setup: () => () => h('p', 'page a'),
+        })
+        const PageB = defineComponent({
+          setup: () => () => h('p', 'page b'),
+        })
+        const RouteView = defineComponent({
+          setup: () => () =>
+            h(
+              Suspense,
+              { suspensible: true },
+              {
+                default: () => (route.value === 'a' ? h(PageA) : h(PageB)),
+              },
+            ),
+        })
+        const App = defineComponent({
+          setup: () => () =>
+            h(
+              Suspense,
+              { onResolve: onRootResolve },
+              { default: () => h('div', [h(AsyncSibling), h(RouteView)]) },
+            ),
+        })
+
+        return { App, route, onRootResolve }
+      })
+
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><span>async sibling</span><p>page b</p></div>`,
+    )
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
   // a nested suspense that was already toggled once during hydration has
   // isHydrating unset, but while the root suspense is still hydrating a
   // second toggle must also be patched through (checked via
