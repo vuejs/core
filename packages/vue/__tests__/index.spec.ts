@@ -620,4 +620,37 @@ describe('compiler + runtime integration', () => {
       app.unmount()
     })
   })
+
+  test.each([false, true])(
+    'unmounts all children of a nested v-once block (updated: %s)',
+    async updated => {
+      const count = ref(0)
+      const onceUnmounted = vi.fn()
+      const liveUnmounted = vi.fn()
+      const container = document.createElement('div')
+      const app = createApp({
+        components: {
+          OnceChild: { template: 'once', unmounted: onceUnmounted },
+          LiveChild: { template: 'live', unmounted: liveUnmounted },
+        },
+        setup: () => ({ count, show: true }),
+        template:
+          '<div><section v-if="show"><OnceChild v-once /><LiveChild />{{ count }}</section></div>',
+      })
+
+      app.mount(container)
+      expect(container.textContent).toBe('oncelive0')
+      if (updated) {
+        count.value++
+        await nextTick()
+        expect(container.textContent).toBe('oncelive1')
+      }
+
+      app.unmount()
+      expect({
+        once: onceUnmounted.mock.calls.length,
+        live: liveUnmounted.mock.calls.length,
+      }).toEqual({ once: 1, live: 1 })
+    },
+  )
 })

@@ -2171,7 +2171,10 @@ function baseCreateRenderer(
       memo,
     } = vnode
 
-    if (patchFlag === PatchFlags.BAIL) {
+    if (
+      patchFlag === PatchFlags.BAIL ||
+      (dynamicChildren && dynamicChildren.hasOnce)
+    ) {
       optimized = false
     }
 
