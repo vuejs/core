@@ -146,6 +146,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       name: 'model',
       modelType,
       builtin: true,
+      once: context.inVOnce,
     })
 
   function checkDuplicatedValue() {

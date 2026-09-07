@@ -120,11 +120,8 @@ import {
   setupPropsValidation,
 } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
-import {
-  dynamicSlotsProxyHandlers,
-  getSlot,
-  withOnceSlot,
-} from './componentSlots'
+import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
+import { inOnce, withOnce } from './once'
 import { renderEffect } from './renderEffect'
 import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -1152,10 +1149,14 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    withOnceSlot(
-      () => hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds),
-      false,
-    )
+    if (inOnce) {
+      withOnce(
+        () => hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds),
+        false,
+      )
+    } else {
+      hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
+    }
     onScopeDispose(unmount, true)
     isMounted = true
     syncNodes()
@@ -1194,21 +1195,34 @@ function mountVNode(
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
         namespace = getContainerType(parentNode as Element)
-        // Component vnodes render here; see createVDOMComponent.
-        withOnceSlot(
-          () =>
-            internals.p(
-              null,
-              vnode,
-              parentNode,
-              anchor,
-              parentComponent as any,
-              operationSuspense,
-              namespace,
-              frag.slotScopeIds,
-            ),
-          false,
-        )
+        if (inOnce) {
+          // Component vnodes render here; see createVDOMComponent.
+          withOnce(
+            () =>
+              internals.p(
+                null,
+                vnode,
+                parentNode,
+                anchor,
+                parentComponent as any,
+                operationSuspense,
+                namespace,
+                frag.slotScopeIds,
+              ),
+            false,
+          )
+        } else {
+          internals.p(
+            null,
+            vnode,
+            parentNode,
+            anchor,
+            parentComponent as any,
+            operationSuspense,
+            namespace,
+            frag.slotScopeIds,
+          )
+        }
         onScopeDispose(unmount, true)
         isMounted = true
       } else {
@@ -1415,10 +1429,14 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    withOnceSlot(
-      () => hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds),
-      false,
-    )
+    if (inOnce) {
+      withOnce(
+        () => hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds),
+        false,
+      )
+    } else {
+      hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
+    }
     isMounted = true
     syncNodes()
   }
@@ -1452,21 +1470,33 @@ function createVDOMComponent(
       simpleSetCurrentInstance(parentComponent)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
-        // A VDOM component is a boundary: its own render must create live
-        // effects even when it is mounted inside a v-once extent.
-        withOnceSlot(
-          () =>
-            internals.mt(
-              vnode,
-              parentNode,
-              anchor,
-              parentComponent as any,
-              operationSuspense,
-              getContainerType(parentNode as Element),
-              false,
-            ),
-          false,
-        )
+        if (inOnce) {
+          // A VDOM component is a boundary: its own render must create live
+          // effects even when it is mounted inside a v-once extent.
+          withOnce(
+            () =>
+              internals.mt(
+                vnode,
+                parentNode,
+                anchor,
+                parentComponent as any,
+                operationSuspense,
+                getContainerType(parentNode as Element),
+                false,
+              ),
+            false,
+          )
+        } else {
+          internals.mt(
+            vnode,
+            parentNode,
+            anchor,
+            parentComponent as any,
+            operationSuspense,
+            getContainerType(parentNode as Element),
+            false,
+          )
+        }
         // set ref
         if (rawRef) vdomSetRef(rawRef, null, operationSuspense, vnode)
         isMounted = true
@@ -1856,7 +1886,7 @@ function renderVDOMSlot(
   }
   localFallback = fallback
     ? once
-      ? () => withOnceSlot(() => fallback(internals, parentComponent))
+      ? () => withOnce(() => fallback(internals, parentComponent))
       : () => fallback(internals, parentComponent)
     : undefined
 
@@ -2186,7 +2216,7 @@ function renderVDOMSlot(
     if (slotsRef.value) {
       const renderContent = () =>
         renderSlot(slotsRef.value, isFunction(name) ? name() : name, props)
-      slotContent = once ? withOnceSlot(renderContent) : renderContent()
+      slotContent = once ? withOnce(renderContent) : renderContent()
 
       if (isVNode(slotContent)) {
         if (slotContent.type === Fragment) {

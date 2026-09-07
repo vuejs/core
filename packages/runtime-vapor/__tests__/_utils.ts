@@ -227,7 +227,7 @@ export interface ParityResult {
 export async function renderParity(
   srcs: Record<string, string>,
   makeData: () => runtimeDom.Ref<any>,
-  act: (data: runtimeDom.Ref<any>) => void | Promise<void>,
+  act: (data: runtimeDom.Ref<any>, root: HTMLElement) => void | Promise<void>,
   extra: Record<string, any> = {},
 ): Promise<{ vdom: ParityResult; vapor: ParityResult }> {
   const results = {} as { vdom: ParityResult; vapor: ParityResult }
@@ -251,7 +251,7 @@ export async function renderParity(
     const app = vapor ? createVaporApp(App) : createApp(App)
     app.use(vaporInteropPlugin).mount(root)
     const before = root.innerHTML
-    await act(data)
+    await act(data, root)
     await runtimeDom.nextTick()
     results[vapor ? 'vapor' : 'vdom'] = {
       before,

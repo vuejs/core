@@ -618,6 +618,40 @@ describe('component: props', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
+  test('v-once snapshots sources without caching computeds on them', () => {
+    const source = (() => ({ a: 1 })) as (() => any) & { _cache?: unknown }
+    const getter = (() => 2) as (() => any) & { _cache?: unknown }
+    const Child = defineVaporComponent({
+      props: ['a', 'b'],
+      setup(props: any) {
+        expect(props.a).toBe(1)
+        expect(props.b).toBe(2)
+        return []
+      },
+    })
+
+    // Nest one level: sources are only cached under an instance with a parent.
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(
+          Child,
+          { b: getter, $: [source] },
+          null,
+          true,
+          true,
+        )
+      },
+    })
+    define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(source._cache).toBeUndefined()
+    expect(getter._cache).toBeUndefined()
+  })
+
   // #15227
   test('declared class prop should be normalized', () => {
     const data = ref({ skin: { b: true, c: false } })

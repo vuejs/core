@@ -32,6 +32,7 @@ import {
   isBlockOperation,
 } from './ir'
 import {
+  isBuiltInComponent,
   isConstantExpression,
   isStaticExpression,
   isTransitionNode,
@@ -345,6 +346,9 @@ export class TransformContext<T extends AllNode = AllNode> {
       node,
       parent: this as any,
       index,
+      // Slot content is executed by the child component, which re-runs it on
+      // its own updates (vdom parity), so v-once does not reach into it.
+      inVOnce: this.inVOnce && !isComponentBoundary(this.node),
 
       template: '',
       templateRoot: false,
@@ -628,4 +632,13 @@ export function getNextId(
 ): number {
   if (map && map.has(n)) return map.get(n)!
   return n
+}
+
+// Teleport is not a boundary: its content renders in place.
+function isComponentBoundary(node: AllNode): boolean {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    node.tagType === ElementTypes.COMPONENT &&
+    isBuiltInComponent(node.tag) !== 'VaporTeleport'
+  )
 }

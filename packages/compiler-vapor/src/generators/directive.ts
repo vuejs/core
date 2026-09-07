@@ -9,6 +9,7 @@ import {
   NEWLINE,
   genCall,
   genMulti,
+  genOnce,
 } from './utils'
 import { type DirectiveIRNode, IRNodeTypes, type OperationNode } from '../ir'
 import { genVShow } from './vShow'
@@ -52,7 +53,11 @@ function genCustomDirectives(
 
   return [
     NEWLINE,
-    ...genCall(helper('withVaporDirectives'), element, directives),
+    ...genOnce(
+      genCall(helper('withVaporDirectives'), element, directives),
+      opers[0].once,
+      context,
+    ),
   ]
 
   function genDirectiveItem({

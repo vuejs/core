@@ -135,6 +135,18 @@ describe('compiler: v-once', () => {
     })
   })
 
+  test('component slot content keeps its effects', () => {
+    const { code } = compileWithOnce(
+      `<Comp v-once :id="foo"><template #default="{ n }">{{ n }}{{ msg }}</template></Comp>`,
+    )
+    expect(code).toMatchSnapshot()
+    // The component itself is once; its slot content is executed by the child.
+    expect(code).contains(
+      '_createAssetComponent("Comp", { id: () => (_ctx.foo) }, (_slotProps0) => {',
+    )
+    expect(code).contains('_renderEffect(() => _setText(')
+  })
+
   test('on slot outlet', () => {
     const { ir, code } = compileWithOnce(`<div><slot v-once /></div>`)
     expect(code).toMatchSnapshot()
@@ -221,6 +233,32 @@ describe('compiler: v-once', () => {
       id: 0,
       once: true,
     })
+  })
+
+  test('with v-show', () => {
+    const { code } = compileWithOnce(`<div v-show="show" v-once />`)
+    expect(code).toMatchSnapshot()
+    expect(code).contains('_withOnce(() => _applyVShow(n0, () => (_ctx.show)))')
+    expect(code).not.contains('effect')
+  })
+
+  test('with v-model', () => {
+    const { code } = compileWithOnce(`<input v-model="text" v-once />`)
+    expect(code).toMatchSnapshot()
+    expect(code).contains('_withOnce(() => _applyTextModel(')
+  })
+
+  test('with custom directive', () => {
+    const { code } = compileWithOnce(`<div v-dir="val" v-once />`)
+    expect(code).toMatchSnapshot()
+    expect(code).contains('_withOnce(() => _withVaporDirectives(')
+  })
+
+  test('directives outside v-once are not wrapped', () => {
+    const { code } = compileWithOnce(
+      `<div v-show="show" v-dir="val" /><div v-once />`,
+    )
+    expect(code).not.contains('withOnce')
   })
 
   test('with key', () => {

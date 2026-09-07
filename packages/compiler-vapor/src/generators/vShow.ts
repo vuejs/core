@@ -1,7 +1,7 @@
 import type { CodegenContext } from '../generate'
 import type { DirectiveIRNode } from '../ir'
 import { genExpression } from './expression'
-import { type CodeFragment, NEWLINE, genCall } from './utils'
+import { type CodeFragment, NEWLINE, genCall, genOnce } from './utils'
 
 export function genVShow(
   oper: DirectiveIRNode,
@@ -10,10 +10,14 @@ export function genVShow(
   const { element } = oper
   return [
     NEWLINE,
-    ...genCall(context.helper('applyVShow'), `n${element}`, [
-      `() => (`,
-      ...genExpression(oper.dir.exp!, context),
-      `)`,
-    ]),
+    ...genOnce(
+      genCall(context.helper('applyVShow'), `n${element}`, [
+        `() => (`,
+        ...genExpression(oper.dir.exp!, context),
+        `)`,
+      ]),
+      oper.once,
+      context,
+    ),
   ]
 }

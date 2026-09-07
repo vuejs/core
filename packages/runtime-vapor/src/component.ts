@@ -89,11 +89,11 @@ import {
   type StaticSlots,
   dynamicSlotsProxyHandlers,
   getSlot,
-  inOnceSlot,
   normalizeRawSlots,
   setCurrentSlotOwner,
-  withOnceSlot,
+  snapshotRawSlots,
 } from './componentSlots'
+import { inOnce, withOnce } from './once'
 import { hmrReload, hmrRerender } from './hmr'
 import {
   type FragmentClaim,
@@ -289,8 +289,8 @@ export function createComponent(
 ): VaporComponentInstance {
   // A component created while rendering a v-once slot should receive frozen
   // parent inputs, but its own render effects should still be live.
-  const wasInOnceSlot = inOnceSlot
-  if (wasInOnceSlot) once = true
+  const wasInOnce = inOnce
+  if (wasInOnce) once = true
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -436,17 +436,18 @@ export function createComponent(
     let inputScope: EffectScope | undefined
     if (
       keepAliveCtx &&
-      ((rawProps && !once) || (rawSlots && (rawSlots as RawSlots).$))
+      !once &&
+      (rawProps || (rawSlots && (rawSlots as RawSlots).$))
     ) {
       // The cached component keeps its detached scope active, so commit only
       // its direct inputs through a cache-owned scope. Descendants read from
       // the same committed inputs and need no additional isolation.
-      // v-once snapshots raw props in the instance constructor, so it does not
-      // need a live commit effect after creation.
+      // v-once snapshots raw props and the slot set in the instance
+      // constructor, so it does not need a live commit effect after creation.
       const scope = new EffectScope(true)
       let isolated = false
       scope.run(() => {
-        if (rawProps && !once) {
+        if (rawProps) {
           const next = keepAliveCtx!.isolatePropSources(rawProps as RawProps)
           isolated = next !== rawProps
           rawProps = next
@@ -527,11 +528,11 @@ export function createComponent(
           instance,
           // Async hydration re-enters setup later, so preserve the component
           // boundary rule above when the delayed setup actually runs.
-          wasInOnceSlot ? () => withOnceSlot(setup, false) : setup,
+          wasInOnce ? () => withOnce(setup, false) : setup,
         )
       } else {
-        if (wasInOnceSlot) {
-          withOnceSlot(() => setupComponent(instance, component), false)
+        if (wasInOnce) {
+          withOnce(() => setupComponent(instance, component), false)
         } else {
           setupComponent(instance, component)
         }
@@ -913,11 +914,6 @@ export class VaporComponentInstance<
 
   ce?: ComponentCustomElementInterface
 
-  // for v-once: caches props/attrs values to ensure they remain frozen
-  // even when the component re-renders due to local state changes
-  oncePropsCache?: Record<string | symbol, any>
-  isOnce: boolean
-
   // lifecycle hooks
   isMounted: boolean
   isUnmounted: boolean
@@ -996,7 +992,6 @@ export class VaporComponentInstance<
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)
-    this.isOnce = !!once
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
     this.expose = expose.bind(null, this) as any
@@ -1023,9 +1018,7 @@ export class VaporComponentInstance<
     // Snapshot raw parent inputs before creating proxies so delayed reads from
     // v-once children cannot observe later parent updates.
     this.rawProps =
-      this.isOnce && rawProps
-        ? snapshotRawProps(rawProps)
-        : rawProps || EMPTY_OBJ
+      once && rawProps ? snapshotRawProps(rawProps) : rawProps || EMPTY_OBJ
     // a custom element host mutates its props object after creation, so its
     // attrs key set is never static
     this.hasFallthrough = !!ce || hasFallthroughAttrs(comp, this.rawProps)
@@ -1044,7 +1037,10 @@ export class VaporComponentInstance<
     }
 
     // init slots
-    const normalizedRawSlots = normalizeRawSlots(rawSlots)
+    let normalizedRawSlots = normalizeRawSlots(rawSlots)
+    if (once && normalizedRawSlots && normalizedRawSlots.$) {
+      normalizedRawSlots = snapshotRawSlots(normalizedRawSlots)
+    }
     this.rawSlots = normalizedRawSlots || EMPTY_OBJ
     this.slots = (
       normalizedRawSlots
