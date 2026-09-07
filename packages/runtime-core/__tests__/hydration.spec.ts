@@ -1648,6 +1648,51 @@ describe('SSR hydration', () => {
     expect(onRootResolve).toHaveBeenCalledTimes(1)
   })
 
+  test('Suspense: remove an ancestor of an unresolved async component during hydration', async () => {
+    const { container, show, render, release, onRootResolve } =
+      await hydrateSuspenseApp(gate => {
+        const show = ref(true)
+        const render = vi.fn(() => h('span', 'child'))
+        const onRootResolve = vi.fn()
+
+        const AsyncChild = defineComponent({
+          async setup() {
+            await gate()
+            return render
+          },
+        })
+
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          content: () =>
+            h('div', [
+              show.value ? h('section', [h(AsyncChild)]) : null,
+              h('span', 'rest'),
+            ]),
+        })
+
+        return { App, show, render, onRootResolve }
+      })
+
+    const section = container.querySelector('section')!
+    const claimedNode = section.firstChild!
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    show.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><!----><span>rest</span></div>`)
+    // Removing the ancestor leaves the claimed node attached to that ancestor.
+    expect(section.parentNode).toBeNull()
+    expect(claimedNode.parentNode).toBe(section)
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><!----><span>rest</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+    expect(render).not.toHaveBeenCalled()
+  })
+
   test('Suspense: remove an unresolved async component after an update during hydration', async () => {
     const { container, ssrHtml, show, msg, release, onRootResolve } =
       await hydrateSuspenseApp(gate => {
