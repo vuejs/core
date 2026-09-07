@@ -1043,4 +1043,42 @@ describe('component: props', () => {
     expect.soft(data.value.readClass()).toBe('active')
     expect.soft(host.innerHTML).toBe('<div>active</div>')
   })
+
+  test.each([
+    ':style="[data.styles]"',
+    'v-bind="data.input"',
+    'v-bind="{}" :style="[data.styles]"',
+    ':[data.key]="[data.styles]"',
+  ])('v-once snapshots normalized declared style props (%s)', async binding => {
+    const styles = { color: 'red' }
+    const data = ref({
+      styles,
+      input: { style: [styles] },
+      key: 'style',
+      readStyle: () => ({ color: '' }),
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ style: Object })
+        _data.value.readStyle = () => props.style
+      </script>
+      <template><div>{{ props.style.color }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child v-once ${binding} /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(data.value.readStyle()).toEqual({ color: 'red' })
+    expect(host.innerHTML).toBe('<div>red</div>')
+
+    data.value.styles.color = 'blue'
+    await nextTick()
+
+    expect.soft(data.value.readStyle()).toEqual({ color: 'red' })
+    expect.soft(host.innerHTML).toBe('<div>red</div>')
+  })
 })
