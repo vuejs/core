@@ -2294,6 +2294,11 @@ function baseCreateRenderer(
 
     if (type === Static) {
       removeStaticNode(vnode)
+      // An opaque hydration placeholder cannot animate, but its removal must
+      // still release an out-in transition waiting for the claimed DOM.
+      if (transition && !transition.persisted && transition.afterLeave) {
+        transition.afterLeave()
+      }
       return
     }
 

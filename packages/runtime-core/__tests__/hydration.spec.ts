@@ -1724,6 +1724,45 @@ describe('SSR hydration', () => {
     expect(onRootResolve).toHaveBeenCalledTimes(1)
   })
 
+  test('Suspense: finish out-in transition from a fragment hydration placeholder', async () => {
+    const { container, ssrHtml, route, release, onRootResolve, onLeave } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onRootResolve = vi.fn()
+        const onLeave = vi.fn((el: Element, done: () => void) => done())
+        const PageA = defineComponent({
+          async setup() {
+            await gate()
+            return compileToFunction('<!--before--><div>page a</div>')
+          },
+        })
+        const PageB = defineComponent({
+          setup: () => () => h('div', 'page b'),
+        })
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          transition: { mode: 'out-in', css: false, onLeave },
+          content: () => (route.value === 'a' ? h(PageA) : h(PageB)),
+        })
+
+        return { App, route, onRootResolve, onLeave }
+      })
+
+    expect(ssrHtml).toBe(`<!--[--><!--before--><div>page a</div><!--]-->`)
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>page b</div>`)
+    expect(onLeave).not.toHaveBeenCalled()
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div>page b</div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
   // a component whose async setup() is still pending can be unmounted in
   // place while its boundary keeps hydrating (e.g. a v-if inside the pending
   // branch). its claimed DOM is torn down through the placeholder, but
