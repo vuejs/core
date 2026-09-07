@@ -3,6 +3,8 @@
  */
 
 import {
+  type Component,
+  Fragment,
   type ObjectDirective,
   Suspense,
   Teleport,
@@ -74,6 +76,44 @@ function mountWithHydration(html: string, render: () => any) {
 const triggerEvent = (type: string, el: Element) => {
   const event = new Event(type)
   el.dispatchEvent(event)
+}
+
+type SuspenseGate = (name?: string) => Promise<void>
+
+/**
+ * The Suspense hydration tests below need the app twice: rendered on the server
+ * with every async gate already resolved, then hydrated over that markup with
+ * the gates held open, so the boundary stays pending for as long as the test
+ * needs. `makeApp` is called once per side; whatever it returns next to `App`
+ * (refs, spies) is the client side's, and `release(name)` settles one gate.
+ */
+async function hydrateSuspenseApp<S extends object>(
+  makeApp: (gate: SuspenseGate) => { App: Component } & S,
+): Promise<
+  {
+    container: HTMLElement
+    ssrHtml: string
+    release: (name?: string) => void
+  } & S
+> {
+  const ssrHtml = await renderToString(h(makeApp(() => Promise.resolve()).App))
+  const container = document.createElement('div')
+  container.innerHTML = ssrHtml
+
+  const held: Record<string, Promise<void>> = {}
+  const release: Record<string, () => void> = {}
+  const client = makeApp(
+    (name = 'default') =>
+      (held[name] ||= new Promise<void>(r => (release[name] = r))),
+  )
+  createSSRApp(client.App).mount(container)
+  await nextTick()
+  return {
+    ...client,
+    container,
+    ssrHtml,
+    release: (name = 'default') => release[name](),
+  }
 }
 
 describe('SSR hydration', () => {
@@ -1048,6 +1088,67 @@ describe('SSR hydration', () => {
     triggerEvent('click', container.querySelector('span')!)
     await nextTick()
     expect(container.innerHTML).toBe(`<span>1</span>`)
+  })
+
+  // a same-root-type update to a hydrating suspense used to patch against the
+  // detached hiddenContainer while the anchors come from the live SSR DOM, so
+  // inserting a node threw. the pending branch of a hydrating boundary lives
+  // in the real container (its DOM was adopted in place and resolving does
+  // not move it), so it must be patched there - and the in-place patch must
+  // not resolve the still-hydrating boundary
+  test('Suspense: update the pending branch of a hydrating suspense in place', async () => {
+    const { container, ssrHtml, items, release, onResolve } =
+      await hydrateSuspenseApp(gate => {
+        const items = ref(['one', 'two'])
+        const onResolve = vi.fn()
+
+        const AsyncChild = defineComponent({
+          async setup() {
+            await gate()
+            return () => h('div', 'async child')
+          },
+        })
+
+        const App = defineComponent({
+          setup() {
+            return () =>
+              h(
+                Suspense,
+                { onResolve },
+                {
+                  default: () =>
+                    h(Fragment, [
+                      ...items.value.map(i => h('div', { key: i }, i)),
+                      h(AsyncChild),
+                    ]),
+                },
+              )
+          },
+        })
+
+        return { App, items, onResolve }
+      })
+
+    expect(ssrHtml).toBe(
+      `<!--[--><div>one</div><div>two</div><div>async child</div><!--]-->`,
+    )
+    expect(onResolve).not.toHaveBeenCalled()
+
+    // insert a keyed child while the boundary is still hydrating: the node
+    // must land in the live DOM, next to the still-pending async child
+    items.value = ['one', 'two', 'three']
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><div>one</div><div>two</div><div>three</div><div>async child</div><!--]-->`,
+    )
+    expect(onResolve).not.toHaveBeenCalled()
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(
+      `<!--[--><div>one</div><div>two</div><div>three</div><div>async child</div><!--]-->`,
+    )
+    expect(onResolve).toHaveBeenCalledTimes(1)
   })
 
   test('Suspense (full integration)', async () => {

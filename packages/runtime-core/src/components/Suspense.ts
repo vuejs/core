@@ -249,7 +249,8 @@ function patchSuspense(
       patch(
         pendingBranch,
         newBranch,
-        suspense.hiddenContainer,
+        // a hydrating pending branch is adopted SSR DOM, already in place
+        isHydrating ? container : suspense.hiddenContainer,
         null,
         parentComponent,
         suspense,
