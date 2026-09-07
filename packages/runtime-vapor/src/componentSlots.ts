@@ -105,17 +105,19 @@ export function normalizeRawSlots(
  * live; the child re-runs them on its own updates.
  */
 export function snapshotRawSlots(rawSlots: RawSlots): RawSlots {
+  const dynamicSources = rawSlots.$
+  if (!dynamicSources) return rawSlots
   const snapshot: RawSlots = {}
   for (const key in rawSlots) {
     if (key !== '$') snapshot[key] = rawSlots[key]
   }
-  for (const source of rawSlots.$!) {
+  for (const source of dynamicSources) {
     if (isFunction(source)) {
       const slot = withSlotOwner(rawSlots, () => source())
-      if (slot) {
-        for (const s of isArray(slot) ? slot : [slot]) {
-          snapshot[String(s.name)] = s.fn
-        }
+      if (isArray(slot)) {
+        for (const s of slot) snapshot[String(s.name)] = s.fn
+      } else if (slot) {
+        snapshot[String(slot.name)] = slot.fn
       }
     } else {
       for (const key in source) snapshot[key] = source[key]

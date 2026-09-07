@@ -212,7 +212,6 @@ export function compile(
 }
 
 export interface ParityResult {
-  before: string
   after: string
   text: string
 }
@@ -220,8 +219,9 @@ export interface ParityResult {
 /**
  * Mount the same SFC sources as a vdom app and as a vapor app in turn
  * (`srcs.App` is the root; the rest register on `_components` in order),
- * run `act`, and return each mode's html before/after plus the final text.
- * Sources use plain `<script setup>`; the mode comes from the compile option.
+ * run `act`, and return each mode's final html and text. Sources without a
+ * `<script>` get a plain `<script setup>` so the mode comes from the compile
+ * option (`compile()` would inject `<script vapor>`, which forces vapor).
  * `extra` components are shared by both modes as given.
  */
 export async function renderParity(
@@ -250,11 +250,9 @@ export async function renderParity(
     const root = document.createElement('div')
     const app = vapor ? createVaporApp(App) : createApp(App)
     app.use(vaporInteropPlugin).mount(root)
-    const before = root.innerHTML
     await act(data, root)
     await runtimeDom.nextTick()
     results[vapor ? 'vapor' : 'vdom'] = {
-      before,
       after: root.innerHTML,
       text: root.textContent!,
     }

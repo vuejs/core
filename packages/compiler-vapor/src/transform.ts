@@ -32,8 +32,8 @@ import {
   isBlockOperation,
 } from './ir'
 import {
-  isBuiltInComponent,
   isConstantExpression,
+  isParentRenderedBuiltIn,
   isStaticExpression,
   isTransitionNode,
 } from './utils'
@@ -634,11 +634,10 @@ export function getNextId(
   return n
 }
 
-// Teleport is not a boundary: its content renders in place.
 function isComponentBoundary(node: AllNode): boolean {
   return (
     node.type === NodeTypes.ELEMENT &&
     node.tagType === ElementTypes.COMPONENT &&
-    isBuiltInComponent(node.tag) !== 'VaporTeleport'
+    !isParentRenderedBuiltIn(node.tag)
   )
 }

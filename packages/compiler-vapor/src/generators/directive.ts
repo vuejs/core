@@ -20,14 +20,18 @@ export function genBuiltinDirective(
   oper: DirectiveIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
+  let call: CodeFragment[]
   switch (oper.name) {
     case 'show':
-      return genVShow(oper, context)
+      call = genVShow(oper, context)
+      break
     case 'model':
-      return genVModel(oper, context)
+      call = genVModel(oper, context)
+      break
     default:
       return []
   }
+  return [NEWLINE, ...genOnce(call, oper.once, context)]
 }
 
 /**

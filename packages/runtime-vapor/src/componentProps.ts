@@ -227,12 +227,12 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
   // keeps prop defaults lazy while preserving v-once input semantics.
   // Sources are read directly: the caller is the instance that defined them,
   // and a one-time read has no use for the computed `resolveFunctionSource`
-  // would allocate.
+  // would allocate. Values are stored plain; only a function value needs a
+  // getter so readers do not invoke it.
   const snapshot: RawProps = Object.create(null)
   for (const key in rawProps) {
     if (key !== '$') {
-      const value = readSource(rawProps[key])
-      snapshot[key] = () => value
+      snapshot[key] = freezeValue(readSource(rawProps[key]))
     }
   }
 
@@ -244,16 +244,14 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
     for (let i = 0; i < dynamicSources.length; i++) {
       const source = dynamicSources[i]
       const isDynamic = isFunction(source)
-      const resolved =
-        (isDynamic
-          ? (source as () => Record<string, unknown>)()
-          : (source as Record<string, unknown>)) || EMPTY_OBJ
+      const resolved = readSource(source) || EMPTY_OBJ
       // Object sources are read without a per-source computed, so a resolved
       // function source is stored in that shape.
       const value: Record<string, unknown> = Object.create(null)
       for (const key in resolved) {
-        const v = isDynamic ? resolved[key] : readSource(resolved[key])
-        value[key] = () => v
+        value[key] = freezeValue(
+          isDynamic ? resolved[key] : readSource(resolved[key]),
+        )
       }
       snapshotSources[i] = value
     }
@@ -271,6 +269,10 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
 
 function readSource<T>(source: T | (() => T)): T {
   return isFunction(source) ? (source as () => T)() : source
+}
+
+function freezeValue(value: unknown): unknown {
+  return isFunction(value) ? () => value : value
 }
 
 function stabilizeDynamicSourceValue<T>(oldValue: T | undefined, value: T): T {

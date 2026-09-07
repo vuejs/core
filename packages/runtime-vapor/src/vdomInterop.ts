@@ -121,7 +121,7 @@ import {
 } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
-import { inOnce, withOnce } from './once'
+import { inOnce, setInOnce, withOnce } from './once'
 import { renderEffect } from './renderEffect'
 import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -349,6 +349,10 @@ const vaporInteropImpl: VaporInVdomInterface = {
     container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
+    // vdom is a boundary: a vapor component it creates is not part of the
+    // v-once extent the vdom render itself may be running in.
+    const prevOnce = inOnce
+    if (prevOnce) setInOnce(false)
 
     const propsRef = shallowRef(filterReservedProps(vnode.props))
     const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
@@ -377,6 +381,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       // VDOM interop owns the explicit mount below
       true,
     ))
+    if (prevOnce) setInOnce(true)
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
     const vnodeHookState = ensureVNodeHookState(instance, vnode)
@@ -1149,14 +1154,7 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    if (inOnce) {
-      withOnce(
-        () => hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds),
-        false,
-      )
-    } else {
-      hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
-    }
+    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
     onScopeDispose(unmount, true)
     isMounted = true
     syncNodes()
@@ -1195,34 +1193,16 @@ function mountVNode(
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
         namespace = getContainerType(parentNode as Element)
-        if (inOnce) {
-          // Component vnodes render here; see createVDOMComponent.
-          withOnce(
-            () =>
-              internals.p(
-                null,
-                vnode,
-                parentNode,
-                anchor,
-                parentComponent as any,
-                operationSuspense,
-                namespace,
-                frag.slotScopeIds,
-              ),
-            false,
-          )
-        } else {
-          internals.p(
-            null,
-            vnode,
-            parentNode,
-            anchor,
-            parentComponent as any,
-            operationSuspense,
-            namespace,
-            frag.slotScopeIds,
-          )
-        }
+        internals.p(
+          null,
+          vnode,
+          parentNode,
+          anchor,
+          parentComponent as any,
+          operationSuspense,
+          namespace,
+          frag.slotScopeIds,
+        )
         onScopeDispose(unmount, true)
         isMounted = true
       } else {
@@ -1429,14 +1409,7 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    if (inOnce) {
-      withOnce(
-        () => hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds),
-        false,
-      )
-    } else {
-      hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
-    }
+    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
     isMounted = true
     syncNodes()
   }
@@ -1470,33 +1443,15 @@ function createVDOMComponent(
       simpleSetCurrentInstance(parentComponent)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
-        if (inOnce) {
-          // A VDOM component is a boundary: its own render must create live
-          // effects even when it is mounted inside a v-once extent.
-          withOnce(
-            () =>
-              internals.mt(
-                vnode,
-                parentNode,
-                anchor,
-                parentComponent as any,
-                operationSuspense,
-                getContainerType(parentNode as Element),
-                false,
-              ),
-            false,
-          )
-        } else {
-          internals.mt(
-            vnode,
-            parentNode,
-            anchor,
-            parentComponent as any,
-            operationSuspense,
-            getContainerType(parentNode as Element),
-            false,
-          )
-        }
+        internals.mt(
+          vnode,
+          parentNode,
+          anchor,
+          parentComponent as any,
+          operationSuspense,
+          getContainerType(parentNode as Element),
+          false,
+        )
         // set ref
         if (rawRef) vdomSetRef(rawRef, null, operationSuspense, vnode)
         isMounted = true
@@ -3029,9 +2984,11 @@ function invokeVaporSlot(vnode: VNode): Block {
   const scope = effectScope()
   vnode.vs!.scope = scope
   try {
-    return scope.run(() =>
-      vnode.vs!.slot(new Proxy(propsRef, vaporSlotPropsProxyHandler)),
-    )!
+    const run = () =>
+      vnode.vs!.slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+    // vdom is a boundary: the slot it invokes runs live even when the vdom
+    // render sits inside a v-once extent.
+    return (inOnce ? withOnce(() => scope.run(run), false) : scope.run(run))!
   } catch (e) {
     vnode.vs!.scope = undefined
     scope.stop()

@@ -8,6 +8,10 @@
  */
 export let inOnce = false
 
+export function setInOnce(value: boolean): void {
+  inOnce = value
+}
+
 export function withOnce<T>(fn: () => T, value = true): T {
   if (inOnce === value) return fn()
   const prev = inOnce

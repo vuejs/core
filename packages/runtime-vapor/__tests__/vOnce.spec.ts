@@ -14,6 +14,21 @@ const vDir = (el: Element, b: any) => {
 const withDir = (template: string) =>
   `<script setup>const data = _data; const components = _components; const vDir = components.vDir</script>${template}`
 
+// The input's `.value` after a programmatic model change, per mode.
+async function inputValues(srcs: Record<string, string>): Promise<string[]> {
+  const values: string[] = []
+  await renderParity(
+    srcs,
+    () => ref({ text: 'a' }),
+    async (data, root) => {
+      data.value.text = 'b'
+      await nextTick()
+      values.push((root.querySelector('input') as HTMLInputElement).value)
+    },
+  )
+  return values
+}
+
 describe('v-once', () => {
   describe('directive helpers inside a compiled v-once region', () => {
     test('v-show on an element and on a component', async () => {
@@ -34,17 +49,11 @@ describe('v-once', () => {
     })
 
     test('native v-model', async () => {
-      const values: string[] = []
-      await renderParity(
-        { App: `<template><input v-model="data.text" v-once></template>` },
-        () => ref({ text: 'a' }),
-        async (data, root) => {
-          data.value.text = 'b'
-          await nextTick()
-          values.push((root.querySelector('input') as HTMLInputElement).value)
-        },
-      )
-      expect(values).toEqual(['a', 'a'])
+      expect(
+        await inputValues({
+          App: `<template><input v-model="data.text" v-once></template>`,
+        }),
+      ).toEqual(['a', 'a'])
     })
 
     test('custom directive', async () => {
@@ -97,20 +106,12 @@ describe('v-once', () => {
         '<div><div data-v="a">x</div><!--slot--></div>',
       )
 
-      const values: string[] = []
-      await renderParity(
-        {
+      expect(
+        await inputValues({
           Child,
           App: `<template><components.Child><input v-model="data.text"></components.Child></template>`,
-        },
-        () => ref({ text: 'a' }),
-        async (data, root) => {
-          data.value.text = 'b'
-          await nextTick()
-          values.push((root.querySelector('input') as HTMLInputElement).value)
-        },
-      )
-      expect(values).toEqual(['a', 'a'])
+        }),
+      ).toEqual(['a', 'a'])
     })
   })
 
@@ -158,6 +159,22 @@ describe('v-once', () => {
       )
       expect(vdom.text).toBe('ab')
       expect(vapor.text).toBe(vdom.text)
+    })
+
+    test('children of parent-rendered built-ins stay frozen', async () => {
+      const Leaf = `<script setup>const props = defineProps(['label'])</script><template><i>{{ props.label }}</i></template>`
+      const keepAlive = await renderParity(
+        {
+          Leaf,
+          App: `<template><div><KeepAlive v-once><components.Leaf :label="data.msg"/></KeepAlive></div></template>`,
+        },
+        () => ref({ msg: 'a' }),
+        data => {
+          data.value.msg = 'b'
+        },
+      )
+      expect(keepAlive.vdom.text).toBe('a')
+      expect(keepAlive.vapor.text).toBe('a')
     })
 
     test('the slot set stays frozen', async () => {

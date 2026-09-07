@@ -147,6 +147,19 @@ describe('compiler: v-once', () => {
     expect(code).contains('_renderEffect(() => _setText(')
   })
 
+  test('children of parent-rendered built-ins stay static', () => {
+    for (const tag of ['KeepAlive', 'Teleport', 'Suspense']) {
+      const { code } = compileWithOnce(
+        `<${tag} v-once><div>{{ msg }}</div></${tag}>`,
+      )
+      expect(code).not.contains('renderEffect')
+    }
+    const { code } = compileWithOnce(
+      `<Transition v-once><div>{{ msg }}</div></Transition>`,
+    )
+    expect(code).contains('renderEffect')
+  })
+
   test('on slot outlet', () => {
     const { ir, code } = compileWithOnce(`<div><slot v-once /></div>`)
     expect(code).toMatchSnapshot()

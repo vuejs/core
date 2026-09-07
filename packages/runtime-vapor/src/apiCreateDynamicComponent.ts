@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   Fragment,
+  type GenericAppContext,
   NULL_DYNAMIC_COMPONENT,
   type VNode,
   currentInstance,
@@ -62,18 +63,11 @@ export function createDynamicComponent(
 
   const normalizedRawSlots = normalizeRawSlots(rawSlots)
   const scopeOwner = getScopeOwner()
-  const getAppContext = () =>
-    (currentInstance && currentInstance.appContext) || emptyContext
-
-  const resolve = (value: any, appContext: ReturnType<typeof getAppContext>) =>
-    isBlock(value) || (isInteropEnabled && appContext.vdom && isVNode(value))
-      ? value
-      : withScopeOwner(scopeOwner, () => resolveDynamicComponent(value))
 
   const render = (
     value: any,
     resolved: any,
-    appContext: ReturnType<typeof getAppContext>,
+    appContext: GenericAppContext,
   ): Block => {
     // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
     if (isBlock(value)) return value
@@ -129,7 +123,11 @@ export function createDynamicComponent(
     const hydrationCursor = isHydrating ? enterHydrationCursor() : null
     const value = getter()
     const appContext = getAppContext()
-    const block = render(value, resolve(value, appContext), appContext)
+    const block = render(
+      value,
+      resolveValue(value, appContext, scopeOwner),
+      appContext,
+    )
     finishBlockCreation(
       block,
       undefined,
@@ -176,7 +174,7 @@ export function createDynamicComponent(
     // instead would put a build-dependent node (dev comment / prod text) into
     // the semantic content tree — prod hydration then mistakes the detached
     // text for valid content and crashes deriving an anchor from it.
-    const resolved = resolve(value, appContext)
+    const resolved = resolveValue(value, appContext, scopeOwner)
     if (resolved === NULL_DYNAMIC_COMPONENT) {
       frag.update(undefined, resolved)
       return
@@ -192,6 +190,23 @@ export function createDynamicComponent(
     _insertionAnchor,
   )
   return frag
+}
+
+function getAppContext(): GenericAppContext {
+  return (currentInstance && currentInstance.appContext) || emptyContext
+}
+
+// Blocks and vnodes are rendered as they are; anything else is a component
+// definition or a name to resolve in the slot owner's context.
+function resolveValue(
+  value: any,
+  appContext: GenericAppContext,
+  scopeOwner: VaporComponentInstance | null,
+): any {
+  return isBlock(value) ||
+    (isInteropEnabled && appContext.vdom && isVNode(value))
+    ? value
+    : withScopeOwner(scopeOwner, () => resolveDynamicComponent(value))
 }
 
 function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {

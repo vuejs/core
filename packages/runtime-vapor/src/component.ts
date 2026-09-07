@@ -1038,7 +1038,7 @@ export class VaporComponentInstance<
 
     // init slots
     let normalizedRawSlots = normalizeRawSlots(rawSlots)
-    if (once && normalizedRawSlots && normalizedRawSlots.$) {
+    if (once && normalizedRawSlots) {
       normalizedRawSlots = snapshotRawSlots(normalizedRawSlots)
     }
     this.rawSlots = normalizedRawSlots || EMPTY_OBJ
