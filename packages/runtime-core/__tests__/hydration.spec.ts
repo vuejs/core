@@ -4,6 +4,7 @@
 
 import {
   type Component,
+  Fragment,
   type ObjectDirective,
   Suspense,
   Teleport,
@@ -1349,6 +1350,67 @@ describe('SSR hydration', () => {
       `<div><span>page b</span><div>target child</div></div>`,
     )
     expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
+  // a same-root-type update to a hydrating suspense used to patch against the
+  // detached hiddenContainer while the anchors come from the live SSR DOM, so
+  // inserting a node threw. the pending branch of a hydrating boundary lives
+  // in the real container (its DOM was adopted in place and resolving does
+  // not move it), so it must be patched there - and the in-place patch must
+  // not resolve the still-hydrating boundary
+  test('Suspense: update the pending branch of a hydrating suspense in place', async () => {
+    const { container, ssrHtml, items, release, onResolve } =
+      await hydrateSuspenseApp(gate => {
+        const items = ref(['one', 'two'])
+        const onResolve = vi.fn()
+
+        const AsyncChild = defineComponent({
+          async setup() {
+            await gate()
+            return () => h('div', 'async child')
+          },
+        })
+
+        const App = defineComponent({
+          setup() {
+            return () =>
+              h(
+                Suspense,
+                { onResolve },
+                {
+                  default: () =>
+                    h(Fragment, [
+                      ...items.value.map(i => h('div', { key: i }, i)),
+                      h(AsyncChild),
+                    ]),
+                },
+              )
+          },
+        })
+
+        return { App, items, onResolve }
+      })
+
+    expect(ssrHtml).toBe(
+      `<!--[--><div>one</div><div>two</div><div>async child</div><!--]-->`,
+    )
+    expect(onResolve).not.toHaveBeenCalled()
+
+    // insert a keyed child while the boundary is still hydrating: the node
+    // must land in the live DOM, next to the still-pending async child
+    items.value = ['one', 'two', 'three']
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<!--[--><div>one</div><div>two</div><div>three</div><div>async child</div><!--]-->`,
+    )
+    expect(onResolve).not.toHaveBeenCalled()
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(
+      `<!--[--><div>one</div><div>two</div><div>three</div><div>async child</div><!--]-->`,
+    )
+    expect(onResolve).toHaveBeenCalledTimes(1)
   })
 
   test('Suspense (full integration)', async () => {
