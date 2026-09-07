@@ -7223,4 +7223,38 @@ describe('vdomInterop', () => {
       expect(`returned non-block value`).toHaveBeenWarned()
     })
   })
+
+  // #15442
+  test.each([true, false])(
+    'should merge component listeners across interop (Vapor parent: %s)',
+    vaporParent => {
+      const onStatic = vi.fn()
+      const onObject = vi.fn()
+      const data = ref({ onStatic, listeners: { click: onObject } })
+      const Child = compile(
+        `<script setup ${vaporParent ? '' : 'vapor'}>
+          defineEmits(['click'])
+        </script>
+        <template><button @click="$emit('click')">click</button></template>`,
+        ref(null),
+        {},
+        { vapor: !vaporParent },
+      )
+      const Parent = compile(
+        `<script setup ${vaporParent ? 'vapor' : ''}>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child @click="data.onStatic" v-on="data.listeners" /></template>`,
+        data,
+        { Child },
+        { vapor: vaporParent },
+      )
+      const { host } = define(Parent).render()
+      const button = host.querySelector('button')!
+      button.click()
+      expect(onStatic).toHaveBeenCalledTimes(1)
+      expect(onObject).toHaveBeenCalledTimes(1)
+    },
+  )
 })

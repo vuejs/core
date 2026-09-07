@@ -7,6 +7,7 @@ import {
   isArray,
   isFunction,
   isObject,
+  isOn,
   isPlainObject,
   isString,
   normalizeClass,
@@ -525,9 +526,11 @@ export function getPropsProxyHandlers(
 
 export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
   if (key === '$') return
-  // need special merging behavior for class & style
-  const merged = key === 'class' || key === 'style' ? ([] as any[]) : undefined
   const dynamicSources = rawProps.$
+  const isEvent = dynamicSources && isString(key) && isOn(key)
+  // Class, style and event listeners merge across prop sources.
+  const merged =
+    key === 'class' || key === 'style' || isEvent ? ([] as any[]) : undefined
   if (dynamicSources) {
     let i = dynamicSources.length
     let source, isDynamic
@@ -556,8 +559,18 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     }
   }
   if (merged && merged.length) {
-    return merged.reverse()
+    merged.reverse()
+    return isEvent ? merged.reduce(mergeEventHandlers) : merged
   }
+}
+
+function mergeEventHandlers(existing: unknown, incoming: unknown): unknown {
+  if (!existing) return incoming
+  return incoming &&
+    existing !== incoming &&
+    !(isArray(existing) && existing.includes(incoming))
+    ? ([] as unknown[]).concat(existing, incoming)
+    : existing
 }
 
 export function hasAttrFromRawProps(rawProps: RawProps, key: string): boolean {
@@ -686,6 +699,8 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
           } else {
             mergedRawProps[key] = [existing, value]
           }
+        } else if (isOn(key)) {
+          mergedRawProps[key] = mergeEventHandlers(mergedRawProps[key], value)
         } else {
           mergedRawProps[key] = value
         }
