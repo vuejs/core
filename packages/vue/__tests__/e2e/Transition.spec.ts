@@ -3712,7 +3712,7 @@ describe('e2e: Transition', () => {
       }).mount('#app')
     })
 
-    // if transition starts while there's v-leave-active added along with v-leave-from, its bad, it has to start when it doesnt have the v-leave-from
+    // if transition starts while there's v-leave-active added along with v-leave-from, it's bad, it has to start when it doesn't have the v-leave-from
 
     // enter
     await classWhenTransitionStart()

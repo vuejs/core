@@ -255,7 +255,8 @@ function patchSuspense(
       patch(
         pendingBranch,
         newBranch,
-        suspense.hiddenContainer,
+        // a hydrating pending branch is adopted SSR DOM, already in place
+        isHydrating ? container : suspense.hiddenContainer,
         null,
         parentComponent,
         suspense,
@@ -653,6 +654,7 @@ function createSuspenseBoundary(
           parentSuspense.pendingBranch &&
           parentSuspenseId === parentSuspense.pendingId
         ) {
+          parentSuspenseId = undefined
           parentSuspense.deps--
           if (parentSuspense.deps === 0 && !sync) {
             parentSuspense.resolve()
@@ -755,9 +757,10 @@ function createSuspenseBoundary(
           // still be set when Suspense re-enters another component's render path.
           // Clear it first.
           unsetCurrentInstance()
-          // removed in place while still pending: `isUnmounted` is only set
-          // on resolve, so bail here but still release the dep.
-          if (hydratedEl && !parentNode(hydratedEl)) {
+          // The scope is stopped synchronously on unmount, while `isUnmounted`
+          // is deferred until the boundary resolves. Bail but still release the
+          // dep even if the claimed DOM remains attached to a removed ancestor.
+          if (hydratedEl && !instance.scope.active) {
             if (isInPendingSuspense && --suspense.deps === 0) {
               suspense.resolve()
             }
