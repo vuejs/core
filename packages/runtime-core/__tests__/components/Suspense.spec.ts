@@ -16,6 +16,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onBeforeUnmount,
   onErrorCaptured,
   onMounted,
   onUnmounted,
@@ -493,121 +494,223 @@ describe('Suspense', () => {
   })
 
   // #10042
-  test('unmount suspensible child before parent suspense resolve', async () => {
-    const calls: string[] = []
+  test.each([false, true])(
+    'keep nested suspense content until its pending parent resolves (intermediate boundary: %s)',
+    async intermediate => {
+      const calls: string[] = []
+      const innerBeforeUnmount = vi.fn()
 
-    const OuterB = defineAsyncComponent(
-      {
-        setup: () => {
-          onMounted(() => {
-            calls.push('OuterB mounted')
-          })
-          onUnmounted(() => {
-            calls.push('OuterB unmounted')
-          })
-          return () => h('div', 'OuterB')
+      const OuterB = defineAsyncComponent(
+        {
+          setup: () => {
+            onMounted(() => {
+              calls.push('OuterB mounted')
+            })
+            onUnmounted(() => {
+              calls.push('OuterB unmounted')
+            })
+            return () => h('div', 'OuterB')
+          },
         },
-      },
-      10,
-    )
+        10,
+      )
 
-    const OuterA = defineAsyncComponent(
-      {
-        setup: () => {
-          onMounted(() => {
-            calls.push('OuterA mounted')
-          })
-          onUnmounted(() => {
-            calls.push('OuterA unmounted')
-          })
-          return () =>
-            h('div', null, [
-              h('div', 'OuterA'),
+      const OuterA = defineAsyncComponent(
+        {
+          setup: () => {
+            onMounted(() => {
+              calls.push('OuterA mounted')
+            })
+            onUnmounted(() => {
+              calls.push('OuterA unmounted')
+            })
+            const nestedView = () =>
               h(RouterView, null, {
                 default: ({ Component }: any) => [
                   Component
                     ? h(
                         Suspense,
                         { suspensible: true },
-                        {
-                          default: () => h(Component),
-                        },
+                        { default: () => h(Component) },
                       )
                     : null,
                 ],
-              }),
-            ])
+              })
+            return () =>
+              h('div', null, [
+                h('div', 'OuterA'),
+                intermediate
+                  ? h(Suspense, { suspensible: true }, { default: nestedView })
+                  : nestedView(),
+              ])
+          },
         },
-      },
-      10,
-    )
+        10,
+      )
 
-    const InnerA = defineAsyncComponent(
-      {
-        setup: () => {
-          onMounted(() => {
-            calls.push('InnerA mounted')
-          })
-          onUnmounted(() => {
-            calls.push('InnerA unmounted')
-          })
-          return () => h('div', 'InnerA')
+      const InnerA = defineAsyncComponent(
+        {
+          setup: () => {
+            onBeforeUnmount(innerBeforeUnmount)
+            onMounted(() => {
+              calls.push('InnerA mounted')
+            })
+            onUnmounted(() => {
+              calls.push('InnerA unmounted')
+            })
+            return () => h('div', 'InnerA')
+          },
         },
-      },
-      5,
-    )
+        5,
+      )
 
-    const toggle = ref(true)
-    const route = computed(() => {
-      return toggle.value ? [OuterA, InnerA] : [OuterB]
-    })
+      const toggle = ref(true)
+      const route = computed(() => {
+        return toggle.value ? [OuterA, InnerA] : [OuterB]
+      })
 
-    const Comp = {
+      const Comp = {
+        setup() {
+          provide('route', route)
+          return () =>
+            h(RouterView, null, {
+              default: ({ Component }: any) => [
+                h(Suspense, null, {
+                  default: () => h(Component),
+                }),
+              ],
+            })
+        },
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+      await Promise.all(deps)
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<!---->`)
+
+      await Promise.all(deps)
+      await nextTick()
+      expect(serializeInner(root)).toBe(
+        `<div><div>OuterA</div><div>InnerA</div></div>`,
+      )
+      expect(calls).toEqual([`OuterA mounted`, 'InnerA mounted'])
+
+      deps.length = 0
+      calls.length = 0
+      toggle.value = false
+      await nextTick()
+
+      // The old nested route stays mounted while the new outer route is pending.
+      expect(serializeInner(root)).toBe(
+        `<div><div>OuterA</div><div>InnerA</div></div>`,
+      )
+      expect(calls).toEqual([])
+      expect(innerBeforeUnmount).not.toHaveBeenCalled()
+
+      await Promise.all(deps)
+      await nextTick()
+      expect(serializeInner(root)).toBe(`<div>OuterB</div>`)
+      expect(innerBeforeUnmount).toHaveBeenCalledTimes(1)
+      expect(calls).toEqual([
+        'OuterB mounted',
+        'InnerA unmounted',
+        'OuterA unmounted',
+      ])
+    },
+  )
+
+  test('replay retained boundary updates when a replaced pending branch is cancelled', async () => {
+    const show = ref(true)
+    const count = ref(0)
+    const unmounted = vi.fn()
+    const Child = {
       setup() {
-        provide('route', route)
-        return () =>
-          h(RouterView, null, {
-            default: ({ Component }: any) => [
-              h(Suspense, null, {
-                default: () => h(Component),
-              }),
-            ],
-          })
+        onUnmounted(unmounted)
+        return () => h('p', 'child')
       },
     }
-
+    const Nested = {
+      props: ['count'],
+      setup: () => () =>
+        show.value
+          ? h(Suspense, { suspensible: true }, { default: () => h(Child) })
+          : null,
+    }
+    const PageA = {
+      setup: () => () =>
+        h('div', [h('span', count.value), h(Nested, { count: count.value })]),
+    }
+    const PageB = defineAsyncComponent({ render: () => h('p', 'b') })
+    const PageC = defineAsyncComponent({ render: () => h('p', 'c') })
+    const page = shallowRef<ComponentOptions>(PageA)
+    const App = {
+      setup: () => () => h(Suspense, null, { default: () => h(page.value) }),
+    }
     const root = nodeOps.createElement('div')
-    render(h(Comp), root)
-    await Promise.all(deps)
+    render(h(App), root)
+
+    page.value = PageB
     await nextTick()
-    expect(serializeInner(root)).toBe(`<!---->`)
+    show.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><span>0</span><p>child</p></div>')
+
+    // Ordinary updates stay live, including parent-driven component updates.
+    count.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><span>1</span><p>child</p></div>')
+
+    page.value = PageC
+    await nextTick()
+    page.value = PageA
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div><span>1</span><!----></div>')
+    expect(unmounted).toHaveBeenCalledTimes(1)
 
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(
-      `<div><div>OuterA</div><div>InnerA</div></div>`,
-    )
-    expect(calls).toEqual([`OuterA mounted`, 'InnerA mounted'])
-
-    deps.length = 0
-    calls.length = 0
-    toggle.value = false
+    expect(serializeInner(root)).toBe('<div><span>1</span><!----></div>')
+    show.value = true
     await nextTick()
+    expect(serializeInner(root)).toBe('<div><span>1</span><p>child</p></div>')
+    render(null, root)
+  })
 
-    // expect not change
-    expect(serializeInner(root)).toBe(
-      `<div><div>OuterA</div><div>InnerA</div></div>`,
-    )
-    expect(calls).toEqual([])
-
+  test('do not defer boundary removal in the new pending branch', async () => {
+    const show = ref(true)
+    const unmounted = vi.fn()
+    const Child = {
+      setup() {
+        onBeforeUnmount(unmounted)
+        return () => h('p', 'child')
+      },
+    }
+    const Nested = {
+      setup: () => () =>
+        show.value
+          ? h(Suspense, { suspensible: true }, { default: () => h(Child) })
+          : null,
+    }
+    const Async = defineAsyncComponent({ render: () => h('span', 'async') })
+    const PageA = { render: () => h('p', 'a') }
+    const PageB = { render: () => h('div', [h(Nested), h(Async)]) }
+    const page = shallowRef<ComponentOptions>(PageA)
+    const App = {
+      setup: () => () => h(Suspense, null, { default: () => h(page.value) }),
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    page.value = PageB
+    await nextTick()
+    show.value = false
+    await nextTick()
+    expect(unmounted).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe('<p>a</p>')
     await Promise.all(deps)
     await nextTick()
-    expect(serializeInner(root)).toBe(`<div>OuterB</div>`)
-    expect(calls).toEqual([
-      'OuterB mounted',
-      'InnerA unmounted',
-      'OuterA unmounted',
-    ])
+    expect(serializeInner(root)).toBe('<div><!----><span>async</span></div>')
+    render(null, root)
   })
 
   test('unmount suspense after resolve', async () => {

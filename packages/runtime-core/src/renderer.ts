@@ -62,9 +62,9 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
-  hasSuspensibleChild,
   isSuspense,
   queueEffectWithSuspense,
+  queueSuspenseUpdate,
 } from './components/Suspense'
 import {
   TeleportEndKey,
@@ -1602,23 +1602,22 @@ function baseCreateRenderer(
     const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
     instance.scope.off()
 
-    const wrapUpdate = (update: () => void) => () => {
-      if (
-        __FEATURE_SUSPENSE__ &&
-        parentSuspense &&
-        parentSuspense.deps > 0 &&
-        instance.subTree &&
-        hasSuspensibleChild(instance.subTree)
-      ) {
-        parentSuspense.preEffects.push(update)
-      } else {
-        update()
-      }
-    }
-    const update = (instance.update = wrapUpdate(effect.run.bind(effect)))
-    const job: SchedulerJob = (instance.job = wrapUpdate(
-      effect.runIfDirty.bind(effect),
-    ))
+    const update = (instance.update =
+      __FEATURE_SUSPENSE__ && parentSuspense
+        ? () => {
+            if (queueSuspenseUpdate(instance)) {
+              if (instance.next) instance.next.el = instance.vnode.el
+              return
+            }
+            effect.run()
+          }
+        : effect.run.bind(effect))
+    const job: SchedulerJob = (instance.job =
+      __FEATURE_SUSPENSE__ && parentSuspense
+        ? () => {
+            if (instance.next || effect.dirty) update()
+          }
+        : effect.runIfDirty.bind(effect))
     job.i = instance
     job.id = instance.uid
     effect.scheduler = () => queueJob(job)
