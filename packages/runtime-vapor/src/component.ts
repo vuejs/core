@@ -287,10 +287,11 @@ export function createComponent(
   managedMount = false,
   ce?: (instance: VaporComponentInstance) => void,
 ): VaporComponentInstance {
-  // A component created while rendering a v-once slot should receive frozen
-  // parent inputs, but its own render effects should still be live.
+  // A component created while rendering a v-once region receives frozen
+  // parent inputs, but its own render effects stay live. A vdom-managed mount
+  // is a boundary of its own: the vdom render owns that component's inputs.
   const wasInOnce = inOnce
-  if (wasInOnce) once = true
+  if (wasInOnce && !managedMount) once = true
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor

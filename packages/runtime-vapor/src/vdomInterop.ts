@@ -121,7 +121,7 @@ import {
 } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
 import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
-import { inOnce, setInOnce, withOnce } from './once'
+import { inOnce, withOnce } from './once'
 import { renderEffect } from './renderEffect'
 import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -349,10 +349,6 @@ const vaporInteropImpl: VaporInVdomInterface = {
     container.insertBefore(selfAnchor, anchor)
     const prev = currentInstance
     simpleSetCurrentInstance(parentComponent)
-    // vdom is a boundary: a vapor component it creates is not part of the
-    // v-once extent the vdom render itself may be running in.
-    const prevOnce = inOnce
-    if (prevOnce) setInOnce(false)
 
     const propsRef = shallowRef(filterReservedProps(vnode.props))
     const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
@@ -381,7 +377,6 @@ const vaporInteropImpl: VaporInVdomInterface = {
       // VDOM interop owns the explicit mount below
       true,
     ))
-    if (prevOnce) setInOnce(true)
     instance.rawPropsRef = propsRef
     instance.rawSlotsRef = slotsRef
     const vnodeHookState = ensureVNodeHookState(instance, vnode)
