@@ -31,7 +31,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 
   // we assume v-model directives are always parsed
   // (not artificially created by a transform)
-  const rawExp = exp.loc.source
+  const rawExp = exp.loc.source.trim()
   const expString =
     exp.type === NodeTypes.SIMPLE_EXPRESSION ? exp.content : rawExp
 
@@ -48,6 +48,15 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     return createTransformProps()
   }
 
+  // const bindings are not writable.
+  if (
+    bindingType === BindingTypes.LITERAL_CONST ||
+    bindingType === BindingTypes.SETUP_CONST
+  ) {
+    context.onError(createCompilerError(ErrorCodes.X_V_MODEL_ON_CONST, exp.loc))
+    return createTransformProps()
+  }
+
   const maybeRef =
     !__BROWSER__ &&
     context.inline &&
@@ -55,10 +64,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       bindingType === BindingTypes.SETUP_REF ||
       bindingType === BindingTypes.SETUP_MAYBE_REF)
 
-  if (
-    !expString.trim() ||
-    (!isMemberExpression(expString, context) && !maybeRef)
-  ) {
+  if (!expString.trim() || (!isMemberExpression(exp, context) && !maybeRef)) {
     context.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc),
     )
@@ -134,6 +140,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   // modelModifiers: { foo: true, "bar-baz": true }
   if (dir.modifiers.length && node.tagType === ElementTypes.COMPONENT) {
     const modifiers = dir.modifiers
+      .map(m => m.content)
       .map(m => (isSimpleIdentifier(m) ? m : JSON.stringify(m)) + `: true`)
       .join(`, `)
     const modifiersKey = arg
@@ -148,7 +155,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
           `{ ${modifiers} }`,
           false,
           dir.loc,
-          ConstantTypes.CAN_HOIST,
+          ConstantTypes.CAN_CACHE,
         ),
       ),
     )

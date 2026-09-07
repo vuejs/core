@@ -39,7 +39,7 @@ export function processAwait(
   node: AwaitExpression,
   needSemi: boolean,
   isStatement: boolean,
-) {
+): void {
   const argumentStart =
     node.argument.extra && node.argument.extra.parenthesized
       ? (node.argument.extra.parenStart as number)

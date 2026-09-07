@@ -88,4 +88,38 @@ describe('runtime-dom: attrs patching', () => {
     expect(el2.dataset.test).toBe(undefined)
     expect(testvalue).toBe(obj)
   })
+
+  // #13946
+  test('sandbox should be handled as attribute even if property exists', () => {
+    const iframe = document.createElement('iframe') as any
+    let propSetCount = 0
+    // simulate sandbox property in jsdom environment
+    Object.defineProperty(iframe, 'sandbox', {
+      configurable: true,
+      enumerable: true,
+      get() {
+        return this._sandbox
+      },
+      set(v) {
+        propSetCount++
+        this._sandbox = v
+      },
+    })
+
+    patchProp(iframe, 'sandbox', null, 'allow-scripts')
+    expect(iframe.getAttribute('sandbox')).toBe('allow-scripts')
+    expect(propSetCount).toBe(0)
+
+    patchProp(iframe, 'sandbox', 'allow-scripts', null)
+    expect(iframe.hasAttribute('sandbox')).toBe(false)
+    expect(iframe.getAttribute('sandbox')).toBe(null)
+    expect(propSetCount).toBe(0)
+
+    patchProp(iframe, 'sandbox', null, '')
+    expect(iframe.getAttribute('sandbox')).toBe('')
+    expect(iframe.hasAttribute('sandbox')).toBe(true)
+    expect(propSetCount).toBe(0)
+
+    delete iframe.sandbox
+  })
 })

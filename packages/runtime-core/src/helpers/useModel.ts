@@ -10,7 +10,13 @@ export function useModel<
   M extends PropertyKey,
   T extends Record<string, any>,
   K extends keyof T,
->(props: T, name: K, options?: DefineModelOptions<T[K]>): ModelRef<T[K], M>
+  G = T[K],
+  S = T[K],
+>(
+  props: T,
+  name: K,
+  options?: DefineModelOptions<T[K], G, S>,
+): ModelRef<T[K], M, G, S>
 export function useModel(
   props: Record<string, any>,
   name: string,
@@ -22,53 +28,85 @@ export function useModel(
     return ref() as any
   }
 
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[name]) {
+  const camelizedName = camelize(name)
+  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[camelizedName]) {
     warn(`useModel() called with prop "${name}" which is not declared.`)
     return ref() as any
   }
 
-  const camelizedName = camelize(name)
   const hyphenatedName = hyphenate(name)
+  const modifiers = getModelModifiers(props, camelizedName)
 
   const res = customRef((track, trigger) => {
     let localValue: any
+    let prevSetValue: any = EMPTY_OBJ
+    let prevEmittedValue: any
+
     watchSyncEffect(() => {
-      const propValue = props[name]
+      const propValue = props[camelizedName]
       if (hasChanged(localValue, propValue)) {
         localValue = propValue
         trigger()
       }
     })
+
     return {
       get() {
         track()
         return options.get ? options.get(localValue) : localValue
       },
+
       set(value) {
-        const rawProps = i.vnode!.props
+        const emittedValue = options.set ? options.set(value) : value
         if (
-          !(
-            rawProps &&
-            // check if parent has passed v-model
-            (name in rawProps ||
-              camelizedName in rawProps ||
-              hyphenatedName in rawProps) &&
-            (`onUpdate:${name}` in rawProps ||
-              `onUpdate:${camelizedName}` in rawProps ||
-              `onUpdate:${hyphenatedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
+          !hasChanged(emittedValue, localValue) &&
+          !(prevSetValue !== EMPTY_OBJ && hasChanged(value, prevSetValue))
         ) {
+          return
+        }
+        const rawProps = i.vnode!.props
+        const hasVModel = !!(
+          rawProps &&
+          // check if parent has passed v-model
+          (name in rawProps ||
+            camelizedName in rawProps ||
+            hyphenatedName in rawProps) &&
+          (`onUpdate:${name}` in rawProps ||
+            `onUpdate:${camelizedName}` in rawProps ||
+            `onUpdate:${hyphenatedName}` in rawProps)
+        )
+        if (!hasVModel) {
+          // no v-model, local update
           localValue = value
           trigger()
         }
-        i.emit(`update:${name}`, options.set ? options.set(value) : value)
+
+        i.emit(`update:${name}`, emittedValue)
+        // #10279: if the local value is converted via a setter but the value
+        // emitted to parent was the same, the parent will not trigger any
+        // updates and there will be no prop sync. However the local input state
+        // may be out of sync, so we need to force an update here.
+        if (
+          hasChanged(value, prevSetValue) &&
+          ((hasChanged(value, emittedValue) &&
+            !hasChanged(emittedValue, prevEmittedValue)) ||
+            // #13524: browsers differ in when they flush microtasks between
+            // event listeners. If a v-model listener emits an intermediate value
+            // and a following listener restores the model to its previous prop
+            // value before parent updates are flushed, the parent render can be
+            // deduped as having no prop change. Force a local update so DOM state
+            // such as an input's value is synchronized back to the current model.
+            (hasVModel &&
+              prevSetValue !== EMPTY_OBJ &&
+              !hasChanged(emittedValue, localValue)))
+        ) {
+          trigger()
+        }
+        prevSetValue = value
+        prevEmittedValue = emittedValue
       },
     }
   })
-
-  const modifierKey =
-    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
 
   // @ts-expect-error
   res[Symbol.iterator] = () => {
@@ -76,7 +114,7 @@ export function useModel(
     return {
       next() {
         if (i < 2) {
-          return { value: i++ ? props[modifierKey] || {} : res, done: false }
+          return { value: i++ ? modifiers || EMPTY_OBJ : res, done: false }
         } else {
           return { done: true }
         }
@@ -85,4 +123,15 @@ export function useModel(
   }
 
   return res
+}
+
+export const getModelModifiers = (
+  props: Record<string, any>,
+  modelName: string,
+): Record<string, boolean> | undefined => {
+  return modelName === 'modelValue' || modelName === 'model-value'
+    ? props.modelModifiers
+    : props[`${modelName}Modifiers`] ||
+        props[`${camelize(modelName)}Modifiers`] ||
+        props[`${hyphenate(modelName)}Modifiers`]
 }

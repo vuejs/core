@@ -1,7 +1,7 @@
 import type { ObjectDirective } from '@vue/runtime-core'
 
-export const vShowOriginalDisplay = Symbol('_vod')
-export const vShowHidden = Symbol('_vsh')
+export const vShowOriginalDisplay: unique symbol = Symbol('_vod')
+export const vShowHidden: unique symbol = Symbol('_vsh')
 
 export interface VShowElement extends HTMLElement {
   // _vod = vue original display
@@ -9,7 +9,9 @@ export interface VShowElement extends HTMLElement {
   [vShowHidden]: boolean
 }
 
-export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
+export const vShow: ObjectDirective<VShowElement> & { name: 'show' } = {
+  // used for prop mismatch check during hydration
+  name: 'show',
   beforeMount(el, { value }, { transition }) {
     el[vShowOriginalDisplay] =
       el.style.display === 'none' ? '' : el.style.display
@@ -45,10 +47,6 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   },
 }
 
-if (__DEV__) {
-  vShow.name = 'show'
-}
-
 function setDisplay(el: VShowElement, value: unknown): void {
   el.style.display = value ? el[vShowOriginalDisplay] : 'none'
   el[vShowHidden] = !value
@@ -56,7 +54,7 @@ function setDisplay(el: VShowElement, value: unknown): void {
 
 // SSR vnode transforms, only used when user includes client-oriented render
 // function in SSR
-export function initVShowForSSR() {
+export function initVShowForSSR(): void {
   vShow.getSSRProps = ({ value }) => {
     if (!value) {
       return { style: { display: 'none' } }

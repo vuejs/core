@@ -13,14 +13,11 @@ import { camelize, toHandlerKey } from '@vue/shared'
 import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { hasScopeRef, isMemberExpression } from '../utils'
+import { hasScopeRef, isFnExpression, isMemberExpression } from '../utils'
 import { TO_HANDLER_KEY } from '../runtimeHelpers'
 
-const fnExpRE =
-  /^\s*(async\s*)?(\([^)]*?\)|[\w$_]+)\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
-
 export interface VOnDirectiveNode extends DirectiveNode {
-  // v-on without arg is handled directly in ./transformElements.ts due to it affecting
+  // v-on without arg is handled directly in ./transformElement.ts due to its affecting
   // codegen for the entire props object. This transform here is only for v-on
   // *with* args.
   arg: ExpressionNode
@@ -77,15 +74,14 @@ export const transformOn: DirectiveTransform = (
 
   // handler processing
   let exp: ExpressionNode | undefined = dir.exp as
-    | SimpleExpressionNode
-    | undefined
+    SimpleExpressionNode | undefined
   if (exp && !exp.content.trim()) {
     exp = undefined
   }
   let shouldCache: boolean = context.cacheHandlers && !exp && !context.inVOnce
   if (exp) {
-    const isMemberExp = isMemberExpression(exp.content, context)
-    const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
+    const isMemberExp = isMemberExpression(exp, context)
+    const isInlineStatement = !(isMemberExp || isFnExpression(exp, context))
     const hasMultipleStatements = exp.content.includes(`;`)
 
     // process the expression since it's been skipped

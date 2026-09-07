@@ -23,7 +23,6 @@ import {
   createVNodeCall,
 } from '../ast'
 import {
-  PatchFlagNames,
   PatchFlags,
   camelize,
   capitalize,
@@ -57,7 +56,7 @@ import {
   toValidAssetId,
 } from '../utils'
 import { buildSlots } from './vSlot'
-import { getConstantType } from './hoistStatic'
+import { getConstantType } from './cacheStatic'
 import { BindingTypes } from '../options'
 import {
   CompilerDeprecationTypes,
@@ -77,13 +76,11 @@ export const transformElement: NodeTransform = (node, context) => {
   return function postTransformElement() {
     node = context.currentNode!
 
-    if (
-      !(
-        node.type === NodeTypes.ELEMENT &&
-        (node.tagType === ElementTypes.ELEMENT ||
-          node.tagType === ElementTypes.COMPONENT)
-      )
-    ) {
+    if (!(
+      node.type === NodeTypes.ELEMENT &&
+      (node.tagType === ElementTypes.ELEMENT ||
+        node.tagType === ElementTypes.COMPONENT)
+    )) {
       return
     }
 
@@ -101,11 +98,12 @@ export const transformElement: NodeTransform = (node, context) => {
 
     let vnodeProps: VNodeCall['props']
     let vnodeChildren: VNodeCall['children']
-    let vnodePatchFlag: VNodeCall['patchFlag']
-    let patchFlag: number = 0
+    let patchFlag: VNodeCall['patchFlag'] | 0 = 0
     let vnodeDynamicProps: VNodeCall['dynamicProps']
     let dynamicPropNames: string[] | undefined
     let vnodeDirectives: VNodeCall['directives']
+    let needsPatch = false
+    let isBlockRequired = false
 
     let shouldUseBlock =
       // dynamic component may resolve to plain elements
@@ -131,6 +129,8 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeProps = propsBuildResult.props
       patchFlag = propsBuildResult.patchFlag
       dynamicPropNames = propsBuildResult.dynamicPropNames
+      needsPatch = propsBuildResult.needsPatch
+      isBlockRequired = propsBuildResult.isBlockRequired
       const directives = propsBuildResult.directives
       vnodeDirectives =
         directives && directives.length
@@ -206,42 +206,31 @@ export const transformElement: NodeTransform = (node, context) => {
     }
 
     // patchFlag & dynamicPropNames
-    if (patchFlag !== 0) {
-      if (__DEV__) {
-        if (patchFlag < 0) {
-          // special flags (negative and mutually exclusive)
-          vnodePatchFlag =
-            patchFlag + ` /* ${PatchFlagNames[patchFlag as PatchFlags]} */`
-        } else {
-          // bitwise flags
-          const flagNames = Object.keys(PatchFlagNames)
-            .map(Number)
-            .filter(n => n > 0 && patchFlag & n)
-            .map(n => PatchFlagNames[n as PatchFlags])
-            .join(`, `)
-          vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
-        }
-      } else {
-        vnodePatchFlag = String(patchFlag)
-      }
-      if (dynamicPropNames && dynamicPropNames.length) {
-        vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
-      }
+    if (dynamicPropNames && dynamicPropNames.length) {
+      vnodeDynamicProps = stringifyDynamicPropNames(dynamicPropNames)
     }
 
-    node.codegenNode = createVNodeCall(
+    const vnodeCall = (node.codegenNode = createVNodeCall(
       context,
       vnodeTag,
       vnodeProps,
       vnodeChildren,
-      vnodePatchFlag,
+      patchFlag === 0 ? undefined : patchFlag,
       vnodeDynamicProps,
       vnodeDirectives,
       !!shouldUseBlock,
       false /* disableTracking */,
       isComponent,
       node.loc,
-    )
+    ))
+    needsPatch =
+      needsPatch && (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION)
+    if (needsPatch) {
+      vnodeCall.needsPatch = true
+    }
+    if (isBlockRequired) {
+      vnodeCall.isBlockRequired = true
+    }
   }
 }
 
@@ -249,7 +238,7 @@ export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
   ssr = false,
-) {
+): string | symbol | CallExpression {
   let { tag } = node
 
   // 1. dynamic component
@@ -271,7 +260,7 @@ export function resolveComponentType(
         exp = isProp.exp
         if (!exp) {
           // #10469 handle :is shorthand
-          exp = createSimpleExpression(`is`, false, isProp.loc)
+          exp = createSimpleExpression(`is`, false, isProp.arg!.loc)
           if (!__BROWSER__) {
             exp = isProp.exp = processExpression(exp, context)
           }
@@ -395,7 +384,7 @@ export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
 export function buildProps(
   node: ElementNode,
   context: TransformContext,
-  props: ElementNode['props'] = node.props,
+  props: ElementNode['props'] | undefined = node.props,
   isComponent: boolean,
   isDynamicComponent: boolean,
   ssr = false,
@@ -405,6 +394,8 @@ export function buildProps(
   patchFlag: number
   dynamicPropNames: string[]
   shouldUseBlock: boolean
+  needsPatch: boolean
+  isBlockRequired: boolean
 } {
   const { tag, loc: elementLoc, children } = node
   let properties: ObjectExpression['properties'] = []
@@ -412,6 +403,7 @@ export function buildProps(
   const runtimeDirectives: DirectiveNode[] = []
   const hasChildren = children.length > 0
   let shouldUseBlock = false
+  let isBlockRequired = false
 
   // patchFlag analysis
   let patchFlag = 0
@@ -467,6 +459,10 @@ export function buildProps(
         hasVnodeHook = true
       }
 
+      if (name === 'ref') {
+        hasRef = true
+      }
+
       if (isEventHandler && value.type === NodeTypes.JS_CALL_EXPRESSION) {
         // handler wrapped with internal helper e.g. withModifiers(fn)
         // extract the actual expression
@@ -483,13 +479,15 @@ export function buildProps(
         return
       }
 
-      if (name === 'ref') {
-        hasRef = true
-      } else if (name === 'class') {
+      if (name === 'class') {
         hasClassBinding = true
       } else if (name === 'style') {
         hasStyleBinding = true
-      } else if (name !== 'key' && !dynamicPropNames.includes(name)) {
+      } else if (
+        name !== 'ref' &&
+        name !== 'key' &&
+        !dynamicPropNames.includes(name)
+      ) {
         dynamicPropNames.push(name)
       }
 
@@ -596,14 +594,21 @@ export function buildProps(
         continue
       }
 
+      // #938: elements with dynamic keys should be forced into blocks
+      if (isVBind && isStaticArgOf(arg, 'key')) {
+        shouldUseBlock = true
+      }
+      // inline before-update hooks need to remain blocks so that they are
+      // invoked before children
       if (
-        // #938: elements with dynamic keys should be forced into blocks
-        (isVBind && isStaticArgOf(arg, 'key')) ||
-        // inline before-update hooks need to force block so that it is invoked
-        // before children
-        (isVOn && hasChildren && isStaticArgOf(arg, 'vue:before-update'))
+        isVOn &&
+        hasChildren &&
+        arg &&
+        isStaticExp(arg) &&
+        camelize(arg.content) === 'vue:beforeUpdate'
       ) {
         shouldUseBlock = true
+        isBlockRequired = true
       }
 
       if (isVBind && isStaticArgOf(arg, 'ref')) {
@@ -615,11 +620,9 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
-            // #10696 in case a v-bind object contains ref
-            pushRefVForMarker()
-            // have to merge early for compat build check
-            pushMergeArg()
             if (__COMPAT__) {
+              // have to merge early for compat build check
+              pushMergeArg()
               // 2.x v-bind object order compat
               if (__DEV__) {
                 const hasOverridableKeys = mergeArgs.some(arg => {
@@ -662,6 +665,9 @@ export function buildProps(
               }
             }
 
+            // #10696 in case a v-bind object contains ref
+            pushRefVForMarker()
+            pushMergeArg()
             mergeArgs.push(exp)
           } else {
             // v-on="obj" -> toHandlers(obj)
@@ -686,7 +692,7 @@ export function buildProps(
       }
 
       // force hydration for v-bind with .prop modifier
-      if (isVBind && modifiers.includes('prop')) {
+      if (isVBind && modifiers.some(mod => mod.content === 'prop')) {
         patchFlag |= PatchFlags.NEED_HYDRATION
       }
 
@@ -713,6 +719,7 @@ export function buildProps(
         // to ensure before-update gets called before children update
         if (hasChildren) {
           shouldUseBlock = true
+          isBlockRequired = true
         }
       }
     }
@@ -758,11 +765,10 @@ export function buildProps(
       patchFlag |= PatchFlags.NEED_HYDRATION
     }
   }
-  if (
-    !shouldUseBlock &&
+  const needsPatch =
     (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
-  ) {
+  if (!shouldUseBlock && needsPatch) {
     patchFlag |= PatchFlags.NEED_PATCH
   }
 
@@ -847,6 +853,8 @@ export function buildProps(
     patchFlag,
     dynamicPropNames,
     shouldUseBlock,
+    needsPatch,
+    isBlockRequired,
   }
 }
 

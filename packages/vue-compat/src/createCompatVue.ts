@@ -2,6 +2,7 @@
 // `dist/vue.esm-bundler.js` which is used by default for bundlers.
 import { initDev } from './dev'
 import {
+  type CompatVue,
   DeprecationTypes,
   KeepAlive,
   Transition,
@@ -37,7 +38,7 @@ function wrappedCreateApp(...args: any[]) {
   return app
 }
 
-export function createCompatVue() {
+export function createCompatVue(): CompatVue {
   const Vue = compatUtils.createCompatVue(createApp, wrappedCreateApp)
   extend(Vue, runtimeDom)
   return Vue

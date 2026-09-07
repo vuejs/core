@@ -1,4 +1,3 @@
 dist
-*.md
-*.html
 pnpm-lock.yaml
+CHANGELOG*.md

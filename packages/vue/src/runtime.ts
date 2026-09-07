@@ -9,7 +9,7 @@ if (__DEV__) {
 
 export * from '@vue/runtime-dom'
 
-export const compile = () => {
+export const compile = (): void => {
   if (__DEV__) {
     warn(
       `Runtime compilation is not supported in this build of Vue.` +

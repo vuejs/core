@@ -49,7 +49,7 @@ test('pipeToWebWritable', async () => {
   }
 
   const { readable, writable } = new TransformStream()
-  pipeToWebWritable(createApp(App), {}, writable)
+  pipeToWebWritable(createApp(App), {}, writable as any)
 
   const reader = readable.getReader()
   const decoder = new TextDecoder()

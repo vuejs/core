@@ -1,37 +1,33 @@
 <script src="../../dist/vue.global.js"></script>
 <script>
-// math helper...
-function valueToPoint (value, index, total) {
-  var x     = 0
-  var y     = -value * 0.8
-  var angle = Math.PI * 2 / total * index
-  var cos   = Math.cos(angle)
-  var sin   = Math.sin(angle)
-  var tx    = x * cos - y * sin + 100
-  var ty    = x * sin + y * cos + 100
-  return {
-    x: tx,
-    y: ty
-  }
-}
-
-const AxisLabel = {
-  template: '<text :x="point.x" :y="point.y">{{stat.label}}</text>',
-  props: {
-    stat: Object,
-    index: Number,
-    total: Number
-  },
-  computed: {
-    point: function () {
-      return valueToPoint(
-        +this.stat.value + 10,
-        this.index,
-        this.total
-      )
+  // math helper...
+  function valueToPoint(value, index, total) {
+    var x = 0
+    var y = -value * 0.8
+    var angle = ((Math.PI * 2) / total) * index
+    var cos = Math.cos(angle)
+    var sin = Math.sin(angle)
+    var tx = x * cos - y * sin + 100
+    var ty = x * sin + y * cos + 100
+    return {
+      x: tx,
+      y: ty,
     }
   }
-}
+
+  const AxisLabel = {
+    template: '<text :x="point.x" :y="point.y">{{stat.label}}</text>',
+    props: {
+      stat: Object,
+      index: Number,
+      total: Number,
+    },
+    computed: {
+      point: function () {
+        return valueToPoint(+this.stat.value + 10, this.index, this.total)
+      },
+    },
+  }
 </script>
 
 <!-- template for the polygraph component. -->
@@ -49,23 +45,25 @@ const AxisLabel = {
 </script>
 
 <script>
-const Polygraph = {
-  props: ['stats'],
-  template: '#polygraph-template',
-  computed: {
-    // a computed property for the polygon's points
-    points() {
-      const total = this.stats.length
-      return this.stats.map((stat, i) => {
-        const point = valueToPoint(stat.value, i, total)
-        return point.x + ',' + point.y
-      }).join(' ')
-    }
-  },
-  components: {
-    AxisLabel
+  const Polygraph = {
+    props: ['stats'],
+    template: '#polygraph-template',
+    computed: {
+      // a computed property for the polygon's points
+      points() {
+        const total = this.stats.length
+        return this.stats
+          .map((stat, i) => {
+            const point = valueToPoint(stat.value, i, total)
+            return point.x + ',' + point.y
+          })
+          .join(' ')
+      },
+    },
+    components: {
+      AxisLabel,
+    },
   }
-}
 </script>
 
 <!-- demo root element -->
@@ -77,86 +75,92 @@ const Polygraph = {
   <!-- controls -->
   <div v-for="stat in stats">
     <label>{{stat.label}}</label>
-    <input type="range" v-model="stat.value" min="0" max="100">
+    <input type="range" v-model="stat.value" min="0" max="100" />
     <span>{{stat.value}}</span>
     <button @click="remove(stat)" class="remove">X</button>
   </div>
   <form id="add">
-    <input name="newlabel" v-model="newLabel">
+    <input name="newlabel" v-model="newLabel" />
     <button @click="add">Add a Stat</button>
   </form>
   <pre id="raw">{{ stats }}</pre>
 </div>
 
 <script>
-const globalStats = [
-  { label: 'A', value: 100 },
-  { label: 'B', value: 100 },
-  { label: 'C', value: 100 },
-  { label: 'D', value: 100 },
-  { label: 'E', value: 100 },
-  { label: 'F', value: 100 }
-]
+  const globalStats = [
+    { label: 'A', value: 100 },
+    { label: 'B', value: 100 },
+    { label: 'C', value: 100 },
+    { label: 'D', value: 100 },
+    { label: 'E', value: 100 },
+    { label: 'F', value: 100 },
+  ]
 
-Vue.createApp({
-  components: {
-    Polygraph
-  },
-  data: () => ({
-    newLabel: '',
-    stats: globalStats
-  }),
-  methods: {
-    add(e) {
-      e.preventDefault()
-      if (!this.newLabel) return
-      this.stats.push({
-        label: this.newLabel,
-        value: 100
-      })
-      this.newLabel = ''
+  Vue.createApp({
+    components: {
+      Polygraph,
     },
-    remove(stat) {
-      if (this.stats.length > 3) {
-        this.stats.splice(this.stats.indexOf(stat), 1)
-      } else {
-        alert('Can\'t delete more!')
-      }
-    }
-  }
-}).mount('#demo')
+    data: () => ({
+      newLabel: '',
+      stats: globalStats,
+    }),
+    methods: {
+      add(e) {
+        e.preventDefault()
+        if (!this.newLabel) return
+        this.stats.push({
+          label: this.newLabel,
+          value: 100,
+        })
+        this.newLabel = ''
+      },
+      remove(stat) {
+        if (this.stats.length > 3) {
+          this.stats.splice(this.stats.indexOf(stat), 1)
+        } else {
+          alert("Can't delete more!")
+        }
+      },
+    },
+  }).mount('#demo')
 </script>
 
 <style>
-body {
-    font-family: Helvetica Neue, Arial, sans-serif;
-}
+  body {
+    font-family:
+      Helvetica Neue,
+      Arial,
+      sans-serif;
+  }
 
-polygon {
+  polygon {
     fill: #42b983;
-    opacity: .75;
-}
+    opacity: 0.75;
+  }
 
-circle {
+  circle {
     fill: transparent;
     stroke: #999;
-}
+  }
 
-text {
-    font-family: Helvetica Neue, Arial, sans-serif;
+  text {
+    font-family:
+      Helvetica Neue,
+      Arial,
+      sans-serif;
     font-size: 10px;
     fill: #666;
-}
+  }
 
-label {
+  label {
     display: inline-block;
     margin-left: 10px;
     width: 20px;
-}
+  }
 
-#raw {
+  #raw {
     position: absolute;
     top: 0;
     left: 300px;
-}
+  }
 </style>

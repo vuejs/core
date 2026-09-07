@@ -36,9 +36,6 @@ const { values: args, positionals } = parseArgs({
     tag: {
       type: 'string',
     },
-    canary: {
-      type: 'boolean',
-    },
     skipBuild: {
       type: 'boolean',
     },
@@ -51,6 +48,16 @@ const { values: args, positionals } = parseArgs({
     skipPrompts: {
       type: 'boolean',
     },
+    publish: {
+      type: 'boolean',
+      default: false,
+    },
+    publishOnly: {
+      type: 'boolean',
+    },
+    registry: {
+      type: 'string',
+    },
   },
 })
 
@@ -59,21 +66,28 @@ const isDryRun = args.dry
 /** @type {boolean | undefined} */
 let skipTests = args.skipTests
 const skipBuild = args.skipBuild
-const isCanary = args.canary
-const skipPrompts = args.skipPrompts || args.canary
-const skipGit = args.skipGit || args.canary
+const skipPrompts = args.skipPrompts
+const skipGit = args.skipGit
 
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
   .filter(p => {
     const pkgRoot = path.resolve(__dirname, '../packages', p)
-    if (fs.statSync(pkgRoot).isDirectory()) {
-      const pkg = JSON.parse(
-        fs.readFileSync(path.resolve(pkgRoot, 'package.json'), 'utf-8'),
-      )
-      return !pkg.private
+    const pkgPath = path.resolve(pkgRoot, 'package.json')
+    if (!fs.statSync(pkgRoot).isDirectory() || !fs.existsSync(pkgPath)) {
+      return false
     }
+
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+    return !pkg.private
   })
+
+const sortPackagesForPublishing = (/** @type {string[]} */ packageNames) => [
+  // Publish vue last so users cannot install the new entry package before
+  // the matching internal packages are available.
+  ...packageNames.filter(p => p !== 'vue'),
+  ...packageNames.filter(p => p === 'vue'),
+]
 
 const isCorePackage = (/** @type {string} */ pkgName) => {
   if (!pkgName) return
@@ -88,22 +102,10 @@ const isCorePackage = (/** @type {string} */ pkgName) => {
   )
 }
 
-const renamePackageToCanary = (/** @type {string} */ pkgName) => {
-  if (pkgName === 'vue') {
-    return '@vue/canary'
-  }
-
-  if (isCorePackage(pkgName)) {
-    return `${pkgName}-canary`
-  }
-
-  return pkgName
-}
-
 const keepThePackageName = (/** @type {string} */ pkgName) => pkgName
 
 /** @type {string[]} */
-const skippedPackages = []
+const alreadyPublishedPackages = []
 
 /** @type {ReadonlyArray<import('semver').ReleaseType>} */
 const versionIncrements = [
@@ -130,6 +132,12 @@ const dryRun = async (
 const runIfNotDry = isDryRun ? dryRun : run
 const getPkgRoot = (/** @type {string} */ pkg) =>
   path.resolve(__dirname, '../packages/' + pkg)
+const getPkgManifest = (/** @type {string} */ pkg) =>
+  /** @type {Package} */ (
+    JSON.parse(
+      fs.readFileSync(path.resolve(getPkgRoot(pkg), 'package.json'), 'utf-8'),
+    )
+  )
 const step = (/** @type {string} */ msg) => console.log(pico.cyan(msg))
 
 async function main() {
@@ -140,57 +148,6 @@ async function main() {
   }
 
   let targetVersion = positionals[0]
-
-  if (isCanary) {
-    // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
-    // Use UTC date so that it's consistent across CI and maintainers' machines
-    const date = new Date()
-    const yyyy = date.getUTCFullYear()
-    const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
-    const dd = date.getUTCDate().toString().padStart(2, '0')
-
-    const major = semver.major(currentVersion)
-    const datestamp = `${yyyy}${MM}${dd}`
-    let canaryVersion
-
-    canaryVersion = `${major}.${datestamp}.0`
-    if (args.tag && args.tag !== 'latest') {
-      canaryVersion = `${major}.${datestamp}.0-${args.tag}.0`
-    }
-
-    // check the registry to avoid version collision
-    // in case we need to publish more than one canary versions in a day
-    try {
-      const pkgName = renamePackageToCanary('vue')
-      const { stdout } = await run(
-        'pnpm',
-        ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
-        { stdio: 'pipe' },
-      )
-      let versions = JSON.parse(/** @type {string} */ (stdout))
-      versions = Array.isArray(versions) ? versions : [versions]
-      const latestSameDayPatch = /** @type {string} */ (
-        semver.maxSatisfying(versions, `~${canaryVersion}`)
-      )
-
-      canaryVersion = /** @type {string} */ (
-        semver.inc(latestSameDayPatch, 'patch')
-      )
-      if (args.tag && args.tag !== 'latest') {
-        canaryVersion = /** @type {string} */ (
-          semver.inc(latestSameDayPatch, 'prerelease', args.tag)
-        )
-      }
-    } catch (/** @type {any} */ e) {
-      if (/E404/.test(e.message)) {
-        // the first patch version on that day
-      } else {
-        throw e
-      }
-    }
-
-    targetVersion = canaryVersion
-  }
 
   if (!targetVersion) {
     // no explicit version, offer suggestions
@@ -218,16 +175,18 @@ async function main() {
     }
   }
 
+  // @ts-expect-error
+  if (versionIncrements.includes(targetVersion)) {
+    // @ts-expect-error
+    targetVersion = inc(targetVersion)
+  }
+
   if (!semver.valid(targetVersion)) {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
 
   if (skipPrompts) {
-    step(
-      isCanary
-        ? `Releasing canary version v${targetVersion}...`
-        : `Releasing v${targetVersion}...`,
-    )
+    step(`Releasing v${targetVersion}...`)
   } else {
     /** @type {{ yes: boolean }} */
     const { yes: confirmRelease } = await prompt({
@@ -241,51 +200,12 @@ async function main() {
     }
   }
 
-  if (!skipTests) {
-    step('Checking CI status for HEAD...')
-    let isCIPassed = await getCIResult()
-    skipTests ||= isCIPassed
-
-    if (isCIPassed && !skipPrompts) {
-      /** @type {{ yes: boolean }} */
-      const { yes: promptSkipTests } = await prompt({
-        type: 'confirm',
-        name: 'yes',
-        message: `CI for this commit passed. Skip local tests?`,
-      })
-
-      skipTests = promptSkipTests
-    }
-  }
-
-  if (!skipTests) {
-    step('\nRunning tests...')
-    if (!isDryRun) {
-      await run('pnpm', ['run', 'test', '--run'])
-    } else {
-      console.log(`Skipped (dry run)`)
-    }
-  } else {
-    step('Tests skipped.')
-  }
+  await runTestsIfNeeded()
 
   // update all package versions and inter-dependencies
   step('\nUpdating cross dependencies...')
-  updateVersions(
-    targetVersion,
-    isCanary ? renamePackageToCanary : keepThePackageName,
-  )
+  updateVersions(targetVersion, keepThePackageName)
   versionUpdated = true
-
-  // build all packages with types
-  step('\nBuilding all packages...')
-  if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build', '--withTypes'])
-    step('\nTesting built types...')
-    await run('pnpm', ['test-dts-only'])
-  } else {
-    console.log(`(skipped)`)
-  }
 
   // generate changelog
   step('\nGenerating changelog...')
@@ -305,11 +225,8 @@ async function main() {
   }
 
   // update pnpm-lock.yaml
-  // skipped during canary release because the package names changed and installing with `workspace:*` would fail
-  if (!isCanary) {
-    step('\nUpdating lockfile...')
-    await run(`pnpm`, ['install', '--prefer-offline'])
-  }
+  step('\nUpdating lockfile...')
+  await run(`pnpm`, ['install', '--prefer-offline'])
 
   if (!skipGit) {
     const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
@@ -323,24 +240,9 @@ async function main() {
   }
 
   // publish packages
-  step('\nPublishing packages...')
-
-  const additionalPublishFlags = []
-  if (isDryRun) {
-    additionalPublishFlags.push('--dry-run')
-  }
-  if (isDryRun || skipGit) {
-    additionalPublishFlags.push('--no-git-checks')
-  }
-  // bypass the pnpm --publish-branch restriction which isn't too useful to us
-  // otherwise it leads to a prompt and blocks the release script
-  const branch = await getBranch()
-  if (branch !== 'main') {
-    additionalPublishFlags.push('--publish-branch', branch)
-  }
-
-  for (const pkg of packages) {
-    await publishPackage(pkg, targetVersion, additionalPublishFlags)
+  if (args.publish) {
+    await buildPackages()
+    await publishPackages(targetVersion)
   }
 
   // push to GitHub
@@ -351,20 +253,67 @@ async function main() {
     await runIfNotDry('git', ['push'])
   }
 
+  if (!args.publish) {
+    console.log(
+      pico.yellow(
+        '\nRelease will be done via GitHub Actions.\n' +
+          'Check status at https://github.com/vuejs/core/actions/workflows/release.yml',
+      ),
+    )
+  }
+
   if (isDryRun) {
     console.log(`\nDry run finished - run git diff to see package changes.`)
   }
 
-  if (skippedPackages.length) {
+  if (alreadyPublishedPackages.length) {
     console.log(
       pico.yellow(
-        `The following packages are skipped and NOT published:\n- ${skippedPackages.join(
+        `The following packages already existed on the registry and were skipped:\n- ${alreadyPublishedPackages.join(
           '\n- ',
         )}`,
       ),
     )
   }
   console.log()
+}
+
+async function runTestsIfNeeded() {
+  if (!skipTests) {
+    step('Checking CI status for HEAD...')
+    let isCIPassed = await getCIResult()
+    skipTests ||= isCIPassed
+
+    if (isCIPassed) {
+      if (!skipPrompts) {
+        /** @type {{ yes: boolean }} */
+        const { yes: promptSkipTests } = await prompt({
+          type: 'confirm',
+          name: 'yes',
+          message: `CI for this commit passed. Skip local tests?`,
+        })
+        skipTests = promptSkipTests
+      } else {
+        skipTests = true
+      }
+    } else if (skipPrompts) {
+      throw new Error(
+        'CI for the latest commit has not passed yet. ' +
+          'Only run the release workflow after the CI has passed.',
+      )
+    }
+  }
+
+  if (!skipTests) {
+    step('\nRunning tests...')
+    if (!isDryRun) {
+      await run('pnpm', ['run', 'test', '--run'])
+    } else {
+      console.log(`Skipped (dry run)`)
+    }
+  } else {
+    step('Tests skipped.')
+  }
 }
 
 async function getCIResult() {
@@ -445,32 +394,41 @@ function updatePackage(pkgRoot, version, getNewPackageName) {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
   pkg.name = getNewPackageName(pkg.name)
   pkg.version = version
-  if (isCanary) {
-    updateDeps(pkg, 'dependencies', version, getNewPackageName)
-    updateDeps(pkg, 'peerDependencies', version, getNewPackageName)
-  }
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 }
 
+async function buildPackages() {
+  step('\nBuilding all packages...')
+  if (!skipBuild) {
+    await run('pnpm', ['run', 'build', '--withTypes'])
+  } else {
+    console.log(`(skipped)`)
+  }
+}
+
 /**
- * @param {Package} pkg
- * @param {'dependencies' | 'peerDependencies'} depType
  * @param {string} version
- * @param {(pkgName: string) => string} getNewPackageName
  */
-function updateDeps(pkg, depType, version, getNewPackageName) {
-  const deps = pkg[depType]
-  if (!deps) return
-  Object.keys(deps).forEach(dep => {
-    if (isCorePackage(dep)) {
-      const newName = getNewPackageName(dep)
-      const newVersion = newName === dep ? version : `npm:${newName}@${version}`
-      console.log(
-        pico.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`),
-      )
-      deps[dep] = newVersion
-    }
-  })
+async function publishPackages(version) {
+  // publish packages
+  step('\nPublishing packages...')
+
+  const additionalPublishFlags = []
+  if (isDryRun) {
+    additionalPublishFlags.push('--dry-run')
+  }
+  if (isDryRun || skipGit || process.env.CI) {
+    additionalPublishFlags.push('--no-git-checks')
+  }
+  // add provenance metadata when releasing from CI
+  // skip provenance if not publishing to actual npm
+  if (process.env.CI && !args.registry) {
+    additionalPublishFlags.push('--provenance')
+  }
+
+  for (const pkg of sortPackagesForPublishing(packages)) {
+    await publishPackage(pkg, version, additionalPublishFlags)
+  }
 }
 
 /**
@@ -479,9 +437,7 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
  * @param {ReadonlyArray<string>} additionalFlags
  */
 async function publishPackage(pkgName, version, additionalFlags) {
-  if (skippedPackages.includes(pkgName)) {
-    return
-  }
+  const packageName = getPkgManifest(pkgName).name
 
   let releaseTag = null
   if (args.tag) {
@@ -494,7 +450,14 @@ async function publishPackage(pkgName, version, additionalFlags) {
     releaseTag = 'rc'
   }
 
-  step(`Publishing ${pkgName}...`)
+  if (!isDryRun && (await isPackagePublished(packageName, version))) {
+    const pkgVersion = `${packageName}@${version}`
+    console.log(pico.yellow(`Skipping already published: ${pkgVersion}`))
+    alreadyPublishedPackages.push(pkgVersion)
+    return
+  }
+
+  step(`Publishing ${packageName}...`)
   try {
     // Don't change the package manager here as we rely on pnpm to handle
     // workspace:* deps
@@ -505,6 +468,7 @@ async function publishPackage(pkgName, version, additionalFlags) {
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
+        ...(args.registry ? ['--registry', args.registry] : []),
         ...additionalFlags,
       ],
       {
@@ -512,17 +476,58 @@ async function publishPackage(pkgName, version, additionalFlags) {
         stdio: 'pipe',
       },
     )
-    console.log(pico.green(`Successfully published ${pkgName}@${version}`))
+    console.log(pico.green(`Successfully published ${packageName}@${version}`))
   } catch (/** @type {any} */ e) {
-    if (e.stderr.match(/previously published/)) {
-      console.log(pico.red(`Skipping already published: ${pkgName}`))
+    if (e.message?.match(/previously published/)) {
+      const pkgVersion = `${packageName}@${version}`
+      console.log(pico.red(`Skipping already published: ${pkgVersion}`))
+      alreadyPublishedPackages.push(pkgVersion)
     } else {
       throw e
     }
   }
 }
 
-main().catch(err => {
+async function isPackagePublished(
+  /** @type {string} */ packageName,
+  /** @type {string} */ version,
+) {
+  try {
+    await run(
+      'npm',
+      [
+        'view',
+        `${packageName}@${version}`,
+        'version',
+        ...(args.registry ? ['--registry', args.registry] : []),
+      ],
+      { stdio: 'pipe' },
+    )
+    return true
+  } catch (/** @type {any} */ e) {
+    if (isPackageNotFoundError(e)) {
+      return false
+    }
+    throw e
+  }
+}
+
+function isPackageNotFoundError(/** @type {Error} */ error) {
+  return /E404|No match found|No matching version|notarget/i.test(error.message)
+}
+
+async function publishOnly() {
+  const targetVersion = positionals[0]
+  if (targetVersion) {
+    updateVersions(targetVersion)
+  }
+  await buildPackages()
+  await publishPackages(currentVersion)
+}
+
+const fnToRun = args.publishOnly ? publishOnly : main
+
+fnToRun().catch(err => {
   if (versionUpdated) {
     // revert to current version on failed releases
     updateVersions(currentVersion)

@@ -5,7 +5,7 @@ import {
   createVNode,
   ssrContextKey,
   ssrUtils,
-} from 'vue'
+} from '@vue/runtime-dom'
 import { isPromise, isString } from '@vue/shared'
 import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 import type { Readable, Writable } from 'node:stream'
@@ -125,9 +125,9 @@ export function renderToNodeStream(
 
 export function pipeToNodeWritable(
   input: App | VNode,
-  context: SSRContext = {},
+  context: SSRContext | undefined = {},
   writable: Writable,
-) {
+): void {
   renderToSimpleStream(input, context, {
     push(content) {
       if (content != null) {
@@ -181,7 +181,7 @@ export function renderToWebStream(
 
 export function pipeToWebWritable(
   input: App | VNode,
-  context: SSRContext = {},
+  context: SSRContext | undefined = {},
   writable: WritableStream,
 ): void {
   const writer = writable.getWriter()

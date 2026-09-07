@@ -6,15 +6,15 @@ Please follow the documentation at [vuejs.org](https://vuejs.org/)!
 
 ## Sponsors
 
-Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [ sponsoring Vue's development](https://vuejs.org/sponsor/).
+Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [sponsoring Vue's development](https://vuejs.org/sponsor/).
 
 <p align="center">
   <h3 align="center">Special Sponsor</h3>
 </p>
 
 <p align="center">
-  <a target="_blank" href="https://github.com/appwrite/appwrite">
-  <img alt="special sponsor appwrite" src="https://sponsors.vuejs.org/images/appwrite.svg" width="300">
+  <a target="_blank" href="https://betterstack.com/">
+  <img alt="special sponsor" src="https://automation.vuejs.org/images/better_stack.png" width="300">
   </a>
 </p>
 
@@ -34,7 +34,8 @@ Please make sure to respect issue requirements and use [the new issue helper](ht
 
 ## Stay In Touch
 
-- [Twitter](https://twitter.com/vuejs)
+- [X](https://x.com/vuejs)
+- [Bluesky](https://bsky.app/profile/vuejs.org)
 - [Blog](https://blog.vuejs.org/)
 - [Job Board](https://vuejobs.com/?ref=vuejs)
 
@@ -44,7 +45,9 @@ Please make sure to read the [Contributing Guide](https://github.com/vuejs/core/
 
 Thank you to all the people who already contributed to Vue!
 
-<a href="https://github.com/vuejs/core/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890" /></a>
+<a href="https://github.com/vuejs/core/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890&limit=500" /></a>
+
+<sub>_Note: Showing the first 500 contributors only due to GitHub image size limitations_</sub>
 
 ## License
 

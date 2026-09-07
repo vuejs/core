@@ -263,6 +263,41 @@ describe('ssr: directives', () => {
     })
   })
 
+  describe('template with v-text / v-html', () => {
+    test('element with v-html', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<span v-html="foo"/>`,
+          }),
+        ),
+      ).toBe(`<span>hello</span>`)
+    })
+
+    test('textarea with v-text', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<textarea v-text="foo"/>`,
+          }),
+        ),
+      ).toBe(`<textarea>hello</textarea>`)
+    })
+
+    test('textarea with v-html', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ foo: 'hello' }),
+            template: `<textarea v-html="foo"/>`,
+          }),
+        ),
+      ).toBe(`<textarea>hello</textarea>`)
+    })
+  })
+
   describe('vnode v-show', () => {
     test('basic', async () => {
       expect(

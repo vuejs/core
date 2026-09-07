@@ -431,7 +431,7 @@ const warnCount: Record<string, number> = Object.create(null)
 // test only
 let warningEnabled = true
 
-export function toggleDeprecationWarning(flag: boolean) {
+export function toggleDeprecationWarning(flag: boolean): void {
   warningEnabled = flag
 }
 
@@ -439,7 +439,7 @@ export function warnDeprecation(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
   ...args: any[]
-) {
+): void {
   if (!__DEV__) {
     return
   }
@@ -502,21 +502,21 @@ export const globalCompatConfig: CompatConfig = {
   MODE: 2,
 }
 
-export function configureCompat(config: CompatConfig) {
+export function configureCompat(config: CompatConfig): void {
   if (__DEV__) {
     validateCompatConfig(config)
   }
   extend(globalCompatConfig, config)
 }
 
-const seenConfigObjects = /*#__PURE__*/ new WeakSet<CompatConfig>()
+const seenConfigObjects = /*@__PURE__*/ new WeakSet<CompatConfig>()
 const warnedInvalidKeys: Record<string, boolean> = {}
 
 // dev only
 export function validateCompatConfig(
   config: CompatConfig,
   instance?: ComponentInternalInstance,
-) {
+): void {
   if (seenConfigObjects.has(config)) {
     return
   }
@@ -554,7 +554,7 @@ export function validateCompatConfig(
 export function getCompatConfigForKey(
   key: DeprecationTypes | 'MODE',
   instance: ComponentInternalInstance | null,
-) {
+): CompatConfig[DeprecationTypes | 'MODE'] {
   const instanceConfig =
     instance && (instance.type as ComponentOptions).compatConfig
   if (instanceConfig && key in instanceConfig) {
@@ -594,7 +594,7 @@ export function assertCompatEnabled(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
   ...args: any[]
-) {
+): void {
   if (!isCompatEnabled(key, instance)) {
     throw new Error(`${key} compat has been disabled.`)
   } else if (__DEV__) {
@@ -610,7 +610,7 @@ export function softAssertCompatEnabled(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
   ...args: any[]
-) {
+): boolean {
   if (__DEV__) {
     warnDeprecation(key, instance, ...args)
   }
@@ -626,7 +626,7 @@ export function checkCompatEnabled(
   key: DeprecationTypes,
   instance: ComponentInternalInstance | null,
   ...args: any[]
-) {
+): boolean {
   const enabled = isCompatEnabled(key, instance)
   if (__DEV__ && enabled) {
     warnDeprecation(key, instance, ...args)

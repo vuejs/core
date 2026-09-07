@@ -73,7 +73,7 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
 export function ssrProcessSlotOutlet(
   node: SlotOutletNode,
   context: SSRTransformContext,
-) {
+): void {
   const renderCall = node.ssrCodegenNode!
 
   // has fallback content

@@ -1,4 +1,8 @@
-import type { ComponentInternalInstance, Slots } from 'vue'
+import {
+  type ComponentInternalInstance,
+  type Slots,
+  ssrUtils,
+} from '@vue/runtime-dom'
 import {
   type Props,
   type PushFn,
@@ -6,6 +10,8 @@ import {
   renderVNodeChildren,
 } from '../render'
 import { isArray } from '@vue/shared'
+
+const { ensureValidVNode } = ssrUtils
 
 export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
@@ -18,12 +24,13 @@ export type SSRSlot = (
 export function ssrRenderSlot(
   slots: Slots | SSRSlots,
   slotName: string,
-  slotProps: Props,
+  // can be nullish when `v-bind` on the `<slot>` evaluates to nullish
+  slotProps: Props | null | undefined,
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-) {
+): void {
   // template-compiled slots are always rendered as fragments
   push(`<!--[-->`)
   ssrRenderSlotInner(
@@ -41,13 +48,13 @@ export function ssrRenderSlot(
 export function ssrRenderSlotInner(
   slots: Slots | SSRSlots,
   slotName: string,
-  slotProps: Props,
+  slotProps: Props | null | undefined,
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
   transition?: boolean,
-) {
+): void {
   const slotFn = slots[slotName]
   if (slotFn) {
     const slotBuffer: SSRBufferItem[] = []
@@ -55,14 +62,28 @@ export function ssrRenderSlotInner(
       slotBuffer.push(item)
     }
     const ret = slotFn(
-      slotProps,
+      // keep the slot function's contract in sync with `renderSlot`, which also
+      // normalizes nullish props before invoking the slot
+      slotProps || {},
       bufferedPush,
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : '',
     )
     if (isArray(ret)) {
-      // normal slot
-      renderVNodeChildren(push, ret, parentComponent, slotScopeId)
+      const validSlotContent = ensureValidVNode(ret)
+      if (validSlotContent) {
+        // normal slot
+        renderVNodeChildren(
+          push,
+          validSlotContent,
+          parentComponent,
+          slotScopeId,
+        )
+      } else if (fallbackRenderFn) {
+        fallbackRenderFn()
+      } else if (transition) {
+        push(`<!---->`)
+      }
     } else {
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
@@ -98,13 +119,19 @@ export function ssrRenderSlotInner(
           end--
         }
 
-        for (let i = start; i < end; i++) {
-          push(slotBuffer[i])
+        if (start < end) {
+          for (let i = start; i < end; i++) {
+            push(slotBuffer[i])
+          }
+        } else if (transition) {
+          push(`<!---->`)
         }
       }
     }
   } else if (fallbackRenderFn) {
     fallbackRenderFn()
+  } else if (transition) {
+    push(`<!---->`)
   }
 }
 

@@ -6,7 +6,8 @@
  */
 const internalObjectProto = {}
 
-export const createInternalObject = () => Object.create(internalObjectProto)
+export const createInternalObject = (): any =>
+  Object.create(internalObjectProto)
 
-export const isInternalObject = (obj: object) =>
+export const isInternalObject = (obj: object): boolean =>
   Object.getPrototypeOf(obj) === internalObjectProto

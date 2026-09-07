@@ -1,5 +1,6 @@
 import {
   Fragment,
+  Suspense,
   createBlock,
   createCommentVNode,
   createVNode,
@@ -45,6 +46,49 @@ describe('scopeId runtime support', () => {
     expect(serializeInner(root)).toBe(
       `<div parent><div child parent></div></div>`,
     )
+  })
+
+  // #5148
+  test('should attach scopeId to suspense content', async () => {
+    const deps: Promise<any>[] = []
+    const Child = {
+      async setup() {
+        const p = new Promise(r => setTimeout(r, 1))
+        deps.push(p.then(() => Promise.resolve()))
+
+        await p
+        return () => h('div', 'async')
+      },
+    }
+
+    const Wrapper = {
+      setup(_: any, { slots }: any) {
+        return () => slots.default({ Component: h(Child) })
+      },
+    }
+
+    const App = {
+      __scopeId: 'parent',
+      setup() {
+        return () =>
+          h(Wrapper, null, {
+            default: withCtx(({ Component }: any) =>
+              h(Suspense, null, {
+                default: h(Component),
+                fallback: h('div', 'fallback'),
+              }),
+            ),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div parent>fallback</div>`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div parent>async</div>`)
   })
 
   // :slotted basic

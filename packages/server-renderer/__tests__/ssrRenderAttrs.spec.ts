@@ -55,6 +55,19 @@ describe('ssr: renderAttrs', () => {
     ).toBe(` checked disabled`) // boolean attr w/ false should be ignored
   })
 
+  test('hidden enumerated attribute', () => {
+    expect(ssrRenderAttrs({ hidden: true })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ disabled: true, hidden: false })).toBe(` disabled`)
+    expect(ssrRenderAttrs({ hidden: 'until-found' })).toBe(
+      ` hidden="until-found"`,
+    )
+    expect(ssrRenderAttrs({ hidden: '' })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ hidden: 0 })).toBe(``)
+    expect(ssrRenderAttrs({ hidden: NaN })).toBe(``)
+    expect(ssrRenderAttrs({ hidden: 1 })).toBe(` hidden`)
+    expect(ssrRenderAttrs({ hidden: '0' })).toBe(` hidden="0"`)
+  })
+
   test('ignore falsy values', () => {
     expect(
       ssrRenderAttrs({
@@ -105,6 +118,17 @@ describe('ssr: renderAttrs', () => {
       ),
     ).toBe(` viewBox="foo"`)
   })
+
+  test('ignore attr names containing carriage returns', () => {
+    expect(
+      ssrRenderAttrs({
+        id: 'safe',
+        ['x\rautofocus\ronfocus']: 'alert(1)',
+      }),
+    ).toBe(` id="safe"`)
+    expect(`unsafe attribute name`).toHaveBeenWarned()
+    expect(`Skipped rendering unsafe attribute name`).toHaveBeenWarned()
+  })
 })
 
 describe('ssr: renderAttr', () => {
@@ -142,6 +166,19 @@ describe('ssr: renderClass', () => {
 
   test('escape class values', () => {
     expect(ssrRenderClass(`"><script`)).toBe(`&quot;&gt;&lt;script`)
+  })
+
+  test('className', () => {
+    expect(
+      ssrRenderAttrs({
+        className: 'foo',
+      }),
+    ).toBe(` class="foo"`)
+    expect(
+      ssrRenderAttrs({
+        className: ['foo', 'bar'],
+      }),
+    ).toBe(` class="foo,bar"`)
   })
 })
 
@@ -189,5 +226,20 @@ describe('ssr: renderStyle', () => {
         color: `"><script`,
       }),
     ).toBe(`color:&quot;&gt;&lt;script;`)
+  })
+
+  test('useCssVars handling', () => {
+    expect(
+      ssrRenderStyle({
+        fontSize: null,
+        ':--v1': undefined,
+        ':--v2': null,
+        ':--v3': '',
+        ':--v4': '  ',
+        ':--v5': 'foo',
+        ':--v6': 0,
+        '--foo': 1,
+      }),
+    ).toBe(`--v1:initial;--v2:initial;--v3: ;--v4:  ;--v5:foo;--v6:0;--foo:1;`)
   })
 })

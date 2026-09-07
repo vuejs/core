@@ -1,6 +1,6 @@
 const escapeRE = /["'&<>]/
 
-export function escapeHtml(string: unknown) {
+export function escapeHtml(string: unknown): string {
   const str = '' + string
   const match = escapeRE.exec(str)
 
@@ -45,8 +45,25 @@ export function escapeHtml(string: unknown) {
 }
 
 // https://www.w3.org/TR/html52/syntax.html#comments
-const commentStripRE = /^-?>|<!--|-->|--!>|<!-$/g
+const commentStripRE = /^(?:-?>)+|<!--|-->|--!>|<!-$/g
 
 export function escapeHtmlComment(src: string): string {
-  return src.replace(commentStripRE, '')
+  let prev: string
+  do {
+    prev = src
+    src = src.replace(commentStripRE, '')
+  } while (src !== prev)
+  return src
+}
+
+export const cssVarNameEscapeSymbolsRE: RegExp =
+  /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
+
+export function getEscapedCssVarName(
+  key: string,
+  doubleEscape: boolean,
+): string {
+  return key.replace(cssVarNameEscapeSymbolsRE, s =>
+    doubleEscape ? (s === '"' ? '\\\\\\"' : `\\\\${s}`) : `\\${s}`,
+  )
 }

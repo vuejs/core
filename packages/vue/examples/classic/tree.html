@@ -22,43 +22,42 @@
 </script>
 <!-- item script -->
 <script>
-const TreeItem = {
-  name: 'TreeItem', // necessary for self-reference
-  template: '#item-template',
-  props: {
-    model: Object
-  },
-  data() {
-    return {
-      open: false
-    }
-  },
-  computed: {
-    isFolder() {
-      return this.model.children &&
-        this.model.children.length
-    }
-  },
-  methods: {
-    toggle() {
-      if (this.isFolder) {
-        this.open = !this.open
+  const TreeItem = {
+    name: 'TreeItem', // necessary for self-reference
+    template: '#item-template',
+    props: {
+      model: Object,
+    },
+    data() {
+      return {
+        open: false,
       }
     },
-    changeType() {
-      if (!this.isFolder) {
-        this.model.children = []
-        this.addChild()
-        this.open = true
-      }
+    computed: {
+      isFolder() {
+        return this.model.children && this.model.children.length
+      },
     },
-    addChild() {
-      this.model.children.push({
-        name: 'new stuff'
-      })
-    }
+    methods: {
+      toggle() {
+        if (this.isFolder) {
+          this.open = !this.open
+        }
+      },
+      changeType() {
+        if (!this.isFolder) {
+          this.model.children = []
+          this.addChild()
+          this.open = true
+        }
+      },
+      addChild() {
+        this.model.children.push({
+          name: 'new stuff',
+        })
+      },
+    },
   }
-}
 </script>
 
 <p>(You can double click on an item to turn it into a folder.)</p>
@@ -69,43 +68,37 @@ const TreeItem = {
 </ul>
 
 <script>
-const treeData = {
-  name: 'My Tree',
-  children: [
-    { name: 'hello' },
-    { name: 'wat' },
-    {
-      name: 'child folder',
-      children: [
-        {
-          name: 'child folder',
-          children: [
-            { name: 'hello' },
-            { name: 'wat' }
-          ]
-        },
-        { name: 'hello' },
-        { name: 'wat' },
-        {
-          name: 'child folder',
-          children: [
-            { name: 'hello' },
-            { name: 'wat' }
-          ]
-        }
-      ]
-    }
-  ]
-}
+  const treeData = {
+    name: 'My Tree',
+    children: [
+      { name: 'hello' },
+      { name: 'wat' },
+      {
+        name: 'child folder',
+        children: [
+          {
+            name: 'child folder',
+            children: [{ name: 'hello' }, { name: 'wat' }],
+          },
+          { name: 'hello' },
+          { name: 'wat' },
+          {
+            name: 'child folder',
+            children: [{ name: 'hello' }, { name: 'wat' }],
+          },
+        ],
+      },
+    ],
+  }
 
-Vue.createApp({
-  components: {
-    TreeItem
-  },
-  data: () => ({
-    treeData
-  })
-}).mount('#demo')
+  Vue.createApp({
+    components: {
+      TreeItem,
+    },
+    data: () => ({
+      treeData,
+    }),
+  }).mount('#demo')
 </script>
 
 <style>

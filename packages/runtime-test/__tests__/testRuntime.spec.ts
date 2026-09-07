@@ -200,17 +200,4 @@ describe('test renderer', () => {
     await nextTick()
     expect(serialize(root)).toBe(`<div><span>1, 2</span></div>`)
   })
-
-  it('should mock warn', () => {
-    console.warn('warn!!!')
-    expect('warn!!!').toHaveBeenWarned()
-    expect('warn!!!').toHaveBeenWarnedTimes(1)
-
-    console.warn('warn!!!')
-    expect('warn!!!').toHaveBeenWarnedTimes(2)
-
-    console.warn('warning')
-    expect('warn!!!').toHaveBeenWarnedTimes(2)
-    expect('warning').toHaveBeenWarnedLast()
-  })
 })

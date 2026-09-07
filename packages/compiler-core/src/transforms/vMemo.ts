@@ -16,7 +16,7 @@ const seen = new WeakSet()
 export const transformMemo: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.ELEMENT) {
     const dir = findDir(node, 'memo')
-    if (!dir || seen.has(node)) {
+    if (!dir || seen.has(node) || context.inSSR) {
       return
     }
     seen.add(node)
@@ -33,8 +33,10 @@ export const transformMemo: NodeTransform = (node, context) => {
           dir.exp!,
           createFunctionExpression(undefined, codegenNode),
           `_cache`,
-          String(context.cached++),
+          String(context.cached.length),
         ]) as MemoExpression
+        // increment cache count
+        context.cached.push(null)
       }
     }
   }

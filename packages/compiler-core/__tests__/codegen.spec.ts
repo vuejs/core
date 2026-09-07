@@ -47,7 +47,7 @@ function createRoot(options: Partial<RootNode> = {}): RootNode {
     directives: [],
     imports: [],
     hoists: [],
-    cached: 0,
+    cached: [],
     temps: 0,
     codegenNode: createSimpleExpression(`null`, false),
     loc: locStub,
@@ -267,7 +267,7 @@ describe('compiler: codegen', () => {
             disableTracking: true,
             props: undefined,
             children: createCallExpression(RENDER_LIST),
-            patchFlag: '1',
+            patchFlag: PatchFlags.TEXT,
             dynamicProps: undefined,
             directives: undefined,
             loc: locStub,
@@ -303,7 +303,7 @@ describe('compiler: codegen', () => {
             disableTracking: false,
             props: undefined,
             children: createCallExpression(RENDER_LIST),
-            patchFlag: genFlagText(PatchFlags.STABLE_FRAGMENT),
+            patchFlag: PatchFlags.STABLE_FRAGMENT,
             dynamicProps: undefined,
             directives: undefined,
             loc: locStub,
@@ -364,7 +364,7 @@ describe('compiler: codegen', () => {
             ),
           ],
           // flag
-          PatchFlags.FULL_PROPS + '',
+          PatchFlags.FULL_PROPS,
         ),
       }),
     )
@@ -375,7 +375,7 @@ describe('compiler: codegen', () => {
       [foo + bar]: bar
     }, [
       _${helperNameMap[CREATE_ELEMENT_VNODE]}("p", { "some-key": "foo" })
-    ], ${PatchFlags.FULL_PROPS})`)
+    ], ${genFlagText(PatchFlags.FULL_PROPS)})`)
     expect(code).toMatchSnapshot()
   })
 
@@ -422,7 +422,7 @@ describe('compiler: codegen', () => {
   test('CacheExpression', () => {
     const { code } = generate(
       createRoot({
-        cached: 1,
+        cached: [],
         codegenNode: createCacheExpression(
           1,
           createSimpleExpression(`foo`, false),
@@ -437,10 +437,10 @@ describe('compiler: codegen', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('CacheExpression w/ isVNode: true', () => {
+  test('CacheExpression w/ isVOnce: true', () => {
     const { code } = generate(
       createRoot({
-        cached: 1,
+        cached: [],
         codegenNode: createCacheExpression(
           1,
           createSimpleExpression(`foo`, false),
@@ -456,7 +456,7 @@ describe('compiler: codegen', () => {
       `
   _cache[1] || (
     _setBlockTracking(-1),
-    _cache[1] = foo,
+    (_cache[1] = foo).cacheIndex = 1,
     _setBlockTracking(1),
     _cache[1]
   )
@@ -666,11 +666,14 @@ describe('compiler: codegen', () => {
     })
 
     test('with patchFlag and no children/props', () => {
-      expect(genCode(createVNodeCall(null, `"div"`, undefined, undefined, '1')))
-        .toMatchInlineSnapshot(`
-          "return _createElementVNode("div", null, null, 1)
-           "
-        `)
+      expect(
+        genCode(
+          createVNodeCall(null, `"div"`, undefined, undefined, PatchFlags.TEXT),
+        ),
+      ).toMatchInlineSnapshot(`
+        "return _createElementVNode("div", null, null, 1 /* TEXT */)
+         "
+      `)
     })
 
     test('as block', () => {

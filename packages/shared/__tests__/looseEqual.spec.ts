@@ -233,4 +233,59 @@ describe('utils/looseEqual', () => {
     expect(looseEqual(arr1, arr5)).toBe(false)
     expect(looseEqual(arr5, arr1)).toBe(false)
   })
+
+  test('compares maps correctly', () => {
+    const map = new Map<any, any>([
+      [{ id: 1 }, { value: '1' }],
+      ['foo', 'bar'],
+    ])
+
+    expect(looseEqual(map, map)).toBe(true)
+    expect(
+      looseEqual(
+        map,
+        new Map<any, any>([
+          ['foo', 'bar'],
+          [{ id: '1' }, { value: 1 }],
+        ]),
+      ),
+    ).toBe(true)
+    expect(looseEqual(map, new Map([['foo', 'bar']]))).toBe(false)
+    expect(looseEqual(new Map([['a', 1]]), new Map([['b', 2]]))).toBe(false)
+    expect(
+      looseEqual(
+        new Map<any, any>([
+          ['a', 1],
+          ['b', 2],
+        ]),
+        new Map<any, any>([
+          ['a', 2],
+          ['b', 1],
+        ]),
+      ),
+    ).toBe(false)
+    expect(
+      looseEqual(
+        new Map<any, any>([
+          [1, 'value'],
+          ['1', 'value'],
+        ]),
+        new Map<any, any>([
+          [1, 'value'],
+          [2, 'value'],
+        ]),
+      ),
+    ).toBe(false)
+  })
+
+  test('compares sets correctly', () => {
+    const set = new Set<any>([{ id: 1 }, 'foo'])
+
+    expect(looseEqual(set, set)).toBe(true)
+    expect(looseEqual(set, new Set(['foo', { id: '1' }]))).toBe(true)
+    expect(looseEqual(set, new Set(['foo']))).toBe(false)
+    expect(looseEqual(new Set([1]), new Set([2]))).toBe(false)
+    expect(looseEqual(new Set<any>([1, '1']), new Set<any>([1, 2]))).toBe(false)
+    expect(looseEqual(new Set(), new Map())).toBe(false)
+  })
 })

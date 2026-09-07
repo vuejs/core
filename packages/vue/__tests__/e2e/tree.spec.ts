@@ -88,7 +88,7 @@ describe('e2e: tree', () => {
     expect(await isVisible('#demo ul')).toBe(true)
     expect(await text('#demo li div span')).toContain('[-]')
 
-    await click('#demo ul > .item div', { clickCount: 2 })
+    await click('#demo ul > .item div', { count: 2 })
     expect(await count('.item')).toBe(15)
     expect(await count('.item > ul')).toBe(5)
     expect(await text('#demo ul > .item:nth-child(1)')).toContain('[-]')

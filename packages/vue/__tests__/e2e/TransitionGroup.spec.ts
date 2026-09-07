@@ -1,13 +1,10 @@
-import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
-import path from 'node:path'
-import { createApp, ref } from 'vue'
+import { E2E_TIMEOUT, setupBrowserE2E } from './e2eBrowserUtils'
 
 describe('e2e: TransitionGroup', () => {
-  const { page, html, nextFrame, timeout } = setupPuppeteer()
-  const baseUrl = `file://${path.resolve(__dirname, './transition.html')}`
+  const { page, reset, html, nextFrame, timeout } = setupBrowserE2E()
 
-  const duration = process.env.CI ? 200 : 50
-  const buffer = process.env.CI ? 20 : 5
+  const duration = 50
+  const buffer = 20
 
   const htmlWhenTransitionStart = () =>
     page().evaluate(() => {
@@ -20,7 +17,7 @@ describe('e2e: TransitionGroup', () => {
   const transitionFinish = (time = duration) => timeout(time + buffer)
 
   beforeEach(async () => {
-    await page().goto(baseUrl)
+    await reset()
     await page().waitForSelector('#app')
   })
 
@@ -298,6 +295,190 @@ describe('e2e: TransitionGroup', () => {
   )
 
   test(
+    'v-show enter does not also run move transition',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <transition-group name="show-group" tag="div" id="showGroup">
+                <div
+                  v-for="item in items"
+                  :key="item"
+                  :id="\`show-\${item}\`"
+                  v-show="visibleItems.includes(item)"
+                  class="show-item"
+                >
+                  {{ item }}
+                </div>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const visibleItems = ref(['a', 'c'])
+            const click = () => (visibleItems.value = ['a', 'b', 'c'])
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.textContent = `
+                #showGroup {
+                  display: flex;
+                  gap: 5px;
+                }
+                #showGroup > .show-item {
+                  width: 100px;
+                  height: 20px;
+                }
+                .show-group-enter-active,
+                .show-group-move {
+                  transition: transform ${duration}ms ease;
+                }
+                .show-group-enter-from {
+                  transform: translateX(1000px);
+                }
+              `
+              document.head.appendChild(styleNode)
+            })
+
+            return { click, items, visibleItems }
+          },
+        }).mount('#app')
+      }, duration)
+
+      const duringTransition = await page().evaluate(() => {
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return Promise.resolve().then(() =>
+          Array.from(document.querySelectorAll('.show-item')).map(node => ({
+            text: node.textContent!.trim(),
+            classes: Array.from(node.classList),
+            inlineTransform: (node as HTMLElement).style.transform,
+          })),
+        )
+      })
+
+      expect(duringTransition).toStrictEqual([
+        {
+          text: 'a',
+          classes: ['show-item'],
+          inlineTransform: '',
+        },
+        {
+          text: 'b',
+          classes: [
+            'show-item',
+            'show-group-enter-from',
+            'show-group-enter-active',
+          ],
+          inlineTransform: '',
+        },
+        {
+          text: 'c',
+          classes: ['show-item', 'show-group-move'],
+          inlineTransform: '',
+        },
+      ])
+
+      await transitionFinish()
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'move while entering',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+              <transition-group name="toasts" tag="div" id="toasts">
+                <div class="toast" v-for="toast in list" :key="toast.id">
+                  {{ toast.text }} #{{ toast.id }}
+                </div>
+              </transition-group>
+              <button id="addBtn" @click="add">button</button>
+            `,
+          setup: () => {
+            const list = ref([])
+            let id = 0
+            const add = () => {
+              if (list.value.length > 3) {
+                list.value.splice(0, 1)
+              }
+              list.value.push({
+                id,
+                type: 'error',
+                text: 'Test message',
+              })
+              id++
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.innerHTML = `
+                #toasts {
+                  position: absolute;
+                  bottom: 0;
+                  left: 0;
+                }
+                #toasts > .toast {
+                  width: 150px;
+                  margin-bottom: 10px;
+                  height: 30px;
+                  color: white;
+                  background: black;
+                }
+                .toasts-leave-active {
+                  position: absolute;
+                }
+                .toasts-move { transition: transform ${duration}ms ease; }
+              `
+              document.body.appendChild(styleNode)
+            })
+
+            return { list, add }
+          },
+        }).mount('#app')
+      }, duration)
+
+      const overlapDelay = Math.max(10, Math.floor(duration / 2))
+      const { midTop, finalTop } = await page().evaluate(
+        ({ overlapDelay, duration, buffer }) => {
+          ;(document.querySelector('#addBtn') as any)!.click()
+          return new Promise<{ midTop: number; finalTop: number }>(resolve => {
+            setTimeout(() => {
+              ;(document.querySelector('#addBtn') as any)!.click()
+              Promise.resolve().then(() => {
+                const nodes = Array.from(
+                  document.querySelectorAll('#toasts .toast'),
+                ) as HTMLElement[]
+                const firstToast = nodes.find(node =>
+                  node.textContent?.includes('#0'),
+                )
+                const midTop = firstToast
+                  ? firstToast.getBoundingClientRect().top
+                  : NaN
+                setTimeout(() => {
+                  const finalTop = firstToast
+                    ? firstToast.getBoundingClientRect().top
+                    : NaN
+                  resolve({ midTop, finalTop })
+                }, duration + buffer)
+              })
+            }, overlapDelay)
+          })
+        },
+        { overlapDelay, duration, buffer },
+      )
+
+      expect(midTop).toBeGreaterThan(finalTop)
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
     'dynamic name',
     async () => {
       await page().evaluate(() => {
@@ -494,6 +675,7 @@ describe('e2e: TransitionGroup', () => {
   )
 
   test('warn unkeyed children', () => {
+    const { createApp, ref } = (window as any).Vue
     createApp({
       template: `
         <transition-group name="test">
@@ -507,6 +689,22 @@ describe('e2e: TransitionGroup', () => {
     }).mount(document.createElement('div'))
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
+  })
+
+  test('not warn unkeyed text children w/ whitespace preserve', () => {
+    const { createApp } = (window as any).Vue
+    const app = createApp({
+      template: `
+        <transition-group name="test">
+          <p key="1">1</p>
+          <p key="2" v-if="false">2</p>
+        </transition-group>
+        `,
+    })
+
+    app.config.compilerOptions.whitespace = 'preserve'
+    app.mount(document.createElement('div'))
+    expect(`<TransitionGroup> children must be keyed`).not.toHaveBeenWarned()
   })
 
   // #5168, #7898, #9067
@@ -589,8 +787,8 @@ describe('e2e: TransitionGroup', () => {
           template: `
             <div id="container">
               <transition-group name="test">
-                <div class="test">foo</div>
-                <div class="test" v-if="show">bar</div>
+                <div key="1" class="test">foo</div>
+                <div key="2" class="test" v-if="show">bar</div>
               </transition-group>
             </div>
             <button id="toggleBtn" @click="click">button</button>
@@ -627,6 +825,113 @@ describe('e2e: TransitionGroup', () => {
       expect(await html('#container')).toBe(
         `<div class="test">foo</div>` + ` ` + `<div class="test">bar</div>`,
       )
+    },
+    E2E_TIMEOUT,
+  )
+
+  // #6105
+  test(
+    'with scale',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, ref, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+            <div id="container">
+              <div class="scale" style="transform: scale(2) translateX(50%) translateY(50%)">
+                <transition-group tag="ul">
+                  <li v-for="item in items" :key="item">{{item}}</li>
+                </transition-group>
+                <button id="toggleBtn" @click="click">button</button>
+              </div>
+            </div>
+          `,
+          setup: () => {
+            const items = ref(['a', 'b', 'c'])
+            const click = () => {
+              items.value.reverse()
+            }
+
+            onMounted(() => {
+              const styleNode = document.createElement('style')
+              styleNode.innerHTML = `.v-move {
+                transition: transform 0.5s ease;
+              }`
+              document.body.appendChild(styleNode)
+            })
+
+            return { items, click }
+          },
+        }).mount('#app')
+      })
+
+      const original_top = await page().$eval('ul li:nth-child(1)', node => {
+        return node.getBoundingClientRect().top
+      })
+      const new_top = await page().evaluate(() => {
+        const el = document.querySelector('ul li:nth-child(1)')
+        const p = new Promise(resolve => {
+          el!.addEventListener('transitionstart', () => {
+            const new_top = el!.getBoundingClientRect().top
+            resolve(new_top)
+          })
+        })
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        return p
+      })
+
+      expect(original_top).toBeLessThan(new_top as number)
+    },
+    E2E_TIMEOUT,
+  )
+
+  test(
+    'not leaking after children unmounted',
+    async () => {
+      const client = await page().createCDPSession()
+      await page().evaluate(async () => {
+        const { createApp, ref, nextTick } = (window as any).Vue
+        const show = ref(true)
+
+        createApp({
+          components: {
+            Child: {
+              setup: () => {
+                // Big arrays kick GC earlier
+                const test = ref([...Array(3000)].map((_, i) => ({ i })))
+                // @ts-expect-error - Custom property and same lib as runtime is used
+                window.__REF__ = new WeakRef(test)
+
+                return { test }
+              },
+              template: `
+              <p>{{ test.length }}</p>
+            `,
+            },
+          },
+          template: `
+          <transition-group>
+            <Child v-if="show" />
+          </transition-group>
+        `,
+          setup() {
+            return { show }
+          },
+        }).mount('#app')
+
+        show.value = false
+        await nextTick()
+      })
+
+      const isCollected = async () =>
+        // @ts-expect-error - Custom property
+        await page().evaluate(() => window.__REF__.deref() === undefined)
+
+      while ((await isCollected()) === false) {
+        await client.send('HeapProfiler.collectGarbage')
+      }
+
+      expect(await isCollected()).toBe(true)
     },
     E2E_TIMEOUT,
   )

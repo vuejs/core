@@ -1,20 +1,22 @@
 import { isFunction } from '@vue/shared'
-import { currentInstance } from './component'
-import { currentRenderingInstance } from './componentRenderContext'
+import { currentInstance, getCurrentInstance } from './component'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
-export interface InjectionKey<T> extends Symbol {}
+interface InjectionConstraint<T> {}
+
+export type InjectionKey<T> = symbol & InjectionConstraint<T>
 
 export function provide<T, K = InjectionKey<T> | string | number>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
-) {
-  if (!currentInstance) {
-    if (__DEV__) {
+): void {
+  if (__DEV__) {
+    if (!currentInstance || currentInstance.isMounted) {
       warn(`provide() can only be used inside setup().`)
     }
-  } else {
+  }
+  if (currentInstance) {
     let provides = currentInstance.provides
     // by default an instance inherits its parent's provides object
     // but when it needs to provide values of its own, it creates its
@@ -49,18 +51,23 @@ export function inject(
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
-  const instance = currentInstance || currentRenderingInstance
+  const instance = getCurrentInstance()
 
   // also support looking up from app-level provides w/ `app.runWithContext()`
   if (instance || currentApp) {
     // #2400
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
-    const provides = instance
-      ? instance.parent == null
-        ? instance.vnode.appContext && instance.vnode.appContext.provides
-        : instance.parent.provides
-      : currentApp!._context.provides
+    // #11488, in a nested createApp, prioritize using the provides from currentApp
+    // #13212, for custom elements we must get injected values from its appContext
+    // as it already inherits the provides object from the parent element
+    let provides = currentApp
+      ? currentApp._context.provides
+      : instance
+        ? instance.parent == null || instance.ce
+          ? instance.vnode.appContext && instance.vnode.appContext.provides
+          : instance.parent.provides
+        : undefined
 
     if (provides && (key as string | symbol) in provides) {
       // TS doesn't allow symbol as index type
@@ -83,5 +90,5 @@ export function inject(
  * user. One example is `useRoute()` in `vue-router`.
  */
 export function hasInjectionContext(): boolean {
-  return !!(currentInstance || currentRenderingInstance || currentApp)
+  return !!(getCurrentInstance() || currentApp)
 }

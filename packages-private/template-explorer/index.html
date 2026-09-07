@@ -1,0 +1,24 @@
+<title>Vue Template Explorer</title>
+<link
+  rel="stylesheet"
+  data-name="vs/editor/editor.main"
+  href="https://unpkg.com/monaco-editor@0.20.0/min/vs/editor/editor.main.css"
+/>
+<link rel="stylesheet" href="./style.css" />
+
+<div id="header"></div>
+<div id="source" class="editor"></div>
+<div id="output" class="editor"></div>
+
+<script src="https://unpkg.com/monaco-editor@0.20.0/min/vs/loader.js"></script>
+<script>
+  require.config({
+    paths: {
+      vs: 'https://unpkg.com/monaco-editor@0.20.0/min/vs',
+    },
+  })
+</script>
+<script src="./dist/template-explorer.global.js"></script>
+<script>
+  require(['vs/editor/editor.main'], init /* injected by build */)
+</script>

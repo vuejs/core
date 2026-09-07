@@ -1,3 +1,10 @@
+import {
+  effect,
+  isReactive,
+  reactive,
+  readonly,
+  shallowReactive,
+} from '../../src/index'
 import { renderList } from '../../src/helpers/renderList'
 
 describe('renderList', () => {
@@ -22,12 +29,24 @@ describe('renderList', () => {
   })
 
   it('should warn when given a non-integer N', () => {
-    try {
-      renderList(3.1, () => {})
-    } catch (e) {}
+    expect(renderList(3.1, () => {})).toEqual([])
     expect(
-      `The v-for range expect an integer value but got 3.1.`,
+      `The v-for range expects a positive integer value but got 3.1.`,
     ).toHaveBeenWarned()
+  })
+
+  it('should warn when given a negative N', () => {
+    expect(renderList(-1, () => {})).toEqual([])
+    expect(
+      `The v-for range expects a positive integer value but got -1.`,
+    ).toHaveBeenWarned()
+  })
+
+  it('should not warn when given 0', () => {
+    renderList(0, () => {})
+    expect(
+      `The v-for range expects a positive integer value but got 0.`,
+    ).not.toHaveBeenWarned()
   })
 
   it('should render properties in an object', () => {
@@ -51,9 +70,48 @@ describe('renderList', () => {
     ).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
+  it('should return empty array when source is 0', () => {
+    expect(renderList(0, (item, index) => `node ${index}: ${item}`)).toEqual([])
+  })
+
   it('should return empty array when source is undefined', () => {
     expect(
       renderList(undefined, (item, index) => `node ${index}: ${item}`),
     ).toEqual([])
+  })
+
+  it('should render items in a reactive array correctly', () => {
+    const reactiveArray = reactive([{ foo: 1 }])
+    expect(renderList(reactiveArray, isReactive)).toEqual([true])
+
+    const shallowReactiveArray = shallowReactive([{ foo: 1 }])
+    expect(renderList(shallowReactiveArray, isReactive)).toEqual([false])
+  })
+
+  it('should not allow mutation', () => {
+    const arr = readonly(reactive([{ foo: 1 }]))
+    expect(
+      renderList(arr, item => {
+        ;(item as any).foo = 0
+        return item.foo
+      }),
+    ).toEqual([1])
+    expect(
+      `Set operation on key "foo" failed: target is readonly.`,
+    ).toHaveBeenWarned()
+  })
+
+  it('should trigger effect for deep mutations in readonly reactive arrays', () => {
+    const arr = reactive([{ foo: 1 }])
+    const readonlyArr = readonly(arr)
+
+    let dummy
+    effect(() => {
+      dummy = renderList(readonlyArr, item => item.foo)
+    })
+    expect(dummy).toEqual([1])
+
+    arr[0].foo = 2
+    expect(dummy).toEqual([2])
   })
 })

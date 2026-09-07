@@ -1,6 +1,7 @@
 import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
-import vitest from 'eslint-plugin-vitest'
+import { defineConfig } from 'eslint/config'
+import vitest from '@vitest/eslint-plugin'
 import { builtinModules } from 'node:module'
 
 const DOMGlobals = ['window', 'document']
@@ -12,7 +13,7 @@ const banConstEnum = {
     'Please use non-const enums. This project automatically inlines enums.',
 }
 
-export default tseslint.config(
+export default defineConfig(
   {
     files: ['**/*.js', '**/*.ts', '**/*.tsx'],
     extends: [tseslint.configs.base],
@@ -60,7 +61,10 @@ export default tseslint.config(
       ],
       // This rule enforces the preference for using '@ts-expect-error' comments in TypeScript
       // code to indicate intentional type errors, improving code clarity and maintainability.
-      '@typescript-eslint/prefer-ts-expect-error': 'error',
+      '@typescript-eslint/ban-ts-comment': [
+        'error',
+        { minimumDescriptionLength: 0 },
+      ],
       // Enforce the use of 'import type' for importing types
       '@typescript-eslint/consistent-type-imports': [
         'error',
@@ -76,7 +80,11 @@ export default tseslint.config(
 
   // tests, no restrictions (runs in Node / Vitest with jsdom)
   {
-    files: ['**/__tests__/**', 'packages/dts-test/**'],
+    files: [
+      '**/__tests__/**',
+      'packages-private/dts-test/**',
+      'packages-private/dts-build-test/**',
+    ],
     plugins: { vitest },
     languageOptions: {
       globals: {
@@ -119,7 +127,10 @@ export default tseslint.config(
 
   // Private package, browser only + no syntax restrictions
   {
-    files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
+    files: [
+      'packages-private/template-explorer/**',
+      'packages-private/sfc-playground/**',
+    ],
     rules: {
       'no-restricted-globals': ['error', ...NodeGlobals],
       'no-restricted-syntax': ['error', banConstEnum],

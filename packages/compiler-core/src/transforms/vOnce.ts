@@ -17,7 +17,11 @@ export const transformOnce: NodeTransform = (node, context) => {
       context.inVOnce = false
       const cur = context.currentNode as ElementNode | IfNode | ForNode
       if (cur.codegenNode) {
-        cur.codegenNode = context.cache(cur.codegenNode, true /* isVNode */)
+        cur.codegenNode = context.cache(
+          cur.codegenNode,
+          true /* isVNode */,
+          true /* inVOnce */,
+        )
       }
     }
   }
