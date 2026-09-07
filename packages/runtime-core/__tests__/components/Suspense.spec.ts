@@ -2004,6 +2004,143 @@ describe('Suspense', () => {
     ])
   })
 
+  // toggling a nested suspensible suspense to sync content resolves the
+  // parent boundary synchronously while it is still being patched; the
+  // fallback fall-through must then be skipped or it patches the unmounted
+  // fallback and corrupts activeBranch
+  test('nested suspensible suspense toggled to sync content while parent is in fallback', async () => {
+    const route = ref('a')
+    const label = ref('first')
+
+    const AsyncChild = {
+      async setup() {
+        await new Promise(() => {}) // never resolves
+        return () => h('div', 'async child')
+      },
+    }
+    const PageA = {
+      setup: () => () => h('div', [h('span', 'page a'), h(AsyncChild)]),
+    }
+    const PageB = {
+      setup: () => () => h('div', `page b ${label.value}`),
+    }
+
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: h('div', { 'data-label': label.value }, [
+              h(
+                Suspense,
+                { suspensible: true },
+                {
+                  default:
+                    route.value === 'a'
+                      ? h(PageA, { key: 'a' })
+                      : h(PageB, { key: 'b' }),
+                },
+              ),
+            ]),
+            fallback: h('div', 'fallback'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    // the nested suspense resolves synchronously, propagates, and resolves
+    // the outer boundary mid-patch
+    route.value = 'b'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div data-label="first"><div>page b first</div></div>`,
+    )
+
+    // a follow-up update must still reach the DOM
+    label.value = 'second'
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div data-label="second"><div>page b second</div></div>`,
+    )
+  })
+
+  // a nested suspensible suspense resolving synchronously inside the parent's
+  // same-root patch must not resolve the parent before later siblings in the
+  // same patch have registered their async deps
+  test('nested suspensible suspense resolving the parent mid-patch while a later sibling registers an async dep', async () => {
+    const route = ref('a')
+    const show = ref(false)
+    let releaseSibling: () => void
+    const siblingGate = new Promise<void>(r => (releaseSibling = r))
+
+    const NeverChild = {
+      async setup() {
+        await new Promise(() => {}) // never resolves
+        return () => h('div', 'never')
+      },
+    }
+    const Sibling = {
+      async setup() {
+        await siblingGate
+        return () => h('div', 'sibling')
+      },
+    }
+    const PageA = {
+      setup: () => () => h('div', [h('span', 'page a'), h(NeverChild)]),
+    }
+    const PageB = {
+      setup: () => () => h('div', 'page b'),
+    }
+
+    const onResolve = vi.fn()
+    const Comp = {
+      setup() {
+        return () =>
+          h(
+            Suspense,
+            { onResolve },
+            {
+              default: h('div', [
+                h(
+                  Suspense,
+                  { suspensible: true },
+                  {
+                    default:
+                      route.value === 'a'
+                        ? h(PageA, { key: 'a' })
+                        : h(PageB, { key: 'b' }),
+                  },
+                ),
+                show.value ? h(Sibling) : null,
+              ]),
+              fallback: h('div', 'fallback'),
+            },
+          )
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+
+    // the nested suspense resolves synchronously and releases the parent's
+    // last dep, but the sibling mounted right after it is still pending
+    route.value = 'b'
+    show.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    expect(onResolve).not.toHaveBeenCalled()
+
+    releaseSibling!()
+    await new Promise(r => setTimeout(r))
+    expect(serializeInner(root)).toBe(
+      `<div><div>page b</div><div>sibling</div></div>`,
+    )
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
   // #6416
   test('KeepAlive with Suspense', async () => {
     const Async = defineAsyncComponent({
