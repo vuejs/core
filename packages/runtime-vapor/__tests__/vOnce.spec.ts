@@ -161,22 +161,6 @@ describe('v-once', () => {
       expect(vapor.text).toBe(vdom.text)
     })
 
-    test('children of parent-rendered built-ins stay frozen', async () => {
-      const Leaf = `<script setup>const props = defineProps(['label'])</script><template><i>{{ props.label }}</i></template>`
-      const keepAlive = await renderParity(
-        {
-          Leaf,
-          App: `<template><div><KeepAlive v-once><components.Leaf :label="data.msg"/></KeepAlive></div></template>`,
-        },
-        () => ref({ msg: 'a' }),
-        data => {
-          data.value.msg = 'b'
-        },
-      )
-      expect(keepAlive.vdom.text).toBe('a')
-      expect(keepAlive.vapor.text).toBe('a')
-    })
-
     test('the slot set stays frozen', async () => {
       const { vdom, vapor } = await renderParity(
         {

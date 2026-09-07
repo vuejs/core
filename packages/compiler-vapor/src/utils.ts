@@ -159,21 +159,6 @@ export function isTeleportTag(tag: string): boolean {
   return tag === 'teleport' || tag === 'vaporteleport'
 }
 
-/**
- * Built-ins whose children are rendered by the parent rather than by the
- * component's own render, so they freeze with the parent under v-once
- * (vdom parity: Teleport / KeepAlive children are not built as slots and
- * Suspense slots are evaluated at vnode creation).
- */
-export function isParentRenderedBuiltIn(tag: string): boolean {
-  return (
-    isTeleportTag(tag) ||
-    isKeepAliveTag(tag) ||
-    tag === 'Suspense' ||
-    tag === 'suspense'
-  )
-}
-
 export function isBuiltInComponent(tag: string): string | undefined {
   if (isTeleportTag(tag)) {
     return 'VaporTeleport'

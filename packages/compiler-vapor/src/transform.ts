@@ -33,7 +33,6 @@ import {
 } from './ir'
 import {
   isConstantExpression,
-  isParentRenderedBuiltIn,
   isStaticExpression,
   isTransitionNode,
 } from './utils'
@@ -348,7 +347,7 @@ export class TransformContext<T extends AllNode = AllNode> {
       index,
       // Slot content is executed by the child component, which re-runs it on
       // its own updates (vdom parity), so v-once does not reach into it.
-      inVOnce: this.inVOnce && !isComponentBoundary(this.node),
+      inVOnce: this.inVOnce && !isComponentNode(this.node),
 
       template: '',
       templateRoot: false,
@@ -634,10 +633,8 @@ export function getNextId(
   return n
 }
 
-function isComponentBoundary(node: AllNode): boolean {
+function isComponentNode(node: AllNode): boolean {
   return (
-    node.type === NodeTypes.ELEMENT &&
-    node.tagType === ElementTypes.COMPONENT &&
-    !isParentRenderedBuiltIn(node.tag)
+    node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.COMPONENT
   )
 }
