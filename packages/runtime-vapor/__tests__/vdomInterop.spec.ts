@@ -2437,7 +2437,7 @@ describe('vdomInterop', () => {
         },
         render() {
           const setRef = createTemplateRefSetter()
-          const n0 = createDynamicComponent(() => VdomChild)
+          const n0 = createDynamicComponent(() => VdomChild) as DynamicFragment
           setRef(n0, vdomRef, false, 'vdomRef')
           return n0
         },
@@ -2503,7 +2503,7 @@ describe('vdomInterop', () => {
       const VaporChild = defineVaporComponent({
         setup() {
           const setRef = createTemplateRefSetter()
-          const n0 = createDynamicComponent(() => VdomChild)
+          const n0 = createDynamicComponent(() => VdomChild) as DynamicFragment
           renderEffect(() => {
             setRef(n0, useA.value ? refA : refB, false, 'vdomRef')
           })

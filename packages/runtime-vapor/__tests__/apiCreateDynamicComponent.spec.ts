@@ -144,11 +144,32 @@ describe('api: createDynamicComponent', () => {
       },
     }).render()
 
-    expect(html()).toBe('AAA<!--dynamic-component-->')
+    // resolved once: no fragment, no anchor
+    expect(html()).toBe('AAA')
 
     val.value = B
     await nextTick()
-    expect(html()).toBe('AAA<!--dynamic-component-->') // still AAA
+    expect(html()).toBe('AAA') // still AAA
+  })
+
+  test('null with v-once', async () => {
+    const val = shallowRef<any>(null)
+    const { html } = define({
+      setup() {
+        return createDynamicComponent(
+          () => val.value,
+          null,
+          null,
+          VaporDynamicComponentFlags.ONCE,
+        )
+      },
+    }).render()
+
+    expect(html()).toBe('<!--ndc-->')
+
+    val.value = A
+    await nextTick()
+    expect(html()).toBe('<!--ndc-->')
   })
 
   test('fallback with v-once', async () => {
@@ -166,11 +187,11 @@ describe('api: createDynamicComponent', () => {
       },
     }).render()
 
-    expect(html()).toBe('<button id="0"></button><!--dynamic-component-->')
+    expect(html()).toBe('<button id="0"></button>')
 
     id.value++
     await nextTick()
-    expect(html()).toBe('<button id="0"></button><!--dynamic-component-->')
+    expect(html()).toBe('<button id="0"></button>')
   })
 
   test('render fallback with insertionState', async () => {

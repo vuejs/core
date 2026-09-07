@@ -153,7 +153,7 @@ describe('api: template ref', () => {
         }
       },
       render() {
-        const n0 = createDynamicComponent(() => Child)
+        const n0 = createDynamicComponent(() => Child) as any
         frag = n0
         setTemplateRefBinding(n0, () => refKey.value)
         return n0
@@ -198,7 +198,7 @@ describe('api: template ref', () => {
         return { foo, bar }
       },
       render() {
-        const n0 = createDynamicComponent(() => views[view.value])
+        const n0 = createDynamicComponent(() => views[view.value]) as any
         setTemplateRefBinding(n0, () => refKey.value)
         return n0
       },
