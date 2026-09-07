@@ -31,7 +31,7 @@ export function genBuiltinDirective(
     default:
       return []
   }
-  return [NEWLINE, ...genOnce(call, oper.once, context)]
+  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
 }
 
 /**
@@ -55,14 +55,8 @@ function genCustomDirectives(
   const directiveItems = opers.map(genDirectiveItem)
   const directives = genMulti(DELIMITERS_ARRAY, ...directiveItems)
 
-  return [
-    NEWLINE,
-    ...genOnce(
-      genCall(helper('withVaporDirectives'), element, directives),
-      opers[0].once,
-      context,
-    ),
-  ]
+  const call = genCall(helper('withVaporDirectives'), element, directives)
+  return [NEWLINE, ...(opers[0].once ? genOnce(call, context) : call)]
 
   function genDirectiveItem({
     dir,

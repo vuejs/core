@@ -12,15 +12,14 @@ import type { CodegenContext } from '../generate'
 import type { ParserOptions } from '@babel/parser'
 
 /**
- * A helper that creates its own effects runs inside the once ambient at a
- * v-once site, so those effects run once like compiled ones do.
+ * Run a helper call inside the once ambient: a helper that creates its own
+ * effects at a v-once site has them run once like compiled ones do.
  */
 export function genOnce(
   call: CodeFragment[],
-  once: boolean | undefined,
   context: CodegenContext,
 ): CodeFragment[] {
-  return once ? genCall(context.helper('withOnce'), ['() => ', ...call]) : call
+  return genCall(context.helper('withOnce'), ['() => ', ...call])
 }
 
 export const IMPORT_EXP_START = '__IMPORT_EXP_START__'
