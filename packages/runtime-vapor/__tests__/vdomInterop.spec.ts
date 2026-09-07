@@ -38,7 +38,7 @@ import {
 } from '@vue/runtime-dom'
 import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
-import { compile, makeInteropRender } from './_utils'
+import { compile, makeInteropRender, renderParity } from './_utils'
 import { type DynamicFragment, isInteropFragment } from '../src/fragment'
 import {
   type VaporComponentInstance,
@@ -1487,6 +1487,57 @@ describe('vdomInterop', () => {
       increment()
       await nextTick()
       expect(html()).toBe('<span>1</span>')
+    })
+
+    test('keeps a VDOM component live inside v-once slot content regardless of nesting', async () => {
+      const VdomMid = defineComponent({
+        setup(_, { slots }) {
+          return () => h('b', slots.default && slots.default())
+        },
+      })
+      const Child = `<template><div><slot v-once/></div></template>`
+      for (const content of [
+        `<components.VdomMid>{{ data.msg }}</components.VdomMid>`,
+        `<div><components.VdomMid>{{ data.msg }}</components.VdomMid></div>`,
+      ]) {
+        const { vdom, vapor } = await renderParity(
+          {
+            Child,
+            App: `<template><components.Child>${content}</components.Child></template>`,
+          },
+          () => ref({ msg: 'a' }),
+          data => {
+            data.value.msg = 'b'
+          },
+          { VdomMid },
+        )
+        expect(vdom.text).toBe('b')
+        expect(vapor.text).toBe('b')
+      }
+    })
+
+    test('keeps VDOM-owned props live on Vapor descendants inside v-once slot content', async () => {
+      let bump!: () => void
+      const VdomMid = defineComponent({
+        setup(_, { slots }) {
+          const n = ref(0)
+          bump = () => n.value++
+          return () =>
+            h('b', [n.value, slots.default && slots.default({ n: n.value })])
+        },
+      })
+      const { vdom, vapor } = await renderParity(
+        {
+          Leaf: `<script setup>const props = defineProps(['n'])</script><template><i>{{ props.n }}</i></template>`,
+          Child: `<template><div><slot v-once/></div></template>`,
+          App: `<template><components.Child><div><components.VdomMid v-slot="{ n }"><components.Leaf :n="n"/></components.VdomMid></div></components.Child></template>`,
+        },
+        () => ref({}),
+        () => bump(),
+        { VdomMid },
+      )
+      expect(vdom.text).toBe('11')
+      expect(vapor.text).toBe('11')
     })
 
     test('falls through to outlet fallback when vdom local fallback is invalidated or removed from VaporSlot', async () => {

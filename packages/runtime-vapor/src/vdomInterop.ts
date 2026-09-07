@@ -1152,7 +1152,10 @@ function mountVNode(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
+    withOnceSlot(
+      () => hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds),
+      false,
+    )
     onScopeDispose(unmount, true)
     isMounted = true
     syncNodes()
@@ -1191,15 +1194,20 @@ function mountVNode(
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
         namespace = getContainerType(parentNode as Element)
-        internals.p(
-          null,
-          vnode,
-          parentNode,
-          anchor,
-          parentComponent as any,
-          operationSuspense,
-          namespace,
-          frag.slotScopeIds,
+        // Component vnodes render here; see createVDOMComponent.
+        withOnceSlot(
+          () =>
+            internals.p(
+              null,
+              vnode,
+              parentNode,
+              anchor,
+              parentComponent as any,
+              operationSuspense,
+              namespace,
+              frag.slotScopeIds,
+            ),
+          false,
         )
         onScopeDispose(unmount, true)
         isMounted = true
@@ -1407,7 +1415,10 @@ function createVDOMComponent(
 
   frag.hydrate = () => {
     if (!isHydrating) return
-    hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
+    withOnceSlot(
+      () => hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds),
+      false,
+    )
     isMounted = true
     syncNodes()
   }
@@ -1441,13 +1452,19 @@ function createVDOMComponent(
       simpleSetCurrentInstance(parentComponent)
       if (!isMounted) {
         if (transition) setVNodeTransitionHooks(vnode, transition)
-        internals.mt(
-          vnode,
-          parentNode,
-          anchor,
-          parentComponent as any,
-          operationSuspense,
-          getContainerType(parentNode as Element),
+        // A VDOM component is a boundary: its own render must create live
+        // effects even when it is mounted inside a v-once extent.
+        withOnceSlot(
+          () =>
+            internals.mt(
+              vnode,
+              parentNode,
+              anchor,
+              parentComponent as any,
+              operationSuspense,
+              getContainerType(parentNode as Element),
+              false,
+            ),
           false,
         )
         // set ref

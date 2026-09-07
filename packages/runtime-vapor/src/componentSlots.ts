@@ -61,6 +61,7 @@ import { withHydratingSlotBoundary } from './dom/hydrateFragment'
 export let inOnceSlot = false
 
 export function withOnceSlot<T>(fn: () => T, value = true): T {
+  if (inOnceSlot === value) return fn()
   const prev = inOnceSlot
   try {
     inOnceSlot = value
