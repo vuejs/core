@@ -310,11 +310,15 @@ export function createHydrationFunctions(
           // inner component is loaded, so we need to give it a placeholder
           // vnode that matches its adopted DOM.
           //
-          // This covers two cases, both of which leave subTree unset:
+          // This covers three cases, all of which leave subTree unset:
           // - the component has not resolved yet
           // - the component has resolved, but uses a lazy hydration strategy
           //   that has not fired yet, so hydrating its subtree was deferred
-          if (isAsyncWrapper(vnode) && !vnode.component!.subTree) {
+          // - the component's own async setup() has not resolved yet
+          if (
+            (isAsyncWrapper(vnode) || vnode.component!.asyncDep) &&
+            !vnode.component!.subTree
+          ) {
             let subTree
             if (isFragmentStart) {
               // the async component has no child vnodes yet, so represent its

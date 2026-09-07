@@ -757,6 +757,15 @@ function createSuspenseBoundary(
           // still be set when Suspense re-enters another component's render path.
           // Clear it first.
           unsetCurrentInstance()
+          // The scope is stopped synchronously on unmount, while `isUnmounted`
+          // is deferred until the boundary resolves. Bail but still release the
+          // dep even if the claimed DOM remains attached to a removed ancestor.
+          if (hydratedEl && !instance.scope.active) {
+            if (isInPendingSuspense && --suspense.deps === 0) {
+              suspense.resolve()
+            }
+            return
+          }
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance
