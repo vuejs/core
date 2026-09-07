@@ -211,6 +211,56 @@ export function compile(
   )
 }
 
+export interface ParityResult {
+  after: string
+  text: string
+}
+
+/**
+ * Mount the same SFC sources as a vdom app and as a vapor app in turn
+ * (`srcs.App` is the root; the rest register on `_components` in order),
+ * run `act`, and return each mode's final html and text. Sources without a
+ * `<script>` get a plain `<script setup>` so the mode comes from the compile
+ * option (`compile()` would inject `<script vapor>`, which forces vapor).
+ * `extra` components are shared by both modes as given.
+ */
+export async function renderParity(
+  srcs: Record<string, string>,
+  makeData: () => runtimeDom.Ref<any>,
+  act: (data: runtimeDom.Ref<any>, root: HTMLElement) => void | Promise<void>,
+  extra: Record<string, any> = {},
+): Promise<{ vdom: ParityResult; vapor: ParityResult }> {
+  const results = {} as { vdom: ParityResult; vapor: ParityResult }
+  for (const vapor of [false, true]) {
+    const data = makeData()
+    const components: Record<string, any> = { ...extra }
+    const withScript = (src: string) =>
+      src.includes('<script')
+        ? src
+        : `<script setup>const data = _data; const components = _components;</script>` +
+          src
+    for (const name in srcs) {
+      if (name !== 'App') {
+        components[name] = compile(withScript(srcs[name]), data, components, {
+          vapor,
+        })
+      }
+    }
+    const App = compile(withScript(srcs.App), data, components, { vapor })
+    const root = document.createElement('div')
+    const app = vapor ? createVaporApp(App) : createApp(App)
+    app.use(vaporInteropPlugin).mount(root)
+    await act(data, root)
+    await runtimeDom.nextTick()
+    results[vapor ? 'vapor' : 'vdom'] = {
+      after: root.innerHTML,
+      text: root.textContent!,
+    }
+    app.unmount()
+  }
+  return results
+}
+
 export function compileToVaporRender(
   template: string,
   options?: CompilerOptions,

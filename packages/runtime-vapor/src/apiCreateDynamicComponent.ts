@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   Fragment,
+  type GenericAppContext,
   NULL_DYNAMIC_COMPONENT,
   type VNode,
   currentInstance,
@@ -10,7 +11,7 @@ import {
   setCurrentRenderingInstance,
 } from '@vue/runtime-dom'
 import { ShapeFlags, VaporDynamicComponentFlags } from '@vue/shared'
-import { isBlock, removeNode } from './block'
+import { type Block, isBlock, removeNode } from './block'
 import {
   type VaporComponentInstance,
   createComponentWithFallback,
@@ -34,6 +35,7 @@ import {
   type HydrationCursor,
   captureHydrationCursor,
   createFragmentClaim,
+  enterHydrationCursor,
   isHydrating,
   locateHydrationNode,
 } from './dom/hydration'
@@ -51,13 +53,91 @@ export function createDynamicComponent(
   rawProps?: RawProps | null,
   rawSlots?: LooseRawSlots | null,
   flags: number = 0,
-): VaporFragment {
+): Block {
   const isSingleRoot = !!(flags & VaporDynamicComponentFlags.SINGLE_ROOT)
   const once = !!(flags & VaporDynamicComponentFlags.ONCE)
   const slotRoot = !!(flags & VaporDynamicComponentFlags.SLOT_ROOT)
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()
+
+  const normalizedRawSlots = normalizeRawSlots(rawSlots)
+  const scopeOwner = getScopeOwner()
+
+  const render = (
+    value: any,
+    resolved: any,
+    appContext: GenericAppContext,
+  ): Block => {
+    // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
+    if (isBlock(value)) return value
+
+    // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
+    if (isInteropEnabled && appContext.vdom && isVNode(value)) {
+      if (isKeepAlive(currentInstance)) {
+        enableKeepAlive()
+        const cached = (
+          currentInstance as KeepAliveInstance
+        ).ctx.getCachedComponent(value.type, value.key) as VaporFragment
+        if (cached) return cached
+      }
+
+      // A vnode standing in as this component's effective root inherits
+      // fallthrough attrs; the normal component path folds them into
+      // rawProps at creation, this one merges them into the vnode's props.
+      const owner =
+        isSingleRoot &&
+        isVaporComponent(currentInstance) &&
+        currentInstance.hasFallthrough &&
+        currentInstance.type.inheritAttrs !== false
+          ? currentInstance
+          : undefined
+      const frag = appContext.vdom.mountVNode(
+        value,
+        currentInstance,
+        owner && (() => resolveFallthroughAttrs(owner)),
+      )
+      if (isHydrating) {
+        locateHydrationNode(
+          shouldConsumeFragmentStart(value) ? createFragmentClaim() : undefined,
+        )
+        frag.hydrate()
+      }
+      return frag
+    }
+
+    return createComponentWithFallback(
+      resolved,
+      rawProps,
+      normalizedRawSlots,
+      isSingleRoot,
+      once,
+      appContext,
+    )
+  }
+
+  if (once) {
+    // Resolved exactly once, so there is nothing for a fragment to switch:
+    // render the block in place, like `createIf` once. A null component
+    // renders the fallback's placeholder node.
+    const hydrationCursor = isHydrating ? enterHydrationCursor() : null
+    const value = getter()
+    const appContext = getAppContext()
+    const block = render(
+      value,
+      resolveValue(value, appContext, scopeOwner),
+      appContext,
+    )
+    finishBlockCreation(
+      block,
+      undefined,
+      hydrationCursor,
+      _insertionParent,
+      _insertionAnchor,
+    )
+    return block
+  }
+
   const hydrationCursor: HydrationCursor | null = isHydrating
     ? captureHydrationCursor()
     : null
@@ -85,79 +165,22 @@ export function createDynamicComponent(
     _insertionAnchor,
   )
 
-  const normalizedRawSlots = normalizeRawSlots(rawSlots)
-  const scopeOwner = getScopeOwner()
-  const renderFn = () => {
+  renderEffect(() => {
     const value = getter()
-    const appContext =
-      (currentInstance && currentInstance.appContext) || emptyContext
+    const appContext = getAppContext()
     // Resolve before update: a null dynamic component is an empty branch
     // (nodes stays EMPTY_BLOCK, the fragment anchor is the only structural
     // node), the same shape as v-if=false. Rendering a fake placeholder node
     // instead would put a build-dependent node (dev comment / prod text) into
     // the semantic content tree — prod hydration then mistakes the detached
     // text for valid content and crashes deriving an anchor from it.
-    const resolved =
-      isBlock(value) || (isInteropEnabled && appContext.vdom && isVNode(value))
-        ? value
-        : withScopeOwner(scopeOwner, () => resolveDynamicComponent(value))
+    const resolved = resolveValue(value, appContext, scopeOwner)
     if (resolved === NULL_DYNAMIC_COMPONENT) {
       frag.update(undefined, resolved)
       return
     }
-    frag.update(() => {
-      // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
-      if (isBlock(value)) return value
-
-      // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
-      if (isInteropEnabled && appContext.vdom && isVNode(value)) {
-        if (isKeepAlive(currentInstance)) {
-          enableKeepAlive()
-          const frag = (
-            currentInstance as KeepAliveInstance
-          ).ctx.getCachedComponent(value.type, value.key) as VaporFragment
-          if (frag) return frag
-        }
-
-        // A vnode standing in as this component's effective root inherits
-        // fallthrough attrs; the normal component path folds them into
-        // rawProps at creation, this one merges them into the vnode's props.
-        const owner =
-          isSingleRoot &&
-          isVaporComponent(currentInstance) &&
-          currentInstance.hasFallthrough &&
-          currentInstance.type.inheritAttrs !== false
-            ? currentInstance
-            : undefined
-        const frag = appContext.vdom.mountVNode(
-          value,
-          currentInstance,
-          owner && (() => resolveFallthroughAttrs(owner)),
-        )
-        if (isHydrating) {
-          locateHydrationNode(
-            shouldConsumeFragmentStart(value)
-              ? createFragmentClaim()
-              : undefined,
-          )
-          frag.hydrate()
-        }
-        return frag
-      }
-
-      return createComponentWithFallback(
-        resolved,
-        rawProps,
-        normalizedRawSlots,
-        isSingleRoot,
-        once,
-        appContext,
-      )
-    }, value)
-  }
-
-  if (once) renderFn()
-  else renderEffect(renderFn)
+    frag.update(() => render(value, resolved, appContext), value)
+  })
 
   finishBlockCreation(
     frag,
@@ -167,6 +190,23 @@ export function createDynamicComponent(
     _insertionAnchor,
   )
   return frag
+}
+
+function getAppContext(): GenericAppContext {
+  return (currentInstance && currentInstance.appContext) || emptyContext
+}
+
+// Blocks and vnodes are rendered as they are; anything else is a component
+// definition or a name to resolve in the slot owner's context.
+function resolveValue(
+  value: any,
+  appContext: GenericAppContext,
+  scopeOwner: VaporComponentInstance | null,
+): any {
+  return isBlock(value) ||
+    (isInteropEnabled && appContext.vdom && isVNode(value))
+    ? value
+    : withScopeOwner(scopeOwner, () => resolveDynamicComponent(value))
 }
 
 function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {

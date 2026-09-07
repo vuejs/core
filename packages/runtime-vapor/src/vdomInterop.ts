@@ -120,11 +120,8 @@ import {
   setupPropsValidation,
 } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
-import {
-  dynamicSlotsProxyHandlers,
-  getSlot,
-  withOnceSlot,
-} from './componentSlots'
+import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
+import { inOnce, withOnce } from './once'
 import { renderEffect } from './renderEffect'
 import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -1839,7 +1836,7 @@ function renderVDOMSlot(
   }
   localFallback = fallback
     ? once
-      ? () => withOnceSlot(() => fallback(internals, parentComponent))
+      ? () => withOnce(() => fallback(internals, parentComponent))
       : () => fallback(internals, parentComponent)
     : undefined
 
@@ -2169,7 +2166,7 @@ function renderVDOMSlot(
     if (slotsRef.value) {
       const renderContent = () =>
         renderSlot(slotsRef.value, isFunction(name) ? name() : name, props)
-      slotContent = once ? withOnceSlot(renderContent) : renderContent()
+      slotContent = once ? withOnce(renderContent) : renderContent()
 
       if (isVNode(slotContent)) {
         if (slotContent.type === Fragment) {
@@ -2982,9 +2979,11 @@ function invokeVaporSlot(vnode: VNode): Block {
   const scope = effectScope()
   vnode.vs!.scope = scope
   try {
-    return scope.run(() =>
-      vnode.vs!.slot(new Proxy(propsRef, vaporSlotPropsProxyHandler)),
-    )!
+    const run = () =>
+      vnode.vs!.slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+    // vdom is a boundary: the slot it invokes runs live even when the vdom
+    // render sits inside a v-once extent.
+    return (inOnce ? withOnce(() => scope.run(run), false) : scope.run(run))!
   } catch (e) {
     vnode.vs!.scope = undefined
     scope.stop()

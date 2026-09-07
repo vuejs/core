@@ -53,22 +53,7 @@ import {
   setElementScopeIds,
 } from './scopeId'
 import { withHydratingSlotBoundary } from './dom/hydrateFragment'
-
-/**
- * Flag to indicate if we are executing a once slot.
- * When true, renderEffect should skip creating reactive effect.
- */
-export let inOnceSlot = false
-
-export function withOnceSlot<T>(fn: () => T, value = true): T {
-  const prev = inOnceSlot
-  try {
-    inOnceSlot = value
-    return fn()
-  } finally {
-    inOnceSlot = prev
-  }
-}
+import { withOnce } from './once'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -112,6 +97,37 @@ export function normalizeRawSlots(
     rawSlotsOwnerMap.set(normalized, getScopeOwner())
   }
   return normalized
+}
+
+/**
+ * Freeze the slot set of a v-once component: dynamic sources resolve once,
+ * in `resolveSlot` precedence, into plain entries. The slot functions stay
+ * live; the child re-runs them on its own updates.
+ */
+export function snapshotRawSlots(rawSlots: RawSlots): RawSlots {
+  const dynamicSources = rawSlots.$
+  if (!dynamicSources) return rawSlots
+  const snapshot: RawSlots = {}
+  for (const key in rawSlots) {
+    if (key !== '$') snapshot[key] = rawSlots[key]
+  }
+  for (const source of dynamicSources) {
+    if (isFunction(source)) {
+      const slot = withSlotOwner(rawSlots, () => source())
+      if (isArray(slot)) {
+        for (const s of slot) snapshot[String(s.name)] = s.fn
+      } else if (slot) {
+        snapshot[String(slot.name)] = slot.fn
+      }
+    } else {
+      for (const key in source) snapshot[key] = source[key]
+    }
+  }
+  for (const symbol of Object.getOwnPropertySymbols(rawSlots)) {
+    ;(snapshot as any)[symbol] = (rawSlots as any)[symbol]
+  }
+  rawSlotsOwnerMap.set(snapshot, rawSlotsOwnerMap.get(rawSlots) || null)
+  return snapshot
 }
 
 function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
@@ -318,8 +334,7 @@ export function createSlot(
     // non-interop paths wrap here.
     if (once && fallback) {
       const originalFallback = fallback
-      fallback = (...args: any[]) =>
-        withOnceSlot(() => originalFallback(...args))
+      fallback = (...args: any[]) => withOnce(() => originalFallback(...args))
     }
     if (isHydrating) hydrationCursor = captureHydrationCursor()
     // A definition that resolves to another async wrapper mounts that wrapper
@@ -445,7 +460,7 @@ export function createSlot(
         // the fragment's render seam) and catches up out-of-window content.
         cachedBoundSlot = () =>
           renderWithSlotScopeIds(slotScopeIds, () =>
-            once ? withOnceSlot(() => slot(slotProps)) : slot(slotProps),
+            once ? withOnce(() => slot(slotProps)) : slot(slotProps),
           )
       }
       return cachedBoundSlot!

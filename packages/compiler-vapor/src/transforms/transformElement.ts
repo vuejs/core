@@ -1231,6 +1231,7 @@ function transformProp(
       dir: prop,
       name,
       asset: !fromSetup,
+      once: context.inVOnce,
     })
   }
 }

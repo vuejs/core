@@ -19,6 +19,7 @@ import {
 import { isAsyncComponentEnabled } from '../asyncComponentState'
 import { type VaporFragment, isFragment, isInteropFragment } from '../fragment'
 import { isInteropEnabled } from '../vdomInteropState'
+import { inOnce, withOnce } from '../once'
 
 // !! vapor directive is different from vdom directives
 export type VaporDirective<
@@ -58,6 +59,8 @@ export function withVaporDirectives(
   }
 
   const instance = currentInstance
+  // Deferred (re)application keeps the once ambient it was created under.
+  const once = inOnce
   const trackedBlocks = new WeakSet<VaporFragment | VaporComponentInstance>()
   let currentElement: Element | null | undefined = null
   let directiveScope: EffectScope | undefined
@@ -107,7 +110,11 @@ export function withVaporDirectives(
     // Re-apply in the original directive owner's component context
     const prev = setCurrentInstance(instance, directiveScope)
     try {
-      applyDirectivesToElement(element, dirs)
+      if (once) {
+        withOnce(() => applyDirectivesToElement(element, dirs))
+      } else {
+        applyDirectivesToElement(element, dirs)
+      }
     } finally {
       restoreCurrentInstance(prev)
     }

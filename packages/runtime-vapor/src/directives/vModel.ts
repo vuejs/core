@@ -10,6 +10,7 @@ import {
   vModelTextUpdate,
 } from '@vue/runtime-dom'
 import { renderEffect } from '../renderEffect'
+import { inOnce, withOnce } from '../once'
 import { looseEqual } from '@vue/shared'
 import { traverse } from '@vue/reactivity'
 
@@ -30,7 +31,8 @@ function ensureMounted(cb: () => void) {
   if (currentInstance!.isMounted) {
     cb()
   } else {
-    onMounted(cb)
+    // Deferred work keeps the once ambient it was created under.
+    onMounted(inOnce ? () => withOnce(cb) : cb)
   }
 }
 

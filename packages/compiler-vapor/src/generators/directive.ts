@@ -9,6 +9,7 @@ import {
   NEWLINE,
   genCall,
   genMulti,
+  genOnce,
 } from './utils'
 import { type DirectiveIRNode, IRNodeTypes, type OperationNode } from '../ir'
 import { genVShow } from './vShow'
@@ -19,14 +20,18 @@ export function genBuiltinDirective(
   oper: DirectiveIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
+  let call: CodeFragment[]
   switch (oper.name) {
     case 'show':
-      return genVShow(oper, context)
+      call = genVShow(oper, context)
+      break
     case 'model':
-      return genVModel(oper, context)
+      call = genVModel(oper, context)
+      break
     default:
       return []
   }
+  return [NEWLINE, ...(oper.once ? genOnce(call, context) : call)]
 }
 
 /**
@@ -50,10 +55,8 @@ function genCustomDirectives(
   const directiveItems = opers.map(genDirectiveItem)
   const directives = genMulti(DELIMITERS_ARRAY, ...directiveItems)
 
-  return [
-    NEWLINE,
-    ...genCall(helper('withVaporDirectives'), element, directives),
-  ]
+  const call = genCall(helper('withVaporDirectives'), element, directives)
+  return [NEWLINE, ...(opers[0].once ? genOnce(call, context) : call)]
 
   function genDirectiveItem({
     dir,

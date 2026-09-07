@@ -618,6 +618,40 @@ describe('component: props', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
+  test('v-once snapshots sources without caching computeds on them', () => {
+    const source = (() => ({ a: 1 })) as (() => any) & { _cache?: unknown }
+    const getter = (() => 2) as (() => any) & { _cache?: unknown }
+    const Child = defineVaporComponent({
+      props: ['a', 'b'],
+      setup(props: any) {
+        expect(props.a).toBe(1)
+        expect(props.b).toBe(2)
+        return []
+      },
+    })
+
+    // Nest one level: sources are only cached under an instance with a parent.
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(
+          Child,
+          { b: getter, $: [source] },
+          null,
+          true,
+          true,
+        )
+      },
+    })
+    define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(source._cache).toBeUndefined()
+    expect(getter._cache).toBeUndefined()
+  })
+
   // #15227
   test('declared class prop should be normalized', () => {
     const data = ref({ skin: { b: true, c: false } })
@@ -985,5 +1019,82 @@ describe('component: props', () => {
         title: 'baz',
       })
     })
+  })
+
+  test.each([
+    ':class="data.classes"',
+    ':class="[data.classes]"',
+    'v-bind="data.input"',
+    'v-bind="{}" :class="data.classes"',
+    ':[data.key]="data.classes"',
+  ])('v-once snapshots normalized declared class props (%s)', async binding => {
+    const classes = { active: true }
+    const data = ref({
+      classes,
+      input: { class: classes },
+      key: 'class',
+      readClass: () => '',
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ class: String })
+        _data.value.readClass = () => props.class
+      </script>
+      <template><div>{{ props.class }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child v-once ${binding} /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(data.value.readClass()).toBe('active')
+    expect(host.innerHTML).toBe('<div>active</div>')
+
+    data.value.classes.active = false
+    await nextTick()
+
+    expect.soft(data.value.readClass()).toBe('active')
+    expect.soft(host.innerHTML).toBe('<div>active</div>')
+  })
+
+  test.each([
+    ':style="[data.styles]"',
+    'v-bind="data.input"',
+    'v-bind="{}" :style="[data.styles]"',
+    ':[data.key]="[data.styles]"',
+  ])('v-once snapshots normalized declared style props (%s)', async binding => {
+    const styles = { color: 'red' }
+    const data = ref({
+      styles,
+      input: { style: [styles] },
+      key: 'style',
+      readStyle: () => ({ color: '' }),
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ style: Object })
+        _data.value.readStyle = () => props.style
+      </script>
+      <template><div>{{ props.style.color }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child v-once ${binding} /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(data.value.readStyle()).toEqual({ color: 'red' })
+    expect(host.innerHTML).toBe('<div>red</div>')
+
+    data.value.styles.color = 'blue'
+    await nextTick()
+
+    expect.soft(data.value.readStyle()).toEqual({ color: 'red' })
+    expect.soft(host.innerHTML).toBe('<div>red</div>')
   })
 })

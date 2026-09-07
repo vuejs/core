@@ -25,6 +25,20 @@ export function render(_ctx, $props, $emit, $attrs, $slots) {
 }"
 `;
 
+exports[`compiler: v-once > component slot content keeps its effects 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n3 = _createAssetComponent("Comp", { id: () => (_ctx.foo) }, (_slotProps0) => {
+    const n0 = t0()
+    _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.n) + _toDisplayString(_ctx.msg)))
+    return n0
+  }, true, true)
+  return n3
+}"
+`;
+
 exports[`compiler: v-once > inside v-once 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div><div>", 3)
@@ -68,6 +82,18 @@ export function render(_ctx) {
   _setInsertionState(n1)
   const n0 = _createSlot("default", null, null, 2 /* ONCE */)
   return n1
+}"
+`;
+
+exports[`compiler: v-once > with custom directive 1`] = `
+"import { resolveDirective as _resolveDirective, withVaporDirectives as _withVaporDirectives, withOnce as _withOnce, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const _directive_dir = _resolveDirective("dir")
+  const n0 = t0()
+  _withOnce(() => _withVaporDirectives(n0, [[_directive_dir, () => (_ctx.val)]]))
+  return n0
 }"
 `;
 
@@ -120,6 +146,28 @@ export function render(_ctx) {
     const n4 = t1()
     return n4
   }, 85 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, FALSE_NO_SCOPE, ONCE */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-once > with v-model 1`] = `
+"import { applyTextModel as _applyTextModel, withOnce as _withOnce, template as _template } from 'vue';
+const t0 = _template("<input>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withOnce(() => _applyTextModel(n0, () => (_ctx.text), _value => (_ctx.text = _value)))
+  return n0
+}"
+`;
+
+exports[`compiler: v-once > with v-show 1`] = `
+"import { applyVShow as _applyVShow, withOnce as _withOnce, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _withOnce(() => _applyVShow(n0, () => (_ctx.show)))
   return n0
 }"
 `;

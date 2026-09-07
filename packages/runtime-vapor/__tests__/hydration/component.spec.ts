@@ -795,6 +795,57 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('dynamic component with v-once', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <component :is="components[data]" v-once/>
+            <span/>
+          </div>
+        </template>`,
+        {
+          foo: `<template><div>foo</div></template>`,
+          bar: `<template><div>bar</div></template>`,
+        },
+        ref('foo'),
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span><div>foo</div><span></span></div>"`,
+      )
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span><div>foo</div><span></span></div>"`,
+      )
+    })
+
+    test('null dynamic component with v-once', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <div>
+            <span/>
+            <component :is="components[data]" v-once/>
+            <span/>
+          </div>
+        </template>`,
+        {
+          foo: `<template><div>foo</div></template>`,
+        },
+        ref('missing'),
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span><!----><span></span></div>"`,
+      )
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><span></span><!----><span></span></div>"`,
+      )
+    })
+
     test('dynamic component fallback', async () => {
       const { container, data } = await testHydration(
         `<template>
