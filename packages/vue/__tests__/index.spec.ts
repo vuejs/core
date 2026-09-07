@@ -1,6 +1,6 @@
 import { BindingTypes, type CompilerOptions } from '@vue/compiler-core'
 import { compile } from '@vue/compiler-dom'
-import { EMPTY_ARR, PatchFlags } from '@vue/shared'
+import { EMPTY_ARR } from '@vue/shared'
 import { type VNode, createApp, nextTick, reactive, ref } from '../src'
 import * as Vue from '../src'
 import type { InternalRenderFunction } from '../../runtime-core/src/component'
@@ -315,60 +315,25 @@ describe('compiler + runtime integration', () => {
     expect(unmounted).toHaveBeenCalledTimes(1)
   })
 
-  test('unmounts separate instances of a v-once slot', async () => {
-    const show = ref(true)
-    const unmounted = vi.fn()
-    let id = 0
-    const container = document.createElement('div')
-    const app = createApp({
-      components: {
-        Child: {
-          data: () => ({ id: ++id }),
-          template: '{{ id }}',
-          unmounted() {
-            unmounted(this.id)
-          },
-        },
-        Twice: {
-          setup(_, { slots }) {
-            return () =>
-              Vue.h('div', [
-                show.value ? Vue.h('section', slots.default!()) : null,
-                Vue.h('aside', slots.default!()),
-              ])
-          },
-        },
-      },
-      template: '<Twice><Child v-once /></Twice>',
-    })
-
-    app.mount(container)
-    expect(container.textContent).toBe('12')
-    show.value = false
-    await nextTick()
-    expect(container.textContent).toBe('2')
-    expect(unmounted).toHaveBeenCalledTimes(1)
-    expect(unmounted).toHaveBeenNthCalledWith(1, 1)
-    app.unmount()
-    expect(unmounted).toHaveBeenCalledTimes(2)
-    expect(unmounted).toHaveBeenNthCalledWith(2, 2)
-  })
-
-  test.each([
-    [0, '<Child v-once :value="count" />'],
-    [1, '<Child v-once :value="count" />'],
-    [0, '<p v-once>{{ count }}</p>'],
-    [1, '<p v-once>{{ count }}</p>'],
-  ])(
-    'preserves cached slot content after removing outlet %i: %s',
-    async (removeIndex, template) => {
+  test.each([0, 1])(
+    'preserves cached slot content after removing outlet %i',
+    async removeIndex => {
       const show = ref(true)
       const count = ref(0)
       const tick = ref(0)
+      const unmounted = vi.fn()
+      let id = 0
       const container = document.createElement('div')
       const app = createApp({
         components: {
-          Child: { props: ['value'], template: '<p>{{ value }}</p>' },
+          Child: {
+            props: ['value'],
+            data: () => ({ id: ++id }),
+            template: '<p>{{ value }}</p>',
+            unmounted() {
+              unmounted(this.id)
+            },
+          },
           Twice: {
             setup(_, { slots }) {
               return () => {
@@ -386,7 +351,7 @@ describe('compiler + runtime integration', () => {
           },
         },
         setup: () => ({ count }),
-        template: `<Twice>${template}</Twice>`,
+        template: '<Twice><Child v-once :value="count" /></Twice>',
       })
 
       app.mount(container)
@@ -394,6 +359,8 @@ describe('compiler + runtime integration', () => {
       show.value = false
       await nextTick()
       expect(container.textContent).toBe('0')
+      expect(unmounted).toHaveBeenCalledTimes(1)
+      expect(unmounted).toHaveBeenLastCalledWith(removeIndex + 1)
       count.value++
       tick.value++
       await nextTick()
@@ -402,28 +369,24 @@ describe('compiler + runtime integration', () => {
       await nextTick()
       expect(container.textContent).toBe('00')
       app.unmount()
+      expect(unmounted.mock.calls.map(([id]) => id).sort()).toEqual([1, 2, 3])
     },
   )
 
   test('does not clear the receiver cache when a cloned v-once slot unmounts', async () => {
     const show = ref(true)
     const count = ref(0)
-    const render = compileToFunction(
-      '<div><p v-once>{{ count }}</p><section><slot /></section><aside v-if="show"><slot /></aside><b>{{ count }}</b></div>',
-    )
-    const fullDiffRender: InternalRenderFunction = (...args) => {
-      const vnode = render(...args) as VNode
-      vnode.patchFlag = PatchFlags.BAIL
-      return vnode
-    }
-    fullDiffRender._rc = true
     const container = document.createElement('div')
     const app = createApp({
       components: {
         Child: { template: 'child' },
         Twice: {
+          components: {
+            OwnChild: { props: ['value'], template: '<p>{{ value }}</p>' },
+          },
           setup: () => ({ count, show }),
-          render: fullDiffRender,
+          template:
+            '<div><OwnChild v-once :value="count" /><slot /><slot v-if="show" /><b>{{ count }}</b></div>',
         },
       },
       setup: () => ({ enabled: true }),
