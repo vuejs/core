@@ -61,6 +61,7 @@ import {
   NOOP,
   type Prettify,
   ShapeFlags,
+  extend,
   hasOwn,
   invokeArrayFns,
   isArray,
@@ -349,10 +350,14 @@ export function createComponent(
       // that do not restore the parent as currentInstance.
       const owner = currentInstance
       const source = () => resolveFallthroughAttrs(owner)
+      // copy, never mutate: the caller's rawProps outlives this creation
+      // (dynamic component branches share one object), and every creation
+      // must see exactly one fallthrough source
       if (rawProps && rawProps !== EMPTY_OBJ) {
-        ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
-          source,
-        )
+        const sources = (rawProps as RawProps).$
+        rawProps = extend({}, rawProps, {
+          $: sources ? sources.concat(source) : [source],
+        }) as RawProps
       } else {
         rawProps = { $: [source] } as RawProps
       }
