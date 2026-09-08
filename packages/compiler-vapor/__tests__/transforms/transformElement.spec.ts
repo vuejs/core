@@ -965,6 +965,21 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('native element with is="vue:" prefix', () => {
+      const { code, ir, helpers } = compileWithElementTransform(
+        `<button is="vue:foo" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(helpers).toContain('createAssetComponent')
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'foo',
+        asset: true,
+        root: true,
+        props: [[]],
+      })
+    })
+
     test('normal component with dynamic :is prop', () => {
       const { code, ir, helpers } = compileWithElementTransform(
         `<custom-input :is="'foo'" />`,
