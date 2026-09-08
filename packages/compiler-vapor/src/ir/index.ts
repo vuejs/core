@@ -237,6 +237,7 @@ export interface CreateComponentIRNode
   slotRoot?: boolean
   dynamic?: SimpleExpressionNode
   useCreateElement: boolean
+  ns?: Namespace
 }
 
 export interface SlotOutletIRNode

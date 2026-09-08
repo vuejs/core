@@ -945,6 +945,26 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('element fallback namespace', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<svg><component :is="foo" /><component is="circle" /></svg>` +
+          `<math><component :is="foo" /></math>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('8 /* NS_SVG */')
+      expect(code).contains('16 /* NS_MATHML */')
+      expect(code).contains(
+        '_createComponentWithFallback(_resolveDynamicComponent("circle"), null, null, null, null, 1)',
+      )
+      const ops: any[] = []
+      const collect = (dynamic: any) => {
+        if (dynamic.operation) ops.push(dynamic.operation)
+        dynamic.children.forEach(collect)
+      }
+      collect(ir.block.dynamic)
+      expect(ops.map(op => op.ns)).toEqual([1, 1, 2])
+    })
+
     // #3934
     test('normal component with is prop', () => {
       const { code, ir, helpers } = compileWithElementTransform(

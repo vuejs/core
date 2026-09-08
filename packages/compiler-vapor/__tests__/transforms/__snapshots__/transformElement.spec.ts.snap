@@ -828,6 +828,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > dynamic component > element fallback namespace 1`] = `
+"import { setInsertionState as _setInsertionState, createDynamicComponent as _createDynamicComponent, resolveDynamicComponent as _resolveDynamicComponent, createComponentWithFallback as _createComponentWithFallback, template as _template } from 'vue';
+const t0 = _template("<svg>", 0, 1)
+const t1 = _template("<math>", 0, 2)
+
+export function render(_ctx) {
+  const n2 = t0()
+  _setInsertionState(n2)
+  const n0 = _createDynamicComponent(() => (_ctx.foo), null, null, 8 /* NS_SVG */)
+  _setInsertionState(n2, 1)
+  const n1 = _createComponentWithFallback(_resolveDynamicComponent("circle"), null, null, null, null, 1)
+  const n4 = t1()
+  _setInsertionState(n4)
+  const n3 = _createDynamicComponent(() => (_ctx.foo), null, null, 16 /* NS_MATHML */)
+  return [n2, n4]
+}"
+`;
+
 exports[`compiler: element transform > dynamic component > native element with is="vue:" prefix 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
