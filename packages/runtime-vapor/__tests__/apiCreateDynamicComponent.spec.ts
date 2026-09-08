@@ -104,6 +104,30 @@ describe('api: createDynamicComponent', () => {
     host.remove()
   })
 
+  test('keeps the branch when a name resolves to the current component', async () => {
+    let setups = 0
+    const Foo = defineVaporComponent({
+      setup() {
+        setups++
+        return template('<span>foo</span>')()
+      },
+    })
+    const data = shallowRef<any>('Foo')
+    const App = compile(`<template><component :is="data" /></template>`, data)
+    const host = document.createElement('div')
+    const app = createVaporApp(App)
+    app.component('Foo', Foo)
+    app.mount(host)
+    expect(host.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
+
+    data.value = Foo
+    await nextTick()
+    data.value = 'foo'
+    await nextTick()
+    expect(host.innerHTML).toBe('<span>foo</span><!--dynamic-component-->')
+    expect(setups).toBe(1)
+  })
+
   test('global registration', async () => {
     const val = shallowRef('foo')
 
