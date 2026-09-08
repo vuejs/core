@@ -348,6 +348,38 @@ export function getPropsProxyHandlers(
     if (!isProp(key)) return
     const rawProps = instance.rawProps
     const dynamicSources = rawProps.$
+    if (dynamicSources && isOn(key)) {
+      const handlers: Record<string, unknown> = {}
+      let matchedKey: string | undefined
+      // Match mergeProps: merge exact raw keys in source order before
+      // resolving camelized aliases in their first occurrence order.
+      for (let i = -1; i < dynamicSources.length; i++) {
+        const source = i < 0 ? rawProps : dynamicSources[i]
+        const isDynamic = isFunction(source)
+        const resolved = isDynamic ? resolveFunctionSource(source) : source
+        for (const rawKey in resolved) {
+          if (camelize(rawKey) === key) {
+            if (!hasOwn(handlers, rawKey)) matchedKey = rawKey
+            const value = isDynamic
+              ? resolved[rawKey]
+              : resolveSource(resolved[rawKey])
+            handlers[rawKey] = mergeEventHandlers(handlers[rawKey], value)
+          }
+        }
+      }
+      return resolvePropValue(
+        propsOptions!,
+        key,
+        matchedKey === undefined ? undefined : handlers[matchedKey],
+        instance,
+        resolveDefault,
+        matchedKey === undefined,
+      )
+    }
+    const merged =
+      dynamicSources && (key === 'class' || key === 'style')
+        ? ([] as unknown[])
+        : undefined
     if (dynamicSources) {
       let i = dynamicSources.length
       let source, isDynamic, rawKey
@@ -361,38 +393,63 @@ export function getPropsProxyHandlers(
           : source
         for (rawKey in source) {
           if (camelize(rawKey) === key) {
-            return resolvePropValue(
-              propsOptions!,
-              key,
-              normalizeRawProp(
+            const value = isDynamic
+              ? source[rawKey]
+              : resolveSource(source[rawKey])
+            if (merged) {
+              merged.push(value)
+            } else {
+              return resolvePropValue(
+                propsOptions!,
                 key,
-                isDynamic ? source[rawKey] : resolveSource(source[rawKey]),
-              ),
-              instance,
-              resolveDefault,
-            )
+                normalizeRawProp(key, value),
+                instance,
+                resolveDefault,
+              )
+            }
           }
         }
       }
     }
     for (const rawKey in rawProps) {
       if (camelize(rawKey) === key) {
-        return resolvePropValue(
-          propsOptions!,
-          key,
-          normalizeRawProp(key, resolveSource(rawProps[rawKey])),
-          instance,
-          resolveDefault,
-        )
+        const value = resolveSource(rawProps[rawKey])
+        if (merged) {
+          merged.push(value)
+        } else {
+          return resolvePropValue(
+            propsOptions!,
+            key,
+            normalizeRawProp(key, value),
+            instance,
+            resolveDefault,
+          )
+        }
+      }
+    }
+    const hasMerged = !!(merged && merged.length)
+    let value
+    if (hasMerged) {
+      if (merged.length === 1) {
+        value = merged[0]
+      } else if (key === 'class') {
+        // Match mergeProps, including leaving all-undefined classes undefined.
+        for (let i = merged.length - 1; i >= 0; i--) {
+          if (value !== merged[i]) {
+            value = normalizeClass([value, merged[i]])
+          }
+        }
+      } else {
+        value = merged.reverse()
       }
     }
     return resolvePropValue(
       propsOptions!,
       key,
-      undefined,
+      normalizeRawProp(key, value),
       instance,
       resolveDefault,
-      true,
+      !hasMerged,
     )
   }
 
@@ -631,11 +688,9 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
         const value = isDynamic ? resolved[key] : resolveSource(source[key])
         if (key === 'class' || key === 'style') {
           const existing = mergedRawProps[key]
-          if (isArray(existing)) {
-            existing.push(value)
-          } else {
-            mergedRawProps[key] = [existing, value]
-          }
+          mergedRawProps[key] = isArray(existing)
+            ? [...existing, value]
+            : [existing, value]
         } else if (isOn(key)) {
           mergedRawProps[key] = mergeEventHandlers(mergedRawProps[key], value)
         } else {
