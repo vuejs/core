@@ -677,6 +677,63 @@ describe('component: props', () => {
     expect('Invalid prop').not.toHaveBeenWarned()
   })
 
+  test('declared class props merge static and v-bind sources', () => {
+    const data = ref({ attrs: { class: 'b' }, extra: 'c' })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ class: String })
+      </script>
+      <template><div>{{ props.class }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template><Child class="a" v-bind="data.attrs" :class="data.extra" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe('<div>a b c</div>')
+  })
+
+  test('declared event props merge static and v-on sources', () => {
+    const calls: string[] = []
+    const data = ref({
+      onStatic: () => calls.push('static'),
+      listeners: { click: () => calls.push('object') },
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ onClick: null })
+        const trigger = () => {
+          const handlers = Array.isArray(props.onClick)
+            ? props.onClick
+            : [props.onClick]
+          handlers.forEach(handler => handler())
+        }
+      </script><template><button @click="trigger">click</button></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template><Child @click="data.onStatic" v-on="data.listeners" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    host.querySelector('button')!.click()
+
+    expect(calls).toEqual(['static', 'object'])
+  })
+
   test('class prop should only normalize the value that was passed', () => {
     let props: any
     const fallback = ['a', 'b']

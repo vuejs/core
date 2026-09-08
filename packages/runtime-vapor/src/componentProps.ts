@@ -348,6 +348,11 @@ export function getPropsProxyHandlers(
     if (!isProp(key)) return
     const rawProps = instance.rawProps
     const dynamicSources = rawProps.$
+    const isEvent = dynamicSources && isOn(key)
+    const merged =
+      dynamicSources && (key === 'class' || key === 'style' || isEvent)
+        ? ([] as unknown[])
+        : undefined
     if (dynamicSources) {
       let i = dynamicSources.length
       let source, isDynamic, rawKey
@@ -361,38 +366,57 @@ export function getPropsProxyHandlers(
           : source
         for (rawKey in source) {
           if (camelize(rawKey) === key) {
-            return resolvePropValue(
-              propsOptions!,
-              key,
-              normalizeRawProp(
+            const value = isDynamic
+              ? source[rawKey]
+              : resolveSource(source[rawKey])
+            if (merged) {
+              merged.push(value)
+            } else {
+              return resolvePropValue(
+                propsOptions!,
                 key,
-                isDynamic ? source[rawKey] : resolveSource(source[rawKey]),
-              ),
-              instance,
-              resolveDefault,
-            )
+                normalizeRawProp(key, value),
+                instance,
+                resolveDefault,
+              )
+            }
           }
         }
       }
     }
     for (const rawKey in rawProps) {
       if (camelize(rawKey) === key) {
-        return resolvePropValue(
-          propsOptions!,
-          key,
-          normalizeRawProp(key, resolveSource(rawProps[rawKey])),
-          instance,
-          resolveDefault,
-        )
+        const value = resolveSource(rawProps[rawKey])
+        if (merged) {
+          merged.push(value)
+        } else {
+          return resolvePropValue(
+            propsOptions!,
+            key,
+            normalizeRawProp(key, value),
+            instance,
+            resolveDefault,
+          )
+        }
+      }
+    }
+    const hasMerged = !!(merged && merged.length)
+    let value
+    if (hasMerged) {
+      if (merged.length > 1) {
+        merged.reverse()
+        value = isEvent ? merged.reduce(mergeEventHandlers) : merged
+      } else {
+        value = merged[0]
       }
     }
     return resolvePropValue(
       propsOptions!,
       key,
-      undefined,
+      normalizeRawProp(key, value),
       instance,
       resolveDefault,
-      true,
+      !hasMerged,
     )
   }
 
