@@ -164,6 +164,9 @@ export function createDynamicComponent(
       }
       branchKey = branchToken
     }
+    // update() returns early on an unchanged key; skip building the branch
+    // closure for it. Hydration still goes through update for its anchor.
+    if (branchKey === frag.current && !isHydrating) return
     frag.update(
       () => render(value, resolved, appContext),
       branchKey,
