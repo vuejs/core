@@ -113,6 +113,22 @@ describe('component', () => {
     expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
   })
 
+  it('renders a native tag with is="vue:" as the component', () => {
+    const Foo = defineVaporComponent({
+      setup() {
+        return template('<span>foo</span>')()
+      },
+    })
+    const App = compile(
+      `<template><button is="vue:Foo" /></template>`,
+      ref(null),
+    )
+    const { app, html, mount } = define(App).create()
+    app.component('Foo', Foo)
+    mount()
+    expect(html()).toBe('<span>foo</span>')
+  })
+
   it('should pass maybeSelfReference when creating asset component', () => {
     const { host } = define({
       props: ['nested'],

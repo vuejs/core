@@ -290,6 +290,12 @@ function transformComponentElement(
   let asset = true
 
   if (!dynamicComponent && !useCreateElement) {
+    // <button is="vue:xxx">: the parser marks it as a component and the
+    // prefixed value names the component
+    const isProp = findProp(node, 'is')
+    if (isProp && isProp.type === NodeTypes.ATTRIBUTE && isVueIsValue(isProp)) {
+      tag = isProp.value!.content.slice(4)
+    }
     const fromSetup = resolveSetupReference(tag, context)
     if (fromSetup) {
       tag = fromSetup
@@ -342,6 +348,10 @@ function transformComponentElement(
     context.registerOperation(createSetBlockKey(id, staticKey))
   }
   context.slots = []
+}
+
+function isVueIsValue(prop: AttributeNode): boolean {
+  return !!prop.value && prop.value.content.startsWith('vue:')
 }
 
 function resolveDynamicComponent(node: ComponentNode) {
@@ -858,13 +868,13 @@ export function buildProps(
       }
     }
 
-    // exclude `is` prop only for <component>
+    // exclude `is` on <component>, and is="vue:xxx" on other tags
     if (
-      isDynamicComponent &&
-      ((prop.type === NodeTypes.ATTRIBUTE && prop.name === 'is') ||
-        (prop.type === NodeTypes.DIRECTIVE &&
+      prop.type === NodeTypes.ATTRIBUTE
+        ? prop.name === 'is' && (isDynamicComponent || isVueIsValue(prop))
+        : isDynamicComponent &&
           prop.name === 'bind' &&
-          isStaticArgOf(prop.arg, 'is')))
+          isStaticArgOf(prop.arg, 'is')
     ) {
       continue
     }

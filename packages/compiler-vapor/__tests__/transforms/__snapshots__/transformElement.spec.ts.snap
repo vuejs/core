@@ -828,6 +828,15 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > dynamic component > native element with is="vue:" prefix 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("foo", null, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > dynamic component > normal component with dynamic :is prop 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
