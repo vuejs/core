@@ -278,6 +278,23 @@ function useVdomInterop(
   return isInteropEnabled && !!appContext.vdom && !component.__vapor
 }
 
+// The instance whose fallthrough attrs a block created right now inherits:
+// its single root, or any child of a Transition (which passes attrs through).
+export function resolveFallthroughOwner(
+  isSingleRoot?: boolean,
+): VaporComponentInstance | undefined {
+  const instance = currentInstance
+  if (
+    (isSingleRoot ||
+      (isTransitionEnabled && instance && isVaporTransition(instance.type))) &&
+    isVaporComponent(instance) &&
+    instance.type.inheritAttrs !== false &&
+    instance.hasFallthrough
+  ) {
+    return instance
+  }
+}
+
 export function createComponent(
   component: VaporComponent,
   rawProps?: LooseRawProps | null,
@@ -336,21 +353,11 @@ export function createComponent(
       hasParentSuspense = true
     }
 
-    if (
-      (isSingleRoot ||
-        // transition has attrs fallthrough
-        (isTransitionEnabled
-          ? currentInstance && isVaporTransition(currentInstance!.type)
-          : false)) &&
-      isVaporComponent(currentInstance) &&
-      currentInstance.type.inheritAttrs !== false &&
-      currentInstance.hasFallthrough
-    ) {
-      // check if we are the single root of the parent
-      // if yes, inject parent attrs as dynamic props source.
-      // capture the owner: dynamic sources can be resolved from read paths
-      // that do not restore the parent as currentInstance.
-      const owner = currentInstance
+    const owner = resolveFallthroughOwner(isSingleRoot)
+    if (owner) {
+      // inject the parent attrs as a dynamic props source; the owner is
+      // captured because sources resolve from read paths that do not
+      // restore it as currentInstance
       const source = () => resolveFallthroughAttrs(owner)
       // copy, never mutate: the caller's rawProps outlives this creation
       // (dynamic component branches share one object), and every creation

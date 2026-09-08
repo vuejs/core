@@ -282,6 +282,19 @@ describe('api: createDynamicComponent', () => {
     expect(enters).toEqual(['2'])
   })
 
+  test('warns on an invalid is value and renders an empty branch', async () => {
+    const data = shallowRef<any>(true)
+    const App = compile(`<template><component :is="data" /></template>`, data)
+    const { html } = define(App).render()
+    expect(html()).toBe('<!--dynamic-component-->')
+    expect('Invalid dynamic component type: true (boolean)').toHaveBeenWarned()
+
+    data.value = 123
+    await nextTick()
+    expect(html()).toBe('<!--dynamic-component-->')
+    expect('Invalid dynamic component type: 123 (number)').toHaveBeenWarned()
+  })
+
   test('global registration', async () => {
     const val = shallowRef('foo')
 
