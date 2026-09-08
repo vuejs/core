@@ -78,6 +78,8 @@ import {
   getRootElement,
   isVaporComponent,
   mountComponent,
+  resolveFallthroughAttrs,
+  resolveFallthroughOwner,
   unmountComponent,
 } from './component'
 import {
@@ -129,12 +131,14 @@ import {
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
+  createFragmentClaim,
   currentHydrationNode,
   isClaimedAnchor,
   isComment,
   isHydrating,
   locateEndAnchor,
   locateFragmentEnd,
+  locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -1086,6 +1090,56 @@ function createVNodeFragment(vnode: VNode): {
     content.resolved ? isValidBlock(frag.nodes, componentAsValid) : true
   trackFragmentVNodeUpdates(frag, vnode, syncNodes)
   return { frag, syncNodes }
+}
+
+/**
+ * Mount a vnode as a dynamic component branch (`<component :is="vnode">`
+ * in a vapor template). The KeepAlive lookup, fallthrough and hydration of
+ * the vnode live here so the dynamic component only sees a block.
+ */
+function mountDynamicVNode(
+  internals: RendererInternals,
+  vnode: VNode,
+  parentComponent: VaporComponentInstance | null,
+  isSingleRoot?: boolean,
+): VaporFragment {
+  if (parentComponent && isKeepAlive(parentComponent)) {
+    const cached = (
+      parentComponent as KeepAliveInstance
+    ).ctx.getCachedComponent(vnode.type, vnode.key) as VaporFragment
+    if (cached) return cached
+  }
+  // A vnode standing in as the parent's effective root inherits fallthrough
+  // attrs merged into its props (see mountVNode).
+  const owner = resolveFallthroughOwner(isSingleRoot)
+  const frag = mountVNode(
+    internals,
+    vnode,
+    parentComponent,
+    owner && (() => resolveFallthroughAttrs(owner)),
+  )
+  if (isHydrating) {
+    locateHydrationNode(
+      shouldConsumeFragmentStart(vnode) ? createFragmentClaim() : undefined,
+    )
+    frag.hydrate!()
+  }
+  return frag
+}
+
+function shouldConsumeFragmentStart(vnode: VNode): boolean {
+  if (vnode.type === Fragment) {
+    return false
+  }
+
+  // Only Vapor component VNodes carry `__multiRoot`
+  // e.g. `h(VaporComp)`
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const type = vnode.type as { __vapor?: boolean; __multiRoot?: boolean }
+    return !!type.__vapor && !type.__multiRoot
+  }
+
+  return true
 }
 
 /**
@@ -2590,7 +2644,7 @@ export const vaporInteropPlugin: Plugin = app => {
   app._context.vdom = {
     mount: createVDOMComponent.bind(null, internals),
     slot: renderVDOMSlot.bind(null, internals),
-    mountVNode: mountVNode.bind(null, internals),
+    mountVNode: mountDynamicVNode.bind(null, internals),
   } satisfies VdomInVaporInterface
   const mount = app.mount
   app.mount = ((...args) => {

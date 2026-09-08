@@ -1,23 +1,19 @@
 import {
   type ComponentInternalInstance,
-  Fragment,
   type GenericAppContext,
   NULL_DYNAMIC_COMPONENT,
-  type VNode,
   currentInstance,
-  isKeepAlive,
   isVNode,
   resolveDynamicComponent,
   setCurrentRenderingInstance,
+  warn,
 } from '@vue/runtime-dom'
-import { Namespaces, ShapeFlags, VaporDynamicComponentFlags } from '@vue/shared'
+import { Namespaces, VaporDynamicComponentFlags } from '@vue/shared'
 import { type Block, isBlock, removeNode } from './block'
 import {
   type VaporComponentInstance,
   createComponentWithFallback,
   emptyContext,
-  isVaporComponent,
-  resolveFallthroughAttrs,
 } from './component'
 import { renderEffect } from './renderEffect'
 import type { RawProps } from './componentProps'
@@ -34,19 +30,11 @@ import {
 import {
   type HydrationCursor,
   captureHydrationCursor,
-  createFragmentClaim,
   enterHydrationCursor,
   isHydrating,
-  locateHydrationNode,
 } from './dom/hydration'
-import {
-  DynamicFragment,
-  type VaporFragment,
-  finishBlockCreation,
-} from './fragment'
-import type { KeepAliveInstance } from './components/KeepAlive'
+import { DynamicFragment, finishBlockCreation } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
-import { enableKeepAlive } from './keepAlive'
 
 export function createDynamicComponent(
   getter: () => any,
@@ -79,38 +67,10 @@ export function createDynamicComponent(
     // Support integration with VaporRouterView/VaporRouterLink by accepting blocks
     if (isBlock(value)) return value
 
-    // Handles VNodes passed from VDOM components (e.g., `h(VaporComp)` from slots)
+    // vnodes handed down from vdom slots (`h(VaporComp)`) mount through the
+    // interop, which owns their KeepAlive lookup, fallthrough and hydration
     if (isInteropEnabled && appContext.vdom && isVNode(value)) {
-      if (isKeepAlive(currentInstance)) {
-        enableKeepAlive()
-        const cached = (
-          currentInstance as KeepAliveInstance
-        ).ctx.getCachedComponent(value.type, value.key) as VaporFragment
-        if (cached) return cached
-      }
-
-      // A vnode standing in as this component's effective root inherits
-      // fallthrough attrs; the normal component path folds them into
-      // rawProps at creation, this one merges them into the vnode's props.
-      const owner =
-        isSingleRoot &&
-        isVaporComponent(currentInstance) &&
-        currentInstance.hasFallthrough &&
-        currentInstance.type.inheritAttrs !== false
-          ? currentInstance
-          : undefined
-      const frag = appContext.vdom.mountVNode(
-        value,
-        currentInstance,
-        owner && (() => resolveFallthroughAttrs(owner)),
-      )
-      if (isHydrating) {
-        locateHydrationNode(
-          shouldConsumeFragmentStart(value) ? createFragmentClaim() : undefined,
-        )
-        frag.hydrate()
-      }
-      return frag
+      return appContext.vdom.mountVNode(value, currentInstance, isSingleRoot)
     }
 
     return createComponentWithFallback(
@@ -204,6 +164,9 @@ export function createDynamicComponent(
       }
       branchKey = branchToken
     }
+    // update() returns early on an unchanged key; skip building the branch
+    // closure for it. Hydration still goes through update for its anchor.
+    if (branchKey === frag.current && !isHydrating) return
     frag.update(
       () => render(value, resolved, appContext),
       branchKey,
@@ -233,10 +196,30 @@ function resolveValue(
   appContext: GenericAppContext,
   scopeOwner: VaporComponentInstance | null,
 ): any {
-  return isBlock(value) ||
+  if (
+    isBlock(value) ||
     (isInteropEnabled && appContext.vdom && isVNode(value))
-    ? value
-    : withScopeOwner(scopeOwner, () => resolveDynamicComponent(value))
+  ) {
+    return value
+  }
+  const resolved = withScopeOwner(scopeOwner, () =>
+    resolveDynamicComponent(value),
+  )
+  // strings are tags, objects and functions are components, symbols are
+  // vdom types the interop mounts; anything else is an empty branch
+  const type = typeof resolved
+  if (
+    type !== 'string' &&
+    type !== 'object' &&
+    type !== 'function' &&
+    type !== 'symbol'
+  ) {
+    if (__DEV__) {
+      warn(`Invalid dynamic component type: ${String(resolved)} (${type})`)
+    }
+    return NULL_DYNAMIC_COMPONENT
+  }
+  return resolved
 }
 
 function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {
@@ -248,19 +231,4 @@ function withScopeOwner(owner: VaporComponentInstance | null, fn: () => any) {
   } finally {
     setCurrentRenderingInstance(prev)
   }
-}
-
-function shouldConsumeFragmentStart(vnode: VNode): boolean {
-  if (vnode.type === Fragment) {
-    return false
-  }
-
-  // Only Vapor component VNodes carry `__multiRoot`
-  // e.g. `h(VaporComp)`
-  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
-    const type = vnode.type as { __vapor?: boolean; __multiRoot?: boolean }
-    return !!type.__vapor && !type.__multiRoot
-  }
-
-  return true
 }

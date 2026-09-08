@@ -288,7 +288,7 @@ export interface VdomInVaporInterface {
   mountVNode: (
     vnode: VNode,
     parentComponent: any, // VaporComponentInstance
-    getFallthroughAttrs?: () => Record<string, any>,
+    isSingleRoot?: boolean,
   ) => any
 }
 
