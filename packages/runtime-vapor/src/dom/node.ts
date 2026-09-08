@@ -1,3 +1,4 @@
+import { type Namespace, Namespaces } from '@vue/shared'
 import type { ChildItem, InsertionParent } from '../insertionState'
 import {
   isHydrating,
@@ -5,9 +6,17 @@ import {
   skipUntrackedAnchors,
 } from './hydration'
 
+const SVG_NS = 'http://www.w3.org/2000/svg'
+const MATHML_NS = 'http://www.w3.org/1998/Math/MathML'
+
 /*@__NO_SIDE_EFFECTS__*/
-export function createElement(tagName: string): HTMLElement {
-  return document.createElement(tagName)
+export function createElement(tagName: string, ns?: Namespace): HTMLElement {
+  return ns
+    ? (document.createElementNS(
+        ns === Namespaces.SVG ? SVG_NS : MATHML_NS,
+        tagName,
+      ) as HTMLElement)
+    : document.createElement(tagName)
 }
 
 /*@__NO_SIDE_EFFECTS__*/

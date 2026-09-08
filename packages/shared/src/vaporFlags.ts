@@ -149,4 +149,7 @@ export enum VaporDynamicComponentFlags {
   SINGLE_ROOT = 1,
   ONCE = 1 << 1,
   SLOT_ROOT = 1 << 2,
+  // element fallback namespace, from the parser namespace of the tag
+  NS_SVG = 1 << 3,
+  NS_MATHML = 1 << 4,
 }

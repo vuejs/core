@@ -128,6 +128,29 @@ describe('api: createDynamicComponent', () => {
     expect(setups).toBe(1)
   })
 
+  test('element fallback inherits the template namespace', async () => {
+    const data = ref({ tag: 'circle' })
+    const App = compile(
+      `<template>
+        <svg><component :is="data.tag" class="shape" /></svg>
+        <math><component :is="'mi'" /></math>
+      </template>`,
+      data,
+    )
+    const { host } = define(App).render()
+    const svgNS = 'http://www.w3.org/2000/svg'
+    const circle = host.querySelector('circle')!
+    expect(circle.namespaceURI).toBe(svgNS)
+    expect(circle.getAttribute('class')).toBe('shape')
+    expect(host.querySelector('mi')!.namespaceURI).toBe(
+      'http://www.w3.org/1998/Math/MathML',
+    )
+
+    data.value.tag = 'rect'
+    await nextTick()
+    expect(host.querySelector('rect')!.namespaceURI).toBe(svgNS)
+  })
+
   test('global registration', async () => {
     const val = shallowRef('foo')
 

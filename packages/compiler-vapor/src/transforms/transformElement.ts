@@ -343,6 +343,7 @@ function transformComponentElement(
     once: context.inVOnce,
     dynamic: dynamicComponent,
     useCreateElement,
+    ns: node.ns || undefined,
   }
   if (staticKey) {
     context.registerOperation(createSetBlockKey(id, staticKey))

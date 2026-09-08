@@ -59,6 +59,8 @@ import {
 import {
   EMPTY_OBJ,
   NOOP,
+  type Namespace,
+  Namespaces,
   type Prettify,
   ShapeFlags,
   extend,
@@ -1106,6 +1108,7 @@ export function createAssetComponent(
   isSingleRoot?: boolean,
   once?: boolean,
   maybeSelfReference?: boolean,
+  ns?: Namespace,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   return createComponentWithFallback(
@@ -1114,6 +1117,7 @@ export function createAssetComponent(
     rawSlots,
     isSingleRoot,
     once,
+    ns,
     appContext,
   )
 }
@@ -1129,6 +1133,7 @@ export function createComponentWithFallback(
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
+  ns?: Namespace,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (comp === NULL_DYNAMIC_COMPONENT) {
@@ -1165,7 +1170,7 @@ export function createComponentWithFallback(
     )
   }
 
-  return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once)
+  return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once, ns)
 }
 
 function isReusableNullComponentAnchor(node: Node): boolean {
@@ -1187,6 +1192,7 @@ export function createPlainElement(
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
+  ns?: Namespace,
 ): HTMLElement {
   rawSlots = normalizeRawSlots(rawSlots)
   const _insertionParent = insertionParent
@@ -1209,8 +1215,9 @@ export function createPlainElement(
         currentHydrationNode!,
         hydrationTemplate,
         adoptHydrationChildren,
+        ns,
       ) as HTMLElement)
-    : createElement(comp)
+    : createElement(comp, ns)
 
   // mark single root
   ;(el as any).$root = isSingleRoot
@@ -1224,8 +1231,9 @@ export function createPlainElement(
   }
 
   if (rawProps) {
+    const isSVG = ns === Namespaces.SVG
     const setFn = () =>
-      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
+      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)], isSVG)
     if (once) setFn()
     else renderEffect(setFn)
   }

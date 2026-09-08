@@ -10,7 +10,7 @@ import {
   resolveDynamicComponent,
   setCurrentRenderingInstance,
 } from '@vue/runtime-dom'
-import { ShapeFlags, VaporDynamicComponentFlags } from '@vue/shared'
+import { Namespaces, ShapeFlags, VaporDynamicComponentFlags } from '@vue/shared'
 import { type Block, isBlock, removeNode } from './block'
 import {
   type VaporComponentInstance,
@@ -57,6 +57,12 @@ export function createDynamicComponent(
   const isSingleRoot = !!(flags & VaporDynamicComponentFlags.SINGLE_ROOT)
   const once = !!(flags & VaporDynamicComponentFlags.ONCE)
   const slotRoot = !!(flags & VaporDynamicComponentFlags.SLOT_ROOT)
+  const ns =
+    flags & VaporDynamicComponentFlags.NS_SVG
+      ? Namespaces.SVG
+      : flags & VaporDynamicComponentFlags.NS_MATHML
+        ? Namespaces.MATH_ML
+        : undefined
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
   if (!isHydrating) resetInsertionState()
@@ -112,6 +118,7 @@ export function createDynamicComponent(
       normalizedRawSlots,
       isSingleRoot,
       once,
+      ns,
       appContext,
     )
   }
