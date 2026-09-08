@@ -348,9 +348,36 @@ export function getPropsProxyHandlers(
     if (!isProp(key)) return
     const rawProps = instance.rawProps
     const dynamicSources = rawProps.$
-    const isEvent = dynamicSources && isOn(key)
+    if (dynamicSources && isOn(key)) {
+      const handlers: Record<string, unknown> = {}
+      let matchedKey: string | undefined
+      // Match mergeProps: merge exact raw keys in source order before
+      // resolving camelized aliases in their first occurrence order.
+      for (let i = -1; i < dynamicSources.length; i++) {
+        const source = i < 0 ? rawProps : dynamicSources[i]
+        const isDynamic = isFunction(source)
+        const resolved = isDynamic ? resolveFunctionSource(source) : source
+        for (const rawKey in resolved) {
+          if (camelize(rawKey) === key) {
+            if (!hasOwn(handlers, rawKey)) matchedKey = rawKey
+            const value = isDynamic
+              ? resolved[rawKey]
+              : resolveSource(resolved[rawKey])
+            handlers[rawKey] = mergeEventHandlers(handlers[rawKey], value)
+          }
+        }
+      }
+      return resolvePropValue(
+        propsOptions!,
+        key,
+        matchedKey === undefined ? undefined : handlers[matchedKey],
+        instance,
+        resolveDefault,
+        matchedKey === undefined,
+      )
+    }
     const merged =
-      dynamicSources && (key === 'class' || key === 'style' || isEvent)
+      dynamicSources && (key === 'class' || key === 'style')
         ? ([] as unknown[])
         : undefined
     if (dynamicSources) {
@@ -404,8 +431,7 @@ export function getPropsProxyHandlers(
     let value
     if (hasMerged) {
       if (merged.length > 1) {
-        merged.reverse()
-        value = isEvent ? merged.reduce(mergeEventHandlers) : merged
+        value = merged.reverse()
       } else {
         value = merged[0]
       }
