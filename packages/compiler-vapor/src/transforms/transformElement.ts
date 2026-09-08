@@ -56,9 +56,11 @@ import { EMPTY_EXPRESSION } from './utils'
 import {
   findProp,
   isBuiltInComponent,
+  isComponentTag,
   isStaticExpression,
   resolveExpression,
 } from '../utils'
+import { dynamicComponentKeys } from './transformKey'
 import {
   IMPORT_EXP_END,
   IMPORT_EXP_START,
@@ -344,6 +346,7 @@ function transformComponentElement(
     dynamic: dynamicComponent,
     useCreateElement,
     ns: node.ns || undefined,
+    key: dynamicComponentKeys.get(node),
   }
   if (staticKey) {
     context.registerOperation(createSetBlockKey(id, staticKey))
@@ -1299,10 +1302,6 @@ function toDirectiveResult(prop: IRProp): DirectiveTransformResult {
 function mergePropValues(existing: IRProp, incoming: IRProp) {
   const newValues = incoming.values
   existing.values.push(...newValues)
-}
-
-function isComponentTag(tag: string) {
-  return tag === 'component' || tag === 'Component'
 }
 
 export function shouldUseCreateElement(

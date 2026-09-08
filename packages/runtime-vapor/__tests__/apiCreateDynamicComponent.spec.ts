@@ -2,6 +2,8 @@ import { ref, shallowRef } from '@vue/reactivity'
 import {
   currentInstance,
   nextTick,
+  onActivated,
+  onDeactivated,
   resolveDynamicComponent,
 } from '@vue/runtime-dom'
 import { VaporDynamicComponentFlags } from '@vue/shared'
@@ -149,6 +151,135 @@ describe('api: createDynamicComponent', () => {
     data.value.tag = 'rect'
     await nextTick()
     expect(host.querySelector('rect')!.namespaceURI).toBe(svgNS)
+  })
+
+  test('compiled :key switches the branch without a wrapping fragment', async () => {
+    let setups = 0
+    const Foo = defineVaporComponent({
+      setup() {
+        setups++
+        return template('<span>foo</span>')()
+      },
+    })
+    const Bar = defineVaporComponent({
+      setup() {
+        return template('<b>bar</b>')()
+      },
+    })
+    const data = ref({ view: 'Foo', k: 1 })
+    const App = compile(
+      `<template><component :is="data.view" :key="data.k" /></template>`,
+      data,
+    )
+    const { app, html, mount } = define(App).create()
+    app.component('Foo', Foo)
+    app.component('Bar', Bar)
+    mount()
+    expect(html()).toBe('<span>foo</span><!--dynamic-component-->')
+
+    // same key, same component: no remount
+    data.value = { view: 'Foo', k: 1 }
+    await nextTick()
+    expect(setups).toBe(1)
+
+    // key change remounts
+    data.value = { view: 'Foo', k: 2 }
+    await nextTick()
+    expect(setups).toBe(2)
+
+    // same key, different component: remount
+    data.value = { view: 'Bar', k: 2 }
+    await nextTick()
+    expect(html()).toBe('<b>bar</b><!--dynamic-component-->')
+    data.value = { view: 'Foo', k: 2 }
+    await nextTick()
+    expect(setups).toBe(3)
+    expect(html()).toBe('<span>foo</span><!--dynamic-component-->')
+  })
+
+  test('compiled :key is the KeepAlive cache key', async () => {
+    const calls: string[] = []
+    const Foo = defineVaporComponent({
+      name: 'Foo',
+      props: ['id'],
+      setup(props: any) {
+        calls.push(`setup:${props.id}`)
+        onActivated(() => calls.push(`activated:${props.id}`))
+        onDeactivated(() => calls.push(`deactivated:${props.id}`))
+        return template('<span>foo</span>')()
+      },
+    })
+    const data = ref({ k: 1 })
+    const App = compile(
+      `<template>
+        <KeepAlive>
+          <component :is="components.Foo" :key="data.k" :id="data.k" />
+        </KeepAlive>
+      </template>`,
+      data,
+      { Foo },
+    )
+    define(App).render()
+    expect(calls).toEqual(['setup:1', 'activated:1'])
+
+    // the incoming branch is set up before the outgoing one deactivates
+    data.value = { k: 2 }
+    await nextTick()
+    expect(calls).toEqual([
+      'setup:1',
+      'activated:1',
+      'setup:2',
+      'deactivated:1',
+      'activated:2',
+    ])
+
+    // re-entering key 1 reactivates its cached instance instead of setting up
+    data.value = { k: 1 }
+    await nextTick()
+    expect(calls).toEqual([
+      'setup:1',
+      'activated:1',
+      'setup:2',
+      'deactivated:1',
+      'activated:2',
+      'deactivated:2',
+      'activated:1',
+    ])
+  })
+
+  // Coverage guard: the wrapping keyed fragment used to drive this; the
+  // dynamic component's own branch key must keep Transition sequencing.
+  test('compiled :key change runs leave and enter under Transition', async () => {
+    const leaves: string[] = []
+    const enters: string[] = []
+    const data = ref({
+      k: 1,
+      onLeave: (el: Element, done: () => void) => {
+        leaves.push(el.textContent!)
+        done()
+      },
+      onEnter: (el: Element, done: () => void) => {
+        enters.push(el.textContent!)
+        done()
+      },
+    })
+    const App = compile(
+      `<template>
+        <Transition :css="false" @leave="data.onLeave" @enter="data.onEnter">
+          <component :is="'div'" :key="data.k">{{ data.k }}</component>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { html } = define(App).render()
+    expect(html()).toBe('<div>1</div><!--dynamic-component-->')
+    expect(enters).toEqual([])
+
+    data.value = { ...data.value, k: 2 }
+    await nextTick()
+    expect(html()).toBe('<div>2</div><!--dynamic-component-->')
+    expect(leaves).toEqual(['1'])
+    expect(enters).toEqual(['2'])
   })
 
   test('global registration', async () => {

@@ -488,6 +488,7 @@ function deferBranchUpdateDuringLeaveImpl(
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
+  branchKey: any,
 ): boolean {
   const transition = frag.$transition!
   if (!transition.state.isLeaving) return false
@@ -500,8 +501,9 @@ function deferBranchUpdateDuringLeaveImpl(
     pending.render = render
     pending.key = key
     pending.noScope = noScope
+    pending.branchKey = branchKey
   } else {
-    frag.pending = { render, key, noScope }
+    frag.pending = { render, key, noScope, branchKey }
   }
   return true
 }
@@ -513,6 +515,7 @@ function removeBranchWithLeaveImpl(
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
+  branchKey: any,
 ): boolean {
   const mode = transition.mode
   if (
@@ -547,9 +550,20 @@ function removeBranchWithLeaveImpl(
             pending.key,
             pending.noScope,
             true,
+            undefined,
+            pending.branchKey,
           )
         } else {
-          frag.renderBranch(render, transition, parent, key, noScope, true)
+          frag.renderBranch(
+            render,
+            transition,
+            parent,
+            key,
+            noScope,
+            true,
+            undefined,
+            branchKey,
+          )
         }
       } finally {
         restoreCurrentInstance(prevInstance)

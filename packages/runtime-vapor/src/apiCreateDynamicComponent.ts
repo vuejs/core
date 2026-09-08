@@ -53,6 +53,7 @@ export function createDynamicComponent(
   rawProps?: RawProps | null,
   rawSlots?: LooseRawSlots | null,
   flags: number = 0,
+  key?: () => any,
 ): Block {
   const isSingleRoot = !!(flags & VaporDynamicComponentFlags.SINGLE_ROOT)
   const once = !!(flags & VaporDynamicComponentFlags.ONCE)
@@ -172,8 +173,16 @@ export function createDynamicComponent(
     _insertionAnchor,
   )
 
+  // A `:key` joins the resolved component in the branch identity, the way a
+  // vnode is matched by type and key. The pair is memoized as one token so
+  // unchanged inputs compare equal by reference.
+  let lastKey: any
+  let lastResolved: any
+  let branchToken: object | undefined
+
   renderEffect(() => {
     const value = getter()
+    const userKey = key ? key() : undefined
     const appContext = getAppContext()
     // Resolve before update: a null dynamic component is an empty branch
     // (nodes stays EMPTY_BLOCK, the fragment anchor is the only structural
@@ -186,7 +195,21 @@ export function createDynamicComponent(
       frag.update(undefined, resolved)
       return
     }
-    frag.update(() => render(value, resolved, appContext), resolved)
+    let branchKey: any = resolved
+    if (key) {
+      if (userKey !== lastKey || resolved !== lastResolved) {
+        lastKey = userKey
+        lastResolved = resolved
+        branchToken = {}
+      }
+      branchKey = branchToken
+    }
+    frag.update(
+      () => render(value, resolved, appContext),
+      branchKey,
+      false,
+      userKey,
+    )
   })
 
   finishBlockCreation(
