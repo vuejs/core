@@ -19,6 +19,7 @@ type DeferBranchUpdateDuringLeaveFn = (
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
+  branchKey: any,
 ) => boolean
 type RemoveBranchWithLeaveFn = (
   frag: DynamicFragment,
@@ -27,6 +28,7 @@ type RemoveBranchWithLeaveFn = (
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
+  branchKey: any,
 ) => boolean
 
 export let applyTransitionHooks: ApplyTransitionHooksFn

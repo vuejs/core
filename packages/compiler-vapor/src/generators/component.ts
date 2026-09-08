@@ -124,7 +124,13 @@ export function genCreateComponent(
       rawProps,
       rawSlots,
       isRuntimeDynamicComponent ? dynamicComponentFlags : root ? 'true' : false,
-      isRuntimeDynamicComponent ? false : once && 'true',
+      isRuntimeDynamicComponent
+        ? operation.key && [
+            '() => (',
+            ...genExpression(operation.key, context),
+            ')',
+          ]
+        : once && 'true',
       useAssetComponentHelper ? maybeSelfReference && 'true' : nsArg,
       useAssetComponentHelper && nsArg,
     ),

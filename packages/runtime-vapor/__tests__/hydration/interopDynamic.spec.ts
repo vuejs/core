@@ -81,22 +81,20 @@ describe('VDOM interop', () => {
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-    expect(container.innerHTML).toBe(
-      '<!--[--><!----><!--keyed--><span>tail</span><!--]-->',
-    )
+    expect(container.innerHTML).toBe('<!--[--><!----><span>tail</span><!--]-->')
 
     data.value.show = true
     data.value.key = 'filled'
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--[--><div>late</div><!--dynamic-component--><!--keyed--><span>tail</span><!--]-->',
+      '<!--[--><div>late</div><!----><span>tail</span><!--]-->',
     )
 
     data.value.msg = 'late-updated'
     data.value.tail = 'tail-updated'
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<!--[--><div>late-updated</div><!--dynamic-component--><!--keyed--><span>tail-updated</span><!--]-->',
+      '<!--[--><div>late-updated</div><!----><span>tail-updated</span><!--]-->',
     )
   })
 

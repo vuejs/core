@@ -337,11 +337,16 @@ export class DynamicFragment extends RenderContextFragment {
   current?: BlockFn
   // Owned by the Transition module (deferBranchUpdateDuringLeave /
   // removeBranchWithLeave); the core update pipeline never touches it.
-  pending?: { render?: BlockFn; key: any; noScope: boolean }
+  pending?: { render?: BlockFn; key: any; noScope: boolean; branchKey?: any }
   // Debug text for the runtime anchor comment, dev builds only. Never a
   // category signal: everything hydration branches on lives in `__vf`.
   anchorLabel?: string
   keyed?: boolean
+  // The user-facing key of the current branch: the branch key itself for
+  // keyed fragments, or the `:key` a dynamic component carries next to its
+  // resolved-component identity. KeepAlive caches by it; it reaches the
+  // branch nodes as $key.
+  branchKey?: any
   inTransition?: boolean
   /** hydration: this `v-if` branch's claim on its SSR range */
   hydrationClaim?: FragmentClaim
@@ -394,7 +399,12 @@ export class DynamicFragment extends RenderContextFragment {
     return true
   }
 
-  update(render?: BlockFn, key: any = render, noScope: boolean = false): void {
+  update(
+    render?: BlockFn,
+    key: any = render,
+    noScope: boolean = false,
+    branchKey?: any,
+  ): void {
     const everUpdated = this.everUpdated
     this.everUpdated = true
     if (key === this.current) {
@@ -420,7 +430,7 @@ export class DynamicFragment extends RenderContextFragment {
     // the leave finishes.
     if (
       transition &&
-      deferBranchUpdateDuringLeave(this, render, key, noScope)
+      deferBranchUpdateDuringLeave(this, render, key, noScope, branchKey)
     ) {
       return
     }
@@ -443,7 +453,15 @@ export class DynamicFragment extends RenderContextFragment {
       }
       if (
         transition &&
-        removeBranchWithLeave(this, transition, parent, render, key, noScope)
+        removeBranchWithLeave(
+          this,
+          transition,
+          parent,
+          render,
+          key,
+          noScope,
+          branchKey,
+        )
       ) {
         // out-in: the next branch mounts after the leave finishes.
         setActiveSub(prevSub)
@@ -470,6 +488,7 @@ export class DynamicFragment extends RenderContextFragment {
       // `everUpdated` field comment
       wasMounted || (everUpdated && !!parent),
       removePrevious,
+      branchKey,
     )
     setActiveSub(prevSub)
 
@@ -492,8 +511,10 @@ export class DynamicFragment extends RenderContextFragment {
     noScope: boolean,
     notifyUpdated: boolean,
     removePrevious?: () => void,
+    branchKey?: any,
   ): void {
     this.current = key
+    this.branchKey = this.keyed ? key : branchKey
     if (render) {
       const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx : null
       // A compiler-proven static branch can skip its own EffectScope, but attrs
@@ -523,7 +544,7 @@ export class DynamicFragment extends RenderContextFragment {
           }, this.scope)
         } finally {
           // Inherit the fragment key without overriding a child's own key.
-          const key = this.keyed ? this.current : this.$key
+          const key = this.branchKey !== undefined ? this.branchKey : this.$key
           // Only propagate branch keys when Transition or KeepAlive consumes them.
           if (
             key !== undefined &&
