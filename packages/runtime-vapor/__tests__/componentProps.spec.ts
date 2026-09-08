@@ -1252,4 +1252,70 @@ describe('component: props', () => {
       },
     )
   })
+
+  test.each([undefined, 'active'])(
+    'merged class props restore defaults when all sources are undefined (%s)',
+    async initialClass => {
+      await renderParity(
+        {
+          Child: `<script setup>
+            const props = defineProps({ class: { type: String, default: 'fallback' } })
+          </script><template><div>{{ props.class }}</div></template>`,
+          App: `<template><components.Child :class="data.extra" v-bind="data.attrs" /></template>`,
+        },
+        () =>
+          ref({
+            extra: initialClass,
+            attrs: { class: undefined as string | undefined },
+          }),
+        async (data, root) => {
+          expect(root.textContent).toBe(initialClass ?? 'fallback')
+
+          data.value.extra = undefined
+          await nextTick()
+          expect(root.textContent).toBe('fallback')
+
+          data.value.attrs.class = ''
+          await nextTick()
+          expect(root.textContent).toBe('')
+
+          data.value.attrs.class = undefined
+          await nextTick()
+          expect(root.textContent).toBe('fallback')
+
+          data.value.extra = data.value.attrs.class = 'shared'
+          await nextTick()
+          expect(root.textContent).toBe('shared')
+        },
+      )
+    },
+  )
+
+  test('prop validation does not mutate class and style source arrays', async () => {
+    await renderParity(
+      {
+        Child: `<script setup>
+          const props = defineProps({ class: String, style: Object })
+        </script><template><div>{{ props.class }}|{{ JSON.stringify(props.style) }}</div></template>`,
+        App: `<template><components.Child :class="data.classes" :style="data.styles" v-bind="data.attrs" /></template>`,
+      },
+      () =>
+        ref({
+          classes: ['a'],
+          styles: [{ color: 'red' }],
+          attrs: { class: 'b', style: { margin: '1px' } },
+        }),
+      async (data, root) => {
+        expect.soft(data.value.classes).toEqual(['a'])
+        expect.soft(data.value.styles).toEqual([{ color: 'red' }])
+        expect(root.textContent).toBe('a b|{"color":"red","margin":"1px"}')
+
+        data.value.attrs = { class: 'c', style: { padding: '2px' } }
+        await nextTick()
+        expect.soft(data.value.classes).toEqual(['a'])
+        expect.soft(data.value.styles).toEqual([{ color: 'red' }])
+        expect(root.textContent).toBe('a c|{"color":"red","padding":"2px"}')
+      },
+    )
+  })
 })

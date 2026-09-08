@@ -430,10 +430,17 @@ export function getPropsProxyHandlers(
     const hasMerged = !!(merged && merged.length)
     let value
     if (hasMerged) {
-      if (merged.length > 1) {
-        value = merged.reverse()
-      } else {
+      if (merged.length === 1) {
         value = merged[0]
+      } else if (key === 'class') {
+        // Match mergeProps, including leaving all-undefined classes undefined.
+        for (let i = merged.length - 1; i >= 0; i--) {
+          if (value !== merged[i]) {
+            value = normalizeClass([value, merged[i]])
+          }
+        }
+      } else {
+        value = merged.reverse()
       }
     }
     return resolvePropValue(
@@ -681,11 +688,9 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
         const value = isDynamic ? resolved[key] : resolveSource(source[key])
         if (key === 'class' || key === 'style') {
           const existing = mergedRawProps[key]
-          if (isArray(existing)) {
-            existing.push(value)
-          } else {
-            mergedRawProps[key] = [existing, value]
-          }
+          mergedRawProps[key] = isArray(existing)
+            ? [...existing, value]
+            : [existing, value]
         } else if (isOn(key)) {
           mergedRawProps[key] = mergeEventHandlers(mergedRawProps[key], value)
         } else {
