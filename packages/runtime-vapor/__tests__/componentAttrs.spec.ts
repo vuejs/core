@@ -1695,6 +1695,50 @@ describe('attribute fallthrough', () => {
     expect(host.innerHTML).toBe('<div><i>two</i></div><!--dynamic-component-->')
   })
 
+  it('does not accumulate fallthrough sources across dynamic component switches', async () => {
+    const state = ref({ current: 'A' })
+    // attrs bound onto a non-root element go through the full class merge
+    // instead of the root's incremental classList path, so a duplicated
+    // source shows up in the DOM
+    const compileInner = (text: string) =>
+      compile(
+        `<script setup vapor>
+          import { useAttrs } from 'vue'
+          defineOptions({ inheritAttrs: false })
+          const attrs = useAttrs()
+        </script>
+        <template><div><span v-bind="attrs">${text}</span></div></template>`,
+        ref(null),
+      )
+    const A = compileInner('A')
+    const B = compileInner('B')
+    const Child = compile(
+      `<template>
+        <component :is="components[data.current]" :foo="1" />
+      </template>`,
+      state,
+      { A, B },
+    )
+    const Parent = compile(
+      `<template><components.Child class="c" /></template>`,
+      ref(null),
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe(
+      '<div><span foo="1" class="c">A</span></div><!--dynamic-component-->',
+    )
+
+    for (const current of ['B', 'A', 'B']) {
+      state.value = { current }
+      await nextTick()
+    }
+    expect(host.innerHTML).toBe(
+      '<div><span foo="1" class="c">B</span></div><!--dynamic-component-->',
+    )
+  })
+
   // #15277
   it('should pass fallthrough attrs to declared props with inheritAttrs: false', () => {
     const Child = compile(
