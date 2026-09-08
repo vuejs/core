@@ -179,7 +179,7 @@ export function createDynamicComponent(
       frag.update(undefined, resolved)
       return
     }
-    frag.update(() => render(value, resolved, appContext), value)
+    frag.update(() => render(value, resolved, appContext), resolved)
   })
 
   finishBlockCreation(
