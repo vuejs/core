@@ -27,6 +27,31 @@ describe('validate html nesting', () => {
     })
     expect(err).toBeUndefined()
   })
+
+  // #13608 - Chrome 134+ HTML5 spec updates
+  it('should not warn with select > button', () => {
+    let err: CompilerError | undefined
+    compile(`<select><button>Click me</button></select>`, {
+      onWarn: e => (err = e),
+    })
+    expect(err).toBeUndefined()
+  })
+
+  it('should not warn with option > span', () => {
+    let err: CompilerError | undefined
+    compile(`<select><option><span>Styled text</span></option></select>`, {
+      onWarn: e => (err = e),
+    })
+    expect(err).toBeUndefined()
+  })
+
+  it('should not warn with option > b', () => {
+    let err: CompilerError | undefined
+    compile(`<select><option><b>Bold text</b></option></select>`, {
+      onWarn: e => (err = e),
+    })
+    expect(err).toBeUndefined()
+  })
 })
 
 /**
@@ -146,6 +171,29 @@ describe('isValidHTMLNesting', () => {
 
     // valid
     expect(isValidHTMLNesting('h1', 'div')).toBe(true)
+  })
+
+  test('select - Chrome 134+ allows button as child', () => {
+    // These should be valid according to new HTML5 spec (Chrome 134+)
+    expect(isValidHTMLNesting('select', 'button')).toBe(true)
+
+    // Traditional valid children should still work
+    expect(isValidHTMLNesting('select', 'option')).toBe(true)
+    expect(isValidHTMLNesting('select', 'optgroup')).toBe(true)
+    expect(isValidHTMLNesting('select', 'hr')).toBe(true)
+  })
+
+  test('option - Chrome 134+ allows styled content', () => {
+    // These should be valid according to new HTML5 spec (Chrome 134+)
+    expect(isValidHTMLNesting('option', 'span')).toBe(true)
+    expect(isValidHTMLNesting('option', 'b')).toBe(true)
+    expect(isValidHTMLNesting('option', 'i')).toBe(true)
+    expect(isValidHTMLNesting('option', 'strong')).toBe(true)
+    expect(isValidHTMLNesting('option', 'em')).toBe(true)
+
+    // Block-level elements might still be invalid
+    expect(isValidHTMLNesting('option', 'div')).toBe(false)
+    expect(isValidHTMLNesting('option', 'p')).toBe(false)
   })
 
   describe('SVG', () => {
