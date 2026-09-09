@@ -1,6 +1,11 @@
 import type { EffectScope } from '@vue/reactivity'
 import { type BlockFn, isValidSlot } from './block'
 import type { VaporFragment } from './fragment'
+import {
+  currentRenderContext,
+  deriveSlotBoundary,
+  withRenderContext,
+} from './renderContext'
 
 // A slot boundary is one slot outlet's fallback-resolution point. `parent` is
 // the next boundary this outlet is allowed to inherit from; ownership caps set
@@ -24,28 +29,14 @@ export interface SlotBoundaryContext {
   onContentInvalid?: (() => void)[]
 }
 
-export let currentSlotBoundary: SlotBoundaryContext | null = null
-
-export function setCurrentSlotBoundary(
-  b: SlotBoundaryContext | null,
-): SlotBoundaryContext | null {
-  try {
-    return currentSlotBoundary
-  } finally {
-    currentSlotBoundary = b
-  }
-}
-
 export function withSlotBoundary<R>(
   boundary: SlotBoundaryContext | null,
   fn: () => R,
 ): R {
-  const prev = setCurrentSlotBoundary(boundary)
-  try {
-    return fn()
-  } finally {
-    setCurrentSlotBoundary(prev)
-  }
+  return withRenderContext(
+    deriveSlotBoundary(currentRenderContext, boundary),
+    fn,
+  )
 }
 
 // Dynamic children (`v-if`, `v-for`, interop fragments) created under a slot
@@ -54,7 +45,7 @@ export function trackSlotBoundaryDirtying(
   fragment: VaporFragment,
   onInvalid?: () => void,
 ): void {
-  const boundary = currentSlotBoundary
+  const boundary = currentRenderContext.slotBoundary
   if (!boundary) return
 
   if (onInvalid) {

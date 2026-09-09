@@ -45,25 +45,18 @@ import {
   locateFragmentEnd,
   locateHydrationNode,
 } from './dom/hydration'
-import { currentSlotOwner, setCurrentSlotOwner } from './componentSlots'
 import {
-  isSuspenseEnabled,
-  parentSuspense,
-  setParentSuspense,
-} from './suspense'
-import {
-  applyScopeIdOwners,
-  currentSlotScopeIds,
-  setCurrentSlotScopeIds,
-} from './scopeId'
+  type RenderContext,
+  currentRenderContext,
+  deriveSlotBoundary,
+  withRenderContext,
+} from './renderContext'
+import { applyScopeIdOwners } from './scopeId'
 import {
   type SlotBoundaryContext,
-  currentSlotBoundary,
   hasSlotFallback,
   registerContentInvalid,
-  setCurrentSlotBoundary,
   trackSlotBoundaryDirtying,
-  withSlotBoundary,
 } from './slotBoundary'
 import {
   claimPrecedingFragmentClose,
@@ -179,39 +172,30 @@ export class VaporFragment<
 // re-renders — capture the ambient render context at construction so the
 // deferred render can restore it. Fragments that only hold externally
 // rendered content (ForFragment / ForBlock) stay on the lean base class:
-// the for pipeline restores its ambient context through closures instead,
-// once per v-for rather than once per item.
+// the for pipeline captures the context once per v-for instead.
 export class RenderContextFragment<
   T extends Block = Block,
 > extends VaporFragment<T> {
-  // render context
   readonly renderInstance: GenericComponentInstance | null = currentInstance
-  readonly slotOwner: VaporComponentInstance | null = currentSlotOwner
   readonly keepAliveCtx?: VaporKeepAliveContext | null
-  // Captured by reference: fast-path slot outlets null this right after
-  // construction — they join no fallback arbitration (see createSlot).
-  slotBoundary: SlotBoundaryContext | null = currentSlotBoundary
-  // The Suspense boundary this fragment renders *into*. Unlike
-  // `renderInstance.suspense` (the boundary its owner was mounted in), slot
-  // content can be declared outside a boundary and rendered inside one, so this
-  // has to be the ambient value at construction time. Restored alongside the
-  // other fragment-owned ambient state in `runWithFragmentCtxOnly`, so
-  // branches that first render during an update queue their post-render
-  // effects on the right boundary instead of the global queue.
-  readonly renderSuspense?: SuspenseBoundary | null
-  // Captured by reference: slot outlets replace this with their merged id cell
-  // right after construction, so late renders (branch switches, deferred
-  // fallbacks) create their DOM under the outlet's slot scope context.
-  slotScopeIds: string[] | null = currentSlotScopeIds
+  // The context this fragment's content renders under. Slot outlets replace
+  // it with their own cell right after construction (see createSlot), so late
+  // renders create their DOM under the outlet's context.
+  ctx: RenderContext = currentRenderContext
 
   constructor(nodes: T, flags: number = FRAGMENT) {
     super(nodes, flags)
     if (isKeepAliveEnabled) {
       this.keepAliveCtx = getKeepAliveContext(currentInstance)
     }
-    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) {
-      this.renderSuspense = parentSuspense
-    }
+  }
+
+  get slotBoundary(): SlotBoundaryContext | null {
+    return this.ctx.slotBoundary
+  }
+
+  get slotScopeIds(): string[] | null {
+    return this.ctx.slotScopeIds
   }
 
   protected runWithRenderCtx<R>(fn: () => R, scope?: EffectScope): R {
@@ -226,7 +210,7 @@ export function runWithRenderCtx<R>(
 ): R {
   const prevInstance = setCurrentInstance(fragment.renderInstance, scope)
   try {
-    return runWithFragmentCtxOnly(fragment, fn)
+    return withRenderContext(fragment.ctx, fn)
   } finally {
     restoreCurrentInstance(prevInstance)
   }
@@ -253,43 +237,6 @@ export function createSlotBoundary(
     getScopeIds: () => fragment.slotScopeIds,
     markDirty,
     onContentInvalid,
-  }
-}
-
-// Restores fragment-owned ambient state only. The caller must already have the
-// correct currentInstance / currentScope; use runWithRenderCtx for late renders.
-export function runWithFragmentCtxOnly<R>(
-  fragment: RenderContextFragment,
-  fn: () => R,
-): R {
-  // When ambient fragment context already matches, no ambient state needs
-  // restoring. This keeps ordinary branch renders on the cheap path.
-  const suspense =
-    __FEATURE_SUSPENSE__ && isSuspenseEnabled
-      ? fragment.renderSuspense || null
-      : null
-  const restoreSuspense =
-    __FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense !== suspense
-  if (
-    !restoreSuspense &&
-    currentSlotOwner === fragment.slotOwner &&
-    currentSlotBoundary === fragment.slotBoundary &&
-    currentSlotScopeIds === fragment.slotScopeIds
-  ) {
-    return fn()
-  }
-
-  const prevSuspense = restoreSuspense ? setParentSuspense(suspense) : null
-  const prevSlotOwner = setCurrentSlotOwner(fragment.slotOwner)
-  const prevBoundary = setCurrentSlotBoundary(fragment.slotBoundary)
-  const prevSlotScopeIds = setCurrentSlotScopeIds(fragment.slotScopeIds)
-  try {
-    return fn()
-  } finally {
-    setCurrentSlotScopeIds(prevSlotScopeIds)
-    setCurrentSlotBoundary(prevBoundary)
-    setCurrentSlotOwner(prevSlotOwner)
-    if (restoreSuspense) setParentSuspense(prevSuspense)
   }
 }
 
@@ -647,6 +594,7 @@ export class SlotFragment
   private localFallback?: BlockFn
   private isUpdating = false
   private ownBoundary?: SlotBoundaryContext
+  private contentCtx?: RenderContext
   // Decoded from VaporSlotFlags: forwarded roots expose their content
   // validity to the enclosing boundary (unless once, whose content never
   // changes validity) and resolve fallback in shared or inherit mode.
@@ -819,8 +767,14 @@ export class SlotFragment
     const prevLocalFallback = this.localFallback
     this.localFallback = fallback
     const boundary = this.boundary
+    // Content renders under the outlet context plus this boundary; both are
+    // fixed before the first update.
+    const contentCtx = (this.contentCtx ||= deriveSlotBoundary(
+      this.ctx,
+      boundary,
+    ))
     const slotRender = render
-      ? () => withSlotBoundary(boundary, render)
+      ? () => withRenderContext(contentCtx, render)
       : () => EMPTY_BLOCK
     this.isUpdating = true
     this.pendingRecheck = false

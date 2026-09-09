@@ -43,8 +43,8 @@ import {
   RenderContextFragment,
   isFragment,
   resolveFragmentAnchor,
-  runWithFragmentCtxOnly,
 } from '../fragment'
+import { withRenderContext } from '../renderContext'
 import {
   advanceHydrationNode,
   claimAnchor,
@@ -153,7 +153,7 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   get scopeOwner(): GenericComponentInstance | null {
-    return (this.slotOwner ||
+    return (this.ctx.slotOwner ||
       this.renderInstance) as GenericComponentInstance | null
   }
 
@@ -169,7 +169,7 @@ export class TeleportFragment extends RenderContextFragment {
       // init and slot re-runs, where new nodes capture the ambient context.
       // The equality fast path keeps the synchronous first run free.
       renderEffect(() =>
-        runWithFragmentCtxOnly(this, () => {
+        withRenderContext(this.ctx, () => {
           // Stop the previous run's effects before tearing down its nodes;
           // components unmount here, handleChildrenUpdate detaches the DOM.
           const prevScope = this.scope
@@ -315,7 +315,7 @@ export class TeleportFragment extends RenderContextFragment {
       undefined,
       this.parentSuspense !== undefined
         ? this.parentSuspense
-        : (__FEATURE_SUSPENSE__ && isSuspenseEnabled && this.renderSuspense) ||
+        : (__FEATURE_SUSPENSE__ && isSuspenseEnabled && this.ctx.suspense) ||
             null,
     )
   }

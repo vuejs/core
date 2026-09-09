@@ -35,13 +35,7 @@ import {
 } from './block'
 import { MoveType, queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance } from './component'
-import {
-  type DynamicSlot,
-  type VaporSlot,
-  currentSlotOwner,
-  setCurrentSlotOwner,
-} from './componentSlots'
-import { currentSlotScopeIds, setCurrentSlotScopeIds } from './scopeId'
+import type { DynamicSlot, VaporSlot } from './componentSlots'
 import { renderEffect } from './renderEffect'
 import { VaporVForFlags } from '@vue/shared'
 import {
@@ -82,7 +76,7 @@ import {
 } from './insertionState'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
 import { setBlockKey } from './helpers/setKey'
-import { currentSlotBoundary, setCurrentSlotBoundary } from './slotBoundary'
+import { currentRenderContext, withRenderContext } from './renderContext'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -150,9 +144,7 @@ export const createFor = (
   const isFragment = !!(flags & VaporVForFlags.IS_FRAGMENT)
   const wrappedRows = !!(flags & VaporVForFlags.WRAPPED_ROWS)
 
-  const slotOwner = currentSlotOwner
-  const slotBoundary = currentSlotBoundary
-  const slotScopeIds = currentSlotScopeIds
+  const ctx = currentRenderContext
 
   if (__DEV__ && !instance) {
     warn('createFor() can only be used inside setup()')
@@ -666,19 +658,7 @@ export const createFor = (
   } else {
     renderEffect(() => {
       if (!isMounted) return renderList()
-      const prevOwner = setCurrentSlotOwner(slotOwner)
-      const restoreBoundary = currentSlotBoundary !== slotBoundary
-      const prevBoundary = restoreBoundary
-        ? setCurrentSlotBoundary(slotBoundary)
-        : null
-      const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
-      try {
-        renderList()
-      } finally {
-        setCurrentSlotScopeIds(prevSlotScopeIds)
-        if (restoreBoundary) setCurrentSlotBoundary(prevBoundary)
-        setCurrentSlotOwner(prevOwner)
-      }
+      withRenderContext(ctx, renderList)
     })
   }
 

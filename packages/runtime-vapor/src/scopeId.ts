@@ -9,89 +9,13 @@ import type { Block } from './block'
 import { isArray } from '@vue/shared'
 import { isInteropEnabled } from './vdomInteropState'
 import { getScopeOwner } from './componentSlots'
-import { setTemplateCloneHook } from './dom/template'
 import {
-  isHydrating,
-  isRecreatedNode,
-  setMismatchStampHook,
-} from './dom/hydration'
-
-/**
- * Ambient slot scope ids (the `-s` variants) active while creating DOM for
- * slot content — the vapor counterpart of the renderer's `slotScopeIds` patch
- * context. Cleared around child setup (the child captures it for root-only
- * inheritance). Mounted DOM is never retroactively re-stamped (VDOM parity).
- */
-export let currentSlotScopeIds: string[] | null = null
-
-export function setCurrentSlotScopeIds(
-  scopeIds: string[] | null,
-): string[] | null {
-  const prev = currentSlotScopeIds
-  if (scopeIds !== prev) {
-    currentSlotScopeIds = scopeIds
-    // Install the creation-seam hooks only on null↔non-null flips: the hooks
-    // read the live ambient, and non-slotted hot paths stay a single null check.
-    if (!prev || !scopeIds) {
-      if (scopeIds) {
-        setTemplateCloneHook(cloneStampedTemplate)
-        setMismatchStampHook(stampSlotScopeIds)
-      } else {
-        setTemplateCloneHook(null)
-        setMismatchStampHook(null)
-      }
-    }
-  }
-  return prev
-}
-
-function stampSlotScopeIds(node: Node): void {
-  if (node.nodeType === 1 /* Node.ELEMENT_NODE */) {
-    setElementScopeIdsDeep(node as Element, currentSlotScopeIds!)
-  }
-}
-
-/**
- * Stamped-variant cache: ids are written once per (template prototype × id
- * cell) and clones inherit them via cloneNode. Never stale because scope ids
- * are compile-time constants; entries are freed with their cell (WeakMap key).
- */
-const stampedTemplates = new WeakMap<Node, WeakMap<string[], Node>>()
-
-function cloneStampedTemplate(prototype: Node): Node {
-  if (prototype.nodeType !== 1 /* Node.ELEMENT_NODE */) {
-    return prototype.cloneNode(true)
-  }
-  const scopeIds = currentSlotScopeIds!
-  let variants = stampedTemplates.get(prototype)
-  if (!variants) {
-    stampedTemplates.set(prototype, (variants = new WeakMap()))
-  }
-  let stamped = variants.get(scopeIds)
-  if (!stamped) {
-    stamped = prototype.cloneNode(true)
-    setElementScopeIdsDeep(stamped as Element, scopeIds)
-    variants.set(scopeIds, stamped)
-  }
-  return stamped.cloneNode(true)
-}
-
-// Template clones contain no component boundaries and fresh clones carry no
-// runtime scope ids yet — plain setAttribute, no exists-check.
-function setElementScopeIdsDeep(el: Element, scopeIds: string[]): void {
-  setElementScopeIds(el, scopeIds)
-  let child = el.firstElementChild
-  while (child) {
-    setElementScopeIdsDeep(child, scopeIds)
-    child = child.nextElementSibling
-  }
-}
-
-export function setElementScopeIds(el: Element, scopeIds: string[]): void {
-  for (let i = 0; i < scopeIds.length; i++) {
-    el.setAttribute(scopeIds[i], '')
-  }
-}
+  currentRenderContext,
+  deriveSlotScopeIds,
+  withRenderContext,
+} from './renderContext'
+import { isHydrating, isRecreatedNode } from './dom/hydration'
+import { setElementScopeIds } from './dom/scopeIdStamp'
 
 /**
  * Catch-up for slot content DOM created outside the ambient window (eager
@@ -124,14 +48,12 @@ export function renderWithSlotScopeIds(
   scopeIds: string[] | null,
   render: () => Block,
 ): Block {
-  const prev = setCurrentSlotScopeIds(scopeIds)
-  try {
-    const block = render()
-    if (scopeIds && !isHydrating) stampSlotContent(block, scopeIds)
-    return block
-  } finally {
-    setCurrentSlotScopeIds(prev)
-  }
+  const block = withRenderContext(
+    deriveSlotScopeIds(currentRenderContext, scopeIds),
+    render,
+  )
+  if (scopeIds && !isHydrating) stampSlotContent(block, scopeIds)
+  return block
 }
 
 export function getCurrentScopeId(): string | undefined {

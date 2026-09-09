@@ -28,13 +28,14 @@ import {
 } from '../src'
 import { compile, compileToVaporRender, makeRender } from './_utils'
 import { type VaporComponentInstance, currentInstance } from '../src/component'
-import { currentSlotOwner, setCurrentSlotOwner } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
+import { enableSuspense } from '../src/suspense'
 import {
-  enableSuspense,
-  parentSuspense,
-  setParentSuspense,
-} from '../src/suspense'
+  currentRenderContext,
+  deriveSlotOwner,
+  deriveSuspense,
+  setRenderContext,
+} from '../src/renderContext'
 
 const define = makeRender()
 
@@ -952,17 +953,20 @@ describe('component', () => {
         const instance = currentInstance as VaporComponentInstance
         instance.suspense = activeSuspense
 
-        const prevOwner = setCurrentSlotOwner(owner)
-        const prevSuspense = setParentSuspense(previousSuspense)
+        const prevCtx = setRenderContext(
+          deriveSuspense(
+            deriveSlotOwner(currentRenderContext, owner),
+            previousSuspense,
+          ),
+        )
         try {
           createComponent(Child)
         } catch (e) {
           caught = e
         }
-        ownerAfterThrow = currentSlotOwner
-        suspenseAfterThrow = parentSuspense
-        setCurrentSlotOwner(prevOwner)
-        setParentSuspense(prevSuspense)
+        ownerAfterThrow = currentRenderContext.slotOwner
+        suspenseAfterThrow = currentRenderContext.suspense
+        setRenderContext(prevCtx)
         return []
       },
     }).render()

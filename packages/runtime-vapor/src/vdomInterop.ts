@@ -84,7 +84,6 @@ import {
 } from './component'
 import {
   collectRootScopeIds,
-  currentSlotScopeIds,
   getCurrentScopeId,
   setPublishInteropScopeIds,
 } from './scopeId'
@@ -151,7 +150,6 @@ import {
   isFragment,
   isSlotResolver,
   resolveFragmentAnchor,
-  runWithFragmentCtxOnly,
 } from './fragment'
 import { SLOT_OUTLET, VDOM } from './fragmentFlags'
 import {
@@ -209,14 +207,19 @@ import {
   isKeepAliveEnabled,
 } from './keepAlive'
 import {
-  parentSuspense as currentParentSuspense,
   currentUnmountSuspense,
   enableSuspense,
   isSuspenseEnabled,
   resolveUnmountSuspense,
   runWithUnmountSuspense,
-  setParentSuspense,
 } from './suspense'
+import {
+  currentRenderContext,
+  deriveSlotScopeIds,
+  deriveSuspense,
+  setRenderContext,
+  withRenderContext,
+} from './renderContext'
 
 const EMPTY_VNODES = EMPTY_ARR as unknown as VNode[]
 
@@ -358,9 +361,9 @@ const vaporInteropImpl: VaporInVdomInterface = {
     const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
     const rawSlots = createInteropRawSlots(slotsRef)
 
-    let prevSuspense: SuspenseBoundary | null = null
+    const prevCtx = currentRenderContext
     if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
-      prevSuspense = setParentSuspense(parentSuspense)
+      setRenderContext(deriveSuspense(prevCtx, parentSuspense))
     }
 
     const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
@@ -404,9 +407,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       })
     }
 
-    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
-      setParentSuspense(prevSuspense)
-    }
+    setRenderContext(prevCtx)
 
     const rootEl = resolveInteropRootEl(instance)
     if (rootEl) {
@@ -1152,7 +1153,8 @@ function mountVNode(
   getFallthroughAttrs?: () => Record<string, any>,
 ): VaporFragment {
   let suspense =
-    currentParentSuspense || (parentComponent && parentComponent.suspense)
+    currentRenderContext.suspense ||
+    (parentComponent && parentComponent.suspense)
   // A vnode standing in as a component's effective root inherits fallthrough
   // attrs the same way VDOM does it — merged into the vnode's props
   // (`cloneVNode` -> `mergeProps`), so mount and patch apply them natively
@@ -1340,7 +1342,8 @@ function createVDOMComponent(
   once?: boolean,
 ): VaporFragment {
   let suspense =
-    currentParentSuspense || (parentComponent && parentComponent.suspense)
+    currentRenderContext.suspense ||
+    (parentComponent && parentComponent.suspense)
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
   const vnode = createVNode(
@@ -1474,7 +1477,7 @@ function createVDOMComponent(
   }
 
   vnode.scopeId = getCurrentScopeId() || null
-  vnode.slotScopeIds = currentSlotScopeIds
+  vnode.slotScopeIds = currentRenderContext.slotScopeIds
 
   const place = (
     parentNode: ParentNode,
@@ -1835,7 +1838,7 @@ function renderVDOMSlot(
   const forwarded = isForwardedSlot(flags)
   const inheritFallback = slotInheritsFallback(flags)
   const notifiesBoundary = slotNotifiesBoundary(flags)
-  let suspense = currentParentSuspense || parentComponent.suspense
+  let suspense = currentRenderContext.suspense || parentComponent.suspense
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
   // patches.
@@ -2217,7 +2220,7 @@ function renderVDOMSlot(
 
   function renderContent(): void {
     notifyBeforeUpdate()
-    runWithFragmentCtxOnly(frag, () =>
+    withRenderContext(frag.ctx, () =>
       withSlotBoundary(contentBoundary, () => {
         const { content: slotContent, valid: slotContentValid } =
           resolveSlotContent()
@@ -2813,10 +2816,10 @@ function renderVaporSlot(
   contextSlotScopeIds: string[] | null,
 ): Block {
   const prev = currentInstance
-  let prevSuspense: SuspenseBoundary | null = null
+  const prevCtx = currentRenderContext
   simpleSetCurrentInstance(parentComponent)
   if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
-    prevSuspense = setParentSuspense(parentSuspense)
+    setRenderContext(deriveSuspense(prevCtx, parentSuspense))
   }
   try {
     if (!vnode.vs || !vnode.vs.slot) {
@@ -2830,10 +2833,9 @@ function renderVaporSlot(
     const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
     // The vnode-derived slot context becomes the creation ambient for the
     // vapor-rendered content, restored via the fragment's render seam.
-    frag.slotScopeIds = getInteropVaporSlotScopeIds(
-      vnode,
-      parentComponent,
-      contextSlotScopeIds,
+    frag.ctx = deriveSlotScopeIds(
+      frag.ctx,
+      getInteropVaporSlotScopeIds(vnode, parentComponent, contextSlotScopeIds),
     )
     const content = new InteropContentState()
     frag.isBlockValid = componentAsValid =>
@@ -2974,7 +2976,7 @@ function renderVaporSlot(
             )
             try {
               return finalizeResolvedContent(
-                runWithFragmentCtxOnly(frag, () => {
+                withRenderContext(frag.ctx, () => {
                   const renderSlot = () =>
                     withSlotBoundary(localFallbackBoundary, () =>
                       invokeVaporSlot(vnode),
@@ -2988,7 +2990,7 @@ function renderVaporSlot(
           })
         } else {
           resolvedContent = finalizeResolvedContent(
-            runWithFragmentCtxOnly(frag, () =>
+            withRenderContext(frag.ctx, () =>
               withSlotBoundary(localFallbackBoundary, () =>
                 invokeVaporSlot(vnode),
               ),
@@ -3069,9 +3071,7 @@ function renderVaporSlot(
       throw e
     }
   } finally {
-    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
-      setParentSuspense(prevSuspense)
-    }
+    setRenderContext(prevCtx)
     simpleSetCurrentInstance(prev)
   }
 }
@@ -3201,7 +3201,8 @@ function createVNodeChildrenFragment(
   parentComponent: ComponentInternalInstance | null,
 ): VaporFragment {
   let suspense =
-    currentParentSuspense || (parentComponent && parentComponent.suspense)
+    currentRenderContext.suspense ||
+    (parentComponent && parentComponent.suspense)
   const frag = createInteropFragment()
   const content = new InteropContentState()
   // `isBlockValid` reports `content.valid` (VDOM-side `ensureValidVNode`), not
@@ -3270,7 +3271,7 @@ function createVNodeChildrenFragment(
     simpleSetCurrentInstance(parentComponent)
     try {
       renderEffect(() => {
-        runWithFragmentCtxOnly(frag, () => {
+        withRenderContext(frag.ctx, () => {
           const nextChildren = render()
           notifyBeforeUpdate()
           if (isHydrating) {

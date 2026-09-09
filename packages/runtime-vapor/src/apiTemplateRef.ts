@@ -43,7 +43,7 @@ import {
   unsetRef,
 } from './refCleanup'
 import { renderEffect } from './renderEffect'
-import { parentSuspense } from './suspense'
+import { currentRenderContext } from './renderContext'
 
 export type NodeRef =
   | string
@@ -125,7 +125,10 @@ export function createTemplateRefSetter(): setRefFn {
   return (el, ref, refFor, refKey) => {
     let state = stateMap.get(el)
     if (!state) {
-      stateMap.set(el, (state = { ref, suspense: parentSuspense }))
+      stateMap.set(
+        el,
+        (state = { ref, suspense: currentRenderContext.suspense }),
+      )
     }
     setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
   }
@@ -188,7 +191,7 @@ export function setStaticTemplateRef(
   refKey?: string,
 ): void {
   const instance = getScopeOwner()!
-  const suspense = parentSuspense
+  const suspense = currentRenderContext.suspense
   setRef(instance, suspense, el, ref, undefined, refFor, refKey)
   registerFragmentRefUpdate(el, undefined, () => {
     setRef(instance, suspense, el, ref, ref, refFor, refKey)
@@ -209,7 +212,7 @@ export function setTemplateRefBinding(
   let state: TemplateRefState | undefined
   renderEffect(() => {
     const ref = getter()
-    if (!state) state = { ref, suspense: parentSuspense }
+    if (!state) state = { ref, suspense: currentRenderContext.suspense }
     setTemplateRefWithState(instance, el, state, ref, refFor, refKey)
   })
 }
