@@ -21,13 +21,21 @@ import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
   ExtractPropTypes,
+  ExtractPublicPropTypes,
+  Prop,
+  PropType,
 } from './componentProps'
 import type {
   EmitsOptions,
   EmitsToProps,
   TypeEmitsToOptions,
 } from './componentEmits'
-import { type IsKeyValues, extend, isFunction } from '@vue/shared'
+import {
+  type IsKeyValues,
+  type LooseRequired,
+  extend,
+  isFunction,
+} from '@vue/shared'
 import type { VNodeProps } from './vnode'
 import type {
   ComponentPublicInstanceConstructor,
@@ -136,8 +144,84 @@ export type DefineSetupFnComponent<
   S
 >
 
+type DefineSetupFnComponentWithInstanceProps<
+  P extends Record<string, any>,
+  E extends EmitsOptions,
+  S extends SlotsType,
+  Props,
+  PP = PublicProps,
+  InstanceProps = Props,
+> = new (props: Props & PP) => Omit<
+  CreateComponentPublicInstanceWithMixins<
+    InstanceProps,
+    {},
+    {},
+    {},
+    {},
+    ComponentOptionsMixin,
+    ComponentOptionsMixin,
+    E,
+    PP,
+    {},
+    false,
+    {},
+    S
+  >,
+  '$props'
+> & {
+  $props: Props & PP
+}
+
 type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> &
   Readonly<EmitsToProps<Emits>>
+
+// Detect both ComponentObjectPropsOptions<P> and its PropType-only narrowed
+// form. Keep match state separate because `never` is a valid inferred payload.
+type PropValueMatch<V> = [Exclude<V, undefined>] extends [Prop<infer T> | null]
+  ? [Prop<T> | null] extends [Exclude<V, undefined>]
+    ? { matched: true; value: T }
+    : [Exclude<V, undefined>] extends [PropType<infer U> | null]
+      ? [PropType<U> | null] extends [Exclude<V, undefined>]
+        ? { matched: true; value: U }
+        : { matched: false }
+      : { matched: false }
+  : { matched: false }
+
+type PropValueType<V> =
+  PropValueMatch<V> extends {
+    matched: true
+    value: infer T
+  }
+    ? T
+    : never
+
+type PreTypedKeys<O> = {
+  [K in keyof O]-?: PropValueMatch<O[K]> extends { matched: true } ? K : never
+}[keyof O]
+
+type LiteralRuntimePropKeys<O> = Exclude<keyof O, PreTypedKeys<O>>
+
+type PreTypedProps<O> = {
+  [K in keyof Pick<O, PreTypedKeys<O>>]: PropValueType<O[K]>
+}
+
+type LiteralRuntimePropsOptions<O> = {
+  [K in keyof Pick<O, LiteralRuntimePropKeys<O>>]: O[K]
+}
+
+type PublicRuntimeProps<O extends ComponentObjectPropsOptions> =
+  PreTypedProps<O> & ExtractPublicPropTypes<LiteralRuntimePropsOptions<O>>
+
+type ResolvedRuntimeProps<O extends ComponentObjectPropsOptions> = Readonly<
+  LooseRequired<
+    Readonly<PreTypedProps<O> & ExtractPropTypes<LiteralRuntimePropsOptions<O>>>
+  >
+>
+
+type IsEqual<X, Y> =
+  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
+    ? true
+    : false
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -162,6 +246,37 @@ export function defineComponent<
     slots?: S
   },
 ): DefineSetupFnComponent<Props, E, S>
+// function syntax + object runtime props, unannotated setup:
+// setup gets resolved/internal props; public contract stays ExtractPublicPropTypes (#13964).
+// An explicit annotation that is exactly the resolved setup type cannot be
+// distinguished from unannotated inference, so it also uses the public contract.
+export function defineComponent<
+  RuntimePropsOptions extends ComponentObjectPropsOptions,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  S extends SlotsType = {},
+  P = ResolvedRuntimeProps<RuntimePropsOptions>,
+>(
+  setup: IsEqual<P, ResolvedRuntimeProps<RuntimePropsOptions>> extends true
+    ? (
+        props: P,
+        ctx: SetupContext<E, S>,
+      ) => RenderFunction | Promise<RenderFunction>
+    : never,
+  options: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+    props: RuntimePropsOptions
+    emits?: E | EE[]
+    slots?: S
+  },
+): DefineSetupFnComponentWithInstanceProps<
+  PublicRuntimeProps<RuntimePropsOptions>,
+  E,
+  S,
+  PublicRuntimeProps<RuntimePropsOptions> & EmitsToProps<E>,
+  PublicProps,
+  ToResolvedProps<ResolvedRuntimeProps<RuntimePropsOptions>, E>
+>
+// function syntax + object runtime props, annotated setup
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},

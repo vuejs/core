@@ -1,7 +1,9 @@
 import {
   type Component,
+  type ComponentObjectPropsOptions,
   type ComponentOptions,
   type ComponentPublicInstance,
+  type DefineSetupFnComponent,
   type PropType,
   type SetupContext,
   type Slots,
@@ -1423,6 +1425,14 @@ describe('function syntax w/ emits', () => {
 })
 
 describe('function syntax w/ runtime props', () => {
+  type AnySetupInstance = InstanceType<DefineSetupFnComponent<any>>
+  expectType<IsAny<AnySetupInstance>>(true)
+
+  const CompAny = defineComponent((_props: any) => () => {}, {
+    props: { msg: String },
+  })
+  expectType<IsAny<InstanceType<typeof CompAny>>>(true)
+
   // with runtime props, the runtime props must match
   // manual type declaration
   const Comp1 = defineComponent(
@@ -1544,6 +1554,144 @@ describe('function syntax w/ runtime props', () => {
   // @ts-expect-error bar doesn't exist
   expectType<JSX.Element>(<Comp3 msg="1" bar="2" />)
 
+  // #13964 function syntax: optional runtime props must stay optional
+  const CompOptional = defineComponent(
+    props => {
+      expectType<string | undefined>(props.p1)
+      expectType<number | undefined>(props.p2)
+      expectType<boolean>(props.p3)
+      expectType<string>(props.p4)
+      // @ts-expect-error props should be readonly
+      props.p4 = 'value'
+      return () => {}
+    },
+    {
+      props: {
+        p1: String,
+        p2: { type: Number },
+        p3: { type: Boolean, required: false },
+        p4: { type: String, required: true },
+      },
+    },
+  )
+
+  expectType<JSX.Element>(<CompOptional p4="ok" />)
+  expectType<JSX.Element>(<CompOptional p1="a" p2={1} p3={false} p4="ok" />)
+  // @ts-expect-error p4 is required
+  expectType<JSX.Element>(<CompOptional />)
+  // @ts-expect-error p4 type is incorrect
+  expectType<JSX.Element>(<CompOptional p4={1} />)
+
+  // resolved setup vs public contract: Boolean / default are present in setup
+  const CompResolved = defineComponent(
+    props => {
+      expectType<boolean>(props.flag)
+      expectType<string>(props.foo)
+      return () => {}
+    },
+    {
+      props: {
+        flag: Boolean,
+        foo: { type: String, default: 'x' },
+      },
+    },
+  )
+  expectType<JSX.Element>(<CompResolved />)
+  expectType<JSX.Element>(<CompResolved flag={true} foo="y" />)
+
+  // annotated setup must keep the existing object-props overload
+  const CompAnnotated = defineComponent((_: { msg?: string }) => () => {}, {
+    props: {
+      msg: { type: String, required: true },
+    },
+  })
+  expectType<JSX.Element>(<CompAnnotated />)
+
+  // annotation equal to resolved setup type: public contract is still ExtractPublicPropTypes
+  const CompExactBool = defineComponent(
+    (_: Readonly<{ flag: boolean }>) => () => {},
+    { props: { flag: Boolean } },
+  )
+  expectType<JSX.Element>(<CompExactBool />)
+  expectType<JSX.Element>(<CompExactBool flag={true} />)
+
+  const CompExactDefault = defineComponent(
+    (_: Readonly<{ foo: string }>) => () => {},
+    { props: { foo: { type: String, default: 'x' } } },
+  )
+  expectType<JSX.Element>(<CompExactDefault />)
+  expectType<JSX.Element>(<CompExactDefault foo="y" />)
+
+  const CompExactOptional = defineComponent(
+    (_: Readonly<{ msg: string | undefined }>) => () => {},
+    { props: { msg: String } },
+  )
+  expectType<JSX.Element>(<CompExactOptional />)
+  expectType<JSX.Element>(<CompExactOptional msg="ok" />)
+
+  const runtimeProps: ComponentObjectPropsOptions<{ msg: string }> = {
+    msg: { type: String, required: true },
+  }
+  const CompHoisted = defineComponent(
+    props => {
+      expectType<string>(props.msg)
+      return () => {}
+    },
+    { props: runtimeProps },
+  )
+  expectType<JSX.Element>(<CompHoisted msg="ok" />)
+  // @ts-expect-error msg is required
+  expectType<JSX.Element>(<CompHoisted />)
+
+  const mixedProps = { ...runtimeProps, count: Number }
+  const CompMixed = defineComponent(
+    props => {
+      expectType<string>(props.msg)
+      expectType<number | undefined>(props.count)
+      return () => {}
+    },
+    { props: mixedProps },
+  )
+  expectType<JSX.Element>(<CompMixed msg="ok" />)
+  // @ts-expect-error msg is required
+  expectType<JSX.Element>(<CompMixed />)
+
+  const narrowedRuntimeProps: Record<'msg', PropType<string> | null> = {
+    msg: String,
+  }
+  const CompNarrowed = defineComponent(
+    props => {
+      expectType<string>(props.msg)
+      return () => {}
+    },
+    { props: narrowedRuntimeProps },
+  )
+  expectType<JSX.Element>(<CompNarrowed msg="ok" />)
+  // @ts-expect-error msg is required
+  expectType<JSX.Element>(<CompNarrowed />)
+  // @ts-expect-error msg must use the inferred string payload
+  expectType<JSX.Element>(<CompNarrowed msg={1} />)
+
+  const neverRuntimeProps: ComponentObjectPropsOptions<{ value: never }> = {
+    value: { type: null, required: true },
+  }
+  const CompNever = defineComponent(
+    props => {
+      expectType<never>(props.value)
+      return () => {}
+    },
+    { props: neverRuntimeProps },
+  )
+  expectType<JSX.Element>(<CompNever value={undefined as never} />)
+  // @ts-expect-error value remains required
+  expectType<JSX.Element>(<CompNever />)
+  // @ts-expect-error value retains the never payload
+  expectType<JSX.Element>(<CompNever value="nope" />)
+
+  const resolvedVm = {} as InstanceType<typeof CompResolved>
+  expectType<boolean>(resolvedVm.flag)
+  expectType<string>(resolvedVm.foo)
+
   // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {
@@ -1554,13 +1702,13 @@ describe('function syntax w/ runtime props', () => {
     },
   )
 
+  // @ts-expect-error prop type mismatch
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
     {
       props: {
-        // @ts-expect-error prop type mismatch
         msg: Number,
       },
     },
