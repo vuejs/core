@@ -3,6 +3,7 @@ import {
   type HydrationCursor,
   captureHydrationCursor,
   isHydrating,
+  locateHydrationNode,
 } from './dom/hydration'
 import { DynamicFragment, finishBlockCreation } from './fragment'
 import {
@@ -38,7 +39,6 @@ export function createKeyedFragment(
     0,
     __DEV__ ? 'keyed' : undefined,
     true,
-    true,
     trackSlotBoundary,
     trackSlotBoundary
       ? () => {
@@ -48,6 +48,7 @@ export function createKeyedFragment(
       : undefined,
     _insertionAnchor,
   )
+  if (isHydrating) locateHydrationNode()
 
   renderEffect(() => frag.update(render, key()))
 

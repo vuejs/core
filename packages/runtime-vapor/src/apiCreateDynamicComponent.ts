@@ -32,6 +32,7 @@ import {
   captureHydrationCursor,
   enterHydrationCursor,
   isHydrating,
+  locateHydrationNode,
 } from './dom/hydration'
 import { DynamicFragment, finishBlockCreation } from './fragment'
 import { isInteropEnabled } from './vdomInteropState'
@@ -114,7 +115,6 @@ export function createDynamicComponent(
     0,
     __DEV__ ? 'dynamic-component' : undefined,
     false,
-    true,
     slotRoot,
     slotRoot
       ? () => {
@@ -132,6 +132,7 @@ export function createDynamicComponent(
       : undefined,
     _insertionAnchor,
   )
+  if (isHydrating) locateHydrationNode()
 
   // A `:key` joins the resolved component in the branch identity, the way a
   // vnode is matched by type and key. The pair is memoized as one token so

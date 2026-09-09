@@ -63,6 +63,7 @@ import {
   cleanupHydrationTail,
   currentHydrationNode,
   isHydrating,
+  locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
   setMarkerlessHydrationContainer,
@@ -216,6 +217,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       0,
       __DEV__ ? 'transition-group' : undefined,
     )
+    if (isHydrating) locateHydrationNode()
     let currentTag: string | undefined
     let currentSlot: BlockFn | undefined
     let isMounted = false

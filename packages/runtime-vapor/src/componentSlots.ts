@@ -351,7 +351,6 @@ export function createSlot(
         __DEV__ ? 'slot' : undefined,
         false,
         false,
-        false,
         undefined,
         _insertionAnchor,
       )

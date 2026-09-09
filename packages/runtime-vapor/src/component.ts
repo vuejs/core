@@ -117,6 +117,7 @@ import {
   isHydrating,
   isRecreatedNode,
   locateEndAnchor,
+  locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
   trimHydrationBoundary,
@@ -1289,6 +1290,7 @@ export function createPlainElement(
         NATIVE_CHILDREN,
         __DEV__ ? (isHydrating ? '' : 'slot') : undefined,
       )
+      if (isHydrating) locateHydrationNode()
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
     } else {
