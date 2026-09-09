@@ -208,6 +208,12 @@ export function runWithRenderCtx<R>(
   fn: () => R,
   scope?: EffectScope,
 ): R {
+  // Renders driven by the fragment's own render effect already run under its
+  // instance; only out-of-effect renders (slot fallbacks, deferred branches,
+  // async resolution) switch it.
+  if (scope === undefined && currentInstance === fragment.renderInstance) {
+    return withRenderContext(fragment.ctx, fn)
+  }
   const prevInstance = setCurrentInstance(fragment.renderInstance, scope)
   try {
     return withRenderContext(fragment.ctx, fn)
@@ -554,7 +560,7 @@ export class DynamicFragment extends RenderContextFragment {
           }
         }
         return nodes
-      }, this.scope)
+      })
     } finally {
       // Inherit the fragment key without overriding a child's own key.
       const key = this.branchKey !== undefined ? this.branchKey : this.$key
