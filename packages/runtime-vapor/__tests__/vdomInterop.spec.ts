@@ -4331,6 +4331,49 @@ describe('vdomInterop', () => {
       expect(beforeUpdateSpy).toHaveBeenCalledTimes(0)
       expect(updatedSpy).toHaveBeenCalledTimes(0)
     })
+    test('deactivating a vapor child should move vdom slot content with leave semantics', async () => {
+      const onEnter = vi.fn((_el: Element, done: () => void) => done())
+      const onLeave = vi.fn((_el: Element, done: () => void) => done())
+      const data = ref({ current: 'A', show: true, onEnter, onLeave })
+      // a vapor outlet rendering vdom slot content
+      const A = compile(`<template><slot>fallback</slot></template>`, data)
+      const B = compile(
+        `<script setup>const data = _data;</script><template><p>B</p></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template>
+          <KeepAlive>
+            <components.A v-if="data.current === 'A'">
+              <Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">
+                <div v-if="data.show">A</div>
+              </Transition>
+            </components.A>
+            <components.B v-else />
+          </KeepAlive>
+        </template>`,
+        data,
+        { A, B },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      expect(host.textContent).toContain('A')
+      expect(onEnter).not.toHaveBeenCalled()
+
+      data.value.current = 'B'
+      await nextTick()
+      expect(host.textContent).toContain('B')
+      expect(onLeave).toHaveBeenCalledTimes(1)
+      expect(onEnter).not.toHaveBeenCalled()
+
+      data.value.current = 'A'
+      await nextTick()
+      expect(host.textContent).toContain('A')
+      expect(onEnter).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('Teleport', () => {

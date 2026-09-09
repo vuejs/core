@@ -59,7 +59,11 @@ import {
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
-import { DynamicFragment, SlotFragment, isSlotFragment } from '../src/fragment'
+import {
+  DynamicFragment,
+  SlotFragment,
+  isVaporSlotOutlet,
+} from '../src/fragment'
 import { IF } from '../src/fragmentFlags'
 import {
   type SlotBoundaryContext,
@@ -3889,7 +3893,7 @@ describe('component: slots', () => {
 
           expect(slotBlock).toBeInstanceOf(DynamicFragment)
           expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-          expect(isSlotFragment(slotBlock)).toBe(true)
+          expect(isVaporSlotOutlet(slotBlock)).toBe(true)
           expect(observedBoundary).toBe(null)
         })
 

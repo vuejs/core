@@ -1796,7 +1796,7 @@ function applyFallthroughAttrs(
 ): void {
   const state = new FallthroughResolveState(scope)
   const root = resolveFallthroughRoot(block, state)
-  const { fragments, innermost, hasSlotFragment } = state
+  const { fragments, innermost, hasSlotOutlet } = state
 
   if (fragments) {
     for (const frag of fragments) {
@@ -1807,7 +1807,7 @@ function applyFallthroughAttrs(
     }
   }
 
-  if (root && !hasSlotFragment) {
+  if (root && !hasSlotOutlet) {
     let ownerScope = scope
     if (innermost) {
       // A compiler-proven no-scope branch may have rendered without a scope;
@@ -1829,7 +1829,7 @@ function applyFallthroughAttrs(
     const fallthroughAttrs = resolveFallthroughAttrs(instance)
     if (
       Object.keys(fallthroughAttrs).length &&
-      (hasSlotFragment ||
+      (hasSlotOutlet ||
         (fragments && state.hasNonSingleRoot) ||
         (isTeleportEnabled && containsTeleportFragment(block)) ||
         (!accessedAttrs &&
@@ -1849,7 +1849,7 @@ class FallthroughResolveState implements RootChainVisitor {
   innermost?: DynamicFragment
   // nearest enclosing branch scope; lifecycle parent for retrofitted scopes
   parentScope?: EffectScope
-  hasSlotFragment?: boolean
+  hasSlotOutlet?: boolean
   // the innermost fragment's current branch is multi-root: fragments stay
   // registered for future branches while the current render warns
   hasNonSingleRoot?: boolean
@@ -1866,7 +1866,7 @@ class FallthroughResolveState implements RootChainVisitor {
     // must not register a fallthrough hook — a later branch switch would
     // re-apply from the branch alone, with the slot boundary out of view.
     if (frag.__vf & SLOT) {
-      this.hasSlotFragment = true
+      this.hasSlotOutlet = true
       return true
     }
     ;(this.fragments ||= []).push(frag)
