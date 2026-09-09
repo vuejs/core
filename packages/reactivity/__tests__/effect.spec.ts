@@ -750,6 +750,7 @@ describe('reactivity/effect', () => {
     let events: DebuggerEvent[] = []
     let dummy
     const onTrack = vi.fn((e: DebuggerEvent) => {
+      obj.foo // #12259
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
