@@ -26,6 +26,17 @@ function transformWithStyleTransform(
 }
 
 describe('compiler: style transform', () => {
+  test('preserves comment-like text in quoted style values', () => {
+    const { node } = transformWithStyleTransform(
+      `<div style="--label: 'a/*b*/c'; /* ignored */ color: red"/>`,
+    )
+    expect(node.props[0]).toMatchObject({
+      exp: {
+        content: JSON.stringify({ '--label': "'a/*b*/c'", color: 'red' }),
+      },
+    })
+  })
+
   test('should transform into directive node', () => {
     const { node } = transformWithStyleTransform(`<div style="color: red"/>`)
     expect(node.props[0]).toMatchObject({
