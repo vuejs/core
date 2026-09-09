@@ -148,6 +148,47 @@ describe('vdom interop', () => {
     expect(container.innerHTML).toBe(`<div>inner</div>`)
   })
 
+  test('vdom suspense: nested boundaries register vapor async setup with the inner one', async () => {
+    const data = { deps: [] }
+    const { container } = await testSuspense(
+      `<script setup>
+        const components = _components;
+      </script>
+      <template>
+        <Suspense>
+          <components.Mid/>
+          <template #fallback>
+            <span>outer fallback</span>
+          </template>
+        </Suspense>
+      </template>`,
+      {
+        Inner: withAsyncScript(`<template><div>inner</div></template>`),
+        Mid: {
+          code: `<script setup>
+            const components = _components;
+          </script>
+          <template>
+            <Suspense>
+              <components.Inner/>
+              <template #fallback>
+                <span>inner fallback</span>
+              </template>
+            </Suspense>
+          </template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+
+    expect(container.innerHTML).toBe(`<span>inner fallback</span>`)
+
+    await Promise.all(data.deps)
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div>inner</div>`)
+  })
+
   test('vdom suspense: content update before suspense resolve', async () => {
     const data = reactive({ msg: 'foo', deps: [] })
     const { container } = await testSuspense(

@@ -346,6 +346,7 @@ export function createComponent(
     if (
       __FEATURE_SUSPENSE__ &&
       isSuspenseEnabled &&
+      !parentSuspense &&
       currentInstance &&
       currentInstance.suspense
     ) {
