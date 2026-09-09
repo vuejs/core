@@ -55,6 +55,7 @@ export {
   enableTracking,
   pauseTracking,
   resetTracking,
+  untrack,
   onEffectCleanup,
   ReactiveEffect,
   EffectFlags,

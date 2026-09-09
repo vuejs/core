@@ -8,7 +8,12 @@ import {
   serializeInner,
 } from '@vue/runtime-test'
 import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
-import { onEffectCleanup, pauseTracking, resetTracking } from '../src/effect'
+import {
+  onEffectCleanup,
+  pauseTracking,
+  resetTracking,
+  untrack,
+} from '../src/effect'
 import {
   type DebuggerEvent,
   type ReactiveEffectRunner,
@@ -1175,6 +1180,22 @@ describe('reactivity/effect', () => {
     expect(spy1).toHaveBeenCalledTimes(1)
     // inner effect should trigger
     expect(spy2).toHaveBeenCalledTimes(2)
+  })
+
+  it('should not track dependencies when using untrack', () => {
+    const a = ref(1)
+    const b = computed(() => a.value)
+    let dummyA
+    let dummyB
+    effect(() => {
+      dummyA = untrack(() => a.value)
+      dummyB = untrack(() => b.value)
+    })
+    expect(dummyA).toBe(1)
+    expect(dummyB).toBe(1)
+    a.value = 2
+    expect(dummyA).toBe(1)
+    expect(dummyB).toBe(1)
   })
 
   describe('dep unsubscribe', () => {
