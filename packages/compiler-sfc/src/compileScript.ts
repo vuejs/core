@@ -669,7 +669,7 @@ export function compileScript(
             )
           }
         },
-        exit(node: Node) {
+        leave(node: Node) {
           if (node.type === 'BlockStatement') scope.pop()
         },
       })

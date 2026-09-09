@@ -1026,6 +1026,25 @@ describe('SFC compile <script setup>', () => {
         false,
       )
     })
+
+    // #15465
+    test('await statements after a nested block should be separated', async () => {
+      const { content } = compile(
+        `<script setup>
+        if (true) {
+          if (false) {}
+          await Promise.resolve(1)
+          await Promise.resolve(2)
+        }
+        </script>`,
+        { genDefaultAs: '_sfc_' },
+      )
+      const component = new Function(
+        '_withAsyncContext',
+        `${content.replace(/^import .*\n/, '')};return _sfc_`,
+      )((getAwaitable: () => unknown) => [getAwaitable(), () => {}])
+      await expect(component.setup({}, { expose() {} })).resolves.toEqual({})
+    })
   })
 
   describe('errors', () => {
