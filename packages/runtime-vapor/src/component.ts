@@ -1522,21 +1522,21 @@ export function unmountComponent(
   const pendingAsyncSetup =
     __FEATURE_SUSPENSE__ && !!instance.asyncDep && !instance.asyncResolved
 
-  if (
-    !instance.isUnmounted &&
-    (instance.isMounted ||
-      // An async setup component can be unmounted before it finishes mounting.
-      // It still needs normal unmount cleanup and must be marked unmounted so
-      // a later async resolution is ignored.
-      pendingAsyncSetup)
-  ) {
+  if (!instance.isUnmounted) {
+    // Unmount hooks belong to mounted instances, plus async setup ones torn
+    // down before they finish mounting (a later resolution must see
+    // isUnmounted). A created but never mounted instance still owns its
+    // setup effects, so disposal itself is unconditional.
+    const hasLifecycle = instance.isMounted || pendingAsyncSetup
     if (__DEV__) {
       unregisterHMR(instance)
     }
-    invalidateMount(instance.m)
-    invalidateMount(instance.a)
-    if (instance.bum) {
-      invokeArrayFns(instance.bum)
+    if (hasLifecycle) {
+      invalidateMount(instance.m)
+      invalidateMount(instance.a)
+      if (instance.bum) {
+        invokeArrayFns(instance.bum)
+      }
     }
 
     if (isKeepAliveEnabled) {
@@ -1545,7 +1545,7 @@ export function unmountComponent(
     }
     instance.scope.stop()
 
-    if (instance.um) {
+    if (hasLifecycle && instance.um) {
       queuePostRenderEffect(instance.um!, undefined, parentSuspense)
     }
     instance.isUnmounted = true

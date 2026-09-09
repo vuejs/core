@@ -988,6 +988,49 @@ describe('component', () => {
     await nextTick()
     expect(input.getAttribute('type')).toBe('text')
   })
+
+  it('should dispose a component that was created but never mounted', () => {
+    // a render error after a root-chain child is created leaves that child
+    // owned by the parent scope without ever reaching mountComponent
+    const dispose = vi.fn()
+    const unmounted = vi.fn()
+    const Child = compile(
+      `<script vapor setup>
+      import { onScopeDispose, onUnmounted } from 'vue'
+      onScopeDispose(_components.dispose)
+      onUnmounted(_components.unmounted)
+      </script>
+      <template><div>child</div></template>`,
+      ref(null),
+      { dispose, unmounted },
+    )
+    const Parent = compile(
+      `<script vapor setup>
+      const Child = _components.Child
+      const boom = () => {
+        throw new Error('boom')
+      }
+      </script>
+      <template>
+        <Child />
+        <span>{{ boom() }}</span>
+      </template>`,
+      ref(null),
+      { Child },
+    )
+    const { app, mount } = define(Parent).create()
+    const handler = (app.config.errorHandler = vi.fn())
+    mount()
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(
+      `Vapor component setup() returned non-block value`,
+    ).toHaveBeenWarned()
+    expect(dispose).not.toHaveBeenCalled()
+
+    app.unmount()
+    expect(dispose).toHaveBeenCalledTimes(1)
+    expect(unmounted).not.toHaveBeenCalled()
+  })
 })
 
 function getEffectsCount(scope: EffectScope): number {
