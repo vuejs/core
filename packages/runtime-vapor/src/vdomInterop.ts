@@ -1209,11 +1209,11 @@ function mountVNode(
     syncNodes()
   }
 
-  frag.insert = (
-    parentNode,
-    anchor,
-    parentSuspense,
-    transition,
+  const place = (
+    parentNode: ParentNode,
+    anchor: Node | null,
+    parentSuspense: SuspenseBoundary | null | undefined,
+    transition: TransitionHooks | undefined,
     moveType = MoveType.REORDER,
   ) => {
     if (isHydrating) return
@@ -1275,6 +1275,16 @@ function mountVNode(
     syncNodes()
     if (isMounted && frag.u) frag.u.forEach(hook => hook())
   }
+  frag.insert = (parentNode, anchor, parentSuspense, transition) =>
+    place(parentNode, anchor, parentSuspense, transition)
+  frag.move = (
+    parentNode,
+    anchor,
+    moveType,
+    _parentComponent,
+    parentSuspense,
+    transition,
+  ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
   if (getFallthroughAttrs) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
@@ -1466,11 +1476,11 @@ function createVDOMComponent(
   vnode.scopeId = getCurrentScopeId() || null
   vnode.slotScopeIds = currentSlotScopeIds
 
-  frag.insert = (
-    parentNode,
-    anchor,
-    parentSuspense,
-    transition,
+  const place = (
+    parentNode: ParentNode,
+    anchor: Node | null,
+    parentSuspense: SuspenseBoundary | null | undefined,
+    transition: TransitionHooks | undefined,
     moveType = MoveType.REORDER,
   ) => {
     if (isHydrating) return
@@ -1524,6 +1534,16 @@ function createVDOMComponent(
     syncNodes()
     if (isMounted && frag.u) frag.u.forEach(hook => hook())
   }
+  frag.insert = (parentNode, anchor, parentSuspense, transition) =>
+    place(parentNode, anchor, parentSuspense, transition)
+  frag.move = (
+    parentNode,
+    anchor,
+    moveType,
+    _parentComponent,
+    parentSuspense,
+    transition,
+  ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
   frag.remove = unmount
 
@@ -1894,7 +1914,12 @@ function renderVDOMSlot(
       : () => fallback(internals, parentComponent)
     : undefined
 
-  frag.insert = (parentNode, anchor, parentSuspense) => {
+  const place = (
+    parentNode: ParentNode,
+    anchor: Node | null,
+    parentSuspense: SuspenseBoundary | null | undefined,
+    moveType?: MoveType,
+  ) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     // A non-inherited local fallback can revive independently of sibling
@@ -1927,22 +1952,35 @@ function renderVDOMSlot(
           rendered,
           parentNode,
           anchor,
-          MoveType.REORDER,
+          moveType === undefined ? MoveType.REORDER : moveType,
           parentComponent as any,
           suspense,
         )
       } else if (rendered) {
         // move vapor content
-        insert(rendered, parentNode, anchor, suspense)
+        if (moveType === undefined) {
+          insert(rendered, parentNode, anchor, suspense)
+        } else {
+          move(rendered, parentNode, anchor, moveType, undefined, suspense)
+        }
       }
 
       if (!sharedContentParked) {
-        insertActiveSlotFallback(slotResolutionState)
+        insertActiveSlotFallback(slotResolutionState, moveType)
       }
     }
 
     notifyUpdated()
   }
+  frag.insert = (parentNode, anchor, parentSuspense) =>
+    place(parentNode, anchor, parentSuspense)
+  frag.move = (
+    parentNode,
+    anchor,
+    moveType,
+    _parentComponent,
+    parentSuspense,
+  ) => place(parentNode, anchor, parentSuspense, moveType)
 
   frag.remove = parentNode => {
     const storage = sharedContentStorage
@@ -2987,6 +3025,28 @@ function renderVaporSlot(
           insert(frag.nodes, parentNode, anchor, parentSuspense)
         }
       }
+      frag.move = (
+        parentNode,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      ) => {
+        currentParentNode = parentNode
+        currentAnchor = anchor
+        if (slotResolutionState.activeFallback) {
+          insertActiveSlotFallback(slotResolutionState, moveType)
+        } else {
+          move(
+            frag.nodes,
+            parentNode,
+            anchor,
+            moveType,
+            parentComponent,
+            parentSuspense,
+          )
+        }
+      }
       frag.remove = parentNode => {
         if (!slotResolutionState.activeFallback) {
           remove(frag.nodes, parentNode)
@@ -3317,7 +3377,12 @@ function createVNodeChildrenFragment(
     startRenderEffect()
   }
 
-  frag.insert = (parentNode, anchor, parentSuspense) => {
+  const place = (
+    parentNode: ParentNode,
+    anchor: Node | null,
+    parentSuspense: SuspenseBoundary | null | undefined,
+    moveType = MoveType.REORDER,
+  ) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     currentParentNode = parentNode
@@ -3354,13 +3419,22 @@ function createVNodeChildrenFragment(
           vnode,
           parentNode,
           anchor,
-          MoveType.REORDER,
+          moveType,
           parentComponent as any,
           suspense,
         )
       })
     }
   }
+  frag.insert = (parentNode, anchor, parentSuspense) =>
+    place(parentNode, anchor, parentSuspense)
+  frag.move = (
+    parentNode,
+    anchor,
+    moveType,
+    _parentComponent,
+    parentSuspense,
+  ) => place(parentNode, anchor, parentSuspense, moveType)
 
   frag.remove = parentNode => {
     scope.stop()

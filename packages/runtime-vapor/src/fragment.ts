@@ -122,15 +122,23 @@ export class VaporFragment<
   vnode?: VNode | null
   anchor?: Node
   isBlockValid?: (componentAsValid?: boolean) => boolean
-  insert?: (
+  insert?(
     parent: ParentNode,
     anchor: Node | null,
     parentSuspense?: SuspenseBoundary | null,
     transitionHooks?: TransitionHooks,
-    moveType?: MoveType,
-  ) => void
-  remove?: (parent?: ParentNode, transitionHooks?: TransitionHooks) => void
+  ): void
+  move?(
+    parent: ParentNode,
+    anchor: Node | null,
+    moveType: MoveType,
+    parentComponent?: VaporComponentInstance,
+    parentSuspense?: SuspenseBoundary | null,
+    transitionHooks?: TransitionHooks,
+  ): void
+  remove?(parent?: ParentNode, transitionHooks?: TransitionHooks): void
   hydrate?(...args: any[]): void
+  scope?: EffectScope
   setRef?: (
     instance: VaporComponentInstance,
     ref: NodeRef,
@@ -653,9 +661,6 @@ export class SlotFragment
         )
       }
     }
-    this.insert = (parent, anchor, parentSuspense, _hooks, moveType) =>
-      this.insertSlot(parent, anchor, parentSuspense, moveType)
-    this.remove = parent => this.removeSlot(parent)
   }
 
   // updateSlot owns hydration timing, so opt out of autoHydrate.
@@ -702,26 +707,32 @@ export class SlotFragment
     ))
   }
 
-  private insertSlot(
+  insert(
     parent: ParentNode,
     anchor: Node | null,
     parentSuspense?: SuspenseBoundary | null,
-    moveType?: MoveType,
   ): void {
     this.disposed = false
-    // block.ts move() reaches fragments through insert(); a move must keep
-    // move semantics (no enter on reorder, leave on LEAVE) for the content.
-    if (moveType !== undefined) {
-      move(this.nodes, parent, anchor, moveType, undefined, parentSuspense)
-    } else {
-      insert(this.nodes, parent, anchor, parentSuspense)
-    }
+    insert(this.nodes, parent, anchor, parentSuspense)
     if (this.activeFallback === this.nodes) {
       this.fallbackInserted = true
     }
   }
 
-  private removeSlot(parent?: ParentNode): void {
+  move(
+    parent: ParentNode,
+    anchor: Node | null,
+    moveType: MoveType,
+    parentComponent?: VaporComponentInstance,
+    parentSuspense?: SuspenseBoundary | null,
+  ): void {
+    move(this.nodes, parent, anchor, moveType, parentComponent, parentSuspense)
+    if (this.activeFallback === this.nodes) {
+      this.fallbackInserted = true
+    }
+  }
+
+  remove(parent?: ParentNode): void {
     this.disposed = true
     const nodes = this.nodes
     remove(nodes, parent)
@@ -1033,7 +1044,7 @@ export function isForBlock(val: unknown): val is ForBlock {
   return !!(val && (val as any).__vf & FOR_ITEM)
 }
 
-export function isSlotFragment(val: unknown): val is SlotFragment {
+export function isVaporSlotOutlet(val: unknown): val is DynamicFragment {
   return !!(val && (val as any).__vf & SLOT)
 }
 

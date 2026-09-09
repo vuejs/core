@@ -52,7 +52,7 @@ import {
   isDynamicFragment,
   isForFragment,
   isFragment,
-  isSlotFragment,
+  isVaporSlotOutlet,
 } from '../fragment'
 import {
   currentHydrationNode,
@@ -360,8 +360,8 @@ export function applyTransitionHooksImpl(
   if (
     hooks.applyGroup &&
     (isForFragment(block) ||
-      isSlotFragment(block) ||
-      (isVaporComponent(block) && isSlotFragment(block.block)))
+      isVaporSlotOutlet(block) ||
+      (isVaporComponent(block) && isVaporSlotOutlet(block.block)))
   ) {
     hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
     return hooks
@@ -408,7 +408,7 @@ function isPersistedRoot(block: Block | undefined): boolean {
       block = block.find(b => !(b instanceof Comment))
     } else if (
       isFragment(block) &&
-      (isSlotFragment(block) ||
+      (isVaporSlotOutlet(block) ||
         !(isDynamicFragment(block) || isForFragment(block)))
     ) {
       block = block.nodes

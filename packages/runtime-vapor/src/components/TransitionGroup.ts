@@ -52,7 +52,7 @@ import {
   type VaporFragment,
   isForBlock,
   isFragment,
-  isSlotFragment,
+  isVaporSlotOutlet,
 } from '../fragment'
 import {
   type DefineVaporComponent,
@@ -352,7 +352,7 @@ function collectTransitionBlocks(
   if (block instanceof Node) {
     if (block instanceof Element) children.push(block)
   } else if (isVaporComponent(block)) {
-    const isRootSlot = block.block && isSlotFragment(block.block)
+    const isRootSlot = block.block && isVaporSlotOutlet(block.block)
     if (onUpdateOwner && !isRootSlot) onUpdateOwner(block)
 
     const start = children.length
