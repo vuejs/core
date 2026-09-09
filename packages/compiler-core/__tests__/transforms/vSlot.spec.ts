@@ -200,6 +200,10 @@ describe('compiler: transform component slots', () => {
           },
           returns: [
             {
+              type: NodeTypes.TEXT,
+              content: ` `,
+            },
+            {
               type: NodeTypes.INTERPOLATION,
               content: {
                 content: `foo`,
@@ -211,6 +215,10 @@ describe('compiler: transform component slots', () => {
                 content: `_ctx.bar`,
               },
             },
+            {
+              type: NodeTypes.TEXT,
+              content: ` `,
+            },
           ],
         },
         two: {
@@ -220,6 +228,10 @@ describe('compiler: transform component slots', () => {
             children: [`{ `, { content: `bar` }, ` }`],
           },
           returns: [
+            {
+              type: NodeTypes.TEXT,
+              content: ` `,
+            },
             {
               type: NodeTypes.INTERPOLATION,
               content: {
@@ -231,6 +243,10 @@ describe('compiler: transform component slots', () => {
               content: {
                 content: `bar`,
               },
+            },
+            {
+              type: NodeTypes.TEXT,
+              content: ` `,
             },
           ],
         },
@@ -369,6 +385,10 @@ describe('compiler: transform component slots', () => {
             },
             returns: [
               {
+                type: NodeTypes.TEXT,
+                content: ` `,
+              },
+              {
                 type: NodeTypes.INTERPOLATION,
                 content: {
                   content: `foo`,
@@ -380,6 +400,10 @@ describe('compiler: transform component slots', () => {
                   content: `_ctx.bar`,
                 },
               },
+              {
+                type: NodeTypes.TEXT,
+                content: ` `,
+              },
             ],
           },
           '[_ctx.two]': {
@@ -389,6 +413,10 @@ describe('compiler: transform component slots', () => {
               children: [`{ `, { content: `bar` }, ` }`],
             },
             returns: [
+              {
+                type: NodeTypes.TEXT,
+                content: ` `,
+              },
               {
                 type: NodeTypes.INTERPOLATION,
                 content: {
@@ -400,6 +428,10 @@ describe('compiler: transform component slots', () => {
                 content: {
                   content: `bar`,
                 },
+              },
+              {
+                type: NodeTypes.TEXT,
+                content: ` `,
               },
             ],
           },
@@ -447,6 +479,10 @@ describe('compiler: transform component slots', () => {
                       },
                       returns: [
                         {
+                          type: NodeTypes.TEXT,
+                          content: ` `,
+                        },
+                        {
                           type: NodeTypes.INTERPOLATION,
                           content: {
                             content: `foo`,
@@ -463,6 +499,10 @@ describe('compiler: transform component slots', () => {
                           content: {
                             content: `_ctx.baz`,
                           },
+                        },
+                        {
+                          type: NodeTypes.TEXT,
+                          content: ` `,
                         },
                       ],
                     },
@@ -496,6 +536,10 @@ describe('compiler: transform component slots', () => {
               content: {
                 content: `_ctx.baz`,
               },
+            },
+            {
+              type: NodeTypes.TEXT,
+              content: ` `,
             },
           ],
         },
