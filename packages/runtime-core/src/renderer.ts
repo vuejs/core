@@ -132,6 +132,12 @@ export interface RendererOptions<
   ): HostElement
   createText(text: string): HostNode
   createComment(text: string): HostNode
+  /**
+   * Creates a node used to delimit a Fragment. When omitted, Fragment
+   * delimiters are empty text nodes for backwards compatibility with custom
+   * renderers.
+   */
+  createFragmentAnchor?(text: string): HostNode
   setText(node: HostNode, text: string): void
   setElementText(node: HostElement, text: string): void
   parentNode(node: HostNode): HostElement | null
@@ -366,6 +372,7 @@ function baseCreateRenderer(
     createElement: hostCreateElement,
     createText: hostCreateText,
     createComment: hostCreateComment,
+    createFragmentAnchor: hostCreateFragmentAnchor = hostCreateText,
     setText: hostSetText,
     setElementText: hostSetElementText,
     parentNode: hostParentNode,
@@ -1065,8 +1072,14 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean,
   ) => {
-    const fragmentStartAnchor = (n2.el = n1 ? n1.el : hostCreateText(''))!
-    const fragmentEndAnchor = (n2.anchor = n1 ? n1.anchor : hostCreateText(''))!
+    // The DOM renderer uses CDATA sections here so the anchors
+    // survive `Node.normalize()`, which removes empty text nodes.
+    const fragmentStartAnchor = (n2.el = n1
+      ? n1.el
+      : hostCreateFragmentAnchor(''))!
+    const fragmentEndAnchor = (n2.anchor = n1
+      ? n1.anchor
+      : hostCreateFragmentAnchor(''))!
 
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
 
