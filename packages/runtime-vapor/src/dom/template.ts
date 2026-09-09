@@ -12,19 +12,15 @@ import {
 } from './hydration'
 import { type Namespace, Namespaces, TemplateFlags } from '@vue/shared'
 import { _child, createTextNode } from './node'
+import { currentRenderContext } from '../renderContext'
+import { cloneStampedTemplate } from './scopeIdStamp'
 import { resolvePendingSlotContent } from './hydrateFragment'
 
 let t: HTMLTemplateElement
 
-// Clone provider installed by the scope id module while slotted ids are live
-// (this module imports no scope machinery; the common path is one null
-// check). Serves clones carrying the active ids from a stamped-variant cache.
-export let templateCloneHook: ((prototype: Node) => Node) | null = null
-
-export function setTemplateCloneHook(
-  hook: ((prototype: Node) => Node) | null,
-): void {
-  templateCloneHook = hook
+function cloneTemplate(n: Node): Node {
+  const scopeIds = currentRenderContext.slotScopeIds
+  return scopeIds ? cloneStampedTemplate(n, scopeIds) : n.cloneNode(true)
 }
 
 /*@__NO_SIDE_EFFECTS__*/
@@ -86,9 +82,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
     }
 
     if (node) {
-      const ret = templateCloneHook
-        ? templateCloneHook(node)
-        : node.cloneNode(true)
+      const ret = cloneTemplate(node)
       if (root) (ret as any).$root = true
       return ret
     }
@@ -106,9 +100,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
       t.innerHTML = html
       node = _child(t.content)
     }
-    const ret = templateCloneHook
-      ? templateCloneHook(node)
-      : node.cloneNode(true)
+    const ret = cloneTemplate(node)
     if (root) (ret as any).$root = true
     return ret
   }

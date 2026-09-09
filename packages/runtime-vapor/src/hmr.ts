@@ -14,7 +14,12 @@ import {
   runDevRender,
   unmountComponent,
 } from './component'
-import { applyComponentScopeIds, setCurrentSlotScopeIds } from './scopeId'
+import { applyComponentScopeIds } from './scopeId'
+import {
+  currentRenderContext,
+  deriveSlotScopeIds,
+  withRenderContext,
+} from './renderContext'
 
 export function hmrRerender(instance: VaporComponentInstance): void {
   // A component without a separate render function (built-ins like
@@ -37,12 +42,12 @@ export function hmrRerender(instance: VaporComponentInstance): void {
   pushWarningContext(instance)
   // The rerender recreates the component's own template window, where slot
   // scope ids never apply; root-only ids are re-applied below.
-  const prevSlotScopeIds = setCurrentSlotScopeIds(null)
   try {
-    runDevRender(instance)
-    applyComponentFallthrough(instance)
+    withRenderContext(deriveSlotScopeIds(currentRenderContext, null), () => {
+      runDevRender(instance)
+      applyComponentFallthrough(instance)
+    })
   } finally {
-    setCurrentSlotScopeIds(prevSlotScopeIds)
     popWarningContext()
     restoreCurrentInstance(prev)
   }

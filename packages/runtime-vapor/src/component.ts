@@ -93,9 +93,14 @@ import {
   dynamicSlotsProxyHandlers,
   getSlot,
   normalizeRawSlots,
-  setCurrentSlotOwner,
   snapshotRawSlots,
 } from './componentSlots'
+import {
+  currentRenderContext,
+  deriveRenderContext,
+  deriveSuspense,
+  setRenderContext,
+} from './renderContext'
 import { inOnce, withOnce } from './once'
 import { hmrReload, hmrRerender } from './hmr'
 import {
@@ -154,20 +159,16 @@ import type { VaporElement } from './apiDefineCustomElement'
 import {
   currentUnmountSuspense,
   isSuspenseEnabled,
-  parentSuspense,
   resolveUnmountSuspense,
   runWithUnmountSuspense,
-  setParentSuspense,
 } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import {
   applyComponentScopeIds,
-  currentSlotScopeIds,
   getCurrentScopeId,
   hydrateComponentScopeIds,
-  setCurrentSlotScopeIds,
-  setElementScopeIds,
 } from './scopeId'
+import { setElementScopeIds } from './dom/scopeIdStamp'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
 export { currentInstance } from '@vue/runtime-dom'
@@ -275,7 +276,7 @@ function useVdomInterop(
   component: VaporComponent,
   appContext: GenericAppContext,
 ): boolean {
-  return isInteropEnabled && !!appContext.vdom && !component.__vapor
+  return !!appContext.vdom && !component.__vapor
 }
 
 // The instance whose fallthrough attrs a block created right now inherits:
@@ -331,18 +332,16 @@ export function createComponent(
     resetInsertionState()
   }
 
-  let prevSuspense: SuspenseBoundary | null = null
-  let hasParentSuspense = false
+  const prevCtx = currentRenderContext
   try {
     if (
       __FEATURE_SUSPENSE__ &&
       isSuspenseEnabled &&
-      !parentSuspense &&
+      !prevCtx.suspense &&
       currentInstance &&
       currentInstance.suspense
     ) {
-      prevSuspense = setParentSuspense(currentInstance.suspense)
-      hasParentSuspense = true
+      setRenderContext(deriveSuspense(prevCtx, currentInstance.suspense))
     }
 
     const owner = resolveFallthroughOwner(isSingleRoot)
@@ -387,13 +386,16 @@ export function createComponent(
     let asyncBoundary = false
     if (isAsyncComponentEnabled && !isHydrating) {
       const resolved = component.__asyncResolved
-      if (resolved && !useVdomInterop(resolved, appContext)) {
+      if (
+        resolved &&
+        !(isInteropEnabled && useVdomInterop(resolved, appContext))
+      ) {
         component = resolved
         asyncBoundary = true
       }
     }
 
-    if (useVdomInterop(component, appContext)) {
+    if (isInteropEnabled && useVdomInterop(component, appContext)) {
       const frag = appContext.vdom!.mount(
         component as any,
         currentInstance as any,
@@ -403,7 +405,12 @@ export function createComponent(
       )
       if (!isHydrating) {
         if (_insertionParent) {
-          insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
+          insert(
+            frag,
+            _insertionParent,
+            _insertionAnchor,
+            currentRenderContext.suspense,
+          )
         }
       } else {
         frag.hydrate()
@@ -431,7 +438,12 @@ export function createComponent(
       }
       if (!isHydrating) {
         if (_insertionParent) {
-          insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
+          insert(
+            frag,
+            _insertionParent,
+            _insertionAnchor,
+            currentRenderContext.suspense,
+          )
         }
       } else {
         frag.hydrate()
@@ -497,11 +509,19 @@ export function createComponent(
       if (keepAliveCtx) keepAliveCtx.processShapeFlag(instance)
     }
 
-    // reset currentSlotOwner to null to avoid affecting the child components
-    const prevSlotOwner = setCurrentSlotOwner(null)
-    // Slot scope ids stop at component boundaries; the instance captured
-    // them above for root-only application.
-    const prevSlotScopeIds = setCurrentSlotScopeIds(null)
+    // The slot owner and slot scope ids stop at component boundaries: setup
+    // must not see the parent's slot context (the instance captured the ids
+    // above for root-only application).
+    const outerCtx = currentRenderContext
+    setRenderContext(
+      deriveRenderContext(
+        outerCtx,
+        null,
+        outerCtx.slotBoundary,
+        null,
+        outerCtx.suspense,
+      ),
+    )
     let hasWarningContext = false
     let hasInitMeasure = false
     try {
@@ -575,12 +595,7 @@ export function createComponent(
           endMeasure(instance, 'init')
         }
       }
-      setCurrentSlotScopeIds(prevSlotScopeIds)
-      setCurrentSlotOwner(prevSlotOwner)
-      if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && hasParentSuspense) {
-        setParentSuspense(prevSuspense)
-        hasParentSuspense = false
-      }
+      setRenderContext(prevCtx)
     }
     onScopeDispose(
       () =>
@@ -618,9 +633,7 @@ export function createComponent(
 
     return instance
   } finally {
-    if (hasParentSuspense) {
-      setParentSuspense(prevSuspense)
-    }
+    setRenderContext(prevCtx)
     if (isHydrating && !deferHydrationBoundary) {
       // Boundary cleanup still needs the component-local cursor. Only after
       // that do we restore the outer cursor's resume point.
@@ -1023,8 +1036,8 @@ export class VaporComponentInstance<
     this.suspense = null
     this.suspenseId = 0
     if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) {
-      this.suspense = parentSuspense
-      this.suspenseId = parentSuspense ? parentSuspense.pendingId : 0
+      const suspense = (this.suspense = currentRenderContext.suspense)
+      this.suspenseId = suspense ? suspense.pendingId : 0
     }
     this.asyncDep = null
     this.asyncResolved = false
@@ -1070,7 +1083,7 @@ export class VaporComponentInstance<
     ) as Slots
 
     this.scopeId = getCurrentScopeId()
-    this.slotScopeIds = currentSlotScopeIds
+    this.slotScopeIds = currentRenderContext.slotScopeIds
 
     // apply custom element special handling
     if (ce) {
@@ -1240,7 +1253,8 @@ export function createPlainElement(
   if (!isHydrating || isRecreatedNode(el)) {
     const scopeId = getCurrentScopeId()
     if (scopeId) el.setAttribute(scopeId, '')
-    if (currentSlotScopeIds) setElementScopeIds(el, currentSlotScopeIds)
+    const slotScopeIds = currentRenderContext.slotScopeIds
+    if (slotScopeIds) setElementScopeIds(el, slotScopeIds)
   }
 
   if (rawProps) {

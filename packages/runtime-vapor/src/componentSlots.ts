@@ -41,17 +41,19 @@ import {
   isInteropFragment,
 } from './fragment'
 import { SLOT_FRAGMENT } from './fragmentFlags'
-import { currentSlotBoundary, withSlotBoundary } from './slotBoundary'
+import {
+  currentRenderContext,
+  deriveRenderContext,
+  deriveSlotOwner,
+  deriveSlotScopeIds,
+  withRenderContext,
+} from './renderContext'
 import { createElement } from './dom/node'
 import { setDynamicProps } from './dom/prop'
 import { interopSlotsKey, isInteropEnabled } from './vdomInteropState'
 import { isAsyncComponentEnabled } from './asyncComponentState'
-import {
-  currentSlotScopeIds,
-  renderWithSlotScopeIds,
-  setCurrentSlotScopeIds,
-  setElementScopeIds,
-} from './scopeId'
+import { renderWithSlotScopeIds } from './scopeId'
+import { setElementScopeIds } from './dom/scopeIdStamp'
 import { withHydratingSlotBoundary } from './dom/hydrateFragment'
 import { withOnce } from './once'
 
@@ -131,15 +133,11 @@ export function snapshotRawSlots(rawSlots: RawSlots): RawSlots {
 }
 
 function withSlotOwner<T>(slots: RawSlots, fn: () => T): T {
-  if (!rawSlotsOwnerMap.has(slots)) {
+  const owner = rawSlotsOwnerMap.get(slots)
+  if (owner === undefined) {
     return fn()
   }
-  const prevOwner = setCurrentSlotOwner(rawSlotsOwnerMap.get(slots) || null)
-  try {
-    return fn()
-  } finally {
-    setCurrentSlotOwner(prevOwner)
-  }
+  return withRenderContext(deriveSlotOwner(currentRenderContext, owner), fn)
 }
 
 function getOwnedSlot(
@@ -249,29 +247,12 @@ function resolveSlot(
 }
 
 /**
- * Tracks the slot owner (the component that defines the slot content).
- * This is used for:
- * 1. Getting the correct rawSlots in forwarded slots (via createSlot)
- * 2. Inheriting the slot owner's scopeId
- */
-export let currentSlotOwner: VaporComponentInstance | null = null
-
-export function setCurrentSlotOwner(
-  owner: VaporComponentInstance | null,
-): VaporComponentInstance | null {
-  try {
-    return currentSlotOwner
-  } finally {
-    currentSlotOwner = owner
-  }
-}
-
-/**
  * Get the effective slot instance for accessing rawSlots and scopeId.
- * Prefers currentSlotOwner (if inside a slot), falls back to currentInstance.
+ * Prefers the slot owner (if inside a slot), falls back to currentInstance.
  */
 export function getScopeOwner(): VaporComponentInstance | null {
-  return (currentSlotOwner || currentInstance) as VaporComponentInstance | null
+  return (currentRenderContext.slotOwner ||
+    currentInstance) as VaporComponentInstance | null
 }
 
 export function createSlot(
@@ -292,7 +273,7 @@ export function createSlot(
   // The outlet's id cell: its own `-s` id merged onto the outer slot context,
   // so forwarded slot content accumulates every level's ids (VDOM
   // processFragment concat semantics).
-  const outerSlotScopeIds = currentSlotScopeIds
+  const outerSlotScopeIds = currentRenderContext.slotScopeIds
   const slotScopeIds = scopeId
     ? outerSlotScopeIds
       ? [...outerSlotScopeIds, `${scopeId}-s`]
@@ -313,22 +294,21 @@ export function createSlot(
     if (isHydrating) hydrationCursor = enterHydrationCursor()
     // Establish the outlet cell as the creation ambient; the interop slot
     // captures it as the base patch context for the vdom-rendered content.
-    const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
-    try {
-      fragment = instance.appContext.vdom!.slot(
-        interopSlotsSource,
-        name,
-        slotProps,
-        instance,
-        {
-          fallback,
-          flags,
-          adoptAnchor: _insertionAnchor,
-        },
-      )
-    } finally {
-      setCurrentSlotScopeIds(prevSlotScopeIds)
-    }
+    fragment = withRenderContext(
+      deriveSlotScopeIds(currentRenderContext, slotScopeIds),
+      () =>
+        instance.appContext.vdom!.slot(
+          interopSlotsSource,
+          name,
+          slotProps,
+          instance,
+          {
+            fallback,
+            flags,
+            adoptAnchor: _insertionAnchor,
+          },
+        ),
+    )
   } else {
     // renderVDOMSlot wraps its fallback from flags itself, so only the
     // non-interop paths wrap here.
@@ -359,6 +339,9 @@ export function createSlot(
       : undefined
     let dynamicFragment: DynamicFragment | undefined
     if (slotFragment) {
+      // Late renders (fallbacks, branch switches) run under the outlet cell
+      // rather than the construction-time capture.
+      slotFragment.ctx = deriveSlotScopeIds(slotFragment.ctx, slotScopeIds)
       fragment = slotFragment
     } else {
       // Fast path: DynamicFragment is enough, but hydration still enters the
@@ -374,12 +357,16 @@ export function createSlot(
       )
       // A fast-path outlet joins no fallback arbitration, so its content must
       // not render under (or attach dirty-tracking to) an enclosing boundary.
-      dynamicFragment.slotBoundary = null
+      const ctx = dynamicFragment.ctx
+      dynamicFragment.ctx = deriveRenderContext(
+        ctx,
+        ctx.slotOwner,
+        null,
+        slotScopeIds,
+        ctx.suspense,
+      )
       fragment = dynamicFragment
     }
-    // Replace the construction-time capture with the outlet cell so late
-    // renders (fallbacks, branch switches) run under the merged context.
-    ;(fragment as SlotFragment | DynamicFragment).slotScopeIds = slotScopeIds
 
     const isDynamicName = isFunction(name)
 
@@ -405,17 +392,11 @@ export function createSlot(
         else renderEffect(setSlotProps)
         if (fallback) {
           const fallbackFn = fallback
-          // The fallback renders outside the fragment's own render seam, so
-          // establish the outlet cell explicitly around it. Like any fast-path
-          // outlet it must not render under an enclosing boundary.
-          const prevSlotScopeIds = setCurrentSlotScopeIds(slotScopeIds)
-          try {
-            withSlotBoundary(null, () => {
-              insert(fallbackFn(), el)
-            })
-          } finally {
-            setCurrentSlotScopeIds(prevSlotScopeIds)
-          }
+          // The fallback renders outside update(), so restore the outlet's
+          // context explicitly.
+          withRenderContext(dynamicFragment!.ctx, () => {
+            insert(fallbackFn(), el)
+          })
         }
         fragment.nodes = el
         return
@@ -503,7 +484,7 @@ function shouldUseSlotFragment(
   // chain. Everything below is boundary-independent: a non-forwarded outlet
   // never chains outward, so local fallback reachability follows the same
   // static analysis with or without an enclosing boundary.
-  if (currentSlotBoundary && isForwardedSlot(flags)) return true
+  if (currentRenderContext.slotBoundary && isForwardedSlot(flags)) return true
 
   // Without fallback, there is no fallback branch to track.
   if (!fallback) return false
