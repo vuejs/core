@@ -14,6 +14,7 @@ import {
   insert,
   isValidBlock,
   isValidSlot,
+  move,
   remove,
   removeAttachedNodes,
   removeNode,
@@ -652,16 +653,43 @@ export class SlotFragment
         )
       }
     }
-    if (!isHydrating) {
-      this.insert = (parent, anchor, parentSuspense) =>
-        this.insertSlot(parent, anchor, parentSuspense)
-    }
+    this.insert = (parent, anchor, parentSuspense, _hooks, moveType) =>
+      this.insertSlot(parent, anchor, parentSuspense, moveType)
     this.remove = parent => this.removeSlot(parent)
   }
 
   // updateSlot owns hydration timing, so opt out of autoHydrate.
   protected get autoHydrate(): boolean {
     return false
+  }
+
+  renderBranch(
+    render: BlockFn | undefined,
+    transition: VaporTransitionHooks | undefined,
+    parent: ParentNode | null,
+    key: any,
+    noScope: boolean,
+    notifyUpdated: boolean,
+    removePrevious?: () => void,
+    branchKey?: any,
+  ): void {
+    super.renderBranch(
+      render,
+      transition,
+      parent,
+      key,
+      noScope,
+      notifyUpdated,
+      removePrevious,
+      branchKey,
+    )
+    // A deferred branch render (Transition out-in) lands after updateContent
+    // captured `content`; re-capture and re-resolve so the exposed block and
+    // the fallback decision follow the branch that actually rendered.
+    if (!this.isUpdating) {
+      this.content = this.nodes
+      recheckSlotResolution(this, false)
+    }
   }
 
   get boundary(): SlotBoundaryContext {
@@ -678,9 +706,16 @@ export class SlotFragment
     parent: ParentNode,
     anchor: Node | null,
     parentSuspense?: SuspenseBoundary | null,
+    moveType?: MoveType,
   ): void {
     this.disposed = false
-    insert(this.nodes, parent, anchor, parentSuspense)
+    // block.ts move() reaches fragments through insert(); a move must keep
+    // move semantics (no enter on reorder, leave on LEAVE) for the content.
+    if (moveType !== undefined) {
+      move(this.nodes, parent, anchor, moveType, undefined, parentSuspense)
+    } else {
+      insert(this.nodes, parent, anchor, parentSuspense)
+    }
     if (this.activeFallback === this.nodes) {
       this.fallbackInserted = true
     }
