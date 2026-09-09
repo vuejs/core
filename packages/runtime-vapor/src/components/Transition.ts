@@ -57,6 +57,7 @@ import {
 import {
   currentHydrationNode,
   isHydrating,
+  locateHydrationNode,
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import { updateLastLocatedLogicalChild } from '../dom/node'
@@ -163,6 +164,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // Transition needs a DynamicFragment to drive enter/leave on updates.
     if (instance.rawSlots.$) {
       const frag = new DynamicFragment(0, __DEV__ ? 'transition' : undefined)
+      if (isHydrating) locateHydrationNode()
       state.root = frag
       let isMounted = false
       renderEffect(() => {

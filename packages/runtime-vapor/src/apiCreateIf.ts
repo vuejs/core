@@ -68,7 +68,6 @@ export function createIf(
       IF,
       __DEV__ ? 'if' : undefined,
       keyed,
-      false,
       trackSlotBoundary,
       trackSlotBoundary
         ? () => {

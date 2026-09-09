@@ -99,8 +99,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         const frag = new DynamicFragment(
           0,
           __DEV__ ? 'async component' : undefined,
-          false,
-          false,
         )
         frag.nodes = nodes
         instance.block = frag
@@ -146,6 +144,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         locateHydrationNode()
       } else {
         frag = new DynamicFragment(0, __DEV__ ? 'async component' : undefined)
+        if (isHydrating) locateHydrationNode()
       }
 
       // already resolved: only reached where createComponent keeps the
