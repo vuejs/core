@@ -69,7 +69,13 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
     let match
     // ignore v-bind() in comments, eg /* ... */
     // and // (Less, Sass and Stylus all support the use of // to comment)
-    const content = style.content.replace(/\/\*([\s\S]*?)\*\/|\/\/.*/g, '')
+    // Preserve strings and URLs, which may contain comment delimiters. Match
+    // entire identifiers (including CSS escapes) to avoid treating e.g. myurl()
+    // as url().
+    const content = style.content.replace(
+      /"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|url\(\s*(?:[^"'()\\]|\\[\s\S])*\)|(?:[\w\u0080-\uFFFF-]|\\(?:[\da-f]{1,6}(?:\r\n|[\t\n\f\r ])?|[^\n\f\r]))+|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*/gi,
+      match => (match.startsWith('/') ? '' : match),
+    )
     while ((match = vBindRE.exec(content))) {
       const start = match.index + match[0].length
       const end = lexBinding(content, start)

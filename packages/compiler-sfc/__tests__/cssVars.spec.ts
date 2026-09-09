@@ -186,6 +186,84 @@ describe('CSS vars injection', () => {
       assertCode(content)
     })
 
+    test.each([
+      'background: url("https://example.com/image.png");',
+      "background: url('//example.com/image.png');",
+      'background: url(https://example.com/image.png);',
+      'background: URL(//example.com/image.png);',
+      'background: /* comment */url(https://example.com/image.png);',
+      String.raw`background: url(https://example.com/image\).png);`,
+      'content: "// not a comment";',
+      String.raw`content: "escaped \" // not a comment";`,
+      "content: '/*';",
+    ])('preserves CSS bindings after %s', declaration => {
+      const source = `div { ${declaration} color: v-bind(color); content: '*/'; }`
+      const sfc = `<script setup>const color = 'red'</script><style>${source}</style>`
+      expect(parse(sfc).descriptor.cssVars).toEqual(['color'])
+
+      const { content } = compileSFCScript(sfc)
+      expect(content).toContain(`"${mockId}-color": (color)`)
+
+      const result = compileStyle({ source, filename: 'test.css', id: mockId })
+      expect(result.errors).toEqual([])
+      expect(result.code).toContain(`color: var(--${mockId}-color)`)
+    })
+
+    test('preserves bindings after URLs with normal script', () => {
+      const { content } = compileSFCScript(
+        `<script>export default { data: () => ({ color: 'red' }) }</script>
+         <style>div { background: url(https://example.com/image.png); color: v-bind(color); }</style>`,
+      )
+      expect(content).toContain(`"${mockId}-color": (_ctx.color)`)
+    })
+
+    test('preserves comment delimiters in binding expressions', () => {
+      const { descriptor } = parse(
+        `<style>div { color: v-bind('theme["//"]'); width: v-bind('sizes["/*"]'); }</style>`,
+      )
+      expect(descriptor.cssVars).toEqual(['theme["//"]', 'sizes["/*"]'])
+    })
+
+    test.each(['scss', 'less', 'stylus'])(
+      'ignores actual comments in %s after strings and URLs',
+      lang => {
+        const { descriptor } = parse(`<style lang="${lang}">
+          div { background: url("https://example.com/image.png"); }
+          // color: v-bind(commentedOut);
+          /* width: v-bind(alsoCommentedOut); */
+          div { color: v-bind(color); } // width: v-bind(commentedOut);
+        </style>`)
+        expect(descriptor.cssVars).toEqual(['color'])
+      },
+    )
+
+    test.each([
+      'myurl',
+      'my-url',
+      'éurl',
+      '中url',
+      String.raw`my\url`,
+      String.raw`my\61 url`,
+    ])('does not treat the SCSS function %s as a URL', name => {
+      const source = `div { background: ${name}(// ) v-bind(fake)
+          red); color: v-bind(color); }`
+      const sfc = `<script setup>const color = 'red'</script><style lang="scss">${source}</style>`
+      expect(parse(sfc).descriptor.cssVars).toEqual(['color'])
+      const { content } = compileSFCScript(sfc)
+      expect(content).toContain(`"${mockId}-color": (color)`)
+      expect(content).not.toContain('fake')
+
+      const result = compileStyle({
+        source,
+        filename: 'test.scss',
+        id: mockId,
+        preprocessLang: 'scss',
+      })
+      expect(result.errors).toEqual([])
+      expect(result.code).not.toContain('fake')
+      expect(result.code).toContain(`color: var(--${mockId}-color)`)
+    })
+
     test('w/ <script setup> using the same var multiple times', () => {
       const { content } = compileSFCScript(
         `<script setup>
