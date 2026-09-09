@@ -461,4 +461,51 @@ describe('component: slots', () => {
     createApp(App).mount(root)
     expect(serializeInner(root)).toBe('foo')
   })
+
+  // #14425
+  test('conditionally rendered slot position in `slots` instance property should match its position in template', async () => {
+    const showFoo = ref(true)
+
+    let instance: any
+    const Child = () => {
+      instance = getCurrentInstance()
+      return 'child'
+    }
+
+    const Comp = {
+      setup() {
+        return () => [
+          h(
+            Child,
+            null,
+            createSlots(
+              {
+                bar: () => [h('span', 'bar')],
+                baz: () => [h('span', 'baz')],
+                // @ts-expect-error property holding slots flag DYNAMIC
+                _: 2,
+              },
+              [
+                showFoo.value
+                  ? { name: 'foo', fn: () => [h('span', 'foo')] }
+                  : undefined,
+              ],
+              ['foo', 'bar', 'baz'],
+            ),
+          ),
+        ]
+      },
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(Object.keys(instance.slots)).toEqual(['foo', 'bar', 'baz'])
+
+    showFoo.value = false
+    await nextTick()
+    expect(Object.keys(instance.slots)).toEqual(['bar', 'baz'])
+
+    showFoo.value = true
+    await nextTick()
+    expect(Object.keys(instance.slots)).toEqual(['foo', 'bar', 'baz'])
+  })
 })
