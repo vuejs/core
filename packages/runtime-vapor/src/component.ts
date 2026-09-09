@@ -276,7 +276,7 @@ function useVdomInterop(
   component: VaporComponent,
   appContext: GenericAppContext,
 ): boolean {
-  return isInteropEnabled && !!appContext.vdom && !component.__vapor
+  return !!appContext.vdom && !component.__vapor
 }
 
 // The instance whose fallthrough attrs a block created right now inherits:
@@ -386,13 +386,16 @@ export function createComponent(
     let asyncBoundary = false
     if (isAsyncComponentEnabled && !isHydrating) {
       const resolved = component.__asyncResolved
-      if (resolved && !useVdomInterop(resolved, appContext)) {
+      if (
+        resolved &&
+        !(isInteropEnabled && useVdomInterop(resolved, appContext))
+      ) {
         component = resolved
         asyncBoundary = true
       }
     }
 
-    if (useVdomInterop(component, appContext)) {
+    if (isInteropEnabled && useVdomInterop(component, appContext)) {
       const frag = appContext.vdom!.mount(
         component as any,
         currentInstance as any,
