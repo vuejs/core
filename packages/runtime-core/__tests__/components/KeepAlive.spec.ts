@@ -26,6 +26,7 @@ import {
   shallowRef,
 } from '@vue/runtime-test'
 import type { KeepAliveProps } from '../../src/components/KeepAlive'
+import { queuePostFlushCb } from '../../src/scheduler'
 
 const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 
@@ -339,6 +340,211 @@ describe('KeepAlive', () => {
     expect(serializeInner(root)).toBe(`<!---->`)
     assertHookCalls(one, [1, 1, 4, 3, 0])
     assertHookCalls(two, [1, 1, 4, 4, 0]) // should remain inactive
+  })
+
+  test('should not mount nested dynamic component twice when parent key changes', async () => {
+    const mountedA = vi.fn()
+    const mountedB = vi.fn()
+
+    const A = defineComponent({
+      name: 'A',
+      setup() {
+        onMounted(mountedA)
+        return () => h('span', 'Comp A')
+      },
+    })
+
+    const B = defineComponent({
+      name: 'B',
+      setup() {
+        onMounted(mountedB)
+        return () => h('span', 'Comp B')
+      },
+    })
+
+    const switchRoute = () => {
+      comp.value = B
+    }
+    const comp = shallowRef(A)
+    const HomeView = defineComponent({
+      name: 'HomeView',
+      setup() {
+        return () => h('main', [h(KeepAlive, null, [h(comp.value)])])
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(KeepAlive, null, [
+            h(HomeView, {
+              key: (comp.value as ComponentOptions).name,
+            }),
+          ])
+      },
+    })
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<main><span>Comp A</span></main>`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(0)
+
+    switchRoute()
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<main><span>Comp B</span></main>`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(1)
+  })
+
+  test('should apply the latest deferred update when re-activating a branch', async () => {
+    const visible = ref(true)
+    const value = ref('A')
+
+    const Home = defineComponent({
+      name: 'Home',
+      setup() {
+        return () => h('main', value.value)
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        return () => h(KeepAlive, null, [visible.value ? h(Home) : null])
+      },
+    })
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<main>A</main>`)
+
+    visible.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    value.value = 'B'
+    await nextTick()
+    value.value = 'C'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    visible.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<main>C</main>`)
+  })
+
+  test('should keep deferred branch updates pending when re-activation is immediately reversed', async () => {
+    const mountedA = vi.fn()
+    const mountedB = vi.fn()
+    const visible = ref(true)
+
+    const A = defineComponent({
+      name: 'A',
+      setup() {
+        onMounted(mountedA)
+        return () => h('span', 'Comp A')
+      },
+    })
+
+    const B = defineComponent({
+      name: 'B',
+      setup() {
+        onMounted(mountedB)
+        return () => h('span', 'Comp B')
+      },
+    })
+
+    const comp = shallowRef(A)
+    const Home = defineComponent({
+      name: 'Home',
+      setup() {
+        return () => h('main', [h(KeepAlive, null, [h(comp.value)])])
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        return () => h(KeepAlive, null, [visible.value ? h(Home) : null])
+      },
+    })
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<main><span>Comp A</span></main>`)
+    expect(mountedA).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(0)
+
+    visible.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    comp.value = B
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+    expect(mountedB).toHaveBeenCalledTimes(0)
+
+    const deactivateAfterActivate = vi.fn(() => {
+      visible.value = false
+    }) as any
+    deactivateAfterActivate.id = -1
+
+    visible.value = true
+    queuePostFlushCb(deactivateAfterActivate)
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<!---->`)
+    expect(deactivateAfterActivate).toHaveBeenCalledTimes(1)
+    expect(mountedB).toHaveBeenCalledTimes(0)
+
+    visible.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<main><span>Comp B</span></main>`)
+    expect(mountedB).toHaveBeenCalledTimes(1)
+  })
+
+  test('should not replay a deferred update when a newer child job is already queued', async () => {
+    let renders = 0
+    const visible = ref(true)
+    const value = ref('A')
+
+    const Home = defineComponent({
+      name: 'Home',
+      setup() {
+        return () => {
+          renders++
+          return h('main', value.value)
+        }
+      },
+    })
+
+    const App = defineComponent({
+      setup() {
+        return () => h(KeepAlive, null, [visible.value ? h(Home) : null])
+      },
+    })
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<main>A</main>`)
+    expect(renders).toBe(1)
+
+    visible.value = false
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    value.value = 'B'
+    await nextTick()
+    expect(renders).toBe(1)
+
+    const queueNewerUpdate = vi.fn(() => {
+      value.value = 'C'
+    }) as any
+    queueNewerUpdate.id = -1
+
+    visible.value = true
+    queuePostFlushCb(queueNewerUpdate)
+    await nextTick()
+
+    expect(queueNewerUpdate).toHaveBeenCalledTimes(1)
+    expect(serializeInner(root)).toBe(`<main>C</main>`)
+    expect(renders).toBe(2)
   })
 
   async function assertNameMatch(props: KeepAliveProps) {
