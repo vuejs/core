@@ -1601,17 +1601,20 @@ export function getExposed(
 
 /**
  * The shared traversal of the effective-root chain — root element
- * resolution, scope id owner registration, interop carrier publication —
- * encoding the chain rules (teleport exclusion, slot outlet breaks,
- * comment-filtered arrays, component descent) once. Fallthrough attrs use
- * their own component-bounded resolver (resolveFallthroughRoot), which
- * mirrors these rules but stops at component boundaries.
+ * resolution, scope id owner registration, interop carrier publication,
+ * fallthrough root resolution, root-chain component lookup — encoding the
+ * chain rules (teleport exclusion, slot outlet breaks, comment-filtered
+ * arrays, component descent or stop) once.
  */
 export interface RootChainVisitor {
-  onDynamicFragment?: (frag: DynamicFragment) => void
+  // Returning true ends the descent at this fragment.
+  onDynamicFragment?: (frag: DynamicFragment) => boolean | void
   // Fired on component descent, including an entry block that is itself a
   // component.
   onComponent?: (instance: VaporComponentInstance) => void
+  // Components fold their own chain (attrs at creation, a chain lookup at
+  // the first instance), so the descent ends there instead of entering it.
+  stopAtComponent?: boolean
   // Fired at a vnode-backed interop fragment, terminating the descent there
   // (the fragment carries the chain across into vdom).
   onInteropFragment?: (frag: InteropFragment) => void
@@ -1628,7 +1631,10 @@ export function getRootElement(
   }
 
   if (isVaporComponent(block)) {
-    if (visitor && visitor.onComponent) visitor.onComponent(block)
+    if (visitor) {
+      if (visitor.onComponent) visitor.onComponent(block)
+      if (visitor.stopAtComponent) return
+    }
     return getRootElement(block.block, visitor)
   }
 
@@ -1637,8 +1643,12 @@ export function getRootElement(
       if (visitor.excludeSlotOutlets && isSlotOutletFragment(block)) {
         return
       }
-      if (isDynamicFragment(block) && visitor.onDynamicFragment) {
+      if (
+        isDynamicFragment(block) &&
+        visitor.onDynamicFragment &&
         visitor.onDynamicFragment(block)
+      ) {
+        return
       }
       if (
         isInteropEnabled &&
@@ -1650,35 +1660,33 @@ export function getRootElement(
         return
       }
     }
-    const { nodes } = block
-    if (nodes instanceof Element && (nodes as any).$root) {
-      return nodes
-    }
-    return getRootElement(nodes, visitor)
+    return getRootElement(block.nodes, visitor)
   }
 
-  // The root node contains comments. It is necessary to filter out
-  // the comment nodes and return a single root node.
-  // align with vdom behavior
   if (isArray(block)) {
     // Structure first, visit after: a multi-root array has no effective
     // root, and firing the visitor on a branch before that verdict would
     // leak side effects (owner registration, carrier publication) that
     // multi-root semantics forbid.
-    let single: Block | undefined
-    let hasComment = false
-    for (const b of block) {
-      if (b instanceof Comment) {
-        hasComment = true
-        continue
-      }
-      // only a lone eligible branch alongside comments can hold the root
-      if (single !== undefined) return
-      single = b
-    }
-    if (!hasComment || single === undefined) return
-    return getRootElement(single, visitor)
+    const single = singleRootOf(block)
+    return single === undefined ? undefined : getRootElement(single, visitor)
   }
+}
+
+// A multi-root array has no effective root; only a lone eligible branch
+// alongside comments can hold one (vdom comment-filtering alignment).
+function singleRootOf(nodes: Block[]): Block | undefined {
+  let single: Block | undefined
+  let hasComment = false
+  for (const b of nodes) {
+    if (b instanceof Comment) {
+      hasComment = true
+      continue
+    }
+    if (single !== undefined) return
+    single = b
+  }
+  return hasComment ? single : undefined
 }
 
 /**
@@ -1701,21 +1709,10 @@ export function getRootChainComponent(
       continue
     }
     if (isArray(block)) {
-      let single: Block | undefined
-      let hasComment = false
-      for (const b of block) {
-        if (b instanceof Comment) {
-          hasComment = true
-          continue
-        }
-        if (single !== undefined) return
-        single = b
-      }
-      if (hasComment && single !== undefined) {
-        block = single
-        continue
-      }
-      return
+      const single = singleRootOf(block)
+      if (single === undefined) return
+      block = single
+      continue
     }
     return
   }
@@ -1797,7 +1794,7 @@ function applyFallthroughAttrs(
   instance: VaporComponentInstance,
   scope?: EffectScope,
 ): void {
-  const state: FallthroughResolveState = { parentScope: scope }
+  const state = new FallthroughResolveState(scope)
   const root = resolveFallthroughRoot(block, state)
   const { fragments, innermost, hasSlotFragment } = state
 
@@ -1843,7 +1840,9 @@ function applyFallthroughAttrs(
   }
 }
 
-interface FallthroughResolveState {
+// The fallthrough resolution state doubles as the descent visitor, so a
+// resolution allocates this one object and no closures.
+class FallthroughResolveState implements RootChainVisitor {
   // non-slot dynamic fragments on the effective-root path, outermost first
   fragments?: DynamicFragment[]
   // the innermost of those — its branch scope owns the fallthrough effect
@@ -1854,67 +1853,44 @@ interface FallthroughResolveState {
   // the innermost fragment's current branch is multi-root: fragments stay
   // registered for future branches while the current render warns
   hasNonSingleRoot?: boolean
+  // attrs fold at a component's own creation boundary
+  readonly stopAtComponent = true
+
+  constructor(parentScope?: EffectScope) {
+    this.parentScope = parentScope
+  }
+
+  onDynamicFragment(frag: DynamicFragment): boolean | void {
+    // Slot outlets warn instead of inheriting attrs, and the descent stops
+    // there: slot content is rendered by the parent, so fragments inside it
+    // must not register a fallthrough hook — a later branch switch would
+    // re-apply from the branch alone, with the slot boundary out of view.
+    if (frag.__vf & SLOT) {
+      this.hasSlotFragment = true
+      return true
+    }
+    ;(this.fragments ||= []).push(frag)
+    if (this.innermost && this.innermost.scope) {
+      this.parentScope = this.innermost.scope
+    }
+    this.innermost = frag
+  }
 }
 
-// Single-pass effective-root resolution for fallthrough: descends the same
-// effective-root rules as getRootElement, but stops at components (their
-// attrs fold at their own creation boundary) and collects the dynamic
-// fragment chain, scope ownership, and warning inputs along the way.
+// Effective-root resolution for fallthrough: the shared descent, collecting
+// the dynamic fragment chain, scope ownership, and warning inputs on the way.
 function resolveFallthroughRoot(
   block: Block,
   state: FallthroughResolveState,
 ): Element | undefined {
-  if (block instanceof Element) {
-    return block
+  const root = getRootElement(block, state)
+  const { innermost } = state
+  if (!root && innermost) {
+    const { nodes } = innermost
+    state.hasNonSingleRoot =
+      isArray(nodes) && nodes.some(child => !(child instanceof Comment))
   }
-
-  if (isVaporComponent(block)) return
-
-  if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
-    if (isDynamicFragment(block)) {
-      // Slot outlets warn instead of inheriting attrs, and the descent stops
-      // there: slot content is rendered by the parent, so fragments inside it
-      // must not register a fallthrough hook — a later branch switch would
-      // re-apply from the branch alone, with the slot boundary out of view.
-      if (block.__vf & SLOT) {
-        state.hasSlotFragment = true
-        return
-      } else {
-        ;(state.fragments ||= []).push(block)
-        if (state.innermost && state.innermost.scope) {
-          state.parentScope = state.innermost.scope
-        }
-        state.innermost = block
-      }
-    }
-    const { nodes } = block
-    if (nodes instanceof Element && (nodes as any).$root) {
-      return nodes
-    }
-    const el = resolveFallthroughRoot(nodes, state)
-    if (!el && state.innermost === block) {
-      state.hasNonSingleRoot =
-        isArray(nodes) && nodes.some(child => !(child instanceof Comment))
-    }
-    return el
-  }
-
-  // multi-root arrays have no effective root; only a lone eligible branch
-  // alongside comments can hold one (vdom comment-filtering alignment)
-  if (isArray(block)) {
-    let single: Block | undefined
-    let hasComment = false
-    for (const b of block) {
-      if (b instanceof Comment) {
-        hasComment = true
-        continue
-      }
-      if (single !== undefined) return
-      single = b
-    }
-    if (!hasComment || single === undefined) return
-    return resolveFallthroughRoot(single, state)
-  }
+  return root
 }
 
 function containsTeleportFragment(block: Block): boolean {
