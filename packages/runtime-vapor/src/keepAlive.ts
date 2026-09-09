@@ -13,8 +13,13 @@ export interface VaporKeepAliveContext {
   isolatePropSources(rawProps: RawProps): RawProps
   isolateSlotSources(rawSlots: RawSlots): RawSlots
   // caches or stops the outgoing branch scope and returns whether its DOM
-  // removal must wait for the incoming cache decision
-  prepareBranchRemoval(frag: DynamicFragment, scope: EffectScope): boolean
+  // removal must wait for the incoming cache decision. `prevKey` is the
+  // outgoing branch key: `frag.current` already names the incoming one.
+  prepareBranchRemoval(
+    frag: DynamicFragment,
+    scope: EffectScope,
+    prevKey: any,
+  ): boolean
   // acquires the incoming branch scope, sets up the keyed cache-key context,
   // marks shape flags, then runs any deferred outgoing removal
   runBranchRender(

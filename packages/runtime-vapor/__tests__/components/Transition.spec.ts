@@ -9,7 +9,7 @@ import {
   resolveTransitionBlock,
 } from '../../src/components/Transition'
 import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
-import { SlotFragment } from '../../src/fragment'
+import { type DynamicFragment, SlotFragment } from '../../src/fragment'
 import {
   Fragment,
   type Ref,
@@ -2016,6 +2016,38 @@ describe('Transition', () => {
     )
     expect(onBeforeLeave).toHaveBeenCalledTimes(1)
     expect(onLeave).toHaveBeenCalledTimes(1)
+  })
+
+  test('dynamic default slot re-appearing should pair beforeUpdate with updated', async () => {
+    const data = ref({ show: true })
+    const App = compile(
+      `<template>
+        <Transition :css="false">
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { instance } = define(App as any).render()
+    // the hook pairing is the fragment protocol under test, so the
+    // Transition's dynamic fragment is observed directly
+    const frag = (instance!.block as any).block as DynamicFragment
+    const bu = vi.fn()
+    const u = vi.fn()
+    ;(frag.bu ||= []).push(bu)
+    ;(frag.u ||= []).push(u)
+
+    data.value.show = false
+    await nextTick()
+    expect(bu).toHaveBeenCalledTimes(1)
+    expect(u).toHaveBeenCalledTimes(1)
+
+    data.value.show = true
+    await nextTick()
+    expect(bu).toHaveBeenCalledTimes(2)
+    expect(u).toHaveBeenCalledTimes(2)
   })
 
   test('dynamic default slot source should respect reactive mode changes', async () => {

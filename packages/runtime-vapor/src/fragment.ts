@@ -343,7 +343,11 @@ export class DynamicFragment extends RenderContextFragment {
   // @ts-expect-error - assigned in the constructor or hydrateDynamicFragmentAnchor()
   anchor: Node
   scope: EffectScope | undefined
-  current?: BlockFn
+  // Key of the branch update() is heading to; undefined until the first
+  // branch renders. Written before the leave/defer scheduling, so an update
+  // that targets the in-flight key during a leave is a no-op rather than a
+  // revival of the outgoing branch.
+  current?: any
   // Owned by the Transition module (deferBranchUpdateDuringLeave /
   // removeBranchWithLeave); the core update pipeline never touches it.
   pending?: { render?: BlockFn; key: any; noScope: boolean; branchKey?: any }
@@ -426,8 +430,15 @@ export class DynamicFragment extends RenderContextFragment {
     }
 
     const transition = isTransitionEnabled ? this.$transition : undefined
-    const wasMounted = this.current !== undefined
-    if (wasMounted) {
+    const prevKey = this.current
+    const wasMounted = prevKey !== undefined
+    this.current = key
+    const prevSub = setActiveSub()
+    const parent = !isHydrating ? this.getBranchParent() : null
+    // Every update after the mount-time render brackets its hooks; see the
+    // `everUpdated` field comment.
+    const isUpdate = wasMounted || (everUpdated && !!parent)
+    if (isUpdate) {
       const bu = this.bu
       if (bu) {
         for (let i = 0; i < bu.length; i++) {
@@ -441,11 +452,10 @@ export class DynamicFragment extends RenderContextFragment {
       transition &&
       deferBranchUpdateDuringLeave(this, render, key, noScope, branchKey)
     ) {
+      setActiveSub(prevSub)
       return
     }
 
-    const prevSub = setActiveSub()
-    const parent = !isHydrating ? this.getBranchParent() : null
     let removePrevious: (() => void) | undefined
     // teardown previous branch
     if (wasMounted) {
@@ -455,7 +465,11 @@ export class DynamicFragment extends RenderContextFragment {
       let deferRemoval = false
       if (scope) {
         if (this.keepAliveCtx) {
-          deferRemoval = this.keepAliveCtx.prepareBranchRemoval(this, scope)
+          deferRemoval = this.keepAliveCtx.prepareBranchRemoval(
+            this,
+            scope,
+            prevKey,
+          )
         } else {
           scope.stop()
         }
@@ -493,9 +507,7 @@ export class DynamicFragment extends RenderContextFragment {
       parent,
       key,
       noScope,
-      // notify on any update except the mount-time first render; see the
-      // `everUpdated` field comment
-      wasMounted || (everUpdated && !!parent),
+      isUpdate,
       removePrevious,
       branchKey,
     )
@@ -522,60 +534,30 @@ export class DynamicFragment extends RenderContextFragment {
     removePrevious?: () => void,
     branchKey?: any,
   ): void {
-    this.current = key
     this.branchKey = this.keyed ? key : branchKey
     if (render) {
       const keepAliveCtx = isKeepAliveEnabled ? this.keepAliveCtx : null
       // A compiler-proven static branch can skip its own EffectScope, but attrs
       // fallthrough still registers branch-owned cleanup.
       const useScope = !noScope || !!this.fallthrough
-      if (!keepAliveCtx) {
+      if (keepAliveCtx) {
+        keepAliveCtx.runBranchRender(
+          this,
+          () =>
+            this.renderNodes(
+              render,
+              useScope,
+              parent,
+              transition,
+              keepAliveCtx,
+            ),
+          useScope,
+          removePrevious,
+        )
+      } else {
         this.scope = useScope ? new EffectScope() : undefined
+        this.renderNodes(render, useScope, parent, transition, null)
       }
-
-      const renderBranch = () => {
-        try {
-          this.nodes = this.runWithRenderCtx(() => {
-            const nodes =
-              (useScope ? this.scope!.run(render) : render()) || EMPTY_BLOCK
-            // (Re-)apply fallthrough attrs for the new branch inside the
-            // render ctx, before insertion. Disconnected renders are skipped
-            // on purpose: the enclosing application traverses into them and
-            // owns their first application.
-            if (parent && this.fallthrough) this.fallthrough(nodes)
-            const bm = this.bm
-            if (bm) {
-              for (let i = 0; i < bm.length; i++) {
-                bm[i](nodes)
-              }
-            }
-            return nodes
-          }, this.scope)
-        } finally {
-          // Inherit the fragment key without overriding a child's own key.
-          const key = this.branchKey !== undefined ? this.branchKey : this.$key
-          // Only propagate branch keys when Transition or KeepAlive consumes them.
-          if (
-            key !== undefined &&
-            (transition || this.inTransition || keepAliveCtx)
-          ) {
-            setBlockKey(this.nodes, key, false)
-          }
-
-          if (isTransitionEnabled && transition) {
-            this.$transition = applyTransitionHooks(this.nodes, transition)
-          }
-        }
-      }
-
-      keepAliveCtx
-        ? keepAliveCtx.runBranchRender(
-            this,
-            renderBranch,
-            useScope,
-            removePrevious,
-          )
-        : renderBranch()
 
       // Root-only inherited ids must land on the new branch's effective root
       // before insertion so custom element callbacks observe them.
@@ -596,7 +578,50 @@ export class DynamicFragment extends RenderContextFragment {
 
     const u = this.u
     if (notifyUpdated && u) {
-      u.forEach(hook => hook(this.nodes))
+      for (let i = 0; i < u.length; i++) {
+        u[i](this.nodes)
+      }
+    }
+  }
+
+  private renderNodes(
+    render: BlockFn,
+    useScope: boolean,
+    parent: ParentNode | null,
+    transition: VaporTransitionHooks | undefined,
+    keepAliveCtx: VaporKeepAliveContext | null,
+  ): void {
+    try {
+      this.nodes = this.runWithRenderCtx(() => {
+        const nodes =
+          (useScope ? this.scope!.run(render) : render()) || EMPTY_BLOCK
+        // (Re-)apply fallthrough attrs for the new branch inside the
+        // render ctx, before insertion. Disconnected renders are skipped
+        // on purpose: the enclosing application traverses into them and
+        // owns their first application.
+        if (parent && this.fallthrough) this.fallthrough(nodes)
+        const bm = this.bm
+        if (bm) {
+          for (let i = 0; i < bm.length; i++) {
+            bm[i](nodes)
+          }
+        }
+        return nodes
+      }, this.scope)
+    } finally {
+      // Inherit the fragment key without overriding a child's own key.
+      const key = this.branchKey !== undefined ? this.branchKey : this.$key
+      // Only propagate branch keys when Transition or KeepAlive consumes them.
+      if (
+        key !== undefined &&
+        (transition || this.inTransition || keepAliveCtx)
+      ) {
+        setBlockKey(this.nodes, key, false)
+      }
+
+      if (isTransitionEnabled && transition) {
+        this.$transition = applyTransitionHooks(this.nodes, transition)
+      }
     }
   }
 }
