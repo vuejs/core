@@ -492,10 +492,6 @@ function deferBranchUpdateDuringLeaveImpl(
 ): boolean {
   const transition = frag.$transition!
   if (!transition.state.isLeaving) return false
-  // Track the latest target key immediately so repeated updates during
-  // leave keep overwriting the pending branch instead of reviving stale
-  // keys when the deferred render finally runs.
-  frag.current = key
   const pending = frag.pending
   if (pending) {
     pending.render = render
@@ -572,12 +568,6 @@ function removeBranchWithLeaveImpl(
     if (mode === 'out-in') {
       // out-in owns the removal here so update() can return before
       // rendering; the next branch mounts from the afterLeave callback.
-      // Record the target key immediately (mirroring the defer path) so
-      // `current` no longer points at the outgoing branch. Otherwise a
-      // toggle back to the original key during the leave would hit the
-      // `key === current` early-return in update() and be dropped, leaving
-      // the deferred render to mount the stale branch.
-      frag.current = key
       parent && remove(frag.nodes, parent)
       return true
     }

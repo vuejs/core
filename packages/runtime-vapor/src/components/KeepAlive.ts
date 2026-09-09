@@ -375,7 +375,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
         current = undefined
         deactivate(instance, storageContainer, parentSuspense)
       },
-      prepareBranchRemoval(frag, scope) {
+      prepareBranchRemoval(frag, scope, prevKey) {
         // Async-wrapper internals share this context but are not themselves
         // KeepAlive cache roots.
         if (frag !== rootFragment) {
@@ -395,12 +395,12 @@ const VaporKeepAliveImpl = defineVaporComponent({
         // Component and KeepAlive input scopes are detached from this
         // DynamicFragment scope, so this only pauses branch-owned effects.
         scope.pause()
-        cacheScope(cacheKey, scopeLookupKey(frag), scope)
+        cacheScope(cacheKey, scopeLookupKey(frag, prevKey), scope)
         return true
       },
       runBranchRender(frag, fn, useScope, removePrevious) {
         const cachedScope = useScope
-          ? deleteScope(scopeLookupKey(frag))
+          ? deleteScope(scopeLookupKey(frag, frag.current))
           : undefined
         frag.scope = useScope ? cachedScope || new EffectScope() : undefined
         if (cachedScope) cachedScope.resume()
@@ -473,8 +473,8 @@ export const VaporKeepAlive: DefineVaporComponent<{}, string, KeepAliveProps> =
 
 // A branch with a user key is cached and its scope aliased under that key,
 // so re-entering the key finds them whatever the branch identity is.
-function scopeLookupKey(frag: DynamicFragment): any {
-  return frag.branchKey !== undefined ? frag.branchKey : frag.current
+function scopeLookupKey(frag: DynamicFragment, current: any): any {
+  return frag.branchKey !== undefined ? frag.branchKey : current
 }
 
 function registerDynamicFragmentHooks(
