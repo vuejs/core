@@ -106,7 +106,6 @@ import {
   claimAnchor,
   createFragmentClaim,
   currentHydrationNode,
-  enterHydrationBoundary,
   enterHydrationCursor,
   exitHydrationCursor,
   isComment,
@@ -115,6 +114,7 @@ import {
   locateEndAnchor,
   nextLogicalSibling,
   setCurrentHydrationNode,
+  trimHydrationBoundary,
   withDeferredHydrationBoundary,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
@@ -318,23 +318,14 @@ export function createComponent(
   let hydrationClose: Node | null = null
   let hydrationClaim: FragmentClaim | undefined
   let hydrationCursor: HydrationCursor | null = null
-  let exitHydrationBoundary: (() => void) | undefined
   let deferHydrationBoundary = false
-  const finalizeHydrationBoundary = () => {
-    exitHydrationBoundary && exitHydrationBoundary()
-    if (hydrationClose && currentHydrationNode === hydrationClose) {
-      advanceHydrationNode(hydrationClose)
-    }
-  }
   if (isHydrating) {
     resolvePendingSlotContent()
     if (component.__multiRoot) hydrationClaim = createFragmentClaim()
     hydrationCursor = enterHydrationCursor(hydrationClaim, true)
     if (hydrationClaim && hydrationClaim.start) {
       hydrationClose = locateEndAnchor(hydrationClaim.start)
-      exitHydrationBoundary = enterHydrationBoundary(
-        hydrationClose && claimAnchor(hydrationClose),
-      )
+      if (hydrationClose) claimAnchor(hydrationClose)
     }
   } else {
     resetInsertionState()
@@ -618,17 +609,10 @@ export function createComponent(
       instance.restoreAsyncContext
     ) {
       deferHydrationBoundary = true
-      instance.deferredHydrationBoundary = () => {
-        if (
-          instance.block &&
-          hydrationClose &&
-          findBlockBoundary(instance.block).nextNode ===
-            hydrationClose.nextSibling
-        ) {
-          setCurrentHydrationNode(hydrationClose)
-        }
-        finalizeHydrationBoundary()
-      }
+      instance.deferredHydrationBoundary = createDeferredHydrationBoundary(
+        instance,
+        hydrationClose,
+      )
       exitHydrationCursor(hydrationCursor)
     }
 
@@ -640,9 +624,30 @@ export function createComponent(
     if (isHydrating && !deferHydrationBoundary) {
       // Boundary cleanup still needs the component-local cursor. Only after
       // that do we restore the outer cursor's resume point.
-      finalizeHydrationBoundary()
+      finalizeHydrationBoundary(hydrationClose)
       exitHydrationCursor(hydrationCursor)
     }
+  }
+}
+
+function finalizeHydrationBoundary(close: Node | null): void {
+  if (!close) return
+  trimHydrationBoundary(close)
+  if (currentHydrationNode === close) advanceHydrationNode(close)
+}
+
+function createDeferredHydrationBoundary(
+  instance: VaporComponentInstance,
+  close: Node,
+): () => void {
+  return () => {
+    if (
+      instance.block &&
+      findBlockBoundary(instance.block).nextNode === close.nextSibling
+    ) {
+      setCurrentHydrationNode(close)
+    }
+    finalizeHydrationBoundary(close)
   }
 }
 
