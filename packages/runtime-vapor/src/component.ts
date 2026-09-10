@@ -118,7 +118,6 @@ import {
   claimAnchor,
   createFragmentClaim,
   currentHydrationNode,
-  enterHydrationBoundary,
   enterHydrationCursor,
   exitHydrationCursor,
   hydrateNode,
@@ -129,6 +128,7 @@ import {
   locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
+  trimHydrationBoundary,
   withDeferredHydrationBoundary,
 } from './dom/hydration'
 import { createComment, createElement, createTextNode } from './dom/node'
@@ -619,7 +619,7 @@ export function createComponent(
     setRenderContext(prevCtx)
     // A pending async setup owns its range until its deferred render
     // re-enters it, so only the cursor is handed back here.
-    if (hydration) hydration.exit(!pendingAsyncHydration)
+    if (hydration) exitComponentHydration(hydration, !pendingAsyncHydration)
   }
 }
 
@@ -627,17 +627,14 @@ interface ComponentHydration {
   /** owns the range's opening `[` when the component is multi-root */
   claim: FragmentClaim | undefined
   cursor: HydrationCursor
-  /**
-   * Hand the cursor back; with `finalizeBoundary` the unclaimed tail of the
-   * range is trimmed first and the cursor moves past the close marker.
-   */
-  exit(finalizeBoundary: boolean): void
+  /** the claimed close marker of a multi-root range */
+  close: Node | null
 }
 
 /**
- * Open a component's SSR range: locate its start, claim its markers and set
- * up boundary cleanup. Shared by creation and by the deferred render of an
- * async setup, which re-enters the range once setup has settled.
+ * Open a component's SSR range: locate its start and claim its markers.
+ * Shared by creation and by the deferred render of an async setup, which
+ * re-enters the range once setup has settled.
  */
 function enterComponentHydration(
   component: VaporComponent,
@@ -646,20 +643,23 @@ function enterComponentHydration(
   const claim = component.__multiRoot ? createFragmentClaim() : undefined
   const cursor = enterHydrationCursor(claim, true)
   const close = claim && claim.start ? locateEndAnchor(claim.start) : null
-  const trimBoundary = close
-    ? enterHydrationBoundary(claimAnchor(close))
-    : undefined
-  return {
-    claim,
-    cursor,
-    exit(finalizeBoundary) {
-      if (finalizeBoundary) {
-        if (trimBoundary) trimBoundary()
-        if (close && currentHydrationNode === close) advanceHydrationNode(close)
-      }
-      exitHydrationCursor(cursor)
-    },
+  if (close) claimAnchor(close)
+  return { claim, cursor, close }
+}
+
+/**
+ * Hand the cursor back; with `finalizeBoundary` the unclaimed tail of the
+ * range is trimmed first and the cursor moves past the close marker.
+ */
+function exitComponentHydration(
+  { close, cursor }: ComponentHydration,
+  finalizeBoundary: boolean,
+): void {
+  if (finalizeBoundary) {
+    trimHydrationBoundary(close)
+    if (close && currentHydrationNode === close) advanceHydrationNode(close)
   }
+  exitHydrationCursor(cursor)
 }
 
 export function setupComponent(
@@ -1391,7 +1391,7 @@ export function mountComponent(
             try {
               withDeferredHydrationBoundary(renderAndMount)
             } finally {
-              hydration.exit(true)
+              exitComponentHydration(hydration, true)
             }
           })
         } else {
