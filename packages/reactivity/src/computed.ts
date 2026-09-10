@@ -14,6 +14,7 @@ import {
   link,
   shallowPropagate,
   startTracking,
+  unlink,
 } from './system'
 import { warn } from './warning'
 
@@ -60,6 +61,7 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
   depsTail: Link | undefined = undefined
   flags: SystemReactiveFlags =
     SystemReactiveFlags.Mutable | SystemReactiveFlags.Dirty
+  cleanupNext: ComputedRefImpl | undefined = undefined
 
   /**
    * @internal
@@ -149,6 +151,11 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
       link(this, activeSub)
     } else if (activeEffectScope !== undefined) {
       link(this, activeEffectScope)
+    } else if (
+      this.subs === undefined &&
+      !(this.flags & SystemReactiveFlags.CleanupScheduled)
+    ) {
+      scheduleCleanup(this)
     }
     return this._value!
   }
@@ -179,6 +186,45 @@ export class ComputedRefImpl<T = any> implements ReactiveNode {
 
 if (__DEV__) {
   setupOnTrigger(ComputedRefImpl)
+}
+
+let cleanupHead: ComputedRefImpl | undefined = undefined
+let cleanupTail: ComputedRefImpl | undefined = undefined
+let isFlushing = false
+const resolvedPromise = /*@__PURE__*/ Promise.resolve() as Promise<void>
+
+function scheduleCleanup(c: ComputedRefImpl): void {
+  c.flags |= SystemReactiveFlags.CleanupScheduled
+  if (cleanupTail !== undefined) {
+    cleanupTail.cleanupNext = c
+    cleanupTail = c
+  } else {
+    cleanupHead = cleanupTail = c
+  }
+  if (!isFlushing) {
+    isFlushing = true
+    resolvedPromise.then(cleanup)
+  }
+}
+
+// clean up unsubscribed computed refs after a tick
+function cleanup(): void {
+  let c = cleanupHead
+  cleanupHead = cleanupTail = undefined
+  isFlushing = false
+  while (c !== undefined) {
+    const next = c.cleanupNext
+    c.cleanupNext = undefined
+    c.flags &= ~SystemReactiveFlags.CleanupScheduled
+    if (c.subs === undefined) {
+      let dep = c.deps
+      while (dep !== undefined) {
+        dep = unlink(dep, c)
+      }
+      c.flags |= SystemReactiveFlags.Dirty
+    }
+    c = next
+  }
 }
 
 /**
