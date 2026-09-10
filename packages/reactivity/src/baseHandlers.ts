@@ -46,6 +46,30 @@ function hasOwnProperty(this: object, key: unknown) {
   return obj.hasOwnProperty(key as string)
 }
 
+export function getRawValue(
+  receiver: object,
+  isReadonly: boolean,
+  isShallow: boolean,
+  target: Target,
+): Target | undefined {
+  if (
+    receiver ===
+      (isReadonly
+        ? isShallow
+          ? shallowReadonlyMap
+          : readonlyMap
+        : isShallow
+          ? shallowReactiveMap
+          : reactiveMap
+      ).get(target) ||
+    // receiver is not the reactive proxy, but has the same prototype
+    // this means the receiver is a user proxy of the reactive proxy
+    Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
+  ) {
+    return target
+  }
+}
+
 class BaseReactiveHandler implements ProxyHandler<Target> {
   constructor(
     protected readonly _isReadonly = false,
@@ -64,24 +88,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     } else if (key === ReactiveFlags.IS_SHALLOW) {
       return isShallow
     } else if (key === ReactiveFlags.RAW) {
-      if (
-        receiver ===
-          (isReadonly
-            ? isShallow
-              ? shallowReadonlyMap
-              : readonlyMap
-            : isShallow
-              ? shallowReactiveMap
-              : reactiveMap
-          ).get(target) ||
-        // receiver is not the reactive proxy, but has the same prototype
-        // this means the receiver is a user proxy of the reactive proxy
-        Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
-      ) {
-        return target
-      }
-      // early return undefined
-      return
+      return getRawValue(receiver, isReadonly, isShallow, target)
     }
 
     const targetIsArray = isArray(target)
