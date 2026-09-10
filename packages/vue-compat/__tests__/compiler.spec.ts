@@ -16,7 +16,6 @@ afterEach(() => {
   Vue.configureCompat({ MODE: 3 })
 })
 
-// COMPILER_V_FOR_REF is tested in ./refInfor.spec.ts
 // COMPILER_FILTERS is tested in ./filters.spec.ts
 
 test('COMPILER_IS_ON_ELEMENT', () => {
