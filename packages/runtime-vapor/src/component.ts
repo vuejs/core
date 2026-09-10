@@ -92,7 +92,7 @@ import {
 } from './componentProps'
 import { renderEffect } from './renderEffect'
 import { emit, normalizeEmitsOptions } from './componentEmits'
-import { setDynamicProps } from './dom/prop'
+import { patchDynamicProps } from './dom/prop'
 import {
   type LooseRawSlots,
   type RawSlots,
@@ -774,7 +774,7 @@ export function applyFallthroughProps(
 ): void {
   isApplyingFallthroughProps = true
   try {
-    setDynamicProps(el, [attrs])
+    patchDynamicProps(el, attrs)
   } finally {
     isApplyingFallthroughProps = false
   }
@@ -1256,7 +1256,7 @@ export function createPlainElement(
   if (rawProps) {
     const isSVG = ns === Namespaces.SVG
     const setFn = () =>
-      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)], isSVG)
+      patchDynamicProps(el, resolveDynamicProps(rawProps as RawProps), isSVG)
     if (once) setFn()
     else renderEffect(setFn)
   }

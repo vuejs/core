@@ -485,7 +485,18 @@ export function setHtml(el: TargetElement, value: any): void {
 }
 
 export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
-  const props = args.length > 1 ? mergeProps(...args) : args[0] || EMPTY_OBJ
+  patchDynamicProps(
+    el,
+    args.length > 1 ? mergeProps(...args) : args[0] || EMPTY_OBJ,
+    isSVG,
+  )
+}
+
+export function patchDynamicProps(
+  el: any,
+  props: Record<string, any>,
+  isSVG?: boolean,
+): void {
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
   const prevProps = el[cacheKey] as Record<string, any> | undefined
   const nextProps: Record<string, any> = Object.create(null)
