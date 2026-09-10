@@ -986,7 +986,7 @@ export class VaporComponentInstance<
    * If $attrs was used during render then the warning for failed attrs
    * fallthrough can be suppressed.
    */
-  accessedAttrs: boolean = false
+  accessedAttrs?: boolean
 
   // type only
   /**
@@ -1865,8 +1865,8 @@ class FallthroughResolveState implements RootChainVisitor {
   // nearest enclosing branch scope; lifecycle parent for retrofitted scopes
   parentScope?: EffectScope
   hasSlotOutlet?: boolean
-  // the innermost fragment's current branch is multi-root: fragments stay
-  // registered for future branches while the current render warns
+  // dev only: the innermost fragment's current branch is multi-root; fragments
+  // stay registered for future branches while the current render warns
   hasNonSingleRoot?: boolean
   // attrs fold at a component's own creation boundary
   readonly stopAtComponent = true
@@ -1900,7 +1900,7 @@ function resolveFallthroughRoot(
 ): Element | undefined {
   const root = getRootElement(block, state)
   const { innermost } = state
-  if (!root && innermost) {
+  if (__DEV__ && !root && innermost) {
     const { nodes } = innermost
     state.hasNonSingleRoot =
       isArray(nodes) && nodes.some(child => !(child instanceof Comment))
