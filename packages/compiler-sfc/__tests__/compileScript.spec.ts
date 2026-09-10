@@ -1158,6 +1158,20 @@ describe('SFC compile <script setup>', () => {
       }`)
     })
 
+    test('vapor: returns the template as a render closure', () => {
+      const { content } = compile(
+        `<script setup vapor>
+        const msg = await Promise.resolve('hi')
+        </script>
+        <template><div>{{ msg }}</div></template>`,
+        { vapor: true, inlineTemplate: true },
+      )
+      expect(content).toMatch(`async setup(`)
+      expect(content).toMatch(`_withAsyncContext(`)
+      expect(content).toMatch(`return () => {`)
+      assertCode(content)
+    })
+
     test('should ignore await inside functions', () => {
       // function declaration
       assertAwaitDetection(`async function foo() { await bar }`, false)
