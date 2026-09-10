@@ -99,8 +99,6 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         const frag = new DynamicFragment(
           0,
           __DEV__ ? 'async component' : undefined,
-          false,
-          false,
         )
         frag.nodes = nodes
         instance.block = frag
@@ -146,6 +144,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
         locateHydrationNode()
       } else {
         frag = new DynamicFragment(0, __DEV__ ? 'async component' : undefined)
+        if (isHydrating) locateHydrationNode()
       }
 
       // already resolved: only reached where createComponent keeps the
@@ -299,9 +298,8 @@ function createInnerComp(
       // rawProps is shared and already contains fallthrough attrs.
       // so isSingleRoot should be undefined
       undefined,
-      // The resolved inner component is the real input boundary for async
-      // components, so it must inherit the wrapper's v-once state.
-      parent.isOnce,
+      // The wrapper already snapshotted rawProps when it is v-once.
+      undefined,
       parent.appContext,
     )
   } finally {

@@ -219,6 +219,9 @@ export interface DirectiveIRNode extends BaseIRNode {
   builtin?: boolean
   asset?: boolean
   modelType?: 'text' | 'dynamic' | 'radio' | 'checkbox' | 'select'
+  // The helper creates its own effects, so a v-once site runs it in the once
+  // ambient instead of eliding a compiler effect.
+  once?: boolean
 }
 
 export interface CreateComponentIRNode
@@ -234,6 +237,8 @@ export interface CreateComponentIRNode
   slotRoot?: boolean
   dynamic?: SimpleExpressionNode
   useCreateElement: boolean
+  ns?: Namespace
+  key?: SimpleExpressionNode
 }
 
 export interface SlotOutletIRNode

@@ -9,6 +9,7 @@ import {
   resolveTransitionBlock,
 } from '../../src/components/Transition'
 import { resolveTransitionBlocks } from '../../src/components/TransitionGroup'
+import { type DynamicFragment, SlotFragment } from '../../src/fragment'
 import {
   Fragment,
   type Ref,
@@ -2017,6 +2018,38 @@ describe('Transition', () => {
     expect(onLeave).toHaveBeenCalledTimes(1)
   })
 
+  test('dynamic default slot re-appearing should pair beforeUpdate with updated', async () => {
+    const data = ref({ show: true })
+    const App = compile(
+      `<template>
+        <Transition :css="false">
+          <template #default v-if="data.show">
+            <div>foo</div>
+          </template>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const { instance } = define(App as any).render()
+    // the hook pairing is the fragment protocol under test, so the
+    // Transition's dynamic fragment is observed directly
+    const frag = (instance!.block as any).block as DynamicFragment
+    const bu = vi.fn()
+    const u = vi.fn()
+    ;(frag.bu ||= []).push(bu)
+    ;(frag.u ||= []).push(u)
+
+    data.value.show = false
+    await nextTick()
+    expect(bu).toHaveBeenCalledTimes(1)
+    expect(u).toHaveBeenCalledTimes(1)
+
+    data.value.show = true
+    await nextTick()
+    expect(bu).toHaveBeenCalledTimes(2)
+    expect(u).toHaveBeenCalledTimes(2)
+  })
+
   test('dynamic default slot source should respect reactive mode changes', async () => {
     const onLeave = vi.fn((_: Element, done: () => void) => setTimeout(done, 0))
     const data = ref({
@@ -2181,5 +2214,102 @@ describe('Transition', () => {
       expect.arrayContaining(['external-next', 'box', 'internal-next']),
     )
     expect(el.classList).toHaveLength(3)
+  })
+
+  test('keyed reorder through a slot outlet with fallback should not replay enter', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      list: [{ id: 1 }, { id: 2 }, { id: 3 }],
+      show: true,
+      slotName: 'default',
+      onEnter,
+      onLeave,
+    })
+    // a dynamic slot name with fallback resolves through a SlotFragment
+    const Child = compile(
+      `<template><slot :name="data.slotName">fallback</slot></template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child v-for="item in data.list" :key="item.id">
+          <Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">
+            <div v-if="data.show">{{ item.id }}</div>
+          </Transition>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host, instance } = define(App as any).render()
+    const rows = (instance!.block as any).nodes[0]
+    expect(rows[0].nodes.block).toBeInstanceOf(SlotFragment)
+    expect(host.textContent).toBe('123')
+
+    data.value.list = [
+      data.value.list[2],
+      data.value.list[0],
+      data.value.list[1],
+    ]
+    await nextTick()
+    expect(host.textContent).toBe('312')
+    expect(onEnter).not.toHaveBeenCalled()
+    expect(onLeave).not.toHaveBeenCalled()
+  })
+
+  test('out-in slot content swap should keep slot fallback resolution in sync', async () => {
+    let finishLeave: (() => void) | undefined
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      finishLeave = done
+    })
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({ a: true, showA: true, showB: true, onLeave, onEnter })
+    const Child = compile(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @enter="data.onEnter"
+          @leave="data.onLeave"
+        >
+          <slot><p class="fb">fallback</p></slot>
+        </Transition>
+      </template>`,
+      data,
+    )
+    const App = compile(
+      `<template>
+        <components.Child>
+          <template v-if="data.a" #default>
+            <div v-if="data.showA" class="a">A</div>
+          </template>
+          <template v-else #default>
+            <div v-if="data.showB" class="b">B</div>
+          </template>
+        </components.Child>
+      </template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App as any).render()
+    expect(host.innerHTML).toContain('class="a"')
+
+    data.value.a = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    // the leave settles asynchronously, so the next branch renders after
+    // the slot update returned
+    finishLeave!()
+    await nextTick()
+    expect(host.innerHTML).toContain('class="b"')
+
+    data.value.showB = false
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(2)
+    finishLeave!()
+    await nextTick()
+    expect(host.innerHTML).not.toContain('class="b"')
+    expect(host.innerHTML).toContain('fallback')
   })
 })

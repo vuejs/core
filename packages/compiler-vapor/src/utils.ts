@@ -159,6 +159,10 @@ export function isTeleportTag(tag: string): boolean {
   return tag === 'teleport' || tag === 'vaporteleport'
 }
 
+export function isComponentTag(tag: string): boolean {
+  return tag === 'component' || tag === 'Component'
+}
+
 export function isBuiltInComponent(tag: string): string | undefined {
   if (isTeleportTag(tag)) {
     return 'VaporTeleport'

@@ -31,7 +31,11 @@ import {
   parentNode,
   querySelector,
 } from '../dom/node'
-import { type LooseRawProps, isVaporComponent } from '../component'
+import {
+  type LooseRawProps,
+  type VaporComponentInstance,
+  isVaporComponent,
+} from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
 import { extend, isArray } from '@vue/shared'
@@ -39,8 +43,8 @@ import {
   RenderContextFragment,
   isFragment,
   resolveFragmentAnchor,
-  runWithFragmentCtxOnly,
 } from '../fragment'
+import { withRenderContext } from '../renderContext'
 import {
   advanceHydrationNode,
   claimAnchor,
@@ -96,7 +100,7 @@ export class TeleportFragment extends RenderContextFragment {
   private readonly childrenScope = getCurrentScope()
   // One scope per slot run, so a re-run can stop the previous run's effects
   // (the DynamicFragment branch-scope discipline, and the same field name).
-  private scope?: EffectScope
+  scope?: EffectScope
 
   target?: ParentNode | null
   targetAnchor?: Node | null
@@ -149,7 +153,7 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   get scopeOwner(): GenericComponentInstance | null {
-    return (this.slotOwner ||
+    return (this.ctx.slotOwner ||
       this.renderInstance) as GenericComponentInstance | null
   }
 
@@ -165,7 +169,7 @@ export class TeleportFragment extends RenderContextFragment {
       // init and slot re-runs, where new nodes capture the ambient context.
       // The equality fast path keeps the synchronous first run free.
       renderEffect(() =>
-        runWithFragmentCtxOnly(this, () => {
+        withRenderContext(this.ctx, () => {
           // Stop the previous run's effects before tearing down its nodes;
           // components unmount here, handleChildrenUpdate detaches the DOM.
           const prevScope = this.scope
@@ -311,7 +315,7 @@ export class TeleportFragment extends RenderContextFragment {
       undefined,
       this.parentSuspense !== undefined
         ? this.parentSuspense
-        : (__FEATURE_SUSPENSE__ && isSuspenseEnabled && this.renderSuspense) ||
+        : (__FEATURE_SUSPENSE__ && isSuspenseEnabled && this.ctx.suspense) ||
             null,
     )
   }
@@ -367,11 +371,11 @@ export class TeleportFragment extends RenderContextFragment {
     }
   }
 
-  insert = (
+  insert(
     container: ParentNode,
     anchor: Node | null,
     parentSuspense?: SuspenseBoundary | null,
-  ): void => {
+  ): void {
     if (isHydrating) return
 
     if (parentSuspense !== undefined) this.parentSuspense = parentSuspense
@@ -397,6 +401,16 @@ export class TeleportFragment extends RenderContextFragment {
     if (!wasMountedInTarget) {
       this.handlePropsUpdate()
     }
+  }
+
+  move(
+    container: ParentNode,
+    anchor: Node | null,
+    _moveType: MoveType,
+    _parentComponent?: VaporComponentInstance,
+    parentSuspense?: SuspenseBoundary | null,
+  ): void {
+    this.insert(container, anchor, parentSuspense)
   }
 
   private cancelMountToTarget(): void {
@@ -457,7 +471,7 @@ export class TeleportFragment extends RenderContextFragment {
     this.mountState = { location: TeleportMountLocation.None }
   }
 
-  remove = (_parent?: ParentNode): void => {
+  remove(): void {
     this.dispose()
 
     if (this.anchor) {

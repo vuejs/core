@@ -1,4 +1,5 @@
 import { NOOP } from '@vue/shared'
+import { queuePostFlushCb } from '@vue/runtime-dom'
 import {
   type FragmentClaim,
   advanceHydrationNode,
@@ -26,12 +27,16 @@ import {
 } from './node'
 import {
   type Block,
+  type BlockFn,
   EMPTY_BLOCK,
   findBlockBoundary,
   isValidBlock,
+  isValidSlot,
   move,
 } from '../block'
-import type { DynamicFragment } from '../fragment'
+import type { DynamicFragment, SlotFragment } from '../fragment'
+import { hasSlotFallback } from '../slotBoundary'
+import { recheckSlotResolution } from '../slotFragment'
 import { IF, NATIVE_CHILDREN, SLOT } from '../fragmentFlags'
 
 interface DeferredSlotAnchor {
@@ -795,4 +800,124 @@ export function hydrateDynamicFragmentAnchor(
   isEmpty = false,
 ): void {
   executeAnchorPlan(frag, resolveDynamicAnchor(frag, isEmpty))
+}
+
+function updateHydratingSlotContent(
+  frag: SlotFragment,
+  render: BlockFn,
+  key: any,
+): { contentStart: Node | null; contentValid: boolean } {
+  const contentStart = currentHydrationNode
+  const pending = startPendingSlotContentGuard(
+    frag.sharedFallback || hasSlotFallback(frag.boundary),
+    contentStart,
+  )
+  try {
+    frag.updateContent(render, key)
+    const contentValid = isValidSlot(frag.getContent())
+    pending.finish(contentValid)
+    return { contentStart, contentValid }
+  } finally {
+    pending.settle()
+  }
+}
+
+/** The hydrating half of `SlotFragment.updateSlot`: content, then anchor. */
+export function hydrateSlotFragmentContent(
+  frag: SlotFragment,
+  render: BlockFn,
+  hasLocalFallback: boolean,
+  key: any,
+  shouldForce: boolean,
+): void {
+  // Forwarded roots that do not own an inherited fallback restore only
+  // their exposed branch. The receiver decides its fallback after all
+  // shared roots have reported their final content/local-fallback result.
+  if (frag.sharedFallback || (frag.inheritFallback && !hasLocalFallback)) {
+    const claim = createFragmentClaim()
+    locateHydrationNode(claim)
+    const { contentStart, contentValid } = updateHydratingSlotContent(
+      frag,
+      render,
+      key,
+    )
+    const end = locateFragmentEnd(claim.start)
+    let exposedValid = contentValid
+    if (frag.sharedFallback) {
+      recheckSlotResolution(frag, shouldForce || frag.pendingRecheckForce)
+      exposedValid = isValidSlot(frag.nodes)
+    } else {
+      frag.syncNodes()
+      frag.lastNodesValid = contentValid
+    }
+    if (exposedValid) {
+      if (end) {
+        frag.anchor = claimAnchor(end)
+        advanceHydrationNode(end)
+      } else {
+        hydrateDynamicFragmentAnchor(frag, !isValidBlock(frag.nodes))
+      }
+    } else if (frag.sharedFallback) {
+      const slotEnd = getCurrentSlotEndAnchor()
+      const candidate = end && end !== slotEnd ? end : null
+      if (candidate) {
+        // Move past this candidate range so later sibling roots hydrate
+        // from their own position. The parent aggregate decision below
+        // determines whether this root actually owns the range.
+        advanceHydrationNode(candidate)
+      }
+      const anchor = claimUntrackedAnchor(
+        __DEV__ ? createComment(frag.anchorLabel ?? '') : createTextNode(),
+      )
+      frag.anchor = anchor
+      claimPrecedingFragmentClose(slotEnd)
+      const attachContent = createDeferredSlotAttach(
+        contentStart,
+        slotEnd,
+        anchor,
+        candidate,
+        candidate => (frag.anchor = claimAnchor(candidate)),
+        () => frag.nodes,
+      )
+      // Post-flush even after the verdict: the reference node's final
+      // position is only stable once the whole pass has finished.
+      const queued = queuePendingSlotContentAnchor({
+        onContent: attachContent,
+        onFallback: () => {},
+      })
+      if (!queued) {
+        if (candidate) {
+          claimAnchor(candidate)
+        }
+        queuePostFlushCb(attachContent)
+      }
+    } else {
+      // Empty forwarded content should not claim the receiver slot's
+      // SSR close marker. Queue its runtime anchor before that marker so
+      // fallback hydration can finish first and the final DOM matches CSR.
+      const anchor = (frag.anchor = claimUntrackedAnchor(
+        __DEV__ ? createComment(frag.anchorLabel ?? '') : createTextNode(),
+      ))
+      const slotEnd = getCurrentSlotEndAnchor()
+      const parent = slotEnd && slotEnd.parentNode
+      if (parent) {
+        // When the receiver fallback is a fragment, the node right
+        // before the receiver slot end is the fallback fragment's SSR
+        // close.
+        claimPrecedingFragmentClose(slotEnd)
+
+        queuePostFlushCb(() => {
+          if (slotEnd.parentNode === parent) {
+            parent.insertBefore(anchor, slotEnd)
+          }
+        })
+      }
+    }
+  } else {
+    withHydratingSlotBoundary(() => {
+      updateHydratingSlotContent(frag, render, key)
+      recheckSlotResolution(frag, shouldForce || frag.pendingRecheckForce)
+      hydrateDynamicFragmentAnchor(frag, !isValidBlock(frag.nodes))
+    })
+  }
 }

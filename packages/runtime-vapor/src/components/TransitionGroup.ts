@@ -52,7 +52,7 @@ import {
   type VaporFragment,
   isForBlock,
   isFragment,
-  isSlotFragment,
+  isVaporSlotOutlet,
 } from '../fragment'
 import {
   type DefineVaporComponent,
@@ -63,6 +63,7 @@ import {
   cleanupHydrationTail,
   currentHydrationNode,
   isHydrating,
+  locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
   setMarkerlessHydrationContainer,
@@ -216,6 +217,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       0,
       __DEV__ ? 'transition-group' : undefined,
     )
+    if (isHydrating) locateHydrationNode()
     let currentTag: string | undefined
     let currentSlot: BlockFn | undefined
     let isMounted = false
@@ -352,7 +354,7 @@ function collectTransitionBlocks(
   if (block instanceof Node) {
     if (block instanceof Element) children.push(block)
   } else if (isVaporComponent(block)) {
-    const isRootSlot = block.block && isSlotFragment(block.block)
+    const isRootSlot = block.block && isVaporSlotOutlet(block.block)
     if (onUpdateOwner && !isRootSlot) onUpdateOwner(block)
 
     const start = children.length

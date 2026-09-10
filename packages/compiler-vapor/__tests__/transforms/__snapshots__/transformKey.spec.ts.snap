@@ -1,13 +1,10 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: key > with dynamic key > <component is/> + key 1`] = `
-"import { createDynamicComponent as _createDynamicComponent, createKeyedFragment as _createKeyedFragment } from 'vue';
+"import { createDynamicComponent as _createDynamicComponent } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createKeyedFragment(() => (_ctx.id), () => {
-    const n1 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */)
-    return n1
-  })
+  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */, () => (_ctx.id))
   return n0
 }"
 `;

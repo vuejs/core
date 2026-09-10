@@ -19,7 +19,7 @@ import {
   isForFragment,
   isFragment,
   isInteropFragment,
-  isSlotFragment,
+  isVaporSlotOutlet,
 } from '../src/fragment'
 import { TeleportFragment } from '../src/components/Teleport'
 import { isTeleportFragment } from '../src/teleport'
@@ -161,12 +161,12 @@ describe('fragment protocol flags', () => {
       expect(isFragment(value)).toBe(true)
     }
     expect(isDynamicFragment(dynamic)).toBe(true)
-    expect(isSlotFragment(slot)).toBe(true)
+    expect(isVaporSlotOutlet(slot)).toBe(true)
     expect(isForFragment(forFragment)).toBe(true)
     expect(isForBlock(forBlock)).toBe(true)
     expect(isTeleportFragment(teleport)).toBe(true)
 
-    expect(isSlotFragment(dynamic)).toBe(false)
+    expect(isVaporSlotOutlet(dynamic)).toBe(false)
     expect(isDynamicFragment(fragment)).toBe(false)
     expect(isForFragment(forBlock)).toBe(false)
     expect(isForBlock(forFragment)).toBe(false)

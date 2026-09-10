@@ -1,4 +1,6 @@
 import {
+  type Namespace,
+  Namespaces,
   VaporDynamicComponentFlags,
   VaporSlotStability,
   camelize,
@@ -84,8 +86,15 @@ export function genCreateComponent(
     operation.dynamic && !operation.dynamic.isStatic
   )
   const dynamicComponentFlags = isRuntimeDynamicComponent
-    ? genDynamicComponentFlags(root, once, slotRoot)
+    ? genDynamicComponentFlags(root, once, slotRoot, operation.ns)
     : false
+  // helpers that may fall back to a plain element take the namespace
+  const nsArg =
+    !isRuntimeDynamicComponent &&
+    (operation.useCreateElement || operation.asset || !!operation.dynamic) &&
+    operation.ns
+      ? String(operation.ns)
+      : false
   const rawSlots = genRawSlots(slots, context)
   const [ids, handlers] = processInlineHandlers(props, context)
   const rawProps = context.withId(() => genRawProps(props, context, true), ids)
@@ -115,8 +124,15 @@ export function genCreateComponent(
       rawProps,
       rawSlots,
       isRuntimeDynamicComponent ? dynamicComponentFlags : root ? 'true' : false,
-      isRuntimeDynamicComponent ? false : once && 'true',
-      isRuntimeDynamicComponent ? false : maybeSelfReference && 'true',
+      isRuntimeDynamicComponent
+        ? operation.key && [
+            '() => (',
+            ...genExpression(operation.key, context),
+            ')',
+          ]
+        : once && 'true',
+      useAssetComponentHelper ? maybeSelfReference && 'true' : nsArg,
+      useAssetComponentHelper && nsArg,
     ),
     ...genDirectivesForElement(operation.id, context),
   ]
@@ -160,6 +176,7 @@ function genDynamicComponentFlags(
   root: boolean | undefined,
   once: boolean | undefined,
   slotRoot: boolean | undefined,
+  ns: Namespace | undefined,
 ): string | false {
   let flags = 0
   const names: string[] = []
@@ -175,6 +192,13 @@ function genDynamicComponentFlags(
   if (slotRoot) {
     flags |= VaporDynamicComponentFlags.SLOT_ROOT
     names.push('SLOT_ROOT')
+  }
+  if (ns === Namespaces.SVG) {
+    flags |= VaporDynamicComponentFlags.NS_SVG
+    names.push('NS_SVG')
+  } else if (ns === Namespaces.MATH_ML) {
+    flags |= VaporDynamicComponentFlags.NS_MATHML
+    names.push('NS_MATHML')
   }
 
   if (!flags) {

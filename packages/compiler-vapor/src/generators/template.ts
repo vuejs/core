@@ -118,8 +118,12 @@ export function genChildren(
           ? child.anchor
           : child.id
         : undefined
+    // A child created by its own operation (component, block, createElement-
+    // backed element) owns its subtree through genSelf; only children that
+    // sit in the parent template are descended into from here.
+    const ownsSubtree = child.operation !== undefined
 
-    if (id === undefined && !child.hasDynamicChild) {
+    if (id === undefined && (!child.hasDynamicChild || ownsSubtree)) {
       flushBeforeDynamic && flushBeforeDynamic(child, push)
       push(...genSelf(child, context, flushBeforeDynamic))
       continue
@@ -181,7 +185,7 @@ export function genChildren(
       )
     }
 
-    if (id === child.anchor && !child.hasDynamicChild) {
+    if (id === child.anchor && (!child.hasDynamicChild || ownsSubtree)) {
       flushBeforeDynamic && flushBeforeDynamic(child, push)
       push(...genSelf(child, context, flushBeforeDynamic))
     }
@@ -191,9 +195,11 @@ export function genChildren(
     }
 
     prev = [variable, elementIndex, id === undefined]
-    push(
-      ...genChildren(child, context, pushBlock, variable, flushBeforeDynamic),
-    )
+    if (!ownsSubtree) {
+      push(
+        ...genChildren(child, context, pushBlock, variable, flushBeforeDynamic),
+      )
+    }
   }
 
   return frag

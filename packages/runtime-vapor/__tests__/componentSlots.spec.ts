@@ -59,14 +59,18 @@ import {
   setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../src/dom/hydration'
-import { DynamicFragment, SlotFragment, isSlotFragment } from '../src/fragment'
+import {
+  DynamicFragment,
+  SlotFragment,
+  isVaporSlotOutlet,
+} from '../src/fragment'
 import { IF } from '../src/fragmentFlags'
 import {
   type SlotBoundaryContext,
-  currentSlotBoundary,
   trackSlotBoundaryDirtying,
   withSlotBoundary,
 } from '../src/slotBoundary'
+import { currentRenderContext } from '../src/renderContext'
 import {
   type SlotResolutionState,
   markSlotResolutionDirty,
@@ -357,7 +361,7 @@ describe('component: slots', () => {
       let fallbackBoundary: any
 
       frag.updateSlot(undefined, () => {
-        fallbackBoundary = currentSlotBoundary
+        fallbackBoundary = currentRenderContext.slotBoundary
         return []
       })
 
@@ -563,8 +567,8 @@ describe('component: slots', () => {
           { id: 2, show: true },
         ],
         capture: () => {
-          if (currentSlotBoundary) {
-            boundary = currentSlotBoundary
+          if (currentRenderContext.slotBoundary) {
+            boundary = currentRenderContext.slotBoundary
           }
           return true
         },
@@ -602,8 +606,8 @@ describe('component: slots', () => {
         outer: true,
         inner: true,
         capture: () => {
-          if (currentSlotBoundary) {
-            boundary = currentSlotBoundary
+          if (currentRenderContext.slotBoundary) {
+            boundary = currentRenderContext.slotBoundary
           }
           return true
         },
@@ -640,8 +644,8 @@ describe('component: slots', () => {
         outer: true,
         inner: false,
         capture: () => {
-          if (currentSlotBoundary) {
-            boundary = currentSlotBoundary
+          if (currentRenderContext.slotBoundary) {
+            boundary = currentRenderContext.slotBoundary
           }
           return true
         },
@@ -1805,7 +1809,7 @@ describe('component: slots', () => {
       const vdom = (app._context as any).vdom
       const slotsRef = shallowRef({
         default: () => {
-          observedBoundary = currentSlotBoundary
+          observedBoundary = currentRenderContext.slotBoundary
           return [h('div', 'content')]
         },
       })
@@ -3881,7 +3885,7 @@ describe('component: slots', () => {
           define(() =>
             createComponent(Comp, null, {
               default: () => {
-                observedBoundary = currentSlotBoundary
+                observedBoundary = currentRenderContext.slotBoundary
                 return template('content')()
               },
             }),
@@ -3889,7 +3893,7 @@ describe('component: slots', () => {
 
           expect(slotBlock).toBeInstanceOf(DynamicFragment)
           expect(slotBlock).not.toBeInstanceOf(SlotFragment)
-          expect(isSlotFragment(slotBlock)).toBe(true)
+          expect(isVaporSlotOutlet(slotBlock)).toBe(true)
           expect(observedBoundary).toBe(null)
         })
 
@@ -3913,7 +3917,7 @@ describe('component: slots', () => {
           const { host } = define(() =>
             createComponent(Comp, null, {
               default: () => {
-                observedBoundary = currentSlotBoundary
+                observedBoundary = currentRenderContext.slotBoundary
                 return createIf(
                   () => show.value,
                   () => template('<span>content</span>')(),

@@ -39,7 +39,7 @@ import {
 } from '@vue/runtime-dom'
 import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
-import { compile, makeInteropRender } from './_utils'
+import { compile, makeInteropRender, renderParity } from './_utils'
 import { type DynamicFragment, isInteropFragment } from '../src/fragment'
 import {
   type VaporComponentInstance,
@@ -1489,6 +1489,57 @@ describe('vdomInterop', () => {
       expect(html()).toBe('<span>1</span>')
     })
 
+    test('keeps a VDOM component live inside v-once slot content regardless of nesting', async () => {
+      const VdomMid = defineComponent({
+        setup(_, { slots }) {
+          return () => h('b', slots.default && slots.default())
+        },
+      })
+      const Child = `<template><div><slot v-once/></div></template>`
+      for (const content of [
+        `<components.VdomMid>{{ data.msg }}</components.VdomMid>`,
+        `<div><components.VdomMid>{{ data.msg }}</components.VdomMid></div>`,
+      ]) {
+        const { vdom, vapor } = await renderParity(
+          {
+            Child,
+            App: `<template><components.Child>${content}</components.Child></template>`,
+          },
+          () => ref({ msg: 'a' }),
+          data => {
+            data.value.msg = 'b'
+          },
+          { VdomMid },
+        )
+        expect(vdom.text).toBe('b')
+        expect(vapor.text).toBe('b')
+      }
+    })
+
+    test('keeps VDOM-owned props live on Vapor descendants inside v-once slot content', async () => {
+      let bump!: () => void
+      const VdomMid = defineComponent({
+        setup(_, { slots }) {
+          const n = ref(0)
+          bump = () => n.value++
+          return () =>
+            h('b', [n.value, slots.default && slots.default({ n: n.value })])
+        },
+      })
+      const { vdom, vapor } = await renderParity(
+        {
+          Leaf: `<script setup>const props = defineProps(['n'])</script><template><i>{{ props.n }}</i></template>`,
+          Child: `<template><div><slot v-once/></div></template>`,
+          App: `<template><components.Child><div><components.VdomMid v-slot="{ n }"><components.Leaf :n="n"/></components.VdomMid></div></components.Child></template>`,
+        },
+        () => ref({}),
+        () => bump(),
+        { VdomMid },
+      )
+      expect(vdom.text).toBe('11')
+      expect(vapor.text).toBe('11')
+    })
+
     test('falls through to outlet fallback when vdom local fallback is invalidated or removed from VaporSlot', async () => {
       const mode = ref<'local' | 'empty' | 'none'>('local')
       const localText = ref('local fallback')
@@ -2386,7 +2437,7 @@ describe('vdomInterop', () => {
         },
         render() {
           const setRef = createTemplateRefSetter()
-          const n0 = createDynamicComponent(() => VdomChild)
+          const n0 = createDynamicComponent(() => VdomChild) as DynamicFragment
           setRef(n0, vdomRef, false, 'vdomRef')
           return n0
         },
@@ -2452,7 +2503,7 @@ describe('vdomInterop', () => {
       const VaporChild = defineVaporComponent({
         setup() {
           const setRef = createTemplateRefSetter()
-          const n0 = createDynamicComponent(() => VdomChild)
+          const n0 = createDynamicComponent(() => VdomChild) as DynamicFragment
           renderEffect(() => {
             setRef(n0, useA.value ? refA : refB, false, 'vdomRef')
           })
@@ -4279,6 +4330,49 @@ describe('vdomInterop', () => {
       ).toHaveBeenWarnedTimes(2)
       expect(beforeUpdateSpy).toHaveBeenCalledTimes(0)
       expect(updatedSpy).toHaveBeenCalledTimes(0)
+    })
+    test('deactivating a vapor child should move vdom slot content with leave semantics', async () => {
+      const onEnter = vi.fn((_el: Element, done: () => void) => done())
+      const onLeave = vi.fn((_el: Element, done: () => void) => done())
+      const data = ref({ current: 'A', show: true, onEnter, onLeave })
+      // a vapor outlet rendering vdom slot content
+      const A = compile(`<template><slot>fallback</slot></template>`, data)
+      const B = compile(
+        `<script setup>const data = _data;</script><template><p>B</p></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components;</script>
+        <template>
+          <KeepAlive>
+            <components.A v-if="data.current === 'A'">
+              <Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">
+                <div v-if="data.show">A</div>
+              </Transition>
+            </components.A>
+            <components.B v-else />
+          </KeepAlive>
+        </template>`,
+        data,
+        { A, B },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      expect(host.textContent).toContain('A')
+      expect(onEnter).not.toHaveBeenCalled()
+
+      data.value.current = 'B'
+      await nextTick()
+      expect(host.textContent).toContain('B')
+      expect(onLeave).toHaveBeenCalledTimes(1)
+      expect(onEnter).not.toHaveBeenCalled()
+
+      data.value.current = 'A'
+      await nextTick()
+      expect(host.textContent).toContain('A')
+      expect(onEnter).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -7223,4 +7317,38 @@ describe('vdomInterop', () => {
       expect(`returned non-block value`).toHaveBeenWarned()
     })
   })
+
+  // #15442
+  test.each([true, false])(
+    'should merge component listeners across interop (Vapor parent: %s)',
+    vaporParent => {
+      const onStatic = vi.fn()
+      const onObject = vi.fn()
+      const data = ref({ onStatic, listeners: { click: onObject } })
+      const Child = compile(
+        `<script setup ${vaporParent ? '' : 'vapor'}>
+          defineEmits(['click'])
+        </script>
+        <template><button @click="$emit('click')">click</button></template>`,
+        ref(null),
+        {},
+        { vapor: !vaporParent },
+      )
+      const Parent = compile(
+        `<script setup ${vaporParent ? 'vapor' : ''}>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child @click="data.onStatic" v-on="data.listeners" /></template>`,
+        data,
+        { Child },
+        { vapor: vaporParent },
+      )
+      const { host } = define(Parent).render()
+      const button = host.querySelector('button')!
+      button.click()
+      expect(onStatic).toHaveBeenCalledTimes(1)
+      expect(onObject).toHaveBeenCalledTimes(1)
+    },
+  )
 })

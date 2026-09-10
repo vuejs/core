@@ -7,6 +7,7 @@ import {
   isArray,
   isFunction,
   isObject,
+  isOn,
   isPlainObject,
   isString,
   normalizeClass,
@@ -38,7 +39,6 @@ import {
 } from '@vue/reactivity'
 import { normalizeEmitsOptions } from './componentEmits'
 import { renderEffect } from './renderEffect'
-import { pauseTracking, resetTracking } from '@vue/reactivity'
 import type { interopKey } from './vdomInteropState'
 
 export type RawProps = Record<string, unknown> & {
@@ -226,11 +226,14 @@ export function resolveFunctionSource<T>(
 export function snapshotRawProps(rawProps: RawProps): RawProps {
   // Freeze the parent-provided raw source, not the child props proxy. This
   // keeps prop defaults lazy while preserving v-once input semantics.
+  // Sources are read directly: the caller is the instance that defined them,
+  // and a one-time read has no use for the computed `resolveFunctionSource`
+  // would allocate. Values are stored plain; only a function value needs a
+  // getter so readers do not invoke it.
   const snapshot: RawProps = Object.create(null)
   for (const key in rawProps) {
     if (key !== '$') {
-      const value = resolveSource(rawProps[key])
-      snapshot[key] = () => value
+      snapshot[key] = freezeValue(key, readSource(rawProps[key]))
     }
   }
 
@@ -241,22 +244,18 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
     } = []
     for (let i = 0; i < dynamicSources.length; i++) {
       const source = dynamicSources[i]
+      const isDynamic = isFunction(source)
+      const resolved = readSource(source) || EMPTY_OBJ
+      // Object sources are read without a per-source computed, so a resolved
+      // function source is stored in that shape.
       const value: Record<string, unknown> = Object.create(null)
-      if (isFunction(source)) {
-        const resolved = resolveFunctionSource(
-          source as () => Record<string, unknown>,
+      for (const key in resolved) {
+        value[key] = freezeValue(
+          key,
+          isDynamic ? resolved[key] : readSource(resolved[key]),
         )
-        for (const key in resolved) {
-          value[key] = resolved[key]
-        }
-        snapshotSources[i] = () => value
-      } else {
-        for (const key in source) {
-          const resolved = resolveSource(source[key])
-          value[key] = () => resolved
-        }
-        snapshotSources[i] = value
       }
+      snapshotSources[i] = value
     }
     const symbols = Object.getOwnPropertySymbols(dynamicSources)
     for (let i = 0; i < symbols.length; i++) {
@@ -268,6 +267,16 @@ export function snapshotRawProps(rawProps: RawProps): RawProps {
   }
 
   return snapshot
+}
+
+function readSource<T>(source: T | (() => T)): T {
+  return isFunction(source) ? (source as () => T)() : source
+}
+
+function freezeValue(key: string, value: unknown): unknown {
+  if (key === 'class' && value && !isString(value)) return normalizeClass(value)
+  if (key === 'style' && isArray(value)) return normalizeStyle(value)
+  return isFunction(value) ? () => value : value
 }
 
 function stabilizeDynamicSourceValue<T>(oldValue: T | undefined, value: T): T {
@@ -339,6 +348,38 @@ export function getPropsProxyHandlers(
     if (!isProp(key)) return
     const rawProps = instance.rawProps
     const dynamicSources = rawProps.$
+    if (dynamicSources && isOn(key)) {
+      const handlers: Record<string, unknown> = {}
+      let matchedKey: string | undefined
+      // Match mergeProps: merge exact raw keys in source order before
+      // resolving camelized aliases in their first occurrence order.
+      for (let i = -1; i < dynamicSources.length; i++) {
+        const source = i < 0 ? rawProps : dynamicSources[i]
+        const isDynamic = isFunction(source)
+        const resolved = isDynamic ? resolveFunctionSource(source) : source
+        for (const rawKey in resolved) {
+          if (camelize(rawKey) === key) {
+            if (!hasOwn(handlers, rawKey)) matchedKey = rawKey
+            const value = isDynamic
+              ? resolved[rawKey]
+              : resolveSource(resolved[rawKey])
+            handlers[rawKey] = mergeEventHandlers(handlers[rawKey], value)
+          }
+        }
+      }
+      return resolvePropValue(
+        propsOptions!,
+        key,
+        matchedKey === undefined ? undefined : handlers[matchedKey],
+        instance,
+        resolveDefault,
+        matchedKey === undefined,
+      )
+    }
+    const merged =
+      dynamicSources && (key === 'class' || key === 'style')
+        ? ([] as unknown[])
+        : undefined
     if (dynamicSources) {
       let i = dynamicSources.length
       let source, isDynamic, rawKey
@@ -352,70 +393,69 @@ export function getPropsProxyHandlers(
           : source
         for (rawKey in source) {
           if (camelize(rawKey) === key) {
-            return resolvePropValue(
-              propsOptions!,
-              key,
-              normalizeRawProp(
+            const value = isDynamic
+              ? source[rawKey]
+              : resolveSource(source[rawKey])
+            if (merged) {
+              merged.push(value)
+            } else {
+              return resolvePropValue(
+                propsOptions!,
                 key,
-                isDynamic ? source[rawKey] : resolveSource(source[rawKey]),
-              ),
-              instance,
-              resolveDefault,
-            )
+                normalizeRawProp(key, value),
+                instance,
+                resolveDefault,
+              )
+            }
           }
         }
       }
     }
     for (const rawKey in rawProps) {
       if (camelize(rawKey) === key) {
-        return resolvePropValue(
-          propsOptions!,
-          key,
-          normalizeRawProp(key, resolveSource(rawProps[rawKey])),
-          instance,
-          resolveDefault,
-        )
+        const value = resolveSource(rawProps[rawKey])
+        if (merged) {
+          merged.push(value)
+        } else {
+          return resolvePropValue(
+            propsOptions!,
+            key,
+            normalizeRawProp(key, value),
+            instance,
+            resolveDefault,
+          )
+        }
+      }
+    }
+    const hasMerged = !!(merged && merged.length)
+    let value
+    if (hasMerged) {
+      if (merged.length === 1) {
+        value = merged[0]
+      } else if (key === 'class') {
+        // Match mergeProps, including leaving all-undefined classes undefined.
+        for (let i = merged.length - 1; i >= 0; i--) {
+          if (value !== merged[i]) {
+            value = normalizeClass([value, merged[i]])
+          }
+        }
+      } else {
+        value = merged.reverse()
       }
     }
     return resolvePropValue(
       propsOptions!,
       key,
-      undefined,
+      normalizeRawProp(key, value),
       instance,
       resolveDefault,
-      true,
+      !hasMerged,
     )
   }
 
-  const withOnceCache = <
-    T extends (instance: VaporComponentInstance, key: string | symbol) => any,
-  >(
-    getter: T,
-  ): T => {
-    return ((instance: VaporComponentInstance, key: string | symbol) => {
-      const cache =
-        instance.oncePropsCache ||
-        (instance.oncePropsCache = Object.create(null))
-      if (!hasOwn(cache, key)) {
-        pauseTracking()
-        try {
-          cache[key] = getter(instance, key)
-        } finally {
-          resetTracking()
-        }
-      }
-      return cache[key]
-    }) as T
-  }
-
-  const getOnceProp = withOnceCache(getProp)
-  const getMaybeOnceProp = (
-    instance: VaporComponentInstance,
-    key: string | symbol,
-  ) => (instance.isOnce ? getOnceProp : getProp)(instance, key)
   const propsHandlers = propsOptions
     ? ({
-        get: getMaybeOnceProp,
+        get: getProp,
         has: (_, key) => isProp(key),
         ownKeys: () => Object.keys(propsOptions),
         getOwnPropertyDescriptor(target, key) {
@@ -423,7 +463,7 @@ export function getPropsProxyHandlers(
             return {
               configurable: true,
               enumerable: true,
-              get: () => getMaybeOnceProp(target, key),
+              get: () => getProp(target, key),
             }
           }
         },
@@ -451,63 +491,18 @@ export function getPropsProxyHandlers(
     }
   }
 
-  const getOnceAttr = withOnceCache((instance, key) =>
-    getAttr(instance.rawProps, key),
-  )
-  const onceAttrKeys = Symbol()
   const getAttrKeys = (target: VaporComponentInstance) =>
     getKeysFromRawProps(target.rawProps).filter(isAttr)
-  const getOnceAttrKeys = (target: VaporComponentInstance) => {
-    const cache =
-      target.oncePropsCache || (target.oncePropsCache = Object.create(null))
-    if (!hasOwn(cache, onceAttrKeys)) {
-      pauseTracking()
-      try {
-        // Freeze both the attr key set and its initial values so direct
-        // delayed reads do not see attrs added after the once boundary.
-        const keys = getAttrKeys(target)
-        cache[onceAttrKeys] = keys
-        for (let i = 0; i < keys.length; i++) {
-          const key = keys[i]
-          if (!hasOwn(cache, key)) {
-            cache[key] = getAttr(target.rawProps, key)
-          }
-        }
-      } finally {
-        resetTracking()
-      }
-    }
-    return cache[onceAttrKeys] as string[]
-  }
-  const getMaybeOnceAttrKeys = (target: VaporComponentInstance) =>
-    target.isOnce ? getOnceAttrKeys(target) : getAttrKeys(target)
-  const getMaybeOnceAttr = (
-    instance: VaporComponentInstance,
-    key: string | symbol,
-  ) =>
-    instance.isOnce
-      ? getOnceAttrKeys(instance).includes(key as string)
-        ? getOnceAttr(instance, key)
-        : undefined
-      : getAttr(instance.rawProps, key)
   const attrsHandlers = {
-    get: getMaybeOnceAttr,
-    has: (target, key: string | symbol) =>
-      target.isOnce
-        ? getOnceAttrKeys(target).includes(key as string)
-        : hasAttr(target.rawProps, key),
-    ownKeys: getMaybeOnceAttrKeys,
+    get: (target, key: string | symbol) => getAttr(target.rawProps, key),
+    has: (target, key: string | symbol) => hasAttr(target.rawProps, key),
+    ownKeys: getAttrKeys,
     getOwnPropertyDescriptor(target, key: string | symbol) {
-      if (
-        isString(key) &&
-        (target.isOnce
-          ? getOnceAttrKeys(target).includes(key)
-          : hasAttr(target.rawProps, key))
-      ) {
+      if (isString(key) && hasAttr(target.rawProps, key)) {
         return {
           configurable: true,
           enumerable: true,
-          get: () => getMaybeOnceAttr(target, key),
+          get: () => getAttr(target.rawProps, key),
         }
       }
     },
@@ -525,9 +520,11 @@ export function getPropsProxyHandlers(
 
 export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
   if (key === '$') return
-  // need special merging behavior for class & style
-  const merged = key === 'class' || key === 'style' ? ([] as any[]) : undefined
   const dynamicSources = rawProps.$
+  const isEvent = dynamicSources && isString(key) && isOn(key)
+  // Class, style and event listeners merge across prop sources.
+  const merged =
+    key === 'class' || key === 'style' || isEvent ? ([] as any[]) : undefined
   if (dynamicSources) {
     let i = dynamicSources.length
     let source, isDynamic
@@ -556,8 +553,18 @@ export function getAttrFromRawProps(rawProps: RawProps, key: string): unknown {
     }
   }
   if (merged && merged.length) {
-    return merged.reverse()
+    merged.reverse()
+    return isEvent ? merged.reduce(mergeEventHandlers) : merged
   }
+}
+
+function mergeEventHandlers(existing: unknown, incoming: unknown): unknown {
+  if (!existing) return incoming
+  return incoming &&
+    existing !== incoming &&
+    !(isArray(existing) && existing.includes(incoming))
+    ? ([] as unknown[]).concat(existing, incoming)
+    : existing
 }
 
 export function hasAttrFromRawProps(rawProps: RawProps, key: string): boolean {
@@ -681,11 +688,11 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
         const value = isDynamic ? resolved[key] : resolveSource(source[key])
         if (key === 'class' || key === 'style') {
           const existing = mergedRawProps[key]
-          if (isArray(existing)) {
-            existing.push(value)
-          } else {
-            mergedRawProps[key] = [existing, value]
-          }
+          mergedRawProps[key] = isArray(existing)
+            ? [...existing, value]
+            : [existing, value]
+        } else if (isOn(key)) {
+          mergedRawProps[key] = mergeEventHandlers(mergedRawProps[key], value)
         } else {
           mergedRawProps[key] = value
         }

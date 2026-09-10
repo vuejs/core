@@ -17,7 +17,7 @@ import {
   isVaporComponent,
   settleDeferredKeepAliveUpdates,
 } from './component'
-import { inOnceSlot } from './componentSlots'
+import { inOnce } from './once'
 import { invokeArrayFns } from '@vue/shared'
 import { isSuspenseEnabled } from './suspense'
 
@@ -143,8 +143,7 @@ export class RenderEffect extends ReactiveEffect {
 }
 
 export function renderEffect(fn: () => void, noLifecycle = false): void {
-  // in once slot, just run the function directly
-  if (inOnceSlot) return fn()
+  if (inOnce) return fn()
 
   const effect = new RenderEffect(fn, noLifecycle)
   effect.run()

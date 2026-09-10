@@ -78,11 +78,12 @@ import {
   getRootElement,
   isVaporComponent,
   mountComponent,
+  resolveFallthroughAttrs,
+  resolveFallthroughOwner,
   unmountComponent,
 } from './component'
 import {
   collectRootScopeIds,
-  currentSlotScopeIds,
   getCurrentScopeId,
   setPublishInteropScopeIds,
 } from './scopeId'
@@ -120,11 +121,8 @@ import {
   setupPropsValidation,
 } from './componentProps'
 import type { RawSlots, VaporSlot } from './componentSlots'
-import {
-  dynamicSlotsProxyHandlers,
-  getSlot,
-  withOnceSlot,
-} from './componentSlots'
+import { dynamicSlotsProxyHandlers, getSlot } from './componentSlots'
+import { inOnce, withOnce } from './once'
 import { renderEffect } from './renderEffect'
 import { createTextNode, parentNode } from './dom/node'
 import { optimizePropertyLookup } from './dom/prop'
@@ -132,12 +130,14 @@ import {
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
+  createFragmentClaim,
   currentHydrationNode,
   isClaimedAnchor,
   isComment,
   isHydrating,
   locateEndAnchor,
   locateFragmentEnd,
+  locateHydrationNode,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -150,7 +150,6 @@ import {
   isFragment,
   isSlotResolver,
   resolveFragmentAnchor,
-  runWithFragmentCtxOnly,
 } from './fragment'
 import { SLOT_OUTLET, VDOM } from './fragmentFlags'
 import {
@@ -208,14 +207,19 @@ import {
   isKeepAliveEnabled,
 } from './keepAlive'
 import {
-  parentSuspense as currentParentSuspense,
   currentUnmountSuspense,
   enableSuspense,
   isSuspenseEnabled,
   resolveUnmountSuspense,
   runWithUnmountSuspense,
-  setParentSuspense,
 } from './suspense'
+import {
+  currentRenderContext,
+  deriveSlotScopeIds,
+  deriveSuspense,
+  setRenderContext,
+  withRenderContext,
+} from './renderContext'
 
 const EMPTY_VNODES = EMPTY_ARR as unknown as VNode[]
 
@@ -357,9 +361,9 @@ const vaporInteropImpl: VaporInVdomInterface = {
     const slotsRef = shallowRef(normalizeInteropSlots(vnode.children))
     const rawSlots = createInteropRawSlots(slotsRef)
 
-    let prevSuspense: SuspenseBoundary | null = null
+    const prevCtx = currentRenderContext
     if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
-      prevSuspense = setParentSuspense(parentSuspense)
+      setRenderContext(deriveSuspense(prevCtx, parentSuspense))
     }
 
     const dynamicPropSource: (() => any)[] & { [interopKey]?: boolean } = [
@@ -403,9 +407,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       })
     }
 
-    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
-      setParentSuspense(prevSuspense)
-    }
+    setRenderContext(prevCtx)
 
     const rootEl = resolveInteropRootEl(instance)
     if (rootEl) {
@@ -1092,6 +1094,56 @@ function createVNodeFragment(vnode: VNode): {
 }
 
 /**
+ * Mount a vnode as a dynamic component branch (`<component :is="vnode">`
+ * in a vapor template). The KeepAlive lookup, fallthrough and hydration of
+ * the vnode live here so the dynamic component only sees a block.
+ */
+function mountDynamicVNode(
+  internals: RendererInternals,
+  vnode: VNode,
+  parentComponent: VaporComponentInstance | null,
+  isSingleRoot?: boolean,
+): VaporFragment {
+  if (parentComponent && isKeepAlive(parentComponent)) {
+    const cached = (
+      parentComponent as KeepAliveInstance
+    ).ctx.getCachedComponent(vnode.type, vnode.key) as VaporFragment
+    if (cached) return cached
+  }
+  // A vnode standing in as the parent's effective root inherits fallthrough
+  // attrs merged into its props (see mountVNode).
+  const owner = resolveFallthroughOwner(isSingleRoot)
+  const frag = mountVNode(
+    internals,
+    vnode,
+    parentComponent,
+    owner && (() => resolveFallthroughAttrs(owner)),
+  )
+  if (isHydrating) {
+    locateHydrationNode(
+      shouldConsumeFragmentStart(vnode) ? createFragmentClaim() : undefined,
+    )
+    frag.hydrate!()
+  }
+  return frag
+}
+
+function shouldConsumeFragmentStart(vnode: VNode): boolean {
+  if (vnode.type === Fragment) {
+    return false
+  }
+
+  // Only Vapor component VNodes carry `__multiRoot`
+  // e.g. `h(VaporComp)`
+  if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    const type = vnode.type as { __vapor?: boolean; __multiRoot?: boolean }
+    return !!type.__vapor && !type.__multiRoot
+  }
+
+  return true
+}
+
+/**
  * Mount VNode in vapor
  */
 function mountVNode(
@@ -1101,7 +1153,8 @@ function mountVNode(
   getFallthroughAttrs?: () => Record<string, any>,
 ): VaporFragment {
   let suspense =
-    currentParentSuspense || (parentComponent && parentComponent.suspense)
+    currentRenderContext.suspense ||
+    (parentComponent && parentComponent.suspense)
   // A vnode standing in as a component's effective root inherits fallthrough
   // attrs the same way VDOM does it — merged into the vnode's props
   // (`cloneVNode` -> `mergeProps`), so mount and patch apply them natively
@@ -1158,11 +1211,11 @@ function mountVNode(
     syncNodes()
   }
 
-  frag.insert = (
-    parentNode,
-    anchor,
-    parentSuspense,
-    transition,
+  const place = (
+    parentNode: ParentNode,
+    anchor: Node | null,
+    parentSuspense: SuspenseBoundary | null | undefined,
+    transition: TransitionHooks | undefined,
     moveType = MoveType.REORDER,
   ) => {
     if (isHydrating) return
@@ -1224,6 +1277,16 @@ function mountVNode(
     syncNodes()
     if (isMounted && frag.u) frag.u.forEach(hook => hook())
   }
+  frag.insert = (parentNode, anchor, parentSuspense, transition) =>
+    place(parentNode, anchor, parentSuspense, transition)
+  frag.move = (
+    parentNode,
+    anchor,
+    moveType,
+    _parentComponent,
+    parentSuspense,
+    transition,
+  ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
   if (getFallthroughAttrs) {
     // Re-clone and let VDOM patch the change through, mirroring how a VDOM
@@ -1279,7 +1342,8 @@ function createVDOMComponent(
   once?: boolean,
 ): VaporFragment {
   let suspense =
-    currentParentSuspense || (parentComponent && parentComponent.suspense)
+    currentRenderContext.suspense ||
+    (parentComponent && parentComponent.suspense)
   const useBridge = shouldUseRendererBridge(component)
   const comp = useBridge ? ensureRendererBridge(component) : component
   const vnode = createVNode(
@@ -1413,13 +1477,13 @@ function createVDOMComponent(
   }
 
   vnode.scopeId = getCurrentScopeId() || null
-  vnode.slotScopeIds = currentSlotScopeIds
+  vnode.slotScopeIds = currentRenderContext.slotScopeIds
 
-  frag.insert = (
-    parentNode,
-    anchor,
-    parentSuspense,
-    transition,
+  const place = (
+    parentNode: ParentNode,
+    anchor: Node | null,
+    parentSuspense: SuspenseBoundary | null | undefined,
+    transition: TransitionHooks | undefined,
     moveType = MoveType.REORDER,
   ) => {
     if (isHydrating) return
@@ -1473,6 +1537,16 @@ function createVDOMComponent(
     syncNodes()
     if (isMounted && frag.u) frag.u.forEach(hook => hook())
   }
+  frag.insert = (parentNode, anchor, parentSuspense, transition) =>
+    place(parentNode, anchor, parentSuspense, transition)
+  frag.move = (
+    parentNode,
+    anchor,
+    moveType,
+    _parentComponent,
+    parentSuspense,
+    transition,
+  ) => place(parentNode, anchor, parentSuspense, transition, moveType)
 
   frag.remove = unmount
 
@@ -1764,7 +1838,7 @@ function renderVDOMSlot(
   const forwarded = isForwardedSlot(flags)
   const inheritFallback = slotInheritsFallback(flags)
   const notifiesBoundary = slotNotifiesBoundary(flags)
-  let suspense = currentParentSuspense || parentComponent.suspense
+  let suspense = currentRenderContext.suspense || parentComponent.suspense
   // frag.slotScopeIds is the outlet's id cell (the ambient createSlot
   // establishes around this call) — the base patch context for content
   // patches.
@@ -1839,11 +1913,16 @@ function renderVDOMSlot(
   }
   localFallback = fallback
     ? once
-      ? () => withOnceSlot(() => fallback(internals, parentComponent))
+      ? () => withOnce(() => fallback(internals, parentComponent))
       : () => fallback(internals, parentComponent)
     : undefined
 
-  frag.insert = (parentNode, anchor, parentSuspense) => {
+  const place = (
+    parentNode: ParentNode,
+    anchor: Node | null,
+    parentSuspense: SuspenseBoundary | null | undefined,
+    moveType?: MoveType,
+  ) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     // A non-inherited local fallback can revive independently of sibling
@@ -1876,22 +1955,35 @@ function renderVDOMSlot(
           rendered,
           parentNode,
           anchor,
-          MoveType.REORDER,
+          moveType === undefined ? MoveType.REORDER : moveType,
           parentComponent as any,
           suspense,
         )
       } else if (rendered) {
         // move vapor content
-        insert(rendered, parentNode, anchor, suspense)
+        if (moveType === undefined) {
+          insert(rendered, parentNode, anchor, suspense)
+        } else {
+          move(rendered, parentNode, anchor, moveType, undefined, suspense)
+        }
       }
 
       if (!sharedContentParked) {
-        insertActiveSlotFallback(slotResolutionState)
+        insertActiveSlotFallback(slotResolutionState, moveType)
       }
     }
 
     notifyUpdated()
   }
+  frag.insert = (parentNode, anchor, parentSuspense) =>
+    place(parentNode, anchor, parentSuspense)
+  frag.move = (
+    parentNode,
+    anchor,
+    moveType,
+    _parentComponent,
+    parentSuspense,
+  ) => place(parentNode, anchor, parentSuspense, moveType)
 
   frag.remove = parentNode => {
     const storage = sharedContentStorage
@@ -2128,7 +2220,7 @@ function renderVDOMSlot(
 
   function renderContent(): void {
     notifyBeforeUpdate()
-    runWithFragmentCtxOnly(frag, () =>
+    withRenderContext(frag.ctx, () =>
       withSlotBoundary(contentBoundary, () => {
         const { content: slotContent, valid: slotContentValid } =
           resolveSlotContent()
@@ -2169,7 +2261,7 @@ function renderVDOMSlot(
     if (slotsRef.value) {
       const renderContent = () =>
         renderSlot(slotsRef.value, isFunction(name) ? name() : name, props)
-      slotContent = once ? withOnceSlot(renderContent) : renderContent()
+      slotContent = once ? withOnce(renderContent) : renderContent()
 
       if (isVNode(slotContent)) {
         if (slotContent.type === Fragment) {
@@ -2593,7 +2685,7 @@ export const vaporInteropPlugin: Plugin = app => {
   app._context.vdom = {
     mount: createVDOMComponent.bind(null, internals),
     slot: renderVDOMSlot.bind(null, internals),
-    mountVNode: mountVNode.bind(null, internals),
+    mountVNode: mountDynamicVNode.bind(null, internals),
   } satisfies VdomInVaporInterface
   const mount = app.mount
   app.mount = ((...args) => {
@@ -2724,10 +2816,10 @@ function renderVaporSlot(
   contextSlotScopeIds: string[] | null,
 ): Block {
   const prev = currentInstance
-  let prevSuspense: SuspenseBoundary | null = null
+  const prevCtx = currentRenderContext
   simpleSetCurrentInstance(parentComponent)
   if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
-    prevSuspense = setParentSuspense(parentSuspense)
+    setRenderContext(deriveSuspense(prevCtx, parentSuspense))
   }
   try {
     if (!vnode.vs || !vnode.vs.slot) {
@@ -2741,10 +2833,9 @@ function renderVaporSlot(
     const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
     // The vnode-derived slot context becomes the creation ambient for the
     // vapor-rendered content, restored via the fragment's render seam.
-    frag.slotScopeIds = getInteropVaporSlotScopeIds(
-      vnode,
-      parentComponent,
-      contextSlotScopeIds,
+    frag.ctx = deriveSlotScopeIds(
+      frag.ctx,
+      getInteropVaporSlotScopeIds(vnode, parentComponent, contextSlotScopeIds),
     )
     const content = new InteropContentState()
     frag.isBlockValid = componentAsValid =>
@@ -2885,7 +2976,7 @@ function renderVaporSlot(
             )
             try {
               return finalizeResolvedContent(
-                runWithFragmentCtxOnly(frag, () => {
+                withRenderContext(frag.ctx, () => {
                   const renderSlot = () =>
                     withSlotBoundary(localFallbackBoundary, () =>
                       invokeVaporSlot(vnode),
@@ -2899,7 +2990,7 @@ function renderVaporSlot(
           })
         } else {
           resolvedContent = finalizeResolvedContent(
-            runWithFragmentCtxOnly(frag, () =>
+            withRenderContext(frag.ctx, () =>
               withSlotBoundary(localFallbackBoundary, () =>
                 invokeVaporSlot(vnode),
               ),
@@ -2936,6 +3027,28 @@ function renderVaporSlot(
           insert(frag.nodes, parentNode, anchor, parentSuspense)
         }
       }
+      frag.move = (
+        parentNode,
+        anchor,
+        moveType,
+        parentComponent,
+        parentSuspense,
+      ) => {
+        currentParentNode = parentNode
+        currentAnchor = anchor
+        if (slotResolutionState.activeFallback) {
+          insertActiveSlotFallback(slotResolutionState, moveType)
+        } else {
+          move(
+            frag.nodes,
+            parentNode,
+            anchor,
+            moveType,
+            parentComponent,
+            parentSuspense,
+          )
+        }
+      }
       frag.remove = parentNode => {
         if (!slotResolutionState.activeFallback) {
           remove(frag.nodes, parentNode)
@@ -2958,9 +3071,7 @@ function renderVaporSlot(
       throw e
     }
   } finally {
-    if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && parentSuspense) {
-      setParentSuspense(prevSuspense)
-    }
+    setRenderContext(prevCtx)
     simpleSetCurrentInstance(prev)
   }
 }
@@ -2982,9 +3093,11 @@ function invokeVaporSlot(vnode: VNode): Block {
   const scope = effectScope()
   vnode.vs!.scope = scope
   try {
-    return scope.run(() =>
-      vnode.vs!.slot(new Proxy(propsRef, vaporSlotPropsProxyHandler)),
-    )!
+    const run = () =>
+      vnode.vs!.slot(new Proxy(propsRef, vaporSlotPropsProxyHandler))
+    // vdom is a boundary: the slot it invokes runs live even when the vdom
+    // render sits inside a v-once extent.
+    return (inOnce ? withOnce(() => scope.run(run), false) : scope.run(run))!
   } catch (e) {
     vnode.vs!.scope = undefined
     scope.stop()
@@ -3088,7 +3201,8 @@ function createVNodeChildrenFragment(
   parentComponent: ComponentInternalInstance | null,
 ): VaporFragment {
   let suspense =
-    currentParentSuspense || (parentComponent && parentComponent.suspense)
+    currentRenderContext.suspense ||
+    (parentComponent && parentComponent.suspense)
   const frag = createInteropFragment()
   const content = new InteropContentState()
   // `isBlockValid` reports `content.valid` (VDOM-side `ensureValidVNode`), not
@@ -3157,7 +3271,7 @@ function createVNodeChildrenFragment(
     simpleSetCurrentInstance(parentComponent)
     try {
       renderEffect(() => {
-        runWithFragmentCtxOnly(frag, () => {
+        withRenderContext(frag.ctx, () => {
           const nextChildren = render()
           notifyBeforeUpdate()
           if (isHydrating) {
@@ -3264,7 +3378,12 @@ function createVNodeChildrenFragment(
     startRenderEffect()
   }
 
-  frag.insert = (parentNode, anchor, parentSuspense) => {
+  const place = (
+    parentNode: ParentNode,
+    anchor: Node | null,
+    parentSuspense: SuspenseBoundary | null | undefined,
+    moveType = MoveType.REORDER,
+  ) => {
     if (isHydrating) return
     if (parentSuspense !== undefined) suspense = parentSuspense
     currentParentNode = parentNode
@@ -3301,13 +3420,22 @@ function createVNodeChildrenFragment(
           vnode,
           parentNode,
           anchor,
-          MoveType.REORDER,
+          moveType,
           parentComponent as any,
           suspense,
         )
       })
     }
   }
+  frag.insert = (parentNode, anchor, parentSuspense) =>
+    place(parentNode, anchor, parentSuspense)
+  frag.move = (
+    parentNode,
+    anchor,
+    moveType,
+    _parentComponent,
+    parentSuspense,
+  ) => place(parentNode, anchor, parentSuspense, moveType)
 
   frag.remove = parentNode => {
     scope.stop()

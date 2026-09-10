@@ -28,13 +28,14 @@ import {
 } from '../src'
 import { compile, compileToVaporRender, makeRender } from './_utils'
 import { type VaporComponentInstance, currentInstance } from '../src/component'
-import { currentSlotOwner, setCurrentSlotOwner } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
+import { enableSuspense } from '../src/suspense'
 import {
-  enableSuspense,
-  parentSuspense,
-  setParentSuspense,
-} from '../src/suspense'
+  currentRenderContext,
+  deriveSlotOwner,
+  deriveSuspense,
+  setRenderContext,
+} from '../src/renderContext'
 
 const define = makeRender()
 
@@ -111,6 +112,22 @@ describe('component', () => {
 
     expect(host.innerHTML).toBe('<foo-bar id="foo"></foo-bar>')
     expect(`Failed to resolve component: foo-bar`).toHaveBeenWarned()
+  })
+
+  it('renders a native tag with is="vue:" as the component', () => {
+    const Foo = defineVaporComponent({
+      setup() {
+        return template('<span>foo</span>')()
+      },
+    })
+    const App = compile(
+      `<template><button is="vue:Foo" /></template>`,
+      ref(null),
+    )
+    const { app, html, mount } = define(App).create()
+    app.component('Foo', Foo)
+    mount()
+    expect(html()).toBe('<span>foo</span>')
   })
 
   it('should pass maybeSelfReference when creating asset component', () => {
@@ -936,17 +953,20 @@ describe('component', () => {
         const instance = currentInstance as VaporComponentInstance
         instance.suspense = activeSuspense
 
-        const prevOwner = setCurrentSlotOwner(owner)
-        const prevSuspense = setParentSuspense(previousSuspense)
+        const prevCtx = setRenderContext(
+          deriveSuspense(
+            deriveSlotOwner(currentRenderContext, owner),
+            previousSuspense,
+          ),
+        )
         try {
           createComponent(Child)
         } catch (e) {
           caught = e
         }
-        ownerAfterThrow = currentSlotOwner
-        suspenseAfterThrow = parentSuspense
-        setCurrentSlotOwner(prevOwner)
-        setParentSuspense(prevSuspense)
+        ownerAfterThrow = currentRenderContext.slotOwner
+        suspenseAfterThrow = currentRenderContext.suspense
+        setRenderContext(prevCtx)
         return []
       },
     }).render()
@@ -971,6 +991,49 @@ describe('component', () => {
     type.value = 'text'
     await nextTick()
     expect(input.getAttribute('type')).toBe('text')
+  })
+
+  it('should dispose a component that was created but never mounted', () => {
+    // a render error after a root-chain child is created leaves that child
+    // owned by the parent scope without ever reaching mountComponent
+    const dispose = vi.fn()
+    const unmounted = vi.fn()
+    const Child = compile(
+      `<script vapor setup>
+      import { onScopeDispose, onUnmounted } from 'vue'
+      onScopeDispose(_components.dispose)
+      onUnmounted(_components.unmounted)
+      </script>
+      <template><div>child</div></template>`,
+      ref(null),
+      { dispose, unmounted },
+    )
+    const Parent = compile(
+      `<script vapor setup>
+      const Child = _components.Child
+      const boom = () => {
+        throw new Error('boom')
+      }
+      </script>
+      <template>
+        <Child />
+        <span>{{ boom() }}</span>
+      </template>`,
+      ref(null),
+      { Child },
+    )
+    const { app, mount } = define(Parent).create()
+    const handler = (app.config.errorHandler = vi.fn())
+    mount()
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(
+      `Vapor component setup() returned non-block value`,
+    ).toHaveBeenWarned()
+    expect(dispose).not.toHaveBeenCalled()
+
+    app.unmount()
+    expect(dispose).toHaveBeenCalledTimes(1)
+    expect(unmounted).not.toHaveBeenCalled()
   })
 })
 

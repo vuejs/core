@@ -1,9 +1,11 @@
 import { EffectScope } from '@vue/reactivity'
+import type { MoveType } from '@vue/runtime-dom'
 import {
   type Block,
   type VaporTransitionHooks,
   insert,
   isValidSlot,
+  move,
   remove,
   removeAttachedNodes,
 } from './block'
@@ -243,7 +245,10 @@ function renderFallbackInScope(
   }
 }
 
-export function insertActiveSlotFallback(state: SlotResolutionState): void {
+export function insertActiveSlotFallback(
+  state: SlotResolutionState,
+  moveType?: MoveType,
+): void {
   const fallback = state.activeFallback
   if (isHydrating || !fallback || !isValidSlot(fallback)) {
     return
@@ -252,7 +257,11 @@ export function insertActiveSlotFallback(state: SlotResolutionState): void {
   if (!parentNode) {
     return
   }
-  insert(fallback, parentNode, state.getAnchor())
+  if (moveType === undefined) {
+    insert(fallback, parentNode, state.getAnchor())
+  } else {
+    move(fallback, parentNode, state.getAnchor(), moveType)
+  }
   state.fallbackInserted = true
 }
 

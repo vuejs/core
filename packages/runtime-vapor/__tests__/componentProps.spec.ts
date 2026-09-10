@@ -16,7 +16,7 @@ import {
   template,
 } from '../src'
 import { resolveDynamicProps } from '../src/componentProps'
-import { compile, makeRender } from './_utils'
+import { compile, makeRender, renderParity } from './_utils'
 import { setElementText } from '../src/dom/prop'
 
 const define = makeRender<any>()
@@ -618,6 +618,40 @@ describe('component: props', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
+  test('v-once snapshots sources without caching computeds on them', () => {
+    const source = (() => ({ a: 1 })) as (() => any) & { _cache?: unknown }
+    const getter = (() => 2) as (() => any) & { _cache?: unknown }
+    const Child = defineVaporComponent({
+      props: ['a', 'b'],
+      setup(props: any) {
+        expect(props.a).toBe(1)
+        expect(props.b).toBe(2)
+        return []
+      },
+    })
+
+    // Nest one level: sources are only cached under an instance with a parent.
+    const Parent = defineVaporComponent({
+      setup() {
+        return createComponent(
+          Child,
+          { b: getter, $: [source] },
+          null,
+          true,
+          true,
+        )
+      },
+    })
+    define({
+      setup() {
+        return createComponent(Parent)
+      },
+    }).render()
+
+    expect(source._cache).toBeUndefined()
+    expect(getter._cache).toBeUndefined()
+  })
+
   // #15227
   test('declared class prop should be normalized', () => {
     const data = ref({ skin: { b: true, c: false } })
@@ -641,6 +675,63 @@ describe('component: props', () => {
     const { host } = define(Parent).render()
     expect(host.innerHTML).toBe('<div>a b</div>')
     expect('Invalid prop').not.toHaveBeenWarned()
+  })
+
+  test('declared class props merge static and v-bind sources', () => {
+    const data = ref({ attrs: { class: 'b' }, extra: 'c' })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ class: String })
+      </script>
+      <template><div>{{ props.class }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template><Child class="a" v-bind="data.attrs" :class="data.extra" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe('<div>a b c</div>')
+  })
+
+  test('declared event props merge static and v-on sources', () => {
+    const calls: string[] = []
+    const data = ref({
+      onStatic: () => calls.push('static'),
+      listeners: { click: () => calls.push('object') },
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ onClick: null })
+        const trigger = () => {
+          const handlers = Array.isArray(props.onClick)
+            ? props.onClick
+            : [props.onClick]
+          handlers.forEach(handler => handler())
+        }
+      </script><template><button @click="trigger">click</button></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<script setup vapor>
+        const data = _data
+        const Child = _components.Child
+      </script>
+      <template><Child @click="data.onStatic" v-on="data.listeners" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    host.querySelector('button')!.click()
+
+    expect(calls).toEqual(['static', 'object'])
   })
 
   test('class prop should only normalize the value that was passed', () => {
@@ -956,6 +1047,22 @@ describe('component: props', () => {
       expect(host.innerHTML).toBe('<div id="foo" class="bar">foo-bar</div>')
     })
 
+    test('resolveDynamicProps merges event listeners across sources', () => {
+      const first = vi.fn()
+      const second = vi.fn()
+      const third = vi.fn()
+      expect(
+        resolveDynamicProps({
+          onClick: () => first,
+          $: [
+            () => ({ onClick: [second, third] }),
+            { onClick: () => first },
+            () => ({ onClick: null }),
+          ],
+        }).onClick,
+      ).toEqual([first, second, third])
+    })
+
     test('resolveDynamicProps supports direct values in static object sources', () => {
       expect(
         resolveDynamicProps({
@@ -969,5 +1076,246 @@ describe('component: props', () => {
         title: 'baz',
       })
     })
+  })
+
+  test.each([
+    ':class="data.classes"',
+    ':class="[data.classes]"',
+    'v-bind="data.input"',
+    'v-bind="{}" :class="data.classes"',
+    ':[data.key]="data.classes"',
+  ])('v-once snapshots normalized declared class props (%s)', async binding => {
+    const classes = { active: true }
+    const data = ref({
+      classes,
+      input: { class: classes },
+      key: 'class',
+      readClass: () => '',
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ class: String })
+        _data.value.readClass = () => props.class
+      </script>
+      <template><div>{{ props.class }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child v-once ${binding} /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(data.value.readClass()).toBe('active')
+    expect(host.innerHTML).toBe('<div>active</div>')
+
+    data.value.classes.active = false
+    await nextTick()
+
+    expect.soft(data.value.readClass()).toBe('active')
+    expect.soft(host.innerHTML).toBe('<div>active</div>')
+  })
+
+  test.each([
+    ':style="[data.styles]"',
+    'v-bind="data.input"',
+    'v-bind="{}" :style="[data.styles]"',
+    ':[data.key]="[data.styles]"',
+  ])('v-once snapshots normalized declared style props (%s)', async binding => {
+    const styles = { color: 'red' }
+    const data = ref({
+      styles,
+      input: { style: [styles] },
+      key: 'style',
+      readStyle: () => ({ color: '' }),
+    })
+    const Child = compile(
+      `<script setup vapor>
+        const props = defineProps({ style: Object })
+        _data.value.readStyle = () => props.style
+      </script>
+      <template><div>{{ props.style.color }}</div></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child v-once ${binding} /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(data.value.readStyle()).toEqual({ color: 'red' })
+    expect(host.innerHTML).toBe('<div>red</div>')
+
+    data.value.styles.color = 'blue'
+    await nextTick()
+
+    expect.soft(data.value.readStyle()).toEqual({ color: 'red' })
+    expect.soft(host.innerHTML).toBe('<div>red</div>')
+  })
+
+  test.each([
+    [':on-click="data.first" v-bind="data.attrs"', ['second']],
+    ['v-bind="data.attrs" :on-click="data.first"', ['first']],
+    [
+      ':on-click="data.first" v-bind="data.attrs" :[data.key]="data.third"',
+      ['second'],
+    ],
+    ['v-bind="{ \'on-click\': data.first, ...data.attrs }"', ['second']],
+    [
+      ':on-click="data.first" v-bind="{ \'on-click\': data.third }"',
+      ['first', 'third'],
+    ],
+  ])(
+    'declared event props preserve raw key precedence (%s)',
+    async (binding, expected) => {
+      await renderParity(
+        {
+          Child: `<script setup>
+          const props = defineProps({ onClick: null })
+          const trigger = () => {
+            const handlers = Array.isArray(props.onClick)
+              ? props.onClick
+              : [props.onClick]
+            handlers.forEach(handler => handler())
+          }
+        </script><template><button @click="trigger">click</button></template>`,
+          App: `<template><components.Child ${binding} /></template>`,
+        },
+        () => {
+          const calls: string[] = []
+          return ref({
+            calls,
+            first: () => calls.push('first'),
+            attrs: { onClick: () => calls.push('second') },
+            third: () => calls.push('third'),
+            key: 'on-click',
+          })
+        },
+        async (data, root) => {
+          root.querySelector('button')!.click()
+          expect(data.value.calls).toEqual(expected)
+        },
+      )
+    },
+  )
+
+  test('declared event props update merged sources and restore defaults', async () => {
+    await renderParity(
+      {
+        Child: `<script setup>
+          const props = defineProps({
+            onClick: { default: () => () => _data.value.calls.push('default') }
+          })
+          const trigger = () => {
+            const handlers = Array.isArray(props.onClick)
+              ? props.onClick
+              : [props.onClick]
+            handlers.forEach(handler => handler())
+          }
+        </script><template><button @click="trigger">click</button></template>`,
+        App: `<template><components.Child v-on="data.listeners" v-bind="data.attrs" /></template>`,
+      },
+      () => {
+        const calls: string[] = []
+        const first = () => calls.push('first')
+        const second = () => calls.push('second')
+        return ref({
+          calls,
+          listeners: { click: [first, second] } as Record<string, unknown>,
+          attrs: { onClick: first } as Record<string, unknown>,
+        })
+      },
+      async (data, root) => {
+        const button = root.querySelector('button')!
+        button.click()
+        expect(data.value.calls).toEqual(['first', 'second'])
+
+        data.value.calls.length = 0
+        data.value.attrs = { 'on-click': () => data.value.calls.push('third') }
+        await nextTick()
+        button.click()
+        expect(data.value.calls).toEqual(['third'])
+
+        data.value.calls.length = 0
+        data.value.attrs = {}
+        await nextTick()
+        button.click()
+        expect(data.value.calls).toEqual(['first', 'second'])
+
+        data.value.calls.length = 0
+        data.value.listeners = {}
+        await nextTick()
+        button.click()
+        expect(data.value.calls).toEqual(['default'])
+      },
+    )
+  })
+
+  test.each([undefined, 'active'])(
+    'merged class props restore defaults when all sources are undefined (%s)',
+    async initialClass => {
+      await renderParity(
+        {
+          Child: `<script setup>
+            const props = defineProps({ class: { type: String, default: 'fallback' } })
+          </script><template><div>{{ props.class }}</div></template>`,
+          App: `<template><components.Child :class="data.extra" v-bind="data.attrs" /></template>`,
+        },
+        () =>
+          ref({
+            extra: initialClass,
+            attrs: { class: undefined as string | undefined },
+          }),
+        async (data, root) => {
+          expect(root.textContent).toBe(initialClass ?? 'fallback')
+
+          data.value.extra = undefined
+          await nextTick()
+          expect(root.textContent).toBe('fallback')
+
+          data.value.attrs.class = ''
+          await nextTick()
+          expect(root.textContent).toBe('')
+
+          data.value.attrs.class = undefined
+          await nextTick()
+          expect(root.textContent).toBe('fallback')
+
+          data.value.extra = data.value.attrs.class = 'shared'
+          await nextTick()
+          expect(root.textContent).toBe('shared')
+        },
+      )
+    },
+  )
+
+  test('prop validation does not mutate class and style source arrays', async () => {
+    await renderParity(
+      {
+        Child: `<script setup>
+          const props = defineProps({ class: String, style: Object })
+        </script><template><div>{{ props.class }}|{{ JSON.stringify(props.style) }}</div></template>`,
+        App: `<template><components.Child :class="data.classes" :style="data.styles" v-bind="data.attrs" /></template>`,
+      },
+      () =>
+        ref({
+          classes: ['a'],
+          styles: [{ color: 'red' }],
+          attrs: { class: 'b', style: { margin: '1px' } },
+        }),
+      async (data, root) => {
+        expect.soft(data.value.classes).toEqual(['a'])
+        expect.soft(data.value.styles).toEqual([{ color: 'red' }])
+        expect(root.textContent).toBe('a b|{"color":"red","margin":"1px"}')
+
+        data.value.attrs = { class: 'c', style: { padding: '2px' } }
+        await nextTick()
+        expect.soft(data.value.classes).toEqual(['a'])
+        expect.soft(data.value.styles).toEqual([{ color: 'red' }])
+        expect(root.textContent).toBe('a c|{"color":"red","padding":"2px"}')
+      },
+    )
   })
 })

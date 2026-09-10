@@ -11,6 +11,17 @@ import { isArray, isString } from '@vue/shared'
 import type { CodegenContext } from '../generate'
 import type { ParserOptions } from '@babel/parser'
 
+/**
+ * Run a helper call inside the once ambient: a helper that creates its own
+ * effects at a v-once site has them run once like compiled ones do.
+ */
+export function genOnce(
+  call: CodeFragment[],
+  context: CodegenContext,
+): CodeFragment[] {
+  return genCall(context.helper('withOnce'), ['() => ', ...call])
+}
+
 export const IMPORT_EXP_START = '__IMPORT_EXP_START__'
 export const IMPORT_EXP_END = '__IMPORT_EXP_END__'
 export const IMPORT_EXPR_RE: RegExp = new RegExp(

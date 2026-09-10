@@ -297,13 +297,14 @@ export function move(
       anchor = block.anchor
     }
     // fragment
-    if (block.insert) {
-      block.insert(
+    if (block.move) {
+      block.move(
         parent,
         anchor,
+        moveType,
+        parentComponent,
         parentSuspense,
         (block as TransitionBlock).$transition,
-        moveType,
       )
     } else {
       move(
@@ -399,9 +400,7 @@ export function removeFragment(
     remove(block.nodes, parent)
   }
   if (block.anchor) removeNode(block.anchor, parent)
-  if ((block as DynamicFragment).scope) {
-    ;(block as DynamicFragment).scope!.stop()
-  }
+  if (block.scope) block.scope.stop()
 }
 
 /**

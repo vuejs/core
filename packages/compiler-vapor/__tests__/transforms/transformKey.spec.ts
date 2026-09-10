@@ -101,7 +101,11 @@ describe('compiler: key', () => {
     test('<component is/> + key', () => {
       const { code } = compileWithKey(`<component :is="view" :key="id" />`)
       expect(code).toMatchSnapshot()
-      expect(code).contains('_createKeyedFragment(() => (_ctx.id)')
+      // the dynamic component keys its own branches; no wrapping fragment
+      expect(code).not.contains('_createKeyedFragment(')
+      expect(code).contains(
+        '_createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */, () => (_ctx.id))',
+      )
     })
 
     test('v-if + key', () => {

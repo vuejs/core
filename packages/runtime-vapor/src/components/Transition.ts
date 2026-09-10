@@ -52,11 +52,12 @@ import {
   isDynamicFragment,
   isForFragment,
   isFragment,
-  isSlotFragment,
+  isVaporSlotOutlet,
 } from '../fragment'
 import {
   currentHydrationNode,
   isHydrating,
+  locateHydrationNode,
   setCurrentHydrationNode,
 } from '../dom/hydration'
 import { updateLastLocatedLogicalChild } from '../dom/node'
@@ -163,6 +164,7 @@ export const VaporTransition: FunctionalVaporComponent<TransitionProps> =
     // Transition needs a DynamicFragment to drive enter/leave on updates.
     if (instance.rawSlots.$) {
       const frag = new DynamicFragment(0, __DEV__ ? 'transition' : undefined)
+      if (isHydrating) locateHydrationNode()
       state.root = frag
       let isMounted = false
       renderEffect(() => {
@@ -360,8 +362,8 @@ export function applyTransitionHooksImpl(
   if (
     hooks.applyGroup &&
     (isForFragment(block) ||
-      isSlotFragment(block) ||
-      (isVaporComponent(block) && isSlotFragment(block.block)))
+      isVaporSlotOutlet(block) ||
+      (isVaporComponent(block) && isVaporSlotOutlet(block.block)))
   ) {
     hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
     return hooks
@@ -408,7 +410,7 @@ function isPersistedRoot(block: Block | undefined): boolean {
       block = block.find(b => !(b instanceof Comment))
     } else if (
       isFragment(block) &&
-      (isSlotFragment(block) ||
+      (isVaporSlotOutlet(block) ||
         !(isDynamicFragment(block) || isForFragment(block)))
     ) {
       block = block.nodes
@@ -488,20 +490,18 @@ function deferBranchUpdateDuringLeaveImpl(
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
+  branchKey: any,
 ): boolean {
   const transition = frag.$transition!
   if (!transition.state.isLeaving) return false
-  // Track the latest target key immediately so repeated updates during
-  // leave keep overwriting the pending branch instead of reviving stale
-  // keys when the deferred render finally runs.
-  frag.current = key
   const pending = frag.pending
   if (pending) {
     pending.render = render
     pending.key = key
     pending.noScope = noScope
+    pending.branchKey = branchKey
   } else {
-    frag.pending = { render, key, noScope }
+    frag.pending = { render, key, noScope, branchKey }
   }
   return true
 }
@@ -513,6 +513,7 @@ function removeBranchWithLeaveImpl(
   render: BlockFn | undefined,
   key: any,
   noScope: boolean,
+  branchKey: any,
 ): boolean {
   const mode = transition.mode
   if (
@@ -547,9 +548,20 @@ function removeBranchWithLeaveImpl(
             pending.key,
             pending.noScope,
             true,
+            undefined,
+            pending.branchKey,
           )
         } else {
-          frag.renderBranch(render, transition, parent, key, noScope, true)
+          frag.renderBranch(
+            render,
+            transition,
+            parent,
+            key,
+            noScope,
+            true,
+            undefined,
+            branchKey,
+          )
         }
       } finally {
         restoreCurrentInstance(prevInstance)
@@ -558,12 +570,6 @@ function removeBranchWithLeaveImpl(
     if (mode === 'out-in') {
       // out-in owns the removal here so update() can return before
       // rendering; the next branch mounts from the afterLeave callback.
-      // Record the target key immediately (mirroring the defer path) so
-      // `current` no longer points at the outgoing branch. Otherwise a
-      // toggle back to the original key during the leave would hit the
-      // `key === current` early-return in update() and be dropped, leaving
-      // the deferred render to mount the stale branch.
-      frag.current = key
       parent && remove(frag.nodes, parent)
       return true
     }

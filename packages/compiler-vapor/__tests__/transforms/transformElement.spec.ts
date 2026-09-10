@@ -945,6 +945,26 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('element fallback namespace', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<svg><component :is="foo" /><component is="circle" /></svg>` +
+          `<math><component :is="foo" /></math>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('8 /* NS_SVG */')
+      expect(code).contains('16 /* NS_MATHML */')
+      expect(code).contains(
+        '_createComponentWithFallback(_resolveDynamicComponent("circle"), null, null, null, null, 1)',
+      )
+      const ops: any[] = []
+      const collect = (dynamic: any) => {
+        if (dynamic.operation) ops.push(dynamic.operation)
+        dynamic.children.forEach(collect)
+      }
+      collect(ir.block.dynamic)
+      expect(ops.map(op => op.ns)).toEqual([1, 1, 2])
+    })
+
     // #3934
     test('normal component with is prop', () => {
       const { code, ir, helpers } = compileWithElementTransform(
@@ -962,6 +982,21 @@ describe('compiler: element transform', () => {
         asset: true,
         root: true,
         props: [[{ key: { content: 'is' }, values: [{ content: 'foo' }] }]],
+      })
+    })
+
+    test('native element with is="vue:" prefix', () => {
+      const { code, ir, helpers } = compileWithElementTransform(
+        `<button is="vue:foo" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(helpers).toContain('createAssetComponent')
+      expect(ir.block.dynamic.children[0].operation).toMatchObject({
+        type: IRNodeTypes.CREATE_COMPONENT_NODE,
+        tag: 'foo',
+        asset: true,
+        root: true,
+        props: [[]],
       })
     })
 
@@ -1688,6 +1723,38 @@ describe('compiler: element transform', () => {
     expect(code).toContain('createPlainElement')
     expect(code).toContain('_insert(')
     expect(code).not.toContain('_txt(n0)')
+  })
+
+  test('nested custom element with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      '<div><my-custom-element><span>{{ msg }}</span></my-custom-element></div>',
+      {
+        isCustomElement: tag => tag === 'my-custom-element',
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_setInsertionState(n')
+    expect(code).toContain('createPlainElement("my-custom-element"')
+    expect(code).not.toContain('_nthChild(')
+  })
+
+  test('nested plain template element with dynamic child', () => {
+    const { code } = compileWithElementTransform(
+      '<div><template><span>{{ msg }}</span></template></div>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_setInsertionState(n')
+    expect(code).toContain('createPlainElement("template"')
+    expect(code).not.toContain('_nthChild(')
+  })
+
+  test('nested plain template element anchored before a template sibling', () => {
+    const { code } = compileWithElementTransform(
+      '<div><template><span>{{ msg }}</span></template><b/></div>',
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('_template("<div><!><b>')
+    expect(code).toContain('createPlainElement("template"')
   })
 
   test('svg', () => {

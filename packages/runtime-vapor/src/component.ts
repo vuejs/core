@@ -66,8 +66,11 @@ import {
 import {
   EMPTY_OBJ,
   NOOP,
+  type Namespace,
+  Namespaces,
   type Prettify,
   ShapeFlags,
+  extend,
   hasOwn,
   invokeArrayFns,
   isArray,
@@ -96,11 +99,16 @@ import {
   type StaticSlots,
   dynamicSlotsProxyHandlers,
   getSlot,
-  inOnceSlot,
   normalizeRawSlots,
-  setCurrentSlotOwner,
-  withOnceSlot,
+  snapshotRawSlots,
 } from './componentSlots'
+import {
+  currentRenderContext,
+  deriveRenderContext,
+  deriveSuspense,
+  setRenderContext,
+} from './renderContext'
+import { inOnce, withOnce } from './once'
 import { hmrReload, hmrRerender } from './hmr'
 import {
   type FragmentClaim,
@@ -118,6 +126,7 @@ import {
   isHydrating,
   isRecreatedNode,
   locateEndAnchor,
+  locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
   withDeferredHydrationBoundary,
@@ -159,20 +168,16 @@ import type { VaporElement } from './apiDefineCustomElement'
 import {
   currentUnmountSuspense,
   isSuspenseEnabled,
-  parentSuspense,
   resolveUnmountSuspense,
   runWithUnmountSuspense,
-  setParentSuspense,
 } from './suspense'
 import { isInteropEnabled } from './vdomInteropState'
 import {
   applyComponentScopeIds,
-  currentSlotScopeIds,
   getCurrentScopeId,
   hydrateComponentScopeIds,
-  setCurrentSlotScopeIds,
-  setElementScopeIds,
 } from './scopeId'
+import { setElementScopeIds } from './dom/scopeIdStamp'
 import { isTransitionEnabled, isVaporTransition } from './transition'
 
 export { currentInstance } from '@vue/runtime-dom'
@@ -280,7 +285,24 @@ function useVdomInterop(
   component: VaporComponent,
   appContext: GenericAppContext,
 ): boolean {
-  return isInteropEnabled && !!appContext.vdom && !component.__vapor
+  return !!appContext.vdom && !component.__vapor
+}
+
+// The instance whose fallthrough attrs a block created right now inherits:
+// its single root, or any child of a Transition (which passes attrs through).
+export function resolveFallthroughOwner(
+  isSingleRoot?: boolean,
+): VaporComponentInstance | undefined {
+  const instance = currentInstance
+  if (
+    (isSingleRoot ||
+      (isTransitionEnabled && instance && isVaporTransition(instance.type))) &&
+    isVaporComponent(instance) &&
+    instance.type.inheritAttrs !== false &&
+    instance.hasFallthrough
+  ) {
+    return instance
+  }
 }
 
 export function createComponent(
@@ -295,10 +317,11 @@ export function createComponent(
   managedMount = false,
   ce?: (instance: VaporComponentInstance) => void,
 ): VaporComponentInstance {
-  // A component created while rendering a v-once slot should receive frozen
-  // parent inputs, but its own render effects should still be live.
-  const wasInOnceSlot = inOnceSlot
-  if (wasInOnceSlot) once = true
+  // A component created while rendering a v-once region receives frozen
+  // parent inputs, but its own render effects stay live. A vdom-managed mount
+  // is a boundary of its own: the vdom render owns that component's inputs.
+  const wasInOnce = inOnce
+  if (wasInOnce && !managedMount) once = true
 
   const _insertionParent = insertionParent
   const _insertionAnchor = insertionAnchor
@@ -310,39 +333,32 @@ export function createComponent(
     resetInsertionState()
   }
 
-  let prevSuspense: SuspenseBoundary | null = null
-  let hasParentSuspense = false
+  const prevCtx = currentRenderContext
   try {
     if (
       __FEATURE_SUSPENSE__ &&
       isSuspenseEnabled &&
+      !prevCtx.suspense &&
       currentInstance &&
       currentInstance.suspense
     ) {
-      prevSuspense = setParentSuspense(currentInstance.suspense)
-      hasParentSuspense = true
+      setRenderContext(deriveSuspense(prevCtx, currentInstance.suspense))
     }
 
-    if (
-      (isSingleRoot ||
-        // transition has attrs fallthrough
-        (isTransitionEnabled
-          ? currentInstance && isVaporTransition(currentInstance!.type)
-          : false)) &&
-      isVaporComponent(currentInstance) &&
-      currentInstance.type.inheritAttrs !== false &&
-      currentInstance.hasFallthrough
-    ) {
-      // check if we are the single root of the parent
-      // if yes, inject parent attrs as dynamic props source.
-      // capture the owner: dynamic sources can be resolved from read paths
-      // that do not restore the parent as currentInstance.
-      const owner = currentInstance
+    const owner = resolveFallthroughOwner(isSingleRoot)
+    if (owner) {
+      // inject the parent attrs as a dynamic props source; the owner is
+      // captured because sources resolve from read paths that do not
+      // restore it as currentInstance
       const source = () => resolveFallthroughAttrs(owner)
+      // copy, never mutate: the caller's rawProps outlives this creation
+      // (dynamic component branches share one object), and every creation
+      // must see exactly one fallthrough source
       if (rawProps && rawProps !== EMPTY_OBJ) {
-        ;((rawProps as RawProps).$ || ((rawProps as RawProps).$ = [])).push(
-          source,
-        )
+        const sources = (rawProps as RawProps).$
+        rawProps = extend({}, rawProps, {
+          $: sources ? sources.concat(source) : [source],
+        }) as RawProps
       } else {
         rawProps = { $: [source] } as RawProps
       }
@@ -371,13 +387,16 @@ export function createComponent(
     let asyncBoundary = false
     if (isAsyncComponentEnabled && !isHydrating) {
       const resolved = component.__asyncResolved
-      if (resolved && !useVdomInterop(resolved, appContext)) {
+      if (
+        resolved &&
+        !(isInteropEnabled && useVdomInterop(resolved, appContext))
+      ) {
         component = resolved
         asyncBoundary = true
       }
     }
 
-    if (useVdomInterop(component, appContext)) {
+    if (isInteropEnabled && useVdomInterop(component, appContext)) {
       const frag = appContext.vdom!.mount(
         component as any,
         currentInstance as any,
@@ -387,7 +406,12 @@ export function createComponent(
       )
       if (!isHydrating) {
         if (_insertionParent) {
-          insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
+          insert(
+            frag,
+            _insertionParent,
+            _insertionAnchor,
+            currentRenderContext.suspense,
+          )
         }
       } else {
         frag.hydrate()
@@ -415,7 +439,12 @@ export function createComponent(
       }
       if (!isHydrating) {
         if (_insertionParent) {
-          insert(frag, _insertionParent, _insertionAnchor, parentSuspense)
+          insert(
+            frag,
+            _insertionParent,
+            _insertionAnchor,
+            currentRenderContext.suspense,
+          )
         }
       } else {
         frag.hydrate()
@@ -427,17 +456,18 @@ export function createComponent(
     let inputScope: EffectScope | undefined
     if (
       keepAliveCtx &&
-      ((rawProps && !once) || (rawSlots && (rawSlots as RawSlots).$))
+      !once &&
+      (rawProps || (rawSlots && (rawSlots as RawSlots).$))
     ) {
       // The cached component keeps its detached scope active, so commit only
       // its direct inputs through a cache-owned scope. Descendants read from
       // the same committed inputs and need no additional isolation.
-      // v-once snapshots raw props in the instance constructor, so it does not
-      // need a live commit effect after creation.
+      // v-once snapshots raw props and the slot set in the instance
+      // constructor, so it does not need a live commit effect after creation.
       const scope = new EffectScope(true)
       let isolated = false
       scope.run(() => {
-        if (rawProps && !once) {
+        if (rawProps) {
           const next = keepAliveCtx!.isolatePropSources(rawProps as RawProps)
           isolated = next !== rawProps
           rawProps = next
@@ -480,11 +510,19 @@ export function createComponent(
       if (keepAliveCtx) keepAliveCtx.processShapeFlag(instance)
     }
 
-    // reset currentSlotOwner to null to avoid affecting the child components
-    const prevSlotOwner = setCurrentSlotOwner(null)
-    // Slot scope ids stop at component boundaries; the instance captured
-    // them above for root-only application.
-    const prevSlotScopeIds = setCurrentSlotScopeIds(null)
+    // The slot owner and slot scope ids stop at component boundaries: setup
+    // must not see the parent's slot context (the instance captured the ids
+    // above for root-only application).
+    const outerCtx = currentRenderContext
+    setRenderContext(
+      deriveRenderContext(
+        outerCtx,
+        null,
+        outerCtx.slotBoundary,
+        null,
+        outerCtx.suspense,
+      ),
+    )
     let hasWarningContext = false
     let hasInitMeasure = false
     try {
@@ -518,11 +556,11 @@ export function createComponent(
           instance,
           // Async hydration re-enters setup later, so preserve the component
           // boundary rule above when the delayed setup actually runs.
-          wasInOnceSlot ? () => withOnceSlot(setup, false) : setup,
+          wasInOnce ? () => withOnce(setup, false) : setup,
         )
       } else {
-        if (wasInOnceSlot) {
-          withOnceSlot(() => setupComponent(instance, component), false)
+        if (wasInOnce) {
+          withOnce(() => setupComponent(instance, component), false)
         } else {
           setupComponent(instance, component)
         }
@@ -559,12 +597,7 @@ export function createComponent(
           endMeasure(instance, 'init')
         }
       }
-      setCurrentSlotScopeIds(prevSlotScopeIds)
-      setCurrentSlotOwner(prevSlotOwner)
-      if (__FEATURE_SUSPENSE__ && isSuspenseEnabled && hasParentSuspense) {
-        setParentSuspense(prevSuspense)
-        hasParentSuspense = false
-      }
+      setRenderContext(prevCtx)
     }
     onScopeDispose(
       () =>
@@ -584,9 +617,6 @@ export function createComponent(
 
     return instance
   } finally {
-    if (hasParentSuspense) {
-      setParentSuspense(prevSuspense)
-    }
     // A pending async setup owns its range until its deferred render
     // re-enters it, so only the cursor is handed back here.
     if (hydration) hydration.exit(!pendingAsyncHydration)
@@ -914,11 +944,6 @@ export class VaporComponentInstance<
 
   ce?: ComponentCustomElementInterface
 
-  // for v-once: caches props/attrs values to ensure they remain frozen
-  // even when the component re-renders due to local state changes
-  oncePropsCache?: Record<string | symbol, any>
-  isOnce: boolean
-
   // lifecycle hooks
   isMounted: boolean
   isUnmounted: boolean
@@ -997,7 +1022,6 @@ export class VaporComponentInstance<
 
     this.block = null! // to be set
     this.scope = new EffectScope(true)
-    this.isOnce = !!once
 
     this.emit = emit.bind(null, this) as EmitFn<Emits>
     this.expose = expose.bind(null, this) as any
@@ -1008,8 +1032,8 @@ export class VaporComponentInstance<
     this.suspense = null
     this.suspenseId = 0
     if (__FEATURE_SUSPENSE__ && isSuspenseEnabled) {
-      this.suspense = parentSuspense
-      this.suspenseId = parentSuspense ? parentSuspense.pendingId : 0
+      const suspense = (this.suspense = currentRenderContext.suspense)
+      this.suspenseId = suspense ? suspense.pendingId : 0
     }
     this.asyncDep = null
     this.asyncResolved = false
@@ -1024,9 +1048,7 @@ export class VaporComponentInstance<
     // Snapshot raw parent inputs before creating proxies so delayed reads from
     // v-once children cannot observe later parent updates.
     this.rawProps =
-      this.isOnce && rawProps
-        ? snapshotRawProps(rawProps)
-        : rawProps || EMPTY_OBJ
+      once && rawProps ? snapshotRawProps(rawProps) : rawProps || EMPTY_OBJ
     // a custom element host mutates its props object after creation, so its
     // attrs key set is never static
     this.hasFallthrough = !!ce || hasFallthroughAttrs(comp, this.rawProps)
@@ -1045,7 +1067,10 @@ export class VaporComponentInstance<
     }
 
     // init slots
-    const normalizedRawSlots = normalizeRawSlots(rawSlots)
+    let normalizedRawSlots = normalizeRawSlots(rawSlots)
+    if (once && normalizedRawSlots) {
+      normalizedRawSlots = snapshotRawSlots(normalizedRawSlots)
+    }
     this.rawSlots = normalizedRawSlots || EMPTY_OBJ
     this.slots = (
       normalizedRawSlots
@@ -1054,7 +1079,7 @@ export class VaporComponentInstance<
     ) as Slots
 
     this.scopeId = getCurrentScopeId()
-    this.slotScopeIds = currentSlotScopeIds
+    this.slotScopeIds = currentRenderContext.slotScopeIds
 
     // apply custom element special handling
     if (ce) {
@@ -1105,6 +1130,7 @@ export function createAssetComponent(
   isSingleRoot?: boolean,
   once?: boolean,
   maybeSelfReference?: boolean,
+  ns?: Namespace,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   return createComponentWithFallback(
@@ -1113,6 +1139,7 @@ export function createAssetComponent(
     rawSlots,
     isSingleRoot,
     once,
+    ns,
     appContext,
   )
 }
@@ -1128,6 +1155,7 @@ export function createComponentWithFallback(
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
+  ns?: Namespace,
   appContext?: GenericAppContext,
 ): HTMLElement | VaporComponentInstance {
   if (comp === NULL_DYNAMIC_COMPONENT) {
@@ -1164,7 +1192,7 @@ export function createComponentWithFallback(
     )
   }
 
-  return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once)
+  return createPlainElement(comp, rawProps, rawSlots, isSingleRoot, once, ns)
 }
 
 function isReusableNullComponentAnchor(node: Node): boolean {
@@ -1186,6 +1214,7 @@ export function createPlainElement(
   rawSlots?: LooseRawSlots | null,
   isSingleRoot?: boolean,
   once?: boolean,
+  ns?: Namespace,
 ): HTMLElement {
   rawSlots = normalizeRawSlots(rawSlots)
   const _insertionParent = insertionParent
@@ -1208,8 +1237,9 @@ export function createPlainElement(
         currentHydrationNode!,
         hydrationTemplate,
         adoptHydrationChildren,
+        ns,
       ) as HTMLElement)
-    : createElement(comp)
+    : createElement(comp, ns)
 
   // mark single root
   ;(el as any).$root = isSingleRoot
@@ -1219,12 +1249,14 @@ export function createPlainElement(
   if (!isHydrating || isRecreatedNode(el)) {
     const scopeId = getCurrentScopeId()
     if (scopeId) el.setAttribute(scopeId, '')
-    if (currentSlotScopeIds) setElementScopeIds(el, currentSlotScopeIds)
+    const slotScopeIds = currentRenderContext.slotScopeIds
+    if (slotScopeIds) setElementScopeIds(el, slotScopeIds)
   }
 
   if (rawProps) {
+    const isSVG = ns === Namespaces.SVG
     const setFn = () =>
-      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)])
+      setDynamicProps(el, [resolveDynamicProps(rawProps as RawProps)], isSVG)
     if (once) setFn()
     else renderEffect(setFn)
   }
@@ -1253,6 +1285,7 @@ export function createPlainElement(
         NATIVE_CHILDREN,
         __DEV__ ? (isHydrating ? '' : 'slot') : undefined,
       )
+      if (isHydrating) locateHydrationNode()
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
     } else {
@@ -1503,21 +1536,21 @@ export function unmountComponent(
   const pendingAsyncSetup =
     __FEATURE_SUSPENSE__ && !!instance.asyncDep && !instance.asyncResolved
 
-  if (
-    !instance.isUnmounted &&
-    (instance.isMounted ||
-      // An async setup component can be unmounted before it finishes mounting.
-      // It still needs normal unmount cleanup and must be marked unmounted so
-      // a later async resolution is ignored.
-      pendingAsyncSetup)
-  ) {
+  if (!instance.isUnmounted) {
+    // Unmount hooks belong to mounted instances, plus async setup ones torn
+    // down before they finish mounting (a later resolution must see
+    // isUnmounted). A created but never mounted instance still owns its
+    // setup effects, so disposal itself is unconditional.
+    const hasLifecycle = instance.isMounted || pendingAsyncSetup
     if (__DEV__) {
       unregisterHMR(instance)
     }
-    invalidateMount(instance.m)
-    invalidateMount(instance.a)
-    if (instance.bum) {
-      invokeArrayFns(instance.bum)
+    if (hasLifecycle) {
+      invalidateMount(instance.m)
+      invalidateMount(instance.a)
+      if (instance.bum) {
+        invokeArrayFns(instance.bum)
+      }
     }
 
     if (isKeepAliveEnabled) {
@@ -1526,7 +1559,7 @@ export function unmountComponent(
     }
     instance.scope.stop()
 
-    if (instance.um) {
+    if (hasLifecycle && instance.um) {
       queuePostRenderEffect(instance.um!, undefined, parentSuspense)
     }
     instance.isUnmounted = true
@@ -1573,17 +1606,20 @@ export function getExposed(
 
 /**
  * The shared traversal of the effective-root chain — root element
- * resolution, scope id owner registration, interop carrier publication —
- * encoding the chain rules (teleport exclusion, slot outlet breaks,
- * comment-filtered arrays, component descent) once. Fallthrough attrs use
- * their own component-bounded resolver (resolveFallthroughRoot), which
- * mirrors these rules but stops at component boundaries.
+ * resolution, scope id owner registration, interop carrier publication,
+ * fallthrough root resolution, root-chain component lookup — encoding the
+ * chain rules (teleport exclusion, slot outlet breaks, comment-filtered
+ * arrays, component descent or stop) once.
  */
 export interface RootChainVisitor {
-  onDynamicFragment?: (frag: DynamicFragment) => void
+  // Returning true ends the descent at this fragment.
+  onDynamicFragment?: (frag: DynamicFragment) => boolean | void
   // Fired on component descent, including an entry block that is itself a
   // component.
   onComponent?: (instance: VaporComponentInstance) => void
+  // Components fold their own chain (attrs at creation, a chain lookup at
+  // the first instance), so the descent ends there instead of entering it.
+  stopAtComponent?: boolean
   // Fired at a vnode-backed interop fragment, terminating the descent there
   // (the fragment carries the chain across into vdom).
   onInteropFragment?: (frag: InteropFragment) => void
@@ -1600,7 +1636,10 @@ export function getRootElement(
   }
 
   if (isVaporComponent(block)) {
-    if (visitor && visitor.onComponent) visitor.onComponent(block)
+    if (visitor) {
+      if (visitor.onComponent) visitor.onComponent(block)
+      if (visitor.stopAtComponent) return
+    }
     return getRootElement(block.block, visitor)
   }
 
@@ -1609,8 +1648,12 @@ export function getRootElement(
       if (visitor.excludeSlotOutlets && isSlotOutletFragment(block)) {
         return
       }
-      if (isDynamicFragment(block) && visitor.onDynamicFragment) {
+      if (
+        isDynamicFragment(block) &&
+        visitor.onDynamicFragment &&
         visitor.onDynamicFragment(block)
+      ) {
+        return
       }
       if (
         isInteropEnabled &&
@@ -1622,35 +1665,33 @@ export function getRootElement(
         return
       }
     }
-    const { nodes } = block
-    if (nodes instanceof Element && (nodes as any).$root) {
-      return nodes
-    }
-    return getRootElement(nodes, visitor)
+    return getRootElement(block.nodes, visitor)
   }
 
-  // The root node contains comments. It is necessary to filter out
-  // the comment nodes and return a single root node.
-  // align with vdom behavior
   if (isArray(block)) {
     // Structure first, visit after: a multi-root array has no effective
     // root, and firing the visitor on a branch before that verdict would
     // leak side effects (owner registration, carrier publication) that
     // multi-root semantics forbid.
-    let single: Block | undefined
-    let hasComment = false
-    for (const b of block) {
-      if (b instanceof Comment) {
-        hasComment = true
-        continue
-      }
-      // only a lone eligible branch alongside comments can hold the root
-      if (single !== undefined) return
-      single = b
-    }
-    if (!hasComment || single === undefined) return
-    return getRootElement(single, visitor)
+    const single = singleRootOf(block)
+    return single === undefined ? undefined : getRootElement(single, visitor)
   }
+}
+
+// A multi-root array has no effective root; only a lone eligible branch
+// alongside comments can hold one (vdom comment-filtering alignment).
+function singleRootOf(nodes: Block[]): Block | undefined {
+  let single: Block | undefined
+  let hasComment = false
+  for (const b of nodes) {
+    if (b instanceof Comment) {
+      hasComment = true
+      continue
+    }
+    if (single !== undefined) return
+    single = b
+  }
+  return hasComment ? single : undefined
 }
 
 /**
@@ -1673,21 +1714,10 @@ export function getRootChainComponent(
       continue
     }
     if (isArray(block)) {
-      let single: Block | undefined
-      let hasComment = false
-      for (const b of block) {
-        if (b instanceof Comment) {
-          hasComment = true
-          continue
-        }
-        if (single !== undefined) return
-        single = b
-      }
-      if (hasComment && single !== undefined) {
-        block = single
-        continue
-      }
-      return
+      const single = singleRootOf(block)
+      if (single === undefined) return
+      block = single
+      continue
     }
     return
   }
@@ -1779,9 +1809,9 @@ function applyFallthroughAttrs(
   instance: VaporComponentInstance,
   scope?: EffectScope,
 ): void {
-  const state: FallthroughResolveState = { parentScope: scope }
+  const state = new FallthroughResolveState(scope)
   const root = resolveFallthroughRoot(block, state)
-  const { fragments, innermost, hasSlotFragment } = state
+  const { fragments, innermost, hasSlotOutlet } = state
 
   if (fragments) {
     for (const frag of fragments) {
@@ -1792,7 +1822,7 @@ function applyFallthroughAttrs(
     }
   }
 
-  if (root && !hasSlotFragment) {
+  if (root && !hasSlotOutlet) {
     let ownerScope = scope
     if (innermost) {
       // A compiler-proven no-scope branch may have rendered without a scope;
@@ -1814,7 +1844,7 @@ function applyFallthroughAttrs(
     const fallthroughAttrs = resolveFallthroughAttrs(instance)
     if (
       Object.keys(fallthroughAttrs).length &&
-      (hasSlotFragment ||
+      (hasSlotOutlet ||
         (fragments && state.hasNonSingleRoot) ||
         (isTeleportEnabled && containsTeleportFragment(block)) ||
         (!accessedAttrs &&
@@ -1825,78 +1855,57 @@ function applyFallthroughAttrs(
   }
 }
 
-interface FallthroughResolveState {
+// The fallthrough resolution state doubles as the descent visitor, so a
+// resolution allocates this one object and no closures.
+class FallthroughResolveState implements RootChainVisitor {
   // non-slot dynamic fragments on the effective-root path, outermost first
   fragments?: DynamicFragment[]
   // the innermost of those — its branch scope owns the fallthrough effect
   innermost?: DynamicFragment
   // nearest enclosing branch scope; lifecycle parent for retrofitted scopes
   parentScope?: EffectScope
-  hasSlotFragment?: boolean
+  hasSlotOutlet?: boolean
   // the innermost fragment's current branch is multi-root: fragments stay
   // registered for future branches while the current render warns
   hasNonSingleRoot?: boolean
+  // attrs fold at a component's own creation boundary
+  readonly stopAtComponent = true
+
+  constructor(parentScope?: EffectScope) {
+    this.parentScope = parentScope
+  }
+
+  onDynamicFragment(frag: DynamicFragment): boolean | void {
+    // Slot outlets warn instead of inheriting attrs, and the descent stops
+    // there: slot content is rendered by the parent, so fragments inside it
+    // must not register a fallthrough hook — a later branch switch would
+    // re-apply from the branch alone, with the slot boundary out of view.
+    if (frag.__vf & SLOT) {
+      this.hasSlotOutlet = true
+      return true
+    }
+    ;(this.fragments ||= []).push(frag)
+    if (this.innermost && this.innermost.scope) {
+      this.parentScope = this.innermost.scope
+    }
+    this.innermost = frag
+  }
 }
 
-// Single-pass effective-root resolution for fallthrough: descends the same
-// effective-root rules as getRootElement, but stops at components (their
-// attrs fold at their own creation boundary) and collects the dynamic
-// fragment chain, scope ownership, and warning inputs along the way.
+// Effective-root resolution for fallthrough: the shared descent, collecting
+// the dynamic fragment chain, scope ownership, and warning inputs on the way.
 function resolveFallthroughRoot(
   block: Block,
   state: FallthroughResolveState,
 ): Element | undefined {
-  if (block instanceof Element) {
-    return block
+  const root = getRootElement(block, state)
+  const { innermost } = state
+  if (!root && innermost) {
+    const { nodes } = innermost
+    state.hasNonSingleRoot =
+      isArray(nodes) && nodes.some(child => !(child instanceof Comment))
   }
-
-  if (isVaporComponent(block)) return
-
-  if (isFragment(block) && !(isTeleportEnabled && isTeleportFragment(block))) {
-    if (isDynamicFragment(block)) {
-      // Slot outlets warn instead of inheriting attrs, and the descent stops
-      // there: slot content is rendered by the parent, so fragments inside it
-      // must not register a fallthrough hook — a later branch switch would
-      // re-apply from the branch alone, with the slot boundary out of view.
-      if (block.__vf & SLOT) {
-        state.hasSlotFragment = true
-        return
-      } else {
-        ;(state.fragments ||= []).push(block)
-        if (state.innermost && state.innermost.scope) {
-          state.parentScope = state.innermost.scope
-        }
-        state.innermost = block
-      }
-    }
-    const { nodes } = block
-    if (nodes instanceof Element && (nodes as any).$root) {
-      return nodes
-    }
-    const el = resolveFallthroughRoot(nodes, state)
-    if (!el && state.innermost === block) {
-      state.hasNonSingleRoot =
-        isArray(nodes) && nodes.some(child => !(child instanceof Comment))
-    }
-    return el
-  }
-
-  // multi-root arrays have no effective root; only a lone eligible branch
-  // alongside comments can hold one (vdom comment-filtering alignment)
-  if (isArray(block)) {
-    let single: Block | undefined
-    let hasComment = false
-    for (const b of block) {
-      if (b instanceof Comment) {
-        hasComment = true
-        continue
-      }
-      if (single !== undefined) return
-      single = b
-    }
-    if (!hasComment || single === undefined) return
-    return resolveFallthroughRoot(single, state)
-  }
+  return root
 }
 
 function containsTeleportFragment(block: Block): boolean {

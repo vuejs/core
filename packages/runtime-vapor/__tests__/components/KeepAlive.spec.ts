@@ -4658,4 +4658,50 @@ describe('VaporKeepAlive', () => {
     expect(html()).toBe(`<div>child</div><!--if-->`)
     expect(slotKeys[slotKeys.length - 1]).toEqual(['b'])
   })
+
+  test('should leave and enter slot outlet content with fallback across deactivation', async () => {
+    const onEnter = vi.fn((_el: Element, done: () => void) => done())
+    const onLeave = vi.fn((_el: Element, done: () => void) => done())
+    const data = ref({
+      current: 'A',
+      show: true,
+      slotName: 'default',
+      onEnter,
+      onLeave,
+    })
+    // a dynamic slot name with fallback resolves through a SlotFragment
+    const A = compile(
+      `<template><slot :name="data.slotName">fallback</slot></template>`,
+      data,
+    )
+    const B = compile(`<template><p>B</p></template>`, data)
+    const App = compile(
+      `<template>
+        <KeepAlive>
+          <components.A v-if="data.current === 'A'">
+            <Transition :css="false" @enter="data.onEnter" @leave="data.onLeave">
+              <div v-if="data.show">A</div>
+            </Transition>
+          </components.A>
+          <components.B v-else />
+        </KeepAlive>
+      </template>`,
+      data,
+      { A, B },
+    )
+    const { host } = define(App as any).render()
+    expect(host.textContent).toContain('A')
+    expect(onEnter).not.toHaveBeenCalled()
+
+    data.value.current = 'B'
+    await nextTick()
+    expect(host.textContent).toContain('B')
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    expect(onEnter).not.toHaveBeenCalled()
+
+    data.value.current = 'A'
+    await nextTick()
+    expect(host.textContent).toContain('A')
+    expect(onEnter).toHaveBeenCalledTimes(1)
+  })
 })
