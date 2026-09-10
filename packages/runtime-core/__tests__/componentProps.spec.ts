@@ -389,15 +389,24 @@ describe('component props', () => {
         bool: { type: Boolean, required: true },
         str: { type: String, required: true },
         num: { type: Number, required: true },
+        null1: { type: null, required: true },
+        null2: { type: null, required: true },
+        null3: { type: null, required: true },
       },
       setup() {
         return () => null
       },
     }
-    render(h(Comp), nodeOps.createElement('div'))
+    render(
+      h(Comp, { null2: null, null3: undefined }),
+      nodeOps.createElement('div'),
+    )
     expect(`Missing required prop: "bool"`).toHaveBeenWarned()
     expect(`Missing required prop: "str"`).toHaveBeenWarned()
     expect(`Missing required prop: "num"`).toHaveBeenWarned()
+    expect(`Missing required prop: "null1"`).toHaveBeenWarned()
+    expect(`Missing required prop: "null2"`).toHaveBeenWarned()
+    expect(`Missing required prop: "null3"`).toHaveBeenWarned()
   })
 
   test('warn on type mismatch', () => {
