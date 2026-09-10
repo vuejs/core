@@ -597,7 +597,6 @@ export function createComponent(
           endMeasure(instance, 'init')
         }
       }
-      setRenderContext(prevCtx)
     }
     onScopeDispose(
       () =>
@@ -617,6 +616,7 @@ export function createComponent(
 
     return instance
   } finally {
+    setRenderContext(prevCtx)
     // A pending async setup owns its range until its deferred render
     // re-enters it, so only the cursor is handed back here.
     if (hydration) hydration.exit(!pendingAsyncHydration)
