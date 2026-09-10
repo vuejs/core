@@ -101,13 +101,14 @@ exports[`sfc reactive props destructure > default values w/ runtime declaration 
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
+  props: /*@__PURE__*/_mergeDefaults(['foo', 'foo:bar', 'baz'], {
   foo: 1,
-  "foo:bar": 'foo-bar'
+  "foo:bar": 'foo-bar',
+  baz: (props) => (props["foo"])
 }),
   setup(__props) {
 
-      
+      __props.foo
       
 return () => {}
 }
@@ -142,11 +143,12 @@ export default /*@__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: false, default: 1 },
     bar: { type: Object, required: false, default: () => ({}) },
-    func: { type: Function, required: false, default: () => {} }
+    func: { type: Function, required: false, default: () => {} },
+    baz: { type: Object, required: false, default: (props) => (props["bar"]) }
   },
   setup(__props: any) {
 
-      
+      __props.bar
       
 return () => {}
 }
