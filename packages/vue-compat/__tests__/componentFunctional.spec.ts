@@ -63,6 +63,40 @@ describe('COMPONENT_FUNCTIONAL', () => {
     ).toHaveBeenWarned()
   })
 
+  // #6950
+  test('functional component have no instance', async () => {
+    const parents: any[] = []
+    const ParentReporter = {
+      functional: true,
+      render(h: any, ctx: any) {
+        parents.push(ctx.parent)
+        return h('div', 'OK')
+      },
+    }
+
+    const FunctionalWrapper = {
+      functional: true,
+      render(h: any) {
+        return h(ParentReporter)
+      },
+    }
+
+    const NonFunctionalRoot = {
+      render(h: any) {
+        return h('div', [h(ParentReporter), h(FunctionalWrapper)])
+      },
+    }
+
+    toggleDeprecationWarning(false)
+    const vm = new Vue(NonFunctionalRoot).$mount()
+    expect(vm.$el.outerHTML).toMatchInlineSnapshot(
+      `"<div><div>OK</div><div>OK</div></div>"`,
+    )
+    expect(parents.length).toBe(2)
+    // consistent with 2.x
+    expect(parents[0] === parents[1]).toBe(true)
+  })
+
   test('copies compatConfig option', () => {
     const func = {
       name: 'Func',
