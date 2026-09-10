@@ -5,6 +5,7 @@ export {
   toRef,
   toValue,
   toRefs,
+  toShallowRef,
   unref,
   proxyRefs,
   customRef,
