@@ -236,6 +236,12 @@ export interface TransformOptions
    */
   transformHoist?: HoistTransform | null
   /**
+   * Allow `<script>` and `<style>` tags inside the template of SFC files.
+   * Disabled by default to avoid unintentionally adding side effects into the application.
+   * @default false
+   */
+  allowSideEffectTags?: boolean
+  /**
    * If the pairing runtime provides additional built-in elements, use this to
    * mark them as built-in so the compiler will generate component vnodes
    * for them.
