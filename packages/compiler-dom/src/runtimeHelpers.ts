@@ -18,6 +18,9 @@ export const V_ON_WITH_MODIFIERS: unique symbol = Symbol(
 export const V_ON_WITH_KEYS: unique symbol = Symbol(
   __DEV__ ? `vOnKeysGuard` : ``,
 )
+export const V_ON_WITH_DYNAMIC_EVENT_MODIFIERS: unique symbol = Symbol(
+  __DEV__ ? `vOnDynamicEventModifiers` : ``,
+)
 
 export const V_SHOW: unique symbol = Symbol(__DEV__ ? `vShow` : ``)
 
@@ -34,6 +37,7 @@ registerRuntimeHelpers({
   [V_MODEL_DYNAMIC]: `vModelDynamic`,
   [V_ON_WITH_MODIFIERS]: `withModifiers`,
   [V_ON_WITH_KEYS]: `withKeys`,
+  [V_ON_WITH_DYNAMIC_EVENT_MODIFIERS]: `withDynamicEventModifiers`,
   [V_SHOW]: `vShow`,
   [TRANSITION]: `Transition`,
   [TRANSITION_GROUP]: `TransitionGroup`,
