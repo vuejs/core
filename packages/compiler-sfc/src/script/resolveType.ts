@@ -1237,7 +1237,10 @@ export function invalidateTypeCache(filename: string): void {
   // A changed config can be extended by any number of others and is cached under its own
   // resolved path, so there is no single entry to drop; clearing is cheap because this
   // only runs when a config file itself changed.
-  if (filename.endsWith('.json')) extendedConfigCache.clear()
+  if (filename.endsWith('.json')) {
+    extendedConfigCache.clear()
+    tsConfigCache.clear()
+  }
   const affectedConfig = tsConfigRefMap.get(filename)
   if (affectedConfig) tsConfigCache.delete(affectedConfig)
 }
