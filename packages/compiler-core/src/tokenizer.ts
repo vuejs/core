@@ -125,6 +125,7 @@ export enum State {
   CDATASequence,
   InSpecialComment,
   InCommentLike,
+  InJsLineComment,
 
   // Special tags
   BeforeSpecialS, // Decide if we deal with `<script` or `<style`
@@ -199,6 +200,7 @@ export interface Callbacks {
   ondirmodifier(start: number, endIndex: number): void
 
   oncomment(start: number, endIndex: number): void
+  onjslinecomment(start: number, endIndex: number): void
   oncdata(start: number, endIndex: number): void
 
   onprocessinginstruction(start: number, endIndex: number): void
@@ -329,6 +331,14 @@ export default class Tokenizer {
 
   private peek() {
     return this.buffer.charCodeAt(this.index + 1)
+  }
+
+  private isInTagLineCommentOpen(): boolean {
+    return (
+      !this.inSFCRoot &&
+      this.buffer.charCodeAt(this.index) === CharCodes.Slash &&
+      this.peek() === CharCodes.Slash
+    )
   }
 
   private stateText(c: number): void {
@@ -545,6 +555,20 @@ export default class Tokenizer {
     }
   }
 
+  private startInTagLineComment(): void {
+    this.state = State.InJsLineComment
+    this.sectionStart = this.index + 2
+    this.index++
+  }
+
+  private stateInJsLineComment(c: number): void {
+    if (c === CharCodes.NewLine || c === CharCodes.CarriageReturn) {
+      this.cbs.onjslinecomment(this.sectionStart, this.index)
+      this.sectionStart = this.index + 1
+      this.state = State.BeforeAttrName
+    }
+  }
+
   private startSpecial(sequence: Uint8Array, offset: number) {
     this.enterRCDATA(sequence, offset)
     this.state = State.SpecialStartSequence
@@ -594,7 +618,11 @@ export default class Tokenizer {
     }
   }
   private stateInTagName(c: number): void {
-    if (isEndOfTagSection(c)) {
+    if (c === CharCodes.Slash && this.peek() === CharCodes.Slash) {
+      this.cbs.onopentagname(this.sectionStart, this.index)
+      this.sectionStart = -1
+      this.startInTagLineComment()
+    } else if (isEndOfTagSection(c)) {
       this.handleTagName(c)
     }
   }
@@ -654,6 +682,8 @@ export default class Tokenizer {
         this.state = State.Text
       }
       this.sectionStart = this.index + 1
+    } else if (this.isInTagLineCommentOpen()) {
+      this.startInTagLineComment()
     } else if (c === CharCodes.Slash) {
       this.state = State.InSelfClosingTag
       if ((__DEV__ || !__BROWSER__) && this.peek() !== CharCodes.Gt) {
@@ -779,6 +809,9 @@ export default class Tokenizer {
   private stateAfterAttrName(c: number): void {
     if (c === CharCodes.Eq) {
       this.state = State.BeforeAttrValue
+    } else if (this.isInTagLineCommentOpen()) {
+      this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
+      this.startInTagLineComment()
     } else if (c === CharCodes.Slash || c === CharCodes.Gt) {
       this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
       this.sectionStart = -1
@@ -1005,6 +1038,10 @@ export default class Tokenizer {
           this.stateInCommentLike(c)
           break
         }
+        case State.InJsLineComment: {
+          this.stateInJsLineComment(c)
+          break
+        }
         case State.InSpecialComment: {
           this.stateInSpecialComment(c)
           break
@@ -1129,6 +1166,13 @@ export default class Tokenizer {
   /** Handle any trailing data. */
   private handleTrailingData() {
     const endIndex = this.buffer.length
+
+    if (this.state === State.InJsLineComment) {
+      this.cbs.onjslinecomment(this.sectionStart, endIndex)
+      this.sectionStart = endIndex
+      this.state = State.BeforeAttrName
+      return
+    }
 
     // If there is no remaining data, we are done.
     if (this.sectionStart >= endIndex) {
