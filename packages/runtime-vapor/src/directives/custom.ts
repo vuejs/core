@@ -181,6 +181,7 @@ function applyDirectivesToElement(
   dirs: VaporDirectiveArguments,
   instance: GenericComponentInstance | null,
 ): void {
+  const hookCounts = __DEV__ && instance ? countLifecycleHooks(instance) : null
   for (const [dir, value, argument, modifiers] of dirs) {
     if (dir) {
       const ret = callWithErrorHandling(
@@ -195,5 +196,49 @@ function applyDirectivesToElement(
         )
       }
     }
+  }
+  if (__DEV__ && hookCounts) warnLifecycleHooks(instance!, hookCounts)
+}
+
+// Lifecycle hooks are not supported inside a directive: they would attach to
+// the owner instance, not the element. Dev-only detection by hook count.
+const lifecycleHookNames: Record<string, string> = __DEV__
+  ? {
+      bm: 'onBeforeMount',
+      m: 'onMounted',
+      bu: 'onBeforeUpdate',
+      u: 'onUpdated',
+      bum: 'onBeforeUnmount',
+      um: 'onUnmounted',
+      da: 'onDeactivated',
+      a: 'onActivated',
+    }
+  : {}
+
+function countLifecycleHooks(instance: GenericComponentInstance): number[] {
+  const counts: number[] = []
+  for (const key in lifecycleHookNames) {
+    const hooks = (instance as any)[key]
+    counts.push(hooks ? hooks.length : 0)
+  }
+  return counts
+}
+
+function warnLifecycleHooks(
+  instance: GenericComponentInstance,
+  before: number[],
+): void {
+  let i = 0
+  for (const key in lifecycleHookNames) {
+    const hooks = (instance as any)[key]
+    if (hooks && hooks.length > before[i]) {
+      warn(
+        `${lifecycleHookNames[key]}() was called inside a custom directive. ` +
+          `Lifecycle hooks are not supported in Vapor directives: they attach to ` +
+          `the component, not the element. Use watchPostEffect() for work that ` +
+          `needs the element in the DOM, and return a cleanup function for teardown.`,
+      )
+    }
+    i++
   }
 }
