@@ -87,7 +87,11 @@ function genElementDirectives(
       ...genExpression(dir.exp, context),
       ')',
     ]
-    const argument = dir.arg && genExpression(dir.arg, context)
+    const argument = dir.arg && [
+      '() => (',
+      ...genExpression(dir.arg, context),
+      ')',
+    ]
     const modifiers = !!dir.modifiers.length && [
       '{ ',
       genDirectiveModifiers(dir.modifiers.map(m => m.content)),

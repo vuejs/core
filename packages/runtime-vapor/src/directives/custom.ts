@@ -32,7 +32,7 @@ export type VaporDirective<
 > = (
   node: HostElement,
   value?: () => Value,
-  argument?: Arg,
+  argument?: () => Arg,
   modifiers?: DirectiveModifiers<Modifiers>,
 ) => (() => void) | void
 
@@ -41,11 +41,15 @@ type AnyVaporDirective = VaporDirective<any>
 type VaporDirectiveArguments = Array<
   | [AnyVaporDirective | undefined]
   | [AnyVaporDirective | undefined, () => any]
-  | [AnyVaporDirective | undefined, (() => any) | undefined, argument: any]
+  | [
+      AnyVaporDirective | undefined,
+      (() => any) | undefined,
+      argument: () => any,
+    ]
   | [
       AnyVaporDirective | undefined,
       value: (() => any) | undefined,
-      argument: any | undefined,
+      argument: (() => any) | undefined,
       modifiers: DirectiveModifiers,
     ]
 >
