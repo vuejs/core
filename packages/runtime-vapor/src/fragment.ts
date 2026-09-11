@@ -448,8 +448,6 @@ export class DynamicFragment extends RenderContextFragment {
         branchKey,
       )
     } finally {
-      // hooks and branch renders run user code; the caller's subscriber
-      // must come back even when one of them throws
       setActiveSub(prevSub)
     }
 
