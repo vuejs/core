@@ -489,4 +489,34 @@ describe('custom directive', () => {
 
     app.unmount()
   })
+
+  it('should apply after the element props and children are in place', () => {
+    const data = ref({ x: 'X', text: 'T', show: true })
+    let seen: Record<string, unknown> | undefined
+    const dir: VaporDirective = el => {
+      seen = {
+        attr: el.getAttribute('data-x'),
+        text: el.textContent,
+        span: !!el.querySelector('span'),
+        child: !!el.querySelector('b'),
+        connected: el.isConnected,
+      }
+    }
+    const Child = compile(`<template><b /></template>`, data)
+    const App = compile(
+      `<template><div v-custom :data-x="data.x">{{ data.text }}<span v-if="data.show" /><components.Child /></div></template>`,
+      data,
+      { Child },
+    )
+    App.directives = { custom: dir }
+
+    define(App).render()
+    expect(seen).toEqual({
+      attr: 'X',
+      text: 'T',
+      span: true,
+      child: true,
+      connected: false,
+    })
+  })
 })

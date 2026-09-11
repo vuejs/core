@@ -2,10 +2,8 @@ import {
   type AttributeNode,
   type ElementNode,
   ElementTypes,
-  ErrorCodes,
   NodeTypes,
   type SimpleExpressionNode,
-  createCompilerError,
   createSimpleExpression,
   isStaticArgOf,
   isStaticExp,
@@ -13,7 +11,6 @@ import {
 import type { NodeTransform, TransformContext } from '../transform'
 import {
   type BlockIRNode,
-  type DirectiveIRNode,
   DynamicFlag,
   IRNodeTypes,
   type IRProps,
@@ -83,19 +80,6 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       true,
     )
     irProps = isDynamic ? props : [props]
-
-    const runtimeDirective = context.block.operation.find(
-      (oper): oper is DirectiveIRNode =>
-        oper.type === IRNodeTypes.DIRECTIVE && oper.element === id,
-    )
-    if (runtimeDirective) {
-      context.options.onError(
-        createCompilerError(
-          ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-          runtimeDirective.dir.loc,
-        ),
-      )
-    }
   }
 
   return () => {

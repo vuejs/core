@@ -7,6 +7,7 @@ import {
   type CodeFragmentDelimiters,
   DELIMITERS_ARRAY,
   NEWLINE,
+  buildCodeFragment,
   genCall,
   genMulti,
   genOnce,
@@ -35,17 +36,29 @@ export function genBuiltinDirective(
 }
 
 /**
- * user directives via `withVaporDirectives`
+ * user directives via `withVaporDirectives`, emitted at the end of the block
+ * so the element's props, children and v-model are in place first
  */
-export function genDirectivesForElement(
-  id: number,
+export function genCustomDirectives(
+  operations: OperationNode[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const dirs = filterCustomDirectives(id, context.block.operation)
-  return dirs.length ? genCustomDirectives(dirs, context) : []
+  const byElement = new Map<number, DirectiveIRNode[]>()
+  for (const oper of operations) {
+    if (oper.type === IRNodeTypes.DIRECTIVE && !oper.builtin) {
+      const dirs = byElement.get(oper.element)
+      if (dirs) dirs.push(oper)
+      else byElement.set(oper.element, [oper])
+    }
+  }
+  const [frag, push] = buildCodeFragment()
+  for (const dirs of byElement.values()) {
+    push(...genElementDirectives(dirs, context))
+  }
+  return frag
 }
 
-function genCustomDirectives(
+function genElementDirectives(
   opers: DirectiveIRNode[],
   context: CodegenContext,
 ): CodeFragment[] {
@@ -89,16 +102,4 @@ function genCustomDirectives(
       modifiers,
     )
   }
-}
-
-function filterCustomDirectives(
-  id: number,
-  operations: OperationNode[],
-): DirectiveIRNode[] {
-  return operations.filter(
-    (oper): oper is DirectiveIRNode =>
-      oper.type === IRNodeTypes.DIRECTIVE &&
-      oper.element === id &&
-      !oper.builtin,
-  )
 }
