@@ -86,10 +86,9 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: transform <slot> outlets > error on unexpected custom directive on <slot> 1`] = `
-"import { resolveDirective as _resolveDirective, createSlot as _createSlot } from 'vue';
+"import { createSlot as _createSlot } from 'vue';
 
 export function render(_ctx) {
-  const _directive_foo = _resolveDirective("foo")
   const n0 = _createSlot()
   return n0
 }"
