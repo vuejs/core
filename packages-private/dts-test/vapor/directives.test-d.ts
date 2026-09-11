@@ -42,14 +42,15 @@ describe('custom directive argument and modifiers', () => {
     'foo' | 'bar',
     'arg'
   > = (_element, _value, argument, modifiers) => {
-    expectType<'arg' | undefined>(argument)
+    expectType<(() => 'arg') | undefined>(argument)
     expectType<DirectiveModifiers<'foo' | 'bar'> | undefined>(modifiers)
 
     if (argument) {
-      expectType<false>({} as IsAny<typeof argument>)
+      expectType<'arg'>(argument())
+      expectType<false>({} as IsAny<ReturnType<typeof argument>>)
 
       // @ts-expect-error argument should retain its declared type
-      expectType<'other'>(argument)
+      expectType<'other'>(argument())
     }
 
     if (modifiers) {
@@ -66,6 +67,6 @@ describe('custom directive argument and modifiers', () => {
   )
 
   withVaporDirectives({} as HTMLDivElement, [
-    [directive, () => 1, 'arg', { foo: true }],
+    [directive, () => 1, () => 'arg', { foo: true }],
   ])
 })
