@@ -97,6 +97,25 @@ describe('custom directive', () => {
     expect(teardown).toHaveBeenCalledOnce()
   })
 
+  it('should warn instead of applying through a slot outlet root', () => {
+    const data = ref(null)
+    const dir: VaporDirective = vi.fn()
+    const Child = compile(`<template><slot /></template>`, data)
+    const App = compile(
+      `<template><components.Child v-custom><p>content</p></components.Child></template>`,
+      data,
+      { Child },
+    )
+    App.directives = { custom: dir }
+
+    const { html } = define(App).render()
+    expect(html()).toBe('<p>content</p><!--slot-->')
+    expect(dir).not.toHaveBeenCalled()
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+  })
+
   it('should warn on multi-root component', () => {
     const dir: VaporDirective = vi.fn()
     const scope = effectScope()
