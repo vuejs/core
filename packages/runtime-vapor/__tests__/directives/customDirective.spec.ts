@@ -116,6 +116,22 @@ describe('custom directive', () => {
     ).toHaveBeenWarned()
   })
 
+  it('should warn and skip vdom object directives', () => {
+    const data = ref(null)
+    const mounted = vi.fn()
+    const fn: VaporDirective = vi.fn()
+    const App = compile(`<template><div v-obj v-fn /></template>`, data)
+    App.directives = { obj: { mounted }, fn }
+
+    const { html } = define(App).render()
+    expect(html()).toBe('<div></div>')
+    expect(mounted).not.toHaveBeenCalled()
+    expect(fn).toHaveBeenCalledOnce()
+    expect(
+      'Received a VDOM object directive (hooks: mounted) in a Vapor template',
+    ).toHaveBeenWarned()
+  })
+
   it('should warn on multi-root component', () => {
     const dir: VaporDirective = vi.fn()
     const scope = effectScope()
