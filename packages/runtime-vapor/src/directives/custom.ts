@@ -1,6 +1,9 @@
 import { EffectScope } from '@vue/reactivity'
 import {
   type DirectiveModifiers,
+  ErrorCodes,
+  type GenericComponentInstance,
+  callWithErrorHandling,
   currentInstance,
   isAsyncWrapper,
   onBeforeMount,
@@ -52,7 +55,7 @@ export function withVaporDirectives(
 ): void {
   // Element targets are stable, so apply synchronously in the current scope
   if (node instanceof Element) {
-    applyDirectivesToElement(node, dirs)
+    applyDirectivesToElement(node, dirs, currentInstance)
     return
   }
 
@@ -155,9 +158,9 @@ export function withVaporDirectives(
     const prev = setCurrentInstance(instance, directiveScope)
     try {
       if (once) {
-        withOnce(() => applyDirectivesToElement(element, dirs))
+        withOnce(() => applyDirectivesToElement(element, dirs, instance))
       } else {
-        applyDirectivesToElement(element, dirs)
+        applyDirectivesToElement(element, dirs, instance)
       }
     } finally {
       restoreCurrentInstance(prev)
@@ -176,11 +179,21 @@ export function withVaporDirectives(
 function applyDirectivesToElement(
   element: Element,
   dirs: VaporDirectiveArguments,
+  instance: GenericComponentInstance | null,
 ): void {
   for (const [dir, value, argument, modifiers] of dirs) {
     if (dir) {
-      const ret = dir(element, value, argument, modifiers)
-      if (ret) onScopeDispose(ret)
+      const ret = callWithErrorHandling(
+        dir,
+        instance,
+        ErrorCodes.DIRECTIVE_HOOK,
+        [element, value, argument, modifiers],
+      )
+      if (ret) {
+        onScopeDispose(() =>
+          callWithErrorHandling(ret, instance, ErrorCodes.DIRECTIVE_HOOK),
+        )
+      }
     }
   }
 }
