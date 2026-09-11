@@ -3660,7 +3660,10 @@ function publishVaporScopeIds(block: Block, scopeIds: string[]): void {
       currentScopeIds = collectRootScopeIds(instance) || []
     },
     onInteropFragment: frag => {
-      setVNodeVaporScopeIds(frag.vnode!, currentScopeIds)
+      if (frag.vnode) {
+        setVNodeVaporScopeIds(frag.vnode, currentScopeIds)
+        return true
+      }
     },
     excludeSlotOutlets: true,
   })
