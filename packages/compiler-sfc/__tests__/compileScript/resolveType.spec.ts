@@ -1405,6 +1405,63 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/src/types.ts'])
     })
 
+    test('ts module resolve parses a shared extended config once', () => {
+      const base = '/tsconfig.base.json'
+      const files: Record<string, string> = {
+        '/tsconfig.json': JSON.stringify({
+          files: [],
+          references: [
+            { path: './tsconfig.a.json' },
+            { path: './tsconfig.b.json' },
+            { path: './tsconfig.c.json' },
+          ],
+        }),
+        [base]: JSON.stringify({
+          compilerOptions: {
+            composite: true,
+            paths: {
+              bar: ['./user.ts'],
+            },
+          },
+        }),
+        '/user.ts': 'export type User = { bar: string }',
+      }
+      for (const name of ['a', 'b', 'c']) {
+        files[`/tsconfig.${name}.json`] = JSON.stringify({
+          extends: base,
+          include: ['**/*.ts', '**/*.vue'],
+        })
+      }
+
+      // Counting reads of the shared base is what makes this test able to fail: the
+      // traversal reaches three configs that extend it, and without a shared
+      // `extendedConfigCache` each one re-reads and re-parses it.
+      let baseReads = 0
+      const { props } = resolve(
+        `
+        import { User } from 'bar'
+        defineProps<User>()
+        `,
+        files,
+        {
+          fs: {
+            fileExists(file) {
+              return !!(files[file] ?? files[normalize(file)])
+            },
+            readFile(file) {
+              if (normalize(file) === normalize(base)) baseReads++
+              return files[file] ?? files[normalize(file)]
+            },
+          },
+        },
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String'],
+      })
+      expect(baseReads).toBe(1)
+    })
+
     test('ts module resolve w/ project reference folder', () => {
       const files = {
         '/tsconfig.json': JSON.stringify({
