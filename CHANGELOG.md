@@ -1,3 +1,25 @@
+# [3.6.0-rc.8](https://github.com/vuejs/core/compare/v3.6.0-rc.7...v3.6.0-rc.8) (2026-09-11)
+
+### Bug Fixes
+
+* **compiler-vapor:** emit createElement-backed children nested in a template ([#15441](https://github.com/vuejs/core/issues/15441)) ([cf95255](https://github.com/vuejs/core/commit/cf952554ff0ec97b654d69ba69a2f57e5063e7de))
+* **compiler-vapor:** resolve is="vue:" on native tags as the component ([#15450](https://github.com/vuejs/core/issues/15450)) ([5aeb53c](https://github.com/vuejs/core/commit/5aeb53cbd98cef967f89fa15cca1b746117c288c))
+* **runtime-vapor:** copy rawProps when injecting fallthrough attrs ([#15447](https://github.com/vuejs/core/issues/15447)) ([5bcdf9e](https://github.com/vuejs/core/commit/5bcdf9ee350fc54ba1b34b0b8f2a63a523f8affc))
+* **runtime-vapor:** dispose component instances that never mounted ([#15457](https://github.com/vuejs/core/issues/15457)) ([efa2eae](https://github.com/vuejs/core/commit/efa2eae202e89cb2d052c968c04511c09b314dcf))
+* **runtime-vapor:** honor move semantics and deferred branch renders in SlotFragment ([#15461](https://github.com/vuejs/core/issues/15461)) ([80a5678](https://github.com/vuejs/core/commit/80a5678e2cdce1bb749235024d4597f0836261dd))
+* **runtime-vapor:** key dynamic component branches by the resolved component ([#15448](https://github.com/vuejs/core/issues/15448)) ([80141d6](https://github.com/vuejs/core/commit/80141d6fbb9d343774db7ec958bc0a2d90663528))
+* **runtime-vapor:** merge component event listeners across prop sources ([#15444](https://github.com/vuejs/core/issues/15444)) ([2d2d130](https://github.com/vuejs/core/commit/2d2d1301af2dfa146668eb4262838f2be9ccbf3f)), closes [#15442](https://github.com/vuejs/core/issues/15442)
+* **runtime-vapor:** merge declared class, style and event props across sources ([#15454](https://github.com/vuejs/core/issues/15454)) ([fbc7692](https://github.com/vuejs/core/commit/fbc769278341977d3ad365474329aa9730b7913a))
+* **runtime-vapor:** register async setup with the ambient suspense boundary ([#15456](https://github.com/vuejs/core/issues/15456)) ([e9515f1](https://github.com/vuejs/core/commit/e9515f1ce838a6c45a5b5d9b58fff13457359938))
+* **vapor:** correct v-once handling for components, slots and directives ([#15443](https://github.com/vuejs/core/issues/15443)) ([d85db6e](https://github.com/vuejs/core/commit/d85db6e800b07b8847e9ec69ed6a76c6b4b22f60))
+* **vapor:** create dynamic component element fallbacks in the template namespace ([#15451](https://github.com/vuejs/core/issues/15451)) ([2923ef1](https://github.com/vuejs/core/commit/2923ef19aa8cdb68b57a39e9341a9638e746c651))
+
+### Performance Improvements
+
+* **runtime-vapor:** avoid allocating the hydration boundary closure on client render ([#15459](https://github.com/vuejs/core/issues/15459)) ([3227d3b](https://github.com/vuejs/core/commit/3227d3be0351276dc58deda121f84ec18df11d3e))
+* **runtime-vapor:** keep dev-only fallthrough bookkeeping out of production ([51cce24](https://github.com/vuejs/core/commit/51cce24b02a57ae2e70420f149a742aaf27746e6))
+* **runtime-vapor:** keep mergeProps out of the fallthrough path ([64bff85](https://github.com/vuejs/core/commit/64bff85d49e785359fce19fa4f688fe4fc3dd580))
+
 # [3.6.0-rc.7](https://github.com/vuejs/core/compare/v3.6.0-rc.6...v3.6.0-rc.7) (2026-09-04)
 
 ### Bug Fixes
