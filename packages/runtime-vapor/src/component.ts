@@ -1615,14 +1615,14 @@ export interface RootChainVisitor {
   // Returning true ends the descent at this fragment.
   onDynamicFragment?: (frag: DynamicFragment) => boolean | void
   // Fired on component descent, including an entry block that is itself a
-  // component.
-  onComponent?: (instance: VaporComponentInstance) => void
+  // component. Returning true ends the descent there.
+  onComponent?: (instance: VaporComponentInstance) => boolean | void
   // Components fold their own chain (attrs at creation, a chain lookup at
   // the first instance), so the descent ends there instead of entering it.
   stopAtComponent?: boolean
-  // Fired at a vnode-backed interop fragment, terminating the descent there
-  // (the fragment carries the chain across into vdom).
-  onInteropFragment?: (frag: InteropFragment) => void
+  // Fired at an interop fragment; a vnode-backed one carries the chain across
+  // into vdom. Returning true ends the descent there.
+  onInteropFragment?: (frag: InteropFragment) => boolean | void
   // Slot outlets break the effective-root chain for scope id inheritance.
   excludeSlotOutlets?: boolean
 }
@@ -1637,7 +1637,7 @@ export function getRootElement(
 
   if (isVaporComponent(block)) {
     if (visitor) {
-      if (visitor.onComponent) visitor.onComponent(block)
+      if (visitor.onComponent && visitor.onComponent(block)) return
       if (visitor.stopAtComponent) return
     }
     return getRootElement(block.block, visitor)
@@ -1659,9 +1659,8 @@ export function getRootElement(
         isInteropEnabled &&
         visitor.onInteropFragment &&
         isInteropFragment(block) &&
-        block.vnode
-      ) {
         visitor.onInteropFragment(block)
+      ) {
         return
       }
     }

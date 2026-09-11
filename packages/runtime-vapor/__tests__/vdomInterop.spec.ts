@@ -890,6 +890,40 @@ describe('vdomInterop', () => {
       expect(dir).toHaveBeenCalledWith(el, undefined, undefined, undefined)
     })
 
+    test('re-resolve vapor custom directive when vdom child root changes', async () => {
+      const teardown = vi.fn()
+      const dir: VaporDirective = vi.fn(() => teardown)
+      const tag = ref('div')
+      const count = ref(0)
+      const VDomChild = defineComponent({
+        setup() {
+          return () => h(tag.value, String(count.value))
+        },
+      })
+      const App = compile(
+        `<template><components.VDomChild v-custom /></template>`,
+        ref(null),
+        { VDomChild },
+      )
+      App.directives = { custom: dir }
+
+      const { host } = define(App as any).render()
+      expect(dir).toHaveBeenCalledOnce()
+
+      count.value++
+      await nextTick()
+      expect(dir).toHaveBeenCalledOnce()
+      expect(teardown).not.toHaveBeenCalled()
+
+      tag.value = 'span'
+      await nextTick()
+      const el = host.firstElementChild!
+      expect(el).toBeInstanceOf(HTMLSpanElement)
+      expect(teardown).toHaveBeenCalledOnce()
+      expect(dir).toHaveBeenCalledTimes(2)
+      expect((dir as any).mock.calls[1][0]).toBe(el)
+    })
+
     test('apply custom directive to vapor child', async () => {
       const vCustom = {
         created: vi.fn(),
