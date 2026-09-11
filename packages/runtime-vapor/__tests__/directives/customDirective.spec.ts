@@ -7,7 +7,14 @@ import {
   defineVaporComponent,
   withVaporDirectives,
 } from '../../src'
-import { currentInstance, nextTick, watchEffect } from '@vue/runtime-dom'
+import {
+  currentInstance,
+  nextTick,
+  onMounted,
+  onUpdated,
+  watchEffect,
+  watchPostEffect,
+} from '@vue/runtime-dom'
 import type { Mock } from 'vite-plus/test'
 import { compile, makeRender } from '../_utils'
 
@@ -518,5 +525,52 @@ describe('custom directive', () => {
       child: true,
       connected: false,
     })
+  })
+
+  it('should warn on lifecycle hooks registered inside a directive', () => {
+    const data = ref(null)
+    const dir: VaporDirective = () => {
+      onMounted(() => {})
+      onUpdated(() => {})
+    }
+    const App = compile(`<template><div v-custom /></template>`, data)
+    App.directives = { custom: dir }
+
+    const { html } = define(App).render()
+    expect(html()).toBe('<div></div>')
+    expect(
+      'onMounted() was called inside a custom directive',
+    ).toHaveBeenWarned()
+    expect(
+      'onUpdated() was called inside a custom directive',
+    ).toHaveBeenWarned()
+  })
+
+  it('should observe the inserted element from a post effect', async () => {
+    const data = ref({ show: true, extra: false })
+    const states: string[] = []
+    const dir: VaporDirective = el => {
+      watchPostEffect(() => states.push(`${el.tagName}:${el.isConnected}`))
+    }
+    const Child = compile(
+      `<template><div v-if="data.show" /><span v-else /></template>`,
+      data,
+    )
+    const App = compile(
+      `<template><components.Child v-custom /><p v-if="data.extra" v-custom /></template>`,
+      data,
+      { Child },
+    )
+    App.directives = { custom: dir }
+
+    const { app } = define(App).render()
+    expect(states).toEqual(['DIV:true'])
+
+    data.value.show = false
+    data.value.extra = true
+    await nextTick()
+    expect(states).toEqual(['DIV:true', 'P:true', 'SPAN:true'])
+
+    app.unmount()
   })
 })
