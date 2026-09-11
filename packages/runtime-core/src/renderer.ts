@@ -64,6 +64,7 @@ import {
   type SuspenseImpl,
   isSuspense,
   queueEffectWithSuspense,
+  queueSuspenseUpdate,
 } from './components/Suspense'
 import {
   TeleportEndKey,
@@ -1601,8 +1602,22 @@ function baseCreateRenderer(
     const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
     instance.scope.off()
 
-    const update = (instance.update = effect.run.bind(effect))
-    const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
+    const update = (instance.update =
+      __FEATURE_SUSPENSE__ && parentSuspense
+        ? () => {
+            if (queueSuspenseUpdate(instance)) {
+              if (instance.next) instance.next.el = instance.vnode.el
+              return
+            }
+            effect.run()
+          }
+        : effect.run.bind(effect))
+    const job: SchedulerJob = (instance.job =
+      __FEATURE_SUSPENSE__ && parentSuspense
+        ? () => {
+            if (instance.next || effect.dirty) update()
+          }
+        : effect.runIfDirty.bind(effect))
     job.i = instance
     job.id = instance.uid
     effect.scheduler = () => queueJob(job)
