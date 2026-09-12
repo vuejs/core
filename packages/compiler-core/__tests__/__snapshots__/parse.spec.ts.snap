@@ -2473,6 +2473,375 @@ exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></templa
 }
 `;
 
+exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div "bc=''></div></template> 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "children": [],
+          "codegenNode": undefined,
+          "loc": {
+            "end": {
+              "column": 29,
+              "line": 1,
+              "offset": 28,
+            },
+            "source": "<div "bc=''></div>",
+            "start": {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
+          "props": [
+            {
+              "loc": {
+                "end": {
+                  "column": 22,
+                  "line": 1,
+                  "offset": 21,
+                },
+                "source": ""bc=''",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": ""bc",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": ""bc",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "type": 6,
+              "value": {
+                "content": "",
+                "loc": {
+                  "end": {
+                    "column": 22,
+                    "line": 1,
+                    "offset": 21,
+                  },
+                  "source": "''",
+                  "start": {
+                    "column": 20,
+                    "line": 1,
+                    "offset": 19,
+                  },
+                },
+                "type": 2,
+              },
+            },
+          ],
+          "tag": "div",
+          "tagType": 0,
+          "type": 1,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 40,
+          "line": 1,
+          "offset": 39,
+        },
+        "source": "<template><div "bc=''></div></template>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "template",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 40,
+      "line": 1,
+      "offset": 39,
+    },
+    "source": "<template><div "bc=''></div></template>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<template><div "bc=''></div></template>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div 'bc=''></div></template> 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "children": [],
+          "codegenNode": undefined,
+          "loc": {
+            "end": {
+              "column": 29,
+              "line": 1,
+              "offset": 28,
+            },
+            "source": "<div 'bc=''></div>",
+            "start": {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
+          "props": [
+            {
+              "loc": {
+                "end": {
+                  "column": 22,
+                  "line": 1,
+                  "offset": 21,
+                },
+                "source": "'bc=''",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": "'bc",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "'bc",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "type": 6,
+              "value": {
+                "content": "",
+                "loc": {
+                  "end": {
+                    "column": 22,
+                    "line": 1,
+                    "offset": 21,
+                  },
+                  "source": "''",
+                  "start": {
+                    "column": 20,
+                    "line": 1,
+                    "offset": 19,
+                  },
+                },
+                "type": 2,
+              },
+            },
+          ],
+          "tag": "div",
+          "tagType": 0,
+          "type": 1,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 40,
+          "line": 1,
+          "offset": 39,
+        },
+        "source": "<template><div 'bc=''></div></template>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "template",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 40,
+      "line": 1,
+      "offset": 39,
+    },
+    "source": "<template><div 'bc=''></div></template>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<template><div 'bc=''></div></template>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div <bc=''></div></template> 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "children": [],
+          "codegenNode": undefined,
+          "loc": {
+            "end": {
+              "column": 29,
+              "line": 1,
+              "offset": 28,
+            },
+            "source": "<div <bc=''></div>",
+            "start": {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
+          "props": [
+            {
+              "loc": {
+                "end": {
+                  "column": 22,
+                  "line": 1,
+                  "offset": 21,
+                },
+                "source": "<bc=''",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "name": "<bc",
+              "nameLoc": {
+                "end": {
+                  "column": 19,
+                  "line": 1,
+                  "offset": 18,
+                },
+                "source": "<bc",
+                "start": {
+                  "column": 16,
+                  "line": 1,
+                  "offset": 15,
+                },
+              },
+              "type": 6,
+              "value": {
+                "content": "",
+                "loc": {
+                  "end": {
+                    "column": 22,
+                    "line": 1,
+                    "offset": 21,
+                  },
+                  "source": "''",
+                  "start": {
+                    "column": 20,
+                    "line": 1,
+                    "offset": 19,
+                  },
+                },
+                "type": 2,
+              },
+            },
+          ],
+          "tag": "div",
+          "tagType": 0,
+          "type": 1,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 40,
+          "line": 1,
+          "offset": 39,
+        },
+        "source": "<template><div <bc=''></div></template>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "template",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 40,
+      "line": 1,
+      "offset": 39,
+    },
+    "source": "<template><div <bc=''></div></template>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<template><div <bc=''></div></template>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div a"bc=''></div></template> 1`] = `
 {
   "cached": [],
@@ -2837,6 +3206,140 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
     },
   },
   "source": "<template><div a<bc=''></div></template>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <template><div\\x0a;  <span>hi</span>\\x0a;</div></template> 1`] = `
+{
+  "cached": [],
+  "children": [
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "content": "hi ",
+              "loc": {
+                "end": {
+                  "column": 1,
+                  "line": 3,
+                  "offset": 33,
+                },
+                "source": "hi</span>
+",
+                "start": {
+                  "column": 9,
+                  "line": 2,
+                  "offset": 23,
+                },
+              },
+              "type": 2,
+            },
+          ],
+          "codegenNode": undefined,
+          "loc": {
+            "end": {
+              "column": 7,
+              "line": 3,
+              "offset": 39,
+            },
+            "source": "<div
+  <span>hi</span>
+</div>",
+            "start": {
+              "column": 11,
+              "line": 1,
+              "offset": 10,
+            },
+          },
+          "ns": 0,
+          "props": [
+            {
+              "loc": {
+                "end": {
+                  "column": 8,
+                  "line": 2,
+                  "offset": 22,
+                },
+                "source": "<span",
+                "start": {
+                  "column": 3,
+                  "line": 2,
+                  "offset": 17,
+                },
+              },
+              "name": "<span",
+              "nameLoc": {
+                "end": {
+                  "column": 8,
+                  "line": 2,
+                  "offset": 22,
+                },
+                "source": "<span",
+                "start": {
+                  "column": 3,
+                  "line": 2,
+                  "offset": 17,
+                },
+              },
+              "type": 6,
+              "value": undefined,
+            },
+          ],
+          "tag": "div",
+          "tagType": 0,
+          "type": 1,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 18,
+          "line": 3,
+          "offset": 50,
+        },
+        "source": "<template><div
+  <span>hi</span>
+</div></template>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "template",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 18,
+      "line": 3,
+      "offset": 50,
+    },
+    "source": "<template><div
+  <span>hi</span>
+</div></template>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<template><div
+  <span>hi</span>
+</div></template>",
   "temps": 0,
   "type": 0,
 }
