@@ -960,6 +960,28 @@ describe('SFC compile <script setup>', () => {
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
+    // #15495
+    test('await in switch case', () => {
+      const code = assertAwaitDetection(`switch (a) {
+        case 1:
+          foo()
+          await bar()
+      }`)
+      expect(code).toMatch(/foo\(\)\s*;\(/)
+    })
+
+    // #15495
+    test('await in switch case nested in a block', () => {
+      const code = assertAwaitDetection(`if (a) {
+        switch (b) {
+          case 1:
+            qux()
+            await bar()
+        }
+      }`)
+      expect(code).toMatch(/qux\(\)\s*;\(/)
+    })
+
     test('multiple `if` nested statements', () => {
       assertAwaitDetection(`if (ok) {
         let a = 'foo'
