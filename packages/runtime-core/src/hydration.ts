@@ -899,6 +899,9 @@ function propHasMismatch(
     if (key === 'hidden') {
       actual = normalizeHiddenValue(el.getAttribute(key))
       expected = normalizeHiddenValue(clientValue)
+    } else if (key === 'popover') {
+      actual = normalizePopoverValue(el.getAttribute(key))
+      expected = normalizePopoverValue(clientValue)
     } else if (isBooleanAttr(key)) {
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
@@ -956,6 +959,28 @@ function normalizeHiddenValue(value: unknown): false | '' | 'until-found' {
     return value.toLowerCase() === 'until-found' ? 'until-found' : ''
   }
   return includeBooleanAttr(value) ? '' : false
+}
+
+function normalizePopoverValue(
+  value: unknown,
+): 'auto' | 'hint' | 'manual' | null {
+  if (isString(value)) {
+    value = value.toLowerCase()
+  }
+  if (value === 'auto' || value === '' || value === true) {
+    return 'auto'
+  }
+  if (value === 'hint') {
+    return 'hint'
+  }
+  if (value === 'manual') {
+    return 'manual'
+  }
+  if (isRenderableAttrValue(value) && value !== false) {
+    // Invalid values default to popover=manual.
+    return 'manual'
+  }
+  return null
 }
 
 function toClassSet(str: string): Set<string> {
