@@ -1387,9 +1387,6 @@ function createVDOMComponent(
       once,
     )
 
-    // ensure props are shallow reactive to align with VDOM behavior.
-    instance.props = shallowReactive(wrapper.props)
-
     const attrs = createInternalObject()
     const isFilteredEmit = (key: string | symbol): boolean =>
       typeof key === 'string' && isEmitListener(instance.emitsOptions, key)
@@ -1415,6 +1412,12 @@ function createVDOMComponent(
         }
       },
     })
+
+    // Match VDOM's optional props behavior for functional components.
+    instance.props =
+      vnode.shapeFlag & ShapeFlags.FUNCTIONAL_COMPONENT && !comp.props
+        ? instance.attrs
+        : shallowReactive(wrapper.props)
 
     instance.slots =
       wrapper.rawSlots === EMPTY_OBJ
