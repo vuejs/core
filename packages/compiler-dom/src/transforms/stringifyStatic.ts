@@ -349,7 +349,8 @@ function stringifyElement(
         // #6568
         if (
           (isBooleanAttr((p.arg as SimpleExpressionNode).content) ||
-            (p.arg as SimpleExpressionNode).content === 'hidden') &&
+            (p.arg as SimpleExpressionNode).content === 'hidden' ||
+            (p.arg as SimpleExpressionNode).content === 'popover') &&
           exp.content === 'false'
         ) {
           continue

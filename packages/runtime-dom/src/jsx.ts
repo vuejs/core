@@ -322,7 +322,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   unselectable?: 'on' | 'off' | undefined
 
   // Popover API
-  popover?: '' | 'auto' | 'manual' | 'hint' | undefined
+  popover?: boolean | '' | 'auto' | 'manual' | 'hint' | undefined
 
   // Living Standard
   /**
