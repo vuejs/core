@@ -646,6 +646,8 @@ export function compileScript(
           }
           if (child.type === 'BlockStatement') {
             scope.push(child.body)
+          } else if (child.type === 'SwitchCase') {
+            scope.push(child.consequent)
           }
           if (child.type === 'AwaitExpression') {
             hasAwait = true
@@ -670,7 +672,9 @@ export function compileScript(
           }
         },
         leave(node: Node) {
-          if (node.type === 'BlockStatement') scope.pop()
+          if (node.type === 'BlockStatement' || node.type === 'SwitchCase') {
+            scope.pop()
+          }
         },
       })
     }
