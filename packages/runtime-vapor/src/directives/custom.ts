@@ -21,6 +21,7 @@ import {
 import { isAsyncComponentEnabled } from '../asyncComponentState'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import { inOnce, withOnce } from '../once'
+import { isFunction, isObject } from '@vue/shared'
 
 // !! vapor directive is different from vdom directives
 export type VaporDirective<
@@ -186,6 +187,19 @@ function applyDirectivesToElement(
   const hookCounts = __DEV__ && instance ? countLifecycleHooks(instance) : null
   for (const [dir, value, argument, modifiers] of dirs) {
     if (dir) {
+      if (!isFunction(dir)) {
+        if (__DEV__) {
+          warn(
+            `Received a VDOM object directive` +
+              (isObject(dir)
+                ? ` (hooks: ${Object.keys(dir).join(', ')})`
+                : ``) +
+              ` in a Vapor template. Vapor directives must be a function: ` +
+              `(el, value, arg, modifiers) => cleanup.`,
+          )
+        }
+        continue
+      }
       const ret = callWithErrorHandling(
         dir,
         instance,
