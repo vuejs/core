@@ -132,6 +132,29 @@ describe('custom directive', () => {
     ).toHaveBeenWarned()
   })
 
+  it('should pass the argument as a getter', async () => {
+    const data = ref({ arg: 'a' })
+    const dir: VaporDirective = (el, _value, arg) => {
+      watchEffect(() => {
+        ;(el as Element).setAttribute('data-arg', arg!())
+      })
+    }
+    const App = compile(
+      `<template><div v-custom:[data.arg] /><p v-custom:static /></template>`,
+      data,
+    )
+    App.directives = { custom: dir }
+
+    const { host } = define(App).render()
+    const [div, p] = Array.from(host.children)
+    expect(div.getAttribute('data-arg')).toBe('a')
+    expect(p.getAttribute('data-arg')).toBe('static')
+
+    data.value.arg = 'b'
+    await nextTick()
+    expect(div.getAttribute('data-arg')).toBe('b')
+  })
+
   it('should warn on multi-root component', () => {
     const dir: VaporDirective = vi.fn()
     const scope = effectScope()
