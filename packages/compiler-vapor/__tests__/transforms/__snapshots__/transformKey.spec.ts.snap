@@ -9,6 +9,25 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: key > with dynamic key > <template v-if> + key 1`] = `
+"import { createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>", 3)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.foo), () => {
+    const n4 = t0()
+    return n4
+  }, () => {
+    const n7 = t0()
+    return n7
+  }, 613 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, KEYED_INDEX_1 */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
+  return n0
+}"
+`;
+
 exports[`compiler: key > with dynamic key > basic key 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)

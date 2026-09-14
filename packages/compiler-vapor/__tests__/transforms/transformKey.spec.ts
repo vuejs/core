@@ -122,6 +122,17 @@ describe('compiler: key', () => {
       expect(code).contains('_createKeyedFragment(')
     })
 
+    test('<template v-if> + key', () => {
+      const { code } = compileWithKey(
+        `<template v-if="ok" :key="a"><div/></template>` +
+          `<template v-else-if="foo" :key="b"><div/></template>` +
+          `<template v-else :key="c"><div/></template>`,
+      )
+      expect(code).toMatchSnapshot()
+      // same as vdom: the key on a <template> branch is ignored
+      expect(code).not.contains('_createKeyedFragment(')
+    })
+
     test('v-for + key', () => {
       const { code } = compileWithKey(`<div v-for="i in list" :key="i"></div>`)
       expect(code).toMatchSnapshot()

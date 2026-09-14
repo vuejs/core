@@ -1,5 +1,6 @@
 import {
   type ElementNode,
+  ElementTypes,
   NodeTypes,
   type SimpleExpressionNode,
 } from '@vue/compiler-dom'
@@ -18,7 +19,10 @@ export const transformKey: NodeTransform = (node, context) => {
   if (
     node.type !== NodeTypes.ELEMENT ||
     context.inVOnce ||
-    findDir(node, 'for')
+    findDir(node, 'for') ||
+    // same as vdom: a key on a <template> v-if branch is ignored
+    (node.tagType === ElementTypes.TEMPLATE &&
+      findDir(node, /^(if|else-if|else)$/, true))
   )
     return
 
