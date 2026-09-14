@@ -10,8 +10,10 @@ import {
   setStyle,
   template,
   useVaporCssVars,
+  vaporInteropPlugin,
 } from '@vue/runtime-vapor'
 import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
+import { Suspense, createApp, defineComponent, h } from '@vue/runtime-dom'
 import { VaporBlockShape } from '@vue/shared'
 import { compile, ifFlags, makeRender } from '../_utils'
 import type { VaporComponent } from '../../src/component'
@@ -752,5 +754,100 @@ describe('useVaporCssVars', () => {
     expect(html()).toBe(
       '<css-vars-ce-root style="--v51566ce1: red;"></css-vars-ce-root>',
     )
+  })
+  test('slot outlet root: exposed fallback and re-exposed content receive vars', async () => {
+    const data = ref({ color: 'red', show: false })
+    const Child = compile(
+      `<template><slot><span /></slot></template>
+      <style>span { color: v-bind('data.color') }</style>`,
+      data,
+    )
+    const App = compile(
+      `<template><components.Child><i v-if="data.show" /></components.Child></template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+    expect(cssVar(host.querySelector('span'))).toBe('red')
+
+    // content becomes valid after mount: exposed through the slot resolver,
+    // not through a branch render of the outlet
+    data.value.show = true
+    await nextTick()
+    expect(host.querySelector('span')).toBe(null)
+    expect(cssVar(host.querySelector('i'))).toBe('red')
+
+    // back to a freshly rendered fallback
+    data.value.show = false
+    await nextTick()
+    expect(cssVar(host.querySelector('span'))).toBe('red')
+  })
+
+  test('teleport outlets unregister with the scope that created them', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const data = ref({ color: 'red', show: true, target })
+    // inside an element the teleport is mounted via insertion state and never
+    // goes through block removal
+    const App = compile(
+      `<template>
+        <section v-if="data.show"><Teleport :to="data.target"><div /></Teleport></section>
+        <Teleport v-if="data.show" :to="data.target"><p /></Teleport>
+      </template>
+      <style>div, p { color: v-bind('data.color') }</style>`,
+      data,
+    )
+    const { instance } = define(App).render()
+    await nextTick()
+    expect(instance!.cssVarOutlets!.length).toBe(2)
+
+    for (let i = 0; i < 3; i++) {
+      data.value.show = false
+      await nextTick()
+      data.value.show = true
+      await nextTick()
+    }
+    expect(instance!.cssVarOutlets!.length).toBe(2)
+    expect(cssVar(target.querySelector('div'))).toBe('red')
+    expect(cssVar(target.querySelector('p'))).toBe('red')
+  })
+
+  test('async setup root child receives vars when it mounts', async () => {
+    let resolve!: () => void
+    const pending = new Promise<void>(r => (resolve = r))
+    const data = ref({ color: 'red', pending })
+    const Leaf = compile(
+      `<script vapor setup>const data = _data; await data.value.pending</script>
+      <template><div id="leaf" /></template>`,
+      data,
+    )
+    const Owner = compile(
+      `<template><components.Leaf /></template>
+      <style>div { color: v-bind('data.color') }</style>`,
+      data,
+      { Leaf },
+    )
+    const Root = defineComponent({
+      setup: () => () =>
+        h(Suspense, null, {
+          default: () => h(Owner as any),
+          fallback: () => h('span', 'loading'),
+        }),
+    })
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const app = createApp(Root)
+    app.use(vaporInteropPlugin)
+    app.mount(host)
+    await nextTick()
+    expect(host.innerHTML).toBe('<span>loading</span>')
+
+    resolve()
+    await pending
+    await Promise.resolve()
+    await nextTick()
+    await nextTick()
+    expect(cssVar(host.querySelector('#leaf'))).toBe('red')
+    app.unmount()
   })
 })

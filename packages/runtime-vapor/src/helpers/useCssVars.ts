@@ -3,6 +3,7 @@ import {
   currentInstance,
   onBeforeMount,
   onMounted,
+  onScopeDispose,
   setVarsOnNode,
   watch,
 } from '@vue/runtime-dom'
@@ -95,7 +96,10 @@ function registerCssVarApply(
   if (isArray(block)) {
     for (let i = 0; i < block.length; i++) registerCssVarApply(block[i], apply)
   } else if (isVaporComponent(block)) {
-    registerCssVarApply(block.block, apply)
+    // a pending async setup has no block yet: join once it mounts, which
+    // runs its beforeMount hooks before insertion
+    if (block.block) registerCssVarApply(block.block, apply)
+    else (block.bm ||= []).push(() => apply(block.block))
   } else if (
     isFragment(block) &&
     !(isTeleportEnabled && isTeleportFragment(block))
@@ -118,7 +122,7 @@ export function registerCssVarOutlet(
   frag: VaporFragment,
 ): void {
   ;(owner.cssVarOutlets ||= []).push(frag)
-  ;(frag.bum ||= []).push(() => remove(owner.cssVarOutlets!, frag))
+  onScopeDispose(() => remove(owner.cssVarOutlets!, frag), true)
 }
 
 // HMR: a rerendered block re-enters every owner chain passing through it
