@@ -34,7 +34,9 @@ export enum WatchErrorCodes {
   WATCH_CLEANUP,
 }
 
-export type WatchEffect = (onCleanup: OnCleanup) => void
+// Use `any` to accept ignored return values and avoid
+// @typescript-eslint/no-misused-promises errors for async callbacks.
+export type WatchEffect = (onCleanup: OnCleanup) => any
 
 export type WatchSource<T = any> = Ref<T, any> | ComputedRef<T> | (() => T)
 

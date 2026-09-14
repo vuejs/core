@@ -2,6 +2,8 @@ import {
   type ComputedRef,
   type MaybeRef,
   type Ref,
+  type WatchEffect,
+  type WatchHandle,
   computed,
   defineComponent,
   defineModel,
@@ -9,6 +11,9 @@ import {
   ref,
   shallowRef,
   watch,
+  watchEffect,
+  watchPostEffect,
+  watchSyncEffect,
 } from 'vue'
 import { expectType } from './utils'
 
@@ -19,6 +24,25 @@ const source3 = () => 1
 type Bar = Ref<string> | ComputedRef<string> | (() => number)
 type Foo = readonly [Ref<string>, ComputedRef<string>, () => number]
 type OnCleanup = (fn: () => void) => void
+
+{
+  // #14249: expose promise returns to type-aware lint rules.
+  expectType<ReturnType<WatchEffect>>(Promise.resolve(1))
+
+  const effect: WatchEffect = async () => source.value
+
+  for (const watch of [watchEffect, watchPostEffect, watchSyncEffect]) {
+    expectType<WatchHandle>(watch(effect))
+    watch(() => source.value)
+    watch(async onCleanup => {
+      expectType<OnCleanup>(onCleanup)
+      onCleanup(() => {})
+      // @ts-expect-error
+      onCleanup(1)
+      return source.value
+    })
+  }
+}
 
 const readonlyArr: Foo = [source, source2, source3]
 
