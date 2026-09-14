@@ -30,7 +30,7 @@ import {
   toDisplayString,
   triggerRef,
 } from '@vue/runtime-dom'
-import { compile, makeRender, shuffle } from './_utils'
+import { compile, makeRender, renderParity, shuffle } from './_utils'
 import { VaporVForFlags } from '@vue/shared'
 
 const define = makeRender()
@@ -1268,6 +1268,26 @@ describe('createFor', () => {
 
     expect(host.innerHTML).toBe('<span>1-true</span><!--for-->')
     expect(calls).toEqual(['mount 1-false', 'unmount 1-false', 'mount 1-true'])
+  })
+
+  test('class comparing an expression of the key updates like vdom', async () => {
+    const active: string[] = []
+    await renderParity(
+      {
+        App: `<template><li v-for="(p, i) in data.pages" :key="i" :class="{ active: i + 1 === data.page }">{{ p }}</li></template>`,
+      },
+      () => ref({ pages: ['a', 'b', 'c', 'd'], page: 1 }),
+      async (data, root) => {
+        for (const page of [2, 3]) {
+          data.value.page = page
+          await nextTick()
+          const rows = root.querySelectorAll('.active')
+          active.push([...rows].map(row => row.textContent).join())
+        }
+      },
+    )
+    // vdom, then vapor
+    expect(active).toEqual(['b', 'c', 'b', 'c'])
   })
 
   describe('readonly source', () => {
