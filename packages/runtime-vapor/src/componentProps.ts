@@ -346,7 +346,9 @@ export function getPropsProxyHandlers(
 
   const getProp = (instance: VaporComponentInstance, key: string | symbol) => {
     // this enables direct watching of props and prevents `Invalid watch source` DEV warnings.
-    if (key === ReactiveFlags.IS_REACTIVE) return true
+    // props are shallow reactive in vdom, so watching them should not traverse deeply.
+    if (key === ReactiveFlags.IS_REACTIVE || key === ReactiveFlags.IS_SHALLOW)
+      return true
 
     if (!isProp(key)) return
     const rawProps = instance.rawProps
