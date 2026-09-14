@@ -346,6 +346,80 @@ describe('api: options', () => {
     expect(vm.fromMixinB).toBe('bar')
   })
 
+  // #14052
+  describe('immediate watcher triggering another watcher', () => {
+    const immediate = {
+      source: {
+        immediate: true,
+        handler(this: any) {
+          this.chained = this.source
+        },
+      },
+    }
+    const chained = {
+      chained() {
+        ;(this as any).result = 'triggered'
+      },
+    }
+    const base = {
+      data: () => ({ source: 'foo', chained: {}, result: 'not triggered' }),
+      render(this: any) {
+        return this.result
+      },
+    }
+
+    const mount = async (comp: any) => {
+      const root = nodeOps.createElement('div')
+      render(h(comp), root)
+      await nextTick()
+      return serializeInner(root)
+    }
+
+    test('chained watcher declared after the immediate one', async () => {
+      expect(
+        await mount({ ...base, watch: { ...immediate, ...chained } }),
+      ).toBe('triggered')
+    })
+
+    test('chained watcher declared before the immediate one', async () => {
+      expect(
+        await mount({ ...base, watch: { ...chained, ...immediate } }),
+      ).toBe('triggered')
+    })
+
+    test('chained watcher declared outside of the mixin', async () => {
+      expect(
+        await mount({
+          mixins: [{ ...base, watch: immediate }],
+          watch: chained,
+          render: base.render,
+        }),
+      ).toBe('triggered')
+    })
+
+    test('once watcher still stops after its immediate call', async () => {
+      const spy = vi.fn()
+      const root = nodeOps.createElement('div')
+      let vm: any
+      render(
+        h({
+          data: () => ({ source: 'foo' }),
+          watch: { source: { immediate: true, once: true, handler: spy } },
+          render() {
+            vm = this
+          },
+        }),
+        root,
+      )
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+
+      vm.source = 'bar'
+      await nextTick()
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+  })
+
   test('provide/inject', () => {
     const symbolKey = Symbol()
     const Root = defineComponent({

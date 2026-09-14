@@ -19,7 +19,13 @@ import {
   isPromise,
   isString,
 } from '@vue/shared'
-import { type Ref, getCurrentScope, isRef, traverse } from '@vue/reactivity'
+import {
+  type Ref,
+  WatchErrorCodes,
+  getCurrentScope,
+  isRef,
+  traverse,
+} from '@vue/reactivity'
 import { computed } from './apiComputed'
 import {
   type WatchCallback,
@@ -694,8 +700,20 @@ export function applyOptions(instance: ComponentInternalInstance): void {
   }
 
   if (watchOptions) {
+    // #14052 an immediate callback that mutates other state would otherwise
+    // only be observed by the watchers declared above it, making behavior
+    // depend on declaration order. Register every watcher first, then run the
+    // immediate callbacks.
+    const immediateCbs: (() => void)[] = []
     for (const key in watchOptions) {
-      createWatcher(watchOptions[key], ctx, publicThis, key)
+      createWatcher(watchOptions[key], ctx, publicThis, key, immediateCbs)
+    }
+    if (immediateCbs.length) {
+      callWithAsyncErrorHandling(
+        immediateCbs,
+        instance,
+        WatchErrorCodes.WATCH_CALLBACK,
+      )
     }
   }
 
@@ -846,11 +864,26 @@ function callHook(
   )
 }
 
+function deferFirstCall(
+  handler: WatchCallback,
+  immediateCbs: (() => void)[],
+): WatchCallback {
+  let firstCallDeferred = false
+  return (...args) => {
+    if (firstCallDeferred) {
+      return handler(...args)
+    }
+    firstCallDeferred = true
+    immediateCbs.push(() => handler(...args))
+  }
+}
+
 export function createWatcher(
   raw: ComponentWatchOptionItem,
   ctx: Data,
   publicThis: ComponentPublicInstance,
   key: string,
+  immediateCbs?: (() => void)[],
 ): void {
   let getter = key.includes('.')
     ? createPathGetter(publicThis, key)
@@ -903,13 +936,21 @@ export function createWatcher(
     }
   } else if (isObject(raw)) {
     if (isArray(raw)) {
-      raw.forEach(r => createWatcher(r, ctx, publicThis, key))
+      raw.forEach(r => createWatcher(r, ctx, publicThis, key, immediateCbs))
     } else {
       const handler = isFunction(raw.handler)
         ? raw.handler.bind(publicThis)
         : (ctx[raw.handler] as WatchCallback)
       if (isFunction(handler)) {
-        watch(getter, handler, __COMPAT__ ? extend(raw, options) : raw)
+        watch(
+          getter,
+          // `once` stops the watcher as soon as its callback runs, so deferring
+          // the call would leave it alive for longer than declared.
+          immediateCbs && raw.immediate && !raw.once
+            ? deferFirstCall(handler, immediateCbs)
+            : handler,
+          __COMPAT__ ? extend(raw, options) : raw,
+        )
       } else if (__DEV__) {
         warn(`Invalid watch handler specified by key "${raw.handler}"`, handler)
       }
