@@ -9,6 +9,7 @@ import {
   isObject,
   isOn,
   isPlainObject,
+  isReservedProp,
   isString,
   normalizeClass,
   normalizeStyle,
@@ -323,14 +324,16 @@ export function getPropsProxyHandlers(
           isString(key) && hasOwn(propsOptions, camelize(key))
       : NO
   ) as (key: string | symbol) => key is string
-  const isAttr =
+  const isAttr = (
     propsOptions || emitsOptions
       ? (key: string | symbol) =>
           isString(key) &&
           key !== '$' &&
+          !isReservedProp(key) &&
           !isProp(key) &&
           !isEmitListener(emitsOptions, key)
-      : (key: string | symbol) => isString(key)
+      : (key: string | symbol) => isString(key) && !isReservedProp(key)
+  ) as (key: string | symbol) => key is string
 
   // vdom normalizes class and style on the vnode, so prop resolution already
   // receives normalized values. Match that order here.
@@ -478,7 +481,12 @@ export function getPropsProxyHandlers(
   }
 
   const getAttr = (target: RawProps, key: string | symbol) => {
-    if (isString(key) && !isProp(key) && !isEmitListener(emitsOptions, key)) {
+    if (
+      isString(key) &&
+      !isReservedProp(key) &&
+      !isProp(key) &&
+      !isEmitListener(emitsOptions, key)
+    ) {
       return getAttrFromRawProps(target, key)
     }
   }

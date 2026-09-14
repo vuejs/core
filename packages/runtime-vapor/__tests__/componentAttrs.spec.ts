@@ -2286,4 +2286,41 @@ describe('attribute fallthrough', () => {
       }
     },
   )
+
+  it('should not fallthrough reserved props from v-bind object', () => {
+    const data = ref({
+      attrs: { key: 'a', ref_for: true, ref_key: 'r', id: 'foo' },
+      attrKeys: [] as string[],
+    })
+    const Child = compile(
+      `<script setup vapor>
+        import { useAttrs } from 'vue'
+        _data.value.attrKeys = Object.keys(useAttrs())
+      </script>
+      <template><div /></template>`,
+      data,
+    )
+    const Parent = compile(
+      `<template><components.Child v-bind="data.attrs" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe('<div id="foo"></div>')
+    expect(data.value.attrKeys).toEqual(['id'])
+  })
+
+  it('should not fallthrough nullish dynamic argument', () => {
+    const data = ref({ name: null as string | null, onFoo: () => {} })
+    const Child = compile('<template><div>child</div></template>', data)
+    const Parent = compile(
+      `<template><components.Child @[data.name]="data.onFoo" /></template>`,
+      data,
+      { Child },
+    )
+
+    const { host } = define(Parent).render()
+    expect(host.innerHTML).toBe('<div>child</div>')
+  })
 })
