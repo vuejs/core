@@ -213,13 +213,11 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     onUpdated(updated)
     const updateHooks: TransitionGroupUpdateHooks = { beforeUpdate, updated }
 
-    const frag = new DynamicFragment(
-      0,
-      __DEV__ ? 'transition-group' : undefined,
-    )
     if (isHydrating) locateHydrationNode()
-    let currentTag: string | undefined
-    let currentSlot: BlockFn | undefined
+    // The wrapper element is static configuration, not animated content:
+    // `tag` is read once. (vdom only remounts the children on a tag change
+    // because the parent re-render patches the root vnode type.)
+    const tag = props.tag
     let isMounted = false
 
     renderEffect(() => {
@@ -240,17 +238,19 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       }
     }, true)
 
-    renderEffect(() => {
-      const tag = props.tag
-      const slot = slots.default
-      // if the tag and slot are the same as previous render, no need to update.
-      if (isMounted && tag === currentTag && slot === currentSlot) return
-
-      const container = tag
+    const createContainer = (): HTMLElement | undefined =>
+      tag
         ? isHydrating
           ? (adoptTemplate(currentHydrationNode!, `<${tag}/>`) as HTMLElement)
           : createElement(tag)
         : undefined
+
+    const renderChildren = (
+      slot: BlockFn | undefined,
+      container: HTMLElement | undefined,
+      // the dynamic slot path renders through its fragment
+      run: (render: BlockFn) => void = render => render(),
+    ): void => {
       let nextNode: Node | null = null
       let prevMarkerlessContainer: ParentNode | null = null
       let prevTransitionChildPending = false
@@ -262,11 +262,10 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
         nextNode = nextLogicalSibling(container)
         setCurrentHydrationNode(container.firstChild || container)
       }
-      let block: Block = slottedBlock
       let transitionBlocks: ResolvedTransitionBlock[] = []
       try {
-        frag.update(() => {
-          block = (slot && slot()) || []
+        run(() => {
+          const block = (slot && slot()) || []
           transitionBlocks = applyGroupTransitionHooks(
             block,
             propsProxy,
@@ -274,6 +273,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
             instance,
             updateHooks,
           )
+          slottedBlock = block
           if (container) {
             if (!isHydrating) insert(block, container)
             return container
@@ -298,11 +298,27 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           setCurrentHydrationNode(nextNode)
         }
       }
-      slottedBlock = block
-
-      currentTag = tag
-      currentSlot = slot
       isMounted = true
+    }
+
+    if (!instance.rawSlots.$) {
+      const container = createContainer()
+      renderChildren(slots.default, container)
+      return container || slottedBlock
+    }
+
+    // Dynamic slot sources can add/remove the default slot after setup, so
+    // the group re-renders it through a DynamicFragment (as Transition does).
+    const frag = new DynamicFragment(
+      0,
+      __DEV__ ? 'transition-group' : undefined,
+    )
+    let currentSlot: BlockFn | undefined
+    renderEffect(() => {
+      const slot = slots.default
+      if (isMounted && slot === currentSlot) return
+      renderChildren(slot, createContainer(), render => frag.update(render))
+      currentSlot = slot
     })
     return frag
   },
