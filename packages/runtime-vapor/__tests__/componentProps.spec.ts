@@ -3,6 +3,7 @@
 import {
   // currentInstance,
   inject,
+  isShallow,
   nextTick,
   provide,
   ref,
@@ -526,6 +527,33 @@ describe('component: props', () => {
     await nextTick()
     expect(html()).toBe(`<h1>bar</h1>`)
     expect(changeSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('directly watching props should be shallow', async () => {
+    const changeSpy = vi.fn()
+    let props: any
+    const { render } = define({
+      props: ['foo', 'bar'],
+      setup(_props: any) {
+        props = _props
+        watch(props, changeSpy)
+        return []
+      },
+    })
+
+    const foo = ref({ nested: { count: 0 } })
+    const bar = ref(1)
+    render({ foo: () => foo.value, bar: () => bar.value })
+
+    // nested mutation should not trigger, same as shallowReactive props in vdom
+    foo.value.nested.count++
+    await nextTick()
+    expect(changeSpy).toHaveBeenCalledTimes(0)
+
+    bar.value++
+    await nextTick()
+    expect(changeSpy).toHaveBeenCalledTimes(1)
+    expect(isShallow(props)).toBe(true)
   })
 
   test('support null in required + multiple-type declarations', () => {
