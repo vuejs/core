@@ -10,6 +10,7 @@ import {
   createCommentVNode,
   createVNode,
   currentInstance,
+  defineAsyncComponent,
   defineComponent,
   getCurrentScope,
   h,
@@ -3494,6 +3495,93 @@ describe('vdomInterop', () => {
       await new Promise(r => setTimeout(r, duration))
       await nextTick()
       expect(html()).toBe('<div>foo</div><!--async component-->')
+    })
+
+    describe('vdom async component slots', () => {
+      const VdomChild = defineComponent({
+        setup(_, { slots }) {
+          return () =>
+            h('div', [
+              renderSlot(slots, 'default'),
+              renderSlot(slots, 'foo', { msg: 'bar' }, () => ['fallback']),
+            ])
+        },
+      })
+
+      test('static and dynamic slots', async () => {
+        const AsyncChild = defineAsyncComponent(() =>
+          Promise.resolve(VdomChild),
+        )
+        const data = ref({ msg: 'foo', show: true })
+        const App = compile(
+          `<template>
+            <components.AsyncChild>
+              <span>{{ data.msg }}</span>
+              <template v-if="data.show" #foo="{ msg }">{{ msg }}</template>
+            </components.AsyncChild>
+          </template>`,
+          data,
+          { AsyncChild },
+        )
+
+        const { html } = define(App as any).render()
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(html()).toBe('<div><span>foo</span>bar</div>')
+
+        data.value.msg = 'baz'
+        await nextTick()
+        expect(html()).toBe('<div><span>baz</span>bar</div>')
+
+        data.value.show = false
+        await nextTick()
+        expect(html()).toBe('<div><span>baz</span>fallback</div>')
+
+        data.value.show = true
+        await nextTick()
+        expect(html()).toBe('<div><span>baz</span>bar</div>')
+      })
+
+      test('inside vdom component slot', async () => {
+        const AsyncChild = defineAsyncComponent(() =>
+          Promise.resolve(VdomChild),
+        )
+        const VdomWrapper = defineComponent({
+          setup(_, { slots }) {
+            return () => h('section', renderSlot(slots, 'default'))
+          },
+        })
+        const data = ref({ show: true })
+        const App = compile(
+          `<template>
+            <components.VdomWrapper>
+              <components.AsyncChild v-if="data.show">
+                <span>foo</span>
+                <template #foo="{ msg }">{{ msg }}</template>
+              </components.AsyncChild>
+            </components.VdomWrapper>
+          </template>`,
+          data,
+          { AsyncChild, VdomWrapper },
+        )
+
+        const root = document.createElement('div')
+        createVaporApp(App).use(vaporInteropPlugin).mount(root)
+        await new Promise(r => setTimeout(r))
+        await nextTick()
+        expect(root.innerHTML).toBe(
+          '<section><div><span>foo</span>bar</div><!--if--></section>',
+        )
+
+        // mount again after the component is loaded
+        data.value.show = false
+        await nextTick()
+        data.value.show = true
+        await nextTick()
+        expect(root.innerHTML).toBe(
+          '<section><div><span>foo</span>bar</div><!--if--></section>',
+        )
+      })
     })
   })
 
