@@ -660,6 +660,23 @@ describe('patchProp', () => {
       expect(el.getAttribute('foo')).toBe('newVal')
     })
 
+    test('should skip reserved props', () => {
+      const el = document.createElement('div')
+      setDynamicProps(el, [
+        {
+          '': 'empty',
+          key: 'k',
+          ref: 'r',
+          ref_for: true,
+          ref_key: 'rk',
+          onVnodeMounted: () => {},
+          foo: 'val',
+        },
+      ])
+      expect(el.attributes.length).toBe(1)
+      expect(el.getAttribute('foo')).toBe('val')
+    })
+
     test('should reset old props', () => {
       const el = document.createElement('div')
       setDynamicProps(el, [{ foo: 'val' }])

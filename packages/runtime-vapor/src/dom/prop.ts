@@ -6,6 +6,7 @@ import {
   getEscapedCssVarName,
   includeBooleanAttr,
   isOn,
+  isReservedProp,
   isSpecialBooleanAttr,
   isString,
   isSymbol,
@@ -510,6 +511,7 @@ export function patchDynamicProps(
   }
 
   for (const key of Object.keys(props)) {
+    if (isReservedProp(key)) continue
     const value = props[key]
     nextProps[key] = value
     // Events and objects can have stable identity with mutable internals, so
