@@ -440,7 +440,8 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
 }
 
 /**
- * Used by setDynamicProps only, so need to guard with `toDisplayString`
+ * Used by setDynamicProps and `textContent` bindings, so need to guard with
+ * `toDisplayString`
  */
 export function setElementText(
   el: Node & { $txt?: string },

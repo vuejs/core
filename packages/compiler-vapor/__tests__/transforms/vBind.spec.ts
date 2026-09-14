@@ -547,13 +547,13 @@ describe('compiler v-bind', () => {
   test('.prop modifier w/ textContent', () => {
     const { code } = compileWithVBind(`<div :textContent.prop="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setText(n0, _ctx.foo)')
+    expect(code).contains('_setElementText(n0, _ctx.foo)')
   })
 
   test('.prop modifier (shorthand) w/ textContent', () => {
     const { code } = compileWithVBind(`<div .textContent="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setText(n0, _ctx.foo)')
+    expect(code).contains('_setElementText(n0, _ctx.foo)')
   })
 
   test('.prop modifier w/ value', () => {
@@ -723,7 +723,7 @@ describe('compiler v-bind', () => {
       <div :textContent="foo"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setText(n0, _ctx.foo)')
+    expect(code).contains('_setElementText(n0, _ctx.foo)')
   })
 
   test(':value', () => {
