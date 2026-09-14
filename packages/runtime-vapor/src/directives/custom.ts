@@ -92,6 +92,8 @@ export function withVaporDirectives(
       if (frag.nodes === EMPTY_BLOCK) pending = true
       track(frag)
     },
+    // directives do not apply through a slot outlet root
+    excludeSlotOutlets: true,
   }
 
   function stopDirectiveScope() {
