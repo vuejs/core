@@ -26,6 +26,7 @@ import {
   genOperations,
 } from './operation'
 import { genChildren, genSelf } from './template'
+import { genCustomDirectives } from './directive'
 import { toValidAssetId } from '@vue/compiler-dom'
 import { VaporSlotFlags } from '@vue/shared'
 
@@ -170,6 +171,7 @@ export function genBlockContent(
   if (modelOperations.length) {
     push(...genOperations(modelOperations, context))
   }
+  push(...genCustomDirectives(operation, context))
 
   push(NEWLINE, `return `)
 

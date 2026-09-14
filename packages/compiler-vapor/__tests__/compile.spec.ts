@@ -327,6 +327,18 @@ describe('compile', () => {
       )
     })
 
+    test('applies custom directives after props, children and v-model', () => {
+      const code = compile(
+        `<div v-dir :id="foo">{{ bar }}<span v-if="ok" /><Comp /><input v-model="text" /></div>`,
+      )
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `_applyTextModel(n5, () => (_ctx.text), _value => (_ctx.text = _value))
+  _withVaporDirectives(n7, [[_directive_dir]])
+  return n7`,
+      )
+    })
+
     test('flushes previous effects before creating child component', () => {
       const code = compile(`<div>parent: {{ useId() }}</div><Child />`, {
         bindingMetadata: {

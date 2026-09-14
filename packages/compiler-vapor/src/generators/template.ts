@@ -1,7 +1,6 @@
 import type { CodegenContext } from '../generate'
 import { DynamicFlag, type IRDynamicInfo, type IRTemplate } from '../ir'
 import { TemplateFlags } from '@vue/shared'
-import { genDirectivesForElement } from './directive'
 import { genOperationWithInsertionState } from './operation'
 import {
   type CodeFragment,
@@ -56,7 +55,6 @@ export function genSelf(
 
   if (id !== undefined && template !== undefined) {
     push(NEWLINE, `const n${id} = ${context.tName(template)}()`)
-    push(...genDirectivesForElement(id, context))
   }
 
   if (operation) {
@@ -188,10 +186,6 @@ export function genChildren(
     if (id === child.anchor && (!child.hasDynamicChild || ownsSubtree)) {
       flushBeforeDynamic && flushBeforeDynamic(child, push)
       push(...genSelf(child, context, flushBeforeDynamic))
-    }
-
-    if (id !== undefined) {
-      push(...genDirectivesForElement(id, context))
     }
 
     prev = [variable, elementIndex, id === undefined]

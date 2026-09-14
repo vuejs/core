@@ -46,7 +46,6 @@ import {
   isSimpleIdentifier,
   toValidAssetId,
 } from '@vue/compiler-dom'
-import { genDirectivesForElement } from './directive'
 import { genEventHandler } from './event'
 import { genBlock, hasStableSlotRoot, markSlotRootOperations } from './block'
 import {
@@ -134,7 +133,6 @@ export function genCreateComponent(
       useAssetComponentHelper ? maybeSelfReference && 'true' : nsArg,
       useAssetComponentHelper && nsArg,
     ),
-    ...genDirectivesForElement(operation.id, context),
   ]
 
   function genTag() {

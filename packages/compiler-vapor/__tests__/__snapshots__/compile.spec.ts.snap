@@ -224,6 +224,35 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > execution order > applies custom directives after props, children and v-model 1`] = `
+"import { resolveDirective as _resolveDirective, child as _child, next as _next, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, setInsertionState as _setInsertionState, createIf as _createIf, createAssetComponent as _createAssetComponent, applyTextModel as _applyTextModel, withVaporDirectives as _withVaporDirectives, template as _template } from 'vue';
+const t0 = _template("<span>", 2)
+const t1 = _template("<div> <!><!><input>", 1)
+
+export function render(_ctx) {
+  const _directive_dir = _resolveDirective("dir")
+  const n7 = t1()
+  const n0 = _child(n7)
+  const n6 = _next(n0)
+  const n8 = _next(n6)
+  const n5 = _next(n8)
+  _renderEffect(() => {
+    _setProp(n7, "id", _ctx.foo)
+    _setText(n0, _toDisplayString(_ctx.bar))
+  })
+  _setInsertionState(n7, n6)
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n3 = t0()
+    return n3
+  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)
+  _setInsertionState(n7, n8)
+  const n4 = _createAssetComponent("Comp")
+  _applyTextModel(n5, () => (_ctx.text), _value => (_ctx.text = _value))
+  _withVaporDirectives(n7, [[_directive_dir]])
+  return n7
+}"
+`;
+
 exports[`compile > execution order > basic 1`] = `
 "import { txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)

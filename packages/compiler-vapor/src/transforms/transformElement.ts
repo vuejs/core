@@ -1232,6 +1232,15 @@ function transformProp(
   }
 
   if (!isBuiltInDirective(name)) {
+    if (node.tagType === ElementTypes.SLOT) {
+      context.options.onError(
+        createCompilerError(
+          ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
+          prop.loc,
+        ),
+      )
+      return
+    }
     const fromSetup = resolveSetupReference(`v-${name}`, context)
     if (fromSetup) {
       name = fromSetup
