@@ -13,7 +13,7 @@ import {
 import { nextTick, ref } from '@vue/runtime-dom'
 import { VaporBlockShape, VaporIfFlags } from '@vue/shared'
 import type { Mock } from 'vite-plus/test'
-import { compile, ifFlags, makeRender } from './_utils'
+import { compile, ifFlags, makeRender, renderParity } from './_utils'
 import { setElementText } from '../src/dom/prop'
 import type { DynamicFragment } from '../src/fragment'
 
@@ -540,5 +540,24 @@ describe('createIf', () => {
     ).render()
 
     expect(branch.$key).toBe(0)
+  })
+
+  test('should ignore key on <template v-if> like vdom', async () => {
+    const reused: boolean[] = []
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><template v-if="data.ok" :key="data.id"><input /><p>{{ data.id }}</p></template></template>`,
+      },
+      () => ref({ ok: true, id: 1 }),
+      async (data, root) => {
+        const input = root.querySelector('input')
+        data.value.id = 2
+        await nextTick()
+        reused.push(root.querySelector('input') === input)
+      },
+    )
+    // the branch is patched in place, not remounted
+    expect(reused).toEqual([true, true])
+    expect(vapor.text).toBe(vdom.text)
   })
 })
