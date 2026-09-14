@@ -28,6 +28,22 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: key > with dynamic key > <template v-slot> + key 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n2 = _createAssetComponent("Comp", null, {
+    "foo": (_slotProps0) => {
+      const n0 = t0()
+      _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.x)))
+      return n0
+    }
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: key > with dynamic key > basic key 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createKeyedFragment as _createKeyedFragment, template as _template } from 'vue';
 const t0 = _template("<div> ", 1)
