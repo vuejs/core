@@ -1391,23 +1391,24 @@ function createVDOMComponent(
     instance.props = shallowReactive(wrapper.props)
 
     const attrs = createInternalObject()
-    const isFilteredEmit = (key: string | symbol): boolean =>
-      typeof key === 'string' && isEmitListener(instance.emitsOptions, key)
+    const isFilteredAttr = (key: string | symbol): boolean =>
+      typeof key === 'string' &&
+      (isReservedProp(key) || isEmitListener(instance.emitsOptions, key))
     instance.attrs = new Proxy(attrs, {
       get(_, key: string | symbol) {
-        if (isFilteredEmit(key)) return
+        if (isFilteredAttr(key)) return
         return wrapper.attrs[key as any]
       },
       has(_, key: string | symbol) {
-        return !isFilteredEmit(key) && key in wrapper.attrs
+        return !isFilteredAttr(key) && key in wrapper.attrs
       },
       ownKeys() {
         return Reflect.ownKeys(wrapper.attrs).filter(
-          key => !isFilteredEmit(key),
+          key => !isFilteredAttr(key),
         )
       },
       getOwnPropertyDescriptor(_, key: string | symbol) {
-        if (!isFilteredEmit(key) && key in wrapper.attrs) {
+        if (!isFilteredAttr(key) && key in wrapper.attrs) {
           return {
             enumerable: true,
             configurable: true,
@@ -1464,7 +1465,7 @@ function createVDOMComponent(
     }
     isUnmounted = true
     isMounted = false
-    internals.umt(vnode.component!, parentSuspense, !!parentNode)
+    internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
     // VDOM transitions own their leaving DOM until the leave finishes.
     if (!transition) removeDom(parentNode)
   }
