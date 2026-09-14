@@ -337,4 +337,78 @@ describe('custom directive', () => {
     app.unmount()
     expect(teardown).toHaveBeenCalledTimes(2)
   })
+
+  it('should release the previous component root before it is removed', async () => {
+    const data = ref({ show: true })
+    const states: string[] = []
+    const dir: VaporDirective = el => {
+      states.push(`apply:${el.tagName}:${el.isConnected}`)
+      return () => states.push(`cleanup:${el.tagName}:${el.isConnected}`)
+    }
+    const Child = compile(
+      `<template><div v-if="data.show" /><span v-else /></template>`,
+      data,
+    )
+    const App = compile(
+      `<template><components.Child v-custom /></template>`,
+      data,
+      { Child },
+    )
+    App.directives = { custom: dir }
+
+    const { app } = define(App).render()
+    data.value.show = false
+    await nextTick()
+    expect(states).toEqual([
+      'apply:DIV:false',
+      'cleanup:DIV:true',
+      'apply:SPAN:true',
+    ])
+
+    app.unmount()
+    expect(states[3]).toBe('cleanup:SPAN:true')
+  })
+
+  it('should keep the current root when a cached branch updates offscreen', async () => {
+    const data = ref({ current: 'CompA', show: true })
+    const teardown = vi.fn()
+    const dir: VaporDirective = vi.fn(() => teardown)
+    const CompA = compile(
+      `<template><div v-if="data.show" /><span v-else /></template>`,
+      data,
+    )
+    const CompB = compile(`<template><p /></template>`, data)
+    const App = compile(
+      `<template><KeepAlive><component :is="data.current" v-custom /></KeepAlive></template>`,
+      data,
+    )
+    App.components = { CompA, CompB }
+    App.directives = { custom: dir }
+
+    const { host, app } = define(App).render()
+    expect(dir).toHaveBeenCalledOnce()
+
+    data.value.current = 'CompB'
+    await nextTick()
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(teardown).toHaveBeenCalledOnce()
+
+    // the deactivated CompA switches its root while CompB owns the directive
+    data.value.show = false
+    await nextTick()
+    expect(dir).toHaveBeenCalledTimes(2)
+    expect(teardown).toHaveBeenCalledOnce()
+    expect(host.firstElementChild).toBeInstanceOf(HTMLParagraphElement)
+
+    data.value.current = 'CompA'
+    await nextTick()
+    expect(dir).toHaveBeenCalledTimes(3)
+    expect(teardown).toHaveBeenCalledTimes(2)
+    expect((dir as unknown as Mock).mock.calls[2][0]).toBe(
+      host.firstElementChild,
+    )
+    expect(host.firstElementChild).toBeInstanceOf(HTMLSpanElement)
+
+    app.unmount()
+  })
 })

@@ -1,5 +1,4 @@
 import { EffectScope } from '@vue/reactivity'
-import { isArray } from '@vue/shared'
 import {
   type DirectiveModifiers,
   currentInstance,
@@ -10,15 +9,14 @@ import {
   setCurrentInstance,
   warn,
 } from '@vue/runtime-dom'
-import { type Block, EMPTY_BLOCK } from '../block'
+import { EMPTY_BLOCK } from '../block'
 import {
+  type RootChainVisitor,
   type VaporComponentInstance,
   getRootElement,
-  isVaporComponent,
 } from '../component'
 import { isAsyncComponentEnabled } from '../asyncComponentState'
-import { type VaporFragment, isFragment, isInteropFragment } from '../fragment'
-import { isInteropEnabled } from '../vdomInteropState'
+import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import { inOnce, withOnce } from '../once'
 
 // !! vapor directive is different from vdom directives
@@ -61,10 +59,37 @@ export function withVaporDirectives(
   const instance = currentInstance
   // Deferred (re)application keeps the once ambient it was created under.
   const once = inOnce
-  const trackedBlocks = new WeakSet<VaporFragment | VaporComponentInstance>()
   let currentElement: Element | null | undefined = null
   let directiveScope: EffectScope | undefined
   let disposed = false
+  // Set by a descent that met a root which cannot resolve yet.
+  let pending = false
+  let pendingSetups: WeakSet<VaporComponentInstance> | undefined
+
+  const visitor: RootChainVisitor = {
+    onDynamicFragment: track,
+    onComponent(block) {
+      if (__FEATURE_SUSPENSE__ && block.asyncDep && !block.asyncResolved) {
+        pending = true
+        if (!(pendingSetups ||= new WeakSet()).has(block)) {
+          pendingSetups.add(block)
+          // Suspense replaces the pending block before the component's first mount
+          onBeforeMount(applyDirectives, block)
+        }
+        return true
+      }
+      // Async wrappers keep an empty fragment until a renderable branch is available
+      if (isAsyncComponentEnabled && isAsyncWrapper(block)) {
+        const inner = block.block
+        if (isFragment(inner) && inner.nodes === EMPTY_BLOCK) pending = true
+      }
+    },
+    onInteropFragment(frag) {
+      // Interop content resolves its nodes on `syncNodes`
+      if (frag.nodes === EMPTY_BLOCK) pending = true
+      track(frag)
+    },
+  }
 
   function stopDirectiveScope() {
     if (directiveScope) {
@@ -73,12 +98,31 @@ export function withVaporDirectives(
     }
   }
 
+  function track(frag: VaporFragment): void {
+    const u = (frag.u ||= [])
+    if (u.includes(applyDirectives)) return
+    // Re-resolve the root element when the fragment updates
+    u.push(applyDirectives)
+    // A branch switch discards its root: release it while it is still in the
+    // DOM (vdom beforeUnmount). Interop fragments update on every vdom
+    // re-render and usually keep their root, so they only re-resolve.
+    if (isDynamicFragment(frag)) {
+      ;(frag.bu ||= []).push(() => {
+        // Fragments off the chain (a deactivated KeepAlive branch) keep it
+        if (currentElement && getRootElement(frag.nodes) === currentElement) {
+          currentElement = null
+          stopDirectiveScope()
+        }
+      })
+    }
+  }
+
   function applyDirectives() {
     if (disposed) return
 
-    const isRootPending = trackRootUpdates(node)
-    const element = getRootElement(node)
-    if (!element && isRootPending) {
+    pending = false
+    const element = getRootElement(node, visitor)
+    if (!element && pending) {
       // Keep null as the pending state so a resolved invalid root still warns
       if (currentElement !== null) {
         currentElement = null
@@ -118,53 +162,6 @@ export function withVaporDirectives(
     } finally {
       restoreCurrentInstance(prev)
     }
-  }
-
-  function trackRootUpdates(block: Block): boolean {
-    if (isVaporComponent(block)) {
-      if (__FEATURE_SUSPENSE__ && block.asyncDep && !block.asyncResolved) {
-        if (!trackedBlocks.has(block)) {
-          trackedBlocks.add(block)
-          // Suspense replaces the pending block before the component's first mount
-          onBeforeMount(applyDirectives, block)
-        }
-        return true
-      }
-
-      const innerBlock = block.block
-      if (trackRootUpdates(innerBlock)) return true
-
-      // Async wrappers keep an empty fragment until a renderable branch is available
-      return (
-        isAsyncComponentEnabled &&
-        isAsyncWrapper(block) &&
-        isFragment(innerBlock) &&
-        innerBlock.nodes === EMPTY_BLOCK
-      )
-    }
-    // Traverse every child so all nested fragments are tracked
-    if (isArray(block)) {
-      let hasPendingTarget = false
-      for (const child of block) {
-        if (trackRootUpdates(child)) hasPendingTarget = true
-      }
-      return hasPendingTarget
-    }
-    if (!isFragment(block)) return false
-
-    if (!trackedBlocks.has(block)) {
-      trackedBlocks.add(block)
-      // Re-resolve the root element when the fragment updates
-      ;(block.u ||= []).push(applyDirectives)
-    }
-
-    return (
-      // For VDOM interops, directives cannot resolve the root element until `syncNodes`
-      (isInteropEnabled &&
-        isInteropFragment(block) &&
-        block.nodes === EMPTY_BLOCK) ||
-      trackRootUpdates(block.nodes)
-    )
   }
 
   onScopeDispose(() => {
