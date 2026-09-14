@@ -87,6 +87,7 @@ import {
   getCurrentScopeId,
   setPublishInteropScopeIds,
 } from './scopeId'
+import { setVarsOnBlock } from './helpers/useCssVars'
 import type { LooseRawSlots } from './componentSlots'
 import {
   type Block,
@@ -342,6 +343,9 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
 
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: VaporInVdomInterface = {
+  applyCssVars(vnode, vars) {
+    setVarsOnBlock((vnode.component as any).block, vars)
+  },
   mount(
     vnode,
     container: ParentNode,
