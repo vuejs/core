@@ -1,4 +1,5 @@
 import {
+  type FunctionalComponent,
   KeepAlive,
   type ShallowRef,
   Suspense,
@@ -7386,6 +7387,54 @@ describe('vdomInterop', () => {
     },
   )
 
+  // #15493
+  test.each([false, true])(
+    'should pass props to functional vdom components (declared: %s)',
+    async declared => {
+      const data = ref({ msg: 'hello' })
+      const VDomChild: FunctionalComponent<{ msg: string }> = props =>
+        h('div', props.msg)
+      if (declared) VDomChild.props = ['msg']
+
+      const App = compile(
+        `<template><components.VDomChild :msg="data.msg" /></template>`,
+        data,
+        { VDomChild },
+      )
+      const { html } = define(App).render()
+
+      expect(html()).toBe('<div>hello</div>')
+
+      data.value.msg = 'world'
+      await nextTick()
+      expect(html()).toBe('<div>world</div>')
+    },
+  )
+
+  test('should exclude declared emit listeners from optional functional vdom props', () => {
+    const onClick = vi.fn()
+    const VDomChild: FunctionalComponent<any> = (props, { attrs, emit }) => {
+      expect(props).toBe(attrs)
+      expect(props.onClick).toBeUndefined()
+      expect('onClick' in props).toBe(false)
+      expect(Object.keys(props)).toEqual(['msg'])
+      return h('button', { onClick: () => emit('click') }, props.msg)
+    }
+    VDomChild.emits = ['click']
+
+    const App = compile(
+      `<template>
+        <components.VDomChild msg="hello" @click="data.onClick" />
+      </template>`,
+      ref({ onClick }),
+      { VDomChild },
+    )
+    const { html, host } = define(App).render()
+
+    expect(html()).toBe('<button>hello</button>')
+    host.querySelector('button')!.click()
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
   test.each([
     [true, true],
     [true, false],
