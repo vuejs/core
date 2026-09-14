@@ -7351,4 +7351,86 @@ describe('vdomInterop', () => {
       expect(onObject).toHaveBeenCalledTimes(1)
     },
   )
+
+  test.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])(
+    'should invoke component vnode hooks once across interop (Vapor parent: %s, inheritAttrs: %s)',
+    async (vaporParent, inheritAttrs) => {
+      const hooks = {
+        onVnodeBeforeMount: vi.fn(),
+        onVnodeMounted: vi.fn(),
+        onVnodeBeforeUpdate: vi.fn(),
+        onVnodeUpdated: vi.fn(),
+        onVnodeBeforeUnmount: vi.fn(),
+        onVnodeUnmounted: vi.fn(),
+      }
+      const data = ref({
+        show: true,
+        id: 'a',
+        bindings: { key: 'child', ref_for: true, ref_key: 'r', ...hooks },
+        readAttrs: (): Record<string, unknown> => ({}),
+      })
+      const Child = compile(
+        `<script setup ${vaporParent ? '' : 'vapor'}>
+          import { useAttrs } from 'vue'
+          defineOptions({ inheritAttrs: ${inheritAttrs} })
+          defineProps(['id'])
+          const attrs = useAttrs()
+          _data.value.readAttrs = () => attrs
+        </script>
+        <template><div>{{ id }}</div></template>`,
+        data,
+        {},
+        { vapor: !vaporParent },
+      )
+      const Parent = compile(
+        `<script setup ${vaporParent ? 'vapor' : ''}>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child v-if="data.show" :id="data.id" title="parent" v-bind="data.bindings" /></template>`,
+        data,
+        { Child },
+        { vapor: vaporParent },
+      )
+      const { host, app } = define(Parent).render()
+      expect(host.textContent).toBe('a')
+      expect(hooks.onVnodeBeforeMount).toHaveBeenCalledTimes(1)
+      expect(hooks.onVnodeMounted).toHaveBeenCalledTimes(1)
+
+      data.value.id = 'b'
+      await nextTick()
+      expect(host.textContent).toBe('b')
+      expect(hooks.onVnodeBeforeUpdate).toHaveBeenCalledTimes(1)
+      expect(hooks.onVnodeUpdated).toHaveBeenCalledTimes(1)
+
+      const attrs = data.value.readAttrs()
+      expect({ ...attrs }).toEqual({ title: 'parent' })
+      for (const key of Object.keys(data.value.bindings)) {
+        expect(attrs[key]).toBeUndefined()
+        expect(key in attrs).toBe(false)
+        expect(Object.getOwnPropertyDescriptor(attrs, key)).toBeUndefined()
+      }
+
+      data.value.show = false
+      await nextTick()
+      expect(host.querySelector('div')).toBeNull()
+      expect(hooks.onVnodeBeforeUnmount).toHaveBeenCalledTimes(1)
+      expect(hooks.onVnodeUnmounted).toHaveBeenCalledTimes(1)
+      for (const hook of Object.values(hooks)) {
+        expect(hook.mock.calls[0][0].type).toBe(Child)
+      }
+
+      data.value.show = true
+      await nextTick()
+      expect(host.textContent).toBe('b')
+      app.unmount()
+      expect(hooks.onVnodeBeforeUnmount).toHaveBeenCalledTimes(2)
+      expect(hooks.onVnodeUnmounted).toHaveBeenCalledTimes(2)
+    },
+  )
 })
