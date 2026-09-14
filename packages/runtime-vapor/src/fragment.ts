@@ -370,84 +370,86 @@ export class DynamicFragment extends RenderContextFragment {
     const wasMounted = prevKey !== undefined
     this.current = key
     const prevSub = setActiveSub()
-    const parent = !isHydrating ? this.getBranchParent() : null
-    // Every update after the mount-time render brackets its hooks; see the
-    // `everUpdated` field comment.
-    const isUpdate = wasMounted || (everUpdated && !!parent)
-    if (isUpdate) {
-      const bu = this.bu
-      if (bu) {
-        for (let i = 0; i < bu.length; i++) {
-          bu[i]()
+    let reusingDeferredAnchor = false
+    try {
+      const parent = !isHydrating ? this.getBranchParent() : null
+      // Every update after the mount-time render brackets its hooks; see the
+      // `everUpdated` field comment.
+      const isUpdate = wasMounted || (everUpdated && !!parent)
+      if (isUpdate) {
+        const bu = this.bu
+        if (bu) {
+          for (let i = 0; i < bu.length; i++) {
+            bu[i]()
+          }
         }
       }
-    }
-    // currently leaving: defer mounting the next branch until
-    // the leave finishes.
-    if (
-      transition &&
-      deferBranchUpdateDuringLeave(this, render, key, noScope, branchKey)
-    ) {
-      setActiveSub(prevSub)
-      return
-    }
-
-    let removePrevious: (() => void) | undefined
-    // teardown previous branch
-    if (wasMounted) {
-      const scope = this.scope
-      const previous = this.nodes
-      const removeBranch = () => remove(previous, parent || undefined)
-      let deferRemoval = false
-      if (scope) {
-        if (this.keepAliveCtx) {
-          deferRemoval = this.keepAliveCtx.prepareBranchRemoval(
-            this,
-            scope,
-            prevKey,
-          )
-        } else {
-          scope.stop()
-        }
-      }
+      // currently leaving: defer mounting the next branch until
+      // the leave finishes.
       if (
         transition &&
-        removeBranchWithLeave(
-          this,
-          transition,
-          parent,
-          render,
-          key,
-          noScope,
-          branchKey,
-        )
+        deferBranchUpdateDuringLeave(this, render, key, noScope, branchKey)
       ) {
-        // out-in: the next branch mounts after the leave finishes.
-        setActiveSub(prevSub)
         return
       }
-      if (deferRemoval) {
-        removePrevious = removeBranch
-      } else {
-        removeBranch()
+
+      let removePrevious: (() => void) | undefined
+      // teardown previous branch
+      if (wasMounted) {
+        const scope = this.scope
+        const previous = this.nodes
+        const removeBranch = () => remove(previous, parent || undefined)
+        let deferRemoval = false
+        if (scope) {
+          if (this.keepAliveCtx) {
+            deferRemoval = this.keepAliveCtx.prepareBranchRemoval(
+              this,
+              scope,
+              prevKey,
+            )
+          } else {
+            scope.stop()
+          }
+        }
+        if (
+          transition &&
+          removeBranchWithLeave(
+            this,
+            transition,
+            parent,
+            render,
+            key,
+            noScope,
+            branchKey,
+          )
+        ) {
+          // out-in: the next branch mounts after the leave finishes.
+          return
+        }
+        if (deferRemoval) {
+          removePrevious = removeBranch
+        } else {
+          removeBranch()
+        }
       }
+
+      reusingDeferredAnchor = isHydrating
+        ? prepareDeferredHydrationAnchor(this, !!render)
+        : false
+
+      this.renderBranch(
+        render,
+        transition,
+        parent,
+        key,
+        noScope,
+        isUpdate,
+        removePrevious,
+        branchKey,
+      )
+    } finally {
+      setActiveSub(prevSub)
     }
-
-    const reusingDeferredAnchor = isHydrating
-      ? prepareDeferredHydrationAnchor(this, !!render)
-      : false
-
-    this.renderBranch(
-      render,
-      transition,
-      parent,
-      key,
-      noScope,
-      isUpdate,
-      removePrevious,
-      branchKey,
-    )
-    setActiveSub(prevSub)
 
     if (isHydrating && this.autoHydrate && !reusingDeferredAnchor) {
       hydrateDynamicFragmentAnchor(this, render == null)

@@ -411,4 +411,82 @@ describe('custom directive', () => {
 
     app.unmount()
   })
+
+  it('should isolate directive errors from the owner render', () => {
+    const data = ref(null)
+    const error = new Error('directive')
+    const dir: VaporDirective = () => {
+      throw error
+    }
+    const App = compile(
+      `<template><div><p v-custom /><i>after</i></div></template>`,
+      data,
+    )
+    App.directives = { custom: dir }
+
+    const { app, mount, html } = define(App).create()
+    const errorHandler = (app.config.errorHandler = vi.fn())
+    mount()
+    expect(errorHandler).toHaveBeenCalledOnce()
+    expect(errorHandler.mock.calls[0][0]).toBe(error)
+    expect(html()).toBe('<div><p></p><i>after</i></div>')
+
+    app.unmount()
+  })
+
+  it('should isolate directive errors on component root re-application', async () => {
+    const data = ref({ show: true })
+    const error = new Error('directive')
+    const dir: VaporDirective = el => {
+      if (el.tagName === 'SPAN') throw error
+    }
+    const Child = compile(
+      `<template><div v-if="data.show" /><span v-else /></template>`,
+      data,
+    )
+    const App = compile(
+      `<template><components.Child v-custom /></template>`,
+      data,
+      { Child },
+    )
+    App.directives = { custom: dir }
+
+    const { app, mount, html } = define(App).create()
+    const errorHandler = (app.config.errorHandler = vi.fn())
+    mount()
+    data.value.show = false
+    await nextTick()
+    expect(errorHandler).toHaveBeenCalledOnce()
+    expect(errorHandler.mock.calls[0][0]).toBe(error)
+    expect(html()).toBe('<span></span><!--if-->')
+
+    app.unmount()
+  })
+
+  it('should isolate directive cleanup errors', async () => {
+    const data = ref({ show: true })
+    const error = new Error('cleanup')
+    const teardown = vi.fn()
+    const failing: VaporDirective = () => () => {
+      throw error
+    }
+    const other: VaporDirective = () => teardown
+    const App = compile(
+      `<template><div v-if="data.show" v-failing v-other /></template>`,
+      data,
+    )
+    App.directives = { failing, other }
+
+    const { app, mount, html } = define(App).create()
+    const errorHandler = (app.config.errorHandler = vi.fn())
+    mount()
+    data.value.show = false
+    await nextTick()
+    expect(errorHandler).toHaveBeenCalledOnce()
+    expect(errorHandler.mock.calls[0][0]).toBe(error)
+    expect(teardown).toHaveBeenCalledOnce()
+    expect(html()).toBe('<!--if-->')
+
+    app.unmount()
+  })
 })
