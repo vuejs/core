@@ -44,7 +44,10 @@ function setVars(
   }
 }
 
-function setVarsOnBlock(block: Block, vars: Record<string, string>): void {
+export function setVarsOnBlock(
+  block: Block,
+  vars: Record<string, string>,
+): void {
   if (block instanceof Node) {
     setVarsOnNode(block, vars)
   } else if (isArray(block)) {

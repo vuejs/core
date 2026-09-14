@@ -7312,6 +7312,36 @@ describe('vdomInterop', () => {
     })
   })
 
+  describe('css vars', () => {
+    test('applies vdom owner css vars through a vapor root child', async () => {
+      const data = ref({ color: 'red', show: true })
+      const Child = compile(
+        `<template><div v-if="data.show">a</div><span v-else>b</span></template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup>const data = _data; const components = _components</script>
+        <template><components.Child /></template>
+        <style>div { color: v-bind('data.color') }</style>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { html } = define(App as any).render()
+      await nextTick()
+      expect(html()).toBe('<div style="--v51566ce1: red;">a</div><!--if-->')
+
+      data.value.color = 'green'
+      await nextTick()
+      expect(html()).toBe('<div style="--v51566ce1: green;">a</div><!--if-->')
+
+      // a root swap inside the vapor child is re-applied by the owner's observer
+      data.value.show = false
+      await nextTick()
+      expect(html()).toBe('<span style="--v51566ce1: green;">b</span><!--if-->')
+    })
+  })
+
   describe('error handling', () => {
     test('vdom parent captures error thrown in vapor child setup', async () => {
       const err = new Error('foo')

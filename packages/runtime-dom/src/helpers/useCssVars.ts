@@ -3,6 +3,7 @@ import {
   type GenericComponentInstance,
   Static,
   type VNode,
+  type VaporInVdomInterface,
   getCurrentInstance,
   onBeforeUpdate,
   onMounted,
@@ -29,7 +30,7 @@ export function useCssVars(
     if (instance.ce) {
       setVarsOnNode(instance.ce as any, vars)
     } else {
-      setVarsOnVNode(instance.subTree, vars)
+      setVarsOnVNode(instance.subTree, vars, instance.appContext.vapor)
     }
   }
 
@@ -41,26 +42,35 @@ export function useCssVars(
   )
 }
 
-function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
+function setVarsOnVNode(
+  vnode: VNode,
+  vars: Record<string, string>,
+  vapor: VaporInVdomInterface | undefined,
+) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
     if (suspense.pendingBranch && !suspense.isHydrating) {
       suspense.effects.push(() => {
-        setVarsOnVNode(suspense.activeBranch!, vars)
+        setVarsOnVNode(suspense.activeBranch!, vars, vapor)
       })
     }
   }
 
   // drill down HOCs until it's a non-component vnode
   while (vnode.component) {
+    // a vapor root has no subTree; the interop writes its block
+    if ((vnode.component as GenericComponentInstance).vapor) {
+      vapor!.applyCssVars(vnode, vars)
+      return
+    }
     vnode = vnode.component.subTree
   }
 
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     setVarsOnNode(vnode.el as Node, vars)
   } else if (vnode.type === Fragment) {
-    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))
+    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, vapor))
   } else if (vnode.type === Static) {
     let { el, anchor } = vnode
     while (el) {

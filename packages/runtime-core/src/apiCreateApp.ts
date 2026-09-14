@@ -254,6 +254,7 @@ export interface VaporInVdomInterface {
     component: ComponentInternalInstance,
     transition: TransitionHooks,
   ): void
+  applyCssVars(vnode: VNode, vars: Record<string, string>): void
 }
 
 /**
