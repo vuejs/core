@@ -478,4 +478,81 @@ describe('TransitionGroup', () => {
     expect(host.textContent).not.toContain('A')
     expect(host.textContent).toContain('B')
   })
+  test('reads tag once instead of re-mounting the children on tag change', async () => {
+    const onBeforeEnter = vi.fn()
+    const data = ref<any>({ tag: 'ul', items: ['a', 'b'], onBeforeEnter })
+    const App = compile(
+      `<template>
+        <TransitionGroup :tag="data.tag" :css="false" @before-enter="data.onBeforeEnter">
+          <li v-for="i in data.items" :key="i">{{ i }}</li>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    const container = host.firstChild as Element
+    const rows = Array.from(container.children)
+    expect(container.tagName).toBe('UL')
+
+    data.value.tag = 'ol'
+    await nextTick()
+    expect(host.firstChild).toBe(container)
+    expect(Array.from(container.children)).toEqual(rows)
+    expect(onBeforeEnter).not.toHaveBeenCalled()
+  })
+
+  test('renders a static default slot without a fragment anchor', () => {
+    const data = ref({ items: ['a'] })
+    const withTag = compile(
+      `<template>
+        <TransitionGroup tag="ul">
+          <li v-for="i in data.items" :key="i">{{ i }}</li>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    expect(define(withTag as any).render().host.innerHTML).toBe(
+      '<ul><li>a</li><!--for--></ul>',
+    )
+  })
+
+  test('renders a static default slot without tag as the bare children', () => {
+    const data = ref({ items: ['a'] })
+    const withoutTag = compile(
+      `<template>
+        <TransitionGroup>
+          <li v-for="i in data.items" :key="i">{{ i }}</li>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    expect(define(withoutTag as any).render().host.innerHTML).toBe(
+      '<li>a</li><!--for-->',
+    )
+  })
+
+  // coverage guard: conditional default slots keep the dynamic path
+  test('re-renders a conditional default slot inside the wrapper element', async () => {
+    const data = ref({ show: false, items: ['a'] })
+    const App = compile(
+      `<template>
+        <TransitionGroup tag="ul" :css="false">
+          <template v-if="data.show" #default>
+            <li v-for="i in data.items" :key="i">{{ i }}</li>
+          </template>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+    expect(host.querySelector('ul')!.innerHTML).toBe('')
+
+    data.value.show = true
+    await nextTick()
+    expect(host.querySelector('ul')!.innerHTML).toBe('<li>a</li><!--for-->')
+
+    data.value.show = false
+    await nextTick()
+    expect(host.querySelector('ul')!.innerHTML).toBe('')
+  })
 })
