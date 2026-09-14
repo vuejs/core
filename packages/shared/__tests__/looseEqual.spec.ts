@@ -317,4 +317,16 @@ describe('utils/looseEqual', () => {
       looseEqual({ a: shared, b: shared }, { a: { id: 1 }, b: { id: 1 } }),
     ).toBe(true)
   })
+
+  test('compares circular references symmetrically', () => {
+    const self: any = {}
+    self.next = self
+    const first: any = {}
+    const second: any = {}
+    first.next = second
+    second.next = first
+
+    expect(looseEqual(self, first)).toBe(false)
+    expect(looseEqual(first, self)).toBe(false)
+  })
 })

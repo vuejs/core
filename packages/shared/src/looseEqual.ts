@@ -1,6 +1,8 @@
 import { isArray, isDate, isMap, isObject, isSet, isSymbol } from './general'
 
-function looseCompareArrays(a: any[], b: any[], seen: Map<any, any>) {
+type ComparisonState = [Map<any, any>, Map<any, any>]
+
+function looseCompareArrays(a: any[], b: any[], seen: ComparisonState) {
   if (a.length !== b.length) return false
   let equal = true
   for (let i = 0; equal && i < a.length; i++) {
@@ -12,7 +14,7 @@ function looseCompareArrays(a: any[], b: any[], seen: Map<any, any>) {
 function looseCompareCollections(
   a: Map<any, any> | Set<any>,
   b: Map<any, any> | Set<any>,
-  seen: Map<any, any>,
+  seen: ComparisonState,
 ) {
   if (a.size !== b.size) return false
   const candidates = Array.from(b)
@@ -31,7 +33,7 @@ function looseCompareCollections(
   return true
 }
 
-function looseCompareObjects(a: any, b: any, seen: Map<any, any>) {
+function looseCompareObjects(a: any, b: any, seen: ComparisonState) {
   let aValidType = isMap(a)
   let bValidType = isMap(b)
   if (aValidType || bValidType) {
@@ -68,21 +70,25 @@ function looseCompareObjects(a: any, b: any, seen: Map<any, any>) {
 function looseCompareNested(
   a: any,
   b: any,
-  seen: Map<any, any> | undefined,
-  compare: (a: any, b: any, seen: Map<any, any>) => boolean,
+  seen: ComparisonState | undefined,
+  compare: (a: any, b: any, seen: ComparisonState) => boolean,
 ) {
   if (!seen) {
-    seen = new Map()
-  } else if (seen.has(a)) {
-    return seen.get(a) === b
+    seen = [new Map(), new Map()]
   }
-  seen.set(a, b)
+  const [seenA, seenB] = seen
+  if (seenA.has(a) || seenB.has(b)) {
+    return seenA.get(a) === b && seenB.get(b) === a
+  }
+  seenA.set(a, b)
+  seenB.set(b, a)
   const equal = compare(a, b, seen)
-  seen.delete(a)
+  seenA.delete(a)
+  seenB.delete(b)
   return equal
 }
 
-export function looseEqual(a: any, b: any, seen?: Map<any, any>): boolean {
+export function looseEqual(a: any, b: any, seen?: ComparisonState): boolean {
   if (a === b) return true
   let aValidType = isDate(a)
   let bValidType = isDate(b)
