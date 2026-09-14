@@ -2167,7 +2167,6 @@ test('should reapply css vars when teleport root children are replaced', async (
 
   const teleported = target.firstElementChild as HTMLElement
   expect(teleported.tagName).toBe('P')
-  expect(teleported.getAttribute('data-v-owner')).toBeTruthy()
   expect(teleported.style.getPropertyValue('--color')).toBe('red')
 
   state.color = 'blue'
@@ -2213,7 +2212,6 @@ test('should reapply css vars when invalid target keeps children in main view', 
 
   const teleported = host.firstElementChild as HTMLElement
   expect(teleported.tagName).toBe('P')
-  expect(teleported.getAttribute('data-v-owner')).toBeTruthy()
   expect(teleported.style.getPropertyValue('--color')).toBe('red')
 
   state.color = 'blue'

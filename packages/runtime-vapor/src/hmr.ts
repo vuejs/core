@@ -15,6 +15,7 @@ import {
   unmountComponent,
 } from './component'
 import { applyComponentScopeIds } from './scopeId'
+import { applyComponentCssVars } from './helpers/useCssVars'
 import {
   currentRenderContext,
   deriveSlotScopeIds,
@@ -52,6 +53,7 @@ export function hmrRerender(instance: VaporComponentInstance): void {
     restoreCurrentInstance(prev)
   }
   applyComponentScopeIds(instance)
+  applyComponentCssVars(instance)
   insert(instance.block, parent, anchor)
 }
 

@@ -156,6 +156,7 @@ import type {
 import {
   DynamicFragment,
   type InteropFragment,
+  type VaporFragment,
   finishBlockCreation,
   isDynamicFragment,
   isFragment,
@@ -904,6 +905,9 @@ export class VaporComponentInstance<
   // The slot scope context this instance was created in, applied to the
   // effective root only (VDOM `-s` inheritance semantics).
   slotScopeIds?: string[] | null
+
+  applyCssVars?: (nodes: Block) => void
+  cssVarOutlets?: VaporFragment[]
 
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>

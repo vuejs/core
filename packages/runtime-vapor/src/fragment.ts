@@ -145,7 +145,7 @@ export class VaporFragment<
   /** beforeUpdate */
   bu?: (() => void)[]
   /** updated */
-  u?: ((nodes?: Block) => void)[]
+  u?: ((nodes: Block) => void)[]
 
   constructor(nodes: T, flags: number = FRAGMENT) {
     this.nodes = nodes

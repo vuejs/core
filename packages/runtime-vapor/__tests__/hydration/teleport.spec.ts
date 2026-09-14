@@ -999,7 +999,6 @@ describe('Vapor Mode hydration', () => {
       const span = teleportContainer.querySelector('span') as HTMLElement
       expect(span).toBeTruthy()
       expect(span.style.getPropertyValue('--color')).toBe('red')
-      expect(span.hasAttribute('data-v-owner')).toBe(true)
 
       // css vars should update reactively
       state.color = 'green'

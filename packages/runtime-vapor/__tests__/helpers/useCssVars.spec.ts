@@ -13,7 +13,7 @@ import {
 } from '@vue/runtime-vapor'
 import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
 import { VaporBlockShape } from '@vue/shared'
-import { ifFlags, makeRender } from '../_utils'
+import { compile, ifFlags, makeRender } from '../_utils'
 import type { VaporComponent } from '../../src/component'
 
 const define = makeRender()
@@ -319,7 +319,6 @@ describe('useVaporCssVars', () => {
     await nextTick()
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
-      expect((c as HTMLElement).outerHTML.includes('data-v-owner')).toBe(true)
     }
 
     toggle.value = true
@@ -327,7 +326,6 @@ describe('useVaporCssVars', () => {
     expect(target.children.length).toBe(2)
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
-      expect((c as HTMLElement).outerHTML.includes('data-v-owner')).toBe(true)
     }
   })
 
@@ -351,7 +349,9 @@ describe('useVaporCssVars', () => {
 
     await nextTick()
     expect(target.children.length).toBe(0)
-    expect(host.children[0].outerHTML.includes('data-v-owner')).toBe(true)
+    expect(
+      (host.children[0] as HTMLElement).style.getPropertyValue(`--color`),
+    ).toBe('red')
   })
 
   test('with teleport and nested fragment', async () => {
@@ -405,14 +405,12 @@ describe('useVaporCssVars', () => {
     await nextTick()
     let el = target.children[0] as HTMLElement
     expect(el.tagName).toBe('DIV')
-    expect(el.outerHTML.includes('data-v-owner')).toBe(true)
     expect(el.style.getPropertyValue(`--color`)).toBe('red')
 
     value.value = false
     await nextTick()
     el = target.children[0] as HTMLElement
     expect(el.tagName).toBe('SPAN')
-    expect(el.outerHTML.includes('data-v-owner')).toBe(true)
     expect(el.style.getPropertyValue(`--color`)).toBe('red')
   })
 
@@ -605,5 +603,154 @@ describe('useVaporCssVars', () => {
     await nextTick()
     el = root.children[0] as HTMLElement
     expect(el.style.getPropertyValue(`--color`)).toBe('green')
+  })
+  // `v-bind('data.color')` compiled under compile()'s fixed sfc id
+  const cssVar = (el: Element | null) =>
+    el ? (el as HTMLElement).style.getPropertyValue('--v51566ce1') : null
+
+  test('teleport: nested v-if created after an outer branch switch', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const data = ref({ color: 'red', a: true, b: false, target })
+    const App = compile(
+      `<template>
+        <Teleport :to="data.target">
+          <template v-if="data.a"><span v-if="data.b" /></template>
+        </Teleport>
+      </template>
+      <style>span { color: v-bind('data.color') }</style>`,
+      data,
+    )
+    define(App).render()
+    await nextTick()
+
+    data.value.a = false
+    await nextTick()
+    data.value.a = true
+    await nextTick()
+    data.value.b = true
+    await nextTick()
+    expect(cssVar(target.querySelector('span'))).toBe('red')
+
+    data.value.color = 'green'
+    await nextTick()
+    expect(cssVar(target.querySelector('span'))).toBe('green')
+  })
+
+  test('teleport: v-if inside a v-for item added after mount', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const data = ref({
+      color: 'red',
+      list: [{ id: 1, on: false }],
+      target,
+    })
+    const App = compile(
+      `<template>
+        <Teleport :to="data.target">
+          <template v-for="item in data.list" :key="item.id">
+            <i v-if="item.on" :id="'on' + item.id" />
+            <u v-else :id="'off' + item.id" />
+          </template>
+        </Teleport>
+      </template>
+      <style>i { color: v-bind('data.color') }</style>`,
+      data,
+    )
+    define(App).render()
+    await nextTick()
+
+    data.value.list.push({ id: 2, on: false })
+    await nextTick()
+    expect(cssVar(target.querySelector('#off2'))).toBe('red')
+
+    data.value.list[1].on = true
+    await nextTick()
+    expect(cssVar(target.querySelector('#on2'))).toBe('red')
+  })
+
+  test('setup error after useVaporCssVars is reported once', async () => {
+    const data = ref({ color: 'red' })
+    const App = compile(
+      `<script vapor setup>
+      const data = _data
+      throw new Error('boom')
+      </script>
+      <template><div /></template>
+      <style>div { color: v-bind('data.color') }</style>`,
+      data,
+    )
+    const errors: string[] = []
+    const { app, mount } = define(App).create()
+    app.config.errorHandler = err => errors.push(String(err))
+    mount()
+    await nextTick()
+    expect(errors).toEqual(['Error: boom'])
+    expect('setup() returned non-block value').toHaveBeenWarned()
+  })
+
+  test('HOC child switching its own root: new root carries vars before its mounted hooks', async () => {
+    const data = ref({ color: 'red', show: false, seen: null })
+    const Leaf = compile(
+      `<script vapor setup>
+      import { onMounted } from 'vue'
+      const data = _data
+      onMounted(() => {
+        data.value.seen = document
+          .getElementById('leaf')
+          .style.getPropertyValue('--v51566ce1')
+      })
+      </script>
+      <template><div id="leaf" /></template>`,
+      data,
+    )
+    const Child = compile(
+      `<template><components.Leaf v-if="data.show" /><span v-else /></template>`,
+      data,
+      { Leaf },
+    )
+    const App = compile(
+      `<template><components.Child /></template>
+      <style>div { color: v-bind('data.color') }</style>`,
+      data,
+      { Child },
+    )
+    define(App).render()
+
+    data.value.show = true
+    await nextTick()
+    expect(data.value.seen).toBe('red')
+  })
+
+  // coverage guard: the host is the only css-var target; shadow content only
+  // receives it through the custom element's attribute fallthrough (VDOM same)
+  test('custom element: root switch keeps vars on the host', async () => {
+    const data = ref({ color: 'red', show: true })
+    const CE = defineVaporCustomElement(
+      compile(
+        `<template><div v-if="data.show">a</div><span v-else>b</span></template>
+        <style>div { color: v-bind('data.color') }</style>`,
+        data,
+      ),
+    )
+    customElements.define('css-vars-ce-root', CE)
+
+    const { host, html } = define({
+      setup() {
+        return createPlainElement('css-vars-ce-root', null, null, true)
+      },
+    }).render()
+    expect(html()).toBe(
+      '<css-vars-ce-root style="--v51566ce1: red;"></css-vars-ce-root>',
+    )
+
+    data.value.show = false
+    await nextTick()
+    expect(host.firstElementChild!.shadowRoot!.innerHTML).toBe(
+      '<span style="--v51566ce1: red;">b</span><!--if-->',
+    )
+    expect(html()).toBe(
+      '<css-vars-ce-root style="--v51566ce1: red;"></css-vars-ce-root>',
+    )
   })
 })

@@ -344,7 +344,7 @@ export { shouldSetAsProp, shouldSetAsPropForVueCE } from './patchProp'
 /**
  * @internal
  */
-export { baseUseCssVars, setVarsOnNode } from './helpers/useCssVars'
+export { setVarsOnNode } from './helpers/useCssVars'
 /**
  * @internal
  */
