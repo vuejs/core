@@ -147,6 +147,15 @@ export interface SlotResolutionState {
   // Reports an exposed-branch validity flip so an enclosing boundary can
   // recheck its own fallback decision.
   notifyExposedValidityChange(): void
+  // beforeMount hooks, handed every block about to be exposed
+  bm?: ((nodes: Block) => void)[]
+}
+
+function beforeExpose(state: SlotResolutionState, block: Block): void {
+  const bm = state.bm
+  if (bm) {
+    for (let i = 0; i < bm.length; i++) bm[i](block)
+  }
 }
 
 /**
@@ -297,6 +306,7 @@ function commitSlotFallback(
       removeAttachedNodes(state.getContent(), parentNode, false)
     }
   }
+  beforeExpose(state, block)
   insertActiveSlotFallback(state)
 }
 
@@ -377,10 +387,13 @@ function recheckSlotResolutionNow(
     const content = state.getContent()
     const hadFallback = !!fallback
     clearSlotFallback(state)
-    if (!isHydrating && hadFallback) {
-      const parentNode = state.getParentNode()
-      if (parentNode) {
-        insert(content, parentNode, state.getAnchor())
+    if (hadFallback) {
+      beforeExpose(state, content)
+      if (!isHydrating) {
+        const parentNode = state.getParentNode()
+        if (parentNode) {
+          insert(content, parentNode, state.getAnchor())
+        }
       }
     }
   } else if (fallback) {

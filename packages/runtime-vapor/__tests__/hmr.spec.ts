@@ -12,6 +12,7 @@ import {
   onUnmounted,
   popWarningContext,
   provide,
+  reactive,
   ref,
   setCurrentInstance,
   toDisplayString,
@@ -31,6 +32,7 @@ import {
   renderEffect,
   setText,
   template,
+  useVaporCssVars,
   vaporInteropPlugin,
 } from '@vue/runtime-vapor'
 import { BindingTypes } from '@vue/compiler-core'
@@ -471,6 +473,28 @@ describe('hot module replacement', () => {
     app.unmount()
     await nextTick()
     expect(unmountSpy).toHaveBeenCalledTimes(2)
+  })
+
+  // coverage guard: the rerendered root must receive the owner's css vars
+  test('rerender re-applies css vars to the new root', async () => {
+    const root = document.createElement('div')
+    const id = 'test-rerender-css-vars'
+    const state = reactive({ color: 'red' })
+    const Comp = defineVaporComponent({
+      __hmrId: id,
+      setup() {
+        useVaporCssVars(() => state)
+      },
+      render: compileToFunction(`<div>x</div>`),
+    })
+    createRecord(id, Comp as any)
+
+    define(Comp).create().mount(root)
+    expect(root.innerHTML).toBe(`<div style="--color: red;">x</div>`)
+
+    rerender(id, compileToFunction(`<span>y</span>`))
+    await nextTick()
+    expect(root.innerHTML).toBe(`<span style="--color: red;">y</span>`)
   })
 
   test('rerender should unregister replaced child instances from hmr records', () => {

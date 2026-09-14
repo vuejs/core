@@ -344,7 +344,7 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: VaporInVdomInterface = {
   applyCssVars(vnode, vars) {
-    setVarsOnBlock((vnode.component as any).block, vars)
+    setVarsOnBlock(getVaporInstance(vnode).block, vars)
   },
   mount(
     vnode,
@@ -1052,7 +1052,7 @@ function trackFragmentVNodeUpdates(
   vnode.iu = () => {
     syncNodes()
     if (frag.u) {
-      frag.u.forEach(hook => hook())
+      frag.u.forEach(hook => hook(frag.nodes))
     }
   }
 }
@@ -1279,7 +1279,7 @@ function mountVNode(
       mountedAnchor = anchor
     }
     syncNodes()
-    if (isMounted && frag.u) frag.u.forEach(hook => hook())
+    if (isMounted && frag.u) frag.u.forEach(hook => hook(frag.nodes))
   }
   frag.insert = (parentNode, anchor, parentSuspense, transition) =>
     place(parentNode, anchor, parentSuspense, transition)
@@ -1543,7 +1543,7 @@ function createVDOMComponent(
     }
 
     syncNodes()
-    if (isMounted && frag.u) frag.u.forEach(hook => hook())
+    if (isMounted && frag.u) frag.u.forEach(hook => hook(frag.nodes))
   }
   frag.insert = (parentNode, anchor, parentSuspense, transition) =>
     place(parentNode, anchor, parentSuspense, transition)
@@ -2099,7 +2099,7 @@ function renderVDOMSlot(
   function notifyUpdated(): void {
     syncInteropRoot(parentComponent)
     if (isMounted && frag.u) {
-      frag.u.forEach(hook => hook())
+      frag.u.forEach(hook => hook(frag.nodes))
     }
   }
 
@@ -3265,7 +3265,7 @@ function createVNodeChildrenFragment(
       frag.slotBoundary.markDirty()
     }
     if (isMounted && frag.u) {
-      frag.u.forEach(hook => hook())
+      frag.u.forEach(hook => hook(frag.nodes))
     }
   }
   const notifyBeforeUpdate = (): void => {
@@ -3362,7 +3362,7 @@ function createVNodeChildrenFragment(
           const validityChanged = syncResolvedNodesAndCleanup()
           if (isHydrating) {
             if (isMounted && frag.u) {
-              frag.u.forEach(hook => hook())
+              frag.u.forEach(hook => hook(frag.nodes))
             }
           } else {
             notifyUpdated(validityChanged)

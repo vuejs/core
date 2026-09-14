@@ -409,7 +409,7 @@ export const createFor = (
     frag.nodes = parentAnchor ? [newBlocks, parentAnchor] : [newBlocks]
 
     if (wasMounted && frag.u) {
-      for (const fn of frag.u) fn()
+      for (const fn of frag.u) fn(frag.nodes)
     }
     setActiveSub(prevSub)
   }
@@ -473,6 +473,12 @@ export const createFor = (
     if (isTransitionEnabled && frag.$transition) {
       if (frag.$transition.applyGroup) setBlockKey(block.nodes, block.key)
       applyTransitionHooks(block.nodes, frag.$transition)
+    }
+
+    // a fresh item is rendered but not inserted yet
+    const bm = frag.bm
+    if (bm) {
+      for (let i = 0; i < bm.length; i++) bm[i](block.nodes)
     }
 
     if (parent) {

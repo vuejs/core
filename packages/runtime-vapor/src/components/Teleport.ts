@@ -1,9 +1,4 @@
-import {
-  EffectScope,
-  getCurrentScope,
-  pauseTracking,
-  resetTracking,
-} from '@vue/reactivity'
+import { EffectScope, getCurrentScope } from '@vue/reactivity'
 import {
   type GenericComponentInstance,
   MismatchTypes,
@@ -31,19 +26,11 @@ import {
   parentNode,
   querySelector,
 } from '../dom/node'
-import {
-  type LooseRawProps,
-  type VaporComponentInstance,
-  isVaporComponent,
-} from '../component'
+import type { LooseRawProps, VaporComponentInstance } from '../component'
 import { rawPropsProxyHandlers } from '../componentProps'
 import { renderEffect } from '../renderEffect'
-import { extend, isArray } from '@vue/shared'
-import {
-  RenderContextFragment,
-  isFragment,
-  resolveFragmentAnchor,
-} from '../fragment'
+import { extend } from '@vue/shared'
+import { RenderContextFragment, resolveFragmentAnchor } from '../fragment'
 import { withRenderContext } from '../renderContext'
 import {
   advanceHydrationNode,
@@ -58,6 +45,7 @@ import type { DefineVaporSetupFnComponent } from '../apiDefineComponent'
 import type { RawSlots } from '../componentSlots'
 import { applyTransitionHooks, isTransitionEnabled } from '../transition'
 import { enableTeleport } from '../teleport'
+import { registerCssVarOutlet } from '../helpers/useCssVars'
 import { TELEPORT } from '../fragmentFlags'
 import { isSuspenseEnabled } from '../suspense'
 
@@ -184,6 +172,8 @@ export class TeleportFragment extends RenderContextFragment {
           )
         }),
       )
+      const owner = this.scopeOwner as VaporComponentInstance | null
+      if (owner && owner.applyCssVars) registerCssVarOutlet(owner, this)
       this.bindChildren(this.nodes)
     } finally {
       restoreCurrentInstance(prevInstance)
@@ -196,24 +186,9 @@ export class TeleportFragment extends RenderContextFragment {
     }
   }
 
-  private registerUpdateCssVars(block: Block) {
-    if (isFragment(block)) {
-      ;(block.u || (block.u = [])).push(() => this.updateCssVars())
-      this.registerUpdateCssVars(block.nodes)
-    } else if (isVaporComponent(block)) {
-      this.registerUpdateCssVars(block.block)
-    } else if (isArray(block)) {
-      block.forEach(node => this.registerUpdateCssVars(node))
-    }
-  }
-
   private bindChildren(block: Block): void {
-    // register updateCssVars to nested fragments's update hooks so that
-    // it will be called when root fragment changed
-    const scopeOwner = this.scopeOwner
-    if (scopeOwner && scopeOwner.ut) {
-      this.registerUpdateCssVars(block)
-    }
+    const owner = this.scopeOwner as VaporComponentInstance | null
+    if (owner && owner.applyCssVars) owner.applyCssVars(block)
   }
 
   private handleChildrenUpdate(children: Block): void {
@@ -231,9 +206,8 @@ export class TeleportFragment extends RenderContextFragment {
     remove(this.nodes, mountState.container)
     // mount new nodes
     this.nodes = children
+    this.bindChildren(children)
     insert(children, mountState.container, mountState.anchor)
-    this.bindChildren(this.nodes)
-    this.updateCssVars()
   }
 
   private mount(
@@ -256,7 +230,6 @@ export class TeleportFragment extends RenderContextFragment {
       insert(this.nodes, parent, anchor)
     }
     this.mountState = { location, container: parent, anchor }
-    this.updateCssVars()
   }
 
   private prepareTargetAnchors(target: ParentNode): void {
@@ -604,40 +577,7 @@ export class TeleportFragment extends RenderContextFragment {
       )
     }
 
-    if (target || disabled) {
-      this.updateCssVars()
-    }
     advanceHydrationNode(this.anchor!)
-  }
-
-  private updateCssVars(): void {
-    const ctx = this.scopeOwner
-    if (ctx && ctx.ut) {
-      let node: Node | null | undefined
-      let anchor: Node | null | undefined
-      if (this.mountState.location === TeleportMountLocation.Main) {
-        node = this.placeholder
-        anchor = this.anchor
-      } else if (this.mountState.location === TeleportMountLocation.Target) {
-        node = this.targetStart
-        anchor = this.targetAnchor
-      } else {
-        return
-      }
-      while (node && node !== anchor) {
-        if (node.nodeType === 1)
-          (node as Element).setAttribute('data-v-owner', String(ctx.uid))
-        node = node.nextSibling
-      }
-      // Avoid collecting the owner's css vars dependencies into the active
-      // Teleport effect, or later css vars updates would re-run Teleport itself.
-      pauseTracking()
-      try {
-        ctx.ut()
-      } finally {
-        resetTracking()
-      }
-    }
   }
 }
 

@@ -7340,6 +7340,31 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(html()).toBe('<span style="--v51566ce1: green;">b</span><!--if-->')
     })
+
+    // coverage guard: the owner rewrites through the interop fragment's
+    // updated hook once the vdom child has patched its root
+    test('vapor owner css vars follow a vdom root child re-render', async () => {
+      const data = ref({ color: 'red', show: true })
+      const VDomChild = compile(
+        `<script setup>const data = _data</script>
+        <template><div v-if="data.show">a</div><span v-else>b</span></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template><components.VDomChild /></template>
+        <style>div { color: v-bind('data.color') }</style>`,
+        data,
+        { VDomChild },
+      )
+      const { html } = define(App as any).render()
+      expect(html()).toBe('<div style="--v51566ce1: red;">a</div>')
+
+      data.value.show = false
+      await nextTick()
+      expect(html()).toBe('<span style="--v51566ce1: red;">b</span>')
+    })
   })
 
   describe('error handling', () => {
