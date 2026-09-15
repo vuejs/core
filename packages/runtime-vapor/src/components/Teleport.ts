@@ -146,10 +146,12 @@ export class TeleportFragment extends RenderContextFragment {
   }
 
   private initChildren(): void {
-    const prevInstance = setCurrentInstance(
-      this.renderInstance,
-      this.childrenScope,
-    )
+    const instance = this.renderInstance as VaporComponentInstance | null
+    const prevInstance = setCurrentInstance(instance, this.childrenScope)
+    // Deferred init can run after the owner mounted, but the first render of
+    // the children is still part of the mount and must not run update hooks.
+    const prevUpdating = instance ? instance.isUpdating : false
+    if (instance) instance.isUpdating = true
     try {
       this.childrenInitialized = true
       // RenderEffect restores (renderInstance, childrenScope) on every run,
@@ -176,6 +178,7 @@ export class TeleportFragment extends RenderContextFragment {
       if (owner && owner.applyCssVars) registerCssVarOutlet(owner, this)
       this.bindChildren(this.nodes)
     } finally {
+      if (instance) instance.isUpdating = prevUpdating
       restoreCurrentInstance(prevInstance)
     }
   }
