@@ -1378,6 +1378,7 @@ function createVDOMComponent(
   }
 
   if (
+    !once &&
     (component as any).__asyncLoader &&
     rawSlots &&
     (rawSlots as RawSlots).$
