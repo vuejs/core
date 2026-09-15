@@ -455,11 +455,16 @@ export function getBlockFirstNode(block: Block): Node | undefined {
       if (marker) return marker
     }
     const nodes = block.nodes
+    if (isValidBlock(nodes)) return getBlockFirstNode(nodes)
     // Empty fragments may keep their insertion anchor in `anchor` or in
-    // `nodes` (ForFragment).
-    return isValidBlock(nodes)
-      ? getBlockFirstNode(nodes)
-      : block.anchor || getBlockFirstNode(nodes)
+    // `nodes` (ForFragment). An empty fragment nested in `nodes` places its
+    // anchor before the outer one, but an invalid slot fallback in `nodes` is
+    // kept out of the DOM, so only use a node that sits next to `anchor`.
+    const node = getBlockFirstNode(nodes)
+    const anchor = block.anchor
+    return node && (!anchor || node.parentNode === anchor.parentNode)
+      ? node
+      : anchor
   }
 }
 
