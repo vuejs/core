@@ -19,6 +19,7 @@ import {
 } from '@vue/shared'
 import { onBinding } from './event'
 import {
+  type ElementWithTransition,
   type GenericComponentInstance,
   MismatchTypes,
   currentInstance,
@@ -39,6 +40,7 @@ import {
   toStyleMap,
   unsafeToTrustedHTML,
   vShowHidden,
+  vtcKey,
   warn,
   warnPropMismatch,
   xlinkNS,
@@ -56,6 +58,7 @@ import {
 } from './hydration'
 import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
+import { isTransitionEnabled } from '../transition'
 
 type TargetElement = Element & {
   $root?: true
@@ -220,10 +223,12 @@ export function setClass(
     }
 
     if (value !== el.$cls) {
+      el.$cls = value
+      if (isTransitionEnabled) value = withTransitionClasses(el, value)
       if (isSVG) {
-        el.setAttribute('class', (el.$cls = value))
+        el.setAttribute('class', value)
       } else {
-        el.className = el.$cls = value
+        el.className = value
       }
     }
   }
@@ -262,9 +267,20 @@ export function setClassName(
     // pass the rebuilt string as normalized to avoid doing that work twice.
     setClass(el, value, false, true)
   } else {
-    el.className = el.$cls = value
+    el.$cls = value
+    el.className = isTransitionEnabled
+      ? withTransitionClasses(el, value)
+      : value
   }
   el.$clsFlags = flags
+}
+
+// Keep the temporary classes of an element during a transition.
+function withTransitionClasses(el: TargetElement, value: string): string {
+  const transitionClasses = (el as ElementWithTransition)[vtcKey]
+  return transitionClasses
+    ? (value ? [value, ...transitionClasses] : [...transitionClasses]).join(' ')
+    : value
 }
 
 function setClassIncremental(
