@@ -1,4 +1,5 @@
 import { EffectScope } from '@vue/reactivity'
+import { isArray } from '@vue/shared'
 import type { MoveType } from '@vue/runtime-dom'
 import {
   type Block,
@@ -292,8 +293,8 @@ function commitSlotFallback(
     if (state.$transition) {
       // Match VDOM slot fallback branch identity so fallback enter does not
       // early-remove the currently leaving slot content.
-      setBlockKey(block, '_fb')
-      state.$transition = applyTransitionHooks(block, state.$transition)
+      if (!isArray(block)) setBlockKey(block, '_fb')
+      state.$transition = applyTransitionHooks(block, state.$transition, state)
     }
   }
   if (detachContent && !isHydrating) {

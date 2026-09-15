@@ -40,6 +40,7 @@ import { unsetRef } from '../refCleanup'
 import {
   type DynamicFragment,
   type VaporFragment,
+  getFragmentKey,
   isDynamicFragment,
   isFragment,
   isInteropFragment,
@@ -109,7 +110,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const resolveCacheKeyFromBlock = (
       block: VaporComponentInstance | VaporFragment,
       interop: boolean,
-      branchKey = currentCacheKey,
+      branchKey: any,
     ): CacheKey => {
       if (interop && isInteropEnabled) {
         const frag = block as VaporFragment
@@ -180,10 +181,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return
         }
       }
-      const [innerBlock, interop] = getInnerBlock(block)
+      const [innerBlock, interop, branchKey] = getInnerBlock(block)
       if (!innerBlock) return
 
-      const branchKey = isDynamicFragment(block) ? block.branchKey : undefined
       const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
       // Align with VDOM KeepAlive behavior: async wrappers can enter the cache
       // before they resolve, and a later async update may resolve the same
@@ -204,10 +204,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
     }
 
     const processShapeFlag = (block: Block): CacheKey | false => {
-      const [innerBlock, interop] = getInnerBlock(block)
+      const [innerBlock, interop, branchKey] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
-      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop)
+      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
       setShapeFlag(innerBlock, interop, cache.has(cacheKey))
       return cacheKey
     }
@@ -296,11 +296,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
     const getCurrentBlockState = () => {
       const block = keepAliveInstance.block!
-      const [currentBlock, interop] = getInnerBlock(block)
-      const branchKey =
-        isDynamicFragment(block) && block.branchKey !== undefined
-          ? block.branchKey
-          : currentCacheKey
+      const [currentBlock, interop, branchKey] = getInnerBlock(block)
 
       return {
         currentBlock,
@@ -382,11 +378,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
           scope.stop()
           return false
         }
+        const fragKey = getFragmentKey(frag)
         const cacheKey =
-          frag.branchKey !== undefined
-            ? withCurrentCacheKey(frag.branchKey, () =>
-                processShapeFlag(frag.nodes),
-              )
+          fragKey !== undefined
+            ? withCurrentCacheKey(fragKey, () => processShapeFlag(frag.nodes))
             : processShapeFlag(frag.nodes)
         if (cacheKey === false) {
           scope.stop()
@@ -420,9 +415,8 @@ const VaporKeepAliveImpl = defineVaporComponent({
         // before rendering, so incoming setup runs before cache pruning decides
         // whether the outgoing branch is deactivated or unmounted.
         try {
-          frag.branchKey !== undefined
-            ? withCurrentCacheKey(frag.branchKey, run)
-            : run()
+          const fragKey = getFragmentKey(frag)
+          fragKey !== undefined ? withCurrentCacheKey(fragKey, run) : run()
           if (
             removePrevious &&
             incomingCacheKey !== false &&
@@ -474,7 +468,8 @@ export const VaporKeepAlive: DefineVaporComponent<{}, string, KeepAliveProps> =
 // A branch with a user key is cached and its scope aliased under that key,
 // so re-entering the key finds them whatever the branch identity is.
 function scopeLookupKey(frag: DynamicFragment, current: any): any {
-  return frag.branchKey !== undefined ? frag.branchKey : current
+  const key = getFragmentKey(frag)
+  return key !== undefined ? key : current
 }
 
 function registerDynamicFragmentHooks(
@@ -578,19 +573,26 @@ function isKeptAlive(
 }
 
 type InnerBlockResult =
-  | [VaporFragment, true]
-  | [VaporComponentInstance, false]
-  | [undefined, false]
+  | [VaporFragment, true, any]
+  | [VaporComponentInstance, false, any]
+  | [undefined, false, any]
 
-function getInnerBlock(block: Block): InnerBlockResult {
+// Also resolves the branch key the inner block sits in: the key of the
+// innermost fragment declaring one, the way nested v-if branches key the
+// child vnode in vdom; the ambient key seeds a walk that starts below the
+// fragment being rendered.
+function getInnerBlock(
+  block: Block,
+  branchKey: any = currentCacheKey,
+): InnerBlockResult {
   if (isVaporComponent(block)) {
-    return [block, false]
+    return [block, false, branchKey]
   } else if (isInteropEnabled && isInteropFragment(block)) {
-    return [block, true]
+    return [block, true, branchKey]
   } else if (isFragment(block)) {
-    return getInnerBlock(block.nodes)
+    return getInnerBlock(block.nodes, getFragmentKey(block) ?? branchKey)
   }
-  return [undefined, false]
+  return [undefined, false, branchKey]
 }
 
 function getInstanceFromCache(

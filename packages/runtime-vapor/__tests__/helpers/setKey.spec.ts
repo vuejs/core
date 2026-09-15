@@ -21,14 +21,7 @@ describe('helpers: setBlockKey', () => {
     expect(el.$key).toBe('bar')
   })
 
-  test('does not override an existing key when overwrite is false', () => {
-    const el = template(`<div></div>`)() as any
-    setBlockKey(el, 'inner')
-    setBlockKey(el, 'outer', false)
-    expect(el.$key).toBe('inner')
-  })
-
-  test('sets key on component and rendered block', () => {
+  test('sets key on the component only, never on its rendered block', () => {
     const Child = defineVaporComponent({
       setup() {
         return template(`<div>child</div>`)() as any
@@ -45,8 +38,8 @@ describe('helpers: setBlockKey', () => {
     }).render()
 
     expect(child.$key).toBe('foo')
-    expect(child.block.$key).toBe('foo')
-    expect((host.children[0] as any).$key).toBe('foo')
+    expect(child.block.$key).toBeUndefined()
+    expect((host.children[0] as any).$key).toBeUndefined()
   })
 
   test('syncs interop fragment vnode.key', () => {
@@ -62,18 +55,6 @@ describe('helpers: setBlockKey', () => {
 
     expect(frag.$key).toBe('foo')
     expect(frag.vnode!.key).toBe('foo')
-    expect((frag.nodes as any).$key).toBe('foo')
-  })
-
-  test('does not duplicate key across multiple root blocks', () => {
-    const blocks = [
-      template(`<div>a</div>`)() as any,
-      template(`<div>b</div>`)() as any,
-    ]
-
-    setBlockKey(blocks, 'foo')
-
-    expect(blocks[0].$key).toBeUndefined()
-    expect(blocks[1].$key).toBeUndefined()
+    expect((frag.nodes as any).$key).toBeUndefined()
   })
 })

@@ -17,7 +17,7 @@ const defineInterop = makeInteropRender()
 const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
 
 describe('TransitionGroup', () => {
-  test('prefixes outer component key for a single transition child', () => {
+  test('uses the component key for a single transition child', () => {
     const Child = defineVaporComponent({
       setup() {
         return template(`<div>child</div>`)() as any
@@ -29,20 +29,19 @@ describe('TransitionGroup', () => {
       setup() {
         child = createComponent(Child)
         setBlockKey(child, 'foo')
-        child.block.$key = undefined
         return createComponent(VaporTransitionGroup, null, {
           default: () => child,
         })
       },
     }).render()
 
-    expect(getTransitionKey(child.block)).toBe('foo0')
-    // the composed key never overwrites the block's own key
+    expect(getTransitionKey(child.block)).toBe('foo')
+    // the resolved key never touches the block's own key
     expect(child.block.$key).toBeUndefined()
     expect(child.block.$transition).toBeDefined()
   })
 
-  test('prefixes outer fragment key for a single transition child', () => {
+  test('defaults an unkeyed single transition child to the fragment key', () => {
     let frag: any
     define({
       setup() {
@@ -51,14 +50,13 @@ describe('TransitionGroup', () => {
           () => template(`<div>child</div>`)() as any,
         )
         setBlockKey(frag, 'foo')
-        frag.nodes.$key = undefined
         return createComponent(VaporTransitionGroup, null, {
           default: () => frag,
         })
       },
     }).render()
 
-    expect(getTransitionKey(frag.nodes)).toBe('foo0')
+    expect(getTransitionKey(frag.nodes)).toBe('foo')
     expect(frag.nodes.$transition).toBeDefined()
   })
 
@@ -77,8 +75,6 @@ describe('TransitionGroup', () => {
       setup() {
         child = createComponent(Child)
         setBlockKey(child, 'foo')
-        child.block[0].$key = undefined
-        child.block[1].$key = undefined
         return createComponent(VaporTransitionGroup, null, {
           default: () => child,
         })
@@ -145,15 +141,13 @@ describe('TransitionGroup', () => {
     }).render()
 
     expect(child.$key).toBe('foo')
-    expect(child.block.$key).toBe('foo')
 
     resolve(ResolvedChild)
     await timeout()
     await nextTick()
     await nextTick()
 
-    expect(child.block.nodes.$key).toBe('foo')
-    expect(child.block.nodes.block.$key).toBe('foo')
+    expect(getTransitionKey(child.block.nodes.block)).toBe('foo')
     expect(child.block.nodes.block.$transition).toBeDefined()
   })
 
@@ -177,7 +171,7 @@ describe('TransitionGroup', () => {
     items.value = [1, 2]
     await nextTick()
 
-    expect(list.nodes[0][1].nodes.$key).toBe(2)
+    expect(getTransitionKey(list.nodes[0][1].nodes)).toBe(2)
     expect(list.nodes[0][1].nodes.$transition).toBeDefined()
   })
 
@@ -338,7 +332,7 @@ describe('TransitionGroup', () => {
     expect(forBlock.u).toBeUndefined()
     // while its element child carries the group hooks and the derived key
     expect(forBlock.nodes.$transition).toBeDefined()
-    expect(forBlock.nodes.$key).toBe(1)
+    expect(getTransitionKey(forBlock.nodes)).toBe(1)
   })
 
   test('mounted children should react to transition prop changes', async () => {

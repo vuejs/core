@@ -187,8 +187,8 @@ import {
 import type { NodeRef } from './apiTemplateRef'
 import {
   ensureTransitionHooksRegistered,
+  findTransitionBlock,
   getTransitionElement,
-  resolveTransitionBlock,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
 import { isVaporTransition } from './transition'
@@ -313,7 +313,7 @@ function getInteropTransitionElement(
     | VaporComponentInstance
     | null
   if (isVaporComponent(component)) {
-    const block = component.block && resolveTransitionBlock(component.block)
+    const block = component.block && findTransitionBlock(component.block)
     return block && getTransitionElement(block)
   }
   if (component) {
@@ -2335,7 +2335,7 @@ function renderVDOMSlot(
     if (slotResolutionState.activeFallback && slotContentValid && transition) {
       if (mode === 'out-in') {
         const fallback = slotResolutionState.activeFallback
-        const leavingBlock = fallback && resolveTransitionBlock(fallback)
+        const leavingBlock = fallback && findTransitionBlock(fallback)
         const leavingElement =
           leavingBlock && getTransitionElement(leavingBlock)
         pendingOutIn = {

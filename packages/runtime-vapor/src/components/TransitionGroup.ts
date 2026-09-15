@@ -31,14 +31,19 @@ import {
 } from '../block'
 import { renderEffect } from '../renderEffect'
 import {
+  type KeyContext,
+  ROOT_KEY_CONTEXT,
   type ResolvedTransitionBlock,
   applyTransitionHooksImpl,
+  enterFragmentKeyContext,
+  fillKeyContext,
+  fixKeyContext,
   getTransitionElement,
   getTransitionKey,
-  groupTransitionKeys,
   isValidTransitionBlock,
   resolveTransitionHooks,
   setTransitionType,
+  transitionKeys,
 } from './Transition'
 import {
   type VaporComponentInstance,
@@ -50,6 +55,7 @@ import { createElement } from '../dom/node'
 import {
   DynamicFragment,
   type VaporFragment,
+  getFragmentKey,
   isForBlock,
   isFragment,
   isVaporSlotOutlet,
@@ -346,29 +352,37 @@ export function resolveTransitionBlocks(
     collectTransitionBlocks(block, children, onFragment, onUpdateOwner)
     return children
   }
-  const composed: ComposedKeys = new Map()
-  collectTransitionBlocks(block, children, onFragment, onUpdateOwner, composed)
+  const keys: ComposedKeys = new Map()
+  collectTransitionBlocks(
+    block,
+    children,
+    onFragment,
+    onUpdateOwner,
+    keys,
+    ROOT_KEY_CONTEXT,
+  )
   for (let i = 0; i < children.length; i++) {
-    const child = children[i]
-    const key = composed.get(child)
-    if (key !== undefined) {
-      groupTransitionKeys.set(child, key)
-    } else {
-      groupTransitionKeys.delete(child)
-    }
+    transitionKeys.set(children[i], keys.get(children[i]))
   }
   return children
 }
 
+// `ctx` only records the per-fragment key context for branch re-renders
+// (applyTransitionHooksImpl's single-child path); list keys are composed
+// bottom-up below. Both are skipped by the collect-only pass.
 function collectTransitionBlocks(
   block: Block,
   children: ResolvedTransitionBlock[],
   onFragment?: (frag: VaporFragment) => void,
   onUpdateOwner?: (owner: TransitionGroupUpdateOwner) => void,
-  composed?: ComposedKeys,
+  keys?: ComposedKeys,
+  ctx?: KeyContext,
 ): void {
   if (block instanceof Node) {
-    if (block instanceof Element) children.push(block)
+    if (block instanceof Element) {
+      children.push(block)
+      if (keys) keys.set(block, (block as ResolvedTransitionBlock).$key)
+    }
   } else if (isVaporComponent(block)) {
     const isRootSlot = block.block && isVaporSlotOutlet(block.block)
     if (onUpdateOwner && !isRootSlot) onUpdateOwner(block)
@@ -379,15 +393,20 @@ function collectTransitionBlocks(
       children,
       onFragment,
       isRootSlot ? onUpdateOwner : undefined,
-      composed,
+      keys,
+      ctx &&
+        (isRootSlot
+          ? fillKeyContext(ctx, block.$key)
+          : fixKeyContext(ctx, block)),
     )
-    if (composed) {
+    if (keys) {
       if (!isRootSlot) {
         for (let i = start; i < children.length; i++) {
           setTransitionType(children[i], block.type)
         }
       }
-      inheritTransitionKey(children, start, block.$key, composed)
+      // a root-slot component is transparent, like the slot outlet it wraps
+      resolveOwnerKey(children, start, block.$key, keys, !isRootSlot)
     }
   } else if (isArray(block)) {
     for (let i = 0; i < block.length; i++) {
@@ -396,7 +415,8 @@ function collectTransitionBlocks(
         children,
         onFragment,
         onUpdateOwner,
-        composed,
+        keys,
+        ctx,
       )
     }
   } else if (isFragment(block)) {
@@ -411,47 +431,58 @@ function collectTransitionBlocks(
     }
     if (isInteropEnabled && block.hasVDOMContent && block.hasVDOMContent()) {
       children.push(block)
+      if (keys) keys.set(block, block.$key)
     } else {
+      const key = isItem ? block.key : getFragmentKey(block)
       const start = children.length
       collectTransitionBlocks(
         block.nodes,
         children,
         onFragment,
         onUpdateOwner,
-        composed,
+        keys,
+        ctx && enterFragmentKeyContext(block, ctx, key),
       )
-      if (!composed) {
+      if (!keys) {
         // element collection only; keys were resolved by the apply pass
       } else if (isItem) {
         const count = children.length - start
         if (count === 1) {
           // the row key is the single root's own key
-          children[start].$key = block.key
-        } else if (block.key != null) {
+          keys.set(children[start], key)
+        } else if (key != null) {
           for (let i = start; i < children.length; i++) {
-            composed.set(children[i], `${block.key}:${i - start}`)
+            keys.set(children[i], `${key}:${i - start}`)
           }
         }
       } else {
-        inheritTransitionKey(children, start, block.$key, composed)
+        resolveOwnerKey(children, start, key, keys, false)
       }
     }
   }
 }
 
-function inheritTransitionKey(
+// vdom key semantics for the block owning the collected roots: a component
+// is the child vnode, so its key is final for a single root; a fragment only
+// supplies the default key of its single root. Multiple roots compose the
+// owner key with each root's key, as vdom does for fragment children.
+function resolveOwnerKey(
   children: ResolvedTransitionBlock[],
   start: number,
   key: any,
-  composed: ComposedKeys,
+  keys: ComposedKeys,
+  owner: boolean,
 ): void {
+  if (children.length - start === 1) {
+    const child = children[start]
+    if (owner || keys.get(child) == null) keys.set(child, key)
+    return
+  }
   if (key == null) return
   for (let i = start; i < children.length; i++) {
     const child = children[i]
-    const inner = composed.get(child)
-    const base =
-      inner !== undefined ? inner : child.$key != null ? child.$key : i - start
-    composed.set(child, String(key) + String(base))
+    const inner = keys.get(child)
+    keys.set(child, String(key) + String(inner != null ? inner : i - start))
   }
 }
 

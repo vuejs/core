@@ -1109,7 +1109,7 @@ describe('VaporKeepAlive', () => {
 
     expect(host.textContent).toBe('child')
     expect(mounted).toHaveBeenCalledTimes(1)
-    expect(childInstance.$key).toBe(0)
+    expect(childInstance.$key).toBeUndefined()
 
     state.inner = false
     await nextTick()
