@@ -1121,6 +1121,53 @@ describe('VaporKeepAlive', () => {
     expect(mounted).toHaveBeenCalledTimes(1)
   })
 
+  test('should unmount a component reactivated in a nested v-if branch', async () => {
+    const deactivated = vi.fn()
+    const unmounted = vi.fn()
+    const Child = defineVaporComponent({
+      setup() {
+        onDeactivated(deactivated)
+        onUnmounted(unmounted)
+        return template(`<div>child</div>`)()
+      },
+    })
+    const state = reactive({ show: true, view: 'child' })
+    const App = compile(
+      `<script setup vapor>
+        const state = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <div v-if="state.show">
+          <KeepAlive>
+            <span v-if="state.view === 'a'">a</span>
+            <Child v-else-if="state.view === 'child'" />
+            <span v-else>b</span>
+          </KeepAlive>
+        </div>
+      </template>`,
+      state as any,
+      { Child },
+    )
+    const { host } = define(App).render()
+    expect(host.textContent).toBe('child')
+
+    state.view = 'b'
+    await nextTick()
+    expect(host.textContent).toBe('b')
+    expect(deactivated).toHaveBeenCalledTimes(1)
+
+    state.view = 'child'
+    await nextTick()
+    expect(host.textContent).toBe('child')
+
+    state.show = false
+    await nextTick()
+    expect(host.textContent).toBe('')
+    expect(deactivated).toHaveBeenCalledTimes(2)
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
   async function assertNameMatch(props: LooseRawProps) {
     const outerRef = ref(true)
     const viewRef = ref('one')
