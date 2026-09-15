@@ -283,6 +283,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
         exclude && pruneCache(name => !matches(exclude, name))
+        // VDOM re-renders on prop change and caches the current branch, which
+        // may match now
+        cacheBlock()
       },
       // prune post-render after `current` has been updated
       { flush: 'post', deep: true },
@@ -376,9 +379,13 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return false
         }
         const fragKey = getFragmentKey(frag)
-        const cacheKey = withCurrentCacheKey(fragKey, () =>
-          processShapeFlag(frag.nodes),
-        )
+        const [innerBlock, interop] = getInnerBlock(frag.nodes)
+        // Like VDOM, a branch rendered while not matching include/exclude is
+        // not kept alive, even if it matches by the time it is removed.
+        const cacheKey =
+          innerBlock && isKeptAlive(innerBlock, interop)
+            ? withCurrentCacheKey(fragKey, () => processShapeFlag(frag.nodes))
+            : false
         if (cacheKey === false) {
           scope.stop()
           return false
