@@ -51,7 +51,7 @@ export type HelperConfig = {
 
 // this should be kept in sync with runtime-vapor/src/dom/prop.ts
 const helpers = {
-  setText: { name: 'setText' },
+  setElementText: { name: 'setElementText' },
   setHtml: { name: 'setHtml' },
   setClass: { name: 'setClass' },
   setClassName: { name: 'setClassName' },
@@ -490,6 +490,6 @@ function getSpecialHelper(
   } else if (keyName === 'innerHTML') {
     return helpers.setHtml
   } else if (keyName === 'textContent') {
-    return helpers.setText
+    return helpers.setElementText
   }
 }

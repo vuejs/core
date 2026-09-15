@@ -182,6 +182,23 @@ describe('compiler: v-for', () => {
     expect(code).contains(`n0.onReset(_selector0_1.reset)`)
   })
 
+  test('selector pattern requires the key itself on one side', () => {
+    const compileClass = (key: string, cond: string) =>
+      compileWithVFor(
+        `<li v-for="(item, i) in items" :key="${key}" :class="{ active: ${cond} }"></li>`,
+      ).code
+
+    // the selector only re-runs rows whose key equals the old/new value
+    expect(compileClass('i', 'i + 1 === page')).not.contains('_createSelector')
+    expect(compileClass('i', 'page === i * 2')).not.contains('_createSelector')
+    expect(compileClass('item.id', 'item.id + 1 === page')).not.contains(
+      '_createSelector',
+    )
+    expect(compileClass('i', 'i === page - 1')).contains(
+      'const _selector0 = _createSelector(() => _ctx.page - 1)',
+    )
+  })
+
   test('multi effect', () => {
     const { code } = compileWithVFor(
       `<div v-for="(item, index) of items" :item="item" :index="index" />`,
