@@ -277,6 +277,33 @@ describe('TransitionGroup', () => {
     delete (window as any).__bumpLocal
   })
 
+  test('keys rows of an unkeyed <template v-for> by the child key', async () => {
+    const onBeforeEnter = vi.fn()
+    const data = ref<any>({ show: false, list: [0, 1], onBeforeEnter })
+    const App = compile(
+      `<template>
+        <TransitionGroup tag="ul" @before-enter="data.onBeforeEnter">
+          <template v-for="value in data.list">
+            <li v-if="data.show" :key="value">{{ value }}</li>
+          </template>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.show = true
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledTimes(2)
+    const rows = () => Array.from(host.querySelectorAll('li')) as any[]
+    expect(rows().map(li => getTransitionKey(li))).toEqual([0, 1])
+
+    data.value.list.push(2)
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledTimes(3)
+    expect(rows().map(li => getTransitionKey(li))).toEqual([0, 1, 2])
+  })
+
   test('keyed reorder does not run enter hooks on relocated rows', async () => {
     const onBeforeEnter = vi.fn()
     const data = ref<any>({ items: ['a', 'b', 'c'], onBeforeEnter })

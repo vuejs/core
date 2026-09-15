@@ -445,18 +445,18 @@ function collectTransitionBlocks(
       )
       if (!keys) {
         // element collection only; keys were resolved by the apply pass
-      } else if (isItem) {
-        const count = children.length - start
-        if (count === 1) {
+      } else if (!isItem) {
+        resolveOwnerKey(children, start, key, keys, false)
+      } else if (key != null) {
+        // an unkeyed row composes nothing: its roots keep their own keys
+        if (children.length - start === 1) {
           // the row key is the single root's own key
           keys.set(children[start], key)
-        } else if (key != null) {
+        } else {
           for (let i = start; i < children.length; i++) {
             keys.set(children[i], `${key}:${i - start}`)
           }
         }
-      } else {
-        resolveOwnerKey(children, start, key, keys, false)
       }
     }
   }
