@@ -17,7 +17,7 @@ const defineInterop = makeInteropRender()
 const timeout = (n = 0) => new Promise(r => setTimeout(r, n))
 
 describe('TransitionGroup', () => {
-  test('prefixes outer component key for a single transition child', () => {
+  test('uses the component key for a single transition child', () => {
     const Child = defineVaporComponent({
       setup() {
         return template(`<div>child</div>`)() as any
@@ -29,20 +29,19 @@ describe('TransitionGroup', () => {
       setup() {
         child = createComponent(Child)
         setBlockKey(child, 'foo')
-        child.block.$key = undefined
         return createComponent(VaporTransitionGroup, null, {
           default: () => child,
         })
       },
     }).render()
 
-    expect(getTransitionKey(child.block)).toBe('foo0')
-    // the composed key never overwrites the block's own key
+    expect(getTransitionKey(child.block)).toBe('foo')
+    // the resolved key never touches the block's own key
     expect(child.block.$key).toBeUndefined()
     expect(child.block.$transition).toBeDefined()
   })
 
-  test('prefixes outer fragment key for a single transition child', () => {
+  test('defaults an unkeyed single transition child to the fragment key', () => {
     let frag: any
     define({
       setup() {
@@ -51,14 +50,13 @@ describe('TransitionGroup', () => {
           () => template(`<div>child</div>`)() as any,
         )
         setBlockKey(frag, 'foo')
-        frag.nodes.$key = undefined
         return createComponent(VaporTransitionGroup, null, {
           default: () => frag,
         })
       },
     }).render()
 
-    expect(getTransitionKey(frag.nodes)).toBe('foo0')
+    expect(getTransitionKey(frag.nodes)).toBe('foo')
     expect(frag.nodes.$transition).toBeDefined()
   })
 
@@ -77,8 +75,6 @@ describe('TransitionGroup', () => {
       setup() {
         child = createComponent(Child)
         setBlockKey(child, 'foo')
-        child.block[0].$key = undefined
-        child.block[1].$key = undefined
         return createComponent(VaporTransitionGroup, null, {
           default: () => child,
         })
@@ -145,15 +141,13 @@ describe('TransitionGroup', () => {
     }).render()
 
     expect(child.$key).toBe('foo')
-    expect(child.block.$key).toBe('foo')
 
     resolve(ResolvedChild)
     await timeout()
     await nextTick()
     await nextTick()
 
-    expect(child.block.nodes.$key).toBe('foo')
-    expect(child.block.nodes.block.$key).toBe('foo')
+    expect(getTransitionKey(child.block.nodes.block)).toBe('foo')
     expect(child.block.nodes.block.$transition).toBeDefined()
   })
 
@@ -177,7 +171,7 @@ describe('TransitionGroup', () => {
     items.value = [1, 2]
     await nextTick()
 
-    expect(list.nodes[0][1].nodes.$key).toBe(2)
+    expect(getTransitionKey(list.nodes[0][1].nodes)).toBe(2)
     expect(list.nodes[0][1].nodes.$transition).toBeDefined()
   })
 
@@ -283,6 +277,79 @@ describe('TransitionGroup', () => {
     delete (window as any).__bumpLocal
   })
 
+  test('keys rows of an unkeyed <template v-for> by the child key', async () => {
+    const onBeforeEnter = vi.fn()
+    const data = ref<any>({ show: false, list: [0, 1], onBeforeEnter })
+    const App = compile(
+      `<template>
+        <TransitionGroup tag="ul" @before-enter="data.onBeforeEnter">
+          <template v-for="value in data.list">
+            <li v-if="data.show" :key="value">{{ value }}</li>
+          </template>
+        </TransitionGroup>
+      </template>`,
+      data,
+    )
+    const { host } = define(App as any).render()
+
+    data.value.show = true
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledTimes(2)
+    const rowKeys = () =>
+      Array.from(host.querySelectorAll('li'), li => getTransitionKey(li))
+    expect(rowKeys()).toEqual([0, 1])
+
+    data.value.list.push(2)
+    await nextTick()
+    expect(onBeforeEnter).toHaveBeenCalledTimes(3)
+    expect(rowKeys()).toEqual([0, 1, 2])
+  })
+
+  test('keeps the wrapper key and resolved type when an async child resolves', async () => {
+    let resolve!: (comp: any) => void
+    const Child = compile(
+      `<template><div class="async">async</div></template>`,
+      ref(),
+    )
+    const AsyncChild = defineVaporAsyncComponent(
+      () => new Promise(r => (resolve = r as any)),
+    )
+    const leaves: (() => void)[] = []
+    const data = ref<any>({
+      show: true,
+      onLeave: (_el: Element, done: () => void) => leaves.push(done),
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const AsyncChild = _components.AsyncChild
+      </script>
+      <template>
+        <TransitionGroup :css="false" @leave="data.onLeave">
+          <AsyncChild v-if="data.show" key="outer" />
+          <span key="fixed">fixed</span>
+        </TransitionGroup>
+      </template>`,
+      data,
+      { AsyncChild },
+    )
+    const { host } = define(App as any).render()
+
+    resolve(Child)
+    await timeout()
+    await nextTick()
+    expect(getTransitionKey(host.querySelector('.async')!)).toBe('outer')
+
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+    // "outer" re-enters while the first one is still leaving: same key and
+    // type, so the leaving child is early-removed
+    expect(host.querySelectorAll('.async').length).toBe(1)
+    leaves.forEach(done => done())
+  })
+
   test('keyed reorder does not run enter hooks on relocated rows', async () => {
     const onBeforeEnter = vi.fn()
     const data = ref<any>({ items: ['a', 'b', 'c'], onBeforeEnter })
@@ -338,7 +405,7 @@ describe('TransitionGroup', () => {
     expect(forBlock.u).toBeUndefined()
     // while its element child carries the group hooks and the derived key
     expect(forBlock.nodes.$transition).toBeDefined()
-    expect(forBlock.nodes.$key).toBe(1)
+    expect(getTransitionKey(forBlock.nodes)).toBe(1)
   })
 
   test('mounted children should react to transition prop changes', async () => {

@@ -69,6 +69,7 @@ export function getKeepAliveContext(
 }
 
 export function withCurrentCacheKey<T>(key: any, fn: () => T): T {
+  if (key === undefined) return fn()
   const prev = currentCacheKey
   currentCacheKey = key
   try {

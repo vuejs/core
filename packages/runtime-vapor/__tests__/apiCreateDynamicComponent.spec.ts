@@ -557,7 +557,7 @@ describe('api: createDynamicComponent', () => {
           null,
           VaporDynamicComponentFlags.SINGLE_ROOT,
         )
-        setBlockKey(n0, 'foo')
+        setBlockKey(n0 as any, 'foo')
         return n0
       },
     })
@@ -567,7 +567,7 @@ describe('api: createDynamicComponent', () => {
 
     const block = instance!.block as any
     expect(block.$key).toBe('foo')
-    expect(block.nodes.$key).toBe('foo')
+    expect(block.nodes.$key).toBeUndefined()
   })
 
   test('resolves slot owner local components after dynamic updates', async () => {

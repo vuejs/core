@@ -211,6 +211,28 @@ describe('compiler: key', () => {
       expect(code).not.contains('_createKeyedFragment(')
     })
 
+    test('nested element + key is dropped', () => {
+      const { code } = compileWithKey(`<div><span key="a"></span></div>`)
+      expect(code).toMatchSnapshot()
+      expect(code).not.contains('_setBlockKey(')
+      expect(code).not.contains('_child(')
+    })
+
+    // coverage guards: block roots other than the template root keep their key
+    test('slot roots + key', () => {
+      const { code } = compileWithKey(
+        `<Foo><div key="a"></div><div key="b"></div></Foo>`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code.match(/_setBlockKey\(/g)).toHaveLength(2)
+    })
+
+    test('v-if branch root + key', () => {
+      const { code } = compileWithKey(`<div v-if="ok" key="a"></div>`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_setBlockKey(')
+    })
+
     test('v-once + element key', () => {
       const { code } = compileWithKey(`<div v-once key="foo" />`)
       expect(code).toMatchSnapshot()

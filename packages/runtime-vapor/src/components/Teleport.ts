@@ -222,7 +222,7 @@ export class TeleportFragment extends RenderContextFragment {
       this.$transition &&
       this.mountState.location === TeleportMountLocation.None
     ) {
-      applyTransitionHooks(this.nodes, this.$transition)
+      applyTransitionHooks(this.nodes, this.$transition, this)
     }
     if (this.mountState.location !== TeleportMountLocation.None) {
       move(this.nodes, parent, anchor, MoveType.REORDER)

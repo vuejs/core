@@ -1,5 +1,6 @@
 import {
   createComponent,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   setBlockKey,
   template,
@@ -25,6 +26,15 @@ import { compile, makeInteropRender, makeRender } from '../_utils'
 
 const define = makeRender()
 const defineInterop = makeInteropRender()
+
+// holds every leave open until the test releases it
+function collectLeaves() {
+  const leaves: (() => void)[] = []
+  return {
+    leaves,
+    onLeave: (_el: Element, done: () => void) => leaves.push(done),
+  }
+}
 
 function createAppearTestState(
   show: boolean,
@@ -108,10 +118,9 @@ describe('Transition', () => {
       },
     }).render()
 
-    child.block.$key = undefined
-
     const resolved = resolveTransitionBlock(child)!
-    expect(resolved.$key).toBe('foo')
+    expect(getTransitionKey(resolved)).toBe('foo')
+    expect(resolved.$key).toBeUndefined()
   })
 
   test('keeps unkeyed child key undefined (shares leaving bucket by type)', () => {
@@ -129,13 +138,11 @@ describe('Transition', () => {
       },
     }).render()
 
-    child.block.$key = undefined
-
     // No explicit key: the resolved child must stay unkeyed so successive
     // instances of the same component type share the leaving-cache bucket
     // and earlyRemove can match the previous still-leaving instance.
     const resolved = resolveTransitionBlock(child)!
-    expect(resolved.$key).toBeUndefined()
+    expect(getTransitionKey(resolved)).toBeUndefined()
   })
 
   test('preserves falsy explicit component key when resolving child', () => {
@@ -154,10 +161,8 @@ describe('Transition', () => {
       },
     }).render()
 
-    child.block.$key = undefined
-
     const resolved = resolveTransitionBlock(child)!
-    expect(resolved.$key).toBe(0)
+    expect(getTransitionKey(resolved)).toBe(0)
   })
 
   test('treats null component key as absent when resolving child', () => {
@@ -176,14 +181,204 @@ describe('Transition', () => {
       },
     }).render()
 
-    child.block.$key = null
-
     // A null key counts as absent and must not fall back to uid; the resolved
-    // child keeps its nullish key (stable across same-type instances, so it
-    // shares the leaving bucket by type).
+    // child stays unkeyed (stable across same-type instances, so it shares
+    // the leaving bucket by type).
     const resolved = resolveTransitionBlock(child)!
-    expect(resolved.$key).toBeNull()
-    expect(resolved.$key).not.toBe(child.uid)
+    expect(getTransitionKey(resolved)).toBeUndefined()
+  })
+
+  // vdom: Transition keys by the child vnode; keys inside the child's own
+  // subtree never reach it
+  test('component child with a dynamic key keeps that key over its root element key', async () => {
+    let leaveDone: (() => void) | undefined
+    const data = ref<any>({
+      k: 1,
+      onLeave: (_el: Element, done: () => void) => (leaveDone = done),
+    })
+    const Comp = compile(`<template><div key="inner">x</div></template>`, data)
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Comp = _components.Comp
+      </script>
+      <template>
+        <Transition name="t" @leave="data.onLeave">
+          <Comp :key="data.k" />
+        </Transition>
+      </template>`,
+      data,
+      { Comp },
+    )
+    const { host } = define(App).render()
+
+    data.value.k = 2
+    await nextTick()
+    // keys 1 and 2 differ: the entering child must not early-remove the
+    // leaving one
+    expect(host.querySelectorAll('div').length).toBe(2)
+    leaveDone!()
+  })
+
+  test('component key does not leak into a nested Transition', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({
+      ok: true,
+      onLeave,
+    })
+    const Inner = compile(
+      `<template><div class="inner">i</div></template>`,
+      data,
+    )
+    const Mid = compile(
+      `<script setup vapor>
+        const data = _data
+        const Inner = _components.Inner
+      </script>
+      <template>
+        <Transition name="t" @leave="data.onLeave">
+          <Inner v-if="data.ok" key="b" />
+          <Inner v-else key="c" />
+        </Transition>
+      </template>`,
+      data,
+      { Inner },
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Mid = _components.Mid
+      </script>
+      <template><Mid key="a" /></template>`,
+      data,
+      { Mid },
+    )
+    const { host } = define(App).render()
+
+    data.value.ok = false
+    await nextTick()
+    data.value.ok = true
+    await nextTick()
+    // b re-enters while the first b is still leaving: same key, so the
+    // leaving one is early-removed
+    expect(host.querySelectorAll('.inner').length).toBe(2)
+    leaves.forEach(done => done())
+  })
+
+  test('keeps the resolved key when leave hooks are re-applied (in-out)', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({
+      k: 1,
+      onLeave,
+    })
+    const Comp = compile(`<template><div>x</div></template>`, data)
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const Comp = _components.Comp
+      </script>
+      <template>
+        <Transition name="t" mode="in-out" @leave="data.onLeave">
+          <Comp :key="data.k" />
+        </Transition>
+      </template>`,
+      data,
+      { Comp },
+    )
+    const { host } = define(App).render()
+
+    data.value.k = 2
+    await nextTick()
+    data.value.k = 1
+    await nextTick()
+    // key 1 re-enters while the first key-1 child is still leaving: the
+    // leaving child keeps its key, so it is early-removed
+    expect(host.querySelectorAll('div').length).toBe(2)
+    leaves.forEach(done => done())
+  })
+
+  test('keeps the wrapper key when an async child resolves', async () => {
+    let resolve!: (comp: any) => void
+    const Child = compile(
+      `<template><div class="async">async</div></template>`,
+      ref(),
+    )
+    const AsyncChild = defineVaporAsyncComponent(
+      () => new Promise(r => (resolve = r as any)),
+    )
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({
+      show: true,
+      onLeave,
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const AsyncChild = _components.AsyncChild
+      </script>
+      <template>
+        <Transition :css="false" @leave="data.onLeave">
+          <AsyncChild v-if="data.show" key="outer" />
+          <span v-else key="other">other</span>
+        </Transition>
+      </template>`,
+      data,
+      { AsyncChild },
+    )
+    const { host } = define(App).render()
+
+    resolve(Child)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(getTransitionKey(host.querySelector('.async')!)).toBe('outer')
+
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+    // "outer" re-enters while the first one is still leaving: same key, so
+    // the leaving child is early-removed
+    expect(host.querySelectorAll('.async').length).toBe(1)
+    leaves.forEach(done => done())
+  })
+
+  test('unkeyed component child ignores keys inside its subtree', async () => {
+    const { leaves, onLeave } = collectLeaves()
+    const data = ref<any>({
+      x: 1,
+      onLeave,
+    })
+    const A = compile(
+      `<script setup vapor>
+        const data = _data
+        const props = defineProps(['x'])
+      </script>
+      <template><div class="a" :key="props.x">{{ props.x }}</div></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const A = _components.A
+      </script>
+      <template>
+        <Transition name="t" @leave="data.onLeave">
+          <A :x="data.x" />
+        </Transition>
+      </template>`,
+      data,
+      { A },
+    )
+    const { host } = define(App).render()
+
+    data.value.x = 2
+    await nextTick()
+    data.value.x = 1
+    await nextTick()
+    // the child stays unkeyed, so each entering root early-removes the
+    // leaving one
+    expect(host.querySelectorAll('.a').length).toBe(1)
+    leaves.forEach(done => done())
   })
 
   test('collects group leaves with component key prefixes', () => {
@@ -202,8 +397,6 @@ describe('Transition', () => {
       setup() {
         child = createComponent(Child)
         setBlockKey(child, 'foo')
-        child.block[1].$key = undefined
-        child.block[2].$key = undefined
         return child
       },
     }).render()
@@ -230,8 +423,6 @@ describe('Transition', () => {
       setup() {
         child = createComponent(Child)
         setBlockKey(child, 'foo')
-        child.block[1].$key = undefined
-        child.block[2].$key = undefined
         return child
       },
     }).render()

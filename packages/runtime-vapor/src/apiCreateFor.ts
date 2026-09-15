@@ -75,7 +75,6 @@ import {
   resetInsertionState,
 } from './insertionState'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
-import { setBlockKey } from './helpers/setKey'
 import { currentRenderContext, withRenderContext } from './renderContext'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
@@ -471,8 +470,13 @@ export const createFor = (
 
     // apply transition for new nodes
     if (isTransitionEnabled && frag.$transition) {
-      if (frag.$transition.applyGroup) setBlockKey(block.nodes, block.key)
-      applyTransitionHooks(block.nodes, frag.$transition)
+      const hooks = frag.$transition
+      if (hooks.applyGroup) {
+        // TransitionGroup resolves the row key from the ForBlock itself
+        hooks.applyGroup(block, hooks.props, hooks.state, hooks.instance)
+      } else {
+        applyTransitionHooks(block.nodes, hooks)
+      }
     }
 
     // a fresh item is rendered but not inserted yet

@@ -733,6 +733,9 @@ function resolveStaticKey(
   context: TransformContext<ElementNode>,
   isComponent: boolean,
 ): SimpleExpressionNode | undefined {
+  // a key is only read on block roots (Transition, TransitionGroup and
+  // KeepAlive resolve their child from a block)
+  if (context.parent!.node !== context.block.node) return
   const keyProp = findProp(node, 'key', false, true)
   if (!keyProp) return
 
