@@ -53,6 +53,7 @@ import {
   insert,
   isBlock,
   remove,
+  unmountVDOMOnScopeDispose,
 } from './block'
 import {
   type ShallowRef,
@@ -406,6 +407,7 @@ export function createComponent(
         normalizeRawSlots(rawSlots),
         once,
       )
+      if (_insertionParent) unmountVDOMOnScopeDispose(frag)
       if (!isHydrating) {
         if (_insertionParent) {
           insert(
@@ -611,6 +613,7 @@ export function createComponent(
         ),
       true,
     )
+    if (_insertionParent) unmountVDOMOnScopeDispose(instance)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
       mountComponent(instance, _insertionParent!, _insertionAnchor)
@@ -1293,11 +1296,13 @@ export function createPlainElement(
       if (isHydrating) locateHydrationNode()
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
+      unmountVDOMOnScopeDispose(frag)
     } else {
       const slot = getSlot(rawSlots as RawSlots, 'default')
       if (slot) {
         const block = slot()
         if (!isHydrating) insert(block, el)
+        unmountVDOMOnScopeDispose(block)
       }
     }
     if (isHydrating) {

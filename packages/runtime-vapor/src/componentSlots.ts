@@ -8,7 +8,12 @@ import {
   isForwardedSlot,
   isFunction,
 } from '@vue/shared'
-import { type Block, type BlockFn, insert } from './block'
+import {
+  type Block,
+  type BlockFn,
+  insert,
+  unmountVDOMOnScopeDispose,
+} from './block'
 import {
   type RawProps,
   rawPropsProxyHandlers,
@@ -394,7 +399,9 @@ export function createSlot(
           // The fallback renders outside update(), so restore the outlet's
           // context explicitly.
           withRenderContext(dynamicFragment!.ctx, () => {
-            insert(fallbackFn(), el)
+            const block = fallbackFn()
+            insert(block, el)
+            unmountVDOMOnScopeDispose(block)
           })
         }
         fragment.nodes = el
