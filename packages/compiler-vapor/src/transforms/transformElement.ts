@@ -120,11 +120,17 @@ export const transformElement: NodeTransform = (node, context) => {
       node.tagType === ElementTypes.COMPONENT || useCreateElement
 
     const isDynamicComponent = isComponentTag(node.tag)
-    const staticKey = resolveStaticKey(
-      node,
-      context as TransformContext<ElementNode>,
-      isComponent,
-    )
+    // A key is only read on block roots (Transition, TransitionGroup and
+    // KeepAlive resolve their child from a block); a static key nested in an
+    // element has no reader, as in vdom outside a keyed diff.
+    const staticKey =
+      context.parent!.node === context.block.node
+        ? resolveStaticKey(
+            node,
+            context as TransformContext<ElementNode>,
+            isComponent,
+          )
+        : undefined
 
     const propsResult = buildProps(
       node,
