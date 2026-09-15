@@ -2017,6 +2017,8 @@ function renderVDOMSlot(
   ) => place(parentNode, anchor, parentSuspense, moveType)
 
   frag.remove = parentNode => {
+    // scope disposal and block removal can both reach this
+    if (disposed) return
     const storage = sharedContentStorage
     if (parentNode && !storage) {
       currentParentNode = parentNode

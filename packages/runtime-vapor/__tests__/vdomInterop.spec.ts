@@ -18,6 +18,7 @@ import {
   nextTick,
   onActivated,
   onBeforeMount,
+  onBeforeUnmount,
   onBeforeUpdate,
   onDeactivated,
   onErrorCaptured,
@@ -35,6 +36,7 @@ import {
   useSlots,
   useTemplateRef,
   vShow,
+  watch,
   withAsyncContext,
   withCtx,
   withDirectives,
@@ -2399,6 +2401,157 @@ describe('vdomInterop', () => {
       value.value = 'bar'
       await nextTick()
       expect(html()).toBe('bar')
+    })
+  })
+
+  describe('unmount', () => {
+    function createVDomChild() {
+      const data = ref({ show: true, inner: true, count: 0 })
+      const unmounted: string[] = []
+      const watched = vi.fn()
+      const VDomChild = defineComponent({
+        props: ['id'],
+        setup(props) {
+          onBeforeUnmount(() => unmounted.push(`bum ${props.id}`))
+          onUnmounted(() => unmounted.push(`um ${props.id}`))
+          watch(
+            () => data.value.count,
+            () => watched(props.id),
+          )
+          return () => h('p', props.id)
+        },
+      })
+      return { data, unmounted, watched, VDomChild }
+    }
+
+    test('vdom components inside a removed element', async () => {
+      const { data, unmounted, watched, VDomChild } = createVDomChild()
+      const App = compile(
+        `<template>
+          <div v-if="data.show">
+            <components.VDomChild id="a" />
+            <components.VDomChild v-if="data.inner" id="b" />
+            <components.VDomChild v-for="id in ['c']" :key="id" :id="id" />
+          </div>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const { html } = define(App).render()
+      expect(html()).toBe(
+        '<div><p>a</p><p>b</p><!--if--><p>c</p><!--for--></div><!--if-->',
+      )
+      data.value.count++
+      await nextTick()
+      expect(watched).toHaveBeenCalledTimes(3)
+
+      data.value.show = false
+      await nextTick()
+      expect(html()).toBe('<!--if-->')
+      expect(unmounted.sort()).toEqual([
+        'bum a',
+        'bum b',
+        'bum c',
+        'um a',
+        'um b',
+        'um c',
+      ])
+
+      data.value.count++
+      await nextTick()
+      expect(watched).toHaveBeenCalledTimes(3)
+    })
+
+    test('vdom components inside an element on app unmount', async () => {
+      const { data, unmounted, VDomChild } = createVDomChild()
+      const App = compile(
+        `<template><div><components.VDomChild id="a" /></div></template>`,
+        data,
+        { VDomChild },
+      )
+      const { app, html } = define(App).render()
+      expect(html()).toBe('<div><p>a</p></div>')
+
+      app.unmount()
+      await nextTick()
+      expect(unmounted).toEqual(['bum a', 'um a'])
+    })
+
+    test('vdom components inside an element on pending suspense unmount', async () => {
+      const { data, unmounted, VDomChild } = createVDomChild()
+      const AsyncChild = defineComponent({
+        async setup() {
+          await new Promise(() => {})
+          return () => h('i')
+        },
+      })
+      const VaporChild = compile(
+        `<template>
+          <div><components.VDomChild v-if="data.inner" id="a" /></div>
+          <components.AsyncChild />
+        </template>`,
+        data,
+        { VDomChild, AsyncChild },
+      )
+      const { app } = define({
+        setup() {
+          return () => h(Suspense, null, { default: () => h(VaporChild) })
+        },
+      }).render()
+
+      app.unmount()
+      await nextTick()
+      expect(unmounted).toEqual(['bum a', 'um a'])
+    })
+
+    test('vdom slot content inside a removed element', async () => {
+      const { data, unmounted, watched, VDomChild } = createVDomChild()
+      const VaporChild = compile(
+        `<template>
+          <div>
+            <slot />
+            <template v-if="data.inner"><slot name="inner" /></template>
+          </div>
+        </template>`,
+        data,
+      )
+      const VaporRootSlot = compile(`<template><slot /></template>`, data)
+      const { html } = define({
+        setup() {
+          return () =>
+            data.value.show
+              ? [
+                  h(VaporChild, null, {
+                    default: () => [h(VDomChild, { id: 'a' })],
+                    inner: () => [h(VDomChild, { id: 'b' })],
+                  }),
+                  h(VaporRootSlot, null, {
+                    default: () => [h(VDomChild, { id: 'c' })],
+                  }),
+                ]
+              : null
+        },
+      }).render()
+      expect(html()).toBe('<div><p>a</p><p>b</p><!--if--></div><p>c</p>')
+      data.value.count++
+      await nextTick()
+      expect(watched).toHaveBeenCalledTimes(3)
+
+      data.value.show = false
+      await nextTick()
+      expect(html()).toBe('<!---->')
+      expect(unmounted.sort()).toEqual([
+        'bum a',
+        'bum b',
+        'bum c',
+        'um a',
+        'um b',
+        'um c',
+      ])
+
+      data.value.count++
+      await nextTick()
+      expect(watched).toHaveBeenCalledTimes(3)
     })
   })
 

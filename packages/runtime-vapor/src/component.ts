@@ -170,6 +170,7 @@ import type { VaporElement } from './apiDefineCustomElement'
 import {
   currentUnmountSuspense,
   isSuspenseEnabled,
+  queueUnmountPostFlush,
   resolveUnmountSuspense,
   runWithUnmountSuspense,
 } from './suspense'
@@ -406,6 +407,15 @@ export function createComponent(
         normalizeRawSlots(rawSlots),
         once,
       )
+      if (_insertionParent) {
+        // Mounted via insertion state, so not part of the returned block tree:
+        // block removal never reaches it and scope disposal must unmount it.
+        onScopeDispose(() => frag.remove!(), true)
+      } else {
+        // Block removal unmounts it with transition hooks when it runs; fall
+        // back for a block tree dropped inside a removed element.
+        onScopeDispose(() => queueUnmountPostFlush(() => frag.remove!()), true)
+      }
       if (!isHydrating) {
         if (_insertionParent) {
           insert(

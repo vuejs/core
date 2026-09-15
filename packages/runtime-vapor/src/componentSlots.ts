@@ -20,6 +20,7 @@ import {
   currentInstance,
   isAsyncWrapper,
 } from '@vue/runtime-dom'
+import { onScopeDispose } from '@vue/reactivity'
 import type { LooseRawProps, VaporComponentInstance } from './component'
 import { renderEffect } from './renderEffect'
 import {
@@ -56,6 +57,7 @@ import { renderWithSlotScopeIds } from './scopeId'
 import { setElementScopeIds } from './dom/scopeIdStamp'
 import { withHydratingSlotBoundary } from './dom/hydrateFragment'
 import { withOnce } from './once'
+import { queueUnmountPostFlush } from './suspense'
 
 export type RawSlots = Record<string, VaporSlot> & {
   $?: DynamicSlotSource[]
@@ -309,6 +311,14 @@ export function createSlot(
           },
         ),
     )
+    // Same teardown as a vdom component in createComponent: block removal
+    // never reaches an outlet inside a removed element.
+    const frag = fragment
+    if (_insertionParent) {
+      onScopeDispose(() => frag.remove!(), true)
+    } else {
+      onScopeDispose(() => queueUnmountPostFlush(() => frag.remove!()), true)
+    }
   } else {
     // renderVDOMSlot wraps its fallback from flags itself, so only the
     // non-interop paths wrap here.
