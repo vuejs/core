@@ -43,7 +43,7 @@ import {
   VaporVForFlags,
   extend,
 } from '@vue/shared'
-import { compile, makeRender } from './_utils'
+import { compile, makeRender, renderParity } from './_utils'
 import type { DynamicSlot } from '../src/componentSlots'
 import { setElementText, setText } from '../src/dom/prop'
 import {
@@ -226,6 +226,29 @@ describe('component: slots', () => {
     expect(
       'Slot "default" invoked outside of the render function',
     ).not.toHaveBeenWarned()
+  })
+
+  test('should ignore key on <template v-slot> like vdom', async () => {
+    const reused: boolean[] = []
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><div><slot>fallback</slot><slot name="foo" :x="1">fallback</slot></div></template>`,
+        App: `<template><components.Child>
+          <template #default :key="data.k"><input /></template>
+          <template #foo="{ x }" :key="data.k">foo{{ x }}</template>
+        </components.Child></template>`,
+      },
+      () => ref({ k: 1 }),
+      async (data, root) => {
+        const input = root.querySelector('input')
+        data.value.k = 2
+        await nextTick()
+        reused.push(!!input && root.querySelector('input') === input)
+      },
+    )
+    // the slot is rendered and patched in place, not remounted
+    expect(reused).toEqual([true, true])
+    expect(vapor.text).toBe(vdom.text)
   })
 
   describe('slot fallback boundary', () => {

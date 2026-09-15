@@ -133,6 +133,16 @@ describe('compiler: key', () => {
       expect(code).not.contains('_createKeyedFragment(')
     })
 
+    test('<template v-slot> + key', () => {
+      const { code } = compileWithKey(
+        `<Comp><template #foo="{ x }" :key="a">{{ x }}</template></Comp>`,
+      )
+      expect(code).toMatchSnapshot()
+      // same as vdom: the key on a <template> slot is ignored
+      expect(code).not.contains('_createKeyedFragment(')
+      expect(code).contains('"foo": (_slotProps0) =>')
+    })
+
     test('v-for + key', () => {
       const { code } = compileWithKey(`<div v-for="i in list" :key="i"></div>`)
       expect(code).toMatchSnapshot()

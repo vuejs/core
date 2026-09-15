@@ -20,9 +20,9 @@ export const transformKey: NodeTransform = (node, context) => {
     node.type !== NodeTypes.ELEMENT ||
     context.inVOnce ||
     findDir(node, 'for') ||
-    // same as vdom: a key on a <template> v-if branch is ignored
+    // same as vdom: a key on a <template> v-if branch or slot is ignored
     (node.tagType === ElementTypes.TEMPLATE &&
-      findDir(node, /^(if|else-if|else)$/, true))
+      findDir(node, /^(if|else-if|else|slot)$/, true))
   )
     return
 
