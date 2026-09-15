@@ -44,6 +44,7 @@ import {
   resolveTransitionHooks,
   setTransitionType,
   transitionKeys,
+  transitionTypeOf,
 } from './Transition'
 import {
   type VaporComponentInstance,
@@ -402,7 +403,7 @@ function collectTransitionBlocks(
     if (keys) {
       if (!isRootSlot) {
         for (let i = start; i < children.length; i++) {
-          setTransitionType(children[i], block.type)
+          setTransitionType(children[i], transitionTypeOf(block))
         }
       }
       // a root-slot component is transparent, like the slot outlet it wraps

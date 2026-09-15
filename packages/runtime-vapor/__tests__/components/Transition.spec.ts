@@ -1,5 +1,6 @@
 import {
   createComponent,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   setBlockKey,
   template,
@@ -284,6 +285,51 @@ describe('Transition', () => {
     // key 1 re-enters while the first key-1 child is still leaving: the
     // leaving child keeps its key, so it is early-removed
     expect(host.querySelectorAll('div').length).toBe(2)
+    leaves.forEach(done => done())
+  })
+
+  test('keeps the wrapper key when an async child resolves', async () => {
+    let resolve!: (comp: any) => void
+    const Child = compile(
+      `<template><div class="async">async</div></template>`,
+      ref(),
+    )
+    const AsyncChild = defineVaporAsyncComponent(
+      () => new Promise(r => (resolve = r as any)),
+    )
+    const leaves: (() => void)[] = []
+    const data = ref<any>({
+      show: true,
+      onLeave: (_el: Element, done: () => void) => leaves.push(done),
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const AsyncChild = _components.AsyncChild
+      </script>
+      <template>
+        <Transition :css="false" @leave="data.onLeave">
+          <AsyncChild v-if="data.show" key="outer" />
+          <span v-else key="other">other</span>
+        </Transition>
+      </template>`,
+      data,
+      { AsyncChild },
+    )
+    const { host } = define(App).render()
+
+    resolve(Child)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(getTransitionKey(host.querySelector('.async') as any)).toBe('outer')
+
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+    // "outer" re-enters while the first one is still leaving: same key, so
+    // the leaving child is early-removed
+    expect(host.querySelectorAll('.async').length).toBe(1)
     leaves.forEach(done => done())
   })
 

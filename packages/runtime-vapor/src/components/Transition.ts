@@ -596,11 +596,22 @@ export interface KeyContext {
 export const ROOT_KEY_CONTEXT: KeyContext = { key: undefined }
 export const keyContexts: WeakMap<TransitionOwner, KeyContext> = new WeakMap()
 
+export function transitionTypeOf(block: VaporComponentInstance): any {
+  return (
+    (isAsyncComponentEnabled &&
+      isAsyncWrapper(block) &&
+      (block.type as any).__asyncResolved) ||
+    block.type
+  )
+}
+
 export function fixKeyContext(
   ctx: KeyContext,
   block: VaporComponentInstance,
 ): KeyContext {
-  return ctx.type ? ctx : { key: block.$key ?? ctx.key, type: block.type }
+  return ctx.type
+    ? ctx
+    : { key: block.$key ?? ctx.key, type: transitionTypeOf(block) }
 }
 
 export function fillKeyContext(ctx: KeyContext, key: any): KeyContext {
@@ -683,17 +694,28 @@ function collectComponentTransitionBlocks(
     collectTransitionBlocks(block.block, onFragment, children, ctx)
     return
   }
-  if (ctx) ctx = fixKeyContext(ctx, block)
   if (isAsyncComponentEnabled && isAsyncWrapper(block)) {
     const inner = getAsyncWrapperInner(block)
     if (inner === undefined) {
-      // unsettled: set transition hooks on the wrapper's fragment
-      if (onFragment && isFragment(block.block)) onFragment(block.block)
+      // unsettled: the wrapper's fragment re-renders the resolved child,
+      // which fixes the identity then, defaulting to the wrapper key
+      if (isFragment(block.block)) {
+        if (onFragment) onFragment(block.block)
+        if (ctx) {
+          enterFragmentKeyContext(block.block, fillKeyContext(ctx, block.$key))
+        }
+      }
       return
     }
-    collectTransitionBlocks(inner, onFragment, children, ctx)
+    collectTransitionBlocks(
+      inner,
+      onFragment,
+      children,
+      ctx && fixKeyContext(ctx, block),
+    )
     return
   }
+  if (ctx) ctx = fixKeyContext(ctx, block)
 
   // stop searching if encountering nested Transition component
   if (isVaporTransition(block.type)) return
