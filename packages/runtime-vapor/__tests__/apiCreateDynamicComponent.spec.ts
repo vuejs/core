@@ -295,6 +295,40 @@ describe('api: createDynamicComponent', () => {
     expect('Invalid dynamic component type: 123 (number)').toHaveBeenWarned()
   })
 
+  test('renders an empty branch for an empty string is value', async () => {
+    const data = shallowRef('')
+    const App = compile(
+      `<template><p>a</p><component :is="data">x</component><p>b</p></template>`,
+      data,
+    )
+    const { html } = define(App).render()
+    expect(html()).toBe('<p>a</p><!--dynamic-component--><p>b</p>')
+    expect('Invalid dynamic component type:  (string)').toHaveBeenWarned()
+
+    data.value = 'i'
+    await nextTick()
+    expect(html()).toBe('<p>a</p><i>x</i><!--dynamic-component--><p>b</p>')
+
+    data.value = ''
+    await nextTick()
+    expect(html()).toBe('<p>a</p><!--dynamic-component--><p>b</p>')
+
+    data.value = 'i'
+    await nextTick()
+    expect(html()).toBe('<p>a</p><i>x</i><!--dynamic-component--><p>b</p>')
+  })
+
+  test('v-once with an empty string is value', () => {
+    const data = shallowRef('')
+    const App = compile(
+      `<template><p>a</p><component v-once :is="data">x</component><p>b</p></template>`,
+      data,
+    )
+    const { html } = define(App).render()
+    expect(html()).toBe('<p>a</p><!--ndc--><p>b</p>')
+    expect('Invalid dynamic component type:  (string)').toHaveBeenWarned()
+  })
+
   test('global registration', async () => {
     const val = shallowRef('foo')
 
