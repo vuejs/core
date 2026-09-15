@@ -3528,6 +3528,51 @@ describe('VaporKeepAlive', () => {
   })
 
   describe('vdom interop', () => {
+    test('caches a keyed vdom child under its branch key', async () => {
+      const mounted = vi.fn()
+      const activated = vi.fn()
+      const deactivated = vi.fn()
+      const Child = {
+        setup() {
+          onMounted(mounted)
+          onActivated(activated)
+          onDeactivated(deactivated)
+          return () => h('div', 'child')
+        },
+      }
+      const data = ref({ show: true, childKey: 'a' })
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template>
+          <KeepAlive>
+            <Child v-if="data.show" :key="data.childKey" />
+          </KeepAlive>
+        </template>`,
+        data,
+        { Child },
+      )
+      const container = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+      expect(container.innerHTML).toContain('child')
+      expect(mounted).toHaveBeenCalledTimes(1)
+
+      data.value.show = false
+      await nextTick()
+      expect(deactivated).toHaveBeenCalledTimes(1)
+
+      data.value.show = true
+      await nextTick()
+      expect(container.innerHTML).toContain('child')
+      expect(mounted).toHaveBeenCalledTimes(1)
+      expect(activated).toHaveBeenCalledTimes(2)
+      app.unmount()
+    })
+
     test('should cache interop branches by explicit key', async () => {
       let cache: Map<any, any>
       let keepAlive: any
