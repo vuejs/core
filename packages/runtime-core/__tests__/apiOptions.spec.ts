@@ -418,6 +418,36 @@ describe('api: options', () => {
       await nextTick()
       expect(spy).toHaveBeenCalledTimes(1)
     })
+
+    test('sync watcher mutated before its immediate call runs', async () => {
+      const calls: any[] = []
+      const root = nodeOps.createElement('div')
+      render(
+        h({
+          data: () => ({ source: 'foo', chained: 'bar' }),
+          watch: {
+            source: {
+              immediate: true,
+              handler(this: any) {
+                this.chained = 'baz'
+              },
+            },
+            chained: {
+              immediate: true,
+              flush: 'sync',
+              handler(to: any, from: any) {
+                calls.push([to, from])
+              },
+            },
+          },
+          render() {},
+        }),
+        root,
+      )
+      await nextTick()
+      // the queued immediate call is dropped rather than replaying 'bar'
+      expect(calls).toEqual([['baz', 'bar']])
+    })
   })
 
   test('provide/inject', () => {

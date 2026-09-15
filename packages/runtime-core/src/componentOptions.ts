@@ -700,10 +700,8 @@ export function applyOptions(instance: ComponentInternalInstance): void {
   }
 
   if (watchOptions) {
-    // #14052 an immediate callback that mutates other state would otherwise
-    // only be observed by the watchers declared above it, making behavior
-    // depend on declaration order. Register every watcher first, then run the
-    // immediate callbacks.
+    // #14052 register all watchers before running the immediate callbacks, so
+    // declaration order can't decide which watchers observe their mutations
     const immediateCbs: (() => void)[] = []
     for (const key in watchOptions) {
       createWatcher(watchOptions[key], ctx, publicThis, key, immediateCbs)
@@ -868,13 +866,18 @@ function deferFirstCall(
   handler: WatchCallback,
   immediateCbs: (() => void)[],
 ): WatchCallback {
-  let firstCallDeferred = false
+  let queued = false
+  let stale = false
   return (...args) => {
-    if (firstCallDeferred) {
+    if (queued) {
+      // a real change beat the queued call to it, whose args are now stale
+      stale = true
       return handler(...args)
     }
-    firstCallDeferred = true
-    immediateCbs.push(() => handler(...args))
+    queued = true
+    immediateCbs.push(() => {
+      if (!stale) handler(...args)
+    })
   }
 }
 
