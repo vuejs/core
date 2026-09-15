@@ -518,7 +518,8 @@ function matchSelectorPattern(
               [left, right],
               [right, left],
             ]) {
-              const aIsKey = isKeyOnlyBinding(a, key, content)
+              // must be the key itself, not an expression derived from it
+              const aIsKey = content.slice(a.start! - 1, a.end! - 1) === key
               const bIsKey = isKeyOnlyBinding(b, key, content)
               const bVars = analyzeVariableScopes(b, idMap)
               if (aIsKey && !bIsKey && !bVars.length) {
