@@ -1594,9 +1594,9 @@ describe('VaporKeepAlive', () => {
   })
 
   describe('cache invalidation', () => {
-    function setup() {
+    function setup(include = 'one,two') {
       const viewRef = ref('one')
-      const includeRef = ref('one,two')
+      const includeRef = ref(include)
       define({
         setup() {
           return createComponent(
@@ -1611,9 +1611,9 @@ describe('VaporKeepAlive', () => {
       return { viewRef, includeRef }
     }
 
-    function setupExclude() {
+    function setupExclude(exclude = '') {
       const viewRef = ref('one')
-      const excludeRef = ref('')
+      const excludeRef = ref(exclude)
       define({
         setup() {
           return createComponent(
@@ -1696,6 +1696,47 @@ describe('VaporKeepAlive', () => {
       assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
       // two should be pruned
       assertHookCalls(twoHooks, [1, 1, 1, 1, 1])
+    })
+
+    test('on include change matching current view', async () => {
+      const { viewRef, includeRef } = setup('two')
+
+      includeRef.value = 'one,two'
+      await nextTick()
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 0, 1, 0])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    })
+
+    test('on exclude change matching current view', async () => {
+      const { viewRef, excludeRef } = setupExclude('one')
+
+      excludeRef.value = ''
+      await nextTick()
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 0, 1, 0])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    })
+
+    test('on include change matching current view + view switch', async () => {
+      const { viewRef, includeRef } = setup('two')
+
+      includeRef.value = 'one,two'
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 0, 0, 1])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [2, 2, 1, 0, 1])
     })
 
     test('should not prune current active instance', async () => {
