@@ -113,7 +113,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
       branchKey: any,
     ): CacheKey => {
       if (interop && isInteropEnabled) {
-        // an unkeyed vnode carries `key: null`, which counts as no key
+        // vnode.key is null when absent
         const frag = block as VaporFragment
         return frag.$key ?? frag.vnode!.key ?? branchKey ?? frag.vnode!.type
       }

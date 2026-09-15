@@ -295,13 +295,59 @@ describe('TransitionGroup', () => {
     data.value.show = true
     await nextTick()
     expect(onBeforeEnter).toHaveBeenCalledTimes(2)
-    const rows = () => Array.from(host.querySelectorAll('li')) as any[]
-    expect(rows().map(li => getTransitionKey(li))).toEqual([0, 1])
+    const rowKeys = () =>
+      Array.from(host.querySelectorAll('li'), li => getTransitionKey(li))
+    expect(rowKeys()).toEqual([0, 1])
 
     data.value.list.push(2)
     await nextTick()
     expect(onBeforeEnter).toHaveBeenCalledTimes(3)
-    expect(rows().map(li => getTransitionKey(li))).toEqual([0, 1, 2])
+    expect(rowKeys()).toEqual([0, 1, 2])
+  })
+
+  test('keeps the wrapper key and resolved type when an async child resolves', async () => {
+    let resolve!: (comp: any) => void
+    const Child = compile(
+      `<template><div class="async">async</div></template>`,
+      ref(),
+    )
+    const AsyncChild = defineVaporAsyncComponent(
+      () => new Promise(r => (resolve = r as any)),
+    )
+    const leaves: (() => void)[] = []
+    const data = ref<any>({
+      show: true,
+      onLeave: (_el: Element, done: () => void) => leaves.push(done),
+    })
+    const App = compile(
+      `<script setup vapor>
+        const data = _data
+        const AsyncChild = _components.AsyncChild
+      </script>
+      <template>
+        <TransitionGroup :css="false" @leave="data.onLeave">
+          <AsyncChild v-if="data.show" key="outer" />
+          <span key="fixed">fixed</span>
+        </TransitionGroup>
+      </template>`,
+      data,
+      { AsyncChild },
+    )
+    const { host } = define(App as any).render()
+
+    resolve(Child)
+    await timeout()
+    await nextTick()
+    expect(getTransitionKey(host.querySelector('.async') as any)).toBe('outer')
+
+    data.value.show = false
+    await nextTick()
+    data.value.show = true
+    await nextTick()
+    // "outer" re-enters while the first one is still leaving: same key and
+    // type, so the leaving child is early-removed
+    expect(host.querySelectorAll('.async').length).toBe(1)
+    leaves.forEach(done => done())
   })
 
   test('keyed reorder does not run enter hooks on relocated rows', async () => {

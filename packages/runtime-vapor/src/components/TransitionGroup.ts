@@ -35,9 +35,8 @@ import {
   ROOT_KEY_CONTEXT,
   type ResolvedTransitionBlock,
   applyTransitionHooksImpl,
+  enterComponentKeyContext,
   enterFragmentKeyContext,
-  fillKeyContext,
-  fixKeyContext,
   getTransitionElement,
   getTransitionKey,
   isValidTransitionBlock,
@@ -45,6 +44,7 @@ import {
   setTransitionType,
   transitionKeys,
   transitionTypeOf,
+  withDefaultKey,
 } from './Transition'
 import {
   type VaporComponentInstance,
@@ -397,13 +397,14 @@ function collectTransitionBlocks(
       keys,
       ctx &&
         (isRootSlot
-          ? fillKeyContext(ctx, block.$key)
-          : fixKeyContext(ctx, block)),
+          ? withDefaultKey(ctx, block.$key)
+          : enterComponentKeyContext(ctx, block)),
     )
     if (keys) {
       if (!isRootSlot) {
+        const t = transitionTypeOf(block)
         for (let i = start; i < children.length; i++) {
-          setTransitionType(children[i], transitionTypeOf(block))
+          setTransitionType(children[i], t)
         }
       }
       // a root-slot component is transparent, like the slot outlet it wraps
@@ -472,11 +473,11 @@ function resolveOwnerKey(
   start: number,
   key: any,
   keys: ComposedKeys,
-  owner: boolean,
+  final: boolean,
 ): void {
   if (children.length - start === 1) {
     const child = children[start]
-    if (owner || keys.get(child) == null) keys.set(child, key)
+    if (final || keys.get(child) == null) keys.set(child, key)
     return
   }
   if (key == null) return

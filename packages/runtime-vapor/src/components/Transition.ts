@@ -598,14 +598,12 @@ export const keyContexts: WeakMap<TransitionOwner, KeyContext> = new WeakMap()
 
 export function transitionTypeOf(block: VaporComponentInstance): any {
   return (
-    (isAsyncComponentEnabled &&
-      isAsyncWrapper(block) &&
-      (block.type as any).__asyncResolved) ||
+    (isAsyncComponentEnabled && (block.type as any).__asyncResolved) ||
     block.type
   )
 }
 
-export function fixKeyContext(
+export function finalizeKeyContext(
   ctx: KeyContext,
   block: VaporComponentInstance,
 ): KeyContext {
@@ -614,8 +612,29 @@ export function fixKeyContext(
     : { key: block.$key ?? ctx.key, type: transitionTypeOf(block) }
 }
 
-export function fillKeyContext(ctx: KeyContext, key: any): KeyContext {
+export function withDefaultKey(ctx: KeyContext, key: any): KeyContext {
   return ctx.type || key == null ? ctx : { key }
+}
+
+function isUnresolvedAsyncWrapper(block: VaporComponentInstance): boolean {
+  return (
+    isAsyncComponentEnabled &&
+    isAsyncWrapper(block) &&
+    getAsyncWrapperInner(block) === undefined
+  )
+}
+
+// The context a component hands to its content: fixed to the component's
+// identity, except for an unresolved async wrapper, whose resolved child
+// fixes it later with the wrapper key as default.
+export function enterComponentKeyContext(
+  ctx: KeyContext,
+  block: VaporComponentInstance,
+  unresolved: boolean = isUnresolvedAsyncWrapper(block),
+): KeyContext {
+  return unresolved
+    ? withDefaultKey(ctx, block.$key)
+    : finalizeKeyContext(ctx, block)
 }
 
 // Records the context a fragment's content resolves in and returns that
@@ -626,10 +645,13 @@ export function enterFragmentKeyContext(
   key: any = getFragmentKey(frag),
 ): KeyContext {
   keyContexts.set(frag, ctx)
-  return fillKeyContext(ctx, key)
+  return withDefaultKey(ctx, key)
 }
 
-function resolveChild(child: ResolvedTransitionBlock, ctx: KeyContext): void {
+function resolveChildIdentity(
+  child: ResolvedTransitionBlock,
+  ctx: KeyContext,
+): void {
   transitionKeys.set(child, ctx.type ? ctx.key : (child.$key ?? ctx.key))
   if (ctx.type) setTransitionType(child, ctx.type)
 }
@@ -645,7 +667,7 @@ export function resolveTransitionBlock(
 ): ResolvedTransitionBlock | undefined {
   let ctx = (owner && keyContexts.get(owner)) || ROOT_KEY_CONTEXT
   if (owner && isFragment(owner))
-    ctx = fillKeyContext(ctx, getFragmentKey(owner))
+    ctx = withDefaultKey(ctx, getFragmentKey(owner))
   const children: ResolvedTransitionBlock[] = []
   collectTransitionBlocks(block, onFragment, children, ctx)
   return children[0]
@@ -672,7 +694,7 @@ function collectTransitionBlocks(
     // transition can only be applied on Element child
     if (block instanceof Element) {
       children.push(block)
-      if (ctx) resolveChild(block, ctx)
+      if (ctx) resolveChildIdentity(block, ctx)
     }
   } else if (isVaporComponent(block)) {
     collectComponentTransitionBlocks(block, onFragment, children, ctx)
@@ -694,28 +716,23 @@ function collectComponentTransitionBlocks(
     collectTransitionBlocks(block.block, onFragment, children, ctx)
     return
   }
-  if (isAsyncComponentEnabled && isAsyncWrapper(block)) {
-    const inner = getAsyncWrapperInner(block)
+  const async = isAsyncComponentEnabled && isAsyncWrapper(block)
+  const inner = async ? getAsyncWrapperInner(block) : undefined
+  if (ctx) {
+    ctx = enterComponentKeyContext(ctx, block, async && inner === undefined)
+  }
+  if (async) {
     if (inner === undefined) {
-      // unsettled: the wrapper's fragment re-renders the resolved child,
-      // which fixes the identity then, defaulting to the wrapper key
+      // unresolved: the wrapper's fragment re-renders the resolved child
       if (isFragment(block.block)) {
         if (onFragment) onFragment(block.block)
-        if (ctx) {
-          enterFragmentKeyContext(block.block, fillKeyContext(ctx, block.$key))
-        }
+        if (ctx) keyContexts.set(block.block, ctx)
       }
       return
     }
-    collectTransitionBlocks(
-      inner,
-      onFragment,
-      children,
-      ctx && fixKeyContext(ctx, block),
-    )
+    collectTransitionBlocks(inner, onFragment, children, ctx)
     return
   }
-  if (ctx) ctx = fixKeyContext(ctx, block)
 
   // stop searching if encountering nested Transition component
   if (isVaporTransition(block.type)) return
@@ -757,7 +774,7 @@ function collectFragmentTransitionBlocks(
   if (isInteropEnabled && block.hasVDOMContent && block.hasVDOMContent()) {
     children.push(block)
     if (ctx) {
-      resolveChild(block, ctx)
+      resolveChildIdentity(block, ctx)
       if (!ctx.type) {
         const type = block.getTransitionType!()
         if (type !== undefined) setTransitionType(block, type)

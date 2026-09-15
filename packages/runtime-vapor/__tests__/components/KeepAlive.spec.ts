@@ -3529,14 +3529,13 @@ describe('VaporKeepAlive', () => {
 
   describe('vdom interop', () => {
     test('caches a keyed vdom child under its branch key', async () => {
-      const mounted = vi.fn()
-      const activated = vi.fn()
-      const deactivated = vi.fn()
       const Child = {
         setup() {
-          onMounted(mounted)
-          onActivated(activated)
-          onDeactivated(deactivated)
+          onBeforeMount(() => oneHooks.beforeMount())
+          onMounted(() => oneHooks.mounted())
+          onActivated(() => oneHooks.activated())
+          onDeactivated(() => oneHooks.deactivated())
+          onUnmounted(() => oneHooks.unmounted())
           return () => h('div', 'child')
         },
       }
@@ -3558,18 +3557,16 @@ describe('VaporKeepAlive', () => {
       const app = createVaporApp(App)
       app.use(vaporInteropPlugin)
       app.mount(container)
-      expect(container.innerHTML).toContain('child')
-      expect(mounted).toHaveBeenCalledTimes(1)
+      assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
 
       data.value.show = false
       await nextTick()
-      expect(deactivated).toHaveBeenCalledTimes(1)
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
 
       data.value.show = true
       await nextTick()
       expect(container.innerHTML).toContain('child')
-      expect(mounted).toHaveBeenCalledTimes(1)
-      expect(activated).toHaveBeenCalledTimes(2)
+      assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
       app.unmount()
     })
 
