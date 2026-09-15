@@ -27,6 +27,7 @@ import {
   xlinkNS,
 } from '@vue/runtime-dom'
 import { renderEffect } from '../../src'
+import { renderParity } from '../_utils'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
@@ -859,6 +860,26 @@ describe('patchProp', () => {
       expect(el.textContent).toBe(JSON.stringify({ a: 1 }, null, 2))
       setElementText(el, ref('bar'))
       expect(el.textContent).toBe('bar')
+    })
+
+    test('compiled textContent binding', async () => {
+      for (const App of [
+        `<template><p :textContent="data.msg"></p></template>`,
+        `<template><p .textContent="data.msg"></p></template>`,
+      ]) {
+        const initial: string[] = []
+        const { vdom, vapor } = await renderParity(
+          { App },
+          () => ref({ msg: 'foo' }),
+          async (data, root) => {
+            initial.push(root.innerHTML)
+            data.value.msg = 'bar'
+          },
+        )
+        expect(initial).toEqual(['<p>foo</p>', '<p>foo</p>'])
+        expect(vdom.after).toBe('<p>bar</p>')
+        expect(vapor.after).toBe(vdom.after)
+      }
     })
   })
 

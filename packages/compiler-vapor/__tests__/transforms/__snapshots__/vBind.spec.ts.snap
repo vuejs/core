@@ -155,12 +155,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > .prop modifier (shorthand) w/ textContent 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setElementText as _setElementText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setText(n0, _ctx.foo))
+  _renderEffect(() => _setElementText(n0, _ctx.foo))
   return n0
 }"
 `;
@@ -243,12 +243,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > .prop modifier w/ textContent 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setElementText as _setElementText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setText(n0, _ctx.foo))
+  _renderEffect(() => _setElementText(n0, _ctx.foo))
   return n0
 }"
 `;
@@ -298,12 +298,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > :textContext 1`] = `
-"import { setText as _setText, renderEffect as _renderEffect, template as _template } from 'vue';
+"import { setElementText as _setElementText, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setText(n0, _ctx.foo))
+  _renderEffect(() => _setElementText(n0, _ctx.foo))
   return n0
 }"
 `;
