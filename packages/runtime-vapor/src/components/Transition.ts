@@ -12,6 +12,7 @@ import {
   checkTransitionMode,
   currentInstance,
   isAsyncWrapper,
+  isKeepAlive,
   isTemplateNode,
   leaveCbKey,
   queuePostRenderEffect,
@@ -49,11 +50,14 @@ import { renderEffect } from '../renderEffect'
 import {
   DynamicFragment,
   type VaporFragment,
+  getFragmentKey,
   isDynamicFragment,
   isForFragment,
   isFragment,
   isVaporSlotOutlet,
 } from '../fragment'
+import { isKeepAliveEnabled } from '../keepAlive'
+import { DYNAMIC, TELEPORT } from '../fragmentFlags'
 import {
   currentHydrationNode,
   isHydrating,
@@ -273,14 +277,19 @@ function getLeaveElement(
   }
 }
 
-// TransitionGroup composes owner keys onto its children (vdom's
-// getTransitionRawChildren) without touching the block's own `$key`.
-export const groupTransitionKeys: WeakMap<ResolvedTransitionBlock, any> =
-  new WeakMap()
+// Keys resolved for transition children (vdom's `vnode.key` as seen by
+// Transition / TransitionGroup), written when the content is resolved.
+const transitionKeys: WeakMap<ResolvedTransitionBlock, any> = new WeakMap()
 
 export function getTransitionKey(block: ResolvedTransitionBlock): any {
-  const key = groupTransitionKeys.get(block)
-  return key !== undefined ? key : block.$key
+  return transitionKeys.get(block)
+}
+
+export function setTransitionKey(
+  block: ResolvedTransitionBlock,
+  key: any,
+): void {
+  transitionKeys.set(block, key)
 }
 
 const getTransitionHooksContext = (
@@ -345,6 +354,7 @@ export function resolveTransitionHooks(
 export function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
+  owner?: VaporFragment,
 ): VaporTransitionHooks {
   // filter out comment nodes
   if (isArray(block)) {
@@ -370,8 +380,10 @@ export function applyTransitionHooksImpl(
   }
 
   const fragments: VaporFragment[] = []
-  const child = resolveTransitionBlock(block, fragment =>
-    fragments.push(fragment),
+  const child = resolveTransitionBlock(
+    block,
+    fragment => fragments.push(fragment),
+    owner,
   )
   if (!child) {
     // set transition hooks on fragments for later use
@@ -426,7 +438,7 @@ export function applyTransitionLeaveHooksImpl(
   enterHooks: VaporTransitionHooks,
   afterLeaveCb: () => void,
 ): boolean {
-  const leavingBlock = resolveTransitionBlock(block)
+  const leavingBlock = findTransitionBlock(block)
   if (!leavingBlock) return false
 
   const { props, state, instance } = enterHooks
@@ -577,29 +589,120 @@ function removeBranchWithLeaveImpl(
   return false
 }
 
+// vdom identity of a transition child as the chain is walked: the first
+// component or element is the child vnode, so its own key (or the default
+// key of its branch) and its type are final; `type` set means finalized.
+// Recorded per fragment so a branch re-render starting there resolves the
+// same way as a walk from the Transition root.
+export interface KeyContext {
+  key: any
+  type?: any
+}
+export const ROOT_KEY_CONTEXT: KeyContext = { key: undefined }
+const keyContexts: WeakMap<VaporFragment, KeyContext> = new WeakMap()
+// fragments that re-apply hooks on their own content, i.e. read this back
+const KEY_CONTEXT_OWNER = DYNAMIC | TELEPORT
+
+export function transitionTypeOf(block: VaporComponentInstance): any {
+  return (
+    (isAsyncComponentEnabled && (block.type as any).__asyncResolved) ||
+    block.type
+  )
+}
+
+export function withDefaultKey(ctx: KeyContext, key: any): KeyContext {
+  return ctx.type || key == null ? ctx : { key }
+}
+
+function isUnresolvedAsyncWrapper(block: VaporComponentInstance): boolean {
+  return (
+    isAsyncComponentEnabled &&
+    isAsyncWrapper(block) &&
+    getAsyncWrapperInner(block) === undefined
+  )
+}
+
+// The context a component hands to its content: finalized to the component's
+// identity, except for an unresolved async wrapper, whose resolved child
+// finalizes it later with the wrapper key as default.
+export function enterComponentKeyContext(
+  ctx: KeyContext,
+  block: VaporComponentInstance,
+  unresolved: boolean = isUnresolvedAsyncWrapper(block),
+): KeyContext {
+  if (ctx.type) return ctx
+  return unresolved
+    ? withDefaultKey(ctx, block.$key)
+    : { key: block.$key ?? ctx.key, type: transitionTypeOf(block) }
+}
+
+// Records the context a fragment's content resolves in and returns that
+// content's context, `key` being the fragment's own default key.
+export function enterFragmentKeyContext(
+  frag: VaporFragment,
+  ctx: KeyContext,
+  key: any = getFragmentKey(frag),
+): KeyContext {
+  if (frag.__vf & KEY_CONTEXT_OWNER) keyContexts.set(frag, ctx)
+  return withDefaultKey(ctx, key)
+}
+
+function resolveChildIdentity(
+  child: ResolvedTransitionBlock,
+  ctx: KeyContext,
+): void {
+  transitionKeys.set(child, ctx.type ? ctx.key : (child.$key ?? ctx.key))
+  if (ctx.type) setTransitionType(child, ctx.type)
+}
+
+/**
+ * Resolve the transition child of `block` together with its identity.
+ * `owner` is the fragment whose content `block` is.
+ */
 export function resolveTransitionBlock(
   block: Block,
   onFragment?: (frag: VaporFragment) => void,
+  owner?: VaporFragment,
 ): ResolvedTransitionBlock | undefined {
+  const ctx = owner
+    ? withDefaultKey(
+        keyContexts.get(owner) || ROOT_KEY_CONTEXT,
+        getFragmentKey(owner),
+      )
+    : ROOT_KEY_CONTEXT
   const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(block, onFragment, children)
+  collectTransitionBlocks(block, onFragment, children, ctx)
   return children[0]
 }
 
+/** Locate the transition child of `block` without touching its identity. */
+export function findTransitionBlock(
+  block: Block,
+): ResolvedTransitionBlock | undefined {
+  const children: ResolvedTransitionBlock[] = []
+  collectTransitionBlocks(block, undefined, children, undefined)
+  return children[0]
+}
+
+// `ctx` undefined: locate only
 function collectTransitionBlocks(
   block: Block,
   onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
+  ctx: KeyContext | undefined,
 ): void {
   if (block instanceof Node) {
     // transition can only be applied on Element child
-    if (block instanceof Element) children.push(block)
+    if (block instanceof Element) {
+      children.push(block)
+      if (ctx) resolveChildIdentity(block, ctx)
+    }
   } else if (isVaporComponent(block)) {
-    collectComponentTransitionBlocks(block, onFragment, children)
+    collectComponentTransitionBlocks(block, onFragment, children, ctx)
   } else if (isArray(block)) {
-    collectArrayTransitionBlocks(block, onFragment, children)
+    collectArrayTransitionBlocks(block, onFragment, children, ctx)
   } else if (isFragment(block)) {
-    collectFragmentTransitionBlocks(block, onFragment, children)
+    collectFragmentTransitionBlocks(block, onFragment, children, ctx)
   }
 }
 
@@ -607,33 +710,42 @@ function collectComponentTransitionBlocks(
   block: VaporComponentInstance,
   onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
+  ctx: KeyContext | undefined,
 ): void {
-  if (isAsyncComponentEnabled && isAsyncWrapper(block)) {
-    const inner = getAsyncWrapperInner(block)
+  // vdom's getInnerChild: KeepAlive is looked through, its child is the one
+  if (isKeepAliveEnabled && isKeepAlive(block)) {
+    collectTransitionBlocks(block.block, onFragment, children, ctx)
+    return
+  }
+  const async = isAsyncComponentEnabled && isAsyncWrapper(block)
+  const inner = async ? getAsyncWrapperInner(block) : undefined
+  if (ctx) {
+    ctx = enterComponentKeyContext(ctx, block, async && inner === undefined)
+  }
+  if (async) {
     if (inner === undefined) {
-      // unsettled: set transition hooks on the wrapper's fragment
-      if (onFragment && isFragment(block.block)) onFragment(block.block)
+      // unresolved: the wrapper's fragment re-renders the resolved child
+      if (isFragment(block.block)) {
+        if (onFragment) onFragment(block.block)
+        if (ctx) keyContexts.set(block.block, ctx)
+      }
       return
     }
-
-    const start = children.length
-    collectTransitionBlocks(inner, onFragment, children)
-    inheritSingleComponentKey(children[start], block)
+    collectTransitionBlocks(inner, onFragment, children, ctx)
     return
   }
 
   // stop searching if encountering nested Transition component
   if (isVaporTransition(block.type)) return
 
-  const start = children.length
-  collectTransitionBlocks(block.block, onFragment, children)
-  inheritSingleComponentKey(children[start], block)
+  collectTransitionBlocks(block.block, onFragment, children, ctx)
 }
 
 function collectArrayTransitionBlocks(
   block: Block[],
   onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
+  ctx: KeyContext | undefined,
 ): void {
   let hasFound = false
   for (const c of block) {
@@ -647,7 +759,7 @@ function collectArrayTransitionBlocks(
       break
     }
     const nested: ResolvedTransitionBlock[] = []
-    collectTransitionBlocks(c, onFragment, nested)
+    collectTransitionBlocks(c, onFragment, nested, ctx)
     if (nested.length) children.push(nested[0])
     hasFound = true
     if (!__DEV__) break
@@ -658,35 +770,28 @@ function collectFragmentTransitionBlocks(
   block: VaporFragment,
   onFragment: ((frag: VaporFragment) => void) | undefined,
   children: ResolvedTransitionBlock[],
+  ctx: KeyContext | undefined,
 ): void {
   if (isInteropEnabled && block.hasVDOMContent && block.hasVDOMContent()) {
     children.push(block)
-    const type = block.getTransitionType!()
-    if (type !== undefined) setTransitionType(block, type)
+    if (ctx) {
+      resolveChildIdentity(block, ctx)
+      if (!ctx.type) {
+        const type = block.getTransitionType!()
+        if (type !== undefined) setTransitionType(block, type)
+      }
+    }
     return
   }
 
   // collect fragments for setting transition hooks
   if (onFragment) onFragment(block)
-  collectTransitionBlocks(block.nodes, onFragment, children)
-}
-
-function inheritSingleComponentKey(
-  child: ResolvedTransitionBlock | undefined,
-  block: VaporComponentInstance,
-): void {
-  if (!child) return
-  // Inherit an explicit component key onto the resolved child, but do NOT
-  // fall back to the component uid. An unkeyed child must keep its key
-  // undefined so successive instances of the same component type share the
-  // leaving-cache bucket (which is keyed by resolved type). This matches
-  // VDOM's null-key behavior and lets a re-entering instance early-remove
-  // the previous one that is still leaving. A uid fallback gives every
-  // instance a distinct key, permanently breaking earlyRemove on toggles.
-  if (child.$key == null && block.$key != null) {
-    child.$key = block.$key
-  }
-  setTransitionType(child, block.type)
+  collectTransitionBlocks(
+    block.nodes,
+    onFragment,
+    children,
+    ctx && enterFragmentKeyContext(block, ctx),
+  )
 }
 
 export function setTransitionHooks(
@@ -694,7 +799,7 @@ export function setTransitionHooks(
   hooks: VaporTransitionHooks,
 ): void {
   if (isVaporComponent(block)) {
-    block = resolveTransitionBlock(block.block) as TransitionBlock
+    block = findTransitionBlock(block.block) as TransitionBlock
     if (!block) return
   }
   block.$transition = hooks

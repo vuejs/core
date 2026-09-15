@@ -1,4 +1,5 @@
 import { EffectScope } from '@vue/reactivity'
+import { isArray } from '@vue/shared'
 import type { MoveType } from '@vue/runtime-dom'
 import {
   type Block,
@@ -22,6 +23,7 @@ import {
   isTransitionEnabled,
 } from './transition'
 import { setBlockKey } from './helpers/setKey'
+import type { VaporFragment } from './fragment'
 
 // Slot resolution.
 //
@@ -292,8 +294,12 @@ function commitSlotFallback(
     if (state.$transition) {
       // Match VDOM slot fallback branch identity so fallback enter does not
       // early-remove the currently leaving slot content.
-      setBlockKey(block, '_fb')
-      state.$transition = applyTransitionHooks(block, state.$transition)
+      if (!isArray(block)) setBlockKey(block, '_fb')
+      state.$transition = applyTransitionHooks(
+        block,
+        state.$transition,
+        ownerFragment(state),
+      )
     }
   }
   if (detachContent && !isHydrating) {
@@ -308,6 +314,13 @@ function commitSlotFallback(
   }
   beforeExpose(state, block)
   insertActiveSlotFallback(state)
+}
+
+// A vapor SlotFragment is its own resolution state; an interop outlet keeps
+// its state apart from the fragment, so only the former owns a key context.
+function ownerFragment(state: SlotResolutionState): VaporFragment | undefined {
+  const frag = state as unknown as VaporFragment
+  return frag.__vf ? frag : undefined
 }
 
 function renderAndCommitSlotFallback(

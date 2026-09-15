@@ -1,13 +1,16 @@
 import type { Block, BlockFn } from './block'
 import type { VaporTransitionHooks } from './block'
 import type { FunctionalVaporComponent, VaporComponent } from './component'
-import type { DynamicFragment } from './fragment'
+import type { DynamicFragment, VaporFragment } from './fragment'
 
 // Transition hooks registry for tree-shaking
 // These are registered by Transition component when it's used
 type ApplyTransitionHooksFn = (
   block: Block,
   hooks: VaporTransitionHooks,
+  // the fragment whose content `block` is; resolves the key context the
+  // content sits in
+  owner?: VaporFragment,
 ) => VaporTransitionHooks
 type ApplyTransitionLeaveHooksFn = (
   block: Block,

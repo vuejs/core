@@ -243,6 +243,16 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: key > with static key > nested element + key is dropped 1`] = `
+"import { template as _template } from 'vue';
+const t0 = _template("<div><span>", 3)
+
+export function render(_ctx) {
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compiler: key > with static key > null static expression key 1`] = `
 "import { setBlockKey as _setBlockKey, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -254,6 +264,23 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: key > with static key > slot roots + key 1`] = `
+"import { setBlockKey as _setBlockKey, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template("<div></div>")
+const t1 = _template("<div>")
+
+export function render(_ctx) {
+  const n2 = _createAssetComponent("Foo", null, () => {
+    const n0 = t0()
+    const n1 = t1()
+    _setBlockKey(n0, "a")
+    _setBlockKey(n1, "b")
+    return [n0, n1]
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: key > with static key > static expression key 1`] = `
 "import { setBlockKey as _setBlockKey, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -261,6 +288,20 @@ const t0 = _template("<div>", 1)
 export function render(_ctx) {
   const n0 = t0()
   _setBlockKey(n0, "1")
+  return n0
+}"
+`;
+
+exports[`compiler: key > with static key > v-if branch root + key 1`] = `
+"import { setBlockKey as _setBlockKey, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    _setBlockKey(n2, "a")
+    return n2
+  })
   return n0
 }"
 `;

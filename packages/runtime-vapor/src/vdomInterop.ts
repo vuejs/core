@@ -187,8 +187,8 @@ import {
 import type { NodeRef } from './apiTemplateRef'
 import {
   ensureTransitionHooksRegistered,
+  findTransitionBlock,
   getTransitionElement,
-  resolveTransitionBlock,
   setTransitionHooks as setVaporTransitionHooks,
 } from './components/Transition'
 import { isVaporTransition } from './transition'
@@ -299,9 +299,14 @@ function getInteropTransitionType(vnode: VNode): VNode['type'] | undefined {
   return child && child.type
 }
 
+// vdom represents an absent key as null, vapor as undefined
+function vnodeKeyOf(vnode: VNode): VNode['key'] | undefined {
+  return vnode.key ?? undefined
+}
+
 function getVNodeKey(vnode: VNode | undefined): VNode['key'] | undefined {
   const child = getRawTransitionChild(vnode)
-  return child && child.key
+  return child && vnodeKeyOf(child)
 }
 
 function getInteropTransitionElement(
@@ -313,7 +318,7 @@ function getInteropTransitionElement(
     | VaporComponentInstance
     | null
   if (isVaporComponent(component)) {
-    const block = component.block && resolveTransitionBlock(component.block)
+    const block = component.block && findTransitionBlock(component.block)
     return block && getTransitionElement(block)
   }
   if (component) {
@@ -1085,7 +1090,7 @@ function createVNodeFragment(vnode: VNode): {
   syncNodes: () => void
 } {
   const frag = createInteropFragment(EMPTY_BLOCK, vnode)
-  frag.$key = vnode.key
+  frag.$key = vnodeKeyOf(vnode)
   const content = new InteropContentState()
   // reads `frag.vnode` rather than the captured argument so it follows a
   // fallthrough re-clone (see mountVNode)
@@ -1314,7 +1319,7 @@ function mountVNode(
       vnode = next
       trackFragmentVNodeUpdates(frag, vnode, syncNodes)
       frag.vnode = vnode
-      frag.$key = vnode.key
+      frag.$key = vnodeKeyOf(vnode)
       const prevInstance = currentInstance
       simpleSetCurrentInstance(parentComponent)
       internals.p(
@@ -2337,7 +2342,7 @@ function renderVDOMSlot(
     if (slotResolutionState.activeFallback && slotContentValid && transition) {
       if (mode === 'out-in') {
         const fallback = slotResolutionState.activeFallback
-        const leavingBlock = fallback && resolveTransitionBlock(fallback)
+        const leavingBlock = fallback && findTransitionBlock(fallback)
         const leavingElement =
           leavingBlock && getTransitionElement(leavingBlock)
         pendingOutIn = {

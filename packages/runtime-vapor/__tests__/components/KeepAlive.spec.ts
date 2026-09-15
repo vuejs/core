@@ -1109,7 +1109,7 @@ describe('VaporKeepAlive', () => {
 
     expect(host.textContent).toBe('child')
     expect(mounted).toHaveBeenCalledTimes(1)
-    expect(childInstance.$key).toBe(0)
+    expect(childInstance.$key).toBeUndefined()
 
     state.inner = false
     await nextTick()
@@ -3528,6 +3528,48 @@ describe('VaporKeepAlive', () => {
   })
 
   describe('vdom interop', () => {
+    test('caches a keyed vdom child under its branch key', async () => {
+      const Child = {
+        setup() {
+          onBeforeMount(() => oneHooks.beforeMount())
+          onMounted(() => oneHooks.mounted())
+          onActivated(() => oneHooks.activated())
+          onDeactivated(() => oneHooks.deactivated())
+          onUnmounted(() => oneHooks.unmounted())
+          return () => h('div', 'child')
+        },
+      }
+      const data = ref({ show: true, childKey: 'a' })
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template>
+          <KeepAlive>
+            <Child v-if="data.show" :key="data.childKey" />
+          </KeepAlive>
+        </template>`,
+        data,
+        { Child },
+      )
+      const container = document.createElement('div')
+      const app = createVaporApp(App)
+      app.use(vaporInteropPlugin)
+      app.mount(container)
+      assertHookCalls(oneHooks, [1, 1, 1, 0, 0])
+
+      data.value.show = false
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+
+      data.value.show = true
+      await nextTick()
+      expect(container.innerHTML).toContain('child')
+      assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
+      app.unmount()
+    })
+
     test('should cache interop branches by explicit key', async () => {
       let cache: Map<any, any>
       let keepAlive: any

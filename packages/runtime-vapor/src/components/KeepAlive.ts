@@ -40,6 +40,7 @@ import { unsetRef } from '../refCleanup'
 import {
   type DynamicFragment,
   type VaporFragment,
+  getFragmentKey,
   isDynamicFragment,
   isFragment,
   isInteropFragment,
@@ -109,15 +110,12 @@ const VaporKeepAliveImpl = defineVaporComponent({
     const resolveCacheKeyFromBlock = (
       block: VaporComponentInstance | VaporFragment,
       interop: boolean,
-      branchKey = currentCacheKey,
+      branchKey: any,
     ): CacheKey => {
       if (interop && isInteropEnabled) {
+        // vnode.key is null when absent
         const frag = block as VaporFragment
-        return (
-          (frag.$key !== undefined
-            ? frag.$key
-            : (frag.vnode!.key ?? branchKey)) ?? frag.vnode!.type
-        )
+        return frag.$key ?? frag.vnode!.key ?? branchKey ?? frag.vnode!.type
       }
 
       return (
@@ -180,10 +178,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return
         }
       }
-      const [innerBlock, interop] = getInnerBlock(block)
+      const [innerBlock, interop, branchKey] = getInnerBlock(block)
       if (!innerBlock) return
 
-      const branchKey = isDynamicFragment(block) ? block.branchKey : undefined
       const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
       // Align with VDOM KeepAlive behavior: async wrappers can enter the cache
       // before they resolve, and a later async update may resolve the same
@@ -204,10 +201,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
     }
 
     const processShapeFlag = (block: Block): CacheKey | false => {
-      const [innerBlock, interop] = getInnerBlock(block)
+      const [innerBlock, interop, branchKey] = getInnerBlock(block)
       if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
 
-      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop)
+      const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
       setShapeFlag(innerBlock, interop, cache.has(cacheKey))
       return cacheKey
     }
@@ -296,11 +293,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
     const getCurrentBlockState = () => {
       const block = keepAliveInstance.block!
-      const [currentBlock, interop] = getInnerBlock(block)
-      const branchKey =
-        isDynamicFragment(block) && block.branchKey !== undefined
-          ? block.branchKey
-          : currentCacheKey
+      const [currentBlock, interop, branchKey] = getInnerBlock(block)
 
       return {
         currentBlock,
@@ -382,12 +375,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
           scope.stop()
           return false
         }
-        const cacheKey =
-          frag.branchKey !== undefined
-            ? withCurrentCacheKey(frag.branchKey, () =>
-                processShapeFlag(frag.nodes),
-              )
-            : processShapeFlag(frag.nodes)
+        const fragKey = getFragmentKey(frag)
+        const cacheKey = withCurrentCacheKey(fragKey, () =>
+          processShapeFlag(frag.nodes),
+        )
         if (cacheKey === false) {
           scope.stop()
           return false
@@ -395,12 +386,15 @@ const VaporKeepAliveImpl = defineVaporComponent({
         // Component and KeepAlive input scopes are detached from this
         // DynamicFragment scope, so this only pauses branch-owned effects.
         scope.pause()
-        cacheScope(cacheKey, scopeLookupKey(frag, prevKey), scope)
+        cacheScope(cacheKey, fragKey ?? prevKey, scope)
         return true
       },
       runBranchRender(frag, fn, useScope, removePrevious) {
+        // a branch with a user key is cached and its scope aliased under that
+        // key, so re-entering the key finds them whatever the branch identity
+        const fragKey = getFragmentKey(frag)
         const cachedScope = useScope
-          ? deleteScope(scopeLookupKey(frag, frag.current))
+          ? deleteScope(fragKey ?? frag.current)
           : undefined
         frag.scope = useScope ? cachedScope || new EffectScope() : undefined
         if (cachedScope) cachedScope.resume()
@@ -420,9 +414,7 @@ const VaporKeepAliveImpl = defineVaporComponent({
         // before rendering, so incoming setup runs before cache pruning decides
         // whether the outgoing branch is deactivated or unmounted.
         try {
-          frag.branchKey !== undefined
-            ? withCurrentCacheKey(frag.branchKey, run)
-            : run()
+          withCurrentCacheKey(fragKey, run)
           if (
             removePrevious &&
             incomingCacheKey !== false &&
@@ -470,12 +462,6 @@ const VaporKeepAliveImpl = defineVaporComponent({
 
 export const VaporKeepAlive: DefineVaporComponent<{}, string, KeepAliveProps> =
   /*@__PURE__*/ withKeepAliveEnabled(VaporKeepAliveImpl)
-
-// A branch with a user key is cached and its scope aliased under that key,
-// so re-entering the key finds them whatever the branch identity is.
-function scopeLookupKey(frag: DynamicFragment, current: any): any {
-  return frag.branchKey !== undefined ? frag.branchKey : current
-}
 
 function registerDynamicFragmentHooks(
   block: Block,
@@ -578,19 +564,25 @@ function isKeptAlive(
 }
 
 type InnerBlockResult =
-  | [VaporFragment, true]
-  | [VaporComponentInstance, false]
-  | [undefined, false]
+  | [VaporFragment, true, any]
+  | [VaporComponentInstance, false, any]
+  | [undefined, false, any]
 
-function getInnerBlock(block: Block): InnerBlockResult {
+// Also resolves the branch key the inner block sits in (innermost fragment
+// declaring one wins); the ambient key seeds a walk starting below the
+// fragment being rendered.
+function getInnerBlock(
+  block: Block,
+  branchKey: any = currentCacheKey,
+): InnerBlockResult {
   if (isVaporComponent(block)) {
-    return [block, false]
+    return [block, false, branchKey]
   } else if (isInteropEnabled && isInteropFragment(block)) {
-    return [block, true]
+    return [block, true, branchKey]
   } else if (isFragment(block)) {
-    return getInnerBlock(block.nodes)
+    return getInnerBlock(block.nodes, getFragmentKey(block) ?? branchKey)
   }
-  return [undefined, false]
+  return [undefined, false, branchKey]
 }
 
 function getInstanceFromCache(

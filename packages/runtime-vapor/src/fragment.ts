@@ -62,7 +62,6 @@ import {
   recheckSlotResolution,
   resolveExposedSlotNodes,
 } from './slotFragment'
-import { setBlockKey } from './helpers/setKey'
 import {
   type VaporKeepAliveContext,
   getKeepAliveContext,
@@ -72,7 +71,6 @@ import {
   applyTransitionHooks,
   deferBranchUpdateDuringLeave,
   isTransitionEnabled,
-  isVaporTransition,
   removeBranchWithLeave,
 } from './transition'
 import {
@@ -296,10 +294,9 @@ export class DynamicFragment extends RenderContextFragment {
   keyed?: boolean
   // The user-facing key of the current branch: the branch key itself for
   // keyed fragments, or the `:key` a dynamic component carries next to its
-  // resolved-component identity. KeepAlive caches by it; it reaches the
-  // branch nodes as $key.
+  // resolved-component identity. KeepAlive caches by it and Transition reads
+  // it as the default key of the branch root.
   branchKey?: any
-  inTransition?: boolean
   /** hydration: this `v-if` branch's claim on its SSR range */
   hydrationClaim?: FragmentClaim
   // Fallthrough (re-)application for this fragment's branches, installed by
@@ -328,13 +325,6 @@ export class DynamicFragment extends RenderContextFragment {
   ) {
     super(EMPTY_BLOCK, DYNAMIC | flags)
     if (keyed) this.keyed = true
-    if (
-      isTransitionEnabled &&
-      currentInstance &&
-      isVaporTransition(currentInstance.type)
-    ) {
-      this.inTransition = true
-    }
     if (__DEV__) this.anchorLabel = anchorLabel
     if (!isHydrating) {
       this.anchor = resolveFragmentAnchor(adoptAnchor, anchorLabel)
@@ -481,20 +471,13 @@ export class DynamicFragment extends RenderContextFragment {
       if (keepAliveCtx) {
         keepAliveCtx.runBranchRender(
           this,
-          () =>
-            this.renderNodes(
-              render,
-              useScope,
-              parent,
-              transition,
-              keepAliveCtx,
-            ),
+          () => this.renderNodes(render, useScope, parent, transition),
           useScope,
           removePrevious,
         )
       } else {
         this.scope = useScope ? new EffectScope() : undefined
-        this.renderNodes(render, useScope, parent, transition, null)
+        this.renderNodes(render, useScope, parent, transition)
       }
 
       // Root-only inherited ids must land on the new branch's effective root
@@ -527,7 +510,6 @@ export class DynamicFragment extends RenderContextFragment {
     useScope: boolean,
     parent: ParentNode | null,
     transition: VaporTransitionHooks | undefined,
-    keepAliveCtx: VaporKeepAliveContext | null,
   ): void {
     try {
       this.nodes = this.runWithRenderCtx(() => {
@@ -547,18 +529,8 @@ export class DynamicFragment extends RenderContextFragment {
         return nodes
       })
     } finally {
-      // Inherit the fragment key without overriding a child's own key.
-      const key = this.branchKey !== undefined ? this.branchKey : this.$key
-      // Only propagate branch keys when Transition or KeepAlive consumes them.
-      if (
-        key !== undefined &&
-        (transition || this.inTransition || keepAliveCtx)
-      ) {
-        setBlockKey(this.nodes, key, false)
-      }
-
       if (isTransitionEnabled && transition) {
-        this.$transition = applyTransitionHooks(this.nodes, transition)
+        this.$transition = applyTransitionHooks(this.nodes, transition, this)
       }
     }
   }
@@ -902,6 +874,15 @@ export function isSlotOutletFragment(val: unknown): boolean {
 
 export function isDynamicFragment(val: unknown): val is DynamicFragment {
   return !!(val && (val as any).__vf & DYNAMIC)
+}
+
+/**
+ * The key a fragment hands to its branch root as default: a declared key
+ * (static key on a dynamic component) or the current branch key (keyed
+ * fragment, dynamic component `:key`, v-if branch index).
+ */
+export function getFragmentKey(frag: VaporFragment): any {
+  return frag.$key ?? (frag as DynamicFragment).branchKey
 }
 
 export function isForFragment(val: unknown): val is ForFragment {
