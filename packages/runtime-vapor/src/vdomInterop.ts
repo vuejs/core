@@ -944,6 +944,8 @@ const vaporSlotsProxyHandler: ProxyHandler<any> = {
         renderSlot({ [key]: slot }, key as string, props),
       ]
       ;(wrapped as any)[rawVaporSlotKey] = slot
+      // already normalized, so VDOM slot normalization keeps it as is
+      ;(wrapped as any)._n = true
       wrappers.set(key, { slot, wrapped })
       return wrapped
     }
@@ -1375,6 +1377,21 @@ function createVDOMComponent(
     }
   }
 
+  if (
+    !once &&
+    (component as any).__asyncLoader &&
+    rawSlots &&
+    (rawSlots as RawSlots).$
+  ) {
+    // the async wrapper passes slots to its inner component only when it
+    // renders, so re-render it when dynamic slots change, like a VDOM parent
+    renderEffect(() => {
+      dynamicSlotsProxyHandlers.ownKeys!(rawSlots as RawSlots)
+      const instance = vnode.component
+      if (instance && instance.isMounted) instance.update()
+    }, true)
+  }
+
   // overwrite how the vdom instance handles props
   vnode.vi = (instance: ComponentInternalInstance) => {
     // Reuse VDOM's normalized options so Options API merging stays in VDOM.
@@ -1428,6 +1445,12 @@ function createVDOMComponent(
       wrapper.rawSlots === EMPTY_OBJ
         ? EMPTY_OBJ
         : new Proxy(wrapper.rawSlots, vaporSlotsProxyHandler)
+
+    // async wrappers create the inner component with `vnode.children`
+    if ((component as any).__asyncLoader && instance.slots !== EMPTY_OBJ) {
+      vnode.children = instance.slots
+      vnode.shapeFlag |= ShapeFlags.SLOTS_CHILDREN
+    }
 
     if (__DEV__) {
       const prev = setCurrentInstance(wrapper, instance.scope)
