@@ -56,6 +56,7 @@ import {
 } from './block'
 import {
   type ShallowRef,
+  isRef,
   markRaw,
   onScopeDispose,
   proxyRefs,
@@ -1603,6 +1604,15 @@ export function getExposed(
       instance.exposeProxy ||
       (instance.exposeProxy = new Proxy(markRaw(instance.exposed), {
         get: (target, key) => unref(target[key as any]),
+        // same as proxyRefs in vdom: assigning to an exposed ref sets its value
+        set: (target, key, value, receiver) => {
+          const oldValue = target[key as any]
+          if (isRef(oldValue) && !isRef(value)) {
+            oldValue.value = value
+            return true
+          }
+          return Reflect.set(target, key, value, receiver)
+        },
       }))
     )
   }

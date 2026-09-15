@@ -206,14 +206,15 @@ function resolveValue(
   const resolved = withScopeOwner(scopeOwner, () =>
     resolveDynamicComponent(value),
   )
-  // strings are tags, objects and functions are components, symbols are
-  // vdom types the interop mounts; anything else is an empty branch
+  // non-empty strings are tags, objects and functions are components, symbols
+  // are vdom types the interop mounts; anything else is an empty branch
   const type = typeof resolved
   if (
-    type !== 'string' &&
-    type !== 'object' &&
-    type !== 'function' &&
-    type !== 'symbol'
+    !resolved ||
+    (type !== 'string' &&
+      type !== 'object' &&
+      type !== 'function' &&
+      type !== 'symbol')
   ) {
     if (__DEV__) {
       warn(`Invalid dynamic component type: ${String(resolved)} (${type})`)
