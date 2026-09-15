@@ -17,6 +17,7 @@ import {
   remove,
   removeAttachedNodes,
   removeNode,
+  unmountVDOMOnScopeDispose,
 } from './block'
 import {
   type GenericComponentInstance,
@@ -853,6 +854,7 @@ export function finishBlockCreation(
   ) {
     insert(block, insertionParent, insertionAnchor)
   }
+  if (insertionParent) unmountVDOMOnScopeDispose(block)
 }
 
 export function isFragment(val: unknown): val is VaporFragment {

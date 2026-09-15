@@ -1185,7 +1185,18 @@ function mountVNode(
   // and reused for later patches, mirroring how VDOM closes the mount-time
   // namespace over a component's render effect.
   let namespace: ElementNamespace
+  let isUnmounted = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    // scope disposal and block removal can both reach this
+    if (isUnmounted) {
+      if (parentNode) {
+        removeAttachedNodes(resolveVNodeNodes(vnode), parentNode)
+        if (vnode.anchor && vnode.anchor.parentNode === parentNode) {
+          remove(vnode.anchor as Node, parentNode)
+        }
+      }
+      return
+    }
     if (transition) setVNodeTransitionHooks(vnode, transition)
     const parentSuspense = resolveUnmountSuspense(suspense)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -1206,6 +1217,7 @@ function mountVNode(
         )
       }
     } else {
+      isUnmounted = true
       internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
     }
 
@@ -2022,8 +2034,6 @@ function renderVDOMSlot(
   ) => place(parentNode, anchor, parentSuspense, moveType)
 
   frag.remove = parentNode => {
-    // scope disposal and block removal can both reach this
-    if (disposed) return
     const storage = sharedContentStorage
     if (parentNode && !storage) {
       currentParentNode = parentNode

@@ -2406,13 +2406,18 @@ describe('vdomInterop', () => {
 
   describe('unmount', () => {
     function createVDomChild() {
-      const data = ref({ show: true, inner: true, count: 0 })
+      const data = ref({ show: true, inner: true, count: 0, list: ['x'] })
       const unmounted: string[] = []
+      const connected: boolean[] = []
       const watched = vi.fn()
       const VDomChild = defineComponent({
         props: ['id'],
         setup(props) {
-          onBeforeUnmount(() => unmounted.push(`bum ${props.id}`))
+          const instance = currentInstance!
+          onBeforeUnmount(() => {
+            unmounted.push(`bum ${props.id}`)
+            connected.push(instance.subTree!.el!.isConnected)
+          })
           onUnmounted(() => unmounted.push(`um ${props.id}`))
           watch(
             () => data.value.count,
@@ -2421,29 +2426,42 @@ describe('vdomInterop', () => {
           return () => h('p', props.id)
         },
       })
-      return { data, unmounted, watched, VDomChild }
+      return { data, unmounted, connected, watched, VDomChild }
     }
 
     test('vdom components inside a removed element', async () => {
       const { data, unmounted, watched, VDomChild } = createVDomChild()
+      const VaporRoot = compile(
+        `<template><components.VDomChild id="d" /></template>`,
+        data,
+        { VDomChild },
+      )
       const App = compile(
         `<template>
           <div v-if="data.show">
             <components.VDomChild id="a" />
             <components.VDomChild v-if="data.inner" id="b" />
             <components.VDomChild v-for="id in ['c']" :key="id" :id="id" />
+            <components.VaporRoot />
+            <component is="section"><components.VDomChild id="e" /></component>
+            <TransitionGroup tag="ul">
+              <components.VDomChild v-for="id in ['f']" :key="id" :id="id" />
+            </TransitionGroup>
+            <component :is="components.vnode" />
           </div>
         </template>`,
         data,
-        { VDomChild },
+        { VDomChild, VaporRoot, vnode: h(VDomChild, { id: 'g' }) },
       )
       const { html } = define(App).render()
       expect(html()).toBe(
-        '<div><p>a</p><p>b</p><!--if--><p>c</p><!--for--></div><!--if-->',
+        '<div><p>a</p><p>b</p><!--if--><p>c</p><!--for--><p>d</p>' +
+          '<section><p>e</p></section><ul><p>f</p><!--for--></ul><p>g</p>' +
+          '<!--dynamic-component--></div><!--if-->',
       )
       data.value.count++
       await nextTick()
-      expect(watched).toHaveBeenCalledTimes(3)
+      expect(watched).toHaveBeenCalledTimes(7)
 
       data.value.show = false
       await nextTick()
@@ -2452,14 +2470,73 @@ describe('vdomInterop', () => {
         'bum a',
         'bum b',
         'bum c',
+        'bum d',
+        'bum e',
+        'bum f',
+        'bum g',
         'um a',
         'um b',
         'um c',
+        'um d',
+        'um e',
+        'um f',
+        'um g',
       ])
 
       data.value.count++
       await nextTick()
-      expect(watched).toHaveBeenCalledTimes(3)
+      expect(watched).toHaveBeenCalledTimes(7)
+    })
+
+    test('vdom components inside an element removed in the same tick as a watched change', async () => {
+      const { data, unmounted, connected, watched, VDomChild } =
+        createVDomChild()
+      const App = compile(
+        `<template>
+          <div v-if="data.show">
+            <components.VDomChild v-if="data.inner" id="a" />
+          </div>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const { host, html } = define(App).render()
+      document.body.appendChild(host)
+
+      data.value.show = false
+      data.value.count++
+      await nextTick()
+      expect(html()).toBe('<!--if-->')
+      expect(unmounted).toEqual(['bum a', 'um a'])
+      // unmounted before the element is removed, like vdom
+      expect(connected).toEqual([true])
+      expect(watched).not.toHaveBeenCalled()
+    })
+
+    test('vdom components in v-for rows cleared at once', async () => {
+      const { data, unmounted, watched, VDomChild } = createVDomChild()
+      const App = compile(
+        `<template>
+          <ul>
+            <template v-for="id in data.list" :key="id">
+              <components.VDomChild :id="id" /><i />
+            </template>
+          </ul>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const { html } = define(App).render()
+      expect(html()).toBe('<ul><p>x</p><i></i><!--for--></ul>')
+
+      data.value.list = []
+      await nextTick()
+      expect(html()).toBe('<ul><!--for--></ul>')
+      expect(unmounted).toEqual(['bum x', 'um x'])
+
+      data.value.count++
+      await nextTick()
+      expect(watched).not.toHaveBeenCalled()
     })
 
     test('vdom components inside an element on app unmount', async () => {

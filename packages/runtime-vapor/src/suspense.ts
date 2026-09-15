@@ -1,4 +1,4 @@
-import { type SuspenseBoundary, queuePostFlushCb } from '@vue/runtime-dom'
+import type { SuspenseBoundary } from '@vue/runtime-dom'
 
 export let isSuspenseEnabled = false
 // `instance.suspense` is the boundary a component was mounted in, but an
@@ -56,15 +56,4 @@ export function resolveUnmountSuspense(
   return currentUnmountSuspense === undefined
     ? fallback
     : currentUnmountSuspense
-}
-
-/**
- * Queues a teardown after the flush under the unmount pass's boundary that was
- * active when it was queued, since that pass is over by the time it runs.
- */
-export function queueUnmountPostFlush(fn: () => void): void {
-  const suspense = currentUnmountSuspense
-  queuePostFlushCb(
-    suspense === undefined ? fn : () => runWithUnmountSuspense(suspense, fn),
-  )
 }

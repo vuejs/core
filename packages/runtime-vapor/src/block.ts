@@ -1,4 +1,5 @@
 import { EMPTY_ARR, isArray } from '@vue/shared'
+import { onScopeDispose } from '@vue/reactivity'
 import {
   type VaporComponentInstance,
   isVaporComponent,
@@ -21,6 +22,7 @@ import {
   type DynamicFragment,
   type VaporFragment,
   isFragment,
+  isInteropFragment,
 } from './fragment'
 import { isTeleportEnabled, isTeleportFragment } from './teleport'
 import { isTransitionEnabled } from './transition'
@@ -401,6 +403,34 @@ export function removeFragment(
   }
   if (block.anchor) removeNode(block.anchor, parent)
   if (block.scope) block.scope.stop()
+}
+
+/**
+ * Block removal doesn't descend into elements, so it never reaches a block
+ * mounted into one. Unmount the vdom components in its tree synchronously when
+ * its owner scope is disposed, as vdom does for an element's children.
+ */
+export function unmountVDOMOnScopeDispose(block: Block): void {
+  if (isInteropEnabled && !(block instanceof Node)) {
+    onScopeDispose(() => unmountVDOM(block), true)
+  }
+}
+
+/**
+ * Unmounts the vdom components in a block tree whose DOM goes away without
+ * block removal.
+ */
+export function unmountVDOM(block: Block | undefined): void {
+  if (!block || block instanceof Node) return
+  if (isVaporComponent(block)) {
+    unmountVDOM(block.block)
+  } else if (isArray(block)) {
+    for (let i = 0; i < block.length; i++) unmountVDOM(block[i])
+  } else if (isInteropFragment(block)) {
+    block.remove!()
+  } else {
+    unmountVDOM(block.nodes)
+  }
 }
 
 /**

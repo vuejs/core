@@ -32,6 +32,7 @@ import {
   remove,
   removeFragment,
   removeNode,
+  unmountVDOM,
 } from './block'
 import { MoveType, queuePostFlushCb, warn } from '@vue/runtime-dom'
 import { currentInstance } from './component'
@@ -76,6 +77,7 @@ import {
 } from './insertionState'
 import { applyTransitionHooks, isTransitionEnabled } from './transition'
 import { currentRenderContext, withRenderContext } from './renderContext'
+import { isInteropEnabled } from './vdomInteropState'
 
 type Source = any[] | Record<any, any> | number | Set<any> | Map<any, any>
 
@@ -655,6 +657,9 @@ export const createFor = (
     }
     if (doRemove) {
       removeForBlock(block)
+    } else if (isInteropEnabled) {
+      // the parent's content is cleared at once, bypassing block removal
+      unmountVDOM(block)
     }
     if (isComponent) {
       // Component item cleanups such as template refs must observe the

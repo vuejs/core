@@ -53,6 +53,7 @@ import {
   insert,
   isBlock,
   remove,
+  unmountVDOMOnScopeDispose,
 } from './block'
 import {
   type ShallowRef,
@@ -170,7 +171,6 @@ import type { VaporElement } from './apiDefineCustomElement'
 import {
   currentUnmountSuspense,
   isSuspenseEnabled,
-  queueUnmountPostFlush,
   resolveUnmountSuspense,
   runWithUnmountSuspense,
 } from './suspense'
@@ -407,15 +407,7 @@ export function createComponent(
         normalizeRawSlots(rawSlots),
         once,
       )
-      if (_insertionParent) {
-        // Mounted via insertion state, so not part of the returned block tree:
-        // block removal never reaches it and scope disposal must unmount it.
-        onScopeDispose(() => frag.remove!(), true)
-      } else {
-        // Block removal unmounts it with transition hooks when it runs; fall
-        // back for a block tree dropped inside a removed element.
-        onScopeDispose(() => queueUnmountPostFlush(() => frag.remove!()), true)
-      }
+      if (_insertionParent) unmountVDOMOnScopeDispose(frag)
       if (!isHydrating) {
         if (_insertionParent) {
           insert(
@@ -621,6 +613,7 @@ export function createComponent(
         ),
       true,
     )
+    if (_insertionParent) unmountVDOMOnScopeDispose(instance)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
       mountComponent(instance, _insertionParent!, _insertionAnchor)
@@ -1303,11 +1296,13 @@ export function createPlainElement(
       if (isHydrating) locateHydrationNode()
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
+      unmountVDOMOnScopeDispose(frag)
     } else {
       const slot = getSlot(rawSlots as RawSlots, 'default')
       if (slot) {
         const block = slot()
         if (!isHydrating) insert(block, el)
+        unmountVDOMOnScopeDispose(block)
       }
     }
     if (isHydrating) {
