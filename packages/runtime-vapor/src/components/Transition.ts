@@ -665,7 +665,10 @@ export function resolveTransitionBlock(
   owner?: VaporFragment,
 ): ResolvedTransitionBlock | undefined {
   const ctx = owner
-    ? enterFragmentKeyContext(owner, keyContexts.get(owner) || ROOT_KEY_CONTEXT)
+    ? withDefaultKey(
+        keyContexts.get(owner) || ROOT_KEY_CONTEXT,
+        getFragmentKey(owner),
+      )
     : ROOT_KEY_CONTEXT
   const children: ResolvedTransitionBlock[] = []
   collectTransitionBlocks(block, onFragment, children, ctx)
