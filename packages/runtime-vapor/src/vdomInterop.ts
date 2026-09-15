@@ -300,9 +300,13 @@ function getInteropTransitionType(vnode: VNode): VNode['type'] | undefined {
 }
 
 // vdom represents an absent key as null, vapor as undefined
+function vnodeKeyOf(vnode: VNode): VNode['key'] | undefined {
+  return vnode.key ?? undefined
+}
+
 function getVNodeKey(vnode: VNode | undefined): VNode['key'] | undefined {
   const child = getRawTransitionChild(vnode)
-  return child ? (child.key ?? undefined) : undefined
+  return child && vnodeKeyOf(child)
 }
 
 function getInteropTransitionElement(
@@ -1086,7 +1090,7 @@ function createVNodeFragment(vnode: VNode): {
   syncNodes: () => void
 } {
   const frag = createInteropFragment(EMPTY_BLOCK, vnode)
-  frag.$key = vnode.key ?? undefined
+  frag.$key = vnodeKeyOf(vnode)
   const content = new InteropContentState()
   // reads `frag.vnode` rather than the captured argument so it follows a
   // fallthrough re-clone (see mountVNode)
@@ -1315,7 +1319,7 @@ function mountVNode(
       vnode = next
       trackFragmentVNodeUpdates(frag, vnode, syncNodes)
       frag.vnode = vnode
-      frag.$key = vnode.key ?? undefined
+      frag.$key = vnodeKeyOf(vnode)
       const prevInstance = currentInstance
       simpleSetCurrentInstance(parentComponent)
       internals.p(

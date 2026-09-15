@@ -882,7 +882,7 @@ export function isDynamicFragment(val: unknown): val is DynamicFragment {
  * fragment, dynamic component `:key`, v-if branch index).
  */
 export function getFragmentKey(frag: VaporFragment): any {
-  return frag.$key ?? (isDynamicFragment(frag) ? frag.branchKey : undefined)
+  return frag.$key ?? (frag as DynamicFragment).branchKey
 }
 
 export function isForFragment(val: unknown): val is ForFragment {

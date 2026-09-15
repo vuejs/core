@@ -34,7 +34,6 @@ import {
   remove,
 } from '../block'
 import {
-  type TransitionOwner,
   displayName,
   isVaporTransition,
   registerTransitionHooks,
@@ -58,6 +57,7 @@ import {
   isVaporSlotOutlet,
 } from '../fragment'
 import { isKeepAliveEnabled } from '../keepAlive'
+import { DYNAMIC, TELEPORT } from '../fragmentFlags'
 import {
   currentHydrationNode,
   isHydrating,
@@ -279,11 +279,17 @@ function getLeaveElement(
 
 // Keys resolved for transition children (vdom's `vnode.key` as seen by
 // Transition / TransitionGroup), written when the content is resolved.
-export const transitionKeys: WeakMap<ResolvedTransitionBlock, any> =
-  new WeakMap()
+const transitionKeys: WeakMap<ResolvedTransitionBlock, any> = new WeakMap()
 
 export function getTransitionKey(block: ResolvedTransitionBlock): any {
   return transitionKeys.get(block)
+}
+
+export function setTransitionKey(
+  block: ResolvedTransitionBlock,
+  key: any,
+): void {
+  transitionKeys.set(block, key)
 }
 
 const getTransitionHooksContext = (
@@ -348,7 +354,7 @@ export function resolveTransitionHooks(
 export function applyTransitionHooksImpl(
   block: Block,
   hooks: VaporTransitionHooks,
-  owner?: TransitionOwner,
+  owner?: VaporFragment,
 ): VaporTransitionHooks {
   // filter out comment nodes
   if (isArray(block)) {
@@ -585,31 +591,23 @@ function removeBranchWithLeaveImpl(
 
 // vdom identity of a transition child as the chain is walked: the first
 // component or element is the child vnode, so its own key (or the default
-// key of the branch it sits in) and its type are final and nothing below
-// contributes; `type` is set once a component fixed the identity. Recorded
-// per fragment so a branch re-render starting at that fragment resolves the
+// key of its branch) and its type are final; `type` set means finalized.
+// Recorded per fragment so a branch re-render starting there resolves the
 // same way as a walk from the Transition root.
 export interface KeyContext {
   key: any
   type?: any
 }
 export const ROOT_KEY_CONTEXT: KeyContext = { key: undefined }
-export const keyContexts: WeakMap<TransitionOwner, KeyContext> = new WeakMap()
+const keyContexts: WeakMap<VaporFragment, KeyContext> = new WeakMap()
+// fragments that re-apply hooks on their own content, i.e. read this back
+const KEY_CONTEXT_OWNER = DYNAMIC | TELEPORT
 
 export function transitionTypeOf(block: VaporComponentInstance): any {
   return (
     (isAsyncComponentEnabled && (block.type as any).__asyncResolved) ||
     block.type
   )
-}
-
-export function finalizeKeyContext(
-  ctx: KeyContext,
-  block: VaporComponentInstance,
-): KeyContext {
-  return ctx.type
-    ? ctx
-    : { key: block.$key ?? ctx.key, type: transitionTypeOf(block) }
 }
 
 export function withDefaultKey(ctx: KeyContext, key: any): KeyContext {
@@ -624,17 +622,18 @@ function isUnresolvedAsyncWrapper(block: VaporComponentInstance): boolean {
   )
 }
 
-// The context a component hands to its content: fixed to the component's
+// The context a component hands to its content: finalized to the component's
 // identity, except for an unresolved async wrapper, whose resolved child
-// fixes it later with the wrapper key as default.
+// finalizes it later with the wrapper key as default.
 export function enterComponentKeyContext(
   ctx: KeyContext,
   block: VaporComponentInstance,
   unresolved: boolean = isUnresolvedAsyncWrapper(block),
 ): KeyContext {
+  if (ctx.type) return ctx
   return unresolved
     ? withDefaultKey(ctx, block.$key)
-    : finalizeKeyContext(ctx, block)
+    : { key: block.$key ?? ctx.key, type: transitionTypeOf(block) }
 }
 
 // Records the context a fragment's content resolves in and returns that
@@ -644,7 +643,7 @@ export function enterFragmentKeyContext(
   ctx: KeyContext,
   key: any = getFragmentKey(frag),
 ): KeyContext {
-  keyContexts.set(frag, ctx)
+  if (frag.__vf & KEY_CONTEXT_OWNER) keyContexts.set(frag, ctx)
   return withDefaultKey(ctx, key)
 }
 
@@ -658,16 +657,16 @@ function resolveChildIdentity(
 
 /**
  * Resolve the transition child of `block` together with its identity.
- * `owner` is the fragment (or slot host) whose content `block` is.
+ * `owner` is the fragment whose content `block` is.
  */
 export function resolveTransitionBlock(
   block: Block,
   onFragment?: (frag: VaporFragment) => void,
-  owner?: TransitionOwner,
+  owner?: VaporFragment,
 ): ResolvedTransitionBlock | undefined {
-  let ctx = (owner && keyContexts.get(owner)) || ROOT_KEY_CONTEXT
-  if (owner && isFragment(owner))
-    ctx = withDefaultKey(ctx, getFragmentKey(owner))
+  const ctx = owner
+    ? enterFragmentKeyContext(owner, keyContexts.get(owner) || ROOT_KEY_CONTEXT)
+    : ROOT_KEY_CONTEXT
   const children: ResolvedTransitionBlock[] = []
   collectTransitionBlocks(block, onFragment, children, ctx)
   return children[0]
@@ -676,10 +675,9 @@ export function resolveTransitionBlock(
 /** Locate the transition child of `block` without touching its identity. */
 export function findTransitionBlock(
   block: Block,
-  onFragment?: (frag: VaporFragment) => void,
 ): ResolvedTransitionBlock | undefined {
   const children: ResolvedTransitionBlock[] = []
-  collectTransitionBlocks(block, onFragment, children, undefined)
+  collectTransitionBlocks(block, undefined, children, undefined)
   return children[0]
 }
 

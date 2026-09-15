@@ -41,8 +41,8 @@ import {
   getTransitionKey,
   isValidTransitionBlock,
   resolveTransitionHooks,
+  setTransitionKey,
   setTransitionType,
-  transitionKeys,
   transitionTypeOf,
   withDefaultKey,
 } from './Transition'
@@ -363,7 +363,7 @@ export function resolveTransitionBlocks(
     ROOT_KEY_CONTEXT,
   )
   for (let i = 0; i < children.length; i++) {
-    transitionKeys.set(children[i], keys.get(children[i]))
+    setTransitionKey(children[i], keys.get(children[i]))
   }
   return children
 }
@@ -445,9 +445,8 @@ function collectTransitionBlocks(
         keys,
         ctx && enterFragmentKeyContext(block, ctx, key),
       )
-      if (!keys) {
-        // element collection only; keys were resolved by the apply pass
-      } else if (!isItem) {
+      if (!keys) return
+      if (!isItem) {
         resolveOwnerKey(children, start, key, keys, false)
       } else if (key != null) {
         // an unkeyed row composes nothing: its roots keep their own keys

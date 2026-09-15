@@ -338,7 +338,7 @@ describe('TransitionGroup', () => {
     resolve(Child)
     await timeout()
     await nextTick()
-    expect(getTransitionKey(host.querySelector('.async') as any)).toBe('outer')
+    expect(getTransitionKey(host.querySelector('.async')!)).toBe('outer')
 
     data.value.show = false
     await nextTick()

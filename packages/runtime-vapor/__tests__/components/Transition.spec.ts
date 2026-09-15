@@ -27,6 +27,15 @@ import { compile, makeInteropRender, makeRender } from '../_utils'
 const define = makeRender()
 const defineInterop = makeInteropRender()
 
+// holds every leave open until the test releases it
+function collectLeaves() {
+  const leaves: (() => void)[] = []
+  return {
+    leaves,
+    onLeave: (_el: Element, done: () => void) => leaves.push(done),
+  }
+}
+
 function createAppearTestState(
   show: boolean,
   extraState: Record<string, any> = {},
@@ -212,10 +221,10 @@ describe('Transition', () => {
   })
 
   test('component key does not leak into a nested Transition', async () => {
-    const leaves: (() => void)[] = []
+    const { leaves, onLeave } = collectLeaves()
     const data = ref<any>({
       ok: true,
-      onLeave: (_el: Element, done: () => void) => leaves.push(done),
+      onLeave,
     })
     const Inner = compile(
       `<template><div class="inner">i</div></template>`,
@@ -257,10 +266,10 @@ describe('Transition', () => {
   })
 
   test('keeps the resolved key when leave hooks are re-applied (in-out)', async () => {
-    const leaves: (() => void)[] = []
+    const { leaves, onLeave } = collectLeaves()
     const data = ref<any>({
       k: 1,
-      onLeave: (_el: Element, done: () => void) => leaves.push(done),
+      onLeave,
     })
     const Comp = compile(`<template><div>x</div></template>`, data)
     const App = compile(
@@ -297,10 +306,10 @@ describe('Transition', () => {
     const AsyncChild = defineVaporAsyncComponent(
       () => new Promise(r => (resolve = r as any)),
     )
-    const leaves: (() => void)[] = []
+    const { leaves, onLeave } = collectLeaves()
     const data = ref<any>({
       show: true,
-      onLeave: (_el: Element, done: () => void) => leaves.push(done),
+      onLeave,
     })
     const App = compile(
       `<script setup vapor>
@@ -321,7 +330,7 @@ describe('Transition', () => {
     resolve(Child)
     await new Promise(r => setTimeout(r))
     await nextTick()
-    expect(getTransitionKey(host.querySelector('.async') as any)).toBe('outer')
+    expect(getTransitionKey(host.querySelector('.async')!)).toBe('outer')
 
     data.value.show = false
     await nextTick()
@@ -334,10 +343,10 @@ describe('Transition', () => {
   })
 
   test('unkeyed component child ignores keys inside its subtree', async () => {
-    const leaves: (() => void)[] = []
+    const { leaves, onLeave } = collectLeaves()
     const data = ref<any>({
       x: 1,
-      onLeave: (_el: Element, done: () => void) => leaves.push(done),
+      onLeave,
     })
     const A = compile(
       `<script setup vapor>

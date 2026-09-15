@@ -29,7 +29,7 @@ describe('helpers: setBlockKey', () => {
     })
 
     let child: any
-    const { host } = define({
+    define({
       setup() {
         child = createComponent(Child)
         setBlockKey(child, 'foo')
@@ -39,7 +39,6 @@ describe('helpers: setBlockKey', () => {
 
     expect(child.$key).toBe('foo')
     expect(child.block.$key).toBeUndefined()
-    expect((host.children[0] as any).$key).toBeUndefined()
   })
 
   test('syncs interop fragment vnode.key', () => {

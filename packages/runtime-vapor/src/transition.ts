@@ -2,20 +2,15 @@ import type { Block, BlockFn } from './block'
 import type { VaporTransitionHooks } from './block'
 import type { FunctionalVaporComponent, VaporComponent } from './component'
 import type { DynamicFragment, VaporFragment } from './fragment'
-import type { SlotResolutionState } from './slotFragment'
-
-// A vapor SlotFragment is both; an interop slot outlet keeps its resolution
-// state as a separate object.
-export type TransitionOwner = VaporFragment | SlotResolutionState
 
 // Transition hooks registry for tree-shaking
 // These are registered by Transition component when it's used
 type ApplyTransitionHooksFn = (
   block: Block,
   hooks: VaporTransitionHooks,
-  // the fragment (or slot host) whose content `block` is; resolves the key
-  // context the content sits in
-  owner?: TransitionOwner,
+  // the fragment whose content `block` is; resolves the key context the
+  // content sits in
+  owner?: VaporFragment,
 ) => VaporTransitionHooks
 type ApplyTransitionLeaveHooksFn = (
   block: Block,
