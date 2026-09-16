@@ -146,19 +146,22 @@ function setDisplay(
 
 function writeDisplay(el: VShowElement, value: unknown): void {
   if ((__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) && isHydrating) {
-    if (!value && el.style.display !== 'none') {
-      const hasMismatch = warnPropMismatch(
-        el,
-        'style',
-        MismatchTypes.STYLE,
-        `display: ${el.style.display}`,
-        'display: none',
-      )
-      if (hasMismatch) {
-        logMismatchError()
-        el.style.display = 'none'
-        el[vShowOriginalDisplay] = ''
-      }
+    // the SSR display state only counts as a mismatch when it disagrees
+    // with the client value in either direction
+    const hidden = el.style.display === 'none'
+    if (!value === hidden) return
+    const expected = value ? el[vShowOriginalDisplay]! : 'none'
+    const hasMismatch = warnPropMismatch(
+      el,
+      'style',
+      MismatchTypes.STYLE,
+      `display: ${el.style.display}`,
+      expected ? `display: ${expected}` : false,
+    )
+    if (hasMismatch) {
+      logMismatchError()
+      el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
+      if (!value) el[vShowOriginalDisplay] = ''
     }
   } else {
     el.style.display = value ? el[vShowOriginalDisplay]! : 'none'

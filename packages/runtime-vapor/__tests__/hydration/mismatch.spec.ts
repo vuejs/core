@@ -616,6 +616,17 @@ describe('mismatch handling', () => {
     expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
 
+  test('style mismatch w/ v-show shown on the client', async () => {
+    // hidden by the server, shown by the client: the client value wins
+    const { container } = await mountWithHydration(
+      `<div style="color:red;display:none"></div>`,
+      `<div v-show="data" style="color: red;"></div>`,
+      ref(true),
+    )
+    expect(container.innerHTML).toBe('<div style="color: red;"></div>')
+    expect(`Hydration style mismatch`).toHaveBeenWarned()
+  })
+
   test('attr mismatch', async () => {
     await mountWithHydration(
       `<div id="foo"></div>`,
