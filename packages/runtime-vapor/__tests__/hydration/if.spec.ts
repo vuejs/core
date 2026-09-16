@@ -710,7 +710,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><!--if--><!--]-->
+        <!--[--><!--]-->
         <span>after</span></div>"
       `,
       )
@@ -721,7 +721,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[-->foo<!--if--><!--]-->
+        <!--[-->foo<!--]-->
         <span>after</span></div>"
       `,
       )
@@ -737,7 +737,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[--><!--if--><!--]-->
+        <!--[--><!--]-->
         tail</div>"
       `,
       )
@@ -748,10 +748,41 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[-->foo<!--if--><!--]-->
+        <!--[-->foo<!--]-->
         tail</div>"
       `,
       )
     })
+
+    test.each([false, true])(
+      'empty v-else text branch keeps a following component (v-once: %s)',
+      async once => {
+        const data = reactive({ show: false, txt: '', child: 'child' })
+        const { container, html } = await testHydration(
+          `<template>
+            <template v-if="data.show" ${once ? 'v-once' : ''}>yes</template>
+            <template v-else>{{ data.txt }}</template>
+            <components.Child />
+          </template>`,
+          { Child: `<template>{{ data.child }}<span>suffix</span></template>` },
+          data,
+        )
+
+        expect(container.innerHTML).toBe(html)
+        expect(container.childNodes[2].nodeType).toBe(3)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+        if (!once) {
+          data.txt = 'prefix'
+          await nextTick()
+          expect(container.textContent).toBe('prefixchildsuffix')
+
+          data.show = true
+          await nextTick()
+          expect(container.textContent).toBe('yeschildsuffix')
+        }
+      },
+    )
   })
 })

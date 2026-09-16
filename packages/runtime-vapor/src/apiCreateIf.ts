@@ -1,5 +1,6 @@
 import { type Block, type BlockFn, removeNode } from './block'
 import {
+  type FragmentClaim,
   type HydrationCursor,
   advanceHydrationNode,
   claimUntrackedAnchor,
@@ -8,6 +9,7 @@ import {
   enterHydrationCursor,
   isComment,
   isHydrating,
+  locateEndAnchor,
 } from './dom/hydration'
 import {
   insertionAnchor,
@@ -39,13 +41,14 @@ export function createIf(
   let frag: Block
   if (flags & VaporIfFlags.ONCE) {
     const ok = condition()
+    let claim: FragmentClaim | undefined
     if (isHydrating) {
       branchShape = decodeIfShape(flags, ok)
-      hydrationCursor = enterHydrationCursor(
+      claim =
         branchShape === VaporBlockShape.MULTI_ROOT
           ? createFragmentClaim()
-          : undefined,
-      )
+          : undefined
+      hydrationCursor = enterHydrationCursor(claim)
     }
     frag = ok
       ? b1()
@@ -56,6 +59,10 @@ export function createIf(
               __DEV__ ? createComment('if') : createTextNode(),
             ),
           ]
+    if (isHydrating && claim && claim.start) {
+      // v-once has no DynamicFragment to consume the closing marker.
+      advanceHydrationNode(locateEndAnchor(claim.start)!)
+    }
   } else {
     // DynamicFragment should be keyed for correct transition behavior
     // and KeepAlive cache identity. The encoded value is index + 1, so 0 is

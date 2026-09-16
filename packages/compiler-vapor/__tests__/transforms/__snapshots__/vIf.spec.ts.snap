@@ -132,7 +132,7 @@ export function render(_ctx) {
   const n0 = _createIf(() => (_ctx.foo), () => {
     const n2 = t0()
     return n2
-  }, null, 33 /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)
+  }, null, 34 /* TRUE_MULTI_ROOT, TRUE_NO_SCOPE */)
   return n0
 }"
 `;
@@ -245,7 +245,7 @@ export function render(_ctx) {
   }, () => {
     const n10 = t2()
     return n10
-  }, 117 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, ONCE */), 549 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_1 */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
+  }, 121 /* TRUE_SINGLE_ROOT, FALSE_MULTI_ROOT, TRUE_NO_SCOPE, FALSE_NO_SCOPE, ONCE */), 549 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_1 */), 293 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, TRUE_NO_SCOPE, KEYED_INDEX_0 */)
   return n0
 }"
 `;

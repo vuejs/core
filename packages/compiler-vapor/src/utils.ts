@@ -180,7 +180,12 @@ export function isBuiltInComponent(tag: string): string | undefined {
 
 export function getBlockShape(block: BlockIRNode): VaporBlockShape {
   if (block.returns.length === 0) return VaporBlockShape.EMPTY
-  return block.returns.length === 1
-    ? VaporBlockShape.SINGLE_ROOT
-    : VaporBlockShape.MULTI_ROOT
+  if (block.returns.length > 1) return VaporBlockShape.MULTI_ROOT
+  return block.node.type === NodeTypes.ELEMENT &&
+    block.node.children.every(
+      child =>
+        child.type === NodeTypes.TEXT || child.type === NodeTypes.INTERPOLATION,
+    )
+    ? VaporBlockShape.MULTI_ROOT
+    : VaporBlockShape.SINGLE_ROOT
 }

@@ -210,7 +210,7 @@ describe('compiler: v-if', () => {
 
     expect(code).toMatchSnapshot()
     expect(code).contains(
-      `}, null, ${singleRootNoScope} /* TRUE_SINGLE_ROOT, TRUE_NO_SCOPE */)`,
+      `}, null, ${VaporBlockShape.MULTI_ROOT | VaporIfFlags.TRUE_NO_SCOPE} /* TRUE_MULTI_ROOT, TRUE_NO_SCOPE */)`,
     )
     expect(code).toContain('_template("hello", 2)')
     expect([...ir.template.keys()]).toMatchObject(['hello'])
@@ -484,7 +484,12 @@ describe('compiler: v-if', () => {
 
     expect(op.blockShape).toBe(noScopeOrSingle)
     expect(nested.blockShape).toBe(noScopeOrSingle)
-    expect(innermost.blockShape).toBe(singleRootIfElseNoScope)
+    expect(innermost.blockShape).toBe(
+      VaporBlockShape.SINGLE_ROOT |
+        (VaporBlockShape.MULTI_ROOT << 2) |
+        VaporIfFlags.TRUE_NO_SCOPE |
+        VaporIfFlags.FALSE_NO_SCOPE,
+    )
   })
 
   test('v-if + v-if / v-else[-if]', () => {
