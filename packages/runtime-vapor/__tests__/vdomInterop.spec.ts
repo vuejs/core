@@ -301,6 +301,32 @@ describe('vdomInterop', () => {
       expect(childRef.value).toBe(null)
       expect(unmounted).toHaveBeenCalledTimes(2)
     })
+
+    test('resolves fragment nodes for a vdom row rooted at a slot outlet', async () => {
+      const VDomChild = defineComponent({
+        setup(_, { slots }) {
+          return () => renderSlot(slots, 'default')
+        },
+      })
+
+      const { vdom, vapor } = await renderParity(
+        {
+          App: `<template><div><components.VDomChild v-for="i in data.list" :key="i"><p>{{ i }}</p></components.VDomChild></div></template>`,
+        },
+        () => ref({ list: [1, 2] }),
+        async data => {
+          data.value.list = [2, 1]
+          await nextTick()
+          data.value.list = [1, 2, 3]
+          await nextTick()
+          data.value.list = [3, 1]
+        },
+        { VDomChild },
+      )
+
+      expect(vdom.text).toBe('31')
+      expect(vapor.text).toBe('31')
+    })
   })
 
   describe('props', () => {
@@ -8088,6 +8114,30 @@ describe('vdomInterop', () => {
       data.value.show = false
       await nextTick()
       expect(html()).toBe('<span style="--v51566ce1: red;">b</span>')
+    })
+
+    test('vapor owner css vars reach a vdom child rooted at a slot outlet', async () => {
+      const data = ref({ color: 'red' })
+      const VDomChild = compile(
+        `<script setup>const data = _data</script>
+        <template><slot /></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template><components.VDomChild><p>a</p></components.VDomChild></template>
+        <style>p { color: v-bind('data.color') }</style>`,
+        data,
+        { VDomChild },
+      )
+      const { html } = define(App as any).render()
+      await nextTick()
+      expect(html()).toBe('<p style="--v51566ce1: red;">a</p>')
+
+      data.value.color = 'green'
+      await nextTick()
+      expect(html()).toBe('<p style="--v51566ce1: green;">a</p>')
     })
   })
 

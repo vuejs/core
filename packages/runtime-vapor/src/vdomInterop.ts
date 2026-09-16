@@ -1004,6 +1004,13 @@ function resolveVNodeNodes(vnode: VNode): Block {
       return block
     }
   }
+  // A VaporSlot VNode renders into `vb` and exposes only its trailing anchor
+  // on `vnode.el`. Resolve through the block so a slot outlet sitting at a
+  // VDOM component root reports its content instead of the bare anchor.
+  if (vnode.type === VaporSlotVNode && vnode.vb) {
+    const anchor = vnode.anchor
+    return anchor ? [vnode.vb, anchor as Node] : vnode.vb
+  }
   const vnodeRange = resolveVNodeRange(vnode)
   if (vnodeRange) {
     const nodeRange: Node[] = []
