@@ -53,7 +53,7 @@ export interface VaporTransitionHooks extends TransitionHooks {
 export interface TransitionOptions {
   $key?: any
   $transition?: VaporTransitionHooks
-  // v-show is applied to this block (set by applyVShow after unwrapping)
+  // v-show is applied to this block (set by applyVShow along the root chain)
   $vshow?: true
 }
 

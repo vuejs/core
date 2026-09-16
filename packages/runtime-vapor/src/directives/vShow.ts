@@ -9,114 +9,126 @@ import {
 } from '@vue/runtime-dom'
 import { setActiveSub } from '@vue/reactivity'
 import { renderEffect } from '../renderEffect'
-import { isVaporComponent } from '../component'
-import type { Block, TransitionBlock } from '../block'
-import { isArray } from '@vue/shared'
+import { type RootChainVisitor, getRootElement } from '../component'
+import {
+  type Block,
+  type TransitionBlock,
+  type VaporTransitionHooks,
+  isValidBlock,
+} from '../block'
 import { isHydrating } from '../dom/hydration'
-import { isDynamicFragment, isFragment, isInteropFragment } from '../fragment'
-import { isInteropEnabled } from '../vdomInteropState'
 
+/**
+ * v-show is root-inherited state: it lands on the effective root element of
+ * `target`, and any producer on the root chain (dynamic fragment branch,
+ * interop subtree, pending async setup) can replace that root later. `apply`
+ * resolves the root through the shared chain walker and registers itself on
+ * every producer it passes, so a replacement root re-enters `apply` and
+ * registers the producers inside it in turn.
+ */
 export function applyVShow(target: Block, source: () => any): void {
-  if (isVaporComponent(target)) {
-    return applyVShow(target.block, source)
+  let value: unknown
+  let transition: VaporTransitionHooks | undefined
+  // the chain ends in content that does not exist yet; not a shape warning
+  let unresolved = false
+
+  const visitor: RootChainVisitor = {
+    onComponent(instance) {
+      if (instance.asyncDep && !instance.asyncResolved) {
+        // the block exists only after setup settles; its mount runs `bm`
+        // before insertion. The mark doubles as the registration guard.
+        if (!(instance as TransitionBlock).$vshow) {
+          ;(instance.bm ||= []).push(() => apply(instance.block))
+        }
+        unresolved = true
+        mark(instance)
+        return true
+      }
+      mark(instance)
+    },
+    onDynamicFragment(frag) {
+      mark(frag)
+      register((frag.bm ||= []), apply)
+    },
+    onInteropFragment(frag) {
+      mark(frag)
+      if (frag.$transition) transition = frag.$transition
+      // vdom patches the content first, then notifies through `u`
+      register((frag.u ||= []), apply)
+      if (!isValidBlock(frag.nodes)) unresolved = true
+    },
   }
 
-  if (isArray(target) && target.length === 1) {
-    return applyVShow(target[0], source)
-  }
-
-  ;(target as TransitionBlock).$vshow = true
-
-  if (isDynamicFragment(target)) {
-    // write the display state onto a fresh branch before it is inserted
-    ;(target.bm ||= []).push(nodes => setDisplayUntracked(nodes, source))
-  } else if (isFragment(target) && target.insert) {
-    const insert = target.insert
-    target.insert = (...args) => {
-      const res = insert.call(target, ...args)
-      setDisplayUntracked(target, source)
-      return res
+  const apply = (nodes: Block): void => {
+    transition = undefined
+    unresolved = false
+    const root = getRootElement(nodes, visitor)
+    if (root) {
+      setDisplay(root as VShowElement, value, transition)
+    } else if (__DEV__ && !unresolved && isValidBlock(nodes)) {
+      warn(
+        `v-show used on component with non-single-element root node ` +
+          `and will be ignored.`,
+      )
     }
   }
 
-  renderEffect(() => setDisplay(target, source()))
+  renderEffect(() => {
+    value = source()
+    apply(target)
+  })
 }
 
-// Fragment operations may leave the caller's subscriber active. The source is
-// already tracked by the render effect above, so avoid collecting it again.
-function setDisplayUntracked(target: Block, source: () => any): void {
-  const prevSub = setActiveSub()
-  try {
-    setDisplay(target, source())
-  } finally {
-    setActiveSub(prevSub)
-  }
+function mark(block: Block): void {
+  ;(block as TransitionBlock).$vshow = true
+}
+
+function register(hooks: ((nodes: Block) => void)[], hook: (typeof hooks)[0]) {
+  if (!hooks.includes(hook)) hooks.push(hook)
 }
 
 function setDisplay(
-  target: Block,
+  el: VShowElement,
   value: unknown,
-  transition: TransitionBlock['$transition'] = undefined,
+  transition: VaporTransitionHooks | undefined,
 ): void {
-  if (isVaporComponent(target)) {
-    return setDisplay(target.block, value, transition)
-  }
-  if (isArray(target)) {
-    if (target.length === 0) return
-    if (target.length === 1) return setDisplay(target[0], value, transition)
-  }
-  if (isFragment(target)) {
-    if (isInteropEnabled && isInteropFragment(target) && target.$transition) {
-      transition = target.$transition
-    }
-    return setDisplay(target.nodes, value, transition)
-  }
-
-  if (target instanceof Element) {
-    const el = target as VShowElement
-    const hidden = !value
-    if (!(vShowOriginalDisplay in el)) {
-      // First touch, before insertion: only record the display state and
-      // mark the element as v-show-owned. The renderer owns enter on insert
-      // (vdom's directive beforeMount/mounted role), so no transition runs.
-      ;(target as TransitionBlock).$vshow = true
-      el[vShowOriginalDisplay] =
-        el.style.display === 'none' ? '' : el.style.display
-      el[vShowHidden] = hidden
-      writeDisplay(el, value)
-      return
-    }
-
-    if (el[vShowHidden] === hidden) return
+  const hidden = !value
+  if (!(vShowOriginalDisplay in el)) {
+    // First touch, before insertion: only record the display state and
+    // mark the element as v-show-owned. The renderer owns enter on insert
+    // (vdom's directive beforeMount/mounted role), so no transition runs.
+    mark(el)
+    el[vShowOriginalDisplay] =
+      el.style.display === 'none' ? '' : el.style.display
     el[vShowHidden] = hidden
+    writeDisplay(el, value)
+    return
+  }
 
-    const { $transition = transition } = target as TransitionBlock
-    if ($transition) {
-      const prevSub = setActiveSub()
-      try {
-        if (value) {
-          $transition.beforeEnter(target)
-          el.style.display = el[vShowOriginalDisplay]!
-          $transition.enter(target)
-        } else if (target.isConnected) {
-          $transition.leave(target, () => {
-            el.style.display = 'none'
-          })
-        } else {
-          // detached (e.g. deactivated): nothing to animate
+  if (el[vShowHidden] === hidden) return
+  el[vShowHidden] = hidden
+
+  const { $transition = transition } = el as TransitionBlock
+  if ($transition) {
+    const prevSub = setActiveSub()
+    try {
+      if (value) {
+        $transition.beforeEnter(el)
+        el.style.display = el[vShowOriginalDisplay]!
+        $transition.enter(el)
+      } else if (el.isConnected) {
+        $transition.leave(el, () => {
           el.style.display = 'none'
-        }
-      } finally {
-        setActiveSub(prevSub)
+        })
+      } else {
+        // detached (e.g. deactivated): nothing to animate
+        el.style.display = 'none'
       }
-    } else {
-      writeDisplay(el, value)
+    } finally {
+      setActiveSub(prevSub)
     }
-  } else if (__DEV__) {
-    warn(
-      `v-show used on component with non-single-element root node ` +
-        `and will be ignored.`,
-    )
+  } else {
+    writeDisplay(el, value)
   }
 }
 
