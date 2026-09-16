@@ -332,6 +332,10 @@ export { ensureRenderer, ensureHydrationRenderer, normalizeContainer }
 /**
  * @internal
  */
+export { patchClass } from './modules/class'
+/**
+ * @internal
+ */
 export { patchStyle } from './modules/style'
 /**
  * @internal

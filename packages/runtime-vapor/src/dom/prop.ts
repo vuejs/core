@@ -19,7 +19,6 @@ import {
 } from '@vue/shared'
 import { onBinding } from './event'
 import {
-  type ElementWithTransition,
   type GenericComponentInstance,
   MismatchTypes,
   currentInstance,
@@ -32,6 +31,7 @@ import {
   logMismatchError,
   mergeProps,
   parseEventName,
+  patchClass,
   patchStyle,
   queuePostFlushCb,
   shouldSetAsProp,
@@ -40,7 +40,6 @@ import {
   toStyleMap,
   unsafeToTrustedHTML,
   vShowHidden,
-  vtcKey,
   warn,
   warnPropMismatch,
   xlinkNS,
@@ -224,8 +223,9 @@ export function setClass(
 
     if (value !== el.$cls) {
       el.$cls = value
-      if (isTransitionEnabled) value = withTransitionClasses(el, value)
-      if (isSVG) {
+      if (isTransitionEnabled) {
+        patchClass(el, value, isSVG)
+      } else if (isSVG) {
         el.setAttribute('class', value)
       } else {
         el.className = value
@@ -268,19 +268,13 @@ export function setClassName(
     setClass(el, value, false, true)
   } else {
     el.$cls = value
-    el.className = isTransitionEnabled
-      ? withTransitionClasses(el, value)
-      : value
+    if (isTransitionEnabled) {
+      patchClass(el, value, false)
+    } else {
+      el.className = value
+    }
   }
   el.$clsFlags = flags
-}
-
-// Keep the temporary classes of an element during a transition.
-function withTransitionClasses(el: TargetElement, value: string): string {
-  const transitionClasses = (el as ElementWithTransition)[vtcKey]
-  return transitionClasses
-    ? (value ? [value, ...transitionClasses] : [...transitionClasses]).join(' ')
-    : value
 }
 
 function setClassIncremental(

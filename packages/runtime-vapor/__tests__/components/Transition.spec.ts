@@ -2378,6 +2378,11 @@ describe('Transition', () => {
         <Transition>
           <p v-show="data.visible" :class="{ active: data.active }">leave</p>
         </Transition>
+        <svg>
+          <Transition>
+            <circle v-if="data.show" :class="data.cls" />
+          </Transition>
+        </svg>
       </template>`,
       data,
     )
@@ -2388,14 +2393,24 @@ describe('Transition', () => {
     data.value.visible = false
     await nextTick()
     const div = host.querySelector('div')!
+    const circle = host.querySelector('circle')!
     expect(div.className).toBe('a v-enter-from v-enter-active')
     expect(p.className).toBe('v-leave-from v-leave-active')
+    expect(circle.getAttribute('class')).toBe('a v-enter-from v-enter-active')
 
     data.value.cls = 'b'
     data.value.active = true
     await nextTick()
     expect(div.className).toBe('b v-enter-from v-enter-active')
     expect(p.className).toBe('active v-leave-from v-leave-active')
+    expect(circle.getAttribute('class')).toBe('b v-enter-from v-enter-active')
+
+    data.value.cls = ''
+    data.value.active = false
+    await nextTick()
+    expect(div.className).toBe('v-enter-from v-enter-active')
+    expect(p.className).toBe('v-leave-from v-leave-active')
+    expect(circle.getAttribute('class')).toBe('v-enter-from v-enter-active')
   })
 
   // #15274
