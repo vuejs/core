@@ -1061,13 +1061,10 @@ function extractMemberExpression(
     case 'OptionalCallExpression': {
       // foo[bar?.(baz)]
       const callee = extractMemberExpression(exp.callee, onIdentifier)
-      if (callee === undefined) return
-      const args: string[] = []
-      for (const arg of exp.arguments) {
-        const extracted = extractMemberExpression(arg, onIdentifier)
-        if (extracted === undefined) return
-        args.push(extracted)
-      }
+      const args = exp.arguments.map(arg =>
+        extractMemberExpression(arg, onIdentifier),
+      )
+      if (callee === undefined || args.some(arg => arg === undefined)) return
       const optional = exp.type === 'OptionalCallExpression' ? '?.' : ''
       return `${callee}${optional}(${args.join(', ')})`
     }
@@ -1075,12 +1072,11 @@ function extractMemberExpression(
     case 'OptionalMemberExpression': {
       // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
-      if (object === undefined) return
       const property = extractMemberExpression(
         exp.property,
         exp.computed ? onIdentifier : NOOP,
       )
-      if (property === undefined) return
+      if (object === undefined || property === undefined) return
       const optional = exp.type === 'OptionalMemberExpression' && exp.optional
       const prop = exp.computed
         ? `${optional ? '?.' : ''}[${property}]`

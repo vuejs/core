@@ -592,5 +592,45 @@ describe('compiler: expression', () => {
       )
       expect(code).not.contains('_ctx.foo()')
     })
+
+    test('member expression caches do not collide with identifiers after unsupported member objects', () => {
+      const { code } = compileWithExpression(`
+        <div :id="user.name" :title="user.name" />
+        <div :title="labels[active ? 'on' : 'off'][user_name]" />
+      `)
+      expect(code).contains(
+        `_setProp(n1, "title", _labels[_ctx.active ? 'on' : 'off'][_ctx.user_name])`,
+      )
+      expect(code).contains('const _user_name_1 = _ctx.user.name')
+      expect(code).contains('_setProp(n0, "id", _user_name_1)')
+      expect(code).contains('_setProp(n0, "title", _user_name_1)')
+    })
+
+    test.each([
+      [
+        'arguments',
+        `getKey(active ? 'on' : 'off', user_name)`,
+        `_ctx.getKey(_ctx.active ? 'on' : 'off', _ctx.user_name)`,
+      ],
+      [
+        'callees',
+        `(active ? getOn : getOff)?.(user_name)`,
+        `(_ctx.active ? _ctx.getOn : _ctx.getOff)?.(_ctx.user_name)`,
+      ],
+    ])(
+      'member expression caches do not collide with identifiers after unsupported call %s',
+      (_, key, expectedKey) => {
+        const { code } = compileWithExpression(`
+          <div :id="user.name" :title="user.name" />
+          <div :title="labels[${key}]" />
+        `)
+        expect(code).contains(
+          `_setProp(n1, "title", _ctx.labels[${expectedKey}])`,
+        )
+        expect(code).contains('const _user_name_1 = _ctx.user.name')
+        expect(code).contains('_setProp(n0, "id", _user_name_1)')
+        expect(code).contains('_setProp(n0, "title", _user_name_1)')
+      },
+    )
   })
 })
