@@ -690,7 +690,7 @@ export class SlotFragment
       this.fallbackInserted = false
     }
     this.clearContentInvalid()
-    disposeSlotResolution(this)
+    disposeSlotResolution(this, parent)
   }
 
   // Parked callbacks of content roots; they die with the content branch.

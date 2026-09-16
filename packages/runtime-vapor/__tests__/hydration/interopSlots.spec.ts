@@ -1227,4 +1227,73 @@ describe('VDOM interop', () => {
       </div>"
     `)
   })
+
+  test('removes hydrated slot fallbacks on replacement and enclosing fragment unmount', async () => {
+    const data = ref({
+      show: true,
+      content: false,
+      count: 0,
+      connected: [] as boolean[],
+      unmounted: vi.fn(),
+      watched: vi.fn(),
+    })
+    const { container, app } = await testWithVDOMApp(
+      `<template>
+        <template v-if="data.show">
+          <components.Panel><i v-if="data.content">content</i></components.Panel>
+          <b>tail</b>
+        </template>
+      </template>`,
+      {
+        Fallback: {
+          code: `<script setup>
+            import { getCurrentInstance, onBeforeUnmount, onUnmounted, watch } from 'vue'
+            const data = _data
+            const instance = getCurrentInstance()
+            onBeforeUnmount(() => data.value.connected.push(instance.subTree.el.isConnected))
+            onUnmounted(() => data.value.unmounted())
+            watch(() => data.value.count, () => data.value.watched())
+          </script>
+          <template><p>fallback</p></template>`,
+          vapor: false,
+        },
+        Panel: {
+          code: `<template><slot><components.Fallback /></slot></template>`,
+          vapor: true,
+        },
+      },
+      data,
+    )
+    try {
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+      const hydratedFallback = container.querySelector('p')!
+      expect(container.textContent).toBe('fallbacktail')
+
+      data.value.content = true
+      data.value.count++
+      await nextTick()
+      expect(hydratedFallback.isConnected).toBe(false)
+      expect(container.textContent).toBe('contenttail')
+      expect(data.value.unmounted).toHaveBeenCalledOnce()
+      expect(data.value.connected).toEqual([true])
+      expect(data.value.watched).not.toHaveBeenCalled()
+
+      data.value.content = false
+      await nextTick()
+      const fallback = container.querySelector('p')!
+      expect(container.textContent).toBe('fallbacktail')
+
+      data.value.show = false
+      data.value.count++
+      await nextTick()
+      expect(fallback.isConnected).toBe(false)
+      expect(container.textContent).toBe('')
+      expect(data.value.unmounted).toHaveBeenCalledTimes(2)
+      expect(data.value.connected).toEqual([true, true])
+      expect(data.value.watched).not.toHaveBeenCalled()
+    } finally {
+      app.unmount()
+    }
+  })
 })

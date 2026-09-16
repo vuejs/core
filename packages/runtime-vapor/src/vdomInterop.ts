@@ -2048,7 +2048,7 @@ function renderVDOMSlot(
     if (rendered) {
       removeRenderedContent(rendered, storage || parentNode)
     }
-    disposeSlotResolution(slotResolutionState)
+    disposeSlotResolution(slotResolutionState, storage || parentNode)
     if (storage) {
       const anchor = frag.anchor
       if (anchor && anchor.parentNode === storage) {
@@ -2968,7 +2968,7 @@ function renderVaporSlot(
         currentParentNode = parentNode
       }
       disposed = true
-      disposeSlotResolution(slotResolutionState)
+      disposeSlotResolution(slotResolutionState, parentNode)
       currentParentNode = null
       currentAnchor = null
     }
@@ -3103,7 +3103,7 @@ function renderVaporSlot(
 
       return frag
     } catch (e) {
-      dispose()
+      dispose(currentParentNode || undefined)
       stopVaporSlotScope(vnode)
       throw e
     }

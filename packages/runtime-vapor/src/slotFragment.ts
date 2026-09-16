@@ -198,17 +198,20 @@ export function invalidateExposedSlotContent(state: SlotResolutionState): void {
   }
 }
 
-function clearSlotFallback(state: SlotResolutionState): void {
+function clearSlotFallback(
+  state: SlotResolutionState,
+  parentNode: ParentNode | null = state.getParentNode(),
+): void {
   if (state.fallbackScope) {
     state.fallbackScope.stop()
     state.fallbackScope = undefined
   }
   const fallback = state.activeFallback
   if (fallback) {
-    const parentNode = state.getParentNode()
-    if (state.fallbackInserted && parentNode) {
-      remove(fallback, parentNode)
-    }
+    remove(
+      fallback,
+      state.fallbackInserted ? parentNode || undefined : undefined,
+    )
     state.activeFallback = null
     state.fallbackInserted = false
   }
@@ -340,8 +343,12 @@ function renderAndCommitSlotFallback(
   }
 }
 
-export function disposeSlotResolution(state: SlotResolutionState): void {
-  clearSlotFallback(state)
+export function disposeSlotResolution(
+  state: SlotResolutionState,
+  parentNode?: ParentNode,
+): void {
+  // The enclosing block owns DOM removal when no parent is passed.
+  clearSlotFallback(state, parentNode || null)
   state.pendingRecheck = false
   state.pendingRecheckForce = false
   state.lastNodesValid = undefined
