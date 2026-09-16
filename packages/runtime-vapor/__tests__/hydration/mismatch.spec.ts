@@ -818,6 +818,30 @@ describe('mismatch handling', () => {
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
   })
 
+  test('value binding is null or undefined', async () => {
+    const { container: option } = await mountWithHydration(
+      `<select><option>hello</option></select>`,
+      `<select><option :value="data">hello</option></select>`,
+      ref(null),
+    )
+    expect(option.innerHTML).toBe(`<select><option>hello</option></select>`)
+
+    const { container: input } = await mountWithHydration(
+      `<input />`,
+      `<input :value="data" />`,
+      ref(undefined),
+    )
+    expect(input.innerHTML).toBe(`<input>`)
+
+    const { container: textarea } = await mountWithHydration(
+      `<textarea></textarea>`,
+      `<textarea :value="data"></textarea>`,
+      ref(null),
+    )
+    expect(textarea.innerHTML).toBe(`<textarea></textarea>`)
+    expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+  })
+
   test('should not warn against object values', async () => {
     await mountWithHydration(`<input />`, `<input :from="data" />`, ref({}))
     expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()

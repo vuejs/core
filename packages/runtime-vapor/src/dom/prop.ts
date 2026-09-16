@@ -422,7 +422,11 @@ export function setValue(
 
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
-      attributeHasMismatch(el, 'value', getClientText(el, value))
+      attributeHasMismatch(
+        el,
+        'value',
+        isString(value) ? getClientText(el, value) : value,
+      )
     if (!forceHydrate && !shouldForceHydrate(el, 'value')) {
       return
     }
