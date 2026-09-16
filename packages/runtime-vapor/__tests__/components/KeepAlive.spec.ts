@@ -4787,4 +4787,33 @@ describe('VaporKeepAlive', () => {
     expect(host.textContent).toContain('A')
     expect(onEnter).toHaveBeenCalledTimes(1)
   })
+
+  test('should unmount a deactivated component cached after an include change', async () => {
+    const data = ref({ include: 'two', view: 'one' })
+    const App = compile(
+      `<template>
+        <KeepAlive :include="data.include">
+          <component :is="components[data.view]" />
+        </KeepAlive>
+      </template>`,
+      data,
+      views,
+    )
+    const { app, host } = define(App).render()
+    expect(host.textContent).toBe('one')
+    expect(oneHooks.mounted).toHaveBeenCalledTimes(1)
+
+    data.value.include = 'one,two'
+    await nextTick()
+
+    data.value.view = 'two'
+    await nextTick()
+    expect(host.textContent).toBe('two')
+    expect(oneHooks.deactivated).toHaveBeenCalledTimes(1)
+    expect(oneHooks.unmounted).not.toHaveBeenCalled()
+
+    app.unmount()
+    await nextTick()
+    expect(oneHooks.unmounted).toHaveBeenCalledTimes(1)
+  })
 })
