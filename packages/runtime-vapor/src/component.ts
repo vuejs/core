@@ -57,6 +57,7 @@ import {
 } from './block'
 import {
   type ShallowRef,
+  getCurrentScope,
   isRef,
   markRaw,
   onScopeDispose,
@@ -378,8 +379,17 @@ export function createComponent(
       const ctx = (currentInstance as KeepAliveInstance).ctx
       keepAliveCtx = ctx
       const cached = ctx.getCachedComponent(component)
-      // @ts-expect-error
-      if (cached) return cached
+      if (cached) {
+        // a nested branch teardown stops the branch scope that unmounts the
+        // cached component, so the scope re-entering it takes over
+        const scope = getCurrentScope()
+        if (isVaporComponent(cached) && cached.unmountScope !== scope) {
+          cached.unmountScope = scope
+          registerUnmount(cached)
+        }
+        // @ts-expect-error
+        return cached
+      }
     }
 
     // A resolved async component is created as its resolved component: with
@@ -603,17 +613,8 @@ export function createComponent(
         }
       }
     }
-    onScopeDispose(
-      () =>
-        unmountComponent(
-          instance,
-          undefined,
-          __FEATURE_SUSPENSE__ && isInteropEnabled
-            ? resolveUnmountSuspense(instance.suspense)
-            : instance.suspense,
-        ),
-      true,
-    )
+    if (keepAliveCtx) instance.unmountScope = getCurrentScope()
+    registerUnmount(instance)
     if (_insertionParent) registerNestedVDOMCleanup(instance)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
@@ -946,6 +947,8 @@ export class VaporComponentInstance<
   shapeFlag?: number
   // Owns raw prop/slot isolation effects for cached components.
   inputScope?: EffectScope
+  // The branch scope that unmounts a cached component when disposed.
+  unmountScope?: EffectScope
   $key?: any
   // Share deferred updates across async roots on the KeepAlive component-root
   // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
@@ -1508,6 +1511,22 @@ export function mountComponent(
   if (__DEV__) {
     endMeasure(instance, `mount`)
   }
+}
+
+function registerUnmount(instance: VaporComponentInstance): void {
+  const scope = instance.unmountScope
+  onScopeDispose(() => {
+    if (scope && instance.unmountScope === scope) {
+      instance.unmountScope = undefined
+    }
+    unmountComponent(
+      instance,
+      undefined,
+      __FEATURE_SUSPENSE__ && isInteropEnabled
+        ? resolveUnmountSuspense(instance.suspense)
+        : instance.suspense,
+    )
+  }, true)
 }
 
 export function unmountComponent(
