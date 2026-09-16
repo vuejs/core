@@ -110,8 +110,8 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // its inner component is resolved
       instance.isMounted = true
 
-      // Advance current hydration node to the nextSibling
-      setCurrentHydrationNode(endAnchor || el.nextSibling)
+      // Advance current hydration node past the adopted nodes
+      setCurrentHydrationNode(endAnchor ? _next(endAnchor) : el.nextSibling)
 
       performAsyncHydrate(
         el,
