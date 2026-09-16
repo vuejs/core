@@ -9,12 +9,19 @@ import {
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
+/**
+ * Tags whose first newline the HTML parser drops per spec.
+ * https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inbody
+ */
+export const isIgnoreNewlineTag = (tag: string): boolean =>
+  tag === 'pre' || tag === 'textarea'
+
 export const parserOptions: ParserOptions = {
   parseMode: 'html',
   isVoidTag,
   isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
   isPreTag: tag => tag === 'pre',
-  isIgnoreNewlineTag: tag => tag === 'pre' || tag === 'textarea',
+  isIgnoreNewlineTag,
   decodeEntities: __BROWSER__ ? decodeHtmlBrowser : undefined,
 
   isBuiltInComponent: tag => {

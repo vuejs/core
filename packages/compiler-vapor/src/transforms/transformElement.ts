@@ -10,12 +10,14 @@ import {
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
+  isIgnoreNewlineTag,
   isSimpleIdentifier,
   isStaticArgOf,
   isValidHTMLNesting,
   resolveModifiers,
 } from '@vue/compiler-dom'
 import {
+  Namespaces,
   camelize,
   capitalize,
   extend,
@@ -399,6 +401,7 @@ const dynamicKeys = ['indeterminate']
 // or any of " ' ` = < or >.
 // https://html.spec.whatwg.org/multipage/introduction.html#intro-early-example
 const NEEDS_QUOTES_RE = /[\s"'`=<>]/
+const LEADING_NEWLINE_RE = /^\r?\n/
 const UNSAFE_ATTR_NAME_RE = /[\u0000-\u0020"'<=/>]/
 
 function transformNativeElement(
@@ -509,7 +512,20 @@ function transformNativeElement(
     }
   }
 
-  template += `>` + context.childrenTemplate.join('')
+  let children = context.childrenTemplate.join('')
+  // The HTML parser drops the first newline after a `<pre>`/`<textarea>` start
+  // tag, and our own parser already applied that rule while building the AST.
+  // Templates are parsed as HTML again at runtime, so a newline that survived
+  // into `children` would be dropped a second time - double it to compensate.
+  if (
+    node.ns === Namespaces.HTML &&
+    isIgnoreNewlineTag(tag) &&
+    LEADING_NEWLINE_RE.test(children)
+  ) {
+    children = `\n` + children
+  }
+
+  template += `>` + children
   if (!isVoidTag(tag) && !omitEndTag) {
     template += `</${tag}>`
   }
