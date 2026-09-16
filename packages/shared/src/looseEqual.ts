@@ -1,4 +1,4 @@
-import { isArray, isDate, isObject, isSymbol } from './general'
+import { isArray, isDate, isMap, isObject, isSet, isSymbol } from './general'
 
 function looseCompareArrays(a: any[], b: any[]) {
   if (a.length !== b.length) return false
@@ -7,6 +7,27 @@ function looseCompareArrays(a: any[], b: any[]) {
     equal = looseEqual(a[i], b[i])
   }
   return equal
+}
+
+function looseCompareCollections(
+  a: Map<any, any> | Set<any>,
+  b: Map<any, any> | Set<any>,
+) {
+  if (a.size !== b.size) return false
+  const candidates = Array.from(b)
+  const matched = new Uint8Array(candidates.length)
+  for (const item of a) {
+    let index = -1
+    for (let i = 0; i < candidates.length; i++) {
+      if (!matched[i] && looseEqual(item, candidates[i])) {
+        index = i
+        break
+      }
+    }
+    if (index < 0) return false
+    matched[index] = 1
+  }
+  return true
 }
 
 export function looseEqual(a: any, b: any): boolean {
@@ -31,6 +52,16 @@ export function looseEqual(a: any, b: any): boolean {
   if (aValidType || bValidType) {
     if (!aValidType || !bValidType) {
       return false
+    }
+    aValidType = isMap(a)
+    bValidType = isMap(b)
+    if (aValidType || bValidType) {
+      return aValidType && bValidType ? looseCompareCollections(a, b) : false
+    }
+    aValidType = isSet(a)
+    bValidType = isSet(b)
+    if (aValidType || bValidType) {
+      return aValidType && bValidType ? looseCompareCollections(a, b) : false
     }
     const aKeysCount = Object.keys(a).length
     const bKeysCount = Object.keys(b).length

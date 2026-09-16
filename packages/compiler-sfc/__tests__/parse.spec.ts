@@ -81,7 +81,7 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(script!.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
 
@@ -100,8 +100,8 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(template.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
-        expect(mapping.originalColumn - mapping.generatedColumn).toBe(2)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalColumn! - mapping.generatedColumn).toBe(2)
       })
     })
 
@@ -115,7 +115,7 @@ font-weight: bold;
 
       const consumer = new SourceMapConsumer(custom!.map!)
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalLine! - mapping.generatedLine).toBe(padding)
       })
     })
   })

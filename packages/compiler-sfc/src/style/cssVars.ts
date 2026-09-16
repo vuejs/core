@@ -23,7 +23,12 @@ export function genCssVarsFromList(
   return `{\n  ${vars
     .map(
       key =>
-        `"${isSSR ? `--` : ``}${genVarName(id, key, isProd, isSSR)}": (${key})`,
+        // The `:` prefix here is used in `ssrRenderStyle` to distinguish whether
+        // a custom property comes from `ssrCssVars`. If it does, we need to reset
+        // its value to `initial` on the component instance to avoid unintentionally
+        // inheriting the same property value from a different instance of the same
+        // component in the outer scope.
+        `"${isSSR ? `:--` : ``}${genVarName(id, key, isProd, isSSR)}": (${key})`,
     )
     .join(',\n  ')}\n}`
 }
@@ -35,7 +40,8 @@ function genVarName(
   isSSR = false,
 ): string {
   if (isProd) {
-    return hash(id + raw)
+    // hash must not start with a digit to comply with CSS custom property naming rules
+    return hash(id + raw).replace(/^\d/, r => `v${r}`)
   } else {
     // escape ASCII Punctuation & Symbols
     // #7823 need to double-escape in SSR because the attributes are rendered

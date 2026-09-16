@@ -101,13 +101,13 @@ const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   }) as T
 }
 
-const camelizeRE = /-(\w)/g
+const camelizeRE = /-\w/g
 /**
  * @private
  */
 export const camelize: (str: string) => string = cacheStringFunction(
   (str: string): string => {
-    return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
+    return str.replace(camelizeRE, c => c.slice(1).toUpperCase())
   },
 )
 
@@ -207,4 +207,13 @@ export function genPropsAccessExp(name: string): string {
   return identRE.test(name)
     ? `__props.${name}`
     : `__props[${JSON.stringify(name)}]`
+}
+
+export function genCacheKey(source: string, options: any): string {
+  return (
+    source +
+    JSON.stringify(options, (_, val) =>
+      typeof val === 'function' ? val.toString() : val,
+    )
+  )
 }

@@ -208,6 +208,20 @@ test('ATTR_FALSE_VALUE', () => {
   ).toHaveBeenWarned()
 })
 
+test('ATTR_FALSE_VALUE with false on input value', () => {
+  const vm = new Vue({
+    template: `<input :value="false"/>`,
+  }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLInputElement)
+  expect(vm.$el.hasAttribute('value')).toBe(true)
+  expect(vm.$el.getAttribute('value')).toBe('false')
+  expect(
+    (deprecationData[DeprecationTypes.ATTR_FALSE_VALUE].message as Function)(
+      'value',
+    ),
+  ).not.toHaveBeenWarned()
+})
+
 test("ATTR_FALSE_VALUE with false value shouldn't throw warning", () => {
   const vm = new Vue({
     template: `<div :id="false" :foo="false"/>`,
@@ -259,5 +273,26 @@ test('ATTR_ENUMERATED_COERCION', () => {
       deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
         .message as Function
     )('contenteditable', 'foo', 'true'),
+  ).toHaveBeenWarned()
+})
+
+test('ATTR_ENUMERATED_COERCION, coercing "false"', () => {
+  const vm = new Vue({
+    template: `<div><div draggable="false" :spellcheck="false">hello</div></div>`,
+  }).$mount()
+  expect(vm.$el.innerHTML).toBe(
+    `<div draggable="false" spellcheck="false">hello</div>`,
+  )
+  expect(
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('draggable', 'false', 'false'),
+  ).toHaveBeenWarned()
+  expect(
+    (
+      deprecationData[DeprecationTypes.ATTR_ENUMERATED_COERCION]
+        .message as Function
+    )('spellcheck', 'false', 'false'),
   ).toHaveBeenWarned()
 })

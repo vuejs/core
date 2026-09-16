@@ -10,10 +10,10 @@ permissions:
 jobs:
   close-issues:
     if: github.repository == 'vuejs/core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: can't reproduce
-        uses: actions-cool/issues-helper@v3
+        uses: actions-cool/issues-helper@200c78641dbf33838311e5a1e0c31bbdb92d7cf0 # v3.0.0
         with:
           actions: 'close-issues'
           token: ${{ secrets.GITHUB_TOKEN }}

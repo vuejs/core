@@ -716,4 +716,42 @@ describe('compiler: expression transform', () => {
       })
     })
   })
+
+  describe('switch case variable declarations', () => {
+    test('should handle const declarations in switch case without braces', () => {
+      const { code } = compile(
+        `{{ (() => { switch (1) { case 1: const foo = "bar"; return \`\${foo}\`; } })() }}`,
+      )
+
+      expect(code).toMatch(`const foo = "bar";`)
+      expect(code).toMatch(`return \`\${foo}\`;`)
+      expect(code).not.toMatch(`_ctx.foo`)
+    })
+
+    test('should handle const declarations in switch case with braces (existing behavior)', () => {
+      const { code } = compile(
+        `{{ (() => {
+          switch (true) {
+            case true: {
+              const foo = "bar";
+              return \`\${foo}\`;
+            }
+          }
+        })() }}`,
+      )
+
+      expect(code).toMatch(`const foo = "bar";`)
+      expect(code).toMatch(`return \`\${foo}\`;`)
+      expect(code).not.toMatch(`_ctx.foo`)
+    })
+
+    test('should parse switch case test as local scoped variables', () => {
+      const { code } = compile(
+        `{{ (() => { switch (foo) { case bar: return \`\${bar}\`; } })() }}`,
+      )
+
+      expect(code).toMatch('_ctx.foo')
+      expect(code).toMatch(`_ctx.bar`)
+    })
+  })
 })

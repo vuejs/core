@@ -48,7 +48,7 @@ function rewriteFilter(node: ExpressionNode, context: TransformContext) {
       if (child.type === NodeTypes.SIMPLE_EXPRESSION) {
         parseFilter(child, context)
       } else if (child.type === NodeTypes.COMPOUND_EXPRESSION) {
-        rewriteFilter(node, context)
+        rewriteFilter(child, context)
       } else if (child.type === NodeTypes.INTERPOLATION) {
         rewriteFilter(child.content, context)
       }

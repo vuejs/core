@@ -20,7 +20,7 @@ export const isSpecialBooleanAttr: (key: string) => boolean =
  */
 export const isBooleanAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
   specialBooleanAttrs +
-    `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,` +
+    `,async,autofocus,autoplay,controls,default,defer,disabled,` +
     `inert,loop,open,required,reversed,scoped,seamless,` +
     `checked,muted,multiple,selected`,
 )
@@ -33,7 +33,7 @@ export function includeBooleanAttr(value: unknown): boolean {
   return !!value || value === ''
 }
 
-const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u0020]/
+const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u000d\u0020]/
 const attrValidationCache: Record<string, boolean> = {}
 
 export function isSSRSafeAttrName(name: string): boolean {
@@ -122,6 +122,25 @@ export const isKnownSvgAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
     `xlink:href,xlink:role,xlink:show,xlink:title,xlink:type,xmlns:xlink,xml:base,xml:lang,` +
     `xml:space,y,y1,y2,yChannelSelector,z,zoomAndPan`,
 )
+
+/**
+ * Generated from https://developer.mozilla.org/en-US/docs/Web/MathML/Attribute
+ */
+export const isKnownMathMLAttr: (key: string) => boolean =
+  /*@__PURE__*/ makeMap(
+    `accent,accentunder,actiontype,align,alignmentscope,altimg,altimg-height,` +
+      `altimg-valign,altimg-width,alttext,bevelled,close,columnsalign,columnlines,` +
+      `columnspan,denomalign,depth,dir,display,displaystyle,encoding,` +
+      `equalcolumns,equalrows,fence,fontstyle,fontweight,form,frame,framespacing,` +
+      `groupalign,height,href,id,indentalign,indentalignfirst,indentalignlast,` +
+      `indentshift,indentshiftfirst,indentshiftlast,indextype,justify,` +
+      `largetop,largeop,lquote,lspace,mathbackground,mathcolor,mathsize,` +
+      `mathvariant,maxsize,minlabelspacing,mode,other,overflow,position,` +
+      `rowalign,rowlines,rowspan,rquote,rspace,scriptlevel,scriptminsize,` +
+      `scriptsizemultiplier,selection,separator,separators,shift,side,` +
+      `src,stackalign,stretchy,subscriptshift,superscriptshift,symmetric,` +
+      `voffset,width,widths,xlink:href,xlink:show,xlink:type,xmlns`,
+  )
 
 /**
  * Shared between server-renderer and runtime-core hydration logic

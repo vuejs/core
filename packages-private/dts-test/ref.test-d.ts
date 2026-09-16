@@ -4,9 +4,11 @@ import {
   type MaybeRefOrGetter,
   type Ref,
   type ShallowRef,
+  type TemplateRef,
   type ToRefs,
   type WritableComputedRef,
   computed,
+  customRef,
   isRef,
   proxyRefs,
   reactive,
@@ -189,6 +191,24 @@ describe('allow getter and setter types to be unrelated', <T>() => {
   f.value = ref(1)
 })
 
+describe('correctly unwraps nested refs', () => {
+  const obj = {
+    n: 24,
+    ref: ref(24),
+    nestedRef: ref({ n: ref(0) }),
+  }
+
+  const a = ref(obj)
+  expectType<number>(a.value.n)
+  expectType<number>(a.value.ref)
+  expectType<number>(a.value.nestedRef.n)
+
+  const b = reactive({ a })
+  expectType<number>(b.a.n)
+  expectType<number>(b.a.ref)
+  expectType<number>(b.a.nestedRef.n)
+})
+
 // computed
 describe('allow computed getter and setter types to be unrelated', () => {
   const obj = ref({
@@ -301,6 +321,12 @@ expectType<undefined>(p2.u)
 expectType<Ref<string>>(p2.obj.k)
 expectType<{ name: string } | null>(p2.union)
 
+const r3 = shallowReactive({
+  n: ref(1),
+})
+const p3 = proxyRefs(r3)
+expectType<Ref<number>>(p3.n)
+
 // toRef and toRefs
 {
   const obj: {
@@ -318,6 +344,14 @@ expectType<{ name: string } | null>(p2.union)
   expectType<Ref<number>>(toRef(obj, 'b'))
   // Should not distribute Refs over union
   expectType<Ref<number | string>>(toRef(obj, 'c'))
+
+  const array = reactive(['a', 'b'])
+  expectType<Ref<string>>(toRef(array, '1'))
+  expectType<Ref<string>>(toRef(array, '1', 'fallback'))
+
+  const tuple: [string, number] = ['a', 1]
+  expectType<Ref<string>>(toRef(tuple, '0'))
+  expectType<Ref<number>>(toRef(tuple, '1'))
 
   expectType<Ref<number>>(toRef(() => 123))
   expectType<Ref<number | string>>(toRef(() => obj.c))
@@ -407,6 +441,15 @@ describe('shallow reactive in reactive', () => {
 
   expectType<Ref<number>>(foo.value.a.b)
   expectType<number>(foo.value.a.b.value)
+})
+
+describe('shallow reactive collection in reactive', () => {
+  const baz = reactive({
+    foo: shallowReactive(new Map([['a', ref(42)]])),
+  })
+
+  const foo = toRef(baz, 'foo')
+  expectType<Ref<number> | undefined>(foo.value.get('a'))
 })
 
 describe('shallow ref in reactive', () => {
@@ -517,7 +560,26 @@ expectType<string>(toValue(unref2))
 
 // useTemplateRef
 const tRef = useTemplateRef('foo')
-expectType<Readonly<ShallowRef<unknown>>>(tRef)
+expectType<TemplateRef>(tRef)
 
 const tRef2 = useTemplateRef<HTMLElement>('bar')
-expectType<Readonly<ShallowRef<HTMLElement | null>>>(tRef2)
+expectType<TemplateRef<HTMLElement>>(tRef2)
+
+// #14637 customRef with different getter/setter types
+describe('customRef with different getter/setter types', () => {
+  // customRef should support different getter/setter types like Ref<T, S>
+  const cr = customRef<string, number>((track, trigger) => ({
+    get: () => 'hello',
+    set: (val: number) => {
+      // setter accepts number, getter returns string
+      trigger()
+    },
+  }))
+
+  // getter returns string
+  expectType<string>(cr.value)
+  // setter accepts number
+  cr.value = 123
+  // @ts-expect-error setter doesn't accept string
+  cr.value = 'world'
+})

@@ -239,6 +239,33 @@ return {  }
 })"
 `;
 
+exports[`defineProps > w/ extends intersection type 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Foo = {
+        x?: number;
+      };
+      interface Props extends Foo {
+        z: number
+        y: string
+      }
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    z: { type: Number, required: true },
+    y: { type: String, required: true },
+    x: { type: Number, required: false }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+    
+return {  }
+}
+
+})"
+`;
+
 exports[`defineProps > w/ external definition 1`] = `
 "import { propsModel } from './props'
     
@@ -267,6 +294,31 @@ export default /*@__PURE__*/_defineComponent({
   __expose();
 
     
+    
+return {  }
+}
+
+})"
+`;
+
+exports[`defineProps > w/ intersection type 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Foo = {
+        x?: number;
+      };
+      type Bar = {
+        y: string;
+      };
+      
+export default /*@__PURE__*/_defineComponent({
+  props: {
+    x: { type: Number, required: false },
+    y: { type: String, required: true }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
     
 return {  }
 }
@@ -465,6 +517,7 @@ export default /*@__PURE__*/_defineComponent({
     qux: { type: Function, required: false, default() { return 1 } },
     quux: { type: Function, required: false, default() { } },
     quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } },
+    quuux: { type: Number, required: false, default(a, [b, ...c], {d, ...e}, ...f) { return 1 } },
     fred: { type: String, required: false, get default() { return 'fred' } }
   },
   setup(__props: any, { expose: __expose }) {

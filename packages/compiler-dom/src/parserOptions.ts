@@ -8,6 +8,7 @@ export const parserOptions: ParserOptions = {
   isVoidTag,
   isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
   isPreTag: tag => tag === 'pre',
+  isIgnoreNewlineTag: tag => tag === 'pre' || tag === 'textarea',
   decodeEntities: __BROWSER__ ? decodeHtmlBrowser : undefined,
 
   isBuiltInComponent: tag => {
