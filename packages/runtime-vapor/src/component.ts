@@ -436,6 +436,7 @@ export function createComponent(
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
         onScopeDispose(() => frag.disposeTarget(), true)
+        registerNestedVDOMCleanup(frag)
       } else {
         // Give normal block removal (and Transition leave preparation) the
         // current stack before falling back to target-side cleanup.

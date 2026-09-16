@@ -1468,4 +1468,55 @@ describe('VDOM interop', () => {
     expect(container.textContent).toBe('B')
     app.unmount()
   })
+
+  test('hydrates and unmounts a VNode in an embedded disabled teleport', async () => {
+    const unmounted: string[] = []
+    const connected: boolean[] = []
+    const watched = vi.fn()
+    const Child = runtimeDom.defineComponent({
+      setup() {
+        const instance = runtimeDom.getCurrentInstance()!
+        runtimeDom.onBeforeUnmount(() => {
+          unmounted.push('bum')
+          connected.push(instance.subTree!.el!.isConnected)
+        })
+        runtimeDom.onUnmounted(() => unmounted.push('um'))
+        runtimeDom.watch(() => data.value.count, watched)
+        return () => h('p', 'a')
+      },
+    })
+    const current = shallowRef(h(Child))
+    const data = ref({ show: true, count: 0, current })
+    const target = document.createElement('div')
+    target.id = 'hydrated-vdom-unmount-target'
+    document.body.appendChild(target)
+    const { container, app } = await testWithVaporApp(
+      `<template>
+        <div v-if="data.show">
+          <Teleport to="#hydrated-vdom-unmount-target" disabled>
+            <component :is="data.current" />
+          </Teleport>
+        </div>
+      </template>`,
+      undefined,
+      data,
+    )
+    try {
+      expect(container.textContent).toBe('a')
+      expect('mismatch').not.toHaveBeenWarned()
+
+      data.value.show = false
+      data.value.count++
+      await nextTick()
+
+      expect(unmounted).toEqual(['bum', 'um'])
+      expect(connected).toEqual([true])
+      expect(watched).not.toHaveBeenCalled()
+      expect(container.textContent).toBe('')
+      expect(target.childNodes).toHaveLength(0)
+    } finally {
+      app.unmount()
+      target.remove()
+    }
+  })
 })

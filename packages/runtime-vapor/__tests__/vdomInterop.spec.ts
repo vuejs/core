@@ -2630,6 +2630,57 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(watched).toHaveBeenCalledTimes(3)
     })
+
+    test('unmounts VDOM children in an embedded disabled teleport', async () => {
+      const { data, unmounted, connected, watched, VDomChild } =
+        createVDomChild()
+      let finishLeave: (() => void) | undefined
+      const onLeave = vi.fn((_el: Element, done: () => void) => {
+        finishLeave = done
+      })
+      const target = document.createElement('div')
+      target.id = 'vdom-unmount-target'
+      document.body.appendChild(target)
+      const App = compile(
+        `<template>
+          <Transition :css="false" @leave="components.onLeave">
+            <div v-if="data.show">
+              <Teleport to="#vdom-unmount-target" disabled>
+                <components.VDomChild id="a" />
+              </Teleport>
+            </div>
+          </Transition>
+        </template>`,
+        data,
+        { VDomChild, onLeave },
+      )
+      const { host, app } = define(App).render()
+      document.body.appendChild(host)
+      const child = host.querySelector('p')!
+      try {
+        expect(child.textContent).toBe('a')
+
+        data.value.show = false
+        data.value.count++
+        await nextTick()
+
+        expect(unmounted).toEqual(['bum a', 'um a'])
+        expect(connected).toEqual([true])
+        expect(watched).not.toHaveBeenCalled()
+        expect(onLeave).toHaveBeenCalledOnce()
+        expect(child.isConnected).toBe(true)
+        expect(target.childNodes).toHaveLength(0)
+
+        finishLeave!()
+        await nextTick()
+        expect(child.isConnected).toBe(false)
+        expect(host.textContent).toBe('')
+      } finally {
+        finishLeave?.()
+        app.unmount()
+        target.remove()
+      }
+    })
   })
 
   describe('template ref', () => {
