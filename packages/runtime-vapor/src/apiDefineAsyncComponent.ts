@@ -26,6 +26,7 @@ import {
   isHydrating,
   locateEndAnchor,
   locateHydrationNode,
+  nextLogicalSibling,
   setCurrentHydrationNode,
   withDeferredHydrationBoundary,
 } from './dom/hydration'
@@ -111,7 +112,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       instance.isMounted = true
 
       // Advance current hydration node past the adopted nodes
-      setCurrentHydrationNode(endAnchor ? _next(endAnchor) : el.nextSibling)
+      setCurrentHydrationNode(nextLogicalSibling(el))
 
       performAsyncHydrate(
         el,
