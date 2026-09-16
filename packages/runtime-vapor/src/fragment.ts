@@ -1,4 +1,9 @@
-import { EffectScope, type ShallowRef, setActiveSub } from '@vue/reactivity'
+import {
+  EffectScope,
+  type ShallowRef,
+  onScopeDispose,
+  setActiveSub,
+} from '@vue/reactivity'
 import {
   VaporSlotFlags,
   slotInheritsFallback,
@@ -14,6 +19,7 @@ import {
   insert,
   isValidSlot,
   move,
+  registerNestedVDOMCleanup,
   remove,
   removeAttachedNodes,
   removeNode,
@@ -573,6 +579,12 @@ export class SlotFragment
       undefined,
       adoptAnchor,
     )
+    // Fallback scopes are detached from content updates, but still belong
+    // to the outlet's owner scope.
+    onScopeDispose(() => {
+      this.disposed = true
+      if (this.fallbackScope) this.fallbackScope.stop()
+    }, true)
     this.sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
     this.inheritFallback = slotInheritsFallback(flags)
     this.notifyParentBoundary = slotNotifiesBoundary(flags)
@@ -668,6 +680,7 @@ export class SlotFragment
 
   remove(parent?: ParentNode): void {
     this.disposed = true
+    if (this.fallbackScope) this.fallbackScope.stop()
     const nodes = this.nodes
     remove(nodes, parent)
     if (this.activeFallback === nodes) {
@@ -677,7 +690,7 @@ export class SlotFragment
       this.fallbackInserted = false
     }
     this.clearContentInvalid()
-    disposeSlotResolution(this)
+    disposeSlotResolution(this, parent)
   }
 
   // Parked callbacks of content roots; they die with the content branch.
@@ -853,6 +866,7 @@ export function finishBlockCreation(
   ) {
     insert(block, insertionParent, insertionAnchor)
   }
+  if (insertionParent) registerNestedVDOMCleanup(block)
 }
 
 export function isFragment(val: unknown): val is VaporFragment {
