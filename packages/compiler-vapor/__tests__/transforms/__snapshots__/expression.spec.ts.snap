@@ -571,7 +571,7 @@ const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _child(n1)
+  const n0 = _child(n1, true)
   const x1 = _txt(n1)
   _renderEffect(() => {
     const _foo = _ctx.foo
@@ -635,7 +635,7 @@ const t0 = _template("<div> ", 1)
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _child(n1)
+  const n0 = _child(n1, true)
   const x1 = _txt(n1)
   _renderEffect(() => {
     const _foo = _ctx.foo

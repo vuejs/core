@@ -3,6 +3,7 @@ import type { ChildItem, InsertionParent } from '../insertionState'
 import {
   isHydrating,
   nextLogicalSibling,
+  resolveBlankTextTarget,
   skipUntrackedAnchors,
 } from './hydration'
 
@@ -54,30 +55,37 @@ export function txt(node: ParentNode): Node {
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function child(node: InsertionParent): Node {
+export function child(node: InsertionParent, isText?: boolean): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, 0)!
+    const n = locateChildByLogicalIndex(node, 0)
+    return isText ? resolveBlankTextTarget(n, node) : n!
   }
   return _child(node)
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function nthChild(node: InsertionParent, i: number): Node {
+export function nthChild(
+  node: InsertionParent,
+  i: number,
+  isText?: boolean,
+): Node {
   if (isHydrating) {
-    return locateChildByLogicalIndex(node, i)!
+    const n = locateChildByLogicalIndex(node, i)
+    return isText ? resolveBlankTextTarget(n, node) : n!
   }
   return node.childNodes[i]
 }
 
 /*@__NO_SIDE_EFFECTS__*/
-export function next(node: Node): Node {
+export function next(node: Node, isText?: boolean): Node {
   if (isHydrating) {
-    const result = nextLogicalSibling(node)!
+    let result = nextLogicalSibling(node)
+    const parent = node.parentNode
+    if (isText) result = resolveBlankTextTarget(result, parent!)
     // advance the $llc cache when `node` is the cached logical child; the
     // helper enforces the "$llc implies $idx" invariant for us
-    const parent = node.parentNode
     if (parent) updateLastLocatedLogicalChild(parent, node, result, 1)
-    return result
+    return result!
   }
   return _next(node)
 }
@@ -97,14 +105,14 @@ export function locateChildByLogicalIndex(
   logicalIndex: number,
 ): Node | null {
   let child = (parent.$llc ||
-    skipUntrackedAnchors(parent.firstChild)) as ChildItem
-  let fromIndex = child.$idx || 0
+    skipUntrackedAnchors(parent.firstChild)) as ChildItem | null
+  let fromIndex = (child && child.$idx) || 0
 
   // if target index is less than cached index, start from the beginning.
   // this can happen when child/nthChild/next updates $llc to a later node
   // before an earlier dynamic node is hydrated
   if (logicalIndex < fromIndex) {
-    child = skipUntrackedAnchors(parent.firstChild) as ChildItem
+    child = skipUntrackedAnchors(parent.firstChild) as ChildItem | null
     fromIndex = 0
   }
 
@@ -114,7 +122,7 @@ export function locateChildByLogicalIndex(
       return (parent.$llc = child)
     }
 
-    child = nextLogicalSibling(child) as ChildItem
+    child = nextLogicalSibling(child) as ChildItem | null
 
     fromIndex++
   }

@@ -24,7 +24,7 @@ const t0 = _template("<div><p> </p> <p> ", 1)
 export function render(_ctx) {
   const n3 = t0()
   const n0 = _child(n3)
-  const n1 = _next(n0)
+  const n1 = _next(n0, true)
   const n2 = _next(n1)
   const x0 = _txt(n0)
   const x2 = _txt(n2)

@@ -298,6 +298,7 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
   template?: number
   hasDynamicChild?: boolean
+  isText?: boolean
   operation?: OperationNode
 }
 

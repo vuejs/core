@@ -158,6 +158,7 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
 
   context.template += ' '
   const id = context.reference()
+  context.dynamic.isText = isElementChild
 
   if (values.length === 0) {
     return

@@ -17,7 +17,7 @@ const t0 = _template("<div> <span>", 1)
 
 export function render(_ctx, $props, $emit, $attrs, $slots) {
   const n2 = t0()
-  const n0 = _child(n2)
+  const n0 = _child(n2, true)
   const n1 = _next(n0)
   _setText(n0, _toDisplayString(_ctx.msg) + " ")
   _setClass(n1, _ctx.clz)

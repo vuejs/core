@@ -142,4 +142,15 @@ describe('compiler: text transform', () => {
     const { code } = compileWithTextTransform(`<Comp>{{ "Hello" }}</Comp>`)
     expect(code).toMatchSnapshot()
   })
+
+  test('text references among element children', () => {
+    const { code } = compileWithTextTransform(
+      '<p>{{ before }}<br :id="id">{{ between }}<br>{{ after }}</p>',
+    )
+    expect(code).toContain('const n0 = _child(n4, true)')
+    expect(code).toContain('const n1 = _next(n0)')
+    expect(code).toContain('const n2 = _next(n1, true)')
+    expect(code).toContain('const n3 = _nthChild(n4, 4, true)')
+    expect(code).toMatchSnapshot()
+  })
 })
