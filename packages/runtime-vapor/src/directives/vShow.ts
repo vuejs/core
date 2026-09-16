@@ -156,18 +156,17 @@ function writeDisplay(el: VShowElement, value: unknown): void {
     const hidden = el.style.display === 'none'
     if (!value === hidden) return
     const expected = value ? el[vShowOriginalDisplay]! : 'none'
-    const hasMismatch = warnPropMismatch(
-      el,
-      'style',
-      MismatchTypes.STYLE,
-      `display: ${el.style.display}`,
-      expected ? `display: ${expected}` : false,
-    )
-    if (hasMismatch) {
+    if (
+      warnPropMismatch(
+        el,
+        'style',
+        MismatchTypes.STYLE,
+        `display: ${el.style.display}`,
+        expected ? `display: ${expected}` : false,
+      )
+    ) {
       logMismatchError()
-      el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
     }
-  } else {
-    el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
   }
+  el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
 }
