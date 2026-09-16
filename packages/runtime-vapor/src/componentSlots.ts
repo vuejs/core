@@ -12,7 +12,7 @@ import {
   type Block,
   type BlockFn,
   insert,
-  unmountVDOMOnScopeDispose,
+  registerNestedVDOMCleanup,
 } from './block'
 import {
   type RawProps,
@@ -401,7 +401,7 @@ export function createSlot(
           withRenderContext(dynamicFragment!.ctx, () => {
             const block = fallbackFn()
             insert(block, el)
-            unmountVDOMOnScopeDispose(block)
+            registerNestedVDOMCleanup(block)
           })
         }
         fragment.nodes = el

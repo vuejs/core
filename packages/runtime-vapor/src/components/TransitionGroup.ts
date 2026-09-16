@@ -28,7 +28,7 @@ import {
   type BlockFn,
   type TransitionBlock,
   insert,
-  unmountVDOMOnScopeDispose,
+  registerNestedVDOMCleanup,
 } from '../block'
 import { renderEffect } from '../renderEffect'
 import {
@@ -284,7 +284,7 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           slottedBlock = block
           if (container) {
             if (!isHydrating) insert(block, container)
-            unmountVDOMOnScopeDispose(block)
+            registerNestedVDOMCleanup(block)
             return container
           }
           return block

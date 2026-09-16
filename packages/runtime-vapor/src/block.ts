@@ -410,7 +410,7 @@ export function removeFragment(
  * mounted into one. Unmount the vdom components in its tree synchronously when
  * its owner scope is disposed, as vdom does for an element's children.
  */
-export function unmountVDOMOnScopeDispose(block: Block): void {
+export function registerNestedVDOMCleanup(block: Block): void {
   if (isInteropEnabled && !(block instanceof Node)) {
     onScopeDispose(() => unmountVDOM(block), true)
   }
