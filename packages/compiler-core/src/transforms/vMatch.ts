@@ -194,14 +194,19 @@ export function lowerMatchDirectives(
           const arm = arms[index]
           const content =
             child.tagType === ElementTypes.TEMPLATE ? child.children : [child]
-          const bindings = arm.bindings.length
-            ? scope(
-                content,
-                `[, ${arm.bindings.map(b => b.name).join(', ')}]`,
-                local,
-                child.loc,
-              )
-            : undefined
+          const once =
+            child.tagType === ElementTypes.TEMPLATE &&
+            findDir(child, 'once', true)
+          const bindings =
+            arm.bindings.length || once
+              ? scope(
+                  content,
+                  `[, ${arm.bindings.map(b => b.name).join(', ')}]`,
+                  local,
+                  child.loc,
+                )
+              : undefined
+          if (once) bindings!.props.push(once)
           const branch = template(bindings ? [bindings] : content, child.loc)
           const key =
             child.tagType === ElementTypes.TEMPLATE &&

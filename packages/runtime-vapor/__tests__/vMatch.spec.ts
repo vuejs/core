@@ -23,6 +23,34 @@ describe('v-match VDOM / Vapor parity', () => {
     )
   })
 
+  test.each(['input', 'template'])(
+    'v-once retains bindings and arm identity on %s',
+    async tag => {
+      const arm =
+        tag === 'input'
+          ? `<input v-when="{ kind: 'a', const value }" v-once :value="value"/>`
+          : `<template v-when="{ kind: 'a', const value }" v-once><input :value="value"/></template>`
+      await renderParity(
+        {
+          App: `<template><template v-match="data">${arm}<input v-when="{ kind: 'b', const value }" :value="value"/></template></template>`,
+        },
+        () => ref({ kind: 'a', value: 'first' }),
+        async (data, root) => {
+          const first = root.querySelector('input')!
+          expect(first.value).toBe('first')
+          data.value.value = 'updated'
+          await nextTick()
+          expect(root.querySelector('input')).toBe(first)
+          expect(first.value).toBe('first')
+          data.value = { kind: 'b', value: 'second' }
+          await nextTick()
+          expect(root.querySelector('input')).not.toBe(first)
+          expect(root.querySelector('input')!.value).toBe('second')
+        },
+      )
+    },
+  )
+
   test('reactive selection, guards, rest and event binding lifetime', async () => {
     const results = await renderParity(
       {
@@ -50,6 +78,25 @@ describe('v-match VDOM / Vapor parity', () => {
     )
     expect(results.vdom.text).toBe('empty')
     expect(results.vapor.text).toBe(results.vdom.text)
+  })
+
+  test('branch bindings compose with component props and scoped slots', async () => {
+    await renderParity(
+      {
+        Panel: '<template><div><slot :suffix="data.suffix"/></div></template>',
+        App: `<template><template v-match="data.result"><components.Panel v-when="{ const text }" :title="text"><template #default="{ suffix }"><span>{{ text }}:{{ suffix }}</span><template v-match="suffix"><b v-when="const ending">{{ ending }}</b></template></template></components.Panel><i v-when="_">empty</i></template></template>`,
+      },
+      () => ref({ result: { text: 'first' }, suffix: '!' }),
+      async (data, root) => {
+        expect(root.textContent).toBe('first:!!')
+        expect(root.querySelector('div')!.title).toBe('first')
+        data.value.result.text = 'second'
+        data.value.suffix = '?'
+        await nextTick()
+        expect(root.textContent).toBe('second:??')
+        expect(root.querySelector('div')!.title).toBe('second')
+      },
+    )
   })
 
   test('nested match and array rest react to in-place updates', async () => {

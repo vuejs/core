@@ -391,16 +391,27 @@ function getUnnormalizedProps(
   return [props, callPath]
 }
 export function injectProp(
-  node: BlockCodegenNode,
+  node: BlockCodegenNode | CacheExpression,
   prop: Property,
   context: TransformContext,
 ): void {
+  if (node.type === NodeTypes.JS_CACHE_EXPRESSION) {
+    injectScopeBody(node.value)
+    return
+  }
   if (node.type === NodeTypes.JS_SCOPE_EXPRESSION) {
     injectScopeBody(node.body)
     return
   }
   function injectScopeBody(body: JSChildNode | TemplateChildNode): void {
-    if (body.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+    if (body.type === NodeTypes.JS_CACHE_EXPRESSION) {
+      injectScopeBody(body.value)
+    } else if (
+      body.type === NodeTypes.JS_CALL_EXPRESSION &&
+      body.callee === WITH_MEMO
+    ) {
+      injectScopeBody(getMemoedVNodeCall(body as MemoExpression))
+    } else if (body.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
       injectScopeBody(body.consequent)
       injectScopeBody(body.alternate)
     } else if (
