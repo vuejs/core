@@ -1004,6 +1004,16 @@ function resolveVNodeNodes(vnode: VNode): Block {
       return block
     }
   }
+  // Resolve through the live block so slot content and dynamic fragments stay
+  // visible. Hydrated slots also retain a VDOM-owned opening marker.
+  if (vnode.type === VaporSlotVNode && vnode.vb) {
+    const { el, anchor, vb } = vnode
+    if (!anchor) return vb
+
+    return el && el !== anchor && isComment(el as Node, '[')
+      ? [el as Node, vb, anchor as Node]
+      : [vb, anchor as Node]
+  }
   const vnodeRange = resolveVNodeRange(vnode)
   if (vnodeRange) {
     const nodeRange: Node[] = []

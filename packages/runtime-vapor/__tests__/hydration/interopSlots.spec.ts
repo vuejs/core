@@ -1228,6 +1228,46 @@ describe('VDOM interop', () => {
     `)
   })
 
+  test('preserves hydrated slot boundaries when keyed vdom rows reorder', async () => {
+    const data = ref({ list: [1, 2] })
+    const { container, app } = await testWithVaporApp(
+      `<template><div><components.VDomChild v-for="i in data.list" :key="i"><p>{{ i }}</p></components.VDomChild></div></template>`,
+      {
+        VDomChild: {
+          code: `<script setup>const data = _data</script><template><slot /></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    try {
+      expect('Hydration node mismatch').not.toHaveBeenWarned()
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+      const root = container.firstElementChild!
+      expect(root.innerHTML).toBe(
+        '<!--[--><!--[--><p>1</p><!--]--><!--[--><p>2</p><!--]--><!--]-->',
+      )
+      const [p1, p2] = root.querySelectorAll('p')
+      const start1 = p1.previousSibling
+      const end1 = p1.nextSibling
+      const start2 = p2.previousSibling
+      const end2 = p2.nextSibling
+
+      data.value.list = [2, 1]
+      await nextTick()
+      expect(root.textContent).toBe('21')
+      expect(root.innerHTML).toBe(
+        '<!--[--><!--[--><p>2</p><!--]--><!--[--><p>1</p><!--]--><!--]-->',
+      )
+      expect(p1.previousSibling).toBe(start1)
+      expect(p1.nextSibling).toBe(end1)
+      expect(p2.previousSibling).toBe(start2)
+      expect(p2.nextSibling).toBe(end2)
+    } finally {
+      app.unmount()
+    }
+  })
+
   test('removes hydrated slot fallbacks on replacement and enclosing fragment unmount', async () => {
     const data = ref({
       show: true,
