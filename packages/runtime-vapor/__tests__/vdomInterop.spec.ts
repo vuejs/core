@@ -8295,4 +8295,101 @@ describe('vdomInterop', () => {
       expect(hooks.onVnodeUnmounted).toHaveBeenCalledTimes(2)
     },
   )
+
+  test('should refresh emit listeners when no child update is triggered', async () => {
+    const childBeforeUpdate = vi.fn()
+    const removed: string[] = []
+    const data = ref({
+      items: [
+        { id: 1, name: 'a' },
+        { id: 2, name: 'b' },
+        { id: 3, name: 'c' },
+      ],
+      remove: (i: number) => {
+        removed.push(`${i}:${data.value.items[i].name}`)
+        data.value.items = data.value.items.filter((_, n) => n !== i)
+      },
+    })
+    const Row = compile(
+      `<script setup vapor>
+        import { onBeforeUpdate } from 'vue'
+        defineProps(['name'])
+        const emit = defineEmits(['remove'])
+        onBeforeUpdate(_components.childBeforeUpdate)
+      </script>
+      <template><button @click="emit('remove')">{{ name }}</button></template>`,
+      data,
+      { childBeforeUpdate },
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const Row = _components.Row
+      </script>
+      <template>
+        <Row
+          v-for="(item, i) in data.items"
+          :key="item.id"
+          :name="item.name"
+          @remove="data.remove(i)"
+        />
+      </template>`,
+      data,
+      { Row },
+      { vapor: false },
+    )
+    const { host } = define(App).render()
+
+    // each click must reach the listener from the parent's latest render
+    for (let i = 0; i < 3; i++) {
+      host.querySelector('button')!.click()
+      await nextTick()
+    }
+    expect(removed).toEqual(['0:a', '0:b', '0:c'])
+    expect(host.innerHTML).toBe('')
+    // ...without updating the child, which vdom also skips
+    expect(childBeforeUpdate).not.toHaveBeenCalled()
+  })
+
+  test('should refresh emit listeners on KeepAlive reactivation', async () => {
+    const calls: string[] = []
+    const data = ref({
+      view: 'row',
+      handler: () => calls.push('first'),
+    })
+    const Row = compile(
+      `<script setup vapor>
+        const emit = defineEmits(['foo'])
+      </script>
+      <template><button @click="emit('foo')">row</button></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const { Row, Other } = _components
+      </script>
+      <template>
+        <KeepAlive>
+          <component
+            :is="data.view === 'row' ? Row : Other"
+            @foo="data.handler"
+          />
+        </KeepAlive>
+      </template>`,
+      data,
+      { Row, Other: { render: () => h('i', 'other') } },
+      { vapor: false },
+    )
+    const { host } = define(App).render()
+
+    host.querySelector('button')!.click()
+    data.value.view = 'other'
+    await nextTick()
+    data.value.handler = () => calls.push('second')
+    data.value.view = 'row'
+    await nextTick()
+    host.querySelector('button')!.click()
+    expect(calls).toEqual(['first', 'second'])
+  })
 })

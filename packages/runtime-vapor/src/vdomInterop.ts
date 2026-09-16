@@ -107,10 +107,12 @@ import {
   ShapeFlags,
   VaporSlotFlags,
   extend,
+  hasOwn,
   isArray,
   isForwardedSlot,
   isFunction,
   isObject,
+  isOn,
   isReservedProp,
   isString,
   slotInheritsFallback,
@@ -346,6 +348,31 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
   return filtered
 }
 
+/**
+ * `shouldUpdateComponent()` ignores declared emit listeners, so a parent render
+ * that only swapped a listener triggers no child update. VDOM still assigns
+ * `instance.vnode = n2` in that case, keeping `emit()` on the latest listener;
+ * mirror that here by refreshing the listeners on the committed props object in
+ * place. Writing `rawPropsRef.value` would instead schedule the update the
+ * parent deliberately skipped.
+ */
+function refreshInteropListeners(
+  instance: VaporComponentInstance,
+  props: VNode['props'],
+): void {
+  const committed = instance.rawPropsRef!.value
+  for (const key in committed) {
+    if (isOn(key) && !(props && hasOwn(props, key))) {
+      delete committed[key]
+    }
+  }
+  for (const key in props) {
+    if (isOn(key) && !isReservedProp(key)) {
+      committed[key] = props![key]
+    }
+  }
+}
+
 // mounting vapor components and slots in vdom
 const vaporInteropImpl: VaporInVdomInterface = {
   applyCssVars(vnode, vars) {
@@ -484,6 +511,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
           vnodeHookState.pendingVNodeUpdate = null
         }
       })
+    } else {
+      refreshInteropListeners(instance, n2.props)
     }
   },
 
@@ -857,6 +886,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
         undefined,
         parentSuspense,
       )
+    } else {
+      refreshInteropListeners(instance, vnode.props)
     }
     activate(instance, container, anchor, parentSuspense)
     insert(vnode.anchor as any, container, anchor)
