@@ -1887,4 +1887,37 @@ describe('compiler: element transform', () => {
       expect([...ir.template.keys()]).toMatchObject([template])
     })
   })
+
+  describe('leading newline in <pre> and <textarea>', () => {
+    // the parser already dropped the first newline per the html spec, so the
+    // one left in the ast has to be doubled to survive the template string
+    // being parsed as html again at runtime
+    test.each([
+      ['<pre>\n\nline</pre>', '<pre>\n\nline'],
+      ['<pre>\n\n\nline</pre>', '<pre>\n\n\nline'],
+      ['<pre>\r\n\r\nline</pre>', '<pre>\n\nline'],
+      ['<textarea>\n\nline</textarea>', '<textarea>\n\nline'],
+      ['<pre>\n\n<b>text</b></pre>', '<pre>\n\n<b>text'],
+      ['<div><pre>\n\nline</pre></div>', '<div><pre>\n\nline'],
+      // untouched
+      ['<pre>\nline</pre>', '<pre>line'],
+      ['<textarea>\nline</textarea>', '<textarea>line'],
+      ['<pre>line\n\nmore</pre>', '<pre>line\n\nmore'],
+      ['<pre></pre>', '<pre>'],
+      ['<div>\n\nline</div>', '<div> line'],
+    ])('%j compiles to %j', (source, template) => {
+      const { code, ir } = compileWithElementTransform(source)
+
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('not applied outside the html namespace', () => {
+      const { ir } = compileWithElementTransform(
+        `<svg><pre>\n\nline</pre></svg>`,
+      )
+
+      expect([...ir.template.keys()]).toContain('<pre> line')
+    })
+  })
 })

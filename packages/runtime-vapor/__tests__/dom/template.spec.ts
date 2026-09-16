@@ -1,6 +1,6 @@
 import { template } from '../../src/dom/template'
 import { nextTick, ref } from '@vue/runtime-dom'
-import { compile, makeRender } from '../_utils'
+import { compile, makeRender, renderParity } from '../_utils'
 import { child, next, nthChild } from '../../src/dom/node'
 
 describe('api: template', () => {
@@ -89,5 +89,33 @@ describe('createElement-backed children', () => {
     data.value.msg = 'b'
     await nextTick()
     expect(tpl.firstChild!.textContent).toBe('b')
+  })
+})
+
+describe('leading newline in <pre> and <textarea>', () => {
+  // The compiler already drops the first newline after these start tags.
+  // Vapor must preserve the remaining newlines when parsing its template again.
+  test.each([
+    // one newline is consumed by the compiler, the rest must be kept
+    ['<pre>\n\nline</pre>', '<pre>\nline</pre>'],
+    ['<pre>\n\n\nline</pre>', '<pre>\n\nline</pre>'],
+    ['<textarea>\n\nline</textarea>', '<textarea>\nline</textarea>'],
+    ['<pre>\n\n<b>text</b></pre>', '<pre>\n<b>text</b></pre>'],
+    ['<pre>\n\n<b>{{ data }}</b></pre>', '<pre>\n<b>foo</b></pre>'],
+    ['<div><pre>\n\nline</pre></div>', '<div><pre>\nline</pre></div>'],
+    ['<pre>\n\n<pre>\n\nin</pre></pre>', '<pre>\n<pre>\nin</pre></pre>'],
+    // untouched: nothing is left for the runtime parser to eat
+    ['<pre>\nline</pre>', '<pre>line</pre>'],
+    ['<textarea>\nline</textarea>', '<textarea>line</textarea>'],
+    ['<pre>line\n\nmore</pre>', '<pre>line\n\nmore</pre>'],
+    ['<div>\n\nline</div>', '<div> line</div>'],
+  ])('%j renders as %j in both modes', async (tpl, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      () => {},
+    )
+    expect(vdom.after).toBe(expected)
+    expect(vapor.after).toBe(expected)
   })
 })
