@@ -266,7 +266,26 @@ export function render(_ctx) {
     const _foo_bar = _foo + _ctx.bar
     _setProp(n0, "id", _foo_bar)
     _setProp(n1, "id", _foo_bar)
-    _setProp(n2, "id", _foo + _foo_bar)
+    _setProp(n2, "id", _foo + _foo + _ctx.bar)
+  })
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compiler: expression > cache expressions > repeated expression replacement respects boundaries past an optional chain 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _renderEffect(() => {
+    const _obj_k = _ctx.obj?.k
+    const _obj_k_1 = _obj_k + 1
+    _setProp(n0, "id", _obj_k_1)
+    _setProp(n1, "id", _obj_k_1)
+    _setProp(n2, "title", _obj_k + 10)
   })
   return [n0, n1, n2]
 }"
@@ -286,6 +305,45 @@ export function render(_ctx) {
     _setProp(n0, "id", _foo_bar)
     _setProp(n1, "id", _foo_bar)
     _setProp(n2, "title", _foo + _ctx.barbaz)
+  })
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compiler: expression > cache expressions > repeated expression replacement respects numeric literal boundaries 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _renderEffect(() => {
+    const _n = _ctx.n
+    const _n_1 = _n + 1
+    _setProp(n0, "id", _n_1)
+    _setProp(n1, "id", _n_1)
+    _setProp(n2, "title", _n + 10)
+  })
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compiler: expression > cache expressions > repeated expression replacement respects operator precedence 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _renderEffect(() => {
+    const _a = _ctx.a
+    const _b = _ctx.b
+    const _a_b = _a + _b
+    _setProp(n0, "id", _a_b)
+    _setProp(n1, "id", _a_b)
+    _setProp(n2, "title", _ctx.c * _a + _b)
   })
   return [n0, n1, n2]
 }"

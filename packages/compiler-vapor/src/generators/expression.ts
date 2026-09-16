@@ -31,6 +31,7 @@ import {
   getParserOptions,
 } from './utils'
 import { parseExpression } from '@babel/parser'
+import { walk } from 'estree-walker'
 
 export function genExpression(
   node: SimpleExpressionNode,
@@ -890,26 +891,18 @@ function findContentReplacements(
   content: string,
   replacement: string,
 ): ContentReplacement[] {
-  const identifiers = getIdentifierRanges(exp)
-  if (!identifiers.length) return []
+  // a textual match is only interchangeable with the cached variable when it
+  // spans a whole node, otherwise it cuts across operator precedence or
+  // literal boundaries
+  const nodeRanges = getNodeRanges(exp)
+  if (!nodeRanges.size) return []
 
   const replacements: ContentReplacement[] = []
   let searchStart = 0
   let start = exp.content.indexOf(content, searchStart)
   while (start !== -1) {
     const end = start + content.length
-    let canReplace = false
-    for (const identifier of identifiers) {
-      if (start >= identifier.end || end <= identifier.start) {
-        continue
-      }
-      if (start > identifier.start || end < identifier.end) {
-        canReplace = false
-        break
-      }
-      canReplace = true
-    }
-    if (canReplace) {
+    if (nodeRanges.has(`${start}:${end}`)) {
       replacements.push({ start, end, content: replacement })
       searchStart = end
     } else {
@@ -933,6 +926,21 @@ function findIdentifierReplacements(
     }
   }
   return replacements
+}
+
+function getNodeRanges(exp: SimpleExpressionNode): Set<string> {
+  const ranges = new Set<string>()
+  if (!exp.ast || typeof exp.ast !== 'object') return ranges
+
+  walk(exp.ast, {
+    enter(node: Node) {
+      // range is offset by -1 due to the wrapping parens when parsed
+      if (node.start != null && node.end != null) {
+        ranges.add(`${node.start - 1}:${node.end - 1}`)
+      }
+    },
+  })
+  return ranges
 }
 
 function getIdentifierRanges(exp: SimpleExpressionNode): SourceRange[] {

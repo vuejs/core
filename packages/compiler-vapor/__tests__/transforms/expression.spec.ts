@@ -112,7 +112,7 @@ describe('compiler: expression', () => {
       expect(code).matchSnapshot()
       expect(code).contains('const _foo_bar = _foo + _ctx.bar')
       expect(code).contains('_setProp(n0, "id", _foo_bar)')
-      expect(code).contains('_setProp(n2, "id", _foo + _foo_bar)')
+      expect(code).contains('_setProp(n2, "id", _foo + _foo + _ctx.bar)')
     })
 
     test('repeated expression replacement skips string literals', () => {
@@ -136,6 +136,42 @@ describe('compiler: expression', () => {
       expect(code).matchSnapshot()
       expect(code).contains('_setProp(n2, "title", _foo + _ctx.barbaz)')
       expect(code).not.contains('_ctx.foo_barbaz')
+    })
+
+    test('repeated expression replacement respects numeric literal boundaries', () => {
+      const { code } = compileWithExpression(`
+        <div :id="n + 1"></div>
+        <div :id="n + 1"></div>
+        <div :title="n + 10"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _n_1 = _n + 1')
+      expect(code).contains('_setProp(n2, "title", _n + 10)')
+      expect(code).not.contains('n_10')
+    })
+
+    test('repeated expression replacement respects operator precedence', () => {
+      const { code } = compileWithExpression(`
+        <div :id="a + b"></div>
+        <div :id="a + b"></div>
+        <div :title="c * a + b"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _a_b = _a + _b')
+      expect(code).contains('_setProp(n2, "title", _ctx.c * _a + _b)')
+      expect(code).not.contains('_ctx.c * _a_b')
+    })
+
+    test('repeated expression replacement respects boundaries past an optional chain', () => {
+      const { code } = compileWithExpression(`
+        <div :id="obj?.k + 1"></div>
+        <div :id="obj?.k + 1"></div>
+        <div :title="obj?.k + 10"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _obj_k_1 = _obj_k + 1')
+      expect(code).contains('_setProp(n2, "title", _obj_k + 10)')
+      expect(code).not.contains('obj_k_10')
     })
 
     test('overlapping repeated expressions avoid stale declarations', () => {
