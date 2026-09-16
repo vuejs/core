@@ -2681,6 +2681,178 @@ describe('vdomInterop', () => {
         target.remove()
       }
     })
+
+    test('unmounts slot fallback children before their elements are removed', async () => {
+      const { data, unmounted, connected, watched, VDomChild } =
+        createVDomChild()
+      const Outlet = compile(
+        `<template>
+          <slot name="root">
+            <section><components.VDomChild id="root" /></section>
+          </slot>
+          <div>
+            <slot name="nested">
+              <section>
+                <components.VDomChild id="nested" />
+                <span>{{ data.count }}</span>
+              </section>
+            </slot>
+          </div>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const App = compile(
+        `<template>
+          <components.Outlet v-if="data.show">
+            <template #root><i v-if="!data.inner" /></template>
+            <template #nested><i v-if="!data.inner" /></template>
+          </components.Outlet>
+        </template>`,
+        data,
+        { Outlet },
+      )
+      const { host, app } = define(App).render()
+      document.body.appendChild(host)
+      const fallbackText = host.querySelector('span')!
+      try {
+        expect(host.textContent).toBe('rootnested0')
+
+        data.value.show = false
+        data.value.count++
+        await nextTick()
+
+        expect(unmounted).toEqual([
+          'bum root',
+          'bum nested',
+          'um root',
+          'um nested',
+        ])
+        expect(connected).toEqual([true, true])
+        expect(watched).not.toHaveBeenCalled()
+        expect(fallbackText.textContent).toBe('0')
+        expect(host.textContent).toBe('')
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('unmounts slot fallback children before exposing valid content', async () => {
+      const { data, unmounted, connected, watched, VDomChild } =
+        createVDomChild()
+      const Outlet = compile(
+        `<template>
+          <slot><section><components.VDomChild id="fallback" /></section></slot>
+        </template>`,
+        data,
+        { VDomChild },
+      )
+      const App = compile(
+        `<template>
+          <components.Outlet><i v-if="!data.inner">content</i></components.Outlet>
+        </template>`,
+        data,
+        { Outlet },
+      )
+      const { host, app } = define(App).render()
+      document.body.appendChild(host)
+      try {
+        expect(host.textContent).toBe('fallback')
+
+        data.value.inner = false
+        data.value.count++
+        await nextTick()
+
+        expect(unmounted).toEqual(['bum fallback', 'um fallback'])
+        expect(connected).toEqual([true])
+        expect(watched).not.toHaveBeenCalled()
+        expect(host.textContent).toBe('content')
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('cleans up fallbacks when VDOM replaces or removes a vapor slot', async () => {
+      const { data, unmounted, connected, watched, VDomChild } =
+        createVDomChild()
+      const VDomHost = defineComponent({
+        setup(_, { slots }) {
+          return () =>
+            data.value.show
+              ? renderSlot(slots, 'default', {}, () => [
+                  h(VDomChild, { id: 'vdom' }),
+                ])
+              : null
+        },
+      })
+      const Outlet = compile(
+        `<template>
+          <components.VDomHost>
+            <template v-if="data.list.length" #default>
+              <div>
+                <slot><section><components.VDomChild id="fallback" /></section></slot>
+              </div>
+            </template>
+            <template v-else #default><i v-if="!data.inner" /></template>
+          </components.VDomHost>
+        </template>`,
+        data,
+        { VDomHost, VDomChild },
+      )
+      const App = compile(
+        `<template>
+          <components.Outlet><i v-if="!data.inner" /></components.Outlet>
+        </template>`,
+        data,
+        { Outlet },
+      )
+      const { host, app } = define(App).render()
+      document.body.appendChild(host)
+      try {
+        expect(host.textContent).toBe('fallback')
+
+        data.value.list = []
+        data.value.count++
+        await nextTick()
+
+        expect(unmounted).toEqual(['bum fallback', 'um fallback'])
+        expect(connected).toEqual([true])
+        expect(watched).not.toHaveBeenCalled()
+        expect(host.textContent).toBe('vdom')
+
+        data.value.list = ['x']
+        data.value.count++
+        await nextTick()
+
+        expect(unmounted).toEqual([
+          'bum fallback',
+          'um fallback',
+          'bum vdom',
+          'um vdom',
+        ])
+        expect(connected).toEqual([true, true])
+        expect(watched).not.toHaveBeenCalled()
+        expect(host.textContent).toBe('fallback')
+
+        data.value.show = false
+        data.value.count++
+        await nextTick()
+
+        expect(unmounted).toEqual([
+          'bum fallback',
+          'um fallback',
+          'bum vdom',
+          'um vdom',
+          'bum fallback',
+          'um fallback',
+        ])
+        expect(connected).toEqual([true, true, true])
+        expect(watched).not.toHaveBeenCalled()
+        expect(host.textContent).toBe('')
+      } finally {
+        app.unmount()
+      }
+    })
   })
 
   describe('template ref', () => {

@@ -539,8 +539,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
         (needsHostParentForRemove(vnode.vb)
           ? ((anchor && anchor.parentNode) as ParentNode)
           : undefined)
-      remove(vnode.vb, blockContainer)
       stopVaporSlotScope(vnode)
+      remove(vnode.vb, blockContainer)
     }
     if (doRemove) {
       if (slotStartAnchor) {
@@ -607,8 +607,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
         const oldBlockOwnsAnchor =
           isFragment(n1.vb!) && n1.vb!.anchor === selfAnchor
         // remove old vapor block
-        remove(n1.vb!, parent)
         stopVaporSlotScope(n1)
+        remove(n1.vb!, parent)
         const slotBlock = renderVaporSlot(
           n2,
           parentComponent,
@@ -2892,7 +2892,6 @@ function renderVaporSlot(
     let outletFallback!: BlockFn
     let currentParentNode: ParentNode | null = null
     let currentAnchor: Node | null = null
-    let slotScope: ReturnType<typeof effectScope> | undefined
     let disposed = false
     let slotResolutionState!: SlotResolutionState
     let ownedSlotFragment: SlotFragment | undefined
@@ -2970,7 +2969,6 @@ function renderVaporSlot(
       }
       disposed = true
       disposeSlotResolution(slotResolutionState)
-      slotScope = undefined
       currentParentNode = null
       currentAnchor = null
     }
@@ -3045,13 +3043,6 @@ function renderVaporSlot(
         }
       } finally {
         isResolvingContent = false
-      }
-      const nextScope = vnode.vs!.scope
-      if (nextScope && slotScope !== nextScope && !disposed) {
-        slotScope = nextScope
-        nextScope.run(() => {
-          onScopeDispose(() => dispose(), true)
-        })
       }
       if (hasInteropFallback && isSlotResolver(resolvedContent)) {
         ownedSlotFragment = resolvedContent

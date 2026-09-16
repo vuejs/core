@@ -1,4 +1,9 @@
-import { EffectScope, type ShallowRef, setActiveSub } from '@vue/reactivity'
+import {
+  EffectScope,
+  type ShallowRef,
+  onScopeDispose,
+  setActiveSub,
+} from '@vue/reactivity'
 import {
   VaporSlotFlags,
   slotInheritsFallback,
@@ -574,6 +579,12 @@ export class SlotFragment
       undefined,
       adoptAnchor,
     )
+    // Fallback scopes are detached from content updates, but still belong
+    // to the outlet's owner scope.
+    onScopeDispose(() => {
+      this.disposed = true
+      if (this.fallbackScope) this.fallbackScope.stop()
+    }, true)
     this.sharedFallback = !!(flags & VaporSlotFlags.SHARED_FALLBACK)
     this.inheritFallback = slotInheritsFallback(flags)
     this.notifyParentBoundary = slotNotifiesBoundary(flags)
@@ -669,6 +680,7 @@ export class SlotFragment
 
   remove(parent?: ParentNode): void {
     this.disposed = true
+    if (this.fallbackScope) this.fallbackScope.stop()
     const nodes = this.nodes
     remove(nodes, parent)
     if (this.activeFallback === nodes) {
