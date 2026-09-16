@@ -314,11 +314,13 @@ describe('vdomInterop', () => {
           App: `<template><div><components.VDomChild v-for="i in data.list" :key="i"><p>{{ i }}</p></components.VDomChild></div></template>`,
         },
         () => ref({ list: [1, 2] }),
-        async data => {
+        async (data, root) => {
           data.value.list = [2, 1]
           await nextTick()
+          expect(root.textContent).toBe('21')
           data.value.list = [1, 2, 3]
           await nextTick()
+          expect(root.textContent).toBe('123')
           data.value.list = [3, 1]
         },
         { VDomChild },
@@ -8114,6 +8116,46 @@ describe('vdomInterop', () => {
       data.value.show = false
       await nextTick()
       expect(html()).toBe('<span style="--v51566ce1: red;">b</span>')
+    })
+
+    test('vapor owner css vars reach replacement slot roots in a vdom child', async () => {
+      const data = ref({ color: 'red', show: true })
+      const VDomChild = compile(
+        `<script setup>const data = _data</script>
+        <template><slot /></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template><components.VDomChild><p v-if="data.show">a</p><span v-else>b</span></components.VDomChild></template>
+        <style>p, span { color: v-bind('data.color') }</style>`,
+        data,
+        { VDomChild },
+      )
+      const { host } = define(App as any).render()
+      await nextTick()
+      expect(host.firstElementChild!.outerHTML).toBe(
+        '<p style="--v51566ce1: red;">a</p>',
+      )
+
+      data.value.show = false
+      await nextTick()
+      expect(host.firstElementChild!.outerHTML).toBe(
+        '<span style="--v51566ce1: red;">b</span>',
+      )
+
+      data.value.color = 'green'
+      await nextTick()
+      expect(host.firstElementChild!.outerHTML).toBe(
+        '<span style="--v51566ce1: green;">b</span>',
+      )
+
+      data.value.show = true
+      await nextTick()
+      expect(host.firstElementChild!.outerHTML).toBe(
+        '<p style="--v51566ce1: green;">a</p>',
+      )
     })
 
     test('vapor owner css vars reach a vdom child rooted at a slot outlet', async () => {
