@@ -1,4 +1,4 @@
-import { nextTick, ref } from '@vue/runtime-dom'
+import { nextTick, reactive, ref } from '@vue/runtime-dom'
 import { formatHtml, setupHydrationTest, testHydration } from './_helpers'
 
 setupHydrationTest()
@@ -494,6 +494,49 @@ describe('Vapor Mode hydration', () => {
         <!--[--><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><div><div><div>bar</div><!--if--></div><span>non-hydration node</span></div><!--]-->
         </div>"
       `)
+    })
+
+    test('empty interpolation row keeps the rest of its row', async () => {
+      const data = reactive({
+        lines: [
+          { id: 1, v: 'a' },
+          { id: 2, v: '' },
+          { id: 3, v: 'b' },
+        ],
+      })
+      const { container } = await testHydration(
+        `<template>
+          <p><template v-for="l in data.lines" :key="l.id">{{ l.v }}<br></template></p>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<p>
+        <!--[-->
+        <!--[-->a<br><!--]-->
+        <!--[--><br><!--]-->
+        <!--[-->b<br><!--]-->
+        <!--]-->
+        </p>"
+      `,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.lines[1].v = 'M'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<p>
+        <!--[-->
+        <!--[-->a<br><!--]-->
+        <!--[-->M<br><!--]-->
+        <!--[-->b<br><!--]-->
+        <!--]-->
+        </p>"
+      `,
+      )
     })
   })
 })

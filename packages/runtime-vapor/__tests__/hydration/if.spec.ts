@@ -694,5 +694,64 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    test('empty interpolation branch keeps the following sibling', async () => {
+      const data = reactive({ show: true, txt: '' })
+      const { container } = await testHydration(
+        `<template>
+          <div>
+            <template v-if="data.show">{{ data.txt }}</template>
+            <span>after</span>
+          </div>
+        </template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><!--if--><!--]-->
+        <span>after</span></div>"
+      `,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[-->foo<!--if--><!--]-->
+        <span>after</span></div>"
+      `,
+      )
+    })
+
+    test('empty interpolation branch keeps the following static text', async () => {
+      const data = reactive({ show: true, txt: '' })
+      const { container } = await testHydration(
+        `<template><div><template v-if="data.show">{{ data.txt }}</template>tail</div></template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><!--if--><!--]-->
+        tail</div>"
+      `,
+      )
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[-->foo<!--if--><!--]-->
+        tail</div>"
+      `,
+      )
+    })
   })
 })

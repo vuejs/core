@@ -707,8 +707,8 @@ describe('VDOM interop', () => {
     document.body.appendChild(container)
     createVaporSSRApp(ClientApp).mount(container)
 
-    expect(`Hydration node mismatch`).toHaveBeenWarned()
-    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration text mismatch`).toHaveBeenWarned()
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
