@@ -869,6 +869,31 @@ describe('vdomInterop', () => {
       expect(root.innerHTML).toBe('<div><div style=""></div></div>')
     })
 
+    test('apply v-show to vdom child whose root element is replaced', async () => {
+      const data = ref({ b: true, show: false })
+      const VDomChild = compile(
+        `<script setup>const data = _data</script><template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template><components.VDomChild v-show="data.show" /></template>`,
+        data,
+        { VDomChild },
+      )
+      const { host } = define(App as any).render()
+      expect(host.innerHTML).toBe('<div style="display: none;">m</div>')
+
+      data.value.b = false
+      await nextTick()
+      expect(host.innerHTML).toBe('<p style="display: none;">p</p>')
+
+      data.value.show = true
+      await nextTick()
+      expect(host.innerHTML).toBe('<p style="">p</p>')
+    })
+
     test('apply vapor custom directive to vdom child', () => {
       const dir: VaporDirective = vi.fn(el => {
         ;(el as Element).setAttribute('data-custom', '')

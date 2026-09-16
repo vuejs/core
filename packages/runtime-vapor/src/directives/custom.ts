@@ -21,6 +21,8 @@ import {
 import { isAsyncComponentEnabled } from '../asyncComponentState'
 import { type VaporFragment, isDynamicFragment, isFragment } from '../fragment'
 import { inOnce, withOnce } from '../once'
+import { isInteropEnabled } from '../vdomInteropState'
+import { isSuspenseEnabled } from '../suspense'
 import { isFunction, isObject } from '@vue/shared'
 
 // !! vapor directive is different from vdom directives
@@ -77,7 +79,12 @@ export function withVaporDirectives(
   const visitor: RootChainVisitor = {
     onDynamicFragment: track,
     onComponent(block) {
-      if (__FEATURE_SUSPENSE__ && block.asyncDep && !block.asyncResolved) {
+      if (
+        __FEATURE_SUSPENSE__ &&
+        isSuspenseEnabled &&
+        block.asyncDep &&
+        !block.asyncResolved
+      ) {
         pending = true
         if (!(pendingSetups ||= new WeakSet()).has(block)) {
           pendingSetups.add(block)
@@ -92,13 +99,15 @@ export function withVaporDirectives(
         if (isFragment(inner) && inner.nodes === EMPTY_BLOCK) pending = true
       }
     },
-    onInteropFragment(frag) {
+    // directives do not apply through a slot outlet root
+    excludeSlotOutlets: true,
+  }
+  if (isInteropEnabled) {
+    visitor.onInteropFragment = frag => {
       // Interop content resolves its nodes on `syncNodes`
       if (frag.nodes === EMPTY_BLOCK) pending = true
       track(frag)
-    },
-    // directives do not apply through a slot outlet root
-    excludeSlotOutlets: true,
+    }
   }
 
   function stopDirectiveScope() {

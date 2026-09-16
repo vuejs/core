@@ -2,13 +2,14 @@ import {
   applyVShow,
   createComponent,
   createIf,
+  defineVaporAsyncComponent,
   defineVaporComponent,
   on,
   template,
 } from '../../src'
 import { type VShowElement, nextTick, ref } from 'vue'
 import { describe, expect, test, vi } from 'vite-plus/test'
-import { makeRender } from '../_utils'
+import { compile, makeRender, renderParity } from '../_utils'
 
 const define = makeRender()
 
@@ -170,5 +171,94 @@ describe('directive: v-show', () => {
     visible.value = false
     await nextTick()
     expect(condition).toHaveBeenCalledTimes(2)
+  })
+
+  test('keeps a nested dynamic root hidden when the inner branch swaps', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Mid: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        Inner: `<template><components.Mid v-if="data.a"/><span v-else>s</span></template>`,
+        App: `<template><components.Inner v-show="false"/></template>`,
+      },
+      () => ref({ a: true, b: true }),
+      async data => {
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p style="display: none;">p</p>')
+    expect(vapor.after).toBe(
+      '<p style="display: none;">p</p><!--if--><!--if-->',
+    )
+  })
+
+  test('keeps a nested dynamic root hidden after outer and inner branch swaps', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Mid: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        Inner: `<template><span v-if="data.a">s</span><components.Mid v-else/></template>`,
+        App: `<template><components.Inner v-show="false"/></template>`,
+      },
+      () => ref({ a: true, b: true }),
+      async data => {
+        data.value.a = false
+        await nextTick()
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p style="display: none;">p</p>')
+    expect(vapor.after).toBe(
+      '<p style="display: none;">p</p><!--if--><!--if-->',
+    )
+  })
+
+  test('follows the root of a resolved async component across branch swaps', async () => {
+    const data = ref({ b: true, show: false })
+    const Inner = compile(
+      `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+      data,
+    )
+    let resolve!: (comp: any) => void
+    const AsyncInner = defineVaporAsyncComponent(
+      () => new Promise<any>(r => (resolve = r)),
+    )
+    const App = compile(
+      `<template><components.AsyncInner v-show="data.show"/></template>`,
+      data,
+      { AsyncInner },
+    )
+    const { host } = define(App).render()
+
+    resolve(Inner)
+    await new Promise(r => setTimeout(r))
+    await nextTick()
+    expect(host.querySelector('div')!.style.display).toBe('none')
+
+    data.value.b = false
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('none')
+
+    data.value.show = true
+    await nextTick()
+    expect(host.querySelector('p')!.style.display).toBe('')
+  })
+
+  test('v-once freezes the value used by later dynamic roots', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Inner: `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+        App: `<template><components.Inner v-show="data.show" v-once/></template>`,
+      },
+      () => ref({ b: true, show: true }),
+      async data => {
+        data.value.show = false
+        await nextTick()
+        data.value.b = false
+        await nextTick()
+      },
+    )
+    expect(vdom.after).toBe('<p>p</p>')
+    expect(vapor.after).toBe('<p>p</p><!--if-->')
   })
 })
