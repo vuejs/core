@@ -17,6 +17,9 @@ import {
   isValidBlock,
 } from '../block'
 import { isHydrating } from '../dom/hydration'
+import { isInteropEnabled } from '../vdomInteropState'
+import { isTransitionEnabled } from '../transition'
+import { isSuspenseEnabled } from '../suspense'
 
 /**
  * v-show is root-inherited state: it lands on the effective root element of
@@ -34,7 +37,12 @@ export function applyVShow(target: Block, source: () => any): void {
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
-      if (instance.asyncDep && !instance.asyncResolved) {
+      if (
+        __FEATURE_SUSPENSE__ &&
+        isSuspenseEnabled &&
+        instance.asyncDep &&
+        !instance.asyncResolved
+      ) {
         // the block exists only after setup settles; its mount runs `bm`
         // before insertion. The mark doubles as the registration guard.
         if (!(instance as TransitionBlock).$vshow) {
@@ -50,13 +58,15 @@ export function applyVShow(target: Block, source: () => any): void {
       mark(frag)
       register((frag.bm ||= []), apply)
     },
-    onInteropFragment(frag) {
+  }
+  if (isInteropEnabled) {
+    visitor.onInteropFragment = frag => {
       mark(frag)
-      if (frag.$transition) transition = frag.$transition
+      if (isTransitionEnabled && frag.$transition) transition = frag.$transition
       // vdom patches the content first, then notifies through `u`
       register((frag.u ||= []), apply)
       if (!isValidBlock(frag.nodes)) unresolved = true
-    },
+    }
   }
 
   const apply = (nodes: Block): void => {
@@ -108,7 +118,9 @@ function setDisplay(
   if (el[vShowHidden] === hidden) return
   el[vShowHidden] = hidden
 
-  const { $transition = transition } = el as TransitionBlock
+  const $transition = isTransitionEnabled
+    ? (el as TransitionBlock).$transition || transition
+    : undefined
   if ($transition) {
     const prevSub = setActiveSub()
     try {
