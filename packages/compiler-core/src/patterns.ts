@@ -337,6 +337,8 @@ export function generateMatchSelector(
   const temp = () => `${prefix}_${nextId++}`
   const root = temp()
   const branches = arms.map((arm, index) => {
+    // RFC evaluation order: test the shape, copy bound rest, introduce bindings,
+    // then evaluate the guard. A failed test must not read a discarded rest.
     const tests: string[] = []
     const declarations: string[] = []
     const copies: string[] = []
@@ -389,7 +391,13 @@ export function generateMatchSelector(
               .map(p => JSON.stringify(p.key))
               .join(', ')
             copies.push(
-              `const ${copy} = {}; for (const ${key} of Object.getOwnPropertyNames(Object(${value})).concat(Object.getOwnPropertySymbols(Object(${value})))) { if (![${keys}].includes(${key}) && Object.prototype.propertyIsEnumerable.call(${value}, ${key})) Object.defineProperty(${copy}, ${key}, { value: ${value}[${key}], enumerable: true, configurable: true, writable: true }); }`,
+              `const ${copy} = {}; ` +
+                `for (const ${key} of Object.getOwnPropertyNames(Object(${value}))` +
+                `.concat(Object.getOwnPropertySymbols(Object(${value})))) { ` +
+                `if (![${keys}].includes(${key}) && ` +
+                `Object.prototype.propertyIsEnumerable.call(${value}, ${key})) ` +
+                `Object.defineProperty(${copy}, ${key}, { value: ${value}[${key}], ` +
+                `enumerable: true, configurable: true, writable: true }); }`,
             )
             declarations.push(`const ${pattern.rest.binding.name} = ${copy};`)
           }
@@ -417,7 +425,16 @@ export function generateMatchSelector(
     }
     emit(arm.pattern, root)
     const result = temp()
-    return `{ const ${result} = (() => { ${tests.join(' ')} ${copies.join(' ')} { ${declarations.join(' ')} ${arm.guard ? `if (!(${arm.guard.text})) return null;` : ''} return [${index}${arm.bindings.map(b => `, ${b.name}`).join('')}]; } })(); if (${result} !== null) return ${result}; }`
+    const guard = arm.guard ? `if (!(${arm.guard.text})) return null;` : ''
+    const values = arm.bindings.map(binding => `, ${binding.name}`).join('')
+    // This inner block keeps pattern value lookups outside a binding's TDZ.
+    const body =
+      `${tests.join(' ')} ${copies.join(' ')} ` +
+      `{ ${declarations.join(' ')} ${guard} return [${index}${values}]; }`
+    return (
+      `{ const ${result} = (() => { ${body} })(); ` +
+      `if (${result} !== null) return ${result}; }`
+    )
   })
   return `((${root}) => { ${branches.join(' ')} return [-1]; })(${subject})`
 }
