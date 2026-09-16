@@ -31,6 +31,7 @@ import {
   logMismatchError,
   mergeProps,
   parseEventName,
+  patchClass,
   patchStyle,
   queuePostFlushCb,
   shouldSetAsProp,
@@ -56,6 +57,7 @@ import {
 } from './hydration'
 import { type Block, normalizeBlock } from '../block'
 import type { VaporElement } from '../apiDefineCustomElement'
+import { isTransitionEnabled } from '../transition'
 
 type TargetElement = Element & {
   $root?: true
@@ -220,10 +222,13 @@ export function setClass(
     }
 
     if (value !== el.$cls) {
-      if (isSVG) {
-        el.setAttribute('class', (el.$cls = value))
+      el.$cls = value
+      if (isTransitionEnabled) {
+        patchClass(el, value, isSVG)
+      } else if (isSVG) {
+        el.setAttribute('class', value)
       } else {
-        el.className = el.$cls = value
+        el.className = value
       }
     }
   }
@@ -262,7 +267,12 @@ export function setClassName(
     // pass the rebuilt string as normalized to avoid doing that work twice.
     setClass(el, value, false, true)
   } else {
-    el.className = el.$cls = value
+    el.$cls = value
+    if (isTransitionEnabled) {
+      patchClass(el, value, false)
+    } else {
+      el.className = value
+    }
   }
   el.$clsFlags = flags
 }

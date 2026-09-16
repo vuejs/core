@@ -2065,6 +2065,39 @@ test('should stop effects of the previous children render when the slot re-runs'
   expect(effectRuns).toBe(1)
 })
 
+test('should not call update hooks when mounting teleport inside an element', async () => {
+  const target = document.createElement('div')
+  const state = reactive({ msg: 'one' })
+  const beforeUpdate = vi.fn()
+  const updated = vi.fn()
+  const App = compile(
+    `<script setup vapor>
+      import { onBeforeUpdate, onUpdated } from 'vue'
+      const data = _data
+      onBeforeUpdate(data.beforeUpdate)
+      onUpdated(data.updated)
+    </script>
+    <template>
+      <div>
+        <Teleport :to="data.target"><p>{{ data.state.msg }}</p></Teleport>
+      </div>
+    </template>`,
+    { target, state, beforeUpdate, updated } as any,
+  )
+
+  define(App).render()
+  await nextTick()
+  expect(target.innerHTML).toBe('<p>one</p>')
+  expect(beforeUpdate).toHaveBeenCalledTimes(0)
+  expect(updated).toHaveBeenCalledTimes(0)
+
+  state.msg = 'two'
+  await nextTick()
+  expect(target.innerHTML).toBe('<p>two</p>')
+  expect(beforeUpdate).toHaveBeenCalledTimes(1)
+  expect(updated).toHaveBeenCalledTimes(1)
+})
+
 test('should cache delayed teleported child under KeepAlive once target becomes available', async () => {
   const show = ref(true)
   const target = ref<any>('#missing-teleport-target-keepalive')

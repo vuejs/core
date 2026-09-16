@@ -52,10 +52,12 @@ import {
   getBlockFirstNode,
   insert,
   isBlock,
+  registerNestedVDOMCleanup,
   remove,
 } from './block'
 import {
   type ShallowRef,
+  getCurrentScope,
   isRef,
   markRaw,
   onScopeDispose,
@@ -377,8 +379,17 @@ export function createComponent(
       const ctx = (currentInstance as KeepAliveInstance).ctx
       keepAliveCtx = ctx
       const cached = ctx.getCachedComponent(component)
-      // @ts-expect-error
-      if (cached) return cached
+      if (cached) {
+        // a nested branch teardown stops the branch scope that unmounts the
+        // cached component, so the scope re-entering it takes over
+        const scope = getCurrentScope()
+        if (isVaporComponent(cached) && cached.unmountScope !== scope) {
+          cached.unmountScope = scope
+          registerUnmount(cached)
+        }
+        // @ts-expect-error
+        return cached
+      }
     }
 
     // A resolved async component is created as its resolved component: with
@@ -406,6 +417,7 @@ export function createComponent(
         normalizeRawSlots(rawSlots),
         once,
       )
+      if (_insertionParent) registerNestedVDOMCleanup(frag)
       if (!isHydrating) {
         if (_insertionParent) {
           insert(
@@ -434,6 +446,7 @@ export function createComponent(
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
         onScopeDispose(() => frag.disposeTarget(), true)
+        registerNestedVDOMCleanup(frag)
       } else {
         // Give normal block removal (and Transition leave preparation) the
         // current stack before falling back to target-side cleanup.
@@ -600,17 +613,9 @@ export function createComponent(
         }
       }
     }
-    onScopeDispose(
-      () =>
-        unmountComponent(
-          instance,
-          undefined,
-          __FEATURE_SUSPENSE__ && isInteropEnabled
-            ? resolveUnmountSuspense(instance.suspense)
-            : instance.suspense,
-        ),
-      true,
-    )
+    if (keepAliveCtx) instance.unmountScope = getCurrentScope()
+    registerUnmount(instance)
+    if (_insertionParent) registerNestedVDOMCleanup(instance)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
       mountComponent(instance, _insertionParent!, _insertionAnchor)
@@ -942,6 +947,8 @@ export class VaporComponentInstance<
   shapeFlag?: number
   // Owns raw prop/slot isolation effects for cached components.
   inputScope?: EffectScope
+  // The branch scope that unmounts a cached component when disposed.
+  unmountScope?: EffectScope
   $key?: any
   // Share deferred updates across async roots on the KeepAlive component-root
   // chain so A(pending) -> B -> A renders only the final branch, matching VDOM.
@@ -1293,11 +1300,13 @@ export function createPlainElement(
       if (isHydrating) locateHydrationNode()
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
+      registerNestedVDOMCleanup(frag)
     } else {
       const slot = getSlot(rawSlots as RawSlots, 'default')
       if (slot) {
         const block = slot()
         if (!isHydrating) insert(block, el)
+        registerNestedVDOMCleanup(block)
       }
     }
     if (isHydrating) {
@@ -1502,6 +1511,22 @@ export function mountComponent(
   if (__DEV__) {
     endMeasure(instance, `mount`)
   }
+}
+
+function registerUnmount(instance: VaporComponentInstance): void {
+  const scope = instance.unmountScope
+  onScopeDispose(() => {
+    if (scope && instance.unmountScope === scope) {
+      instance.unmountScope = undefined
+    }
+    unmountComponent(
+      instance,
+      undefined,
+      __FEATURE_SUSPENSE__ && isInteropEnabled
+        ? resolveUnmountSuspense(instance.suspense)
+        : instance.suspense,
+    )
+  }, true)
 }
 
 export function unmountComponent(

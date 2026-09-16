@@ -539,8 +539,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
         (needsHostParentForRemove(vnode.vb)
           ? ((anchor && anchor.parentNode) as ParentNode)
           : undefined)
-      remove(vnode.vb, blockContainer)
       stopVaporSlotScope(vnode)
+      remove(vnode.vb, blockContainer)
     }
     if (doRemove) {
       if (slotStartAnchor) {
@@ -607,8 +607,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
         const oldBlockOwnsAnchor =
           isFragment(n1.vb!) && n1.vb!.anchor === selfAnchor
         // remove old vapor block
-        remove(n1.vb!, parent)
         stopVaporSlotScope(n1)
+        remove(n1.vb!, parent)
         const slotBlock = renderVaporSlot(
           n2,
           parentComponent,
@@ -1185,7 +1185,18 @@ function mountVNode(
   // and reused for later patches, mirroring how VDOM closes the mount-time
   // namespace over a component's render effect.
   let namespace: ElementNamespace
+  let isUnmounted = false
   const unmount = (parentNode?: ParentNode, transition?: TransitionHooks) => {
+    // scope disposal and block removal can both reach this
+    if (isUnmounted) {
+      if (parentNode) {
+        removeAttachedNodes(resolveVNodeNodes(vnode), parentNode)
+        if (vnode.anchor && vnode.anchor.parentNode === parentNode) {
+          remove(vnode.anchor as Node, parentNode)
+        }
+      }
+      return
+    }
     if (transition) setVNodeTransitionHooks(vnode, transition)
     const parentSuspense = resolveUnmountSuspense(suspense)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
@@ -1206,6 +1217,7 @@ function mountVNode(
         )
       }
     } else {
+      isUnmounted = true
       internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
     }
 
@@ -1217,7 +1229,6 @@ function mountVNode(
   frag.hydrate = () => {
     if (!isHydrating) return
     hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
-    onScopeDispose(unmount, true)
     isMounted = true
     syncNodes()
   }
@@ -1265,7 +1276,6 @@ function mountVNode(
           namespace,
           frag.slotScopeIds,
         )
-        onScopeDispose(unmount, true)
         isMounted = true
       } else {
         // move
@@ -2038,7 +2048,7 @@ function renderVDOMSlot(
     if (rendered) {
       removeRenderedContent(rendered, storage || parentNode)
     }
-    disposeSlotResolution(slotResolutionState)
+    disposeSlotResolution(slotResolutionState, storage || parentNode)
     if (storage) {
       const anchor = frag.anchor
       if (anchor && anchor.parentNode === storage) {
@@ -2882,7 +2892,6 @@ function renderVaporSlot(
     let outletFallback!: BlockFn
     let currentParentNode: ParentNode | null = null
     let currentAnchor: Node | null = null
-    let slotScope: ReturnType<typeof effectScope> | undefined
     let disposed = false
     let slotResolutionState!: SlotResolutionState
     let ownedSlotFragment: SlotFragment | undefined
@@ -2959,8 +2968,7 @@ function renderVaporSlot(
         currentParentNode = parentNode
       }
       disposed = true
-      disposeSlotResolution(slotResolutionState)
-      slotScope = undefined
+      disposeSlotResolution(slotResolutionState, parentNode)
       currentParentNode = null
       currentAnchor = null
     }
@@ -3036,13 +3044,6 @@ function renderVaporSlot(
       } finally {
         isResolvingContent = false
       }
-      const nextScope = vnode.vs!.scope
-      if (nextScope && slotScope !== nextScope && !disposed) {
-        slotScope = nextScope
-        nextScope.run(() => {
-          onScopeDispose(() => dispose(), true)
-        })
-      }
       if (hasInteropFallback && isSlotResolver(resolvedContent)) {
         ownedSlotFragment = resolvedContent
         trackInteropFallbackChanges(vnode.vs!.scope, slotState, () =>
@@ -3102,7 +3103,7 @@ function renderVaporSlot(
 
       return frag
     } catch (e) {
-      dispose()
+      dispose(currentParentNode || undefined)
       stopVaporSlotScope(vnode)
       throw e
     }
