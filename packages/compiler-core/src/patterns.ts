@@ -332,7 +332,7 @@ export function generateMatchSelector(
   arms: MatchArm[],
   subject: string,
   prefix: string,
-): string {
+): { code: string; subjectOffset: number } {
   let nextId = 0
   const temp = () => `${prefix}_${nextId++}`
   const root = temp()
@@ -436,5 +436,6 @@ export function generateMatchSelector(
       `if (${result} !== null) return ${result}; }`
     )
   })
-  return `((${root}) => { ${branches.join(' ')} return [-1]; })(${subject})`
+  const selector = `((${root}) => { ${branches.join(' ')} return [-1]; })(`
+  return { code: `${selector}${subject})`, subjectOffset: selector.length }
 }

@@ -7,6 +7,7 @@ import {
   ElementTypes,
   NodeTypes,
   type RootNode,
+  type SimpleExpressionNode,
   type SourceLocation,
   type TemplateChildNode,
   createSimpleExpression,
@@ -87,11 +88,18 @@ export function lowerMatchDirectives(
     value: string,
     source: string,
     loc: SourceLocation,
+    sourceRanges?: SimpleExpressionNode['sourceRanges'],
   ): ElementNode {
     const node = template(children, loc)
     const dir = directive('for', `${value} in [${source}]`, loc)
+    const sourceExpression = expression(`[${source}]`, loc)
+    sourceExpression.sourceRanges = sourceRanges?.map(range => ({
+      ...range,
+      start: range.start + 1,
+      end: range.end + 1,
+    }))
     dir.forParseResult = {
-      source: expression(`[${source}]`, loc),
+      source: sourceExpression,
       value: expression(value, loc, true),
       key: undefined,
       index: undefined,
@@ -123,7 +131,7 @@ export function lowerMatchDirectives(
             'v-match requires a subject expression and accepts no arguments or modifiers.',
             match.loc,
           )
-          return
+          match.exp = expression('undefined', match.loc)
         }
         const arms: MatchArm[] = []
         const elements: ElementNode[] = []
@@ -226,7 +234,13 @@ export function lowerMatchDirectives(
           match.exp.content,
           `${local}_select`,
         )
-        const matchScope = scope(branches, local, selection, match.loc)
+        const matchScope = scope(branches, local, selection.code, match.loc, [
+          {
+            start: selection.subjectOffset,
+            end: selection.subjectOffset + match.exp.content.length,
+            loc: match.exp.loc,
+          },
+        ])
         if (
           node.tag === 'template' &&
           !findDir(node, /^(if|else-if|else|for|slot)$/, true)

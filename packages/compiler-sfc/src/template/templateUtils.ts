@@ -149,7 +149,8 @@ function countRootUnit(node: RootChildNode, preserveComments: boolean): number {
 
   if (
     hasStructuralDirective(node, 'if') ||
-    hasStructuralDirective(node, 'for')
+    hasStructuralDirective(node, 'for') ||
+    hasStructuralDirective(node, 'match')
   ) {
     return 1
   }

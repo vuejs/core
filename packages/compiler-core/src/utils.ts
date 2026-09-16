@@ -19,12 +19,14 @@ import {
   type RootNode,
   type SimpleExpressionNode,
   type SlotOutletNode,
+  type SourceLocation,
   type TemplateChildNode,
   type TemplateNode,
   type TextNode,
   type VNodeCall,
   createCallExpression,
   createObjectExpression,
+  locStub,
 } from './ast'
 import type { TransformContext } from './transform'
 import {
@@ -232,6 +234,35 @@ export const isFnExpression: (
   exp: ExpressionNode,
   context: Pick<TransformContext, 'expressionPlugins'>,
 ) => boolean = __BROWSER__ ? isFnExpressionBrowser : isFnExpressionNode
+
+export function getExpressionRange(
+  node: SimpleExpressionNode,
+  start: number,
+  end: number,
+): SourceLocation {
+  if (node.sourceRanges) {
+    const range = node.sourceRanges.find(
+      range => start >= range.start && end <= range.end,
+    )
+    if (!range) return locStub
+    const { loc } = range
+    return {
+      start: advancePositionWithClone(
+        loc.start,
+        loc.source,
+        start - range.start,
+      ),
+      end: advancePositionWithClone(loc.start, loc.source, end - range.start),
+      source: loc.source.slice(start - range.start, end - range.start),
+    }
+  }
+  const source = node.content.slice(start, end)
+  return {
+    start: advancePositionWithClone(node.loc.start, source, start),
+    end: advancePositionWithClone(node.loc.start, source, end),
+    source,
+  }
+}
 
 export function advancePositionWithClone(
   pos: Position,

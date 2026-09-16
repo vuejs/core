@@ -231,6 +231,8 @@ export interface SimpleExpressionNode extends Node {
    * - `false` means there was a parsing error
    */
   ast?: BabelNode | null | false
+  /** Original source ranges within a compiler-generated expression. */
+  sourceRanges?: { start: number; end: number; loc: SourceLocation }[]
   /**
    * Indicates this is an identifier for a hoist vnode call and points to the
    * hoisted node.

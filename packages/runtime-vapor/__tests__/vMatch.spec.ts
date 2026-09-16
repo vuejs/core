@@ -2,6 +2,47 @@ import { nextTick, ref } from '@vue/runtime-dom'
 import { renderParity } from './_utils'
 
 describe('v-match VDOM / Vapor parity', () => {
+  test('SFC root match preserves bindings, nested scopes and branch identity', async () => {
+    await renderParity(
+      {
+        Panel: '<template><slot :text="data.slot"/></template>',
+        App: `<template v-match="data.result">
+          <section v-when="{ kind: 'ok', const text }" :title="text">
+            <button @click="data.clicked.push(text)">{{ text }}</button>
+            <b v-for="text in text">{{ text }}</b>
+            <components.Panel v-slot="{ text }"><i>{{ text }}</i></components.Panel>
+            <template v-match="text"><em v-when="const text">{{ text }}</em></template>
+          </section>
+          <p v-when="_">empty</p>
+        </template>`,
+      },
+      () =>
+        ref({
+          result: { kind: 'ok', text: 'ab' },
+          slot: 'slot',
+          clicked: [] as string[],
+        }),
+      async (data, root) => {
+        const section = root.querySelector('section')!
+        const button = root.querySelector('button')!
+        expect(section.textContent!.replace(/\s/g, '')).toBe('ababslotab')
+        button.click()
+        data.value.result.text = 'cd'
+        data.value.slot = 'updated'
+        await nextTick()
+        expect(root.querySelector('section')).toBe(section)
+        expect(section.title).toBe('cd')
+        expect(section.textContent!.replace(/\s/g, '')).toBe('cdcdupdatedcd')
+        button.click()
+        expect(data.value.clicked).toEqual(['ab', 'cd'])
+        data.value.result.kind = 'err'
+        await nextTick()
+        expect(root.querySelector('section')).toBeNull()
+        expect(root.textContent).toBe('empty')
+      },
+    )
+  })
+
   test('template arm keys remount while empty arms stop fallthrough', async () => {
     await renderParity(
       {

@@ -8,7 +8,6 @@ import {
   type RawSourceMap,
   type RootNode,
   type SourceLocation,
-  createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { SourceMapGenerator } from 'source-map-js'
@@ -19,6 +18,7 @@ import type { ImportBinding } from './compileScript'
 import { isUsedInTemplate } from './script/importUsageCheck'
 import type { LRUCache } from 'lru-cache'
 import { genCacheKey } from '@vue/shared'
+import { createTemplateRoot } from './template/resolveTemplateAST'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -178,7 +178,7 @@ export function parse(
           descriptor.vapor ||= !!templateBlock.attrs.vapor
 
           if (!templateBlock.attrs.src) {
-            templateBlock.ast = createRoot(node.children, source)
+            templateBlock.ast = createTemplateRoot(node, source)
           }
 
           // warn against 2.x <template functional>
@@ -335,6 +335,13 @@ function createBlock(
     block.content = padContent(source, block, pad) + block.content
   }
   node.props.forEach(p => {
+    if (
+      type === 'template' &&
+      p.type === NodeTypes.DIRECTIVE &&
+      p.name === 'match'
+    ) {
+      attrs[p.rawName || 'v-match'] = p.exp?.loc.source || true
+    }
     if (p.type === NodeTypes.ATTRIBUTE) {
       const name = p.name
       attrs[name] = p.value ? p.value.content || true : true

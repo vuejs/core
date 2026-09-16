@@ -4,6 +4,32 @@ import { setupHydrationTest, testHydration } from './_helpers'
 setupHydrationTest()
 
 describe('patterned templates hydration', () => {
+  test.each([false, true])(
+    'hydrates a top-level SFC match (vapor=%s)',
+    async isVaporApp => {
+      const data = ref<unknown>({ text: 'first' })
+      const { container, app } = await testHydration(
+        `<script setup>const data = _data;</script><template v-match="data"><template v-when="{ const text }"><b>{{ text }}</b><i>{{ text }}</i></template><template v-when="null"></template><p v-when="_">fallback</p></template>`,
+        {},
+        data,
+        { isVaporApp },
+      )
+      const b = container.querySelector('b')
+      expect(container.textContent).toBe('firstfirst')
+      data.value = { text: 'second' }
+      await nextTick()
+      expect(container.querySelector('b')).toBe(b)
+      expect(container.textContent).toBe('secondsecond')
+      data.value = null
+      await nextTick()
+      expect(container.textContent).toBe('')
+      data.value = 1
+      await nextTick()
+      expect(container.textContent).toBe('fallback')
+      app.unmount()
+    },
+  )
+
   test('hydrates nested multi-root binding arms and retains sibling nodes', async () => {
     const data = ref({ items: [1, 2, 3] })
     const { container, app } = await testHydration(

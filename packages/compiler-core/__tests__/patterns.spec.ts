@@ -13,7 +13,7 @@ function select(
   return new Function(
     'subject',
     ...Object.keys(values),
-    `return ${expression}`,
+    `return ${expression.code}`,
   )(subject, ...Object.values(values))
 }
 
@@ -52,7 +52,7 @@ describe('RFC 823 pattern grammar', () => {
       () =>
         new Function(
           'subject',
-          `return ${generateMatchSelector([arm], 'subject', '__test')}`,
+          `return ${generateMatchSelector([arm], 'subject', '__test').code}`,
         ),
     ).not.toThrow()
   })
@@ -168,7 +168,7 @@ describe('RFC 823 selection semantics', () => {
       'get',
       'values',
       'guard',
-      `return ${generateMatchSelector(arms, 'get()', '__test')}`,
+      `return ${generateMatchSelector(arms, 'get()', '__test').code}`,
     )(get, values, guard)
     expect(result).toEqual([2, 42])
     expect(events).toEqual(['subject', 'value', 'guard:42'])
