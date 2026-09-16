@@ -19,12 +19,7 @@ describe('e2e: Transition', () => {
 
   const nextTick = () => (window as any).Vue.nextTick()
 
-  const transitionFinish = async (time = duration) => {
-    // Vue applies the enter/leave-to classes on the next two animation frames.
-    // Start the duration wait after those frames, including on busy CI runners.
-    await nextFrame()
-    await timeout(time + buffer)
-  }
+  const transitionFinish = (time = duration) => timeout(time + buffer)
 
   const classWhenTransitionStart = () =>
     page().evaluate(() => {
@@ -1698,17 +1693,21 @@ describe('e2e: Transition', () => {
         })
 
         await transitionFinish()
-        expect(await html('#container')).toBe('<div>CompA</div>')
+        await expect.poll(() => html('#container')).toBe('<div>CompA</div>')
 
         await click('#switchToB')
         await transitionFinish()
         await transitionFinish()
-        expect(await html('#container')).toBe('<div class="">CompB</div>')
+        await expect
+          .poll(() => html('#container'))
+          .toBe('<div class="">CompB</div>')
 
         await click('#switchToA')
         await transitionFinish()
         await transitionFinish()
-        expect(await html('#container')).toBe('<div class="">CompA</div>')
+        await expect
+          .poll(() => html('#container'))
+          .toBe('<div class="">CompA</div>')
 
         expect(onUnmountedSpyB).toBeCalledTimes(1)
       },
@@ -2411,21 +2410,27 @@ describe('e2e: Transition', () => {
         })
 
         await transitionFinish(60)
-        expect(await html('#container')).toBe(
-          '<div class=""><button>Go</button><div>1</div><!--teleport start--><!--teleport end--></div>',
-        )
+        await expect
+          .poll(() => html('#container'))
+          .toBe(
+            '<div class=""><button>Go</button><div>1</div><!--teleport start--><!--teleport end--></div>',
+          )
 
         await click('button')
         await transitionFinish(60)
-        expect(await html('#container')).toBe(
-          '<div class=""><button>Back</button><!--teleport start--><!--teleport end--></div>',
-        )
+        await expect
+          .poll(() => html('#container'))
+          .toBe(
+            '<div class=""><button>Back</button><!--teleport start--><!--teleport end--></div>',
+          )
 
         await click('button')
         await transitionFinish(60)
-        expect(await html('#container')).toBe(
-          '<div class=""><button>Go</button><div>3</div><!--teleport start--><!--teleport end--></div>',
-        )
+        await expect
+          .poll(() => html('#container'))
+          .toBe(
+            '<div class=""><button>Go</button><div>3</div><!--teleport start--><!--teleport end--></div>',
+          )
       },
       E2E_TIMEOUT,
     )
