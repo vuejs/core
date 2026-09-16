@@ -34,7 +34,10 @@ function hasMultipleChildren(node: ElementNode): boolean {
 
   if (children.length === 1 && first.type === NodeTypes.ELEMENT) {
     // has v-for
-    if (findDir(first, 'for')) {
+    if (
+      findDir(first, 'for') &&
+      !findDir(first, 'for')?.forParseResult?.matchScope
+    ) {
       return true
     }
 
@@ -55,7 +58,7 @@ function hasMultipleChildren(node: ElementNode): boolean {
         c.type === NodeTypes.ELEMENT &&
         (!isTemplateNode(c) || !hasMultipleChildren(c)) &&
         // not has v-for
-        !findDir(c, 'for') &&
+        (!findDir(c, 'for') || findDir(c, 'for')?.forParseResult?.matchScope) &&
         // if the first child has v-if, the rest should also have v-else-if/v-else
         (index === 0 ? findDir(c, 'if') : hasElse(c)),
     )

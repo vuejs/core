@@ -4,6 +4,7 @@ import {
   type RootNode,
   baseParse,
   generate,
+  lowerMatchDirectives,
   noopDirectiveTransform,
   parserOptions,
   trackSlotScopes,
@@ -51,6 +52,8 @@ export function compile(
   // Save raw options for AST. This is needed when performing sub-transforms
   // on slot vnode branches.
   rawOptionsMap.set(ast, options)
+
+  lowerMatchDirectives(ast, options)
 
   transform(ast, {
     ...options,

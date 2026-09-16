@@ -1,0 +1,68 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SSR v-match > lowers patterns and branch bindings without runtime directives 1`] = `
+"import { mergeProps as _mergeProps } from "vue"
+import { ssrRenderAttrs as _ssrRenderAttrs, ssrInterpolate as _ssrInterpolate } from "vue/server-renderer"
+
+export function ssrRender(_ctx, _push, _parent, _attrs) {
+  { const __vue_match_0 = ([((__vue_match_0_select_0) => { { const __vue_match_0_select_3 = (() => { if (__vue_match_0_select_0 == null) return null; if (!("kind" in Object(__vue_match_0_select_0))) return null; const __vue_match_0_select_1 = __vue_match_0_select_0["kind"]; if (!(__vue_match_0_select_1 === 'ok')) return null; if (!("data" in Object(__vue_match_0_select_0))) return null; const __vue_match_0_select_2 = __vue_match_0_select_0["data"];  { const data = __vue_match_0_select_2; if (!(data > 0)) return null; return [0, data]; } })(); if (__vue_match_0_select_3 !== null) return __vue_match_0_select_3; } { const __vue_match_0_select_4 = (() => {   {   return [1]; } })(); if (__vue_match_0_select_4 !== null) return __vue_match_0_select_4; } return [-1]; })(_ctx.result)])[0];
+  if (__vue_match_0[0] === 0) {
+    { const [, data] = ([__vue_match_0])[0];
+    _push(\`<p\${
+      _ssrRenderAttrs(_mergeProps({ title: data }, { ref_for: true }, _attrs))
+    }>\${
+      _ssrInterpolate(data)
+    }</p>\`)
+    }
+  } else if (__vue_match_0[0] === 1) {
+    _push(\`<p\${_ssrRenderAttrs(_mergeProps({ ref_for: true }, _attrs))}>empty</p>\`)
+  } else {
+    _push(\`<!---->\`)
+  }
+  }
+}"
+`;
+
+exports[`Vapor v-match > lowers patterns and branch bindings without runtime directives 1`] = `
+"import { txt as _txt, setProp as _setProp, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, computed as _computed, createIf as _createIf, template as _template } from 'vue';
+const t0 = _template("<p> ")
+const t1 = _template("<p>empty")
+
+export function render(_ctx) {
+  const n0 = ((_for_item0) => {
+    const n2 = _createIf(() => (_for_item0.value[0] === 0), () => {
+      const n4 = ((_for_item1) => {
+        const n6 = t0()
+        const x6 = _txt(n6)
+        _renderEffect(() => {
+          const _data = _for_item1.value[1]
+          _setProp(n6, "title", _data)
+          _setText(x6, _toDisplayString(_data))
+        })
+        return n6
+      })(_computed(() => ([_for_item0.value])[0]))
+      return n4
+    }, () => _createIf(() => (_for_item0.value[0] === 1), () => {
+      const n8 = t1()
+      return n8
+    }), 261 /* TRUE_SINGLE_ROOT, FALSE_SINGLE_ROOT, KEYED_INDEX_0 */)
+    return n2
+  })(_computed(() => ([((__vue_match_0_select_0) => { { const __vue_match_0_select_3 = (() => { if (__vue_match_0_select_0 == null) return null; if (!("kind" in Object(__vue_match_0_select_0))) return null; const __vue_match_0_select_1 = __vue_match_0_select_0["kind"]; if (!(__vue_match_0_select_1 === 'ok')) return null; if (!("data" in Object(__vue_match_0_select_0))) return null; const __vue_match_0_select_2 = __vue_match_0_select_0["data"];  { const data = __vue_match_0_select_2; if (!(data > 0)) return null; return [0, data]; } })(); if (__vue_match_0_select_3 !== null) return __vue_match_0_select_3; } { const __vue_match_0_select_4 = (() => {   {   return [1]; } })(); if (__vue_match_0_select_4 !== null) return __vue_match_0_select_4; } return [-1]; })(_ctx.result)])[0]))
+  return n0
+}"
+`;
+
+exports[`client v-match > lowers patterns and branch bindings without runtime directives 1`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode } from "vue"
+
+export function render(_ctx, _cache) {
+  return (() => { const __vue_match_0 = ([((__vue_match_0_select_0) => { { const __vue_match_0_select_3 = (() => { if (__vue_match_0_select_0 == null) return null; if (!("kind" in Object(__vue_match_0_select_0))) return null; const __vue_match_0_select_1 = __vue_match_0_select_0["kind"]; if (!(__vue_match_0_select_1 === 'ok')) return null; if (!("data" in Object(__vue_match_0_select_0))) return null; const __vue_match_0_select_2 = __vue_match_0_select_0["data"];  { const data = __vue_match_0_select_2; if (!(data > 0)) return null; return [0, data]; } })(); if (__vue_match_0_select_3 !== null) return __vue_match_0_select_3; } { const __vue_match_0_select_4 = (() => {   {   return [1]; } })(); if (__vue_match_0_select_4 !== null) return __vue_match_0_select_4; } return [-1]; })(_ctx.result)])[0]; return (__vue_match_0[0] === 0)
+    ? (() => { const [, data] = ([__vue_match_0])[0]; return (_openBlock(), _createElementBlock("p", {
+        key: 0,
+        title: data
+      }, _toDisplayString(data), 9 /* TEXT, PROPS */, ["title"])) })()
+    : (__vue_match_0[0] === 1)
+      ? (_openBlock(), _createElementBlock("p", { key: 1 }, "empty"))
+      : _createCommentVNode("v-if", true) })()
+}"
+`;

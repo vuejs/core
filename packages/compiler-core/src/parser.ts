@@ -357,7 +357,7 @@ const tokenizer = new Tokenizer(stack, {
           // directive
           let expParseMode = ExpParseMode.Normal
           if (!__BROWSER__) {
-            if (currentProp.name === 'for') {
+            if (currentProp.name === 'for' || currentProp.name === 'when') {
               expParseMode = ExpParseMode.Skip
             } else if (currentProp.name === 'slot') {
               expParseMode = ExpParseMode.Params
@@ -764,7 +764,15 @@ function backTrack(index: number, c: number) {
   return i
 }
 
-const specialTemplateDir = new Set(['if', 'else', 'else-if', 'for', 'slot'])
+const specialTemplateDir = new Set([
+  'if',
+  'else',
+  'else-if',
+  'for',
+  'slot',
+  'match',
+  'when',
+])
 function isFragmentTemplate({ tag, props }: ElementNode): boolean {
   if (tag === 'template') {
     for (let i = 0; i < props.length; i++) {

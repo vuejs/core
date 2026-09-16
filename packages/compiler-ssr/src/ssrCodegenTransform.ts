@@ -1,6 +1,5 @@
 import {
   type BlockStatement,
-  type CallExpression,
   type CompilerError,
   type CompilerOptions,
   ElementTypes,
@@ -84,7 +83,7 @@ export interface SSRTransformContext {
   onError: (error: CompilerError) => void
   helper<T extends symbol>(name: T): T
   pushStringPart(part: TemplateLiteral['elements'][0]): void
-  pushStatement(statement: IfStatement | CallExpression): void
+  pushStatement(statement: JSChildNode | IfStatement): void
 }
 
 function createSSRTransformContext(

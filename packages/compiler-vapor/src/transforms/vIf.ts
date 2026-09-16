@@ -286,7 +286,10 @@ function shouldForceMultiRoot(context: TransformContext<ElementNode>): boolean {
     parent.type === NodeTypes.ELEMENT &&
     parent.tagType === ElementTypes.TEMPLATE &&
     parent.props.some(
-      prop => prop.type === NodeTypes.DIRECTIVE && prop.name === 'for',
+      prop =>
+        prop.type === NodeTypes.DIRECTIVE &&
+        prop.name === 'for' &&
+        !prop.forParseResult?.matchScope,
     )
   )
 }

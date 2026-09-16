@@ -33,6 +33,7 @@ import {
   KEEP_ALIVE,
   MERGE_PROPS,
   NORMALIZE_PROPS,
+  RENDER_SLOT,
   SUSPENSE,
   TELEPORT,
   TO_HANDLERS,
@@ -390,10 +391,33 @@ function getUnnormalizedProps(
   return [props, callPath]
 }
 export function injectProp(
-  node: VNodeCall | RenderSlotCall,
+  node: BlockCodegenNode,
   prop: Property,
   context: TransformContext,
 ): void {
+  if (node.type === NodeTypes.JS_SCOPE_EXPRESSION) {
+    injectScopeBody(node.body)
+    return
+  }
+  function injectScopeBody(body: JSChildNode | TemplateChildNode): void {
+    if (body.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+      injectScopeBody(body.consequent)
+      injectScopeBody(body.alternate)
+    } else if (
+      body.type === NodeTypes.ELEMENT ||
+      body.type === NodeTypes.IF ||
+      body.type === NodeTypes.FOR
+    ) {
+      if (body.codegenNode) injectScopeBody(body.codegenNode)
+    } else if (
+      body.type === NodeTypes.VNODE_CALL ||
+      body.type === NodeTypes.JS_SCOPE_EXPRESSION ||
+      (body.type === NodeTypes.JS_CALL_EXPRESSION &&
+        body.callee === RENDER_SLOT)
+    ) {
+      injectProp(body as BlockCodegenNode, prop, context)
+    }
+  }
   if (node.type !== NodeTypes.VNODE_CALL && injectSlotKey(node, prop)) {
     return
   }
@@ -596,7 +620,7 @@ export function hasScopeRef(
 
 export function getMemoedVNodeCall(
   node: BlockCodegenNode | MemoExpression,
-): VNodeCall | RenderSlotCall {
+): BlockCodegenNode {
   if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
     return node.arguments[1].returns as VNodeCall
   } else {

@@ -3,6 +3,7 @@ import {
   type NodeTransform,
   NodeTypes,
   createCallExpression,
+  createCompoundExpression,
   createForLoopParams,
   createFunctionExpression,
   createStructuralDirectiveTransform,
@@ -25,6 +26,27 @@ export function ssrProcessFor(
   context: SSRTransformContext,
   disableNestedFragments = false,
 ): void {
+  if (node.parseResult.matchScope) {
+    context.pushStatement(
+      createCompoundExpression([
+        '{ const ',
+        node.valueAlias!,
+        ' = (',
+        node.source,
+        ')[0];',
+      ]),
+    )
+    const fragment =
+      node.children.length !== 1 ||
+      ![NodeTypes.ELEMENT, NodeTypes.IF, NodeTypes.FOR].includes(
+        node.children[0].type,
+      )
+    for (const statement of processChildrenAsStatement(node, context, fragment)
+      .body)
+      context.pushStatement(statement)
+    context.pushStatement(createCompoundExpression(['}']))
+    return
+  }
   const needFragmentWrapper =
     !disableNestedFragments &&
     (node.children.length !== 1 || node.children[0].type !== NodeTypes.ELEMENT)

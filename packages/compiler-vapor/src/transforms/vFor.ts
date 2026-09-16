@@ -90,6 +90,7 @@ export function processFor(
 
     context.dynamic.operation = {
       type: IRNodeTypes.FOR,
+      matchScope: parseResult.matchScope,
       id,
       ...context.effectBoundary(),
       source: source as SimpleExpressionNode,

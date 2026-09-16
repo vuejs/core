@@ -8,6 +8,7 @@ import {
 import { type CodegenResult, generate } from './codegen'
 import type { RootNode } from './ast'
 import { extend, isString } from '@vue/shared'
+import { lowerMatchDirectives } from './transforms/vMatch'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'
 import { transformExpression } from './transforms/transformExpression'
@@ -102,6 +103,8 @@ export function baseCompile(
       options.expressionPlugins = [...(expressionPlugins || []), 'typescript']
     }
   }
+
+  lowerMatchDirectives(ast, resolvedOptions)
 
   transform(
     ast,

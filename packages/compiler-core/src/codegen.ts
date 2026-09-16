@@ -700,6 +700,15 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
       genVNodeCall(node, context)
       break
 
+    case NodeTypes.JS_SCOPE_EXPRESSION:
+      context.push(`(() => { const `)
+      genNode(node.value, context)
+      context.push(` = (`)
+      genNode(node.source, context)
+      context.push(`)[0]; return `)
+      genNode(node.body, context)
+      context.push(` })()`)
+      break
     case NodeTypes.JS_CALL_EXPRESSION:
       genCallExpression(node, context)
       break
