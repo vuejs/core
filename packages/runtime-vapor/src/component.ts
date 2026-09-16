@@ -52,6 +52,7 @@ import {
   getBlockFirstNode,
   insert,
   isBlock,
+  registerNestedVDOMCleanup,
   remove,
 } from './block'
 import {
@@ -406,6 +407,7 @@ export function createComponent(
         normalizeRawSlots(rawSlots),
         once,
       )
+      if (_insertionParent) registerNestedVDOMCleanup(frag)
       if (!isHydrating) {
         if (_insertionParent) {
           insert(
@@ -434,6 +436,7 @@ export function createComponent(
         // Teleports mounted via insertion state are not part of the returned
         // block tree, so scope disposal must tear down their target-side state.
         onScopeDispose(() => frag.disposeTarget(), true)
+        registerNestedVDOMCleanup(frag)
       } else {
         // Give normal block removal (and Transition leave preparation) the
         // current stack before falling back to target-side cleanup.
@@ -611,6 +614,7 @@ export function createComponent(
         ),
       true,
     )
+    if (_insertionParent) registerNestedVDOMCleanup(instance)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
       mountComponent(instance, _insertionParent!, _insertionAnchor)
@@ -1293,11 +1297,13 @@ export function createPlainElement(
       if (isHydrating) locateHydrationNode()
       renderEffect(() => frag.update(getSlot(rawSlots as RawSlots, 'default')))
       if (!isHydrating) insert(frag, el)
+      registerNestedVDOMCleanup(frag)
     } else {
       const slot = getSlot(rawSlots as RawSlots, 'default')
       if (slot) {
         const block = slot()
         if (!isHydrating) insert(block, el)
+        registerNestedVDOMCleanup(block)
       }
     }
     if (isHydrating) {
