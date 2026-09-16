@@ -134,7 +134,13 @@ export function genChildren(
       child.template == null &&
       child.operation === undefined &&
       !(child.flags & (DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE))
-    const accessPath = genAccessPath(context, from, elementIndex, prev)
+    const accessPath = genAccessPath(
+      context,
+      from,
+      elementIndex,
+      prev,
+      child.isText,
+    )
 
     if (inlinePlaceholder) {
       if (prev && prev[2]) {
@@ -208,23 +214,25 @@ function genAccessPath(
   from: CodeFragments,
   elementIndex: number,
   prev: [variable: string, elementIndex: number, reusable: boolean] | undefined,
+  isText?: boolean,
 ): CodeFragment[] {
+  const textHint = isText ? 'true' : undefined
   if (prev) {
     return elementIndex - prev[1] === 1
-      ? genCall(helper('next'), prev[0])
-      : genCall(helper('nthChild'), from, String(elementIndex))
+      ? genCall(helper('next'), prev[0], textHint)
+      : genCall(helper('nthChild'), from, String(elementIndex), textHint)
   }
 
   if (elementIndex === 0) {
-    return genCall(helper('child'), from)
+    return genCall(helper('child'), from, textHint)
   }
 
   // adjacent to the first child: chain off it instead of an indexed lookup
   if (elementIndex === 1) {
     const firstChild = genCall(helper('child'), from)
-    return genCall(helper('next'), firstChild)
+    return genCall(helper('next'), firstChild, textHint)
   }
-  return genCall(helper('nthChild'), from, String(elementIndex))
+  return genCall(helper('nthChild'), from, String(elementIndex), textHint)
 }
 
 /**

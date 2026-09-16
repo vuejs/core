@@ -429,7 +429,7 @@ function adoptTemplateImpl(
 ): Node | null {
   if (target.type !== 8 /* Comment */) {
     node = target.blank
-      ? resolveBlankTextTarget(node)
+      ? resolveBlankTextTarget(node, parentNode(node)!)
       : resolveHydrationTarget(node)
   }
 
@@ -852,18 +852,20 @@ export function isRecreatedNode(node: Node | null | undefined): boolean {
  * before template adoption. Preserve any remaining boundary or sibling while
  * seeding the missing text at its logical position.
  */
-function resolveBlankTextTarget(node: Node): Node {
-  node = skipUntrackedAnchors(node)!
+export function resolveBlankTextTarget(
+  node: Node | null,
+  parent: ParentNode,
+): Node {
+  node = skipUntrackedAnchors(node)
 
-  if (node.nodeType === 3 /* Text */) {
+  if (node && node.nodeType === 3 /* Text */) {
     return node
   }
 
-  const parent = parentNode(node)!
   const text = createTextNode()
   parent.insertBefore(text, node)
   // the seeded text takes over the logical position `node` was cached at
-  updateLastLocatedLogicalChild(parent, node, text)
+  if (node) updateLastLocatedLogicalChild(parent, node, text)
   return text
 }
 

@@ -392,4 +392,78 @@ describe('Vapor Mode hydration', () => {
     await nextTick()
     expect(container.innerHTML).toBe(html)
   })
+
+  test.each([
+    ['{{ data.txt }}<br>', 0, 'foo<br>', '<br>'],
+    ['<br>{{ data.txt }}', 1, '<br>foo', '<br>'],
+    ['<br><br>{{ data.txt }}', 2, '<br><br>foo', '<br><br>'],
+  ])(
+    'empty interpolation among element children: %s',
+    async (template, index, updated, initial) => {
+      const data = reactive({ txt: '' })
+      const { container, html } = await testHydration(
+        `<template><p>${template}</p></template>`,
+        {},
+        data,
+      )
+
+      expect(html).toBe(`<p>${initial}</p>`)
+      expect(container.innerHTML).toBe(html)
+      const p = container.firstChild!
+      const text = p.childNodes[index]
+      const br = container.querySelector('br')
+      expect(text.nodeType).toBe(3)
+      expect(text.nodeValue).toBe('')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(container.innerHTML).toBe(`<p>${updated}</p>`)
+      expect(p.childNodes[index]).toBe(text)
+      expect(container.querySelector('br')).toBe(br)
+
+      data.txt = ''
+      await nextTick()
+      expect(container.innerHTML).toBe(html)
+      expect(p.childNodes[index]).toBe(text)
+    },
+  )
+
+  test('empty text positions preserve nested sibling references', async () => {
+    const data = reactive({ before: '', after: '', title: 'one' })
+    const { container, html } = await testHydration(
+      `<template><div>
+        <p><i/>{{ data.before }}<b :title="data.title"/>{{ data.after }}</p>
+        <p><i/>{{ data.before }}<b :title="data.title"/>{{ data.after }}</p>
+      </div></template>`,
+      {},
+      data,
+    )
+
+    expect(container.innerHTML).toBe(html)
+    const parents = Array.from(container.querySelectorAll('p'))
+    const children = parents.map(p => Array.from(p.childNodes))
+    for (const nodes of children) {
+      expect(nodes.map(n => n.nodeType)).toEqual([1, 3, 1, 3])
+    }
+
+    data.before = 'before'
+    data.after = 'after'
+    data.title = 'two'
+    await nextTick()
+    for (const [index, p] of parents.entries()) {
+      expect(p.innerHTML).toBe('<i></i>before<b title="two"></b>after')
+      children[index].forEach((child, i) => {
+        expect(p.childNodes[i]).toBe(child)
+      })
+    }
+
+    data.before = data.after = ''
+    data.title = 'one'
+    await nextTick()
+    expect(container.innerHTML).toBe(html)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+  })
 })

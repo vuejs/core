@@ -86,3 +86,23 @@ export function render(_ctx) {
   return n1
 }"
 `;
+
+exports[`compiler: text transform > text references among element children 1`] = `
+"import { child as _child, next as _next, nthChild as _nthChild, toDisplayString as _toDisplayString, setText as _setText, setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<p> <br> <br> ", 1)
+
+export function render(_ctx) {
+  const n4 = t0()
+  const n0 = _child(n4, true)
+  const n1 = _next(n0)
+  const n2 = _next(n1, true)
+  const n3 = _nthChild(n4, 4, true)
+  _renderEffect(() => {
+    _setText(n0, _toDisplayString(_ctx.before))
+    _setProp(n1, "id", _ctx.id)
+    _setText(n2, _toDisplayString(_ctx.between))
+    _setText(n3, _toDisplayString(_ctx.after))
+  })
+  return n4
+}"
+`;
