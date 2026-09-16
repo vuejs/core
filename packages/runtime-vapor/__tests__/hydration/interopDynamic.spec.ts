@@ -1,5 +1,11 @@
 import { createVaporSSRApp } from '../../src'
-import { defineAsyncComponent, nextTick, ref } from '@vue/runtime-dom'
+import {
+  defineAsyncComponent,
+  h,
+  nextTick,
+  ref,
+  shallowRef,
+} from '@vue/runtime-dom'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
 import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
@@ -1415,5 +1421,51 @@ describe('VDOM interop', () => {
       <!--[--><button>1</button><!--dynamic-component--><!--if--><span>tail-updated</span><!--]-->
       "
     `)
+  })
+
+  test('hydrated VNode dynamic component should complete out-in leave', async () => {
+    const A = { render: () => h('div', 'A') }
+    const B = { render: () => h('div', 'B') }
+    const current = shallowRef(h(A))
+    let finishLeave!: () => void
+    const onLeave = vi.fn((_el: Element, done: () => void) => {
+      finishLeave = done
+    })
+    const onAfterLeave = vi.fn()
+    const data = ref({ current, onLeave, onAfterLeave })
+    const { container, app } = await testWithVaporApp(
+      `<template>
+        <Transition
+          mode="out-in"
+          :css="false"
+          @leave="data.onLeave"
+          @after-leave="data.onAfterLeave"
+        >
+          <component :is="data.current" />
+        </Transition>
+      </template>`,
+      undefined,
+      data,
+    )
+
+    const previous = container.querySelector('div')!
+    expect(previous.textContent).toBe('A')
+    expect(`mismatch`).not.toHaveBeenWarned()
+
+    current.value = h(B)
+    await nextTick()
+
+    expect(onLeave).toHaveBeenCalledOnce()
+    expect(previous.isConnected).toBe(true)
+    expect(container.textContent).toBe('A')
+    expect(onAfterLeave).not.toHaveBeenCalled()
+
+    finishLeave()
+    await nextTick()
+
+    expect(onAfterLeave).toHaveBeenCalledOnce()
+    expect(previous.isConnected).toBe(false)
+    expect(container.textContent).toBe('B')
+    app.unmount()
   })
 })

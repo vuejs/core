@@ -1229,7 +1229,6 @@ function mountVNode(
   frag.hydrate = () => {
     if (!isHydrating) return
     hydrateVNode(vnode, parentComponent as any, frag.slotScopeIds)
-    onScopeDispose(unmount, true)
     isMounted = true
     syncNodes()
   }
@@ -1277,7 +1276,6 @@ function mountVNode(
           namespace,
           frag.slotScopeIds,
         )
-        onScopeDispose(unmount, true)
         isMounted = true
       } else {
         // move
