@@ -478,5 +478,24 @@ describe('compiler: expression', () => {
       expect(code).not.contains('const _obj_Math_random')
       expect(code).contains('Math.random()')
     })
+
+    test('repeated optional chain does not replace a prefix of a longer chain', () => {
+      const { code } = compileWithExpression(`
+        <input
+          :value="user?.profile.name"
+          :title="user?.profile.name"
+          :data-length="user?.profile.name.length"
+        />
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _user = _ctx.user')
+      expect(code).contains('const _user_profile_name = _user?.profile.name')
+      expect(code).contains('_setValue(n0, _user_profile_name)')
+      expect(code).contains('_setProp(n0, "title", _user_profile_name)')
+      expect(code).contains(
+        '_setAttr(n0, "data-length", _user?.profile.name.length)',
+      )
+      expect(code).not.contains('_user_profile_name.length')
+    })
   })
 })
