@@ -1492,6 +1492,7 @@ describe('data-allow-mismatch', () => {
   })
 
   test('style mismatch w/ v-show', async () => {
+    // the client value wins right away; only the report is silenced
     const data = ref(false)
     const { container } = await mountWithHydration(
       `<section><div style="color:red;" data-allow-mismatch="style"></div></section>`,
@@ -1499,19 +1500,31 @@ describe('data-allow-mismatch', () => {
       data,
     )
     expect(container.innerHTML).toBe(
-      '<section><div style="color:red;" data-allow-mismatch="style"></div></section>',
+      '<section><div style="color: red; display: none;" data-allow-mismatch="style"></div></section>',
     )
 
     data.value = true
     await nextTick()
     expect(container.innerHTML).toBe(
-      '<section><div style="color:red;" data-allow-mismatch="style"></div></section>',
+      '<section><div style="color: red;" data-allow-mismatch="style"></div></section>',
     )
 
     data.value = false
     await nextTick()
     expect(container.innerHTML).toBe(
       '<section><div style="color: red; display: none;" data-allow-mismatch="style"></div></section>',
+    )
+    expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('style mismatch w/ v-show shown on the client', async () => {
+    const { container } = await mountWithHydration(
+      `<section><div style="color:red;display:none" data-allow-mismatch="style"></div></section>`,
+      `<section><div v-show="data" style="color: red;"></div></section>`,
+      ref(true),
+    )
+    expect(container.innerHTML).toBe(
+      '<section><div style="color: red;" data-allow-mismatch="style"></div></section>',
     )
     expect(`Hydration style mismatch`).not.toHaveBeenWarned()
   })
