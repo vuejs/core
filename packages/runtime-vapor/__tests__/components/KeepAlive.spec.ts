@@ -1124,8 +1124,10 @@ describe('VaporKeepAlive', () => {
   test('should unmount a component reactivated in a nested v-if branch', async () => {
     const deactivated = vi.fn()
     const unmounted = vi.fn()
+    let childInstance!: VaporComponentInstance
     const Child = defineVaporComponent({
       setup() {
+        childInstance = currentInstance as VaporComponentInstance
         onDeactivated(deactivated)
         onUnmounted(unmounted)
         return template(`<div>child</div>`)()
@@ -1151,21 +1153,30 @@ describe('VaporKeepAlive', () => {
     )
     const { host } = define(App).render()
     expect(host.textContent).toBe('child')
+    const initialScope = childInstance.unmountScope!
+    expect(initialScope.active).toBe(true)
 
     state.view = 'b'
     await nextTick()
     expect(host.textContent).toBe('b')
     expect(deactivated).toHaveBeenCalledTimes(1)
+    expect(initialScope.active).toBe(false)
+    expect(childInstance.unmountScope).toBeUndefined()
 
     state.view = 'child'
     await nextTick()
     expect(host.textContent).toBe('child')
+    const reactivatedScope = childInstance.unmountScope!
+    expect(reactivatedScope).not.toBe(initialScope)
+    expect(reactivatedScope.active).toBe(true)
 
     state.show = false
     await nextTick()
     expect(host.textContent).toBe('')
     expect(deactivated).toHaveBeenCalledTimes(2)
     expect(unmounted).toHaveBeenCalledTimes(1)
+    expect(reactivatedScope.active).toBe(false)
+    expect(childInstance.unmountScope).toBeUndefined()
   })
 
   async function assertNameMatch(props: LooseRawProps) {

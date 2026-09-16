@@ -613,8 +613,8 @@ export function createComponent(
         }
       }
     }
-    registerUnmount(instance)
     if (keepAliveCtx) instance.unmountScope = getCurrentScope()
+    registerUnmount(instance)
     if (_insertionParent) registerNestedVDOMCleanup(instance)
 
     if (!managedMount && (_insertionParent || isHydrating)) {
@@ -1514,17 +1514,19 @@ export function mountComponent(
 }
 
 function registerUnmount(instance: VaporComponentInstance): void {
-  onScopeDispose(
-    () =>
-      unmountComponent(
-        instance,
-        undefined,
-        __FEATURE_SUSPENSE__ && isInteropEnabled
-          ? resolveUnmountSuspense(instance.suspense)
-          : instance.suspense,
-      ),
-    true,
-  )
+  const scope = instance.unmountScope
+  onScopeDispose(() => {
+    if (scope && instance.unmountScope === scope) {
+      instance.unmountScope = undefined
+    }
+    unmountComponent(
+      instance,
+      undefined,
+      __FEATURE_SUSPENSE__ && isInteropEnabled
+        ? resolveUnmountSuspense(instance.suspense)
+        : instance.suspense,
+    )
+  }, true)
 }
 
 export function unmountComponent(
