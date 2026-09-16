@@ -305,6 +305,34 @@ describe('compiler: expression', () => {
       expect(code).contains('_setProp(n0, "id", _obj?.foo + _obj?.bar)')
     })
 
+    test('repeated optional chaining prefix', () => {
+      const { code } = compileWithExpression(
+        `<div :id="obj?.foo.bar" :title="obj?.foo.baz"></div>`,
+      )
+      expect(code).contains('const _obj = _ctx.obj')
+      expect(code).contains('_setProp(n0, "id", _obj?.foo.bar)')
+      expect(code).contains('_setProp(n0, "title", _obj?.foo.baz)')
+      expect(code).not.contains('_obj_foo')
+    })
+
+    test('repeated optional chaining prefix followed by an optional link', () => {
+      const { code } = compileWithExpression(
+        `<div :id="obj?.foo?.bar" :title="obj?.foo?.baz"></div>`,
+      )
+      expect(code).contains('const _obj_foo = _ctx.obj?.foo')
+      expect(code).contains('_setProp(n0, "id", _obj_foo?.bar)')
+      expect(code).contains('_setProp(n0, "title", _obj_foo?.baz)')
+    })
+
+    test('repeated optional chaining prefix with non-null assertion', () => {
+      const { code } = compileWithExpression(
+        `<div :id="obj?.foo!.bar" :title="obj?.foo!.baz"></div>`,
+      )
+      expect(code).contains('const _obj = _ctx.obj')
+      expect(code).contains('_setProp(n0, "id", _obj?.foo!.bar)')
+      expect(code).not.contains('_obj_foo')
+    })
+
     test('repeated optional chaining', () => {
       const { code } = compileWithExpression(
         `<div :id="obj?.foo" :title="obj?.foo"></div>`,
