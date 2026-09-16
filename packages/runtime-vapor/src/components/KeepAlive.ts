@@ -200,9 +200,18 @@ const VaporKeepAliveImpl = defineVaporComponent({
       )
     }
 
-    const processShapeFlag = (block: Block): CacheKey | false => {
+    const processShapeFlag = (
+      block: Block,
+      requireKeptAlive = false,
+    ): CacheKey | false => {
       const [innerBlock, interop, branchKey] = getInnerBlock(block)
-      if (!innerBlock || !shouldCache(innerBlock!, props, interop)) return false
+      if (
+        !innerBlock ||
+        (requireKeptAlive && !isKeptAlive(innerBlock, interop)) ||
+        !shouldCache(innerBlock, props, interop)
+      ) {
+        return false
+      }
 
       const cacheKey = resolveCacheKeyFromBlock(innerBlock, interop, branchKey)
       setShapeFlag(innerBlock, interop, cache.has(cacheKey))
@@ -283,6 +292,9 @@ const VaporKeepAliveImpl = defineVaporComponent({
       ([include, exclude]) => {
         include && pruneCache(name => matches(include, name))
         exclude && pruneCache(name => !matches(exclude, name))
+        // VDOM re-renders on prop change and caches the current branch, which
+        // may match now
+        cacheBlock()
       },
       // prune post-render after `current` has been updated
       { flush: 'post', deep: true },
@@ -376,8 +388,10 @@ const VaporKeepAliveImpl = defineVaporComponent({
           return false
         }
         const fragKey = getFragmentKey(frag)
+        // Like VDOM, a branch rendered while not matching include/exclude is
+        // not kept alive, even if it matches by the time it is removed.
         const cacheKey = withCurrentCacheKey(fragKey, () =>
-          processShapeFlag(frag.nodes),
+          processShapeFlag(frag.nodes, true),
         )
         if (cacheKey === false) {
           scope.stop()

@@ -1121,6 +1121,64 @@ describe('VaporKeepAlive', () => {
     expect(mounted).toHaveBeenCalledTimes(1)
   })
 
+  test('should unmount a component reactivated in a nested v-if branch', async () => {
+    const deactivated = vi.fn()
+    const unmounted = vi.fn()
+    let childInstance!: VaporComponentInstance
+    const Child = defineVaporComponent({
+      setup() {
+        childInstance = currentInstance as VaporComponentInstance
+        onDeactivated(deactivated)
+        onUnmounted(unmounted)
+        return template(`<div>child</div>`)()
+      },
+    })
+    const state = reactive({ show: true, view: 'child' })
+    const App = compile(
+      `<script setup vapor>
+        const state = _data
+        const Child = _components.Child
+      </script>
+      <template>
+        <div v-if="state.show">
+          <KeepAlive>
+            <span v-if="state.view === 'a'">a</span>
+            <Child v-else-if="state.view === 'child'" />
+            <span v-else>b</span>
+          </KeepAlive>
+        </div>
+      </template>`,
+      state as any,
+      { Child },
+    )
+    const { host } = define(App).render()
+    expect(host.textContent).toBe('child')
+    const initialScope = childInstance.unmountScope!
+    expect(initialScope.active).toBe(true)
+
+    state.view = 'b'
+    await nextTick()
+    expect(host.textContent).toBe('b')
+    expect(deactivated).toHaveBeenCalledTimes(1)
+    expect(initialScope.active).toBe(false)
+    expect(childInstance.unmountScope).toBeUndefined()
+
+    state.view = 'child'
+    await nextTick()
+    expect(host.textContent).toBe('child')
+    const reactivatedScope = childInstance.unmountScope!
+    expect(reactivatedScope).not.toBe(initialScope)
+    expect(reactivatedScope.active).toBe(true)
+
+    state.show = false
+    await nextTick()
+    expect(host.textContent).toBe('')
+    expect(deactivated).toHaveBeenCalledTimes(2)
+    expect(unmounted).toHaveBeenCalledTimes(1)
+    expect(reactivatedScope.active).toBe(false)
+    expect(childInstance.unmountScope).toBeUndefined()
+  })
+
   async function assertNameMatch(props: LooseRawProps) {
     const outerRef = ref(true)
     const viewRef = ref('one')
@@ -1594,9 +1652,9 @@ describe('VaporKeepAlive', () => {
   })
 
   describe('cache invalidation', () => {
-    function setup() {
+    function setup(include = 'one,two') {
       const viewRef = ref('one')
-      const includeRef = ref('one,two')
+      const includeRef = ref(include)
       define({
         setup() {
           return createComponent(
@@ -1611,9 +1669,9 @@ describe('VaporKeepAlive', () => {
       return { viewRef, includeRef }
     }
 
-    function setupExclude() {
+    function setupExclude(exclude = '') {
       const viewRef = ref('one')
-      const excludeRef = ref('')
+      const excludeRef = ref(exclude)
       define({
         setup() {
           return createComponent(
@@ -1696,6 +1754,47 @@ describe('VaporKeepAlive', () => {
       assertHookCalls(oneHooks, [1, 1, 2, 1, 0])
       // two should be pruned
       assertHookCalls(twoHooks, [1, 1, 1, 1, 1])
+    })
+
+    test('on include change matching current view', async () => {
+      const { viewRef, includeRef } = setup('two')
+
+      includeRef.value = 'one,two'
+      await nextTick()
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 0, 1, 0])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    })
+
+    test('on exclude change matching current view', async () => {
+      const { viewRef, excludeRef } = setupExclude('one')
+
+      excludeRef.value = ''
+      await nextTick()
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 0, 1, 0])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 1, 1, 0])
+    })
+
+    test('on include change matching current view + view switch', async () => {
+      const { viewRef, includeRef } = setup('two')
+
+      includeRef.value = 'one,two'
+      viewRef.value = 'two'
+      await nextTick()
+      assertHookCalls(oneHooks, [1, 1, 0, 0, 1])
+
+      viewRef.value = 'one'
+      await nextTick()
+      assertHookCalls(oneHooks, [2, 2, 1, 0, 1])
     })
 
     test('should not prune current active instance', async () => {
@@ -4745,5 +4844,34 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(host.textContent).toContain('A')
     expect(onEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('should unmount a deactivated component cached after an include change', async () => {
+    const data = ref({ include: 'two', view: 'one' })
+    const App = compile(
+      `<template>
+        <KeepAlive :include="data.include">
+          <component :is="components[data.view]" />
+        </KeepAlive>
+      </template>`,
+      data,
+      views,
+    )
+    const { app, host } = define(App).render()
+    expect(host.textContent).toBe('one')
+    expect(oneHooks.mounted).toHaveBeenCalledTimes(1)
+
+    data.value.include = 'one,two'
+    await nextTick()
+
+    data.value.view = 'two'
+    await nextTick()
+    expect(host.textContent).toBe('two')
+    expect(oneHooks.deactivated).toHaveBeenCalledTimes(1)
+    expect(oneHooks.unmounted).not.toHaveBeenCalled()
+
+    app.unmount()
+    await nextTick()
+    expect(oneHooks.unmounted).toHaveBeenCalledTimes(1)
   })
 })

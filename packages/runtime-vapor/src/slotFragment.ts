@@ -122,7 +122,7 @@ export interface SlotResolutionState {
   // A committed fallback can be invalid and therefore remain detached.
   fallbackInserted: boolean
   // Detached scope owning the active fallback's effects (see
-  // renderFallbackInScope); stopped by clearSlotFallback.
+  // renderFallbackInScope); stopped with the outlet or by clearSlotFallback.
   fallbackScope?: EffectScope
   // Validity of the exposed branch as of the last recheck; undefined before
   // the first recheck. Flips trigger notifyExposedValidityChange.
@@ -198,21 +198,24 @@ export function invalidateExposedSlotContent(state: SlotResolutionState): void {
   }
 }
 
-function clearSlotFallback(state: SlotResolutionState): void {
-  const fallback = state.activeFallback
-  if (fallback) {
-    const parentNode = state.getParentNode()
-    if (state.fallbackInserted && parentNode) {
-      remove(fallback, parentNode)
-    }
-    state.activeFallback = null
-    state.fallbackInserted = false
-  }
-  state.activeFallbackInvalidCallbacks = undefined
+function clearSlotFallback(
+  state: SlotResolutionState,
+  parentNode: ParentNode | null = state.getParentNode(),
+): void {
   if (state.fallbackScope) {
     state.fallbackScope.stop()
     state.fallbackScope = undefined
   }
+  const fallback = state.activeFallback
+  if (fallback) {
+    remove(
+      fallback,
+      state.fallbackInserted ? parentNode || undefined : undefined,
+    )
+    state.activeFallback = null
+    state.fallbackInserted = false
+  }
+  state.activeFallbackInvalidCallbacks = undefined
 }
 
 export function leaveSlotFallback(
@@ -230,8 +233,8 @@ export function leaveSlotFallback(
 
 // Renders the fallback into a dedicated detached scope: the fallback must
 // not die with whatever branch scope happens to be active when a recheck
-// fires, so its lifetime is managed manually (stopped by clearSlotFallback,
-// or right here when the render throws or yields nothing).
+// fires. The slot owner stops it on replacement or disposal; failed renders
+// are stopped here.
 function renderFallbackInScope(
   state: SlotResolutionState,
 ): (RenderedSlotFallback & { scope: EffectScope }) | undefined {
@@ -340,8 +343,12 @@ function renderAndCommitSlotFallback(
   }
 }
 
-export function disposeSlotResolution(state: SlotResolutionState): void {
-  clearSlotFallback(state)
+export function disposeSlotResolution(
+  state: SlotResolutionState,
+  parentNode?: ParentNode,
+): void {
+  // The enclosing block owns DOM removal when no parent is passed.
+  clearSlotFallback(state, parentNode || null)
   state.pendingRecheck = false
   state.pendingRecheckForce = false
   state.lastNodesValid = undefined
