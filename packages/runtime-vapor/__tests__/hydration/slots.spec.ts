@@ -1712,5 +1712,38 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    test('empty interpolation in named slot content keeps the following element', async () => {
+      const data = reactive({ txt: '' })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <template #foo>{{ data.txt }}<b>x</b></template>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template><div><slot name="foo"/></div></template>`,
+        },
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[--><b>x</b><!--]-->
+        </div>"
+      `,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "<div>
+        <!--[-->foo<b>x</b><!--]-->
+        </div>"
+      `,
+      )
+    })
   })
 })

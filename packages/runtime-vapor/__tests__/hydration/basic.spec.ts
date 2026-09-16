@@ -140,6 +140,33 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    test('empty text node at root followed by an element', async () => {
+      const data = reactive({ txt: '' })
+      const { container } = await testHydration(
+        `<template>{{ data.txt }}<span>s</span></template>`,
+        undefined,
+        data,
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>s</span><!--]-->
+        "
+      `,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.txt = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[-->foo<span>s</span><!--]-->
+        "
+      `,
+      )
+    })
   })
 
   describe('element', () => {
