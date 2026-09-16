@@ -5,6 +5,7 @@ import {
   canSetValueDirectly,
   getEscapedCssVarName,
   includeBooleanAttr,
+  isArray,
   isOn,
   isReservedProp,
   isSpecialBooleanAttr,
@@ -21,6 +22,7 @@ import { onBinding } from './event'
 import {
   type GenericComponentInstance,
   MismatchTypes,
+  type VShowElement,
   currentInstance,
   getAttributeMismatch,
   isFunctionalFallthroughKey,
@@ -40,6 +42,7 @@ import {
   toStyleMap,
   unsafeToTrustedHTML,
   vShowHidden,
+  vShowOriginalDisplay,
   warn,
   warnPropMismatch,
   xlinkNS,
@@ -362,6 +365,7 @@ export function setStyle(el: TargetElement, value: any): void {
         checkHydrationStyleMismatch(el, value, normalizedValue, false)
       }
       el.$sty = normalizedValue
+      hydrateVShowDisplay(el, normalizedValue)
       return
     }
 
@@ -380,10 +384,27 @@ function setStyleIncremental(el: any, value: any): NormalizedStyle | undefined {
       checkHydrationStyleMismatch(el, value, normalizedValue, true)
     }
     el[cacheKey] = normalizedValue
+    hydrateVShowDisplay(el, normalizedValue)
     return
   }
 
   patchStyle(el, el[cacheKey], (el[cacheKey] = normalizedValue))
+}
+
+// Hydration skips the style patch, so mirror patchStyle's v-show bookkeeping:
+// the client style's display is what v-show restores when shown.
+function hydrateVShowDisplay(
+  el: Element,
+  style: NormalizedStyle | string | undefined,
+): void {
+  if (vShowOriginalDisplay in el) {
+    let display = isString(style)
+      ? parseStringStyle(style).display
+      : style && style.display
+    if (isArray(display)) display = display[display.length - 1]
+    ;(el as VShowElement)[vShowOriginalDisplay] =
+      display == null ? '' : String(display)
+  }
 }
 
 export function setValue(

@@ -161,7 +161,6 @@ function writeDisplay(el: VShowElement, value: unknown): void {
     if (hasMismatch) {
       logMismatchError()
       el.style.display = value ? el[vShowOriginalDisplay]! : 'none'
-      if (!value) el[vShowOriginalDisplay] = ''
     }
   } else {
     el.style.display = value ? el[vShowOriginalDisplay]! : 'none'

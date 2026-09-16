@@ -627,6 +627,55 @@ describe('mismatch handling', () => {
     expect(`Hydration style mismatch`).toHaveBeenWarned()
   })
 
+  test('style mismatch w/ v-show keeps the SSR display for later toggles', async () => {
+    const data = ref(false)
+    const { container } = await mountWithHydration(
+      `<div style="display:flex;"></div>`,
+      `<div v-show="data" style="display: flex"></div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe('<div style="display: none;"></div>')
+    expect(`Hydration style mismatch`).toHaveBeenWarned()
+
+    data.value = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div style="display: flex;"></div>')
+  })
+
+  test('v-show restores the client :style display after hydration', async () => {
+    const data = ref({ show: false, style: { display: 'flex' } })
+    const { container } = await mountWithHydration(
+      `<div style="display:none;"></div>`,
+      `<div v-show="data.show" :style="data.style"></div>`,
+      data,
+    )
+    expect(container.innerHTML).toBe('<div style="display:none;"></div>')
+
+    data.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div style="display: flex;"></div>')
+  })
+
+  test('v-show restores the client :style display after a shown mismatch', async () => {
+    const data = ref({ show: true, style: { display: 'flex' } })
+    const { container } = await mountWithHydration(
+      `<div style="display:none;"></div>`,
+      `<div v-show="data.show" :style="data.style"></div>`,
+      data,
+    )
+    // the correction only lifts the SSR `display: none`, like vdom's beforeMount
+    expect(container.innerHTML).toBe('<div style=""></div>')
+    expect(`Hydration style mismatch`).toHaveBeenWarned()
+
+    data.value.show = false
+    await nextTick()
+    expect(container.innerHTML).toBe('<div style="display: none;"></div>')
+
+    data.value.show = true
+    await nextTick()
+    expect(container.innerHTML).toBe('<div style="display: flex;"></div>')
+  })
+
   test('attr mismatch', async () => {
     await mountWithHydration(
       `<div id="foo"></div>`,
