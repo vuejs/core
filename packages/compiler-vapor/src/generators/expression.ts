@@ -460,6 +460,26 @@ function analyzeExpressions(
           return
         }
 
+        // skip a member expression that an optional chain continues from
+        // without `?.`, since the cached variable is accessed outside of the
+        // chain and no longer short-circuits
+        // e.g. obj?.foo.bar - `const _obj_foo = obj?.foo` then `_obj_foo.bar`
+        let chainChild: Node = parent
+        let index = parentStack.length - 2
+        // a non-null assertion stays inside the chain, e.g. obj?.foo!.bar
+        while (parentStack[index]?.type === 'TSNonNullExpression') {
+          chainChild = parentStack[index--]
+        }
+        const chainParent = parentStack[index]
+        if (
+          chainParent &&
+          chainParent.type === 'OptionalMemberExpression' &&
+          !chainParent.optional &&
+          chainParent.object === chainChild
+        ) {
+          return
+        }
+
         // skip member expressions containing globally allowed identifiers
         // e.g. obj[Math.random()] - the call may have side effects
         if (hasGlobalIdentifier) return
