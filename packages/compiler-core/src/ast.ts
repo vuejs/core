@@ -48,6 +48,7 @@ export enum NodeTypes {
   JS_ASSIGNMENT_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
   JS_RETURN_STATEMENT,
+  JS_SCOPE_EXPRESSION,
 }
 
 export enum ElementTypes {
@@ -230,6 +231,8 @@ export interface SimpleExpressionNode extends Node {
    * - `false` means there was a parsing error
    */
   ast?: BabelNode | null | false
+  /** Original source ranges within a compiler-generated expression. */
+  sourceRanges?: { start: number; end: number; loc: SourceLocation }[]
   /**
    * Indicates this is an identifier for a hoist vnode call and points to the
    * hoisted node.
@@ -295,10 +298,12 @@ export interface ForNode extends Node {
   objectIndexAlias: ExpressionNode | undefined
   parseResult: ForParseResult
   children: TemplateChildNode[]
-  codegenNode?: ForCodegenNode
+  codegenNode?: ForCodegenNode | ScopeExpression
 }
 
 export interface ForParseResult {
+  /** Internal lexical scope introduced by patterned-template lowering. */
+  matchScope?: boolean
   source: ExpressionNode
   value: ExpressionNode | undefined
   key: ExpressionNode | undefined
@@ -348,6 +353,7 @@ export interface VNodeCall extends Node {
 // Vue render function generation.
 
 export type JSChildNode =
+  | ScopeExpression
   | VNodeCall
   | CallExpression
   | ObjectExpression
@@ -570,7 +576,14 @@ export interface DynamicSlotFnProperty extends Property {
   value: SlotFunctionExpression
 }
 
-export type BlockCodegenNode = VNodeCall | RenderSlotCall
+export interface ScopeExpression extends Node {
+  type: NodeTypes.JS_SCOPE_EXPRESSION
+  value: ExpressionNode
+  source: ExpressionNode
+  body: JSChildNode | TemplateChildNode
+}
+
+export type BlockCodegenNode = VNodeCall | RenderSlotCall | ScopeExpression
 
 export interface IfConditionalExpression extends ConditionalExpression {
   consequent: BlockCodegenNode | MemoExpression

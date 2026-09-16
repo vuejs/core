@@ -85,3 +85,6 @@ export {
   CompilerDeprecationTypes,
   type CompilerCompatOptions,
 } from './compat/compatConfig'
+
+export * from './patterns'
+export { lowerMatchDirectives } from './transforms/vMatch'

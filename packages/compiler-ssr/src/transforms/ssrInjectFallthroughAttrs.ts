@@ -18,6 +18,9 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   // transformExpression.
   if (node.type === NodeTypes.ROOT) {
     context.identifiers._attrs = 1
+    const children = filterNonCommentChildren(node)
+    if (children.length === 1 && isMatchScope(children[0]))
+      injectMatchAttrs(children[0])
   }
 
   if (
@@ -52,6 +55,10 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
 }
 
 function injectFallthroughAttrs(node: RootNode | TemplateChildNode) {
+  if (isMatchScope(node)) {
+    injectMatchAttrs(node)
+    return
+  }
   if (
     node.type === NodeTypes.ELEMENT &&
     (node.tagType === ElementTypes.ELEMENT ||
@@ -67,4 +74,30 @@ function injectFallthroughAttrs(node: RootNode | TemplateChildNode) {
       loc: locStub,
     })
   }
+}
+
+function isMatchScope(node: RootNode | TemplateChildNode) {
+  return (
+    node.type === NodeTypes.ELEMENT &&
+    findDir(node, 'for')?.forParseResult?.matchScope
+  )
+}
+
+function injectMatchAttrs(node: RootNode | TemplateChildNode) {
+  if (node.type !== NodeTypes.ELEMENT) return
+  if (isMatchScope(node)) {
+    const children = filterNonCommentChildren(node)
+    if (children.length === 1) injectMatchAttrs(children[0])
+    else if (
+      children.every(
+        c =>
+          c.type === NodeTypes.ELEMENT &&
+          findDir(c, /^(if|else-if|else)$/, true),
+      )
+    ) {
+      for (const child of children) injectMatchAttrs(child)
+    }
+  } else if (node.tagType === ElementTypes.TEMPLATE && hasSingleChild(node)) {
+    injectMatchAttrs(filterNonCommentChildren(node)[0])
+  } else injectFallthroughAttrs(node)
 }

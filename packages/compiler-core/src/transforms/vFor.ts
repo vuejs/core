@@ -20,6 +20,7 @@ import {
   type SimpleExpressionNode,
   type SlotOutletNode,
   type VNodeCall,
+  convertToBlock,
   createBlockStatement,
   createCallExpression,
   createCompoundExpression,
@@ -54,6 +55,51 @@ export const transformFor: NodeTransform = createStructuralDirectiveTransform(
   (node, dir, context) => {
     const { helper, removeHelper } = context
     return processFor(node, dir, context, forNode => {
+      if (forNode.parseResult.matchScope) {
+        const key = findProp(node, 'key', false, true)
+        const keyValue =
+          key?.type === NodeTypes.DIRECTIVE
+            ? key.exp
+            : key?.value && createSimpleExpression(key.value.content, true)
+        const keyExpression =
+          keyValue && !__BROWSER__ && context.prefixIdentifiers
+            ? processExpression(keyValue as SimpleExpressionNode, context)
+            : keyValue
+        return () => {
+          const children = forNode.children
+          const child = children.length === 1 ? children[0] : undefined
+          const body =
+            child &&
+            (child.type === NodeTypes.ELEMENT ||
+              child.type === NodeTypes.IF ||
+              child.type === NodeTypes.FOR)
+              ? child.codegenNode!
+              : createVNodeCall(
+                  context,
+                  helper(FRAGMENT),
+                  undefined,
+                  children,
+                  PatchFlags.STABLE_FRAGMENT,
+                  undefined,
+                  undefined,
+                  true,
+                )
+          if (body.type === NodeTypes.VNODE_CALL) convertToBlock(body, context)
+          forNode.codegenNode = {
+            type: NodeTypes.JS_SCOPE_EXPRESSION,
+            value: forNode.valueAlias!,
+            source: forNode.source,
+            body,
+            loc: node.loc,
+          }
+          if (keyExpression)
+            injectProp(
+              forNode.codegenNode,
+              createObjectProperty('key', keyExpression),
+              context,
+            )
+        }
+      }
       // create the loop render function expression now, and add the
       // iterator on exit after all children have been traversed
       const renderExp = createCallExpression(helper(RENDER_LIST), [

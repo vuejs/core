@@ -80,7 +80,7 @@ export function genFor(
   }
 
   const { selectorPatterns, keyOnlyBindingPatterns, skippedEffectIndexes } =
-    matchPatterns(render, keyProp, idMap, context)
+    matchPatterns(render, oper.matchScope ? undefined : keyProp, idMap, context)
   const selectorDeclarations: CodeFragment[] = []
   const selectorName = (i: number) =>
     selectorPatterns.length > 1 ? `_selector${id}_${i}` : `_selector${id}`
@@ -100,7 +100,24 @@ export function genFor(
   const blockFn = context.withId(() => {
     const frag: CodeFragment[] = []
     frag.push('(', ...args, ') => {', INDENT_START)
-    if (selectorPatterns.length || keyOnlyBindingPatterns.length) {
+    if (oper.matchScope && keyProp) {
+      frag.push(
+        NEWLINE,
+        'return ',
+        ...genCall(
+          helper('createKeyedFragment'),
+          ['() => (', ...genExpression(keyProp, context), ')'],
+          [
+            '() => {',
+            INDENT_START,
+            ...genBlockContent(render, context),
+            INDENT_END,
+            NEWLINE,
+            '}',
+          ],
+        ),
+      )
+    } else if (selectorPatterns.length || keyOnlyBindingPatterns.length) {
       frag.push(
         ...genBlockContent(
           render,
@@ -142,6 +159,21 @@ export function genFor(
     return frag
   }, idMap)
   exitScope()
+
+  if (oper.matchScope) {
+    return [
+      NEWLINE,
+      `const n${id} = (`,
+      ...blockFn,
+      `)(`,
+      ...genCall(helper('computed'), [
+        '() => (',
+        ...genExpression(source, context),
+        ')[0]',
+      ]),
+      ')',
+    ]
+  }
 
   const flags = genForFlags(
     onlyChild,

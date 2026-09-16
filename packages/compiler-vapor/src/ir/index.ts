@@ -110,6 +110,7 @@ export interface IfIRNode extends BaseIRNode, EffectBoundary, InsertionState {
 }
 
 export interface IRFor {
+  matchScope?: boolean
   source: SimpleExpressionNode
   value?: SimpleExpressionNode
   key?: SimpleExpressionNode

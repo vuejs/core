@@ -5,6 +5,7 @@ import {
   type ParserOptions,
   type RootNode,
   createRoot,
+  findDir,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 
@@ -36,5 +37,16 @@ export function resolveTemplateAST(
   const template = newAST.children.find(
     node => node.type === NodeTypes.ELEMENT && node.tag === 'template',
   ) as ElementNode
-  return createRoot(template.children, inAST.source)
+  return createTemplateRoot(template, inAST.source)
+}
+
+export function createTemplateRoot(
+  template: ElementNode,
+  source: string,
+): RootNode {
+  const match = findDir(template, 'match', true)
+  return createRoot(
+    match ? [{ ...template, props: [match] }] : template.children,
+    source,
+  )
 }

@@ -2,6 +2,7 @@ import {
   type CompilerOptions,
   ConstantTypes,
   type ElementNode,
+  type ForCodegenNode,
   type ForNode,
   type IfNode,
   NodeTypes,
@@ -510,7 +511,8 @@ describe('compiler: cacheStatic transform', () => {
       },
       patchFlag: PatchFlags.UNKEYED_FRAGMENT,
     })
-    const innerBlockCodegen = forBlockCodegen!.children.arguments[1]
+    const innerBlockCodegen = (forBlockCodegen! as ForCodegenNode).children
+      .arguments[1]
     expect(innerBlockCodegen.returns).toMatchObject({
       type: NodeTypes.VNODE_CALL,
       tag: `"div"`,
@@ -766,7 +768,8 @@ describe('compiler: cacheStatic transform', () => {
         },
         patchFlag: PatchFlags.UNKEYED_FRAGMENT,
       })
-      const innerBlockCodegen = forBlockCodegen!.children.arguments[1]
+      const innerBlockCodegen = (forBlockCodegen! as ForCodegenNode).children
+        .arguments[1]
       expect(innerBlockCodegen.returns).toMatchObject({
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`,

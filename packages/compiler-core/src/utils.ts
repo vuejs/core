@@ -19,12 +19,14 @@ import {
   type RootNode,
   type SimpleExpressionNode,
   type SlotOutletNode,
+  type SourceLocation,
   type TemplateChildNode,
   type TemplateNode,
   type TextNode,
   type VNodeCall,
   createCallExpression,
   createObjectExpression,
+  locStub,
 } from './ast'
 import type { TransformContext } from './transform'
 import {
@@ -33,6 +35,7 @@ import {
   KEEP_ALIVE,
   MERGE_PROPS,
   NORMALIZE_PROPS,
+  RENDER_SLOT,
   SUSPENSE,
   TELEPORT,
   TO_HANDLERS,
@@ -232,6 +235,35 @@ export const isFnExpression: (
   context: Pick<TransformContext, 'expressionPlugins'>,
 ) => boolean = __BROWSER__ ? isFnExpressionBrowser : isFnExpressionNode
 
+export function getExpressionRange(
+  node: SimpleExpressionNode,
+  start: number,
+  end: number,
+): SourceLocation {
+  if (node.sourceRanges) {
+    const range = node.sourceRanges.find(
+      range => start >= range.start && end <= range.end,
+    )
+    if (!range) return locStub
+    const { loc } = range
+    return {
+      start: advancePositionWithClone(
+        loc.start,
+        loc.source,
+        start - range.start,
+      ),
+      end: advancePositionWithClone(loc.start, loc.source, end - range.start),
+      source: loc.source.slice(start - range.start, end - range.start),
+    }
+  }
+  const source = node.content.slice(start, end)
+  return {
+    start: advancePositionWithClone(node.loc.start, source, start),
+    end: advancePositionWithClone(node.loc.start, source, end),
+    source,
+  }
+}
+
 export function advancePositionWithClone(
   pos: Position,
   source: string,
@@ -390,10 +422,44 @@ function getUnnormalizedProps(
   return [props, callPath]
 }
 export function injectProp(
-  node: VNodeCall | RenderSlotCall,
+  node: BlockCodegenNode | CacheExpression,
   prop: Property,
   context: TransformContext,
 ): void {
+  if (node.type === NodeTypes.JS_CACHE_EXPRESSION) {
+    injectScopeBody(node.value)
+    return
+  }
+  if (node.type === NodeTypes.JS_SCOPE_EXPRESSION) {
+    injectScopeBody(node.body)
+    return
+  }
+  function injectScopeBody(body: JSChildNode | TemplateChildNode): void {
+    if (body.type === NodeTypes.JS_CACHE_EXPRESSION) {
+      injectScopeBody(body.value)
+    } else if (
+      body.type === NodeTypes.JS_CALL_EXPRESSION &&
+      body.callee === WITH_MEMO
+    ) {
+      injectScopeBody(getMemoedVNodeCall(body as MemoExpression))
+    } else if (body.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
+      injectScopeBody(body.consequent)
+      injectScopeBody(body.alternate)
+    } else if (
+      body.type === NodeTypes.ELEMENT ||
+      body.type === NodeTypes.IF ||
+      body.type === NodeTypes.FOR
+    ) {
+      if (body.codegenNode) injectScopeBody(body.codegenNode)
+    } else if (
+      body.type === NodeTypes.VNODE_CALL ||
+      body.type === NodeTypes.JS_SCOPE_EXPRESSION ||
+      (body.type === NodeTypes.JS_CALL_EXPRESSION &&
+        body.callee === RENDER_SLOT)
+    ) {
+      injectProp(body as BlockCodegenNode, prop, context)
+    }
+  }
   if (node.type !== NodeTypes.VNODE_CALL && injectSlotKey(node, prop)) {
     return
   }
@@ -596,7 +662,7 @@ export function hasScopeRef(
 
 export function getMemoedVNodeCall(
   node: BlockCodegenNode | MemoExpression,
-): VNodeCall | RenderSlotCall {
+): BlockCodegenNode {
   if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
     return node.arguments[1].returns as VNodeCall
   } else {

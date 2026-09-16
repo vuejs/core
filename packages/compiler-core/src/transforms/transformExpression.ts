@@ -24,7 +24,7 @@ import {
   isStaticPropertyKey,
   walkIdentifiers,
 } from '../babelUtils'
-import { advancePositionWithClone, findDir, isSimpleIdentifier } from '../utils'
+import { findDir, getExpressionRange, isSimpleIdentifier } from '../utils'
 import {
   genPropsAccessExp,
   hasOwn,
@@ -359,16 +359,11 @@ export function processExpression(
     if (leadingText.length || id.prefix) {
       children.push(leadingText + (id.prefix || ``))
     }
-    const source = rawExp.slice(start, end)
     children.push(
       createSimpleExpression(
         id.name,
         false,
-        {
-          start: advancePositionWithClone(node.loc.start, source, start),
-          end: advancePositionWithClone(node.loc.start, source, end),
-          source,
-        },
+        getExpressionRange(node, start, end),
         id.isConstant
           ? ConstantTypes.CAN_STRINGIFY
           : ConstantTypes.NOT_CONSTANT,

@@ -12,6 +12,7 @@ import {
   type SourceLocation,
   advancePositionWithClone,
   createSimpleExpression,
+  getExpressionRange,
   isInDestructureAssignment,
   isStaticProperty,
   walkIdentifiers,
@@ -115,11 +116,7 @@ export function genExpression(
           ...genIdentifier(
             source,
             context,
-            {
-              start: advancePositionWithClone(node.loc.start, source, start),
-              end: advancePositionWithClone(node.loc.start, source, end),
-              source,
-            },
+            getExpressionRange(node, start, end),
             hasMemberExpression ? undefined : assignment,
             id,
             parent,

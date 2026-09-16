@@ -2,6 +2,7 @@ import {
   type CompilerError,
   type ComponentNode,
   ElementTypes,
+  type ForNode,
   type IfBranchNode,
   type NodeTransform,
   NodeTypes,
@@ -65,7 +66,7 @@ export function postTransformTransition(
 }
 
 function defaultHasMultipleChildren(
-  node: ComponentNode | IfBranchNode,
+  node: ComponentNode | IfBranchNode | ForNode,
 ): boolean {
   // filter out potential comment nodes (#1352) and whitespace (#4637)
   const children = (node.children = node.children.filter(
@@ -74,7 +75,8 @@ function defaultHasMultipleChildren(
   const child = children[0]
   return (
     children.length !== 1 ||
-    child.type === NodeTypes.FOR ||
+    (child.type === NodeTypes.FOR &&
+      (!child.parseResult.matchScope || defaultHasMultipleChildren(child))) ||
     (child.type === NodeTypes.IF &&
       child.branches.some(defaultHasMultipleChildren))
   )

@@ -1,6 +1,7 @@
 import {
   type CompilerOptions as BaseCompilerOptions,
   type RootNode,
+  lowerMatchDirectives,
   parse,
 } from '@vue/compiler-dom'
 import { extend, isString } from '@vue/shared'
@@ -50,6 +51,8 @@ export function compile(
       ]
     }
   }
+
+  lowerMatchDirectives(ast, resolvedOptions)
 
   const ir = transform(
     ast,
