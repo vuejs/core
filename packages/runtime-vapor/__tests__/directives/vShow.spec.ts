@@ -261,4 +261,43 @@ describe('directive: v-show', () => {
     expect(vdom.after).toBe('<p>p</p>')
     expect(vapor.after).toBe('<p>p</p><!--if-->')
   })
+
+  test('ignores a slot outlet root like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot/></template>`,
+        App: `<template><components.Child v-show="false"><div>x</div></components.Child></template>`,
+      },
+      () => ref({}),
+      async () => {},
+    )
+    expect(vdom.after).toBe('<div>x</div>')
+    expect(vapor.after).toBe('<div>x</div><!--slot-->')
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+    expect(
+      'v-show used on component with non-single-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  test('ignores a slot outlet reached through the root chain like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot/></template>`,
+        Outer: `<template><components.Child v-if="data.ok"><slot/></components.Child></template>`,
+        App: `<template><components.Outer v-show="false"><div>x</div></components.Outer></template>`,
+      },
+      () => ref({ ok: true }),
+      async () => {},
+    )
+    expect(vdom.after).toBe('<div>x</div>')
+    expect(vapor.after).toBe('<div>x</div><!--slot--><!--slot--><!--if-->')
+    expect(
+      'Runtime directive used on component with non-element root node',
+    ).toHaveBeenWarned()
+    expect(
+      'v-show used on component with non-single-element root node',
+    ).toHaveBeenWarned()
+  })
 })

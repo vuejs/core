@@ -16,6 +16,7 @@ import {
   type VaporTransitionHooks,
   isValidBlock,
 } from '../block'
+import { isSlotOutletFragment } from '../fragment'
 import { isHydrating } from '../dom/hydration'
 import { isInteropEnabled } from '../vdomInteropState'
 import { isTransitionEnabled } from '../transition'
@@ -34,6 +35,8 @@ export function applyVShow(target: Block, source: () => any): void {
   let transition: VaporTransitionHooks | undefined
   // the chain ends in content that does not exist yet; not a shape warning
   let unresolved = false
+  // a slot outlet is a fragment root in vdom: nothing for v-show to land on
+  let slotRoot = false
 
   const visitor: RootChainVisitor = {
     onComponent(instance) {
@@ -55,12 +58,14 @@ export function applyVShow(target: Block, source: () => any): void {
       mark(instance)
     },
     onDynamicFragment(frag) {
+      if (isSlotOutletFragment(frag)) return (slotRoot = true)
       mark(frag)
       register((frag.bm ||= []), apply)
     },
   }
   if (isInteropEnabled) {
     visitor.onInteropFragment = frag => {
+      if (isSlotOutletFragment(frag)) return (slotRoot = true)
       mark(frag)
       if (isTransitionEnabled && frag.$transition) transition = frag.$transition
       // vdom patches the content first, then notifies through `u`
@@ -71,11 +76,11 @@ export function applyVShow(target: Block, source: () => any): void {
 
   const apply = (nodes: Block): void => {
     transition = undefined
-    unresolved = false
+    unresolved = slotRoot = false
     const root = getRootElement(nodes, visitor)
     if (root) {
       setDisplay(root as VShowElement, value, transition)
-    } else if (__DEV__ && !unresolved && isValidBlock(nodes)) {
+    } else if (__DEV__ && (slotRoot || (!unresolved && isValidBlock(nodes)))) {
       warn(
         `v-show used on component with non-single-element root node ` +
           `and will be ignored.`,
