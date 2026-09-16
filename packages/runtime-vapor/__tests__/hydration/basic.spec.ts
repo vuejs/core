@@ -362,4 +362,34 @@ describe('Vapor Mode hydration', () => {
       expect((container.firstChild as any).foo).toBe(msg.value)
     })
   })
+
+  test('empty interpolation before a multi-root component', async () => {
+    const data = reactive({ txt: '' })
+    const { container, html } = await testHydration(
+      `<template>{{ data.txt }}<components.Child /></template>`,
+      { Child: `<template>child<span>suffix</span></template>` },
+      data,
+    )
+
+    expect(container.innerHTML).toBe(html)
+    const text = container.childNodes[1]
+    const childText = container.childNodes[3]
+    expect(text.nodeType).toBe(3)
+    expect(text.nodeValue).toBe('')
+    expect(childText.nodeValue).toBe('child')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+
+    data.txt = 'prefix'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<!--[-->prefix<!--[-->child<span>suffix</span><!--]--><!--]-->',
+    )
+    expect(container.childNodes[1]).toBe(text)
+    expect(container.childNodes[3]).toBe(childText)
+
+    data.txt = ''
+    await nextTick()
+    expect(container.innerHTML).toBe(html)
+  })
 })

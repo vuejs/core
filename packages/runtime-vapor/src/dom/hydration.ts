@@ -848,31 +848,12 @@ export function isRecreatedNode(node: Node | null | undefined): boolean {
 }
 
 /**
- * The target for a blank text template — the node a dynamic text block adopts.
- * Such a block renders nothing when its value is empty, and SSR emits no text
- * node for it, so the server position it owns may hold no text at all.
- *
- * Unlike `resolveHydrationTarget` this steps *into* the SSR range under the
- * cursor (past its `[`) but never out of one: skipping a `]` or a teleport
- * marker would adopt the node that follows the block and drop the server DOM
- * behind it. When nothing textual is left at the position, seed an empty text
- * node there instead of reporting a mismatch — the recovery `runtime-core`
- * performs for an empty text vnode (#5728, #7215).
+ * SSR omits empty text nodes. Block owners consume their opening markers
+ * before template adoption. Preserve any remaining boundary or sibling while
+ * seeding the missing text at its logical position.
  */
 function resolveBlankTextTarget(node: Node): Node {
-  while (true) {
-    // Same single flag read as `resolveHydrationTarget`: an untracked anchor
-    // holds no server position and is stepped over, any other claimed anchor
-    // is the position itself. An unclaimed `[` opens the range this block
-    // owns, so step into it.
-    const flags = (node as Anchor).$vha!
-    if (flags ? !(flags & AnchorFlags.UNTRACKED) : !isComment(node, '[')) {
-      break
-    }
-    const next = node.nextSibling
-    if (!next) return node
-    node = next
-  }
+  node = skipUntrackedAnchors(node)!
 
   if (node.nodeType === 3 /* Text */) {
     return node
