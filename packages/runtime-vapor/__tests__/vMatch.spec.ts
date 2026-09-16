@@ -130,7 +130,7 @@ describe('v-match VDOM / Vapor parity', () => {
             <template v-match="value">
               <section v-when="{ tag: value.tag, const value } if (value === 'arm')" :title="value">
                 <b>{{ value }}</b>
-                <i v-for="value in [1, 2]">{{ value }}</i>
+                <i v-for="value in value">{{ value }}</i>
                 <components.Panel v-slot="{ value }"><em>{{ value }}</em></components.Panel>
                 <strong>{{ value }}</strong>
                 <template v-match="value"><small v-when="const value">{{ value }}</small></template>
@@ -152,7 +152,7 @@ describe('v-match VDOM / Vapor parity', () => {
         }),
       async (data, root) => {
         const text = () => root.textContent!.replace(/\s/g, '')
-        expect(text()).toBe('arm12slotarmarmarmotherothersetup')
+        expect(text()).toBe('armarmslotarmarmarmotherothersetup')
         expect(root.querySelector('section')!.title).toBe('arm')
         data.value.slot = 'updated'
         data.value.rows[0].value = 'fallback'
