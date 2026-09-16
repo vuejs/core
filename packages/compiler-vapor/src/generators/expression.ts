@@ -455,6 +455,11 @@ function analyzeExpressions(
           if (isGloballyAllowed(id.name)) hasGlobalIdentifier = true
         })
 
+        // skip a member expression that cannot be fully extracted,
+        // e.g. obj[foo ? 'a' : 'b'] - caching the incomplete source would
+        // generate invalid or incorrect code
+        if (memberExp === undefined) return
+
         const parentOfMemberExp = parentStack[parentStack.length - 2]
         if (parentOfMemberExp && isCallExpression(parentOfMemberExp)) {
           return
@@ -1026,11 +1031,16 @@ function getUniqueDeclarationName(
   return name
 }
 
+/**
+ * Returns the source of a member expression, or `undefined` if it contains a
+ * node that cannot be extracted, e.g. `foo[bar ? 'a' : 'b']`. Such expressions
+ * must not be cached - the extracted source would be incomplete.
+ */
 function extractMemberExpression(
   exp: Node,
   onIdentifier: (id: Identifier) => void,
-): string {
-  if (!exp) return ''
+): string | undefined {
+  if (!exp) return
   switch (exp.type) {
     case 'Identifier': // foo[bar]
       onIdentifier(exp)
@@ -1041,25 +1051,46 @@ function extractMemberExpression(
       return exp.value.toString()
     case 'BinaryExpression': {
       // foo[bar + 1]
-      const expression = `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
+      const left = extractMemberExpression(exp.left, onIdentifier)
+      const right = extractMemberExpression(exp.right, onIdentifier)
+      if (left === undefined || right === undefined) return
+      const expression = `${left} ${exp.operator} ${right}`
       return exp.extra?.parenthesized ? `(${expression})` : expression
     }
     case 'CallExpression': // foo[bar(baz)]
-      return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
-    case 'OptionalCallExpression': // foo[bar?.(baz)]
-      return `${extractMemberExpression(exp.callee, onIdentifier)}?.(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
+    case 'OptionalCallExpression': {
+      // foo[bar?.(baz)]
+      const callee = extractMemberExpression(exp.callee, onIdentifier)
+      if (callee === undefined) return
+      const args: string[] = []
+      for (const arg of exp.arguments) {
+        const extracted = extractMemberExpression(arg, onIdentifier)
+        if (extracted === undefined) return
+        args.push(extracted)
+      }
+      const optional = exp.type === 'OptionalCallExpression' ? '?.' : ''
+      return `${callee}${optional}(${args.join(', ')})`
+    }
     case 'MemberExpression': // foo[bar.baz]
-    case 'OptionalMemberExpression': // foo?.bar
+    case 'OptionalMemberExpression': {
+      // foo?.bar
       const object = extractMemberExpression(exp.object, onIdentifier)
+      if (object === undefined) return
+      const property = extractMemberExpression(
+        exp.property,
+        exp.computed ? onIdentifier : NOOP,
+      )
+      if (property === undefined) return
       const optional = exp.type === 'OptionalMemberExpression' && exp.optional
       const prop = exp.computed
-        ? `${optional ? '?.' : ''}[${extractMemberExpression(exp.property, onIdentifier)}]`
-        : `${optional ? '?.' : '.'}${extractMemberExpression(exp.property, NOOP)}`
+        ? `${optional ? '?.' : ''}[${property}]`
+        : `${optional ? '?.' : '.'}${property}`
       return `${object}${prop}`
+    }
     case 'TSNonNullExpression': // foo!.bar
-      return `${extractMemberExpression(exp.expression, onIdentifier)}`
+      return extractMemberExpression(exp.expression, onIdentifier)
     default:
-      return ''
+      return
   }
 }
 

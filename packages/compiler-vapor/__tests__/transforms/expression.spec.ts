@@ -530,5 +530,67 @@ describe('compiler: expression', () => {
         '_setProp(n1, "title", _items[_page - 1 * _pageSize])',
       )
     })
+
+    test('repeated member expression with a conditional key', () => {
+      const { code } = compileWithExpression(`
+        <div :id="labels[active ? 'on' : 'off']"></div>
+        <div :title="labels[active ? 'on' : 'off']"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        `const _labels_active_on_off = _ctx.labels[_ctx.active ? 'on' : 'off']`,
+      )
+      expect(code).contains('_setProp(n0, "id", _labels_active_on_off)')
+      expect(code).contains('_setProp(n1, "title", _labels_active_on_off)')
+    })
+
+    test('repeated member expression with a template literal key', () => {
+      const { code } = compileWithExpression(`
+        <div :id="obj[\`k\${i}\`]"></div>
+        <div :title="obj[\`k\${i}\`]"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _obj_k_i = _ctx.obj[`k${_ctx.i}`]')
+      expect(code).contains('_setProp(n0, "id", _obj_k_i)')
+      expect(code).contains('_setProp(n1, "title", _obj_k_i)')
+    })
+
+    test('member expressions with different unsupported keys', () => {
+      const { code } = compileWithExpression(`
+        <div :id="labels[active ? 'on' : 'off']"></div>
+        <div :title="labels[status || 'unknown']"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('const _labels = _ctx.labels')
+      expect(code).contains(
+        `_setProp(n0, "id", _labels[_ctx.active ? 'on' : 'off'])`,
+      )
+      expect(code).contains(
+        `_setProp(n1, "title", _labels[_ctx.status || 'unknown'])`,
+      )
+    })
+
+    test('member expressions with different array keys', () => {
+      const { code } = compileWithExpression(`
+        <div :id="obj[[foo][0]]"></div>
+        <div :title="obj[[bar][0]]"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains('_setProp(n0, "id", _obj[[_ctx.foo][0]])')
+      expect(code).contains('_setProp(n1, "title", _obj[[_ctx.bar][0]])')
+      expect(code).not.contains('_ctx.obj[[0]]')
+    })
+
+    test('repeated member expression with a call key keeps its arguments', () => {
+      const { code } = compileWithExpression(`
+        <div :id="obj[foo(bar ? 1 : 2)]"></div>
+        <div :title="obj[foo(bar ? 1 : 2)]"></div>
+      `)
+      expect(code).matchSnapshot()
+      expect(code).contains(
+        'const _obj_foo_bar_1_2 = _ctx.obj[_ctx.foo(_ctx.bar ? 1 : 2)]',
+      )
+      expect(code).not.contains('_ctx.foo()')
+    })
   })
 })
