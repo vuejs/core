@@ -251,6 +251,19 @@ describe('component: slots', () => {
     expect(vapor.text).toBe(vdom.text)
   })
 
+  test('should keep number literal slot props as numbers like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><slot :count="0" :level="1" :ratio="1.5"/></template>`,
+        App: `<template><components.Child v-slot="{ count, level, ratio }">{{ typeof count }}/{{ count + 1 }}/{{ count === 0 }}/{{ level === 1 }}/{{ ratio }}</components.Child></template>`,
+      },
+      () => ref(0),
+      () => {},
+    )
+    expect(vdom.text).toBe('number/1/true/true/1.5')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
   describe('slot fallback boundary', () => {
     test('slot fragment insert uses active fallback output', () => {
       const container = document.createElement('div')

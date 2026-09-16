@@ -134,6 +134,19 @@ describe('compiler: transform <slot> outlets', () => {
     })
   })
 
+  test('slot outlet with number literal props', () => {
+    // slot props are passed along as raw values, so number literals must not
+    // be stringified the way they are for plain element attributes
+    const { code } = compileWithSlotsOutlet(
+      `<slot :count="0" :level="1" :ratio="1.5" :str="'1'" />`,
+    )
+    expect(code).toContain(`count: 0`)
+    expect(code).toContain(`level: 1`)
+    expect(code).toContain(`ratio: 1.5`)
+    expect(code).toContain(`str: "1"`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('statically named slot outlet with v-bind="obj"', () => {
     const { ir, code } = compileWithSlotsOutlet(
       `<slot name="foo" foo="bar" v-bind="obj" :baz="qux" />`,

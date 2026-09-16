@@ -43,6 +43,26 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('slot with number literal props', async () => {
+      // the server renders the prop as a number, so the client has to as well,
+      // otherwise hydration mismatches
+      const { container } = await testHydration(
+        `<template>
+          <components.Child v-slot="{ count }"><span>{{ typeof count }}/{{ count + 1 }}</span></components.Child>
+        </template>`,
+        {
+          Child: `<template><slot :count="0"/></template>`,
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>number/1</span><!--]-->
+        "
+      `,
+      )
+    })
+
     test('dynamic slot outlet update preserves slotted scope id', async () => {
       const data = ref({ slotName: 'one' })
       const childCode = `<template><slot :name="data.slotName" /></template>`
