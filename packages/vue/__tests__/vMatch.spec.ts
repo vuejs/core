@@ -148,4 +148,30 @@ describe('v-match rendering', () => {
     expect(root.textContent).toBe('one:2,4empty')
     app.unmount()
   })
+
+  test('SSR and hydration preserve shadowed loop bindings and props', async () => {
+    const rows = ref([{ value: 'arm' }])
+    const App = {
+      ...component(
+        `<main><div v-for="value in rows"><template v-match="value"><section v-when="{ const value }" :title="value"><b v-for="value in [1, 2]">{{ value }}</b><i>{{ value }}</i></section></template><p>{{ value.value }}</p></div><footer>{{ value }}</footer></main>`,
+        () => ({ rows }),
+      ),
+      props: ['value'],
+    }
+    const root = document.createElement('div')
+    root.innerHTML = await SSR.renderToString(
+      createSSRApp(App, { value: 'prop' }),
+    )
+    expect(root.textContent).toBe('12armarmprop')
+    const section = root.querySelector('section')!
+    expect(section.title).toBe('arm')
+    const app = createSSRApp(App, { value: 'prop' })
+    app.mount(root)
+    expect(root.querySelector('section')).toBe(section)
+    rows.value[0].value = 'updated'
+    await nextTick()
+    expect(root.textContent).toBe('12updatedupdatedprop')
+    expect(section.title).toBe('updated')
+    app.unmount()
+  })
 })

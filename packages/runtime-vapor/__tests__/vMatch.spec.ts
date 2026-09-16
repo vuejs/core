@@ -116,4 +116,103 @@ describe('v-match VDOM / Vapor parity', () => {
     expect(results.vdom.text).toBe('empty')
     expect(results.vapor.text).toBe('empty')
   })
+
+  test('arm bindings shadow setup, loop and slot bindings without leaking', async () => {
+    await renderParity(
+      {
+        Panel: '<template><slot :value="data.slot"/></template>',
+        App: `<script setup>
+          const data = _data;
+          const components = _components;
+          const value = 'setup';
+        </script><template>
+          <div v-for="value in data.rows">
+            <template v-match="value">
+              <section v-when="{ tag: value.tag, const value } if (value === 'arm')" :title="value">
+                <b>{{ value }}</b>
+                <i v-for="value in [1, 2]">{{ value }}</i>
+                <components.Panel v-slot="{ value }"><em>{{ value }}</em></components.Panel>
+                <strong>{{ value }}</strong>
+                <template v-match="value"><small v-when="const value">{{ value }}</small></template>
+              </section>
+              <u v-when="const value">{{ value.value }}</u>
+            </template>
+            <p>{{ value.value }}</p>
+          </div>
+          <footer>{{ value }}</footer>
+        </template>`,
+      },
+      () =>
+        ref({
+          rows: [
+            { tag: 'setup', value: 'arm' },
+            { tag: 'setup', value: 'other' },
+          ],
+          slot: 'slot',
+        }),
+      async (data, root) => {
+        const text = () => root.textContent!.replace(/\s/g, '')
+        expect(text()).toBe('arm12slotarmarmarmotherothersetup')
+        expect(root.querySelector('section')!.title).toBe('arm')
+        data.value.slot = 'updated'
+        data.value.rows[0].value = 'fallback'
+        await nextTick()
+        expect(text()).toBe('fallbackfallbackotherothersetup')
+      },
+    )
+  })
+
+  test('$event is local to an inline handler and shadows an arm binding', async () => {
+    await renderParity(
+      {
+        App: `<template><template v-match="data.value">
+          <button v-when="const $event if ($event === 'arm')" :title="$event" @click="data.clicked.push($event.type)">{{ $event }}</button>
+          <i v-when="_"/>
+        </template></template>`,
+      },
+      () => ref({ value: 'arm', clicked: [] as string[] }),
+      (data, root) => {
+        const button = root.querySelector('button')!
+        expect(button.title).toBe('arm')
+        expect(button.textContent).toBe('arm')
+        button.click()
+        expect(data.value.clicked).toEqual(['click'])
+      },
+    )
+  })
+
+  test('props and component slot parameters occupy different arm scopes', async () => {
+    await renderParity(
+      {
+        Panel: `<script setup>
+          const data = _data;
+          defineProps(['label']);
+        </script><template><div :title="label"><slot :value="data.slot"/></div></template>`,
+        Child: `<script setup>
+          const data = _data;
+          const components = _components;
+          defineProps(['value']);
+        </script><template>
+          <template v-match="data.row">
+            <components.Panel v-when="{ const value } if (value === 'arm')" :label="value" v-slot="{ value }"><b>{{ value }}</b></components.Panel>
+            <i v-when="_"/>
+          </template>
+          <p>{{ value }}</p>
+        </template>`,
+        App: '<template><components.Child :value="data.prop"/></template>',
+      },
+      () => ref({ row: { value: 'arm' }, prop: 'prop', slot: 'slot' }),
+      async (data, root) => {
+        expect(root.querySelector('div')!.title).toBe('arm')
+        expect(root.querySelector('b')!.textContent).toBe('slot')
+        expect(root.querySelector('p')!.textContent).toBe('prop')
+        data.value.prop = 'updated'
+        data.value.slot = 'nested'
+        await nextTick()
+        expect(root.querySelector('div')!.title).toBe('arm')
+        expect(root.querySelector('b')!.textContent).toBe('nested')
+        expect(root.querySelector('p')!.textContent).toBe('updated')
+      },
+    )
+  })
 })
