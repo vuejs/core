@@ -384,7 +384,6 @@ export {
   resolveTransitionProps,
   TransitionPropsValidators,
   forceReflow,
-  vtcKey,
   type ElementWithTransition,
 } from './components/Transition'
 /**
