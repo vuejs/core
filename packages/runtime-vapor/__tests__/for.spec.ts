@@ -1290,6 +1290,58 @@ describe('createFor', () => {
     expect(active).toEqual(['b', 'c', 'b', 'c'])
   })
 
+  test('inserts items before a following item that renders an empty branch', async () => {
+    const branches = `<p v-if="it.k === 1">p{{ it.id }}</p><b v-else-if="it.k === 2">b{{ it.id }}</b>`
+    const act = async (data: Ref<any>) => {
+      data.value.list.unshift({ id: 2, k: 0 })
+      await nextTick()
+      data.value.list.unshift({ id: 3, k: 1 })
+      await nextTick()
+      data.value.list[1].k = 2
+    }
+    const makeData = () => ref({ list: [{ id: 1, k: 1 }] })
+
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><div><template v-for="it in data.list" :key="it.id">${branches}</template></div></template>`,
+      },
+      makeData,
+      act,
+    )
+    expect(vdom.text).toBe('p3b2p1')
+    expect(vapor.text).toBe(vdom.text)
+
+    const components = await renderParity(
+      {
+        Row: `<script setup>defineProps(['it'])</script><template>${branches}</template>`,
+        App: `<template><div><components.Row v-for="it in data.list" :key="it.id" :it="it" /></div></template>`,
+      },
+      makeData,
+      act,
+    )
+    expect(components.vdom.text).toBe('p3b2p1')
+    expect(components.vapor.text).toBe(components.vdom.text)
+  })
+
+  test('inserts items before a following slot item with an empty fallback', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><div><template v-for="it in data.list" :key="it.id"><slot :it="it"><i v-if="it.fb">f{{ it.id }}</i></slot></template></div></template>`,
+        App: `<template><components.Child><template #default="{ it }"><b v-if="it.c">c{{ it.id }}</b></template></components.Child></template>`,
+      },
+      () => ref({ list: [{ id: 1, c: true, fb: false }] }),
+      async data => {
+        data.value.list[0].c = false
+        await nextTick()
+        data.value.list.unshift({ id: 2, c: true, fb: false })
+        await nextTick()
+        data.value.list[1].c = true
+      },
+    )
+    expect(vdom.text).toBe('c2c1')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
   describe('readonly source', () => {
     test('should not allow mutation', () => {
       const arr = readonly(reactive([{ foo: 1 }]))
