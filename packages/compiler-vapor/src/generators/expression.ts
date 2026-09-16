@@ -790,7 +790,12 @@ function processRepeatedExpressions(
           setExpressionReplacement(expressionReplacements, exp, varName, null)
         }
         // foo + foo + baz -> foo + foo_baz
-        else if (processed.content.includes(content)) {
+        // An optional chain may continue past the cached expression, so only
+        // replace exact matches to preserve short-circuiting.
+        else if (
+          !content.includes('?.') &&
+          processed.content.includes(content)
+        ) {
           const replacements = findContentReplacements(
             processed,
             content,
