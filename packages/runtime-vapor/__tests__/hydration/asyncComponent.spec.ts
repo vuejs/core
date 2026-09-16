@@ -1084,5 +1084,47 @@ describe('Vapor Mode hydration', () => {
         '<!--[--><div><button>inner</button><!--async component--></div><!--async component--><span>after</span><!--]-->',
       )
     })
+
+    test('deferred async component with multiple roots keeps the next sibling', async () => {
+      const data = ref({ msg: 'hello' })
+      const compCode = `<b>{{ data.msg }}</b><i>{{ data.msg }}</i>`
+      const appCode = `<components.AsyncComp/><components.AsyncComp/>`
+
+      const SSRAsync = defineAsyncComponent(() =>
+        Promise.resolve(compileVaporComponent(compCode, data, undefined, true)),
+      )
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(
+          compileVaporComponent(appCode, data, { AsyncComp: SSRAsync }, true),
+        ),
+      )
+
+      const hydrates: (() => void)[] = []
+      const AsyncComp = defineVaporAsyncComponent({
+        loader: () => Promise.resolve(compileVaporComponent(compCode, data)),
+        hydrate(hydrate) {
+          hydrates.push(hydrate)
+        },
+      })
+      const App = compileVaporComponent(appCode, data, { AsyncComp })
+      const container = document.createElement('div')
+      container.innerHTML = html
+      document.body.appendChild(container)
+      createVaporSSRApp(App).mount(container)
+      await new Promise(r => setTimeout(r))
+      expect(hydrates.length).toBe(2)
+
+      const serverNodes = [...container.querySelectorAll('b, i')]
+      hydrates.forEach(hydrate => hydrate())
+      await new Promise(r => setTimeout(r))
+      // the second component must adopt the server nodes instead of
+      // re-creating them
+      expect([...container.querySelectorAll('b, i')]).toEqual(serverNodes)
+      expect('Hydration children mismatch').not.toHaveBeenWarned()
+
+      data.value.msg = 'world'
+      await nextTick()
+      expect(container.textContent).toBe('worldworldworldworld')
+    })
   })
 })
