@@ -1039,8 +1039,11 @@ function extractMemberExpression(
       return exp.extra ? (exp.extra.raw as string) : exp.value
     case 'NumericLiteral': // foo[0]
       return exp.value.toString()
-    case 'BinaryExpression': // foo[bar + 1]
-      return `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
+    case 'BinaryExpression': {
+      // foo[bar + 1]
+      const expression = `${extractMemberExpression(exp.left, onIdentifier)} ${exp.operator} ${extractMemberExpression(exp.right, onIdentifier)}`
+      return exp.extra?.parenthesized ? `(${expression})` : expression
+    }
     case 'CallExpression': // foo[bar(baz)]
       return `${extractMemberExpression(exp.callee, onIdentifier)}(${exp.arguments.map(arg => extractMemberExpression(arg, onIdentifier)).join(', ')})`
     case 'OptionalCallExpression': // foo[bar?.(baz)]

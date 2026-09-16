@@ -497,5 +497,38 @@ describe('compiler: expression', () => {
       )
       expect(code).not.contains('_user_profile_name.length')
     })
+
+    test.each([
+      ['(page - 1) * pageSize', '(_ctx.page - 1) * _ctx.pageSize'],
+      ['total - (offset - count)', '_ctx.total - (_ctx.offset - _ctx.count)'],
+      [
+        '(base ** exponent) ** power',
+        '(_ctx.base ** _ctx.exponent) ** _ctx.power',
+      ],
+    ])(
+      'cached member expressions preserve binary grouping: %s',
+      (key, expected) => {
+        const { code } = compileWithExpression(`
+          <div :id="items[${key}]" />
+          <div :title="items[${key}]" />
+        `)
+        expect(code.match(/const _items_\w+ = (.*)/)?.[1]).toBe(
+          `_ctx.items[${expected}]`,
+        )
+      },
+    )
+
+    test('member expressions with different binary grouping are not merged', () => {
+      const { code } = compileWithExpression(`
+        <div :id="items[(page - 1) * pageSize]" />
+        <div :title="items[page - 1 * pageSize]" />
+      `)
+      expect(code).contains(
+        '_setProp(n0, "id", _items[(_page - 1) * _pageSize])',
+      )
+      expect(code).contains(
+        '_setProp(n1, "title", _items[_page - 1 * _pageSize])',
+      )
+    })
   })
 })
