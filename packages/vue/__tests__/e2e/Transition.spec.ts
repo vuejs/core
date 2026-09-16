@@ -19,7 +19,12 @@ describe('e2e: Transition', () => {
 
   const nextTick = () => (window as any).Vue.nextTick()
 
-  const transitionFinish = (time = duration) => timeout(time + buffer)
+  const transitionFinish = async (time = duration) => {
+    // Vue applies the enter/leave-to classes on the next two animation frames.
+    // Start the duration wait after those frames, including on busy CI runners.
+    await nextFrame()
+    await timeout(time + buffer)
+  }
 
   const classWhenTransitionStart = () =>
     page().evaluate(() => {
