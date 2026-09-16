@@ -10,10 +10,10 @@ import {
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
-  isIgnoreNewlineTag,
   isSimpleIdentifier,
   isStaticArgOf,
   isValidHTMLNesting,
+  parserOptions,
   resolveModifiers,
 } from '@vue/compiler-dom'
 import {
@@ -519,7 +519,7 @@ function transformNativeElement(
   // into `children` would be dropped a second time - double it to compensate.
   if (
     node.ns === Namespaces.HTML &&
-    isIgnoreNewlineTag(tag) &&
+    parserOptions.isIgnoreNewlineTag!(tag) &&
     LEADING_NEWLINE_RE.test(children)
   ) {
     children = `\n` + children

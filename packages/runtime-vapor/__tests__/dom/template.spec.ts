@@ -93,10 +93,8 @@ describe('createElement-backed children', () => {
 })
 
 describe('leading newline in <pre> and <textarea>', () => {
-  // the html parser drops the first newline after these start tags, so a
-  // template that still carries one after the compiler already applied that
-  // rule must survive being parsed a second time at runtime (vdom builds the
-  // dom with createElement and is unaffected).
+  // The compiler already drops the first newline after these start tags.
+  // Vapor must preserve the remaining newlines when parsing its template again.
   test.each([
     // one newline is consumed by the compiler, the rest must be kept
     ['<pre>\n\nline</pre>', '<pre>\nline</pre>'],

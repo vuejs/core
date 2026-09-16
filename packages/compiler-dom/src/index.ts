@@ -76,6 +76,5 @@ export {
 } from './errors'
 export { resolveModifiers, isKeyboardEvent } from './transforms/vOn'
 export { isValidHTMLNesting } from './htmlNesting'
-export { isIgnoreNewlineTag } from './parserOptions'
 export { postTransformTransition } from './transforms/Transition'
 export * from '@vue/compiler-core'
