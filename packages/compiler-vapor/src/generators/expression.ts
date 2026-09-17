@@ -12,6 +12,7 @@ import {
   type SourceLocation,
   advancePositionWithClone,
   createSimpleExpression,
+  isFunctionType,
   isInDestructureAssignment,
   isStaticProperty,
   walkIdentifiers,
@@ -934,6 +935,10 @@ function getNodeRanges(exp: SimpleExpressionNode): Set<string> {
 
   walk(exp.ast, {
     enter(node: Node) {
+      // Expressions inside functions may refer to different local bindings.
+      if (isFunctionType(node)) {
+        return this.skip()
+      }
       // range is offset by -1 due to the wrapping parens when parsed
       if (node.start != null && node.end != null) {
         ranges.add(`${node.start - 1}:${node.end - 1}`)
