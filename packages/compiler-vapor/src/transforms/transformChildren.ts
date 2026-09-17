@@ -80,25 +80,19 @@ export const transformChildren: NodeTransform = (node, context) => {
       context.childrenTemplate.push(childContext.template)
     }
 
-    // Captured before the flag below is set: a child that renders nothing does
-    // not make its parent dynamic, so the NON_TEMPLATE it gets here must not
-    // feed back into this condition.
-    const makesParentDynamic = !!(
+    if (
       childDynamic.hasDynamicChild ||
       childDynamic.id !== undefined ||
       childDynamic.flags & DynamicFlag.NON_TEMPLATE ||
       childDynamic.flags & DynamicFlag.INSERT
-    )
-
-    if (!isFragment && !createsNode) {
-      // A child that renders nothing - e.g. the empty text node the parser
-      // leaves behind after dropping the leading newline of <pre> - has no
-      // node in the parent, so it must not take a child slot.
-      childDynamic.flags |= DynamicFlag.NON_TEMPLATE
+    ) {
+      context.dynamic.hasDynamicChild = true
     }
 
-    if (makesParentDynamic) {
-      context.dynamic.hasDynamicChild = true
+    // Set this after the check above: absent children must not make their
+    // parent dynamic.
+    if (!createsNode) {
+      childDynamic.flags |= DynamicFlag.NON_TEMPLATE
     }
 
     context.dynamic.children[i] = childDynamic
