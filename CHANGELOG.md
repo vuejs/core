@@ -1,3 +1,22 @@
+## [3.5.43](https://github.com/vuejs/core/compare/v3.5.42...v3.5.43) (2026-09-17)
+
+### Bug Fixes
+
+* **compiler-sfc:** ignore comment delimiters inside strings and url() when parsing css vars ([#15548](https://github.com/vuejs/core/issues/15548)) ([2fde323](https://github.com/vuejs/core/commit/2fde3239ca3cdb9b152870f695cd3401fcaada94))
+* **compiler-sfc:** prepend semicolon for await in switch case ([#15498](https://github.com/vuejs/core/issues/15498)) ([9a1df69](https://github.com/vuejs/core/commit/9a1df69b63fecd743919af89a419783dd030b9f7)), closes [#15495](https://github.com/vuejs/core/issues/15495)
+* **compiler-sfc:** restore await scope when leaving nested blocks ([5409708](https://github.com/vuejs/core/commit/54097087a0918b98f16c84599b1a6d654e952ca7)), closes [#15465](https://github.com/vuejs/core/issues/15465)
+* **compiler-sfc:** reuse parsed parent configs across tsconfig walks (fix [#15478](https://github.com/vuejs/core/issues/15478)) ([#15480](https://github.com/vuejs/core/issues/15480)) ([d6febaa](https://github.com/vuejs/core/commit/d6febaab8c0d95a6320e7e37276c00e8159e9cb2))
+* **hydration:** run leave hooks for hydration placeholders ([#15431](https://github.com/vuejs/core/issues/15431)) ([5dda192](https://github.com/vuejs/core/commit/5dda192082afa4985951d90e229324d522e25c22))
+* **reactivity:** preserve readonly wrappers in array copy methods ([#15469](https://github.com/vuejs/core/issues/15469)) ([599f35b](https://github.com/vuejs/core/commit/599f35bbb21f3d78b7aa0818342ab4f27442a333))
+* **runtime-core:** unmount v-once children after parent rerenders ([#15435](https://github.com/vuejs/core/issues/15435)) ([d720338](https://github.com/vuejs/core/commit/d720338d5d29c1fac82abbe6f7066fe703ce624d))
+* **shared:** handle circular references in looseEqual ([#15499](https://github.com/vuejs/core/issues/15499)) ([718f782](https://github.com/vuejs/core/commit/718f782b14c7e0165d20b6f4dd8664f78054b62c)), closes [#15496](https://github.com/vuejs/core/issues/15496)
+* **shared:** preserve comment-like text in style values ([#15471](https://github.com/vuejs/core/issues/15471)) ([b9456cb](https://github.com/vuejs/core/commit/b9456cb40db714a6f573a1713d92e96d4c9e9533))
+* **suspense:** don't drop nested suspense patches during hydration ([#15429](https://github.com/vuejs/core/issues/15429)) ([76d42dc](https://github.com/vuejs/core/commit/76d42dc1874e82e62e9650debd68a53472d810e0))
+* **suspense:** keep the boundary pending while its branch is patched ([#15411](https://github.com/vuejs/core/issues/15411)) ([bfcfe9e](https://github.com/vuejs/core/commit/bfcfe9e4d0254f85af452544a058291ef88dce1a)), closes [#7506](https://github.com/vuejs/core/issues/7506)
+* **suspense:** patch a hydrating boundary's pending branch in place ([#15432](https://github.com/vuejs/core/issues/15432)) ([2cde6f7](https://github.com/vuejs/core/commit/2cde6f754cb3e4695a21fb5719e0c75ee2fc5c61))
+* **suspense:** unmount the DOM an interrupted async component claimed ([#15430](https://github.com/vuejs/core/issues/15430)) ([fb9b45c](https://github.com/vuejs/core/commit/fb9b45ce780f656a23fcb374eb8ea9f7abadc594))
+* **types:** keep optional props when a runtime prop uses a generic PropType ([#15523](https://github.com/vuejs/core/issues/15523)) ([243aabc](https://github.com/vuejs/core/commit/243aabccf05fefb3760f2dab1c2d75aa424baad7)), closes [#9546](https://github.com/vuejs/core/issues/9546)
+
 ## [3.5.42](https://github.com/vuejs/core/compare/v3.5.41...v3.5.42) (2026-08-27)
 
 ### Bug Fixes
