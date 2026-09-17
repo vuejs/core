@@ -711,5 +711,35 @@ describe('compiler: expression', () => {
       `)
       expect(code).contains('_setProp(n2, "title", (_a_b) * _ctx.c)')
     })
+
+    test.each([
+      ['`n + 1` + suffix', '`n + 1` + _ctx.suffix'],
+      ['`n + 1${n + 1}n + 1`', '`n + 1${_n_1}n + 1`'],
+    ])(
+      'repeated expression replacement preserves template literal text: %s',
+      (expr, expected) => {
+        const { code } = compileWithExpression(`
+          <div :id="n + 1"></div>
+          <div :id="n + 1"></div>
+          <div :title="${expr}"></div>
+        `)
+        expect(code).contains(`_setProp(n2, "title", ${expected})`)
+      },
+    )
+
+    test.each([
+      ['value as a | b', '_ctx.value as a | b'],
+      ['(a | b) as a | b', '(_a_b) as a | b'],
+    ])(
+      'repeated expression replacement preserves type annotations: %s',
+      (expr, expected) => {
+        const { code } = compileWithExpression(`
+          <div :id="a | b"></div>
+          <div :id="a | b"></div>
+          <div :title="${expr}"></div>
+        `)
+        expect(code).contains(`_setProp(n2, "title", ${expected})`)
+      },
+    )
   })
 })

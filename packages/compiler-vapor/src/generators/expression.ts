@@ -10,6 +10,7 @@ import {
   NewlineType,
   type SimpleExpressionNode,
   type SourceLocation,
+  TS_NODE_TYPES,
   advancePositionWithClone,
   createSimpleExpression,
   isFunctionType,
@@ -796,7 +797,7 @@ function processRepeatedExpressions(
         if (processed.content === content) {
           setExpressionReplacement(expressionReplacements, exp, varName, null)
         }
-        // foo + foo + baz -> foo + foo_baz
+        // (foo + baz) * qux -> (foo_baz) * qux
         // An optional chain may continue past the cached expression, so only
         // replace exact matches to preserve short-circuiting.
         else if (
@@ -935,8 +936,12 @@ function getNodeRanges(exp: SimpleExpressionNode): Set<string> {
 
   walk(exp.ast, {
     enter(node: Node) {
-      // Expressions inside functions may refer to different local bindings.
-      if (isFunctionType(node)) {
+      // Skip nested scopes, template text, and type-only subtrees.
+      if (
+        isFunctionType(node) ||
+        node.type === 'TemplateElement' ||
+        (node.type.startsWith('TS') && !TS_NODE_TYPES.includes(node.type))
+      ) {
         return this.skip()
       }
       // range is offset by -1 due to the wrapping parens when parsed
