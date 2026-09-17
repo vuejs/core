@@ -403,6 +403,19 @@ function baseCreateRenderer(
       n2.dynamicChildren = null
     }
 
+    // Cached v-once nodes skip block tracking on subsequent renders.
+    if (
+      n2.dynamicChildren &&
+      n1 &&
+      n1.dynamicChildren &&
+      n1.dynamicChildren.hasOnce
+    ) {
+      if (n2.dynamicChildren === (EMPTY_ARR as any)) {
+        n2.dynamicChildren = []
+      }
+      n2.dynamicChildren.hasOnce = true
+    }
+
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
@@ -2161,7 +2174,10 @@ function baseCreateRenderer(
       memo,
     } = vnode
 
-    if (patchFlag === PatchFlags.BAIL) {
+    if (
+      patchFlag === PatchFlags.BAIL ||
+      (dynamicChildren && dynamicChildren.hasOnce)
+    ) {
       optimized = false
     }
 
@@ -2173,7 +2189,8 @@ function baseCreateRenderer(
     }
 
     // #6593 should clean memo cache when unmount
-    if (cacheIndex != null) {
+    // Slot receivers must not invalidate caches owned by the slot author.
+    if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) {
       parentComponent!.renderCache[cacheIndex] = undefined
     }
 
