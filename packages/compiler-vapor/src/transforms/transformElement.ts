@@ -10,6 +10,7 @@ import {
   advancePositionWithClone,
   createCompilerError,
   createSimpleExpression,
+  hasDynamicKeyVBind,
   isSimpleIdentifier,
   isStaticArgOf,
   isValidHTMLNesting,
@@ -77,6 +78,71 @@ export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
   // the leading comma is intentional so empty string "" is also included
   ',key,ref,ref_for,ref_key,',
 )
+
+/**
+ * `true-value` / `false-value` are only read back by `v-model` on a checkbox,
+ * and they are dropped from the ssr output, so a checkbox that only carries
+ * them in the template has nothing left to read from after hydration. A
+ * dynamic `type` can still make the element a checkbox at runtime.
+ */
+function isCheckboxValueProp(node: ElementNode, key: string): boolean {
+  if (node.tag !== 'input' || (key !== 'true-value' && key !== 'false-value')) {
+    return false
+  }
+  const type = findProp(node, 'type')
+  return type
+    ? type.type === NodeTypes.DIRECTIVE || type.value!.content === 'checkbox'
+    : hasDynamicKeyVBind(node)
+}
+
+/**
+ * Props the template string cannot carry, so they have to be applied by a
+ * runtime prop setter instead:
+ * - `<textarea>` / `<select>` ignore a `value` content attribute, the value
+ *   only takes effect as a dom property - which is where vdom sends it too,
+ *   see `shouldSetAsProp`
+ * - `true-value` / `false-value`, see `isCheckboxValueProp`
+ */
+function isRuntimeOnlyProp(node: ElementNode, key: string): boolean {
+  return (
+    (key === 'value' && (node.tag === 'textarea' || node.tag === 'select')) ||
+    isCheckboxValueProp(node, key)
+  )
+}
+
+/**
+ * Props `v-model` reads back off the element as raw values (`_value`,
+ * `_trueValue`, `_falseValue`), so a number literal bound to them has to keep
+ * its type - vdom bails on `<option :value="1">` in its own static
+ * stringification for the same reason.
+ *
+ * Deliberately wider than `isRuntimeOnlyProp`: a literal `<input value="1">`
+ * belongs in the template string, only the type of a *bound* number has to
+ * survive. So this one is consulted by `v-bind`, that one by
+ * `transformNativeElement`.
+ */
+export function isModelValueProp(node: ElementNode, key: string): boolean {
+  const { tag } = node
+  return (
+    (key === 'value' &&
+      (tag === 'input' ||
+        tag === 'option' ||
+        tag === 'textarea' ||
+        tag === 'select')) ||
+    isCheckboxValueProp(node, key)
+  )
+}
+
+/**
+ * Boolean attributes are folded into the template from the value itself, which
+ * needs the type it was written with: `:disabled="0"` is `false`, while the
+ * `"0"` a stringified template attribute would carry is `true`. `hidden` is
+ * not a boolean attribute - it also takes `until-found` - but a number means
+ * the same thing there.
+ */
+export function isFoldableBooleanAttr(key: string): boolean {
+  return isBooleanAttr(key) || key === 'hidden'
+}
 
 export const transformElement: NodeTransform = (node, context) => {
   let effectIndex = context.block.effect.length
@@ -470,14 +536,15 @@ function transformNativeElement(
         canStringifyAttrName &&
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
-        !dynamicKeys.includes(key.content)
+        !dynamicKeys.includes(key.content) &&
+        !isRuntimeOnlyProp(node, key.content)
       ) {
         const value = values[0].content === "''" ? '' : values[0].content
         appendTemplateProp(key.content, value)
       } else if (
         canStringifyAttrName &&
         !prop.modifier &&
-        (isBooleanAttr(key.content) || key.content === 'hidden') &&
+        isFoldableBooleanAttr(key.content) &&
         (foldedValue = foldBooleanAttrValue(key.content, values)) != null
       ) {
         if (foldedValue) {

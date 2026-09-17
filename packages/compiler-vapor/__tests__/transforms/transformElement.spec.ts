@@ -1920,4 +1920,42 @@ describe('compiler: element transform', () => {
       expect([...ir.template.keys()]).toContain('<pre> line')
     })
   })
+
+  describe('props the template string cannot carry', () => {
+    test.each([
+      // `true-value` / `false-value` are dropped from the ssr output, so a
+      // checkbox that only carries them in the template has nothing left to
+      // read from after hydration
+      [
+        '<input type="checkbox" true-value="yes" false-value="no">',
+        '<input type=checkbox>',
+      ],
+      ['<input type="checkbox" :true-value="`0`">', '<input type=checkbox>'],
+      [
+        '<input type="checkbox" v-bind="{ \'true-value\': \'0\' }">',
+        '<input type=checkbox>',
+      ],
+      // the type is only known at runtime, so it may still be a checkbox
+      ['<input :type="type" true-value="yes">', '<input>'],
+      ['<input v-bind="attrs" true-value="yes">', '<input>'],
+      // `<textarea>` / `<select>` ignore a `value` content attribute
+      ['<textarea value="1"></textarea>', '<textarea>'],
+      ['<textarea :value="`x`"></textarea>', '<textarea>'],
+      ['<select value="b"></select>', '<select>'],
+      // untouched
+      ['<div true-value="yes"></div>', '<div true-value=yes>'],
+      ['<input true-value="yes">', '<input true-value=yes>'],
+      [
+        '<input type="text" true-value="yes">',
+        '<input type=text true-value=yes>',
+      ],
+      ['<input value="1">', '<input value=1>'],
+      ['<option value="1"></option>', '<option value=1>'],
+      ['<div value="1"></div>', '<div value=1>'],
+    ])('%j keeps the template %j', (source, template) => {
+      const { ir } = compileWithElementTransform(source)
+
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+  })
 })

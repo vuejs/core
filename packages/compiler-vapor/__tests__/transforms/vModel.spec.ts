@@ -139,6 +139,18 @@ describe('compiler: vModel transform', () => {
       )
     })
 
+    test('should error on dynamic value binding alongside v-model on <textarea>', () => {
+      const onError = vi.fn()
+      compileWithVModel(`<textarea v-model="test" :value="test"></textarea>`, {
+        onError,
+      })
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE,
+        }),
+      )
+    })
+
     // #3596
     test('should NOT error on static value binding alongside v-model', () => {
       const onError = vi.fn()

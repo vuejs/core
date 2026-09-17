@@ -330,6 +330,99 @@ describe('Vapor Mode hydration', () => {
       expect((container.firstChild!.firstChild as any)._value).toBe(true)
     })
 
+    test('force hydrate select option with number value bindings', async () => {
+      const { container } = await mountWithHydration(
+        '<select><option value="1">ok</option></select>',
+        `<select><option :value="1">ok</option></select>`,
+      )
+      expect((container.firstChild!.firstChild as any)._value).toBe(1)
+    })
+
+    test('force hydrate input v-model with number value bindings', async () => {
+      const { container } = await mountWithHydration(
+        '<input type="checkbox">',
+        `<input type="checkbox" :true-value="1" :false-value="0"/>`,
+      )
+      expect((container.firstChild as any)._trueValue).toBe(1)
+      expect((container.firstChild as any)._falseValue).toBe(0)
+    })
+
+    test('force hydrate input v-model with static value attributes', async () => {
+      const { container } = await mountWithHydration(
+        '<input type="checkbox">',
+        `<input type="checkbox" true-value="yes" false-value="no"/>`,
+      )
+      const input = container.firstChild as HTMLInputElement
+      expect((input as any)._trueValue).toBe('yes')
+      expect((input as any)._falseValue).toBe('no')
+      // only the properties v-model reads are restored: `setAttr` bails out
+      // while hydrating, so unlike vdom the attributes themselves stay off the
+      // server markup - nothing reads them back
+      expect(input.hasAttribute('true-value')).toBe(false)
+      expect(input.hasAttribute('false-value')).toBe(false)
+    })
+
+    test('checkbox v-model with static value attributes toggles after hydration', async () => {
+      const { container, data } = await testHydration(
+        `<template><div><input type="checkbox" v-model="data" true-value="yes" false-value="no"></div></template>`,
+        undefined,
+        ref('yes'),
+      )
+      const input = container.querySelector('input')!
+      expect(input.checked).toBe(true)
+
+      input.checked = false
+      triggerEvent('change', input)
+      await nextTick()
+      expect(data.value).toBe('no')
+    })
+
+    test('checkbox v-model with number value bindings toggles after hydration', async () => {
+      const { container, data } = await testHydration(
+        `<template><div><input type="checkbox" v-model="data" :true-value="1" :false-value="0"></div></template>`,
+        undefined,
+        ref(1),
+      )
+      const input = container.querySelector('input')!
+      expect(input.checked).toBe(true)
+
+      input.checked = false
+      triggerEvent('change', input)
+      await nextTick()
+      expect(data.value).toBe(0)
+    })
+
+    test('select v-model with number option values after hydration', async () => {
+      const { container, data } = await testHydration(
+        `<template><div><select v-model="data"><option :value="1">a</option><option :value="2">b</option></select></div></template>`,
+        undefined,
+        ref(1),
+      )
+      const select = container.querySelector('select')!
+      expect(select.selectedIndex).toBe(0)
+
+      select.selectedIndex = 1
+      triggerEvent('change', select)
+      await nextTick()
+      expect(data.value).toBe(2)
+    })
+
+    test('select multiple v-model with number option values after hydration', async () => {
+      const { container, data } = await testHydration(
+        `<template><div><select multiple v-model="data"><option :value="1">a</option><option :value="2">b</option></select></div></template>`,
+        undefined,
+        ref([1]),
+      )
+      const select = container.querySelector('select')!
+      expect(select.options[0].selected).toBe(true)
+      expect(select.options[1].selected).toBe(false)
+
+      select.options[1].selected = true
+      triggerEvent('change', select)
+      await nextTick()
+      expect(data.value).toEqual([1, 2])
+    })
+
     test('force hydrate v-bind with .prop modifiers', async () => {
       const { container } = await mountWithHydration(
         '<div .foo="true"/>',
