@@ -1094,6 +1094,31 @@ describe('compiler: transform slot', () => {
       expect(code).toMatchSnapshot()
     })
 
+    test('dynamic slot name with annotated v-for aliases', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template v-for="(item: string, index: number) in list" #[item]>{{ index }}</template>
+        </Comp>
+      `)
+      expect(code).toContain('_createForSlots')
+      expect(code).toContain('_toDisplayString(_for_key0.value)')
+      expect(code).not.toContain('_ctx.index')
+      expect(code).toMatchSnapshot()
+    })
+
+    test('dynamic slot name with a v-for alias default', () => {
+      const { code } = compileWithSlots(`
+        <Comp>
+          <template v-for="(item, key, index = 99) in list" #[item]>{{ index }}</template>
+        </Comp>
+      `)
+      expect(code).toContain(
+        '_toDisplayString(_getDefaultValue(_for_index0.value, () => (99)))',
+      )
+      expect(code).toContain('(item, key, index = 99) => (item)')
+      expect(code).not.toContain('_ctx.index')
+    })
+
     test('slot with component inside v-if is non-stable', () => {
       const { code } = compileWithSlots(`
         <Comp>

@@ -1,5 +1,35 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: v-for > annotated aliases are not emitted into the key function params 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0, _for_key0) => {
+    const n2 = t0()
+    const x2 = _txt(n2)
+    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value)))
+    return n2
+  }, (item, index) => (index), 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > applies a default value of the value and index aliases 1`] = `
+"import { getDefaultValue as _getDefaultValue, txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0, _for_key0, _for_index0) => {
+    const n2 = t0()
+    const x2 = _txt(n2)
+    _renderEffect(() => _setText(x2, _toDisplayString(_getDefaultValue(_for_item0.value, () => ('x'))) + _toDisplayString(_getDefaultValue(_for_index0.value, () => (99)))))
+    return n2
+  }, undefined, 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
 exports[`compiler: v-for > array de-structured value (with rest) 1`] = `
 "import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
 const t0 = _template("<div> ")
@@ -245,6 +275,21 @@ export function render(_ctx) {
     _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value + _for_key0.value + _for_index0.value)))
     return n2
   }, (value, key, index) => (key), 8 /* IS_SINGLE_NODE */)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > resolves annotated key and index aliases of an object source 1`] = `
+"import { txt as _txt, toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue';
+const t0 = _template("<div> ")
+
+export function render(_ctx) {
+  const n0 = _createFor(() => (_ctx.items), (_for_item0, _for_key0, _for_index0) => {
+    const n2 = t0()
+    const x2 = _txt(n2)
+    _renderEffect(() => _setText(x2, _toDisplayString(_for_item0.value) + _toDisplayString(_for_key0.value) + _toDisplayString(_for_index0.value)))
+    return n2
+  }, undefined, 8 /* IS_SINGLE_NODE */)
   return n0
 }"
 `;

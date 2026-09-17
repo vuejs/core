@@ -8,6 +8,7 @@ import {
   createKeyedFragment,
   createSlot,
   defineVaporComponent,
+  delegateEvents,
   getDefaultValue,
   getRestElement,
   renderEffect,
@@ -1339,6 +1340,120 @@ describe('createFor', () => {
       },
     )
     expect(vdom.text).toBe('c2c1')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
+  // A type annotation or a default value is part of the alias source, so the
+  // bound name has to be read off the ast - see `parseValueDestructure`.
+  // Note `renderParity` does not run the TS strip stage a real build does: it
+  // injects a plain `<script setup>` and runs the output through `new Function`.
+  // These cases only work there because the fix leaves no TS in the output; a
+  // destructured alias keeps its annotation (vdom parity) and would throw a
+  // `SyntaxError` here, so it is covered by a codegen test instead.
+  test('type-annotated aliases resolve like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><li v-for="(item: string, index: number) in data.list" :class="{ last: index === data.list.length - 1 }">{{ item }}{{ index }}</li></template>`,
+      },
+      () => ref({ list: ['a', 'b'] }),
+      async data => {
+        data.value.list.push('c')
+        await nextTick()
+      },
+    )
+    expect(vdom.text).toBe('a0b1c2')
+    expect(vapor.text).toBe(vdom.text)
+    expect(vapor.after).toContain('class="last"')
+  })
+
+  test('type-annotated key and index aliases resolve like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><li v-for="(value: string, key: string, index: number) in data.obj">{{ value }}{{ key }}{{ index }}</li></template>`,
+      },
+      () => ref({ obj: { x: 'X', y: 'Y' } as Record<string, string> }),
+      async data => {
+        data.value.obj = { x: 'X', y: 'Y', z: 'Z' }
+        await nextTick()
+      },
+    )
+    expect(vdom.text).toBe('Xx0Yy1Zz2')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
+  test('type-annotated aliases resolve inside an event handler', async () => {
+    delegateEvents('click')
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><div><li v-for="(item: string, index: number) in data.list" :id="'r' + index" @click="data.clicked = index">{{ item }}</li><p>{{ data.clicked }}</p></div></template>`,
+      },
+      () => ref({ list: ['a', 'b'], clicked: -1 }),
+      async (_data, root) => {
+        ;(root.querySelector('#r1') as HTMLElement).click()
+        await nextTick()
+      },
+    )
+    expect(vdom.text).toBe('ab1')
+    expect(vapor.text).toBe('ab1')
+  })
+
+  // the same alias source trips vapor up without any typescript involved
+  test('a default value on a key alias resolves like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><li v-for="(value, key = 'none') in data.obj">{{ value }}{{ key }}</li></template>`,
+      },
+      () => ref({ obj: { x: 'X' } as Record<string, string> }),
+      async data => {
+        data.value.obj = { x: 'X', y: 'Y' }
+        await nextTick()
+      },
+    )
+    expect(vdom.text).toBe('XxYy')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
+  test('a default value on an index alias is applied like vdom', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><li v-for="(item, key, index = 99) in data.list">{{ item }}|{{ key }}|{{ index }}</li></template>`,
+      },
+      () => ref({ list: ['a', 'b'] }),
+      async data => {
+        data.value.list.push('c')
+        await nextTick()
+      },
+    )
+    // an array source calls the render fn without an index, so the default wins
+    expect(vdom.text).toBe('a|0|99b|1|99c|2|99')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
+  test('type-annotated aliases resolve in a nested template v-for', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        App: `<template><template v-for="(row: string[], r: number) in data.rows"><i v-for="(cell: string, c: number) in row">{{ cell }}{{ r }}{{ c }}</i></template></template>`,
+      },
+      () => ref({ rows: [['p'], ['q']] }),
+      async data => {
+        data.value.rows.push(['s'])
+        await nextTick()
+      },
+    )
+    expect(vdom.text).toBe('p00q10s20')
+    expect(vapor.text).toBe(vdom.text)
+  })
+
+  test('type-annotated aliases resolve in a dynamic slot name', async () => {
+    const { vdom, vapor } = await renderParity(
+      {
+        Child: `<template><div><slot name="a" /><slot name="b" /></div></template>`,
+        App: `<template><components.Child><template v-for="(item: string, index: number) in data.list" #[item]>{{ item }}{{ index }}</template></components.Child></template>`,
+      },
+      () => ref({ list: ['a', 'b'] }),
+      async () => {},
+    )
+    expect(vdom.text).toBe('a0b1')
     expect(vapor.text).toBe(vdom.text)
   })
 

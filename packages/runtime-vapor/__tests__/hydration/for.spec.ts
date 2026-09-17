@@ -32,6 +32,33 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('v-for with type-annotated aliases', async () => {
+      const { container, data } = await testHydration(
+        `<template>
+          <span v-for="(item: string, index: number) in data">{{ item }}{{ index }}</span>
+        </template>`,
+        undefined,
+        ref(['a', 'b']),
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>a0</span><span>b1</span><!--]-->
+        "
+      `,
+      )
+
+      data.value.push('c')
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `
+        "
+        <!--[--><span>a0</span><span>b1</span><span>c2</span><!--]-->
+        "
+      `,
+      )
+    })
+
     test('empty v-for', async () => {
       const { container, data } = await testHydration(
         `<template>
