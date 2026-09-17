@@ -77,11 +77,16 @@ type PropConstructor<T = any> =
   | { (): T }
   | PropMethod<T>
 
-type PropMethod<T, TConstructor = any> = [T] extends [
-  ((...args: any) => any) | undefined,
-] // if is function with args, allowing non-required functions
-  ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
-  : never
+// Function-like constructor so that `Function as PropType<() => void>`
+// type-checks. Intentionally not conditional on `T`: a conditional type here
+// makes `PropType<T>` a deferred (generic) type whenever `T` is a type
+// parameter, which in turn defers `RequiredKeys` / `OptionalKeys` and drops
+// every non-required prop from `ExtractPropTypes` (#9546).
+type PropMethod<T, TConstructor = any> = {
+  new (): TConstructor
+  (): T
+  readonly prototype: TConstructor
+}
 
 type RequiredKeys<T> = {
   [K in keyof T]: T[K] extends
@@ -129,7 +134,10 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
             : [T] extends [Prop<infer V, infer D>]
               ? unknown extends V
                 ? keyof V extends never
-                  ? IfAny<V, V, D>
+                  ? // `D` is only meaningful when a default is present; falling
+                    // back to `V` keeps the deferred type assignable to `V`
+                    // when `V` is a type parameter (#9546)
+                    IfAny<V, V, unknown extends D ? V : D>
                   : V
                 : V
               : T

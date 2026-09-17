@@ -801,6 +801,7 @@ export function cloneVNode<T, U>(
     // notifying after the first re-render of cached children.
     ibu: vnode.ibu,
     iu: vnode.iu,
+    cacheIndex: vnode.cacheIndex,
   }
 
   // if the vnode will be replaced by the cloned one, it is necessary

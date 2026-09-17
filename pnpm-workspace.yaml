@@ -8,7 +8,7 @@ catalog:
   'entities': '^7.0.1'
   'estree-walker': ^2.0.2
   'vite': npm:@voidzero-dev/vite-plus-core@0.3.0
-  '@vitejs/plugin-vue': ^6.0.8
+  '@vitejs/plugin-vue': ^6.0.9
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
   vitest: 4.1.11
@@ -45,6 +45,8 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   # Renovate security update: postcss@8.5.23
   - postcss@8.5.23
+  # Renovate security update: vitest@4.1.11
+  - vitest@4.1.11
 overrides:
   vite@*: 'catalog:'
   vitest@*: 'catalog:'

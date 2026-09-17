@@ -106,10 +106,13 @@ export const SuspenseImpl = {
       //  2. mounting along with the pendingBranch of parentSuspense
       // it is necessary to skip the current patch to avoid multiple mounts
       // of inner components.
+      // but not while the parent is hydrating: its pending branch is the
+      // adopted SSR DOM, never mounted again, so skipping leaves it stale.
       if (
         parentSuspense &&
         parentSuspense.deps > 0 &&
-        !n1.suspense!.isInFallback
+        !n1.suspense!.isInFallback &&
+        !parentSuspense.isHydrating
       ) {
         n2.suspense = n1.suspense!
         n2.suspense.vnode = n2
@@ -244,10 +247,14 @@ function patchSuspense(
     suspense.pendingBranch = newBranch
     if (isSameVNodeType(pendingBranch, newBranch)) {
       // same root type but content may have changed.
+      // hold the boundary pending across the patch: a nested branch that
+      // resolves in here must not resolve it before later siblings register.
+      suspense.deps++
       patch(
         pendingBranch,
         newBranch,
-        suspense.hiddenContainer,
+        // a hydrating pending branch is adopted SSR DOM, already in place
+        isHydrating ? container : suspense.hiddenContainer,
         null,
         parentComponent,
         suspense,
@@ -255,6 +262,7 @@ function patchSuspense(
         slotScopeIds,
         optimized,
       )
+      suspense.deps--
       if (suspense.deps <= 0) {
         suspense.resolve()
       } else if (isInFallback) {
@@ -660,6 +668,7 @@ function createSuspenseBoundary(
           parentSuspense.pendingBranch &&
           parentSuspenseId === parentSuspense.pendingId
         ) {
+          parentSuspenseId = undefined
           parentSuspense.deps--
           if (parentSuspense.deps === 0 && !sync) {
             parentSuspense.resolve()
@@ -743,6 +752,7 @@ function createSuspenseBoundary(
       if (isInPendingSuspense) {
         suspense.deps++
       }
+      const hydratedEl = instance.vnode && instance.vnode.el
 
       instance
         .asyncDep!.catch(err => {
@@ -762,6 +772,15 @@ function createSuspenseBoundary(
           // still be set when Suspense re-enters another component's render path.
           // Clear it first.
           setCurrentInstance(null, undefined)
+          // The scope is stopped synchronously on unmount, while `isUnmounted`
+          // is deferred until the boundary resolves. Bail but still release the
+          // dep even if the claimed DOM remains attached to a removed ancestor.
+          if (hydratedEl && !instance.scope.active) {
+            if (isInPendingSuspense && --suspense.deps === 0) {
+              suspense.resolve()
+            }
+            return
+          }
           // retry from this component
           instance.asyncResolved = true
           onResolve(asyncSetupResult)

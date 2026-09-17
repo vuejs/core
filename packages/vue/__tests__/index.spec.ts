@@ -290,6 +290,120 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe(`<div>false<div>true</div></div>`)
   })
 
+  test.each([
+    '<div><Child v-once />{{ count }}</div>',
+    '<Child v-once />{{ count }}',
+  ])('unmounts a v-once child after rerendering: %s', async template => {
+    const count = ref(0)
+    const unmounted = vi.fn()
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: { template: 'child', unmounted },
+      },
+      setup: () => ({ count }),
+      template,
+    })
+
+    app.mount(container)
+    expect(container.textContent).toBe('child0')
+    count.value++
+    await nextTick()
+    expect(container.textContent).toBe('child1')
+
+    app.unmount()
+    expect(unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  test.each([0, 1])(
+    'preserves cached slot content after removing outlet %i',
+    async removeIndex => {
+      const show = ref(true)
+      const count = ref(0)
+      const tick = ref(0)
+      const unmounted = vi.fn()
+      let id = 0
+      const container = document.createElement('div')
+      const app = createApp({
+        components: {
+          Child: {
+            props: ['value'],
+            data: () => ({ id: ++id }),
+            template: '<p>{{ value }}</p>',
+            unmounted() {
+              unmounted(this.id)
+            },
+          },
+          Twice: {
+            setup(_, { slots }) {
+              return () => {
+                tick.value
+                return Vue.h(
+                  'div',
+                  ['section', 'aside'].map((tag, index) =>
+                    show.value || index !== removeIndex
+                      ? Vue.h(tag, slots.default!())
+                      : null,
+                  ),
+                )
+              }
+            },
+          },
+        },
+        setup: () => ({ count }),
+        template: '<Twice><Child v-once :value="count" /></Twice>',
+      })
+
+      app.mount(container)
+      expect(container.textContent).toBe('00')
+      show.value = false
+      await nextTick()
+      expect(container.textContent).toBe('0')
+      expect(unmounted).toHaveBeenCalledTimes(1)
+      expect(unmounted).toHaveBeenLastCalledWith(removeIndex + 1)
+      count.value++
+      tick.value++
+      await nextTick()
+      expect(container.textContent).toBe('0')
+      show.value = true
+      await nextTick()
+      expect(container.textContent).toBe('00')
+      app.unmount()
+      expect(unmounted.mock.calls.map(([id]) => id).sort()).toEqual([1, 2, 3])
+    },
+  )
+
+  test('does not clear the receiver cache when a cloned v-once slot unmounts', async () => {
+    const show = ref(true)
+    const count = ref(0)
+    const container = document.createElement('div')
+    const app = createApp({
+      components: {
+        Child: { template: 'child' },
+        Twice: {
+          components: {
+            OwnChild: { props: ['value'], template: '<p>{{ value }}</p>' },
+          },
+          setup: () => ({ count, show }),
+          template:
+            '<div><OwnChild v-once :value="count" /><slot /><slot v-if="show" /><b>{{ count }}</b></div>',
+        },
+      },
+      setup: () => ({ enabled: true }),
+      template:
+        '<Twice><template #default v-if="enabled"><Child v-once /></template></Twice>',
+    })
+
+    app.mount(container)
+    show.value = false
+    await nextTick()
+    count.value++
+    await nextTick()
+    expect(container.querySelector('p')!.textContent).toBe('0')
+    expect(container.querySelector('b')!.textContent).toBe('1')
+    app.unmount()
+  })
+
   test('v-for + v-once', async () => {
     const list = reactive([1])
     const App = {
@@ -506,4 +620,37 @@ describe('compiler + runtime integration', () => {
       app.unmount()
     })
   })
+
+  test.each([false, true])(
+    'unmounts all children of a nested v-once block (updated: %s)',
+    async updated => {
+      const count = ref(0)
+      const onceUnmounted = vi.fn()
+      const liveUnmounted = vi.fn()
+      const container = document.createElement('div')
+      const app = createApp({
+        components: {
+          OnceChild: { template: 'once', unmounted: onceUnmounted },
+          LiveChild: { template: 'live', unmounted: liveUnmounted },
+        },
+        setup: () => ({ count, show: true }),
+        template:
+          '<div><section v-if="show"><OnceChild v-once /><LiveChild />{{ count }}</section></div>',
+      })
+
+      app.mount(container)
+      expect(container.textContent).toBe('oncelive0')
+      if (updated) {
+        count.value++
+        await nextTick()
+        expect(container.textContent).toBe('oncelive1')
+      }
+
+      app.unmount()
+      expect({
+        once: onceUnmounted.mock.calls.length,
+        live: liveUnmounted.mock.calls.length,
+      }).toEqual({ once: 1, live: 1 })
+    },
+  )
 })

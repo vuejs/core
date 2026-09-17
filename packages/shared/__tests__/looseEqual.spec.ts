@@ -288,4 +288,45 @@ describe('utils/looseEqual', () => {
     expect(looseEqual(new Set<any>([1, '1']), new Set<any>([1, 2]))).toBe(false)
     expect(looseEqual(new Set(), new Map())).toBe(false)
   })
+
+  test('compares circular references correctly', () => {
+    const makeGraph = () => {
+      const n1: any = { id: 1 }
+      const n2: any = { id: 2 }
+      n1.peer = n2
+      n2.peer = n1
+      return [n1, n2]
+    }
+
+    expect(looseEqual(new Set(makeGraph()), new Set(makeGraph()))).toBe(true)
+    expect(
+      looseEqual(new Map([['a', makeGraph()]]), new Map([['a', makeGraph()]])),
+    ).toBe(true)
+    expect(looseEqual(makeGraph(), makeGraph())).toBe(true)
+    expect(looseEqual({ n: makeGraph() }, { n: makeGraph() })).toBe(true)
+
+    const selfSet = new Set<any>()
+    selfSet.add(selfSet)
+    const otherSelfSet = new Set<any>()
+    otherSelfSet.add(otherSelfSet)
+    expect(looseEqual(selfSet, otherSelfSet)).toBe(true)
+    expect(looseEqual(selfSet, new Set([new Set()]))).toBe(false)
+
+    const shared = { id: 1 }
+    expect(
+      looseEqual({ a: shared, b: shared }, { a: { id: 1 }, b: { id: 1 } }),
+    ).toBe(true)
+  })
+
+  test('compares circular references symmetrically', () => {
+    const self: any = {}
+    self.next = self
+    const first: any = {}
+    const second: any = {}
+    first.next = second
+    second.next = first
+
+    expect(looseEqual(self, first)).toBe(false)
+    expect(looseEqual(first, self)).toBe(false)
+  })
 })

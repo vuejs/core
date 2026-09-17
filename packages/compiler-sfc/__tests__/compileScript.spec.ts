@@ -1105,6 +1105,28 @@ describe('SFC compile <script setup>', () => {
       assertAwaitDetection(`if (ok) { await foo } else { await bar }`)
     })
 
+    // #15495
+    test('await in switch case', () => {
+      const code = assertAwaitDetection(`switch (a) {
+        case 1:
+          foo()
+          await bar()
+      }`)
+      expect(code).toMatch(/foo\(\)\s*;\(/)
+    })
+
+    // #15495
+    test('await in switch case nested in a block', () => {
+      const code = assertAwaitDetection(`if (a) {
+        switch (b) {
+          case 1:
+            qux()
+            await bar()
+        }
+      }`)
+      expect(code).toMatch(/qux\(\)\s*;\(/)
+    })
+
     test('multiple `if` nested statements', () => {
       assertAwaitDetection(`if (ok) {
         let a = 'foo'
@@ -1184,6 +1206,25 @@ describe('SFC compile <script setup>', () => {
         `const cls = class Foo { async method() { await bar }}`,
         false,
       )
+    })
+
+    // #15465
+    test('await statements after a nested block should be separated', async () => {
+      const { content } = compile(
+        `<script setup>
+        if (true) {
+          if (false) {}
+          await Promise.resolve(1)
+          await Promise.resolve(2)
+        }
+        </script>`,
+        { genDefaultAs: '_sfc_' },
+      )
+      const component = new Function(
+        '_withAsyncContext',
+        `${content.replace(/^import .*\n/, '')};return _sfc_`,
+      )((getAwaitable: () => unknown) => [getAwaitable(), () => {}])
+      await expect(component.setup({}, { expose() {} })).resolves.toEqual({})
     })
   })
 

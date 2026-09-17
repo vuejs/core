@@ -408,8 +408,7 @@ export function createHydrationFunctions(
             const component = vnode.component!
             if (
               !component.subTree &&
-              (isAsyncWrapper(vnode) ||
-                (component.asyncDep && !component.asyncResolved))
+              (isAsyncWrapper(vnode) || component.asyncDep)
             ) {
               let subTree
               if (isFragmentStart) {
@@ -418,8 +417,17 @@ export function createHydrationFunctions(
                   ? nextNode.previousSibling
                   : container.lastChild
               } else {
+                // Mirror the adopted node's type so the placeholder behaves
+                // like the rendered root would (transition hooks assume an
+                // element).
                 subTree =
-                  node.nodeType === 3 ? createTextVNode('') : createVNode('div')
+                  node.nodeType === DOMNodeTypes.TEXT
+                    ? createTextVNode('')
+                    : createVNode(
+                        node.nodeType === DOMNodeTypes.COMMENT
+                          ? VComment
+                          : 'div',
+                      )
               }
               subTree.el = node
               component.subTree = subTree

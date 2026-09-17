@@ -559,3 +559,66 @@ test('should be able to trigger with triggerRef', () => {
   triggerRef(ror)
   expect(dummy).toBe(2)
 })
+
+describe('readonly(reactive(array)) element access', () => {
+  // concat/toReversed/toSorted/toSpliced go through reactiveReadArray, which
+  // wrapped elements with toReactive and so dropped the readonly layer. The
+  // giveaway is the dev warning: writing through the paths below used to land on
+  // the raw object without one, while the same write through an index warns.
+  const paths: [string, (state: any) => any][] = [
+    ['index', state => state[0]],
+    ['filter', state => state.filter(() => true)[0]],
+    ['slice', state => state.slice()[0]],
+    ['concat', state => state.concat()[0]],
+    ['toReversed', state => state.toReversed()[1]],
+    ['toSorted', state => state.toSorted()[0]],
+    ['toSpliced', state => state.toSpliced(0, 0)[0]],
+  ]
+
+  test.each(paths)('%s preserves readonly and reactivity', (_name, get) => {
+    const raw = [{ a: 1 }, { a: 2 }]
+    const source = reactive(raw)
+    const state = readonly(source)
+    const item = get(state)
+
+    expect(isReadonly(item)).toBe(true)
+    expect(isReactive(item)).toBe(true)
+    expect(item).toBe(state[0])
+
+    let observed = 0
+    effect(() => {
+      observed = item.a
+    })
+    expect(observed).toBe(1)
+
+    item.a = 999
+    expect(raw[0].a).toBe(1)
+    expect(observed).toBe(1)
+    expect(`target is readonly`).toHaveBeenWarned()
+
+    source[0].a = 2
+    expect(observed).toBe(2)
+  })
+
+  test('concat wraps elements coming from a readonly argument', () => {
+    const raw = [{ a: 1 }]
+    const other = [{ b: 1 }]
+    const input = readonly(reactive(raw))
+    const merged = reactive<unknown[]>([]).concat(input, reactive(other))
+
+    expect(isReadonly(merged[0])).toBe(true)
+    expect(isReactive(merged[0])).toBe(true)
+    expect(merged[0]).toBe(input[0])
+    expect(isReadonly(merged[1])).toBe(false)
+    expect(isReactive(merged[1])).toBe(true)
+  })
+
+  test('concat preserves elements from a non-reactive readonly argument', () => {
+    const input = readonly([{ a: 1 }])
+    const merged = reactive<unknown[]>([]).concat(input)
+
+    expect(isReadonly(merged[0])).toBe(true)
+    expect(isReactive(merged[0])).toBe(false)
+    expect(merged[0]).toBe(input[0])
+  })
+})
