@@ -49,33 +49,37 @@ export function genFor(
     wrappedRows,
   } = oper
 
-  const rawValue = value && value.content
-  const rawKey = key && key.content
-  const rawIndex = index && index.content
-
   const sourceExpr = ['() => (', ...genExpression(source, context), ')']
+  const plugins = context.options.expressionPlugins
+  // key and index are parsed as function params too, so they go through the
+  // same destructure walk as value - it reads the bound name off the ast and
+  // wires up the default value, if any.
   const idToPathMap = parseValueDestructure(value, context)
+  const keyToPathMap = parseValueDestructure(key, context)
+  const indexToPathMap = parseValueDestructure(index, context)
 
   const [depth, exitScope] = context.enterScope()
   const itemVar = `_for_item${depth}`
-  const idMap = buildDestructureIdMap(
-    idToPathMap,
-    `${itemVar}.value`,
-    context.options.expressionPlugins,
-  )
+  const idMap = buildDestructureIdMap(idToPathMap, `${itemVar}.value`, plugins)
   idMap[itemVar] = null
 
   const args = [itemVar]
-  if (rawKey) {
+  if (key) {
     const keyVar = `_for_key${depth}`
     args.push(`, ${keyVar}`)
-    idMap[rawKey] = `${keyVar}.value`
+    Object.assign(
+      idMap,
+      buildDestructureIdMap(keyToPathMap, `${keyVar}.value`, plugins),
+    )
     idMap[keyVar] = null
   }
-  if (rawIndex) {
+  if (index) {
     const indexVar = `_for_index${depth}`
     args.push(`, ${indexVar}`)
-    idMap[rawIndex] = `${indexVar}.value`
+    Object.assign(
+      idMap,
+      buildDestructureIdMap(indexToPathMap, `${indexVar}.value`, plugins),
+    )
     idMap[indexVar] = null
   }
 
@@ -178,24 +182,16 @@ export function genFor(
       () => genExpression(expr, context),
       genSimpleIdMap(),
     )
-    return [
-      ...genMulti(
-        ['(', ')', ', '],
-        rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
-        rawKey ? rawKey : rawIndex ? '__' : undefined,
-        rawIndex,
-      ),
-      ' => (',
-      ...res,
-      ')',
-    ]
+    return [...genAliasParams(value, key, index), ' => (', ...res, ')']
   }
 
   function genSimpleIdMap() {
     const idMap: Record<string, null> = {}
-    if (rawKey) idMap[rawKey] = null
-    if (rawIndex) idMap[rawIndex] = null
-    idToPathMap.forEach((_, id) => (idMap[id] = null))
+    const collect = (map: DestructureMap) =>
+      map.forEach((_, id) => (idMap[id] = null))
+    collect(idToPathMap)
+    collect(keyToPathMap)
+    collect(indexToPathMap)
     return idMap
   }
 }
@@ -290,6 +286,42 @@ export type DestructureMapValue = {
 
 export type DestructureMap = Map<string, DestructureMapValue | null>
 
+// print a v-for alias as a function param, mirroring what vdom emits:
+// `processExpression` with `asParams` swaps every identifier's source range for
+// its name, and a babel `Identifier` range swallows the type annotation and the
+// optional marker, so `index?: number = 0` prints as `index = 0`. A pattern is
+// not an `Identifier`, so its annotation survives there - in vdom too.
+function getAliasParam(exp: SimpleExpressionNode): string {
+  const { ast, content } = exp
+  if (ast && ast.type === 'ArrowFunctionExpression') {
+    const param = ast.params[0]
+    if (param && param.type === 'Identifier') {
+      return param.name
+    }
+    // offsets are shifted by the `(` the alias is parsed with
+    if (param && param.type === 'AssignmentPattern') {
+      const { left } = param
+      if (left.type === 'Identifier') {
+        return left.name + content.slice(left.end! - 1)
+      }
+    }
+  }
+  return content
+}
+
+export function genAliasParams(
+  value: SimpleExpressionNode | undefined,
+  key: SimpleExpressionNode | undefined,
+  index: SimpleExpressionNode | undefined,
+): CodeFragment[] {
+  return genMulti(
+    ['(', ')', ', '],
+    value ? getAliasParam(value) : key || index ? '_' : undefined,
+    key ? getAliasParam(key) : index ? '__' : undefined,
+    index && getAliasParam(index),
+  )
+}
+
 // construct a id -> accessor path map.
 // e.g. `{ x: { y: [z] }}` -> `Map{ 'z' => '.x.y[0]' }`
 export function parseValueDestructure(
@@ -355,11 +387,15 @@ export function parseValueDestructure(
                   ']'
               }
 
-              // default value
+              // default value, either inside the pattern (`{ a = 1 }`) or on
+              // the alias itself (`(item, key, index = 0)`) - the latter sits
+              // directly under the arrow the alias is parsed as
               if (
                 child.type === 'AssignmentPattern' &&
                 (parent.type === 'ObjectProperty' ||
-                  parent.type === 'ArrayPattern')
+                  parent.type === 'ArrayPattern' ||
+                  (parent.type === 'ArrowFunctionExpression' &&
+                    child.left === id))
               ) {
                 isDynamic = true
                 helper = context.helper('getDefaultValue')

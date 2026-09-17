@@ -473,6 +473,24 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > slot owner context > dynamic slot name with annotated v-for aliases 1`] = `
+"import { toDisplayString as _toDisplayString, setText as _setText, renderEffect as _renderEffect, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template(" ")
+
+export function render(_ctx) {
+  const n2 = _createAssetComponent("Comp", null, {
+    $: [
+      _createForSlots(() => (_ctx.list), (_for_item0, _for_key0) => () => {
+        const n0 = t0()
+        _renderEffect(() => _setText(n0, _toDisplayString(_for_key0.value)))
+        return n0
+      }, (item, index) => (item))
+    ]
+  }, true)
+  return n2
+}"
+`;
+
 exports[`compiler: transform slot > slot owner context > dynamic slot source with slot outlet keeps dynamic slot function 1`] = `
 "import { createSlot as _createSlot, createForSlots as _createForSlots, createAssetComponent as _createAssetComponent } from 'vue';
 

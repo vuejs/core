@@ -52,6 +52,7 @@ import {
   type DestructureMap,
   type DestructureMapValue,
   buildDestructureIdMap,
+  genAliasParams,
   parseValueDestructure,
 } from './for'
 import { genModelHandler } from './vModel'
@@ -719,33 +720,34 @@ function genLoopSlot(
 ): CodeFragment[] {
   const { name, fn, loop, keyProp } = slot
   const { value, key, index, source } = loop
-  const rawValue = value && value.content
-  const rawKey = key && key.content
-  const rawIndex = index && index.content
-
+  const plugins = context.options.expressionPlugins
   const idToPathMap = parseValueDestructure(value, context)
+  const keyToPathMap = parseValueDestructure(key, context)
+  const indexToPathMap = parseValueDestructure(index, context)
   const [depth, exitScope] = context.enterScope()
   const itemVar = `_for_item${depth}`
-  const idMap = buildDestructureIdMap(
-    idToPathMap,
-    `${itemVar}.value`,
-    context.options.expressionPlugins,
-  )
+  const idMap = buildDestructureIdMap(idToPathMap, `${itemVar}.value`, plugins)
   idMap[itemVar] = null
 
   const args = [itemVar]
-  if (rawKey) {
+  if (key) {
     const keyVar = `_for_key${depth}`
     args.push(keyVar)
-    idMap[rawKey] = `${keyVar}.value`
+    Object.assign(
+      idMap,
+      buildDestructureIdMap(keyToPathMap, `${keyVar}.value`, plugins),
+    )
     idMap[keyVar] = null
-  } else if (rawIndex) {
+  } else if (index) {
     args.push('_')
   }
-  if (rawIndex) {
+  if (index) {
     const indexVar = `_for_index${depth}`
     args.push(indexVar)
-    idMap[rawIndex] = `${indexVar}.value`
+    Object.assign(
+      idMap,
+      buildDestructureIdMap(indexToPathMap, `${indexVar}.value`, plugins),
+    )
     idMap[indexVar] = null
   }
 
@@ -757,15 +759,12 @@ function genLoopSlot(
   exitScope()
 
   const rawIdMap: Record<string, null> = {}
-  if (rawKey) rawIdMap[rawKey] = null
-  if (rawIndex) rawIdMap[rawIndex] = null
-  idToPathMap.forEach((_, id) => (rawIdMap[id] = null))
-  const rawParams = genMulti(
-    ['(', ')', ', '],
-    rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
-    rawKey ? rawKey : rawIndex ? '__' : undefined,
-    rawIndex,
-  )
+  const collect = (map: DestructureMap) =>
+    map.forEach((_, id) => (rawIdMap[id] = null))
+  collect(idToPathMap)
+  collect(keyToPathMap)
+  collect(indexToPathMap)
+  const rawParams = genAliasParams(value, key, index)
   const getName = [
     ...rawParams,
     ' => (',

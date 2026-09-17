@@ -12,7 +12,7 @@ import {
   transformVIf,
   transformVOn,
 } from '../../src'
-import { NodeTypes } from '@vue/compiler-dom'
+import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import { VaporVForFlags } from '@vue/shared'
 
 const compileWithVFor = makeCompile({
@@ -610,6 +610,104 @@ describe('compiler: v-for', () => {
     expect(code).toContain('let _child1')
     expect(code).toContain('_child1 = _for_item0.value')
     expect(code).toContain('_selector0(_child1.key')
+  })
+
+  // aliases are parsed as function params, so a type annotation is part of the
+  // alias source - the bound name has to come from the ast
+  test.each([
+    '(item, index: number)',
+    '(item: string, index: number)',
+    '(item:string,index:number)',
+    '( item : string , index : number )',
+    '(item: string | number, index: number)',
+    '(item: Array<string>, index: number)',
+    "(item: 'a' | 'b', index: number)",
+    '(item: (a: string) => void, index: number)',
+    '(item?: string, index?: number)',
+  ])('resolves an annotated key alias declared as %s', alias => {
+    const { code } = compileWithVFor(
+      `<div v-for="${alias} in items">{{ index }}</div>`,
+    )
+    expect(code).toContain('_toDisplayString(_for_key0.value)')
+    expect(code).not.toContain('_ctx.index')
+  })
+
+  // a default value is part of the alias source too, so this is broken without
+  // any typescript in the template
+  test.each(['(item, index = 0)', '(item: string, index: number = 0)'])(
+    'resolves a key alias with a default declared as %s',
+    alias => {
+      const { code } = compileWithVFor(
+        `<div v-for="${alias} in items">{{ index }}</div>`,
+      )
+      expect(code).toContain('_getDefaultValue(_for_key0.value, () => (0))')
+      expect(code).not.toContain('_ctx.index')
+    },
+  )
+
+  test('resolves annotated key and index aliases of an object source', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(value: string, key: string, index: number) in items">{{ value }}{{ key }}{{ index }}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain(
+      '_toDisplayString(_for_item0.value) + _toDisplayString(_for_key0.value) + _toDisplayString(_for_index0.value)',
+    )
+    expect(code).not.toContain('_ctx.key')
+    expect(code).not.toContain('_ctx.index')
+  })
+
+  test('applies a default value of the value and index aliases', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item = 'x', key, index = 99) in items">{{ item }}{{ index }}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain(
+      "_toDisplayString(_getDefaultValue(_for_item0.value, () => ('x'))) + _toDisplayString(_getDefaultValue(_for_index0.value, () => (99)))",
+    )
+  })
+
+  test('annotated aliases are not emitted into the key function params', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item: string, index: number) in items" :key="index">{{ item }}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('}, (item, index) => (index)')
+  })
+
+  test('alias defaults are kept in the key function params', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item, key, index: number = 99) in items" :key="index">{{ item }}</div>`,
+    )
+    expect(code).toContain('}, (item, key, index = 99) => (index)')
+  })
+
+  // printing the annotation of a destructured alias is deliberate vdom parity:
+  // a babel `Identifier` range swallows its `typeAnnotation`, so vdom's
+  // `processExpression(asParams)` drops it on a plain alias, while an
+  // `ObjectPattern` keeps it in the source slice. Only `index` changes here.
+  test('drops the annotation of a plain alias but keeps a pattern one', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="({ id }: { id: number }, index: number) in items" :key="index">{{ id }}</div>`,
+    )
+    expect(code).toContain('}, ({ id }: { id: number }, index) => (index)')
+    expect(code).toContain('_toDisplayString(_for_item0.value.id)')
+  })
+
+  // #15205-style limitation, not introduced here: `forIteratorRE` in
+  // compiler-core splits the alias list on the last commas, so a comma inside a
+  // generic annotation mis-splits into `item: Record<string` / `number>` /
+  // `index: number`. vdom survives because it re-joins the pieces verbatim,
+  // vapor re-parses each one and reports an invalid expression. Fixing the
+  // regex belongs in compiler-core, where it affects vdom as well.
+  test('a comma inside a generic annotation is still not supported', () => {
+    const onError = vi.fn()
+    compileWithVFor(
+      `<div v-for="(item: Record<string, number>, index: number) in items">{{ index }}</div>`,
+      { onError },
+    )
+    expect(onError).toHaveBeenCalled()
+    expect(onError.mock.calls[0][0].code).toBe(ErrorCodes.X_INVALID_EXPRESSION)
   })
 
   test('avoids runtime helper collision with an existing cache variable', () => {
