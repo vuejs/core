@@ -131,8 +131,9 @@ function stripComments(content: string): string {
         i = last = end === -1 ? len : end + 2
       } else if (next === CharCodes.Slash) {
         out += content.slice(last, i)
-        const end = content.indexOf('\n', i + 2)
-        i = last = end === -1 ? len : end
+        i += 2
+        while (i < len && !isNewline(content.charCodeAt(i))) i++
+        last = i
       } else {
         i++
       }

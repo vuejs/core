@@ -218,6 +218,13 @@ describe('CSS vars injection', () => {
       expect(descriptor.cssVars).toEqual(['color'])
     })
 
+    test('should end // comments at CR-only line endings', () => {
+      const { descriptor } = parse(
+        `<style lang="scss">// v-bind(a)\rdiv { color: v-bind(color); }</style>`,
+      )
+      expect(descriptor.cssVars).toEqual(['color'])
+    })
+
     test('should not treat identifiers ending with url as url()', () => {
       const { descriptor } = parse(
         `<style lang="scss">div {
