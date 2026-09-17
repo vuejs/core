@@ -880,7 +880,8 @@ describe('e2e: TransitionGroup', () => {
         return p
       })
 
-      expect(original_top).toBeLessThan(new_top as number)
+      // transitionstart can fire at zero progress, before the element moves.
+      expect(original_top).toBeLessThanOrEqual(new_top as number)
     },
     E2E_TIMEOUT,
   )
