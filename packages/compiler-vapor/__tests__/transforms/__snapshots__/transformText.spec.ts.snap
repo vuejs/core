@@ -21,6 +21,29 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: text transform > empty literal next to an element in slot content 1`] = `
+"import { child as _child, setText as _setText, txt as _txt, toDisplayString as _toDisplayString, renderEffect as _renderEffect, createAssetComponent as _createAssetComponent, template as _template } from 'vue';
+const t0 = _template(" ")
+const t1 = _template("<b> ")
+
+export function render(_ctx) {
+  const n3 = _createAssetComponent("Comp", null, () => {
+    const n0 = t0()
+    const n2 = t1()
+    const n1 = _child(n2, true)
+    _setText(n0, '')
+    const x2 = _txt(n2)
+    _renderEffect(() => {
+      const _msg = _ctx.msg
+      _setText(n1, _toDisplayString(_msg))
+      _setText(x2, _toDisplayString(_msg))
+    })
+    return [n0, n2]
+  }, true)
+  return n3
+}"
+`;
+
 exports[`compiler: text transform > escapes raw static text for custom element createElement path 1`] = `
 "import { createPlainElement as _createPlainElement, insert as _insert, setText as _setText, template as _template } from 'vue';
 const t0 = _template("")

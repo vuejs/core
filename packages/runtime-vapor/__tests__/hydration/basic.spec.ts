@@ -466,4 +466,95 @@ describe('Vapor Mode hydration', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration text mismatch`).not.toHaveBeenWarned()
   })
+
+  // the compiler drops the leading newline of <pre> per the html spec, and so
+  // does the parser reading the server output, so the empty text node it
+  // leaves behind must not shift the children after it
+  test.each([
+    ['<pre>\n<b>{{ data.txt }}</b></pre>', '<pre><b>foo</b></pre>'],
+    [
+      '<pre>\n<code>{{ data.txt }}</code>\n</pre>',
+      '<pre><code>foo</code>\n</pre>',
+    ],
+    ['<pre>\n<b>{{ data.txt }}</b><i/></pre>', '<pre><b>foo</b><i></i></pre>'],
+    [
+      '<div><pre>\n<b>{{ data.txt }}</b></pre><i>{{ data.txt }}</i></div>',
+      '<div><pre><b>foo</b></pre><i>foo</i></div>',
+    ],
+    [`<div>{{ '' }}<b>{{ data.txt }}</b></div>`, '<div><b>foo</b></div>'],
+  ])('empty child among element children: %s', async (template, expected) => {
+    const data = reactive({ txt: 'foo' })
+    const { container, html } = await testHydration(
+      `<template>${template}</template>`,
+      {},
+      data,
+    )
+
+    expect(html).toBe(expected)
+    expect(container.innerHTML).toBe(html)
+
+    data.txt = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(expected.replace(/foo/g, 'bar'))
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration text mismatch`).not.toHaveBeenWarned()
+  })
+
+  test.each([
+    [
+      '<b v-if="data.show">{{ data.txt }}</b>',
+      '<pre><b>foo</b></pre>',
+      '<pre><b>foo</b><!--if--></pre>',
+      '<pre><b>bar</b><!--if--></pre>',
+    ],
+    [
+      '<b v-for="i in data.list" :key="i">{{ data.txt }}</b>',
+      '<pre><!--[--><b>foo</b><!--]--></pre>',
+      '<pre><!--[--><b>foo</b><!--]--></pre>',
+      '<pre><!--[--><b>bar</b><!--]--></pre>',
+    ],
+  ])(
+    'block as the first child after a dropped newline: %s',
+    async (block, ssr, hydrated, updated) => {
+      const data = reactive({ txt: 'foo', show: true, list: [1] })
+      const { container, html } = await testHydration(
+        `<template><pre>\n${block}</pre></template>`,
+        {},
+        data,
+      )
+
+      expect(html).toBe(ssr)
+      expect(container.innerHTML).toBe(hydrated)
+
+      data.txt = 'bar'
+      await nextTick()
+      expect(container.innerHTML).toBe(updated)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    },
+  )
+
+  // A child that renders nothing takes no logical unit in the server output
+  // either, so a block appended after it has to start one unit earlier than
+  // the child count suggests - otherwise hydration walks off the end.
+  test('block after a child that renders nothing', async () => {
+    const data = reactive({ txt: 'foo', list: [1, 2] })
+    const { container, html } = await testHydration(
+      `<template><div><b>{{ data.txt }}</b>{{ '' }}<i v-for="i in data.list">x</i></div></template>`,
+      {},
+      data,
+    )
+
+    expect(html).toBe('<div><b>foo</b><!--[--><i>x</i><i>x</i><!--]--></div>')
+    expect(container.innerHTML).toBe(html)
+
+    data.txt = 'bar'
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      '<div><b>bar</b><!--[--><i>x</i><i>x</i><!--]--></div>',
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+  })
 })

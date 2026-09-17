@@ -44,6 +44,19 @@ export const transformChildren: NodeTransform = (node, context) => {
     transformNode(childContext)
 
     const childDynamic = childContext.dynamic
+    // Whether the child materializes a node of its own. Its contrapositive is
+    // the contract the consumers below rely on: a child that creates no node
+    // occupies no position in the parent's template - neither a child index to
+    // navigate to, nor an SSR logical unit. Fragment children are referenced
+    // unconditionally right below, so the predicate is only computed for the
+    // parents that actually consult it.
+    const createsNode =
+      isFragment ||
+      childContext.template !== '' ||
+      childDynamic.template != null ||
+      childDynamic.id !== undefined ||
+      childDynamic.operation !== undefined ||
+      childDynamic.hasDynamicChild === true
 
     if (isFragment) {
       childContext.reference()
@@ -56,13 +69,6 @@ export const transformChildren: NodeTransform = (node, context) => {
         context.block.returns.push(childContext.dynamic.id!)
       }
     } else if (useCreateElement) {
-      const createsNode =
-        childContext.template !== '' ||
-        childDynamic.template != null ||
-        childDynamic.id !== undefined ||
-        childDynamic.operation !== undefined ||
-        childDynamic.hasDynamicChild === true
-
       if (createsNode) {
         // createElement-backed parents don't materialize childNodes from a
         // static HTML string, so every real child node must be inserted.
@@ -81,6 +87,12 @@ export const transformChildren: NodeTransform = (node, context) => {
       childDynamic.flags & DynamicFlag.INSERT
     ) {
       context.dynamic.hasDynamicChild = true
+    }
+
+    // Set this after the check above: absent children must not make their
+    // parent dynamic.
+    if (!createsNode) {
+      childDynamic.flags |= DynamicFlag.NON_TEMPLATE
     }
 
     context.dynamic.children[i] = childDynamic
