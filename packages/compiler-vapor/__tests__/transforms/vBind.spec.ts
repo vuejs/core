@@ -1092,4 +1092,68 @@ describe('compiler v-bind', () => {
 
     expect(code).toContain(expected)
   })
+
+  test('v-model value number literals', () => {
+    const { code } = compileWithVBind(
+      `<input type="checkbox" :value="1" :true-value="1" :false-value="0">`,
+    )
+
+    expect(code).toContain('_setValue(n0, 1)')
+    expect(code).toContain('_setAttr(n0, "true-value", 1)')
+    expect(code).toContain('_setAttr(n0, "false-value", 0)')
+    expect(code).toMatchSnapshot()
+  })
+
+  test('textarea and select value literals', () => {
+    const { code } = compileWithVBind(
+      `<textarea :value="'hello'"></textarea><select :value="'b'"><option value="b"></option></select>`,
+    )
+
+    // the `value` content attribute is inert on both tags
+    expect(code).toContain('_template("<textarea>")')
+    expect(code).toContain('_template("<select><option value=b>")')
+    expect(code).toContain('_setValue(n0, "hello")')
+    expect(code).toContain('_setValue(n1, "b")')
+    expect(code).toMatchSnapshot()
+  })
+
+  test.each([
+    // v-model reads these back off the element, so they stay raw values
+    [`<input :value="1">`, `_setValue(n0, 1)`],
+    [`<input :value="1n">`, `_setValue(n0, 1n)`],
+    [`<option :value="1"></option>`, `_setValue(n0, 1)`],
+    [`<textarea :value="1"></textarea>`, `_setValue(n0, 1)`],
+    [`<select :value="1"></select>`, `_setValue(n0, 1)`],
+    [
+      `<input type="checkbox" :true-value="1">`,
+      `_setAttr(n0, "true-value", 1)`,
+    ],
+    [
+      `<input type="checkbox" :false-value="0">`,
+      `_setAttr(n0, "false-value", 0)`,
+    ],
+    // the type is only known at runtime, so it may still be a checkbox
+    [`<input :type="type" :true-value="1">`, `_setAttr(n0, "true-value", 1)`],
+    // `.prop` goes through the same `setValue`
+    [`<input :value.prop="1">`, `_setValue(n0, 1)`],
+    // a dynamic key is applied at runtime, so it never reaches the template
+    [`<div :[key]="0"></div>`, `[_ctx.key]: 0`],
+    // boolean attributes are folded from the value's own type
+    [`<input :disabled="0">`, `_setProp(n0, "disabled", 0)`],
+    [`<div :hidden="0"></div>`, `_template("<div>"`],
+    // still stringified into the template
+    [`<div :value="1"></div>`, `_template("<div value=1>"`],
+    [`<input :value="'1'">`, `_template("<input value=1>"`],
+    [`<input :size="2">`, `_template("<input size=2>"`],
+    // `true-value` is only read back on a checkbox
+    [`<input :true-value="1">`, `_template("<input true-value=1>"`],
+    [`<input type="text" :true-value="1">`, `true-value=1`],
+    // `.attr` is stringified by `setAttribute` anyway
+    [`<input :value.attr="1">`, `_template("<input value=1>"`],
+    [`<input :disabled.attr="0">`, `_template("<input disabled=0>"`],
+  ])('number literals with %s', (template, expected) => {
+    const { code } = compileWithVBind(template)
+
+    expect(code).toContain(expected)
+  })
 })

@@ -9,7 +9,11 @@ import {
 import { camelize, extend } from '@vue/shared'
 import type { DirectiveTransform, TransformContext } from '../transform'
 import { resolveExpression } from '../utils'
-import { isReservedProp } from './transformElement'
+import {
+  isFoldableBooleanAttr,
+  isModelValueProp,
+  isReservedProp,
+} from './transformElement'
 
 // same-name shorthand - :arg is expanded to :arg="arg"
 export function normalizeBindShorthand(
@@ -47,14 +51,24 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     exp = createSimpleExpression('', true, loc)
   }
 
-  // Component, slot outlet and custom element props are passed as raw values,
-  // so number literals must keep their type instead of being stringified.
+  arg = resolveExpression(arg)
+
+  // A number literal loses its type as soon as it is stringified into the
+  // template, so hold it back wherever the value does not end up there as a
+  // string: component, slot outlet and custom element props are passed as raw
+  // values, a dynamic key is always applied at runtime, boolean attributes are
+  // folded from the type of the value itself, and v-model reads its value
+  // props back off the element. `.attr` always goes through `setAttribute`,
+  // which stringifies anyway.
   const excludeNumber =
     node.tagType === ElementTypes.COMPONENT ||
     node.tagType === ElementTypes.SLOT ||
-    !!context.options.isCustomElement(node.tag)
+    !!context.options.isCustomElement(node.tag) ||
+    !arg.isStatic ||
+    (!modifiersString.includes('attr') &&
+      (isFoldableBooleanAttr(arg.content) ||
+        isModelValueProp(node, arg.content)))
   exp = resolveExpression(exp, excludeNumber)
-  arg = resolveExpression(arg)
 
   if (arg.isStatic && isReservedProp(arg.content)) return
 

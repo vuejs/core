@@ -222,12 +222,18 @@ export interface ParityResult {
  * run `act`, and return each mode's final html and text. Sources without a
  * `<script>` get a plain `<script setup>` so the mode comes from the compile
  * option (`compile()` would inject `<script vapor>`, which forces vapor).
- * `extra` components are shared by both modes as given.
+ * `extra` components are shared by both modes as given. `act` is told which
+ * mode it is running in, so it can collect its own per-mode results without
+ * depending on the order the modes are rendered in.
  */
 export async function renderParity(
   srcs: Record<string, string>,
   makeData: () => runtimeDom.Ref<any>,
-  act: (data: runtimeDom.Ref<any>, root: HTMLElement) => void | Promise<void>,
+  act: (
+    data: runtimeDom.Ref<any>,
+    root: HTMLElement,
+    mode: 'vdom' | 'vapor',
+  ) => void | Promise<void>,
   extra: Record<string, any> = {},
 ): Promise<{ vdom: ParityResult; vapor: ParityResult }> {
   const results = {} as { vdom: ParityResult; vapor: ParityResult }
@@ -250,7 +256,7 @@ export async function renderParity(
     const root = document.createElement('div')
     const app = vapor ? createVaporApp(App) : createApp(App)
     app.use(vaporInteropPlugin).mount(root)
-    await act(data, root)
+    await act(data, root, vapor ? 'vapor' : 'vdom')
     await runtimeDom.nextTick()
     results[vapor ? 'vapor' : 'vdom'] = {
       after: root.innerHTML,

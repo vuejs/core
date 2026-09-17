@@ -693,6 +693,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > textarea and select value literals 1`] = `
+"import { setValue as _setValue, template as _template } from 'vue';
+const t0 = _template("<textarea>")
+const t1 = _template("<select><option value=b>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t1()
+  _setValue(n0, "hello")
+  _setValue(n1, "b")
+  return [n0, n1]
+}"
+`;
+
 exports[`compiler v-bind > unsafe constant object style stays on runtime setter 1`] = `
 "import { setStyle as _setStyle, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -711,6 +725,19 @@ const t0 = _template("<svg>", 1, 1)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > v-model value number literals 1`] = `
+"import { setValue as _setValue, setAttr as _setAttr, template as _template } from 'vue';
+const t0 = _template("<input type=checkbox>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _setValue(n0, 1)
+  _setAttr(n0, "true-value", 1)
+  _setAttr(n0, "false-value", 0)
   return n0
 }"
 `;

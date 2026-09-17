@@ -1,4 +1,4 @@
-import { reactive, ref } from '@vue/reactivity'
+import { type Ref, reactive, ref } from '@vue/reactivity'
 import {
   applyCheckboxModel,
   applyDynamicModel,
@@ -14,7 +14,7 @@ import {
   setValue,
   template,
 } from '../../src'
-import { makeRender } from '../_utils'
+import { makeRender, renderParity } from '../_utils'
 import { nextTick } from '@vue/runtime-dom'
 
 const define = makeRender()
@@ -1182,6 +1182,190 @@ describe('directive: v-model', () => {
       await nextTick()
       expect(n1!.checked).toEqual(false)
       expect(n2!.checked).toEqual(true)
+    })
+  })
+
+  describe('literal values written by the template', () => {
+    // the type the template wrote has to survive into the dom and the model,
+    // so these go through the compiler instead of calling the directives
+    // directly
+    const parity = async <T>(
+      template: string,
+      makeInitial: () => any,
+      probe: (root: HTMLElement, data: Ref<any>) => T | Promise<T>,
+    ): Promise<{ vdom: T; vapor: T }> => {
+      const probed = {} as { vdom: T; vapor: T }
+      await renderParity(
+        { App: `<template>${template}</template>` },
+        () => ref(makeInitial()),
+        async (data, root, mode) => {
+          probed[mode] = await probe(root, data)
+        },
+      )
+      return probed
+    }
+
+    const modelParity = (
+      template: string,
+      makeInitial: () => any,
+      act: (root: HTMLElement) => void,
+    ) =>
+      parity(template, makeInitial, async (root, data) => {
+        act(root)
+        await nextTick()
+        return data.value
+      })
+
+    const pickOption = (root: HTMLElement, index: number) => {
+      const select = root.querySelector('select')!
+      if (select.multiple) {
+        for (let i = 0; i <= index; i++) select.options[i].selected = true
+      } else {
+        select.selectedIndex = index
+      }
+      triggerEvent('change', select)
+    }
+
+    const check = (root: HTMLElement, index: number, checked: boolean) => {
+      const input = root.querySelectorAll('input')[index]
+      input.checked = checked
+      triggerEvent('change', input)
+    }
+
+    test('select keeps number option values', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<select v-model="data"><option :value="1">a</option><option :value="2">b</option></select>`,
+        () => 1,
+        root => pickOption(root, 1),
+      )
+
+      expect(vdom).toBe(2)
+      expect(vapor).toBe(2)
+    })
+
+    test('select multiple keeps number option values', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<select multiple v-model="data"><option :value="1">a</option><option :value="2">b</option></select>`,
+        () => [],
+        root => pickOption(root, 1),
+      )
+
+      expect(vdom).toEqual([1, 2])
+      expect(vapor).toEqual([1, 2])
+    })
+
+    test('radio keeps number values', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<input type="radio" :value="1" v-model="data"><input type="radio" :value="2" v-model="data">`,
+        () => 1,
+        root => check(root, 1, true),
+      )
+
+      expect(vdom).toBe(2)
+      expect(vapor).toBe(2)
+    })
+
+    test('checkbox array keeps number values', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<input type="checkbox" :value="1" v-model="data"><input type="checkbox" :value="2" v-model="data">`,
+        () => [1],
+        root => check(root, 1, true),
+      )
+
+      expect(vdom).toEqual([1, 2])
+      expect(vapor).toEqual([1, 2])
+    })
+
+    test('checkbox keeps number true-value and false-value', async () => {
+      const { vdom, vapor } = await modelParity(
+        `<input type="checkbox" :true-value="1" :false-value="0" v-model="data">`,
+        () => 1,
+        root => check(root, 0, false),
+      )
+
+      expect(vdom).toBe(0)
+      expect(vapor).toBe(0)
+    })
+
+    // taken out of the template string, they have to be put back on the
+    // element by `setAttr` - which is also what stores the raw value
+    // `getCheckboxValue` prefers over the attribute
+    test('checkbox keeps static true-value and false-value in the dom', async () => {
+      const { vdom, vapor } = await parity(
+        `<input type="checkbox" true-value="yes" false-value="no" v-model="data">`,
+        () => 'yes',
+        root => {
+          const input = root.querySelector('input')!
+          return {
+            trueValue: input.getAttribute('true-value'),
+            falseValue: input.getAttribute('false-value'),
+            rawTrueValue: (input as any)._trueValue,
+            rawFalseValue: (input as any)._falseValue,
+            checked: input.checked,
+          }
+        },
+      )
+
+      expect(vapor).toEqual({
+        trueValue: 'yes',
+        falseValue: 'no',
+        rawTrueValue: 'yes',
+        rawFalseValue: 'no',
+        checked: true,
+      })
+      expect(vapor).toEqual(vdom)
+    })
+
+    // a dynamic key never reaches the template string, so the value stays raw
+    // and a boolean attribute is read as the number it was written as
+    test('dynamic key keeps number values', async () => {
+      const { vdom, vapor } = await parity(
+        `<input :[data]="0">`,
+        () => 'disabled',
+        root => root.querySelector('input')!.disabled,
+      )
+
+      expect(vdom).toBe(false)
+      expect(vapor).toBe(false)
+    })
+
+    test('boolean attribute keeps number values', async () => {
+      const { vdom, vapor } = await parity(
+        `<input :disabled="0"><input :disabled="1"><div :hidden="0"></div>`,
+        () => null,
+        root => [
+          root.querySelectorAll('input')[0].disabled,
+          root.querySelectorAll('input')[1].disabled,
+          root.querySelector('div')!.hidden,
+        ],
+      )
+
+      expect(vdom).toEqual([false, true, false])
+      expect(vapor).toEqual([false, true, false])
+    })
+
+    // `<textarea>` / `<select>` ignore a `value` content attribute, so it only
+    // takes effect when it is assigned as a dom property
+    test('textarea value is assigned as a dom property', async () => {
+      const { vdom, vapor } = await parity(
+        `<textarea :value="1"></textarea><textarea value="x"></textarea>`,
+        () => null,
+        root => [...root.querySelectorAll('textarea')].map(el => el.value),
+      )
+
+      expect(vdom).toEqual(['1', 'x'])
+      expect(vapor).toEqual(['1', 'x'])
+    })
+
+    test('select value is assigned as a dom property', async () => {
+      const { vdom, vapor } = await parity(
+        `<select :value="'b'"><option value="a">a</option><option value="b">b</option></select>`,
+        () => null,
+        root => root.querySelector('select')!.selectedIndex,
+      )
+
+      expect(vdom).toBe(1)
+      expect(vapor).toBe(1)
     })
   })
 })
