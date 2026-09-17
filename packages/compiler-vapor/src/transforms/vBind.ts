@@ -47,11 +47,12 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     exp = createSimpleExpression('', true, loc)
   }
 
-  // component and slot outlet props are passed along as raw values instead of
-  // being stringified into the template, so number literals must keep their type
+  // Component, slot outlet and custom element props are passed as raw values,
+  // so number literals must keep their type instead of being stringified.
   const excludeNumber =
     node.tagType === ElementTypes.COMPONENT ||
-    node.tagType === ElementTypes.SLOT
+    node.tagType === ElementTypes.SLOT ||
+    !!context.options.isCustomElement(node.tag)
   exp = resolveExpression(exp, excludeNumber)
   arg = resolveExpression(arg)
 

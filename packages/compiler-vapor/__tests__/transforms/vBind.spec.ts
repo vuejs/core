@@ -1066,4 +1066,30 @@ describe('compiler v-bind', () => {
     )
     expect(code).matchSnapshot()
   })
+
+  test('custom element number literals', () => {
+    const { code } = compileWithVBind(
+      `<number-probe :count="0" :ratio="1.5" :bigint="1n" :str="'0'" :text="\`0\`" />`,
+      { isCustomElement: tag => tag === 'number-probe' },
+    )
+
+    expect(code).toContain('count: 0')
+    expect(code).toContain('ratio: 1.5')
+    expect(code).toContain('bigint: 1n')
+    expect(code).toContain('str: "0"')
+    expect(code).toContain('text: "0"')
+    expect(code).toMatchSnapshot()
+  })
+
+  test.each([
+    [':[key]="0"', '[_ctx.key]: 0'],
+    ['v-bind="props" :count="0"', '{ count: 0 }'],
+    ['v-bind="{ count: 0 }"', '{ count: 0 }'],
+  ])('custom element number literals with %s', (binding, expected) => {
+    const { code } = compileWithVBind(`<number-probe ${binding} />`, {
+      isCustomElement: tag => tag === 'number-probe',
+    })
+
+    expect(code).toContain(expected)
+  })
 })

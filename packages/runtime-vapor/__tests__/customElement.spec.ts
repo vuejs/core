@@ -1,5 +1,6 @@
 import type { MockedFunction } from 'vite-plus/test'
 import type { VaporElement } from '../src/apiDefineCustomElement'
+import { compileToVaporRender } from './_utils'
 import { DynamicFragment, SlotFragment } from '../src/fragment'
 import { VaporSlotFlags } from '@vue/shared'
 import {
@@ -2868,5 +2869,25 @@ describe('defineVaporCustomElement', () => {
     const comp = container.childNodes[0] as VaporElement
     const consumer = comp.shadowRoot!.childNodes[0] as VaporElement
     expect(consumer.tagName).toBe('A')
+  })
+
+  test('preserve number literals on custom element props', () => {
+    customElements.define(
+      'number-probe',
+      class extends HTMLElement {
+        set count(value: unknown) {
+          this.textContent = `${typeof value}/${value === 0}`
+        }
+      },
+    )
+
+    const app = createVaporApp({
+      render: compileToVaporRender('<number-probe :count="0" />', {
+        isCustomElement: tag => tag === 'number-probe',
+      }),
+    })
+    app.mount(container)
+    expect(container.textContent).toBe('number/true')
+    app.unmount()
   })
 })

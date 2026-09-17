@@ -466,6 +466,21 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > custom element number literals 1`] = `
+"import { createPlainElement as _createPlainElement } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createPlainElement("number-probe", {
+    count: 0,
+    ratio: 1.5,
+    bigint: 1n,
+    str: "0",
+    text: "0"
+  }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > dynamic arg 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
