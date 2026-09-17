@@ -140,4 +140,62 @@ describe('compiler: children transform', () => {
     expect(code).toMatch(`_setInsertionState(n4, n3)`)
     expect(code).toMatchSnapshot()
   })
+
+  describe('children that render nothing', () => {
+    // the parser drops the leading newline of <pre> per the html spec but
+    // keeps the now empty text node in the ast; an empty literal among
+    // element children renders nothing either. Neither has a node in the
+    // template string, so siblings must not be located past them.
+    // (<textarea> gets the same newline treatment but is RCDATA, so it can
+    // only ever hold text and never has a sibling to locate.)
+    test.each([
+      ['<pre>\n<b>{{ msg }}</b></pre>', '<pre><b> ', `const n0 = _child(n1)`],
+      [
+        '<pre>\n<code>{{ msg }}</code>\n</pre>',
+        '<pre><code> </code>\n',
+        `const n0 = _child(n1)`,
+      ],
+      ['<pre>\r\n<b>{{ msg }}</b></pre>', '<pre><b> ', `const n0 = _child(n1)`],
+      [
+        '<pre>\n<b>x</b>{{ msg }}</pre>',
+        '<pre><b>x</b> ',
+        `const n0 = _next(_child(n1), true)`,
+      ],
+      [
+        `<div>{{ '' }}<b>{{ msg }}</b></div>`,
+        '<div><b> ',
+        `const n0 = _child(n1)`,
+      ],
+      // untouched: the remaining newline is a text node of its own
+      [
+        '<pre>\n\n<b>{{ msg }}</b></pre>',
+        '<pre>\n\n<b> ',
+        `const n0 = _next(_child(n1))`,
+      ],
+      ['<div>\n<b>{{ msg }}</b></div>', '<div><b> ', `const n0 = _child(n1)`],
+    ])(
+      '%j builds %j and locates children with %j',
+      (source, template, access) => {
+        const { code, ir } = compileWithElementTransform(source)
+
+        expect([...ir.template.keys()]).toMatchObject([template])
+        expect(code).toContain(access)
+      },
+    )
+
+    test('does not make the parent dynamic', () => {
+      const { code } = compileWithElementTransform(
+        `<div><pre>\n<b>s</b></pre><i>{{ msg }}</i></div>`,
+      )
+
+      expect(code).toContain(`const n0 = _next(_child(n1))`)
+      expect(code).not.toMatch(/let p\d/)
+    })
+
+    test('keeps a fully static template static', () => {
+      const { code } = compileWithElementTransform(`<pre>\n<b>s</b></pre>`)
+
+      expect(code).toContain(`_template("<pre><b>s", 3)`)
+    })
+  })
 })

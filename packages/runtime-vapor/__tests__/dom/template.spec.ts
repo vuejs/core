@@ -119,3 +119,68 @@ describe('leading newline in <pre> and <textarea>', () => {
     expect(vapor.after).toBe(expected)
   })
 })
+
+describe('children that render nothing', () => {
+  // The single newline the compiler drops after <pre> leaves an empty text
+  // node in the ast, and an empty literal renders nothing at all. Neither has
+  // a node in the template string, so the children after them must still be
+  // located - and updated - at the right position. (<textarea> loses its
+  // newline the same way, but being RCDATA it never has an element child.)
+  test.each([
+    ['<pre>\n<b>{{ data }}</b></pre>', '<pre><b>bar</b></pre>'],
+    ['<pre>\r\n<b>{{ data }}</b></pre>', '<pre><b>bar</b></pre>'],
+    ['<pre>\n<code>{{ data }}</code>\n</pre>', '<pre><code>bar</code>\n</pre>'],
+    ['<pre>\n<b>x</b>{{ data }}</pre>', '<pre><b>x</b>bar</pre>'],
+    [
+      '<div><pre>\n<b>{{ data }}</b></pre><i>{{ data }}</i></div>',
+      '<div><pre><b>bar</b></pre><i>bar</i></div>',
+    ],
+    [
+      '<pre>\n<b>{{ data }}</b><select><option>1</option></select></pre>',
+      '<pre><b>bar</b><select><option>1</option></select></pre>',
+    ],
+    [`<div>{{ '' }}<b>{{ data }}</b></div>`, '<div><b>bar</b></div>'],
+    [
+      `<div><b>{{ data }}</b>{{ '' }}<i>{{ data }}</i></div>`,
+      '<div><b>bar</b><i>bar</i></div>',
+    ],
+  ])('%j renders as %j in both modes', async (tpl, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      data => {
+        data.value = 'bar'
+      },
+    )
+    expect(vdom.after).toBe(expected)
+    expect(vapor.after).toBe(expected)
+  })
+
+  // Such a child must not count as the last one that materializes either: the
+  // block before it is then an append rather than an anchored insert, so no
+  // `<!>` placeholder is left behind in the dom.
+  test.each([
+    [
+      `<div><template><q>{{ data }}</q></template>{{ '' }}</div>`,
+      '<div><template></template></div>',
+    ],
+    [
+      `<div><Transition><b>{{ data }}</b></Transition>{{ '' }}</div>`,
+      '<div><b>bar</b></div>',
+    ],
+    [
+      `<div><KeepAlive><b>{{ data }}</b></KeepAlive>{{ '' }}</div>`,
+      '<div><b>bar</b></div>',
+    ],
+  ])('%j leaves no anchor behind in both modes', async (tpl, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      data => {
+        data.value = 'bar'
+      },
+    )
+    expect(vdom.after).toBe(expected)
+    expect(vapor.after).toBe(expected)
+  })
+})

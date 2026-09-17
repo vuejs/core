@@ -143,6 +143,19 @@ describe('compiler: text transform', () => {
     expect(code).toMatchSnapshot()
   })
 
+  // #15393: unlike element children, slot content keeps its empty text node.
+  // What keeps it is transformText giving the literal a `" "` template, so it
+  // counts as creating a node; the `!isFragment` guard in transformChildren is
+  // a second line of defence that this case never reaches.
+  test('empty literal next to an element in slot content', () => {
+    const { code } = compileWithTextTransform(
+      `<Comp>{{ '' }}<b>{{ msg }}</b></Comp>`,
+    )
+    expect(code).toContain(`_setText(n0, '')`)
+    expect(code).toContain(`return [n0, n2]`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('text references among element children', () => {
     const { code } = compileWithTextTransform(
       '<p>{{ before }}<br :id="id">{{ between }}<br>{{ after }}</p>',

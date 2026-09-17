@@ -44,6 +44,19 @@ export const transformChildren: NodeTransform = (node, context) => {
     transformNode(childContext)
 
     const childDynamic = childContext.dynamic
+    // Whether the child materializes a node of its own. Its contrapositive is
+    // the contract the consumers below rely on: a child that creates no node
+    // occupies no position in the parent's template - neither a child index to
+    // navigate to, nor an SSR logical unit. Fragment children are referenced
+    // unconditionally right below, so the predicate is only computed for the
+    // parents that actually consult it.
+    const createsNode =
+      isFragment ||
+      childContext.template !== '' ||
+      childDynamic.template != null ||
+      childDynamic.id !== undefined ||
+      childDynamic.operation !== undefined ||
+      childDynamic.hasDynamicChild === true
 
     if (isFragment) {
       childContext.reference()
@@ -56,13 +69,6 @@ export const transformChildren: NodeTransform = (node, context) => {
         context.block.returns.push(childContext.dynamic.id!)
       }
     } else if (useCreateElement) {
-      const createsNode =
-        childContext.template !== '' ||
-        childDynamic.template != null ||
-        childDynamic.id !== undefined ||
-        childDynamic.operation !== undefined ||
-        childDynamic.hasDynamicChild === true
-
       if (createsNode) {
         // createElement-backed parents don't materialize childNodes from a
         // static HTML string, so every real child node must be inserted.
@@ -74,12 +80,24 @@ export const transformChildren: NodeTransform = (node, context) => {
       context.childrenTemplate.push(childContext.template)
     }
 
-    if (
+    // Captured before the flag below is set: a child that renders nothing does
+    // not make its parent dynamic, so the NON_TEMPLATE it gets here must not
+    // feed back into this condition.
+    const makesParentDynamic = !!(
       childDynamic.hasDynamicChild ||
       childDynamic.id !== undefined ||
       childDynamic.flags & DynamicFlag.NON_TEMPLATE ||
       childDynamic.flags & DynamicFlag.INSERT
-    ) {
+    )
+
+    if (!isFragment && !createsNode) {
+      // A child that renders nothing - e.g. the empty text node the parser
+      // leaves behind after dropping the leading newline of <pre> - has no
+      // node in the parent, so it must not take a child slot.
+      childDynamic.flags |= DynamicFlag.NON_TEMPLATE
+    }
+
+    if (makesParentDynamic) {
       context.dynamic.hasDynamicChild = true
     }
 
