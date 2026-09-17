@@ -21,6 +21,7 @@ import {
   SchedulerJobFlags,
   type ShallowUnwrapRef,
   type SuspenseBoundary,
+  type VNode,
   callWithErrorHandling,
   currentInstance,
   endMeasure,
@@ -915,6 +916,9 @@ export class VaporComponentInstance<
   applyCssVars?: (nodes: Block) => void
   cssVarOutlets?: VaporFragment[]
 
+  // Current VDOM input for event dispatch and raw-key checks.
+  interopVNode?: VNode
+
   // to hold vnode props / slots in vdom interop mode
   rawPropsRef?: ShallowRef<any>
   rawSlotsRef?: ShallowRef<any>
@@ -1120,7 +1124,10 @@ export class VaporComponentInstance<
    * paths where it's needed, e.g. `useModel`
    */
   rawKeys(): string[] {
-    return getKeysFromRawProps(this.rawProps)
+    const vnode = isInteropEnabled && this.interopVNode
+    return vnode
+      ? Object.keys(vnode.props || EMPTY_OBJ)
+      : getKeysFromRawProps(this.rawProps)
   }
 }
 

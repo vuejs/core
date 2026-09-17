@@ -541,7 +541,7 @@ export {
 /**
  * @internal
  */
-export { baseEmit, isEmitListener } from './componentEmits'
+export { baseEmit, defaultPropGetter, isEmitListener } from './componentEmits'
 /**
  * @internal
  */

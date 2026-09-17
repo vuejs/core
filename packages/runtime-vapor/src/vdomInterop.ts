@@ -3194,6 +3194,9 @@ function ensureVNodeHookState(
   instance: VaporComponentInstance,
   vnode: VNode,
 ): VNodeHookState {
+  // Publish current event inputs even when the component update is skipped.
+  instance.interopVNode = vnode
+
   let state = vnodeHookStateMap.get(instance)
   if (!state) {
     state = {
