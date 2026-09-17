@@ -151,13 +151,22 @@ function stripComments(content: string): string {
   return last === 0 ? content : out + content.slice(last)
 }
 
-// an unterminated string ends at the newline, matching CSS bad-string
+// an unterminated string ends at the newline, matching CSS bad-string;
+// an escaped newline (including CRLF) is a continuation
 function skipString(s: string, i: number, quote: number): number {
   while (i < s.length) {
     const c = s.charCodeAt(i)
     if (c === quote) return i + 1
     if (isNewline(c)) return i
-    i += c === CharCodes.Backslash ? 2 : 1
+    if (c === CharCodes.Backslash) {
+      i +=
+        s.charCodeAt(i + 1) === CharCodes.CarriageReturn &&
+        s.charCodeAt(i + 2) === CharCodes.NewLine
+          ? 3
+          : 2
+    } else {
+      i++
+    }
   }
   return i
 }

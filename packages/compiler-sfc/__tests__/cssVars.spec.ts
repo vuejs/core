@@ -225,6 +225,13 @@ describe('CSS vars injection', () => {
       expect(descriptor.cssVars).toEqual(['color'])
     })
 
+    test('should treat an escaped CRLF inside a string as a continuation', () => {
+      const { descriptor } = parse(
+        `<style>div { content: "a\\\r\n//"; color: v-bind(color); }</style>`,
+      )
+      expect(descriptor.cssVars).toEqual(['color'])
+    })
+
     test('should not treat identifiers ending with url as url()', () => {
       const { descriptor } = parse(
         `<style lang="scss">div {
