@@ -52,6 +52,10 @@ describe('compiler: expression transform', () => {
     expect(compile(`{{ foo // comment\n}}`).code).toContain(
       '_toDisplayString(_ctx.foo // comment\n)',
     )
+    // a lone \r terminates a line comment too
+    expect(compile(`{{ foo // comment\r}}`).code).toContain(
+      '_toDisplayString(_ctx.foo // comment\n)',
+    )
   })
 
   test('empty interpolation', () => {

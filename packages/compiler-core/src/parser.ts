@@ -118,9 +118,11 @@ const tokenizer = new Tokenizer(stack, {
       innerStart++
     }
     let endsWithNewline = false
-    while (isWhitespace(currentInput.charCodeAt(innerEnd - 1))) {
+    while (true) {
+      const char = currentInput.charCodeAt(innerEnd - 1)
+      if (!isWhitespace(char)) break
       endsWithNewline ||=
-        currentInput.charCodeAt(innerEnd - 1) === CharCodes.NewLine
+        char === CharCodes.NewLine || char === CharCodes.CarriageReturn
       innerEnd--
     }
     let exp = getSlice(innerStart, innerEnd)
