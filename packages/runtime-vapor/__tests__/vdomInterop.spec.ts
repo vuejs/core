@@ -8387,4 +8387,304 @@ describe('vdomInterop', () => {
       expect(hooks.onVnodeUnmounted).toHaveBeenCalledTimes(2)
     },
   )
+
+  test('should refresh emit listeners when no child update is triggered', async () => {
+    const childBeforeUpdate = vi.fn()
+    const removed: string[] = []
+    const data = ref({
+      items: [
+        { id: 1, name: 'a' },
+        { id: 2, name: 'b' },
+        { id: 3, name: 'c' },
+      ],
+      remove: (i: number) => {
+        removed.push(`${i}:${data.value.items[i].name}`)
+        data.value.items = data.value.items.filter((_, n) => n !== i)
+      },
+    })
+    const Row = compile(
+      `<script setup vapor>
+        import { onBeforeUpdate } from 'vue'
+        defineProps(['name'])
+        const emit = defineEmits(['remove'])
+        onBeforeUpdate(_components.childBeforeUpdate)
+      </script>
+      <template><button @click="emit('remove')">{{ name }}</button></template>`,
+      data,
+      { childBeforeUpdate },
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const Row = _components.Row
+      </script>
+      <template>
+        <Row
+          v-for="(item, i) in data.items"
+          :key="item.id"
+          :name="item.name"
+          @remove="data.remove(i)"
+        />
+      </template>`,
+      data,
+      { Row },
+      { vapor: false },
+    )
+    const { host } = define(App).render()
+
+    // each click must reach the listener from the parent's latest render
+    for (let i = 0; i < 3; i++) {
+      host.querySelector('button')!.click()
+      await nextTick()
+    }
+    expect(removed).toEqual(['0:a', '0:b', '0:c'])
+    expect(host.innerHTML).toBe('')
+    // ...without updating the child, which vdom also skips
+    expect(childBeforeUpdate).not.toHaveBeenCalled()
+  })
+
+  test('should refresh emit listeners on KeepAlive reactivation', async () => {
+    const calls: string[] = []
+    const data = ref({
+      view: 'row',
+      handler: () => calls.push('first'),
+    })
+    const Row = compile(
+      `<script setup vapor>
+        const emit = defineEmits(['foo'])
+      </script>
+      <template><button @click="emit('foo')">row</button></template>`,
+      data,
+    )
+    const App = compile(
+      `<script setup>
+        const data = _data
+        const { Row, Other } = _components
+      </script>
+      <template>
+        <KeepAlive>
+          <component
+            :is="data.view === 'row' ? Row : Other"
+            @foo="data.handler"
+          />
+        </KeepAlive>
+      </template>`,
+      data,
+      { Row, Other: { render: () => h('i', 'other') } },
+      { vapor: false },
+    )
+    const { host } = define(App).render()
+
+    host.querySelector('button')!.click()
+    data.value.view = 'other'
+    await nextTick()
+    data.value.handler = () => calls.push('second')
+    data.value.view = 'row'
+    await nextTick()
+    host.querySelector('button')!.click()
+    expect(calls).toEqual(['first', 'second'])
+  })
+
+  describe('emit reads the current vnode after a skipped update', () => {
+    test('listener swap after a forced-but-equal reactivation', async () => {
+      const calls: string[] = []
+      const data = ref({ view: 'row', handler: () => calls.push('first') })
+      const Row = compile(
+        `<script setup vapor>
+          defineProps(['name'])
+          const emit = defineEmits(['foo'])
+        </script>
+        <template><button @click="emit('foo')">{{ name }}</button></template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const { Row, Other } = _components
+        </script>
+        <template>
+          <KeepAlive>
+            <component
+              :is="data.view === 'row' ? Row : Other"
+              name="x"
+              @foo="data.handler"
+            ><span>slot</span></component>
+          </KeepAlive>
+        </template>`,
+        data,
+        { Row, Other: { render: () => h('i', 'other') } },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['first'])
+
+      // reactivating with equal props still forces an update (children), so
+      // the props source computed re-runs and stabilizes to the previous
+      // snapshot object; the listener must not be read through it
+      data.value.view = 'other'
+      await nextTick()
+      data.value.view = 'row'
+      await nextTick()
+      expect(host.innerHTML).toContain('<button>x</button>')
+
+      data.value.handler = () => calls.push('second')
+      await nextTick()
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['first', 'second'])
+    })
+
+    test('v-model in v-for writes through the latest index after a removal', async () => {
+      const data = ref({
+        items: [
+          { id: 1, val: 'a' },
+          { id: 2, val: 'b' },
+          { id: 3, val: 'c' },
+        ],
+      })
+      const Item = compile(
+        `<script setup vapor>
+          const model = defineModel()
+        </script>
+        <template><button @click="model = 'x'">{{ model }}</button></template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const Item = _components.Item
+        </script>
+        <template>
+          <Item v-for="(item, i) in data.items" :key="item.id" v-model="data.items[i].val" />
+        </template>`,
+        data,
+        { Item },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      // rows 2 and 3 keep their modelValue; only the uncached
+      // onUpdate:modelValue closure over `i` changes, which vdom skips
+      data.value.items = data.value.items.slice(1)
+      await nextTick()
+      expect(host.innerHTML).toBe('<button>b</button><button>c</button>')
+      host.querySelector('button')!.click()
+      await nextTick()
+      expect(data.value.items.map(i => i.val)).toEqual(['x', 'c'])
+      expect(host.innerHTML).toBe('<button>x</button><button>c</button>')
+    })
+
+    test('dynamic event name swap between two declared emits', async () => {
+      const calls: string[] = []
+      const bu = vi.fn()
+      const data = ref({ evt: 'foo', handler: (e: string) => calls.push(e) })
+      const Child = compile(
+        `<script setup vapor>
+          import { onBeforeUpdate } from 'vue'
+          const emit = defineEmits(['foo', 'bar'])
+          onBeforeUpdate(_components.bu)
+        </script>
+        <template>
+          <button id="f" @click="emit('foo', 'foo')">f</button>
+          <button id="b" @click="emit('bar', 'bar')">b</button>
+        </template>`,
+        data,
+        { bu },
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child @[data.evt]="data.handler" /></template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      ;(host.querySelector('#f') as HTMLElement).click()
+      expect(calls).toEqual(['foo'])
+      // onFoo -> onBar keeps the key count, and both are emit listeners, so
+      // vdom skips the update although the key set changed
+      data.value.evt = 'bar'
+      await nextTick()
+      ;(host.querySelector('#f') as HTMLElement).click()
+      ;(host.querySelector('#b') as HTMLElement).click()
+      expect(calls).toEqual(['foo', 'bar'])
+      expect(bu).not.toHaveBeenCalled()
+    })
+
+    test('.once listener swapped before and after the first emit', async () => {
+      const calls: string[] = []
+      const data = ref({ handler: () => calls.push('h1') })
+      const Child = compile(
+        `<script setup vapor>
+          const emit = defineEmits(['foo'])
+        </script>
+        <template><button @click="emit('foo')">f</button></template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child @foo.once="data.handler" /></template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      data.value.handler = () => calls.push('h2')
+      await nextTick()
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['h2'])
+      data.value.handler = () => calls.push('h3')
+      await nextTick()
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['h2'])
+    })
+
+    // the same tree in pure vdom and pure vapor already behaves this way
+    for (const vapor of [false, true]) {
+      test(`parity: KeepAlive listener swap in pure ${vapor ? 'vapor' : 'vdom'}`, async () => {
+        const calls: string[] = []
+        const data = ref({ view: 'row', handler: () => calls.push('first') })
+        const Row = compile(
+          `<script setup ${vapor ? 'vapor' : ''}>
+            defineProps(['name'])
+            const emit = defineEmits(['foo'])
+          </script>
+          <template><button @click="emit('foo')">{{ name }}</button></template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const App = compile(
+          `<script setup ${vapor ? 'vapor' : ''}>
+            const data = _data
+            const { Row, Other } = _components
+          </script>
+          <template>
+            <KeepAlive>
+              <component :is="data.view === 'row' ? Row : Other" name="x" @foo="data.handler"><span>slot</span></component>
+            </KeepAlive>
+          </template>`,
+          data,
+          { Row, Other: { render: () => h('i', 'other') } },
+          { vapor },
+        )
+        const { host } = define(App).render()
+        host.querySelector('button')!.click()
+        data.value.view = 'other'
+        await nextTick()
+        data.value.view = 'row'
+        await nextTick()
+        data.value.handler = () => calls.push('second')
+        await nextTick()
+        host.querySelector('button')!.click()
+        expect(calls).toEqual(['first', 'second'])
+      })
+    }
+  })
 })
