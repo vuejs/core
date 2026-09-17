@@ -668,5 +668,48 @@ describe('compiler: expression', () => {
         expect(code).contains('_setProp(n0, "title", _user_name_1)')
       },
     )
+
+    test.each([
+      "items.map(n => n + 1).join(',')",
+      "items.map(function (n) { return n + 1 }).join(',')",
+      "items.map(item => { const n = item; return n + 1 }).join(',')",
+      '({ map(n) { return n + 1 } }).map(1)',
+      '((n, value = n + 1) => value)(1)',
+    ])('repeated expression replacement preserves local bindings: %s', expr => {
+      const { code } = compileWithExpression(`
+        <div :id="n + 1"></div>
+        <div :id="n + 1"></div>
+        <div :title="${expr}"></div>
+      `)
+      expect(code).contains('const _n_1 = _ctx.n + 1')
+      expect(code).contains(expr)
+    })
+
+    test('repeated expression replacement preserves mixed local and outer bindings', () => {
+      const { code } = compileWithExpression(`
+        <div :id="n + offset"></div>
+        <div :id="n + offset"></div>
+        <div :title="items.map(n => n + offset).join(',')"></div>
+      `)
+      expect(code).contains("_ctx.items.map(n => n + _ctx.offset).join(',')")
+    })
+
+    test('repeated expression replacement still reuses expressions outside local scopes', () => {
+      const { code } = compileWithExpression(`
+        <div :id="n + 1"></div>
+        <div :id="n + 1"></div>
+        <div :title="items.map(n => n + 1).join(',') + (n + 1)"></div>
+      `)
+      expect(code).contains("_ctx.items.map(n => n + 1).join(',') + (_n_1)")
+    })
+
+    test('repeated expression replacement reuses parenthesized subexpressions', () => {
+      const { code } = compileWithExpression(`
+        <div :id="a + b"></div>
+        <div :id="a + b"></div>
+        <div :title="(a + b) * c"></div>
+      `)
+      expect(code).contains('_setProp(n2, "title", (_a_b) * _ctx.c)')
+    })
   })
 })
