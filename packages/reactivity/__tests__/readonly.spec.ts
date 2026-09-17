@@ -575,24 +575,50 @@ describe('readonly(reactive(array)) element access', () => {
     ['toSpliced', state => state.toSpliced(0, 0)[0]],
   ]
 
-  test.each(paths)('%s returns a readonly element', (_name, get) => {
+  test.each(paths)('%s preserves readonly and reactivity', (_name, get) => {
     const raw = [{ a: 1 }, { a: 2 }]
-    const state = readonly(reactive(raw))
+    const source = reactive(raw)
+    const state = readonly(source)
     const item = get(state)
 
     expect(isReadonly(item)).toBe(true)
+    expect(isReactive(item)).toBe(true)
+    expect(item).toBe(state[0])
+
+    let observed = 0
+    effect(() => {
+      observed = item.a
+    })
+    expect(observed).toBe(1)
+
     item.a = 999
     expect(raw[0].a).toBe(1)
+    expect(observed).toBe(1)
     expect(`target is readonly`).toHaveBeenWarned()
+
+    source[0].a = 2
+    expect(observed).toBe(2)
   })
 
   test('concat wraps elements coming from a readonly argument', () => {
     const raw = [{ a: 1 }]
     const other = [{ b: 1 }]
-    const merged = reactive([]).concat(readonly(reactive(raw)), reactive(other))
+    const input = readonly(reactive(raw))
+    const merged = reactive<unknown[]>([]).concat(input, reactive(other))
 
     expect(isReadonly(merged[0])).toBe(true)
+    expect(isReactive(merged[0])).toBe(true)
+    expect(merged[0]).toBe(input[0])
     expect(isReadonly(merged[1])).toBe(false)
     expect(isReactive(merged[1])).toBe(true)
+  })
+
+  test('concat preserves elements from a non-reactive readonly argument', () => {
+    const input = readonly([{ a: 1 }])
+    const merged = reactive<unknown[]>([]).concat(input)
+
+    expect(isReadonly(merged[0])).toBe(true)
+    expect(isReactive(merged[0])).toBe(false)
+    expect(merged[0]).toBe(input[0])
   })
 })

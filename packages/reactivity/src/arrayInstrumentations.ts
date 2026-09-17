@@ -15,20 +15,23 @@ import { isArray } from '@vue/shared'
 /**
  * Track array iteration and return:
  * - if input is reactive: a cloned raw array with reactive values
- * - if input is readonly over a reactive array: the same, but readonly
- * - if input is non-reactive or shallowReactive: the original raw array
+ * - if input is readonly: a cloned raw array with readonly values, preserving
+ *   reactivity
+ * - if input is raw or shallow: the original raw array
  */
 export function reactiveReadArray<T>(array: T[]): T[] {
   const raw = toRaw(array)
   if (raw === array) return raw
   track(raw, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
   if (isShallow(array)) return raw
-  // A readonly wrapper has to hand out readonly elements, the way the iterating
-  // methods already do via toWrapped. Kept off the reactive path so the cloned
-  // array still costs a single toReactive per element there.
-  return isReadonly(array)
-    ? raw.map(item => toWrapped(array, item))
-    : raw.map(toReactive)
+  if (!isReadonly(array)) return raw.map(toReactive)
+
+  // Preserve proxy layers without checking the array's flags for every element.
+  return (
+    isReactive(array)
+      ? raw.map(item => toReadonly(toReactive(item)))
+      : raw.map(toReadonly)
+  ) as T[]
 }
 
 /**
