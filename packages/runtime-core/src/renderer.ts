@@ -998,10 +998,12 @@ function baseCreateRenderer(
       const oldVNode = oldChildren[i]
       const newVNode = newChildren[i]
       // Determine the container (parent element) for the patch.
+      // a pending async setup() component only has its placeholder comment
+      const oldEl = oldVNode.el || oldVNode.placeholder
       const container =
         // oldVNode may be an errored async setup() component inside Suspense
         // which will not have a mounted element
-        oldVNode.el &&
+        oldEl &&
         // - In the case of a Fragment, we need to provide the actual parent
         // of the Fragment itself so it can move its children.
         (oldVNode.type === Fragment ||
@@ -1011,7 +1013,7 @@ function baseCreateRenderer(
           // - In the case of a component, it could contain anything.
           oldVNode.shapeFlag &
             (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT | ShapeFlags.SUSPENSE))
-          ? hostParentNode(oldVNode.el)!
+          ? hostParentNode(oldEl)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
             fallbackContainer
@@ -1308,6 +1310,7 @@ function baseCreateRenderer(
           pushWarningContext(n2)
         }
         n2.el = n1.el
+        n2.placeholder = n1.placeholder
         updateComponentPreRender(instance, n2, optimized)
         if (__DEV__) {
           popWarningContext()
@@ -1322,6 +1325,7 @@ function baseCreateRenderer(
     } else {
       // no update needed. just copy over properties
       n2.el = n1.el
+      n2.placeholder = n1.placeholder
       instance.vnode = n2
     }
   }
