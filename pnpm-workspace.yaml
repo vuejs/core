@@ -9,8 +9,8 @@ catalog:
   'estree-walker': ^2.0.2
   'magic-string': ^0.30.21
   'source-map-js': ^1.2.1
-  'vite': ^8.2.0
-  '@vitejs/plugin-vue': ^6.0.8
+  'vite': ^8.3.0
+  '@vitejs/plugin-vue': ^6.0.9
 
 allowBuilds:
   '@parcel/watcher': true
@@ -33,3 +33,6 @@ peerDependencyRules:
 minimumReleaseAge: 1440
 
 trustPolicy: no-downgrade
+minimumReleaseAgeExclude:
+  # Renovate security update: vitest@4.1.11
+  - vitest@4.1.11
