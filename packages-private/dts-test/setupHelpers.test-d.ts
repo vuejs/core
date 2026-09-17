@@ -299,6 +299,40 @@ describe('defineProps w/ runtime declaration', () => {
   props2.baz
 })
 
+describe('defineProps w/ runtime declaration + generic PropType', <T extends
+  Record<string, any>>() => {
+  // #9546
+  const props = defineProps({
+    foo: {
+      type: Object as PropType<T>,
+      required: false,
+      default: null,
+    },
+    bar: {
+      type: Object as PropType<T>,
+      required: true,
+    },
+    baz: Object as PropType<T>,
+    qux: String,
+  })
+  expectType<'foo' | 'bar' | 'baz' | 'qux'>(null! as keyof typeof props)
+  expectType<T | null>(props.foo)
+  expectType<T>(props.bar)
+  expectType<T | undefined>(props.baz)
+  expectType<string | undefined>(props.qux)
+
+  // @ts-expect-error should not be a string
+  expectType<string>(props.foo)
+  // @ts-expect-error should not be a string
+  expectType<string>(props.bar)
+  // @ts-expect-error should not be a string
+  expectType<string>(props.baz)
+
+  // #9277: props should be usable where `T` is expected
+  const use = (p: { bar: T }) => p
+  use(props)
+})
+
 describe('defineEmits w/ type declaration', () => {
   const emit = defineEmits<(e: 'change') => void>()
   emit('change')
