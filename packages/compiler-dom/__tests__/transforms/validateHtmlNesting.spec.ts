@@ -11,6 +11,13 @@ describe('validate html nesting', () => {
     expect(err!.message).toMatch(`<div> cannot be child of <p>`)
   })
 
+  it("Don't warn with customize select and option", () => {
+    let err: CompilerError | undefined
+    compile(`<select><option></option></select>`, { onWarn: e => (err = e) })
+    compile(`<option><p></p></option>`, { onWarn: e => (err = e) })
+    expect(err).toBeUndefined()
+  })
+
   it('should not warn with select > hr', () => {
     let err: CompilerError | undefined
     compile(`<select><hr></select>`, {
