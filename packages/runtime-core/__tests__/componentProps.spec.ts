@@ -136,7 +136,7 @@ describe('component props', () => {
     expect(props).toBe(attrs)
   })
 
-  test('boolean casting', () => {
+  test('string to boolean casting', () => {
     let proxy: any
     const Comp = {
       props: {
@@ -151,7 +151,6 @@ describe('component props', () => {
     }
     render(
       h(Comp, {
-        // absent should cast to false
         bar: '', // empty string should cast to true
         baz: 'baz', // same string should cast to true
         qux: 'ok', // other values should be left in-tact (but raise warning)
@@ -159,11 +158,28 @@ describe('component props', () => {
       nodeOps.createElement('div'),
     )
 
-    expect(proxy.foo).toBe(false)
+    expect(proxy.foo).toBe(undefined)
     expect(proxy.bar).toBe(true)
     expect(proxy.baz).toBe(true)
     expect(proxy.qux).toBe('ok')
     expect('type check failed for prop "qux"').toHaveBeenWarned()
+  })
+
+  test('mixed string/boolean type casting order', () => {
+    let proxy: any
+    const Comp = {
+      props: {
+        foo: [Boolean, String], // Boolean first: '' casts to true
+        bar: [String, Boolean], // String first: '' is kept as-is
+      },
+      render() {
+        proxy = this
+      },
+    }
+    render(h(Comp, { foo: '', bar: '' }), nodeOps.createElement('div'))
+
+    expect(proxy.foo).toBe(true)
+    expect(proxy.bar).toBe('')
   })
 
   test('default value', () => {
