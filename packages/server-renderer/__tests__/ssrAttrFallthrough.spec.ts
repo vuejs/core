@@ -75,4 +75,20 @@ describe('ssr: attr fallthrough', () => {
       `<div id="foo" class="bar baz"></div>`,
     )
   })
+
+  // #12827
+  test('with transition-group tag name', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<TransitionGroup><slot/></TransitionGroup>`,
+            },
+          },
+          template: `<one tag="div"><p v-for="i in 2">{{i}}</p></one>`,
+        }),
+      ),
+    ).toBe(`<div><!--[--><p>1</p><p>2</p><!--]--></div>`)
+  })
 })
