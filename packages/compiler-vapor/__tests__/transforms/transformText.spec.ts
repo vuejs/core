@@ -95,6 +95,41 @@ describe('compiler: text transform', () => {
     expect(code).not.toContain('_template("<b>foo</b>")')
   })
 
+  describe('unescaped text that would parse as html', () => {
+    // root-level and fragment text is left unescaped because it becomes a text
+    // node at runtime - but only when it does not start with "<", so text that
+    // does has to be materialized imperatively instead
+    test.each([
+      ['&lt;b&gt;foo&lt;/b&gt;', '<b>foo</b>'],
+      ['&lt;/div&gt;tail', '</div>tail'],
+      ['&lt;!--c--&gt;tail', '<!--c-->tail'],
+      [`<template v-if="ok">&lt;b&gt;foo&lt;/b&gt;</template>`, '<b>foo</b>'],
+      [`<Comp>&lt;b&gt;foo&lt;/b&gt;</Comp>`, '<b>foo</b>'],
+      [`<Comp>{{ "<b>foo</b>" }}</Comp>`, '<b>foo</b>'],
+      // a lone "<" is text for the html parser too, but not worth relying on
+      ['&lt;', '<'],
+    ])('%j materializes %j as text', (source, text) => {
+      const { code } = compileWithTextTransform(source)
+      // the id of the materialized node depends on the surrounding block
+      const normalized = code.replace(/\bn\d+\b/g, 'n')
+
+      expect(code).toContain('_template("")')
+      expect(normalized).toContain(`_setText(n, ${JSON.stringify(text)})`)
+      expect(code).not.toContain(`_template(${JSON.stringify(text)})`)
+    })
+
+    test.each([
+      // only a leading "<" makes the runtime parse a template as html
+      ['a&lt;b&gt;foo', 'a<b>foo'],
+      // element children are escaped, so they stay in the template
+      ['<div>&lt;b&gt;foo&lt;/b&gt;</div>', '<div>&lt;b&gt;foo&lt;/b&gt;'],
+    ])('%j stays in the template as %j', (source, template) => {
+      const { ir } = compileWithTextTransform(source)
+
+      expect([...ir.template.keys()]).toContain(template)
+    })
+  })
+
   it('should not escape quotes in root-level text nodes', () => {
     // Root-level text goes through createTextNode() which doesn't need escaping
     const { ir } = compileWithTextTransform(`Howdy y'all`)
