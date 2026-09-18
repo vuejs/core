@@ -39,6 +39,7 @@ export function genExpression(
   node: SimpleExpressionNode,
   context: CodegenContext,
   assignment?: string,
+  asParams = false,
 ): CodeFragment[] {
   node = context.getExpressionReplacement(node)
   const { content, ast, isStatic, loc } = node
@@ -68,11 +69,16 @@ export function genExpression(
   const parentStack: Node[] = []
   walkIdentifiers(
     ast!,
-    id => {
+    (id, _, __, isReference, isLocal) => {
+      if (isLocal) {
+        if (!id.typeAnnotation && !id.optional) return
+      } else if (!isReference) {
+        return
+      }
       ids.push(id)
       parentStackMap.set(id, parentStack.slice())
     },
-    false,
+    asParams,
     parentStack,
   )
 
@@ -116,7 +122,7 @@ export function genExpression(
 
         push(
           ...genIdentifier(
-            source,
+            asParams ? id.name : source,
             context,
             {
               start: advancePositionWithClone(node.loc.start, source, start),

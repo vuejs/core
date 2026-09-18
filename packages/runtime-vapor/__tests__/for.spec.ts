@@ -31,7 +31,13 @@ import {
   toDisplayString,
   triggerRef,
 } from '@vue/runtime-dom'
-import { compile, makeRender, renderParity, shuffle } from './_utils'
+import {
+  compile,
+  compileToVaporRender,
+  makeRender,
+  renderParity,
+  shuffle,
+} from './_utils'
 import { VaporVForFlags } from '@vue/shared'
 
 const define = makeRender()
@@ -2619,6 +2625,69 @@ describe('createFor', () => {
       expect(host.innerHTML).toBe('<span>3</span><span>1</span><!--for-->')
     })
   })
+})
+
+test('resolves component bindings in key callback defaults', async () => {
+  const items = ref<(string | undefined)[]>([undefined])
+  const fallback = ref('A')
+  const { host } = define({
+    setup: () => ({ items, fallback }),
+    render: compileToVaporRender(
+      `<li v-for="(item = fallback, i) in items" :key="i">{{ item }}</li>`,
+    ),
+  }).render()
+  expect(host.textContent).toBe('A')
+
+  fallback.value = 'B'
+  items.value.push('C')
+  await nextTick()
+  expect(host.textContent).toBe('BC')
+})
+
+test('resolves outer loop aliases in key callback defaults', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      App: `<template><div v-for="row in data.rows"><span v-for="(item = row.fallback, i) in row.items" :key="i">{{ item }}</span></div></template>`,
+    },
+    () => ref({ rows: [{ fallback: 'A', items: [undefined] }] }),
+    async (data, root) => {
+      expect(root.textContent).toBe('A')
+      data.value.rows[0].fallback = 'B'
+      data.value.rows[0].items = ['C', undefined]
+      await nextTick()
+    },
+  )
+  expect(vdom.text).toBe('CB')
+  expect(vapor.text).toBe(vdom.text)
+})
+
+test('unwraps refs in dynamic slot callback defaults', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      Child: `<template><p><slot name="a" /><slot name="b" /></p></template>`,
+      App: `<script setup>
+        import { ref } from 'vue'
+        const items = ref([undefined])
+        const fallback = ref('a')
+        const components = _components
+      </script>
+      <template>
+        <button @click="fallback = 'b'">next</button>
+        <components.Child>
+          <template v-for="(item = fallback, i) in items" #[item] :key="i">{{ item }}</template>
+        </components.Child>
+      </template>`,
+    },
+    () => ref(null),
+    async (_, root) => {
+      expect(root.querySelector('p')!.textContent).toBe('a')
+      root.querySelector('button')!.click()
+      await nextTick()
+      expect(root.querySelector('p')!.textContent).toBe('b')
+    },
+  )
+  expect(vdom.text).toBe('nextb')
+  expect(vapor.text).toBe(vdom.text)
 })
 
 function getEffectsCount(scope: { deps: any }) {

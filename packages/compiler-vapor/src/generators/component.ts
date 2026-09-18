@@ -764,7 +764,10 @@ function genLoopSlot(
   collect(idToPathMap)
   collect(keyToPathMap)
   collect(indexToPathMap)
-  const rawParams = genAliasParams(value, key, index)
+  const rawParams = context.withId(
+    () => genAliasParams(value, key, index, context),
+    rawIdMap,
+  )
   const getName = [
     ...rawParams,
     ' => (',
