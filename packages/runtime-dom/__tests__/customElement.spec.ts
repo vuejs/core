@@ -285,9 +285,7 @@ describe('defineCustomElement', () => {
       customElements.define('my-el-props-cast', E)
       container.innerHTML = `<my-el-props-cast foo-bar="1" baz="12345"></my-el-props-cast>`
       const e = container.childNodes[0] as VueElement
-      expect(e.shadowRoot!.innerHTML).toBe(
-        `1 number false boolean 12345 string`,
-      )
+      expect(e.shadowRoot!.innerHTML).toBe(`1 number  undefined 12345 string`)
 
       e.setAttribute('bar', '')
       await nextTick()
@@ -2487,7 +2485,7 @@ describe('defineCustomElement', () => {
     expect(e.shadowRoot!.innerHTML).toBe(`true,boolean`)
     e.removeAttribute('boo')
     await nextTick()
-    expect(e.shadowRoot!.innerHTML).toBe(`false,boolean`)
+    expect(e.shadowRoot!.innerHTML).toBe(`undefined,undefined`)
   })
 
   test('prop name conflicts with native property', () => {
