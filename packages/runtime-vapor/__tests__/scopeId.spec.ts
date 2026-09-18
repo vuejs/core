@@ -2520,31 +2520,17 @@ describe('vdom interop', () => {
     const fillFrom = (child: string) =>
       `<template><components.${child}><span v-if="data">content</span></components.${child}></template>`
 
-    test('fallback of an empty slot carries the child scope id', async () => {
+    test.each([
+      ['of an empty slot', false],
+      ['revealed after the content goes away', true],
+    ])('fallback %s carries the child scope id', async (_, startFilled) => {
       const Child = scoped(
         'child',
         `<template><slot><p>fallback</p></slot></template>`,
       )
       const { vdom, vapor } = await renderParity(
         { App: fillFrom('Child') },
-        () => ref(false),
-        () => {},
-        { Child },
-      )
-      expect(vdom.after).toBe(
-        `<p data-v-child="" data-v-child-s="">fallback</p>`,
-      )
-      expect(vapor.after).toBe(vdom.after)
-    })
-
-    test('fallback revealed after the content goes away carries it too', async () => {
-      const Child = scoped(
-        'child',
-        `<template><slot><p>fallback</p></slot></template>`,
-      )
-      const { vdom, vapor } = await renderParity(
-        { App: fillFrom('Child') },
-        () => ref(true),
+        () => ref(startFilled),
         data => {
           data.value = false
         },
