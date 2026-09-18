@@ -46,6 +46,16 @@ export interface IRSlotDynamicBasic {
   slotType: IRSlotType.DYNAMIC
   name: SimpleExpressionNode
   fn: SlotBlockIRNode
+  // Declaration index among the owning component's dynamic slots, emitted as
+  // the slot record's `key`. See `keyDynamicSlots` in transforms/vSlot.ts.
+  //
+  // Optional rather than required for two reasons: the numbering pass runs when
+  // the owning component's transform exits, so records carry no key while they
+  // are still being collected; and this IR is public, so transforms built on it
+  // outside this package (the vapor JSX compiler) can keep producing records
+  // without one. Codegen simply omits the key for those, leaving the slot
+  // fragment to fall back to keying on the slot function.
+  key?: string
 }
 export interface IRSlotDynamicLoop {
   slotType: IRSlotType.LOOP

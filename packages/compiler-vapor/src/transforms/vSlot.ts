@@ -137,6 +137,8 @@ function transformComponentSlot(
     } else if (hasOtherSlots) {
       context.slots = slots
     }
+
+    keyDynamicSlots(slots)
   }
 }
 
@@ -261,6 +263,59 @@ function registerSlot(
 
 function registerDynamicSlot(allSlots: IRSlots[], dynamic: IRSlotDynamic) {
   allSlots.push(dynamic)
+}
+
+/**
+ * Give every dynamic slot record of one component a constant key, numbered in
+ * declaration order.
+ *
+ * Vdom keys a slot fragment by `props.key || content.key || '_' + name`, so an
+ * unkeyed slot still has the outlet name as a stable identity, and
+ * `conditionalBranchIndex` in compiler-core's `buildSlots` only adds a literal
+ * `key` where the name alone is not enough - the `v-if`/`v-else-if`/`v-else`
+ * branches that share one name. Vdom never derives that identity from the slot
+ * function.
+ *
+ * Vapor's `createSlot` does fall back to the slot function, and the dynamic
+ * slots array builds a new one on every evaluation, so merely recomputing a
+ * slot's condition or name remounts its content and drops the DOM state
+ * underneath. A constant key per declaration takes the function back out of
+ * that identity while still telling the branches of one conditional apart.
+ *
+ * Two differences from `conditionalBranchIndex` are deliberate:
+ *
+ * - Numbering runs across all of the component's dynamic records, not per
+ *   conditional, so two independent `v-if` slots resolving to the same name
+ *   still get distinct keys.
+ * - Unconditional `#[name]` records are numbered too, where vdom leaves them to
+ *   fall back to the outlet name. Keying those by name instead would make two
+ *   dynamically named records that swap over one outlet compare equal, and
+ *   `DynamicFragment.update` returns early on an equal key where vdom patches
+ *   the subtree - the wrong content would stay mounted. The cost is that such a
+ *   record survives a change of outlet name that vdom remounts through; see
+ *   `runtime-vapor/__tests__/componentSlots.spec.ts`.
+ *
+ * Loop slots are excluded: `createForSlots` already gives each record a stable
+ * identity to key on.
+ */
+function keyDynamicSlots(slots: IRSlots[]): void {
+  let branchIndex = 0
+  const keyBranch = (slot: IRSlotDynamic) => {
+    if (slot.slotType === IRSlotType.DYNAMIC) {
+      slot.key = String(branchIndex++)
+    } else if (slot.slotType === IRSlotType.CONDITIONAL) {
+      keyBranch(slot.positive)
+      if (slot.negative) keyBranch(slot.negative)
+    }
+  }
+  for (const slot of slots) {
+    if (
+      slot.slotType === IRSlotType.DYNAMIC ||
+      slot.slotType === IRSlotType.CONDITIONAL
+    ) {
+      keyBranch(slot)
+    }
+  }
 }
 
 function hasStaticSlot(slots: IRSlots[], name: string) {

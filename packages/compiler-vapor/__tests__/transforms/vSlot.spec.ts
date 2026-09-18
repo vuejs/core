@@ -585,6 +585,60 @@ describe('compiler: transform slot', () => {
     })
   })
 
+  test('dynamic slot branch keys are numbered per component', () => {
+    const { ir } = compileWithSlots(
+      `<Comp>
+        <template v-if="ok" #a>a</template>
+        <template v-else #a>b</template>
+        <template #[name]>
+          <Inner>
+            <template v-if="ok" #c>c</template>
+            <template #[other]>d</template>
+          </Inner>
+        </template>
+      </Comp>`,
+    )
+    const outer = ir.block.dynamic.children[0].operation as any
+    expect(outer).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Comp',
+      slots: [
+        {
+          slotType: IRSlotType.CONDITIONAL,
+          positive: { slotType: IRSlotType.DYNAMIC, key: '0' },
+          negative: { slotType: IRSlotType.DYNAMIC, key: '1' },
+        },
+        { slotType: IRSlotType.DYNAMIC, name: { content: 'name' }, key: '2' },
+      ],
+    })
+
+    // the nested component numbers its own branches, so keys are only ever
+    // compared within one component's slot records
+    const inner = outer.slots[1].fn.dynamic.children[0].operation
+    expect(inner).toMatchObject({
+      type: IRNodeTypes.CREATE_COMPONENT_NODE,
+      tag: 'Inner',
+      slots: [
+        {
+          slotType: IRSlotType.CONDITIONAL,
+          positive: { slotType: IRSlotType.DYNAMIC, key: '0' },
+        },
+        { slotType: IRSlotType.DYNAMIC, name: { content: 'other' }, key: '1' },
+      ],
+    })
+  })
+
+  // Guard, not coverage: this passes on the base too. `createForSlots` supplies
+  // its own per-record key at runtime, so the compiler must stay out of it.
+  test('guard: v-for slot records stay unkeyed', () => {
+    const { ir } = compileWithSlots(
+      `<Comp><template v-for="i in list" #[i]>foo</template></Comp>`,
+    )
+    const operation = ir.block.dynamic.children[0].operation as any
+    expect(operation.slots).toMatchObject([{ slotType: IRSlotType.LOOP }])
+    expect(operation.slots[0].key).toBeUndefined()
+  })
+
   test('slot v-else missing adjacent v-if should report compiler error', () => {
     const cases = [
       `<Comp><template #foo v-else>foo</template></Comp>`,

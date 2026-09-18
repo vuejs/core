@@ -706,11 +706,12 @@ function genBasicDynamicSlot(
   slot: IRSlotDynamicBasic,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { name, fn } = slot
+  const { name, fn, key } = slot
   return genMulti(
     DELIMITERS_OBJECT_NEWLINE,
     ['name: ', ...genExpression(name, context)],
     ['fn: ', ...genSlotBlockWithProps(fn, context, false)],
+    key !== undefined && [`key: ${JSON.stringify(key)}`],
   )
 }
 

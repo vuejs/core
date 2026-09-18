@@ -29,7 +29,8 @@ export function render(_ctx) {
           name: "default",
           fn: () => {
             return []
-          }
+          },
+          key: "0"
         }
         : void 0)
     ]
@@ -50,7 +51,8 @@ export function render(_ctx) {
         fn: () => {
           const n0 = t0()
           return n0
-        }
+        },
+        key: "0"
       })
     ]
   }, true)
@@ -126,7 +128,8 @@ export function render(_ctx) {
           fn: () => {
             const n0 = t0()
             return n0
-          }
+          },
+          key: "0"
         }
         : _ctx.anotherCondition
           ? {
@@ -134,14 +137,16 @@ export function render(_ctx) {
             fn: (_slotProps0) => {
               const n2 = t1()
               return n2
-            }
+            },
+            key: "1"
           }
           : {
             name: "condition",
             fn: () => {
               const n4 = t2()
               return n4
-            }
+            },
+            key: "2"
           })
     ]
   }, true)
@@ -305,7 +310,8 @@ export function render(_ctx) {
           const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
           return n0
-        }
+        },
+        key: "0"
       })
     ]
   }, true)

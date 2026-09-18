@@ -7685,4 +7685,535 @@ describe('component: slots', () => {
       }
     })
   })
+
+  describe('dynamic slot branch keys', () => {
+    const unmounted = vi.fn()
+    const makeContent = (state: Ref<any>) =>
+      compile(
+        `<script setup vapor>
+        import { onUnmounted, ref } from 'vue'
+        const props = defineProps(['label'])
+        const count = ref(0)
+        onUnmounted(_components.unmounted)
+        </script>
+        <template>
+          <button @click="count++">{{ props.label }}:{{ count }}</button>
+        </template>`,
+        state,
+        { unmounted },
+      )
+
+    beforeEach(() => unmounted.mockClear())
+
+    test('conditional slot keeps its content when the condition recomputes', async () => {
+      const state = ref({ list: [1] })
+      const Content = makeContent(state)
+      const Child = compile(`<template><div><slot /></div></template>`, state)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.list.length" #default>
+              <components.Content label="a" />
+            </template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const button = root.querySelector<HTMLButtonElement>('button')!
+        button.click()
+        await nextTick()
+        expect(button.textContent).toBe('a:1')
+
+        state.value.list.push(2)
+        await nextTick()
+
+        expect(root.querySelector('button')).toBe(button)
+        expect(button.textContent).toBe('a:1')
+        expect(unmounted).not.toHaveBeenCalled()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('named conditional slot keeps its content when the condition recomputes', async () => {
+      const state = ref({ list: [1] })
+      const Content = makeContent(state)
+      const Child = compile(
+        `<template><div><slot name="foo" /></div></template>`,
+        state,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.list.length" #foo>
+              <components.Content label="a" />
+            </template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const button = root.querySelector<HTMLButtonElement>('button')!
+        button.click()
+        await nextTick()
+
+        state.value.list.push(2)
+        await nextTick()
+
+        expect(root.querySelector('button')).toBe(button)
+        expect(button.textContent).toBe('a:1')
+        expect(unmounted).not.toHaveBeenCalled()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    // Guard, not coverage: this passes on the base too. It pins down the limit
+    // of the keying - the branches of one conditional must stay distinguishable.
+    test('guard: conditional slot still remounts when the branch changes', async () => {
+      const state = ref({ ok: true })
+      const Content = makeContent(state)
+      const Child = compile(`<template><div><slot /></div></template>`, state)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.ok" #default>
+              <components.Content label="a" />
+            </template>
+            <template v-else #default>
+              <components.Content label="b" />
+            </template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const button = root.querySelector<HTMLButtonElement>('button')!
+        button.click()
+        await nextTick()
+        expect(button.textContent).toBe('a:1')
+
+        state.value.ok = false
+        await nextTick()
+
+        expect(root.querySelector('button')).not.toBe(button)
+        expect(root.textContent).toBe('b:0')
+        expect(unmounted).toHaveBeenCalledOnce()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('dynamically named slot keeps its content when the name recomputes', async () => {
+      const state = ref({ names: ['foo'] })
+      const Content = makeContent(state)
+      const Child = compile(
+        `<template><div><slot name="foo" /></div></template>`,
+        state,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template #[data.names[0]]>
+              <components.Content label="a" />
+            </template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const button = root.querySelector<HTMLButtonElement>('button')!
+        button.click()
+        await nextTick()
+        expect(button.textContent).toBe('a:1')
+
+        state.value.names = ['foo']
+        await nextTick()
+
+        expect(root.querySelector('button')).toBe(button)
+        expect(button.textContent).toBe('a:1')
+        expect(unmounted).not.toHaveBeenCalled()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    // Guard, not coverage: this passes on the base too.
+    test('guard: dynamically named slot still remounts when the name changes', async () => {
+      const state = ref({ name: 'foo' })
+      const Content = makeContent(state)
+      const Child = compile(
+        `<template>
+          <div id="foo"><slot name="foo" /></div>
+          <div id="bar"><slot name="bar" /></div>
+        </template>`,
+        state,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template #[data.name]>
+              <components.Content label="a" />
+            </template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const button = root.querySelector<HTMLButtonElement>('#foo button')!
+        button.click()
+        await nextTick()
+        expect(button.textContent).toBe('a:1')
+
+        state.value.name = 'bar'
+        await nextTick()
+
+        expect(root.querySelector('#foo button')).toBe(null)
+        expect(root.querySelector('#bar button')!.textContent).toBe('a:0')
+        expect(unmounted).toHaveBeenCalledOnce()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('conditional slot of a nested component is keyed independently', async () => {
+      const state = ref({ list: [1] })
+      const Content = makeContent(state)
+      const Leaf = compile(`<template><div><slot /></div></template>`, state)
+      const Child = compile(`<template><div><slot /></div></template>`, state)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.list.length" #default>
+              <components.Leaf>
+                <template v-if="data.list.length" #default>
+                  <components.Content label="a" />
+                </template>
+              </components.Leaf>
+            </template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child, Leaf, Content },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const button = root.querySelector<HTMLButtonElement>('button')!
+        button.click()
+        await nextTick()
+
+        state.value.list.push(2)
+        await nextTick()
+
+        expect(root.querySelector('button')).toBe(button)
+        expect(button.textContent).toBe('a:1')
+        expect(unmounted).not.toHaveBeenCalled()
+      } finally {
+        app.unmount()
+      }
+    })
+
+    // --- deliberate divergence from vdom -----------------------------------
+
+    // Vdom keys a slot fragment by the outlet name (`props.key || content.key ||
+    // '_' + name`), so renaming the outlet remounts the content. Vapor keys by
+    // declaration instead, so the content survives. Keying unconditional records
+    // by name would restore parity here but break the next test: two such
+    // records swapping over one outlet would compare equal, and
+    // `DynamicFragment.update` returns early on an equal key where vdom patches
+    // the subtree, leaving the wrong content mounted.
+    test('dynamically named slot outlives a rename of the outlet (diverges from vdom)', async () => {
+      const childSrc =
+        `<script setup>const data = _data; const components = _components;</script>` +
+        `<template><div><slot :name="data.o"/></div></template>`
+      const appSrc =
+        `<script setup>const data = _data; const components = _components;</script>` +
+        `<template>
+          <components.Child>
+            <template #[data.n]><input id="i"></template>
+          </components.Child>
+        </template>`
+
+      const renameOutlet = async (vapor: boolean) => {
+        const state = ref({ o: 'p', n: 'p' })
+        const Child = compile(childSrc, state, {}, { vapor })
+        const App = compile(appSrc, state, { Child }, { vapor })
+        const root = document.createElement('div')
+        const app = vapor ? createVaporApp(App) : createApp(App)
+        app.use(vaporInteropPlugin).mount(root)
+        try {
+          const before = root.querySelector('input')!
+          before.value = 'typed'
+          state.value.o = 'q'
+          state.value.n = 'q'
+          await nextTick()
+          const after = root.querySelector('input')!
+          return { preserved: before === after, value: after.value }
+        } finally {
+          app.unmount()
+        }
+      }
+
+      expect(await renameOutlet(false)).toEqual({ preserved: false, value: '' })
+      expect(await renameOutlet(true)).toEqual({
+        preserved: true,
+        value: 'typed',
+      })
+    })
+
+    // Guard, not coverage: this passes on the base too. It is the case that
+    // rules out keying unconditional records by name - under that scheme both
+    // records key to `_x`, `DynamicFragment.update` returns early and A stays
+    // mounted.
+    test('guard: two dynamically named slots swapping over one outlet swap their content', async () => {
+      const state = ref({ a: 'x', b: 'y' })
+      const Child = compile(
+        `<template><div><slot name="x"/></div></template>`,
+        state,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template #[data.a]><input id="A"></template>
+            <template #[data.b]><input id="B"></template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        expect(root.querySelector('input')!.id).toBe('A')
+
+        state.value.a = 'y'
+        state.value.b = 'x'
+        await nextTick()
+
+        expect(root.querySelector('input')!.id).toBe('B')
+      } finally {
+        app.unmount()
+      }
+    })
+
+    // --- branch chains and competing records --------------------------------
+
+    test('v-if / v-else-if / v-else slot branches are keyed apart at runtime', async () => {
+      const state = ref({ n: 1 })
+      const Child = compile(
+        `<template><div><slot name="s"/></div></template>`,
+        state,
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.n < 10" #s><input id="one"></template>
+            <template v-else-if="data.n < 20" #s><input id="two"></template>
+            <template v-else #s><input id="three"></template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+
+      try {
+        app.mount(root)
+        const one = root.querySelector('input')!
+        expect(one.id).toBe('one')
+
+        // re-evaluating the chain without leaving the branch keeps the content
+        state.value.n = 2
+        await nextTick()
+        expect(root.querySelector('input')).toBe(one)
+
+        state.value.n = 15
+        await nextTick()
+        const two = root.querySelector('input')!
+        expect(two.id).toBe('two')
+        expect(two).not.toBe(one)
+
+        state.value.n = 16
+        await nextTick()
+        expect(root.querySelector('input')).toBe(two)
+
+        state.value.n = 25
+        await nextTick()
+        const three = root.querySelector('input')!
+        expect(three.id).toBe('three')
+        expect(three).not.toBe(two)
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test.each([
+      [
+        'conditional first',
+        `<template v-if="data.n > 0" #a><input id="cond"></template>
+         <template v-for="i in data.list" #[i]><input id="loop"></template>`,
+      ],
+      [
+        'loop first',
+        `<template v-for="i in data.list" #[i]><input id="loop"></template>
+         <template v-if="data.n > 0" #a><input id="cond"></template>`,
+      ],
+    ])(
+      'a conditional and a v-for slot competing for one name (%s)',
+      async (_label, decls) => {
+        const state = ref({ n: 1, list: ['a'] })
+        const Child = compile(
+          `<template><div><slot name="a"/></div></template>`,
+          state,
+        )
+        const App = compile(
+          `<template><components.Child>${decls}</components.Child></template>`,
+          state,
+          { Child },
+        )
+        const root = document.createElement('div')
+        const app = createVaporApp(App)
+
+        try {
+          app.mount(root)
+          // the later declaration wins: `resolveSlot` scans the sources in
+          // reverse
+          const first = root.querySelector('input')!
+          expect(first.id).toBe(
+            decls.trimStart().startsWith('<template v-for') ? 'cond' : 'loop',
+          )
+
+          // re-evaluating the conditional without leaving its branch must not
+          // remount whichever record is currently mounted
+          state.value.n = 2
+          await nextTick()
+          expect(root.querySelector('input')).toBe(first)
+
+          // the loop key (a per-item ref) and the conditional key (a branch
+          // index) never compare equal, so a hand-over always remounts
+          state.value.list = []
+          await nextTick()
+          const afterLoopGone = root.querySelector('input')!
+          expect(afterLoopGone.id).toBe('cond')
+          if (first.id === 'loop') {
+            expect(afterLoopGone).not.toBe(first)
+          } else {
+            expect(afterLoopGone).toBe(first)
+          }
+
+          state.value.n = 0
+          await nextTick()
+          expect(root.querySelector('input')).toBe(null)
+        } finally {
+          app.unmount()
+        }
+      },
+    )
+
+    // --- vapor parent -> vdom child -----------------------------------------
+
+    test('conditional slot handed to a vdom child keeps its content', async () => {
+      const state = ref({ list: [1] })
+      const Child = compile(
+        `<script setup>const data = _data; const components = _components;</script>` +
+          `<template><div><slot/></div></template>`,
+        state,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data.list.length" #default><input id="a"></template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App).use(vaporInteropPlugin)
+
+      try {
+        app.mount(root)
+        const input = root.querySelector<HTMLInputElement>('input#a')!
+        input.value = 'typed'
+
+        state.value.list.push(2)
+        await nextTick()
+
+        expect(root.querySelector('input#a')).toBe(input)
+        expect(input.value).toBe('typed')
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('dynamically named slot handed to a vdom child keeps its content', async () => {
+      const state = ref({ names: ['foo'] })
+      const Child = compile(
+        `<script setup>const data = _data; const components = _components;</script>` +
+          `<template><div><slot name="foo"/></div></template>`,
+        state,
+        {},
+        { vapor: false },
+      )
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template #[data.names[0]]><input id="a"></template>
+          </components.Child>
+        </template>`,
+        state,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App).use(vaporInteropPlugin)
+
+      try {
+        app.mount(root)
+        const input = root.querySelector<HTMLInputElement>('input#a')!
+        input.value = 'typed'
+
+        state.value.names = ['foo']
+        await nextTick()
+
+        expect(root.querySelector('input#a')).toBe(input)
+        expect(input.value).toBe('typed')
+      } finally {
+        app.unmount()
+      }
+    })
+  })
 })

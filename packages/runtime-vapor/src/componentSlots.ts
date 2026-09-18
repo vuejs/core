@@ -89,6 +89,7 @@ const rawSlotWrappersCache = new WeakMap<
     {
       slot: VaporSlot
       wrapped: VaporSlot
+      slotKey?: unknown
     }
   >
 >()
@@ -149,6 +150,7 @@ function getOwnedSlot(
   slots: RawSlots,
   key: string,
   slot: VaporSlot,
+  slotKey?: unknown,
 ): VaporSlot {
   if (!rawSlotsOwnerMap.has(slots)) {
     return slot
@@ -158,14 +160,30 @@ function getOwnedSlot(
     rawSlotWrappersCache.set(slots, (wrappers = new Map()))
   }
   const cached = wrappers.get(key)
-  if (cached && cached.slot === slot) {
+  // A dynamic slot record rebuilds its `fn` on every evaluation of the slots
+  // array, so keying the cache on function identity alone hands out a fresh
+  // wrapper each time - which is what a vdom child sees as a changed slot.
+  // When the record carries a declaration key, the wrapper survives for as long
+  // as that key holds and is simply re-pointed at the latest `fn`.
+  if (
+    cached &&
+    (cached.slot === slot ||
+      (slotKey !== undefined && cached.slotKey === slotKey))
+  ) {
+    cached.slot = slot
+    cached.wrapped._ = slot._
     return cached.wrapped
   }
-  const wrapped = ((...args: any[]) =>
-    withSlotOwner(slots, () => slot(...args))) as VaporSlot
-  wrapped._ = slot._
-  wrappers.set(key, { slot, wrapped })
-  return wrapped
+  const entry = {
+    slot,
+    wrapped: undefined as unknown as VaporSlot,
+    slotKey,
+  }
+  entry.wrapped = ((...args: any[]) =>
+    withSlotOwner(slots, () => entry.slot(...args))) as VaporSlot
+  entry.wrapped._ = slot._
+  wrappers.set(key, entry)
+  return entry.wrapped
 }
 
 export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
@@ -211,8 +229,18 @@ export const dynamicSlotsProxyHandlers: ProxyHandler<RawSlots> = {
 export function getSlot(target: RawSlots, key: string): VaporSlot | undefined {
   const slot = resolveSlot(target, key)
   if (slot) {
-    return getOwnedSlot(target, key, isFunction(slot) ? slot : slot.fn)
+    return isFunction(slot)
+      ? getOwnedSlot(target, key, slot)
+      : getOwnedSlot(target, key, slot.fn, resolveSlotRecordKey(slot))
   }
+}
+
+/**
+ * The declaration key of a dynamic slot record, if it carries one: a literal
+ * branch index from the compiler, or the stable item ref of a `v-for` slot.
+ */
+function resolveSlotRecordKey(slot: DynamicSlot): unknown {
+  return hasOwn(slot, 'key') ? slot.key : undefined
 }
 
 function resolveSlot(
@@ -410,18 +438,22 @@ export function createSlot(
 
       const slotName = isFunction(name) ? name() : name
       const resolvedSlot = resolveSlot(rawSlots, slotName)
+      const hasSlotKey =
+        !!resolvedSlot &&
+        !isFunction(resolvedSlot) &&
+        hasOwn(resolvedSlot, 'key')
       const slot = resolvedSlot
         ? getOwnedSlot(
             rawSlots,
             slotName,
             isFunction(resolvedSlot) ? resolvedSlot : resolvedSlot.fn,
+            hasSlotKey ? (resolvedSlot as DynamicSlot).key : undefined,
           )
         : undefined
       const render = slot ? getBoundSlot(slot) : undefined
-      const key =
-        resolvedSlot && !isFunction(resolvedSlot) && hasOwn(resolvedSlot, 'key')
-          ? resolvedSlot.key
-          : render || fallback
+      const key = hasSlotKey
+        ? (resolvedSlot as DynamicSlot).key
+        : render || fallback
       if (slotFragment) {
         slotFragment.updateSlot(render, fallback, key)
       } else {
