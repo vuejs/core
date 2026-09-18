@@ -101,19 +101,24 @@ export const transformText: NodeTransform = (node, context) => {
         parent,
         context.parent as TransformContext<ElementNode>,
       )
-    if (createElementParent && node.content[0] === '<') {
-      materializeLiteralTextNode(
-        createSimpleExpression(node.content, true, node.loc),
-        context as TransformContext<TextNode>,
-      )
-      return
-    }
     const isRootText =
       !parent ||
       parent.type === NodeTypes.ROOT ||
       (parent.type === NodeTypes.ELEMENT &&
         (parent.tagType === ElementTypes.TEMPLATE ||
           parent.tagType === ElementTypes.COMPONENT))
+
+    // Unescaped text becomes a template of its own, and the runtime only turns
+    // such a template into a text node when it does not start with "<" (see
+    // `template()` in runtime-vapor). Text that does start with "<" has to be
+    // materialized imperatively, or it would be parsed as html instead.
+    if ((createElementParent || isRootText) && node.content[0] === '<') {
+      materializeLiteralTextNode(
+        createSimpleExpression(node.content, true, node.loc),
+        context as TransformContext<TextNode>,
+      )
+      return
+    }
 
     context.template += isRootText ? node.content : escapeHtml(node.content)
   }
@@ -138,13 +143,16 @@ function processInterpolation(context: TransformContext<InterpolationNode>) {
     parentNode.type !== NodeTypes.ROOT &&
     (isElementChild || text !== '')
   ) {
+    // same as for plain text: a literal that is not escaped must not be left
+    // for the runtime to parse as html
     if (
-      parentNode.type === NodeTypes.ELEMENT &&
-      shouldUseCreateElement(
-        parentNode,
-        context.parent as TransformContext<ElementNode>,
-      ) &&
-      text[0] === '<'
+      text[0] === '<' &&
+      (!isElementChild ||
+        (parentNode.type === NodeTypes.ELEMENT &&
+          shouldUseCreateElement(
+            parentNode,
+            context.parent as TransformContext<ElementNode>,
+          )))
     ) {
       materializeLiteralTextNode(
         createSimpleExpression(text, true, context.node.loc),

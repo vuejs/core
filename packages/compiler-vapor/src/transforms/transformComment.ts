@@ -8,7 +8,6 @@ import {
 } from '@vue/compiler-dom'
 import type { NodeTransform, TransformContext } from '../transform'
 import { DynamicFlag } from '../ir'
-import { escapeHtml } from '@vue/shared'
 
 const ignoredComments = new WeakMap<
   TransformContext<RootNode>,
@@ -35,7 +34,14 @@ export const transformComment: NodeTransform = (node, context) => {
     context.comment.push(node)
     context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
   } else {
-    context.template += `<!--${escapeHtml(node.content)}-->`
+    // The html parser never resolves character references inside a comment, so
+    // comment data has to be written raw - escaping it would put the escape
+    // sequence itself into the dom, `<!--&-->` becoming `<!--&amp;-->`. The
+    // parser cannot produce content that would close the comment early either:
+    // it ends a comment at the first `-->` and handles the abrupt closings
+    // (`<!-->`, `<!--->`) itself. This matches `createComment` in vdom and the
+    // raw content vapor's own ssr output writes (`ssrCodegenTransform`).
+    context.template += `<!--${node.content}-->`
   }
 }
 

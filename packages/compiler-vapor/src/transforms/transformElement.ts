@@ -500,17 +500,11 @@ function transformNativeElement(
       getEffectIndex,
     )
   } else {
-    const appendTemplateProp = (
-      key: string,
-      value: string = '',
-      generated: boolean = false,
-    ) => {
+    const appendTemplateProp = (key: string, value: string = '') => {
       template += ` ${key}`
 
       if (value) {
-        const escapedValue = generated
-          ? escapeGeneratedAttrValue(value)
-          : value.replace(/"/g, '&quot;')
+        const escapedValue = escapeAttrValue(value)
         template += NEEDS_QUOTES_RE.test(value)
           ? `="${escapedValue}"`
           : `=${escapedValue}`
@@ -562,7 +556,7 @@ function transformNativeElement(
               : undefined) != null
       ) {
         if (foldedValue) {
-          appendTemplateProp(key.content, foldedValue, true)
+          appendTemplateProp(key.content, foldedValue)
         }
       } else {
         context.registerEffect(
@@ -620,7 +614,23 @@ interface ConstantValue {
   value: unknown
 }
 
-function escapeGeneratedAttrValue(value: string): string {
+/**
+ * Templates are parsed as html again at runtime, so a value written into one
+ * has to survive that round trip unchanged. The parser has already decoded the
+ * character references in a static value, and `&` would start a second round
+ * of decoding, turning `&amp;lt;` into `<` instead of `&lt;`. This is the same
+ * reason the vdom static stringifier escapes values before putting them into
+ * an html string (`escapeHtml` in `stringifyStatic`).
+ *
+ * Character references are all this fixes. `<`, `>`, `'` and whitespace need no
+ * escaping because `NEEDS_QUOTES_RE` already puts every value containing them
+ * inside double quotes, where they stand for themselves. A CR or a NUL in the
+ * value does still come out differently than in vdom, but that is a class of
+ * its own: the parser normalizes both away while preprocessing its input, and
+ * it does so for comment data and for text in `<pre>` and `<textarea>` just the
+ * same, where a NUL cannot be written back at all.
+ */
+function escapeAttrValue(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
 }
 

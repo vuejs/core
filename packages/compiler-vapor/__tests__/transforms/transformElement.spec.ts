@@ -1888,6 +1888,44 @@ describe('compiler: element transform', () => {
     })
   })
 
+  describe('character references in static prop values', () => {
+    // the parser already resolved the references in the source, and the
+    // template string is parsed as html again at runtime, so `&` has to be
+    // escaped or the value would be resolved a second time
+    test.each([
+      // quoted because of the `=` in the query string
+      [`<a href="/x?q=1&amp;amp;lang" />`, '<a href="/x?q=1&amp;amp;lang">'],
+      [`<div title="&amp;lt;" />`, '<div title=&amp;lt;>'],
+      [`<div title="&amp;nbsp;" />`, '<div title=&amp;nbsp;>'],
+      [`<div title="&#38;copy;" />`, '<div title=&amp;copy;>'],
+      [`<div title="&#38;#60;" />`, '<div title=&amp;#60;>'],
+      [`<div title="&amp;amp;lt;" />`, '<div title=&amp;amp;lt;>'],
+      [`<div title="&amp;lt" />`, '<div title=&amp;lt>'],
+      // an ampersand that starts no reference is escaped all the same
+      [`<div title="&amp;nope;" />`, '<div title=&amp;nope;>'],
+      [`<div class="a&amp;amp;b" />`, '<div class=a&amp;amp;b>'],
+      [`<div data-x=&amp;lt; />`, '<div data-x=&amp;lt;>'],
+      // quoted values are escaped the same way
+      [`<div title="a &amp;lt; b" />`, '<div title="a &amp;lt; b">'],
+      [`<div title='a&amp;lt;"b' />`, '<div title="a&amp;lt;&quot;b">'],
+    ])('%j compiles to %j', (source, template) => {
+      const { code, ir } = compileWithElementTransform(source)
+
+      expect(code).contains(JSON.stringify(template))
+      expect([...ir.template.keys()]).toMatchObject([template])
+    })
+
+    test('folded values go through the same escape', () => {
+      const { ir } = compileWithElementTransform(
+        `<div class="a&amp;amp;b" :class="{ c: true }" />`,
+      )
+
+      expect([...ir.template.keys()]).toMatchObject([
+        '<div class="a&amp;amp;b c">',
+      ])
+    })
+  })
+
   describe('leading newline in <pre> and <textarea>', () => {
     // the parser already dropped the first newline per the html spec, so the
     // one left in the ast has to be doubled to survive the template string

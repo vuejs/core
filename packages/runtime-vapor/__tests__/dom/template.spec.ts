@@ -184,3 +184,59 @@ describe('children that render nothing', () => {
     expect(vapor.after).toBe(expected)
   })
 })
+
+describe('character references in static templates', () => {
+  // The compiler resolves the references while parsing the template, and vapor
+  // hands its template string to the html parser again at runtime. Whatever is
+  // left in that string must therefore survive a second parse unchanged.
+  test.each([
+    // static attribute values
+    [
+      '<a href="/x?q=1&amp;amp;lang">z</a>',
+      '<a href="/x?q=1&amp;amp;lang">z</a>',
+    ],
+    ['<a title="&amp;nbsp;">z</a>', '<a title="&amp;nbsp;">z</a>'],
+    ['<a title="&#38;copy;">z</a>', '<a title="&amp;copy;">z</a>'],
+    ['<a title="&amp;lt">z</a>', '<a title="&amp;lt">z</a>'],
+    ['<div title="a &amp;lt; b">z</div>', '<div title="a &amp;lt; b">z</div>'],
+    ['<div data-x=&amp;lt;>z</div>', '<div data-x="&amp;lt;">z</div>'],
+    ['<div v-pre title="&amp;lt;">z</div>', '<div title="&amp;lt;">z</div>'],
+    [
+      '<svg><rect data-x="&amp;lt;"></rect></svg>',
+      '<svg><rect data-x="&amp;lt;"></rect></svg>',
+    ],
+    [
+      '<textarea placeholder="&amp;lt;"></textarea>',
+      '<textarea placeholder="&amp;lt;"></textarea>',
+    ],
+    // text that would otherwise be parsed as markup
+    ['&lt;b&gt;hi&lt;/b&gt;', '&lt;b&gt;hi&lt;/b&gt;'],
+    ['&lt;/div&gt;tail', '&lt;/div&gt;tail'],
+    ['&lt;!--c--&gt;tail', '&lt;!--c--&gt;tail'],
+    [
+      '<template v-if="true">&lt;b&gt;x&lt;/b&gt;</template>',
+      '&lt;b&gt;x&lt;/b&gt;',
+    ],
+    // comment data is raw text, the parser resolves nothing inside a comment
+    ['<div><!--a & b--></div>', '<div><!--a & b--></div>'],
+    ['<div><!--a < b--></div>', '<div><!--a < b--></div>'],
+    ['<div><!--a " b--></div>', '<div><!--a " b--></div>'],
+    ["<div><!--a ' b--></div>", "<div><!--a ' b--></div>"],
+    ['<div><!--&lt;--></div>', '<div><!--&lt;--></div>'],
+    ['<div><!--<b class="x">--></div>', '<div><!--<b class="x">--></div>'],
+    ['<!--a & b-->', '<!--a & b-->'],
+    ['<div><!--x---></div>', '<div><!--x---></div>'],
+    // untouched
+    ['<a title="&amp;nope;">z</a>', '<a title="&amp;nope;">z</a>'],
+    ['<div>&amp;lt;</div>', '<div>&amp;lt;</div>'],
+    ['a&lt;b&gt;hi&lt;/b&gt;', 'a&lt;b&gt;hi&lt;/b&gt;'],
+  ])('%j renders as %j in both modes', async (tpl, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      () => {},
+    )
+    expect(vdom.after).toBe(expected)
+    expect(vapor.after).toBe(expected)
+  })
+})
