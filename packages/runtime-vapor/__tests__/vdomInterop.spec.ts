@@ -1116,6 +1116,265 @@ describe('vdomInterop', () => {
       app.unmount()
     })
 
+    // A directive on an interop child must follow the child's own render, the
+    // way VDOM follows it by inheriting the bindings onto the rendered root
+    // vnode. Every case below runs the same vdom parent against a vdom child
+    // and a vapor child and pins the whole hook sequence of both, so the
+    // divergences that remain are visible rather than merely absent.
+    describe('follow the child render', () => {
+      // `el.textContent` pins a hook to its side of the DOM change and
+      // `isConnected` to its side of the insertion. `oldValue` is only part of
+      // the contract for the two update hooks.
+      const trace = (calls: string[]) => {
+        const rec = (name: string) => (el: Element, binding: any) => {
+          const at =
+            `${name} ${el.tagName}[${el.textContent}]` +
+            `${el.isConnected ? '' : ' (detached)'}`
+          calls.push(
+            name === 'beforeUpdate' || name === 'updated'
+              ? `${at} ${binding.oldValue}>${binding.value}`
+              : at,
+          )
+        }
+        return {
+          created: rec('created'),
+          beforeMount: rec('beforeMount'),
+          mounted: rec('mounted'),
+          beforeUpdate: rec('beforeUpdate'),
+          updated: rec('updated'),
+          beforeUnmount: rec('beforeUnmount'),
+          unmounted: rec('unmounted'),
+        }
+      }
+
+      const mountInBody = (render: () => any) => {
+        const App = defineComponent({ setup: () => render })
+        const root = document.createElement('div')
+        document.body.appendChild(root)
+        const app = createApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(root)
+        return {
+          root,
+          done: () => {
+            app.unmount()
+            root.remove()
+          },
+        }
+      }
+
+      test('update hooks run when the child updates itself', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ n: 0 })
+          // the parent never reads `n`, so only the child re-renders
+          const Child = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div>{{ data.n }}</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { done } = mountInBody(() =>
+            withDirectives(h(Child), [[dir, 'v']]),
+          )
+          data.value.n++
+          await nextTick()
+          done()
+          return calls
+        }
+
+        const expected = [
+          'created DIV[0] (detached)',
+          'beforeMount DIV[0] (detached)',
+          'mounted DIV[0]',
+          'beforeUpdate DIV[0] v>v',
+          'updated DIV[1] v>v',
+          'beforeUnmount DIV[1]',
+          'unmounted DIV[1] (detached)',
+        ]
+        expect(await run(false)).toEqual(expected)
+        expect(await run(true)).toEqual(expected)
+      })
+
+      test('directives move to the new root element on a root switch', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ b: true })
+          const Child = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { root, done } = mountInBody(() =>
+            withDirectives(h(Child), [
+              [vShow, false],
+              [dir, 'v'],
+            ]),
+          )
+          data.value.b = false
+          await nextTick()
+          const html = root.innerHTML
+          done()
+          return { calls, html }
+        }
+
+        const vdom = await run(false)
+        const vapor = await run(true)
+        // v-show has to follow the root too, or the new one renders visible
+        expect(vdom.html).toBe('<p style="display: none;">p</p>')
+        expect(vapor.html).toBe('<p style="display: none;">p</p><!--if-->')
+        expect(vdom.calls).toEqual([
+          'created DIV[m] (detached)',
+          'beforeMount DIV[m] (detached)',
+          'mounted DIV[m]',
+          'beforeUnmount DIV[m]',
+          'created P[p] (detached)',
+          'beforeMount P[p] (detached)',
+          'unmounted DIV[m] (detached)',
+          'mounted P[p]',
+          'beforeUnmount P[p]',
+          'unmounted P[p] (detached)',
+        ])
+        expect(vapor.calls).toEqual([
+          'created DIV[m] (detached)',
+          'beforeMount DIV[m] (detached)',
+          'mounted DIV[m]',
+          // a vapor root is only known once the child has rendered, so this
+          // one cannot be withheld from a root that turns out to be doomed
+          'beforeUpdate DIV[m] v>v',
+          // released while still in the document, as VDOM guarantees
+          'beforeUnmount DIV[m]',
+          'unmounted DIV[m] (detached)',
+          // no `updated` in between: the root was replaced, not patched
+          'created P[p]',
+          'beforeMount P[p]',
+          'mounted P[p]',
+          'beforeUnmount P[p]',
+          'unmounted P[p] (detached)',
+        ])
+      })
+
+      test('a parent update in the same tick does not invert the switch', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ b: true })
+          const Child = compile(
+            `<script setup>const data = _data\n` +
+              `const p = defineProps(['n'])</script>` +
+              `<template><div v-if="data.b">{{ p.n }}</div>` +
+              `<p v-else>{{ p.n }}</p></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const n = ref(0)
+          const { done } = mountInBody(() =>
+            withDirectives(h(Child, { n: n.value }), [[dir, 'v']]),
+          )
+          calls.length = 0
+          n.value++
+          data.value.b = false
+          await nextTick()
+          done()
+          return calls
+        }
+
+        const vdom = await run(false)
+        const vapor = await run(true)
+        // the root vnode type changed, so VDOM patches nothing and runs no
+        // update hooks at all
+        expect(vdom).toEqual([
+          'beforeUnmount DIV[0]',
+          'created P[1] (detached)',
+          'beforeMount P[1] (detached)',
+          'unmounted DIV[0] (detached)',
+          'mounted P[1]',
+          'beforeUnmount P[1]',
+          'unmounted P[1] (detached)',
+        ])
+        expect(vapor).toEqual([
+          'beforeUpdate DIV[0] v>v',
+          'beforeUnmount DIV[0]',
+          'unmounted DIV[0] (detached)',
+          // `updated` must not reach an element the directive has not been
+          // told it mounted on
+          'created P[1]',
+          'beforeMount P[1]',
+          'mounted P[1]',
+          'beforeUnmount P[1]',
+          'unmounted P[1] (detached)',
+        ])
+      })
+
+      test('directives come back when an element root returns', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ b: true })
+          const Child = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div v-if="data.b">m</div>` +
+              `<template v-else>txt</template></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { done } = mountInBody(() =>
+            withDirectives(h(Child), [[dir, 'v']]),
+          )
+          data.value.b = false
+          await nextTick()
+          data.value.b = true
+          await nextTick()
+          done()
+          return calls
+        }
+
+        const vdom = await run(false)
+        const vapor = await run(true)
+        if (__DEV__) {
+          // VDOM warns from renderComponentRoot on every render without an
+          // element root; the vapor side holds the bindings silently. Asserted
+          // so the control arm's warning does not leak out of the test.
+          expect(
+            `Runtime directive used on component with non-element root node.`,
+          ).toHaveBeenWarned()
+        }
+        expect(vdom).toEqual([
+          'created DIV[m] (detached)',
+          'beforeMount DIV[m] (detached)',
+          'mounted DIV[m]',
+          'beforeUnmount DIV[m]',
+          'unmounted DIV[m] (detached)',
+          'created DIV[m] (detached)',
+          'beforeMount DIV[m] (detached)',
+          'mounted DIV[m]',
+          'beforeUnmount DIV[m]',
+          'unmounted DIV[m] (detached)',
+        ])
+        expect(vapor).toEqual([
+          'created DIV[m] (detached)',
+          'beforeMount DIV[m] (detached)',
+          'mounted DIV[m]',
+          'beforeUpdate DIV[m] v>v',
+          'beforeUnmount DIV[m]',
+          'unmounted DIV[m] (detached)',
+          // the bindings survive the text-only root and mount again
+          'created DIV[m]',
+          'beforeMount DIV[m]',
+          'mounted DIV[m]',
+          'beforeUnmount DIV[m]',
+          'unmounted DIV[m] (detached)',
+        ])
+      })
+    })
+
     test('should expose the latest vapor root element in updated hooks', async () => {
       const useAltRoot = ref(false)
       const updatedSpy = vi.fn((vnode: any) => {
