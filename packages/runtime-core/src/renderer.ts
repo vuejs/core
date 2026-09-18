@@ -64,6 +64,7 @@ import {
   type SuspenseImpl,
   isSuspense,
   queueEffectWithSuspense,
+  suspenseDeferredTransitions,
 } from './components/Suspense'
 import {
   TeleportEndKey,
@@ -744,6 +745,13 @@ function baseCreateRenderer(
     const needCallTransitionHooks = needTransition(parentSuspense, transition)
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
+    } else if (
+      transition &&
+      !transition.persisted &&
+      parentSuspense &&
+      parentSuspense.pendingBranch
+    ) {
+      suspenseDeferredTransitions.set(el, parentSuspense.pendingId)
     }
     hostInsert(el, container, anchor)
     if (
@@ -2105,6 +2113,7 @@ function baseCreateRenderer(
       transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
+        suspenseDeferredTransitions.delete(el!)
         // #14031 if there is no pending v-show leave, the persisted
         // transition lifecycle is directive-owned, so activating a kept-alive
         // node only relocates it.
