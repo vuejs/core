@@ -177,6 +177,38 @@ describe('compiler + runtime integration', () => {
     expect(container.innerHTML).toBe('hello')
   })
 
+  // #12813
+  it('should warn when in-DOM template container contains a shadow root', () => {
+    const container = document.createElement('div')
+    const host = document.createElement('div')
+    // this is what the HTML parser produces for
+    // `<div><template shadowrootmode="open">Shadow content</template>Light content</div>`
+    host.attachShadow({ mode: 'open' }).textContent = 'Shadow content'
+    host.textContent = 'Light content'
+    container.appendChild(host)
+
+    createApp({}).mount(container)
+
+    expect(
+      '[Vue warn]: Mount container contains <div> with a shadow root.',
+    ).toHaveBeenWarned()
+    // the shadow root is not part of the in-DOM template and the host element
+    // is re-created from scratch, so it is gone
+    expect(container.innerHTML).toBe('<div>Light content</div>')
+    expect(container.firstElementChild!.shadowRoot).toBe(null)
+  })
+
+  it('should not warn about shadow roots when template option is provided', () => {
+    const container = document.createElement('div')
+    const host = document.createElement('div')
+    host.attachShadow({ mode: 'open' }).textContent = 'Shadow content'
+    container.appendChild(host)
+
+    createApp({ template: `<span>ok</span>` }).mount(container)
+
+    expect('shadow root').not.toHaveBeenWarned()
+  })
+
   it('should support selector of rootContainer', () => {
     const container = document.createElement('div')
     const origin = document.querySelector
