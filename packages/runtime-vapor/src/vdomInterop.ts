@@ -2861,15 +2861,15 @@ function trackInteropFallbackChanges(
         initialized = true
         return
       }
-      if (
-        trackedLocalFallback === nextLocalFallback &&
-        trackedOutletFallback === nextOutletFallback
-      ) {
-        return
-      }
+      // Only presence changes re-resolve the chain: a fallback body swapped
+      // for another (compiled fallbacks are fresh closures per owner render)
+      // patches in place through its own fragment effect.
+      const presenceChanged =
+        !!trackedLocalFallback !== !!nextLocalFallback ||
+        !!trackedOutletFallback !== !!nextOutletFallback
       trackedLocalFallback = nextLocalFallback
       trackedOutletFallback = nextOutletFallback
-      onChange()
+      if (presenceChanged) onChange()
     }, true)
   })
 }

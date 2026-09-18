@@ -2428,6 +2428,53 @@ describe('vdomInterop', () => {
       expect(track).toHaveBeenCalledTimes(1)
       expect(html()).toBe('<!--if-->')
     })
+
+    test('an unrelated owner re-render patches the vdom fallback in place', async () => {
+      // the compiled fallback is a fresh closure per owner render; only a
+      // fallback appearing or disappearing may re-resolve the chain
+      const mount = (vapor: boolean) => {
+        const data = ref({ tick: 0, show: false })
+        const Child = compile(
+          `<script setup>const data = _data</script>
+          <template>
+            <div><i>{{ data.tick }}</i><slot><p>fallback</p></slot></div>
+          </template>`,
+          data,
+          {},
+          { vapor: false },
+        )
+        const App = compile(
+          `<script ${vapor ? 'vapor' : 'setup'}>const data = _data; const components = _components</script>
+          <template>
+            <components.Child><span v-if="data.show">content</span></components.Child>
+          </template>`,
+          data,
+          { Child },
+          { vapor },
+        )
+        const root = document.createElement('div')
+        const app = vapor ? createVaporApp(App) : createApp(App)
+        app.use(vaporInteropPlugin).mount(root)
+        return { data, root, app }
+      }
+      const vdom = mount(false)
+      const vapor = mount(true)
+      expect(vdom.root.innerHTML).toBe('<div><i>0</i><p>fallback</p></div>')
+      expect(vapor.root.innerHTML).toBe(vdom.root.innerHTML)
+      const vdomFallback = vdom.root.querySelector('p')
+      const vaporFallback = vapor.root.querySelector('p')
+
+      vdom.data.value.tick++
+      vapor.data.value.tick++
+      await nextTick()
+      expect(vdom.root.innerHTML).toBe('<div><i>1</i><p>fallback</p></div>')
+      expect(vapor.root.innerHTML).toBe(vdom.root.innerHTML)
+      expect(vdom.root.querySelector('p')).toBe(vdomFallback)
+      expect(vapor.root.querySelector('p')).toBe(vaporFallback)
+
+      vdom.app.unmount()
+      vapor.app.unmount()
+    })
   })
 
   describe('provide / inject', () => {
