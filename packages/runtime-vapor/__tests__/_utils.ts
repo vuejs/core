@@ -214,6 +214,10 @@ export function compile(
   )
 }
 
+// vapor anchors are comments vdom does not render
+export const stripAnchors = (html: string): string =>
+  html.replace(/<!--[^>]*-->/g, '')
+
 export interface ParityResult {
   after: string
   text: string
