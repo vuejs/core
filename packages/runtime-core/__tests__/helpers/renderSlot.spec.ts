@@ -228,28 +228,37 @@ describe('renderSlot', () => {
       fallback: localFallback,
     } as any
 
-    renderSlot(
-      {
-        default: () => [forwarded],
-      },
-      'default',
-      undefined,
-      firstOuterFallback,
-    )
+    const renderOutlet = (fallback: () => any) =>
+      renderSlot(
+        {
+          default: () => [forwarded],
+        },
+        'default',
+        undefined,
+        fallback,
+      )
+
+    renderOutlet(firstOuterFallback)
+
+    // the outlet fallback reaches vapor bound to the outlet owner's rendering
+    // context, so the vnode carries that binding rather than the raw function
+    expect(forwarded.vs!.fallback).toBe(localFallback)
+    const firstStored = forwarded.vs!.outletFallback!
+    expect(firstStored).not.toBe(firstOuterFallback)
+    expect(firstStored()).toEqual(firstOuterFallback())
+
+    // and the binding is stable: re-rendering the outlet with the same
+    // fallback must not hand interop a new identity, or interop re-resolves
+    // the slot on every owner render
+    renderOutlet(firstOuterFallback)
+    expect(forwarded.vs!.fallback).toBe(localFallback)
+    expect(forwarded.vs!.outletFallback).toBe(firstStored)
+
+    renderOutlet(nextOuterFallback)
 
     expect(forwarded.vs!.fallback).toBe(localFallback)
-    expect(forwarded.vs!.outletFallback).toBe(firstOuterFallback)
-
-    renderSlot(
-      {
-        default: () => [forwarded],
-      },
-      'default',
-      undefined,
-      nextOuterFallback,
-    )
-
-    expect(forwarded.vs!.fallback).toBe(localFallback)
-    expect(forwarded.vs!.outletFallback).toBe(nextOuterFallback)
+    const nextStored = forwarded.vs!.outletFallback!
+    expect(nextStored).not.toBe(firstStored)
+    expect(nextStored()).toEqual(nextOuterFallback())
   })
 })

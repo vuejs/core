@@ -1730,6 +1730,224 @@ describe('vdom interop', () => {
     vaporApp.unmount()
   })
 
+  describe('vdom slot fallback scope id under a vapor parent', () => {
+    // The same VDOM child in both modes; only the parent that fills its slot
+    // switches between vdom and vapor. Under a vdom parent the fallback is
+    // rendered inside the child's own render, under a vapor parent the interop
+    // fallback chain renders it later.
+    test('fallback of an empty slot carries the child scope id', () => {
+      const data = ref(false)
+      const Child = compile(
+        `<script setup>const data = _data;</script>` +
+          `<template><slot><p>fallback</p></slot></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      Child.__scopeId = 'vdom-child'
+      const makeParent = (C: any) => (vapor: boolean) =>
+        compile(
+          `<script setup>const data = _data; const components = _components;</script>` +
+            `<template><components.Child><span v-if="data">content</span></components.Child></template>`,
+          data,
+          { Child: C },
+          { vapor },
+        )
+      const parent = makeParent(Child)
+      const vdomRoot = document.createElement('div')
+      const vdomApp = createApp(parent(false))
+      vdomApp.use(vaporInteropPlugin).mount(vdomRoot)
+      const vaporRoot = document.createElement('div')
+      const vaporApp = createVaporApp(parent(true))
+      vaporApp.use(vaporInteropPlugin).mount(vaporRoot)
+
+      expect(vdomRoot.innerHTML).toBe(
+        `<p vdom-child="" vdom-child-s="">fallback</p>`,
+      )
+      expect(vaporRoot.innerHTML).toBe(vdomRoot.innerHTML)
+
+      vdomApp.unmount()
+      vaporApp.unmount()
+    })
+
+    test('fallback revealed after the content goes away carries it too', async () => {
+      const mount = (vapor: boolean) => {
+        const show = ref(true)
+        const Child = compile(
+          `<script setup>const data = _data;</script>` +
+            `<template><slot><p>fallback</p></slot></template>`,
+          show,
+          {},
+          { vapor: false },
+        )
+        Child.__scopeId = 'vdom-child'
+        const Parent = compile(
+          `<script setup>const data = _data; const components = _components;</script>` +
+            `<template><components.Child><span v-if="data">content</span></components.Child></template>`,
+          show,
+          { Child },
+          { vapor },
+        )
+        const root = document.createElement('div')
+        const app = vapor ? createVaporApp(Parent) : createApp(Parent)
+        app.use(vaporInteropPlugin).mount(root)
+        return { root, app, show }
+      }
+      const vdom = mount(false)
+      const vapor = mount(true)
+
+      vdom.show.value = false
+      vapor.show.value = false
+      await nextTick()
+      expect(vdom.root.innerHTML).toBe(
+        `<p vdom-child="" vdom-child-s="">fallback</p>`,
+      )
+      expect(vapor.root.innerHTML).toBe(vdom.root.innerHTML)
+
+      vdom.app.unmount()
+      vapor.app.unmount()
+    })
+
+    // Two outlets on the forwarding chain own a fallback each, and the
+    // enclosing one lands on the forwarded vapor slot vnode as
+    // `outletFallback`. Both must come back with their own owner's id, so a
+    // single memoized owner on the interop side would not do.
+    //
+    // `noSlotted` is on here to keep the assertion about owner ids only. With
+    // it off and the fallback owned by the inner outlet, interop also hands
+    // that fallback the enclosing outlet's `-s` id, which vdom does not add
+    // (vdom `vdom-inner vdom-inner-s`, interop `vdom-inner vdom-inner-s
+    // vdom-wrapper-s`). That extra id is on the interop output before this
+    // change as well, and it comes from slot scope id propagation across the
+    // boundary rather than from who owns the fallback, so it is left alone
+    // here. A `:slotted` fallback that is not forwarded is covered below.
+    test.each([
+      ['the wrapper owns one', true, `<b vdom-wrapper="">wrapper fallback</b>`],
+      ['only the inner one does', false, `<p vdom-inner="">inner fallback</p>`],
+    ] as const)(
+      'a forwarded outlet keeps each fallback owner scope id, %s',
+      (_, withWrapperFallback, expected) => {
+        const show = ref(false)
+        const Inner = {
+          __scopeId: 'vdom-inner',
+          setup(_p: unknown, { slots }: any) {
+            return () =>
+              renderSlot(
+                slots,
+                'default',
+                {},
+                () => [h('p', 'inner fallback')],
+                true,
+              )
+          },
+        }
+        const Wrapper = {
+          __scopeId: 'vdom-wrapper',
+          setup(_p: unknown, { slots }: any) {
+            return () =>
+              h(Inner as any, null, {
+                default: () => [
+                  renderSlot(
+                    slots,
+                    'default',
+                    {},
+                    withWrapperFallback
+                      ? () => [h('b', 'wrapper fallback')]
+                      : undefined,
+                    true,
+                  ),
+                ],
+              })
+          },
+        }
+        const vdomRoot = document.createElement('div')
+        const vdomApp = createApp({
+          setup() {
+            return () =>
+              h(Wrapper as any, null, {
+                default: () => (show.value ? [h('span', 'content')] : []),
+              })
+          },
+        })
+        vdomApp.use(vaporInteropPlugin).mount(vdomRoot)
+        const vaporRoot = document.createElement('div')
+        const vaporApp = createVaporApp(
+          defineVaporComponent({
+            setup() {
+              return createComponent(
+                Wrapper as any,
+                null,
+                {
+                  default: () =>
+                    createIf(
+                      () => show.value,
+                      () => template('<span>content</span>')(),
+                    ),
+                },
+                true,
+              )
+            },
+          }),
+        )
+        vaporApp.use(vaporInteropPlugin).mount(vaporRoot)
+
+        expect(vdomRoot.innerHTML).toBe(expected)
+        expect(vaporRoot.innerHTML).toBe(vdomRoot.innerHTML)
+
+        vdomApp.unmount()
+        vaporApp.unmount()
+      },
+    )
+
+    test('a slotted child also keeps the slotted id on the fallback', () => {
+      // `noSlotted` off: the fallback ends up under the outlet's own `-s` ids
+      // as well, and both sets must match VDOM.
+      const show = ref(false)
+      const VdomChild = {
+        __scopeId: 'vdom-child',
+        setup(_: unknown, { slots }: any) {
+          return () => renderSlot(slots, 'default', {}, () => [h('p', 'fb')])
+        },
+      }
+      const vdomRoot = document.createElement('div')
+      const vdomApp = createApp({
+        setup() {
+          return () =>
+            h(VdomChild as any, null, {
+              default: () => (show.value ? [h('span')] : []),
+            })
+        },
+      })
+      vdomApp.use(vaporInteropPlugin).mount(vdomRoot)
+      const vaporRoot = document.createElement('div')
+      const vaporApp = createVaporApp(
+        defineVaporComponent({
+          setup() {
+            return createComponent(
+              VdomChild as any,
+              null,
+              {
+                default: () =>
+                  createIf(
+                    () => show.value,
+                    () => template('<span></span>')(),
+                  ),
+              },
+              true,
+            )
+          },
+        }),
+      )
+      vaporApp.use(vaporInteropPlugin).mount(vaporRoot)
+
+      expect(vdomRoot.innerHTML).toBe(`<p vdom-child="" vdom-child-s="">fb</p>`)
+      expect(vaporRoot.innerHTML).toBe(vdomRoot.innerHTML)
+
+      vdomApp.unmount()
+      vaporApp.unmount()
+    })
+  })
+
   test.each([
     ['a single child', 1],
     ['multiple children', 2],
