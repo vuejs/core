@@ -65,13 +65,56 @@ describe('runtime-dom: props patching', () => {
     expect(el.value).toBe('foo')
     expect(el.setterCalled).toBe(1)
     patchProp(el, 'value', null, null)
-    expect(el.value).toBe('')
+    // #14209: custom elements should preserve nullish values as-is
+    expect(el.value).toBe(null)
     expect(el.setterCalled).toBe(2)
     expect(el.getAttribute('value')).toBe(null)
     const obj = {}
     patchProp(el, 'value', null, obj)
     expect(el.value).toBe(obj)
     expect(el.setterCalled).toBe(3)
+  })
+
+  // #14209
+  test('nullish value handling for custom element props', () => {
+    class TestElement extends HTMLElement {
+      myNumber = 1
+      myBool = true
+      myString = 'hello'
+    }
+    window.customElements.define('ce-nullish-test', TestElement)
+    const el = document.createElement('ce-nullish-test') as TestElement
+
+    // null: should preserve null, not coerce based on existing type
+    patchProp(el, '.myNumber', null, null)
+    expect(el.myNumber).toBe(null)
+    expect(el.getAttribute('myNumber')).toBe(null)
+
+    patchProp(el, '.myBool', null, null)
+    expect(el.myBool).toBe(null)
+
+    patchProp(el, '.myString', null, null)
+    expect(el.myString).toBe(null)
+
+    // undefined: should preserve undefined, not coerce based on existing type
+    el.myNumber = 1
+    el.myBool = true
+    el.myString = 'hello'
+
+    patchProp(el, '.myNumber', null, undefined)
+    expect(el.myNumber).toBe(undefined)
+    expect(el.getAttribute('myNumber')).toBe(null)
+
+    patchProp(el, '.myBool', null, undefined)
+    expect(el.myBool).toBe(undefined)
+
+    patchProp(el, '.myString', null, undefined)
+    expect(el.myString).toBe(undefined)
+
+    // '': should preserve empty string, not coerce to true for boolean
+    el.myBool = true
+    patchProp(el, '.myBool', null, '')
+    expect(el.myBool).toBe('')
   })
 
   // For <input type="text">, setting el.value won't create a `value` attribute
