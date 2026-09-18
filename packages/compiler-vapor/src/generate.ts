@@ -122,7 +122,10 @@ export class CodegenContext {
   private lastIdMap: Map<string, number> = new Map()
   private generatedLocalNames: Set<string> = new Set()
 
-  getUniqueLocalName(base: string, scopeNames: Set<string>): string {
+  getUniqueLocalName(
+    base: string,
+    scopeNames: Set<string> = this.generatedLocalNames,
+  ): string {
     const name = this.findAvailableName(base, scopeNames)
     scopeNames.add(name)
     this.generatedLocalNames.add(name)
@@ -131,6 +134,7 @@ export class CodegenContext {
 
   private isNameAvailable(name: string, reservedNames: Set<string>): boolean {
     if (this.bindingNames.has(name) || reservedNames.has(name)) return false
+    if (this.identifiers[name]?.length) return false
     for (const alias of this.helpers.values()) {
       if (alias === name) return false
     }

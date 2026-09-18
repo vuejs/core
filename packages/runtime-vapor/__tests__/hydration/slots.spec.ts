@@ -1765,5 +1765,42 @@ describe('Vapor Mode hydration', () => {
       `,
       )
     })
+
+    test('preserves hydrated content when a conditional slot first recomputes', async () => {
+      const state = ref({ list: [1], label: 'a' })
+      const { container, app } = await testHydration(
+        `<template>
+            <components.Child>
+              <template v-if="data.list.length" #default="{ value }">
+                <input /><span>{{ data.label }}:{{ value }}</span>
+              </template>
+            </components.Child>
+          </template>`,
+        {
+          Child: `<template><slot :value="data.list.length" /></template>`,
+        },
+        state,
+      )
+      try {
+        const input = container.querySelector('input')!
+        const span = container.querySelector('span')!
+        input.value = 'typed'
+        input.focus()
+        expect(span.textContent).toBe('a:1')
+
+        state.value.list.push(2)
+        state.value.label = 'b'
+        await nextTick()
+
+        expect(container.querySelector('input')).toBe(input)
+        expect(container.querySelector('span')).toBe(span)
+        expect(document.activeElement).toBe(input)
+        expect(input.value).toBe('typed')
+        expect(span.textContent).toBe('b:2')
+        expect('Hydration node mismatch').not.toHaveBeenWarned()
+      } finally {
+        app.unmount()
+      }
+    })
   })
 })
