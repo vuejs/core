@@ -29,7 +29,7 @@ describe('transition-group', () => {
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(\`<ul\${_ssrRenderAttrs(_attrs, "ul", true)}>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
@@ -48,7 +48,7 @@ describe('transition-group', () => {
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(\`<ul\${_ssrRenderAttrs(_attrs, "ul", true)}>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
@@ -70,7 +70,7 @@ describe('transition-group', () => {
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<ul\${_ssrRenderAttrs(_attrs)}>\`)
+        _push(\`<ul\${_ssrRenderAttrs(_attrs, "ul", true)}>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
         })
@@ -91,7 +91,7 @@ describe('transition-group', () => {
         _push(\`<\${
           _ctx.someTag
         }\${
-          _ssrRenderAttrs(_attrs)
+          _ssrRenderAttrs(_attrs, _ctx.someTag, true)
         }>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
@@ -113,7 +113,7 @@ describe('transition-group', () => {
         _push(\`<\${
           _ctx.tag
         }\${
-          _ssrRenderAttrs(_attrs)
+          _ssrRenderAttrs(_attrs, _ctx.tag, true)
         }>\`)
         _ssrRenderList(_ctx.list, (i) => {
           _push(\`<div></div>\`)
@@ -165,7 +165,54 @@ describe('transition-group', () => {
         _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
           class: "red",
           id: "ok"
-        }, _attrs))}></ul>\`)
+        }, _attrs), "ul", true)}></ul>\`)
+      }"
+    `)
+  })
+
+  test('passes static and bound props to the runtime filter', () => {
+    expect(
+      compile(
+        `<TransitionGroup tag="ul" name="list" :duration="duration" mode="x" v-bind="props" class="list"/>`,
+      ).code,
+    ).toMatchInlineSnapshot(`
+      "const { mergeProps: _mergeProps } = require("vue")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<ul\${_ssrRenderAttrs(_mergeProps({
+          name: "list",
+          duration: _ctx.duration,
+          mode: "x"
+        }, _ctx.props, { class: "list" }, _attrs), "ul", true)}></ul>\`)
+      }"
+    `)
+  })
+
+  test('nested group without props', () => {
+    expect(compile('<div><TransitionGroup tag="ul"/></div>').code)
+      .toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><ul></ul></div>\`)
+      }"
+    `)
+  })
+
+  test('nested group with dynamic tag and no props', () => {
+    expect(compile('<div><TransitionGroup :tag="tag"/></div>').code)
+      .toMatchInlineSnapshot(`
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${
+          _ssrRenderAttrs(_attrs)
+        }><\${
+          _ctx.tag
+        }></\${
+          _ctx.tag
+        }></div>\`)
       }"
     `)
   })
