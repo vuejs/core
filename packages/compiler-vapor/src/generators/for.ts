@@ -72,6 +72,8 @@ export function genFor(
       buildDestructureIdMap(keyToPathMap, `${keyVar}.value`, plugins),
     )
     idMap[keyVar] = null
+  } else if (index) {
+    args.push(', _')
   }
   if (index) {
     const indexVar = `_for_index${depth}`
