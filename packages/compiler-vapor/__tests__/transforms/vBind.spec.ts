@@ -1157,6 +1157,8 @@ describe('compiler v-bind', () => {
       `<input type="checkbox" :false-value.attr="0">`,
       `_setAttr(n0, "false-value", 0)`,
     ],
+    // special boolean attributes still inspect the raw value in `setAttr`
+    [`<input :readonly.attr="0">`, `_setAttr(n0, "readonly", 0)`],
     // these `.attr` bindings only need the serialized attribute value
     [`<input :value.attr="1">`, `_template("<input value=1>"`],
     [`<input :disabled.attr="0">`, `_template("<input disabled=0>"`],

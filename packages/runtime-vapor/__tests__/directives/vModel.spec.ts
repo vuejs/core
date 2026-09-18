@@ -1382,20 +1382,23 @@ describe('directive: v-model', () => {
       },
     )
 
-    test('readonly.attr keeps number values', async () => {
+    test.each([0, 1])('readonly.attr keeps number value %i', async value => {
       const { vdom, vapor } = await parity(
-        `<input :readonly.attr="0">`,
+        `<input :readonly.attr="${value}">`,
         () => null,
         root => {
           const input = root.querySelector('input')!
           return {
             readOnly: input.readOnly,
-            hasAttribute: input.hasAttribute('readonly'),
+            attribute: input.getAttribute('readonly'),
           }
         },
       )
 
-      expect(vdom).toEqual({ readOnly: false, hasAttribute: false })
+      expect(vdom).toEqual({
+        readOnly: !!value,
+        attribute: value ? '' : null,
+      })
       expect(vapor).toEqual(vdom)
     })
 
