@@ -10,7 +10,6 @@ import {
   type VNode,
   type VNodeArrayChildren,
   VaporSlot,
-  type VaporSlotOutlet,
   blockStack,
   closeBlock,
   createBlock,
@@ -18,7 +17,7 @@ import {
   isVNode,
   openBlock,
 } from '../vnode'
-import { PatchFlags, SlotFlags, extend, isSymbol } from '@vue/shared'
+import { NOOP, PatchFlags, SlotFlags, extend, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import type { ComponentInternalInstance, Data } from '../component'
@@ -81,15 +80,11 @@ export function renderSlot(
   const vaporSlot = slot && (slot as any)[rawVaporSlotKey]
   if (vaporSlot) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
-    ret.vs = { slot: vaporSlot }
-    if (fallback) {
-      attachVaporSlotOutlet(
-        [ret],
-        fallback,
-        true,
-        currentRenderingInstance,
-        currentRenderingInstance,
-      )
+    ret.vs = {
+      slot: vaporSlot,
+      outlets: fallback
+        ? [{ fallback, vdom: true, owner: currentRenderingInstance }]
+        : undefined,
     }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
@@ -146,16 +141,11 @@ export function renderSlot(
   try {
     const validSlotContent = slot && ensureValidVNode(slot(props))
 
-    // a forwarded vapor slot resolves this outlet's fallback itself
-    if (fallback && validSlotContent) {
-      attachVaporSlotOutlet(
-        validSlotContent,
-        fallback,
-        true,
-        currentRenderingInstance,
-        currentRenderingInstance,
-      )
-    }
+    // forwarded vapor slots resolve this outlet's fallback themselves
+    const fallbackHost =
+      fallback &&
+      validSlotContent &&
+      attachVaporSlotOutlet(validSlotContent, fallback)
 
     const slotKey =
       props.key ||
@@ -171,8 +161,13 @@ export function renderSlot(
           // #7256 force differentiate fallback content from actual content
           (!validSlotContent && fallback ? '_fb' : ''),
       },
-      validSlotContent || (fallback ? fallback() : []),
-      validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
+      fallbackHost
+        ? validSlotContent!.concat(fallbackHost)
+        : validSlotContent || (fallback ? fallback() : []),
+      // the fallback host comes and goes with the shape of the content
+      !fallbackHost &&
+        validSlotContent &&
+        (slots as RawSlots)._ === SlotFlags.STABLE
         ? PatchFlags.STABLE_FRAGMENT
         : PatchFlags.BAIL,
     )
@@ -210,42 +205,78 @@ export function ensureValidVNode(
 }
 
 /**
- * Records a vdom outlet on the vapor slots its content consists of, for
- * interop to resolve the outlet's fallback once they all render empty.
- * Internal to vapor interop.
+ * Hands a vdom outlet's fallback over to the vapor slots its content consists
+ * of: recorded on the slot vnode when the content is structurally that one
+ * slot, else on the returned host vnode, to append to the content, which owns
+ * the fallback and shows it while every slot is empty. Internal to vapor
+ * interop.
  */
 export function attachVaporSlotOutlet(
   vnodes: VNodeArrayChildren,
-  fallback: () => any,
-  vdom: boolean,
-  owner: ComponentInternalInstance | null,
-  key: object | null,
-): void {
-  const members: VNode[] = []
-  if (collectVaporSlots(vnodes, members) && members.length) {
-    const outlet: VaporSlotOutlet = { fallback, vdom, owner, key }
-    for (let i = 0; i < members.length; i++) {
-      ;(members[i].vs!.outlets ||= []).push(outlet)
-    }
+  fallback: () => VNodeArrayChildren,
+): VNode | undefined {
+  if (!findVaporSlots(vnodes)) return
+  const outlet = { fallback, vdom: true, owner: currentRenderingInstance }
+  let host: VNode | undefined
+  if (severalSlots) {
+    host = (openBlock(), createBlock(VaporSlot, { key: '_fb' }))
+    // NOOP: a host has no slot, only the guards on `vs.slot` to pass
+    host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
+  } else {
+    ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
   }
+  foundSlots.length = 0
+  return host
+}
+
+/**
+ * A vapor outlet rendering vdom slot content takes part only when that
+ * content is structurally one vapor slot. Internal to vapor interop.
+ */
+export function recordVaporSlotOutlet(
+  vnodes: VNodeArrayChildren,
+  fallback: () => any,
+): void {
+  if (findVaporSlots(vnodes)) {
+    if (!severalSlots) {
+      ;(foundSlots[0].vs!.outlets ||= []).push({ fallback, vdom: false })
+    }
+    foundSlots.length = 0
+  }
+}
+
+// scratch for the walk below, which runs no user code and cannot re-enter
+const foundSlots: VNode[] = []
+let severalSlots = false
+
+function findVaporSlots(vnodes: VNodeArrayChildren): boolean {
+  severalSlots = false
+  if (walkVaporSlots(vnodes) && foundSlots.length) return true
+  foundSlots.length = 0
+  return false
 }
 
 // Gathers the vapor slot vnodes in outlet content, looking through fragments
 // and past comments the way `ensureValidVNode` does. False once valid vdom
-// content is met: the outlet then stands on its own.
-function collectVaporSlots(
-  vnodes: VNodeArrayChildren,
-  members: VNode[],
-): boolean {
+// content is met: the outlet then stands on its own. `severalSlots` unless
+// the content can never hold more than one slot: no siblings (a `v-if` leaves
+// its comment behind) and no list on the way to it.
+function walkVaporSlots(vnodes: VNodeArrayChildren): boolean {
+  if (vnodes.length > 1) severalSlots = true
   for (let i = 0; i < vnodes.length; i++) {
     const child = vnodes[i]
     if (!isVNode(child)) return false
     if (child.vs) {
-      members.push(child)
+      foundSlots.push(child)
     } else if (child.type === Fragment) {
-      if (!collectVaporSlots(child.children as VNodeArrayChildren, members)) {
-        return false
+      if (
+        child.patchFlag > 0 &&
+        child.patchFlag &
+          (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)
+      ) {
+        severalSlots = true
       }
+      if (!walkVaporSlots(child.children as VNodeArrayChildren)) return false
     } else if (child.type !== Comment) {
       return false
     }

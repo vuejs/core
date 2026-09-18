@@ -256,22 +256,19 @@ describe('renderSlot', () => {
 
       expect((rendered.children as VNode[])[0]).toBe(forwarded)
       expect(forwarded.vs!.outlets).toEqual([
-        { fallback: wrapperFallback, vdom: true, owner: wrapper, key: wrapper },
-        { fallback: innerFallback, vdom: true, owner: inner, key: inner },
+        { fallback: wrapperFallback, vdom: true, owner: wrapper },
+        { fallback: innerFallback, vdom: true, owner: inner },
       ])
     })
 
-    it('finds the vapor slot through fragments and past comments', () => {
+    it('finds the sole vapor slot through single-child fragments', () => {
       let forwarded!: VNode
       const fallback = () => [h('p')]
       renderSlot(
         {
           default: () => [
             (openBlock(),
-            createBlock(Fragment, { key: 0 }, [
-              createCommentVNode('note'),
-              (forwarded = forward()),
-            ])),
+            createBlock(Fragment, { key: 0 }, [(forwarded = forward())])),
           ],
         },
         'default',
@@ -306,18 +303,42 @@ describe('renderSlot', () => {
       ])
     })
 
-    it('records one outlet on every vapor slot of the content', () => {
+    it('appends a fallback host when the content can hold several vapor slots', () => {
       const fallback = () => [h('p')]
-      const rendered = renderSlot(
-        { default: () => [forward(), createCommentVNode('x'), forward()] },
-        'default',
-        {},
-        fallback,
-      )
-      const [first, , second] = rendered.children as VNode[]
-      expect(first.vs!.outlets!.length).toBe(1)
-      expect(first.vs!.outlets![0].fallback).toBe(fallback)
-      expect(second.vs!.outlets![0]).toBe(first.vs!.outlets![0])
+      const contents: [content: () => VNode[], slots: number][] = [
+        [() => [forward(), forward()], 2],
+        // a `v-if` slot leaves its comment behind
+        [() => [forward(), createCommentVNode('v-if')], 1],
+        // a list of one
+        [
+          () => [
+            (openBlock(true),
+            createBlock(
+              Fragment,
+              null,
+              [forward()],
+              PatchFlags.KEYED_FRAGMENT,
+            )),
+          ],
+          1,
+        ],
+      ]
+      for (const [content, slots] of contents) {
+        const rendered = renderSlot(
+          { default: content },
+          'default',
+          {},
+          fallback,
+        )
+        const children = rendered.children as VNode[]
+        const host = children[children.length - 1]
+        expect(host.vs!.outlets!.map(o => o.fallback)).toEqual([fallback])
+        expect(host.vs!.members!.length).toBe(slots)
+        for (const member of host.vs!.members!) {
+          expect(member.vs!.outlets).toBeUndefined()
+        }
+        expect(rendered.patchFlag).toBe(PatchFlags.BAIL)
+      }
     })
 
     it('leaves the outlet alone when its content stands on its own', () => {
