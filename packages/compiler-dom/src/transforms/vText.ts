@@ -1,5 +1,6 @@
 import {
   type DirectiveTransform,
+  ElementTypes,
   TO_DISPLAY_STRING,
   createCallExpression,
   createObjectProperty,
@@ -10,6 +11,11 @@ import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 
 export const transformVText: DirectiveTransform = (dir, node, context) => {
   const { exp, loc } = dir
+  if (node.tagType !== ElementTypes.ELEMENT) {
+    context.onError(
+      createDOMCompilerError(DOMErrorCodes.X_V_TEXT_ON_INVALID_ELEMENT, loc),
+    )
+  }
   if (!exp) {
     context.onError(
       createDOMCompilerError(DOMErrorCodes.X_V_TEXT_NO_EXPRESSION, loc),
