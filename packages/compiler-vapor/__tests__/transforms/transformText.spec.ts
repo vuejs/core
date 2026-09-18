@@ -130,6 +130,52 @@ describe('compiler: text transform', () => {
     })
   })
 
+  describe('text children of a createElement-backed parent', () => {
+    // these parents build their children with `createElement`/`createTextNode`
+    // instead of an html string, so their text is never parsed a second time
+    // and escaping it would put the escape sequence itself into the dom
+    const customElement = { isCustomElement: (tag: string) => tag === 'my-el' }
+
+    test.each([
+      // plain text
+      ['<my-el>Tom &amp; Jerry</my-el>', 'Tom & Jerry'],
+      ['<my-el>a &lt;&gt; &quot; b</my-el>', 'a <> " b'],
+      // folded interpolation - the non-text sibling keeps the parent out of
+      // the all-text-like fold, so the literal lands in its own template
+      ['<my-el>{{ "Tom & Jerry" }}<i/></my-el>', 'Tom & Jerry'],
+      // a nested plain <template> element is createElement-backed too
+      ['<div><template>Tom &amp; Jerry</template></div>', 'Tom & Jerry'],
+    ])('%j keeps %j raw in the template', (source, template) => {
+      const { ir } = compileWithTextTransform(source, customElement)
+
+      expect([...ir.template.keys()]).toContain(template)
+    })
+
+    // the leading "<" guard stays: the runtime parses a template that starts
+    // with "<" as html, so such text is still materialized imperatively
+    it('still materializes a folded literal that starts with "<"', () => {
+      const { code } = compileWithTextTransform(
+        '<my-el>{{ "<b>foo</b>" }}<i/></my-el>',
+        customElement,
+      )
+      const normalized = code.replace(/\bn\d+\b/g, 'n')
+
+      expect(code).toContain('_template("")')
+      expect(normalized).toContain('_setText(n, "<b>foo</b>")')
+      expect(code).not.toContain('_template("<b>foo</b>")')
+    })
+
+    test.each([
+      // a template-string-backed parent still parses its text as html
+      ['<div>Tom &amp; Jerry</div>', '<div>Tom &amp; Jerry'],
+      ['<div>{{ "Tom & Jerry" }}<i/></div>', '<div>Tom &amp; Jerry<i>'],
+    ])('%j stays escaped as %j', (source, template) => {
+      const { ir } = compileWithTextTransform(source, customElement)
+
+      expect([...ir.template.keys()]).toContain(template)
+    })
+  })
+
   it('should not escape quotes in root-level text nodes', () => {
     // Root-level text goes through createTextNode() which doesn't need escaping
     const { ir } = compileWithTextTransform(`Howdy y'all`)

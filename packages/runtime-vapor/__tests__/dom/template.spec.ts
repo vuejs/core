@@ -240,3 +240,65 @@ describe('character references in static templates', () => {
     expect(vapor.after).toBe(expected)
   })
 })
+
+describe('text children of a createElement-backed parent', () => {
+  // These parents build their children with `createElement`/`createTextNode`
+  // instead of an html string, so nothing parses their text a second time and
+  // escaping it would put the escape sequence itself into the dom.
+  const customElement = { isCustomElement: (tag: string) => tag === 'my-el' }
+
+  test.each([
+    ['<my-el>Tom &amp; Jerry</my-el>', '<my-el>Tom &amp; Jerry</my-el>'],
+    ['<my-el>a &lt;&gt; b</my-el>', '<my-el>a &lt;&gt; b</my-el>'],
+    ['<my-el>a &quot; b</my-el>', '<my-el>a " b</my-el>'],
+    // the leading "<" guard: this text must stay text, not become markup
+    [
+      '<my-el>&lt;b&gt;x&lt;/b&gt;</my-el>',
+      '<my-el>&lt;b&gt;x&lt;/b&gt;</my-el>',
+    ],
+    // a template-string-backed parent still needs its text escaped
+    ['<div>Tom &amp; Jerry</div>', '<div>Tom &amp; Jerry</div>'],
+    ['<div>&lt;b&gt;x&lt;/b&gt;</div>', '<div>&lt;b&gt;x&lt;/b&gt;</div>'],
+  ])('plain text %j renders as %j in both modes', async (tpl, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      () => {},
+      {},
+      customElement,
+    )
+    expect(vdom.after).toBe(expected)
+    expect(vapor.after).toBe(expected)
+  })
+
+  test.each([
+    ['<my-el>{{ "Tom & Jerry" }}<i/></my-el>', 'Tom & Jerry'],
+    ['<my-el>{{ "<b>x</b>" }}<i/></my-el>', '<b>x</b>'],
+    ['<div>{{ "Tom & Jerry" }}<i/></div>', 'Tom & Jerry'],
+  ])('folded interpolation %j renders text %j', async (tpl, expected) => {
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      () => {},
+      {},
+      customElement,
+    )
+    expect(vdom.text).toBe(expected)
+    expect(vapor.text).toBe(expected)
+  })
+
+  // a nested plain <template> element is createElement-backed for the same
+  // reason, without needing `isCustomElement`. Both modes append the text to
+  // the element rather than to its `content`, which html serialization hides,
+  // so compare the text.
+  test('nested plain <template> element keeps its text raw', async () => {
+    const tpl = `<div><template>Tom &amp; Jerry</template></div>`
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref('foo'),
+      () => {},
+    )
+    expect(vdom.text).toBe('Tom & Jerry')
+    expect(vapor.text).toBe('Tom & Jerry')
+  })
+})
