@@ -122,6 +122,11 @@ export class VaporFragment<
   remove?(parent?: ParentNode, transitionHooks?: TransitionHooks): void
   hydrate?(...args: any[]): void
   scope?: EffectScope
+  /**
+   * @internal the KeepAlive-owned scope that commits this fragment's raw input
+   * sources, paused while the fragment is cached (see `isolatePropSources`)
+   */
+  inputScope?: EffectScope
   setRef?: (
     instance: VaporComponentInstance,
     ref: NodeRef,
