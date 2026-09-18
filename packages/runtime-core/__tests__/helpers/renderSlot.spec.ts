@@ -256,8 +256,8 @@ describe('renderSlot', () => {
 
       expect((rendered.children as VNode[])[0]).toBe(forwarded)
       expect(forwarded.vs!.outlets).toEqual([
-        { fallback: wrapperFallback, owner: wrapper, vdom: true },
-        { fallback: innerFallback, owner: inner, vdom: true },
+        { fallback: wrapperFallback, vdom: true, owner: wrapper, key: wrapper },
+        { fallback: innerFallback, vdom: true, owner: inner, key: inner },
       ])
     })
 
@@ -306,24 +306,31 @@ describe('renderSlot', () => {
       ])
     })
 
+    it('records one outlet on every vapor slot of the content', () => {
+      const fallback = () => [h('p')]
+      const rendered = renderSlot(
+        { default: () => [forward(), createCommentVNode('x'), forward()] },
+        'default',
+        {},
+        fallback,
+      )
+      const [first, , second] = rendered.children as VNode[]
+      expect(first.vs!.outlets!.length).toBe(1)
+      expect(first.vs!.outlets![0].fallback).toBe(fallback)
+      expect(second.vs!.outlets![0]).toBe(first.vs!.outlets![0])
+    })
+
     it('leaves the outlet alone when its content stands on its own', () => {
       const fallback = () => [h('p')]
-      const cases: (() => VNode[])[] = [
-        // valid vdom content beside the slot
-        () => [forward(), h('span')],
-        // a second vapor slot
-        () => [forward(), forward()],
-      ]
-      for (const content of cases) {
-        const rendered = renderSlot(
-          { default: content },
-          'default',
-          {},
-          fallback,
-        )
-        for (const child of rendered.children as VNode[]) {
-          if (child.vs) expect(child.vs.outlets).toBeUndefined()
-        }
+      // valid vdom content beside the slot
+      const rendered = renderSlot(
+        { default: () => [forward(), h('span')] },
+        'default',
+        {},
+        fallback,
+      )
+      for (const child of rendered.children as VNode[]) {
+        if (child.vs) expect(child.vs.outlets).toBeUndefined()
       }
       // no fallback to record
       let forwarded!: VNode
