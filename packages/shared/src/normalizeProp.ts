@@ -26,12 +26,14 @@ export function normalizeStyle(
 
 const listDelimiterRE = /;(?![^(]*\))/g
 const propertyDelimiterRE = /:([^]+)/
-const styleCommentRE = /\/\*[^]*?\*\//g
+// Match strings and escapes first to preserve comment-like text in CSS values.
+const styleCommentRE =
+  /"(?:[^"\\]|\\[^])*"|'(?:[^'\\]|\\[^])*'|\\[^]|\/\*[^]*?\*\//g
 
 export function parseStringStyle(cssText: string): NormalizedStyle {
   const ret: NormalizedStyle = {}
   cssText
-    .replace(styleCommentRE, '')
+    .replace(styleCommentRE, match => (match.startsWith('/*') ? '' : match))
     .split(listDelimiterRE)
     .forEach(item => {
       if (item) {
@@ -45,10 +47,10 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
 export function stringifyStyle(
   styles: NormalizedStyle | string | undefined,
 ): string {
+  if (!styles) return ''
+  if (isString(styles)) return styles
+
   let ret = ''
-  if (!styles || isString(styles)) {
-    return ret
-  }
   for (const key in styles) {
     const value = styles[key]
     if (isString(value) || typeof value === 'number') {

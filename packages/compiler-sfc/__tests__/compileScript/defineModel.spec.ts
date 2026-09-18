@@ -36,6 +36,43 @@ describe('defineModel()', () => {
     })
   })
 
+  test('w/ template literal name', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup>
+      const x = defineModel(\`x\`, { default: 100 })
+      const y = defineModel(\`y\`, { default: 200 })
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch('"x": { default: 100 },')
+    expect(content).toMatch('"y": { default: 200 },')
+    expect(content).toMatch('emits: ["update:x", "update:y"],')
+    expect(content).toMatch('const x = _useModel(__props, `x`)')
+    expect(content).toMatch('const y = _useModel(__props, `y`)')
+    expect(content).not.toMatch('defineModel')
+
+    expect(bindings).toStrictEqual({
+      x: BindingTypes.SETUP_REF,
+      y: BindingTypes.SETUP_REF,
+    })
+  })
+
+  test('w/ template literal name with expressions falls back to modelValue', () => {
+    const { content } = compile(
+      `
+      <script setup>
+      const name = 'x'
+      const m = defineModel(\`\${name}\`)
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue":')
+    expect(content).toMatch('_useModel(__props, "modelValue",')
+  })
+
   test('w/ defineProps and defineEmits', () => {
     const { content, bindings } = compile(
       `

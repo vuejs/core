@@ -11,3 +11,4 @@ TODOs.md
 dts-build/packages
 *.tsbuildinfo
 *.tgz
+/.vite-hooks/

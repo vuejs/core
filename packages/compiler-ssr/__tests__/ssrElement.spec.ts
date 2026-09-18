@@ -191,6 +191,20 @@ describe('ssr: element', () => {
         `)
     })
 
+    test('v-bind:arg (hidden)', () => {
+      expect(
+        getCompiledString(
+          `<div><span :hidden="false"></span><span :hidden="'until-found'"></span></div>`,
+        ),
+      ).toMatchInlineSnapshot(`
+        "\`<div><span\${
+            _ssrRenderDynamicAttr("hidden", false)
+          }></span><span\${
+            _ssrRenderDynamicAttr("hidden", 'until-found')
+          }></span></div>\`"
+      `)
+    })
+
     test('v-bind:[arg]', () => {
       expect(getCompiledString(`<div v-bind:[key]="value"></div>`))
         .toMatchInlineSnapshot(`
@@ -333,6 +347,39 @@ describe('ssr: element', () => {
               }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
             }>\${
               ("textContent" in _temp0) ? _ssrInterpolate(_temp0.textContent) : _temp0.innerHTML ?? ''
+            }</div>\`"
+        `)
+    })
+
+    test('custom dir with v-text', () => {
+      expect(getCompiledString(`<div v-xxx v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_ssrGetDirectiveProps(_ctx, _directive_xxx))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
+            }</div>\`"
+        `)
+    })
+
+    test('custom dir with v-text and normal attrs', () => {
+      expect(getCompiledString(`<div class="test" v-xxx v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_mergeProps({ class: "test" }, _ssrGetDirectiveProps(_ctx, _directive_xxx)))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
+            }</div>\`"
+        `)
+    })
+
+    test('mulptiple custom dirs with v-text', () => {
+      expect(getCompiledString(`<div v-xxx v-yyy v-text="foo" />`))
+        .toMatchInlineSnapshot(`
+          "\`<div\${
+              _ssrRenderAttrs(_mergeProps(_ssrGetDirectiveProps(_ctx, _directive_xxx), _ssrGetDirectiveProps(_ctx, _directive_yyy)))
+            }>\${
+              _ssrInterpolate(_ctx.foo)
             }</div>\`"
         `)
     })

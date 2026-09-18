@@ -21,6 +21,7 @@ import {
   isOn,
   isReservedProp,
   isString,
+  isSymbol,
   makeMap,
   toRawType,
 } from '@vue/shared'
@@ -41,8 +42,7 @@ import { shouldSkipAttr } from './compat/attrsFallthrough'
 import { createInternalObject } from './internalObject'
 
 export type ComponentPropsOptions<P = Data> =
-  | ComponentObjectPropsOptions<P>
-  | string[]
+  ComponentObjectPropsOptions<P> | string[]
 
 export type ComponentObjectPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
@@ -70,15 +70,18 @@ export interface PropOptions<T = any, D = T> {
 export type PropType<T> = PropConstructor<T> | (PropConstructor<T> | null)[]
 
 type PropConstructor<T = any> =
-  | { new (...args: any[]): T & {} }
-  | { (): T }
-  | PropMethod<T>
+  { new (...args: any[]): T & {} } | { (): T } | PropMethod<T>
 
-type PropMethod<T, TConstructor = any> = [T] extends [
-  ((...args: any) => any) | undefined,
-] // if is function with args, allowing non-required functions
-  ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
-  : never
+// Function-like constructor so that `Function as PropType<() => void>`
+// type-checks. Intentionally not conditional on `T`: a conditional type here
+// makes `PropType<T>` a deferred (generic) type whenever `T` is a type
+// parameter, which in turn defers `RequiredKeys` / `OptionalKeys` and drops
+// every non-required prop from `ExtractPropTypes` (#9546).
+type PropMethod<T, TConstructor = any> = {
+  new (): TConstructor
+  (): T
+  readonly prototype: TConstructor
+}
 
 type RequiredKeys<T> = {
   [K in keyof T]: T[K] extends
@@ -126,7 +129,10 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
             : [T] extends [Prop<infer V, infer D>]
               ? unknown extends V
                 ? keyof V extends never
-                  ? IfAny<V, V, D>
+                  ? // `D` is only meaningful when a default is present; falling
+                    // back to `V` keeps the deferred type assignable to `V`
+                    // when `V` is a type parameter (#9546)
+                    IfAny<V, V, unknown extends D ? V : D>
                   : V
                 : V
               : T
@@ -143,7 +149,9 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null]
 export type ExtractPropTypes<O> = {
   // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to
   // support IDE features
-  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
+  [K in keyof Pick<O, RequiredKeys<O>>]: O[K] extends { default: any }
+    ? Exclude<InferPropType<O[K]>, undefined>
+    : InferPropType<O[K]>
 } & {
   // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to
   // support IDE features
@@ -654,6 +662,7 @@ function validateProps(
 ) {
   const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
+  const camelizePropsKey = Object.keys(rawProps).map(key => camelize(key))
   for (const key in options) {
     let opt = options[key]
     if (opt == null) continue
@@ -662,7 +671,7 @@ function validateProps(
       resolvedValues[key],
       opt,
       __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
-      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key)),
+      !camelizePropsKey.includes(key),
     )
   }
 }
@@ -774,7 +783,7 @@ function getInvalidTypeMessage(
   if (
     expectedTypes.length === 1 &&
     isExplicable(expectedType) &&
-    !isBoolean(expectedType, receivedType)
+    isCoercible(expectedType, receivedType)
   ) {
     message += ` with value ${expectedValue}`
   }
@@ -790,7 +799,9 @@ function getInvalidTypeMessage(
  * dev only
  */
 function styleValue(value: unknown, type: string): string {
-  if (type === 'String') {
+  if (isSymbol(value)) {
+    return value.toString()
+  } else if (type === 'String') {
     return `"${value}"`
   } else if (type === 'Number') {
     return `${Number(value)}`
@@ -810,6 +821,9 @@ function isExplicable(type: string): boolean {
 /**
  * dev only
  */
-function isBoolean(...args: string[]): boolean {
-  return args.some(elem => elem.toLowerCase() === 'boolean')
+function isCoercible(...args: string[]): boolean {
+  return args.every(elem => {
+    const value = elem.toLowerCase()
+    return value !== 'boolean' && value !== 'symbol'
+  })
 }

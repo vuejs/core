@@ -1,9 +1,15 @@
 import {
+  Fragment,
+  Suspense,
+  TestNodeTypes,
   createApp,
+  createCommentVNode,
+  createElementBlock,
   defineComponent,
   getCurrentInstance,
   h,
   nodeOps,
+  openBlock,
   render,
   shallowReadonly,
 } from '@vue/runtime-test'
@@ -11,6 +17,7 @@ import type {
   ComponentInternalInstance,
   ComponentOptions,
 } from '../src/component'
+import { PatchFlags } from '@vue/shared'
 
 describe('component: proxy', () => {
   test('data', () => {
@@ -107,6 +114,168 @@ describe('component: proxy', () => {
     expect(nextTickThis).toBe(instanceProxy)
   })
 
+  // #12680
+  test('$el should resolve to the real root element when root is a dev comment + single element fragment', () => {
+    let instanceProxy: any
+    const Comp = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'real root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  // #12680
+  test('$el should resolve through a single-root child component to its real root element', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () => h(Inner)
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Outer), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  // #12680
+  test('$el should resolve through nested dev comment fragments across component boundaries', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h(Inner)],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+    render(h(Outer), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  test('$el access should be safe while a root child component is mounting', () => {
+    const Child = {
+      setup() {
+        getCurrentInstance()!.parent!.proxy!.$el
+        return () => h('div')
+      },
+    }
+    const Parent = {
+      setup: () => () => h(Child),
+    }
+
+    expect(() => render(h(Parent), nodeOps.createElement('div'))).not.toThrow()
+  })
+
+  test('$el should resolve through a Suspense root', () => {
+    let instanceProxy: any
+    const Inner = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [createCommentVNode(' comment '), h('div', 'inner root')],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+          )
+        )
+      },
+    }
+    const Outer = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: () => h(Inner),
+          })
+      },
+      mounted() {
+        instanceProxy = this
+      },
+    }
+
+    render(h(Outer), nodeOps.createElement('div'))
+    expect(instanceProxy.$el.type).toBe(TestNodeTypes.ELEMENT)
+    expect(instanceProxy.$el.tag).toBe('div')
+  })
+
+  test('$el should preserve the unresolved async root value without a dev root fragment', () => {
+    let instance: ComponentInternalInstance
+    let instanceProxy: any
+    const Child = {
+      name: 'Child',
+      async setup() {
+        await new Promise(() => {})
+      },
+    }
+    const Parent = {
+      setup: () => () => h(Child),
+      mounted() {
+        instance = getCurrentInstance()!
+        instanceProxy = this
+      },
+    }
+
+    render(h(Parent), nodeOps.createElement('div'))
+
+    expect(
+      `A component with async setup() must be nested in a <Suspense>`,
+    ).toHaveBeenWarned()
+    expect(instance!.vnode.el).toBeNull()
+    expect(instanceProxy.$el === instance!.vnode.el).toBe(true)
+  })
+
   test('user attached properties', async () => {
     let instance: ComponentInternalInstance
     let instanceProxy: any
@@ -167,12 +336,25 @@ describe('component: proxy', () => {
       data() {
         return {
           foo: 0,
+          $foo: 0,
         }
+      },
+      computed: {
+        cmp: () => {
+          throw new Error('value of cmp should not be accessed')
+        },
+        $cmp: () => {
+          throw new Error('value of $cmp should not be read')
+        },
       },
       setup() {
         return {
           bar: 1,
         }
+      },
+      __cssModules: {
+        $style: {},
+        cssStyles: {},
       },
       mounted() {
         instanceProxy = this
@@ -181,6 +363,7 @@ describe('component: proxy', () => {
 
     const app = createApp(Comp, { msg: 'hello' })
     app.config.globalProperties.global = 1
+    app.config.globalProperties.$global = 1
 
     app.mount(nodeOps.createElement('div'))
 
@@ -188,12 +371,20 @@ describe('component: proxy', () => {
     expect('msg' in instanceProxy).toBe(true)
     // data
     expect('foo' in instanceProxy).toBe(true)
-    // ctx
+    expect('$foo' in instanceProxy).toBe(false)
+    // setupState
     expect('bar' in instanceProxy).toBe(true)
+    // ctx
+    expect('cmp' in instanceProxy).toBe(true)
+    expect('$cmp' in instanceProxy).toBe(true)
     // public properties
     expect('$el' in instanceProxy).toBe(true)
+    // CSS modules
+    expect('$style' in instanceProxy).toBe(true)
+    expect('cssStyles' in instanceProxy).toBe(true)
     // global properties
     expect('global' in instanceProxy).toBe(true)
+    expect('$global' in instanceProxy).toBe(true)
 
     // non-existent
     expect('$foobar' in instanceProxy).toBe(false)
@@ -202,11 +393,15 @@ describe('component: proxy', () => {
     // #4962 triggering getter should not cause non-existent property to
     // pass the has check
     instanceProxy.baz
+    instanceProxy.$baz
     expect('baz' in instanceProxy).toBe(false)
+    expect('$baz' in instanceProxy).toBe(false)
 
     // set non-existent (goes into proxyTarget sink)
     instanceProxy.baz = 1
     expect('baz' in instanceProxy).toBe(true)
+    instanceProxy.$baz = 1
+    expect('$baz' in instanceProxy).toBe(true)
 
     // dev mode ownKeys check for console inspection
     // should only expose own keys
@@ -214,7 +409,10 @@ describe('component: proxy', () => {
       'msg',
       'bar',
       'foo',
+      'cmp',
+      '$cmp',
       'baz',
+      '$baz',
     ])
   })
 
@@ -312,11 +510,10 @@ describe('component: proxy', () => {
     const spy = vi.spyOn(instanceProxy, 'toggle')
     expect(getCalledTimes).toEqual(3)
 
-    // vitest does not cache the spy like jest do
     const v3 = instanceProxy.toggle()
     expect(v3).toEqual('b')
     expect(spy).toHaveBeenCalled()
-    expect(getCalledTimes).toEqual(4)
+    expect(getCalledTimes).toEqual(3)
   })
 
   test('defineProperty on proxy property with value descriptor', () => {

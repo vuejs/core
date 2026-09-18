@@ -20,7 +20,7 @@ export const isSpecialBooleanAttr: (key: string) => boolean =
  */
 export const isBooleanAttr: (key: string) => boolean = /*@__PURE__*/ makeMap(
   specialBooleanAttrs +
-    `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,` +
+    `,async,autofocus,autoplay,controls,default,defer,disabled,` +
     `inert,loop,open,required,reversed,scoped,seamless,` +
     `checked,muted,multiple,selected`,
 )
@@ -33,7 +33,7 @@ export function includeBooleanAttr(value: unknown): boolean {
   return !!value || value === ''
 }
 
-const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u0020]/
+const unsafeAttrCharRE = /[>/="'\u0009\u000a\u000c\u000d\u0020]/
 const attrValidationCache: Record<string, boolean> = {}
 
 export function isSSRSafeAttrName(name: string): boolean {

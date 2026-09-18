@@ -27,7 +27,7 @@ import { PatchFlags } from '@vue/shared'
 
 const cachedChildrenArrayMatcher = (
   tags: string[],
-  needArraySpread = false,
+  needArraySpread = true,
 ) => ({
   type: NodeTypes.JS_CACHE_EXPRESSION,
   needArraySpread,
@@ -167,9 +167,7 @@ describe('compiler: cacheStatic transform', () => {
             ],
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -194,9 +192,7 @@ describe('compiler: cacheStatic transform', () => {
             },
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -225,9 +221,7 @@ describe('compiler: cacheStatic transform', () => {
             ],
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -254,9 +248,7 @@ describe('compiler: cacheStatic transform', () => {
             },
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -283,9 +275,7 @@ describe('compiler: cacheStatic transform', () => {
             },
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -313,9 +303,7 @@ describe('compiler: cacheStatic transform', () => {
             },
           },
         },
-        {
-          /* _ slot flag */
-        },
+        {/* _ slot flag */},
       ],
     })
   })
@@ -530,6 +518,32 @@ describe('compiler: cacheStatic transform', () => {
       children: cachedChildrenArrayMatcher(['span']),
     })
     expect(root.cached.length).toBe(1)
+    expect(generate(root).code).toMatchSnapshot()
+  })
+
+  test('should hoist props for root with single element excluding comments', () => {
+    // deeply nested div to trigger stringification condition
+    const root = transformWithCache(
+      `<!--comment--><div id="a"><div id="b"><div id="c"><div id="d"><div id="e">hello</div></div></div></div></div>`,
+    )
+    expect(root.cached.length).toBe(1)
+    expect(root.hoists).toMatchObject([createObjectMatcher({ id: 'a' })])
+
+    expect((root.codegenNode as VNodeCall).children).toMatchObject([
+      {
+        type: NodeTypes.COMMENT,
+        content: 'comment',
+      },
+      {
+        type: NodeTypes.ELEMENT,
+        codegenNode: {
+          type: NodeTypes.VNODE_CALL,
+          tag: `"div"`,
+          props: { content: `_hoisted_1` },
+          children: { type: NodeTypes.JS_CACHE_EXPRESSION },
+        },
+      },
+    ])
     expect(generate(root).code).toMatchSnapshot()
   })
 

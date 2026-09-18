@@ -17,10 +17,12 @@ import {
   type TextCallNode,
   type TransformContext,
   createCallExpression,
+  findDir,
   isStaticArgOf,
 } from '@vue/compiler-core'
 import {
   escapeHtml,
+  includeBooleanAttr,
   isArray,
   isBooleanAttr,
   isKnownHtmlAttr,
@@ -184,7 +186,7 @@ const getCachedNode = (
   }
 }
 
-const dataAriaRE = /^(data|aria)-/
+const dataAriaRE = /^(?:data|aria)-/
 const isStringifiableAttr = (name: string, ns: Namespaces) => {
   return (
     (ns === Namespaces.HTML
@@ -210,6 +212,11 @@ const isNonStringifiable = /*@__PURE__*/ makeMap(
  */
 function analyzeNode(node: StringifiableNode): [number, number] | false {
   if (node.type === NodeTypes.ELEMENT && isNonStringifiable(node.tag)) {
+    return false
+  }
+
+  // v-once nodes should not be stringified
+  if (node.type === NodeTypes.ELEMENT && findDir(node, 'once', true)) {
     return false
   }
 
@@ -261,8 +268,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
           isOptionTag &&
           isStaticArgOf(p.arg, 'value') &&
           p.exp &&
-          p.exp.ast &&
-          p.exp.ast.type !== 'StringLiteral'
+          !p.exp.isStatic
         ) {
           return bail()
         }
@@ -342,7 +348,8 @@ function stringifyElement(
         }
         // #6568
         if (
-          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
+          (isBooleanAttr((p.arg as SimpleExpressionNode).content) ||
+            (p.arg as SimpleExpressionNode).content === 'hidden') &&
           exp.content === 'false'
         ) {
           continue
@@ -351,6 +358,13 @@ function stringifyElement(
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
           const arg = p.arg && (p.arg as SimpleExpressionNode).content
+          if (
+            arg === 'hidden' &&
+            typeof evaluated === 'number' &&
+            !includeBooleanAttr(evaluated)
+          ) {
+            continue
+          }
           if (arg === 'class') {
             evaluated = normalizeClass(evaluated)
           } else if (arg === 'style') {

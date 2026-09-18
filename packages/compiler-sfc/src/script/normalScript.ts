@@ -12,10 +12,6 @@ export function processNormalScript(
   scopeId: string,
 ): SFCScriptBlock {
   const script = ctx.descriptor.script!
-  if (script.lang && !ctx.isJS && !ctx.isTS) {
-    // do not process non js/ts script blocks
-    return script
-  }
   try {
     let content = script.content
     let map = script.map

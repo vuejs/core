@@ -1173,4 +1173,53 @@ describe('KeepAlive', () => {
     expect(deactivatedHome).toHaveBeenCalledTimes(0)
     expect(unmountedHome).toHaveBeenCalledTimes(1)
   })
+
+  test('should work with async component when update `include` props', async () => {
+    let resolve: (comp: Component) => void
+    const AsyncComp = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve = r as any
+        }),
+    )
+
+    const toggle = ref(true)
+    const instanceRef = ref<any>(null)
+    const keepaliveInclude = ref(['Foo'])
+    const App = {
+      render: () => {
+        return h(KeepAlive, { include: keepaliveInclude.value }, () =>
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null,
+        )
+      },
+    }
+
+    render(h(App), root)
+    // async component has not been resolved
+    expect(serializeInner(root)).toBe('<!---->')
+
+    resolve!({
+      name: 'Foo',
+      data: () => ({ count: 0 }),
+      render() {
+        return h('p', this.count)
+      },
+    })
+
+    await timeout()
+    // resolved
+    expect(serializeInner(root)).toBe('<p>0</p>')
+
+    // change state + toggle out + update `include` props
+    instanceRef.value.count++
+    toggle.value = false
+    keepaliveInclude.value = ['Foo']
+    await nextTick()
+    expect(serializeInner(root)).toBe('<!---->')
+
+    // toggle in, state should be maintained
+    toggle.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<p>1</p>')
+  })
 })

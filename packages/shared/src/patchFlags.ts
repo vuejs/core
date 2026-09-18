@@ -139,6 +139,6 @@ export const PatchFlagNames: Record<PatchFlags, string> = {
   [PatchFlags.NEED_PATCH]: `NEED_PATCH`,
   [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`,
   [PatchFlags.DEV_ROOT_FRAGMENT]: `DEV_ROOT_FRAGMENT`,
-  [PatchFlags.CACHED]: `HOISTED`,
+  [PatchFlags.CACHED]: `CACHED`,
   [PatchFlags.BAIL]: `BAIL`,
 }

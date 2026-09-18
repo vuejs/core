@@ -20,8 +20,7 @@ export interface ErrorHandlingOptions {
 }
 
 export interface ParserOptions
-  extends ErrorHandlingOptions,
-    CompilerCompatOptions {
+  extends ErrorHandlingOptions, CompilerCompatOptions {
   /**
    * Base mode is platform agnostic and only parses HTML-like template syntax,
    * treating all tags the same way. Specific tag parsing behavior can be
@@ -217,7 +216,8 @@ interface SharedTransformCodegenOptions {
 }
 
 export interface TransformOptions
-  extends SharedTransformCodegenOptions,
+  extends
+    SharedTransformCodegenOptions,
     ErrorHandlingOptions,
     CompilerCompatOptions {
   /**
