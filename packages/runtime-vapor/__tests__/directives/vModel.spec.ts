@@ -1367,5 +1367,64 @@ describe('directive: v-model', () => {
       expect(vdom).toBe(1)
       expect(vapor).toBe(1)
     })
+
+    test.each([true, false])(
+      'checkbox keeps number true-value and false-value with .attr when checked is %s',
+      async checked => {
+        const { vdom, vapor } = await modelParity(
+          `<input type="checkbox" v-model="data" :true-value.attr="1" :false-value.attr="0">`,
+          () => (checked ? 0 : 1),
+          root => check(root, 0, checked),
+        )
+
+        expect(vdom).toBe(checked ? 1 : 0)
+        expect(vapor).toBe(vdom)
+      },
+    )
+
+    test('readonly.attr keeps number values', async () => {
+      const { vdom, vapor } = await parity(
+        `<input :readonly.attr="0">`,
+        () => null,
+        root => {
+          const input = root.querySelector('input')!
+          return {
+            readOnly: input.readOnly,
+            hasAttribute: input.hasAttribute('readonly'),
+          }
+        },
+      )
+
+      expect(vdom).toEqual({ readOnly: false, hasAttribute: false })
+      expect(vapor).toEqual(vdom)
+    })
+
+    test('indeterminate keeps number values', async () => {
+      const { vdom, vapor } = await parity(
+        `<input type="checkbox" :indeterminate="0">`,
+        () => null,
+        root => root.querySelector('input')!.indeterminate,
+      )
+
+      expect(vdom).toBe(false)
+      expect(vapor).toBe(vdom)
+    })
+
+    test('disabled.attr stringifies number values', async () => {
+      const { vdom, vapor } = await parity(
+        `<input :disabled.attr="0">`,
+        () => null,
+        root => {
+          const input = root.querySelector('input')!
+          return {
+            disabled: input.disabled,
+            attribute: input.getAttribute('disabled'),
+          }
+        },
+      )
+
+      expect(vdom).toEqual({ disabled: true, attribute: '0' })
+      expect(vapor).toEqual(vdom)
+    })
   })
 })

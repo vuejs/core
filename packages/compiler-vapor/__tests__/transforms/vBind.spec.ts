@@ -1148,7 +1148,16 @@ describe('compiler v-bind', () => {
     // `true-value` is only read back on a checkbox
     [`<input :true-value="1">`, `_template("<input true-value=1>"`],
     [`<input type="text" :true-value="1">`, `true-value=1`],
-    // `.attr` is stringified by `setAttribute` anyway
+    // checkbox values stay raw even when forced through `setAttr`
+    [
+      `<input type="checkbox" :true-value.attr="1">`,
+      `_setAttr(n0, "true-value", 1)`,
+    ],
+    [
+      `<input type="checkbox" :false-value.attr="0">`,
+      `_setAttr(n0, "false-value", 0)`,
+    ],
+    // these `.attr` bindings only need the serialized attribute value
     [`<input :value.attr="1">`, `_template("<input value=1>"`],
     [`<input :disabled.attr="0">`, `_template("<input disabled=0>"`],
   ])('number literals with %s', (template, expected) => {

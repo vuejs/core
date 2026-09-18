@@ -85,7 +85,7 @@ export const isReservedProp: (key: string) => boolean = /*#__PURE__*/ makeMap(
  * them in the template has nothing left to read from after hydration. A
  * dynamic `type` can still make the element a checkbox at runtime.
  */
-function isCheckboxValueProp(node: ElementNode, key: string): boolean {
+export function isCheckboxValueProp(node: ElementNode, key: string): boolean {
   if (node.tag !== 'input' || (key !== 'true-value' && key !== 'false-value')) {
     return false
   }
