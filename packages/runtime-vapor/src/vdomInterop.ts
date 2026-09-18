@@ -640,7 +640,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
         n2.vb = n1.vb
         ;(vs2.ref = vs1.ref)!.value = n2.props
         vs2.scope = vs1.scope
-        syncInteropVaporSlotState(n1, n2)
+        syncInteropVaporSlotState(n1, n2, slotScopeIds)
       }
     }
   },
@@ -2849,6 +2849,9 @@ interface InteropVaporSlotState {
   // inside some effect does not subscribe it to every patch of the slot.
   outlets: readonly VaporSlotOutlet[]
   outletsRef: ShallowRef<readonly VaporSlotOutlet[]>
+  // per outlet, see `vs.innerIds`; trims the latest patch context below
+  innerIds: readonly number[]
+  context: string[] | null
   // bumped when what this slot exposes turns valid or invalid; created by
   // the fallback hosts following it (see `vs.members`)
   flips?: ShallowRef<number>
@@ -2866,6 +2869,8 @@ function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
     state = {
       outlets,
       outletsRef: shallowRef(outlets),
+      innerIds: slot.innerIds || EMPTY_ARR,
+      context: null,
       members: slot.members,
     }
     slot.state = state
@@ -2873,12 +2878,18 @@ function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
   return state
 }
 
-function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
+function syncInteropVaporSlotState(
+  n1: VNode,
+  n2: VNode,
+  slotScopeIds: string[] | null,
+): void {
   const prevState = n1.vs!.state as InteropVaporSlotState | undefined
   if (!prevState) {
     return
   }
   n2.vs!.state = prevState
+  prevState.innerIds = n2.vs!.innerIds || EMPTY_ARR
+  prevState.context = slotScopeIds
   const prevDepth = prevState.outlets.length
   prevState.outletsRef.value = prevState.outlets = n2.vs!.outlets || EMPTY_ARR
   prevState.members = n2.vs!.members
@@ -2945,10 +2956,12 @@ function renderVaporSlot(
     const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
     // The vnode-derived slot context becomes the creation ambient for the
     // vapor-rendered content, restored via the fragment's render seam.
+    const inherited = getInheritedScopeIds(vnode, parentComponent, false)
     frag.ctx = deriveSlotScopeIds(
       frag.ctx,
-      getInteropVaporSlotScopeIds(vnode, parentComponent, contextSlotScopeIds),
+      getInteropVaporSlotScopeIds(vnode, contextSlotScopeIds, inherited),
     )
+    slotState.context = contextSlotScopeIds
     const content = new InteropContentState()
     frag.isBlockValid = componentAsValid =>
       content.resolved ? isValidBlock(frag.nodes, componentAsValid) : true
@@ -3021,6 +3034,14 @@ function renderVaporSlot(
             : undefined,
         markInteropSlotResolutionDirty,
         onContentInvalid,
+        () =>
+          slotState.innerIds[depth] >= 0
+            ? getEnclosingOutletScopeIds(
+                slotState.context,
+                slotState.innerIds[depth],
+                inherited,
+              )
+            : frag.slotScopeIds,
       )
     }
     const getOutletBoundary = (depth: number): SlotBoundaryContext | null =>
@@ -3806,12 +3827,25 @@ function setVNodeVaporScopeIds(vnode: VNode, scopeIds: string[]): void {
 // vnode's own ids, then deep slot-content inheritance (root-only excluded).
 function getInteropVaporSlotScopeIds(
   vnode: VNode,
-  parentComponent: ComponentInternalInstance | null,
   contextSlotScopeIds: string[] | null,
+  inherited: string[],
 ): string[] | null {
-  const inherited = getInheritedScopeIds(vnode, parentComponent, false)
   return concatInteropScopeIds(
     concatInteropScopeIds(contextSlotScopeIds, vnode.slotScopeIds),
+    inherited.length ? inherited : null,
+  )
+}
+
+// The cell of an outlet enclosing the slot: the patch context without the ids
+// of the `innerIds` fragments inside that outlet, nor the slot vnode's own.
+function getEnclosingOutletScopeIds(
+  context: string[] | null,
+  innerIds: number,
+  inherited: string[],
+): string[] | null {
+  const kept = context && innerIds ? context.slice(0, -innerIds) : context
+  return concatInteropScopeIds(
+    kept && kept.length ? kept : null,
     inherited.length ? inherited : null,
   )
 }

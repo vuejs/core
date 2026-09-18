@@ -57,11 +57,6 @@ function renderSlotFallback(
   scope: EffectScope,
 ): RenderedSlotFallback | undefined {
   let result: RenderedSlotFallback | undefined
-  // Fallbacks render with the REQUESTING outlet's slot scope ids (VDOM
-  // semantics for inherited fallbacks; the requester's cell already merges
-  // every provider's ids), while `run` keeps the provider's lexical context.
-  const scopeIds =
-    boundary && boundary.getScopeIds ? boundary.getScopeIds() : null
 
   while (boundary) {
     const current = boundary
@@ -70,6 +65,9 @@ function renderSlotFallback(
     if (localFallback) {
       let selected = false
       const onContentInvalid: (() => void)[] = []
+      // the PROVIDING outlet's ids: as in vdom, an outer outlet's fallback
+      // replaces the forwarded content and the slotted ids around it
+      const scopeIds = current.getScopeIds ? current.getScopeIds() : null
       const renderFallback = scopeIds
         ? () => renderWithSlotScopeIds(scopeIds, localFallback)
         : localFallback

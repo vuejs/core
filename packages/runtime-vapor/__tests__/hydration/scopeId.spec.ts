@@ -196,7 +196,7 @@ describe('scopeId hydration writes', () => {
     vaporContainer.remove()
   })
 
-  test('recreated mismatch nodes in a VDOM outlet fallback carry both slotted ids', async () => {
+  test('recreated mismatch nodes in a VDOM outlet fallback carry the providing outlet slotted id only', async () => {
     const data = ref(false)
 
     const makeComponents = (ssr: boolean, fallbackTag: string) => {
@@ -245,12 +245,12 @@ describe('scopeId hydration writes', () => {
       .use(runtimeVapor.vaporInteropPlugin)
     app.mount(container)
 
-    // the recreated node gets both the requesting outlet's and the providing
-    // outlet's slotted ids as part of its creation context (CSR control:
-    // <span child-s outlet-s>fallback</span>)
+    // the recreated node gets the providing outlet's slotted id as part of
+    // its creation context, not the forwarding outlet's: in vdom the fallback
+    // replaces the forwarded content (CSR control: <span outlet-s>)
     const span = container.querySelector('span')!
     expect(span).toBeTruthy()
-    expect(span.hasAttribute('child-s')).toBe(true)
+    expect(span.hasAttribute('child-s')).toBe(false)
     expect(span.hasAttribute('outlet-s')).toBe(true)
     expect(`Hydration node mismatch`).toHaveBeenWarned()
     app.unmount()

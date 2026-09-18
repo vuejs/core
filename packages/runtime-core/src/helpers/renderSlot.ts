@@ -10,6 +10,7 @@ import {
   type VNode,
   type VNodeArrayChildren,
   VaporSlot,
+  type VaporSlotOutlet,
   blockStack,
   closeBlock,
   createBlock,
@@ -87,6 +88,7 @@ export function renderSlot(
       outlets: fallback
         ? [{ fallback, vdom: true, owner: currentRenderingInstance }]
         : undefined,
+      innerIds: fallback ? [-1] : undefined,
     }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
@@ -231,12 +233,18 @@ function attachVaporSlotOutlet(
   let host: VNode | undefined
   if (!severalSlots && foundSlots.length) {
     // a lone slot stays the one vnode exposing the fallback (`<Transition>`)
-    ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
+    recordOutlet(foundSlots[0], outlet)
   } else if (foundSlots.length || forwardsVaporSlots(owner)) {
     // no slot at all: a closed `v-if` branch or an empty list of them
     host = (openBlock(), createBlock(VaporSlot, { key: '_fb' }))
-    // NOOP: a host has no slot, only the guards on `vs.slot` to pass
-    host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
+    host.vs = {
+      // NOOP: a host has no slot, only the guards on `vs.slot` to pass
+      slot: NOOP,
+      outlets: [outlet],
+      // a child of the outlet's own fragment
+      innerIds: [0],
+      members: foundSlots.slice(),
+    }
     for (let i = 0; i < foundSlots.length; i++) foundSlots[i].vs!.hosted = true
   }
   foundSlots.length = 0
@@ -260,19 +268,29 @@ export function recordVaporSlotOutlet(
 ): void {
   if (findVaporSlots(vnodes)) {
     if (!severalSlots && foundSlots.length) {
-      ;(foundSlots[0].vs!.outlets ||= []).push({ fallback, vdom: false })
+      recordOutlet(foundSlots[0], { fallback, vdom: false })
     }
     foundSlots.length = 0
   }
 }
 
+function recordOutlet(slot: VNode, outlet: VaporSlotOutlet): void {
+  const vs = slot.vs!
+  ;(vs.outlets ||= []).push(outlet)
+  ;(vs.innerIds ||= []).push(pathIds)
+}
+
 // scratch for the walk below, which runs no user code and cannot re-enter
 const foundSlots: VNode[] = []
 let severalSlots = false
+// slot scope ids of the fragments on the way to a lone slot (the renderer
+// appends them in that order)
+let pathIds = 0
 
 // whether the content is made of vapor slots only, if any at all
 function findVaporSlots(vnodes: VNodeArrayChildren): boolean {
   severalSlots = false
+  pathIds = 0
   if (walkVaporSlots(vnodes)) return true
   foundSlots.length = 0
   return false
@@ -298,6 +316,7 @@ function walkVaporSlots(vnodes: VNodeArrayChildren): boolean {
       ) {
         severalSlots = true
       }
+      if (child.slotScopeIds) pathIds += child.slotScopeIds.length
       if (!walkVaporSlots(child.children as VNodeArrayChildren)) return false
     } else if (child.type !== Comment) {
       return false
