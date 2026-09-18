@@ -1254,4 +1254,19 @@ describe('compiler: transform slot', () => {
       expect(code).toMatchSnapshot()
     })
   })
+
+  test('processes defaults in dynamic slot name and key callbacks', () => {
+    const { code } = compileWithSlots(`
+      <Comp v-for="row in rows">
+        <template
+          v-for="(item = row.fallback, key, index = item.id) in row.items"
+          #[item.name]
+          :key="index"
+        >{{ item.name }}</template>
+      </Comp>
+    `)
+    const params = '(item = _for_item0.value.fallback, key, index = item.id)'
+    expect(code).toContain(`${params} => (item.name)`)
+    expect(code).toContain(`${params} => (index)`)
+  })
 })

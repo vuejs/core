@@ -12,7 +12,7 @@ import {
   transformVIf,
   transformVOn,
 } from '../../src'
-import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
+import { BindingTypes, ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import { VaporVForFlags } from '@vue/shared'
 
 const compileWithVFor = makeCompile({
@@ -720,5 +720,39 @@ describe('compiler: v-for', () => {
     expect(code).toContain('const _setProp = _for_item0.value')
     expect(code).toContain('_setProp1(n2, "id", _setProp.id)')
     expect(code).toContain('_setProp1(n2, "title", _setProp.title)')
+  })
+
+  test.each([
+    ['(item = fallback, i)', '(item = _ctx.fallback, i)'],
+    ['(item: string = fallback, i: number)', '(item = _ctx.fallback, i)'],
+    ['({ id = fallback }, i)', '({ id = _ctx.fallback }, i)'],
+  ])('processes key callback defaults in %s', (aliases, params) => {
+    const { code } = compileWithVFor(
+      `<div v-for="${aliases} in items" :key="i" />`,
+    )
+    expect(code).toContain(`}, ${params} => (i)`)
+  })
+
+  test('preserves callback locals while resolving defaults from an outer loop', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(row, item) in rows">
+        <span v-for="(item = row.fallback, key, index = item.id) in row.items" :key="index" />
+      </div>`,
+    )
+    expect(code).toContain(
+      '(item = _for_item0.value.fallback, key, index = item.id) => (index)',
+    )
+  })
+
+  test.each([
+    [BindingTypes.SETUP_REF, 'fallback.value'],
+    [BindingTypes.SETUP_MAYBE_REF, '_unref(fallback)'],
+    [BindingTypes.PROPS, '__props.fallback'],
+  ])('processes %s bindings in key callback defaults', (binding, fallback) => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item = fallback, i) in items" :key="i" />`,
+      { inline: true, bindingMetadata: { fallback: binding } },
+    )
+    expect(code).toContain(`}, (item = ${fallback}, i) => (i)`)
   })
 })

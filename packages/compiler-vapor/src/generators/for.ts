@@ -178,11 +178,15 @@ export function genFor(
 
   function genCallback(expr: SimpleExpressionNode | undefined) {
     if (!expr) return false
-    const res = context.withId(
-      () => genExpression(expr, context),
+    return context.withId(
+      () => [
+        ...genAliasParams(value, key, index, context),
+        ' => (',
+        ...genExpression(expr, context),
+        ')',
+      ],
       genSimpleIdMap(),
     )
-    return [...genAliasParams(value, key, index), ' => (', ...res, ')']
   }
 
   function genSimpleIdMap() {
@@ -286,39 +290,25 @@ export type DestructureMapValue = {
 
 export type DestructureMap = Map<string, DestructureMapValue | null>
 
-// print a v-for alias as a function param, mirroring what vdom emits:
-// `processExpression` with `asParams` swaps every identifier's source range for
-// its name, and a babel `Identifier` range swallows the type annotation and the
-// optional marker, so `index?: number = 0` prints as `index = 0`. A pattern is
-// not an `Identifier`, so its annotation survives there - in vdom too.
-function getAliasParam(exp: SimpleExpressionNode): string {
-  const { ast, content } = exp
-  if (ast && ast.type === 'ArrowFunctionExpression') {
-    const param = ast.params[0]
-    if (param && param.type === 'Identifier') {
-      return param.name
-    }
-    // offsets are shifted by the `(` the alias is parsed with
-    if (param && param.type === 'AssignmentPattern') {
-      const { left } = param
-      if (left.type === 'Identifier') {
-        return left.name + content.slice(left.end! - 1)
-      }
-    }
-  }
-  return content
-}
-
 export function genAliasParams(
   value: SimpleExpressionNode | undefined,
   key: SimpleExpressionNode | undefined,
   index: SimpleExpressionNode | undefined,
+  context: CodegenContext,
 ): CodeFragment[] {
   return genMulti(
     ['(', ')', ', '],
-    value ? getAliasParam(value) : key || index ? '_' : undefined,
-    key ? getAliasParam(key) : index ? '__' : undefined,
-    index && getAliasParam(index),
+    value
+      ? genExpression(value, context, undefined, true)
+      : key || index
+        ? '_'
+        : undefined,
+    key
+      ? genExpression(key, context, undefined, true)
+      : index
+        ? '__'
+        : undefined,
+    index && genExpression(index, context, undefined, true),
   )
 }
 
