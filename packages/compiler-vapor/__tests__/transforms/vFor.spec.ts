@@ -755,4 +755,12 @@ describe('compiler: v-for', () => {
     )
     expect(code).toContain(`}, (item = ${fallback}, i) => (i)`)
   })
+
+  test('preserves the index position when the key alias is omitted', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(value: string, , index: number) in obj">{{ value }}:{{ index }}</div>`,
+    )
+    expect(code).toContain('(_for_item0, _, _for_index0) => {')
+    expect(code).toContain('_toDisplayString(_for_index0.value)')
+  })
 })

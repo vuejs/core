@@ -2690,6 +2690,22 @@ test('unwraps refs in dynamic slot callback defaults', async () => {
   expect(vapor.text).toBe(vdom.text)
 })
 
+test('preserves the index position when the key alias is omitted', async () => {
+  const { vdom, vapor } = await renderParity(
+    {
+      App: `<template><span v-for="(value, , index) in data" :key="value">{{ value }}:{{ index }}</span></template>`,
+    },
+    () => ref({ a: 'A', b: 'B' }),
+    async (data, root) => {
+      expect(root.textContent).toBe('A:0B:1')
+      data.value = { b: 'B', a: 'A' }
+      await nextTick()
+      expect(root.textContent).toBe('B:0A:1')
+    },
+  )
+  expect(vapor.text).toBe(vdom.text)
+})
+
 function getEffectsCount(scope: { deps: any }) {
   let count = 0
   for (let dep = scope.deps; dep !== undefined; dep = dep.nextDep) {
