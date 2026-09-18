@@ -312,6 +312,9 @@ export function isEmitListener(
   // #8342 the `.once` modifier appends a `Once` suffix. Preserve the exact event
   // name `once`, while still stripping the suffix from `onOnceOnce`.
   key = key === 'Once' ? key : key.replace(/Once$/, '').replace(/^-/, '')
+  if (!key) {
+    return false
+  }
 
   return (
     hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
