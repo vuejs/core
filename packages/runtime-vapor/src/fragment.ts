@@ -6,6 +6,7 @@ import {
 } from '@vue/reactivity'
 import {
   VaporSlotFlags,
+  isFunction,
   slotInheritsFallback,
   slotNotifiesBoundary,
 } from '@vue/shared'
@@ -226,13 +227,15 @@ export function runWithRenderCtx<R>(
  */
 export function createSlotBoundary(
   fragment: RenderContextFragment,
-  parent: SlotBoundaryContext | null,
+  // a getter when the chain above the host can change between renders
+  // (interop outlets follow the outlets recorded on their latest vnode)
+  parent: SlotBoundaryContext | null | (() => SlotBoundaryContext | null),
   getFallback: () => BlockFn | undefined,
   markDirty: (force?: boolean) => void,
   onContentInvalid?: (() => void)[],
 ): SlotBoundaryContext {
   return {
-    parent,
+    getParent: isFunction(parent) ? parent : () => parent,
     getFallback,
     run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
     getScopeIds: () => fragment.slotScopeIds,
