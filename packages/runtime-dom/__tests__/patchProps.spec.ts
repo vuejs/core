@@ -109,6 +109,60 @@ describe('runtime-dom: props patching', () => {
     expect(el.multiple).toBe(false)
   })
 
+  test('patch popover prop', async () => {
+    // polyfill missing JSDOM support
+    if (!('popover' in HTMLElement.prototype)) {
+      Object.defineProperty(HTMLElement.prototype, 'popover', {
+        get: function () {
+          // https://github.com/chromium/chromium/blob/37b30fe1ddbdc9b95ec33edc7389fd6dca534092/third_party/blink/renderer/core/html/html_element.cc#L1290
+          var value = this.getAttribute('popover')?.toLowerCase()
+          if (value === 'auto' || value === '') {
+            return 'auto'
+          }
+          if (value === 'hint') {
+            return 'hint'
+          }
+          if (value === 'manual') {
+            return 'manual'
+          }
+          if (value != null) {
+            // Invalid values default to popover=manual.
+            return 'manual'
+          }
+          return null
+        },
+        set: function (value) {
+          if (value === null) {
+            this.removeAttribute('popover')
+            return
+          }
+          this.setAttribute('popover', value)
+        },
+        enumerable: false,
+        configurable: true,
+      })
+    }
+
+    const el = document.createElement('div')
+    // boolean presence/absence
+    patchProp(el, 'popover', null, false)
+    expect(el.popover).toBe(null)
+    patchProp(el, 'popover', null, true)
+    expect(el.popover).toBe('auto')
+    patchProp(el, 'popover', false, true)
+    expect(el.popover).toBe('auto')
+    patchProp(el, 'popover', true, false)
+    expect(el.popover).toBe(null)
+    // Standard attribute semantics
+    patchProp(el, 'popover', null, '')
+    expect(el.popover).toBe('auto')
+    patchProp(el, 'popover', 'auto', 'manual')
+    expect(el.popover).toBe('manual')
+    // with an invalid value
+    patchProp(el, 'popover', null, 1)
+    expect(el.popover).toBe('manual')
+  })
+
   test('innerHTML unmount prev children', () => {
     const fn = vi.fn()
     const comp = {

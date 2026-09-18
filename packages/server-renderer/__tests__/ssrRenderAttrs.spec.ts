@@ -68,6 +68,17 @@ describe('ssr: renderAttrs', () => {
     expect(ssrRenderAttrs({ hidden: '0' })).toBe(` hidden="0"`)
   })
 
+  test('popover enumerated attribute', () => {
+    expect(ssrRenderAttrs({ popover: true })).toBe(` popover`)
+    expect(ssrRenderAttrs({ disabled: true, popover: false })).toBe(` disabled`)
+    expect(ssrRenderAttrs({ popover: '' })).toBe(` popover`)
+    expect(ssrRenderAttrs({ popover: 'auto' })).toBe(` popover="auto"`)
+    expect(ssrRenderAttrs({ popover: 'manual' })).toBe(` popover="manual"`)
+    expect(ssrRenderAttrs({ popover: 'invalid-value' })).toBe(
+      ` popover="invalid-value"`,
+    )
+  })
+
   test('ignore falsy values', () => {
     expect(
       ssrRenderAttrs({
