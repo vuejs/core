@@ -6,7 +6,11 @@ import type {
   VaporComponentOptions,
 } from '../src/component'
 import type { RawProps } from '../src/componentProps'
-import { compileScript, parse } from '@vue/compiler-sfc'
+import {
+  type SFCTemplateCompileOptions,
+  compileScript,
+  parse,
+} from '@vue/compiler-sfc'
 import * as runtimeVapor from '../src'
 import * as runtimeDom from '@vue/runtime-dom'
 import * as VueServerRenderer from '@vue/server-renderer'
@@ -172,9 +176,11 @@ export function compile(
   {
     vapor = true,
     ssr = false,
+    compilerOptions,
   }: {
     vapor?: boolean | undefined
     ssr?: boolean | undefined
+    compilerOptions?: SFCTemplateCompileOptions['compilerOptions'] | undefined
   } = {},
 ): any {
   if (!sfc.includes(`<script`)) {
@@ -182,7 +188,12 @@ export function compile(
       `<script vapor>const data = _data; const components = _components;</script>` +
       sfc
   }
-  const descriptor = parse(sfc).descriptor
+  // the template ast is parsed once here and reused by `compileScript`, so the
+  // parse has to see the same options the compile does (`isCustomElement`
+  // decides whether a tag is a component already at parse time)
+  const descriptor = parse(sfc, {
+    templateParseOptions: compilerOptions,
+  }).descriptor
 
   const script = compileScript(descriptor, {
     id: 'x',
@@ -192,6 +203,7 @@ export function compile(
     vapor,
     templateOptions: {
       ssr,
+      compilerOptions,
     },
   })
 
@@ -235,6 +247,7 @@ export async function renderParity(
     mode: 'vdom' | 'vapor',
   ) => void | Promise<void>,
   extra: Record<string, any> = {},
+  compilerOptions?: SFCTemplateCompileOptions['compilerOptions'],
 ): Promise<{ vdom: ParityResult; vapor: ParityResult }> {
   const results = {} as { vdom: ParityResult; vapor: ParityResult }
   for (const vapor of [false, true]) {
@@ -249,10 +262,14 @@ export async function renderParity(
       if (name !== 'App') {
         components[name] = compile(withScript(srcs[name]), data, components, {
           vapor,
+          compilerOptions,
         })
       }
     }
-    const App = compile(withScript(srcs.App), data, components, { vapor })
+    const App = compile(withScript(srcs.App), data, components, {
+      vapor,
+      compilerOptions,
+    })
     const root = document.createElement('div')
     const app = vapor ? createVaporApp(App) : createApp(App)
     app.use(vaporInteropPlugin).mount(root)
