@@ -2,6 +2,7 @@ import type { RawSlots, Slots } from '../componentSlots'
 import {
   type ContextualRenderFn,
   currentRenderingInstance,
+  setCurrentRenderingInstance,
 } from '../componentRenderContext'
 import {
   Comment,
@@ -19,7 +20,7 @@ import {
 import { PatchFlags, SlotFlags, extend, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
-import type { Data } from '../component'
+import type { ComponentInternalInstance, Data } from '../component'
 
 /**
  * Links a slot function to its raw vapor slot: a raw vapor slot carries
@@ -39,6 +40,57 @@ export const vdomSlotFallbackKey: unique symbol = Symbol(`vdomSlotFallback`)
 type SlotFallback = {
   (): VNodeArrayChildren
   [vdomSlotFallbackKey]?: boolean
+}
+
+// One boundary wrapper per (owner, fallback): interop compares fallback
+// identity to decide whether a slot has to be re-resolved, so a fallback that
+// keeps its identity across renders has to keep it across the boundary too.
+// Keyed by owner first so an entry dies with its instance — keying by the
+// fallback would let a hoisted one pin the instance it was rendered in.
+const vaporFallbackCache = new WeakMap<
+  ComponentInternalInstance,
+  WeakMap<SlotFallback, SlotFallback>
+>()
+
+/**
+ * Hand a fallback over to vapor interop. `renderSlot` renders a fallback of
+ * its own inline, inside the owner's render, so its vnodes pick up the owner's
+ * scope id from the ambient rendering instance. Vapor interop does not render
+ * it here: it captures the fallback and invokes it later, once the slot
+ * resolves as empty, from outside any render, so bind the owner to the call.
+ *
+ * Not `withCtx`: that one is built for slot functions a user may also invoke
+ * by hand mid-expression, so it disables block tracking and reports the owner
+ * as updated. A fallback is invoked by interop alone, in place of an outlet
+ * that would have rendered it as a plain part of its own render — so it keeps
+ * block tracking (same reasoning as the `_d` flip below) and is not an update.
+ */
+function toVaporFallback(fallback: SlotFallback): SlotFallback {
+  const ctx = currentRenderingInstance
+  if (!ctx) {
+    // nothing to bind to: the fallback already renders in the ambient context
+    fallback[vdomSlotFallbackKey] = true
+    return fallback
+  }
+  let cache = vaporFallbackCache.get(ctx)
+  if (!cache) vaporFallbackCache.set(ctx, (cache = new WeakMap()))
+  let bound = cache.get(fallback)
+  if (!bound) {
+    bound = (() => {
+      const prev = setCurrentRenderingInstance(ctx)
+      const prevStackSize = blockStack.length
+      try {
+        return fallback()
+      } finally {
+        // close blocks left dangling when the fallback throws mid-block (#15070)
+        for (let i = blockStack.length; i > prevStackSize; i--) closeBlock()
+        setCurrentRenderingInstance(prev)
+      }
+    }) as SlotFallback
+    bound[vdomSlotFallbackKey] = true
+    cache.set(fallback, bound)
+  }
+  return bound
 }
 
 /**
@@ -64,13 +116,15 @@ export function renderSlot(
   if (props == null) props = {}
 
   let slot = slots[name]
-  if (fallback) fallback[vdomSlotFallbackKey] = true
 
   // vapor slots rendered in vdom
   const vaporSlot = slot && (slot as any)[rawVaporSlotKey]
   if (vaporSlot) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
-    ret.vs = { slot: vaporSlot, fallback }
+    ret.vs = {
+      slot: vaporSlot,
+      fallback: fallback && toVaporFallback(fallback),
+    }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
     }
@@ -127,7 +181,7 @@ export function renderSlot(
     const validSlotContent = slot && ensureValidVNode(slot(props))
 
     // handle forwarded vapor slot fallback
-    ensureVaporSlotFallback(validSlotContent, fallback)
+    ensureVaporSlotFallback(validSlotContent, fallback, true)
 
     const slotKey =
       props.key ||
@@ -184,6 +238,7 @@ export function ensureValidVNode(
 export function ensureVaporSlotFallback(
   vnodes: VNodeArrayChildren | null | undefined,
   fallback?: () => VNodeArrayChildren,
+  bindToOwner?: boolean,
 ): void {
   let vaporSlot: any
   if (
@@ -195,6 +250,9 @@ export function ensureVaporSlotFallback(
     // Preserve the enclosing VDOM slot outlet's own fallback on the forwarded
     // vapor slot vnode. Interop treats this as an additional local fallback
     // source for that outlet boundary instead of propagated ancestor state.
-    vaporSlot.outletFallback = fallback
+    vaporSlot.outletFallback =
+      fallback && bindToOwner
+        ? toVaporFallback(fallback as SlotFallback)
+        : fallback
   }
 }
