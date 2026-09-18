@@ -435,7 +435,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
               `The directives will not function as intended.`,
           )
         }
-        vnode.dirs = null
+        parkVNodeDirs(vnode, instance)
       }
     }
 
@@ -465,7 +465,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
         if (rootEl) {
           onBeforeUpdate && onBeforeUpdate()
         } else {
-          n2.dirs = null
+          parkVNodeDirs(n2, instance)
         }
       }
       vnodeHookState.pendingVNodeUpdate = n2
@@ -808,7 +808,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
             `The directives will not function as intended.`,
         )
       }
-      vnode.dirs = null
+      parkVNodeDirs(vnode, instance)
     }
     const shouldUpdate = shouldUpdateComponent(cached, vnode)
     if (shouldUpdate) {
@@ -3170,13 +3170,70 @@ function resolveInteropRootEl(
 }
 
 function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
+  const state = vnodeHookStateMap.get(instance)
   const rootEl = resolveInteropRootEl(instance)
-  if (rootEl) {
-    vnode.el = rootEl
-  } else {
-    vnode.el = vnode.anchor
-    vnode.dirs = null
+  const nextEl = rootEl || vnode.anchor
+  // The branch switch that discards this root already released the bindings
+  // while it was still in the DOM; see registerInteropRootSync.
+  const released = !!state && state.releasedEl === vnode.el
+  if (state) state.releasedEl = null
+  if (nextEl === vnode.el) return
+  const parent = instance.parent as ComponentInternalInstance | null
+  // VDOM inherits a component vnode's directives onto the rendered root vnode,
+  // so they mount, patch and unmount with that root element. The vapor child
+  // renders past the renderer, so follow its root here instead: the bindings
+  // leave the element they sat on and enter the one that replaced it.
+  if (vnode.dirs) {
+    // Parked bindings sit on nothing, so they have nothing to leave.
+    if (!state || !state.parkedDirs) {
+      if (!released) invokeDirectiveHook(vnode, null, parent, 'beforeUnmount')
+      invokeDirectiveHook(vnode, null, parent, 'unmounted')
+    }
+    parkVNodeDirs(vnode, instance)
   }
+  vnode.el = nextEl
+  if (!rootEl || !state || !state.parkedDirs) return
+  // The root was replaced, not patched, so VDOM runs no update hooks for it.
+  // Keep the bindings parked until the flush is over: the renderer's
+  // post-render `updated` effect and the interop `u` hook both read
+  // `vnode.dirs`, and an `updated` from either would reach an element the
+  // directive has not been told it mounted on yet. Coming back on the new
+  // element then reads as the mount it is.
+  queuePostRenderEffect(
+    () => {
+      if (instance.isUnmounted || !restoreVNodeDirs(vnode, instance)) return
+      invokeDirectiveHook(vnode, null, parent, 'created')
+      invokeDirectiveHook(vnode, null, parent, 'beforeMount')
+      invokeDirectiveHook(vnode, null, parent, 'mounted')
+    },
+    undefined,
+    instance.suspense,
+  )
+}
+
+/**
+ * A directive hook is always handed `vnode.el`, so the renderer must not see
+ * bindings that have no element root to sit on. Hold them on the interop state
+ * instead of dropping them, so a returning element root can mount them again.
+ */
+function parkVNodeDirs(vnode: VNode, instance: VaporComponentInstance): void {
+  const state = vnodeHookStateMap.get(instance)
+  if (state) state.parkedDirs = { vnode, dirs: vnode.dirs }
+  vnode.dirs = null
+}
+
+function restoreVNodeDirs(
+  vnode: VNode,
+  instance: VaporComponentInstance,
+): boolean {
+  const state = vnodeHookStateMap.get(instance)
+  const parked = state && state.parkedDirs
+  // identity, not timing, decides: bindings only go back onto the vnode they
+  // came off, the way `pendingVNodeUpdate` is keyed by its driving vnode.
+  if (!parked || parked.vnode !== vnode) return false
+  vnode.dirs = parked.dirs
+  state!.parkedDirs = null
+  return true
 }
 
 function syncInteropRoot(instance: VaporComponentInstance): void {
@@ -3193,6 +3250,15 @@ interface VNodeHookState {
   // in update()/activate() clears only its own token — identity, not timing,
   // decides — covering ref writes that scheduled no render effect.
   pendingVNodeUpdate: VNode | null
+  // Bindings held off the renderer while they have no element root to sit on,
+  // keyed by the vnode they came off — identity, not timing, decides here too.
+  parkedDirs: { vnode: VNode; dirs: VNode['dirs'] } | null
+  // The root element a branch switch is discarding, once its directive
+  // `beforeUnmount` has run while the element was still in the DOM.
+  releasedEl: VNode['el']
+  // The root element the bindings sat on when this update started, so the `u`
+  // hook can tell a patched root from a replaced one.
+  updatingEl: VNode['el']
 }
 
 const vnodeHookStateMap = new WeakMap<VaporComponentInstance, VNodeHookState>()
@@ -3209,6 +3275,9 @@ function ensureVNodeHookState(
     state = {
       vnode,
       pendingVNodeUpdate: null,
+      parkedDirs: null,
+      releasedEl: null,
+      updatingEl: null,
     }
     vnodeHookStateMap.set(instance, state)
     ;(instance.bu ||= []).push(() => {
@@ -3224,6 +3293,16 @@ function ensureVNodeHookState(
         )
       }
       if (state!.vnode.ibu) state!.vnode.ibu()
+      state!.updatingEl = state!.vnode.el
+      // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
+      if (state!.vnode.dirs) {
+        invokeDirectiveHook(
+          state!.vnode,
+          state!.vnode,
+          instance.parent as ComponentInternalInstance | null,
+          'beforeUpdate',
+        )
+      }
     })
 
     // Sync the outer component vnode before running any updated hooks. Hooks
@@ -3234,6 +3313,17 @@ function ensureVNodeHookState(
       if (state!.pendingVNodeUpdate) {
         state!.pendingVNodeUpdate = null
         return
+      }
+      // align with VDOM: directive updated runs before vnode updated. A root
+      // switch during this update rebound the bindings to another element and
+      // gave them its mount sequence, which stands in for this `updated`.
+      if (state!.vnode.dirs && state!.vnode.el === state!.updatingEl) {
+        invokeDirectiveHook(
+          state!.vnode,
+          state!.vnode,
+          instance.parent as ComponentInternalInstance | null,
+          'updated',
+        )
       }
       const vnodeHook = state!.vnode.props && state!.vnode.props.onVnodeUpdated
       if (vnodeHook) {
@@ -3668,6 +3758,25 @@ function registerInteropRootSync(
   if (interopRootSyncFragmentMap.get(frag) === instance) return
   interopRootSyncFragmentMap.set(frag, instance)
   ;(frag.u ||= []).push(() => syncInteropRoot(instance))
+  // A branch switch discards its root: release the bindings while it is still
+  // in the DOM (vdom beforeUnmount). The `u` hook above only runs once the
+  // switch is done, so on its own it hands `beforeUnmount` a detached element.
+  ;(frag.bu ||= []).push(() => {
+    const state = vnodeHookStateMap.get(instance)
+    if (!state) return
+    const vnode = state.vnode
+    // Fragments off the chain (a deactivated KeepAlive branch) keep their root
+    if (!vnode.dirs || !vnode.el || getRootElement(frag.nodes) !== vnode.el) {
+      return
+    }
+    state.releasedEl = vnode.el
+    invokeDirectiveHook(
+      vnode,
+      null,
+      instance.parent as ComponentInternalInstance | null,
+      'beforeUnmount',
+    )
+  })
 }
 
 /**
