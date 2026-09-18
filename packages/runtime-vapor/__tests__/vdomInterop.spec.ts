@@ -42,7 +42,11 @@ import {
   withCtx,
   withDirectives,
 } from '@vue/runtime-dom'
-import { VaporDynamicComponentFlags, VaporSlotFlags } from '@vue/shared'
+import {
+  VaporDynamicComponentFlags,
+  VaporSlotFlags,
+  isString,
+} from '@vue/shared'
 import { VaporSlot } from '../../runtime-core/src/vnode'
 import {
   compile,
@@ -2437,10 +2441,11 @@ describe('vdomInterop', () => {
 
     describe('vdom outlet fallback under a vapor parent', () => {
       // A vapor parent fills `Wrapper`, the last of a chain of vdom components
-      // (each sees the ones before it); every vdom outlet on the chain must
-      // resolve its fallback the way it does under a vdom parent.
+      // (templates, or prebuilt components; each sees the ones before it);
+      // every vdom outlet on the chain must resolve its fallback the way it
+      // does under a vdom parent.
       const mountBoth = (
-        chain: Record<string, string>,
+        chain: Record<string, string | object>,
         initial: Record<string, any>,
         content = `<span v-if="data.show">content</span>`,
       ) => {
@@ -2450,12 +2455,15 @@ describe('vdomInterop', () => {
           const data = ref({ ...initial })
           const components: Record<string, any> = {}
           for (const name in chain) {
-            components[name] = compile(
-              `${script('setup')}<template>${chain[name]}</template>`,
-              data,
-              { ...components },
-              { vapor: false },
-            )
+            const member = chain[name]
+            components[name] = isString(member)
+              ? compile(
+                  `${script('setup')}<template>${member}</template>`,
+                  data,
+                  { ...components },
+                  { vapor: false },
+                )
+              : member
           }
           const App = compile(
             `${script(vapor ? 'vapor' : 'setup')}<template>` +
@@ -2483,6 +2491,19 @@ describe('vdomInterop', () => {
             expect(stripAnchors(vdom.root.innerHTML)).toBe(expected)
             expect(stripAnchors(vapor.root.innerHTML)).toBe(expected)
           },
+          // pins the element on each side; the returned check asserts it is
+          // still the same one
+          pin(selector: string) {
+            const sides = [vdom, vapor]
+            const pinned = sides.map(side => side.root.querySelector(selector)!)
+            return (step: string) =>
+              sides.forEach((side, i) =>
+                expect(
+                  side.root.querySelector(selector),
+                  `${i ? 'vapor' : 'vdom'} parent, ${step}`,
+                ).toBe(pinned[i]),
+              )
+          },
           unmount() {
             vdom.app.unmount()
             vapor.app.unmount()
@@ -2501,12 +2522,10 @@ describe('vdomInterop', () => {
           { tick: 0, show: false },
         )
         t.expect('<div><i>0</i><p>fallback</p></div>')
-        const vdomFallback = t.vdom.root.querySelector('p')
-        const vaporFallback = t.vapor.root.querySelector('p')
+        const sameFallback = t.pin('p')
         await t.set({ tick: 1 })
         t.expect('<div><i>1</i><p>fallback</p></div>')
-        expect(t.vdom.root.querySelector('p')).toBe(vdomFallback)
-        expect(t.vapor.root.querySelector('p')).toBe(vaporFallback)
+        sameFallback('tick 1')
         t.unmount()
       })
 
@@ -2616,7 +2635,7 @@ describe('vdomInterop', () => {
         t.unmount()
       })
 
-      test('hands the outlet fallback over when the presenting slot leaves', async () => {
+      test('keeps the outlet fallback while one of its empty slots comes and goes', async () => {
         const t = mountBoth(
           {
             Inner: innerFallback,
@@ -2626,9 +2645,13 @@ describe('vdomInterop', () => {
           namedContent,
         )
         t.expect('<p>inner fallback</p>')
-        await t.set({ first: false })
-        t.expect('<p>inner fallback</p>')
-        await t.set({ b: true })
+        const sameFallback = t.pin('p')
+        for (const first of [false, true]) {
+          await t.set({ first })
+          t.expect('<p>inner fallback</p>')
+          sameFallback(`first ${first}`)
+        }
+        await t.set({ first: false, b: true })
         t.expect('<b>b</b>')
         await t.set({ first: true })
         t.expect('<b>b</b>')
@@ -2636,6 +2659,78 @@ describe('vdomInterop', () => {
         t.expect('<p>inner fallback</p>')
         await t.set({ a: true })
         t.expect('<i>a</i>')
+        t.unmount()
+      })
+
+      test('a local fallback of one forwarded slot keeps the shared outlet fallback away', async () => {
+        // the slots reach the shared outlet at different depths of their own
+        // chains: `a` directly, `b` past its local fallback
+        const t = mountBoth(
+          {
+            Inner: `<slot><p>outer fallback</p></slot>`,
+            Wrapper:
+              `<components.Inner><slot name="a"/>` +
+              `<slot name="b"><b>local fallback</b></slot></components.Inner>`,
+          },
+          { a: false, b: false },
+          namedContent,
+        )
+        t.expect('<b>local fallback</b>')
+        await t.set({ b: true })
+        t.expect('<b>b</b>')
+        await t.set({ b: false })
+        t.expect('<b>local fallback</b>')
+        await t.set({ a: true })
+        t.expect('<i>a</i><b>local fallback</b>')
+        t.unmount()
+      })
+
+      test('never mounts the shared outlet fallback while a later slot has content', async () => {
+        // hand-written probe: setup calls are the observation
+        let setups = 0
+        const Probe = {
+          setup() {
+            setups++
+            return () => h('p', 'probe')
+          },
+        }
+        const t = mountBoth(
+          {
+            Probe,
+            Inner: `<slot><components.Probe /></slot>`,
+            Wrapper: `<components.Inner><slot name="a"/><slot name="b"/></components.Inner>`,
+          },
+          { a: false, b: true },
+          namedContent,
+        )
+        await nextTick()
+        t.expect('<b>b</b>')
+        expect(setups).toBe(0)
+        t.unmount()
+      })
+
+      test('keeps the shared outlet fallback instance while empty slots come and go', async () => {
+        const t = mountBoth(
+          {
+            Inner: `<slot><input /></slot>`,
+            Wrapper: `<components.Inner><template v-for="n in data.count" :key="n"><slot/></template></components.Inner>`,
+          },
+          { count: 1, show: false },
+        )
+        await nextTick()
+        for (const side of [t.vdom, t.vapor]) {
+          side.root.querySelector('input')!.value = 'keep me'
+        }
+        const sameInput = t.pin('input')
+        // more empty slots, then fewer, the first included: the outlet shows
+        // the same fallback throughout
+        for (const count of [2, 3, 1]) {
+          await t.set({ count })
+          sameInput(`count ${count}`)
+          for (const side of [t.vdom, t.vapor]) {
+            expect(side.root.querySelector('input')!.value).toBe('keep me')
+          }
+        }
         t.unmount()
       })
 
