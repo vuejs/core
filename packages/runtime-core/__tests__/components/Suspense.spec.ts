@@ -3481,4 +3481,60 @@ describe('Suspense', () => {
       expect(updateSpy).not.toHaveBeenCalled()
     })
   })
+
+  test.each([true, false])(
+    'skip rendering an unmounted async child (resolves first: %s)',
+    async resolvesFirst => {
+      const show = ref(true)
+      const renderRemoved = vi.fn(() => h('b', 'removed'))
+      const onResolve = vi.fn()
+      let resolveRemoved!: () => void
+      let resolveSibling!: () => void
+      const Removed = {
+        async setup() {
+          await new Promise<void>(resolve => {
+            resolveRemoved = resolve
+          })
+          return renderRemoved
+        },
+      }
+      const Sibling = {
+        async setup() {
+          await new Promise<void>(resolve => {
+            resolveSibling = resolve
+          })
+          return () => h('span', 'kept')
+        },
+      }
+      const app = createApp({
+        components: { Removed, Sibling },
+        setup: () => ({ show, onResolve }),
+        template: `
+          <Suspense @resolve="onResolve">
+            <div><Removed v-if="show" /><Sibling /></div>
+            <template #fallback><p>loading</p></template>
+          </Suspense>`,
+      })
+      const root = document.createElement('div')
+      app.mount(root)
+      expect(root.innerHTML).toBe('<p>loading</p>')
+
+      show.value = false
+      await nextTick()
+      expect(root.innerHTML).toBe('<p>loading</p>')
+
+      ;(resolvesFirst ? resolveRemoved : resolveSibling)()
+      await new Promise(r => setTimeout(r))
+      expect(root.innerHTML).toBe('<p>loading</p>')
+      expect(renderRemoved).not.toHaveBeenCalled()
+      expect(onResolve).not.toHaveBeenCalled()
+
+      ;(resolvesFirst ? resolveSibling : resolveRemoved)()
+      await new Promise(r => setTimeout(r))
+      expect(root.textContent).toBe('kept')
+      expect(renderRemoved).not.toHaveBeenCalled()
+      expect(onResolve).toHaveBeenCalledTimes(1)
+      app.unmount()
+    },
+  )
 })
