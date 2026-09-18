@@ -302,6 +302,9 @@ export interface VNode<
     // vdom outlets whose fallback this slot resolves, innermost first
     // (see attachVaporSlotOutlet)
     outlets?: VaporSlotOutlet[]
+    // per outlet: slot scope ids contributed by the fragments between that
+    // outlet and this slot, -1 for the outlet that rendered the slot itself
+    innerIds?: number[]
     // on the fallback host of an outlet rendering several vapor slots: the
     // slots whose content it follows, in place of a slot of its own
     members?: VNode[]
@@ -856,6 +859,7 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
     outlets: vaporSlot.outlets,
+    innerIds: vaporSlot.innerIds,
     members: vaporSlot.members,
   }
 

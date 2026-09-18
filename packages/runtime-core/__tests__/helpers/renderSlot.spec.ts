@@ -290,6 +290,7 @@ describe('renderSlot', () => {
         { fallback: wrapperFallback, vdom: true, owner: wrapper },
         { fallback: innerFallback, vdom: true, owner: inner },
       ])
+      expect(forwarded.vs!.innerIds).toEqual([-1, 0])
     })
 
     it('finds the sole vapor slot through single-child fragments', () => {
@@ -307,6 +308,32 @@ describe('renderSlot', () => {
         fallback,
       )
       expect(forwarded.vs!.outlets!.map(o => o.fallback)).toEqual([fallback])
+    })
+
+    it('counts the slot scope ids of the fragments inside each outlet', () => {
+      // scoped outlets: the inner outlet fragment carries a slotted id, which
+      // the outer outlet's fallback must not render under
+      setCurrentRenderingInstance({
+        type: { __scopeId: 'scope' },
+        appContext,
+      } as any)
+      let forwarded!: VNode
+      renderSlot(
+        {
+          default: () => [
+            renderSlot(
+              { default: () => [(forwarded = forward())] },
+              'default',
+              {},
+              () => [h('p')],
+            ),
+          ],
+        },
+        'default',
+        {},
+        () => [h('b')],
+      )
+      expect(forwarded.vs!.innerIds).toEqual([0, 1])
     })
 
     it('stacks enclosing outlets innermost first', () => {
@@ -403,6 +430,8 @@ describe('renderSlot', () => {
         expect(children[1].vs!.outlets!.map(o => o.fallback)).toEqual([
           fallback,
         ])
+        // a host sits right inside its outlet's fragment
+        expect(children[1].vs!.innerIds).toEqual([0])
         // the same fragment as when slots are there
         expect(rendered.key).toBe('_default')
         expect(
