@@ -2475,6 +2475,203 @@ describe('vdomInterop', () => {
       vdom.app.unmount()
       vapor.app.unmount()
     })
+
+    describe('vdom outlet fallback for a forwarded vapor slot', () => {
+      // A vapor parent fills a chain of vdom components that forward its slot;
+      // each vdom outlet on the chain must resolve its own fallback the way it
+      // does under a vdom parent. Anchors are stripped for the comparison.
+      const html = (root: HTMLElement) =>
+        root.innerHTML.replace(/<!--[^>]*-->/g, '')
+      const vdomComponent = (
+        data: any,
+        template: string,
+        components: Record<string, any> = {},
+      ) =>
+        compile(
+          `<script setup>const data = _data; const components = _components</script>` +
+            `<template>${template}</template>`,
+          data,
+          components,
+          { vapor: false },
+        )
+      const mountBoth = (
+        build: (data: any) => Record<string, any>,
+        initial: Record<string, any>,
+        content = `<span v-if="data.show">content</span>`,
+      ) => {
+        const mount = (vapor: boolean) => {
+          const data = ref({ ...initial })
+          const components = build(data)
+          const App = compile(
+            `<script ${vapor ? 'vapor' : 'setup'}>const data = _data; const components = _components</script>` +
+              `<template><components.Wrapper>${content}</components.Wrapper></template>`,
+            data,
+            components,
+            { vapor },
+          )
+          const root = document.createElement('div')
+          const app = vapor ? createVaporApp(App) : createApp(App)
+          app.use(vaporInteropPlugin).mount(root)
+          return { data, root, app }
+        }
+        const vdom = mount(false)
+        const vapor = mount(true)
+        return {
+          vdom,
+          vapor,
+          async set(patch: Record<string, any>) {
+            Object.assign(vdom.data.value, patch)
+            Object.assign(vapor.data.value, patch)
+            await nextTick()
+          },
+          expect(expected: string) {
+            expect(html(vdom.root)).toBe(expected)
+            expect(html(vapor.root)).toBe(expected)
+          },
+          unmount() {
+            vdom.app.unmount()
+            vapor.app.unmount()
+          },
+        }
+      }
+
+      test.each([
+        [
+          'only the outermost outlet owns one',
+          `<slot/>`,
+          '<p>leaf fallback</p>',
+        ],
+        [
+          'a nearer outlet owns one too',
+          `<slot><i>inner fallback</i></slot>`,
+          '<i>inner fallback</i>',
+        ],
+      ])(
+        'resolves fallbacks forwarded through several vdom components, %s',
+        async (_, innerOutlet, fallback) => {
+          const t = mountBoth(
+            data => {
+              const Leaf = vdomComponent(
+                data,
+                `<slot><p>leaf fallback</p></slot>`,
+              )
+              const Inner = vdomComponent(
+                data,
+                `<components.Leaf>${innerOutlet}</components.Leaf>`,
+                { Leaf },
+              )
+              const Wrapper = vdomComponent(
+                data,
+                `<components.Inner><slot/></components.Inner>`,
+                { Inner },
+              )
+              return { Wrapper }
+            },
+            { show: false },
+          )
+          t.expect(fallback)
+          await t.set({ show: true })
+          t.expect('<span>content</span>')
+          await t.set({ show: false })
+          t.expect(fallback)
+          t.unmount()
+        },
+      )
+
+      test('resolves the outlet fallback of a slot forwarded inside a v-if fragment', async () => {
+        const t = mountBoth(
+          data => {
+            const Inner = vdomComponent(
+              data,
+              `<slot><p>inner fallback</p></slot>`,
+            )
+            const Wrapper = vdomComponent(
+              data,
+              `<components.Inner><template v-if="data.forward"><slot/></template></components.Inner>`,
+              { Inner },
+            )
+            return { Wrapper }
+          },
+          { forward: true, show: false },
+        )
+        t.expect('<p>inner fallback</p>')
+        await t.set({ show: true })
+        t.expect('<span>content</span>')
+        // the outlet content turns into a plain comment: vdom renders the
+        // fallback inline
+        await t.set({ forward: false })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ forward: true })
+        t.expect('<span>content</span>')
+        await t.set({ show: false })
+        t.expect('<p>inner fallback</p>')
+        t.unmount()
+      })
+
+      test('resolves the outlet fallback of a slot forwarded inside a v-for fragment', async () => {
+        // a single `<slot>` under `<template v-for>` sits two fragments deep
+        // (the list and its item)
+        const t = mountBoth(
+          data => {
+            const Inner = vdomComponent(
+              data,
+              `<slot><p>inner fallback</p></slot>`,
+            )
+            const Wrapper = vdomComponent(
+              data,
+              `<components.Inner><template v-for="n in data.count" :key="n"><slot/></template></components.Inner>`,
+              { Inner },
+            )
+            return { Wrapper }
+          },
+          { count: 1, show: false },
+        )
+        t.expect('<p>inner fallback</p>')
+        await t.set({ show: true })
+        t.expect('<span>content</span>')
+        // an empty list leaves plain vdom content: the fallback renders inline
+        await t.set({ count: 0 })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ count: 1 })
+        t.expect('<span>content</span>')
+        await t.set({ show: false })
+        t.expect('<p>inner fallback</p>')
+        t.unmount()
+      })
+
+      test('follows an outlet joining and leaving the chain across renders', async () => {
+        // a valid sibling makes the outlet content stand on its own, so the
+        // outlet only takes part in fallback resolution while the sibling is
+        // gone
+        const t = mountBoth(
+          data => {
+            const Inner = vdomComponent(
+              data,
+              `<slot><p>inner fallback</p></slot>`,
+            )
+            const Wrapper = vdomComponent(
+              data,
+              `<components.Inner><slot/><b v-if="data.aside">aside</b></components.Inner>`,
+              { Inner },
+            )
+            return { Wrapper }
+          },
+          { aside: true, show: false },
+        )
+        t.expect('<b>aside</b>')
+        await t.set({ aside: false })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ aside: true })
+        t.expect('<b>aside</b>')
+        await t.set({ show: true })
+        t.expect('<span>content</span><b>aside</b>')
+        await t.set({ aside: false })
+        t.expect('<span>content</span>')
+        await t.set({ show: false })
+        t.expect('<p>inner fallback</p>')
+        t.unmount()
+      })
+    })
   })
 
   describe('provide / inject', () => {

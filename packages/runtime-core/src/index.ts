@@ -625,12 +625,12 @@ export {
  * @internal
  */
 export {
+  attachVaporSlotOutlet,
   ensureValidVNode,
-  ensureVaporSlotFallback,
   invokeSlotFallback,
   rawVaporSlotKey,
-  vdomSlotFallbackKey,
 } from './helpers/renderSlot'
+export type { VaporSlotOutlet } from './vnode'
 /**
  * @internal
  */

@@ -305,13 +305,12 @@ describe('vnode', () => {
   test('cloneVNode preserves vapor slot metadata', () => {
     const node = createVNode(VaporSlot as any)
     const viHook = vi.fn()
-    const outletFallback = () => []
+    const outlets = [{ fallback: () => [], owner: null, vdom: true }]
     const slotRef = {} as any
     const slotScope = {} as any
     const slotMeta = {
       slot: () => [],
-      fallback: () => [],
-      outletFallback,
+      outlets,
       state: { localFallback: 'fallback state' },
       ref: slotRef,
       scope: slotScope,
@@ -327,8 +326,7 @@ describe('vnode', () => {
     expect(cloned.vi).toBe(viHook)
     expect(cloned.vs).not.toBe(slotMeta)
     expect(cloned.vs!.slot).toBe(slotMeta.slot)
-    expect(cloned.vs!.fallback).toBe(slotMeta.fallback)
-    expect(cloned.vs!.outletFallback).toBe(outletFallback)
+    expect(cloned.vs!.outlets).toBe(outlets)
     expect(cloned.vs!.state).toBeUndefined()
     expect(cloned.vs!.ref).toBeUndefined()
     expect(cloned.vs!.scope).toBeUndefined()

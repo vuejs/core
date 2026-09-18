@@ -126,7 +126,7 @@ function createTestSlotResolutionState(options: {
 }): SlotResolutionState {
   let state!: SlotResolutionState
   const boundary: SlotBoundaryContext = {
-    parent: null,
+    getParent: () => null,
     getFallback: () => options.fallback,
     run: (fn, scope) => (scope ? scope.run(fn)! : fn()),
     markDirty: force => markSlotResolutionDirty(state, force),
@@ -298,7 +298,7 @@ describe('component: slots', () => {
     test('slot root does not notify parent while exposed validity stays valid', () => {
       const markDirty = vi.fn()
       const parentBoundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: fn => fn(),
         markDirty,
@@ -339,7 +339,7 @@ describe('component: slots', () => {
         document.createTextNode('inherited fallback'),
       )
       const parentBoundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => inheritedFallback,
         run: fn => fn(),
         markDirty: vi.fn(),
@@ -363,7 +363,7 @@ describe('component: slots', () => {
         document.createTextNode('inherited fallback'),
       )
       const parentBoundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => inheritedFallback,
         run: fn => fn(),
         markDirty: vi.fn(),
@@ -385,7 +385,7 @@ describe('component: slots', () => {
 
     test('slot fragment local fallback renders nested slots against the parent boundary', () => {
       const parentBoundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => () => document.createTextNode('outer fallback'),
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
@@ -405,13 +405,13 @@ describe('component: slots', () => {
       // the owning boundary's parent — so nested slots inherit from the
       // grandparent, avoiding fallback -> <slot> -> same fallback recursion.
       expect(fallbackBoundary).not.toBe(frag.boundary)
-      expect(fallbackBoundary.parent).toBe(parentBoundary)
+      expect(fallbackBoundary.getParent()).toBe(parentBoundary)
     })
 
     test('slot fragment local fallback keeps itself as owner for nested fragments', () => {
       const container = document.createElement('div')
       const parentBoundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => () => document.createTextNode('outer fallback'),
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
@@ -447,7 +447,7 @@ describe('component: slots', () => {
       )
       const container = document.createElement('div')
       const parentBoundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => () => document.createTextNode(ancestorText.value),
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
@@ -859,13 +859,13 @@ describe('component: slots', () => {
       const showLocal = ref(false)
       let state!: SlotResolutionState
       const parentBoundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => () => document.createTextNode('parent fallback'),
         run: fn => fn(),
         markDirty: vi.fn(),
       }
       const boundary: SlotBoundaryContext = {
-        parent: parentBoundary,
+        getParent: () => parentBoundary,
         getFallback: () => () =>
           createIf(
             () => showLocal.value,
@@ -911,13 +911,13 @@ describe('component: slots', () => {
         document.createTextNode('local fallback')
       let state!: SlotResolutionState
       const parentBoundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => () => document.createTextNode('parent fallback'),
         run: fn => fn(),
         markDirty: vi.fn(),
       }
       const boundary: SlotBoundaryContext = {
-        parent: parentBoundary,
+        getParent: () => parentBoundary,
         getFallback: () => localFallback,
         run: fn => fn(),
         markDirty: force => markSlotResolutionDirty(state, force),
@@ -952,7 +952,7 @@ describe('component: slots', () => {
       const markDirty = vi.fn()
       const show = ref(true)
       const boundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: fn => fn(),
         markDirty,
@@ -979,7 +979,7 @@ describe('component: slots', () => {
       const markDirty = vi.fn()
       const items = ref([1])
       const boundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: fn => fn(),
         markDirty,
@@ -1004,7 +1004,7 @@ describe('component: slots', () => {
       const markDirty = vi.fn()
       const show = ref(true)
       const boundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: fn => fn(),
         markDirty,
@@ -1036,7 +1036,7 @@ describe('component: slots', () => {
       const markDirty = vi.fn()
       const show = ref(true)
       const boundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: fn => fn(),
         markDirty,
@@ -1071,7 +1071,7 @@ describe('component: slots', () => {
       const markDirty = vi.fn()
       const items = ref([1])
       const boundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: fn => fn(),
         markDirty,
@@ -1103,7 +1103,7 @@ describe('component: slots', () => {
       const markDirty = vi.fn()
       const show = ref(true)
       const boundary: SlotBoundaryContext = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: fn => fn(),
         markDirty,
@@ -1404,7 +1404,7 @@ describe('component: slots', () => {
     test('vdom slot does not dirty parent boundary when content stays valid', async () => {
       const text = ref('A')
       const boundary = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
@@ -1436,7 +1436,7 @@ describe('component: slots', () => {
     test('vdom slot ignores non-root updates inside slot boundary', async () => {
       const text = ref('A')
       const boundary = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
@@ -1466,7 +1466,7 @@ describe('component: slots', () => {
     test('vdom slot does not dirty parent boundary when local fallback keeps output valid', async () => {
       const show = ref(true)
       const boundary = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
@@ -1798,7 +1798,7 @@ describe('component: slots', () => {
     test('vdom slot dirties parent boundary when content validity changes', async () => {
       const show = ref(true)
       const boundary = {
-        parent: null,
+        getParent: () => null,
         getFallback: () => undefined,
         run: (fn: () => any) => fn(),
         markDirty: vi.fn(),
@@ -3938,7 +3938,7 @@ describe('component: slots', () => {
           let observedBoundary: SlotBoundaryContext | null | undefined
           const markDirty = vi.fn()
           const boundary: SlotBoundaryContext = {
-            parent: null,
+            getParent: () => null,
             getFallback: () => undefined,
             run: fn => fn(),
             markDirty,
@@ -4091,7 +4091,7 @@ describe('component: slots', () => {
           const nonStableSlotFn = (() => template('d')()) as BlockFn
           ;(nonStableSlotFn as any)._ = VaporSlotStability.NON_STABLE
           const boundary: SlotBoundaryContext = {
-            parent: null,
+            getParent: () => null,
             getFallback: () => undefined,
             run: fn => fn(),
             markDirty: vi.fn(),
@@ -5571,6 +5571,7 @@ describe('component: slots', () => {
 
       test('vdom fallback removal clears active wrapper fallback for non-slot-fragment content', async () => {
         const useFallback = ref(true)
+        const show = ref(false)
 
         const VdomSlotWithOptionalFallback = {
           render(this: any) {
@@ -5591,7 +5592,7 @@ describe('component: slots', () => {
               {
                 foo: () =>
                   createIf(
-                    () => false,
+                    () => show.value,
                     () => template('<span>content</span>')(),
                   ),
               },
@@ -5604,9 +5605,15 @@ describe('component: slots', () => {
         createVaporApp(VaporForwardedSlot).use(vaporInteropPlugin).mount(root)
         expect(root.innerHTML).toBe('<div>fallback</div>')
 
+        // with no fallback left, the parked content returns to the DOM so
+        // its anchor is live for later updates
         useFallback.value = false
         await nextTick()
-        expect(root.innerHTML).toBe('')
+        expect(root.innerHTML).toBe('<!--if-->')
+
+        show.value = true
+        await nextTick()
+        expect(root.innerHTML).toBe('<span>content</span><!--if-->')
       })
 
       test('vdom fallback toggles between local and inherited fallback for non-slot-fragment content', async () => {
