@@ -626,6 +626,7 @@ export {
  */
 export {
   attachVaporSlotOutlet,
+  recordVaporSlotOutlet,
   ensureValidVNode,
   invokeSlotFallback,
   rawVaporSlotKey,
