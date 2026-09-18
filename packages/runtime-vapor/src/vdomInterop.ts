@@ -114,6 +114,7 @@ import {
   isObject,
   isReservedProp,
   isString,
+  remove as removeFromArray,
   slotInheritsFallback,
   slotNotifiesBoundary,
 } from '@vue/shared'
@@ -2367,7 +2368,7 @@ function renderVDOMSlot(
           // even when the surrounding VDOM fragment stays otherwise
           // valid, so preserve it on the forwarded branch itself.
           if (localFallback) {
-            attachVaporSlotOutlet(children, localFallback, false)
+            attachVaporSlotOutlet(children, localFallback, false, null, frag)
           }
           slotContentValid = hasValidVNodeContent(slotContent)
         } else {
@@ -2811,14 +2812,17 @@ function hydrateVNode(
 
 // The fallback block of the outlet at `depth` on the slot's chain (0 is the
 // outlet that rendered the slot, then each enclosing one); its boundary hands
-// it out only while that outlet is on the chain.
+// it out only while that outlet is on the chain. `blocks` keeps the latest
+// block per depth, telling which outlet an active fallback came from.
 function createFallback(
   state: InteropVaporSlotState,
   depth: number,
   parentComponent: ComponentInternalInstance | null,
+  blocks: Block[],
 ): BlockFn {
   const internals = ensureRenderer().internals
-  return () => {
+  return () => (blocks[depth] = renderFallback())
+  function renderFallback(): Block {
     if (state.outlets[depth].vdom) {
       const frag = createVNodeChildrenFragment(
         internals,
@@ -2843,12 +2847,27 @@ function createFallback(
   }
 }
 
+// An outlet's slots arbitrate its fallback together: it renders once, by the
+// first slot, and only while no slot is valid below the outlet's depth.
+interface InteropOutletState {
+  members: InteropVaporSlotState[]
+}
+
 interface InteropVaporSlotState {
   // vdom outlets whose fallback this slot resolves, innermost first. Chain
   // walks read the plain list; only fallback bodies track the ref, so a walk
   // inside some effect does not subscribe it to every patch of the slot.
   outlets: readonly VaporSlotOutlet[]
   outletsRef: ShallowRef<readonly VaporSlotOutlet[]>
+  // the shared state of each outlet, by depth
+  outletStates: InteropOutletState[]
+  // Depth of the branch this slot exposes when it is valid: -1 for content,
+  // an outlet's depth for its fallback, Infinity while nothing valid shows.
+  // Set up by renderVaporSlot.
+  exposedDepth: () => number
+  // Asks the slot to re-resolve its chain after the next flush, once another
+  // member of one of its outlets changed what it exposes.
+  recheck: () => void
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -2856,7 +2875,13 @@ function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
   let state = slot.state as InteropVaporSlotState | undefined
   if (!state) {
     const outlets = slot.outlets || EMPTY_ARR
-    state = { outlets, outletsRef: shallowRef(outlets) }
+    state = {
+      outlets,
+      outletsRef: shallowRef(outlets),
+      outletStates: [],
+      exposedDepth: () => Infinity,
+      recheck: NOOP,
+    }
     slot.state = state
   }
   return state
@@ -2868,28 +2893,115 @@ function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
     return
   }
   n2.vs!.state = prevState
+  const prevOutlets = prevState.outlets
   prevState.outletsRef.value = prevState.outlets = n2.vs!.outlets || EMPTY_ARR
+  linkOutletStates(prevState, prevOutlets)
+}
+
+// Joins the shared state of every outlet on the slot's chain, carrying it
+// over from the previous render by outlet key, and leaves the ones no longer
+// on the chain. Members of an outlet that gains or loses this slot recheck.
+function linkOutletStates(
+  state: InteropVaporSlotState,
+  prevOutlets: readonly VaporSlotOutlet[],
+): void {
+  const prev = state.outletStates
+  const next: InteropOutletState[] = []
+  for (let i = 0; i < state.outlets.length; i++) {
+    const outlet = state.outlets[i]
+    let shared = outlet.state as InteropOutletState | undefined
+    if (!shared) {
+      const carried = prevOutlets.find(o => o.key === outlet.key)
+      shared = outlet.state = (carried &&
+        (carried.state as InteropOutletState)) || { members: [] }
+    }
+    next.push(shared)
+  }
+  state.outletStates = next
+  for (let i = 0; i < prev.length; i++) {
+    if (!next.includes(prev[i])) leaveOutlet(state, prev[i])
+  }
+  for (let i = 0; i < next.length; i++) {
+    const shared = next[i]
+    if (!shared.members.includes(state)) {
+      shared.members.push(state)
+      notifyOutletMembers(shared, state)
+    }
+  }
+}
+
+function leaveOutlet(
+  state: InteropVaporSlotState,
+  shared: InteropOutletState,
+): void {
+  removeFromArray(shared.members, state)
+  notifyOutletMembers(shared, state)
+}
+
+function notifyOutletMembers(
+  shared: InteropOutletState,
+  except: InteropVaporSlotState,
+): void {
+  const members = shared.members
+  for (let i = 0; i < members.length; i++) {
+    if (members[i] !== except) members[i].recheck()
+  }
+}
+
+// The outlet at `depth` hands its fallback to the first of its slots, once no
+// slot exposes a valid branch below that depth. A slot asking for it while
+// another slot presents has the presenter recheck, in case it gave up.
+function resolveOutletFallback(
+  state: InteropVaporSlotState,
+  depth: number,
+  fallback: BlockFn,
+): BlockFn | undefined {
+  const shared = state.outletStates[depth]
+  if (!shared) return undefined
+  const members = shared.members
+  for (let i = 0; i < members.length; i++) {
+    const member = members[i]
+    if (member !== state && member.exposedDepth() < depth) return undefined
+  }
+  if (members[0] !== state) {
+    members[0].recheck()
+    return undefined
+  }
+  return fallback
 }
 
 function trackInteropFallbackChanges(
   scope: ReturnType<typeof effectScope> | undefined,
   state: InteropVaporSlotState,
   onChange: () => void,
+  onStop: () => void,
 ): void {
   if (!scope) return
-  let trackedDepth = state.outlets.length
+  let tracked = state.outletStates
   scope.run(() => {
     renderEffect(() => {
       // Only an outlet joining or leaving the chain re-resolves it: a
       // fallback body swapped for another (compiled fallbacks are fresh
       // closures per owner render) patches in place through its own
       // fragment effect.
-      const nextDepth = state.outletsRef.value.length
-      if (nextDepth !== trackedDepth) {
-        trackedDepth = nextDepth
+      state.outletsRef.value
+      const next = state.outletStates
+      if (
+        next !== tracked &&
+        (next.length !== tracked.length ||
+          next.some((shared, i) => shared !== tracked[i]))
+      ) {
         onChange()
       }
+      tracked = next
     }, true)
+    onScopeDispose(() => {
+      onStop()
+      for (let i = 0; i < state.outletStates.length; i++) {
+        leaveOutlet(state, state.outletStates[i])
+      }
+      state.outletStates = []
+    })
   })
 }
 
@@ -2931,6 +3043,8 @@ function renderVaporSlot(
     let currentParentNode: ParentNode | null = null
     let currentAnchor: Node | null = null
     let disposed = false
+    // the vnode's slot scope stopped: the slot is unmounted for good
+    let stopped = false
     let slotResolutionState!: SlotResolutionState
     let ownedSlotFragment: SlotFragment | undefined
     let ownedSlotFragmentDirtyQueued = false
@@ -2948,6 +3062,9 @@ function renderVaporSlot(
         markSlotResolutionDirty(slotResolutionState, force)
         return
       }
+      // the owned resolver reports validity flips here; the other slots of
+      // this slot's outlets follow what it exposes
+      notifyExposedDepthChange()
       ownedSlotFragmentDirtyForce = ownedSlotFragmentDirtyForce || !!force
       // When the inner SlotFragment owns the fallback, a single vdom flush
       // can dirty this slot multiple times; batch into one post-flush recheck
@@ -2967,15 +3084,24 @@ function renderVaporSlot(
     // the chain is walked. The chain follows the outlets recorded on the
     // latest vnode and continues into the ambient boundary past the last.
     const outletBoundaries: SlotBoundaryContext[] = []
+    const fallbackBlocks: Block[] = []
     const createOutletBoundary = (
       depth: number,
       onContentInvalid?: (() => void)[],
     ): SlotBoundaryContext => {
-      const fallback = createFallback(slotState, depth, parentComponent)
+      const fallback = createFallback(
+        slotState,
+        depth,
+        parentComponent,
+        fallbackBlocks,
+      )
       return createSlotBoundary(
         frag,
         () => getOutletBoundary(depth + 1),
-        () => (slotState.outlets[depth] ? fallback : undefined),
+        () =>
+          slotState.outlets[depth]
+            ? resolveOutletFallback(slotState, depth, fallback)
+            : undefined,
         markInteropSlotResolutionDirty,
         onContentInvalid,
       )
@@ -3000,6 +3126,7 @@ function renderVaporSlot(
       syncNodes: () => {
         frag.nodes = resolveExposedSlotNodes(slotResolutionState)
         content.resolved = true
+        notifyExposedDepthChange()
       },
       notifyExposedValidityChange: () => {
         if (slotBoundary) {
@@ -3007,6 +3134,43 @@ function renderVaporSlot(
         }
       },
     })
+    // The branch this slot exposes, for the other slots of its outlets: the
+    // owning resolver's active fallback traced back to its outlet depth, or
+    // the content. Unresolved content counts as valid so a slot mounting
+    // beside a presenting one does not take the fallback over prematurely.
+    slotState.exposedDepth = () => {
+      const resolver = ownedSlotFragment || slotResolutionState
+      const fallback = resolver.activeFallback
+      if (fallback) {
+        return isValidSlot(fallback)
+          ? fallbackBlocks.indexOf(fallback)
+          : Infinity
+      }
+      if (ownedSlotFragment)
+        return isValidSlot(ownedSlotFragment) ? -1 : Infinity
+      if (!content.resolved) return -1
+      return isValidSlot(content.nodes) ? -1 : Infinity
+    }
+    let lastExposedDepth = -1
+    const notifyExposedDepthChange = (): void => {
+      const depth = slotState.exposedDepth()
+      if (depth === lastExposedDepth) return
+      lastExposedDepth = depth
+      const states = slotState.outletStates
+      for (let i = 0; i < states.length; i++) {
+        notifyOutletMembers(states[i], slotState)
+      }
+    }
+    let recheckQueued = false
+    slotState.recheck = () => {
+      if (recheckQueued || stopped) return
+      recheckQueued = true
+      queuePostFlushCb(() => {
+        recheckQueued = false
+        if (!stopped) markInteropSlotResolutionDirty(true)
+      })
+    }
+    linkOutletStates(slotState, EMPTY_ARR)
     const takePendingRecheck = (): boolean => {
       const force = slotResolutionState.pendingRecheckForce
       slotResolutionState.pendingRecheck = false
@@ -3079,8 +3243,11 @@ function renderVaporSlot(
       }
       if (hasInteropFallback && isSlotResolver(resolvedContent)) {
         ownedSlotFragment = resolvedContent
-        trackInteropFallbackChanges(vnode.vs!.scope, slotState, () =>
-          markInteropSlotResolutionDirty(),
+        trackInteropFallbackChanges(
+          vnode.vs!.scope,
+          slotState,
+          () => markInteropSlotResolutionDirty(),
+          () => (stopped = true),
         )
         dispose()
         return resolvedContent
@@ -3125,9 +3292,12 @@ function renderVaporSlot(
         }
         dispose(parentNode)
       }
-      trackInteropFallbackChanges(vnode.vs!.scope, slotState, () => {
-        recheckSlotResolution(slotResolutionState, true)
-      })
+      trackInteropFallbackChanges(
+        vnode.vs!.scope,
+        slotState,
+        () => recheckSlotResolution(slotResolutionState, true),
+        () => (stopped = true),
+      )
 
       if (isHydrating && currentHydrationNode) {
         currentAnchor = currentHydrationNode

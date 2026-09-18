@@ -2640,6 +2640,101 @@ describe('vdomInterop', () => {
         t.unmount()
       })
 
+      test('resolves the outlet fallback once every forwarded slot is empty', async () => {
+        const t = mountBoth(
+          data => {
+            const Inner = vdomComponent(
+              data,
+              `<slot><p>inner fallback</p></slot>`,
+            )
+            const Wrapper = vdomComponent(
+              data,
+              `<components.Inner><slot name="a"/><slot name="b"/></components.Inner>`,
+              { Inner },
+            )
+            return { Wrapper }
+          },
+          { a: false, b: false },
+          `<template #a><i v-if="data.a">a</i></template>` +
+            `<template #b><b v-if="data.b">b</b></template>`,
+        )
+        t.expect('<p>inner fallback</p>')
+        await t.set({ a: true })
+        t.expect('<i>a</i>')
+        await t.set({ b: true })
+        t.expect('<i>a</i><b>b</b>')
+        await t.set({ a: false })
+        t.expect('<b>b</b>')
+        await t.set({ b: false })
+        t.expect('<p>inner fallback</p>')
+        t.unmount()
+      })
+
+      test('resolves the outlet fallback of slots forwarded by a v-for', async () => {
+        const t = mountBoth(
+          data => {
+            const Inner = vdomComponent(
+              data,
+              `<slot><p>inner fallback</p></slot>`,
+            )
+            const Wrapper = vdomComponent(
+              data,
+              `<components.Inner><template v-for="n in data.count" :key="n"><slot/></template></components.Inner>`,
+              { Inner },
+            )
+            return { Wrapper }
+          },
+          { count: 2, show: false },
+          `<i v-if="data.show">x</i>`,
+        )
+        t.expect('<p>inner fallback</p>')
+        await t.set({ show: true })
+        t.expect('<i>x</i><i>x</i>')
+        await t.set({ count: 3 })
+        t.expect('<i>x</i><i>x</i><i>x</i>')
+        await t.set({ show: false })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ count: 0 })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ count: 2 })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ show: true })
+        t.expect('<i>x</i><i>x</i>')
+        t.unmount()
+      })
+
+      test('hands the outlet fallback over when the presenting slot leaves', async () => {
+        const t = mountBoth(
+          data => {
+            const Inner = vdomComponent(
+              data,
+              `<slot><p>inner fallback</p></slot>`,
+            )
+            const Wrapper = vdomComponent(
+              data,
+              `<components.Inner><template v-if="data.first"><slot name="a"/></template><slot name="b"/></components.Inner>`,
+              { Inner },
+            )
+            return { Wrapper }
+          },
+          { first: true, a: false, b: false },
+          `<template #a><i v-if="data.a">a</i></template>` +
+            `<template #b><b v-if="data.b">b</b></template>`,
+        )
+        t.expect('<p>inner fallback</p>')
+        await t.set({ first: false })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ b: true })
+        t.expect('<b>b</b>')
+        await t.set({ first: true })
+        t.expect('<b>b</b>')
+        await t.set({ b: false })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ a: true })
+        t.expect('<i>a</i>')
+        t.unmount()
+      })
+
       test('follows an outlet joining and leaving the chain across renders', async () => {
         // a valid sibling makes the outlet content stand on its own, so the
         // outlet only takes part in fallback resolution while the sibling is

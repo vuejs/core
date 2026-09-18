@@ -10,6 +10,7 @@ import {
   type VNode,
   type VNodeArrayChildren,
   VaporSlot,
+  type VaporSlotOutlet,
   blockStack,
   closeBlock,
   createBlock,
@@ -83,7 +84,14 @@ export function renderSlot(
     ret.vs = {
       slot: vaporSlot,
       outlets: fallback
-        ? [{ fallback, owner: currentRenderingInstance, vdom: true }]
+        ? [
+            {
+              fallback,
+              vdom: true,
+              owner: currentRenderingInstance,
+              key: currentRenderingInstance,
+            },
+          ]
         : undefined,
     }
     if (!noSlotted && ret.scopeId) {
@@ -204,8 +212,8 @@ export function ensureValidVNode(
 }
 
 /**
- * Records a vdom outlet on the vapor slot its content consists of, for
- * interop to resolve the outlet's fallback once that slot renders empty.
+ * Records a vdom outlet on the vapor slots its content consists of, for
+ * interop to resolve the outlet's fallback once they all render empty.
  * Internal to vapor interop.
  */
 export function attachVaporSlotOutlet(
@@ -213,12 +221,14 @@ export function attachVaporSlotOutlet(
   fallback: () => any,
   vdom: boolean,
   owner?: ComponentInternalInstance | null,
+  key: object | null = owner || null,
 ): void {
   const members: VNode[] = []
-  // One member only: interop resolves an outlet's fallback per vapor slot, so
-  // several members would each render it (shared arbitration is a follow-up).
-  if (collectVaporSlots(vnodes, members) && members.length === 1) {
-    ;(members[0].vs!.outlets ||= []).push({ fallback, vdom, owner })
+  if (collectVaporSlots(vnodes, members) && members.length) {
+    const outlet: VaporSlotOutlet = { fallback, vdom, owner, key }
+    for (let i = 0; i < members.length; i++) {
+      ;(members[i].vs!.outlets ||= []).push(outlet)
+    }
   }
 }
 
