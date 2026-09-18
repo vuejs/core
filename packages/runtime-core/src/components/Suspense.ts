@@ -26,7 +26,7 @@ import {
   type SetupRenderEffectFn,
   queuePostRenderEffect,
 } from '../renderer'
-import { queuePostFlushCb } from '../scheduler'
+import { type SchedulerJob, queueJob, queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
 import {
   assertNumber,
@@ -451,6 +451,7 @@ export interface SuspenseBoundary {
   isInFallback: boolean
   isHydrating: boolean
   isUnmounted: boolean
+  deferredUpdates?: Set<SchedulerJob>
   effects: Function[]
   resolve(force?: boolean, sync?: boolean): void
   fallback(fallbackVNode: VNode): void
@@ -625,6 +626,14 @@ function createSuspenseBoundary(
       suspense.pendingBranch = null
       suspense.isInFallback = false
 
+      // Updates from the retained branch only need to run if it was resumed.
+      // Keep these separate from pending-branch effects, which are discarded
+      // when a pending branch is replaced.
+      if (resume && suspense.deferredUpdates) {
+        suspense.deferredUpdates.forEach(queueJob)
+      }
+      suspense.deferredUpdates = undefined
+
       // flush buffered effects
       // check if there is a pending parent suspense
       let parent = suspense.parent
@@ -709,6 +718,7 @@ function createSuspenseBoundary(
         activeBranch!.transition!.afterLeave = mountFallback
       }
       suspense.isInFallback = true
+      suspense.deferredUpdates = undefined
 
       // unmount current active branch
       unmount(
@@ -811,6 +821,7 @@ function createSuspenseBoundary(
 
     unmount(parentSuspense, doRemove) {
       suspense.isUnmounted = true
+      suspense.deferredUpdates = undefined
       if (suspense.activeBranch) {
         unmount(
           suspense.activeBranch,
@@ -969,4 +980,32 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 function isVNodeSuspensible(vnode: VNode) {
   const suspensible = vnode.props && vnode.props.suspensible
   return suspensible != null && suspensible !== false
+}
+
+export function queueSuspenseUpdate(
+  instance: ComponentInternalInstance,
+): boolean {
+  // A retained RouterView can replace its root Suspense with a comment when
+  // the nested route disappears. Defer before rendering so this replacement
+  // cannot bypass Suspense.process() and unmount the retained content.
+  if (!instance.subTree || !instance.subTree.suspense) {
+    return false
+  }
+  let parent: ComponentInternalInstance | null = instance
+  while (parent) {
+    const suspense: SuspenseBoundary | null = parent.suspense
+    if (
+      suspense &&
+      suspense.pendingBranch &&
+      !suspense.isHydrating &&
+      !suspense.isInFallback &&
+      suspense.activeBranch &&
+      suspense.activeBranch.component === parent
+    ) {
+      ;(suspense.deferredUpdates ||= new Set()).add(instance.job)
+      return true
+    }
+    parent = parent.parent
+  }
+  return false
 }
