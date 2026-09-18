@@ -81,18 +81,15 @@ export function renderSlot(
   const vaporSlot = slot && (slot as any)[rawVaporSlotKey]
   if (vaporSlot) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
-    ret.vs = {
-      slot: vaporSlot,
-      outlets: fallback
-        ? [
-            {
-              fallback,
-              vdom: true,
-              owner: currentRenderingInstance,
-              key: currentRenderingInstance,
-            },
-          ]
-        : undefined,
+    ret.vs = { slot: vaporSlot }
+    if (fallback) {
+      attachVaporSlotOutlet(
+        [ret],
+        fallback,
+        true,
+        currentRenderingInstance,
+        currentRenderingInstance,
+      )
     }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
@@ -155,6 +152,7 @@ export function renderSlot(
         validSlotContent,
         fallback,
         true,
+        currentRenderingInstance,
         currentRenderingInstance,
       )
     }
@@ -220,8 +218,8 @@ export function attachVaporSlotOutlet(
   vnodes: VNodeArrayChildren,
   fallback: () => any,
   vdom: boolean,
-  owner?: ComponentInternalInstance | null,
-  key: object | null = owner || null,
+  owner: ComponentInternalInstance | null,
+  key: object | null,
 ): void {
   const members: VNode[] = []
   if (collectVaporSlots(vnodes, members) && members.length) {
