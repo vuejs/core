@@ -40,6 +40,8 @@ export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'
 const doc = (typeof document !== 'undefined' ? document : null) as Document
 
 const templateContainer = doc && /*@__PURE__*/ doc.createElement('template')
+const fragmentAnchorDocument =
+  doc && /*@__PURE__*/ doc.implementation.createDocument(null, null)
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
@@ -71,6 +73,12 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   },
 
   createText: text => doc.createTextNode(text),
+
+  // Fragment anchors must survive Node.normalize(), which removes empty text
+  // nodes. CDATA sections are preserved by normalize() and omitted from HTML
+  // serialization, so they don't add visible DOM markers.
+  createFragmentAnchor: text =>
+    doc.adoptNode(fragmentAnchorDocument!.createCDATASection(text)),
 
   createComment: text => doc.createComment(text),
 
