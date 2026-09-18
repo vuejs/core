@@ -277,7 +277,11 @@ export interface VNode<
   vs?: {
     slot: (props: any) => any
     fallback: (() => VNodeArrayChildren) | undefined
+    // rendering instance that owns `fallback`: interop invokes it late,
+    // outside the owner's render
+    owner?: ComponentInternalInstance | null
     outletFallback?: (() => VNodeArrayChildren) | undefined
+    outletOwner?: ComponentInternalInstance | null
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -830,7 +834,9 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
     fallback: vaporSlot.fallback,
+    owner: vaporSlot.owner,
     outletFallback: vaporSlot.outletFallback,
+    outletOwner: vaporSlot.outletOwner,
   }
 
   if (vnode.el) {

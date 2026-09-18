@@ -39,6 +39,7 @@ import {
   getInheritedScopeIds,
   getTransitionRawChildren,
   invokeDirectiveHook,
+  invokeSlotFallback,
   isEmitListener,
   isKeepAlive,
   isVNode,
@@ -2810,7 +2811,8 @@ function hydrateVNode(
 }
 
 function createFallback(
-  fallback: InteropSlotFallback,
+  getFallback: () => InteropSlotFallback | undefined,
+  getOwner: () => ComponentInternalInstance | null | undefined,
   parentComponent: ComponentInternalInstance | null,
   isVNodeFallback: () => boolean,
 ): BlockFn {
@@ -2820,7 +2822,10 @@ function createFallback(
       const frag = createVNodeChildrenFragment(
         internals,
         () => {
-          const children = fallback()
+          const children = invokeSlotFallback(
+            getFallback() || renderEmptyVNodes,
+            getOwner(),
+          )
           return children == null
             ? EMPTY_VNODES
             : normalizeInteropSlotValue(children)
@@ -2832,7 +2837,7 @@ function createFallback(
       }
       return frag
     }
-    return fallback() as Block
+    return (getFallback() || renderEmptyVNodes)() as Block
   }
 }
 
@@ -2846,6 +2851,8 @@ type InteropSlotFallback = {
 interface InteropVaporSlotState {
   localFallback: ShallowRef<InteropSlotFallback | undefined>
   outletFallback: ShallowRef<InteropSlotFallback | undefined>
+  localOwner: ComponentInternalInstance | null | undefined
+  outletOwner: ComponentInternalInstance | null | undefined
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -2855,6 +2862,8 @@ function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
     state = {
       localFallback: shallowRef(slot.fallback),
       outletFallback: shallowRef(slot.outletFallback),
+      localOwner: slot.owner,
+      outletOwner: slot.outletOwner,
     }
     slot.state = state
   }
@@ -2867,6 +2876,8 @@ function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
     return
   }
   n2.vs!.state = prevState
+  prevState.localOwner = n2.vs!.owner
+  prevState.outletOwner = n2.vs!.outletOwner
   prevState.localFallback.value = n2.vs!.fallback
   prevState.outletFallback.value = n2.vs!.outletFallback
 }
@@ -3025,14 +3036,16 @@ function renderVaporSlot(
 
     try {
       localFallback = createFallback(
-        () => (slotState.localFallback.value || renderEmptyVNodes)(),
+        () => slotState.localFallback.value,
+        () => slotState.localOwner,
         parentComponent,
         () =>
           !!slotState.localFallback.value &&
           !!slotState.localFallback.value[vdomSlotFallbackKey],
       )
       outletFallback = createFallback(
-        () => (slotState.outletFallback.value || renderEmptyVNodes)(),
+        () => slotState.outletFallback.value,
+        () => slotState.outletOwner,
         parentComponent,
         () =>
           !!slotState.outletFallback.value &&

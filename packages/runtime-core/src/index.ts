@@ -627,6 +627,7 @@ export {
 export {
   ensureValidVNode,
   ensureVaporSlotFallback,
+  invokeSlotFallback,
   rawVaporSlotKey,
   vdomSlotFallbackKey,
 } from './helpers/renderSlot'
