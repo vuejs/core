@@ -2,6 +2,7 @@ import type { RawSlots, Slots } from '../componentSlots'
 import {
   type ContextualRenderFn,
   currentRenderingInstance,
+  setCurrentRenderingInstance,
 } from '../componentRenderContext'
 import {
   Comment,
@@ -19,7 +20,7 @@ import {
 import { PatchFlags, SlotFlags, extend, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
-import type { Data } from '../component'
+import type { ComponentInternalInstance, Data } from '../component'
 
 /**
  * Links a slot function to its raw vapor slot: a raw vapor slot carries
@@ -39,6 +40,28 @@ export const vdomSlotFallbackKey: unique symbol = Symbol(`vdomSlotFallback`)
 type SlotFallback = {
   (): VNodeArrayChildren
   [vdomSlotFallbackKey]?: boolean
+}
+
+/**
+ * Invokes a VDOM slot fallback under the outlet owner that produced it, the
+ * way `renderSlot` would have rendered it inline. Vapor interop invokes
+ * fallbacks late, outside any render, so it passes the owner recorded on the
+ * vapor slot vnode. Internal to vapor interop.
+ */
+export function invokeSlotFallback(
+  fallback: () => VNodeArrayChildren,
+  owner: ComponentInternalInstance | null | undefined,
+): VNodeArrayChildren {
+  if (!owner) return fallback()
+  const prev = setCurrentRenderingInstance(owner)
+  const prevStackSize = blockStack.length
+  try {
+    return fallback()
+  } finally {
+    // close blocks left dangling when the fallback throws mid-block (#15070)
+    for (let i = blockStack.length; i > prevStackSize; i--) closeBlock()
+    setCurrentRenderingInstance(prev)
+  }
 }
 
 /**
@@ -70,7 +93,7 @@ export function renderSlot(
   const vaporSlot = slot && (slot as any)[rawVaporSlotKey]
   if (vaporSlot) {
     const ret = (openBlock(), createBlock(VaporSlot, props))
-    ret.vs = { slot: vaporSlot, fallback }
+    ret.vs = { slot: vaporSlot, fallback, owner: currentRenderingInstance }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
     }
@@ -127,7 +150,11 @@ export function renderSlot(
     const validSlotContent = slot && ensureValidVNode(slot(props))
 
     // handle forwarded vapor slot fallback
-    ensureVaporSlotFallback(validSlotContent, fallback)
+    ensureVaporSlotFallback(
+      validSlotContent,
+      fallback,
+      currentRenderingInstance,
+    )
 
     const slotKey =
       props.key ||
@@ -184,6 +211,7 @@ export function ensureValidVNode(
 export function ensureVaporSlotFallback(
   vnodes: VNodeArrayChildren | null | undefined,
   fallback?: () => VNodeArrayChildren,
+  owner?: ComponentInternalInstance | null,
 ): void {
   let vaporSlot: any
   if (
@@ -196,5 +224,6 @@ export function ensureVaporSlotFallback(
     // vapor slot vnode. Interop treats this as an additional local fallback
     // source for that outlet boundary instead of propagated ancestor state.
     vaporSlot.outletFallback = fallback
+    vaporSlot.outletOwner = owner
   }
 }

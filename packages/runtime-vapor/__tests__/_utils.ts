@@ -172,9 +172,12 @@ export function compile(
   {
     vapor = true,
     ssr = false,
+    id = 'x',
   }: {
     vapor?: boolean | undefined
     ssr?: boolean | undefined
+    // scope id for `<style scoped>` sources; distinct ids tell components apart
+    id?: string
   } = {},
 ): any {
   if (!sfc.includes(`<script`)) {
@@ -185,7 +188,7 @@ export function compile(
   const descriptor = parse(sfc).descriptor
 
   const script = compileScript(descriptor, {
-    id: 'x',
+    id,
     isProd: true,
     inlineTemplate: true,
     genDefaultAs: '__sfc__',

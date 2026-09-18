@@ -1,7 +1,12 @@
-import { renderSlot } from '../../src/helpers/renderSlot'
+import {
+  invokeSlotFallback,
+  rawVaporSlotKey,
+  renderSlot,
+} from '../../src/helpers/renderSlot'
 import {
   Fragment,
   type Slot,
+  type VNode,
   createBlock,
   createCommentVNode,
   createVNode,
@@ -10,7 +15,11 @@ import {
   withCtx,
 } from '../../src'
 import { PatchFlags } from '@vue/shared'
-import { setCurrentRenderingInstance } from '../../src/componentRenderContext'
+import {
+  currentRenderingInstance,
+  setCurrentRenderingInstance,
+} from '../../src/componentRenderContext'
+import { blockStack } from '../../src/vnode'
 
 describe('renderSlot', () => {
   beforeEach(() => {
@@ -251,5 +260,66 @@ describe('renderSlot', () => {
 
     expect(forwarded.vs!.fallback).toBe(localFallback)
     expect(forwarded.vs!.outletFallback).toBe(nextOuterFallback)
+  })
+
+  it('records the rendering instance that owns each fallback on a forwarded vapor slot', () => {
+    const vaporSlot = () => []
+    ;(vaporSlot as any)[rawVaporSlotKey] = vaporSlot
+    const wrapper = { type: {}, appContext: {} } as any
+    const inner = { type: {}, appContext: {} } as any
+    const wrapperFallback = () => [h('b')]
+    const innerFallback = () => [h('p')]
+    let forwarded!: VNode
+
+    setCurrentRenderingInstance(inner)
+    // the compiled wrapper forwards its outlet inside a `withCtx` slot, so
+    // the inner outlet invokes it under the wrapper's rendering instance
+    const rendered = renderSlot(
+      {
+        default: withCtx(
+          () => [
+            (forwarded = renderSlot(
+              { default: vaporSlot },
+              'default',
+              {},
+              wrapperFallback,
+            )),
+          ],
+          wrapper,
+        ) as Slot,
+      },
+      'default',
+      {},
+      innerFallback,
+    )
+
+    expect((rendered.children as VNode[])[0]).toBe(forwarded)
+    expect(forwarded.vs!.fallback).toBe(wrapperFallback)
+    expect(forwarded.vs!.owner).toBe(wrapper)
+    expect(forwarded.vs!.outletFallback).toBe(innerFallback)
+    expect(forwarded.vs!.outletOwner).toBe(inner)
+  })
+
+  describe('invokeSlotFallback', () => {
+    it('renders the fallback under its owner and restores the previous instance', () => {
+      const owner = { type: { __scopeId: 'owner' } } as any
+      const outer = { type: {} } as any
+      setCurrentRenderingInstance(outer)
+      const children = invokeSlotFallback(() => [h('p')], owner)
+      expect((children[0] as VNode).scopeId).toBe('owner')
+      expect(currentRenderingInstance).toBe(outer)
+    })
+
+    it('closes blocks left open by a throwing fallback', () => {
+      const owner = { type: {} } as any
+      const size = blockStack.length
+      expect(() =>
+        invokeSlotFallback(() => {
+          openBlock()
+          throw new Error('boom')
+        }, owner),
+      ).toThrow('boom')
+      expect(blockStack.length).toBe(size)
+    })
   })
 })
