@@ -1,4 +1,4 @@
-import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
+import { BindingTypes, ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
   VaporDynamicComponentFlags,
   VaporSlotFlags,
@@ -84,6 +84,8 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).toContain(`$: [`)
+    expect(code).toContain(`let s\n`)
+    expect(code).toContain(`fn: s || (s = () =>`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -210,7 +212,8 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: (_slotProps0) =>`)
+    expect(code).contains(`let s\n`)
+    expect(code).contains(`fn: s || (s = (_slotProps0) =>`)
     expect(code).contains(`_slotProps0.foo + _ctx.bar`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
@@ -560,7 +563,8 @@ describe('compiler: transform slot', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(code).contains(`fn: (_slotProps0) =>`)
+    expect(code).contains(`let s, s1, s2\n`)
+    expect(code).contains(`fn: s1 || (s1 = (_slotProps0) =>`)
 
     expect(ir.block.dynamic.children[0].operation).toMatchObject({
       type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -1268,5 +1272,26 @@ describe('compiler: transform slot', () => {
     const params = '(item = _for_item0.value.fallback, key, index = item.id)'
     expect(code).toContain(`${params} => (item.name)`)
     expect(code).toContain(`${params} => (index)`)
+  })
+
+  test('dynamic slot functions do not shadow setup bindings or sibling declarations', () => {
+    const { code } = compileWithSlots(
+      `<Comp><template v-if="ok" #default>{{ s }}</template></Comp>
+       <Comp><template #[name]>{{ s1 }}</template></Comp>`,
+      {
+        inline: true,
+        bindingMetadata: {
+          s: BindingTypes.SETUP_CONST,
+          s1: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+    expect(code).toMatchSnapshot()
+    expect(code).toContain('let s2\n')
+    expect(code).toContain('let s3\n')
+    expect(code).toContain('fn: s2 || (s2 = () =>')
+    expect(code).toContain('fn: s3 || (s3 = () =>')
+    expect(code).toContain('_toDisplayString(s)')
+    expect(code).toContain('_toDisplayString(s1)')
   })
 })

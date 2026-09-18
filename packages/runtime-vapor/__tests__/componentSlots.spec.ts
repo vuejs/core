@@ -7685,4 +7685,227 @@ describe('component: slots', () => {
       }
     })
   })
+
+  describe('stable dynamic slot functions', () => {
+    describe.each([true, false])('vapor child: %s', vapor => {
+      test.each(['v-if="data.list.length" #default', '#[data.names[0]]'])(
+        'preserves state and updates slot props when %s recomputes',
+        async declaration => {
+          const data = ref({
+            list: [1],
+            names: ['default'],
+            text: 'a',
+            value: 1,
+          })
+          const Content = compile(
+            `<script setup vapor>
+              import { ref } from 'vue'
+              const props = defineProps(['label'])
+              const count = ref(0)
+            </script>
+            <template><button @click="count++">{{ props.label }}:{{ count }}</button></template>`,
+            data,
+          )
+          const Child = compile(
+            `<script setup>const data = _data</script>
+            <template><slot :value="data.value" /></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const App = compile(
+            `<template>
+              <components.Child>
+                <template ${declaration}="{ value }">
+                  <input :data-label="data.text + ':' + value" />
+                  <components.Content :label="data.text + ':' + value" />
+                </template>
+              </components.Child>
+            </template>`,
+            data,
+            { Child, Content },
+          )
+          const root = document.createElement('div')
+          document.body.appendChild(root)
+          const app = createVaporApp(App).use(vaporInteropPlugin)
+          try {
+            app.mount(root)
+            const input = root.querySelector('input')!
+            const button = root.querySelector('button')!
+            button.click()
+            input.value = 'typed'
+            input.focus()
+            await nextTick()
+            expect(button.textContent).toBe('a:1:1')
+
+            data.value.list.push(2)
+            data.value.names = ['default']
+            data.value.text = 'b'
+            data.value.value = 2
+            await nextTick()
+
+            expect(root.querySelector('input')).toBe(input)
+            expect(document.activeElement).toBe(input)
+            expect(input.value).toBe('typed')
+            expect(input.dataset.label).toBe('b:2')
+            expect(root.querySelector('button')!.textContent).toBe('b:2:1')
+
+            data.value.value = 3
+            await nextTick()
+            expect(input.dataset.label).toBe('b:3')
+            expect(root.querySelector('button')!.textContent).toBe('b:3:1')
+          } finally {
+            app.unmount()
+            root.remove()
+          }
+        },
+      )
+    })
+
+    test('replaces content only when switching conditional branches', async () => {
+      const data = ref(1)
+      const Child = compile(`<template><slot /></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child>
+            <template v-if="data < 10" #default><input id="a" /></template>
+            <template v-else-if="data < 20" #default><input id="b" /></template>
+            <template v-else #default><input id="c" /></template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      try {
+        app.mount(root)
+        let input = root.querySelector('input')!
+        for (const value of [2, 15, 16, 25, 26, 1]) {
+          data.value = value
+          await nextTick()
+          const next = root.querySelector('input')!
+          const id = value < 10 ? 'a' : value < 20 ? 'b' : 'c'
+          expect(next.id).toBe(id)
+          expect(next === input).toBe(input.id === id)
+          input = next
+        }
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('swaps content when dynamic slot declarations exchange names', async () => {
+      await renderParity(
+        {
+          Child: `<template><slot name="a" /></template>`,
+          App: `<template>
+            <components.Child>
+              <template #[data[0]]><input id="first" /></template>
+              <template #[data[1]]><input id="second" /></template>
+            </components.Child>
+          </template>`,
+        },
+        () => ref(['a', 'b']),
+        async (data, root) => {
+          expect(root.querySelector('input')!.id).toBe('first')
+          data.value = ['b', 'a']
+          await nextTick()
+          expect(root.querySelector('input')!.id).toBe('second')
+        },
+      )
+    })
+
+    test('replaces content when the dynamic slot and outlet are renamed together', async () => {
+      await renderParity(
+        {
+          Child: `<template><slot :name="data" /></template>`,
+          App: `<template>
+            <components.Child><template #[data]><input /></template></components.Child>
+          </template>`,
+        },
+        () => ref('p'),
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          input.value = 'typed'
+          data.value = 'q'
+          await nextTick()
+          expect(root.querySelector('input')).not.toBe(input)
+          expect(root.querySelector('input')!.value).toBe('')
+        },
+      )
+    })
+
+    test('keeps functions inside the outer v-for scope', async () => {
+      const data = ref([
+        { id: 'a', label: 'A', list: [1] },
+        { id: 'b', label: 'B', list: [1] },
+      ])
+      const Child = compile(`<template><slot /></template>`, data)
+      const App = compile(
+        `<template>
+          <components.Child v-for="row in data" :key="row.id">
+            <template v-if="row.list.length" #default>
+              <input :data-label="row.label" />
+            </template>
+          </components.Child>
+        </template>`,
+        data,
+        { Child },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      try {
+        app.mount(root)
+        const [a, b] = root.querySelectorAll('input')
+        data.value = [
+          { id: 'b', label: 'B2', list: [1, 2] },
+          { id: 'a', label: 'A2', list: [1, 2] },
+        ]
+        await nextTick()
+        const inputs = root.querySelectorAll('input')
+        expect(inputs[0]).toBe(b)
+        expect(inputs[1]).toBe(a)
+        expect(a.dataset.label).toBe('A2')
+        expect(b.dataset.label).toBe('B2')
+      } finally {
+        app.unmount()
+      }
+    })
+
+    test('captures nested slot props without shadowing the outer slot binding', async () => {
+      const data = ref({ list: [1], label: 'A' })
+      const Outer = compile(`<template><slot :row="data" /></template>`, data)
+      const Child = compile(
+        `<template><slot :value="data.label" /></template>`,
+        data,
+      )
+      const App = compile(
+        `<template>
+          <components.Outer v-slot="s">
+            <components.Child>
+              <template v-if="s.row.list.length" #default="inner">
+                <input :data-label="s.row.label + ':' + inner.value" />
+              </template>
+            </components.Child>
+          </components.Outer>
+        </template>`,
+        data,
+        { Child, Outer },
+      )
+      const root = document.createElement('div')
+      const app = createVaporApp(App)
+      try {
+        app.mount(root)
+        const input = root.querySelector('input')!
+        expect(input.dataset.label).toBe('A:A')
+        data.value = { list: [1, 2], label: 'B' }
+        await nextTick()
+        expect(root.querySelector('input')).toBe(input)
+        expect(input.dataset.label).toBe('B:B')
+      } finally {
+        app.unmount()
+      }
+    })
+  })
 })

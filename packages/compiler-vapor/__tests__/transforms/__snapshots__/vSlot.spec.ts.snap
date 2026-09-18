@@ -22,14 +22,15 @@ exports[`compiler: transform slot > default slot with v-if directive 1`] = `
 "import { createAssetComponent as _createAssetComponent } from 'vue';
 
 export function render(_ctx) {
+  let s
   const n1 = _createAssetComponent("Comp", null, {
     $: [
       () => (_ctx.show
         ? {
           name: "default",
-          fn: () => {
+          fn: s || (s = () => {
             return []
-          }
+          })
         }
         : void 0)
     ]
@@ -38,19 +39,55 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: transform slot > dynamic slot functions do not shadow setup bindings or sibling declarations 1`] = `
+"
+  const _component_Comp = _resolveComponent("Comp")
+  let s2
+  const n2 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      () => (ok
+        ? {
+          name: "default",
+          fn: s2 || (s2 = () => {
+            const n0 = t0()
+            _renderEffect(() => _setText(n0, _toDisplayString(s)))
+            return n0
+          })
+        }
+        : void 0)
+    ]
+  })
+  let s3
+  const n5 = _createComponentWithFallback(_component_Comp, null, {
+    $: [
+      () => ({
+        name: name,
+        fn: s3 || (s3 = () => {
+          const n3 = t0()
+          _renderEffect(() => _setText(n3, _toDisplayString(s1)))
+          return n3
+        })
+      })
+    ]
+  })
+  return [n2, n5]
+"
+`;
+
 exports[`compiler: transform slot > dynamic slots name 1`] = `
 "import { createAssetComponent as _createAssetComponent, template as _template } from 'vue';
 const t0 = _template("foo", 2)
 
 export function render(_ctx) {
+  let s
   const n2 = _createAssetComponent("Comp", null, {
     $: [
       () => ({
         name: _ctx.name,
-        fn: () => {
+        fn: s || (s = () => {
           const n0 = t0()
           return n0
-        }
+        })
       })
     ]
   }, true)
@@ -118,30 +155,31 @@ const t1 = _template("another condition", 2)
 const t2 = _template("else condition", 2)
 
 export function render(_ctx) {
+  let s, s1, s2
   const n6 = _createAssetComponent("Comp", null, {
     $: [
       () => (_ctx.condition
         ? {
           name: "condition",
-          fn: () => {
+          fn: s || (s = () => {
             const n0 = t0()
             return n0
-          }
+          })
         }
         : _ctx.anotherCondition
           ? {
             name: "condition",
-            fn: (_slotProps0) => {
+            fn: s1 || (s1 = (_slotProps0) => {
               const n2 = t1()
               return n2
-            }
+            })
           }
           : {
             name: "condition",
-            fn: () => {
+            fn: s2 || (s2 = () => {
               const n4 = t2()
               return n4
-            }
+            })
           })
     ]
   }, true)
@@ -297,15 +335,16 @@ exports[`compiler: transform slot > on component dynamically named slot 1`] = `
 const t0 = _template(" ")
 
 export function render(_ctx) {
+  let s
   const n1 = _createAssetComponent("Comp", null, {
     $: [
       () => ({
         name: _ctx.named,
-        fn: (_slotProps0) => {
+        fn: s || (s = (_slotProps0) => {
           const n0 = t0()
           _renderEffect(() => _setText(n0, _toDisplayString(_slotProps0.foo + _ctx.bar)))
           return n0
-        }
+        })
       })
     ]
   }, true)
