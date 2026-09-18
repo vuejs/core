@@ -26,6 +26,7 @@ import {
   onUnmounted,
   onUpdated,
   provide,
+  reactive,
   ref,
   renderSlot,
   resolveComponent,
@@ -5160,6 +5161,354 @@ describe('vdomInterop', () => {
       await nextTick()
       expect(host.textContent).toContain('A')
       expect(onEnter).toHaveBeenCalledTimes(1)
+    })
+
+    test('should isolate props of a cached VDOM child', async () => {
+      const calls: string[] = []
+      const createPage = (name: string) =>
+        defineComponent({
+          name,
+          props: ['n'],
+          setup(props: any) {
+            watch(
+              () => props.n,
+              (value, oldValue) =>
+                calls.push(`${name} ${oldValue} -> ${value}`),
+              { flush: 'sync' },
+            )
+            return () => h('div', `${name} ${props.n}`)
+          },
+        })
+      const Foo = createPage('foo')
+      const Bar = createPage('bar')
+      const data = shallowRef<any>({ current: Foo, n: 1 })
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+        </script>
+        <template>
+          <KeepAlive>
+            <component :is="data.current" :n="data.n" />
+          </KeepAlive>
+        </template>`,
+        data,
+      )
+      const { html } = define(App).render()
+      expect(html()).toBe(`<div>foo 1</div><!--dynamic-component-->`)
+
+      data.value = { current: Bar, n: 2 }
+      await nextTick()
+      expect(html()).toBe(`<div>bar 2</div><!--dynamic-component-->`)
+      expect(calls).toEqual([])
+
+      data.value = { current: Bar, n: 3 }
+      await nextTick()
+      expect(calls).toEqual([`bar 2 -> 3`])
+
+      data.value = { current: Foo, n: 4 }
+      await nextTick()
+      expect(html()).toBe(`<div>foo 4</div><!--dynamic-component-->`)
+      expect(calls).toEqual([`bar 2 -> 3`, `foo 1 -> 4`])
+    })
+
+    test('should isolate dynamic prop sources of a cached VDOM branch', async () => {
+      const calls: string[] = []
+      const createPage = (name: string) =>
+        defineComponent({
+          name,
+          props: ['n', 'label'],
+          setup(props: any) {
+            watch(
+              () => props.label,
+              (value, oldValue) =>
+                calls.push(`${name} ${oldValue} -> ${value}`),
+              { flush: 'sync' },
+            )
+            return () => h('div', `${name} ${props.n} ${props.label}`)
+          },
+        })
+      const Foo = createPage('foo')
+      const Bar = createPage('bar')
+      const toggle = ref(true)
+      const bag = reactive({ n: 1, label: 'a' })
+      const App = compile(
+        `<script setup vapor>
+          const toggle = _data.toggle
+          const bag = _data.bag
+          const Foo = _components.Foo
+          const Bar = _components.Bar
+        </script>
+        <template>
+          <KeepAlive>
+            <Foo v-if="toggle" v-bind="bag" />
+            <Bar v-else v-bind="bag" />
+          </KeepAlive>
+        </template>`,
+        { toggle, bag } as any,
+        { Foo, Bar },
+      )
+      const { html } = define(App).render()
+      expect(html()).toBe(`<div>foo 1 a</div><!--if-->`)
+
+      toggle.value = false
+      bag.n = 2
+      await nextTick()
+      expect(html()).toBe(`<div>bar 2 a</div><!--if-->`)
+      expect(calls).toEqual([])
+
+      bag.label = 'b'
+      await nextTick()
+      expect(calls).toEqual([`bar a -> b`])
+
+      toggle.value = true
+      await nextTick()
+      expect(html()).toBe(`<div>foo 2 b</div><!--if-->`)
+      expect(calls).toEqual([`bar a -> b`, `foo a -> b`])
+    })
+
+    test('should stop committing props to a pruned VDOM child', async () => {
+      const calls: string[] = []
+      const unmounted = vi.fn()
+      const createPage = (name: string) =>
+        defineComponent({
+          name,
+          props: ['n'],
+          setup(props: any) {
+            watch(
+              () => props.n,
+              () => calls.push(`${name} ${props.n}`),
+              { flush: 'sync' },
+            )
+            onUnmounted(unmounted)
+            return () => h('div', `${name} ${props.n}`)
+          },
+        })
+      const Foo = createPage('foo')
+      const Bar = createPage('bar')
+      const data = shallowRef<any>({
+        current: Foo,
+        n: 1,
+        include: ['foo', 'bar'],
+      })
+      let keepAlive: any
+      const App = defineVaporComponent({
+        setup() {
+          keepAlive = createComponent(
+            VaporKeepAlive,
+            { include: () => data.value.include },
+            {
+              default: () =>
+                createDynamicComponent(() => data.value.current, {
+                  n: () => data.value.n,
+                }),
+            },
+          )
+          return keepAlive
+        },
+      })
+      const { html } = define(App as any).render()
+      expect(html()).toBe(`<div>foo 1</div><!--dynamic-component-->`)
+
+      const cache = (keepAlive as any).__v_cache as Map<any, any>
+      const fooFrag = Array.from(cache.values())[0] as DynamicFragment
+      const scopeOnMount = fooFrag.inputScope?.active
+
+      data.value = { current: Bar, n: 2, include: ['foo', 'bar'] }
+      await nextTick()
+      expect(unmounted).not.toHaveBeenCalled()
+      const scopeWhileCached = fooFrag.inputScope?.active
+      calls.length = 0
+
+      // dropping `foo` from `include` unmounts the cached child, which must
+      // not see the props committed for the active one
+      data.value = { current: Bar, n: 3, include: ['bar'] }
+      await nextTick()
+      expect(calls).toEqual([`bar 3`])
+      expect(unmounted).toHaveBeenCalledTimes(1)
+      // caching only pauses the commit scope, pruning has to tear it down:
+      // a merely paused scope would keep the entry's inputs subscribed
+      expect([scopeOnMount, scopeWhileCached]).toEqual([true, true])
+      expect(fooFrag.inputScope!.active).toBe(false)
+    })
+
+    test('should stop committing props to a VDOM child evicted by max', async () => {
+      const calls: string[] = []
+      const unmounted: string[] = []
+      const createPage = (name: string) =>
+        defineComponent({
+          name,
+          props: ['n'],
+          setup(props: any) {
+            watch(
+              () => props.n,
+              () => calls.push(`${name} ${props.n}`),
+              { flush: 'sync' },
+            )
+            onUnmounted(() => unmounted.push(name))
+            return () => h('div', `${name} ${props.n}`)
+          },
+        })
+      const Foo = createPage('foo')
+      const Bar = createPage('bar')
+      const Baz = createPage('baz')
+      const data = shallowRef<any>({ current: Foo, n: 1 })
+      let keepAlive: any
+      const App = defineVaporComponent({
+        setup() {
+          keepAlive = createComponent(
+            VaporKeepAlive,
+            { max: () => 2 },
+            {
+              default: () =>
+                createDynamicComponent(() => data.value.current, {
+                  n: () => data.value.n,
+                }),
+            },
+          )
+          return keepAlive
+        },
+      })
+      const { html } = define(App as any).render()
+      expect(html()).toBe(`<div>foo 1</div><!--dynamic-component-->`)
+
+      const cache = (keepAlive as any).__v_cache as Map<any, any>
+      const fooFrag = Array.from(cache.values())[0] as DynamicFragment
+      const scopeOnMount = fooFrag.inputScope?.active
+
+      data.value = { current: Bar, n: 2 }
+      await nextTick()
+      expect(unmounted).toEqual([])
+      calls.length = 0
+
+      // `max` evicts the least recently used entry through the other prune
+      // path, which has to tear its commit scope down the same way
+      data.value = { current: Baz, n: 3 }
+      await nextTick()
+      expect(html()).toBe(`<div>baz 3</div><!--dynamic-component-->`)
+      expect(unmounted).toEqual([`foo`])
+      expect(calls).toEqual([])
+      expect(scopeOnMount).toBe(true)
+      expect(fooFrag.inputScope!.active).toBe(false)
+    })
+
+    test('should keep running the own effects of a cached VDOM child', async () => {
+      const run = async (vapor: boolean) => {
+        const renders: string[] = []
+        const external = ref('x')
+        const Page = defineComponent({
+          name: 'page',
+          props: ['n'],
+          setup(props: any) {
+            return () => {
+              renders.push(`${props.n}:${external.value}`)
+              return h('div', `page ${props.n} ${external.value}`)
+            }
+          },
+        })
+        const Other = defineComponent({
+          name: 'other',
+          props: ['n'],
+          setup: () => () => h('div', 'other'),
+        })
+        const data = shallowRef<any>({ current: Page, n: 1 })
+        const App = compile(
+          `<script setup${vapor ? ' vapor' : ''}>
+            const data = _data
+          </script>
+          <template>
+            <KeepAlive>
+              <component :is="data.current" :n="data.n" />
+            </KeepAlive>
+          </template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const root = document.createElement('div')
+        const app = vapor ? createVaporApp(App) : createApp(App)
+        app.use(vaporInteropPlugin).mount(root)
+        const mounted = root.textContent
+
+        data.value = { current: Other, n: 2 }
+        await nextTick()
+        const cached = renders.slice()
+
+        // isolating the inputs must not freeze the child itself: a dependency
+        // it owns still re-renders it offscreen, only with the props frozen
+        // at the moment it was cached
+        external.value = 'y'
+        await nextTick()
+        const whileCached = renders.slice()
+
+        data.value = { current: Page, n: 3 }
+        await nextTick()
+        const after = root.textContent
+        app.unmount()
+        return { mounted, cached, whileCached, after, renders }
+      }
+
+      const vdom = await run(false)
+      const vapor = await run(true)
+      expect(vdom.whileCached).toEqual([`1:x`, `1:y`])
+      expect(vdom.after).toBe(`page 3 y`)
+      expect(vapor.mounted).toBe(vdom.mounted)
+      expect(vapor.cached).toEqual(vdom.cached)
+      expect(vapor.whileCached).toEqual(vdom.whileCached)
+      expect(vapor.renders).toEqual(vdom.renders)
+      expect(vapor.after).toBe(vdom.after)
+    })
+
+    test('should isolate props across a nested vapor child of a cached VDOM child', async () => {
+      const calls: string[] = []
+      const VaporInner = defineVaporComponent({
+        props: { n: {} },
+        setup(props: any) {
+          watch(
+            () => props.n,
+            (value, oldValue) => calls.push(`inner ${oldValue} -> ${value}`),
+            { flush: 'sync' },
+          )
+          const n0 = template('<span> </span>')() as any
+          renderEffect(() => setText(child(n0) as any, props.n))
+          return n0
+        },
+      })
+      const VdomPage = defineComponent({
+        name: 'page',
+        props: ['n'],
+        setup(props: any) {
+          return () => h(VaporInner as any, { n: props.n })
+        },
+      })
+      const Other = defineComponent({
+        name: 'other',
+        props: ['n'],
+        setup: () => () => h('div', 'other'),
+      })
+      const data = shallowRef<any>({ current: VdomPage, n: 1 })
+      const App = compile(
+        `<script setup vapor>
+          const data = _data
+        </script>
+        <template>
+          <KeepAlive>
+            <component :is="data.current" :n="data.n" />
+          </KeepAlive>
+        </template>`,
+        data,
+      )
+      const { html } = define(App).render()
+      expect(html()).toBe(`<span>1</span><!--dynamic-component-->`)
+
+      data.value = { current: Other, n: 2 }
+      await nextTick()
+      expect(html()).toBe(`<div>other</div><!--dynamic-component-->`)
+      expect(calls).toEqual([])
+
+      data.value = { current: VdomPage, n: 3 }
+      await nextTick()
+      expect(html()).toBe(`<span>3</span><!--dynamic-component-->`)
+      expect(calls).toEqual([`inner 1 -> 3`])
     })
   })
 

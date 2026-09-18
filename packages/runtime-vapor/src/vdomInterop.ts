@@ -1508,6 +1508,9 @@ function createVDOMComponent(
     if (transition) setVNodeTransitionHooks(vnode, transition)
     const parentSuspense = resolveUnmountSuspense(suspense)
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      // A deactivated child is no longer patched by its parent in VDOM, so
+      // pause the commit of the raw sources it reads from this Vapor parent.
+      if (frag.inputScope) frag.inputScope.pause()
       keepAliveCtx!.clearCurrent!(frag)
       vdomDeactivate(
         vnode,
@@ -1520,6 +1523,7 @@ function createVDOMComponent(
     }
     isUnmounted = true
     isMounted = false
+    if (isKeepAliveEnabled && frag.inputScope) frag.inputScope.stop()
     internals.um(vnode, parentComponent as any, parentSuspense, !!parentNode)
     // VDOM transitions own their leaving DOM until the leave finishes.
     if (!transition) removeDom(parentNode)
@@ -1546,6 +1550,9 @@ function createVDOMComponent(
     if (parentSuspense !== undefined) suspense = parentSuspense
     const operationSuspense = suspense
     if (vnode.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      // An activated child re-enters with the inputs its parent holds now, so
+      // catch the commit up with the sources before activating.
+      if (frag.inputScope) frag.inputScope.resume()
       vdomActivate(
         vnode,
         parentNode,

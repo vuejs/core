@@ -410,30 +410,6 @@ export function createComponent(
       }
     }
 
-    if (isInteropEnabled && useVdomInterop(component, appContext)) {
-      const frag = appContext.vdom!.mount(
-        component as any,
-        currentInstance as any,
-        rawProps,
-        normalizeRawSlots(rawSlots),
-        once,
-      )
-      if (_insertionParent) registerNestedVDOMCleanup(frag)
-      if (!isHydrating) {
-        if (_insertionParent) {
-          insert(
-            frag,
-            _insertionParent,
-            _insertionAnchor,
-            currentRenderContext.suspense,
-          )
-        }
-      } else {
-        frag.hydrate()
-      }
-      return frag
-    }
-
     // teleport
     if (isTeleportEnabled && isVaporTeleport(component)) {
       // the teleport's main-view end anchor adopts the template `<!>`
@@ -501,6 +477,33 @@ export function createComponent(
       if (isolated) {
         inputScope = scope
       }
+    }
+
+    // A VDOM child reads the same raw sources through its interop fragment, so
+    // it is mounted with the isolated inputs and owns the commit scope too.
+    if (isInteropEnabled && useVdomInterop(component, appContext)) {
+      const frag = appContext.vdom!.mount(
+        component as any,
+        currentInstance as any,
+        rawProps,
+        normalizeRawSlots(rawSlots),
+        once,
+      )
+      if (inputScope) frag.inputScope = inputScope
+      if (_insertionParent) registerNestedVDOMCleanup(frag)
+      if (!isHydrating) {
+        if (_insertionParent) {
+          insert(
+            frag,
+            _insertionParent,
+            _insertionAnchor,
+            currentRenderContext.suspense,
+          )
+        }
+      } else {
+        frag.hydrate()
+      }
+      return frag
     }
 
     const instance = new VaporComponentInstance(
