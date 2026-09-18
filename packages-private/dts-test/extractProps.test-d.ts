@@ -18,7 +18,7 @@ declare const props: Prettify<ExtractPropTypes<typeof propsOptions>>
 
 expectType<number>(props.foo)
 expectType<string>(props.bar)
-expectType<boolean>(props.baz)
+expectType<boolean | undefined>(props.baz)
 expectType<unknown[] | undefined>(props.qux)
 
 // external facing props
