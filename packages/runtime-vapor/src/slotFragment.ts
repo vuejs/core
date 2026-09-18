@@ -89,7 +89,8 @@ function renderSlotFallback(
               // place.
               markDirty: force =>
                 current.markDirty(
-                  !!force || (!selected && hasSlotFallback(current.parent)),
+                  !!force ||
+                    (!selected && hasSlotFallback(current.getParent())),
                 ),
             },
             renderFallback,
@@ -103,7 +104,7 @@ function renderSlotFallback(
       result = { block: content, onContentInvalid }
     }
 
-    boundary = current.parent
+    boundary = current.getParent()
   }
 
   return result
@@ -343,6 +344,18 @@ function renderAndCommitSlotFallback(
   }
 }
 
+// Puts the content back in place of a cleared fallback.
+function exposeContent(state: SlotResolutionState): void {
+  const content = state.getContent()
+  beforeExpose(state, content)
+  if (!isHydrating) {
+    const parentNode = state.getParentNode()
+    if (parentNode) {
+      insert(content, parentNode, state.getAnchor())
+    }
+  }
+}
+
 export function disposeSlotResolution(
   state: SlotResolutionState,
   parentNode?: ParentNode,
@@ -404,18 +417,15 @@ function recheckSlotResolutionNow(
   // Content wins over fallback. If fallback was mounted, content may need to
   // be inserted back because it can be invalid while fallback is active.
   if (contentValid) {
-    const content = state.getContent()
     const hadFallback = !!fallback
     clearSlotFallback(state)
-    if (hadFallback) {
-      beforeExpose(state, content)
-      if (!isHydrating) {
-        const parentNode = state.getParentNode()
-        if (parentNode) {
-          insert(content, parentNode, state.getAnchor())
-        }
-      }
-    }
+    if (hadFallback) exposeContent(state)
+  } else if (fallback && !hasSlotFallback(state.boundary)) {
+    // The chain lost its last fallback (an interop outlet left it): the
+    // parked content returns to the DOM, invalid or not, so its anchors are
+    // live for later updates.
+    clearSlotFallback(state)
+    exposeContent(state)
   } else if (fallback) {
     // With an active fallback, `prevNodesValid` tells whether it could already
     // be in the DOM. Previously invalid fallback is inserted only after it
@@ -424,7 +434,7 @@ function recheckSlotResolutionNow(
       // If the selected fallback becomes invalid and no inherited fallback can
       // take over, keep it active. This is an internal fallback update, so its
       // anchors/effects must stay live until it becomes valid again.
-      if (!fallbackValid && hasSlotFallback(state.boundary.parent)) {
+      if (!fallbackValid && hasSlotFallback(state.boundary.getParent())) {
         renderAndCommitSlotFallback(state, true)
       } else if (force && fallbackValid) {
         renderAndCommitSlotFallback(state, true)

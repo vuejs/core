@@ -163,6 +163,19 @@ export type VNodeNormalizedChildren =
   | RawSlots
   | null
 
+/**
+ * A vdom outlet rendering a vapor slot, recorded on the slot's vnode: the
+ * outlet that produced the vnode first, then every enclosing outlet whose
+ * content is only that slot. Interop resolves their fallbacks in turn once
+ * the slot renders empty. Internal to vapor interop.
+ */
+export interface VaporSlotOutlet {
+  fallback: () => any
+  vdom: boolean
+  // rendering instance a vdom fallback renders under; none for a vapor outlet
+  owner?: ComponentInternalInstance | null
+}
+
 export interface VNode<
   HostNode = RendererNode,
   HostElement = RendererElement,
@@ -276,12 +289,9 @@ export interface VNode<
    */
   vs?: {
     slot: (props: any) => any
-    fallback: (() => VNodeArrayChildren) | undefined
-    // rendering instance that owns `fallback`: interop invokes it late,
-    // outside the owner's render
-    owner?: ComponentInternalInstance | null
-    outletFallback?: (() => VNodeArrayChildren) | undefined
-    outletOwner?: ComponentInternalInstance | null
+    // vdom outlets whose fallback this slot resolves, innermost first
+    // (see attachVaporSlotOutlet)
+    outlets?: VaporSlotOutlet[]
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -833,10 +843,7 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
 
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
-    fallback: vaporSlot.fallback,
-    owner: vaporSlot.owner,
-    outletFallback: vaporSlot.outletFallback,
-    outletOwner: vaporSlot.outletOwner,
+    outlets: vaporSlot.outlets,
   }
 
   if (vnode.el) {
