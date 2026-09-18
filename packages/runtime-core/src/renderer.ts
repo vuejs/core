@@ -999,7 +999,7 @@ function baseCreateRenderer(
       const newVNode = newChildren[i]
       // Determine the container (parent element) for the patch.
       // a pending async setup() component only has its placeholder comment
-      const oldEl = oldVNode.el || oldVNode.placeholder
+      const oldEl = oldVNode.el || resolveAsyncComponentPlaceholder(oldVNode)
       const container =
         // oldVNode may be an errored async setup() component inside Suspense
         // which will not have a mounted element

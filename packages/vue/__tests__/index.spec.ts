@@ -431,7 +431,7 @@ describe('compiler + runtime integration', () => {
   })
 
   // #15551
-  test('slot update while an async setup() component is pending', async () => {
+  test.each([false, true])('async setup (wrapped: %s)', async wrapped => {
     const loading = ref(false)
     const slotFilled = ref(true)
     const Dummy = defineComponent({
@@ -440,7 +440,11 @@ describe('compiler + runtime integration', () => {
       },
     })
     const Common = defineComponent({
-      components: { Dummy },
+      components: {
+        Dummy: wrapped
+          ? { components: { Dummy }, template: '<Dummy />' }
+          : Dummy,
+      },
       props: { loading: Boolean },
       template: `
         <div><div>
@@ -716,4 +720,33 @@ describe('compiler + runtime integration', () => {
       }).toEqual({ once: 1, live: 1 })
     },
   )
+
+  test('prop update while an async setup() component is pending', async () => {
+    const loading = ref(false)
+    const value = ref(0)
+    const Dummy = defineComponent({
+      props: ['value'],
+      async setup() {
+        await new Promise(() => {})
+      },
+    })
+    const container = document.createElement('div')
+    const app = createApp({
+      components: { Dummy },
+      setup: () => ({ loading, value }),
+      template: `<Suspense><div><div><Dummy v-if="loading" :value="value" /><span /></div></div></Suspense>`,
+    })
+    app.mount(container)
+
+    loading.value = true
+    await nextTick()
+    value.value++
+    await nextTick()
+    loading.value = false
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div><div><!----><!--v-if--><span></span></div></div>`,
+    )
+    app.unmount()
+  })
 })
