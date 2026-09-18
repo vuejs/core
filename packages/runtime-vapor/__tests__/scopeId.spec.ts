@@ -32,6 +32,7 @@ import {
   compileToVaporRender,
   makeRender,
   renderParity,
+  stripAnchors,
 } from './_utils'
 
 const define = makeRender()
@@ -2101,7 +2102,9 @@ describe('vdom interop', () => {
     // time, which the test compile helper does not do) — only slotted (-s)
     // parity is under test
     const strip = (html: string) =>
-      html.replace(/<!--[^>]*-->/g, '').replace(/ receiver=""/g, '')
+      html
+        .replace(/<!--[^>]*-->/g, '')
+        .replace(/ (receiver|wrapper|inner|leaf)=""/g, '')
 
     const mountPair = (makeSide: (vapor: boolean) => any) => {
       const vdomHost = document.createElement('div')
@@ -2126,14 +2129,18 @@ describe('vdom interop', () => {
         {
           receiver = `<template><slot/></template>`,
           data = ref<any>(0),
+          // compiled in order, each seeing the ones before it
           components = {} as Record<string, string>,
+          // give every component its lowercased name as scope id
+          scoped = false,
         } = {},
       ) =>
       (vapor: boolean) => {
         const c = vapor ? compile : vdomCompile
         const compiled: Record<string, any> = {}
         for (const name in components) {
-          compiled[name] = c(components[name], data)
+          compiled[name] = c(components[name], data, { ...compiled })
+          if (scoped) compiled[name].__scopeId = name.toLowerCase()
         }
         const Receiver = c(receiver, data)
         Receiver.__scopeId = 'receiver'
@@ -2197,6 +2204,50 @@ describe('vdom interop', () => {
       expect(strip(host.innerHTML)).toContain('receiver-s')
       unmount()
     })
+
+    // A chain of scoped components forwards the parent's (empty) slot. In vdom
+    // an outer outlet's fallback replaces the forwarded content altogether,
+    // so it only carries the slotted ids of the outlets around it.
+    test.each([
+      [
+        'the forwarding outlet owns the fallback',
+        {
+          Inner: `<template><slot><p>inner</p></slot></template>`,
+          Wrapper: `<template><components.Inner><slot><b>wrapper</b></slot></components.Inner></template>`,
+        },
+        '<b inner-s="" wrapper-s="">wrapper</b>',
+      ],
+      [
+        'the enclosing outlet owns the fallback',
+        {
+          Inner: `<template><slot><p>inner</p></slot></template>`,
+          Wrapper: `<template><components.Inner><slot/></components.Inner></template>`,
+        },
+        '<p inner-s="">inner</p>',
+      ],
+      [
+        'only the outermost of three outlets owns one',
+        {
+          Leaf: `<template><slot><p>leaf</p></slot></template>`,
+          Inner: `<template><components.Leaf><slot/></components.Leaf></template>`,
+          Wrapper: `<template><components.Inner><slot/></components.Inner></template>`,
+        },
+        '<p leaf-s="">leaf</p>',
+      ],
+    ])(
+      'a forwarded slot fallback carries the ids of the outlets around it, %s',
+      (_, components: Record<string, string>, expected) => {
+        const { vdomHost, host, unmount } = mountPair(
+          makeSides(
+            `<template><components.Wrapper><span v-if="data">content</span></components.Wrapper></template>`,
+            { data: ref(false), components, scoped: true },
+          ),
+        )
+        expect(strip(vdomHost.innerHTML)).toBe(expected)
+        expect(strip(host.innerHTML)).toBe(expected)
+        unmount()
+      },
+    )
   })
 
   test('applies inherited root-only scope id to the interop element root only', () => {
@@ -2592,20 +2643,22 @@ describe('vdom interop', () => {
         'the wrapper owns one',
         `<slot><b>wrapper fallback</b></slot>`,
         `<b data-v-wrapper="" data-v-inner-s="" data-v-wrapper-s="">wrapper fallback</b>`,
-        null,
       ],
       [
         'only the inner one does',
         `<slot/>`,
         `<p data-v-inner="" data-v-inner-s="">inner fallback</p>`,
-        // the inner fallback also gets the forwarding outlet's `-s` id here,
-        // as it does in pure vapor (fallbacks render under the requesting
-        // outlet's ids); vdom does not add it. Not a fallback-owner concern.
-        `<p data-v-inner="" data-v-inner-s="" data-v-wrapper-s="">inner fallback</p>`,
+      ],
+      [
+        // coverage guard: a host beside the slots then owns the inner fallback,
+        // right inside the providing outlet's fragment
+        'only the inner one does, for several slots',
+        `<slot/><slot name="b"/>`,
+        `<p data-v-inner="" data-v-inner-s="">inner fallback</p>`,
       ],
     ])(
       'a forwarded outlet keeps each fallback owner scope id, %s',
-      async (_, forwarded, expected, expectedVapor) => {
+      async (_, forwarded, expected) => {
         const Inner = scoped(
           'inner',
           `<template><slot><p>inner fallback</p></slot></template>`,
@@ -2622,8 +2675,36 @@ describe('vdom interop', () => {
           { Wrapper },
         )
         expect(vdom.after).toBe(expected)
-        expect(vapor.after).toBe(expectedVapor || vdom.after)
+        // an empty slot beside a host keeps its anchor
+        expect(stripAnchors(vapor.after)).toBe(vdom.after)
       },
     )
+
+    test('a fallback forwarded through several outlets carries only the ids around it', async () => {
+      const Leaf = scoped(
+        'leaf',
+        `<template><slot><p>leaf fallback</p></slot></template>`,
+      )
+      const Inner = scoped(
+        'inner',
+        `<template><components.Leaf><slot/></components.Leaf></template>`,
+        { Leaf },
+      )
+      const Wrapper = scoped(
+        'wrapper',
+        `<template><components.Inner><slot/></components.Inner></template>`,
+        { Inner },
+      )
+      const { vdom, vapor } = await renderParity(
+        { App: fillFrom('Wrapper') },
+        () => ref(false),
+        () => {},
+        { Wrapper },
+      )
+      expect(vdom.after).toBe(
+        `<p data-v-leaf="" data-v-leaf-s="">leaf fallback</p>`,
+      )
+      expect(vapor.after).toBe(vdom.after)
+    })
   })
 })

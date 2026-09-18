@@ -233,12 +233,14 @@ export function createSlotBoundary(
   getFallback: () => BlockFn | undefined,
   markDirty: (force?: boolean) => void,
   onContentInvalid?: (() => void)[],
+  // the host fragment's cell unless the boundary stands for another outlet
+  getScopeIds: () => string[] | null = () => fragment.slotScopeIds,
 ): SlotBoundaryContext {
   return {
     getParent: isFunction(parent) ? parent : () => parent,
     getFallback,
     run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
-    getScopeIds: () => fragment.slotScopeIds,
+    getScopeIds,
     markDirty,
     onContentInvalid,
   }
