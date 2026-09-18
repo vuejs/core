@@ -79,14 +79,10 @@ export type RawSlots = {
    * @internal
    */
   _?: SlotFlags
-  /**
-   * cache indexes for slot content
-   * @internal
-   */
-  __?: number[]
 }
 
-const isInternalKey = (key: string) => key[0] === '_' || key === '$stable'
+const isInternalKey = (key: string) =>
+  key === '_' || key === '_ctx' || key === '$stable'
 
 const normalizeSlotValue = (value: unknown): VNode[] =>
   isArray(value)

@@ -109,8 +109,8 @@ describe('CSS vars injection', () => {
       { isProd: true },
     )
     expect(content).toMatch(`_useCssVars(_ctx => ({
-  "4003f1a6": (_ctx.color),
-  "41b6490a": (_ctx.font.size)
+  "v4003f1a6": (_ctx.color),
+  "v41b6490a": (_ctx.font.size)
 }))}`)
 
     const { code } = compileStyle({
@@ -124,8 +124,8 @@ describe('CSS vars injection', () => {
     })
     expect(code).toMatchInlineSnapshot(`
       ".foo {
-              color: var(--4003f1a6);
-              font-size: var(--41b6490a);
+              color: var(--v4003f1a6);
+              font-size: var(--v41b6490a);
       }"
     `)
   })
@@ -184,6 +184,65 @@ describe('CSS vars injection', () => {
       expect(content).not.toMatch(`"${mockId}-color": (color)`)
       expect(content).toMatch(`"${mockId}-width": (width)`)
       assertCode(content)
+    })
+
+    test('should ignore comment delimiters in strings and url()', () => {
+      const { descriptor } = parse(
+        `<style>div {
+          background: url(//example.com/a.png); color: v-bind(color);
+          background: URL( https://example.com/b\\).png ); width: v-bind(width);
+          background: url( "//example.com/c.png" ); height: v-bind(height);
+          content: "escaped \\" // not a comment"; top: v-bind(top);
+          content: '/*'; left: v-bind(left); content: '*/';
+          font-family: v-bind('fonts["//"]');
+        }</style>`,
+      )
+      expect(descriptor.cssVars).toEqual([
+        'color',
+        'width',
+        'height',
+        'top',
+        'left',
+        'fonts["//"]',
+      ])
+    })
+
+    test('should still ignore comments around strings and url()', () => {
+      const { descriptor } = parse(
+        `<style lang="scss">
+        div { background: url("//example.com/a.png"); } // v-bind(a)
+        /* don't "open a string */ div { color: v-bind(color); } // v-bind(b)
+        // url(//example.com/b.png) v-bind(c)
+        </style>`,
+      )
+      expect(descriptor.cssVars).toEqual(['color'])
+    })
+
+    test('should end // comments at CR-only line endings', () => {
+      const { descriptor } = parse(
+        `<style lang="scss">// v-bind(a)\rdiv { color: v-bind(color); }</style>`,
+      )
+      expect(descriptor.cssVars).toEqual(['color'])
+    })
+
+    test('should treat an escaped CRLF inside a string as a continuation', () => {
+      const { descriptor } = parse(
+        `<style>div { content: "a\\\r\n//"; color: v-bind(color); }</style>`,
+      )
+      expect(descriptor.cssVars).toEqual(['color'])
+    })
+
+    test('should not treat identifiers ending with url as url()', () => {
+      const { descriptor } = parse(
+        `<style lang="scss">div {
+          background: my-url(// v-bind(a)
+            red);
+          background: my\\url(// v-bind(b)
+            red);
+          color: v-bind(color);
+        }</style>`,
+      )
+      expect(descriptor.cssVars).toEqual(['color'])
     })
 
     test('w/ <script setup> using the same var multiple times', () => {

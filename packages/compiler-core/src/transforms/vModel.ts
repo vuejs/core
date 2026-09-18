@@ -48,6 +48,15 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     return createTransformProps()
   }
 
+  // const bindings are not writable.
+  if (
+    bindingType === BindingTypes.LITERAL_CONST ||
+    bindingType === BindingTypes.SETUP_CONST
+  ) {
+    context.onError(createCompilerError(ErrorCodes.X_V_MODEL_ON_CONST, exp.loc))
+    return createTransformProps()
+  }
+
   const maybeRef =
     !__BROWSER__ &&
     context.inline &&

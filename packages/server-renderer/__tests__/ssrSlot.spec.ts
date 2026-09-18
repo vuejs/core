@@ -110,16 +110,66 @@ describe('ssr: slot', () => {
     )
   })
 
+  test('nullish slot props', async () => {
+    const nullishBind = {
+      one: {
+        props: ['value'],
+        template: `<div><slot v-bind="value" name="foo">fallback</slot></div>`,
+      },
+    }
+
+    expect(
+      await renderToString(
+        createApp({
+          components: nullishBind,
+          template: `<one :value="null"/>`,
+        }),
+      ),
+    ).toBe(`<div><!--[-->fallback<!--]--></div>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: nullishBind,
+          template: `<one :value="null"><template #foo="{ label }">{{ label || 'none' }}</template></one>`,
+        }),
+      ),
+    ).toBe(`<div><!--[-->none<!--]--></div>`)
+  })
+
   test('transition slot', async () => {
+    const ReusableTransition = {
+      template: `<transition><slot/></transition>`,
+    }
+
+    const ReusableTransitionWithAppear = {
+      template: `<transition appear><slot/></transition>`,
+    }
+
     expect(
       await renderToString(
         createApp({
           components: {
-            one: {
-              template: `<transition><slot/></transition>`,
-            },
+            one: ReusableTransition,
           },
           template: `<one><div v-if="false">foo</div></one>`,
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(await renderToString(createApp(ReusableTransition))).toBe(`<!---->`)
+
+    expect(await renderToString(createApp(ReusableTransitionWithAppear))).toBe(
+      `<template><!----></template>`,
+    )
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: ReusableTransition,
+          },
+          template: `<one><slot/></one>`,
         }),
       ),
     ).toBe(`<!---->`)
@@ -128,9 +178,66 @@ describe('ssr: slot', () => {
       await renderToString(
         createApp({
           components: {
-            one: {
-              template: `<transition><slot/></transition>`,
-            },
+            one: ReusableTransitionWithAppear,
+          },
+          template: `<one><slot/></one>`,
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransition, null, {
+              default: () => null,
+            })
+          },
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransitionWithAppear, null, {
+              default: () => null,
+            })
+          },
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransitionWithAppear, null, {
+              default: () => [],
+            })
+          },
+        }),
+      ),
+    ).toBe(`<template><!----></template>`)
+
+    expect(
+      await renderToString(
+        createApp({
+          render() {
+            return h(ReusableTransition, null, {
+              default: () => [],
+            })
+          },
+        }),
+      ),
+    ).toBe(`<!---->`)
+
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: ReusableTransition,
           },
           template: `<one><div v-if="true">foo</div></one>`,
         }),

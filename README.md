@@ -6,15 +6,15 @@ Please follow the documentation at [vuejs.org](https://vuejs.org/)!
 
 ## Sponsors
 
-Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [ sponsoring Vue's development](https://vuejs.org/sponsor/).
+Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [sponsoring Vue's development](https://vuejs.org/sponsor/).
 
 <p align="center">
   <h3 align="center">Special Sponsor</h3>
 </p>
 
 <p align="center">
-  <a target="_blank" href="https://github.com/appwrite/appwrite">
-  <img alt="special sponsor appwrite" src="https://sponsors.vuejs.org/images/appwrite.svg" width="300">
+  <a target="_blank" href="https://betterstack.com/">
+  <img alt="special sponsor" src="https://automation.vuejs.org/images/better_stack.png" width="300">
   </a>
 </p>
 

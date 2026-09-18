@@ -202,7 +202,13 @@ const KeepAliveImpl: ComponentOptions = {
 
     function pruneCache(filter: (name: string) => boolean) {
       cache.forEach((vnode, key) => {
-        const name = getComponentName(vnode.type as ConcreteComponent)
+        // for async components, name check should be based in its loaded
+        // inner component if available
+        const name = getComponentName(
+          isAsyncWrapper(vnode)
+            ? (vnode.type as ComponentOptions).__asyncResolved || {}
+            : (vnode.type as ConcreteComponent),
+        )
         if (name && !filter(name)) {
           pruneCacheEntry(key)
         }
@@ -242,7 +248,10 @@ const KeepAliveImpl: ComponentOptions = {
         // avoid caching vnode that not been mounted
         if (isSuspense(instance.subTree.type)) {
           queuePostRenderEffect(() => {
-            cache.set(pendingCacheKey!, getInnerChild(instance.subTree))
+            const vnode = getInnerChild(instance.subTree)
+            if (vnode.component) {
+              cache.set(pendingCacheKey!, vnode)
+            }
           }, instance.subTree.suspense)
         } else {
           cache.set(pendingCacheKey, getInnerChild(instance.subTree))

@@ -17,9 +17,7 @@ interface CompiledSlotDescriptor {
 export function createSlots(
   slots: Record<string, SSRSlot>,
   dynamicSlots: (
-    | CompiledSlotDescriptor
-    | CompiledSlotDescriptor[]
-    | undefined
+    CompiledSlotDescriptor | CompiledSlotDescriptor[] | undefined
   )[],
 ): Record<string, SSRSlot> {
   for (let i = 0; i < dynamicSlots.length; i++) {

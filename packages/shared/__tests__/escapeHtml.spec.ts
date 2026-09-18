@@ -23,6 +23,12 @@ describe('escapeHtml', () => {
     expect(result).toEqual(' Comment 1  Hello ! Comment 2  World!')
   })
 
+  test('ssr: escapeHTMLComment removes comment close sequences created by stripping', () => {
+    const input = '--<!--><img src=x onerror=alert(1)>'
+    const result = escapeHtmlComment(input)
+    expect(result).toEqual('<img src=x onerror=alert(1)>')
+  })
+
   test('should not affect non-comment strings', () => {
     const input = 'Hello World'
     const result = escapeHtmlComment(input)

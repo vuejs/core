@@ -2,6 +2,7 @@ import {
   BaseTransition,
   type BaseTransitionProps,
   KeepAlive,
+  Teleport,
   type TestElement,
   type VNodeProps,
   h,
@@ -14,7 +15,7 @@ import {
 } from '@vue/runtime-test'
 
 function mount(
-  props: BaseTransitionProps,
+  props: BaseTransitionProps<TestElement>,
   slot: () => any,
   withKeepAlive = false,
 ) {
@@ -35,7 +36,10 @@ function mount(
   return { root, unmount }
 }
 
-function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
+function mockProps(
+  extra: BaseTransitionProps<TestElement> = {},
+  withKeepAlive = false,
+) {
   const cbs: {
     doneEnter: Record<string, () => void>
     doneLeave: Record<string, () => void>
@@ -43,7 +47,7 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     doneEnter: {},
     doneLeave: {},
   }
-  const props: BaseTransitionProps = {
+  const props: BaseTransitionProps<TestElement> = {
     onBeforeEnter: vi.fn(el => {
       if (!extra.persisted && !withKeepAlive) {
         expect(el.parentNode).toBeNull()
@@ -52,20 +56,20 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
     onEnter: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterEnter: vi.fn(),
-    onEnterCancelled: vi.fn(),
-    onBeforeLeave: vi.fn(),
+    onAfterEnter: vi.fn<(el: TestElement) => void>(),
+    onEnterCancelled: vi.fn<(el: TestElement) => void>(),
+    onBeforeLeave: vi.fn<(el: TestElement) => void>(),
     onLeave: vi.fn((el, done) => {
       cbs.doneLeave[serialize(el as TestElement)] = done
     }),
-    onAfterLeave: vi.fn(),
-    onLeaveCancelled: vi.fn(),
-    onBeforeAppear: vi.fn(),
+    onAfterLeave: vi.fn<(el: TestElement) => void>(),
+    onLeaveCancelled: vi.fn<(el: TestElement) => void>(),
+    onBeforeAppear: vi.fn<(el: TestElement) => void>(),
     onAppear: vi.fn((el, done) => {
       cbs.doneEnter[serialize(el as TestElement)] = done
     }),
-    onAfterAppear: vi.fn(),
-    onAppearCancelled: vi.fn(),
+    onAfterAppear: vi.fn<(el: TestElement) => void>(),
+    onAppearCancelled: vi.fn<(el: TestElement) => void>(),
     ...extra,
   }
   return {
@@ -75,7 +79,7 @@ function mockProps(extra: BaseTransitionProps = {}, withKeepAlive = false) {
 }
 
 function assertCalls(
-  props: BaseTransitionProps,
+  props: BaseTransitionProps<TestElement>,
   calls: Record<string, number>,
 ) {
   Object.keys(calls).forEach(key => {
@@ -250,6 +254,51 @@ describe('BaseTransition', () => {
       expect(props.onAfterAppear).not.toHaveBeenCalled()
       cbs.doneEnter[`<div></div>`]()
       expect(props.onAfterAppear).toHaveBeenCalledTimes(1)
+    })
+
+    // #14031
+    test('w/ KeepAlive activate/deactivate should not call enter/leave hooks', async () => {
+      const { props } = mockProps({ persisted: true })
+      const { hooks } = mockPersistedHooks()
+      const which = ref<'A' | 'B'>('A')
+      const CompA = {
+        name: 'CompA',
+        render: () => h('div', { id: 'A', ...hooks }),
+      }
+      const CompB = {
+        name: 'CompB',
+        render: () => h('span', { id: 'B' }),
+      }
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return h(BaseTransition, props, () =>
+            h(KeepAlive, null, which.value === 'A' ? h(CompA) : h(CompB)),
+          )
+        },
+      }
+      render(h(App), root)
+
+      // initial mount: persisted, so no auto enter hooks
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
+
+      // switch to B → A is deactivated (moved to storage). Since the
+      // transition on A's <div> is persisted, no leave hooks should fire.
+      which.value = 'B'
+      await nextTick()
+      expect(props.onBeforeLeave).not.toHaveBeenCalled()
+      expect(props.onLeave).not.toHaveBeenCalled()
+      expect(props.onAfterLeave).not.toHaveBeenCalled()
+
+      // switch back to A → A is activated (moved back from storage). The
+      // persisted transition still shouldn't auto-fire enter hooks.
+      which.value = 'A'
+      await nextTick()
+      expect(props.onBeforeEnter).not.toHaveBeenCalled()
+      expect(props.onEnter).not.toHaveBeenCalled()
+      expect(props.onAfterEnter).not.toHaveBeenCalled()
     })
   })
 
@@ -1244,5 +1293,67 @@ describe('BaseTransition', () => {
     }
     await runTestWithKeepAlive(testOutIn)
     __DEV__ = true
+  })
+
+  test('should preserve transition for component with KeepAlive root', async () => {
+    const root = nodeOps.createElement('div')
+    const show = ref(false)
+    const onBeforeEnter = vi.fn()
+    const Child = { render: () => h('div', 'content') }
+    const Comp = {
+      render: () => h(KeepAlive, null, { default: () => h(Child) }),
+    }
+    const App = () =>
+      h(BaseTransition, { onBeforeEnter }, () => (show.value ? h(Comp) : null))
+
+    render(h(App), root)
+
+    show.value = true
+    await nextTick()
+    expect(serializeInner(root)).toBe('<div>content</div>')
+    expect(onBeforeEnter).toHaveBeenCalledTimes(1)
+  })
+
+  test('should not error on component with empty Teleport root', () => {
+    const root = nodeOps.createElement('div')
+    const target = nodeOps.createElement('div')
+    const Comp = () => h(Teleport, { to: target }, [])
+
+    expect(() =>
+      render(
+        h(BaseTransition, null, () => h(Comp)),
+        root,
+      ),
+    ).not.toThrow()
+    expect(serializeInner(root)).toBe(
+      '<!--teleport start--><!--teleport end-->',
+    )
+    expect(serializeInner(target)).toBe('')
+    expect(
+      'Component inside <Transition> renders non-element root node',
+    ).toHaveBeenWarned()
+  })
+
+  test('should update transition hooks for component with Teleport root', async () => {
+    const root = nodeOps.createElement('div')
+    const target = nodeOps.createElement('div')
+    const show = ref(true)
+    const firstBeforeLeave = vi.fn()
+    const nextBeforeLeave = vi.fn()
+    const beforeLeave = ref(firstBeforeLeave)
+    const Comp = () => h(Teleport, { to: target }, h('div', 'content'))
+    const App = () =>
+      h(BaseTransition, { onBeforeLeave: beforeLeave.value }, () =>
+        show.value ? h(Comp) : null,
+      )
+
+    render(h(App), root)
+
+    beforeLeave.value = nextBeforeLeave
+    show.value = false
+    await nextTick()
+
+    expect(firstBeforeLeave).not.toHaveBeenCalled()
+    expect(nextBeforeLeave).toHaveBeenCalledTimes(1)
   })
 })

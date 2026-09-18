@@ -29,7 +29,7 @@ if (__TEST__) {
   if (SSRErrorCodes.X_SSR_UNSAFE_ATTR_NAME < DOMErrorCodes.__EXTEND_POINT__) {
     throw new Error(
       `SSRErrorCodes need to be updated to ${
-        DOMErrorCodes.__EXTEND_POINT__ + 1
+        DOMErrorCodes.__EXTEND_POINT__
       } to match extension point from core DOMErrorCodes.`,
     )
   }

@@ -121,10 +121,7 @@ export interface RootNode extends Node {
 }
 
 export type ElementNode =
-  | PlainElementNode
-  | ComponentNode
-  | SlotOutletNode
-  | TemplateNode
+  PlainElementNode | ComponentNode | SlotOutletNode | TemplateNode
 
 export interface BaseElementNode extends Node {
   type: NodeTypes.ELEMENT
@@ -316,9 +313,7 @@ export interface TextCallNode extends Node {
 }
 
 export type TemplateTextChildNode =
-  | TextNode
-  | InterpolationNode
-  | CompoundExpressionNode
+  TextNode | InterpolationNode | CompoundExpressionNode
 
 export interface VNodeCall extends Node {
   type: NodeTypes.VNODE_CALL
@@ -335,6 +330,10 @@ export interface VNodeCall extends Node {
   patchFlag: PatchFlags | undefined
   dynamicProps: string | SimpleExpressionNode | undefined
   directives: DirectiveArguments | undefined
+  /** Whether this vnode must be patched if a later transform makes it non-block. */
+  needsPatch?: boolean
+  /** Whether a later transform must preserve this vnode as a block. */
+  isBlockRequired?: boolean
   isBlock: boolean
   disableTracking: boolean
   isComponent: boolean
@@ -481,8 +480,9 @@ export interface DirectiveArguments extends ArrayExpression {
 }
 
 export interface DirectiveArgumentNode extends ArrayExpression {
-  elements: // dir, exp, arg, modifiers
-  | [string]
+  elements:
+    // dir, exp, arg, modifiers
+    | [string]
     | [string, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode]
     | [string, ExpressionNode, ExpressionNode, ObjectExpression]
@@ -491,14 +491,30 @@ export interface DirectiveArgumentNode extends ArrayExpression {
 // renderSlot(...)
 export interface RenderSlotCall extends CallExpression {
   callee: typeof RENDER_SLOT
-  arguments: // $slots, name, props, fallback
-  | [string, string | ExpressionNode]
-    | [string, string | ExpressionNode, PropsExpression]
+  arguments:
+    // $slots, name, props, fallback, noSlotted, branchKey
+    | [string, string | ExpressionNode]
+    | [string, string | ExpressionNode, PropsExpression | '{}']
     | [
         string,
         string | ExpressionNode,
         PropsExpression | '{}',
-        TemplateChildNode[],
+        FunctionExpression | string,
+      ]
+    | [
+        string,
+        string | ExpressionNode,
+        PropsExpression | '{}',
+        FunctionExpression | string,
+        string,
+      ]
+    | [
+        string,
+        string | ExpressionNode,
+        PropsExpression | '{}',
+        FunctionExpression | string,
+        string,
+        JSChildNode,
       ]
 }
 

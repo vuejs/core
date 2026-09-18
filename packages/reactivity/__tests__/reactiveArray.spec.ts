@@ -95,9 +95,13 @@ describe('reactivity/reactive/Array', () => {
     const identityMethods = ['includes', 'indexOf', 'lastIndexOf'] as const
 
     function instrumentArr(rawTarget: any[]) {
+      const mutableTarget = rawTarget as Record<
+        (typeof identityMethods)[number],
+        any
+      >
       identityMethods.forEach(key => {
         const spy = vi.fn(rawTarget[key] as any)
-        rawTarget[key] = spy
+        mutableTarget[key] = spy
       })
     }
 
@@ -623,7 +627,7 @@ describe('reactivity/reactive/Array', () => {
       expect(left.value).toBe(shallow[0])
       expect(right.value).toBe(shallow[0])
 
-      const deep = reactive([{ val: 1 }, { val: 2 }])
+      let deep = reactive([{ val: 1 }, { val: 2 }])
       left = computed(() => deep.reduce((acc, x) => acc + x.val, '0'))
       right = computed(() => deep.reduceRight((acc, x) => acc + x.val, '3'))
       expect(left.value).toBe('012')
@@ -632,6 +636,40 @@ describe('reactivity/reactive/Array', () => {
       deep[1].val = 23
       expect(left.value).toBe('0123')
       expect(right.value).toBe('3231')
+
+      deep = reactive([{ val: 1 }, { val: 2 }])
+      const maxBy = (prev: any, cur: any) => {
+        expect(isReactive(prev)).toBe(true)
+        expect(isReactive(cur)).toBe(true)
+        return prev.val > cur.val ? prev : cur
+      }
+      left = computed(() => deep.reduce(maxBy))
+      right = computed(() => deep.reduceRight(maxBy))
+      expect(left.value).toMatchObject({ val: 2 })
+      expect(right.value).toMatchObject({ val: 2 })
+
+      deep[0].val = 23
+      expect(left.value).toMatchObject({ val: 23 })
+      expect(right.value).toMatchObject({ val: 23 })
+
+      deep[1].val = 24
+      expect(left.value).toMatchObject({ val: 24 })
+      expect(right.value).toMatchObject({ val: 24 })
+    })
+
+    test('reduce left and right with single deep reactive element and no initial value', () => {
+      const deep = reactive([{ val: 1 }])
+      const left = computed(() => deep.reduce(prev => prev))
+      const right = computed(() => deep.reduceRight(prev => prev))
+
+      expect(isReactive(left.value)).toBe(true)
+      expect(isReactive(right.value)).toBe(true)
+      expect(left.value).toMatchObject({ val: 1 })
+      expect(right.value).toMatchObject({ val: 1 })
+
+      deep[0].val = 2
+      expect(left.value).toMatchObject({ val: 2 })
+      expect(right.value).toMatchObject({ val: 2 })
     })
 
     test('some', () => {
