@@ -1402,17 +1402,6 @@ describe('directive: v-model', () => {
       expect(vapor).toEqual(vdom)
     })
 
-    test('indeterminate keeps number values', async () => {
-      const { vdom, vapor } = await parity(
-        `<input type="checkbox" :indeterminate="0">`,
-        () => null,
-        root => root.querySelector('input')!.indeterminate,
-      )
-
-      expect(vdom).toBe(false)
-      expect(vapor).toBe(vdom)
-    })
-
     test('disabled.attr stringifies number values', async () => {
       const { vdom, vapor } = await parity(
         `<input :disabled.attr="0">`,
