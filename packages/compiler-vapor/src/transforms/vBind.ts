@@ -6,7 +6,7 @@ import {
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
-import { camelize, extend } from '@vue/shared'
+import { camelize, extend, isSpecialBooleanAttr } from '@vue/shared'
 import type { DirectiveTransform, TransformContext } from '../transform'
 import { resolveExpression } from '../utils'
 import {
@@ -59,13 +59,15 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   // string: component, slot outlet and custom element props are passed as raw
   // values, a dynamic key is always applied at runtime, boolean attributes are
   // folded from the type of the value itself, and v-model reads its value
-  // props back off the element. Checkbox true/false values must also stay raw
-  // with `.attr` because `setAttr` stores them before calling `setAttribute`.
+  // props back off the element. With `.attr`, `setAttr` still checks special
+  // boolean attributes and stores raw checkbox true/false values before calling
+  // `setAttribute`.
   const excludeNumber =
     node.tagType === ElementTypes.COMPONENT ||
     node.tagType === ElementTypes.SLOT ||
     !!context.options.isCustomElement(node.tag) ||
     !arg.isStatic ||
+    isSpecialBooleanAttr(arg.content) ||
     isCheckboxValueProp(node, arg.content) ||
     (!modifiersString.includes('attr') &&
       (isFoldableBooleanAttr(arg.content) ||
