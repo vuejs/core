@@ -23,7 +23,7 @@ import { blockStack } from '../../src/vnode'
 
 describe('renderSlot', () => {
   beforeEach(() => {
-    setCurrentRenderingInstance({ type: {} } as any)
+    setCurrentRenderingInstance({ type: {}, vnode: {} } as any)
   })
 
   afterEach(() => {
@@ -341,47 +341,56 @@ describe('renderSlot', () => {
       }
     })
 
-    it('hosts the fallback of an outlet left without slots only when vapor slots are forwarded to it', () => {
-      const fallback = () => [h('p')]
-      // a `v-for` over no item
-      const content = () => [
-        (openBlock(true),
-        createBlock(Fragment, null, [], PatchFlags.KEYED_FRAGMENT)),
-      ]
-      const owner = (forwardsVapor: boolean) =>
-        ({
-          type: {},
-          appContext: {},
-          vnode: {
-            shapeFlag: ShapeFlags.SLOTS_CHILDREN,
-            children: { [rawVaporSlotKey]: forwardsVapor },
-          },
-        }) as any
+    it.each([
+      [
+        'a v-for over no item',
+        () => [
+          (openBlock(true),
+          createBlock(Fragment, null, [], PatchFlags.KEYED_FRAGMENT)),
+        ],
+      ],
+      ['a closed v-if branch', () => [createCommentVNode('v-if', true)]],
+    ])(
+      'hosts the fallback of an outlet left without slots only when vapor slots are forwarded to it: %s',
+      (_, content) => {
+        const fallback = () => [h('p')]
+        const owner = (forwardsVapor: boolean) =>
+          ({
+            type: {},
+            appContext: {},
+            vnode: {
+              shapeFlag: ShapeFlags.SLOTS_CHILDREN,
+              children: { [rawVaporSlotKey]: forwardsVapor },
+            },
+          }) as any
 
-      setCurrentRenderingInstance(owner(true))
-      let rendered = renderSlot({ default: content }, 'default', {}, fallback)
-      let children = rendered.children as VNode[]
-      expect(children.length).toBe(2)
-      expect(children[1].vs!.members).toEqual([])
-      expect(children[1].vs!.outlets!.map(o => o.fallback)).toEqual([fallback])
-      // the same fragment as when slots are there: no valid vdom content
-      expect(rendered.key).toBe('_default_fb')
-      expect(
-        renderSlot(
-          { default: () => [forward(), forward()] },
-          'default',
-          {},
+        setCurrentRenderingInstance(owner(true))
+        let rendered = renderSlot({ default: content }, 'default', {}, fallback)
+        let children = rendered.children as VNode[]
+        expect(children.length).toBe(2)
+        expect(children[1].vs!.members).toEqual([])
+        expect(children[1].vs!.outlets!.map(o => o.fallback)).toEqual([
           fallback,
-        ).key,
-      ).toBe('_default_fb')
+        ])
+        // the same fragment as when slots are there
+        expect(rendered.key).toBe('_default')
+        expect(
+          renderSlot(
+            { default: () => [forward(), forward()] },
+            'default',
+            {},
+            fallback,
+          ).key,
+        ).toBe('_default')
 
-      // plain vdom: the fallback renders inline
-      setCurrentRenderingInstance(owner(false))
-      rendered = renderSlot({ default: content }, 'default', {}, fallback)
-      children = rendered.children as VNode[]
-      expect(children.map(c => c.type)).toEqual(['p'])
-      expect(rendered.key).toBe('_default_fb')
-    })
+        // plain vdom: the fallback renders inline
+        setCurrentRenderingInstance(owner(false))
+        rendered = renderSlot({ default: content }, 'default', {}, fallback)
+        children = rendered.children as VNode[]
+        expect(children.map(c => c.type)).toEqual(['p'])
+        expect(rendered.key).toBe('_default_fb')
+      },
+    )
 
     it('leaves the outlet alone when its content stands on its own', () => {
       const fallback = () => [h('p')]

@@ -147,8 +147,8 @@ export function renderSlot(
     // forwarded vapor slots resolve this outlet's fallback themselves
     const fallbackHost =
       fallback && content && attachVaporSlotOutlet(content, fallback)
-    // vdom-wise a hosted outlet never has valid content, slots left or not:
-    // one fragment identity for as long as its fallback can show
+    // a hosted outlet is one fragment, slots left or not: its content shows
+    // on its own and stays in place as the host comes and goes
     const keyedContent = fallbackHost ? content : validSlotContent
 
     const slotKey =
@@ -163,7 +163,7 @@ export function renderSlot(
         key:
           (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
           // #7256 force differentiate fallback content from actual content
-          (fallback && (fallbackHost || !validSlotContent) ? '_fb' : ''),
+          (!keyedContent && fallback ? '_fb' : ''),
       },
       fallbackHost
         ? content!.concat(fallbackHost)
@@ -225,9 +225,11 @@ function attachVaporSlotOutlet(
   const owner = currentRenderingInstance
   const outlet = { fallback, vdom: true, owner }
   let host: VNode | undefined
-  if (!severalSlots) {
-    if (foundSlots.length) (foundSlots[0].vs!.outlets ||= []).push(outlet)
+  if (!severalSlots && foundSlots.length) {
+    // a lone slot stays the one vnode exposing the fallback (`<Transition>`)
+    ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
   } else if (foundSlots.length || forwardsVaporSlots(owner)) {
+    // no slot at all: a closed `v-if` branch or an empty list of them
     host = (openBlock(), createBlock(VaporSlot, { key: '_fb' }))
     // NOOP: a host has no slot, only the guards on `vs.slot` to pass
     host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
