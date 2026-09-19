@@ -988,7 +988,8 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
       if (
         slotFlag &&
         slotFlag !== SlotFlags.STABLE &&
-        currentRenderingInstance
+        currentRenderingInstance &&
+        currentRenderingInstance.appContext.vapor
       ) {
         const parentSlots = currentRenderingInstance.vnode.children
         if (
