@@ -7,6 +7,7 @@ import {
   type PlainElementNode,
   type TemplateChildNode,
   createCallExpression,
+  createCompoundExpression,
   createConditionalExpression,
   createDOMCompilerError,
   createInterpolation,
@@ -18,6 +19,7 @@ import {
 } from '@vue/compiler-dom'
 import {
   SSR_INCLUDE_BOOLEAN_ATTR,
+  SSR_IS_SET,
   SSR_LOOSE_CONTAIN,
   SSR_LOOSE_EQUAL,
   SSR_RENDER_DYNAMIC_MODEL,
@@ -64,10 +66,14 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
                   model,
                   value,
                 ]),
-                createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                  model,
-                  value,
-                ]),
+                createConditionalExpression(
+                  createCallExpression(context.helper(SSR_IS_SET), [model]),
+                  createCompoundExpression([model, '.has(', value, ')']),
+                  createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
+                    model,
+                    value,
+                  ]),
+                ),
               ),
             ]),
             createSimpleExpression(' selected', true),
@@ -140,7 +146,13 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
                         model,
                         value,
                       ]),
-                      model,
+                      createConditionalExpression(
+                        createCallExpression(context.helper(SSR_IS_SET), [
+                          model,
+                        ]),
+                        createCompoundExpression([model, '.has(', value, ')']),
+                        model,
+                      ),
                     ),
                   ),
                 ]
