@@ -88,7 +88,6 @@ export function renderSlot(
       outlets: fallback
         ? [{ fallback, vdom: true, owner: currentRenderingInstance }]
         : undefined,
-      innerIds: fallback ? [-1] : undefined,
     }
     if (!noSlotted && ret.scopeId) {
       ret.slotScopeIds = [ret.scopeId + '-s']
@@ -229,22 +228,17 @@ function attachVaporSlotOutlet(
 ): VNode | undefined {
   if (!findVaporSlots(content)) return
   const owner = currentRenderingInstance
-  const outlet = { fallback, vdom: true, owner }
+  const outlet: VaporSlotOutlet = { fallback, vdom: true, owner }
   let host: VNode | undefined
   if (!severalSlots && foundSlots.length) {
     // a lone slot stays the one vnode exposing the fallback (`<Transition>`)
-    recordOutlet(foundSlots[0], outlet)
+    outlet.innerIds = pathIds
+    ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
   } else if (foundSlots.length || forwardsVaporSlots(owner)) {
     // no slot at all: a closed `v-if` branch or an empty list of them
     host = (openBlock(), createBlock(VaporSlot, { key: '_fb' }))
-    host.vs = {
-      // NOOP: a host has no slot, only the guards on `vs.slot` to pass
-      slot: NOOP,
-      outlets: [outlet],
-      // a child of the outlet's own fragment
-      innerIds: [0],
-      members: foundSlots.slice(),
-    }
+    // NOOP: a host has no slot, only the guards on `vs.slot` to pass
+    host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
   }
   foundSlots.length = 0
   return host
@@ -267,16 +261,14 @@ export function recordVaporSlotOutlet(
 ): void {
   if (findVaporSlots(vnodes)) {
     if (!severalSlots && foundSlots.length) {
-      recordOutlet(foundSlots[0], { fallback, vdom: false })
+      ;(foundSlots[0].vs!.outlets ||= []).push({
+        fallback,
+        vdom: false,
+        innerIds: pathIds,
+      })
     }
     foundSlots.length = 0
   }
-}
-
-function recordOutlet(slot: VNode, outlet: VaporSlotOutlet): void {
-  const vs = slot.vs!
-  ;(vs.outlets ||= []).push(outlet)
-  ;(vs.innerIds ||= []).push(pathIds)
 }
 
 // scratch for the walk below, which runs no user code and cannot re-enter
