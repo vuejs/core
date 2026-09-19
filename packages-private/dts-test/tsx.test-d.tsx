@@ -16,6 +16,11 @@ expectType<JSX.Element>(<div>hello</div>)
 expectType<JSX.Element>(<input value="foo" />)
 expectType<JSX.Element>(<textarea value={null} />)
 
+// #8600
+expectType<JSX.Element>(<div id={null} aria-label={null} />)
+expectType<JSX.Element>(<input disabled={null} />)
+expectType<JSX.Element>(<svg viewBox={null} />)
+
 // @ts-expect-error style css property validation
 ;<div style={{ unknown: 123 }} />
 
