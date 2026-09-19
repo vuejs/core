@@ -2772,6 +2772,104 @@ describe('vdomInterop', () => {
         t.unmount()
       })
 
+      test('a sibling coming and going leaves valid slot content in place', async () => {
+        // the fallback never shows: whether the outlet needs a host or not
+        // must not change the identity of its content
+        const t = mountBoth(
+          {
+            Inner: innerFallback,
+            Wrapper: `<components.Inner><slot/><b v-if="data.aside">aside</b></components.Inner>`,
+          },
+          { aside: false },
+          `<input />`,
+        )
+        const sameInput = t.pin('input')
+        for (const aside of [true, false]) {
+          await t.set({ aside })
+          sameInput(`aside ${aside}`)
+        }
+        t.unmount()
+      })
+
+      test('keeps the outlet fallback instance while a v-if branch of several slots opens and closes', async () => {
+        for (const forward of [true, false]) {
+          const t = mountBoth(
+            {
+              Inner: `<slot><input /></slot>`,
+              Wrapper:
+                `<components.Inner><template v-if="data.forward">` +
+                `<slot name="a"/><slot name="b"/></template></components.Inner>`,
+            },
+            { forward, a: false, b: false },
+            namedContent,
+          )
+          await nextTick()
+          for (const side of [t.vdom, t.vapor]) {
+            side.root.querySelector('input')!.value = 'keep me'
+          }
+          const sameInput = t.pin('input')
+          for (const next of [!forward, forward, !forward]) {
+            await t.set({ forward: next })
+            sameInput(`from ${forward} to ${next}`)
+            for (const side of [t.vdom, t.vapor]) {
+              expect(side.root.querySelector('input')!.value).toBe('keep me')
+            }
+          }
+          t.unmount()
+        }
+      })
+
+      // coverage guard: a lone slot, conditional or not, is the one vnode a
+      // `<Transition>` renders, so the outlet's fallback stays recorded on it
+      // rather than on a host beside it
+      test('a single v-if slot exposes the outlet fallback to a Transition', async () => {
+        for (const forward of [true, false]) {
+          const t = mountBoth(
+            {
+              Inner: `<Transition :css="false"><slot><p>fallback</p></slot></Transition>`,
+              Wrapper: `<components.Inner><slot name="a" v-if="data.forward"/></components.Inner>`,
+            },
+            { forward, a: false },
+            namedContent,
+          )
+          t.expect('<p>fallback</p>')
+          await t.set({ forward: !forward })
+          t.expect('<p>fallback</p>')
+          await t.set({ forward: true, a: true })
+          t.expect('<i>a</i>')
+          await t.set({ a: false })
+          t.expect('<p>fallback</p>')
+          t.unmount()
+        }
+      })
+
+      test('keeps the outlet fallback instance of slots forwarded under a dynamic slot name', async () => {
+        // a dynamic name compiles the slots as DYNAMIC rather than FORWARDED
+        const t = mountBoth(
+          {
+            Inner: `<slot><input /></slot>`,
+            Wrapper:
+              `<components.Inner><template #[data.name]>` +
+              `<template v-for="n in data.count" :key="n"><slot/></template>` +
+              `</template></components.Inner>`,
+          },
+          { name: 'default', count: 0, show: false },
+        )
+        await nextTick()
+        for (const side of [t.vdom, t.vapor]) {
+          side.root.querySelector('input')!.value = 'keep me'
+        }
+        const sameInput = t.pin('input')
+        for (const count of [1, 2, 0, 1]) {
+          await t.set({ count })
+          sameInput(`count ${count}`)
+          for (const side of [t.vdom, t.vapor]) {
+            expect(side.root.querySelector('input')!.value).toBe('keep me')
+          }
+        }
+        t.unmount()
+      })
+
       test('follows an outlet joining and leaving the chain across renders', async () => {
         // a valid sibling makes the outlet content stand on its own, so the
         // outlet only takes part in fallback resolution while the sibling is

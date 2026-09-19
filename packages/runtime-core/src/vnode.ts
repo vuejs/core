@@ -982,8 +982,15 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
           ;(children as RawSlots)._ = SlotFlags.DYNAMIC
           vnode.patchFlag |= PatchFlags.DYNAMIC_SLOTS
         }
-        // slots forwarding vapor slots stay marked through every vdom
-        // component that forwards them on (see renderSlot)
+      }
+      // Slots that may forward vapor slots stay marked through every vdom
+      // component forwarding them on (see renderSlot). The flag only tells
+      // what cannot: STABLE slots hold no outlet, DYNAMIC ones may.
+      if (
+        slotFlag &&
+        slotFlag !== SlotFlags.STABLE &&
+        currentRenderingInstance
+      ) {
         const parentSlots = currentRenderingInstance.vnode.children
         if (
           (currentRenderingInstance.slots as any)[rawVaporSlotKey] ||
