@@ -2910,9 +2910,10 @@ function renderVaporSlot(
     const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
     // The vnode-derived slot context becomes the creation ambient for the
     // vapor-rendered content, restored via the fragment's render seam.
+    const inherited = getInheritedScopeIds(vnode, parentComponent, false)
     frag.ctx = deriveSlotScopeIds(
       frag.ctx,
-      getInteropVaporSlotScopeIds(vnode, parentComponent, contextSlotScopeIds),
+      getInteropVaporSlotScopeIds(vnode, contextSlotScopeIds, inherited),
     )
     const content = new InteropContentState()
     frag.isBlockValid = componentAsValid =>
@@ -2986,6 +2987,17 @@ function renderVaporSlot(
             : undefined,
         markInteropSlotResolutionDirty,
         onContentInvalid,
+        () => {
+          const outlet = slotState.outlets[depth]
+          // the vnode's own outlet renders under the vnode's own cell
+          return outlet && outlet.innerIds != null
+            ? getEnclosingOutletScopeIds(
+                contextSlotScopeIds,
+                outlet.innerIds,
+                inherited,
+              )
+            : frag.slotScopeIds
+        },
       )
     }
     const getOutletBoundary = (depth: number): SlotBoundaryContext | null =>
@@ -3771,12 +3783,25 @@ function setVNodeVaporScopeIds(vnode: VNode, scopeIds: string[]): void {
 // vnode's own ids, then deep slot-content inheritance (root-only excluded).
 function getInteropVaporSlotScopeIds(
   vnode: VNode,
-  parentComponent: ComponentInternalInstance | null,
   contextSlotScopeIds: string[] | null,
+  inherited: string[],
 ): string[] | null {
-  const inherited = getInheritedScopeIds(vnode, parentComponent, false)
   return concatInteropScopeIds(
     concatInteropScopeIds(contextSlotScopeIds, vnode.slotScopeIds),
+    inherited.length ? inherited : null,
+  )
+}
+
+// The cell of an outlet enclosing the slot: the patch context without the ids
+// of the `innerIds` fragments inside that outlet, nor the slot vnode's own.
+function getEnclosingOutletScopeIds(
+  context: string[] | null,
+  innerIds: number,
+  inherited: string[],
+): string[] | null {
+  const kept = context && innerIds ? context.slice(0, -innerIds) : context
+  return concatInteropScopeIds(
+    kept && kept.length ? kept : null,
     inherited.length ? inherited : null,
   )
 }

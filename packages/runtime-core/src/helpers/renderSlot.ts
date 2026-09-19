@@ -10,6 +10,7 @@ import {
   type VNode,
   type VNodeArrayChildren,
   VaporSlot,
+  type VaporSlotOutlet,
   blockStack,
   closeBlock,
   createBlock,
@@ -227,10 +228,11 @@ function attachVaporSlotOutlet(
 ): VNode | undefined {
   if (!findVaporSlots(content)) return
   const owner = currentRenderingInstance
-  const outlet = { fallback, vdom: true, owner }
+  const outlet: VaporSlotOutlet = { fallback, vdom: true, owner }
   let host: VNode | undefined
   if (!severalSlots && foundSlots.length) {
     // a lone slot stays the one vnode exposing the fallback (`<Transition>`)
+    outlet.innerIds = pathIds
     ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
   } else if (foundSlots.length || forwardsVaporSlots(owner)) {
     // no slot at all: a closed `v-if` branch or an empty list of them
@@ -259,7 +261,11 @@ export function recordVaporSlotOutlet(
 ): void {
   if (findVaporSlots(vnodes)) {
     if (!severalSlots && foundSlots.length) {
-      ;(foundSlots[0].vs!.outlets ||= []).push({ fallback, vdom: false })
+      ;(foundSlots[0].vs!.outlets ||= []).push({
+        fallback,
+        vdom: false,
+        innerIds: pathIds,
+      })
     }
     foundSlots.length = 0
   }
@@ -268,10 +274,14 @@ export function recordVaporSlotOutlet(
 // scratch for the walk below, which runs no user code and cannot re-enter
 const foundSlots: VNode[] = []
 let severalSlots = false
+// slot scope ids of the fragments on the way to a lone slot (the renderer
+// appends them in that order)
+let pathIds = 0
 
 // whether the content is made of vapor slots only, if any at all
 function findVaporSlots(vnodes: VNodeArrayChildren): boolean {
   severalSlots = false
+  pathIds = 0
   if (walkVaporSlots(vnodes)) return true
   foundSlots.length = 0
   return false
@@ -297,6 +307,7 @@ function walkVaporSlots(vnodes: VNodeArrayChildren): boolean {
       ) {
         severalSlots = true
       }
+      if (child.slotScopeIds) pathIds += child.slotScopeIds.length
       if (!walkVaporSlots(child.children as VNodeArrayChildren)) return false
     } else if (child.type !== Comment) {
       return false

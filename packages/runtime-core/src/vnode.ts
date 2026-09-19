@@ -184,6 +184,9 @@ export interface VaporSlotOutlet {
   vdom: boolean
   // rendering instance a vdom fallback renders under; none for a vapor outlet
   owner?: ComponentInternalInstance | null
+  // slot scope ids contributed by the fragments between this outlet and the
+  // vnode, which its fallback renders without; unset on the vnode's own outlet
+  innerIds?: number
 }
 
 export interface VNode<

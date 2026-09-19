@@ -288,7 +288,7 @@ describe('renderSlot', () => {
       expect((rendered.children as VNode[])[0]).toBe(forwarded)
       expect(forwarded.vs!.outlets).toEqual([
         { fallback: wrapperFallback, vdom: true, owner: wrapper },
-        { fallback: innerFallback, vdom: true, owner: inner },
+        { fallback: innerFallback, vdom: true, owner: inner, innerIds: 0 },
       ])
     })
 
@@ -307,6 +307,32 @@ describe('renderSlot', () => {
         fallback,
       )
       expect(forwarded.vs!.outlets!.map(o => o.fallback)).toEqual([fallback])
+    })
+
+    it('counts the slot scope ids of the fragments inside each outlet', () => {
+      // scoped outlets: the inner outlet fragment carries a slotted id, which
+      // the outer outlet's fallback must not render under
+      setCurrentRenderingInstance({
+        type: { __scopeId: 'scope' },
+        appContext,
+      } as any)
+      let forwarded!: VNode
+      renderSlot(
+        {
+          default: () => [
+            renderSlot(
+              { default: () => [(forwarded = forward())] },
+              'default',
+              {},
+              () => [h('p')],
+            ),
+          ],
+        },
+        'default',
+        {},
+        () => [h('b')],
+      )
+      expect(forwarded.vs!.outlets!.map(o => o.innerIds)).toEqual([0, 1])
     })
 
     it('stacks enclosing outlets innermost first', () => {
@@ -403,6 +429,8 @@ describe('renderSlot', () => {
         expect(children[1].vs!.outlets!.map(o => o.fallback)).toEqual([
           fallback,
         ])
+        // a host is its outlet's own vnode
+        expect(children[1].vs!.outlets![0].innerIds).toBeUndefined()
         // the same fragment as when slots are there
         expect(rendered.key).toBe('_default')
         expect(
