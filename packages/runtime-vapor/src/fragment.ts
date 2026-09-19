@@ -561,7 +561,6 @@ export class SlotFragment
 {
   private disposed = false
   activeFallback: Block | null = null
-  activeFallbackBoundary: SlotBoundaryContext | null = null
   fallbackInserted = false
   fallbackScope?: EffectScope
   lastNodesValid?: boolean
@@ -696,7 +695,6 @@ export class SlotFragment
       // the exposed fallback was just torn down by remove() above; null it
       // so disposeSlotResolution does not remove it a second time
       this.activeFallback = null
-      this.activeFallbackBoundary = null
       this.fallbackInserted = false
     }
     this.clearContentInvalid()
