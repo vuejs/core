@@ -625,7 +625,7 @@ export {
  * @internal
  */
 export {
-  attachVaporSlotOutlet,
+  recordVaporSlotOutlet,
   ensureValidVNode,
   invokeSlotFallback,
   rawVaporSlotKey,

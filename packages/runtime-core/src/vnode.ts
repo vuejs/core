@@ -3,6 +3,7 @@ import {
   PatchFlags,
   ShapeFlags,
   SlotFlags,
+  def,
   extend,
   isArray,
   isFunction,
@@ -74,6 +75,15 @@ export const Text: unique symbol = Symbol.for('v-txt')
 export const Comment: unique symbol = Symbol.for('v-cmt')
 export const Static: unique symbol = Symbol.for('v-stc')
 export const VaporSlot: unique symbol = Symbol.for('v-vps')
+
+/**
+ * Links a slot function to its raw vapor slot: a raw vapor slot carries
+ * itself, and the wrapper the interop slots proxy hands out carries the raw
+ * slot it wraps — one lookup answers both "is this a vapor slot" and
+ * "which one". On a slots object: the slots come from a vapor parent, or
+ * forward such slots. Internal to vapor interop.
+ */
+export const rawVaporSlotKey: unique symbol = Symbol(`rawVaporSlot`)
 
 export type VNodeTypes =
   | string
@@ -164,10 +174,10 @@ export type VNodeNormalizedChildren =
   | null
 
 /**
- * A vdom outlet rendering a vapor slot, recorded on the slot's vnode: the
- * outlet that produced the vnode first, then every enclosing outlet whose
- * content is only that slot. Interop resolves their fallbacks in turn once
- * the slot renders empty. Internal to vapor interop.
+ * A vdom outlet rendering a vapor slot, recorded on the vnode that resolves
+ * its fallback: the outlet that produced the vnode first, then every
+ * enclosing outlet whose content is only that vnode. Interop resolves their
+ * fallbacks in turn once the slot renders empty. Internal to vapor interop.
  */
 export interface VaporSlotOutlet {
   fallback: () => any
@@ -292,6 +302,9 @@ export interface VNode<
     // vdom outlets whose fallback this slot resolves, innermost first
     // (see attachVaporSlotOutlet)
     outlets?: VaporSlotOutlet[]
+    // on the fallback host of an outlet rendering several vapor slots: the
+    // slots whose content it follows, in place of a slot of its own
+    members?: VNode[]
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -844,6 +857,7 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
   const cloned: NonNullable<VNode['vs']> = {
     slot: vaporSlot.slot,
     outlets: vaporSlot.outlets,
+    members: vaporSlot.members,
   }
 
   if (vnode.el) {
@@ -967,6 +981,23 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
         } else {
           ;(children as RawSlots)._ = SlotFlags.DYNAMIC
           vnode.patchFlag |= PatchFlags.DYNAMIC_SLOTS
+        }
+      }
+      // Slots that may forward vapor slots stay marked through every vdom
+      // component forwarding them on (see renderSlot). The flag only tells
+      // what cannot: STABLE slots hold no outlet, DYNAMIC ones may.
+      if (
+        slotFlag &&
+        slotFlag !== SlotFlags.STABLE &&
+        currentRenderingInstance &&
+        currentRenderingInstance.appContext.vapor
+      ) {
+        const parentSlots = currentRenderingInstance.vnode.children
+        if (
+          (currentRenderingInstance.slots as any)[rawVaporSlotKey] ||
+          (isObject(parentSlots) && (parentSlots as any)[rawVaporSlotKey])
+        ) {
+          def(children as object, rawVaporSlotKey, true)
         }
       }
     }
