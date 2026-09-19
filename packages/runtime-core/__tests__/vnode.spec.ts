@@ -313,10 +313,13 @@ describe('vnode', () => {
         setCurrentRenderingInstance(prev)
       }
     }
-    const plain = { type: {}, slots: {}, vnode: { children: null } }
+    // an app with the interop installed
+    const appContext = { vapor: {} }
+    const plain = { type: {}, appContext, slots: {}, vnode: { children: null } }
     // slots handed over by a vapor parent
     const underVapor = {
       type: {},
+      appContext,
       slots: { [rawVaporSlotKey]: true },
       vnode: { children: null },
     }
@@ -327,8 +330,17 @@ describe('vnode', () => {
       Object.getOwnPropertyDescriptor(marked, rawVaporSlotKey)!.enumerable,
     ).toBe(false)
     // and by a vdom component forwarding them in turn
-    const forwarder = { type: {}, slots: {}, vnode: { children: marked } }
+    const forwarder = {
+      type: {},
+      appContext,
+      slots: {},
+      vnode: { children: marked },
+    }
     expect(render(forwarder)[rawVaporSlotKey]).toBe(true)
+    // observes the gate only: nothing runs in an app without the interop
+    expect(
+      render({ ...forwarder, appContext: {} })[rawVaporSlotKey],
+    ).toBeUndefined()
   })
 
   test('cloneVNode preserves vapor slot metadata', () => {
