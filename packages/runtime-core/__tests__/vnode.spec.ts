@@ -11,9 +11,10 @@ import {
   mergeProps,
   normalizeVNode,
   openBlock,
+  rawVaporSlotKey,
   transformVNodeArgs,
 } from '../src/vnode'
-import { PatchFlags, ShapeFlags } from '@vue/shared'
+import { PatchFlags, ShapeFlags, SlotFlags } from '@vue/shared'
 import type { Data } from '../src/component'
 import {
   Teleport,
@@ -300,6 +301,34 @@ describe('vnode', () => {
     const cloned2 = cloneVNode(node2)
     expect(cloned2).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
+  })
+
+  test('forwarded slots stay marked as forwarding vapor slots', () => {
+    const forwarded = () => ({ default: () => [], _: SlotFlags.FORWARDED })
+    const render = (instance: any) => {
+      const prev = setCurrentRenderingInstance(instance)
+      try {
+        return createVNode({}, null, forwarded()).children as any
+      } finally {
+        setCurrentRenderingInstance(prev)
+      }
+    }
+    const plain = { type: {}, slots: {}, vnode: { children: null } }
+    // slots handed over by a vapor parent
+    const underVapor = {
+      type: {},
+      slots: { [rawVaporSlotKey]: true },
+      vnode: { children: null },
+    }
+    expect(render(plain)[rawVaporSlotKey]).toBeUndefined()
+    const marked = render(underVapor)
+    expect(marked[rawVaporSlotKey]).toBe(true)
+    expect(
+      Object.getOwnPropertyDescriptor(marked, rawVaporSlotKey)!.enumerable,
+    ).toBe(false)
+    // and by a vdom component forwarding them in turn
+    const forwarder = { type: {}, slots: {}, vnode: { children: marked } }
+    expect(render(forwarder)[rawVaporSlotKey]).toBe(true)
   })
 
   test('cloneVNode preserves vapor slot metadata', () => {

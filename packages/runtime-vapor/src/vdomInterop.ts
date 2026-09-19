@@ -931,6 +931,8 @@ const vaporSlotWrappersCache = new WeakMap<
 
 const vaporSlotsProxyHandler: ProxyHandler<any> = {
   get(target, key) {
+    // marks the slots as coming from a vapor parent (see renderSlot)
+    if (key === rawVaporSlotKey) return true
     const slot =
       isString(key) && !isInternalSlotKey(key)
         ? getSlot(target, key)

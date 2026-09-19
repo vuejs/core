@@ -2599,7 +2599,7 @@ describe('vdomInterop', () => {
         t.expect('<i>x</i><i>x</i><i>x</i>')
         await t.set({ show: false })
         t.expect('<p>inner fallback</p>')
-        // an empty list leaves plain vdom content: the fallback renders inline
+        // no slot left: the outlet keeps showing its fallback
         await t.set({ count: 0 })
         t.expect('<p>inner fallback</p>')
         await t.set({ count: 2 })
@@ -2708,26 +2708,64 @@ describe('vdomInterop', () => {
         t.unmount()
       })
 
-      test('keeps the shared outlet fallback instance while empty slots come and go', async () => {
+      test.each([0, 1])(
+        'keeps the shared outlet fallback instance while empty slots come and go, starting from %i',
+        async count => {
+          const t = mountBoth(
+            {
+              Inner: `<slot><input /></slot>`,
+              Wrapper: `<components.Inner><template v-for="n in data.count" :key="n"><slot/></template></components.Inner>`,
+            },
+            { count, show: false },
+          )
+          await nextTick()
+          for (const side of [t.vdom, t.vapor]) {
+            side.root.querySelector('input')!.value = 'keep me'
+          }
+          const sameInput = t.pin('input')
+          // some empty slots, more, none at all, then some again: the outlet
+          // shows the same fallback throughout
+          for (const count of [1, 2, 0, 1]) {
+            await t.set({ count })
+            sameInput(`count ${count}`)
+            for (const side of [t.vdom, t.vapor]) {
+              expect(side.root.querySelector('input')!.value).toBe('keep me')
+            }
+          }
+          t.unmount()
+        },
+      )
+
+      test('outlets of the same name keep their fallbacks apart', async () => {
+        // two outlets of one component, told apart by slot props only: what
+        // happens to the slots of one must not reach the other's fallback
         const t = mountBoth(
           {
-            Inner: `<slot><input /></slot>`,
-            Wrapper: `<components.Inner><template v-for="n in data.count" :key="n"><slot/></template></components.Inner>`,
+            Inner:
+              `<div><header><slot part="header"><input id="header" /></slot></header>` +
+              `<main><slot part="body"><input id="body" /></slot></main></div>`,
+            Wrapper:
+              `<components.Inner v-slot="{ part }">` +
+              `<template v-for="n in (part === 'body' ? data.count : 0)" :key="n"><slot/></template>` +
+              `</components.Inner>`,
           },
           { count: 1, show: false },
         )
         await nextTick()
         for (const side of [t.vdom, t.vapor]) {
-          side.root.querySelector('input')!.value = 'keep me'
+          side.root.querySelector<HTMLInputElement>('#header')!.value =
+            'keep me'
         }
-        const sameInput = t.pin('input')
-        // more empty slots, fewer, none at all, then some again: the outlet
-        // shows the same fallback throughout
-        for (const count of [2, 3, 1, 0, 1]) {
+        const sameHeader = t.pin('#header')
+        const sameBody = t.pin('#body')
+        for (const count of [2, 0, 1]) {
           await t.set({ count })
-          sameInput(`count ${count}`)
+          sameHeader(`count ${count}`)
+          sameBody(`count ${count}`)
           for (const side of [t.vdom, t.vapor]) {
-            expect(side.root.querySelector('input')!.value).toBe('keep me')
+            expect(
+              side.root.querySelector<HTMLInputElement>('#header')!.value,
+            ).toBe('keep me')
           }
         }
         t.unmount()
