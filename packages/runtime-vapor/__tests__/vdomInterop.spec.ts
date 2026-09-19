@@ -2843,6 +2843,29 @@ describe('vdomInterop', () => {
         }
       })
 
+      test('resolves a new host after its empty members mount', async () => {
+        // none of the new children matches an old one: the renderer mounts
+        // them from the end, the host ahead of the slots it follows
+        const t = mountBoth(
+          {
+            Inner: innerFallback,
+            Wrapper:
+              `<components.Inner>` +
+              `<b v-if="data.aside">aside</b>` +
+              `<template v-else><slot name="a"/><slot name="b"/></template>` +
+              `</components.Inner>`,
+          },
+          { aside: true, a: false, b: false },
+          namedContent,
+        )
+        t.expect('<b>aside</b>')
+        await t.set({ aside: false })
+        t.expect('<p>inner fallback</p>')
+        await t.set({ a: true })
+        t.expect('<i>a</i>')
+        t.unmount()
+      })
+
       test('keeps the outlet fallback instance of slots forwarded under a dynamic slot name', async () => {
         // a dynamic name compiles the slots as DYNAMIC rather than FORWARDED
         const t = mountBoth(
