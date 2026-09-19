@@ -3125,6 +3125,9 @@ function renderVaporSlot(
           followSlotGroup(slotState, () =>
             markSlotResolutionDirty(slotResolutionState),
           )
+          // a patch mounts unmatched children from the end, the host ahead
+          // of its slots, whose first resolution is no flip to hear about
+          if (slotState.members.some(member => !member.vb)) queueRecheck()
         }
       })
       if (hasInteropFallback && isSlotResolver(resolvedContent)) {
