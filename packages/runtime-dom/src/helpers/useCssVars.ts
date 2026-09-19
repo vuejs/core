@@ -3,7 +3,6 @@ import {
   type GenericComponentInstance,
   Static,
   type VNode,
-  VaporSlot,
   getCurrentInstance,
   onBeforeUpdate,
   onMounted,
@@ -102,7 +101,7 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
 
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     setVarsOnNode(vnode.el as Node, vars)
-  } else if (vnode.type === VaporSlot) {
+  } else if (vnode.vb) {
     // vapor slot content rendered in a vdom component: the block belongs to
     // the vapor owner, so the write has to go through the interop
     vnode.ctx!.appContext.vapor!.applyCssVars(vnode, vars)
