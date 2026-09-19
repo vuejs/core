@@ -3,6 +3,7 @@ import {
   PatchFlags,
   ShapeFlags,
   SlotFlags,
+  def,
   extend,
   isArray,
   isFunction,
@@ -74,6 +75,15 @@ export const Text: unique symbol = Symbol.for('v-txt')
 export const Comment: unique symbol = Symbol.for('v-cmt')
 export const Static: unique symbol = Symbol.for('v-stc')
 export const VaporSlot: unique symbol = Symbol.for('v-vps')
+
+/**
+ * Links a slot function to its raw vapor slot: a raw vapor slot carries
+ * itself, and the wrapper the interop slots proxy hands out carries the raw
+ * slot it wraps — one lookup answers both "is this a vapor slot" and
+ * "which one". On a slots object: the slots come from a vapor parent, or
+ * forward such slots. Internal to vapor interop.
+ */
+export const rawVaporSlotKey: unique symbol = Symbol(`rawVaporSlot`)
 
 export type VNodeTypes =
   | string
@@ -971,6 +981,15 @@ export function normalizeChildren(vnode: VNode, children: unknown): void {
         } else {
           ;(children as RawSlots)._ = SlotFlags.DYNAMIC
           vnode.patchFlag |= PatchFlags.DYNAMIC_SLOTS
+        }
+        // slots forwarding vapor slots stay marked through every vdom
+        // component that forwards them on (see renderSlot)
+        const parentSlots = currentRenderingInstance.vnode.children
+        if (
+          (currentRenderingInstance.slots as any)[rawVaporSlotKey] ||
+          (isObject(parentSlots) && (parentSlots as any)[rawVaporSlotKey])
+        ) {
+          def(children as object, rawVaporSlotKey, true)
         }
       }
     }
