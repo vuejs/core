@@ -14,6 +14,7 @@ import {
 } from '@vue/runtime-vapor'
 import { nextTick, onMounted, reactive, ref } from '@vue/runtime-core'
 import { Suspense, createApp, defineComponent, h } from '@vue/runtime-dom'
+import { createVaporApp } from '../../src'
 import { VaporBlockShape } from '@vue/shared'
 import { compile, ifFlags, makeRender } from '../_utils'
 import type { VaporComponent } from '../../src/component'
@@ -849,5 +850,74 @@ describe('useVaporCssVars', () => {
     await nextTick()
     expect(cssVar(host.querySelector('#leaf'))).toBe('red')
     app.unmount()
+  })
+
+  test('vdom child rooted at a slot outlet receives its own css vars', async () => {
+    const data = ref({ color: 'red', ok: false })
+    const components: Record<string, any> = {}
+    // a vdom component whose root is <slot/> and which owns v-bind() css vars
+    components.Child = compile(
+      `<script setup>const data = _data</script>
+      <template><slot/></template>
+      <style>div { color: v-bind('data.color') }</style>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    // the slot content comes from a vapor parent, with several roots and one
+    // of them behind a v-if: the write has to walk the whole block, including
+    // its nested fragments, not just the first node
+    const App = compile(
+      `<template><components.Child><div id="a" /><div v-if="data.ok" id="b" /><div id="c" /></components.Child></template>`,
+      data,
+      components,
+    )
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin).mount(root)
+    await nextTick()
+    expect(cssVar(root.querySelector('#a'))).toBe('red')
+    expect(cssVar(root.querySelector('#c'))).toBe('red')
+
+    // the toggle also creates a node that did not exist on mount
+    data.value = { color: 'green', ok: true }
+    await nextTick()
+    for (const id of ['#a', '#b', '#c']) {
+      expect(cssVar(root.querySelector(id))).toBe('green')
+    }
+    app.unmount()
+    root.remove()
+  })
+
+  test('vdom child with a slot outlet among multiple roots', async () => {
+    const data = ref({ color: 'red' })
+    const components: Record<string, any> = {}
+    components.Child = compile(
+      `<script setup>const data = _data</script>
+      <template><slot/><p id="sibling" /></template>
+      <style>div { color: v-bind('data.color') }</style>`,
+      data,
+      components,
+      { vapor: false },
+    )
+    const App = compile(
+      `<template><components.Child><div id="content" /></components.Child></template>`,
+      data,
+      components,
+    )
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    const app = createVaporApp(App)
+    app.use(vaporInteropPlugin).mount(root)
+    await nextTick()
+    expect(cssVar(root.querySelector('#sibling'))).toBe('red')
+    expect(cssVar(root.querySelector('#content'))).toBe('red')
+
+    data.value = { color: 'green' }
+    await nextTick()
+    expect(cssVar(root.querySelector('#content'))).toBe('green')
+    app.unmount()
+    root.remove()
   })
 })
