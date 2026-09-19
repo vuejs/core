@@ -23,7 +23,7 @@ import { blockStack } from '../../src/vnode'
 
 describe('renderSlot', () => {
   beforeEach(() => {
-    setCurrentRenderingInstance({ type: {}, vnode: {} } as any)
+    setCurrentRenderingInstance({ type: {}, appContext: {} } as any)
   })
 
   afterEach(() => {
@@ -231,10 +231,41 @@ describe('renderSlot', () => {
     ;(vaporSlot as any)[rawVaporSlotKey] = vaporSlot
     const forward = (fallback?: () => any[]) =>
       renderSlot({ default: vaporSlot }, 'default', {}, fallback)
+    // an app with the interop installed
+    const appContext = { vapor: {} }
+
+    beforeEach(() => {
+      setCurrentRenderingInstance({ type: {}, vnode: {}, appContext } as any)
+    })
+
+    it('leaves outlets alone in an app without the interop', () => {
+      // observes the gate only: no vapor slot gets there without the interop
+      setCurrentRenderingInstance({
+        type: {},
+        vnode: {},
+        appContext: {},
+      } as any)
+      const fallback = () => [h('p')]
+      let forwarded!: VNode
+      renderSlot(
+        { default: () => [(forwarded = forward())] },
+        'default',
+        {},
+        fallback,
+      )
+      expect(forwarded.vs!.outlets).toBeUndefined()
+      const rendered = renderSlot(
+        { default: () => [forward(), forward()] },
+        'default',
+        {},
+        fallback,
+      )
+      expect((rendered.children as VNode[]).length).toBe(2)
+    })
 
     it('records each outlet fallback with its owner, innermost first', () => {
-      const wrapper = { type: {}, appContext: {} } as any
-      const inner = { type: {}, appContext: {} } as any
+      const wrapper = { type: {}, vnode: {}, appContext } as any
+      const inner = { type: {}, vnode: {}, appContext } as any
       const wrapperFallback = () => [h('b')]
       const innerFallback = () => [h('p')]
       let forwarded!: VNode
@@ -357,7 +388,7 @@ describe('renderSlot', () => {
         const owner = (forwardsVapor: boolean) =>
           ({
             type: {},
-            appContext: {},
+            appContext,
             vnode: {
               shapeFlag: ShapeFlags.SLOTS_CHILDREN,
               children: { [rawVaporSlotKey]: forwardsVapor },
