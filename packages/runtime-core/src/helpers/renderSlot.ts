@@ -139,30 +139,38 @@ export function renderSlot(
   openBlock()
   let rendered: VNode
   try {
-    const validSlotContent = slot && ensureValidVNode(slot(props))
+    const content = slot && slot(props)
+    const validSlotContent = content && ensureValidVNode(content)
 
     // forwarded vapor slots resolve this outlet's fallback themselves
     const fallbackHost =
       fallback &&
-      validSlotContent &&
-      attachVaporSlotOutlet(validSlotContent, fallback)
+      content &&
+      attachVaporSlotOutlet(
+        content,
+        !!validSlotContent,
+        fallback,
+        props.key || branchKey || name,
+      )
+    // a host keeps the outlet's identity whether or not slots are left
+    const keyedContent = fallbackHost ? content : validSlotContent
 
     const slotKey =
       props.key ||
       branchKey ||
       // slot content array of a dynamic conditional slot may have a branch
       // key attached in the `createSlots` helper, respect that
-      (validSlotContent && (validSlotContent as any).key)
+      (keyedContent && (keyedContent as any).key)
     rendered = createBlock(
       Fragment,
       {
         key:
           (slotKey && !isSymbol(slotKey) ? slotKey : `_${name}`) +
           // #7256 force differentiate fallback content from actual content
-          (!validSlotContent && fallback ? '_fb' : ''),
+          (!keyedContent && fallback ? '_fb' : ''),
       },
       fallbackHost
-        ? validSlotContent!.concat(fallbackHost)
+        ? content!.concat(fallbackHost)
         : validSlotContent || (fallback ? fallback() : []),
       // the fallback host comes and goes with the shape of the content
       !fallbackHost &&
@@ -204,24 +212,47 @@ export function ensureValidVNode(
     : null
 }
 
+// outlets that got a fallback host, by owner: they keep it once no slot is left
+const hostedOutlets = new WeakMap<object, Set<unknown>>()
+let hasHostedOutlets = false
+
 /**
  * Hands a vdom outlet's fallback over to the vapor slots its content consists
  * of: recorded on the slot vnode when the content is structurally that one
  * slot, else on the returned host vnode, to append to the content, which owns
- * the fallback and shows it while every slot is empty. Internal to vapor
- * interop.
+ * the fallback and shows it while every slot is empty. An outlet keeps its
+ * host while it holds no slot at all, so that the fallback does not change
+ * hands, and instance, as slots come and go.
  */
-export function attachVaporSlotOutlet(
-  vnodes: VNodeArrayChildren,
+function attachVaporSlotOutlet(
+  content: VNodeArrayChildren,
+  valid: boolean,
   fallback: () => VNodeArrayChildren,
+  id: unknown,
 ): VNode | undefined {
-  if (!findVaporSlots(vnodes)) return
-  const outlet = { fallback, vdom: true, owner: currentRenderingInstance }
+  const owner = currentRenderingInstance
+  if (valid) {
+    if (!findVaporSlots(content)) return
+  } else if (
+    !hasHostedOutlets ||
+    !owner ||
+    !hostedOutlets.has(owner) ||
+    !hostedOutlets.get(owner)!.has(id)
+  ) {
+    return
+  }
+  const outlet = { fallback, vdom: true, owner }
   let host: VNode | undefined
-  if (severalSlots) {
+  if (!valid || severalSlots) {
     host = (openBlock(), createBlock(VaporSlot, { key: '_fb' }))
     // NOOP: a host has no slot, only the guards on `vs.slot` to pass
     host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
+    if (valid && owner) {
+      let ids = hostedOutlets.get(owner)
+      if (!ids) hostedOutlets.set(owner, (ids = new Set()))
+      ids.add(id)
+      hasHostedOutlets = true
+    }
   } else {
     ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
   }

@@ -2721,9 +2721,9 @@ describe('vdomInterop', () => {
           side.root.querySelector('input')!.value = 'keep me'
         }
         const sameInput = t.pin('input')
-        // more empty slots, then fewer, the first included: the outlet shows
-        // the same fallback throughout
-        for (const count of [2, 3, 1]) {
+        // more empty slots, fewer, none at all, then some again: the outlet
+        // shows the same fallback throughout
+        for (const count of [2, 3, 1, 0, 1]) {
           await t.set({ count })
           sameInput(`count ${count}`)
           for (const side of [t.vdom, t.vapor]) {

@@ -42,7 +42,6 @@ import type { VaporFragment } from './fragment'
 
 interface RenderedSlotFallback {
   block: Block
-  boundary: SlotBoundaryContext
   onContentInvalid: (() => void)[]
 }
 
@@ -100,9 +99,9 @@ function renderSlotFallback(
       )
       if (isValidSlot(content)) {
         selected = true
-        return { block: content, boundary: current, onContentInvalid }
+        return { block: content, onContentInvalid }
       }
-      result = { block: content, boundary: current, onContentInvalid }
+      result = { block: content, onContentInvalid }
     }
 
     boundary = current.getParent()
@@ -119,8 +118,6 @@ export interface SlotResolutionState {
   boundary: SlotBoundaryContext
   // The committed fallback block, or null while content is exposed.
   activeFallback: Block | null
-  // The boundary that provided the active fallback.
-  activeFallbackBoundary?: SlotBoundaryContext | null
   // Parking callbacks registered by hosts rendered in the active fallback.
   activeFallbackInvalidCallbacks?: (() => void)[]
   // A committed fallback can be invalid and therefore remain detached.
@@ -217,7 +214,6 @@ function clearSlotFallback(
       state.fallbackInserted ? parentNode || undefined : undefined,
     )
     state.activeFallback = null
-    state.activeFallbackBoundary = null
     state.fallbackInserted = false
   }
   state.activeFallbackInvalidCallbacks = undefined
@@ -259,7 +255,6 @@ function renderFallbackInScope(
 
   return {
     block: renderedFallback.block,
-    boundary: renderedFallback.boundary,
     onContentInvalid: renderedFallback.onContentInvalid,
     scope,
   }
@@ -291,13 +286,11 @@ export function insertActiveSlotFallback(
 function commitSlotFallback(
   state: SlotResolutionState,
   block: Block,
-  boundary: SlotBoundaryContext,
   scope: EffectScope,
   onContentInvalid: (() => void)[],
   detachContent: boolean,
 ): void {
   state.activeFallback = block
-  state.activeFallbackBoundary = boundary
   state.activeFallbackInvalidCallbacks = onContentInvalid
   state.fallbackScope = scope
   state.fallbackInserted = isHydrating
@@ -344,7 +337,6 @@ function renderAndCommitSlotFallback(
     commitSlotFallback(
       state,
       result.block,
-      result.boundary,
       result.scope,
       result.onContentInvalid,
       !hadFallback,
@@ -417,8 +409,8 @@ function recheckSlotResolutionNow(
   const exposedValid = fallback ? fallbackValid : contentValid
   const prevNodesValid = state.lastNodesValid ?? exposedValid
   if (!force && contentValid && !fallback && prevNodesValid) {
-    state.lastNodesValid = true
     state.syncNodes()
+    state.lastNodesValid = true
     return
   }
 
@@ -429,9 +421,9 @@ function recheckSlotResolutionNow(
     clearSlotFallback(state)
     if (hadFallback) exposeContent(state)
   } else if (fallback && !hasSlotFallback(state.boundary)) {
-    // The chain provides no fallback any more (an interop outlet left it, or
-    // hands its fallback to another slot now): the parked content returns to
-    // the DOM, invalid or not, so its anchors are live for later updates.
+    // The chain lost its last fallback (an interop outlet left it): the
+    // parked content returns to the DOM, invalid or not, so its anchors are
+    // live for later updates.
     clearSlotFallback(state)
     exposeContent(state)
   } else if (fallback) {
@@ -465,9 +457,8 @@ function recheckSlotResolutionNow(
           ? fallbackValid
           : isValidSlot(nextFallback)
         : state.isContentValid()
-  // validity first: syncNodes hooks may report what the host exposes
-  state.lastNodesValid = nextNodesValid
   state.syncNodes()
+  state.lastNodesValid = nextNodesValid
   if (prevNodesValid !== nextNodesValid) {
     state.notifyExposedValidityChange()
   }
