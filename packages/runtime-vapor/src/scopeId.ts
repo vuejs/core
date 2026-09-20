@@ -4,7 +4,12 @@ import {
   getRootElement,
   isVaporComponent,
 } from './component'
-import { type DynamicFragment, isFragment, isInteropFragment } from './fragment'
+import {
+  type DynamicFragment,
+  isFragment,
+  isInteropFragment,
+  isSlotResolver,
+} from './fragment'
 import type { Block } from './block'
 import { isArray } from '@vue/shared'
 import { isInteropEnabled } from './vdomInteropState'
@@ -35,7 +40,9 @@ function stampSlotContent(block: Block, scopeIds: string[]): void {
     for (const b of block) stampSlotContent(b, scopeIds)
   } else if (
     isFragment(block) &&
-    !(isInteropEnabled && isInteropFragment(block))
+    !(isInteropEnabled && isInteropFragment(block)) &&
+    // an exposed fallback keeps the ids of the outlet that provided it
+    !(isSlotResolver(block) && block.activeFallback)
   ) {
     stampSlotContent(block.nodes, scopeIds)
   }
