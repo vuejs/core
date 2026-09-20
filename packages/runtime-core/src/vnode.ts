@@ -312,8 +312,6 @@ export interface VNode<
     // on the fallback host of an outlet rendering several vapor slots: the
     // slots whose content it follows, in place of a slot of its own
     members?: VNode[]
-    // on a slot whose outlet fallback a host beside it owns
-    hosted?: boolean
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
@@ -867,7 +865,6 @@ function cloneVaporSlotMeta(vnode: VNode): VNode['vs'] {
     slot: vaporSlot.slot,
     outlets: vaporSlot.outlets,
     members: vaporSlot.members,
-    hosted: vaporSlot.hosted,
   }
 
   if (vnode.el) {

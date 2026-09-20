@@ -780,15 +780,32 @@ export function createHydrationFunctions(
     }
 
     const container = parentNode(node)!
-    const next = hydrateChildren(
-      nextSibling(node)!,
-      vnode,
-      container,
-      parentComponent,
-      parentSuspense,
-      slotScopeIds,
-      optimized,
-    )
+    const first = nextSibling(node)!
+    // an outlet whose fallback a vapor host owns (see renderSlot): the server
+    // renders that fallback in place of content that is all empty
+    const children = vnode.children as VNode[]
+    const host = children[children.length - 1]
+    let next: Node | null | undefined
+    if (host && host.vs && host.vs.members) {
+      next = getVaporInterface(parentComponent, host).hydrateSlotOutlet(
+        vnode,
+        first,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+      )
+    }
+    if (next === undefined) {
+      next = hydrateChildren(
+        first,
+        vnode,
+        container,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+        optimized,
+      )
+    }
     if (next && isComment(next) && next.data === ']') {
       return nextSibling((vnode.anchor = next))
     } else {
