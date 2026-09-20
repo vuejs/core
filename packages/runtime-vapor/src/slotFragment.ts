@@ -65,11 +65,12 @@ function renderSlotFallback(
     if (localFallback) {
       let selected = false
       const onContentInvalid: (() => void)[] = []
-      // the PROVIDING outlet's ids: as in vdom, an outer outlet's fallback
-      // replaces the forwarded content and the slotted ids around it
-      const scopeIds = current.getScopeIds ? current.getScopeIds() : null
-      const renderFallback = scopeIds
-        ? () => renderWithSlotScopeIds(scopeIds, localFallback)
+      // the PROVIDING outlet's ids, none included: as in vdom, an outer
+      // outlet's fallback replaces the forwarded content and the slotted ids
+      // around it
+      const getScopeIds = current.getScopeIds
+      const renderFallback = getScopeIds
+        ? () => renderWithSlotScopeIds(getScopeIds(), localFallback)
         : localFallback
       const content = current.run(
         () =>

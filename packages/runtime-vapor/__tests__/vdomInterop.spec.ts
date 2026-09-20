@@ -2824,6 +2824,41 @@ describe('vdomInterop', () => {
         }
       })
 
+      test('clones of one slot vnode resolve the fallback of the outlet each sits in', async () => {
+        // render functions: a template has no way to place one vnode twice
+        const Outlet = (name: string) =>
+          defineComponent({
+            setup(_, { slots }) {
+              return () =>
+                h(
+                  'div',
+                  renderSlot(slots, 'default', {}, () => [h('p', name)]),
+                )
+            },
+          })
+        const A = Outlet('A')
+        const B = Outlet('B')
+        const Wrapper = defineComponent({
+          setup(_, { slots }) {
+            return () => {
+              // an outlet with a fallback of its own, which renders nothing
+              const forwarded = renderSlot(slots, 'default', {}, () => [])
+              return [
+                h(A, null, { default: () => [cloneVNode(forwarded)] }),
+                h(B, null, { default: () => [cloneVNode(forwarded)] }),
+              ]
+            }
+          },
+        })
+        const t = mountBoth({ Wrapper }, { show: false })
+        t.expect('<div><p>A</p></div><div><p>B</p></div>')
+        await t.set({ show: true })
+        t.expect(
+          '<div><span>content</span></div><div><span>content</span></div>',
+        )
+        t.unmount()
+      })
+
       test('resolves a new host after its empty members mount', async () => {
         // none of the new children matches an old one: the renderer mounts
         // them from the end, the host ahead of the slots it follows

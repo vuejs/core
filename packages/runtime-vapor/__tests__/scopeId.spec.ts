@@ -2678,6 +2678,31 @@ describe('vdom interop', () => {
       },
     )
 
+    test('an unscoped outlet renders its fallback without the ids of the scoped component forwarding to it', async () => {
+      // the provider has no ids of its own: nothing is left of the requesting
+      // outlet's either
+      const Inner = compile(
+        `<script setup>const data = _data; const components = _components;</script>` +
+          `<template><slot><p>inner fallback</p></slot></template>`,
+        ref(null),
+        {},
+        { vapor: false },
+      )
+      const Wrapper = scoped(
+        'wrapper',
+        `<template><components.Inner><slot/></components.Inner></template>`,
+        { Inner },
+      )
+      const { vdom, vapor } = await renderParity(
+        { App: fillFrom('Wrapper') },
+        () => ref(false),
+        () => {},
+        { Wrapper },
+      )
+      expect(vdom.after).toBe(`<p>inner fallback</p>`)
+      expect(vapor.after).toBe(vdom.after)
+    })
+
     test('a fallback forwarded through several outlets carries only the ids around it', async () => {
       const Leaf = scoped(
         'leaf',

@@ -55,10 +55,13 @@ describe('vdom interop: vapor slot outlets', () => {
     )
 
     expect((rendered.children as VNode[])[0]).toBe(forwarded)
-    expect(forwarded.vs!.outlets).toEqual([
-      { fallback: wrapperFallback, vdom: true, owner: wrapper },
-      { fallback: innerFallback, vdom: true, owner: inner, innerIds: 0 },
-    ])
+    const [own, enclosing] = forwarded.vs!.outlets!
+    expect(own.fallback).toBe(wrapperFallback)
+    expect(own.owner).toBe(wrapper)
+    expect(own.innerIds).toBeUndefined()
+    expect(enclosing.fallback).toBe(innerFallback)
+    expect(enclosing.owner).toBe(inner)
+    expect(enclosing.innerIds).toBe(0)
   })
 
   it('finds the sole vapor slot through single-child fragments', () => {
@@ -102,6 +105,37 @@ describe('vdom interop: vapor slot outlets', () => {
       () => [h('b')],
     )
     expect(forwarded.vs!.outlets!.map(o => o.innerIds)).toEqual([0, 1])
+  })
+
+  it('records an outlet once on a slot vnode reused across renders', () => {
+    // `<slot v-once/>`: the same vnode comes back on every render of the
+    // outlets around it
+    const cached = forward()
+    const inner = { type: {}, vnode: {}, appContext } as any
+    const outer = { type: {}, vnode: {}, appContext } as any
+    const render = () => {
+      setCurrentRenderingInstance(outer)
+      return renderSlot(
+        {
+          default: withCtx(
+            () => [renderSlot({ default: () => [cached] }, 'default', {}, fb)],
+            inner,
+          ) as Slot,
+        },
+        'default',
+        {},
+        fb,
+      )
+    }
+    const fb = () => [h('p')]
+    render()
+    const first = cached.vs!.outlets!
+    expect(first.map(o => o.owner)).toEqual([inner, outer])
+    render()
+    expect(cached.vs!.outlets!.map(o => o.owner)).toEqual([inner, outer])
+    // what an earlier render handed to the renderer stays as it was
+    expect(first.map(o => o.owner)).toEqual([inner, outer])
+    expect(cached.vs!.outlets).not.toBe(first)
   })
 
   it('stacks enclosing outlets innermost first', () => {

@@ -188,6 +188,9 @@ export interface VaporSlotOutlet {
   // vnode, which its fallback renders without (0 counts); unset on the vnode's
   // own outlet
   innerIds?: number
+  // the outlet content the record was made for, which tells a record of this
+  // render from those a reused vnode still carries; unset on the vnode's own
+  content?: VNodeArrayChildren
 }
 
 export interface VNode<
