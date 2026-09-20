@@ -3112,6 +3112,11 @@ function renderVaporSlot(
     if (!vnode.vs || !vnode.vs.slot) {
       return EMPTY_BLOCK
     }
+    // A clone of a mounted vnode comes with the state of that render (a vnode
+    // placed twice is cloned on its second mount): this one starts its own. A
+    // state no render drives yet was made by the host following this slot.
+    const cloned = vnode.vs!.state as InteropVaporSlotState | undefined
+    if (cloned && cloned.recheck) vnode.vs!.state = undefined
     const slotState = resolveInteropVaporSlotState(vnode)
     // Most of the interop setup is shared, but slots with a vdom outlet
     // fallback on their chain still need to let an inner SlotFragment own the
