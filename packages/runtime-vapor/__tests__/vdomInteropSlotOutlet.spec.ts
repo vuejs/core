@@ -138,6 +138,43 @@ describe('vdom interop: vapor slot outlets', () => {
     expect(cached.vs!.outlets).not.toBe(first)
   })
 
+  it('replaces the record of an outlet handed the same content array again', () => {
+    // a slot function returning a cached array
+    const content = [forward()]
+    const first = () => [h('p', 'first')]
+    const second = () => [h('p', 'second')]
+    renderSlot({ default: () => content }, 'default', {}, first)
+    renderSlot({ default: () => content }, 'default', {}, second)
+    expect(content[0].vs!.outlets!.map(o => o.fallback)).toEqual([second])
+  })
+
+  it('leaves the record of a host to the host', () => {
+    // no slot in the inner outlet: all the outer one finds is the host
+    const inner = () => [h('p', 'inner')]
+    const outer = () => [h('p', 'outer')]
+    setCurrentRenderingInstance({
+      type: {},
+      appContext,
+      vnode: {
+        shapeFlag: ShapeFlags.SLOTS_CHILDREN,
+        children: { [rawVaporSlotKey]: true },
+      },
+    } as any)
+    let hosted!: VNode
+    renderSlot(
+      {
+        default: () => [
+          (hosted = renderSlot({ default: () => [] }, 'default', {}, inner)),
+        ],
+      },
+      'default',
+      {},
+      outer,
+    )
+    const host = (hosted.children as VNode[])[0]
+    expect(host.vs!.outlets!.map(o => o.fallback)).toEqual([inner, outer])
+  })
+
   it('stacks enclosing outlets innermost first', () => {
     let forwarded!: VNode
     const innerFallback = () => [h('p')]

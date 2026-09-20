@@ -2859,6 +2859,21 @@ describe('vdomInterop', () => {
         t.unmount()
       })
 
+      test('an enclosing outlet leaves the fallback of a host to the host', async () => {
+        // an empty dynamically named slot: the inner outlet hosts its fallback
+        // with no slot in it, and the host is all the outer outlet finds
+        const t = mountBoth(
+          {
+            Leaf: `<slot><p>outer</p></slot>`,
+            Middle: `<components.Leaf><slot><p>inner</p></slot></components.Leaf>`,
+            Wrapper: `<components.Middle><template #[data.name]></template></components.Middle>`,
+          },
+          { name: 'default', show: false },
+        )
+        t.expect('<p>inner</p>')
+        t.unmount()
+      })
+
       test('resolves a new host after its empty members mount', async () => {
         // none of the new children matches an old one: the renderer mounts
         // them from the end, the host ahead of the slots it follows

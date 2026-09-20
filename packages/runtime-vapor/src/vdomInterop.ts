@@ -2869,11 +2869,12 @@ function attachVaporSlotOutlet(
   owner: ComponentInternalInstance | null,
 ): VNode | undefined {
   if (!findVaporSlots(content)) return
-  const outlet: VaporSlotOutlet = { fallback, vdom: true, owner, content }
+  const outlet: VaporSlotOutlet = { fallback, vdom: true, owner }
   let host: VNode | undefined
   if (!severalSlots && foundSlots.length) {
     // a lone slot stays the one vnode exposing the fallback (`<Transition>`)
     outlet.innerIds = pathIds
+    outlet.content = content
     recordOutlet(foundSlots[0], outlet)
   } else if (foundSlots.length || forwardsVaporSlots(owner)) {
     // no slot at all: a closed `v-if` branch or an empty list of them
@@ -2913,9 +2914,9 @@ function recordVaporSlotOutlet(
 }
 
 // The records of a slot vnode are never written in place: its clones share
-// them. A vnode reused across renders (`<slot v-once/>`) still carries those
-// of the render before: only the outlets nearer to the slot, whose content was
-// walked on the way to it, were recorded by this one.
+// them. A vnode reused across renders (`<slot v-once/>`, a cached array) still
+// carries those of the render before: only the outlets nearer to the slot,
+// whose content was walked on the way to it, were recorded by this one.
 function recordOutlet(slot: VNode, outlet: VaporSlotOutlet): void {
   const vs = slot.vs!
   const outlets: VaporSlotOutlet[] = []
@@ -2923,8 +2924,9 @@ function recordOutlet(slot: VNode, outlet: VaporSlotOutlet): void {
   if (recorded) {
     for (let i = 0; i < recorded.length; i++) {
       const content = recorded[i].content
-      // the vnode's own outlet has none
-      if (!content || walked.includes(content)) outlets.push(recorded[i])
+      // the vnode's own outlet has none; `walked[0]` is this outlet's, whose
+      // earlier record gives way
+      if (!content || walked.indexOf(content) > 0) outlets.push(recorded[i])
     }
   }
   outlets.push(outlet)
