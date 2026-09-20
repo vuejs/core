@@ -834,22 +834,24 @@ const vaporInteropImpl: VaporInVdomInterface = {
       }
       start = start && start.nextSibling
     }
-    const container = parentNode(node)!
-    runWithoutHydration(() => {
-      const patch = ensureRenderer().internals.p
-      for (let i = 0; i < last; i++) {
-        patch(
-          null,
-          (children[i] = normalizeVNode(children[i])),
-          container as any,
-          node as any,
-          parentComponent,
-          parentSuspense,
-          undefined,
-          slotScopeIds,
-        )
-      }
-    })
+    if (last) {
+      const container = parentNode(node)!
+      runWithoutHydration(() => {
+        const patch = ensureRenderer().internals.p
+        for (let i = 0; i < last; i++) {
+          patch(
+            null,
+            (children[i] = normalizeVNode(children[i])),
+            container as any,
+            node as any,
+            parentComponent,
+            parentSuspense,
+            undefined,
+            slotScopeIds,
+          )
+        }
+      })
+    }
     return this.hydrateSlot(
       children[last],
       node,
@@ -2870,19 +2872,26 @@ function attachVaporSlotOutlet(
   owner: ComponentInternalInstance | null,
 ): VNode | undefined {
   if (!findVaporSlots(content)) return
-  const outlet: VaporSlotOutlet = { fallback, vdom: true, owner }
   let host: VNode | undefined
   if (!severalSlots && foundSlots.length) {
     // a lone slot stays the one vnode exposing the fallback (`<Transition>`)
-    outlet.innerIds = pathIds
-    outlet.content = content
-    recordOutlet(foundSlots[0], outlet)
+    recordOutlet(foundSlots[0], {
+      fallback,
+      vdom: true,
+      owner,
+      innerIds: pathIds,
+      content,
+    })
   } else if (foundSlots.length || forwardsVaporSlots(owner)) {
     // no slot at all: a closed `v-if` branch or an empty list of them
     host = createVNode(VaporSlotVNode, { key: '_fb' })
-    // NOOP: no slot to invoke, and one identity across renders for interop
-    // to patch the host in place
-    host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
+    host.vs = {
+      // NOOP: no slot to invoke, and one identity across renders for interop
+      // to patch the host in place
+      slot: NOOP,
+      outlets: [{ fallback, vdom: true, owner }],
+      members: foundSlots.slice(),
+    }
   }
   foundSlots.length = walked.length = 0
   return host
@@ -2920,18 +2929,14 @@ function recordVaporSlotOutlet(
 // whose content was walked on the way to it, were recorded by this one.
 function recordOutlet(slot: VNode, outlet: VaporSlotOutlet): void {
   const vs = slot.vs!
-  const outlets: VaporSlotOutlet[] = []
   const recorded = vs.outlets
-  if (recorded) {
-    for (let i = 0; i < recorded.length; i++) {
-      const content = recorded[i].content
-      // the vnode's own outlet has none; `walked[0]` is this outlet's, whose
-      // earlier record gives way
-      if (!content || walked.indexOf(content) > 0) outlets.push(recorded[i])
-    }
-  }
-  outlets.push(outlet)
-  vs.outlets = outlets
+  vs.outlets = recorded
+    ? recorded
+        // the vnode's own outlet has no content; this outlet's is not among
+        // the children walked, so its earlier record gives way
+        .filter(o => !o.content || walked.includes(o.content))
+        .concat(outlet)
+    : [outlet]
 }
 
 // scratch for the walk below, which runs no user code and cannot re-enter
@@ -2940,7 +2945,8 @@ let severalSlots = false
 // slot scope ids of the fragments on the way to a lone slot (the renderer
 // appends them in that order)
 let pathIds = 0
-// the children walked, which for a lone slot are those on the way to it
+// the children of the fragments walked, which for a lone slot are those on the
+// way to it
 const walked: VNodeArrayChildren[] = []
 
 // whether the content is made of vapor slots only, if any at all
@@ -2958,7 +2964,6 @@ function findVaporSlots(vnodes: VNodeArrayChildren): boolean {
 // the content can never hold more than one slot: no siblings (a `v-if` leaves
 // its comment behind) and no list on the way to it.
 function walkVaporSlots(vnodes: VNodeArrayChildren): boolean {
-  walked.push(vnodes)
   if (vnodes.length > 1) severalSlots = true
   for (let i = 0; i < vnodes.length; i++) {
     const child = vnodes[i]
@@ -2974,7 +2979,10 @@ function walkVaporSlots(vnodes: VNodeArrayChildren): boolean {
         severalSlots = true
       }
       if (child.slotScopeIds) pathIds += child.slotScopeIds.length
-      if (!walkVaporSlots(child.children as VNodeArrayChildren)) return false
+      const children = child.children as VNodeArrayChildren
+      // only a lone slot gets records
+      if (!severalSlots) walked.push(children)
+      if (!walkVaporSlots(children)) return false
     } else if (child.type !== VNodeComment) {
       return false
     }
@@ -3119,17 +3127,21 @@ function renderVaporSlot(
     const cloned = vnode.vs!.state as InteropVaporSlotState | undefined
     if (cloned && cloned.recheck) vnode.vs!.state = undefined
     const slotState = resolveInteropVaporSlotState(vnode)
-    // Most of the interop setup is shared, but slots with a vdom outlet
-    // fallback on their chain still need to let an inner SlotFragment own the
-    // active fallback lifecycle. Forcing the interop wrapper to own that branch breaks
-    // fallback blocks that can later resolve to an empty vnode list.
+    // Slots with a vdom outlet fallback on their chain let an inner
+    // SlotFragment own the active fallback lifecycle: forcing the interop
+    // wrapper to own that branch breaks fallback blocks that can later resolve
+    // to an empty vnode list.
     const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
     // The vnode-derived slot context becomes the creation ambient for the
     // vapor-rendered content, restored via the fragment's render seam.
     const inherited = getInheritedScopeIds(vnode, parentComponent, false)
     frag.ctx = deriveSlotScopeIds(
       frag.ctx,
-      getInteropVaporSlotScopeIds(vnode, contextSlotScopeIds, inherited),
+      getInteropVaporSlotScopeIds(
+        contextSlotScopeIds,
+        vnode.slotScopeIds,
+        inherited,
+      ),
     )
     const content = new InteropContentState()
     frag.isBlockValid = componentAsValid =>
@@ -3187,10 +3199,7 @@ function renderVaporSlot(
     // the chain is walked. The chain follows the outlets recorded on the
     // latest vnode and continues into the ambient boundary past the last.
     const outletBoundaries: SlotBoundaryContext[] = []
-    const createOutletBoundary = (
-      depth: number,
-      onContentInvalid?: (() => void)[],
-    ): SlotBoundaryContext => {
+    const createOutletBoundary = (depth: number): SlotBoundaryContext => {
       let fallback: BlockFn | undefined
       return createSlotBoundary(
         frag,
@@ -3200,7 +3209,8 @@ function renderVaporSlot(
             ? (fallback ||= createFallback(slotState, depth, parentComponent))
             : undefined,
         markInteropSlotResolutionDirty,
-        onContentInvalid,
+        // the content parks at the slot's own resolution point
+        depth ? undefined : onContentInvalid,
         () => {
           const outlet = slotState.outlets[depth]
           // the vnode's own outlet renders under the vnode's own cell
@@ -3218,12 +3228,8 @@ function renderVaporSlot(
       depth < slotState.outlets.length
         ? (outletBoundaries[depth] ||= createOutletBoundary(depth))
         : slotBoundary
-    // the host's own resolution point stays with no outlet on the chain: it
-    // is where the content parks while a fallback shows
-    const rootBoundary = (outletBoundaries[0] = createOutletBoundary(
-      0,
-      onContentInvalid,
-    ))
+    // the slot's own resolution point stays with no outlet on the chain
+    const rootBoundary = createOutletBoundary(0)
     slotResolutionState = createSlotResolutionState(rootBoundary, {
       getContent: () => content.nodes,
       getParentNode: () => currentParentNode,
@@ -3279,6 +3285,12 @@ function renderVaporSlot(
         recheckSlotResolution(slotResolutionState, takePendingRecheck())
         return resolvedContent
       }
+      const renderContent = () =>
+        finalizeResolvedContent(
+          withRenderContext(frag.ctx, () =>
+            withSlotBoundary(rootBoundary, () => invokeVaporSlot(vnode)),
+          ),
+        )
       let resolvedContent: Block | undefined
       isResolvingContent = true
       try {
@@ -3291,21 +3303,13 @@ function renderVaporSlot(
               currentHydrationNode,
             )
             try {
-              return finalizeResolvedContent(
-                withRenderContext(frag.ctx, () =>
-                  withSlotBoundary(rootBoundary, () => invokeVaporSlot(vnode)),
-                ),
-              )
+              return renderContent()
             } finally {
               pending.settle()
             }
           })
         } else {
-          resolvedContent = finalizeResolvedContent(
-            withRenderContext(frag.ctx, () =>
-              withSlotBoundary(rootBoundary, () => invokeVaporSlot(vnode)),
-            ),
-          )
+          resolvedContent = renderContent()
         }
       } finally {
         isResolvingContent = false
@@ -3992,12 +3996,12 @@ function setVNodeVaporScopeIds(vnode: VNode, scopeIds: string[]): void {
 // The single merge point for a vapor slot's id cell: raw patch context, the
 // vnode's own ids, then deep slot-content inheritance (root-only excluded).
 function getInteropVaporSlotScopeIds(
-  vnode: VNode,
   contextSlotScopeIds: string[] | null,
+  own: string[] | null,
   inherited: string[],
 ): string[] | null {
   return concatInteropScopeIds(
-    concatInteropScopeIds(contextSlotScopeIds, vnode.slotScopeIds),
+    concatInteropScopeIds(contextSlotScopeIds, own),
     inherited.length ? inherited : null,
   )
 }
@@ -4010,9 +4014,10 @@ function getEnclosingOutletScopeIds(
   inherited: string[],
 ): string[] | null {
   const kept = context && innerIds ? context.slice(0, -innerIds) : context
-  return concatInteropScopeIds(
+  return getInteropVaporSlotScopeIds(
     kept && kept.length ? kept : null,
-    inherited.length ? inherited : null,
+    null,
+    inherited,
   )
 }
 

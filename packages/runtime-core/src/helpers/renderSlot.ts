@@ -137,13 +137,17 @@ export function renderSlot(
 
     // forwarded vapor slots resolve this outlet's fallback themselves; the
     // interop tells them apart, so none of it ships without it
-    const interop =
-      currentRenderingInstance && currentRenderingInstance.appContext.vapor
-    const fallbackHost =
-      fallback &&
-      content &&
-      interop &&
-      interop.attachSlotOutlet(content, fallback, currentRenderingInstance)
+    let fallbackHost: VNode | undefined
+    if (fallback && content && currentRenderingInstance) {
+      const interop = currentRenderingInstance.appContext.vapor
+      if (interop) {
+        fallbackHost = interop.attachSlotOutlet(
+          content,
+          fallback,
+          currentRenderingInstance,
+        )
+      }
+    }
     // a hosted outlet is one fragment, slots left or not: its content shows
     // on its own and stays in place as the host comes and goes
     const keyedContent = fallbackHost ? content : validSlotContent
