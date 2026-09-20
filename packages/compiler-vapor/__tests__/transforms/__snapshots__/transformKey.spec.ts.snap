@@ -195,7 +195,7 @@ exports[`compiler: key > with static key > <component is literal/> + key 1`] = `
 "import { createDynamicComponent as _createDynamicComponent, setBlockKey as _setBlockKey } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => ('div'), null, null, 1 /* SINGLE_ROOT */)
+  const n0 = _createDynamicComponent(() => ('div'), { key: "1" }, null, 1 /* SINGLE_ROOT */)
   _setBlockKey(n0, "1")
   return n0
 }"
@@ -205,7 +205,7 @@ exports[`compiler: key > with static key > <component is/> + key 1`] = `
 "import { createDynamicComponent as _createDynamicComponent, setBlockKey as _setBlockKey } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createDynamicComponent(() => (_ctx.view), null, null, 1 /* SINGLE_ROOT */)
+  const n0 = _createDynamicComponent(() => (_ctx.view), { key: "1" }, null, 1 /* SINGLE_ROOT */)
   _setBlockKey(n0, "1")
   return n0
 }"
@@ -226,8 +226,23 @@ exports[`compiler: key > with static key > component + key 1`] = `
 "import { createAssetComponent as _createAssetComponent, setBlockKey as _setBlockKey } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createAssetComponent("Foo", null, null, true)
+  const n0 = _createAssetComponent("Foo", { key: "1" }, null, true)
   _setBlockKey(n0, "1")
+  return n0
+}"
+`;
+
+exports[`compiler: key > with static key > component + key with v-bind 1`] = `
+"import { createAssetComponent as _createAssetComponent, setBlockKey as _setBlockKey } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Foo", {
+    key: "a",
+    $: [
+      () => (_ctx.props)
+    ]
+  }, null, true)
+  _setBlockKey(n0, "a")
   return n0
 }"
 `;
@@ -310,7 +325,7 @@ exports[`compiler: key > with static key > v-once + component key 1`] = `
 "import { createAssetComponent as _createAssetComponent, setBlockKey as _setBlockKey } from 'vue';
 
 export function render(_ctx) {
-  const n0 = _createAssetComponent("Foo", null, null, true, true)
+  const n0 = _createAssetComponent("Foo", { key: "bar" }, null, true, true)
   _setBlockKey(n0, "bar")
   return n0
 }"

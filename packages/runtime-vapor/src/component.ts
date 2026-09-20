@@ -91,6 +91,7 @@ import {
   hasFallthroughAttrs,
   normalizePropsOptions,
   resolveDynamicProps,
+  resolveSource,
   setupPropsValidation,
   snapshotRawProps,
 } from './componentProps'
@@ -379,7 +380,10 @@ export function createComponent(
     ) {
       const ctx = (currentInstance as KeepAliveInstance).ctx
       keepAliveCtx = ctx
-      const cached = ctx.getCachedComponent(component)
+      const cached = ctx.getCachedComponent(
+        component,
+        rawProps && resolveSource(rawProps.key),
+      )
       if (cached) {
         // a nested branch teardown stops the branch scope that unmounts the
         // cached component, so the scope re-entering it takes over
