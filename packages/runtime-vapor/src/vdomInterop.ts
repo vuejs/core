@@ -2825,12 +2825,12 @@ function attachVaporSlotOutlet(
   owner: ComponentInternalInstance | null,
 ): VNode | undefined {
   if (!findVaporSlots(content)) return
-  const outlet: VaporSlotOutlet = { fallback, vdom: true, owner }
+  const outlet: VaporSlotOutlet = { fallback, vdom: true, owner, content }
   let host: VNode | undefined
   if (!severalSlots && foundSlots.length) {
     // a lone slot stays the one vnode exposing the fallback (`<Transition>`)
     outlet.innerIds = pathIds
-    ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
+    recordOutlet(foundSlots[0], outlet)
   } else if (foundSlots.length || forwardsVaporSlots(owner)) {
     // no slot at all: a closed `v-if` branch or an empty list of them
     host = createVNode(VaporSlotVNode, { key: '_fb' })
@@ -2839,7 +2839,7 @@ function attachVaporSlotOutlet(
     host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
     for (let i = 0; i < foundSlots.length; i++) foundSlots[i].vs!.hosted = true
   }
-  foundSlots.length = 0
+  foundSlots.length = walked.length = 0
   return host
 }
 
@@ -2858,14 +2858,34 @@ function recordVaporSlotOutlet(
 ): void {
   if (findVaporSlots(vnodes)) {
     if (!severalSlots && foundSlots.length) {
-      ;(foundSlots[0].vs!.outlets ||= []).push({
+      recordOutlet(foundSlots[0], {
         fallback,
         vdom: false,
         innerIds: pathIds,
+        content: vnodes,
       })
     }
-    foundSlots.length = 0
+    foundSlots.length = walked.length = 0
   }
+}
+
+// The records of a slot vnode are never written in place: its clones share
+// them. A vnode reused across renders (`<slot v-once/>`) still carries those
+// of the render before: only the outlets nearer to the slot, whose content was
+// walked on the way to it, were recorded by this one.
+function recordOutlet(slot: VNode, outlet: VaporSlotOutlet): void {
+  const vs = slot.vs!
+  const outlets: VaporSlotOutlet[] = []
+  const recorded = vs.outlets
+  if (recorded) {
+    for (let i = 0; i < recorded.length; i++) {
+      const content = recorded[i].content
+      // the vnode's own outlet has none
+      if (!content || walked.includes(content)) outlets.push(recorded[i])
+    }
+  }
+  outlets.push(outlet)
+  vs.outlets = outlets
 }
 
 // scratch for the walk below, which runs no user code and cannot re-enter
@@ -2874,13 +2894,15 @@ let severalSlots = false
 // slot scope ids of the fragments on the way to a lone slot (the renderer
 // appends them in that order)
 let pathIds = 0
+// the children walked, which for a lone slot are those on the way to it
+const walked: VNodeArrayChildren[] = []
 
 // whether the content is made of vapor slots only, if any at all
 function findVaporSlots(vnodes: VNodeArrayChildren): boolean {
   severalSlots = false
   pathIds = 0
   if (walkVaporSlots(vnodes)) return true
-  foundSlots.length = 0
+  foundSlots.length = walked.length = 0
   return false
 }
 
@@ -2890,6 +2912,7 @@ function findVaporSlots(vnodes: VNodeArrayChildren): boolean {
 // the content can never hold more than one slot: no siblings (a `v-if` leaves
 // its comment behind) and no list on the way to it.
 function walkVaporSlots(vnodes: VNodeArrayChildren): boolean {
+  walked.push(vnodes)
   if (vnodes.length > 1) severalSlots = true
   for (let i = 0; i < vnodes.length; i++) {
     const child = vnodes[i]
