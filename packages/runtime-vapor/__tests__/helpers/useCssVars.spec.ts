@@ -880,8 +880,13 @@ describe('useVaporCssVars', () => {
     expect(cssVar(root.querySelector('#a'))).toBe('red')
     expect(cssVar(root.querySelector('#c'))).toBe('red')
 
-    // the toggle also creates a node that did not exist on mount
-    data.value = { color: 'green', ok: true }
+    // a node that did not exist on mount has to pick up the variables that
+    // are already there, without the vars themselves changing
+    data.value.ok = true
+    await nextTick()
+    expect(cssVar(root.querySelector('#b'))).toBe('red')
+
+    data.value.color = 'green'
     await nextTick()
     for (const id of ['#a', '#b', '#c']) {
       expect(cssVar(root.querySelector(id))).toBe('green')

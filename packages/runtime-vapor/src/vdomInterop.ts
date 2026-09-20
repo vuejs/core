@@ -350,7 +350,7 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
 const vaporInteropImpl: VaporInVdomInterface = {
   applyCssVars(vnode, vars) {
     // a vapor slot rendered in vdom holds its block on the vnode
-    setVarsOnBlock(vnode.vb || (vnode.component as any), vars)
+    setVarsOnBlock(vnode.vb || getVaporInstance(vnode).block, vars)
   },
   mount(
     vnode,
