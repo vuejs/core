@@ -352,6 +352,7 @@ describe('vnode', () => {
     const slotMeta = {
       slot: () => [],
       outlets,
+      hosted: true,
       state: { localFallback: 'fallback state' },
       ref: slotRef,
       scope: slotScope,
@@ -368,6 +369,7 @@ describe('vnode', () => {
     expect(cloned.vs).not.toBe(slotMeta)
     expect(cloned.vs!.slot).toBe(slotMeta.slot)
     expect(cloned.vs!.outlets).toBe(outlets)
+    expect(cloned.vs!.hosted).toBe(true)
     expect(cloned.vs!.state).toBeUndefined()
     expect(cloned.vs!.ref).toBeUndefined()
     expect(cloned.vs!.scope).toBeUndefined()
