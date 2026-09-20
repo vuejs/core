@@ -27,7 +27,12 @@ import {
   template,
   vaporInteropPlugin,
 } from '../src'
-import { compile, compileToVaporRender, makeRender } from './_utils'
+import {
+  compile,
+  compileToVaporRender,
+  makeRender,
+  renderParity,
+} from './_utils'
 
 const define = makeRender()
 
@@ -2488,5 +2493,151 @@ describe('vdom interop', () => {
     await nextTick()
     expect(root.querySelector('section')!.hasAttribute('outer-a')).toBe(true)
     app.unmount()
+  })
+
+  describe('vdom slot fallback under a vapor parent', () => {
+    // The same scoped vdom child fills its `<slot>` from a vdom parent and a
+    // vapor parent in turn; only the parent differs. Under a vdom parent the
+    // fallback renders inline in the child's render, under a vapor parent the
+    // interop fallback chain invokes it later, outside any render.
+    const scoped = (
+      id: string,
+      src: string,
+      components: Record<string, any> = {},
+      style = `p {}`,
+    ) => {
+      const comp = compile(
+        `<script setup>const data = _data; const components = _components;</script>` +
+          src +
+          `<style scoped>${style}</style>`,
+        ref(null),
+        components,
+        { vapor: false, id },
+      )
+      comp.__scopeId = `data-v-${id}`
+      return comp
+    }
+    const fillFrom = (child: string) =>
+      `<template><components.${child}><span v-if="data">content</span></components.${child}></template>`
+
+    test('fallback of an empty slot carries the child scope id', async () => {
+      const Child = scoped(
+        'child',
+        `<template><slot><p>fallback</p></slot></template>`,
+      )
+      const { vdom, vapor } = await renderParity(
+        { App: fillFrom('Child') },
+        () => ref(false),
+        () => {},
+        { Child },
+      )
+      expect(vdom.after).toBe(
+        `<p data-v-child="" data-v-child-s="">fallback</p>`,
+      )
+      expect(vapor.after).toBe(vdom.after)
+    })
+
+    test('fallback revealed after the content goes away carries it too', async () => {
+      const Child = scoped(
+        'child',
+        `<template><slot><p>fallback</p></slot></template>`,
+      )
+      const { vdom, vapor } = await renderParity(
+        { App: fillFrom('Child') },
+        () => ref(true),
+        data => {
+          data.value = false
+        },
+        { Child },
+      )
+      expect(vdom.after).toBe(
+        `<p data-v-child="" data-v-child-s="">fallback</p>`,
+      )
+      expect(vapor.after).toBe(vdom.after)
+    })
+
+    test('a component inside the fallback renders its slot under the fallback owner', async () => {
+      // `withCtx` inside the fallback captures the ambient rendering instance
+      const Foo = scoped('foo', `<template><div><slot/></div></template>`)
+      const Child = scoped(
+        'child',
+        `<template><slot><components.Foo><span>x</span></components.Foo></slot></template>`,
+        { Foo },
+      )
+      const { vdom, vapor } = await renderParity(
+        { App: fillFrom('Child') },
+        () => ref(false),
+        () => {},
+        { Child },
+      )
+      expect(vdom.after).toBe(
+        `<div data-v-foo="" data-v-child="" data-v-child-s="">` +
+          `<span data-v-child="" data-v-foo-s="">x</span></div>`,
+      )
+      expect(vapor.after).toBe(vdom.after)
+    })
+
+    test('an outlet nested in the fallback keeps the owner scope id', async () => {
+      const Child = scoped(
+        'child',
+        `<template><slot name="a"><slot name="b"><p>deep</p></slot></slot></template>`,
+      )
+      const { vdom, vapor } = await renderParity(
+        {
+          App:
+            `<template><components.Child>` +
+            `<template #a><span v-if="data">a</span></template>` +
+            `<template #b><span v-if="data">b</span></template>` +
+            `</components.Child></template>`,
+        },
+        () => ref(false),
+        () => {},
+        { Child },
+      )
+      expect(vdom.after).toBe(`<p data-v-child="" data-v-child-s="">deep</p>`)
+      expect(vapor.after).toBe(vdom.after)
+    })
+
+    // The enclosing outlet's fallback lands on the forwarded vapor slot vnode
+    // as `outletFallback`; both fallbacks must come back with their own
+    // owner's id, so a single owner on the interop side would not do.
+    test.each([
+      [
+        'the wrapper owns one',
+        `<slot><b>wrapper fallback</b></slot>`,
+        `<b data-v-wrapper="" data-v-inner-s="" data-v-wrapper-s="">wrapper fallback</b>`,
+        null,
+      ],
+      [
+        'only the inner one does',
+        `<slot/>`,
+        `<p data-v-inner="" data-v-inner-s="">inner fallback</p>`,
+        // the inner fallback also gets the forwarding outlet's `-s` id here,
+        // as it does in pure vapor (fallbacks render under the requesting
+        // outlet's ids); vdom does not add it. Not a fallback-owner concern.
+        `<p data-v-inner="" data-v-inner-s="" data-v-wrapper-s="">inner fallback</p>`,
+      ],
+    ])(
+      'a forwarded outlet keeps each fallback owner scope id, %s',
+      async (_, forwarded, expected, expectedVapor) => {
+        const Inner = scoped(
+          'inner',
+          `<template><slot><p>inner fallback</p></slot></template>`,
+        )
+        const Wrapper = scoped(
+          'wrapper',
+          `<template><components.Inner>${forwarded}</components.Inner></template>`,
+          { Inner },
+        )
+        const { vdom, vapor } = await renderParity(
+          { App: fillFrom('Wrapper') },
+          () => ref(false),
+          () => {},
+          { Wrapper },
+        )
+        expect(vdom.after).toBe(expected)
+        expect(vapor.after).toBe(expectedVapor || vdom.after)
+      },
+    )
   })
 })
