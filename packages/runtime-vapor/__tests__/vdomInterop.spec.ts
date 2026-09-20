@@ -2514,6 +2514,11 @@ describe('vdomInterop', () => {
         }
       }
       const innerFallback = `<slot><p>inner fallback</p></slot>`
+      // valid vdom content coming and going beside the forwarded slot
+      const asideChain = {
+        Inner: innerFallback,
+        Wrapper: `<components.Inner><slot/><b v-if="data.aside">aside</b></components.Inner>`,
+      }
 
       test('an unrelated owner re-render patches the fallback in place', async () => {
         // the compiled fallback is a fresh closure per owner render; only an
@@ -2763,14 +2768,7 @@ describe('vdomInterop', () => {
       test('a sibling coming and going leaves valid slot content in place', async () => {
         // the fallback never shows: whether the outlet needs a host or not
         // must not change the identity of its content
-        const t = mountBoth(
-          {
-            Inner: innerFallback,
-            Wrapper: `<components.Inner><slot/><b v-if="data.aside">aside</b></components.Inner>`,
-          },
-          { aside: false },
-          `<input />`,
-        )
+        const t = mountBoth(asideChain, { aside: false }, `<input />`)
         const sameInput = t.pin('input')
         for (const aside of [true, false]) {
           await t.set({ aside })
@@ -2825,41 +2823,6 @@ describe('vdomInterop', () => {
         }
       })
 
-      test('clones of one slot vnode resolve the fallback of the outlet each sits in', async () => {
-        // render functions: a template has no way to place one vnode twice
-        const Outlet = (name: string) =>
-          defineComponent({
-            setup(_, { slots }) {
-              return () =>
-                h(
-                  'div',
-                  renderSlot(slots, 'default', {}, () => [h('p', name)]),
-                )
-            },
-          })
-        const A = Outlet('A')
-        const B = Outlet('B')
-        const Wrapper = defineComponent({
-          setup(_, { slots }) {
-            return () => {
-              // an outlet with a fallback of its own, which renders nothing
-              const forwarded = renderSlot(slots, 'default', {}, () => [])
-              return [
-                h(A, null, { default: () => [cloneVNode(forwarded)] }),
-                h(B, null, { default: () => [cloneVNode(forwarded)] }),
-              ]
-            }
-          },
-        })
-        const t = mountBoth({ Wrapper }, { show: false })
-        t.expect('<div><p>A</p></div><div><p>B</p></div>')
-        await t.set({ show: true })
-        t.expect(
-          '<div><span>content</span></div><div><span>content</span></div>',
-        )
-        t.unmount()
-      })
-
       test('an enclosing outlet leaves the fallback of a host to the host', async () => {
         // an empty dynamically named slot: the inner outlet hosts its fallback
         // with no slot in it, and the host is all the outer outlet finds
@@ -2876,6 +2839,15 @@ describe('vdomInterop', () => {
       })
 
       test.each([
+        [
+          'clones of it',
+          (slots: any) => {
+            // an outlet with a fallback of its own, which renders nothing:
+            // the clones start from one list of records
+            const forwarded = renderSlot(slots, 'default', {}, () => [])
+            return [[cloneVNode(forwarded)], [cloneVNode(forwarded)]]
+          },
+        ],
         [
           'the same vnodes',
           (slots: any) => {
@@ -2974,13 +2946,7 @@ describe('vdomInterop', () => {
         // a valid sibling makes the outlet content stand on its own, so the
         // outlet only takes part in fallback resolution while the sibling is
         // gone
-        const t = mountBoth(
-          {
-            Inner: innerFallback,
-            Wrapper: `<components.Inner><slot/><b v-if="data.aside">aside</b></components.Inner>`,
-          },
-          { aside: true, show: false },
-        )
+        const t = mountBoth(asideChain, { aside: true, show: false })
         t.expect('<b>aside</b>')
         await t.set({ aside: false })
         t.expect('<p>inner fallback</p>')

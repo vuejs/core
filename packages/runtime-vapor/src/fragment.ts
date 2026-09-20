@@ -220,10 +220,9 @@ export function runWithRenderCtx<R>(
 
 /**
  * The one construction point for a slot host's boundary context, shared by
- * SlotFragment and both vdom-interop slot hosts. `run` and `getScopeIds`
- * always come from the host fragment's render seam; `parent`, `getFallback`
- * and `markDirty` stay host-specific (ownership caps, fallback sources and
- * dirty batching differ per host).
+ * SlotFragment and both vdom-interop slot hosts. `run` always comes from the
+ * host fragment's render seam; the rest stays host-specific (ownership caps,
+ * fallback sources, dirty batching and id cells differ per host).
  */
 export function createSlotBoundary(
   fragment: RenderContextFragment,
