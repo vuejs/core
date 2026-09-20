@@ -1111,7 +1111,11 @@ describe('VDOM interop', () => {
   describe('hydrate a vdom outlet fallback behind vapor slots forwarded by a vdom component', () => {
     // `compile()` turns a script-less SFC into a vapor one: keep the script
     const setup = `<script setup>const data = _data; const components = _components</script>`
-    const mount = (forwarded: string, data: any) =>
+    const mount = (
+      forwarded: string,
+      data: any,
+      fallback = `<p>{{ data.fallback }}</p>`,
+    ) =>
       testWithVaporApp(
         `${setup}<template>
           <components.Wrapper>
@@ -1120,8 +1124,12 @@ describe('VDOM interop', () => {
           </components.Wrapper>
         </template>`,
         {
+          Multi: {
+            code: `${setup}<template><p>{{ data.fallback }}</p><p>!</p></template>`,
+            vapor: false,
+          },
           Inner: {
-            code: `${setup}<template><slot><p>{{ data.fallback }}</p></slot></template>`,
+            code: `${setup}<template><slot>${fallback}</slot></template>`,
             vapor: false,
           },
           Wrapper: {
@@ -1178,6 +1186,49 @@ describe('VDOM interop', () => {
       data.b = false
       await nextTick()
       expect(stripAnchors(container.innerHTML)).toBe('<p>bar</p>')
+    })
+
+    // a fallback that is a range of its own in the server output, like the
+    // content it stands for
+    describe.each([
+      ['a v-for', `<p v-for="n in 2" :key="n">{{ data.fallback }}{{ n }}</p>`],
+      [
+        'a multi-root v-if',
+        `<template v-if="data.on"><p>{{ data.fallback }}</p><p>!</p></template>`,
+      ],
+      ['a multi-root component', `<components.Multi/>`],
+    ])('adopts a server-rendered fallback that is %s', (_, fallback) => {
+      test.each([
+        ['several slots', `<slot name="a"/><slot name="b"/>`],
+        [
+          'a group',
+          `<template v-if="data.on"><slot name="a"/><slot name="b"/></template>`,
+        ],
+      ])('behind %s', async (_, forwarded) => {
+        const data = reactive({
+          a: false,
+          b: false,
+          fallback: 'foo',
+          on: true,
+        })
+        const { container, html } = await mount(forwarded, data, fallback)
+        noMismatch()
+        expect(stripAnchors(container.innerHTML)).toBe(stripAnchors(html))
+
+        data.fallback = 'bar'
+        await nextTick()
+        expect(stripAnchors(container.innerHTML)).toBe(
+          stripAnchors(html).replace(/foo/g, 'bar'),
+        )
+        data.b = true
+        await nextTick()
+        expect(stripAnchors(container.innerHTML)).toBe('<b>b</b>')
+        data.b = false
+        await nextTick()
+        expect(stripAnchors(container.innerHTML)).toBe(
+          stripAnchors(html).replace(/foo/g, 'bar'),
+        )
+      })
     })
 
     const several = `<slot name="a"/><slot name="b"/>`

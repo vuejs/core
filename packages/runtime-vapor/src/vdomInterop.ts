@@ -820,20 +820,15 @@ const vaporInteropImpl: VaporInVdomInterface = {
     slotScopeIds,
   ) {
     if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) return
-    // The content of a hosted outlet is made of fragments and slots, each a
-    // range of its own in the server output, behind the comments of closed
-    // branches. Anything else there is the fallback, which the server renders
-    // in place of content that is all empty: nothing of the content to adopt.
+    // The server renders the fallback in place of content that is all empty,
+    // the fragments around the slots included. Content it did render has the
+    // shape of the client's, down to the slots; anything else is the fallback,
+    // with nothing of the content to adopt.
     const children = outlet.children as VNode[]
     const last = children.length - 1
-    let start: Node | null = node
-    for (let i = 0; i < last; i++) {
-      if (children[i].type !== VNodeComment) {
-        if (start && isComment(start, '[')) return
-        break
-      }
-      start = start && start.nextSibling
-    }
+    matchedSlot = false
+    const end = matchOutletContent(children, last, node)
+    if (matchedSlot && end && isComment(end, ']')) return
     if (last) {
       const container = parentNode(node)!
       runWithoutHydration(() => {
@@ -2861,6 +2856,37 @@ function hydrateVNode(
   else advanceHydrationNode(node)
 }
 
+// Whether the server output from `node` on has the shape of the content of a
+// hosted outlet: a comment for a closed branch, a range for a slot, and one for
+// a fragment, holding the same in turn. Returns the node past it.
+let matchedSlot = false
+function matchOutletContent(
+  children: VNode[],
+  count: number,
+  node: Node | null,
+): Node | null | undefined {
+  for (let i = 0; i < count; i++) {
+    const child = children[i]
+    if (!node || node.nodeType !== 8) return
+    if (child.type === VNodeComment) {
+      if (isComment(node, '[') || isComment(node, ']')) return
+    } else if (!isComment(node, '[')) {
+      return
+    } else if (child.type === Fragment) {
+      const inner = child.children as VNode[]
+      const end = matchOutletContent(inner, inner.length, node.nextSibling)
+      if (!end || !isComment(end, ']')) return
+      node = end
+    } else {
+      matchedSlot = true
+      node = locateEndAnchor(node as any)
+      if (!node) return
+    }
+    node = node.nextSibling
+  }
+  return node
+}
+
 // Hands a vdom outlet's fallback over to the vapor slots its content consists
 // of: recorded on the slot vnode when the content is structurally that one
 // slot, else on the returned host vnode, to append to the content, which owns
@@ -3307,7 +3333,9 @@ function renderVaporSlot(
             } finally {
               pending.settle()
             }
-          })
+            // a host has no range in the server output: a fragment start there
+            // is its fallback's
+          }, !slotState.members)
         } else {
           resolvedContent = renderContent()
         }
