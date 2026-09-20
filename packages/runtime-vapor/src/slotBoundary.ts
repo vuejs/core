@@ -7,12 +7,13 @@ import {
   withRenderContext,
 } from './renderContext'
 
-// A slot boundary is one slot outlet's fallback-resolution point. `parent` is
-// the next boundary this outlet is allowed to inherit from; ownership caps set
-// it to null even when another slot boundary physically encloses the outlet.
+// A slot boundary is one slot outlet's fallback-resolution point. `getParent`
+// returns the next boundary this outlet is allowed to inherit from; ownership
+// caps make it null even when another slot boundary physically encloses the
+// outlet.
 // renderSlotFallback in slotFragment.ts walks this permitted chain.
 export interface SlotBoundaryContext {
-  parent: SlotBoundaryContext | null
+  getParent: () => SlotBoundaryContext | null
   getFallback: () => BlockFn | undefined
   // Re-establishes the owning slot's ambient slot / fragment context around
   // late renders such as fallback bodies, and runs them in the provided effect
@@ -86,7 +87,7 @@ export function hasSlotFallback(
     if (boundary.getFallback()) {
       return true
     }
-    boundary = boundary.parent
+    boundary = boundary.getParent()
   }
   return false
 }

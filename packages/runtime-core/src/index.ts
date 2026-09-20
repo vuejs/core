@@ -619,6 +619,7 @@ export {
   VaporSlot,
   normalizeVNode,
   type VNodeNormalizedRef,
+  type VdomSlotOutlet,
   normalizeRef,
 } from './vnode'
 /**
@@ -626,10 +627,8 @@ export {
  */
 export {
   ensureValidVNode,
-  ensureVaporSlotFallback,
   invokeSlotFallback,
   rawVaporSlotKey,
-  vdomSlotFallbackKey,
 } from './helpers/renderSlot'
 /**
  * @internal

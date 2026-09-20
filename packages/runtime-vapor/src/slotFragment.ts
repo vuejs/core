@@ -89,7 +89,8 @@ function renderSlotFallback(
               // place.
               markDirty: force =>
                 current.markDirty(
-                  !!force || (!selected && hasSlotFallback(current.parent)),
+                  !!force ||
+                    (!selected && hasSlotFallback(current.getParent())),
                 ),
             },
             renderFallback,
@@ -103,7 +104,7 @@ function renderSlotFallback(
       result = { block: content, onContentInvalid }
     }
 
-    boundary = current.parent
+    boundary = current.getParent()
   }
 
   return result
@@ -402,12 +403,13 @@ function recheckSlotResolutionNow(
   }
 
   // Content wins over fallback. If fallback was mounted, content may need to
-  // be inserted back because it can be invalid while fallback is active.
-  if (contentValid) {
-    const content = state.getContent()
-    const hadFallback = !!fallback
+  // be inserted back because it can be invalid while fallback is active. It
+  // also returns, invalid or not, once the chain lost its last fallback, so
+  // its anchors are live for later updates.
+  if (contentValid || (fallback && !hasSlotFallback(state.boundary))) {
     clearSlotFallback(state)
-    if (hadFallback) {
+    if (fallback) {
+      const content = state.getContent()
       beforeExpose(state, content)
       if (!isHydrating) {
         const parentNode = state.getParentNode()
@@ -424,7 +426,7 @@ function recheckSlotResolutionNow(
       // If the selected fallback becomes invalid and no inherited fallback can
       // take over, keep it active. This is an internal fallback update, so its
       // anchors/effects must stay live until it becomes valid again.
-      if (!fallbackValid && hasSlotFallback(state.boundary.parent)) {
+      if (!fallbackValid && hasSlotFallback(state.boundary.getParent())) {
         renderAndCommitSlotFallback(state, true)
       } else if (force && fallbackValid) {
         renderAndCommitSlotFallback(state, true)

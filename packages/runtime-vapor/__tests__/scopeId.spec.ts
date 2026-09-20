@@ -2598,9 +2598,9 @@ describe('vdom interop', () => {
       expect(vapor.after).toBe(vdom.after)
     })
 
-    // The enclosing outlet's fallback lands on the forwarded vapor slot vnode
-    // as `outletFallback`; both fallbacks must come back with their own
-    // owner's id, so a single owner on the interop side would not do.
+    // The enclosing outlet's fallback is recorded on the forwarded vapor slot
+    // vnode; both fallbacks must come back with their own owner's id, so a
+    // single owner on the interop side would not do.
     test.each([
       [
         'the wrapper owns one',

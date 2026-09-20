@@ -226,78 +226,54 @@ describe('renderSlot', () => {
     })
   })
 
-  it('should preserve local fallback while updating outlet fallback on forwarded vapor slot', () => {
-    const localFallback = () => [createCommentVNode('local empty')]
-    const firstOuterFallback = () => ['first outer fallback']
-    const nextOuterFallback = () => ['next outer fallback']
-    const forwarded = createVNode('div')
-
-    forwarded.vs = {
-      slot: () => [],
-      fallback: localFallback,
-    } as any
-
-    renderSlot(
-      {
-        default: () => [forwarded],
-      },
-      'default',
-      undefined,
-      firstOuterFallback,
-    )
-
-    expect(forwarded.vs!.fallback).toBe(localFallback)
-    expect(forwarded.vs!.outletFallback).toBe(firstOuterFallback)
-
-    renderSlot(
-      {
-        default: () => [forwarded],
-      },
-      'default',
-      undefined,
-      nextOuterFallback,
-    )
-
-    expect(forwarded.vs!.fallback).toBe(localFallback)
-    expect(forwarded.vs!.outletFallback).toBe(nextOuterFallback)
-  })
-
-  it('records the rendering instance that owns each fallback on a forwarded vapor slot', () => {
+  describe('vapor slot outlets', () => {
     const vaporSlot = () => []
     ;(vaporSlot as any)[rawVaporSlotKey] = vaporSlot
-    const wrapper = { type: {}, appContext: {} } as any
-    const inner = { type: {}, appContext: {} } as any
-    const wrapperFallback = () => [h('b')]
-    const innerFallback = () => [h('p')]
-    let forwarded!: VNode
+    const forward = (fallback?: () => any[]) =>
+      renderSlot({ default: vaporSlot }, 'default', {}, fallback)
 
-    setCurrentRenderingInstance(inner)
-    // the compiled wrapper forwards its outlet inside a `withCtx` slot, so
-    // the inner outlet invokes it under the wrapper's rendering instance
-    const rendered = renderSlot(
-      {
-        default: withCtx(
-          () => [
-            (forwarded = renderSlot(
-              { default: vaporSlot },
-              'default',
-              {},
-              wrapperFallback,
-            )),
-          ],
-          wrapper,
-        ) as Slot,
-      },
-      'default',
-      {},
-      innerFallback,
-    )
+    it('records the fallback of the outlet rendering a vapor slot', () => {
+      const owner = { type: {}, appContext: {} } as any
+      setCurrentRenderingInstance(owner)
+      const fallback = () => [h('p')]
+      expect(forward(fallback).vs!.outlets).toEqual([{ fallback, owner }])
+      expect(forward().vs!.outlets).toBeUndefined()
+    })
 
-    expect((rendered.children as VNode[])[0]).toBe(forwarded)
-    expect(forwarded.vs!.fallback).toBe(wrapperFallback)
-    expect(forwarded.vs!.owner).toBe(wrapper)
-    expect(forwarded.vs!.outletFallback).toBe(innerFallback)
-    expect(forwarded.vs!.outletOwner).toBe(inner)
+    it('leaves the content of an outlet alone in an app without the interop', () => {
+      // observes the gate only: no vapor slot gets there without the interop
+      setCurrentRenderingInstance({ type: {}, appContext: {} } as any)
+      let forwarded!: VNode
+      renderSlot(
+        { default: () => [(forwarded = forward())] },
+        'default',
+        {},
+        () => [h('p')],
+      )
+      expect(forwarded.vs!.outlets).toBeUndefined()
+    })
+
+    it('hands the content of an outlet with a fallback over to the interop', () => {
+      const attachSlotOutlet = vi.fn()
+      const owner = { type: {}, appContext: { vapor: { attachSlotOutlet } } }
+      setCurrentRenderingInstance(owner as any)
+      const fallback = () => [h('p')]
+      const content = [forward()]
+
+      // no fallback to hand over
+      renderSlot({ default: () => content }, 'default', {})
+      // nor content: the fallback renders inline
+      renderSlot(
+        { default: () => [createCommentVNode('v-if', true)] },
+        'default',
+        {},
+        fallback,
+      )
+      expect(attachSlotOutlet).not.toHaveBeenCalled()
+
+      renderSlot({ default: () => content }, 'default', {}, fallback)
+      expect(attachSlotOutlet).toHaveBeenCalledWith(content, fallback, owner)
+    })
   })
 
   describe('invokeSlotFallback', () => {
