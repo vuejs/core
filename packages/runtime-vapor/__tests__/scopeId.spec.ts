@@ -2102,9 +2102,7 @@ describe('vdom interop', () => {
     // time, which the test compile helper does not do) — only slotted (-s)
     // parity is under test
     const strip = (html: string) =>
-      html
-        .replace(/<!--[^>]*-->/g, '')
-        .replace(/ (receiver|wrapper|inner|leaf)=""/g, '')
+      stripAnchors(html).replace(/ (receiver|wrapper|inner|leaf)=""/g, '')
 
     const mountPair = (makeSide: (vapor: boolean) => any) => {
       const vdomHost = document.createElement('div')

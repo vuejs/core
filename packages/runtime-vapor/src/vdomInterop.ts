@@ -2819,27 +2819,26 @@ function createFallback(
   parentComponent: ComponentInternalInstance | null,
 ): BlockFn {
   return () => {
-    if (state.outlets[depth].vdom) {
-      const frag = createVNodeChildrenFragment(
-        ensureRenderer().internals,
-        () => {
-          // through the ref: an owner re-render swaps the fallback body, and
-          // the effect patches it in place
-          const outlet = state.outletsRef.value[depth]
-          const children =
-            outlet && invokeSlotFallback(outlet.fallback, outlet.owner)
-          return children == null
-            ? EMPTY_VNODES
-            : normalizeInteropSlotValue(children)
-        },
-        parentComponent,
-      )
-      if (isHydrating && frag.hydrate) {
-        frag.hydrate()
-      }
-      return frag
+    const outlet = state.outlets[depth]
+    if (!outlet.vdom) return outlet.fallback() as Block
+    const frag = createVNodeChildrenFragment(
+      ensureRenderer().internals,
+      () => {
+        // through the ref: an owner re-render swaps the fallback body, and
+        // the effect patches it in place
+        const outlet = state.outletsRef.value[depth]
+        const children =
+          outlet && invokeSlotFallback(outlet.fallback, outlet.owner)
+        return children == null
+          ? EMPTY_VNODES
+          : normalizeInteropSlotValue(children)
+      },
+      parentComponent,
+    )
+    if (isHydrating && frag.hydrate) {
+      frag.hydrate()
     }
-    return state.outlets[depth].fallback() as Block
+    return frag
   }
 }
 
@@ -2896,8 +2895,14 @@ function syncInteropVaporSlotState(n1: VNode, n2: VNode): void {
 // of it.
 function createSlotGroup(state: InteropVaporSlotState): Block {
   const group = createInteropFragment()
-  group.isBlockValid = () =>
-    state.members!.some(member => !member.vb || isValidSlot(member.vb))
+  group.isBlockValid = () => {
+    const members = state.members!
+    for (let i = 0; i < members.length; i++) {
+      const block = members[i].vb
+      if (!block || isValidSlot(block)) return true
+    }
+    return false
+  }
   return group
 }
 
@@ -2938,9 +2943,9 @@ function renderVaporSlot(
       return EMPTY_BLOCK
     }
     const slotState = resolveInteropVaporSlotState(vnode)
-    // Most of the interop setup is shared, but slots that start with a local
-    // VDOM fallback still need to let an inner SlotFragment own the active
-    // fallback lifecycle. Forcing the interop wrapper to own that branch breaks
+    // Most of the interop setup is shared, but slots with a vdom outlet
+    // fallback on their chain still need to let an inner SlotFragment own the
+    // active fallback lifecycle. Forcing the interop wrapper to own that branch breaks
     // fallback blocks that can later resolve to an empty vnode list.
     const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
     // The vnode-derived slot context becomes the creation ambient for the
@@ -2958,8 +2963,6 @@ function renderVaporSlot(
     let currentParentNode: ParentNode | null = null
     let currentAnchor: Node | null = null
     let disposed = false
-    // the vnode's slot scope stopped: the slot is unmounted for good
-    let stopped = false
     let slotResolutionState!: SlotResolutionState
     let ownedSlotFragment: SlotFragment | undefined
     const onContentInvalid = [
@@ -2980,7 +2983,9 @@ function renderVaporSlot(
         recheckQueued = false
         const force = recheckForce
         recheckForce = false
-        if (!stopped) {
+        // stopped, or gone, once the slot is unmounted for good
+        const scope = vnode.vs!.scope
+        if (scope && scope.active) {
           markSlotResolutionDirty(
             ownedSlotFragment || slotResolutionState,
             force,
@@ -2999,9 +3004,7 @@ function renderVaporSlot(
       }
       // the owned resolver reports its validity flips here
       notifyFlip()
-      // When the inner SlotFragment owns the fallback, a single vdom flush
-      // can dirty this slot multiple times; batch into one post-flush recheck
-      // so it observes the settled re-rendered content.
+      // deferred: it must observe the settled re-rendered content
       queueRecheck(force)
     }
     // One boundary per vdom outlet on the chain, innermost first, built as
@@ -3113,11 +3116,9 @@ function renderVaporSlot(
             )
             try {
               return finalizeResolvedContent(
-                withRenderContext(frag.ctx, () => {
-                  const renderSlot = () =>
-                    withSlotBoundary(rootBoundary, () => invokeVaporSlot(vnode))
-                  return renderSlot()
-                }),
+                withRenderContext(frag.ctx, () =>
+                  withSlotBoundary(rootBoundary, () => invokeVaporSlot(vnode)),
+                ),
               )
             } finally {
               pending.settle()
@@ -3133,17 +3134,16 @@ function renderVaporSlot(
       } finally {
         isResolvingContent = false
       }
-      vnode.vs!.scope!.run(() => {
-        onScopeDispose(() => (stopped = true))
-        if (slotState.members) {
+      if (slotState.members) {
+        vnode.vs!.scope!.run(() =>
           followSlotGroup(slotState, () =>
             markSlotResolutionDirty(slotResolutionState),
-          )
-          // a patch mounts unmatched children from the end, the host ahead
-          // of its slots, whose first resolution is no flip to hear about
-          if (slotState.members.some(member => !member.vb)) queueRecheck()
-        }
-      })
+          ),
+        )
+        // a patch mounts unmatched children from the end, the host ahead of
+        // its slots, whose first resolution is no flip to hear about
+        if (slotState.members.some(member => !member.vb)) queueRecheck()
+      }
       if (hasInteropFallback && isSlotResolver(resolvedContent)) {
         ownedSlotFragment = resolvedContent
         dispose()
@@ -3197,7 +3197,6 @@ function renderVaporSlot(
 
       return frag
     } catch (e) {
-      stopped = true
       dispose(currentParentNode || undefined)
       stopVaporSlotScope(vnode)
       throw e

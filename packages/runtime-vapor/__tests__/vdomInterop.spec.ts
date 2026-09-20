@@ -2492,17 +2492,19 @@ describe('vdomInterop', () => {
             expect(stripAnchors(vapor.root.innerHTML)).toBe(expected)
           },
           // pins the element on each side; the returned check asserts it is
-          // still the same one
-          pin(selector: string) {
+          // still the same one, and still holds the `value` typed into it
+          pin(selector: string, value?: string) {
             const sides = [vdom, vapor]
-            const pinned = sides.map(side => side.root.querySelector(selector)!)
+            const pinned = sides.map(side =>
+              side.root.querySelector<HTMLInputElement>(selector)!,
+            )
+            if (value) pinned.forEach(el => (el.value = value))
             return (step: string) =>
-              sides.forEach((side, i) =>
-                expect(
-                  side.root.querySelector(selector),
-                  `${i ? 'vapor' : 'vdom'} parent, ${step}`,
-                ).toBe(pinned[i]),
-              )
+              sides.forEach((side, i) => {
+                const at = `${i ? 'vapor' : 'vdom'} parent, ${step}`
+                expect(side.root.querySelector(selector), at).toBe(pinned[i])
+                if (value) expect(pinned[i].value, at).toBe(value)
+              })
           },
           unmount() {
             vdom.app.unmount()
@@ -2720,18 +2722,12 @@ describe('vdomInterop', () => {
             { count, show: false },
           )
           await nextTick()
-          for (const side of [t.vdom, t.vapor]) {
-            side.root.querySelector('input')!.value = 'keep me'
-          }
-          const sameInput = t.pin('input')
+          const sameInput = t.pin('input', 'keep me')
           // some empty slots, more, none at all, then some again: the outlet
           // shows the same fallback throughout
           for (const count of [1, 2, 0, 1]) {
             await t.set({ count })
             sameInput(`count ${count}`)
-            for (const side of [t.vdom, t.vapor]) {
-              expect(side.root.querySelector('input')!.value).toBe('keep me')
-            }
           }
           t.unmount()
         },
@@ -2753,21 +2749,12 @@ describe('vdomInterop', () => {
           { count: 1, show: false },
         )
         await nextTick()
-        for (const side of [t.vdom, t.vapor]) {
-          side.root.querySelector<HTMLInputElement>('#header')!.value =
-            'keep me'
-        }
-        const sameHeader = t.pin('#header')
+        const sameHeader = t.pin('#header', 'keep me')
         const sameBody = t.pin('#body')
         for (const count of [2, 0, 1]) {
           await t.set({ count })
           sameHeader(`count ${count}`)
           sameBody(`count ${count}`)
-          for (const side of [t.vdom, t.vapor]) {
-            expect(
-              side.root.querySelector<HTMLInputElement>('#header')!.value,
-            ).toBe('keep me')
-          }
         }
         t.unmount()
       })
@@ -2804,16 +2791,10 @@ describe('vdomInterop', () => {
             namedContent,
           )
           await nextTick()
-          for (const side of [t.vdom, t.vapor]) {
-            side.root.querySelector('input')!.value = 'keep me'
-          }
-          const sameInput = t.pin('input')
+          const sameInput = t.pin('input', 'keep me')
           for (const next of [!forward, forward, !forward]) {
             await t.set({ forward: next })
             sameInput(`from ${forward} to ${next}`)
-            for (const side of [t.vdom, t.vapor]) {
-              expect(side.root.querySelector('input')!.value).toBe('keep me')
-            }
           }
           t.unmount()
         }
@@ -2879,16 +2860,10 @@ describe('vdomInterop', () => {
           { name: 'default', count: 0, show: false },
         )
         await nextTick()
-        for (const side of [t.vdom, t.vapor]) {
-          side.root.querySelector('input')!.value = 'keep me'
-        }
-        const sameInput = t.pin('input')
+        const sameInput = t.pin('input', 'keep me')
         for (const count of [1, 2, 0, 1]) {
           await t.set({ count })
           sameInput(`count ${count}`)
-          for (const side of [t.vdom, t.vapor]) {
-            expect(side.root.querySelector('input')!.value).toBe('keep me')
-          }
         }
         t.unmount()
       })

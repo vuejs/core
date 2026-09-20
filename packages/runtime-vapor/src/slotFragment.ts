@@ -412,18 +412,12 @@ function recheckSlotResolutionNow(
     return
   }
 
-  // Content wins over fallback. If fallback was mounted, content may need to
-  // be inserted back because it can be invalid while fallback is active.
-  if (contentValid) {
-    const hadFallback = !!fallback
+  // Content wins over fallback, and so does a chain that lost its last
+  // fallback (an interop outlet left it): the parked content returns to the
+  // DOM, invalid or not, so its anchors are live for later updates.
+  if (contentValid || (fallback && !hasSlotFallback(state.boundary))) {
     clearSlotFallback(state)
-    if (hadFallback) exposeContent(state)
-  } else if (fallback && !hasSlotFallback(state.boundary)) {
-    // The chain lost its last fallback (an interop outlet left it): the
-    // parked content returns to the DOM, invalid or not, so its anchors are
-    // live for later updates.
-    clearSlotFallback(state)
-    exposeContent(state)
+    if (fallback) exposeContent(state)
   } else if (fallback) {
     // With an active fallback, `prevNodesValid` tells whether it could already
     // be in the DOM. Previously invalid fallback is inserted only after it
