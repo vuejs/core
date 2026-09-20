@@ -619,18 +619,17 @@ export {
   VaporSlot,
   normalizeVNode,
   type VNodeNormalizedRef,
+  type VdomSlotOutlet,
   normalizeRef,
 } from './vnode'
 /**
  * @internal
  */
 export {
-  attachVaporSlotOutlet,
   ensureValidVNode,
   invokeSlotFallback,
   rawVaporSlotKey,
 } from './helpers/renderSlot'
-export type { VaporSlotOutlet } from './vnode'
 /**
  * @internal
  */

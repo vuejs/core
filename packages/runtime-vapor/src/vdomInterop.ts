@@ -20,13 +20,13 @@ import {
   type TransitionHooks,
   type VNode,
   type VNodeArrayChildren,
+  Comment as VNodeComment,
   type VNodeNormalizedRef,
   type VaporInVdomInterface,
-  type VaporSlotOutlet,
   VaporSlot as VaporSlotVNode,
   type VdomInVaporInterface,
   type VdomSlotOptions,
-  attachVaporSlotOutlet,
+  type VdomSlotOutlet,
   callWithAsyncErrorHandling,
   cloneVNode,
   createCommentVNode,
@@ -105,6 +105,7 @@ import {
   EMPTY_ARR,
   EMPTY_OBJ,
   NOOP,
+  PatchFlags,
   ShapeFlags,
   VaporSlotFlags,
   extend,
@@ -810,6 +811,8 @@ const vaporInteropImpl: VaporInVdomInterface = {
       ? (vnode.anchor as Node).nextSibling
       : (vnode.anchor as Node)
   },
+
+  attachSlotOutlet,
 
   setTransitionHooks(component, hooks) {
     ensureTransitionHooksRegistered()
@@ -1970,9 +1973,10 @@ function renderVDOMSlot(
       ? isValidBlock(slotResolutionState.activeFallback, componentAsValid)
       : content.valid
   }
+  const parentBoundary = inheritFallback ? slotBoundary : null
   const boundary = createSlotBoundary(
     frag,
-    inheritFallback ? slotBoundary : null,
+    () => parentBoundary,
     (): BlockFn | undefined => localFallback,
     force => markSlotResolutionDirty(slotResolutionState, force),
     [cleanupInvalidContent],
@@ -2361,18 +2365,8 @@ function renderVDOMSlot(
       slotContent = once ? withOnce(renderContent) : renderContent()
 
       if (isVNode(slotContent)) {
-        if (slotContent.type === Fragment) {
-          const children = slotContent.children as VNode[]
-          // Forwarded vapor slots need the slot outlet fallback chain
-          // even when the surrounding VDOM fragment stays otherwise
-          // valid, so preserve it on the forwarded branch itself.
-          if (localFallback) {
-            attachVaporSlotOutlet(children, localFallback, false)
-          }
-          slotContentValid = hasValidVNodeContent(slotContent)
-        } else {
-          slotContentValid = true
-        }
+        slotContentValid =
+          slotContent.type !== Fragment || hasValidVNodeContent(slotContent)
       } else if (slotContent) {
         slotContentValid = isValidSlot(slotContent)
       }
@@ -2819,36 +2813,91 @@ function createFallback(
 ): BlockFn {
   const internals = ensureRenderer().internals
   return () => {
-    if (state.outlets[depth].vdom) {
-      const frag = createVNodeChildrenFragment(
-        internals,
-        () => {
-          // through the ref: an owner re-render swaps the fallback body, and
-          // the effect patches it in place
-          const outlet = state.outletsRef.value[depth]
-          const children =
-            outlet && invokeSlotFallback(outlet.fallback, outlet.owner)
-          return children == null
-            ? EMPTY_VNODES
-            : normalizeInteropSlotValue(children)
-        },
-        parentComponent,
-      )
-      if (isHydrating && frag.hydrate) {
-        frag.hydrate()
-      }
-      return frag
+    const frag = createVNodeChildrenFragment(
+      internals,
+      () => {
+        // through the ref: an owner re-render swaps the fallback body, and
+        // the effect patches it in place
+        const outlet = state.outletsRef.value[depth]
+        const children =
+          outlet && invokeSlotFallback(outlet.fallback, outlet.owner)
+        return children == null
+          ? EMPTY_VNODES
+          : normalizeInteropSlotValue(children)
+      },
+      parentComponent,
+    )
+    if (isHydrating && frag.hydrate) {
+      frag.hydrate()
     }
-    return state.outlets[depth].fallback() as Block
+    return frag
   }
+}
+
+// Hands the fallback of a vdom outlet over to the vapor slot its content
+// consists of, if it is that one slot: the slot resolves it once it renders
+// empty. Lives here rather than beside `renderSlot` so that vdom-only bundles
+// carry none of it.
+function attachSlotOutlet(
+  content: VNodeArrayChildren,
+  fallback: () => VNodeArrayChildren,
+  owner: ComponentInternalInstance | null,
+): void {
+  if (findLoneSlot(content) && loneSlot) {
+    let slot: VNode = loneSlot
+    // a vnode its owner keeps (`<slot v-once/>`) is every placement's: the
+    // record goes on a clone taking its place
+    if (slot.cacheIndex != null) {
+      slot = loneSlotIn![loneSlotAt] = cloneVNode(slot)
+    }
+    // never written in place: clones share the records
+    const vs = slot.vs!
+    const outlet = { fallback, owner }
+    vs.outlets = vs.outlets ? vs.outlets.concat(outlet) : [outlet]
+  }
+  loneSlot = loneSlotIn = null
+}
+
+// scratch of the walk below, which runs no user code and cannot re-enter
+let loneSlot: VNode | null = null
+let loneSlotIn: VNodeArrayChildren | null = null
+let loneSlotAt = 0
+
+// Looks for the vapor slot in outlet content through fragments (an outlet
+// inside renders one) and past comments, the way `ensureValidVNode` does, and
+// leaves it in the scratch above. False once the content cannot be that one
+// slot: valid vdom content, a second slot, or a list.
+function findLoneSlot(vnodes: VNodeArrayChildren): boolean {
+  for (let i = 0; i < vnodes.length; i++) {
+    const child = vnodes[i]
+    if (!isVNode(child)) return false
+    if (child.vs) {
+      if (loneSlot) return false
+      loneSlot = child
+      loneSlotIn = vnodes
+      loneSlotAt = i
+    } else if (child.type === Fragment) {
+      if (
+        (child.patchFlag > 0 &&
+          child.patchFlag &
+            (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
+        !findLoneSlot(child.children as VNodeArrayChildren)
+      ) {
+        return false
+      }
+    } else if (child.type !== VNodeComment) {
+      return false
+    }
+  }
+  return true
 }
 
 interface InteropVaporSlotState {
   // vdom outlets whose fallback this slot resolves, innermost first. Chain
   // walks read the plain list; only fallback bodies track the ref, so a walk
   // inside some effect does not subscribe it to every patch of the slot.
-  outlets: readonly VaporSlotOutlet[]
-  outletsRef: ShallowRef<readonly VaporSlotOutlet[]>
+  outlets: readonly VdomSlotOutlet[]
+  outletsRef: ShallowRef<readonly VdomSlotOutlet[]>
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -2971,11 +3020,14 @@ function renderVaporSlot(
       depth: number,
       onContentInvalid?: (() => void)[],
     ): SlotBoundaryContext => {
-      const fallback = createFallback(slotState, depth, parentComponent)
+      let fallback: BlockFn | undefined
       return createSlotBoundary(
         frag,
         () => getOutletBoundary(depth + 1),
-        () => (slotState.outlets[depth] ? fallback : undefined),
+        () =>
+          slotState.outlets[depth]
+            ? (fallback ||= createFallback(slotState, depth, parentComponent))
+            : undefined,
         markInteropSlotResolutionDirty,
         onContentInvalid,
       )
@@ -2984,7 +3036,7 @@ function renderVaporSlot(
       depth < slotState.outlets.length
         ? (outletBoundaries[depth] ||= createOutletBoundary(depth))
         : slotBoundary
-    // the host's own resolution point stays with no outlet on the chain: it
+    // the slot's own resolution point stays with no outlet on the chain: it
     // is where the content parks while a fallback shows
     const rootBoundary = (outletBoundaries[0] = createOutletBoundary(
       0,

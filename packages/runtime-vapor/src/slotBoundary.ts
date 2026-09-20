@@ -7,9 +7,10 @@ import {
   withRenderContext,
 } from './renderContext'
 
-// A slot boundary is one slot outlet's fallback-resolution point. `getParent` is
-// the next boundary this outlet is allowed to inherit from; ownership caps set
-// it to null even when another slot boundary physically encloses the outlet.
+// A slot boundary is one slot outlet's fallback-resolution point. `getParent`
+// returns the next boundary this outlet is allowed to inherit from; ownership
+// caps make it null even when another slot boundary physically encloses the
+// outlet.
 // renderSlotFallback in slotFragment.ts walks this permitted chain.
 export interface SlotBoundaryContext {
   getParent: () => SlotBoundaryContext | null

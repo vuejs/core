@@ -344,18 +344,6 @@ function renderAndCommitSlotFallback(
   }
 }
 
-// Puts the content back in place of a cleared fallback.
-function exposeContent(state: SlotResolutionState): void {
-  const content = state.getContent()
-  beforeExpose(state, content)
-  if (!isHydrating) {
-    const parentNode = state.getParentNode()
-    if (parentNode) {
-      insert(content, parentNode, state.getAnchor())
-    }
-  }
-}
-
 export function disposeSlotResolution(
   state: SlotResolutionState,
   parentNode?: ParentNode,
@@ -415,17 +403,21 @@ function recheckSlotResolutionNow(
   }
 
   // Content wins over fallback. If fallback was mounted, content may need to
-  // be inserted back because it can be invalid while fallback is active.
-  if (contentValid) {
-    const hadFallback = !!fallback
+  // be inserted back because it can be invalid while fallback is active. It
+  // also returns, invalid or not, once the chain lost its last fallback, so
+  // its anchors are live for later updates.
+  if (contentValid || (fallback && !hasSlotFallback(state.boundary))) {
     clearSlotFallback(state)
-    if (hadFallback) exposeContent(state)
-  } else if (fallback && !hasSlotFallback(state.boundary)) {
-    // The chain lost its last fallback (an interop outlet left it): the
-    // parked content returns to the DOM, invalid or not, so its anchors are
-    // live for later updates.
-    clearSlotFallback(state)
-    exposeContent(state)
+    if (fallback) {
+      const content = state.getContent()
+      beforeExpose(state, content)
+      if (!isHydrating) {
+        const parentNode = state.getParentNode()
+        if (parentNode) {
+          insert(content, parentNode, state.getAnchor())
+        }
+      }
+    }
   } else if (fallback) {
     // With an active fallback, `prevNodesValid` tells whether it could already
     // be in the DOM. Previously invalid fallback is inserted only after it

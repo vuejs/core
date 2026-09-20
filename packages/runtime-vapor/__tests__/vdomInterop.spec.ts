@@ -2609,36 +2609,46 @@ describe('vdomInterop', () => {
         t.unmount()
       })
 
-      test('resolves the outlet fallback of a slot forwarded inside a v-for fragment', async () => {
-        // a single `<slot>` under `<template v-for>` sits two fragments deep
-        // (the list and its item)
-        const t = mountBoth(
-          data => {
-            const Inner = vdomComponent(
-              data,
-              `<slot><p>inner fallback</p></slot>`,
-            )
-            const Wrapper = vdomComponent(
-              data,
-              `<components.Inner><template v-for="n in data.count" :key="n"><slot/></template></components.Inner>`,
-              { Inner },
-            )
-            return { Wrapper }
-          },
-          { count: 1, show: false },
-        )
-        t.expect('<p>inner fallback</p>')
-        await t.set({ show: true })
-        t.expect('<span>content</span>')
-        // an empty list leaves plain vdom content: the fallback renders inline
-        await t.set({ count: 0 })
-        t.expect('<p>inner fallback</p>')
-        await t.set({ count: 1 })
-        t.expect('<span>content</span>')
-        await t.set({ show: false })
-        t.expect('<p>inner fallback</p>')
-        t.unmount()
-      })
+      test.each([
+        [
+          'both',
+          `<div><slot><p>A{{ data.tick }}</p></slot></div><div><slot><p>B{{ data.tick }}</p></slot></div>`,
+          (tick: number) =>
+            `<div><p>A${tick}</p></div><div><p>B${tick}</p></div>`,
+        ],
+        [
+          'the first only',
+          `<div><slot><p>A{{ data.tick }}</p></slot></div><div><slot/></div>`,
+          (tick: number) => `<div><p>A${tick}</p></div><div></div>`,
+        ],
+        [
+          'the second only',
+          `<div><slot/></div><div><slot><p>B{{ data.tick }}</p></slot></div>`,
+          (tick: number) => `<div></div><div><p>B${tick}</p></div>`,
+        ],
+      ])(
+        'a cached slot rendered by two outlets, %s with a fallback',
+        async (_, repeat, expected) => {
+          // `v-once` keeps one vnode, which both outlets of the same render
+          // are handed, and again on every later render
+          const t = mountBoth(
+            data => {
+              const Repeat = vdomComponent(data, repeat)
+              const Wrapper = vdomComponent(
+                data,
+                `<components.Repeat><slot v-once/></components.Repeat>`,
+                { Repeat },
+              )
+              return { Wrapper }
+            },
+            { tick: 0, show: false },
+          )
+          t.expect(expected(0))
+          await t.set({ tick: 1 })
+          t.expect(expected(1))
+          t.unmount()
+        },
+      )
 
       test('follows an outlet joining and leaving the chain across renders', async () => {
         // a valid sibling makes the outlet content stand on its own, so the

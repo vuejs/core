@@ -6,7 +6,6 @@ import {
 } from '@vue/reactivity'
 import {
   VaporSlotFlags,
-  isFunction,
   slotInheritsFallback,
   slotNotifiesBoundary,
 } from '@vue/shared'
@@ -221,21 +220,21 @@ export function runWithRenderCtx<R>(
 /**
  * The one construction point for a slot host's boundary context, shared by
  * SlotFragment and both vdom-interop slot hosts. `run` and `getScopeIds`
- * always come from the host fragment's render seam; `parent`, `getFallback`
+ * always come from the host fragment's render seam; `getParent`, `getFallback`
  * and `markDirty` stay host-specific (ownership caps, fallback sources and
  * dirty batching differ per host).
  */
 export function createSlotBoundary(
   fragment: RenderContextFragment,
-  // a getter when the chain above the host can change between renders
-  // (interop outlets follow the outlets recorded on their latest vnode)
-  parent: SlotBoundaryContext | null | (() => SlotBoundaryContext | null),
+  // a getter: the chain above an interop outlet follows the outlets recorded
+  // on its latest vnode
+  getParent: () => SlotBoundaryContext | null,
   getFallback: () => BlockFn | undefined,
   markDirty: (force?: boolean) => void,
   onContentInvalid?: (() => void)[],
 ): SlotBoundaryContext {
   return {
-    getParent: isFunction(parent) ? parent : () => parent,
+    getParent,
     getFallback,
     run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
     getScopeIds: () => fragment.slotScopeIds,
@@ -653,12 +652,16 @@ export class SlotFragment
   }
 
   get boundary(): SlotBoundaryContext {
-    return (this.ownBoundary ||= createSlotBoundary(
-      this,
-      this.inheritFallback ? this.slotBoundary : null,
-      () => this.localFallback,
-      force => markSlotResolutionDirty(this, force),
-    ))
+    if (!this.ownBoundary) {
+      const parent = this.inheritFallback ? this.slotBoundary : null
+      this.ownBoundary = createSlotBoundary(
+        this,
+        () => parent,
+        () => this.localFallback,
+        force => markSlotResolutionDirty(this, force),
+      )
+    }
+    return this.ownBoundary
   }
 
   insert(

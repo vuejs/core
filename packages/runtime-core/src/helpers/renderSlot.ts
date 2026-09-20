@@ -83,7 +83,7 @@ export function renderSlot(
     ret.vs = {
       slot: vaporSlot,
       outlets: fallback
-        ? [{ fallback, owner: currentRenderingInstance, vdom: true }]
+        ? [{ fallback, owner: currentRenderingInstance }]
         : undefined,
     }
     if (!noSlotted && ret.scopeId) {
@@ -141,14 +141,17 @@ export function renderSlot(
   try {
     const validSlotContent = slot && ensureValidVNode(slot(props))
 
-    // a forwarded vapor slot resolves this outlet's fallback itself
-    if (fallback && validSlotContent) {
-      attachVaporSlotOutlet(
-        validSlotContent,
-        fallback,
-        true,
-        currentRenderingInstance,
-      )
+    // a forwarded vapor slot resolves this outlet's fallback itself; the
+    // interop finds it, so none of that ships without it
+    if (fallback && validSlotContent && currentRenderingInstance) {
+      const interop = currentRenderingInstance.appContext.vapor
+      if (interop) {
+        interop.attachSlotOutlet(
+          validSlotContent,
+          fallback,
+          currentRenderingInstance,
+        )
+      }
     }
 
     const slotKey =
@@ -201,46 +204,4 @@ export function ensureValidVNode(
   })
     ? vnodes
     : null
-}
-
-/**
- * Records a vdom outlet on the vapor slot its content consists of, for
- * interop to resolve the outlet's fallback once that slot renders empty.
- * Internal to vapor interop.
- */
-export function attachVaporSlotOutlet(
-  vnodes: VNodeArrayChildren,
-  fallback: () => any,
-  vdom: boolean,
-  owner?: ComponentInternalInstance | null,
-): void {
-  const members: VNode[] = []
-  // One member only: interop resolves an outlet's fallback per vapor slot, so
-  // several members would each render it (shared arbitration is a follow-up).
-  if (collectVaporSlots(vnodes, members) && members.length === 1) {
-    ;(members[0].vs!.outlets ||= []).push({ fallback, vdom, owner })
-  }
-}
-
-// Gathers the vapor slot vnodes in outlet content, looking through fragments
-// and past comments the way `ensureValidVNode` does. False once valid vdom
-// content is met: the outlet then stands on its own.
-function collectVaporSlots(
-  vnodes: VNodeArrayChildren,
-  members: VNode[],
-): boolean {
-  for (let i = 0; i < vnodes.length; i++) {
-    const child = vnodes[i]
-    if (!isVNode(child)) return false
-    if (child.vs) {
-      members.push(child)
-    } else if (child.type === Fragment) {
-      if (!collectVaporSlots(child.children as VNodeArrayChildren, members)) {
-        return false
-      }
-    } else if (child.type !== Comment) {
-      return false
-    }
-  }
-  return true
 }

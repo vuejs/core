@@ -169,11 +169,10 @@ export type VNodeNormalizedChildren =
  * content is only that slot. Interop resolves their fallbacks in turn once
  * the slot renders empty. Internal to vapor interop.
  */
-export interface VaporSlotOutlet {
-  fallback: () => any
-  vdom: boolean
-  // rendering instance a vdom fallback renders under; none for a vapor outlet
-  owner?: ComponentInternalInstance | null
+export interface VdomSlotOutlet {
+  fallback: () => VNodeArrayChildren
+  // rendering instance the fallback renders under
+  owner: ComponentInternalInstance | null
 }
 
 export interface VNode<
@@ -289,9 +288,9 @@ export interface VNode<
    */
   vs?: {
     slot: (props: any) => any
-    // vdom outlets whose fallback this slot resolves, innermost first
-    // (see attachVaporSlotOutlet)
-    outlets?: VaporSlotOutlet[]
+    // vdom outlets whose fallback this slot resolves, innermost first. Never
+    // written in place: clones share the list
+    outlets?: readonly VdomSlotOutlet[]
     state?: unknown
     ref?: ShallowRef<any>
     scope?: EffectScope
