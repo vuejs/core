@@ -76,6 +76,43 @@ describe('normalizeClass', () => {
     ).toEqual('foo bar baz qux quux')
   })
 
+  test('handles overrides correctly', () => {
+    expect(
+      normalizeClass([
+        { foo: true },
+
+        'bar',
+        { bar: false, foo: undefined },
+
+        ' baz ',
+        { baz: false },
+
+        { qux: false },
+        ' qux \n  baz  ',
+
+        { quux: true },
+        [' quux quux2 ', [{ ' quux  quux3 ': false }]],
+
+        'quux3',
+      ]),
+    ).toEqual('qux baz quux2 quux3')
+  })
+
+  test('handles duplicates correctly', () => {
+    expect(
+      normalizeClass([
+        'foo  foo  baz  baz  baz',
+        { foo: true },
+
+        'bar bar ',
+        { bar: false },
+
+        { baz: false },
+        'baz baz',
+      ]),
+    ).toEqual('foo foo foo baz baz')
+  })
+
   // #6777
   test('parse multi-line inline style', () => {
     expect(
