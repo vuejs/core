@@ -683,6 +683,42 @@ describe('compiler v-bind', () => {
     expect(code).contains('_setAttr(n0, "value", _ctx.foo)')
   })
 
+  test('.prop modifier on component props', () => {
+    const { code } = compileWithVBind(`<Comp :fooBar.prop="id"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('".fooBar": () => (_ctx.id)')
+  })
+
+  test('.attr modifier on component props', () => {
+    const { code } = compileWithVBind(`<Comp :fooBar.attr="id"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains('"^fooBar": () => (_ctx.id)')
+  })
+
+  test('.prop modifier merged with v-bind object', () => {
+    const { code } = compileWithVBind(`<div :fooBar.prop="id" v-bind="obj"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setDynamicProps(n0, [{ ".fooBar": _ctx.id }, _ctx.obj])',
+    )
+  })
+
+  test('.attr modifier merged with v-bind object', () => {
+    const { code } = compileWithVBind(`<div :fooBar.attr="id" v-bind="obj"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setDynamicProps(n0, [{ "^fooBar": _ctx.id }, _ctx.obj])',
+    )
+  })
+
+  test('.attr modifier merged with v-bind object, kebab-case key', () => {
+    const { code } = compileWithVBind(`<div :data-x.attr="id" v-bind="obj"/>`)
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_setDynamicProps(n0, [{ "^data-x": _ctx.id }, _ctx.obj])',
+    )
+  })
+
   test('attributes must be set as attribute', () => {
     const { code } = compileWithVBind(`
       <div :spellcheck :draggable :translate :form />

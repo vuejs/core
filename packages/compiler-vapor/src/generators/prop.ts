@@ -385,8 +385,9 @@ export function genPropKey(
   if (node.isStatic) {
     // only quote keys if necessary
     const keyName =
-      (handler ? toHandlerKey(camelize(node.content)) : node.content) +
-      handlerModifierPostfix
+      (handler
+        ? toHandlerKey(camelize(node.content))
+        : (modifier || '') + node.content) + handlerModifierPostfix
     return [
       [
         isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName),

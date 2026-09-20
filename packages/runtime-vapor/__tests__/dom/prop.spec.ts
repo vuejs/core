@@ -894,4 +894,89 @@ describe('patchProp', () => {
       expect(el.innerHTML).toBe('<p>bar</p>')
     })
   })
+
+  describe('v-bind modifiers on a props object', () => {
+    // a `.prop` / `.attr` modifier is applied by the runtime from the `.` / `^`
+    // prefix of the key, so the prefix has to survive into the generated props
+    // object - component props and props merged with `v-bind="obj"` are only
+    // resolved at runtime.
+    async function parity(
+      srcs: Record<string, string>,
+      probe: (el: any) => Record<string, unknown>,
+    ) {
+      const seen: Record<string, unknown> = {}
+      const { vdom, vapor } = await renderParity(
+        srcs,
+        () => ref({ payload: { a: 1 }, text: 'foo', extra: { id: 'x' } }),
+        (_data, root, mode) => {
+          seen[mode] = probe(root.querySelector('.target'))
+        },
+      )
+      expect(vapor.after).toBe(vdom.after)
+      expect(seen.vapor).toEqual(seen.vdom)
+      return seen.vdom
+    }
+
+    test('.prop on a component is passed through as a dom prop', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><components.Child :payload.prop="data.payload" /></template>`,
+            Child: `<template><div class="target"></div></template>`,
+          },
+          el => ({ payload: el.payload }),
+        ),
+      ).toEqual({ payload: { a: 1 } })
+    })
+
+    test('.prop on a component does not resolve a declared prop', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><components.Child :text.prop="data.text" /></template>`,
+            Child: `<script setup>defineProps(['text'])</script><template><div class="target">{{ text }}</div></template>`,
+          },
+          el => ({ text: el.text, content: el.textContent }),
+        ),
+      ).toEqual({ text: 'foo', content: '' })
+    })
+
+    test('.prop merged with v-bind="obj" is set as a dom prop', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><div class="target" :payload.prop="data.payload" v-bind="data.extra"></div></template>`,
+          },
+          el => ({ payload: el.payload }),
+        ),
+      ).toEqual({ payload: { a: 1 } })
+    })
+
+    test('.attr merged with v-bind="obj" is set as an attribute', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><div class="target" :textContent.attr="data.text" v-bind="data.extra"></div></template>`,
+          },
+          el => ({
+            attr: el.getAttribute('textContent'),
+            content: el.textContent,
+          }),
+        ),
+      ).toEqual({ attr: 'foo', content: '' })
+    })
+
+    // a kebab-case key must reach the runtime verbatim - camelizing it while
+    // prefixing would silently rename the attribute.
+    test('.attr merged with v-bind="obj" keeps a kebab-case key', async () => {
+      expect(
+        await parity(
+          {
+            App: `<template><div class="target" :data-x.attr="data.text" v-bind="data.extra"></div></template>`,
+          },
+          el => ({ attr: el.getAttribute('data-x') }),
+        ),
+      ).toEqual({ attr: 'foo' })
+    })
+  })
 })

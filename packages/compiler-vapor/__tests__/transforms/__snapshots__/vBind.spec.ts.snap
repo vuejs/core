@@ -11,6 +11,37 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > .attr modifier merged with v-bind object 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ "^fooBar": _ctx.id }, _ctx.obj]))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > .attr modifier merged with v-bind object, kebab-case key 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ "^data-x": _ctx.id }, _ctx.obj]))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > .attr modifier on component props 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", { "^fooBar": () => (_ctx.id) }, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > .attr modifier w/ innerHTML 1`] = `
 "import { setAttr as _setAttr, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
@@ -183,6 +214,26 @@ const t0 = _template("<div>", 1)
 export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > .prop modifier merged with v-bind object 1`] = `
+"import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<div>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicProps(n0, [{ ".fooBar": _ctx.id }, _ctx.obj]))
+  return n0
+}"
+`;
+
+exports[`compiler v-bind > .prop modifier on component props 1`] = `
+"import { createAssetComponent as _createAssetComponent } from 'vue';
+
+export function render(_ctx) {
+  const n0 = _createAssetComponent("Comp", { ".fooBar": () => (_ctx.id) }, null, true)
   return n0
 }"
 `;
