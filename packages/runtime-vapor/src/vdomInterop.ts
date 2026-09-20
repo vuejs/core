@@ -139,6 +139,7 @@ import {
   locateEndAnchor,
   locateFragmentEnd,
   locateHydrationNode,
+  runWithoutHydration,
   setCurrentHydrationNode,
   hydrateNode as vaporHydrateNode,
 } from './dom/hydration'
@@ -731,6 +732,38 @@ const vaporInteropImpl: VaporInVdomInterface = {
       return node
     }
     const container = parentNode(node)!
+    // The server rendered nothing for this slot: the cursor rests on the close
+    // marker of the slot's own empty range, or of the vdom fragment it ends.
+    // Nothing to adopt, and an empty branch inside must not take that marker
+    // for its own anchor: mount in place.
+    const close = isComment(node, ']')
+      ? node
+      : isComment(node, '[') &&
+          node.nextSibling &&
+          isComment(node.nextSibling, ']')
+        ? node.nextSibling
+        : null
+    if (close) {
+      const ownsRange = close !== node
+      runWithoutHydration(() => {
+        const block = (vnode.vb = renderVaporSlot(
+          vnode,
+          parentComponent,
+          parentSuspense,
+          slotScopeIds,
+        ))
+        let anchor: Node = close
+        if (!ownsRange) {
+          // the marker is the enclosing fragment's: a self anchor as on mount
+          anchor = (isFragment(block) && block.anchor) || createTextNode()
+          insert(anchor, container, close)
+        }
+        vnode.el = ownsRange ? node : anchor
+        vnode.anchor = anchor
+        insert(block, container, anchor, parentSuspense)
+      })
+      return ownsRange ? close.nextSibling : close
+    }
     let createdAnchor = false
     let resumeNode: Node | null = null
     vaporHydrateNode(node, () => {
