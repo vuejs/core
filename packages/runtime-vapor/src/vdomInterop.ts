@@ -2843,7 +2843,7 @@ function attachSlotOutlet(
   fallback: () => VNodeArrayChildren,
   owner: ComponentInternalInstance | null,
 ): void {
-  if (findLoneSlot(content) && loneSlot) {
+  if (findLoneSlot(content, 0) && loneSlot) {
     let slot: VNode = loneSlot
     // a vnode its owner keeps (`<slot v-once/>`) is every placement's: the
     // record goes on a clone taking its place
@@ -2852,7 +2852,7 @@ function attachSlotOutlet(
     }
     // never written in place: clones share the records
     const vs = slot.vs!
-    const outlet = { fallback, owner }
+    const outlet = { fallback, owner, innerIds: loneSlotInnerIds }
     vs.outlets = vs.outlets ? vs.outlets.concat(outlet) : [outlet]
   }
   loneSlot = loneSlotIn = null
@@ -2862,12 +2862,13 @@ function attachSlotOutlet(
 let loneSlot: VNode | null = null
 let loneSlotIn: VNodeArrayChildren | null = null
 let loneSlotAt = 0
+let loneSlotInnerIds = 0
 
 // Looks for the vapor slot in outlet content through fragments (an outlet
 // inside renders one) and past comments, the way `ensureValidVNode` does, and
 // leaves it in the scratch above. False once the content cannot be that one
 // slot: valid vdom content, a second slot, or a list.
-function findLoneSlot(vnodes: VNodeArrayChildren): boolean {
+function findLoneSlot(vnodes: VNodeArrayChildren, pathIds: number): boolean {
   for (let i = 0; i < vnodes.length; i++) {
     const child = vnodes[i]
     if (!isVNode(child)) return false
@@ -2876,12 +2877,17 @@ function findLoneSlot(vnodes: VNodeArrayChildren): boolean {
       loneSlot = child
       loneSlotIn = vnodes
       loneSlotAt = i
+      loneSlotInnerIds = pathIds
     } else if (child.type === Fragment) {
       if (
         (child.patchFlag > 0 &&
           child.patchFlag &
             (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
-        !findLoneSlot(child.children as VNodeArrayChildren)
+        !findLoneSlot(
+          child.children as VNodeArrayChildren,
+          // what the renderer appends to the patch context on the way in
+          pathIds + (child.slotScopeIds ? child.slotScopeIds.length : 0),
+        )
       ) {
         return false
       }
@@ -2968,9 +2974,14 @@ function renderVaporSlot(
     const frag = createInteropFragment(EMPTY_BLOCK, null, SLOT_OUTLET)
     // The vnode-derived slot context becomes the creation ambient for the
     // vapor-rendered content, restored via the fragment's render seam.
+    const inherited = getInheritedScopeIds(vnode, parentComponent, false)
     frag.ctx = deriveSlotScopeIds(
       frag.ctx,
-      getInteropVaporSlotScopeIds(vnode, parentComponent, contextSlotScopeIds),
+      getInteropVaporSlotScopeIds(
+        contextSlotScopeIds,
+        vnode.slotScopeIds,
+        inherited,
+      ),
     )
     const content = new InteropContentState()
     frag.isBlockValid = componentAsValid =>
@@ -3030,6 +3041,17 @@ function renderVaporSlot(
             : undefined,
         markInteropSlotResolutionDirty,
         onContentInvalid,
+        () => {
+          const outlet = slotState.outlets[depth]
+          // the vnode's own outlet renders under the vnode's own cell
+          return outlet && outlet.innerIds != null
+            ? getEnclosingOutletScopeIds(
+                contextSlotScopeIds,
+                outlet.innerIds,
+                inherited,
+              )
+            : frag.slotScopeIds
+        },
       )
     }
     const getOutletBoundary = (depth: number): SlotBoundaryContext | null =>
@@ -3805,14 +3827,28 @@ function setVNodeVaporScopeIds(vnode: VNode, scopeIds: string[]): void {
 // The single merge point for a vapor slot's id cell: raw patch context, the
 // vnode's own ids, then deep slot-content inheritance (root-only excluded).
 function getInteropVaporSlotScopeIds(
-  vnode: VNode,
-  parentComponent: ComponentInternalInstance | null,
   contextSlotScopeIds: string[] | null,
+  own: string[] | null,
+  inherited: string[],
 ): string[] | null {
-  const inherited = getInheritedScopeIds(vnode, parentComponent, false)
   return concatInteropScopeIds(
-    concatInteropScopeIds(contextSlotScopeIds, vnode.slotScopeIds),
+    concatInteropScopeIds(contextSlotScopeIds, own),
     inherited.length ? inherited : null,
+  )
+}
+
+// The cell of an outlet enclosing the slot: the patch context without the ids
+// of the `innerIds` fragments inside that outlet, nor the slot vnode's own.
+function getEnclosingOutletScopeIds(
+  context: string[] | null,
+  innerIds: number,
+  inherited: string[],
+): string[] | null {
+  const kept = context && innerIds ? context.slice(0, -innerIds) : context
+  return getInteropVaporSlotScopeIds(
+    kept && kept.length ? kept : null,
+    null,
+    inherited,
   )
 }
 
