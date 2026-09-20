@@ -128,14 +128,38 @@ describe('vdom interop: vapor slot outlets', () => {
       )
     }
     const fb = () => [h('p')]
-    render()
+    // the slot as the outer outlet renders it, behind the inner one's fragment
+    const placed = (rendered: VNode) =>
+      ((rendered.children as VNode[])[0].children as VNode[])[0]
+    expect(placed(render())).toBe(cached)
     const first = cached.vs!.outlets!
     expect(first.map(o => o.owner)).toEqual([inner, outer])
-    render()
-    expect(cached.vs!.outlets!.map(o => o.owner)).toEqual([inner, outer])
-    // what an earlier render handed to the renderer stays as it was
-    expect(first.map(o => o.owner)).toEqual([inner, outer])
-    expect(cached.vs!.outlets).not.toBe(first)
+
+    // the next render records on a clone: what the first one handed to the
+    // renderer stays as it was
+    const again = placed(render())
+    expect(again).not.toBe(cached)
+    expect(again.vs!.outlets!.map(o => o.owner)).toEqual([inner, outer])
+    // records of this render, not the earlier ones carried over
+    expect(again.vs!.outlets![0].content).not.toBe(first[0].content)
+    expect(again.vs!.outlets![1].content).not.toBe(first[1].content)
+    expect(cached.vs!.outlets).toBe(first)
+  })
+
+  it('records on a clone for a second outlet of the same render', () => {
+    // `<slot v-once/>` in a component rendering that slot twice: both outlets
+    // are handed the vnode before either mounts
+    const cached = forward()
+    const a = () => [h('p', 'A')]
+    const b = () => [h('p', 'B')]
+    const first = renderSlot({ default: () => [cached] }, 'default', {}, a)
+    const second = renderSlot({ default: () => [cached] }, 'default', {}, b)
+    const [inA] = first.children as VNode[]
+    const [inB] = second.children as VNode[]
+    expect(inA).toBe(cached)
+    expect(inB).not.toBe(cached)
+    expect(inA.vs!.outlets!.map(o => o.fallback)).toEqual([a])
+    expect(inB.vs!.outlets!.map(o => o.fallback)).toEqual([b])
   })
 
   it('replaces the record of an outlet handed the same content array again', () => {
