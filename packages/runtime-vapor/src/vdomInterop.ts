@@ -2971,19 +2971,26 @@ function recordVaporSlotOutlet(
 }
 
 // The records of a slot vnode are never written in place: its clones share
-// them. A vnode reused across renders (`<slot v-once/>`, a cached array) still
-// carries those of the render before: only the outlets nearer to the slot,
-// whose content was walked on the way to it, were recorded by this one.
+// them. Those to keep are the vnode's own outlet's, which has no content, and
+// the ones of the outlets nearer to the slot, whose content was walked on the
+// way to it. Any other belongs to another placement of the vnode: an outlet of
+// the same render handed the same cached vnode (`<slot v-once/>` rendered
+// twice), or an earlier render of a reused one. It stays as it is there, and
+// this outlet records on a clone taking the vnode's place in its content, the
+// way the renderer clones a mounted vnode it is handed again.
 function recordOutlet(slot: VNode, outlet: VaporSlotOutlet): void {
-  const vs = slot.vs!
+  let vs = slot.vs!
   const recorded = vs.outlets
-  vs.outlets = recorded
-    ? recorded
-        // the vnode's own outlet has no content; this outlet's is not among
-        // the children walked, so its earlier record gives way
-        .filter(o => !o.content || walked.includes(o.content))
-        .concat(outlet)
-    : [outlet]
+  if (!recorded) {
+    vs.outlets = [outlet]
+    return
+  }
+  const kept = recorded.filter(o => !o.content || walked.includes(o.content))
+  // behind fragments the vnode is not this outlet's to replace
+  if (kept.length < recorded.length && !walked.length) {
+    vs = (outlet.content![0] = cloneVNode(slot)).vs!
+  }
+  vs.outlets = kept.concat(outlet)
 }
 
 // scratch for the walk below, which runs no user code and cannot re-enter

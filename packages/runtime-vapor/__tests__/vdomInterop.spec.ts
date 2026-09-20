@@ -2898,6 +2898,25 @@ describe('vdomInterop', () => {
         },
       )
 
+      test('a cached slot rendered by two outlets resolves the fallback of each', async () => {
+        // `v-once` keeps one vnode, which both outlets of the same render are
+        // handed before either mounts
+        const t = mountBoth(
+          {
+            Repeat:
+              `<div><slot><p>A{{ data.tick }}</p></slot></div>` +
+              `<div><slot><p>B{{ data.tick }}</p></slot></div>`,
+            Wrapper: `<components.Repeat><slot v-once/></components.Repeat>`,
+          },
+          { tick: 0, show: false },
+        )
+        t.expect('<div><p>A0</p></div><div><p>B0</p></div>')
+        // and again on the next render, the vnode now mounted
+        await t.set({ tick: 1 })
+        t.expect('<div><p>A1</p></div><div><p>B1</p></div>')
+        t.unmount()
+      })
+
       test('resolves a new host after its empty members mount', async () => {
         // none of the new children matches an old one: the renderer mounts
         // them from the end, the host ahead of the slots it follows
