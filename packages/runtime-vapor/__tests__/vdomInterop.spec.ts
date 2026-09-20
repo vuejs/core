@@ -1116,6 +1116,513 @@ describe('vdomInterop', () => {
       app.unmount()
     })
 
+    describe('follow the child render', () => {
+      // `textContent` pins a hook to its side of the DOM change, `isConnected`
+      // to its side of the insertion.
+      const trace = (calls: string[]) =>
+        Object.fromEntries(
+          [
+            'created',
+            'beforeMount',
+            'mounted',
+            'beforeUpdate',
+            'updated',
+            'beforeUnmount',
+            'unmounted',
+          ].map(name => [
+            name,
+            (el: Element, binding: any) =>
+              calls.push(
+                `${name} ${el.tagName}[${el.textContent}]` +
+                  `${el.isConnected ? '' : ' (detached)'} ` +
+                  (name === 'beforeUpdate' || name === 'updated'
+                    ? `${binding.oldValue}>${binding.value}`
+                    : binding.value),
+              ),
+          ]),
+        )
+
+      const mountInBody = (render: () => any) => {
+        const App = defineComponent({ setup: () => render })
+        const root = document.createElement('div')
+        document.body.appendChild(root)
+        const app = createApp(App)
+        app.use(vaporInteropPlugin)
+        app.mount(root)
+        return {
+          root,
+          done: () => {
+            app.unmount()
+            root.remove()
+          },
+        }
+      }
+
+      // Pins the vapor child to the vdom child (the control). `doomed` is the
+      // one cell that cannot align: a vapor root is only known to be replaced
+      // once the child has rendered, after its `beforeUpdate` already ran.
+      const expectParity = async (
+        run: (vapor: boolean) => Promise<string[]>,
+        expected: string[],
+        doomed?: string,
+      ) => {
+        const vdom = await run(false)
+        expect(vdom).toEqual(expected)
+        expect(await run(true)).toEqual(doomed ? [doomed, ...vdom] : vdom)
+      }
+
+      test('hooks interleave with vnode hooks and the child lifecycle', async () => {
+        const run = async (vapor: boolean) => {
+          const calls: string[] = []
+          const data = ref({ n: 0, log: (hook: string) => calls.push(hook) })
+          const Child = compile(
+            `<script setup>
+            import {
+              onBeforeMount, onMounted, onBeforeUpdate, onUpdated,
+              onBeforeUnmount, onUnmounted,
+            } from 'vue'
+            const data = _data
+            onBeforeMount(() => data.value.log('child beforeMount'))
+            onMounted(() => data.value.log('child mounted'))
+            onBeforeUpdate(() => data.value.log('child beforeUpdate'))
+            onUpdated(() => data.value.log('child updated'))
+            onBeforeUnmount(() => data.value.log('child beforeUnmount'))
+            onUnmounted(() => data.value.log('child unmounted'))
+            </script><template><div>{{ data.n }}</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const dir = trace(calls)
+          const vnodeHook = (name: string) => () => calls.push(`vnode ${name}`)
+          const { done } = mountInBody(() =>
+            withDirectives(
+              h(Child, {
+                onVnodeBeforeMount: vnodeHook('beforeMount'),
+                onVnodeMounted: vnodeHook('mounted'),
+                onVnodeBeforeUpdate: vnodeHook('beforeUpdate'),
+                onVnodeUpdated: vnodeHook('updated'),
+                onVnodeBeforeUnmount: vnodeHook('beforeUnmount'),
+                onVnodeUnmounted: vnodeHook('unmounted'),
+              }),
+              [[dir, 'v']],
+            ),
+          )
+          // the parent never reads `n`, so only the child re-renders
+          data.value.n++
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(run, [
+          'child beforeMount',
+          'vnode beforeMount',
+          'created DIV[0] (detached) v',
+          'beforeMount DIV[0] (detached) v',
+          'mounted DIV[0] v',
+          'child mounted',
+          'vnode mounted',
+          'child beforeUpdate',
+          'vnode beforeUpdate',
+          'beforeUpdate DIV[0] v>v',
+          'updated DIV[1] v>v',
+          'child updated',
+          'vnode updated',
+          'vnode beforeUnmount',
+          'child beforeUnmount',
+          'beforeUnmount DIV[1] v',
+          'unmounted DIV[1] (detached) v',
+          'child unmounted',
+          'vnode unmounted',
+        ])
+      })
+
+      test('update hooks run when a nested root component updates itself', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ n: 0 })
+          const Inner = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div>{{ data.n }}</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Child = compile(
+            `<script setup>const components = _components</script>` +
+              `<template><components.Inner/></template>`,
+            data,
+            { Inner },
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { done } = mountInBody(() =>
+            withDirectives(h(Child), [[dir, 'v']]),
+          )
+          calls.length = 0
+          data.value.n++
+          await nextTick()
+          const updates = calls.slice()
+          done()
+          return updates
+        }
+
+        await expectParity(run, [
+          'beforeUpdate DIV[0] v>v',
+          'updated DIV[1] v>v',
+        ])
+      })
+
+      test('directives move to the new root element on a root switch', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ b: true })
+          const Child = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div v-if="data.b">m</div><p v-else>p</p></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { root, done } = mountInBody(() =>
+            withDirectives(h(Child), [
+              [vShow, false],
+              [dir, 'v'],
+            ]),
+          )
+          calls.length = 0
+          data.value.b = false
+          await nextTick()
+          // v-show has to follow the root too, or the new one renders visible
+          expect(root.innerHTML).toBe(
+            `<p style="display: none;">p</p>${vapor ? '<!--if-->' : ''}`,
+          )
+          done()
+          return calls
+        }
+
+        await expectParity(
+          run,
+          [
+            'beforeUnmount DIV[m] v',
+            'created P[p] (detached) v',
+            'beforeMount P[p] (detached) v',
+            'unmounted DIV[m] (detached) v',
+            'mounted P[p] v',
+            'beforeUnmount P[p] v',
+            'unmounted P[p] (detached) v',
+          ],
+          'beforeUpdate DIV[m] v>v',
+        )
+      })
+
+      test('the old root unmounts with the bindings it was mounted with', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({})
+          const Child = compile(
+            `<script setup>const data = _data\n` +
+              `const p = defineProps(['b'])</script>` +
+              `<template><div v-if="p.b">m</div><p v-else>p</p></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const b = ref(true)
+          // one parent render changes the binding value and swaps the root
+          const { done } = mountInBody(() =>
+            withDirectives(h(Child, { b: b.value }), [
+              [dir, b.value ? 'old' : 'new'],
+            ]),
+          )
+          calls.length = 0
+          b.value = false
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(
+          run,
+          [
+            'beforeUnmount DIV[m] old',
+            'created P[p] (detached) new',
+            'beforeMount P[p] (detached) new',
+            'unmounted DIV[m] (detached) old',
+            'mounted P[p] new',
+            'beforeUnmount P[p] new',
+            'unmounted P[p] (detached) new',
+          ],
+          'beforeUpdate DIV[m] old>new',
+        )
+      })
+
+      test('a parent update in the same tick does not invert the switch', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ b: true })
+          const Child = compile(
+            `<script setup>const data = _data\n` +
+              `const p = defineProps(['n'])</script>` +
+              `<template><div v-if="data.b">{{ p.n }}</div>` +
+              `<p v-else>{{ p.n }}</p></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const n = ref(0)
+          const { done } = mountInBody(() =>
+            withDirectives(h(Child, { n: n.value }), [[dir, 'v']]),
+          )
+          calls.length = 0
+          n.value++
+          data.value.b = false
+          await nextTick()
+          done()
+          return calls
+        }
+
+        // the root vnode type changed, so VDOM patches nothing and runs no
+        // update hooks at all
+        await expectParity(
+          run,
+          [
+            'beforeUnmount DIV[0] v',
+            'created P[1] (detached) v',
+            'beforeMount P[1] (detached) v',
+            'unmounted DIV[0] (detached) v',
+            'mounted P[1] v',
+            'beforeUnmount P[1] v',
+            'unmounted P[1] (detached) v',
+          ],
+          'beforeUpdate DIV[0] v>v',
+        )
+      })
+
+      test('a parent update queued after the switch updates the mounted root', async () => {
+        const run = async (vapor: boolean) => {
+          const n = ref(0)
+          const data = ref({ b: true, bump: () => n.value++ })
+          // writes parent state from setup, so the parent re-renders in the
+          // same flush, after the root switch
+          const Inner = compile(
+            `<script setup>const data = _data; data.value.bump()</script>` +
+              `<template><i>i</i></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Child = compile(
+            `<script setup>const data = _data\n` +
+              `const components = _components</script>` +
+              `<template><div v-if="data.b">m</div>` +
+              `<p v-else><components.Inner/></p></template>`,
+            data,
+            { Inner },
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { done } = mountInBody(() =>
+            withDirectives(h(Child), [[dir, `v${n.value}`]]),
+          )
+          calls.length = 0
+          data.value.b = false
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(
+          run,
+          [
+            'beforeUnmount DIV[m] v0',
+            'created P[i] (detached) v0',
+            'beforeMount P[i] (detached) v0',
+            'beforeUpdate P[i] v0>v1',
+            'unmounted DIV[m] (detached) v0',
+            'mounted P[i] v0',
+            'updated P[i] v0>v1',
+            'beforeUnmount P[i] v1',
+            'unmounted P[i] (detached) v1',
+          ],
+          'beforeUpdate DIV[m] v0>v0',
+        )
+      })
+
+      test('directives come back with the latest bindings when an element root returns', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ b: true })
+          const Child = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div v-if="data.b">m</div>` +
+              `<template v-else>txt</template></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const v = ref('v0')
+          const { done } = mountInBody(() =>
+            withDirectives(h(Child), [[dir, v.value]]),
+          )
+          calls.length = 0
+          data.value.b = false
+          await nextTick()
+          // the parent input changes while no element root hosts the bindings
+          v.value = 'v1'
+          await nextTick()
+          data.value.b = true
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(
+          run,
+          [
+            'beforeUnmount DIV[m] v0',
+            'unmounted DIV[m] (detached) v0',
+            'created DIV[m] (detached) v1',
+            'beforeMount DIV[m] (detached) v1',
+            'mounted DIV[m] v1',
+            'beforeUnmount DIV[m] v1',
+            'unmounted DIV[m] (detached) v1',
+          ],
+          'beforeUpdate DIV[m] v0>v0',
+        )
+        if (__DEV__) {
+          expect(
+            `Runtime directive used on component with non-element root node.`,
+          ).toHaveBeenWarned()
+        }
+      })
+
+      test('directives mount before insertion once an async setup resolves', async () => {
+        const run = async (vapor: boolean) => {
+          let resolve!: () => void
+          const data = ref({ p: new Promise<void>(r => (resolve = r)) })
+          const Child = compile(
+            `<script setup>const data = _data; await data.value.p</script>` +
+              `<template><div>m</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { done } = mountInBody(() =>
+            h(Suspense, null, {
+              default: () => withDirectives(h(Child), [[dir, 'v']]),
+              fallback: () => h('span', 'loading'),
+            }),
+          )
+          expect(calls).toEqual([])
+          resolve()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(run, [
+          'created DIV[m] (detached) v',
+          'beforeMount DIV[m] (detached) v',
+          'mounted DIV[m] v',
+          'beforeUnmount DIV[m] v',
+          'unmounted DIV[m] (detached) v',
+        ])
+      })
+
+      test('directives unmount with a pending Suspense boundary', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ p: new Promise<void>(() => {}) })
+          const Child = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div>m</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Pending = compile(
+            `<script setup>const data = _data; await data.value.p</script>` +
+              `<template><i>p</i></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { done } = mountInBody(() =>
+            h(Suspense, null, {
+              default: () =>
+                h('div', [withDirectives(h(Child), [[dir, 'v']]), h(Pending)]),
+              fallback: () => h('span', 'loading'),
+            }),
+          )
+          await nextTick()
+          // the boundary never resolves: its own effect queue is discarded
+          done()
+          await nextTick()
+          return calls
+        }
+
+        await expectParity(run, [
+          'created DIV[m] (detached) v',
+          'beforeMount DIV[m] (detached) v',
+          'beforeUnmount DIV[m] (detached) v',
+          'unmounted DIV[m] (detached) v',
+        ])
+      })
+
+      // vapor only: a vdom Transition renders a placeholder root while the
+      // leave is pending, so the vdom child has no comparable sequence
+      test('an out-in leave releases the old root once', async () => {
+        const dones: (() => void)[] = []
+        const data = ref({
+          b: true,
+          onLeave: (_el: Element, done: () => void) => dones.push(done),
+        })
+        const Child = compile(
+          `<script setup>const data = _data</script>` +
+            `<template><Transition mode="out-in" :css="false" @leave="data.onLeave">` +
+            `<div v-if="data.b">m</div><p v-else>p</p></Transition></template>`,
+          data,
+        )
+        const calls: string[] = []
+        const dir = trace(calls)
+        const { done } = mountInBody(() =>
+          withDirectives(h(Child), [[dir, 'v']]),
+        )
+        calls.length = 0
+        data.value.b = false
+        await nextTick()
+        // toggled again while the old root is still leaving
+        data.value.b = true
+        await nextTick()
+        data.value.b = false
+        await nextTick()
+        dones.forEach(d => d())
+        await nextTick()
+        done()
+        expect(calls).toEqual([
+          'beforeUpdate DIV[m] v>v',
+          'beforeUnmount DIV[m] v',
+          'unmounted DIV[m] v',
+          'created P[p] (detached) v',
+          'beforeMount P[p] (detached) v',
+          'mounted P[p] v',
+          'beforeUnmount P[p] v',
+          'unmounted P[p] (detached) v',
+        ])
+      })
+    })
+
     test('should expose the latest vapor root element in updated hooks', async () => {
       const useAltRoot = ref(false)
       const updatedSpy = vi.fn((vnode: any) => {

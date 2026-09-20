@@ -190,16 +190,8 @@ export interface VaporInVdomInterface {
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    onBeforeMount?: () => void,
-    onVnodeBeforeMount?: () => void,
   ): GenericComponentInstance // VaporComponentInstance
-  update(
-    n1: VNode,
-    n2: VNode,
-    shouldUpdate: boolean,
-    onBeforeUpdate?: () => void,
-    onVnodeBeforeUpdate?: () => void,
-  ): void
+  update(n1: VNode, n2: VNode, shouldUpdate: boolean): void
   unmount(
     vnode: VNode,
     doRemove: boolean | undefined,
@@ -228,8 +220,6 @@ export interface VaporInVdomInterface {
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    onBeforeMount?: () => void,
-    onVnodeBeforeMount?: () => void,
   ): Node | null
   hydrateSlot(
     vnode: VNode,
