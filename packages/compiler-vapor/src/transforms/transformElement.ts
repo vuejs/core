@@ -25,6 +25,7 @@ import {
   getModifierPropName,
   includeBooleanAttr,
   isAlwaysCloseTag,
+  isArray,
   isBlockTag,
   isBooleanAttr,
   isBuiltInDirective,
@@ -399,6 +400,17 @@ function transformComponentElement(
     }
   }
 
+  const props = propsResult[0] ? propsResult[1] : [propsResult[1]]
+  if (staticKey && !useCreateElement) {
+    // KeepAlive needs the explicit key before the component is created.
+    const keyProp: IRProp = {
+      key: createSimpleExpression('key', true),
+      values: [staticKey],
+    }
+    if (isArray(props[0])) props[0].push(keyProp)
+    else props.unshift([keyProp])
+  }
+
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
   context.dynamic.operation = {
@@ -406,7 +418,7 @@ function transformComponentElement(
     id,
     ...context.effectBoundary(),
     tag,
-    props: propsResult[0] ? propsResult[1] : [propsResult[1]],
+    props,
     asset,
     root: singleRoot,
     slots: [...context.slots],

@@ -4874,4 +4874,73 @@ describe('VaporKeepAlive', () => {
     await nextTick()
     expect(oneHooks.unmounted).toHaveBeenCalledTimes(1)
   })
+
+  test.each([
+    ['string', 'key="a"', 'key="b"'],
+    ['constant', `:key="'a'"`, `:key="'b'"`],
+    ['numeric', ':key="1"', ':key="0"'],
+  ])(
+    'should cache v-if components with explicit %s keys',
+    async (_, aKey, bKey) => {
+      const flag = ref(true)
+      const setup = vi.fn()
+      const disposed = vi.fn()
+      const createChild = (name: string) =>
+        compile(
+          `<script setup vapor>
+          import { ref, onScopeDispose } from 'vue'
+          const name = _data.name
+          const count = ref(0)
+          _data.setup(name)
+          onScopeDispose(() => _data.disposed(name))
+        </script>
+        <template><button @click="count++">{{ name }}:{{ count }}</button></template>`,
+          { name, setup, disposed } as any,
+        )
+      const A = createChild('A')
+      const B = createChild('B')
+      const App = compile(
+        `<script setup vapor>
+        const flag = _data
+        const A = _components.A
+        const B = _components.B
+      </script>
+      <template>
+        <KeepAlive>
+          <A v-if="flag" ${aKey} />
+          <B v-else ${bKey} />
+        </KeepAlive>
+      </template>`,
+        flag,
+        { A, B },
+      )
+      const { host, app } = define(App).render()
+      expect(host.textContent).toBe('A:0')
+
+      host.querySelector('button')!.click()
+      await nextTick()
+      expect(host.textContent).toBe('A:1')
+
+      flag.value = false
+      await nextTick()
+      expect(host.textContent).toBe('B:0')
+      host.querySelector('button')!.click()
+      await nextTick()
+      expect(host.textContent).toBe('B:1')
+
+      for (let i = 0; i < 2; i++) {
+        flag.value = true
+        await nextTick()
+        expect(host.textContent).toBe('A:1')
+        flag.value = false
+        await nextTick()
+        expect(host.textContent).toBe('B:1')
+      }
+      expect(setup.mock.calls).toEqual([['A'], ['B']])
+      expect(disposed).not.toHaveBeenCalled()
+
+      app.unmount()
+      expect(disposed.mock.calls.sort()).toEqual([['A'], ['B']])
+    },
+  )
 })

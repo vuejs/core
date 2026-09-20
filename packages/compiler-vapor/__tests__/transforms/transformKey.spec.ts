@@ -158,6 +158,11 @@ describe('compiler: key', () => {
       expect(code).not.contains('_createKeyedFragment(')
     })
 
+    test('component + key with v-bind', () => {
+      const { code } = compileWithKey(`<Foo v-bind="props" key="a" />`)
+      expect(code).toMatchSnapshot()
+    })
+
     test('element + key', () => {
       const { code, ir } = compileWithKey(`<div key="1"></div>`)
       expect(code).toMatchSnapshot()
