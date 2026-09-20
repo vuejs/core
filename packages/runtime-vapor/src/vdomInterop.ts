@@ -819,6 +819,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
     parentSuspense,
     slotScopeIds,
   ) {
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) return
     // The content of a hosted outlet is made of fragments and slots, each a
     // range of its own in the server output, behind the comments of closed
     // branches. Anything else there is the fallback, which the server renders
