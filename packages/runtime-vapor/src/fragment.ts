@@ -219,10 +219,11 @@ export function runWithRenderCtx<R>(
 
 /**
  * The one construction point for a slot host's boundary context, shared by
- * SlotFragment and both vdom-interop slot hosts. `run` and `getScopeIds`
- * always come from the host fragment's render seam; `getParent`, `getFallback`
- * and `markDirty` stay host-specific (ownership caps, fallback sources and
- * dirty batching differ per host).
+ * SlotFragment and both vdom-interop slot hosts. `run` always comes from the
+ * host fragment's render seam, and so does the id cell unless the boundary
+ * stands for an enclosing outlet; `getParent`, `getFallback` and `markDirty`
+ * stay host-specific (ownership caps, fallback sources and dirty batching
+ * differ per host).
  */
 export function createSlotBoundary(
   fragment: RenderContextFragment,
@@ -232,12 +233,14 @@ export function createSlotBoundary(
   getFallback: () => BlockFn | undefined,
   markDirty: (force?: boolean) => void,
   onContentInvalid?: (() => void)[],
+  // the host fragment's cell unless the boundary stands for another outlet
+  getScopeIds: () => string[] | null = () => fragment.slotScopeIds,
 ): SlotBoundaryContext {
   return {
     getParent,
     getFallback,
     run: (fn, scope) => runWithRenderCtx(fragment, fn, scope),
-    getScopeIds: () => fragment.slotScopeIds,
+    getScopeIds,
     markDirty,
     onContentInvalid,
   }

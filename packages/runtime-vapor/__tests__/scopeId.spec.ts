@@ -2565,8 +2565,9 @@ describe('vdom interop', () => {
     // vapor parent in turn; only the parent differs. Under a vdom parent the
     // fallback renders inline in the child's render, under a vapor parent the
     // interop fallback chain invokes it later, outside any render.
+    // a null id leaves the component unscoped
     const scoped = (
-      id: string,
+      id: string | null,
       src: string,
       components: Record<string, any> = {},
       style = `p {}`,
@@ -2574,12 +2575,12 @@ describe('vdom interop', () => {
       const comp = compile(
         `<script setup>const data = _data; const components = _components;</script>` +
           src +
-          `<style scoped>${style}</style>`,
+          (id ? `<style scoped>${style}</style>` : ''),
         ref(null),
         components,
-        { vapor: false, id },
+        { vapor: false, id: id || undefined },
       )
-      comp.__scopeId = `data-v-${id}`
+      if (id) comp.__scopeId = `data-v-${id}`
       return comp
     }
     const fillFrom = (child: string) =>
@@ -2670,23 +2671,27 @@ describe('vdom interop', () => {
       [
         'the wrapper owns one',
         `<slot><b>wrapper fallback</b></slot>`,
+        'inner',
         `<b data-v-wrapper="" data-v-inner-s="" data-v-wrapper-s="">wrapper fallback</b>`,
-        null,
       ],
       [
         'only the inner one does',
         `<slot/>`,
+        'inner',
         `<p data-v-inner="" data-v-inner-s="">inner fallback</p>`,
-        // the inner fallback also gets the forwarding outlet's `-s` id here,
-        // as it does in pure vapor (fallbacks render under the requesting
-        // outlet's ids); vdom does not add it. Not a fallback-owner concern.
-        `<p data-v-inner="" data-v-inner-s="" data-v-wrapper-s="">inner fallback</p>`,
+      ],
+      [
+        // nothing is left of the forwarding outlet's ids either
+        'only the inner one does, unscoped',
+        `<slot/>`,
+        null,
+        `<p>inner fallback</p>`,
       ],
     ])(
       'a forwarded outlet keeps each fallback owner scope id, %s',
-      async (_, forwarded, expected, expectedVapor) => {
+      async (_, forwarded, innerId, expected) => {
         const Inner = scoped(
-          'inner',
+          innerId,
           `<template><slot><p>inner fallback</p></slot></template>`,
         )
         const Wrapper = scoped(
@@ -2701,8 +2706,35 @@ describe('vdom interop', () => {
           { Wrapper },
         )
         expect(vdom.after).toBe(expected)
-        expect(vapor.after).toBe(expectedVapor || vdom.after)
+        expect(vapor.after).toBe(vdom.after)
       },
     )
+
+    test('a fallback forwarded through several outlets carries only the ids around it', async () => {
+      const Leaf = scoped(
+        'leaf',
+        `<template><slot><p>leaf fallback</p></slot></template>`,
+      )
+      const Inner = scoped(
+        'inner',
+        `<template><components.Leaf><slot/></components.Leaf></template>`,
+        { Leaf },
+      )
+      const Wrapper = scoped(
+        'wrapper',
+        `<template><components.Inner><slot/></components.Inner></template>`,
+        { Inner },
+      )
+      const { vdom, vapor } = await renderParity(
+        { App: fillFrom('Wrapper') },
+        () => ref(false),
+        () => {},
+        { Wrapper },
+      )
+      expect(vdom.after).toBe(
+        `<p data-v-leaf="" data-v-leaf-s="">leaf fallback</p>`,
+      )
+      expect(vapor.after).toBe(vdom.after)
+    })
   })
 })

@@ -173,6 +173,10 @@ export interface VdomSlotOutlet {
   fallback: () => VNodeArrayChildren
   // rendering instance the fallback renders under
   owner: ComponentInternalInstance | null
+  // on an enclosing outlet: how many slotted ids the fragments between it and
+  // the slot add to the patch context the slot mounts under, none of which its
+  // fallback carries
+  innerIds?: number
 }
 
 export interface VNode<

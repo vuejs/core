@@ -23,7 +23,8 @@ describe('vdom interop: vapor slot outlets', () => {
   const forward = (fallback?: () => any[]) =>
     renderSlot({ default: vaporSlot }, 'default', {}, fallback)
   const appContext = createApp({}).use(vaporInteropPlugin)._context
-  const instance = () => ({ type: {}, appContext }) as any
+  const instance = (scopeId?: string) =>
+    ({ type: { __scopeId: scopeId }, appContext }) as any
 
   beforeEach(() => {
     setCurrentRenderingInstance(instance())
@@ -87,6 +88,40 @@ describe('vdom interop: vapor slot outlets', () => {
       innerFallback,
       outerFallback,
     ])
+  })
+
+  it('counts the slotted ids of the fragments between an enclosing outlet and the slot', () => {
+    const forwardThrough = (innerId?: string) => {
+      let forwarded!: VNode
+      setCurrentRenderingInstance(instance('leaf'))
+      renderSlot(
+        {
+          default: withCtx(
+            () => [
+              renderSlot(
+                {
+                  default: withCtx(
+                    () => [(forwarded = forward(() => [h('b')]))],
+                    instance('wrapper'),
+                  ) as Slot,
+                },
+                'default',
+                {},
+                () => [h('i')],
+              ),
+            ],
+            instance(innerId),
+          ) as Slot,
+        },
+        'default',
+        {},
+        () => [h('p')],
+      )
+      return forwarded.vs!.outlets!.map(o => o.innerIds)
+    }
+    // its own outlet, the inner one around it, the leaf one around both
+    expect(forwardThrough('inner')).toEqual([undefined, 0, 1])
+    expect(forwardThrough()).toEqual([undefined, 0, 0])
   })
 
   it('leaves the outlet alone unless its content is that one slot', () => {
