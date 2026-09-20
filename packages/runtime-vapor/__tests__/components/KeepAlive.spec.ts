@@ -4943,4 +4943,86 @@ describe('VaporKeepAlive', () => {
       expect(disposed.mock.calls.sort()).toEqual([['A'], ['B']])
     },
   )
+
+  test('should inherit fallthrough attrs through a KeepAlive root', async () => {
+    const data = ref({ ok: true, title: 'one' })
+    const A = compile(`<template><div>A</div></template>`, data)
+    const B = compile(`<template><p>B</p></template>`, data)
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const A = _components.A
+        const B = _components.B
+      </script>
+      <template>
+        <KeepAlive>
+          <A v-if="data.ok" />
+          <B v-else />
+        </KeepAlive>
+      </template>`,
+      data,
+      { A, B },
+    )
+    const App = compile(
+      `<template><components.Child class="cls" :title="data.title" /></template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+
+    const a = host.querySelector('div')!
+    expect(a.className).toBe('cls')
+    expect(a.getAttribute('title')).toBe('one')
+
+    data.value.title = 'two'
+    await nextTick()
+    expect(a.getAttribute('title')).toBe('two')
+
+    // the other branch is a root too, and it is cached on the way back
+    data.value.ok = false
+    await nextTick()
+    const b = host.querySelector('p')!
+    expect(b.className).toBe('cls')
+    expect(b.getAttribute('title')).toBe('two')
+
+    data.value.ok = true
+    await nextTick()
+    expect(host.querySelector('div')!.getAttribute('title')).toBe('two')
+  })
+
+  test('should merge fallthrough class with the class of a KeepAlive root', async () => {
+    const data = ref({ outer: 'outer', inner: 'inner' })
+    const A = compile(
+      `<template><div class="box" :class="data.inner">A</div></template>`,
+      data,
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const A = _components.A
+      </script>
+      <template><KeepAlive><A /></KeepAlive></template>`,
+      data,
+      { A },
+    )
+    const App = compile(
+      `<template><components.Child :class="data.outer" /></template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+    const el = host.querySelector('div')!
+
+    expect([...el.classList]).toEqual(
+      expect.arrayContaining(['outer', 'box', 'inner']),
+    )
+    expect(el.classList).toHaveLength(3)
+
+    data.value.inner = 'inner-next'
+    data.value.outer = 'outer-next'
+    await nextTick()
+    expect([...el.classList]).toEqual(
+      expect.arrayContaining(['outer-next', 'box', 'inner-next']),
+    )
+    expect(el.classList).toHaveLength(3)
+  })
 })

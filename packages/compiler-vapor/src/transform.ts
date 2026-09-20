@@ -34,6 +34,7 @@ import {
 import {
   isConstantBinding,
   isConstantExpression,
+  isKeepAliveTag,
   isTransitionNode,
 } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
@@ -431,7 +432,8 @@ export class TransformContext<T extends AllNode = AllNode> {
     return (
       this.node.type === NodeTypes.ELEMENT &&
       (this.node.tagType === ElementTypes.TEMPLATE ||
-        isTransitionNode(this.node)) &&
+        isTransitionNode(this.node) ||
+        isKeepAliveTag(this.node.tag)) &&
       !!this.parent &&
       this.isSingleRoot
     )
