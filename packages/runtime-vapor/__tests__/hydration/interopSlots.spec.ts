@@ -1139,8 +1139,29 @@ describe('VDOM interop', () => {
     test.each([
       ['one slot', `<slot name="b"/>`],
       ['several slots', `<slot name="a"/><slot name="b"/>`],
+      // the server folds the whole content into the fallback, along with the
+      // fragments the client keeps around the slots
+      [
+        'a v-if group',
+        `<template v-if="data.on"><slot name="a"/><slot name="b"/></template>`,
+      ],
+      [
+        'a v-for group',
+        `<template v-for="n in data.list" :key="n"><slot name="b"/></template>`,
+      ],
+      [
+        'nested groups',
+        `<template v-if="data.on"><template v-for="n in data.list" :key="n">` +
+          `<slot name="a"/><slot name="b"/></template></template>`,
+      ],
     ])('adopts the server-rendered fallback, %s', async (_, forwarded) => {
-      const data = reactive({ a: false, b: false, fallback: 'foo' })
+      const data = reactive({
+        a: false,
+        b: false,
+        fallback: 'foo',
+        on: true,
+        list: [1],
+      })
       const { container } = await mount(forwarded, data)
       noMismatch()
       const fallback = container.querySelector('p')!
@@ -1159,17 +1180,26 @@ describe('VDOM interop', () => {
       expect(stripAnchors(container.innerHTML)).toBe('<p>bar</p>')
     })
 
+    const several = `<slot name="a"/><slot name="b"/>`
     test.each([
-      ['the first', { a: true, b: false }, '<i>a</i>'],
-      ['the last', { a: false, b: true }, '<b>b</b>'],
+      ['the first', several, { a: true, b: false }, '<i>a</i>'],
+      ['the last', several, { a: false, b: true }, '<b>b</b>'],
+      [
+        'one of a nested group',
+        `<template v-if="data.on"><template v-for="n in data.list" :key="n">${several}</template></template>`,
+        { a: true, b: false },
+        '<i>a</i>',
+      ],
     ])(
       'keeps server-rendered content in %s of several slots',
-      async (_, shown, html) => {
-        const data = reactive({ ...shown, fallback: 'foo' })
-        const { container } = await mount(
-          `<slot name="a"/><slot name="b"/>`,
-          data,
-        )
+      async (_, forwarded, shown, html) => {
+        const data = reactive({
+          ...shown,
+          fallback: 'foo',
+          on: true,
+          list: [1],
+        })
+        const { container } = await mount(forwarded, data)
         noMismatch()
         const content = container.querySelector('i,b')!
         expect(stripAnchors(container.innerHTML)).toBe(html)

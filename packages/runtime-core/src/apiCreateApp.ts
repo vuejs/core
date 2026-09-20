@@ -264,6 +264,18 @@ export interface VaporInVdomInterface {
     fallback: () => VNodeArrayChildren,
     owner: ComponentInternalInstance | null,
   ): VNode | undefined
+  /**
+   * Hydrates the children of an outlet fragment ending with a fallback host
+   * when the server folded its whole content into the fallback. Returns the
+   * node after them, or undefined to leave them to the vdom hydration.
+   */
+  hydrateSlotOutlet(
+    outlet: VNode,
+    node: Node,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
+  ): Node | null | undefined
 }
 
 /**

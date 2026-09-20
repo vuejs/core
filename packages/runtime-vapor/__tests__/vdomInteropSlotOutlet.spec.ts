@@ -186,8 +186,6 @@ describe('vdom interop: vapor slot outlets', () => {
       expect(host.vs!.members!.length).toBe(slots)
       for (const member of host.vs!.members!) {
         expect(member.vs!.outlets).toBeUndefined()
-        // told apart on hydration: the fallback in its place is the host's
-        expect(member.vs!.hosted).toBe(true)
       }
       expect(rendered.patchFlag).toBe(PatchFlags.BAIL)
     }

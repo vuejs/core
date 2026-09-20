@@ -735,20 +735,18 @@ const vaporInteropImpl: VaporInVdomInterface = {
     }
     const container = parentNode(node)!
     // The server rendered nothing for this slot: the cursor rests on the close
-    // marker of the slot's own empty range, or of the vdom fragment it ends,
-    // or, past a hosted slot's own range, on the fallback its host adopts (the
-    // server folds an all-empty outlet into its fallback). Nothing to adopt,
-    // and an empty branch inside must not take that node for its own anchor:
-    // mount in place.
-    const before = isComment(node, '[')
-      ? node.nextSibling && isComment(node.nextSibling, ']')
+    // marker of the slot's own empty range, or of the vdom fragment it ends.
+    // Nothing to adopt, and an empty branch inside must not take that marker
+    // for its own anchor: mount in place.
+    const close = isComment(node, ']')
+      ? node
+      : isComment(node, '[') &&
+          node.nextSibling &&
+          isComment(node.nextSibling, ']')
         ? node.nextSibling
         : null
-      : isComment(node, ']') || vnode.vs!.hosted
-        ? node
-        : null
-    if (before) {
-      const ownsRange = before !== node
+    if (close) {
+      const ownsRange = close !== node
       runWithoutHydration(() => {
         const block = (vnode.vb = renderVaporSlot(
           vnode,
@@ -756,17 +754,17 @@ const vaporInteropImpl: VaporInVdomInterface = {
           parentSuspense,
           slotScopeIds,
         ))
-        let anchor: Node = before
+        let anchor: Node = close
         if (!ownsRange) {
-          // the node is not the slot's: a self anchor as on mount
+          // the marker is the enclosing fragment's: a self anchor as on mount
           anchor = (isFragment(block) && block.anchor) || createTextNode()
-          insert(anchor, container, before)
+          insert(anchor, container, close)
         }
         vnode.el = ownsRange ? node : anchor
         vnode.anchor = anchor
         insert(block, container, anchor, parentSuspense)
       })
-      return ownsRange ? before.nextSibling : before
+      return ownsRange ? close.nextSibling : close
     }
     let createdAnchor = false
     let resumeNode: Node | null = null
@@ -812,6 +810,52 @@ const vaporInteropImpl: VaporInVdomInterface = {
     return isComment(node, '[')
       ? (vnode.anchor as Node).nextSibling
       : (vnode.anchor as Node)
+  },
+
+  hydrateSlotOutlet(
+    outlet,
+    node: Node,
+    parentComponent,
+    parentSuspense,
+    slotScopeIds,
+  ) {
+    // The content of a hosted outlet is made of fragments and slots, each a
+    // range of its own in the server output, behind the comments of closed
+    // branches. Anything else there is the fallback, which the server renders
+    // in place of content that is all empty: nothing of the content to adopt.
+    const children = outlet.children as VNode[]
+    const last = children.length - 1
+    let start: Node | null = node
+    for (let i = 0; i < last; i++) {
+      if (children[i].type !== VNodeComment) {
+        if (start && isComment(start, '[')) return
+        break
+      }
+      start = start && start.nextSibling
+    }
+    const container = parentNode(node)!
+    runWithoutHydration(() => {
+      const patch = ensureRenderer().internals.p
+      for (let i = 0; i < last; i++) {
+        patch(
+          null,
+          (children[i] = normalizeVNode(children[i])),
+          container as any,
+          node as any,
+          parentComponent,
+          parentSuspense,
+          undefined,
+          slotScopeIds,
+        )
+      }
+    })
+    return this.hydrateSlot(
+      children[last],
+      node,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+    )
   },
 
   attachSlotOutlet: attachVaporSlotOutlet,
@@ -2837,7 +2881,6 @@ function attachVaporSlotOutlet(
     // NOOP: no slot to invoke, and one identity across renders for interop
     // to patch the host in place
     host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
-    for (let i = 0; i < foundSlots.length; i++) foundSlots[i].vs!.hosted = true
   }
   foundSlots.length = walked.length = 0
   return host
