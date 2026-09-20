@@ -1048,6 +1048,60 @@ describe('VDOM interop', () => {
     )
   })
 
+  describe.each([
+    ['in a vdom component', 'Child'],
+    // the server then folds the forwarding outlet's own empty range away
+    ['forwarded by a vdom component', 'Wrapper'],
+  ])('hydrate empty vapor slot content %s', (_, entry) => {
+    test.each([
+      ['closing a vdom fragment', `<h1>t</h1><slot/>`, `<h1>t</h1><b>b</b>`],
+      ['opening a vdom fragment', `<slot/><h1>t</h1>`, `<b>b</b><h1>t</h1>`],
+      ['as a vdom root', `<slot/>`, `<b>b</b>`],
+      ['closing an element', `<div><slot/></div>`, `<div><b>b</b></div>`],
+      [
+        'ahead of an element sibling',
+        `<div><slot/><h1>t</h1></div>`,
+        `<div><b>b</b><h1>t</h1></div>`,
+      ],
+    ])('%s', async (_, child, shown) => {
+      const data = reactive({ show: false })
+      // `compile()` turns a script-less SFC into a vapor one: keep the script
+      const setup = `<script setup>const data = _data; const components = _components</script>`
+      const { container, html } = await testWithVaporApp(
+        `${setup}<template>
+          <components.${entry}><b v-if="data.show">b</b></components.${entry}>
+        </template>`,
+        {
+          Child: {
+            code: `${setup}<template>${child}</template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `${setup}<template><components.Child><slot/></components.Child></template>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+      const visible = () => container.innerHTML.replace(/<!--[^>]*-->/g, '')
+      const count = (marker: string) =>
+        container.innerHTML.split(marker).length - 1
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      // every server-rendered fragment marker is adopted: none recreated
+      expect(count('<!--[-->')).toBe(html.split('<!--[-->').length - 1)
+      expect(count('<!--]-->')).toBe(html.split('<!--]-->').length - 1)
+
+      data.show = true
+      await nextTick()
+      expect(visible()).toBe(shown)
+      data.show = false
+      await nextTick()
+      expect(visible()).toBe(shown.replace('<b>b</b>', ''))
+    })
+  })
+
   test('hydrate forwarded slot fallback with nested component before parent close marker', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(
