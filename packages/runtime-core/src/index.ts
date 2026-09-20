@@ -626,11 +626,7 @@ export {
 /**
  * @internal
  */
-export {
-  recordVaporSlotOutlet,
-  ensureValidVNode,
-  invokeSlotFallback,
-} from './helpers/renderSlot'
+export { ensureValidVNode, invokeSlotFallback } from './helpers/renderSlot'
 /**
  * @internal
  */

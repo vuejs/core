@@ -26,7 +26,7 @@ import type {
 } from './renderer'
 import type { InjectionKey } from './apiInject'
 import { warn } from './warning'
-import type { VNode } from './vnode'
+import type { VNode, VNodeArrayChildren } from './vnode'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { NO, extend, hasOwn, isFunction, isObject } from '@vue/shared'
 import { type SuspenseBoundary, type TransitionHooks, version } from '.'
@@ -255,6 +255,15 @@ export interface VaporInVdomInterface {
     transition: TransitionHooks,
   ): void
   applyCssVars(vnode: VNode, vars: Record<string, string>): void
+  /**
+   * Hands the fallback of a vdom outlet over to the vapor slots its content
+   * consists of. Returns the vnode to append to that content, if any.
+   */
+  attachSlotOutlet(
+    content: VNodeArrayChildren,
+    fallback: () => VNodeArrayChildren,
+    owner: ComponentInternalInstance | null,
+  ): VNode | undefined
 }
 
 /**

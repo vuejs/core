@@ -10,7 +10,6 @@ import {
   type VNode,
   type VNodeArrayChildren,
   VaporSlot,
-  type VaporSlotOutlet,
   blockStack,
   closeBlock,
   createBlock,
@@ -19,14 +18,7 @@ import {
   openBlock,
   rawVaporSlotKey,
 } from '../vnode'
-import {
-  NOOP,
-  PatchFlags,
-  ShapeFlags,
-  SlotFlags,
-  extend,
-  isSymbol,
-} from '@vue/shared'
+import { PatchFlags, SlotFlags, extend, isSymbol } from '@vue/shared'
 import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import type { ComponentInternalInstance, Data } from '../component'
@@ -143,13 +135,15 @@ export function renderSlot(
     const content = slot && slot(props)
     const validSlotContent = content && ensureValidVNode(content)
 
-    // forwarded vapor slots resolve this outlet's fallback themselves
+    // forwarded vapor slots resolve this outlet's fallback themselves; the
+    // interop tells them apart, so none of it ships without it
+    const interop =
+      currentRenderingInstance && currentRenderingInstance.appContext.vapor
     const fallbackHost =
       fallback &&
       content &&
-      currentRenderingInstance &&
-      currentRenderingInstance.appContext.vapor &&
-      attachVaporSlotOutlet(content, fallback)
+      interop &&
+      interop.attachSlotOutlet(content, fallback, currentRenderingInstance)
     // a hosted outlet is one fragment, slots left or not: its content shows
     // on its own and stays in place as the host comes and goes
     const keyedContent = fallbackHost ? content : validSlotContent
@@ -209,106 +203,4 @@ export function ensureValidVNode(
   })
     ? vnodes
     : null
-}
-
-/**
- * Hands a vdom outlet's fallback over to the vapor slots its content consists
- * of: recorded on the slot vnode when the content is structurally that one
- * slot, else on the returned host vnode, to append to the content, which owns
- * the fallback and shows it while every slot is empty.
- */
-function attachVaporSlotOutlet(
-  content: VNodeArrayChildren,
-  fallback: () => VNodeArrayChildren,
-): VNode | undefined {
-  if (!findVaporSlots(content)) return
-  const owner = currentRenderingInstance
-  const outlet: VaporSlotOutlet = { fallback, vdom: true, owner }
-  let host: VNode | undefined
-  if (!severalSlots && foundSlots.length) {
-    // a lone slot stays the one vnode exposing the fallback (`<Transition>`)
-    outlet.innerIds = pathIds
-    ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
-  } else if (foundSlots.length || forwardsVaporSlots(owner)) {
-    // no slot at all: a closed `v-if` branch or an empty list of them
-    host = createVNode(VaporSlot, { key: '_fb' })
-    // NOOP: no slot to invoke, and one identity across renders for interop
-    // to patch the host in place
-    host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
-    for (let i = 0; i < foundSlots.length; i++) foundSlots[i].vs!.hosted = true
-  }
-  foundSlots.length = 0
-  return host
-}
-
-// whether the slots handed to this component forward vapor slots (marked by
-// normalizeChildren)
-const forwardsVaporSlots = (instance: ComponentInternalInstance | null) =>
-  !!instance &&
-  !!(instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) &&
-  !!(instance.vnode.children as any)[rawVaporSlotKey]
-
-/**
- * A vapor outlet rendering vdom slot content takes part only when that
- * content is structurally one vapor slot. Internal to vapor interop.
- */
-export function recordVaporSlotOutlet(
-  vnodes: VNodeArrayChildren,
-  fallback: () => any,
-): void {
-  if (findVaporSlots(vnodes)) {
-    if (!severalSlots && foundSlots.length) {
-      ;(foundSlots[0].vs!.outlets ||= []).push({
-        fallback,
-        vdom: false,
-        innerIds: pathIds,
-      })
-    }
-    foundSlots.length = 0
-  }
-}
-
-// scratch for the walk below, which runs no user code and cannot re-enter
-const foundSlots: VNode[] = []
-let severalSlots = false
-// slot scope ids of the fragments on the way to a lone slot (the renderer
-// appends them in that order)
-let pathIds = 0
-
-// whether the content is made of vapor slots only, if any at all
-function findVaporSlots(vnodes: VNodeArrayChildren): boolean {
-  severalSlots = false
-  pathIds = 0
-  if (walkVaporSlots(vnodes)) return true
-  foundSlots.length = 0
-  return false
-}
-
-// Gathers the vapor slot vnodes in outlet content, looking through fragments
-// and past comments the way `ensureValidVNode` does. False once valid vdom
-// content is met: the outlet then stands on its own. `severalSlots` unless
-// the content can never hold more than one slot: no siblings (a `v-if` leaves
-// its comment behind) and no list on the way to it.
-function walkVaporSlots(vnodes: VNodeArrayChildren): boolean {
-  if (vnodes.length > 1) severalSlots = true
-  for (let i = 0; i < vnodes.length; i++) {
-    const child = vnodes[i]
-    if (!isVNode(child)) return false
-    if (child.vs) {
-      foundSlots.push(child)
-    } else if (child.type === Fragment) {
-      if (
-        child.patchFlag > 0 &&
-        child.patchFlag &
-          (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)
-      ) {
-        severalSlots = true
-      }
-      if (child.slotScopeIds) pathIds += child.slotScopeIds.length
-      if (!walkVaporSlots(child.children as VNodeArrayChildren)) return false
-    } else if (child.type !== Comment) {
-      return false
-    }
-  }
-  return true
 }
