@@ -803,7 +803,19 @@ const vaporInteropImpl: VaporInVdomInterface = {
     })
     // The created anchor is a client-only node; returning it would make
     // hydrateChildren() treat it as an unclaimed server-rendered child.
-    if (createdAnchor) return resumeNode
+    if (createdAnchor) {
+      // a slot that gave its trial range back left the anchors of its empty
+      // content detached, as for a fallback to take their place
+      if (
+        (vnode.vs!.state as InteropVaporSlotState).onTrial &&
+        !isValidSlot(vnode.vb!)
+      ) {
+        runWithoutHydration(() =>
+          insert(vnode.vb!, container, vnode.anchor as Node, parentSuspense),
+        )
+      }
+      return resumeNode
+    }
     // For fragment-wrapped slot content (`<!--[-->...<!--]-->`), return the
     // node after the end anchor to avoid hydrateChildren() treating `<!--]-->`
     // as an extra child of the current container.
@@ -828,7 +840,16 @@ const vaporInteropImpl: VaporInVdomInterface = {
     const last = children.length - 1
     matchedSlot = false
     const end = matchOutletContent(children, last, node)
-    if (matchedSlot && end && isComment(end, ']')) return
+    if (matchedSlot && end && isComment(end, ']')) {
+      // A fallback made of as many ranges has that shape too. What tells them
+      // apart is that a slot with no content never owns a range with some:
+      // the slots claim theirs on trial (see renderVaporSlot).
+      const members = children[last].vs!.members!
+      for (let i = 0; i < members.length; i++) {
+        resolveInteropVaporSlotState(members[i]).onTrial = true
+      }
+      return
+    }
     if (last) {
       const container = parentNode(node)!
       runWithoutHydration(() => {
@@ -3060,6 +3081,8 @@ interface InteropVaporSlotState {
   members?: readonly VNode[]
   // set up by renderVaporSlot: re-resolves the chain after the flush
   recheck?: (force?: boolean) => void
+  // hydration of a slot beside a fallback host (see hydrateSlotOutlet)
+  onTrial?: boolean
 }
 
 function resolveInteropVaporSlotState(vnode: VNode): InteropVaporSlotState {
@@ -3311,6 +3334,15 @@ function renderVaporSlot(
         recheckSlotResolution(slotResolutionState, takePendingRecheck())
         return resolvedContent
       }
+      // A host has no range in the server output: a fragment start under the
+      // cursor is its fallback's. A slot beside a host owns the one there only
+      // if it has content: all empty, the server rendered the fallback instead.
+      const onTrial = slotState.onTrial
+      const ownsRange = slotState.members
+        ? false
+        : onTrial
+          ? () => isValidSlot(content.nodes)
+          : true
       const renderContent = () =>
         finalizeResolvedContent(
           withRenderContext(frag.ctx, () =>
@@ -3325,7 +3357,7 @@ function renderVaporSlot(
             // SSR may currently contain fallback DOM. Delay empty content
             // anchors until rendered content proves whether it should win.
             pending = startPendingSlotContentGuard(
-              hasSlotFallback(rootBoundary),
+              onTrial || hasSlotFallback(rootBoundary),
               currentHydrationNode,
             )
             try {
@@ -3333,9 +3365,7 @@ function renderVaporSlot(
             } finally {
               pending.settle()
             }
-            // a host has no range in the server output: a fragment start there
-            // is its fallback's
-          }, !slotState.members)
+          }, ownsRange)
         } else {
           resolvedContent = renderContent()
         }
