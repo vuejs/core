@@ -1,4 +1,4 @@
-import { NOOP } from '@vue/shared'
+import { NOOP, isFunction } from '@vue/shared'
 import { queuePostFlushCb } from '@vue/runtime-dom'
 import {
   type FragmentClaim,
@@ -104,6 +104,15 @@ class SlotHydrationSession {
     if (close) trimHydrationBoundary(close)
   }
 
+  /** Give a range claimed on trial back untouched, cursor at its start. */
+  disown(): void {
+    const start = this.claim.start
+    if (start) {
+      this.claim.start = null
+      setCurrentHydrationNode(start)
+    }
+  }
+
   /** Record a claim in the ledger; false = no pending window, act now. */
   defer(anchor: DeferredSlotAnchor): boolean {
     if (!this.pending) return false
@@ -191,9 +200,10 @@ function enterSlotBoundaryRange(
 
 export function withHydratingSlotBoundary<R>(
   fn: () => R,
-  ownsRange?: boolean,
+  // a function: the range is claimed on trial, and asked for once `fn` is done
+  ownsRange?: boolean | (() => boolean),
 ): R {
-  const session = enterSlotBoundaryRange(false, ownsRange)
+  const session = enterSlotBoundaryRange(false, ownsRange !== false)
   const prevSession = currentSlotHydrationSession
   currentSlotHydrationSession = session
 
@@ -201,7 +211,11 @@ export function withHydratingSlotBoundary<R>(
     return fn()
   } finally {
     currentSlotHydrationSession = prevSession
-    session.exitBoundary()
+    if (isFunction(ownsRange) && !ownsRange()) {
+      session.disown()
+    } else {
+      session.exitBoundary()
+    }
   }
 }
 

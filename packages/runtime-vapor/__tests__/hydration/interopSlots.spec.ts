@@ -1197,6 +1197,13 @@ describe('VDOM interop', () => {
         `<template v-if="data.on"><p>{{ data.fallback }}</p><p>!</p></template>`,
       ],
       ['a multi-root component', `<components.Multi/>`],
+      // as many ranges as there are slots: the shape of the content itself
+      ['two multi-root components', `<components.Multi/><components.Multi/>`],
+      [
+        'two v-for',
+        `<p v-for="n in 2" :key="n">{{ data.fallback }}{{ n }}</p>` +
+          `<i v-for="n in 2" :key="n">{{ n }}</i>`,
+      ],
     ])('adopts a server-rendered fallback that is %s', (_, fallback) => {
       test.each([
         ['several slots', `<slot name="a"/><slot name="b"/>`],
