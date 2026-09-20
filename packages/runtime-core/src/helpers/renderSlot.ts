@@ -31,8 +31,6 @@ import { warn } from '../warning'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import type { ComponentInternalInstance, Data } from '../component'
 
-export { rawVaporSlotKey }
-
 /**
  * Invokes a VDOM slot fallback under the outlet owner that produced it, the
  * way `renderSlot` would have rendered it inline. Vapor interop invokes
@@ -217,10 +215,7 @@ export function ensureValidVNode(
  * Hands a vdom outlet's fallback over to the vapor slots its content consists
  * of: recorded on the slot vnode when the content is structurally that one
  * slot, else on the returned host vnode, to append to the content, which owns
- * the fallback and shows it while every slot is empty. An outlet that can
- * hold several slots gets its host with none in it yet, as long as vapor
- * slots are forwarded to it: the fallback then never changes hands, and
- * instance, as slots come and go.
+ * the fallback and shows it while every slot is empty.
  */
 function attachVaporSlotOutlet(
   content: VNodeArrayChildren,
@@ -236,8 +231,9 @@ function attachVaporSlotOutlet(
     ;(foundSlots[0].vs!.outlets ||= []).push(outlet)
   } else if (foundSlots.length || forwardsVaporSlots(owner)) {
     // no slot at all: a closed `v-if` branch or an empty list of them
-    host = (openBlock(), createBlock(VaporSlot, { key: '_fb' }))
-    // NOOP: a host has no slot, only the guards on `vs.slot` to pass
+    host = createVNode(VaporSlot, { key: '_fb' })
+    // NOOP: no slot to invoke, and one identity across renders for interop
+    // to patch the host in place
     host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
     for (let i = 0; i < foundSlots.length; i++) foundSlots[i].vs!.hosted = true
   }

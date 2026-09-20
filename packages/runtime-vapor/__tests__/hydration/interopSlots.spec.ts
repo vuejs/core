@@ -1,5 +1,11 @@
 import { nextTick, reactive, ref } from '@vue/runtime-dom'
-import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
+import {
+  VueServerRenderer,
+  compile,
+  runtimeDom,
+  runtimeVapor,
+  stripAnchors,
+} from '../_utils'
 import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
   formatHtml,
@@ -1125,8 +1131,6 @@ describe('VDOM interop', () => {
         },
         data,
       )
-    const visible = (container: Element) =>
-      container.innerHTML.replace(/<!--[^>]*-->/g, '')
     const noMismatch = () => {
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
@@ -1140,19 +1144,19 @@ describe('VDOM interop', () => {
       const { container } = await mount(forwarded, data)
       noMismatch()
       const fallback = container.querySelector('p')!
-      expect(visible(container)).toBe('<p>foo</p>')
+      expect(stripAnchors(container.innerHTML)).toBe('<p>foo</p>')
 
       data.fallback = 'bar'
       await nextTick()
       expect(container.querySelector('p')).toBe(fallback)
-      expect(visible(container)).toBe('<p>bar</p>')
+      expect(stripAnchors(container.innerHTML)).toBe('<p>bar</p>')
 
       data.b = true
       await nextTick()
-      expect(visible(container)).toBe('<b>b</b>')
+      expect(stripAnchors(container.innerHTML)).toBe('<b>b</b>')
       data.b = false
       await nextTick()
-      expect(visible(container)).toBe('<p>bar</p>')
+      expect(stripAnchors(container.innerHTML)).toBe('<p>bar</p>')
     })
 
     test.each([
@@ -1168,14 +1172,14 @@ describe('VDOM interop', () => {
         )
         noMismatch()
         const content = container.querySelector('i,b')!
-        expect(visible(container)).toBe(html)
+        expect(stripAnchors(container.innerHTML)).toBe(html)
 
         data.a = data.b = false
         await nextTick()
-        expect(visible(container)).toBe('<p>foo</p>')
+        expect(stripAnchors(container.innerHTML)).toBe('<p>foo</p>')
         Object.assign(data, shown)
         await nextTick()
-        expect(visible(container)).toBe(html)
+        expect(stripAnchors(container.innerHTML)).toBe(html)
         expect(content.isConnected).toBe(false)
       },
     )

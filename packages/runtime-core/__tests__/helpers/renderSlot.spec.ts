@@ -1,8 +1,4 @@
-import {
-  invokeSlotFallback,
-  rawVaporSlotKey,
-  renderSlot,
-} from '../../src/helpers/renderSlot'
+import { invokeSlotFallback, renderSlot } from '../../src/helpers/renderSlot'
 import {
   Fragment,
   type Slot,
@@ -19,7 +15,7 @@ import {
   currentRenderingInstance,
   setCurrentRenderingInstance,
 } from '../../src/componentRenderContext'
-import { blockStack } from '../../src/vnode'
+import { blockStack, rawVaporSlotKey } from '../../src/vnode'
 
 describe('renderSlot', () => {
   beforeEach(() => {
