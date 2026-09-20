@@ -1102,6 +1102,85 @@ describe('VDOM interop', () => {
     })
   })
 
+  describe('hydrate a vdom outlet fallback behind vapor slots forwarded by a vdom component', () => {
+    // `compile()` turns a script-less SFC into a vapor one: keep the script
+    const setup = `<script setup>const data = _data; const components = _components</script>`
+    const mount = (forwarded: string, data: any) =>
+      testWithVaporApp(
+        `${setup}<template>
+          <components.Wrapper>
+            <template #a><i v-if="data.a">a</i></template>
+            <template #b><b v-if="data.b">b</b></template>
+          </components.Wrapper>
+        </template>`,
+        {
+          Inner: {
+            code: `${setup}<template><slot><p>{{ data.fallback }}</p></slot></template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `${setup}<template><components.Inner>${forwarded}</components.Inner></template>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+    const visible = (container: Element) =>
+      container.innerHTML.replace(/<!--[^>]*-->/g, '')
+    const noMismatch = () => {
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    }
+
+    test.each([
+      ['one slot', `<slot name="b"/>`],
+      ['several slots', `<slot name="a"/><slot name="b"/>`],
+    ])('adopts the server-rendered fallback, %s', async (_, forwarded) => {
+      const data = reactive({ a: false, b: false, fallback: 'foo' })
+      const { container } = await mount(forwarded, data)
+      noMismatch()
+      const fallback = container.querySelector('p')!
+      expect(visible(container)).toBe('<p>foo</p>')
+
+      data.fallback = 'bar'
+      await nextTick()
+      expect(container.querySelector('p')).toBe(fallback)
+      expect(visible(container)).toBe('<p>bar</p>')
+
+      data.b = true
+      await nextTick()
+      expect(visible(container)).toBe('<b>b</b>')
+      data.b = false
+      await nextTick()
+      expect(visible(container)).toBe('<p>bar</p>')
+    })
+
+    test.each([
+      ['the first', { a: true, b: false }, '<i>a</i>'],
+      ['the last', { a: false, b: true }, '<b>b</b>'],
+    ])(
+      'keeps server-rendered content in %s of several slots',
+      async (_, shown, html) => {
+        const data = reactive({ ...shown, fallback: 'foo' })
+        const { container } = await mount(
+          `<slot name="a"/><slot name="b"/>`,
+          data,
+        )
+        noMismatch()
+        const content = container.querySelector('i,b')!
+        expect(visible(container)).toBe(html)
+
+        data.a = data.b = false
+        await nextTick()
+        expect(visible(container)).toBe('<p>foo</p>')
+        Object.assign(data, shown)
+        await nextTick()
+        expect(visible(container)).toBe(html)
+        expect(content.isConnected).toBe(false)
+      },
+    )
+  })
+
   test('hydrate forwarded slot fallback with nested component before parent close marker', async () => {
     const data = ref('foo')
     const { container } = await testWithVaporApp(

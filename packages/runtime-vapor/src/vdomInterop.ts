@@ -734,18 +734,20 @@ const vaporInteropImpl: VaporInVdomInterface = {
     }
     const container = parentNode(node)!
     // The server rendered nothing for this slot: the cursor rests on the close
-    // marker of the slot's own empty range, or of the vdom fragment it ends.
-    // Nothing to adopt, and an empty branch inside must not take that marker
-    // for its own anchor: mount in place.
-    const close = isComment(node, ']')
-      ? node
-      : isComment(node, '[') &&
-          node.nextSibling &&
-          isComment(node.nextSibling, ']')
+    // marker of the slot's own empty range, or of the vdom fragment it ends,
+    // or, past a hosted slot's own range, on the fallback its host adopts (the
+    // server folds an all-empty outlet into its fallback). Nothing to adopt,
+    // and an empty branch inside must not take that node for its own anchor:
+    // mount in place.
+    const before = isComment(node, '[')
+      ? node.nextSibling && isComment(node.nextSibling, ']')
         ? node.nextSibling
         : null
-    if (close) {
-      const ownsRange = close !== node
+      : isComment(node, ']') || vnode.vs!.hosted
+        ? node
+        : null
+    if (before) {
+      const ownsRange = before !== node
       runWithoutHydration(() => {
         const block = (vnode.vb = renderVaporSlot(
           vnode,
@@ -753,17 +755,17 @@ const vaporInteropImpl: VaporInVdomInterface = {
           parentSuspense,
           slotScopeIds,
         ))
-        let anchor: Node = close
+        let anchor: Node = before
         if (!ownsRange) {
-          // the marker is the enclosing fragment's: a self anchor as on mount
+          // the node is not the slot's: a self anchor as on mount
           anchor = (isFragment(block) && block.anchor) || createTextNode()
-          insert(anchor, container, close)
+          insert(anchor, container, before)
         }
         vnode.el = ownsRange ? node : anchor
         vnode.anchor = anchor
         insert(block, container, anchor, parentSuspense)
       })
-      return ownsRange ? close.nextSibling : close
+      return ownsRange ? before.nextSibling : before
     }
     let createdAnchor = false
     let resumeNode: Node | null = null

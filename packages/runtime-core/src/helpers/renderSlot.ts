@@ -237,6 +237,7 @@ function attachVaporSlotOutlet(
     host = (openBlock(), createBlock(VaporSlot, { key: '_fb' }))
     // NOOP: a host has no slot, only the guards on `vs.slot` to pass
     host.vs = { slot: NOOP, outlets: [outlet], members: foundSlots.slice() }
+    for (let i = 0; i < foundSlots.length; i++) foundSlots[i].vs!.hosted = true
   }
   foundSlots.length = 0
   return host
