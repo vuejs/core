@@ -9,6 +9,7 @@ import {
   type PushFn,
   type SSRBufferItem,
   renderVNodeChildren,
+  vaporSlotFns,
 } from '../render'
 import { isArray } from '@vue/shared'
 
@@ -84,10 +85,7 @@ export function ssrRenderSlotInner(
 ): void {
   const slotFn = slots[slotName]
   if (slotFn) {
-    // a slot is written in the component that rendered the one its outlet is
-    // written in
-    const owner = getCurrentInstance()
-    if (owner && isVapor(owner.vnode.ctx)) vaporSlots++
+    if (vaporSlotFns.has(slotFn)) vaporSlots++
     const slotBuffer: SSRBufferItem[] = []
     const bufferedPush = (item: SSRBufferItem) => {
       slotBuffer.push(item)

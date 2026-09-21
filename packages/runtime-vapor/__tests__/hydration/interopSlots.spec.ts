@@ -1824,4 +1824,70 @@ describe('VDOM interop', () => {
     app.unmount()
     expect(container.innerHTML).toBe('')
   })
+
+  // `h(Child, null, slots)`: no outlet of the component in between renders
+  test.each(['template', 'render function'])(
+    'hydrate the fallback of a vdom outlet (%s) a vapor slot was passed on to as it is',
+    async kind => {
+      const data = reactive({ show: false })
+      const App = (ssr: boolean) => {
+        const Child =
+          kind === 'template'
+            ? compile(
+                `${setup}<template><div><slot><p>fallback</p></slot></div></template>`,
+                data as any,
+                {},
+                { vapor: false, ssr },
+              )
+            : {
+                render(this: any) {
+                  return h('div', [
+                    renderSlot(this.$slots, 'default', {}, () => [
+                      h('p', 'fallback'),
+                    ]),
+                  ])
+                },
+              }
+        const Forward = {
+          setup(_: any, { slots }: any) {
+            return () => h(Child, null, slots)
+          },
+        }
+        return compile(
+          `${setup}<template>
+            <components.Forward><b v-if="data.show">b</b></components.Forward>
+          </template>`,
+          data as any,
+          { Forward },
+          { vapor: true, ssr },
+        )
+      }
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(App(true)),
+      )
+      expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = html
+      const p = container.querySelector('p')
+      const app = runtimeVapor
+        .createVaporSSRApp(App(false))
+        .use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(container.querySelector('p')).toBe(p)
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(`<div><b>b</b></div>`)
+      data.show = false
+      await nextTick()
+      expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
+
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    },
+  )
 })

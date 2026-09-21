@@ -469,5 +469,35 @@ describe('ssr: slot', () => {
         `<div><!--[-->fallback<!--]--></div>`,
       )
     })
+
+    // `h(Child, null, slots)`: no outlet of the component in between renders
+    test('a vapor slot passed on as it is marks the fallback of its outlet', async () => {
+      const RenderChild = {
+        render(this: any) {
+          return h('div', [
+            renderSlot(this.$slots, 'default', {}, () => ['fallback']),
+          ])
+        },
+      }
+      for (const Child of [VdomChild, RenderChild]) {
+        const Forward = {
+          setup(_: any, { slots }: any) {
+            return () => h(Child, null, slots)
+          },
+        }
+        const components = { Forward }
+        const template = `<Forward><span v-if="false"/></Forward>`
+        expect(await render(template, components)).toBe(
+          `<div><!--(-->fallback<!--)--></div>`,
+        )
+        expect(await render(`<Forward>content</Forward>`, components)).toBe(
+          `<div><!--[-->content<!--]--></div>`,
+        )
+        // a vdom slot: left alone
+        expect(await renderToString(createApp({ components, template }))).toBe(
+          `<div><!--[-->fallback<!--]--></div>`,
+        )
+      }
+    })
   })
 })
