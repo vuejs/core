@@ -2047,6 +2047,9 @@ function renderVDOMSlot(
         { first: open.nextSibling!, close, boundary },
         () => place(close.parentNode!, close, undefined),
       )
+      // As hydrating content does behind a fallback: a Transition applying its
+      // hooks afterwards has to reach through to the fallback.
+      if (slotResolutionState.activeFallback) setVNode(null)
       advanceHydrationNode(close)
       return
     }

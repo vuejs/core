@@ -46,6 +46,32 @@ describe('Vapor Mode hydration', () => {
       expect(container.textContent).toBe('fallback')
     })
 
+    // the slot comes from a vdom parent: a vdom slot outlet hosts the fallback
+    test('an adopted slot fallback leaves with a transition under a vdom parent', async () => {
+      const data = reactive({ fb: true })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components</script>
+        <template><section><components.Child /></section></template>`,
+        {
+          Child: {
+            code: `<script setup>const data = _data</script>
+            <template>
+              <Transition><slot><p v-if="data.fb">fb</p></slot></Transition>
+            </template>`,
+            vapor: true,
+          },
+        },
+        data,
+      )
+      const p = container.querySelector('p')!
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.fb = false
+      await nextTick()
+      expect(p.isConnected).toBe(true)
+      expect(p.className).toBe('v-leave-from v-leave-active')
+    })
+
     test('transition appear', async () => {
       const { container } = await testHydration(
         `<template>
