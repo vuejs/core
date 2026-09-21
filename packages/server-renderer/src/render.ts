@@ -123,11 +123,25 @@ export function createBuffer() {
   }
 }
 
+// slots written in a vapor component: known where they are created, since
+// they can be passed on as they are (`h(Child, null, slots)`)
+export const vaporSlotFns: WeakSet<object> = new WeakSet()
+
 export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
+  if (
+    vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
+    vnode.ctx &&
+    vnode.ctx.type.__vapor
+  ) {
+    const slots = vnode.children as Record<string, unknown>
+    for (const name in slots) {
+      if (isFunction(slots[name])) vaporSlotFns.add(slots[name] as object)
+    }
+  }
   const instance = (vnode.component = createComponentInstance(
     vnode,
     parentComponent,

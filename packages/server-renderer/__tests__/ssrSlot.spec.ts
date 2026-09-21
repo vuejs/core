@@ -448,5 +448,22 @@ describe('ssr: slot', () => {
         }),
       ).toBe(`<div><!--[-->content<!--]--></div>`)
     })
+
+    // the client keeps the fragment of every vdom outlet around a vapor slot
+    test('a vdom outlet keeps the range of an empty vapor slot it forwards', async () => {
+      const Child = { template: `<div><slot/></div>` }
+      const W1 = { components: { Child }, template: `<Child><slot/></Child>` }
+      const W2 = { components: { W1 }, template: `<W1><slot/></W1>` }
+      const template = `<W2><span v-if="false"/></W2>`
+      // what the sfc compiler leaves on a vapor component
+      const vapor = { __vapor: true }
+      expect(
+        await renderToString(
+          createApp({ components: { W2 }, template, ...vapor }),
+        ),
+      ).toBe(`<div><!--[--><!--[--><!--[--><!--]--><!--]--><!--]--></div>`)
+      // a vdom slot: left alone
+      expect(await render(template, { W2 })).toBe(`<div><!--[--><!--]--></div>`)
+    })
   })
 })

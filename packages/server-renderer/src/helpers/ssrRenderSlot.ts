@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   type Slots,
+  getCurrentInstance,
   ssrUtils,
 } from '@vue/runtime-dom'
 import {
@@ -8,10 +9,15 @@ import {
   type PushFn,
   type SSRBufferItem,
   renderVNodeChildren,
+  vaporSlotFns,
 } from '../render'
 import { isArray } from '@vue/shared'
 
 const { ensureValidVNode } = ssrUtils
+
+// vapor slots rendered so far: an outlet reads it around its slot function to
+// learn whether one rendered inside
+let vaporSlots = 0
 
 export type SSRSlots = Record<string, SSRSlot>
 export type SSRSlot = (
@@ -58,6 +64,8 @@ export function ssrRenderSlotInner(
   const slotFn = slots[slotName]
   let fallback = false
   if (slotFn) {
+    if (vaporSlotFns.has(slotFn)) vaporSlots++
+    const before = vaporSlots
     const slotBuffer: SSRBufferItem[] = []
     const bufferedPush = (item: SSRBufferItem) => {
       slotBuffer.push(item)
@@ -93,7 +101,16 @@ export function ssrRenderSlotInner(
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
       let isEmptySlot = true
-      if (transition) {
+      // A vdom outlet forwarding a vapor slot keeps its range around it, as the
+      // client keeps its fragment however little the slot renders. The outlet
+      // rendering the vapor slot itself has the slot's own range instead.
+      const owner = getCurrentInstance()
+      if (
+        transition ||
+        (!(owner && owner.type.__vapor) &&
+          !fallbackRenderFn &&
+          vaporSlots !== before)
+      ) {
         isEmptySlot = false
       } else {
         for (let i = 0; i < slotBuffer.length; i++) {
@@ -102,6 +119,8 @@ export function ssrRenderSlotInner(
             break
           }
         }
+      }
+      if (!transition) {
         fallback = isEmptySlot && !!fallbackRenderFn
         push(fallback ? `<!--(-->` : `<!--[-->`)
       }
