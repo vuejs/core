@@ -42,6 +42,7 @@ import {
   claimUntrackedAnchor,
   exitHydrationCursor,
   isHydrating,
+  isHydratingSlotFallback,
 } from './dom/hydration'
 import {
   type RenderContext,
@@ -65,6 +66,7 @@ import {
   disposeSlotResolution,
   invalidateExposedSlotContent,
   markSlotResolutionDirty,
+  placeAdoptedFallback,
   recheckSlotResolution,
   resolveExposedSlotNodes,
 } from './slotFragment'
@@ -673,7 +675,11 @@ export class SlotFragment
     parentSuspense?: SuspenseBoundary | null,
   ): void {
     this.disposed = false
-    insert(this.nodes, parent, anchor, parentSuspense)
+    if (
+      !(isHydratingSlotFallback && placeAdoptedFallback(this, parent, anchor))
+    ) {
+      insert(this.nodes, parent, anchor, parentSuspense)
+    }
     if (this.activeFallback === this.nodes) {
       this.fallbackInserted = true
     }
@@ -756,13 +762,7 @@ export class SlotFragment
     try {
       const shouldForce = prevLocalFallback !== fallback
       if (isHydrating) {
-        hydrateSlotFragmentContent(
-          this,
-          slotRender,
-          !!fallback,
-          key,
-          shouldForce,
-        )
+        hydrateSlotFragmentContent(this, slotRender, !!render, key, shouldForce)
       } else {
         this.updateContent(slotRender, key)
         recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)

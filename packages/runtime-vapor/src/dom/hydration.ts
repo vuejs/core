@@ -73,6 +73,22 @@ export function runWithoutHydration(fn: () => any): any {
   }
 }
 
+// The server rendered a slot's fallback (`<!--(-->`): the nodes under the
+// cursor are the fallback's, so the slot content runs without hydration and
+// the fallback is adopted from within it. Set for that window: the slot that
+// shows the fallback finds it in the DOM already and leaves it in place.
+export let isHydratingSlotFallback = false
+
+export function withHydratingSlotFallback(fn: () => void): void {
+  const prev = isHydratingSlotFallback
+  isHydratingSlotFallback = true
+  try {
+    runWithoutHydration(fn)
+  } finally {
+    isHydratingSlotFallback = prev
+  }
+}
+
 let isOptimized = false
 
 // dev-only: cursors handed out but not yet handed back, checked when the
@@ -132,7 +148,7 @@ export function withHydration(container: ParentNode, fn: () => void): void {
   return performHydration(fn, setup, cleanup)
 }
 
-export function hydrateNode(node: Node, fn: () => void): void {
+export function hydrateNode<T>(node: Node, fn: () => T): T {
   const setup = () => setCurrentHydrationNode(node)
   const cleanup = () => {}
   return performHydration(fn, setup, cleanup)
@@ -498,8 +514,7 @@ function locateHydrationNodeImpl(claim?: FragmentClaim) {
 
 /**
  * The end anchor of the SSR fragment starting at `node`, or null when `node`
- * is not a fragment start. The candidate-range shape every slot host checks
- * before claiming hydrated content.
+ * is not a fragment start.
  */
 export function locateFragmentEnd(node: Node | null): Node | null {
   return node && isRangeStart(node) ? locateEndAnchor(node) : null
@@ -703,7 +718,7 @@ export function warnHydrationTextMismatch(node: Text, expected: string): void {
   )
 }
 
-function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
+export function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
   if (!isMismatchAllowed(node.parentElement!, MismatchTypes.CHILDREN)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       warn(

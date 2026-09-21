@@ -27,7 +27,6 @@ import {
   insert,
   insertFragment,
   insertNode,
-  isValidSlot,
   move,
   remove,
   removeFragment,
@@ -44,7 +43,6 @@ import {
   type HydrationCursor,
   advanceHydrationNode,
   claimAnchor,
-  claimUntrackedAnchor,
   createFragmentClaim,
   currentHydrationNode,
   enterHydrationBoundary,
@@ -63,11 +61,6 @@ import {
   finishBlockCreation,
   resolveFragmentAnchor,
 } from './fragment'
-import {
-  getCurrentSlotEndAnchor,
-  isPendingSlotContent,
-  queuePendingSlotContentAnchor,
-} from './dom/hydrateFragment'
 import {
   type ChildItem,
   insertionAnchor,
@@ -515,11 +508,8 @@ export const createFor = (
   }
 
   function hydrateList(source: ResolvedSource, newLength: number): void {
-    const hydrationStart = currentHydrationNode!
     const claim = hydrationClaim!
     let exitHydrationBoundary: (() => void) | undefined
-    const slotEndAnchor = getCurrentSlotEndAnchor()
-    const slotFallbackRange = isPendingSlotContent() && slotEndAnchor
 
     // claiming a close marker as the anchor also bounds the cleanup to it
     const reuseBoundaryClose = (close: Node): void => {
@@ -564,42 +554,6 @@ export const createFor = (
             _insertionParent.$llc = parentAnchor
           }
         }
-      } else if (slotFallbackRange && !isValidSlot(newBlocks)) {
-        // Slot fallback can fall through an empty/invalid `v-for`. In that
-        // case SSR only rendered the parent slot range, so this `v-for` has no
-        // own `<!--]-->` to reuse. Keep its runtime anchor detached if
-        // fallback wins; if content wins, insert it at the local slot-content
-        // boundary below.
-        const anchor =
-          // The invalid list still consumed local SSR item ranges.
-          currentHydrationNode !== hydrationStart
-            ? currentHydrationNode!
-            : // Empty source with trailing slot siblings.
-              hydrationStart !== slotEndAnchor
-              ? hydrationStart.nextSibling!
-              : slotEndAnchor!
-        parentAnchor = claimUntrackedAnchor(
-          __DEV__ ? createComment('for') : createTextNode(),
-        )
-        const hydrationAnchor = parentAnchor
-        pendingHydrationAnchor = true
-        if (
-          currentHydrationNode === hydrationStart ||
-          currentHydrationNode === slotEndAnchor
-        ) {
-          setCurrentHydrationNode(hydrationStart)
-        }
-        const attachAnchor = () => {
-          const parentNode = anchor.parentNode
-          if (parentNode) parentNode.insertBefore(hydrationAnchor, anchor)
-        }
-        // Post-flush even after the verdict: the reference node's final
-        // position is only stable once the whole pass has finished.
-        const queued = queuePendingSlotContentAnchor({
-          onContent: () => queuePostFlushCb(attachAnchor),
-          onFallback: () => {},
-        })
-        if (!queued) queuePostFlushCb(attachAnchor)
       } else if (markerlessHydrationContainer) {
         // special handling transition-group + v-for, without <!--]--> marker
         const afterRows = currentHydrationNode

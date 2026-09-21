@@ -1114,7 +1114,7 @@ describe('VDOM interop', () => {
       '<!--[--><div>banner</div><!--]-->',
     )
     expect(formatHtml(container.innerHTML)).toContain(
-      '<!--(--><svg><path></path></svg><span>Vue.js</span><!--)-->',
+      '<!--(--><svg><path></path></svg><span>Vue.js</span><!--slot--><!--slot--><!--)-->',
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1122,7 +1122,7 @@ describe('VDOM interop', () => {
     data.title = 'Vapor'
     await nextTick()
     expect(formatHtml(container.innerHTML)).toContain(
-      '<!--(--><svg><path></path></svg><span>Vapor</span><!--)-->',
+      '<!--(--><svg><path></path></svg><span>Vapor</span><!--slot--><!--slot--><!--)-->',
     )
   })
 

@@ -1254,7 +1254,6 @@ describe('Vapor Mode hydration', () => {
       app.mount(container)
 
       expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(`Hydration children mismatch`).toHaveBeenWarned()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "

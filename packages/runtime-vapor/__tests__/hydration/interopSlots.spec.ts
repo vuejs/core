@@ -1396,8 +1396,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
       <!--(-->
-      <!--[--><!--]-->
-      <!--slot--><!--)-->
+      <!--[--><!--slot--><!--for--><!--)-->
       </div>"
     `)
 
@@ -1406,8 +1405,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
       <!--(-->
-      <!--[--><span>foo</span><!--]-->
-      <!--slot--><!--)-->
+      <!--[--><!--slot--><span>foo</span><!--for--><!--)-->
       </div>"
     `)
 
@@ -1416,8 +1414,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
       <!--(-->
-      <!--[--><span>bar</span><!--]-->
-      <!--slot--><!--)-->
+      <!--[--><!--slot--><span>bar</span><!--for--><!--)-->
       </div>"
     `)
   })
@@ -1648,6 +1645,61 @@ describe('VDOM interop', () => {
 
       app.unmount()
       expect(container.innerHTML).toBe('')
+    },
+  )
+
+  // jsdom shows no trace of a node taken out and put back: watch the inserts
+  test.each([
+    ['a vapor outlet', true, true, false],
+    ['a vapor outlet, forwarded', true, true, true],
+    ['a vdom outlet that renders a vapor slot', true, false, false],
+    ['a vdom outlet, forwarded by a vdom component', true, false, true],
+    ['a vapor outlet that renders a vdom slot', false, true, false],
+  ])(
+    'adopt the fallback the server rendered where it is: %s',
+    async (_, vaporApp, vaporChild, forwarded) => {
+      const data = reactive({ show: false, msg: 'fallback' })
+      const moved: string[] = []
+      const watch = (name: 'insertBefore' | 'appendChild') => {
+        const original = Node.prototype[name] as any
+        ;(Node.prototype as any)[name] = function (this: Node, node: Node) {
+          if (node.isConnected) moved.push(node.nodeName)
+          return original.apply(this, arguments)
+        }
+        return () => ((Node.prototype as any)[name] = original)
+      }
+      const restore = [watch('insertBefore'), watch('appendChild')]
+      let container: Element
+      try {
+        ;({ container } = await (vaporApp ? testWithVaporApp : testWithVDOMApp)(
+          `${setup}<template>
+            <components.${forwarded ? 'Wrapper' : 'Child'}><b v-if="data.show">b</b></components.${forwarded ? 'Wrapper' : 'Child'}>
+          </template>`,
+          {
+            Child: {
+              code: `${setup}<template><div><slot><p>{{ data.msg }}</p><i>tail</i></slot></div></template>`,
+              vapor: vaporChild,
+            },
+            Wrapper: {
+              code: `${setup}<template><components.Child><slot/></components.Child></template>`,
+              vapor: vaporChild,
+            },
+          },
+          data,
+        ))
+      } finally {
+        restore.forEach(fn => fn())
+      }
+
+      expect(visible(container)).toBe(`<div><p>fallback</p><i>tail</i></div>`)
+      expect(moved).toEqual([])
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(`<div><b>b</b></div>`)
+      data.show = false
+      await nextTick()
+      expect(visible(container)).toBe(`<div><p>fallback</p><i>tail</i></div>`)
     },
   )
 })

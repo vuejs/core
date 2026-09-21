@@ -1,5 +1,5 @@
 import type { EffectScope } from '@vue/reactivity'
-import { type BlockFn, isValidSlot } from './block'
+import { type Block, type BlockFn, isValidSlot } from './block'
 import type { VaporFragment } from './fragment'
 import {
   currentRenderContext,
@@ -15,6 +15,11 @@ import {
 export interface SlotBoundaryContext {
   getParent: () => SlotBoundaryContext | null
   getFallback: () => BlockFn | undefined
+  // hydration: the server rendered this outlet's fallback in place of its
+  // content (`<!--(-->`). Whichever slot on the chain resolves that fallback
+  // renders it through this, once, to adopt it where it is. A hook so that
+  // client-only bundles carry no hydration.
+  adoptFallback?: (render: BlockFn) => Block
   // Re-establishes the owning slot's ambient slot / fragment context around
   // late renders such as fallback bodies, and runs them in the provided effect
   // scope when one is provided.
