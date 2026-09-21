@@ -20,7 +20,6 @@ import {
   isObject,
   isString,
 } from '@vue/shared'
-import { createComment, createTextNode } from './dom/node'
 import {
   type Block,
   getBlockFirstNode,
@@ -50,7 +49,6 @@ import {
   isComment,
   isHydrating,
   locateClaimedEnd,
-  markerlessHydrationContainer,
   nextLogicalSibling,
   setCurrentHydrationNode,
 } from './dom/hydration'
@@ -109,7 +107,6 @@ export const createFor = (
   let newKeys: any[] | undefined
   let parent: ParentNode | undefined | null
   let parentAnchor: Node
-  let pendingHydrationAnchor = false
   if (!isHydrating) {
     parentAnchor = resolveFragmentAnchor(_insertionAnchor, 'for')
     if (parentAnchor === _insertionAnchor) {
@@ -554,24 +551,6 @@ export const createFor = (
             _insertionParent.$llc = parentAnchor
           }
         }
-      } else if (markerlessHydrationContainer) {
-        // special handling transition-group + v-for, without <!--]--> marker
-        const afterRows = currentHydrationNode
-        if (!newLength && afterRows && isComment(afterRows, '')) {
-          // the server rendered the empty transition slot as a placeholder
-          parentAnchor = claimAnchor(afterRows)
-        } else {
-          parentAnchor = claimAnchor(
-            __DEV__ ? createComment('for') : createTextNode(),
-          )
-          markerlessHydrationContainer.insertBefore(
-            parentAnchor,
-            afterRows && afterRows.parentNode === markerlessHydrationContainer
-              ? afterRows
-              : null,
-          )
-          pendingHydrationAnchor = true
-        }
       } else {
         // a marked list always finds its own range: only malformed server
         // output gets here. Adopt the cursor so prod keeps going.
@@ -631,11 +610,7 @@ export const createFor = (
     })
   }
 
-  if (
-    isHydrating &&
-    !pendingHydrationAnchor &&
-    currentHydrationNode === parentAnchor!
-  ) {
+  if (isHydrating && currentHydrationNode === parentAnchor!) {
     advanceHydrationNode(parentAnchor!)
   }
 

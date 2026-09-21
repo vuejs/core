@@ -169,4 +169,48 @@ describe('transition-group', () => {
       }"
     `)
   })
+
+  // vapor hydration claims ranges by the shape it knows at compile time, so a
+  // vapor component keeps every fragment marker; vdom output stays as it is
+  describe('in a vapor component', () => {
+    const body = (template: string, vapor: boolean) => {
+      const { code } = compile(template, { vapor })
+      return code.slice(code.indexOf('return function'))
+    }
+
+    test.each([
+      [
+        'v-for',
+        `<transition-group tag="ul"><div v-for="i in list"/></transition-group>`,
+      ],
+      [
+        'rows of several nodes',
+        `<transition-group tag="ul"><template v-for="i in list"><a/><b/></template></transition-group>`,
+      ],
+      [
+        'a v-if branch of several roots',
+        `<transition-group tag="ul"><template v-if="ok"><a/><b/></template></transition-group>`,
+      ],
+    ])('%s keeps its range', (_, template) => {
+      expect(body(template, true)).toContain('<!--[-->')
+      expect(body(template, false)).not.toContain('<!--[-->')
+    })
+
+    test('output', () => {
+      expect(
+        body(
+          `<transition-group tag="ul"><template v-for="i in list"><a/><b/></template></transition-group>`,
+          true,
+        ),
+      ).toMatchInlineSnapshot(`
+        "return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(\`<ul\${_ssrRenderAttrs(_attrs)}><!--[-->\`)
+          _ssrRenderList(_ctx.list, (i) => {
+            _push(\`<!--[--><a></a><b></b><!--]-->\`)
+          })
+          _push(\`<!--]--></ul>\`)
+        }"
+      `)
+    })
+  })
 })

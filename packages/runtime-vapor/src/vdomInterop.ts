@@ -142,6 +142,7 @@ import {
   isRangeEnd,
   isRangeStart,
   locateEndAnchor,
+  locateFragmentEnd,
   locateHydrationNode,
   runWithoutHydration,
   setCurrentHydrationNode,
@@ -2547,6 +2548,10 @@ function renderVDOMSlot(
         notifyBeforeUpdate,
       )
       const hydrationParent = parentNode(currentHydrationNode!)!
+      // A transition child is taken out of the slot's fragment, whose range
+      // the server still rendered: the child hydrates inside it.
+      const close = transitionChild && locateFragmentEnd(currentHydrationNode)
+      if (close) setCurrentHydrationNode(currentHydrationNode!.nextSibling)
       hydrateVNode(
         hydrationVNode,
         parentComponent as any,
@@ -2557,6 +2562,10 @@ function renderVDOMSlot(
             : hydratedContent.slotScopeIds,
         ),
       )
+      if (close) {
+        frag.anchor = claimAnchor(close)
+        advanceHydrationNode(close)
+      }
       // Remember the slot outlet insertion point outside the hydrated VNode range.
       // The hydrated content itself may be removed by later VDOM patches before the
       // fallback is inserted.

@@ -20,8 +20,8 @@ import {
 import {
   findDir,
   findProp,
+  isInTransition,
   isStaticExpression,
-  isTransitionHostNode,
   propToExpression,
 } from '../utils'
 import { newBlock, wrapTemplate } from './utils'
@@ -59,13 +59,12 @@ export function processFor(
     // template v-for with a single component child
     isTemplateWithSingleComponent(node)
   // mirrors compiler-ssr: a template row that is not a single element renders
-  // as a fragment, except under Transition/TransitionGroup, whose children
-  // render without nested fragment markers. A v-if or v-for on the child
-  // turns it into an if/for node by the time SSR decides, so it counts.
-  const parentNode = context.parent && context.parent.node
+  // as a fragment, except under Transition, whose children render without
+  // nested fragment markers. A v-if or v-for on the child turns it into an
+  // if/for node by the time SSR decides, so it counts.
   const wrappedRows =
     node.tagType === ElementTypes.TEMPLATE &&
-    !(parentNode && isTransitionHostNode(parentNode)) &&
+    !isInTransition(context) &&
     (node.children.length !== 1 ||
       node.children[0].type !== NodeTypes.ELEMENT ||
       !!findDir(node.children[0], ROW_FRAGMENT_DIR_RE))

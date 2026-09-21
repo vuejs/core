@@ -243,6 +243,7 @@ function doCompileTemplate({
       scopeId: scoped ? longId : undefined,
       slotted,
       sourceMap: true,
+      vapor: ssr && vapor,
       ...compilerOptions,
       // Template-only vapor SFCs have no script analysis, but compiler-vapor
       // still needs bindingMetadata to keep built-in render args like $slots.

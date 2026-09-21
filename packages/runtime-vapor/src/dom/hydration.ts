@@ -226,54 +226,7 @@ export const isRangeEnd = (node: Node): node is CommentAnchor =>
 export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
-// Element whose direct children were server-rendered without fragment
-// markers (TransitionGroup flattens them): a list hydrating in it has no
-// close marker of its own unless the slot content kept one.
-export let markerlessHydrationContainer: ParentNode | null = null
-
-export function setMarkerlessHydrationContainer(
-  container: ParentNode | null,
-): ParentNode | null {
-  try {
-    return markerlessHydrationContainer
-  } finally {
-    markerlessHydrationContainer = container
-    innermostFragmentClaim = null
-  }
-}
-
-/**
- * Direct children of a TransitionGroup container are server-rendered without
- * fragment markers of their own (compiler-ssr disables nested fragments
- * there), so a `v-if`, `v-for` or slot outlet entered as one must not claim
- * the `[` under its cursor. The group arms `Pending` around its children;
- * opening a block scope turns it into `Child` for that block and clears it
- * for the block's own content (`openBlockScope`). Component roots keep their
- * markers and claim regardless.
- */
-const enum TransitionChild {
-  None,
-  Pending,
-  Child,
-}
-let transitionChild = TransitionChild.None
-
-export function setTransitionChildPending(pending: boolean): boolean {
-  try {
-    return transitionChild === TransitionChild.Pending
-  } finally {
-    transitionChild = pending ? TransitionChild.Pending : TransitionChild.None
-  }
-}
-
-/**
- * A block's claim on the `<!--[-->` opening its SSR range. In a markerless
- * container the server also strips the range of a slot outlet that is the
- * single fragment of a transition slot's content, so a marker consumed by
- * such an outlet belongs to the innermost block that starts right after it:
- * that block takes the claim over and the outer one loses its `start`.
- * Owners read `start` late for that reason.
- */
+/** A block's claim on the `<!--[-->` opening its SSR range. */
 export interface FragmentClaim {
   start: CommentAnchor | null
 }
@@ -282,31 +235,13 @@ export function createFragmentClaim(): FragmentClaim {
   return { start: null }
 }
 
-let innermostFragmentClaim: FragmentClaim | null = null
-
-/**
- * Consume the fragment start under the cursor for `claim`, or take over the
- * one the enclosing block consumed when nothing was hydrated in between.
- */
+/** Consume the fragment start under the cursor for `claim`. */
 function claimFragmentStart(claim: FragmentClaim): void {
   const node = currentHydrationNode
-  if (!node || transitionChild === TransitionChild.Child) return
-  if (isRangeStart(node)) {
+  if (node && isRangeStart(node)) {
     claim.start = node
     setCurrentHydrationNode(node.nextSibling)
-  } else {
-    const outer = innermostFragmentClaim
-    if (
-      !outer ||
-      !outer.start ||
-      node !== skipUntrackedAnchors(outer.start.nextSibling)
-    ) {
-      return
-    }
-    claim.start = outer.start
-    outer.start = null
   }
-  if (markerlessHydrationContainer) innermostFragmentClaim = claim
 }
 
 export function setCurrentHydrationNode(node: Node | null): void {
@@ -346,12 +281,8 @@ export function advanceHydrationNode(node: Node): void {
  *   a start node, for wrappers whose inner owner locates its own start later
  *   (dynamic components, keyed fragments, slot outlets). Locating early would
  *   consume the insertion state before the inner path is known.
- * - Both constructors also open the block's scope (`openBlockScope`):
- *   transition-child status and the innermost claim are decided per block
- *   and snapshotted on the cursor.
- * - `exitHydrationCursor(cursor)` — restore the enclosing scope's resume point
- *   and block scope.
- *   Every cursor from either constructor must reach this exactly once;
+ * - `exitHydrationCursor(cursor)` — restore the enclosing scope's resume
+ *   point. Every cursor from either constructor must reach this exactly once;
  *   `finishBlockCreation` in `fragment.ts` is the shared tail for the
  *   block-creating APIs.
  *
@@ -363,56 +294,28 @@ export function advanceHydrationNode(node: Node): void {
 export type HydrationCursor = {
   start: Node | null
   resume: Node | null | undefined
-  /** the enclosing block's scope, restored on exit (see `openBlockScope`) */
-  transitionChild: TransitionChild
-  innermostFragmentClaim: FragmentClaim | null
   /** dev-only: set once handed back, so a second exit can be caught */
   exited?: boolean
 }
 
-/**
- * Open the block being entered: it is a transition child when the flag was
- * armed for its level (element children carry insertion state and are not)
- * unless it keeps its markers (component roots); its own content is not.
- * Claims registered while it is open are only takeover targets for its
- * content.
- */
-function openBlockScope(keepsMarkers?: boolean): void {
-  transitionChild =
-    transitionChild === TransitionChild.Pending &&
-    !insertionParent &&
-    !keepsMarkers
-      ? TransitionChild.Child
-      : TransitionChild.None
-}
-
-export function enterHydrationCursor(
-  claim?: FragmentClaim,
-  keepsMarkers?: boolean,
-): HydrationCursor {
-  const cursor = captureHydrationCursor(keepsMarkers)
+export function enterHydrationCursor(claim?: FragmentClaim): HydrationCursor {
+  const cursor = captureHydrationCursor()
   locateHydrationNode(claim)
   cursor.start = currentHydrationNode
   return cursor
 }
 
 /**
- * Capture the outer resume cursor and open the block scope without locating
- * a start node, for dynamic wrappers whose inner owner locates the local
- * start later, after the selected inner path is known. This avoids consuming
- * insertion state too early.
+ * Capture the outer resume cursor without locating a start node, for dynamic
+ * wrappers whose inner owner locates the local start later, after the selected
+ * inner path is known. This avoids consuming insertion state too early.
  */
-export function captureHydrationCursor(
-  keepsMarkers?: boolean,
-): HydrationCursor {
+export function captureHydrationCursor(): HydrationCursor {
   if (__DEV__) liveCursors++
   const cursor: HydrationCursor = {
     start: null,
     resume: insertionParent ? currentHydrationNode : undefined,
-    transitionChild,
-    innermostFragmentClaim,
   }
-  openBlockScope(keepsMarkers)
   return cursor
 }
 
@@ -433,8 +336,6 @@ export function exitHydrationCursor(cursor: HydrationCursor | null): void {
     cursor.exited = true
     liveCursors--
   }
-  transitionChild = cursor.transitionChild
-  innermostFragmentClaim = cursor.innermostFragmentClaim
   if (cursor.resume !== undefined) {
     setCurrentHydrationNode(cursor.resume)
   }

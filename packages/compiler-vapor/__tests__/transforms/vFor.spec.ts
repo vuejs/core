@@ -567,11 +567,17 @@ describe('compiler: v-for', () => {
     })
   })
 
-  test('v-for on template under a transition group has no wrapped rows', () => {
-    const { code } = compileWithVFor(
-      `<TransitionGroup tag="ul"><template v-for="item in items"><li>{{ item }}</li><li>b</li></template></TransitionGroup>`,
-    )
-    expect(code).not.toContain('WRAPPED_ROWS')
+  // mirrors compiler-ssr for a vapor component: only Transition still renders
+  // its children without nested fragment markers
+  test('v-for on template under a transition group has wrapped rows', () => {
+    const rows = `<template v-for="item in items"><li>{{ item }}</li><li>b</li></template>`
+    expect(
+      compileWithVFor(`<TransitionGroup tag="ul">${rows}</TransitionGroup>`)
+        .code,
+    ).toContain('WRAPPED_ROWS')
+    expect(
+      compileWithVFor(`<Transition>${rows}</Transition>`).code,
+    ).not.toContain('WRAPPED_ROWS')
   })
 
   test('v-for on template with keyed child marks fragment block', () => {

@@ -74,8 +74,6 @@ import {
   locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
-  setMarkerlessHydrationContainer,
-  setTransitionChildPending,
 } from '../dom/hydration'
 import { isTransitionEnabled, registerTransitionHooks } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
@@ -260,21 +258,15 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       run: (render: BlockFn) => void = render => render(),
     ): void => {
       let nextNode: Node | null = null
-      let prevMarkerlessContainer: ParentNode | null = null
-      let prevTransitionChildPending = false
       if (isHydrating && container) {
-        // SSR flattens the children into the container without fragment
-        // markers; the cursor sits on the container itself when it is empty.
-        prevMarkerlessContainer = setMarkerlessHydrationContainer(container)
-        prevTransitionChildPending = setTransitionChildPending(true)
+        // the cursor sits on the container itself when it is empty
         nextNode = nextLogicalSibling(container)
         setCurrentHydrationNode(container.firstChild || container)
       }
-      let transitionBlocks: ResolvedTransitionBlock[] = []
       try {
         run(() => {
           const block = (slot && slot()) || []
-          transitionBlocks = applyGroupTransitionHooks(
+          applyGroupTransitionHooks(
             block,
             propsProxy,
             state,
@@ -293,17 +285,13 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           isHydrating &&
           container &&
           currentHydrationNode &&
-          currentHydrationNode.parentNode === container &&
-          !transitionBlocks.some(child => child === currentHydrationNode)
+          currentHydrationNode.parentNode === container
         ) {
-          // Remove extra SSR nodes left after hydrating the current children,
-          // but keep a node that was claimed as a transition child.
+          // Remove extra SSR nodes left after hydrating the current children.
           cleanupHydrationTail(currentHydrationNode, container)
         }
       } finally {
         if (isHydrating && container) {
-          setMarkerlessHydrationContainer(prevMarkerlessContainer)
-          setTransitionChildPending(prevTransitionChildPending)
           setCurrentHydrationNode(nextNode)
         }
       }

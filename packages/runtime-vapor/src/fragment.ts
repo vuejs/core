@@ -762,7 +762,7 @@ export class SlotFragment
     try {
       const shouldForce = prevLocalFallback !== fallback
       if (isHydrating) {
-        hydrateSlotFragmentContent(this, slotRender, !!render, key, shouldForce)
+        hydrateSlotFragmentContent(this, slotRender, key, shouldForce)
       } else {
         this.updateContent(slotRender, key)
         recheckSlotResolution(this, shouldForce || this.pendingRecheckForce)

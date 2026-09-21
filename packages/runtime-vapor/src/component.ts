@@ -654,7 +654,7 @@ function enterComponentHydration(
   component: VaporComponent,
 ): ComponentHydration {
   const claim = component.__multiRoot ? createFragmentClaim() : undefined
-  const cursor = enterHydrationCursor(claim, true)
+  const cursor = enterHydrationCursor(claim)
   const close = claim && claim.start ? locateEndAnchor(claim.start) : null
   if (close) claimAnchor(close)
   return { claim, cursor, close }

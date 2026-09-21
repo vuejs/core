@@ -624,3 +624,16 @@ test('respects comments option when returning multiRoot metadata', () => {
 
   expect(result.multiRoot).toBe(false)
 })
+
+test('tells the ssr compiler that the template is a vapor component', () => {
+  const ssrCode = (vapor: boolean) =>
+    compile({
+      filename: 'example.vue',
+      source: `<TransitionGroup tag="ul"><li v-for="i in list" :key="i" /></TransitionGroup>`,
+      ssr: true,
+      vapor,
+    }).code
+
+  expect(ssrCode(true)).toContain('<!--[-->')
+  expect(ssrCode(false)).not.toContain('<!--[-->')
+})
