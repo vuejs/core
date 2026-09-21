@@ -135,7 +135,6 @@ import {
   claimUntrackedAnchor,
   createFragmentClaim,
   currentHydrationNode,
-  isClaimedAnchor,
   isComment,
   isHydrating,
   isHydratingSlotFallback,
@@ -178,7 +177,7 @@ import {
 } from './slotFragment'
 import {
   type SlotFallbackRange,
-  getCurrentSlotEndAnchor,
+  currentSlotEndAnchor,
   hydrateSlotFallbackRange,
   insertUntrackedAnchor,
   withHydratingSlotBoundary,
@@ -2061,7 +2060,7 @@ function renderVDOMSlot(
       currentHydrationNode && currentHydrationNode.parentNode
     scope.run(render)
     if (!currentParentNode) {
-      currentAnchor = getCurrentSlotEndAnchor() || currentHydrationNode
+      currentAnchor = currentSlotEndAnchor || currentHydrationNode
       currentParentNode = currentAnchor!.parentNode as ParentNode
     }
     slotNamespace = getContainerType(
@@ -3375,19 +3374,6 @@ function createVNodeChildrenFragment(
             currentParentNode = currentHydrationNode!.parentNode as ParentNode
             childrenNamespace = getContainerType(currentParentNode as Element)
             currentAnchor = currentHydrationNode
-            // Slot fallback hydration can leave an inner empty-branch anchor
-            // immediately before the enclosing slot end anchor. Fragment
-            // patching needs the boundary insertion point after that local
-            // anchor; otherwise later fallback siblings patch in front of it.
-            if (
-              frag.slotBoundary &&
-              currentAnchor &&
-              isClaimedAnchor(currentAnchor) &&
-              currentAnchor !== getCurrentSlotEndAnchor() &&
-              currentAnchor.nextSibling
-            ) {
-              currentAnchor = currentAnchor.nextSibling
-            }
           } else if (!isMounted) {
             currentChildren = nextChildren
             currentVNode = createVNode(Fragment, null, nextChildren)

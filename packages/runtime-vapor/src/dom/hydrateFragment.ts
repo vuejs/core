@@ -42,57 +42,22 @@ import type { SlotBoundaryContext } from '../slotBoundary'
 import { recheckSlotResolution } from '../slotFragment'
 import { IF, NATIVE_CHILDREN, SLOT } from '../fragmentFlags'
 
-/*
- * A slot boundary's claim on its SSR range, stacked for nesting
- * (`currentSlotHydrationSession` is the top): the range's end anchor derives
- * from it, or is inherited.
- */
-class SlotHydrationSession {
-  /** The close marker of the range this boundary itself owns, if any. */
-  readonly ownEndAnchor: Node | null
-
-  constructor(
-    start: Node | null,
-    private readonly parent: SlotHydrationSession | null,
-  ) {
-    this.ownEndAnchor = locateFragmentEnd(start)
-  }
-
-  /** The boundary's SSR close marker, else the inherited one. */
-  get endAnchor(): Node | null {
-    return this.ownEndAnchor || (this.parent ? this.parent.endAnchor : null)
-  }
-
-  /** Trim the range's unclaimed tail. */
-  exitBoundary(): void {
-    const close = this.ownEndAnchor
-    if (close) trimHydrationBoundary(close)
-  }
-}
-
-let currentSlotHydrationSession: SlotHydrationSession | null = null
-
-export function getCurrentSlotEndAnchor(): Node | null {
-  return currentSlotHydrationSession
-    ? currentSlotHydrationSession.endAnchor
-    : null
-}
+// The close marker of the SSR range the slot boundary being hydrated owns.
+export let currentSlotEndAnchor: Node | null = null
 
 /** Locates the boundary's SSR range and consumes its opening marker. */
 export function withHydratingSlotBoundary<R>(fn: () => R): R {
   const claim = createFragmentClaim()
   locateHydrationNode(claim)
-  const prevSession = currentSlotHydrationSession
-  const session = (currentSlotHydrationSession = new SlotHydrationSession(
-    claim.start,
-    prevSession,
-  ))
+  const prev = currentSlotEndAnchor
+  const close = (currentSlotEndAnchor = locateFragmentEnd(claim.start))
 
   try {
     return fn()
   } finally {
-    currentSlotHydrationSession = prevSession
-    session.exitBoundary()
+    currentSlotEndAnchor = prev
+    // trim the range's unclaimed tail
+    if (close) trimHydrationBoundary(close)
   }
 }
 
@@ -167,7 +132,7 @@ export function prepareDeferredHydrationAnchor(
     let slotEndAnchor: Node | null = null
     const anchor =
       frag.anchor ||
-      (currentHydrationNode === (slotEndAnchor = getCurrentSlotEndAnchor())
+      (currentHydrationNode === (slotEndAnchor = currentSlotEndAnchor)
         ? slotEndAnchor
         : null)
     if (anchor) {
@@ -264,7 +229,7 @@ function planReuseOwnClose(frag: DynamicFragment): AnchorPlan | undefined {
   // a slot reads the current session: its claim lives there
   const close =
     frag.__vf & SLOT
-      ? currentSlotHydrationSession && currentSlotHydrationSession.ownEndAnchor
+      ? currentSlotEndAnchor
       : frag.hydrationClaim && frag.hydrationClaim.start
         ? locateClaimedEnd(frag.hydrationClaim.start)
         : null
