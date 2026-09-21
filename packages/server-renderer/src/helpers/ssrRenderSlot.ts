@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   type Slots,
+  getCurrentInstance,
   ssrUtils,
 } from '@vue/runtime-dom'
 import {
@@ -32,7 +33,15 @@ export function ssrRenderSlot(
   slotScopeId?: string,
 ): void {
   // template-compiled slots are always rendered as fragments
-  push(`<!--[-->`)
+  // A vapor client cannot tell slot content from a fallback once either is in
+  // the DOM, and has to before it renders any: `<!--(-->` is a fallback, with
+  // none of the content's output left. Only said of an outlet that vapor
+  // hydrates, or that dropped a vapor slot for its fallback.
+  let close = `<!--]-->`
+  const before = vaporSlots
+  // the component this outlet is written in: a forwarded outlet renders in the
+  // slot of another one, which is what `parentComponent` is then
+  const owner = getCurrentInstance()
   ssrRenderSlotInner(
     slots,
     slotName,
@@ -41,9 +50,25 @@ export function ssrRenderSlot(
     push,
     parentComponent,
     slotScopeId,
+    false,
+    fallback => {
+      if (fallback && (isVapor(owner) || vaporSlots !== before)) {
+        push(`<!--(-->`)
+        close = `<!--)-->`
+      } else {
+        push(`<!--[-->`)
+      }
+    },
   )
-  push(`<!--]-->`)
+  push(close)
 }
+
+// slots written in a vapor component that were rendered so far: an outlet in
+// a vdom component reads it around its slot to learn that it holds one
+let vaporSlots = 0
+
+const isVapor = (instance: ComponentInternalInstance | null): boolean =>
+  !!(instance && instance.type.__vapor)
 
 export function ssrRenderSlotInner(
   slots: Slots | SSRSlots,
@@ -54,9 +79,15 @@ export function ssrRenderSlotInner(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
   transition?: boolean,
+  // called once, before anything is pushed, with whether it is the fallback
+  open?: (fallback: boolean) => void,
 ): void {
   const slotFn = slots[slotName]
   if (slotFn) {
+    // a slot is written in the component that rendered the one its outlet is
+    // written in
+    const owner = getCurrentInstance()
+    if (owner && isVapor(owner.vnode.ctx)) vaporSlots++
     const slotBuffer: SSRBufferItem[] = []
     const bufferedPush = (item: SSRBufferItem) => {
       slotBuffer.push(item)
@@ -71,6 +102,7 @@ export function ssrRenderSlotInner(
     )
     if (isArray(ret)) {
       const validSlotContent = ensureValidVNode(ret)
+      if (open) open(!validSlotContent && !!fallbackRenderFn)
       if (validSlotContent) {
         // normal slot
         renderVNodeChildren(
@@ -98,6 +130,7 @@ export function ssrRenderSlotInner(
           }
         }
       }
+      if (open) open(isEmptySlot && !!fallbackRenderFn)
       if (isEmptySlot) {
         if (fallbackRenderFn) {
           fallbackRenderFn()
@@ -112,8 +145,9 @@ export function ssrRenderSlotInner(
         let end = slotBuffer.length
         if (
           transition &&
-          slotBuffer[0] === '<!--[-->' &&
-          slotBuffer[end - 1] === '<!--]-->'
+          (slotBuffer[0] === '<!--[-->' || slotBuffer[0] === '<!--(-->') &&
+          (slotBuffer[end - 1] === '<!--]-->' ||
+            slotBuffer[end - 1] === '<!--)-->')
         ) {
           start++
           end--
@@ -128,10 +162,13 @@ export function ssrRenderSlotInner(
         }
       }
     }
-  } else if (fallbackRenderFn) {
-    fallbackRenderFn()
-  } else if (transition) {
-    push(`<!---->`)
+  } else {
+    if (open) open(!!fallbackRenderFn)
+    if (fallbackRenderFn) {
+      fallbackRenderFn()
+    } else if (transition) {
+      push(`<!---->`)
+    }
   }
 }
 

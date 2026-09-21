@@ -342,4 +342,108 @@ describe('ssr: slot', () => {
       ),
     ).toBe(`<button><!--[--><!--]--></button>`)
   })
+  // A vapor client reads what the outlet left behind instead of guessing:
+  // `<!--(-->` is a rendered fallback, none of the content's output with it.
+  describe('fallback marker for vapor', () => {
+    // what the sfc compiler leaves on a vapor component
+    const vapor = { __vapor: true }
+    const render = (template: string, components: Record<string, any>) =>
+      renderToString(createApp({ components, template, ...vapor }))
+
+    const VaporChild = {
+      template: `<div><slot>fallback</slot></div>`,
+      ...vapor,
+    }
+    const VdomChild = { template: `<div><slot>fallback</slot></div>` }
+
+    test('an outlet in a vapor component marks its fallback', async () => {
+      const components = { Child: VaporChild }
+      expect(await render(`<Child/>`, components)).toBe(
+        `<div><!--(-->fallback<!--)--></div>`,
+      )
+      expect(await render(`<Child><!--c--></Child>`, components)).toBe(
+        `<div><!--(-->fallback<!--)--></div>`,
+      )
+      expect(await render(`<Child>content</Child>`, components)).toBe(
+        `<div><!--[-->content<!--]--></div>`,
+      )
+    })
+
+    test('whoever provides the slot', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            components: { Child: VaporChild },
+            template: `<Child><span v-if="false"/></Child>`,
+          }),
+        ),
+      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+    })
+
+    test('an outlet written in a vapor component, forwarded into a vdom one', async () => {
+      // it renders in the slot of the vdom component, which is not the one it
+      // is written in
+      const Wrapper = {
+        components: { Child: VdomChild },
+        template: `<Child><slot>wrapper fallback</slot></Child>`,
+        ...vapor,
+      }
+      expect(
+        await renderToString(
+          createApp({ components: { Wrapper }, template: `<Wrapper/>` }),
+        ),
+      ).toBe(`<div><!--[--><!--(-->wrapper fallback<!--)--><!--]--></div>`)
+    })
+
+    test('an empty outlet without a fallback stays a plain range', async () => {
+      expect(
+        await render(`<Child/>`, {
+          Child: { template: `<div><slot/></div>`, ...vapor },
+        }),
+      ).toBe(`<div><!--[--><!--]--></div>`)
+    })
+
+    test('an outlet in a vdom component marks its fallback when it drops a vapor slot', async () => {
+      const components = { Child: VdomChild }
+      // rendered directly
+      expect(
+        await render(`<Child><span v-if="false"/></Child>`, components),
+      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      // forwarded by a vdom component
+      const Wrapper = { components, template: `<Child><slot/></Child>` }
+      expect(
+        await render(`<Wrapper><span v-if="false"/></Wrapper>`, { Wrapper }),
+      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      expect(await render(`<Wrapper>content</Wrapper>`, { Wrapper })).toBe(
+        `<div><!--[--><!--[-->content<!--]--><!--]--></div>`,
+      )
+    })
+
+    test('an outlet in a vdom component with vdom content is left alone', async () => {
+      const components = { Child: VdomChild }
+      const app = (template: string) =>
+        renderToString(createApp({ components, template }))
+      expect(await app(`<Child/>`)).toBe(`<div><!--[-->fallback<!--]--></div>`)
+      expect(await app(`<Child><span v-if="false"/></Child>`)).toBe(
+        `<div><!--[-->fallback<!--]--></div>`,
+      )
+      // no slot passed at all: nothing vapor was dropped
+      expect(await render(`<Child/>`, components)).toBe(
+        `<div><!--[-->fallback<!--]--></div>`,
+      )
+    })
+
+    test('a transition unwraps a marked fallback like a fragment', async () => {
+      const Group = {
+        template: `<transition-group tag="ul"><slot/></transition-group>`,
+      }
+      const Forward = {
+        components: { Group, Child: VaporChild },
+        template: `<Group><Child/></Group>`,
+      }
+      expect(await render(`<Forward/>`, { Forward })).toBe(
+        `<ul><div><!--(-->fallback<!--)--></div></ul>`,
+      )
+    })
+  })
 })

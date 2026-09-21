@@ -103,7 +103,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[-->foo<!--slot--><!--]-->
+        <!--(-->foo<!--slot--><!--)-->
         </div>"
       `,
       )
@@ -113,7 +113,7 @@ describe('Vapor Mode hydration', () => {
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `
         "<div>
-        <!--[-->foo1<!--slot--><!--]-->
+        <!--(-->foo1<!--slot--><!--)-->
         </div>"
       `,
       )
