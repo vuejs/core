@@ -284,6 +284,38 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('plain template element with children', async () => {
+      const { container, data } = await testHydration(`
+      <template><div><template><span>{{ data }}</span></template></div></template>
+    `)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><template><span>foo</span></template></div>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><template><span>bar</span></template></div>"`,
+      )
+    })
+
+    test('plain template element with children and a following sibling', async () => {
+      const { container, data } = await testHydration(`
+      <template><div><template><span>{{ data }}</span></template><i>{{ data }}</i></div></template>
+    `)
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><template><span>foo</span></template><i>foo</i></div>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><template><span>bar</span></template><i>bar</i></div>"`,
+      )
+    })
+
     test('element with ref', async () => {
       const { data, container } = await testHydration(
         `<template>

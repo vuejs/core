@@ -1,8 +1,11 @@
 import {
   type AdoptTarget,
+  type HydrationCursor,
   adoptTemplate,
   advanceHydrationNode,
   currentHydrationNode,
+  enterHydrationCursor,
+  exitHydrationCursor,
   hydrateTextNode,
   isComment,
   isHydrating,
@@ -10,6 +13,7 @@ import {
   resolveHydrationTarget,
   validateHydrationTarget,
 } from './hydration'
+import { insertionParent, resetInsertionState } from '../insertionState'
 import { type Namespace, Namespaces, TemplateFlags } from '@vue/shared'
 import { _child, createTextNode } from './node'
 import { currentRenderContext } from '../renderContext'
@@ -31,6 +35,14 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
   // template compares against the cached form instead of re-scanning `html`
   let adoptTarget: AdoptTarget | undefined
   return (): Node & { $root?: true } => {
+    // a template child of a createElement-backed element carries insertion
+    // state of its own, because its server output sits inside that element
+    // instead of the enclosing template
+    let cursor: HydrationCursor | null = null
+    if (insertionParent) {
+      if (isHydrating) cursor = enterHydrationCursor()
+      else resetInsertionState()
+    }
     if (isHydrating) {
       let adopted: Node | null = null
       // static templates only need to skip fragment markers, teleport
@@ -72,6 +84,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
         )!
       }
       if (root) (adopted as any).$root = true
+      exitHydrationCursor(cursor)
       return adopted
     }
 

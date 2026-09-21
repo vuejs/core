@@ -1,7 +1,12 @@
 import type { CodegenContext } from '../generate'
-import { DynamicFlag, type IRDynamicInfo, type IRTemplate } from '../ir'
+import {
+  DynamicFlag,
+  type IRDynamicInfo,
+  IRNodeTypes,
+  type IRTemplate,
+} from '../ir'
 import { TemplateFlags } from '@vue/shared'
-import { genOperationWithInsertionState } from './operation'
+import { genInsertionState, genOperationWithInsertionState } from './operation'
 import {
   type CodeFragment,
   type CodeFragments,
@@ -54,6 +59,13 @@ export function genSelf(
   const { id, template, operation, hasDynamicChild } = dynamic
 
   if (id !== undefined && template !== undefined) {
+    if (
+      operation &&
+      operation.type === IRNodeTypes.INSERT_NODE &&
+      operation.appendIndex !== undefined
+    ) {
+      push(...genInsertionState(operation, context))
+    }
     push(NEWLINE, `const n${id} = ${context.tName(template)}()`)
   }
 

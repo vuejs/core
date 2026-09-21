@@ -209,6 +209,9 @@ export interface InsertNodeIRNode extends BaseIRNode {
   elements: number[]
   parent: number
   anchor?: number
+  // set only for children of a createElement-backed parent, whose server
+  // output lives inside the parent instead of the enclosing template
+  appendIndex?: number
 }
 
 export interface DirectiveIRNode extends BaseIRNode {

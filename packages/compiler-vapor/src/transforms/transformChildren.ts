@@ -105,6 +105,7 @@ export const transformChildren: NodeTransform = (node, context) => {
 
 function processDynamicChildren(context: TransformContext<ElementNode>) {
   const children = context.dynamic.children
+  const useCreateElement = shouldUseCreateElement(context.node, context)
 
   // The index of the last child that materializes in the parent template.
   // Dynamic children before it are anchored by their own `<!>` placeholder;
@@ -142,6 +143,8 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
           elements: [child.id!],
           parent: context.reference(),
           anchor,
+          appendIndex:
+            useCreateElement && anchor === undefined ? unitIndex : undefined,
         }
       } else if (child.operation && isBlockOperation(child.operation)) {
         child.operation.parent = context.reference()
