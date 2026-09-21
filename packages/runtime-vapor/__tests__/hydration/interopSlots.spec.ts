@@ -1594,8 +1594,8 @@ describe('VDOM interop', () => {
     }
   })
 
-  // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered. The server
-  // does not emit it yet: the markup is written by hand.
+  // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: the
+  // markup is written by hand.
   test.each([
     ['a vdom outlet that renders a vapor slot', false, true],
     ['a vapor outlet that renders a vdom slot', true, false],

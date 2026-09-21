@@ -1802,8 +1802,8 @@ describe('Vapor Mode hydration', () => {
       }
     })
 
-    // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered. The
-    // server does not emit it yet: the markup is written by hand.
+    // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: the
+    // markup is written by hand.
     describe('slot fallback range', () => {
       const childWith = (template: string, data: any) =>
         compileVaporComponent(template, data)
