@@ -56,10 +56,13 @@ export async function testWithVaporApp(
   code: string,
   components?: Record<string, string | { code: string; vapor: boolean }>,
   data?: any,
+  // what the server renders with, where it differs from the client's data
+  serverData?: any,
 ): Promise<HydrationTestContext> {
   return testHydration(code, components, data, {
     isVaporApp: true,
     interop: true,
+    serverData,
   })
 }
 
@@ -116,7 +119,8 @@ export async function testHydration(
   {
     isVaporApp = true,
     interop = false,
-  }: { isVaporApp?: boolean; interop?: boolean } = {},
+    serverData = data,
+  }: { isVaporApp?: boolean; interop?: boolean; serverData?: any } = {},
 ): Promise<HydrationTestContext> {
   const ssrComponents: any = {}
   const clientComponents: any = {}
@@ -128,13 +132,13 @@ export async function testHydration(
       vapor: isVaporComp,
       ssr: false,
     })
-    ssrComponents[key] = compile(code, data, ssrComponents, {
+    ssrComponents[key] = compile(code, serverData, ssrComponents, {
       vapor: isVaporComp,
       ssr: true,
     })
   }
 
-  const serverComp = compile(code, data, ssrComponents, {
+  const serverComp = compile(code, serverData, ssrComponents, {
     vapor: isVaporApp,
     ssr: true,
   })

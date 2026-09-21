@@ -179,14 +179,22 @@ export function getCurrentSlotEndAnchor(): Node | null {
 }
 
 /** Locate this boundary's SSR range and consume its opening marker. */
-function enterSlotBoundaryRange(pending: boolean): SlotHydrationSession {
+function enterSlotBoundaryRange(
+  pending: boolean,
+  ownsRange = true,
+): SlotHydrationSession {
   const claim = createFragmentClaim()
-  locateHydrationNode(claim)
+  // a boundary with no range of its own leaves a range start under the cursor
+  // to what it renders
+  locateHydrationNode(ownsRange ? claim : undefined)
   return new SlotHydrationSession(claim, currentSlotHydrationSession, pending)
 }
 
-export function withHydratingSlotBoundary<R>(fn: () => R): R {
-  const session = enterSlotBoundaryRange(false)
+export function withHydratingSlotBoundary<R>(
+  fn: () => R,
+  ownsRange?: boolean,
+): R {
+  const session = enterSlotBoundaryRange(false, ownsRange)
   const prevSession = currentSlotHydrationSession
   currentSlotHydrationSession = session
 

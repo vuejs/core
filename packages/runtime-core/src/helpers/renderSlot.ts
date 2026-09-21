@@ -143,10 +143,11 @@ export function renderSlot(
 
     // a forwarded vapor slot resolves this outlet's fallback itself; the
     // interop finds it, so none of that ships without it
+    let attached = false
     if (fallback && validSlotContent && currentRenderingInstance) {
       const interop = currentRenderingInstance.appContext.vapor
       if (interop) {
-        interop.attachSlotOutlet(
+        attached = interop.attachSlotOutlet(
           validSlotContent,
           fallback,
           currentRenderingInstance,
@@ -173,6 +174,7 @@ export function renderSlot(
         ? PatchFlags.STABLE_FRAGMENT
         : PatchFlags.BAIL,
     )
+    if (attached) rendered.vo = true
   } catch (err) {
     // close blocks left dangling when the slot throws mid-block
     // they would otherwise retain every vnode created afterwards (#15070)

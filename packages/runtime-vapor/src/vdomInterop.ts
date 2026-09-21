@@ -352,7 +352,7 @@ function filterReservedProps(props: VNode['props']): VNode['props'] {
 }
 
 // mounting vapor components and slots in vdom
-const vaporInteropImpl: VaporInVdomInterface = {
+const vaporInteropImpl = {
   applyCssVars(vnode, vars) {
     // a vapor slot rendered in vdom holds its block on the vnode
     setVarsOnBlock(vnode.vb || getVaporInstance(vnode).block, vars)
@@ -732,6 +732,9 @@ const vaporInteropImpl: VaporInVdomInterface = {
     parentComponent,
     parentSuspense,
     slotScopeIds,
+    // false behind an outlet the server folded into its fallback, the range
+    // of the slot with it: a range start at `node` is the fallback's
+    ownsRange = true,
   ) {
     if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
       return node
@@ -743,11 +746,14 @@ const vaporInteropImpl: VaporInVdomInterface = {
     // for its own anchor: mount in place.
     const close = isRangeEnd(node)
       ? node
-      : isRangeStart(node) && node.nextSibling && isRangeEnd(node.nextSibling)
+      : ownsRange &&
+          isRangeStart(node) &&
+          node.nextSibling &&
+          isRangeEnd(node.nextSibling)
         ? node.nextSibling
         : null
     if (close) {
-      const ownsRange = close !== node
+      const emptyRange = close !== node
       runWithoutHydration(() => {
         const block = (vnode.vb = renderVaporSlot(
           vnode,
@@ -756,16 +762,16 @@ const vaporInteropImpl: VaporInVdomInterface = {
           slotScopeIds,
         ))
         let anchor: Node = close
-        if (!ownsRange) {
+        if (!emptyRange) {
           // the marker is the enclosing fragment's: a self anchor as on mount
           anchor = (isFragment(block) && block.anchor) || createTextNode()
           insert(anchor, container, close)
         }
-        vnode.el = ownsRange ? node : anchor
+        vnode.el = emptyRange ? node : anchor
         vnode.anchor = anchor
         insert(block, container, anchor, parentSuspense)
       })
-      return ownsRange ? close.nextSibling : close
+      return emptyRange ? close.nextSibling : close
     }
     let createdAnchor = false
     let resumeNode: Node | null = null
@@ -775,10 +781,11 @@ const vaporInteropImpl: VaporInVdomInterface = {
         parentComponent,
         parentSuspense,
         slotScopeIds,
+        ownsRange,
       )
       const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
       let anchor = fragmentAnchor || currentHydrationNode!
-      const wrapped = isRangeStart(node) && isRangeEnd(anchor)
+      const wrapped = ownsRange && isRangeStart(node) && isRangeEnd(anchor)
       // An unwrapped slot has no SSR-owned boundary. The hydration cursor is
       // only where VDOM should resume and may belong to the next sibling, so
       // create a dedicated self anchor matching the mount path.
@@ -808,9 +815,28 @@ const vaporInteropImpl: VaporInVdomInterface = {
     // For fragment-wrapped slot content (`<!--[-->...<!--]-->`), return the
     // node after the end anchor to avoid hydrateChildren() treating `<!--]-->`
     // as an extra child of the current container.
-    return isRangeStart(node)
+    return ownsRange && isRangeStart(node)
       ? (vnode.anchor as Node).nextSibling
       : (vnode.anchor as Node)
+  },
+
+  hydrateSlotOutlet(
+    outlet,
+    node: Node,
+    parentComponent,
+    parentSuspense,
+    slotScopeIds,
+  ) {
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
+      return node
+    }
+    return hydrateFoldedOutlet(
+      outlet.children as VNode[],
+      node,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+    )
   },
 
   attachSlotOutlet,
@@ -935,7 +961,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       parentSuspense,
     )
   },
-}
+} satisfies VaporInVdomInterface
 
 const vaporSlotPropsProxyHandler: ProxyHandler<
   ShallowRef<Record<string, any>>
@@ -2835,6 +2861,68 @@ function createFallback(
   }
 }
 
+// The server rendered the fallback of this outlet in place of its content, the
+// slot and what is around it. Only the slot has anything to adopt, that
+// fallback: the fragments down to it and what is beside it mount around it, as
+// on the client. All of them are vnodes, or no outlet would have been attached.
+function hydrateFoldedOutlet(
+  children: VNode[],
+  node: Node,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary | null,
+  slotScopeIds: string[] | null,
+): Node | null {
+  const container = parentNode(node)!
+  const internals = ensureRenderer().internals
+  // `node` until the slot has adopted the fallback, what follows it after
+  let next: Node | null = node
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child.vs) {
+      next = vaporInteropImpl.hydrateSlot(
+        child,
+        node,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+        false,
+      )
+    } else if (child.type === Fragment && hasVaporSlot(child)) {
+      insert((child.el = createTextNode()), container, next)
+      next = hydrateFoldedOutlet(
+        child.children as VNode[],
+        node,
+        parentComponent,
+        parentSuspense,
+        child.slotScopeIds
+          ? concatInteropScopeIds(slotScopeIds, child.slotScopeIds)
+          : slotScopeIds,
+      )
+      insert((child.anchor = createTextNode()), container, next)
+    } else {
+      runWithoutHydration(() =>
+        internals.p(
+          null,
+          child,
+          container as any,
+          next as any,
+          parentComponent,
+          parentSuspense,
+          getContainerType(container as Element),
+          slotScopeIds,
+        ),
+      )
+    }
+  }
+  return next
+}
+
+function hasVaporSlot(fragment: VNode): boolean {
+  return (fragment.children as VNode[]).some(
+    child => child.vs || (child.type === Fragment && hasVaporSlot(child)),
+  )
+}
+
 // Hands the fallback of a vdom outlet over to the vapor slot its content
 // consists of, if it is that one slot: the slot resolves it once it renders
 // empty. Lives here rather than beside `renderSlot` so that vdom-only bundles
@@ -2843,9 +2931,9 @@ function attachSlotOutlet(
   content: VNodeArrayChildren,
   fallback: () => VNodeArrayChildren,
   owner: ComponentInternalInstance | null,
-): void {
-  if (findLoneSlot(content, 0) && loneSlot) {
-    let slot: VNode = loneSlot
+): boolean {
+  let slot = findLoneSlot(content, 0) ? loneSlot : null
+  if (slot) {
     // a vnode its owner keeps (`<slot v-once/>`) is every placement's: the
     // record goes on a clone taking its place
     if (slot.cacheIndex != null) {
@@ -2857,6 +2945,7 @@ function attachSlotOutlet(
     vs.outlets = vs.outlets ? vs.outlets.concat(outlet) : [outlet]
   }
   loneSlot = loneSlotIn = null
+  return !!slot
 }
 
 // scratch of the walk below, which runs no user code and cannot re-enter
@@ -2956,6 +3045,7 @@ function renderVaporSlot(
   // the raw slot patch context; kept off the vnode so cached/cloned VaporSlot
   // vnodes never accumulate it
   contextSlotScopeIds: string[] | null,
+  ownsRange?: boolean,
 ): Block {
   const prev = currentInstance
   const prevCtx = currentRenderContext
@@ -3141,7 +3231,7 @@ function renderVaporSlot(
             } finally {
               pending.settle()
             }
-          })
+          }, ownsRange)
         } else {
           resolvedContent = finalizeResolvedContent(
             withRenderContext(frag.ctx, () =>

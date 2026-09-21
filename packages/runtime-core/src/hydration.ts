@@ -782,15 +782,27 @@ export function createHydrationFunctions(
     }
 
     const container = parentNode(node)!
-    const next = hydrateChildren(
-      nextSibling(node)!,
-      vnode,
-      container,
-      parentComponent,
-      parentSuspense,
-      slotScopeIds,
-      optimized,
-    )
+    const first = nextSibling(node)!
+    // the client kept the forwarded vapor slot and what is around it, the
+    // server rendered the outlet's fallback in their place
+    const next =
+      vnode.vo && (node as Comment).data === '('
+        ? getVaporInterface(parentComponent, vnode).hydrateSlotOutlet(
+            vnode,
+            first,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+          )
+        : hydrateChildren(
+            first,
+            vnode,
+            container,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+            optimized,
+          )
     if (
       next &&
       isComment(next) &&
