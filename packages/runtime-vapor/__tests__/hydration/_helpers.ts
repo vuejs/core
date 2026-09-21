@@ -2,6 +2,7 @@ import { createVaporSSRApp, delegateEvents } from '../../src'
 import type { App } from '@vue/runtime-dom'
 import { ref } from '@vue/runtime-dom'
 import { isString } from '@vue/shared'
+import type { SFCTemplateCompileOptions } from '@vue/compiler-sfc'
 import type { Block } from '../../src/block'
 import type { VaporComponentInstance } from '../../src/component'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
@@ -120,7 +121,13 @@ export async function testHydration(
     isVaporApp = true,
     interop = false,
     serverData = data,
-  }: { isVaporApp?: boolean; interop?: boolean; serverData?: any } = {},
+    compilerOptions,
+  }: {
+    isVaporApp?: boolean
+    interop?: boolean
+    serverData?: any
+    compilerOptions?: SFCTemplateCompileOptions['compilerOptions']
+  } = {},
 ): Promise<HydrationTestContext> {
   const ssrComponents: any = {}
   const clientComponents: any = {}
@@ -141,6 +148,7 @@ export async function testHydration(
   const serverComp = compile(code, serverData, ssrComponents, {
     vapor: isVaporApp,
     ssr: true,
+    compilerOptions,
   })
   const html = await VueServerRenderer.renderToString(
     runtimeDom.createSSRApp(serverComp),
@@ -152,6 +160,7 @@ export async function testHydration(
   const clientComp = compile(code, data, clientComponents, {
     vapor: isVaporApp,
     ssr: false,
+    compilerOptions,
   })
   let app
   if (isVaporApp) {
