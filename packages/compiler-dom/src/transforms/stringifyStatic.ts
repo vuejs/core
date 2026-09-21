@@ -327,7 +327,7 @@ function stringifyElement(
   context: TransformContext,
 ): string {
   let res = `<${node.tag}`
-  let innerHTML = ''
+  let innerHTML = undefined
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
     if (p.type === NodeTypes.ATTRIBUTE) {
@@ -377,7 +377,7 @@ function stringifyElement(
       } else if (p.name === 'html') {
         // #5439 v-html with constant value
         // not sure why would anyone do this but it can happen
-        innerHTML = evaluateConstant(p.exp as SimpleExpressionNode)
+        innerHTML = evaluateConstant(p.exp as SimpleExpressionNode) ?? ''
       } else if (p.name === 'text') {
         innerHTML = escapeHtml(
           toDisplayString(evaluateConstant(p.exp as SimpleExpressionNode)),
@@ -389,7 +389,7 @@ function stringifyElement(
     res += ` ${context.scopeId}`
   }
   res += `>`
-  if (innerHTML) {
+  if (innerHTML !== undefined) {
     res += innerHTML
   } else {
     for (let i = 0; i < node.children.length; i++) {

@@ -552,4 +552,17 @@ describe('stringify static html', () => {
     )
     expect(code).toMatchSnapshot()
   })
+
+  test.each(['0', 'false'])('stringify v-html with `%s`', value => {
+    const { code } = compileWithStringify(
+      `${repeat(
+        `<div v-html="${value}"></div>`,
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}`,
+    )
+    expect(code).toMatch(
+      `<div>${value}</div><div>${value}</div><div>${value}</div><div>${value}</div><div>${value}</div>`,
+    )
+    expect(code).toMatchSnapshot()
+  })
 })
