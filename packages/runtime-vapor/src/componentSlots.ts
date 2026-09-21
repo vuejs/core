@@ -382,7 +382,13 @@ export function createSlot(
       // and fallbacks.
       if (isCustomElementSlot) {
         const el = createElement('slot')
-        if (slotScopeIds) setElementScopeIds(el, slotScopeIds)
+        // the outlet is an element of the owner's own template, so it carries
+        // the owner's own scope id plus the ids of the enclosing slot context
+        // it renders under - the same pair vdom writes on the native `<slot>`
+        // vnode. Its own `-s` id scopes its content, not the outlet itself.
+        const ownScopeId = instance.type.__scopeId
+        if (ownScopeId) el.setAttribute(ownScopeId, '')
+        if (outerSlotScopeIds) setElementScopeIds(el, outerSlotScopeIds)
         const setSlotProps = () => {
           const slotName = isFunction(name) ? name() : name
           setDynamicProps(el, [

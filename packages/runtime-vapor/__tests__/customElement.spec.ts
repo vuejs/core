@@ -1038,6 +1038,118 @@ describe('defineVaporCustomElement', () => {
         `<div><slot class="foo"></slot><!--slot--></div>`,
       )
     })
+
+    // the outlet is an element of the owner's own template, so it is stamped
+    // like any other element there (vdom renders `<slot>` with the owner's
+    // scope id too)
+    test('native slot outlet carries the owner scope id', () => {
+      const E = defineVaporCustomElement({
+        __scopeId: 'data-v-owner',
+        setup() {
+          const n0 = template('<div data-v-owner></div>')() as any
+          setInsertionState(n0)
+          createSlot('default', null)
+          return n0
+        },
+      } as any)
+      customElements.define('my-el-slot-scope-id', E)
+      container.innerHTML = `<my-el-slot-scope-id><b>hi</b></my-el-slot-scope-id>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div data-v-owner=""><slot data-v-owner=""></slot><!--slot--></div>`,
+      )
+    })
+
+    test('native slot outlet carries the owner scope id without :slotted', () => {
+      const E = defineVaporCustomElement({
+        __scopeId: 'data-v-owner',
+        setup() {
+          const n0 = template('<div data-v-owner></div>')() as any
+          setInsertionState(n0)
+          createSlot('default', null, undefined, VaporSlotFlags.NO_SLOTTED)
+          return n0
+        },
+      } as any)
+      customElements.define('my-el-slot-scope-id-no-slotted', E)
+      container.innerHTML = `<my-el-slot-scope-id-no-slotted><b>hi</b></my-el-slot-scope-id-no-slotted>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div data-v-owner=""><slot data-v-owner=""></slot><!--slot--></div>`,
+      )
+    })
+
+    test('forwarded native slot outlet keeps the forwarding scope ids', () => {
+      const Child = defineVaporComponent({
+        __scopeId: 'data-v-child',
+        setup() {
+          return createSlot('default', null)
+        },
+      })
+      const E = defineVaporCustomElement({
+        __scopeId: 'data-v-owner',
+        setup() {
+          return createComponent(Child, null, {
+            default: () =>
+              createSlot('default', null, undefined, VaporSlotFlags.FORWARDED),
+          })
+        },
+      } as any)
+      customElements.define('my-el-slot-scope-id-forwarded', E)
+      container.innerHTML = `<my-el-slot-scope-id-forwarded><b>hi</b></my-el-slot-scope-id-forwarded>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<slot data-v-owner="" data-v-child-s=""></slot><!--slot--><!--slot-->`,
+      )
+    })
+
+    test('native slot outlet of an owner without a scope id', () => {
+      const E = defineVaporCustomElement({
+        setup() {
+          const n0 = template('<div></div>')() as any
+          setInsertionState(n0)
+          createSlot('default', null)
+          return n0
+        },
+      } as any)
+      customElements.define('my-el-slot-no-scope-id', E)
+      container.innerHTML = `<my-el-slot-no-scope-id><b>hi</b></my-el-slot-no-scope-id>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div><slot></slot><!--slot--></div>`,
+      )
+    })
+
+    // the outlet is not the root of the slot content here, so the enclosing
+    // slot context's ids have to be written on it directly
+    test('nested native slot outlet keeps the enclosing slot scope ids', () => {
+      const Child = defineVaporComponent({
+        __scopeId: 'data-v-child',
+        setup() {
+          return createSlot('default', null)
+        },
+      } as any)
+      const E = defineVaporCustomElement({
+        __scopeId: 'data-v-owner',
+        setup() {
+          return createComponent(Child, null, {
+            default: () => {
+              const n0 = template('<div data-v-owner></div>')() as any
+              setInsertionState(n0)
+              createSlot('default', null)
+              return n0
+            },
+          })
+        },
+      } as any)
+      customElements.define('my-el-slot-scope-id-nested', E)
+      container.innerHTML = `<my-el-slot-scope-id-nested><b>hi</b></my-el-slot-scope-id-nested>`
+      const e = container.childNodes[0] as VaporElement
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<div data-v-owner="" data-v-child-s="">` +
+          `<slot data-v-owner="" data-v-child-s=""></slot><!--slot-->` +
+          `</div><!--slot-->`,
+      )
+    })
   })
 
   describe('provide/inject', () => {
