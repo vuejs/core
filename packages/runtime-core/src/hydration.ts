@@ -178,7 +178,9 @@ export function createHydrationFunctions(
     optimized = false,
   ): Node | null => {
     optimized = optimized || !!vnode.dynamicChildren
-    const isFragmentStart = isComment(node) && node.data === '['
+    // `(` opens a slot fallback rendered for vapor: a range like a fragment's
+    const isFragmentStart =
+      isComment(node) && (node.data === '[' || node.data === '(')
     const onMismatch = () =>
       handleMismatch(
         node,
@@ -789,7 +791,11 @@ export function createHydrationFunctions(
       slotScopeIds,
       optimized,
     )
-    if (next && isComment(next) && next.data === ']') {
+    if (
+      next &&
+      isComment(next) &&
+      next.data === ((node as Comment).data === '(' ? ')' : ']')
+    ) {
       return nextSibling((vnode.anchor = next))
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
@@ -866,8 +872,9 @@ export function createHydrationFunctions(
   // looks ahead for a start and closing comment node
   const locateClosingAnchor = (
     node: Node | null,
-    open = '[',
-    close = ']',
+    // the pair of the range `node` opens
+    open: string = (node as Comment).data,
+    close: string = open === '(' ? ')' : ']',
   ): Node | null => {
     let match = 0
     while (node) {

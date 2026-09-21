@@ -1390,4 +1390,58 @@ describe('VDOM interop', () => {
       app.unmount()
     }
   })
+
+  // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered. The server
+  // does not emit it yet: the markup is written by hand.
+  test.each([
+    ['a vdom outlet that renders a vapor slot', false, true],
+    ['a vapor outlet that renders a vdom slot', true, false],
+  ])(
+    'hydrate the slot fallback range of %s',
+    async (_, vaporChild, vaporApp) => {
+      const data: any = reactive({ show: false, msg: 'fallback' })
+      const setup = `<script setup>const data = _data; const components = _components</script>`
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = `<div><!--(--><p>fallback</p><!--)--></div>`
+      const p = container.querySelector('p')!
+
+      const Child = compile(
+        `${setup}<template><div><slot><p>{{ data.msg }}</p></slot></div></template>`,
+        data,
+        {},
+        { vapor: vaporChild },
+      )
+      const App = compile(
+        `${setup}<template><components.Child><b v-if="data.show">b</b></components.Child></template>`,
+        data,
+        { Child },
+        { vapor: vaporApp },
+      )
+      const app = (
+        vaporApp
+          ? runtimeVapor.createVaporSSRApp(App)
+          : runtimeDom.createSSRApp(App)
+      ).use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      const visible = () => container.innerHTML.replace(/<!--[^>]*-->/g, '')
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      data.msg = 'updated'
+      await nextTick()
+      expect(container.querySelector('p')).toBe(p)
+      expect(visible()).toBe(`<div><p>updated</p></div>`)
+
+      data.show = true
+      await nextTick()
+      expect(visible()).toBe(`<div><b>b</b></div>`)
+      data.show = false
+      await nextTick()
+      expect(visible()).toBe(`<div><p>updated</p></div>`)
+
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    },
+  )
 })

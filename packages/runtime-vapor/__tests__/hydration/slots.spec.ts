@@ -1802,5 +1802,82 @@ describe('Vapor Mode hydration', () => {
         app.unmount()
       }
     })
+
+    // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered. The
+    // server does not emit it yet: the markup is written by hand.
+    describe('slot fallback range', () => {
+      const childWith = (template: string, data: any) =>
+        compileVaporComponent(template, data)
+      const visible = (container: Element) =>
+        container.innerHTML.replace(/<!--[^>]*-->/g, '')
+
+      test('hydrates the fallback inside the range', async () => {
+        const data = ref({ show: false, msg: 'fallback' })
+        const Child = childWith(
+          `<div><slot><p>{{ data.msg }}</p></slot></div>`,
+          data,
+        )
+        const { container } = await mountWithHydration(
+          `<div><!--(--><p>fallback</p><!--)--></div>`,
+          `<components.Child><b v-if="data.show">b</b></components.Child>`,
+          data,
+          { Child },
+        )
+        const p = container.querySelector('p')!
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value.msg = 'updated'
+        await nextTick()
+        expect(container.querySelector('p')).toBe(p)
+        expect(visible(container)).toBe(`<div><p>updated</p></div>`)
+
+        data.value.show = true
+        await nextTick()
+        expect(visible(container)).toBe(`<div><b>b</b></div>`)
+        data.value.show = false
+        await nextTick()
+        expect(visible(container)).toBe(`<div><p>updated</p></div>`)
+      })
+
+      test('steps over the range of a component whose root is the outlet', async () => {
+        const data = ref({ msg: 'after' })
+        const Child = childWith(`<slot><p>a</p><p>b</p></slot>`, data)
+        const { container } = await mountWithHydration(
+          `<div><!--(--><p>a</p><p>b</p><!--)--><span>after</span></div>`,
+          `<div><components.Child/><span>{{ data.msg }}</span></div>`,
+          data,
+          { Child },
+        )
+        const span = container.querySelector('span')!
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.value.msg = 'updated'
+        await nextTick()
+        expect(container.querySelector('span')).toBe(span)
+        expect(visible(container)).toBe(
+          `<div><p>a</p><p>b</p><span>updated</span></div>`,
+        )
+      })
+
+      test('recovers from a mismatching range the way it does for a fragment', async () => {
+        const recover = async (open: string, close: string) => {
+          const { container } = await mountWithHydration(
+            `<!--${open}--><p>a</p><p>b</p><!--${close}-->`,
+            `<i v-if="data.on">client</i>`,
+            ref({ on: true }),
+          )
+          return container.innerHTML
+        }
+        const fragment = await recover('[', ']')
+        expect(`Hydration node mismatch`).toHaveBeenWarned()
+        expect(await recover('(', ')')).toBe(
+          fragment
+            .replace('<!--[-->', '<!--(-->')
+            .replace('<!--]-->', '<!--)-->'),
+        )
+      })
+    })
   })
 })

@@ -197,6 +197,16 @@ type RecreatedNode = Node & {
 
 type CommentAnchor = Comment & Anchor
 
+// `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: a range like
+// a fragment's for whatever steps over, claims or removes one.
+export const isRangeStart = (node: Node): node is CommentAnchor =>
+  node.nodeType === 8 &&
+  ((node as Comment).data === '[' || (node as Comment).data === '(')
+
+export const isRangeEnd = (node: Node): node is CommentAnchor =>
+  node.nodeType === 8 &&
+  ((node as Comment).data === ']' || (node as Comment).data === ')')
+
 export const isComment = (node: Node, data: string): node is CommentAnchor =>
   node.nodeType === 8 && (node as Comment).data === data
 
@@ -265,7 +275,7 @@ let innermostFragmentClaim: FragmentClaim | null = null
 function claimFragmentStart(claim: FragmentClaim): void {
   const node = currentHydrationNode
   if (!node || transitionChild === TransitionChild.Child) return
-  if (isComment(node, '[')) {
+  if (isRangeStart(node)) {
     claim.start = node
     setCurrentHydrationNode(node.nextSibling)
   } else {
@@ -443,7 +453,7 @@ function adoptTemplateImpl(
 
 export function nextLogicalSibling(node: Node): Node | null {
   return skipUntrackedAnchors(
-    isComment(node, '[')
+    isRangeStart(node)
       ? locateEndAnchor(node)!.nextSibling
       : isComment(node, 'teleport start')
         ? locateEndAnchor(node, 'teleport start', 'teleport end')!.nextSibling
@@ -492,13 +502,14 @@ function locateHydrationNodeImpl(claim?: FragmentClaim) {
  * before claiming hydrated content.
  */
 export function locateFragmentEnd(node: Node | null): Node | null {
-  return node && isComment(node, '[') ? locateEndAnchor(node) : null
+  return node && isRangeStart(node) ? locateEndAnchor(node) : null
 }
 
 export function locateEndAnchor(
   node: CommentAnchor,
-  open = '[',
-  close = ']',
+  // the pair of the range `node` opens
+  open: string = node.data,
+  close: string = open === '(' ? ')' : ']',
 ): Node | null {
   // already cached matching end
   if (node.$fe) {
@@ -532,7 +543,11 @@ export function locateEndAnchor(
  */
 export function locateClaimedEnd(start: CommentAnchor): Node | null {
   const node = currentHydrationNode
-  if (node && isComment(node, ']') && !isClaimedAnchor(node)) {
+  if (
+    node &&
+    isComment(node, start.data === '(' ? ')' : ']') &&
+    !isClaimedAnchor(node)
+  ) {
     return (start.$fe = node)
   }
   return locateEndAnchor(start)
@@ -547,7 +562,7 @@ function handleMismatch(
   warnHydrationNodeMismatch(node, template)
 
   // fragment
-  if (isComment(node, '[')) {
+  if (isRangeStart(node)) {
     removeFragmentNodes(node)
   }
 
@@ -696,7 +711,7 @@ function warnHydrationNodeMismatch(node: Node, expected: unknown): void {
         node,
         node.nodeType === 3
           ? `(text)`
-          : isComment(node, '[')
+          : isRangeStart(node)
             ? `(start of fragment)`
             : ``,
         `\n- expected on client:`,
@@ -728,7 +743,7 @@ function removeHydrationNode(node: Node, close: Node | null = null): void {
     return
   }
 
-  if (isComment(node, '[')) {
+  if (isRangeStart(node)) {
     const end = locateEndAnchor(node)
     removeFragmentNodes(node, end || undefined)
     const endParent = end && parentNode(end)
@@ -881,11 +896,10 @@ export function resolveHydrationTarget(node: Node): Node {
       if (!(flags & AnchorFlags.UNTRACKED)) return node
     } else if (
       !(
-        node.nodeType === 8 &&
-        ((node as Comment).data === '[' ||
-          (node as Comment).data === ']' ||
-          (node as Comment).data === 'teleport start' ||
-          (node as Comment).data === 'teleport end')
+        isRangeStart(node) ||
+        isRangeEnd(node) ||
+        isComment(node, 'teleport start') ||
+        isComment(node, 'teleport end')
       )
     ) {
       return node

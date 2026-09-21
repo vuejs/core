@@ -12,6 +12,7 @@ import {
   isClaimedAnchor,
   isComment,
   isInDeferredHydrationBoundary,
+  isRangeEnd,
   locateClaimedEnd,
   locateFragmentEnd,
   locateHydrationNode,
@@ -280,7 +281,7 @@ export function createDeferredSlotAttach(
  */
 export function claimPrecedingFragmentClose(slotEnd: Node | null): void {
   const previous = slotEnd && slotEnd.previousSibling
-  if (previous && isComment(previous, ']')) {
+  if (previous && isRangeEnd(previous)) {
     claimAnchor(previous)
   }
 }
@@ -386,7 +387,7 @@ function isReusableAnchorCandidate(
   return (
     !!node &&
     (isComment(node, '') ||
-      isComment(node, ']') ||
+      isRangeEnd(node) ||
       (__DEV__ &&
         frag !== undefined &&
         ((frag.__vf & IF && isComment(node, 'v-if')) ||
@@ -596,7 +597,7 @@ function planEmptyBranch(frag: DynamicFragment): AnchorPlan | undefined {
   if (
     !(flags & SLOT) &&
     currentHydrationNode &&
-    !isComment(currentHydrationNode, ']')
+    !isRangeEnd(currentHydrationNode)
   ) {
     const parentNode = getParentNode(currentHydrationNode)
     // Empty branch against non-empty SSR output has no block node to

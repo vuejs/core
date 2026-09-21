@@ -22,8 +22,8 @@ import { renderEffect } from './renderEffect'
 import { DynamicFragment, isDynamicFragment } from './fragment'
 import {
   hydrateNode,
-  isComment,
   isHydrating,
+  isRangeStart,
   locateEndAnchor,
   locateHydrationNode,
   nextLogicalSibling,
@@ -78,7 +78,7 @@ export function defineVaporAsyncComponent<T extends VaporComponent>(
       // holding the adopted DOM. The wrapper can be moved or unmounted before
       // setup runs, and template refs / transitions register on the fragment
       // that setup will settle rather than on a stand-in.
-      const endAnchor = isComment(el, '[') ? locateEndAnchor(el)! : null
+      const endAnchor = isRangeStart(el) ? locateEndAnchor(el)! : null
       let nodes: Block
       if (endAnchor) {
         const end = _next(endAnchor)

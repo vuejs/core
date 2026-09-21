@@ -138,6 +138,8 @@ import {
   isClaimedAnchor,
   isComment,
   isHydrating,
+  isRangeEnd,
+  isRangeStart,
   locateEndAnchor,
   locateFragmentEnd,
   locateHydrationNode,
@@ -531,7 +533,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       const anchor = vnode.anchor as Node | null
       // `hydrateSlot()` records the opening marker for VDOM SSR slot fragments
       // on vnode.el while vnode.anchor points at the closing marker.
-      if (vnode.el && vnode.el !== anchor && isComment(vnode.el as Node, '[')) {
+      if (vnode.el && vnode.el !== anchor && isRangeStart(vnode.el as Node)) {
         slotStartAnchor = vnode.el as Node
       }
       // Fragment child unmounts invoke VaporSlot with doRemove = false, so the
@@ -605,7 +607,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
         const parent = selfAnchor.parentNode as ParentNode
         const nextSibling = selfAnchor.nextSibling
         const rangeStartAnchor =
-          n1.el && n1.el !== selfAnchor && isComment(n1.el as Node, '[')
+          n1.el && n1.el !== selfAnchor && isRangeStart(n1.el as Node)
             ? (n1.el as Node)
             : undefined
         const oldBlockOwnsAnchor =
@@ -662,7 +664,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
     if (
       vnode.el &&
       vnode.el !== vnode.anchor &&
-      isComment(vnode.el as Node, '[') &&
+      isRangeStart(vnode.el as Node) &&
       !pendingRangeOwnsFragmentStart
     ) {
       move(
@@ -739,11 +741,9 @@ const vaporInteropImpl: VaporInVdomInterface = {
     // marker of the slot's own empty range, or of the vdom fragment it ends.
     // Nothing to adopt, and an empty branch inside must not take that marker
     // for its own anchor: mount in place.
-    const close = isComment(node, ']')
+    const close = isRangeEnd(node)
       ? node
-      : isComment(node, '[') &&
-          node.nextSibling &&
-          isComment(node.nextSibling, ']')
+      : isRangeStart(node) && node.nextSibling && isRangeEnd(node.nextSibling)
         ? node.nextSibling
         : null
     if (close) {
@@ -778,7 +778,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       )
       const fragmentAnchor = isFragment(vnode.vb) && vnode.vb.anchor
       let anchor = fragmentAnchor || currentHydrationNode!
-      const wrapped = isComment(node, '[') && isComment(anchor, ']')
+      const wrapped = isRangeStart(node) && isRangeEnd(anchor)
       // An unwrapped slot has no SSR-owned boundary. The hydration cursor is
       // only where VDOM should resume and may belong to the next sibling, so
       // create a dedicated self anchor matching the mount path.
@@ -790,7 +790,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
       }
       // VDOM SSR wraps slot output in fragment anchors. Keep that range on the
       // VaporSlot vnode so enabled Teleport removal can dispose both anchors.
-      if (isComment(node, '[') && isComment(anchor, ']')) {
+      if (isRangeStart(node) && isRangeEnd(anchor)) {
         vnode.el = node
         vnode.anchor = anchor
       } else {
@@ -808,7 +808,7 @@ const vaporInteropImpl: VaporInVdomInterface = {
     // For fragment-wrapped slot content (`<!--[-->...<!--]-->`), return the
     // node after the end anchor to avoid hydrateChildren() treating `<!--]-->`
     // as an extra child of the current container.
-    return isComment(node, '[')
+    return isRangeStart(node)
       ? (vnode.anchor as Node).nextSibling
       : (vnode.anchor as Node)
   },
@@ -1048,7 +1048,7 @@ function resolveVNodeNodes(vnode: VNode): Block {
     const { el, anchor, vb } = vnode
     if (!anchor) return vb
 
-    return el && el !== anchor && isComment(el as Node, '[')
+    return el && el !== anchor && isRangeStart(el as Node)
       ? [el as Node, vb, anchor as Node]
       : [vb, anchor as Node]
   }
