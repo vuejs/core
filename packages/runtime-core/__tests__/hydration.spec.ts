@@ -4369,5 +4369,20 @@ describe('SSR hydration', () => {
       })
       expect(found).toEqual(['P', 'B'])
     })
+
+    // the node handed to the mismatch is inside the range by then: the range
+    // it closes is still a `[` one, whose nested ranges have to be counted
+    test('removes the whole range of a static vnode that mismatches', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div><!--[--><!--x--><!--[--><!--]--><!--]--><span>after</span></div>`
+      createSSRApp({
+        render: () =>
+          h('div', [createStaticVNode('<b>x</b>', 1), h('span', 'after')]),
+      }).mount(container)
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toContain(`<!--[--><b>x</b><span>`)
+      expect(container.innerHTML).not.toContain(`<!--]-->`)
+    })
   })
 })

@@ -884,8 +884,9 @@ export function createHydrationFunctions(
   // looks ahead for a start and closing comment node
   const locateClosingAnchor = (
     node: Node | null,
-    // the pair of the range `node` opens
-    open: string = (node as Comment).data,
+    // the pair of the range `node` opens: a mismatch hands in a node inside a
+    // `[` range as well
+    open: string = node && isComment(node) && node.data === '(' ? '(' : '[',
     close: string = open === '(' ? ')' : ']',
   ): Node | null => {
     let match = 0

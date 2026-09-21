@@ -1702,4 +1702,78 @@ describe('VDOM interop', () => {
       expect(visible(container)).toBe(`<div><p>fallback</p><i>tail</i></div>`)
     },
   )
+
+  // the server renders `[]` for the whole chain: nothing to adopt
+  test.each([
+    ['no content', ``],
+    ['content that renders nothing', `<b v-if="data.show">b</b>`],
+  ])(
+    'hydrate an empty vdom slot forwarded by vapor components without a fallback: %s',
+    async (_, content) => {
+      const data = reactive({ show: false })
+      const { container, html } = await testWithVDOMApp(
+        `${setup}<template>
+          <components.Wrapper>${content}</components.Wrapper>
+        </template>`,
+        {
+          Child: {
+            code: `${setup}<template><div><slot /></div></template>`,
+            vapor: true,
+          },
+          Wrapper: {
+            code: `${setup}<template><components.Child><slot /></components.Child></template>`,
+            vapor: true,
+          },
+        },
+        data,
+      )
+      expect(html).toBe(`<div><!--[--><!--]--></div>`)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(visible(container)).toBe(`<div></div>`)
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(
+        content ? `<div><b>b</b></div>` : `<div></div>`,
+      )
+    },
+  )
+
+  // the slot's own outlet comes first among its outlets, and is no fragment
+  // of the fallback range the server rendered further out
+  test('hydrate the fallback of an outer vdom outlet when the outlet of the slot has one that renders nothing', async () => {
+    const data = reactive({ show: false, items: [] as number[] })
+    const { container, html } = await testWithVaporApp(
+      `${setup}<template>
+        <components.Wrapper><b v-if="data.show">b</b></components.Wrapper>
+      </template>`,
+      {
+        Child: {
+          code: `${setup}<template><slot><p>fallback</p></slot></template>`,
+          vapor: false,
+        },
+        Mid: {
+          code: `${setup}<template><components.Child><slot><u>mid</u></slot></components.Child></template>`,
+          vapor: false,
+        },
+        Wrapper: {
+          code: `${setup}<template><components.Mid><slot><p v-for="i in data.items" :key="i">x</p></slot></components.Mid></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(html).toBe(`<!--[--><!--(--><u>mid</u><!--)--><!--]-->`)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(visible(container)).toBe(`<u>mid</u>`)
+
+    data.show = true
+    await nextTick()
+    expect(visible(container)).toBe(`<b>b</b>`)
+    data.show = false
+    await nextTick()
+    expect(visible(container)).toBe(`<u>mid</u>`)
+  })
 })

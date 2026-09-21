@@ -2033,6 +2033,12 @@ function renderVDOMSlot(
   frag.hydrate = () => {
     if (!isHydrating) return
     const open = currentHydrationNode
+    if (open && isRangeEnd(open)) {
+      // An enclosing outlet found all of its content empty and rendered its
+      // own range alone: nothing of this one is in the DOM.
+      runWithoutHydration(() => place(open.parentNode!, open, undefined))
+      return
+    }
     if (open && isComment(open, '(')) {
       // the server rendered the local fallback: mount as on the client
       const close = (frag.anchor = claimAnchor(locateEndAnchor(open)!))
@@ -2713,6 +2719,7 @@ function hydrateOutletFallback(
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (child.vs) {
+      const outlets = child.vs.outlets
       mountSlotWithoutHydration(
         child,
         null,
@@ -2720,7 +2727,12 @@ function hydrateOutletFallback(
         parentComponent,
         parentSuspense,
         slotScopeIds,
-        { depth, first: node, close },
+        {
+          // the slot's own outlet comes first among them, and is no fragment
+          depth: outlets && outlets[0].innerIds == null ? depth + 1 : depth,
+          first: node,
+          close,
+        },
       )
       next = close
     } else if (child.type === Fragment && hasVaporSlot(child)) {
