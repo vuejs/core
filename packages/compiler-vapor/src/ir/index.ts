@@ -48,8 +48,8 @@ export interface EffectBoundary {
 
 /**
  * Insertion state shared by block operations (if / for / key / component /
- * slot outlet). `anchor` references a template `<!>` placeholder id;
- * `appendIndex` is the hydration start unit index for appends.
+ * slot outlet) and by node inserts. `anchor` references a template `<!>`
+ * placeholder id; `appendIndex` is the hydration start unit index for appends.
  */
 export interface InsertionState {
   parent?: number
@@ -204,14 +204,10 @@ export interface SetTemplateRefIRNode extends BaseIRNode {
   effect: boolean
 }
 
-export interface InsertNodeIRNode extends BaseIRNode {
+export interface InsertNodeIRNode extends BaseIRNode, InsertionState {
   type: IRNodeTypes.INSERT_NODE
   elements: number[]
   parent: number
-  anchor?: number
-  // set only for children of a createElement-backed parent, whose server
-  // output lives inside the parent instead of the enclosing template
-  appendIndex?: number
 }
 
 export interface DirectiveIRNode extends BaseIRNode {

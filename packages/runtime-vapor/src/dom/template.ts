@@ -38,9 +38,9 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
     // a template child of a createElement-backed element carries insertion
     // state of its own, because its server output sits inside that element
     // instead of the enclosing template
-    let cursor: HydrationCursor | null = null
+    let hydrationCursor: HydrationCursor | null = null
     if (insertionParent) {
-      if (isHydrating) cursor = enterHydrationCursor()
+      if (isHydrating) hydrationCursor = enterHydrationCursor()
       else resetInsertionState()
     }
     if (isHydrating) {
@@ -84,7 +84,7 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
         )!
       }
       if (root) (adopted as any).$root = true
-      exitHydrationCursor(cursor)
+      exitHydrationCursor(hydrationCursor)
       return adopted
     }
 

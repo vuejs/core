@@ -1,8 +1,7 @@
 import {
   type IREffect,
   IRNodeTypes,
-  type InsertNodeIRNode,
-  type InsertionStateTypes,
+  type InsertionState,
   type OperationNode,
   isBlockOperation,
 } from '../ir'
@@ -213,7 +212,7 @@ export function genEffect(
 }
 
 export function genInsertionState(
-  operation: InsertionStateTypes | InsertNodeIRNode,
+  operation: InsertionState,
   context: CodegenContext,
 ): CodeFragment[] {
   const { parent, anchor, appendIndex } = operation

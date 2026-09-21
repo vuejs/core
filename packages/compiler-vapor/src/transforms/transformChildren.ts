@@ -99,13 +99,18 @@ export const transformChildren: NodeTransform = (node, context) => {
   }
 
   if (!isFragment) {
-    processDynamicChildren(context as TransformContext<ElementNode>)
+    processDynamicChildren(
+      context as TransformContext<ElementNode>,
+      useCreateElement,
+    )
   }
 }
 
-function processDynamicChildren(context: TransformContext<ElementNode>) {
+function processDynamicChildren(
+  context: TransformContext<ElementNode>,
+  useCreateElement: boolean,
+) {
   const children = context.dynamic.children
-  const useCreateElement = shouldUseCreateElement(context.node, context)
 
   // The index of the last child that materializes in the parent template.
   // Dynamic children before it are anchored by their own `<!>` placeholder;
