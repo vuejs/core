@@ -1,6 +1,7 @@
 import { NOOP } from '@vue/shared'
 import {
   setDynamicProp as _setDynamicProp,
+  optimizePropertyLookup,
   setAttr,
   setClass,
   setClassName,
@@ -892,6 +893,16 @@ describe('patchProp', () => {
       expect(el.innerHTML).toBe('<p>foo</p>')
       setHtml(el, '<p>bar</p>')
       expect(el.innerHTML).toBe('<p>bar</p>')
+    })
+
+    test('should set an empty innerHTML on a primed element', () => {
+      // `$html` has to start out undefined - an empty string makes the
+      // first write a no-op and leaves the original children in place
+      optimizePropertyLookup()
+      const el = document.createElement('div')
+      el.textContent = 'kid'
+      setHtml(el, '')
+      expect(el.innerHTML).toBe('')
     })
   })
 

@@ -634,7 +634,10 @@ export function optimizePropertyLookup(): void {
   proto.$evtclick = undefined
   proto.$root = false
   proto.$clsFlags = undefined
-  proto.$html = proto.$cls = proto.$sty = ''
+  proto.$cls = proto.$sty = ''
+  // same reason as $txt below: an empty string would make the first
+  // setHtml(el, '') a no-op and leave the original children in place
+  proto.$html = undefined
   // Initialize $txt to undefined instead of empty string to ensure setText()
   // properly updates the text node even when the value is empty string.
   // This prevents issues where setText(node, '') would be skipped because

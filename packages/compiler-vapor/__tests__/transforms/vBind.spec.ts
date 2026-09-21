@@ -1203,4 +1203,26 @@ describe('compiler v-bind', () => {
 
     expect(code).toContain(expected)
   })
+
+  // a constant value only folds into the template string when the string can
+  // carry it: `innerHTML` / `textContent` write the element's content and
+  // `.prop` forces a dom property, so both have to reach a runtime setter
+  test.each([
+    [`<div :innerHTML="'<b>x</b>'"/>`, `_setHtml(n0, "<b>x</b>")`],
+    [`<div :textContent="'hi'"/>`, `_setElementText(n0, "hi")`],
+    [`<div :foo.prop="'bar'"/>`, `_setDOMProp(n0, "foo", "bar")`],
+    [`<div .foo="'bar'"/>`, `_setDOMProp(n0, "foo", "bar")`],
+    // a number stays a number, it never passes through the template string
+    [`<div :scrollTop.prop="10"/>`, `_setDOMProp(n0, "scrollTop", 10)`],
+    // `.attr` does mean the content attribute and still folds
+    [`<div :foo.attr="'bar'"/>`, `_template("<div foo=bar>"`],
+    [`<div :foo.attr="1"/>`, `_template("<div foo=1>"`],
+  ])(
+    'constant props the template string cannot carry: %s',
+    (template, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(expected)
+    },
+  )
 })
