@@ -1,4 +1,4 @@
-import { nextTick, reactive, ref } from '@vue/runtime-dom'
+import { h, nextTick, reactive, ref, renderSlot } from '@vue/runtime-dom'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
 import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
@@ -1775,5 +1775,53 @@ describe('VDOM interop', () => {
     data.show = false
     await nextTick()
     expect(visible(container)).toBe(`<u>mid</u>`)
+  })
+
+  // without `ssrRender` (a render function, or a client-compiled library
+  // component) the server renders the outlet as a vnode
+  test('hydrate the fallback of a vdom outlet the server rendered as a vnode', async () => {
+    const Child = {
+      render(this: any) {
+        return h('div', [
+          renderSlot(this.$slots, 'default', {}, () => [h('p', 'fallback')]),
+        ])
+      },
+    }
+    const data = reactive({ show: false })
+    const App = (ssr: boolean) =>
+      compile(
+        `${setup}<template>
+          <components.Child><b v-if="data.show">b</b></components.Child>
+        </template>`,
+        data as any,
+        { Child },
+        { vapor: true, ssr },
+      )
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App(true)),
+    )
+    expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+    const p = container.querySelector('p')
+    const app = runtimeVapor
+      .createVaporSSRApp(App(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(container.querySelector('p')).toBe(p)
+
+    data.show = true
+    await nextTick()
+    expect(visible(container)).toBe(`<div><b>b</b></div>`)
+    data.show = false
+    await nextTick()
+    expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
+
+    app.unmount()
+    expect(container.innerHTML).toBe('')
   })
 })

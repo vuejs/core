@@ -296,20 +296,29 @@ export function renderVNode(
     case Static:
       push(children as string)
       break
-    case Fragment:
+    case Fragment: {
       if (vnode.slotScopeIds) {
         slotScopeId =
           (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
       }
-      push(`<!--[-->`) // open
+      // An outlet rendered as a vnode (`renderSlot`) keys the fragment of its
+      // fallback `_fb`: marked for the vapor component that uses this one, as
+      // `ssrRenderSlot` does.
+      const user = parentComponent.vnode.ctx
+      const isVaporFallback =
+        isString(vnode.key) &&
+        vnode.key.endsWith('_fb') &&
+        !!(user && user.type.__vapor)
+      push(isVaporFallback ? `<!--(-->` : `<!--[-->`) // open
       renderVNodeChildren(
         push,
         children as VNodeArrayChildren,
         parentComponent,
         slotScopeId,
       )
-      push(`<!--]-->`) // close
+      push(isVaporFallback ? `<!--)-->` : `<!--]-->`) // close
       break
+    }
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
         renderElementVNode(push, vnode, parentComponent, slotScopeId)

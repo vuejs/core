@@ -1,4 +1,4 @@
-import { createApp, defineAsyncComponent, h } from 'vue'
+import { createApp, defineAsyncComponent, h, renderSlot } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 const components = {
@@ -443,6 +443,30 @@ describe('ssr: slot', () => {
       }
       expect(await render(`<Forward/>`, { Forward })).toBe(
         `<ul><div><!--(-->fallback<!--)--></div></ul>`,
+      )
+    })
+
+    // a component without `ssrRender` (a render function, or a client-compiled
+    // library component) renders its outlets as vnodes
+    test('an outlet rendered as a vnode marks its fallback for the vapor component that uses it', async () => {
+      const Child = {
+        render(this: any) {
+          return h('div', [
+            renderSlot(this.$slots, 'default', {}, () => ['fallback']),
+          ])
+        },
+      }
+      const components = { Child }
+      const template = `<Child><span v-if="false"/></Child>`
+      expect(await render(template, components)).toBe(
+        `<div><!--(-->fallback<!--)--></div>`,
+      )
+      expect(await render(`<Child>content</Child>`, components)).toBe(
+        `<div><!--[-->content<!--]--></div>`,
+      )
+      // used by a vdom component: left alone
+      expect(await renderToString(createApp({ components, template }))).toBe(
+        `<div><!--[-->fallback<!--]--></div>`,
       )
     })
   })
