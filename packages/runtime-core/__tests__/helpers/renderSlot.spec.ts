@@ -274,6 +274,21 @@ describe('renderSlot', () => {
       renderSlot({ default: () => content }, 'default', {}, fallback)
       expect(attachSlotOutlet).toHaveBeenCalledWith(content, fallback, owner)
     })
+
+    it('marks the fragment of an outlet whose fallback the interop took over', () => {
+      const attachSlotOutlet = vi.fn(() => false)
+      setCurrentRenderingInstance({
+        type: {},
+        appContext: { vapor: { attachSlotOutlet } },
+      } as any)
+      const render = () =>
+        renderSlot({ default: () => [forward()] }, 'default', {}, () => [
+          h('p'),
+        ])
+      expect(render().vo).toBeUndefined()
+      attachSlotOutlet.mockReturnValue(true)
+      expect(render().vo).toBe(true)
+    })
   })
 
   describe('invokeSlotFallback', () => {

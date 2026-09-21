@@ -814,6 +814,29 @@ const vaporInteropImpl: VaporInVdomInterface = {
 
   attachSlotOutlet,
 
+  hydrateSlotOutlet(
+    outlet,
+    node: Node,
+    parentComponent,
+    parentSuspense,
+    slotScopeIds,
+  ) {
+    if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) return
+    // Anything else is taken for the fallback the server rendered in place of
+    // content that is all empty, the structure around the slot included. A
+    // genuine mismatch ahead of the slot reads the same: the slot recovers
+    // from it as it would from a mismatching fallback.
+    const children = outlet.children as VNode[]
+    if (reachesSlotRange(children, node)) return
+    return hydrateFoldedOutlet(
+      children,
+      node,
+      parentComponent,
+      parentSuspense,
+      slotScopeIds,
+    )
+  },
+
   setTransitionHooks(component, hooks) {
     ensureTransitionHooksRegistered()
     setVaporTransitionHooks(component as any, hooks as VaporTransitionHooks)
@@ -2834,6 +2857,90 @@ function createFallback(
   }
 }
 
+// Only the slot has anything to adopt, the fallback: the fragments down to it
+// and what is beside it mount around that, as on the client. All of them are
+// vnodes already, or no outlet would have been attached.
+function hydrateFoldedOutlet(
+  children: VNode[],
+  node: Node,
+  parentComponent: ComponentInternalInstance | null,
+  parentSuspense: SuspenseBoundary | null,
+  slotScopeIds: string[] | null,
+): Node | null {
+  const container = parentNode(node)!
+  const internals = ensureRenderer().internals
+  // `node` until the slot has adopted the fallback, what follows it after
+  let next: Node | null = node
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child.vs) {
+      next = vaporInteropImpl.hydrateSlot(
+        child,
+        node,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+      )
+    } else if (child.type === Fragment && hasVaporSlot(child)) {
+      insert((child.el = createTextNode()), container, next)
+      next = hydrateFoldedOutlet(
+        child.children as VNode[],
+        node,
+        parentComponent,
+        parentSuspense,
+        child.slotScopeIds
+          ? concatInteropScopeIds(slotScopeIds, child.slotScopeIds)
+          : slotScopeIds,
+      )
+      insert((child.anchor = createTextNode()), container, next)
+    } else {
+      runWithoutHydration(() =>
+        internals.p(
+          null,
+          child,
+          container as any,
+          next as any,
+          parentComponent,
+          parentSuspense,
+          getContainerType(container as Element),
+          slotScopeIds,
+        ),
+      )
+    }
+  }
+  return next
+}
+
+// Whether the server output from `node` on has the shape of outlet content
+// down to its slot: a comment for a closed branch, a range for a fragment,
+// holding the same in turn, and one for the slot.
+function reachesSlotRange(children: VNode[], node: Node | null): boolean {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (!node || node.nodeType !== 8) return false
+    if (child.type === VNodeComment) {
+      if (isComment(node, '[') || isComment(node, ']')) return false
+    } else if (!isComment(node, '[')) {
+      return false
+    } else if (child.vs) {
+      return true
+    } else if (hasVaporSlot(child)) {
+      return reachesSlotRange(child.children as VNode[], node.nextSibling)
+    } else {
+      node = locateEndAnchor(node)
+      if (!node) return false
+    }
+    node = node.nextSibling
+  }
+  return false
+}
+
+function hasVaporSlot(fragment: VNode): boolean {
+  return (fragment.children as VNode[]).some(
+    child => child.vs || (child.type === Fragment && hasVaporSlot(child)),
+  )
+}
+
 // Hands the fallback of a vdom outlet over to the vapor slot its content
 // consists of, if it is that one slot: the slot resolves it once it renders
 // empty. Lives here rather than beside `renderSlot` so that vdom-only bundles
@@ -2842,9 +2949,9 @@ function attachSlotOutlet(
   content: VNodeArrayChildren,
   fallback: () => VNodeArrayChildren,
   owner: ComponentInternalInstance | null,
-): void {
-  if (findLoneSlot(content, 0) && loneSlot) {
-    let slot: VNode = loneSlot
+): boolean {
+  let slot = findLoneSlot(content, 0) ? loneSlot : null
+  if (slot) {
     // a vnode its owner keeps (`<slot v-once/>`) is every placement's: the
     // record goes on a clone taking its place
     if (slot.cacheIndex != null) {
@@ -2856,6 +2963,7 @@ function attachSlotOutlet(
     vs.outlets = vs.outlets ? vs.outlets.concat(outlet) : [outlet]
   }
   loneSlot = loneSlotIn = null
+  return !!slot
 }
 
 // scratch of the walk below, which runs no user code and cannot re-enter

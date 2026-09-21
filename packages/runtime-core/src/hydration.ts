@@ -780,15 +780,27 @@ export function createHydrationFunctions(
     }
 
     const container = parentNode(node)!
-    const next = hydrateChildren(
-      nextSibling(node)!,
-      vnode,
-      container,
-      parentComponent,
-      parentSuspense,
-      slotScopeIds,
-      optimized,
-    )
+    const first = nextSibling(node)!
+    let next = vnode.vo
+      ? getVaporInterface(parentComponent, vnode).hydrateSlotOutlet(
+          vnode,
+          first,
+          parentComponent,
+          parentSuspense,
+          slotScopeIds,
+        )
+      : undefined
+    if (next === undefined) {
+      next = hydrateChildren(
+        first,
+        vnode,
+        container,
+        parentComponent,
+        parentSuspense,
+        slotScopeIds,
+        optimized,
+      )
+    }
     if (next && isComment(next) && next.data === ']') {
       return nextSibling((vnode.anchor = next))
     } else {

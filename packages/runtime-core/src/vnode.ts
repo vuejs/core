@@ -304,6 +304,11 @@ export interface VNode<
    */
   vb?: any
   /**
+   * @internal vapor interop only — the fragment of a vdom slot outlet whose
+   * fallback a forwarded vapor slot resolves
+   */
+  vo?: boolean
+  /**
    * @internal vapor interop only — internal before-update notification, fired
    * before this vnode is patched (alongside onVnodeBeforeUpdate). Single-owner:
    * the interop layer assigns (never appends) so re-tracking replaces the

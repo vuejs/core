@@ -263,7 +263,19 @@ export interface VaporInVdomInterface {
     content: VNodeArrayChildren,
     fallback: () => VNodeArrayChildren,
     owner: ComponentInternalInstance | null,
-  ): void
+  ): boolean
+  /**
+   * Hydrates an outlet marked `vo` where the server rendered its fallback in
+   * place of the whole content. Undefined leaves the outlet to the regular
+   * hydration: the server rendered the content, or nothing is hydrating.
+   */
+  hydrateSlotOutlet(
+    outlet: VNode,
+    node: Node,
+    parentComponent: ComponentInternalInstance | null,
+    parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
+  ): Node | null | undefined
 }
 
 /**
