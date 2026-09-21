@@ -1860,4 +1860,69 @@ describe('VDOM interop', () => {
       expect(container.innerHTML).toBe('')
     },
   )
+
+  // a vdom outlet keeps its fragment around a vapor slot, however little that
+  // one renders: the server has to keep its range too
+  test.each([
+    ['one vdom component', 1, `<b v-if="data.show">b</b>`],
+    ['two vdom components', 2, `<b v-if="data.show">b</b>`],
+    [
+      'two vdom components (v-for)',
+      2,
+      `<b v-for="i in data.show ? 1 : 0" :key="i">b</b>`,
+    ],
+  ])(
+    'hydrate an empty vapor slot forwarded by %s without a fallback',
+    async (_, levels, content) => {
+      const data = reactive({ show: false })
+      const App = (ssr: boolean) => {
+        const components: any = {}
+        const vdom = (code: string) =>
+          compile(
+            `${setup}<template>${code}</template>`,
+            data as any,
+            components,
+            {
+              vapor: false,
+              ssr,
+            },
+          )
+        components.Child = vdom(`<div><slot /></div>`)
+        components.W1 = vdom(`<components.Child><slot /></components.Child>`)
+        components.W2 = vdom(`<components.W1><slot /></components.W1>`)
+        return compile(
+          `${setup}<template>
+            <components.W${levels}>${content}</components.W${levels}>
+          </template>`,
+          data as any,
+          components,
+          { vapor: true, ssr },
+        )
+      }
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(App(true)),
+      )
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = html
+      const div = container.querySelector('div')
+      const app = runtimeVapor
+        .createVaporSSRApp(App(false))
+        .use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(container.querySelector('div')).toBe(div)
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(`<div><b>b</b></div>`)
+      data.show = false
+      await nextTick()
+      expect(visible(container)).toBe(`<div></div>`)
+
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    },
+  )
 })
