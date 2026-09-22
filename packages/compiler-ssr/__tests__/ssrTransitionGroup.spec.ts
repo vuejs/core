@@ -196,6 +196,21 @@ describe('transition-group', () => {
       expect(body(template, false)).not.toContain('<!--[-->')
     })
 
+    // the client creates the block whether or not the branch renders
+    test.each([
+      ['a static tag', `<transition-group tag="ul">`],
+      ['a dynamic tag', `<transition-group :tag="t">`],
+      ['no tag', `<transition-group>`],
+    ])('a v-if without v-else keeps its place with %s', (_, open) => {
+      const template = `${open}<div v-if="ok"/><div/></transition-group>`
+      expect(body(template, true)).toContain('<!---->')
+      expect(body(template, false)).not.toContain('<!---->')
+      // template comments stay out, as the vapor compiler leaves them out
+      expect(
+        body(`${open}<!-- c --><div/></transition-group>`, true),
+      ).not.toContain('<!-- c -->')
+    })
+
     test('output', () => {
       expect(
         body(

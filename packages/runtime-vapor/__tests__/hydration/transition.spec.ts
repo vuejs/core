@@ -1155,6 +1155,44 @@ describe('Vapor Mode hydration', () => {
       expect(items.every(li => li.isConnected)).toBe(true)
     })
 
+    // the server leaves the comments of a group out, but not the place of a
+    // `v-if` that renders nothing: the client creates its block regardless
+    test.each([
+      [
+        'with tag',
+        `<TransitionGroup tag="ul" :css="false">`,
+        `</TransitionGroup>`,
+      ],
+      ['without tag', `<TransitionGroup :css="false">`, `</TransitionGroup>`],
+    ])(
+      '%s should hydrate a v-if that renders nothing ahead of a sibling',
+      async (_, open, close) => {
+        const data = reactive({ show: false })
+        const { container, html } = await testHydration(
+          `<template>
+            ${open}<li v-if="data.show" key="a">A</li><li key="b">B</li>${close}
+          </template>`,
+          {},
+          data,
+        )
+        expect(html).toContain(`<!----><li>B</li>`)
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        const b = container.querySelector('li')
+        const visible = () => container.innerHTML.replace(/<!--[^>]*-->/g, '')
+
+        data.show = true
+        await nextTick()
+        expect(visible()).toContain(`<li>A</li><li>B</li>`)
+        expect(container.querySelectorAll('li')[1]).toBe(b)
+        data.show = false
+        await nextTick()
+        expect(visible()).not.toContain(`<li>A</li>`)
+        expect(container.querySelector('li')).toBe(b)
+      },
+    )
+
     test('without tag should hydrate the v-for children', async () => {
       const data = ref({
         items: [1],
