@@ -83,7 +83,7 @@ export function next(node: Node, isText?: boolean): Node {
     const parent = node.parentNode
     if (isText) result = resolveBlankTextTarget(result, parent!)
     // advance the $llc cache when `node` is the cached logical child; the
-    // helper enforces the "$llc implies $idx" invariant for us
+    // helper keeps `$lli` in step for us
     if (parent) updateLastLocatedLogicalChild(parent, node, result, 1)
     return result!
   }
