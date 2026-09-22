@@ -1,11 +1,15 @@
 import {
+  type AttributeNode,
+  type DirectiveNode,
   type ElementNode,
   ElementTypes,
   ErrorCodes,
   NodeTypes,
+  type SimpleExpressionNode,
   type TemplateChildNode,
   createCompilerError,
   createSimpleExpression,
+  isCommentOrWhitespace,
 } from '@vue/compiler-dom'
 import {
   type NodeTransform,
@@ -23,7 +27,12 @@ import {
 import { VaporBlockShape, VaporIfFlags, extend } from '@vue/shared'
 import { newBlock, wrapTemplate } from './utils'
 import { getSiblingIf } from './transformComment'
-import { getBlockShape, isInTransition, isStaticExpression } from '../utils'
+import {
+  findProp,
+  getBlockShape,
+  isInTransition,
+  isStaticExpression,
+} from '../utils'
 
 export const transformVIf: NodeTransform = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -114,6 +123,11 @@ export function processIf(
       context.options.onError(
         createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
       )
+    }
+
+    // check if user is forcing same key on different branches
+    if (__DEV__ || !__BROWSER__) {
+      checkSameKey(node, context)
     }
 
     const comments = context.comment
@@ -289,4 +303,65 @@ function shouldForceMultiRoot(context: TransformContext<ElementNode>): boolean {
       prop => prop.type === NodeTypes.DIRECTIVE && prop.name === 'for',
     )
   )
+}
+
+function checkSameKey(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): void {
+  const key = findProp(node, 'key')
+  const parent = context.parent
+  if (!key || !parent) return
+
+  // The v-if chain is still intact in the AST: `wrapTemplate` copies nodes
+  // instead of replacing them in the parent, so walk back over the preceding
+  // branches and compare their keys with this one.
+  const siblings = parent.node.children
+  let i = siblings.indexOf(node)
+  while (i > 0) {
+    const sibling = siblings[--i]
+    if (isCommentOrWhitespace(sibling)) continue
+    if (sibling.type !== NodeTypes.ELEMENT) return
+    const dir = sibling.props.find(
+      prop =>
+        prop.type === NodeTypes.DIRECTIVE &&
+        (prop.name === 'if' || prop.name === 'else-if'),
+    ) as DirectiveNode | undefined
+    if (!dir) return
+    if (isSameKey(findProp(sibling, 'key'), key)) {
+      context.options.onError(
+        createCompilerError(ErrorCodes.X_V_IF_SAME_KEY, key.loc),
+      )
+    }
+    if (dir.name === 'if') return
+  }
+}
+
+function isSameKey(
+  a: AttributeNode | DirectiveNode | undefined,
+  b: AttributeNode | DirectiveNode,
+): boolean {
+  if (!a || a.type !== b.type) {
+    return false
+  }
+  if (a.type === NodeTypes.ATTRIBUTE) {
+    if (a.value!.content !== (b as AttributeNode).value!.content) {
+      return false
+    }
+  } else {
+    // directive
+    const exp = a.exp!
+    const branchExp = (b as DirectiveNode).exp!
+    if (exp.type !== branchExp.type) {
+      return false
+    }
+    if (
+      exp.type !== NodeTypes.SIMPLE_EXPRESSION ||
+      exp.isStatic !== (branchExp as SimpleExpressionNode).isStatic ||
+      exp.content !== (branchExp as SimpleExpressionNode).content
+    ) {
+      return false
+    }
+  }
+  return true
 }
