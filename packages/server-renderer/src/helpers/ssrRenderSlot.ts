@@ -31,8 +31,6 @@ export function ssrRenderSlot(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
 ): void {
-  // template-compiled slots are always rendered as fragments
-  push(`<!--[-->`)
   ssrRenderSlotInner(
     slots,
     slotName,
@@ -42,7 +40,6 @@ export function ssrRenderSlot(
     parentComponent,
     slotScopeId,
   )
-  push(`<!--]-->`)
 }
 
 export function ssrRenderSlotInner(
@@ -53,9 +50,13 @@ export function ssrRenderSlotInner(
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  // a transition renders the slot bare: otherwise it is a range, `<!--(-->`
+  // around the fallback, which a vapor client has to know before it renders
+  // anything
   transition?: boolean,
 ): void {
   const slotFn = slots[slotName]
+  let fallback = false
   if (slotFn) {
     const slotBuffer: SSRBufferItem[] = []
     const bufferedPush = (item: SSRBufferItem) => {
@@ -71,6 +72,10 @@ export function ssrRenderSlotInner(
     )
     if (isArray(ret)) {
       const validSlotContent = ensureValidVNode(ret)
+      if (!transition) {
+        fallback = !validSlotContent && !!fallbackRenderFn
+        push(fallback ? `<!--(-->` : `<!--[-->`)
+      }
       if (validSlotContent) {
         // normal slot
         renderVNodeChildren(
@@ -97,6 +102,8 @@ export function ssrRenderSlotInner(
             break
           }
         }
+        fallback = isEmptySlot && !!fallbackRenderFn
+        push(fallback ? `<!--(-->` : `<!--[-->`)
       }
       if (isEmptySlot) {
         if (fallbackRenderFn) {
@@ -110,13 +117,16 @@ export function ssrRenderSlotInner(
         // Therefore, here we need to avoid rendering it as a fragment again.
         let start = 0
         let end = slotBuffer.length
-        if (
-          transition &&
-          slotBuffer[0] === '<!--[-->' &&
-          slotBuffer[end - 1] === '<!--]-->'
-        ) {
-          start++
-          end--
+        if (transition) {
+          const first = slotBuffer[0]
+          if (
+            (first === '<!--[-->' || first === '<!--(-->') &&
+            slotBuffer[end - 1] ===
+              (first === '<!--(-->' ? '<!--)-->' : '<!--]-->')
+          ) {
+            start++
+            end--
+          }
         }
 
         if (start < end) {
@@ -128,11 +138,18 @@ export function ssrRenderSlotInner(
         }
       }
     }
-  } else if (fallbackRenderFn) {
-    fallbackRenderFn()
-  } else if (transition) {
-    push(`<!---->`)
+  } else {
+    if (!transition) {
+      fallback = !!fallbackRenderFn
+      push(fallback ? `<!--(-->` : `<!--[-->`)
+    }
+    if (fallbackRenderFn) {
+      fallbackRenderFn()
+    } else if (transition) {
+      push(`<!---->`)
+    }
   }
+  if (!transition) push(fallback ? `<!--)-->` : `<!--]-->`)
 }
 
 const commentTestRE = /^<!--[\s\S]*-->$/

@@ -42,6 +42,7 @@ import {
 import * as runtimeDom from '@vue/runtime-dom'
 import type { HMRRuntime } from '../src/hmr'
 import type { InternalRenderFunction } from '../src/component'
+import { forEachElement } from '../src/hydrationStrategies'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { type CompilerOptions, compile } from '@vue/compiler-dom'
 import { PatchFlags, normalizeStyle } from '@vue/shared'
@@ -4315,6 +4316,73 @@ describe('SSR hydration', () => {
 
       expect(el.getAttribute('id')).toBe('client')
       expect(el.getAttribute('value')).toBe('server')
+    })
+  })
+  // `<!--(-->`…`<!--)-->`: a slot fallback the server rendered for vapor. vdom
+  // never needs to tell it from a fragment, only to take it for one.
+  describe('slot fallback range', () => {
+    const fallback = () => [h('p', 'fallback')]
+
+    test('hydrates a fragment the server wrapped as a slot fallback', () => {
+      const html = `<div><!--(--><p>fallback</p><!--)--><span>after</span></div>`
+      const { vnode, container } = mountWithHydration(html, () =>
+        h('div', [renderSlot({}, 'default', {}, fallback), h('span', 'after')]),
+      )
+      const [outlet, after] = vnode.children as VNode[]
+      expect((outlet.children as VNode[])[0].el).toBe(
+        container.querySelector('p'),
+      )
+      expect(after.el).toBe(container.querySelector('span'))
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('steps over such a range at the root of a component', () => {
+      // the node after the component is found by lookahead, not from what
+      // the component renders
+      const Comp = {
+        render(this: any) {
+          return renderSlot(this.$slots, 'default', {}, () => [
+            h(Fragment, [h('p', 'a'), h('p', 'b')]),
+          ])
+        },
+      }
+      const html = `<div><!--(--><!--[--><p>a</p><p>b</p><!--]--><!--)--><span>after</span></div>`
+      const { vnode, container } = mountWithHydration(html, () =>
+        h('div', [h(Comp), h('span', 'after')]),
+      )
+      expect((vnode.children as VNode[])[1].el).toBe(
+        container.querySelector('span'),
+      )
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('lazy hydration finds the elements inside such a range', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<!--(--><p>a</p><!--[--><b>b</b><!--]--><!--)--><i>outside</i>`
+      const found: string[] = []
+      forEachElement(container.firstChild!, el => {
+        found.push(el.tagName)
+      })
+      expect(found).toEqual(['P', 'B'])
+    })
+
+    // the node handed to the mismatch is inside the range by then: the range
+    // it closes is still a `[` one, whose nested ranges have to be counted
+    test('removes the whole range of a static vnode that mismatches', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div><!--[--><!--x--><!--[--><!--]--><!--]--><span>after</span></div>`
+      createSSRApp({
+        render: () =>
+          h('div', [createStaticVNode('<b>x</b>', 1), h('span', 'after')]),
+      }).mount(container)
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration children mismatch`).toHaveBeenWarned()
+      expect(container.innerHTML).toContain(`<!--[--><b>x</b><span>`)
+      expect(container.innerHTML).not.toContain(`<!--]-->`)
     })
   })
 })

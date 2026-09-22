@@ -6,7 +6,7 @@ import {
   mountComponent,
   unmountComponent,
 } from './component'
-import { isClaimedAnchor, isComment, isHydrating } from './dom/hydration'
+import { isClaimedAnchor, isHydrating, isRangeEnd } from './dom/hydration'
 import {
   MoveType,
   type TransitionHooks,
@@ -513,9 +513,9 @@ export function findBlockBoundary(block: Block): {
   // already includes its own end or runtime empty text anchor.
   if (
     nextNode &&
-    isComment(nextNode, ']') &&
+    isRangeEnd(nextNode) &&
     isFragmentBlock(boundaryBlock) &&
-    !isComment(lastChild, ']') &&
+    !isRangeEnd(lastChild) &&
     !(lastChild.nodeType === 3 && !(lastChild as Text).data)
   ) {
     nextNode = nextNode.nextSibling

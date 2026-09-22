@@ -990,7 +990,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--]-->
+      <!--(--><div>foo</div><!--)-->
       "
     `,
     )
@@ -1002,7 +1002,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>baz</div><!--]-->
+      <!--(--><div>baz</div><!--)-->
       "
     `,
     )
@@ -1012,7 +1012,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>bar</span><!--if--><!--]-->
+      <!--(--><span>bar</span><!--if--><!--)-->
       "
     `,
     )
@@ -1022,7 +1022,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>qux</span><!--if--><!--]-->
+      <!--(--><span>qux</span><!--if--><!--)-->
       "
     `,
     )
@@ -1114,7 +1114,7 @@ describe('VDOM interop', () => {
       '<!--[--><div>banner</div><!--]-->',
     )
     expect(formatHtml(container.innerHTML)).toContain(
-      '<!--[--><svg><path></path></svg><span>Vue.js</span><!--]-->',
+      '<!--(--><svg><path></path></svg><span>Vue.js</span><!--slot--><!--slot--><!--)-->',
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1122,7 +1122,7 @@ describe('VDOM interop', () => {
     data.title = 'Vapor'
     await nextTick()
     expect(formatHtml(container.innerHTML)).toContain(
-      '<!--[--><svg><path></path></svg><span>Vapor</span><!--]-->',
+      '<!--(--><svg><path></path></svg><span>Vapor</span><!--slot--><!--slot--><!--)-->',
     )
   })
 

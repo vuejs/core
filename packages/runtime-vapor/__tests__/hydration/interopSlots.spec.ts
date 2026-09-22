@@ -1,4 +1,4 @@
-import { nextTick, reactive, ref } from '@vue/runtime-dom'
+import { h, nextTick, reactive, ref, renderSlot } from '@vue/runtime-dom'
 import { VueServerRenderer, compile, runtimeDom, runtimeVapor } from '../_utils'
 import { setIsHydratingEnabled } from '../../src/dom/hydration'
 import {
@@ -174,7 +174,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--]-->
+      <!--(--><div>foo</div><!--)-->
       "
     `,
     )
@@ -186,7 +186,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>bar</div><!--]-->
+      <!--(--><div>bar</div><!--)-->
       "
     `,
     )
@@ -518,7 +518,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>foo</span><!--]-->
+      <!--(--><span>foo</span><!--)-->
       "
     `,
     )
@@ -530,7 +530,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>bar</span><!--]-->
+      <!--(--><span>bar</span><!--)-->
       "
     `,
     )
@@ -578,7 +578,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--]-->
+      <!--(--><div>foo</div><!--)-->
       "
     `,
     )
@@ -590,7 +590,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>baz</div><!--]-->
+      <!--(--><div>baz</div><!--)-->
       "
     `,
     )
@@ -600,7 +600,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>bar</span><!--if--><!--]-->
+      <!--(--><span>bar</span><!--if--><!--)-->
       "
     `,
     )
@@ -610,7 +610,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>qux</span><!--if--><!--]-->
+      <!--(--><span>qux</span><!--if--><!--)-->
       "
     `,
     )
@@ -664,7 +664,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><!----><div>foo</div><!--]-->
+      <!--(--><!----><div>foo</div><!--)-->
       "
     `,
     )
@@ -677,7 +677,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><i>prefix</i><div>foo</div><!--]-->
+      <!--(--><i>prefix</i><div>foo</div><!--)-->
       "
     `,
     )
@@ -737,7 +737,7 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><div>local fallback</div><!--]-->
+      <!--(--><div>local fallback</div><!--)-->
       <!--]-->
       "
     `,
@@ -751,7 +751,7 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><section>outlet fallback</section><!--]-->
+      <!--(--><section>outlet fallback</section><!--)-->
       <!--]-->
       "
     `,
@@ -763,7 +763,7 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><section>updated outlet fallback</section><!--]-->
+      <!--(--><section>updated outlet fallback</section><!--)-->
       <!--]-->
       "
     `,
@@ -776,7 +776,7 @@ describe('VDOM interop', () => {
       `
       "
       <!--[-->
-      <!--[--><div>updated local fallback</div><!--]-->
+      <!--(--><div>updated local fallback</div><!--)-->
       <!--]-->
       "
     `,
@@ -890,10 +890,10 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><div>foo</div><p>bar</p><!--]-->
-        "
-      `,
+      "
+      <!--(--><div>foo</div><p>bar</p><!--)-->
+      "
+    `,
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -903,20 +903,20 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><div>qux</div><p>quux</p><!--]-->
-        "
-      `,
+      "
+      <!--(--><div>qux</div><p>quux</p><!--)-->
+      "
+    `,
     )
 
     data.show = true
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><span>baz</span><!--if--><!--]-->
-        "
-      `,
+      "
+      <!--(--><span>baz</span><!--if--><!--)-->
+      "
+    `,
     )
   })
 
@@ -969,24 +969,24 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[-->
-        <!--[--><div>foo</div><!----><!--]-->
-        <i>tail</i><!--]-->
-        "
-      `,
+      "
+      <!--[-->
+      <!--(--><div>foo</div><!----><!--)-->
+      <i>tail</i><!--]-->
+      "
+    `,
     )
 
     data.extra = true
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[-->
-        <!--[--><div>foo</div><p>bar</p><!--]-->
-        <i>tail</i><!--]-->
-        "
-      `,
+      "
+      <!--[-->
+      <!--(--><div>foo</div><p>bar</p><!--)-->
+      <i>tail</i><!--]-->
+      "
+    `,
     )
   })
 
@@ -1025,12 +1025,12 @@ describe('VDOM interop', () => {
 
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><div>
-        <!--[-->foo<!--slot--><!--]-->
-        </div><!--]-->
-        "
-      `,
+      "
+      <!--(--><div>
+      <!--(-->foo<!--slot--><!--)-->
+      </div><!--)-->
+      "
+    `,
     )
 
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1039,14 +1039,21 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
-        "
-        <!--[--><div>
-        <!--[-->bar<!--slot--><!--]-->
-        </div><!--]-->
-        "
-      `,
+      "
+      <!--(--><div>
+      <!--(-->bar<!--slot--><!--)-->
+      </div><!--)-->
+      "
+    `,
     )
   })
+
+  // `compile()` turns a script-less SFC into a vapor one: keep the script
+  const setup = `<script setup>const data = _data; const components = _components</script>`
+  const visible = (container: Element) =>
+    container.innerHTML.replace(/<!--[^>]*-->/g, '')
+  const count = (container: Element, marker: string) =>
+    container.innerHTML.split(marker).length - 1
 
   describe.each([
     ['in a vdom component', 'Child'],
@@ -1065,8 +1072,6 @@ describe('VDOM interop', () => {
       ],
     ])('%s', async (_, child, shown) => {
       const data = reactive({ show: false })
-      // `compile()` turns a script-less SFC into a vapor one: keep the script
-      const setup = `<script setup>const data = _data; const components = _components</script>`
       const { container, html } = await testWithVaporApp(
         `${setup}<template>
           <components.${entry}><b v-if="data.show">b</b></components.${entry}>
@@ -1083,24 +1088,225 @@ describe('VDOM interop', () => {
         },
         data,
       )
-      const visible = () => container.innerHTML.replace(/<!--[^>]*-->/g, '')
-      const count = (marker: string) =>
-        container.innerHTML.split(marker).length - 1
-
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       // every server-rendered fragment marker is adopted: none recreated
-      expect(count('<!--[-->')).toBe(html.split('<!--[-->').length - 1)
-      expect(count('<!--]-->')).toBe(html.split('<!--]-->').length - 1)
+      expect(count(container, '<!--[-->')).toBe(
+        html.split('<!--[-->').length - 1,
+      )
+      expect(count(container, '<!--]-->')).toBe(
+        html.split('<!--]-->').length - 1,
+      )
 
       data.show = true
       await nextTick()
-      expect(visible()).toBe(shown)
+      expect(visible(container)).toBe(shown)
       data.show = false
       await nextTick()
-      expect(visible()).toBe(shown.replace('<b>b</b>', ''))
+      expect(visible(container)).toBe(shown.replace('<b>b</b>', ''))
     })
   })
+
+  // Once everything in it is empty, the server renders an outlet's fallback
+  // in place of its whole content: the forwarded slot and what is around it.
+  test.each([
+    [
+      'forwarded through two vdom components',
+      `<components.Mid><slot/></components.Mid>`,
+      null,
+    ],
+    [
+      'beside a named slot the parent does not provide',
+      `<components.Child><slot/><slot name="b"/></components.Child>`,
+      null,
+    ],
+    [
+      'behind a closed v-if branch',
+      `<components.Child><i v-if="data.sibling">i</i><slot/></components.Child>`,
+      `<i>i</i>`,
+    ],
+    [
+      'ahead of a closed v-if branch',
+      `<components.Child><slot/><i v-if="data.sibling">i</i></components.Child>`,
+      `<i>i</i>`,
+    ],
+  ])(
+    'hydrate the vdom outlet fallback of an empty forwarded vapor slot %s',
+    async (_, wrapper, sibling) => {
+      const data = reactive({ show: false, sibling: false })
+      const { container, html } = await testWithVaporApp(
+        `${setup}<template>
+          <components.Wrapper><b v-if="data.show">b</b></components.Wrapper>
+        </template>`,
+        {
+          Child: {
+            code: `${setup}<template><slot><p>fallback</p></slot></template>`,
+            vapor: false,
+          },
+          Mid: {
+            code: `${setup}<template><components.Child><slot/></components.Child></template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `${setup}<template>${wrapper}</template>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+
+      expect(html).toBe(`<!--(--><p>fallback</p><!--)-->`)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      // the server's markers are adopted: none recreated
+      expect(count(container, '<!--(-->')).toBe(1)
+      expect(count(container, '<!--)-->')).toBe(1)
+      expect(count(container, '<!--]-->')).toBe(0)
+      expect(visible(container)).toBe(`<p>fallback</p>`)
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(`<b>b</b>`)
+      data.show = false
+      await nextTick()
+      expect(visible(container)).toBe(`<p>fallback</p>`)
+
+      if (sibling) {
+        data.sibling = true
+        await nextTick()
+        expect(visible(container)).toBe(sibling)
+        data.sibling = false
+        await nextTick()
+        expect(visible(container)).toBe(`<p>fallback</p>`)
+      }
+    },
+  )
+
+  // content the server did render, however it differs from the client's, is
+  // not a fallback to adopt
+  test.each([
+    ['an empty slot', false, `<p>fallback</p>`],
+    ['slot content', true, `<b>b</b>`],
+  ])(
+    'leave a mismatching sibling of a forwarded vapor slot to vdom, beside %s',
+    async (_, show, shown) => {
+      const data = reactive({ show, sibling: false })
+      const { container, app } = await testWithVaporApp(
+        `${setup}<template>
+          <components.Wrapper><b v-if="data.show">b</b></components.Wrapper>
+        </template>`,
+        {
+          Child: {
+            code: `${setup}<template><slot><p>fallback</p></slot></template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `${setup}<template><components.Child><i v-if="data.sibling">i</i><slot/></components.Child></template>`,
+            vapor: false,
+          },
+        },
+        data,
+        reactive({ show, sibling: true }),
+      )
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(visible(container)).toBe(shown)
+
+      data.show = !show
+      await nextTick()
+      data.show = show
+      await nextTick()
+      expect(visible(container)).toBe(shown)
+
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    },
+  )
+
+  test('hydrate a vdom outlet that renders its own fallback inside the one it forwards to', async () => {
+    const data = reactive({ show: false })
+    const { container, html } = await testWithVaporApp(
+      `${setup}<template>
+        <components.Wrapper><b v-if="data.show">b</b></components.Wrapper>
+      </template>`,
+      {
+        Child: {
+          code: `${setup}<template><slot><p>fallback</p></slot></template>`,
+          vapor: false,
+        },
+        Mid: {
+          code: `${setup}<template><components.Child><slot><u>mid</u></slot></components.Child></template>`,
+          vapor: false,
+        },
+        Wrapper: {
+          code: `${setup}<template><components.Mid><slot/></components.Mid></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(html).toBe(`<!--[--><!--(--><u>mid</u><!--)--><!--]-->`)
+    expect(count(container, '<!--]-->')).toBe(1)
+    expect(count(container, '<!--)-->')).toBe(1)
+    expect(visible(container)).toBe(`<u>mid</u>`)
+
+    data.show = true
+    await nextTick()
+    expect(visible(container)).toBe(`<b>b</b>`)
+    data.show = false
+    await nextTick()
+    expect(visible(container)).toBe(`<u>mid</u>`)
+  })
+
+  // a range under the cursor is the fallback's then: the slot has none
+  test.each([
+    [
+      'forwarded through two vdom components',
+      `<components.Mid><slot/></components.Mid>`,
+    ],
+    ['forwarded by one', `<components.Child><slot/></components.Child>`],
+  ])(
+    'hydrate a vdom outlet fallback that starts with a fragment of its own, %s',
+    async (_, wrapper) => {
+      const data = reactive({ show: false })
+      const { container, html } = await testWithVaporApp(
+        `${setup}<template>
+          <components.Wrapper><b v-if="data.show">b</b></components.Wrapper>
+        </template>`,
+        {
+          Child: {
+            code: `${setup}<template><slot><p v-for="i in 2">fallback</p><em>tail</em></slot></template>`,
+            vapor: false,
+          },
+          Mid: {
+            code: `${setup}<template><components.Child><slot/></components.Child></template>`,
+            vapor: false,
+          },
+          Wrapper: {
+            code: `${setup}<template>${wrapper}</template>`,
+            vapor: false,
+          },
+        },
+        data,
+      )
+      const fallback = `<p>fallback</p><p>fallback</p><em>tail</em>`
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      for (const marker of ['<!--(-->', '<!--)-->', '<!--[-->', '<!--]-->']) {
+        expect(count(container, marker)).toBe(html.split(marker).length - 1)
+      }
+      expect(visible(container)).toBe(fallback)
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(`<b>b</b>`)
+      data.show = false
+      await nextTick()
+      expect(visible(container)).toBe(fallback)
+    },
+  )
 
   test('hydrate forwarded slot fallback with nested component before parent close marker', async () => {
     const data = ref('foo')
@@ -1149,9 +1355,9 @@ describe('VDOM interop', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
-      <!--[-->
+      <!--(-->
       <!--[--><span>foo</span><!--if--><!--if--><!--if--><!--]-->
-      <!--slot--><!--]-->
+      <!--slot--><!--)-->
       </div>"
     `)
   })
@@ -1189,9 +1395,8 @@ describe('VDOM interop', () => {
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
-      <!--[-->
-      <!--[--><!--]-->
-      <!--slot--><!--]-->
+      <!--(-->
+      <!--[--><!--slot--><!--for--><!--)-->
       </div>"
     `)
 
@@ -1199,9 +1404,8 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
-      <!--[-->
-      <!--[--><span>foo</span><!--]-->
-      <!--slot--><!--]-->
+      <!--(-->
+      <!--[--><!--slot--><span>foo</span><!--for--><!--)-->
       </div>"
     `)
 
@@ -1209,9 +1413,8 @@ describe('VDOM interop', () => {
     await nextTick()
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
       "<div>
-      <!--[-->
-      <!--[--><span>bar</span><!--]-->
-      <!--slot--><!--]-->
+      <!--(-->
+      <!--[--><!--slot--><span>bar</span><!--for--><!--)-->
       </div>"
     `)
   })
@@ -1390,4 +1593,271 @@ describe('VDOM interop', () => {
       app.unmount()
     }
   })
+
+  // `<!--(-->`…`<!--)-->` wraps a slot fallback the server rendered: the
+  // markup is written by hand.
+  test.each([
+    ['a vdom outlet that renders a vapor slot', false, true],
+    ['a vapor outlet that renders a vdom slot', true, false],
+  ])(
+    'hydrate the slot fallback range of %s',
+    async (_, vaporChild, vaporApp) => {
+      const data: any = reactive({ show: false, msg: 'fallback' })
+      const setup = `<script setup>const data = _data; const components = _components</script>`
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = `<div><!--(--><p>fallback</p><!--)--></div>`
+      const p = container.querySelector('p')!
+
+      const Child = compile(
+        `${setup}<template><div><slot><p>{{ data.msg }}</p></slot></div></template>`,
+        data,
+        {},
+        { vapor: vaporChild },
+      )
+      const App = compile(
+        `${setup}<template><components.Child><b v-if="data.show">b</b></components.Child></template>`,
+        data,
+        { Child },
+        { vapor: vaporApp },
+      )
+      const app = (
+        vaporApp
+          ? runtimeVapor.createVaporSSRApp(App)
+          : runtimeDom.createSSRApp(App)
+      ).use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      const visible = () => container.innerHTML.replace(/<!--[^>]*-->/g, '')
+
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      data.msg = 'updated'
+      await nextTick()
+      expect(container.querySelector('p')).toBe(p)
+      expect(visible()).toBe(`<div><p>updated</p></div>`)
+
+      data.show = true
+      await nextTick()
+      expect(visible()).toBe(`<div><b>b</b></div>`)
+      data.show = false
+      await nextTick()
+      expect(visible()).toBe(`<div><p>updated</p></div>`)
+
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    },
+  )
+
+  // jsdom shows no trace of a node taken out and put back: watch the inserts
+  test.each([
+    ['a vapor outlet', true, true, false],
+    ['a vapor outlet, forwarded', true, true, true],
+    ['a vdom outlet that renders a vapor slot', true, false, false],
+    ['a vdom outlet, forwarded by a vdom component', true, false, true],
+    ['a vapor outlet that renders a vdom slot', false, true, false],
+  ])(
+    'adopt the fallback the server rendered where it is: %s',
+    async (_, vaporApp, vaporChild, forwarded) => {
+      const data = reactive({ show: false, msg: 'fallback' })
+      const moved: string[] = []
+      const watch = (name: 'insertBefore' | 'appendChild') => {
+        const original = Node.prototype[name] as any
+        ;(Node.prototype as any)[name] = function (this: Node, node: Node) {
+          if (node.isConnected) moved.push(node.nodeName)
+          return original.apply(this, arguments)
+        }
+        return () => ((Node.prototype as any)[name] = original)
+      }
+      const restore = [watch('insertBefore'), watch('appendChild')]
+      let container: Element
+      try {
+        ;({ container } = await (vaporApp ? testWithVaporApp : testWithVDOMApp)(
+          `${setup}<template>
+            <components.${forwarded ? 'Wrapper' : 'Child'}><b v-if="data.show">b</b></components.${forwarded ? 'Wrapper' : 'Child'}>
+          </template>`,
+          {
+            Child: {
+              code: `${setup}<template><div><slot><p>{{ data.msg }}</p><i>tail</i></slot></div></template>`,
+              vapor: vaporChild,
+            },
+            Wrapper: {
+              code: `${setup}<template><components.Child><slot/></components.Child></template>`,
+              vapor: vaporChild,
+            },
+          },
+          data,
+        ))
+      } finally {
+        restore.forEach(fn => fn())
+      }
+
+      expect(visible(container)).toBe(`<div><p>fallback</p><i>tail</i></div>`)
+      expect(moved).toEqual([])
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(`<div><b>b</b></div>`)
+      data.show = false
+      await nextTick()
+      expect(visible(container)).toBe(`<div><p>fallback</p><i>tail</i></div>`)
+    },
+  )
+
+  // the server renders `[]` for the whole chain: nothing to adopt
+  test.each([
+    ['no content', ``],
+    ['content that renders nothing', `<b v-if="data.show">b</b>`],
+  ])(
+    'hydrate an empty vdom slot forwarded by vapor components without a fallback: %s',
+    async (_, content) => {
+      const data = reactive({ show: false })
+      const { container, html } = await testWithVDOMApp(
+        `${setup}<template>
+          <components.Wrapper>${content}</components.Wrapper>
+        </template>`,
+        {
+          Child: {
+            code: `${setup}<template><div><slot /></div></template>`,
+            vapor: true,
+          },
+          Wrapper: {
+            code: `${setup}<template><components.Child><slot /></components.Child></template>`,
+            vapor: true,
+          },
+        },
+        data,
+      )
+      expect(html).toBe(`<div><!--[--><!--]--></div>`)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(visible(container)).toBe(`<div></div>`)
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(
+        content ? `<div><b>b</b></div>` : `<div></div>`,
+      )
+    },
+  )
+
+  // the slot's own outlet comes first among its outlets, and is no fragment
+  // of the fallback range the server rendered further out
+  test('hydrate the fallback of an outer vdom outlet when the outlet of the slot has one that renders nothing', async () => {
+    const data = reactive({ show: false, items: [] as number[] })
+    const { container, html } = await testWithVaporApp(
+      `${setup}<template>
+        <components.Wrapper><b v-if="data.show">b</b></components.Wrapper>
+      </template>`,
+      {
+        Child: {
+          code: `${setup}<template><slot><p>fallback</p></slot></template>`,
+          vapor: false,
+        },
+        Mid: {
+          code: `${setup}<template><components.Child><slot><u>mid</u></slot></components.Child></template>`,
+          vapor: false,
+        },
+        Wrapper: {
+          code: `${setup}<template><components.Mid><slot><p v-for="i in data.items" :key="i">x</p></slot></components.Mid></template>`,
+          vapor: false,
+        },
+      },
+      data,
+    )
+    expect(html).toBe(`<!--[--><!--(--><u>mid</u><!--)--><!--]-->`)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(visible(container)).toBe(`<u>mid</u>`)
+
+    data.show = true
+    await nextTick()
+    expect(visible(container)).toBe(`<b>b</b>`)
+    data.show = false
+    await nextTick()
+    expect(visible(container)).toBe(`<u>mid</u>`)
+  })
+
+  // without `ssrRender` (a render function, or a client-compiled library
+  // component) the server renders the outlet as a vnode; the fallback is
+  // marked however the vapor slot reached it: `h(Child, null, slots)` renders
+  // no outlet in between, a template's does
+  test.each([
+    ['given', 'render function'],
+    ['passed on as it is', 'template'],
+    ['passed on as it is', 'render function'],
+    ['forwarded by a template', 'render function'],
+  ])(
+    'hydrate the fallback of a vdom outlet a vapor slot was %s (%s child)',
+    async (forward, kind) => {
+      const data = reactive({ show: false })
+      const App = (ssr: boolean) => {
+        const Child =
+          kind === 'template'
+            ? compile(
+                `${setup}<template><div><slot><p>fallback</p></slot></div></template>`,
+                data as any,
+                {},
+                { vapor: false, ssr },
+              )
+            : {
+                render(this: any) {
+                  return h('div', [
+                    renderSlot(this.$slots, 'default', {}, () => [
+                      h('p', 'fallback'),
+                    ]),
+                  ])
+                },
+              }
+        const Forward =
+          forward === 'given'
+            ? Child
+            : forward === 'forwarded by a template'
+              ? compile(
+                  `${setup}<template><components.Child><slot /></components.Child></template>`,
+                  data as any,
+                  { Child },
+                  { vapor: false, ssr },
+                )
+              : {
+                  setup(_: any, { slots }: any) {
+                    return () => h(Child, null, slots)
+                  },
+                }
+        return compile(
+          `${setup}<template>
+            <components.Forward><b v-if="data.show">b</b></components.Forward>
+          </template>`,
+          data as any,
+          { Forward },
+          { vapor: true, ssr },
+        )
+      }
+      const html = await VueServerRenderer.renderToString(
+        runtimeDom.createSSRApp(App(true)),
+      )
+      expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
+
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+      container.innerHTML = html
+      const p = container.querySelector('p')
+      const app = runtimeVapor
+        .createVaporSSRApp(App(false))
+        .use(runtimeVapor.vaporInteropPlugin)
+      app.mount(container)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      expect(container.querySelector('p')).toBe(p)
+
+      data.show = true
+      await nextTick()
+      expect(visible(container)).toBe(`<div><b>b</b></div>`)
+      data.show = false
+      await nextTick()
+      expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
+
+      app.unmount()
+      expect(container.innerHTML).toBe('')
+    },
+  )
 })

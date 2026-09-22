@@ -178,7 +178,9 @@ export function createHydrationFunctions(
     optimized = false,
   ): Node | null => {
     optimized = optimized || !!vnode.dynamicChildren
-    const isFragmentStart = isComment(node) && node.data === '['
+    // `(` opens a slot fallback: a range like a fragment's
+    const isFragmentStart =
+      isComment(node) && (node.data === '[' || node.data === '(')
     const onMismatch = () =>
       handleMismatch(
         node,
@@ -780,16 +782,32 @@ export function createHydrationFunctions(
     }
 
     const container = parentNode(node)!
-    const next = hydrateChildren(
-      nextSibling(node)!,
-      vnode,
-      container,
-      parentComponent,
-      parentSuspense,
-      slotScopeIds,
-      optimized,
-    )
-    if (next && isComment(next) && next.data === ']') {
+    const first = nextSibling(node)!
+    // the client kept the forwarded vapor slot and what is around it, the
+    // server rendered the outlet's fallback in their place
+    const next =
+      vnode.vo && (node as Comment).data === '('
+        ? getVaporInterface(parentComponent, vnode).hydrateSlotOutlet(
+            vnode,
+            node,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+          )
+        : hydrateChildren(
+            first,
+            vnode,
+            container,
+            parentComponent,
+            parentSuspense,
+            slotScopeIds,
+            optimized,
+          )
+    if (
+      next &&
+      isComment(next) &&
+      next.data === ((node as Comment).data === '(' ? ')' : ']')
+    ) {
       return nextSibling((vnode.anchor = next))
     } else {
       // fragment didn't hydrate successfully, since we didn't get a end anchor
@@ -817,7 +835,7 @@ export function createHydrationFunctions(
           node,
           node.nodeType === DOMNodeTypes.TEXT
             ? `(text)`
-            : isComment(node) && node.data === '['
+            : isComment(node) && (node.data === '[' || node.data === '(')
               ? `(start of fragment)`
               : ``,
           `\n- expected on client:`,
@@ -866,8 +884,10 @@ export function createHydrationFunctions(
   // looks ahead for a start and closing comment node
   const locateClosingAnchor = (
     node: Node | null,
-    open = '[',
-    close = ']',
+    // the pair of the range `node` opens: a mismatch hands in a node inside a
+    // `[` range as well
+    open: string = node && isComment(node) && node.data === '(' ? '(' : '[',
+    close: string = open === '(' ? ')' : ']',
   ): Node | null => {
     let match = 0
     while (node) {

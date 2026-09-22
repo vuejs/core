@@ -3,14 +3,11 @@ import { DYNAMIC, IF, NATIVE_CHILDREN } from '../../src/fragmentFlags'
 import {
   claimAnchor,
   hydrateNode,
-  setCurrentHydrationNode,
   setIsHydratingEnabled,
 } from '../../src/dom/hydration'
 import {
   type AnchorPlan,
-  queuePendingSlotContentAnchor,
   resolveDynamicAnchor,
-  startPendingSlotContent,
   withHydratingSlotBoundary,
 } from '../../src/dom/hydrateFragment'
 
@@ -180,115 +177,6 @@ describe('resolveDynamicAnchor', () => {
     expect(create.parent).toBe(host)
     expect(create.next).toBe(footer)
     expect(create.mark).toBeUndefined()
-  })
-
-  test('empty inner v-if under pending slot content creates before fallback', () => {
-    const host = document.createElement('div')
-    const start = document.createComment('[')
-    const end = document.createComment(']')
-    host.append(start, end)
-
-    const plan = resolveWithCursor(start, () =>
-      withHydratingSlotBoundary(() => {
-        const finish = startPendingSlotContent(start)
-        try {
-          return resolveDynamicAnchor(
-            new DynamicFragment(IF, 'if', false, false),
-            true,
-          )
-        } finally {
-          finish(false)
-        }
-      }),
-    )
-
-    const pending = expectKind(plan, 'pending')
-    expect(pending.parent).toBe(host)
-    expect(pending.slotEnd).toBe(end)
-  })
-
-  test('rendered invalid fragment waits for pending slot content decision', () => {
-    const host = document.createElement('div')
-    const start = document.createComment('[')
-    const end = document.createComment(']')
-    host.append(start, end)
-
-    const plan = resolveWithCursor(start, () =>
-      withHydratingSlotBoundary(() => {
-        const finish = startPendingSlotContent(start)
-        try {
-          const frag = new DynamicFragment(0, 'keyed', false, false)
-          frag.nodes = document.createComment('')
-          return resolveDynamicAnchor(frag, false)
-        } finally {
-          finish(false)
-        }
-      }),
-    )
-
-    const pending = expectKind(plan, 'pending')
-    expect(pending.parent).toBe(host)
-    expect(pending.slotEnd).toBe(end)
-  })
-
-  test('rendered invalid fragment reuses its anchor after a markerless pending range', () => {
-    const host = document.createElement('div')
-    const anchor = document.createComment('keyed')
-    host.append(anchor)
-
-    const plan = resolveWithCursor(anchor, () =>
-      withHydratingSlotBoundary(() => {
-        const finish = startPendingSlotContent(anchor)
-        try {
-          setCurrentHydrationNode(null)
-          const frag = new DynamicFragment(0, 'keyed', false, false)
-          frag.nodes = anchor
-          return resolveDynamicAnchor(frag, false)
-        } finally {
-          finish(false)
-        }
-      }),
-    )
-
-    const reuse = expectKind(plan, 'reuse')
-    expect(reuse.node).toBe(anchor)
-    expect(reuse.resetNodes).toBe(true)
-  })
-
-  test('nested invalid pending slot content preserves outer pending anchors', () => {
-    const host = document.createElement('div')
-    const start = document.createComment('[')
-    const end = document.createComment(']')
-    host.append(start, end)
-    const calls: string[] = []
-
-    setIsHydratingEnabled(true)
-    try {
-      hydrateNode(start, () => {
-        withHydratingSlotBoundary(() => {
-          const finishOuter = startPendingSlotContent(start)
-          queuePendingSlotContentAnchor({
-            onContent: () => calls.push('outer content'),
-            onFallback: () => calls.push('outer fallback'),
-          })
-
-          const finishNested = startPendingSlotContent(start)
-          queuePendingSlotContentAnchor({
-            onContent: () => calls.push('nested content'),
-            onFallback: () => calls.push('nested fallback'),
-          })
-          finishNested(false)
-
-          expect(calls).toEqual(['nested fallback'])
-
-          finishOuter(true)
-        })
-      })
-    } finally {
-      setIsHydratingEnabled(false)
-    }
-
-    expect(calls).toEqual(['nested fallback', 'outer content'])
   })
 
   test('empty inner v-if that consumed the slot range reuses the slot end anchor', () => {

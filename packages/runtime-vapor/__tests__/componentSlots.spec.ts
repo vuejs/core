@@ -77,10 +77,7 @@ import {
   recheckSlotResolution,
 } from '../src/slotFragment'
 import {
-  getCurrentSlotEndAnchor,
   hydrateDynamicFragmentAnchor,
-  isPendingSlotContent,
-  startPendingSlotContent,
   withHydratingSlotBoundary,
 } from '../src/dom/hydrateFragment'
 
@@ -1178,47 +1175,6 @@ describe('component: slots', () => {
       expect(cleanup).toHaveBeenCalledTimes(1)
     })
 
-    test('withHydratingSlotBoundary isolates pending content state between boundaries without local markers', () => {
-      const start = document.createComment('[')
-      const end = document.createComment(']')
-      const host = document.createElement('div')
-      host.append(start, end)
-
-      hydrateNode(start, () => {
-        withHydratingSlotBoundary(() => {
-          const outerEnd = getCurrentSlotEndAnchor()
-          expect(outerEnd).toBe(end)
-
-          setCurrentHydrationNode(end)
-
-          withHydratingSlotBoundary(() => {
-            expect(getCurrentSlotEndAnchor()).toBe(end)
-            expect(isPendingSlotContent()).toBe(false)
-
-            const finish = startPendingSlotContent(start)
-            try {
-              expect(isPendingSlotContent()).toBe(true)
-
-              setCurrentHydrationNode(end)
-              withHydratingSlotBoundary(() => {
-                expect(getCurrentSlotEndAnchor()).toBe(end)
-                expect(isPendingSlotContent()).toBe(false)
-              })
-              expect(isPendingSlotContent()).toBe(true)
-            } finally {
-              finish(true)
-            }
-
-            expect(getCurrentSlotEndAnchor()).toBe(end)
-            expect(isPendingSlotContent()).toBe(false)
-          })
-
-          expect(getCurrentSlotEndAnchor()).toBe(end)
-          expect(isPendingSlotContent()).toBe(false)
-        })
-      })
-    })
-
     test('empty slot hydration does not clean following sibling', async () => {
       const start = document.createComment('[')
       const end = document.createComment(']')
@@ -1298,69 +1254,6 @@ describe('component: slots', () => {
       expect(frag.anchor).toBe(end)
       expect(isClaimedAnchor(end)).toBe(true)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
-    })
-
-    test('pending slot content empty inner v-if keeps detached anchor on fallback', async () => {
-      const start = document.createComment('[')
-      const end = document.createComment(']')
-      const host = document.createElement('div')
-      host.append(start, end)
-      let frag!: DynamicFragment
-
-      setIsHydratingEnabled(true)
-      try {
-        hydrateNode(start, () => {
-          withHydratingSlotBoundary(() => {
-            const finish = startPendingSlotContent(start)
-            try {
-              frag = new DynamicFragment(IF, 'if', false, false)
-              hydrateDynamicFragmentAnchor(frag, true)
-            } finally {
-              finish(false)
-            }
-          })
-        })
-      } finally {
-        setIsHydratingEnabled(false)
-      }
-      await nextTick()
-
-      expect(host.innerHTML).toBe('<!--[--><!--]-->')
-      expect(frag.anchor.parentNode).toBeNull()
-    })
-
-    test('pending slot content empty inner branches adopt anchors in order', () => {
-      const start = document.createComment('[')
-      const first = document.createComment('')
-      const second = document.createComment('')
-      const end = document.createComment(']')
-      const host = document.createElement('div')
-      host.append(start, first, second, end)
-      let firstFrag!: DynamicFragment
-      let secondFrag!: DynamicFragment
-
-      setIsHydratingEnabled(true)
-      try {
-        hydrateNode(start, () => {
-          withHydratingSlotBoundary(() => {
-            const finish = startPendingSlotContent(start)
-            try {
-              firstFrag = new DynamicFragment(IF, 'if', false, false)
-              hydrateDynamicFragmentAnchor(firstFrag, true)
-              secondFrag = new DynamicFragment(IF, 'if', false, false)
-              hydrateDynamicFragmentAnchor(secondFrag, true)
-              finish(true)
-            } finally {
-              finish(true)
-            }
-          })
-        })
-      } finally {
-        setIsHydratingEnabled(false)
-      }
-
-      expect(firstFrag.anchor).toBe(first)
-      expect(secondFrag.anchor).toBe(second)
     })
 
     test('slot resolution state stops fallback scope when fallback body throws', async () => {

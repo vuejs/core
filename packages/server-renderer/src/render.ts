@@ -296,20 +296,23 @@ export function renderVNode(
     case Static:
       push(children as string)
       break
-    case Fragment:
+    case Fragment: {
       if (vnode.slotScopeIds) {
         slotScopeId =
           (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
       }
-      push(`<!--[-->`) // open
+      // a slot fallback (`renderSlot`) is marked like `ssrRenderSlot` does
+      const isFallback = shapeFlag & ShapeFlags.SLOT_FALLBACK
+      push(isFallback ? `<!--(-->` : `<!--[-->`) // open
       renderVNodeChildren(
         push,
         children as VNodeArrayChildren,
         parentComponent,
         slotScopeId,
       )
-      push(`<!--]-->`) // close
+      push(isFallback ? `<!--)-->` : `<!--]-->`) // close
       break
+    }
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
         renderElementVNode(push, vnode, parentComponent, slotScopeId)

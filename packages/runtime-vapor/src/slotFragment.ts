@@ -10,7 +10,7 @@ import {
   remove,
   removeAttachedNodes,
 } from './block'
-import { isHydrating } from './dom/hydration'
+import { isHydrating, isHydratingSlotFallback } from './dom/hydration'
 import { renderWithSlotScopeIds } from './scopeId'
 import {
   type SlotBoundaryContext,
@@ -23,7 +23,8 @@ import {
   isTransitionEnabled,
 } from './transition'
 import { setBlockKey } from './helpers/setKey'
-import type { VaporFragment } from './fragment'
+import { type VaporFragment, isInteropFragment } from './fragment'
+import { isInteropEnabled } from './vdomInteropState'
 
 // Slot resolution.
 //
@@ -43,6 +44,8 @@ import type { VaporFragment } from './fragment'
 interface RenderedSlotFallback {
   block: Block
   onContentInvalid: (() => void)[]
+  // hydration: adopted where the server rendered it
+  adopted: boolean
 }
 
 // Walks the boundary chain outward and renders fallbacks into `scope`. Returns:
@@ -69,9 +72,12 @@ function renderSlotFallback(
       // outlet's fallback replaces the forwarded content and the slotted ids
       // around it
       const getScopeIds = current.getScopeIds
-      const renderFallback = getScopeIds
+      const render = getScopeIds
         ? () => renderWithSlotScopeIds(getScopeIds(), localFallback)
         : localFallback
+      const adopt = isHydratingSlotFallback && current.adoptFallback
+      if (adopt) current.adoptFallback = undefined
+      const renderFallback = adopt ? () => adopt(render) : render
       const content = current.run(
         () =>
           withSlotBoundary(
@@ -98,9 +104,9 @@ function renderSlotFallback(
       )
       if (isValidSlot(content)) {
         selected = true
-        return { block: content, onContentInvalid }
+        return { block: content, onContentInvalid, adopted: !!adopt }
       }
-      result = { block: content, onContentInvalid }
+      result = { block: content, onContentInvalid, adopted: !!adopt }
     }
 
     boundary = current.getParent()
@@ -255,8 +261,25 @@ function renderFallbackInScope(
   return {
     block: renderedFallback.block,
     onContentInvalid: renderedFallback.onContentInvalid,
+    adopted: renderedFallback.adopted,
     scope,
   }
+}
+
+// hydration, behind `isHydratingSlotFallback`: the fallback adopted from the server is
+// in the DOM already and stays where the server put it. A vdom one keeps its
+// own record of where that is.
+export function placeAdoptedFallback(
+  state: SlotResolutionState,
+  parentNode: ParentNode,
+  anchor: Node | null,
+): boolean {
+  if (!state.fallbackInserted) return false
+  const fallback = state.activeFallback
+  if (isInteropEnabled && isInteropFragment(fallback)) {
+    fallback.insert!(parentNode, anchor)
+  }
+  return true
 }
 
 export function insertActiveSlotFallback(
@@ -268,7 +291,11 @@ export function insertActiveSlotFallback(
     return
   }
   const parentNode = state.getParentNode()
-  if (!parentNode) {
+  if (
+    !parentNode ||
+    (isHydratingSlotFallback &&
+      placeAdoptedFallback(state, parentNode, state.getAnchor()))
+  ) {
     return
   }
   if (moveType === undefined) {
@@ -288,11 +315,12 @@ function commitSlotFallback(
   scope: EffectScope,
   onContentInvalid: (() => void)[],
   detachContent: boolean,
+  adopted: boolean,
 ): void {
   state.activeFallback = block
   state.activeFallbackInvalidCallbacks = onContentInvalid
   state.fallbackScope = scope
-  state.fallbackInserted = isHydrating
+  state.fallbackInserted = isHydrating || adopted
   if (isTransitionEnabled) {
     if (state.$transition) {
       // Match VDOM slot fallback branch identity so fallback enter does not
@@ -339,6 +367,7 @@ function renderAndCommitSlotFallback(
       result.scope,
       result.onContentInvalid,
       !hadFallback,
+      result.adopted,
     )
   }
 }

@@ -169,7 +169,6 @@ import {
   isSlotOutletFragment,
 } from './fragment'
 import { NATIVE_CHILDREN, SLOT } from './fragmentFlags'
-import { resolvePendingSlotContent } from './dom/hydrateFragment'
 import type { VaporElement } from './apiDefineCustomElement'
 import {
   currentUnmountSuspense,
@@ -654,7 +653,6 @@ interface ComponentHydration {
 function enterComponentHydration(
   component: VaporComponent,
 ): ComponentHydration {
-  resolvePendingSlotContent()
   const claim = component.__multiRoot ? createFragmentClaim() : undefined
   const cursor = enterHydrationCursor(claim, true)
   const close = claim && claim.start ? locateEndAnchor(claim.start) : null
@@ -1247,7 +1245,6 @@ export function createPlainElement(
   const _insertionAnchor = insertionAnchor
   let hydrationCursor: HydrationCursor | null = null
   if (isHydrating) {
-    resolvePendingSlotContent()
     hydrationCursor = enterHydrationCursor()
   } else {
     resetInsertionState()

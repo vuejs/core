@@ -475,7 +475,7 @@ function testRender(type: string, render: typeof renderToString) {
             }),
           ),
         ).toBe(
-          `<div>parent<div class="child"><!--[-->fallback<!--]--></div></div>`,
+          `<div>parent<div class="child"><!--(-->fallback<!--)--></div></div>`,
         )
       })
 
@@ -628,7 +628,7 @@ function testRender(type: string, render: typeof renderToString) {
 
         expect(await render(app)).toBe(
           // should only have a single fragment
-          `<div><!--[-->fallback<!--]--></div>`,
+          `<div><!--(-->fallback<!--)--></div>`,
         )
       })
     })
