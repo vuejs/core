@@ -47,6 +47,9 @@ export type HelperConfig = {
   needKey?: boolean
   isSVG?: boolean
   acceptRoot?: boolean
+  // the helper takes `forceHydrate` in the flag argument, so a `.prop` binding
+  // has to opt in to writing the property during hydration
+  forceHydrate?: boolean
 }
 
 // this should be kept in sync with runtime-vapor/src/dom/prop.ts
@@ -56,10 +59,10 @@ const helpers = {
   setClass: { name: 'setClass' },
   setClassName: { name: 'setClassName' },
   setStyle: { name: 'setStyle' },
-  setValue: { name: 'setValue' },
+  setValue: { name: 'setValue', forceHydrate: true },
   setAttr: { name: 'setAttr', needKey: true },
   setProp: { name: 'setProp', needKey: true },
-  setDOMProp: { name: 'setDOMProp', needKey: true },
+  setDOMProp: { name: 'setDOMProp', needKey: true, forceHydrate: true },
 } as const satisfies Partial<Record<VaporHelper, HelperConfig>>
 
 // only the static key prop will reach here
@@ -89,7 +92,12 @@ export function genSetProp(
       `n${oper.element}`,
       resolvedHelper.needKey ? genExpression(key, context) : false,
       propValue,
-      resolvedHelper.isSVG && 'true',
+      (resolvedHelper.isSVG ||
+        // vdom force hydrates a `.prop` binding (runtime-core/src/hydration.ts),
+        // and so does `setDynamicProp` - the static path has to do the same or
+        // the property is never written on a hydrated element
+        (modifier === '.' && resolvedHelper.forceHydrate)) &&
+        'true',
     ),
   ]
 }

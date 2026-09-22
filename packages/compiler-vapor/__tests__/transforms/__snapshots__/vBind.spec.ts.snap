@@ -147,7 +147,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
+  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id, true))
   return n0
 }"
 `;
@@ -169,7 +169,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar))
+  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar, true))
   return n0
 }"
 `;
@@ -180,7 +180,7 @@ const t0 = _template("<progress>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo))
+  _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo, true))
   return n0
 }"
 `;
@@ -202,7 +202,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setValue(n0, _ctx.foo))
+  _renderEffect(() => _setValue(n0, _ctx.foo, true))
   return n0
 }"
 `;
@@ -213,7 +213,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id))
+  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.id, true))
   return n0
 }"
 `;
@@ -277,7 +277,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar))
+  _renderEffect(() => _setDOMProp(n0, "fooBar", _ctx.fooBar, true))
   return n0
 }"
 `;
@@ -288,7 +288,7 @@ const t0 = _template("<progress>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo))
+  _renderEffect(() => _setDOMProp(n0, "value", _ctx.foo, true))
   return n0
 }"
 `;
@@ -310,7 +310,7 @@ const t0 = _template("<div>", 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setValue(n0, _ctx.foo))
+  _renderEffect(() => _setValue(n0, _ctx.foo, true))
   return n0
 }"
 `;

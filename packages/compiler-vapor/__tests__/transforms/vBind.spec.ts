@@ -397,7 +397,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id, true)')
   })
 
   test('.prop modifier w/ no expression', () => {
@@ -421,7 +421,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar, true)')
   })
 
   test('.prop modifier w/ dynamic arg', () => {
@@ -505,7 +505,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains(' _setDOMProp(n0, "fooBar", _ctx.id)')
+    expect(code).contains(' _setDOMProp(n0, "fooBar", _ctx.id, true)')
   })
 
   test('.prop modifier (shorthand) w/ no expression', () => {
@@ -529,7 +529,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar, true)')
   })
 
   test('.prop modifier w/ innerHTML', () => {
@@ -559,25 +559,25 @@ describe('compiler v-bind', () => {
   test('.prop modifier w/ value', () => {
     const { code } = compileWithVBind(`<div :value.prop="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setValue(n0, _ctx.foo)')
+    expect(code).contains('_setValue(n0, _ctx.foo, true)')
   })
 
   test('.prop modifier (shorthand) w/ value', () => {
     const { code } = compileWithVBind(`<div .value="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setValue(n0, _ctx.foo)')
+    expect(code).contains('_setValue(n0, _ctx.foo, true)')
   })
 
   test('.prop modifier w/ progress value', () => {
     const { code } = compileWithVBind(`<progress :value.prop="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setDOMProp(n0, "value", _ctx.foo)')
+    expect(code).contains('_setDOMProp(n0, "value", _ctx.foo, true)')
   })
 
   test('.prop modifier (shorthand) w/ progress value', () => {
     const { code } = compileWithVBind(`<progress .value="foo" />`)
     expect(code).matchSnapshot()
-    expect(code).contains('_setDOMProp(n0, "value", _ctx.foo)')
+    expect(code).contains('_setDOMProp(n0, "value", _ctx.foo, true)')
   })
 
   test('.attr modifier', () => {
@@ -1171,7 +1171,7 @@ describe('compiler v-bind', () => {
     // the type is only known at runtime, so it may still be a checkbox
     [`<input :type="type" :true-value="1">`, `_setAttr(n0, "true-value", 1)`],
     // `.prop` goes through the same `setValue`
-    [`<input :value.prop="1">`, `_setValue(n0, 1)`],
+    [`<input :value.prop="1">`, `_setValue(n0, 1, true)`],
     // a dynamic key is applied at runtime, so it never reaches the template
     [`<div :[key]="0"></div>`, `[_ctx.key]: 0`],
     // boolean attributes are folded from the value's own type
@@ -1210,10 +1210,10 @@ describe('compiler v-bind', () => {
   test.each([
     [`<div :innerHTML="'<b>x</b>'"/>`, `_setHtml(n0, "<b>x</b>")`],
     [`<div :textContent="'hi'"/>`, `_setElementText(n0, "hi")`],
-    [`<div :foo.prop="'bar'"/>`, `_setDOMProp(n0, "foo", "bar")`],
-    [`<div .foo="'bar'"/>`, `_setDOMProp(n0, "foo", "bar")`],
+    [`<div :foo.prop="'bar'"/>`, `_setDOMProp(n0, "foo", "bar", true)`],
+    [`<div .foo="'bar'"/>`, `_setDOMProp(n0, "foo", "bar", true)`],
     // a number stays a number, it never passes through the template string
-    [`<div :scrollTop.prop="10"/>`, `_setDOMProp(n0, "scrollTop", 10)`],
+    [`<div :scrollTop.prop="10"/>`, `_setDOMProp(n0, "scrollTop", 10, true)`],
     // `.attr` does mean the content attribute and still folds
     [`<div :foo.attr="'bar'"/>`, `_template("<div foo=bar>"`],
     [`<div :foo.attr="1"/>`, `_template("<div foo=1>"`],

@@ -650,4 +650,43 @@ describe('Vapor Mode hydration', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
   })
+
+  // vdom force hydrates a `.prop` binding (`runtime-core/src/hydration.ts`), so
+  // the property has to be written even though the server markup only carries
+  // the serialized value as an attribute
+  describe('.prop bindings', () => {
+    test('writes a dom property', async () => {
+      const data = reactive({ n: 1 })
+      const { container } = await testHydration(
+        `<template><div :payload.prop="data.n"></div></template>`,
+        {},
+        data,
+      )
+
+      const el = container.firstChild as any
+      expect(el.payload).toBe(1)
+
+      data.n = 2
+      await nextTick()
+      expect(el.payload).toBe(2)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('writes the value property', async () => {
+      const data = reactive({ txt: 'foo' })
+      const { container } = await testHydration(
+        `<template><div :value.prop="data.txt"></div></template>`,
+        {},
+        data,
+      )
+
+      const el = container.firstChild as any
+      expect(el.value).toBe('foo')
+
+      data.txt = 'bar'
+      await nextTick()
+      expect(el.value).toBe('bar')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+  })
 })
