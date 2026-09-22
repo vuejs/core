@@ -293,7 +293,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>true</span><!--]-->
+      <!--(--><span>true</span><!--)-->
       "
     `,
     )
@@ -303,7 +303,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>false</span><!--]-->
+      <!--(--><span>false</span><!--)-->
       "
     `,
     )

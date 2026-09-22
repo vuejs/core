@@ -174,7 +174,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>foo</div><!--]-->
+      <!--(--><div>foo</div><!--)-->
       "
     `,
     )
@@ -186,7 +186,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><div>bar</div><!--]-->
+      <!--(--><div>bar</div><!--)-->
       "
     `,
     )
@@ -518,7 +518,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>foo</span><!--]-->
+      <!--(--><span>foo</span><!--)-->
       "
     `,
     )
@@ -530,7 +530,7 @@ describe('VDOM interop', () => {
     expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
       `
       "
-      <!--[--><span>bar</span><!--]-->
+      <!--(--><span>bar</span><!--)-->
       "
     `,
     )
@@ -1778,57 +1778,17 @@ describe('VDOM interop', () => {
   })
 
   // without `ssrRender` (a render function, or a client-compiled library
-  // component) the server renders the outlet as a vnode
-  test('hydrate the fallback of a vdom outlet the server rendered as a vnode', async () => {
-    const Child = {
-      render(this: any) {
-        return h('div', [
-          renderSlot(this.$slots, 'default', {}, () => [h('p', 'fallback')]),
-        ])
-      },
-    }
-    const data = reactive({ show: false })
-    const App = (ssr: boolean) =>
-      compile(
-        `${setup}<template>
-          <components.Child><b v-if="data.show">b</b></components.Child>
-        </template>`,
-        data as any,
-        { Child },
-        { vapor: true, ssr },
-      )
-    const html = await VueServerRenderer.renderToString(
-      runtimeDom.createSSRApp(App(true)),
-    )
-    expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
-
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    container.innerHTML = html
-    const p = container.querySelector('p')
-    const app = runtimeVapor
-      .createVaporSSRApp(App(false))
-      .use(runtimeVapor.vaporInteropPlugin)
-    app.mount(container)
-    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
-    expect(container.querySelector('p')).toBe(p)
-
-    data.show = true
-    await nextTick()
-    expect(visible(container)).toBe(`<div><b>b</b></div>`)
-    data.show = false
-    await nextTick()
-    expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
-
-    app.unmount()
-    expect(container.innerHTML).toBe('')
-  })
-
-  // `h(Child, null, slots)`: no outlet of the component in between renders
-  test.each(['template', 'render function'])(
-    'hydrate the fallback of a vdom outlet (%s) a vapor slot was passed on to as it is',
-    async kind => {
+  // component) the server renders the outlet as a vnode; the fallback is
+  // marked however the vapor slot reached it: `h(Child, null, slots)` renders
+  // no outlet in between, a template's does
+  test.each([
+    ['given', 'render function'],
+    ['passed on as it is', 'template'],
+    ['passed on as it is', 'render function'],
+    ['forwarded by a template', 'render function'],
+  ])(
+    'hydrate the fallback of a vdom outlet a vapor slot was %s (%s child)',
+    async (forward, kind) => {
       const data = reactive({ show: false })
       const App = (ssr: boolean) => {
         const Child =
@@ -1848,11 +1808,21 @@ describe('VDOM interop', () => {
                   ])
                 },
               }
-        const Forward = {
-          setup(_: any, { slots }: any) {
-            return () => h(Child, null, slots)
-          },
-        }
+        const Forward =
+          forward === 'given'
+            ? Child
+            : forward === 'forwarded by a template'
+              ? compile(
+                  `${setup}<template><components.Child><slot /></components.Child></template>`,
+                  data as any,
+                  { Child },
+                  { vapor: false, ssr },
+                )
+              : {
+                  setup(_: any, { slots }: any) {
+                    return () => h(Child, null, slots)
+                  },
+                }
         return compile(
           `${setup}<template>
             <components.Forward><b v-if="data.show">b</b></components.Forward>

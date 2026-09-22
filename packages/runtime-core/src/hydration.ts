@@ -178,7 +178,7 @@ export function createHydrationFunctions(
     optimized = false,
   ): Node | null => {
     optimized = optimized || !!vnode.dynamicChildren
-    // `(` opens a slot fallback rendered for vapor: a range like a fragment's
+    // `(` opens a slot fallback: a range like a fragment's
     const isFragmentStart =
       isComment(node) && (node.data === '[' || node.data === '(')
     const onMismatch = () =>
@@ -789,7 +789,7 @@ export function createHydrationFunctions(
       vnode.vo && (node as Comment).data === '('
         ? getVaporInterface(parentComponent, vnode).hydrateSlotOutlet(
             vnode,
-            first,
+            node,
             parentComponent,
             parentSuspense,
             slotScopeIds,
@@ -835,7 +835,7 @@ export function createHydrationFunctions(
           node,
           node.nodeType === DOMNodeTypes.TEXT
             ? `(text)`
-            : isComment(node) && node.data === '['
+            : isComment(node) && (node.data === '[' || node.data === '(')
               ? `(start of fragment)`
               : ``,
           `\n- expected on client:`,

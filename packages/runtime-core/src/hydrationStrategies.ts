@@ -124,7 +124,7 @@ export function forEachElement(
   node: Node,
   cb: (el: Element) => void | false,
 ): void {
-  // fragment, or a slot fallback rendered for vapor (`<!--(-->`)
+  // fragment, or a slot fallback (`<!--(-->`)
   if (isComment(node) && (node.data === '[' || node.data === '(')) {
     const open = node.data
     const close = open === '[' ? ']' : ')'

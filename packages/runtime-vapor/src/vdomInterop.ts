@@ -807,18 +807,18 @@ const vaporInteropImpl = {
 
   hydrateSlotOutlet(
     outlet,
-    node: Node,
+    open: Comment,
     parentComponent,
     parentSuspense,
     slotScopeIds,
   ) {
     if (!isHydrating && !isVdomHydrating && !isVdomHydratingEnabled) {
-      return node
+      return open.nextSibling
     }
     return hydrateOutletFallback(
       outlet.children as VNode[],
-      node,
-      locateEndAnchor(node.previousSibling as Comment)!,
+      open.nextSibling!,
+      locateEndAnchor(open)!,
       0,
       parentComponent,
       parentSuspense,

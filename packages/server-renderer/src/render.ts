@@ -123,32 +123,11 @@ export function createBuffer() {
   }
 }
 
-// slots written in a vapor component: known where they are created, since
-// they can be passed on as they are (`h(Child, null, slots)`)
-export const vaporSlotFns: WeakSet<object> = new WeakSet()
-
-const hasVaporSlot = (instance: ComponentInternalInstance): boolean => {
-  for (const name in instance.slots) {
-    if (vaporSlotFns.has(instance.slots[name]!)) return true
-  }
-  return false
-}
-
 export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
-  if (
-    vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
-    vnode.ctx &&
-    vnode.ctx.type.__vapor
-  ) {
-    const slots = vnode.children as Record<string, unknown>
-    for (const name in slots) {
-      if (isFunction(slots[name])) vaporSlotFns.add(slots[name] as object)
-    }
-  }
   const instance = (vnode.component = createComponentInstance(
     vnode,
     parentComponent,
@@ -322,21 +301,16 @@ export function renderVNode(
         slotScopeId =
           (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
       }
-      // An outlet rendered as a vnode (`renderSlot`) keys the fragment of its
-      // fallback `_fb`: marked when the component was given vapor slots, as
-      // `ssrRenderSlot` does.
-      const isVaporFallback =
-        isString(vnode.key) &&
-        vnode.key.endsWith('_fb') &&
-        hasVaporSlot(parentComponent)
-      push(isVaporFallback ? `<!--(-->` : `<!--[-->`) // open
+      // a slot fallback (`renderSlot`) is marked like `ssrRenderSlot` does
+      const isFallback = shapeFlag & ShapeFlags.SLOT_FALLBACK
+      push(isFallback ? `<!--(-->` : `<!--[-->`) // open
       renderVNodeChildren(
         push,
         children as VNodeArrayChildren,
         parentComponent,
         slotScopeId,
       )
-      push(isVaporFallback ? `<!--)-->` : `<!--]-->`) // close
+      push(isFallback ? `<!--)-->` : `<!--]-->`) // close
       break
     }
     default:

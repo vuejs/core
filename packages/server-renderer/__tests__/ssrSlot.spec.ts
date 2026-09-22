@@ -125,7 +125,7 @@ describe('ssr: slot', () => {
           template: `<one :value="null"/>`,
         }),
       ),
-    ).toBe(`<div><!--[-->fallback<!--]--></div>`)
+    ).toBe(`<div><!--(-->fallback<!--)--></div>`)
 
     expect(
       await renderToString(
@@ -342,94 +342,61 @@ describe('ssr: slot', () => {
       ),
     ).toBe(`<button><!--[--><!--]--></button>`)
   })
-  // A vapor client reads what the outlet left behind instead of guessing:
-  // `<!--(-->` is a rendered fallback, none of the content's output with it.
-  describe('fallback marker for vapor', () => {
-    // what the sfc compiler leaves on a vapor component
-    const vapor = { __vapor: true }
+  // what the outlet rendered is read back from the markup, before anything is
+  // created on the client: `<!--(-->` is a fallback, none of the content's
+  // output with it
+  describe('slot fallback marker', () => {
     const render = (template: string, components: Record<string, any>) =>
-      renderToString(createApp({ components, template, ...vapor }))
+      renderToString(createApp({ components, template }))
+    const Child = { template: `<div><slot>fallback</slot></div>` }
 
-    const VaporChild = {
-      template: `<div><slot>fallback</slot></div>`,
-      ...vapor,
-    }
-    const VdomChild = { template: `<div><slot>fallback</slot></div>` }
-
-    test('an outlet in a vapor component marks its fallback', async () => {
-      const components = { Child: VaporChild }
+    test('an outlet marks its fallback', async () => {
+      const components = { Child }
       expect(await render(`<Child/>`, components)).toBe(
         `<div><!--(-->fallback<!--)--></div>`,
       )
       expect(await render(`<Child><!--c--></Child>`, components)).toBe(
         `<div><!--(-->fallback<!--)--></div>`,
       )
+      expect(
+        await render(`<Child><span v-if="false"/></Child>`, components),
+      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
       expect(await render(`<Child>content</Child>`, components)).toBe(
         `<div><!--[-->content<!--]--></div>`,
       )
     })
 
-    test('whoever provides the slot', async () => {
-      expect(
-        await renderToString(
-          createApp({
-            components: { Child: VaporChild },
-            template: `<Child><span v-if="false"/></Child>`,
-          }),
-        ),
-      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
-    })
-
-    test('an outlet written in a vapor component, forwarded into a vdom one', async () => {
-      // it renders in the slot of the vdom component, which is not the one it
-      // is written in
-      const Wrapper = {
-        components: { Child: VdomChild },
-        template: `<Child><slot>wrapper fallback</slot></Child>`,
-        ...vapor,
-      }
-      expect(
-        await renderToString(
-          createApp({ components: { Wrapper }, template: `<Wrapper/>` }),
-        ),
-      ).toBe(`<div><!--[--><!--(-->wrapper fallback<!--)--><!--]--></div>`)
-    })
-
     test('an empty outlet without a fallback stays a plain range', async () => {
       expect(
-        await render(`<Child/>`, {
-          Child: { template: `<div><slot/></div>`, ...vapor },
-        }),
+        await render(`<Child/>`, { Child: { template: `<div><slot/></div>` } }),
       ).toBe(`<div><!--[--><!--]--></div>`)
+      // a fallback that renders nothing is still the fallback
+      expect(
+        await render(`<Child/>`, {
+          Child: {
+            template: `<div><slot><template v-if="false">x</template></slot></div>`,
+          },
+        }),
+      ).toBe(`<div><!--(--><!----><!--)--></div>`)
     })
 
-    test('an outlet in a vdom component marks its fallback when it drops a vapor slot', async () => {
-      const components = { Child: VdomChild }
-      // rendered directly
+    test('forwarded outlets keep their own ranges', async () => {
+      const Wrapper = {
+        components: { Child },
+        template: `<Child><slot>wrapper fallback</slot></Child>`,
+      }
+      expect(await render(`<Wrapper/>`, { Wrapper })).toBe(
+        `<div><!--[--><!--(-->wrapper fallback<!--)--><!--]--></div>`,
+      )
+      const Forward = {
+        components: { Child },
+        template: `<Child><slot/></Child>`,
+      }
       expect(
-        await render(`<Child><span v-if="false"/></Child>`, components),
+        await render(`<Forward><span v-if="false"/></Forward>`, { Forward }),
       ).toBe(`<div><!--(-->fallback<!--)--></div>`)
-      // forwarded by a vdom component
-      const Wrapper = { components, template: `<Child><slot/></Child>` }
-      expect(
-        await render(`<Wrapper><span v-if="false"/></Wrapper>`, { Wrapper }),
-      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
-      expect(await render(`<Wrapper>content</Wrapper>`, { Wrapper })).toBe(
+      expect(await render(`<Forward>content</Forward>`, { Forward })).toBe(
         `<div><!--[--><!--[-->content<!--]--><!--]--></div>`,
-      )
-    })
-
-    test('an outlet in a vdom component with vdom content is left alone', async () => {
-      const components = { Child: VdomChild }
-      const app = (template: string) =>
-        renderToString(createApp({ components, template }))
-      expect(await app(`<Child/>`)).toBe(`<div><!--[-->fallback<!--]--></div>`)
-      expect(await app(`<Child><span v-if="false"/></Child>`)).toBe(
-        `<div><!--[-->fallback<!--]--></div>`,
-      )
-      // no slot passed at all: nothing vapor was dropped
-      expect(await render(`<Child/>`, components)).toBe(
-        `<div><!--[-->fallback<!--]--></div>`,
       )
     })
 
@@ -437,41 +404,16 @@ describe('ssr: slot', () => {
       const Group = {
         template: `<transition-group tag="ul"><slot/></transition-group>`,
       }
-      const Forward = {
-        components: { Group, Child: VaporChild },
-        template: `<Group><Child/></Group>`,
+      const Mid = {
+        components: { Group },
+        template: `<Group><slot>fallback</slot></Group>`,
       }
-      expect(await render(`<Forward/>`, { Forward })).toBe(
-        `<ul><div><!--(-->fallback<!--)--></div></ul>`,
-      )
+      expect(await render(`<Mid/>`, { Mid })).toBe(`<ul>fallback</ul>`)
     })
 
     // a component without `ssrRender` (a render function, or a client-compiled
     // library component) renders its outlets as vnodes
-    test('an outlet rendered as a vnode marks its fallback for the vapor component that uses it', async () => {
-      const Child = {
-        render(this: any) {
-          return h('div', [
-            renderSlot(this.$slots, 'default', {}, () => ['fallback']),
-          ])
-        },
-      }
-      const components = { Child }
-      const template = `<Child><span v-if="false"/></Child>`
-      expect(await render(template, components)).toBe(
-        `<div><!--(-->fallback<!--)--></div>`,
-      )
-      expect(await render(`<Child>content</Child>`, components)).toBe(
-        `<div><!--[-->content<!--]--></div>`,
-      )
-      // used by a vdom component: left alone
-      expect(await renderToString(createApp({ components, template }))).toBe(
-        `<div><!--[-->fallback<!--]--></div>`,
-      )
-    })
-
-    // `h(Child, null, slots)`: no outlet of the component in between renders
-    test('a vapor slot passed on as it is marks the fallback of its outlet', async () => {
+    test('an outlet rendered as a vnode marks its fallback', async () => {
       const RenderChild = {
         render(this: any) {
           return h('div', [
@@ -479,25 +421,32 @@ describe('ssr: slot', () => {
           ])
         },
       }
-      for (const Child of [VdomChild, RenderChild]) {
-        const Forward = {
-          setup(_: any, { slots }: any) {
-            return () => h(Child, null, slots)
-          },
-        }
-        const components = { Forward }
-        const template = `<Forward><span v-if="false"/></Forward>`
-        expect(await render(template, components)).toBe(
-          `<div><!--(-->fallback<!--)--></div>`,
-        )
-        expect(await render(`<Forward>content</Forward>`, components)).toBe(
-          `<div><!--[-->content<!--]--></div>`,
-        )
-        // a vdom slot: left alone
-        expect(await renderToString(createApp({ components, template }))).toBe(
-          `<div><!--[-->fallback<!--]--></div>`,
-        )
+      const components = { Child: RenderChild }
+      expect(
+        await render(`<Child><span v-if="false"/></Child>`, components),
+      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      expect(await render(`<Child>content</Child>`, components)).toBe(
+        `<div><!--[-->content<!--]--></div>`,
+      )
+      // a slot rendered as vnodes, into a template outlet
+      expect(
+        await renderToString(
+          createApp({ render: () => h(Child, null, { default: () => [] }) }),
+        ),
+      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
+      // the fallback is told apart from a slot whose name ends like its key
+      const Named = {
+        render(this: any) {
+          return h('div', [
+            renderSlot(this.$slots, 'x_fb', {}, () => ['fallback']),
+          ])
+        },
       }
+      expect(
+        await render(`<Named><template #x_fb>content</template></Named>`, {
+          Named,
+        }),
+      ).toBe(`<div><!--[-->content<!--]--></div>`)
     })
   })
 })

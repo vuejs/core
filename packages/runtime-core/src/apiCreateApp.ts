@@ -270,7 +270,7 @@ export interface VaporInVdomInterface {
    */
   hydrateSlotOutlet(
     outlet: VNode,
-    node: Node,
+    open: Comment,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,

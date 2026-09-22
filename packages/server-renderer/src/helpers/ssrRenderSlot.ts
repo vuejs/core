@@ -1,7 +1,6 @@
 import {
   type ComponentInternalInstance,
   type Slots,
-  getCurrentInstance,
   ssrUtils,
 } from '@vue/runtime-dom'
 import {
@@ -9,7 +8,6 @@ import {
   type PushFn,
   type SSRBufferItem,
   renderVNodeChildren,
-  vaporSlotFns,
 } from '../render'
 import { isArray } from '@vue/shared'
 
@@ -33,16 +31,6 @@ export function ssrRenderSlot(
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
 ): void {
-  // template-compiled slots are always rendered as fragments
-  // A vapor client cannot tell slot content from a fallback once either is in
-  // the DOM, and has to before it renders any: `<!--(-->` is a fallback, with
-  // none of the content's output left. Only said of an outlet that vapor
-  // hydrates, or that dropped a vapor slot for its fallback.
-  let close = `<!--]-->`
-  const before = vaporSlots
-  // the component this outlet is written in: a forwarded outlet renders in the
-  // slot of another one, which is what `parentComponent` is then
-  const owner = getCurrentInstance()
   ssrRenderSlotInner(
     slots,
     slotName,
@@ -51,25 +39,8 @@ export function ssrRenderSlot(
     push,
     parentComponent,
     slotScopeId,
-    false,
-    fallback => {
-      if (fallback && (isVapor(owner) || vaporSlots !== before)) {
-        push(`<!--(-->`)
-        close = `<!--)-->`
-      } else {
-        push(`<!--[-->`)
-      }
-    },
   )
-  push(close)
 }
-
-// slots written in a vapor component that were rendered so far: an outlet in
-// a vdom component reads it around its slot to learn that it holds one
-let vaporSlots = 0
-
-const isVapor = (instance: ComponentInternalInstance | null): boolean =>
-  !!(instance && instance.type.__vapor)
 
 export function ssrRenderSlotInner(
   slots: Slots | SSRSlots,
@@ -79,13 +50,14 @@ export function ssrRenderSlotInner(
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
+  // a transition renders the slot bare: otherwise it is a range, `<!--(-->`
+  // around the fallback, which a vapor client has to know before it renders
+  // anything
   transition?: boolean,
-  // called once, before anything is pushed, with whether it is the fallback
-  open?: (fallback: boolean) => void,
 ): void {
   const slotFn = slots[slotName]
+  let fallback = false
   if (slotFn) {
-    if (vaporSlotFns.has(slotFn)) vaporSlots++
     const slotBuffer: SSRBufferItem[] = []
     const bufferedPush = (item: SSRBufferItem) => {
       slotBuffer.push(item)
@@ -100,7 +72,10 @@ export function ssrRenderSlotInner(
     )
     if (isArray(ret)) {
       const validSlotContent = ensureValidVNode(ret)
-      if (open) open(!validSlotContent && !!fallbackRenderFn)
+      if (!transition) {
+        fallback = !validSlotContent && !!fallbackRenderFn
+        push(fallback ? `<!--(-->` : `<!--[-->`)
+      }
       if (validSlotContent) {
         // normal slot
         renderVNodeChildren(
@@ -127,8 +102,9 @@ export function ssrRenderSlotInner(
             break
           }
         }
+        fallback = isEmptySlot && !!fallbackRenderFn
+        push(fallback ? `<!--(-->` : `<!--[-->`)
       }
-      if (open) open(isEmptySlot && !!fallbackRenderFn)
       if (isEmptySlot) {
         if (fallbackRenderFn) {
           fallbackRenderFn()
@@ -141,14 +117,16 @@ export function ssrRenderSlotInner(
         // Therefore, here we need to avoid rendering it as a fragment again.
         let start = 0
         let end = slotBuffer.length
-        if (
-          transition &&
-          (slotBuffer[0] === '<!--[-->' || slotBuffer[0] === '<!--(-->') &&
-          (slotBuffer[end - 1] === '<!--]-->' ||
-            slotBuffer[end - 1] === '<!--)-->')
-        ) {
-          start++
-          end--
+        if (transition) {
+          const first = slotBuffer[0]
+          if (
+            (first === '<!--[-->' || first === '<!--(-->') &&
+            slotBuffer[end - 1] ===
+              (first === '<!--(-->' ? '<!--)-->' : '<!--]-->')
+          ) {
+            start++
+            end--
+          }
         }
 
         if (start < end) {
@@ -161,13 +139,17 @@ export function ssrRenderSlotInner(
       }
     }
   } else {
-    if (open) open(!!fallbackRenderFn)
+    if (!transition) {
+      fallback = !!fallbackRenderFn
+      push(fallback ? `<!--(-->` : `<!--[-->`)
+    }
     if (fallbackRenderFn) {
       fallbackRenderFn()
     } else if (transition) {
       push(`<!---->`)
     }
   }
+  if (!transition) push(fallback ? `<!--)-->` : `<!--]-->`)
 }
 
 const commentTestRE = /^<!--[\s\S]*-->$/
