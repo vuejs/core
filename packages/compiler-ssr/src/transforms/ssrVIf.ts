@@ -56,7 +56,9 @@ export function ssrProcessIf(
     }
   }
 
-  if (!currentIf.alternate && !disableComment) {
+  // a vapor `v-if` always has its block: it needs its place in the output
+  // even where the comments of a transition group are left out
+  if (!currentIf.alternate && (!disableComment || context.options.vapor)) {
     currentIf.alternate = createBlockStatement([
       createCallExpression(`_push`, ['`<!---->`']),
     ])

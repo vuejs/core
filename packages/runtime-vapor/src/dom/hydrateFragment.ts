@@ -1,5 +1,4 @@
 import {
-  type FragmentClaim,
   advanceHydrationNode,
   claimAnchor,
   claimUntrackedAnchor,
@@ -49,26 +48,22 @@ import { IF, NATIVE_CHILDREN, SLOT } from '../fragmentFlags'
  * from it, or is inherited.
  */
 class SlotHydrationSession {
-  constructor(
-    private readonly claim: FragmentClaim,
-    private readonly parent: SlotHydrationSession | null,
-  ) {}
+  /** The close marker of the range this boundary itself owns, if any. */
+  readonly ownEndAnchor: Node | null
 
-  /**
-   * The boundary's SSR close marker while it owns its range, else the
-   * inherited one. Derived on read: the content's first block may take the
-   * range over mid-content (see `FragmentClaim`).
-   */
+  constructor(
+    start: Node | null,
+    private readonly parent: SlotHydrationSession | null,
+  ) {
+    this.ownEndAnchor = locateFragmentEnd(start)
+  }
+
+  /** The boundary's SSR close marker, else the inherited one. */
   get endAnchor(): Node | null {
     return this.ownEndAnchor || (this.parent ? this.parent.endAnchor : null)
   }
 
-  /** The close marker of the range this boundary itself owns, if any. */
-  get ownEndAnchor(): Node | null {
-    return locateFragmentEnd(this.claim.start)
-  }
-
-  /** Trim the range's unclaimed tail; a range the content took over has none. */
+  /** Trim the range's unclaimed tail. */
   exitBoundary(): void {
     const close = this.ownEndAnchor
     if (close) trimHydrationBoundary(close)
@@ -89,7 +84,7 @@ export function withHydratingSlotBoundary<R>(fn: () => R): R {
   locateHydrationNode(claim)
   const prevSession = currentSlotHydrationSession
   const session = (currentSlotHydrationSession = new SlotHydrationSession(
-    claim,
+    claim.start,
     prevSession,
   ))
 
@@ -483,7 +478,6 @@ export function hydrateDynamicFragmentAnchor(
 export function hydrateSlotFragmentContent(
   frag: SlotFragment,
   render: BlockFn,
-  hasSlot: boolean,
   key: any,
   shouldForce: boolean,
 ): void {
@@ -522,8 +516,7 @@ export function hydrateSlotFragmentContent(
   } else {
     withHydratingSlotBoundary(() => {
       frag.updateContent(render, key)
-      if (!hasSlot || isValidSlot(frag.getContent())) {
-        // no slot at all: the fallback is what the server rendered here
+      if (isValidSlot(frag.getContent())) {
         resolve()
         hydrateDynamicFragmentAnchor(frag, !isValidBlock(frag.nodes))
       } else {

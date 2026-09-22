@@ -68,14 +68,17 @@ import {
 } from '../apiDefineComponent'
 import {
   adoptTemplate,
+  advanceHydrationNode,
+  claimAnchor,
   cleanupHydrationTail,
+  createFragmentClaim,
   currentHydrationNode,
   isHydrating,
+  locateEndAnchor,
   locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
-  setMarkerlessHydrationContainer,
-  setTransitionChildPending,
+  trimHydrationBoundary,
 } from '../dom/hydration'
 import { isTransitionEnabled, registerTransitionHooks } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
@@ -221,11 +224,19 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     onUpdated(updated)
     const updateHooks: TransitionGroupUpdateHooks = { beforeUpdate, updated }
 
-    if (isHydrating) locateHydrationNode()
     // The wrapper element is static configuration, not animated content:
     // `tag` is read once. (vdom only remounts the children on a tag change
     // because the parent re-render patches the root vnode type.)
     const tag = props.tag
+    // without a tag the server wraps the group in a range of its own
+    let close: Node | null = null
+    if (isHydrating) {
+      const claim = tag ? undefined : createFragmentClaim()
+      locateHydrationNode(claim)
+      if (claim && claim.start) {
+        close = claimAnchor(locateEndAnchor(claim.start)!)
+      }
+    }
     let isMounted = false
 
     renderEffect(() => {
@@ -260,21 +271,15 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
       run: (render: BlockFn) => void = render => render(),
     ): void => {
       let nextNode: Node | null = null
-      let prevMarkerlessContainer: ParentNode | null = null
-      let prevTransitionChildPending = false
       if (isHydrating && container) {
-        // SSR flattens the children into the container without fragment
-        // markers; the cursor sits on the container itself when it is empty.
-        prevMarkerlessContainer = setMarkerlessHydrationContainer(container)
-        prevTransitionChildPending = setTransitionChildPending(true)
+        // the cursor sits on the container itself when it is empty
         nextNode = nextLogicalSibling(container)
         setCurrentHydrationNode(container.firstChild || container)
       }
-      let transitionBlocks: ResolvedTransitionBlock[] = []
       try {
         run(() => {
           const block = (slot && slot()) || []
-          transitionBlocks = applyGroupTransitionHooks(
+          applyGroupTransitionHooks(
             block,
             propsProxy,
             state,
@@ -293,17 +298,18 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
           isHydrating &&
           container &&
           currentHydrationNode &&
-          currentHydrationNode.parentNode === container &&
-          !transitionBlocks.some(child => child === currentHydrationNode)
+          currentHydrationNode.parentNode === container
         ) {
-          // Remove extra SSR nodes left after hydrating the current children,
-          // but keep a node that was claimed as a transition child.
+          // Remove extra SSR nodes left after hydrating the current children.
           cleanupHydrationTail(currentHydrationNode, container)
+        }
+        if (isHydrating && close) {
+          trimHydrationBoundary(close)
+          if (currentHydrationNode === close) advanceHydrationNode(close)
+          close = null
         }
       } finally {
         if (isHydrating && container) {
-          setMarkerlessHydrationContainer(prevMarkerlessContainer)
-          setTransitionChildPending(prevTransitionChildPending)
           setCurrentHydrationNode(nextNode)
         }
       }

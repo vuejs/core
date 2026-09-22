@@ -142,6 +142,7 @@ import {
   isRangeEnd,
   isRangeStart,
   locateEndAnchor,
+  locateFragmentEnd,
   locateHydrationNode,
   runWithoutHydration,
   setCurrentHydrationNode,
@@ -2046,6 +2047,9 @@ function renderVDOMSlot(
         { first: open.nextSibling!, close, boundary },
         () => place(close.parentNode!, close, undefined),
       )
+      // As hydrating content does behind a fallback: a Transition applying its
+      // hooks afterwards has to reach through to the fallback.
+      if (slotResolutionState.activeFallback) setVNode(null)
       advanceHydrationNode(close)
       return
     }
@@ -2547,6 +2551,10 @@ function renderVDOMSlot(
         notifyBeforeUpdate,
       )
       const hydrationParent = parentNode(currentHydrationNode!)!
+      // A transition child is taken out of the slot's fragment, whose range
+      // the server still rendered: the child hydrates inside it.
+      const close = transitionChild && locateFragmentEnd(currentHydrationNode)
+      if (close) setCurrentHydrationNode(currentHydrationNode!.nextSibling)
       hydrateVNode(
         hydrationVNode,
         parentComponent as any,
@@ -2557,6 +2565,10 @@ function renderVDOMSlot(
             : hydratedContent.slotScopeIds,
         ),
       )
+      if (close) {
+        frag.anchor = claimAnchor(close)
+        advanceHydrationNode(close)
+      }
       // Remember the slot outlet insertion point outside the hydrated VNode range.
       // The hydrated content itself may be removed by later VDOM patches before the
       // fallback is inserted.
@@ -2626,8 +2638,9 @@ function hydrateVNode(
     slotScopeIds,
     false,
   )
+  // no next node: the vnode ends its parent, move on from there
   if (nextNode) setCurrentHydrationNode(nextNode)
-  else advanceHydrationNode(node)
+  else advanceHydrationNode(parentNode(node)!)
 }
 
 // The fallback block of the outlet at `depth` on the slot's chain (0 is the

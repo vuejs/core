@@ -14,7 +14,7 @@ setupHydrationTest()
 
 describe('Vapor Mode hydration', () => {
   describe('transition', async () => {
-    test('hydrates a slot fallback without fragment markers', async () => {
+    test('hydrates a slot fallback', async () => {
       const data = reactive({ show: false })
       const { container } = await testHydration(
         `<template>
@@ -34,8 +34,8 @@ describe('Vapor Mode hydration', () => {
         data,
       )
 
-      expect(`Hydration node mismatch`).toHaveBeenWarned()
-      expect(container.textContent).toBe('fallback')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(container.innerHTML).toBe(`<!--(--><div>fallback</div><!--)-->`)
 
       data.show = true
       await nextTick()
@@ -44,6 +44,32 @@ describe('Vapor Mode hydration', () => {
       data.show = false
       await nextTick()
       expect(container.textContent).toBe('fallback')
+    })
+
+    // the slot comes from a vdom parent: a vdom slot outlet hosts the fallback
+    test('an adopted slot fallback leaves with a transition under a vdom parent', async () => {
+      const data = reactive({ fb: true })
+      const { container } = await testWithVDOMApp(
+        `<script setup>const components = _components</script>
+        <template><section><components.Child /></section></template>`,
+        {
+          Child: {
+            code: `<script setup>const data = _data</script>
+            <template>
+              <Transition><slot><p v-if="data.fb">fb</p></slot></Transition>
+            </template>`,
+            vapor: true,
+          },
+        },
+        data,
+      )
+      const p = container.querySelector('p')!
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.fb = false
+      await nextTick()
+      expect(p.isConnected).toBe(true)
+      expect(p.className).toBe('v-leave-from v-leave-active')
     })
 
     test('transition appear', async () => {
@@ -87,14 +113,21 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<!----><!--if-->"`,
+        `
+        "
+        <!--[--><!--]-->
+        <!--if-->"
+      `,
       )
       expect(`mismatch`).not.toHaveBeenWarned()
 
       data.value = false
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<span class="v-enter-from v-enter-active">foo</span><!--if-->"`,
+        `
+        "
+        <!--[--><span class="v-enter-from v-enter-active">foo</span><!--if-->"
+      `,
       )
     })
 
@@ -265,7 +298,7 @@ describe('Vapor Mode hydration', () => {
   })
 
   describe('transition-group', () => {
-    test('with tag should hydrate existing container for flattened v-for children', async () => {
+    test('with tag should hydrate existing container for v-for children', async () => {
       const data = ref({
         items: [1],
       })
@@ -283,18 +316,30 @@ describe('Vapor Mode hydration', () => {
 
       const { container } = await mountWithHydration(html, code, data)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<ul name="list" style="margin-top:20px;"><li>1</li><!--for--></ul>"`,
+        `
+        "<ul name="list" style="margin-top:20px;">
+        <!--[--><li>1</li><!--]-->
+        </ul>"
+      `,
       )
       data.value.items.push(2)
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<ul name="list" style="margin-top:20px;"><li>1</li><li class="list-enter-from list-enter-active">2</li><!--for--></ul>"`,
+        `
+        "<ul name="list" style="margin-top:20px;">
+        <!--[--><li>1</li><li class="list-enter-from list-enter-active">2</li><!--]-->
+        </ul>"
+      `,
       )
 
       data.value.items.shift()
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<ul name="list" style="margin-top:20px;"><li class="list-leave-from list-leave-active">1</li><li class="list-enter-from list-enter-active">2</li><!--for--></ul>"`,
+        `
+        "<ul name="list" style="margin-top:20px;">
+        <!--[--><li class="list-leave-from list-leave-active">1</li><li class="list-enter-from list-enter-active">2</li><!--]-->
+        </ul>"
+      `,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -328,7 +373,11 @@ describe('Vapor Mode hydration', () => {
       data.items.splice(2, 0, 6)
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><li>2</li><li class="list-enter-from list-enter-active">6</li><li>3</li><li>4</li><li>5</li><!--for-->"`,
+        `
+        "
+        <!--[--><li>1</li><li>2</li><li class="list-enter-from list-enter-active">6</li><li>3</li><li>4</li><li>5</li><!--]-->
+        "
+      `,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -355,14 +404,22 @@ describe('Vapor Mode hydration', () => {
       const ul = container.querySelector('ul')!
 
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><!--for-->"`,
+        `
+        "
+        <!--[--><li>1</li><!--]-->
+        "
+      `,
       )
       expect(`Hydration children mismatch`).toHaveBeenWarned()
 
       data.value.items.push(4)
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><li>4</li><!--for-->"`,
+        `
+        "
+        <!--[--><li>1</li><li>4</li><!--]-->
+        "
+      `,
       )
     })
 
@@ -389,16 +446,25 @@ describe('Vapor Mode hydration', () => {
       const ul = container.querySelector('ul')!
 
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li class="item">1</li><!--for--><li class="item">tail</li>"`,
+        `
+        "
+        <!--[--><li class="item">1</li><!--]-->
+        <li class="tail">tail</li>"
+      `,
       )
-      expect(`Hydration text mismatch`).toHaveBeenWarned()
+      // the list trims its own range: the sibling after it hydrates its own node
+      expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).toHaveBeenWarned()
 
       data.value.items.push(4)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li class="item">1</li><li class="item">4</li><!--for--><li class="item">tail updated</li>"`,
+        `
+        "
+        <!--[--><li class="item">1</li><li class="item">4</li><!--]-->
+        <li class="tail">tail updated</li>"
+      `,
       )
     })
 
@@ -425,9 +491,13 @@ describe('Vapor Mode hydration', () => {
       const div = container.querySelector('div')!
 
       expect(formatHtml(div.innerHTML)).toMatchInlineSnapshot(
-        `"<span>1</span><!--for--><p>tail</p>"`,
+        `
+        "
+        <!--[--><span>1</span><!--]-->
+        <p>tail</p>"
+      `,
       )
-      expect(`Hydration node mismatch`).toHaveBeenWarned()
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration text mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).toHaveBeenWarned()
 
@@ -435,7 +505,11 @@ describe('Vapor Mode hydration', () => {
       data.value.tail = 'tail updated'
       await nextTick()
       expect(formatHtml(div.innerHTML)).toMatchInlineSnapshot(
-        `"<span>1</span><span>4</span><!--for--><p>tail updated</p>"`,
+        `
+        "
+        <!--[--><span>1</span><span>4</span><!--]-->
+        <p>tail updated</p>"
+      `,
       )
     })
 
@@ -460,13 +534,21 @@ describe('Vapor Mode hydration', () => {
       data.value.tail = 'tail updated'
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><li>2</li><li>3</li><!--for--><li>tail updated</li>"`,
+        `
+        "
+        <!--[--><li>1</li><li>2</li><li>3</li><!--]-->
+        <li>tail updated</li>"
+      `,
       )
 
       data.value.items.shift()
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>2</li><li>3</li><!--for--><li>tail updated</li>"`,
+        `
+        "
+        <!--[--><li>2</li><li>3</li><!--]-->
+        <li>tail updated</li>"
+      `,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -498,13 +580,13 @@ describe('Vapor Mode hydration', () => {
       // the SSR close marker is the list anchor (no extra `<!--for-->`), and
       // the slot anchor follows all of the slot content
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--slot-->`,
+        `<!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]-->`,
       )
       data.value.items.push(3)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--slot-->`,
+        `<!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -533,13 +615,13 @@ describe('Vapor Mode hydration', () => {
       )
       const ul = container.querySelector('ul')!
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--slot--><!--slot-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]--><!--]-->`,
       )
       data.value.items.push(3)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--slot--><!--slot-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]--><!--]-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -570,13 +652,13 @@ describe('Vapor Mode hydration', () => {
       )
       const ul = container.querySelector('ul')!
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--slot--><!--slot-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]--><!--]-->`,
       )
       data.value.items.push(3)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--slot--><!--slot-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]--><!--]-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -608,13 +690,13 @@ describe('Vapor Mode hydration', () => {
       )
       const ul = container.querySelector('ul')!
       expect(ul.innerHTML).toBe(
-        `<!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]--><li>last</li><!--slot-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]--><li>last</li><!--]-->`,
       )
       data.value.items.push(3)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]--><li>last</li><!--slot-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]--><li>last</li><!--]-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -637,11 +719,13 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       const ul = container.querySelector('ul')!
-      expect(ul.innerHTML).toBe(`<li>a</li><li>b</li><!--if--><li>tail</li>`)
+      expect(ul.innerHTML).toBe(
+        `<!--[--><li>a</li><li>b</li><!--]--><li>tail</li>`,
+      )
       data.value.show = false
       data.value.tail = 'tail updated'
       await nextTick()
-      expect(ul.innerHTML).toBe(`<!--if--><li>tail updated</li>`)
+      expect(ul.innerHTML).toBe(`<!--[--><!--]--><li>tail updated</li>`)
       expect(
         `Hydration completed but contains mismatches.`,
       ).not.toHaveBeenWarned()
@@ -663,13 +747,13 @@ describe('Vapor Mode hydration', () => {
       )
       const ul = container.querySelector('ul')!
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--if-->`,
+        `<!--[--><!--[--><li>1</li><li>2</li><!--]--><li>tail</li><!--]-->`,
       )
       data.value.items.push(3)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--if-->`,
+        `<!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><li>tail updated</li><!--]-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -692,14 +776,14 @@ describe('Vapor Mode hydration', () => {
       )
       const ul = container.querySelector('ul')!
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><!--]--><!--[--><li>3</li><!--]--><!--for--><li>tail</li>`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--[--><!--[--><li>3</li><!--]--><!--]--><!--]--><li>tail</li>`,
       )
       data.value.groups[0].push(9)
       data.value.groups.push([4])
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><li>1</li><li>2</li><li>9</li><!--]--><!--[--><li>3</li><!--]--><li>4</li><!--for--><!--for--><li>tail updated</li>`,
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>9</li><!--]--><!--]--><!--[--><!--[--><li>3</li><!--]--><!--]--><li>4</li><!--for--><!--]--><li>tail updated</li>`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -726,13 +810,13 @@ describe('Vapor Mode hydration', () => {
       )
       const ul = container.querySelector('ul')!
       expect(ul.innerHTML).toBe(
-        `<!--[--><!--[--><li>1</li><!--if--><!--]--><!--[--><li>2</li><!--if--><!--]--><!--]--><li>tail</li><!--slot-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><!--if--><!--]--><!--[--><li>2</li><!--if--><!--]--><!--]--><li>tail</li><!--]-->`,
       )
       data.value.items.push(3)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(ul.innerHTML).toBe(
-        `<!--[--><!--[--><li>1</li><!--if--><!--]--><!--[--><li>2</li><!--if--><!--]--><li>3</li><!--if--><!--]--><li>tail updated</li><!--slot-->`,
+        `<!--[--><!--[--><!--[--><li>1</li><!--if--><!--]--><!--[--><li>2</li><!--if--><!--]--><li>3</li><!--if--><!--]--><li>tail updated</li><!--]-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -759,12 +843,12 @@ describe('Vapor Mode hydration', () => {
       )
       const div = container.querySelector('div')!
       expect(div.innerHTML).toBe(
-        `<!--[--><ul css="false"><li>1</li><li>2</li><!--for--><!--slot--></ul><!--]-->`,
+        `<!--[--><ul css="false"><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--></ul><!--]-->`,
       )
       data.value.items.push(3)
       await nextTick()
       expect(div.innerHTML).toBe(
-        `<!--[--><ul css="false"><li>1</li><li>2</li><li>3</li><!--for--><!--slot--></ul><!--]-->`,
+        `<!--[--><ul css="false"><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--></ul><!--]-->`,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -787,10 +871,10 @@ describe('Vapor Mode hydration', () => {
         data,
       )
       const ul = container.querySelector('ul')!
-      expect(ul.innerHTML).toBe(`<!----><!--slot-->`)
+      expect(ul.innerHTML).toBe(`<!--[--><!--]--><!--slot-->`)
       data.value.items.push(3)
       await nextTick()
-      expect(ul.innerHTML).toBe(`<li>3</li><!----><!--slot-->`)
+      expect(ul.innerHTML).toBe(`<!--[--><li>3</li><!--]--><!--slot-->`)
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
       expect(
         `Hydration completed but contains mismatches.`,
@@ -819,7 +903,11 @@ describe('Vapor Mode hydration', () => {
       const ul = container.querySelector('ul')!
 
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>a</li><li>b</li><li>c</li><!--for-->"`,
+        `
+        "
+        <!--[--><li>a</li><li>b</li><li>c</li><!--]-->
+        "
+      `,
       )
       expect(`Hydration node mismatch`).not.toHaveBeenWarned()
       expect(`Hydration children mismatch`).not.toHaveBeenWarned()
@@ -830,11 +918,15 @@ describe('Vapor Mode hydration', () => {
       data.value.items.push('d')
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>a</li><li>b</li><li>c</li><li>d</li><!--for-->"`,
+        `
+        "
+        <!--[--><li>a</li><li>b</li><li>c</li><li>d</li><!--]-->
+        "
+      `,
       )
     })
 
-    test('with tag should hydrate empty claimed container for flattened v-for children', async () => {
+    test('with tag should hydrate empty claimed container for v-for children', async () => {
       const data = ref({
         items: [] as number[],
       })
@@ -850,18 +942,30 @@ describe('Vapor Mode hydration', () => {
       const { container } = await mountWithHydration(html, code, data)
       const ul = container.querySelector('ul')!
 
-      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(`"<!--for-->"`)
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><!--]-->
+        "
+      `)
 
       data.value.items.push(1, 2)
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><li>2</li><!--for-->"`,
+        `
+        "
+        <!--[--><li>1</li><li>2</li><!--]-->
+        "
+      `,
       )
 
       data.value.items.shift()
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>2</li><!--for-->"`,
+        `
+        "
+        <!--[--><li>2</li><!--]-->
+        "
+      `,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -887,20 +991,32 @@ describe('Vapor Mode hydration', () => {
       const ul = container.querySelector('ul')!
 
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<!--for--><li>tail</li>"`,
+        `
+        "
+        <!--[--><!--]-->
+        <li>tail</li>"
+      `,
       )
 
       data.value.items.push(1)
       data.value.tail = 'tail updated'
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><!--for--><li>tail updated</li>"`,
+        `
+        "
+        <!--[--><li>1</li><!--]-->
+        <li>tail updated</li>"
+      `,
       )
 
       data.value.items.shift()
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<!--for--><li>tail updated</li>"`,
+        `
+        "
+        <!--[--><!--]-->
+        <li>tail updated</li>"
+      `,
       )
       expect(
         `Hydration completed but contains mismatches.`,
@@ -929,14 +1045,22 @@ describe('Vapor Mode hydration', () => {
       const { container } = await mountWithHydration(html, code, data)
       const ul = container.querySelector('ul')!
 
-      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(`"<!--for-->"`)
+      expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(`
+        "
+        <!--[--><!--]-->
+        "
+      `)
       expect(formatHtml(container.innerHTML)).toContain('<span>after</span>')
 
       data.value.items.push(1)
       data.value.after = 'after updated'
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><!--for-->"`,
+        `
+        "
+        <!--[--><li>1</li><!--]-->
+        "
+      `,
       )
       expect(formatHtml(container.innerHTML)).toContain(
         '<span>after updated</span>',
@@ -970,7 +1094,11 @@ describe('Vapor Mode hydration', () => {
       const ul = container.querySelector('ul')!
 
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<!--for--><li>tail</li>"`,
+        `
+        "
+        <!--[--><!--]-->
+        <li>tail</li>"
+      `,
       )
       expect(formatHtml(container.innerHTML)).toContain('<i>after</i>')
 
@@ -978,14 +1106,94 @@ describe('Vapor Mode hydration', () => {
       data.after = 'after updated'
       await nextTick()
       expect(formatHtml(ul.innerHTML)).toMatchInlineSnapshot(
-        `"<li>1</li><!--for--><li>tail</li>"`,
+        `
+        "
+        <!--[--><li>1</li><!--]-->
+        <li>tail</li>"
+      `,
       )
       expect(formatHtml(container.innerHTML)).toContain('<i>after updated</i>')
       expect(
         `Hydration completed but contains mismatches.`,
       ).not.toHaveBeenWarned()
     })
-    test('without tag should hydrate the flattened v-for children', async () => {
+    test('with tag should hydrate slot content made of two lists', async () => {
+      const data = ref({ a: [1, 2], b: [3] })
+      const { container } = await testHydration(
+        `<template>
+          <components.Child>
+            <li v-for="item in data.a" :key="item">{{ item }}</li>
+            <li v-for="item in data.b" :key="item">{{ item }}</li>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <TransitionGroup :css="false" tag="ul"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      const ul = container.querySelector('ul')!
+      const items = [...ul.querySelectorAll('li')]
+      expect(ul.innerHTML).toBe(
+        `<!--[--><!--[--><li>1</li><li>2</li><!--]--><!--[--><li>3</li><!--]--><!--]-->`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+      data.value.a.push(4)
+      data.value.b.unshift(5)
+      await nextTick()
+      expect([...ul.querySelectorAll('li')].map(li => li.textContent)).toEqual([
+        '1',
+        '2',
+        '4',
+        '5',
+        '3',
+      ])
+      // the rows the server rendered are the ones still there
+      expect(items.every(li => li.isConnected)).toBe(true)
+    })
+
+    // the server leaves the comments of a group out, but not the place of a
+    // `v-if` that renders nothing: the client creates its block regardless
+    test.each([
+      [
+        'with tag',
+        `<TransitionGroup tag="ul" :css="false">`,
+        `</TransitionGroup>`,
+      ],
+      ['without tag', `<TransitionGroup :css="false">`, `</TransitionGroup>`],
+    ])(
+      '%s should hydrate a v-if that renders nothing ahead of a sibling',
+      async (_, open, close) => {
+        const data = reactive({ show: false })
+        const { container, html } = await testHydration(
+          `<template>
+            ${open}<li v-if="data.show" key="a">A</li><li key="b">B</li>${close}
+          </template>`,
+          {},
+          data,
+        )
+        expect(html).toContain(`<!----><li>B</li>`)
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+        const b = container.querySelector('li')
+        const visible = () => container.innerHTML.replace(/<!--[^>]*-->/g, '')
+
+        data.show = true
+        await nextTick()
+        expect(visible()).toContain(`<li>A</li><li>B</li>`)
+        expect(container.querySelectorAll('li')[1]).toBe(b)
+        data.show = false
+        await nextTick()
+        expect(visible()).not.toContain(`<li>A</li>`)
+        expect(container.querySelector('li')).toBe(b)
+      },
+    )
+
+    test('without tag should hydrate the v-for children', async () => {
       const data = ref({
         items: [1],
       })
@@ -1004,19 +1212,95 @@ describe('Vapor Mode hydration', () => {
       const { container } = await mountWithHydration(html, code, data)
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
+        <!--[-->
         <!--[--><li>1</li><!--]-->
+        <!--]-->
         "
       `)
       data.value.items.push(2)
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(`
         "
+        <!--[-->
         <!--[--><li>1</li><li class="list-enter-from list-enter-active">2</li><!--]-->
+        <!--]-->
         "
       `)
       expect(
         `Hydration completed but contains mismatches.`,
       ).not.toHaveBeenWarned()
     })
+
+    // the server wraps a group without a tag in a range of its own, outside
+    // the slot's
+    test('without tag should hydrate the slot content inside its own range', async () => {
+      const data = reactive({ items: [1, 2] })
+      const { container, html } = await testHydration(
+        `<template>
+          <components.Child>
+            <li v-for="i in data.items" :key="i">{{ i }}</li>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <TransitionGroup :css="false"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      expect(html).toBe(
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--]-->`,
+      )
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      const li = container.querySelector('li')
+
+      data.items.push(3)
+      await nextTick()
+      expect(container.querySelector('li')).toBe(li)
+      expect(container.innerHTML).toBe(
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--><!--]-->`,
+      )
+    })
+
+    test.each([
+      [
+        'with tag',
+        `<TransitionGroup tag="ul"><slot /></TransitionGroup>`,
+        (s: string) => `<ul>${s}</ul>`,
+      ],
+      [
+        'without tag',
+        `<TransitionGroup><slot /></TransitionGroup>`,
+        (s: string) => `<!--[-->${s}<!--]-->`,
+      ],
+    ])(
+      '%s should hydrate vdom slot content under a vdom parent',
+      async (_, child, wrap) => {
+        const data = reactive({ label: 'a' })
+        // `compile()` turns a script-less SFC into a vapor one: keep the script
+        const { container, html } = await testWithVDOMApp(
+          `<script setup>const data = _data; const components = _components</script>
+        <template>
+          <components.Child>
+            <li key="one"><input />{{ data.label }}</li>
+          </components.Child>
+        </template>`,
+          { Child: `<template>${child}</template>` },
+          data,
+        )
+        expect(html).toBe(wrap(`<!--[--><li><input>a</li><!--]-->`))
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.label = 'b'
+        await nextTick()
+        expect(container.innerHTML).toBe(
+          wrap(`<!--[--><li><input>b</li><!--]-->`),
+        )
+      },
+    )
   })
 })
