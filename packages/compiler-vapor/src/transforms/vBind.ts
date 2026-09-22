@@ -57,15 +57,17 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   // A number literal loses its type as soon as it is stringified into the
   // template, so hold it back wherever the value does not end up there as a
   // string: component, slot outlet and custom element props are passed as raw
-  // values, a dynamic key is always applied at runtime, boolean attributes are
-  // folded from the type of the value itself, and v-model reads its value
-  // props back off the element. With `.attr`, `setAttr` still checks special
-  // boolean attributes and stores raw checkbox true/false values before calling
+  // values, a `.prop` binding sets a dom property from the raw value, a
+  // dynamic key is always applied at runtime, boolean attributes are folded
+  // from the type of the value itself, and v-model reads its value props back
+  // off the element. With `.attr`, `setAttr` still checks special boolean
+  // attributes and stores raw checkbox true/false values before calling
   // `setAttribute`.
   const excludeNumber =
     node.tagType === ElementTypes.COMPONENT ||
     node.tagType === ElementTypes.SLOT ||
     !!context.options.isCustomElement(node.tag) ||
+    modifiersString.includes('prop') ||
     !arg.isStatic ||
     isSpecialBooleanAttr(arg.content) ||
     isCheckboxValueProp(node, arg.content) ||

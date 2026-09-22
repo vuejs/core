@@ -99,6 +99,10 @@ export function isCheckboxValueProp(node: ElementNode, key: string): boolean {
 /**
  * Props the template string cannot carry, so they have to be applied by a
  * runtime prop setter instead:
+ * - `innerHTML` / `textContent` are dom properties that set the element's
+ *   content; as a content attribute they would only sit on the element and
+ *   the content would never be written, so vdom always sets them as a dom
+ *   property too, see `shouldSetAsProp`
  * - `<textarea>` / `<select>` ignore a `value` content attribute, the value
  *   only takes effect as a dom property - which is where vdom sends it too,
  *   see `shouldSetAsProp`
@@ -106,6 +110,8 @@ export function isCheckboxValueProp(node: ElementNode, key: string): boolean {
  */
 function isRuntimeOnlyProp(node: ElementNode, key: string): boolean {
   return (
+    key === 'innerHTML' ||
+    key === 'textContent' ||
     (key === 'value' && (node.tag === 'textarea' || node.tag === 'select')) ||
     isCheckboxValueProp(node, key)
   )
@@ -540,6 +546,10 @@ function transformNativeElement(
         template += ` ${key.content}="${IMPORT_EXP_START}${values[0].content}${IMPORT_EXP_END}"`
       } else if (
         canStringifyAttrName &&
+        // `.prop` forces a dom property, which a content attribute in the
+        // template string is not; `.attr` (`^`) does mean the attribute and
+        // can still be folded
+        prop.modifier !== '.' &&
         values.length === 1 &&
         (values[0].isStatic || values[0].content === "''") &&
         !dynamicKeys.includes(key.content) &&
