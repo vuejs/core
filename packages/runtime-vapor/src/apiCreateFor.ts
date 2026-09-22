@@ -296,12 +296,15 @@ export const createFor = (
         // `newBlocks[index]`, which the reuse pass has already filled in.
         let sources: number[] = EMPTY_ARR as unknown as number[]
         let mountCounter = 0
+        // set by the branch below when the queued run is a plain insert
+        let pureInsert = false
 
         if (oldKeyIndexMap.size === 0) {
           // pure append/replace: nothing to pair up, so every queued index is
           // a mount, the planner below is skipped and `sources` is never
           // read - don't build it
           mountCounter = queuedLength
+          pureInsert = true
         } else {
           sources = new Array(queuedLength)
           for (let q = queuedLength - 1; q >= 0; q--) {
@@ -350,57 +353,84 @@ export const createFor = (
         // reuses exist and none of them moved: every one of them stays put
         const allKept = hasReuse && sequence === undefined
 
-        // apply back-to-front so every block can anchor on the finalized
-        // block after it (kept blocks count as finalized: relative order
-        // among all unmoved blocks is already correct)
-        let sequenceEnd = sequence ? sequence.length - 1 : -1
-        // nearest attached node at positions >= scanFrom; positions past it
-        // are already scanned, keeping the whole pass O(newLength) even
-        // across runs of blocks that render nothing
-        let scanFrom = newLength
-        let cachedAnchor: Node | undefined
-        for (let q = queuedLength - 1; q >= 0; q--) {
-          const index = queuedIndices[q]
-          let isKept = allKept && sources[q] !== 0
-          if (sequenceEnd >= 0 && sequence![sequenceEnd] === q) {
-            sequenceEnd--
-            // `getSequence` seeds its result with index 0, so it can report
-            // a leading entry that was never selected; skip that marker
-            isKept = sources[q] !== 0
-          }
-          // `scanFrom`/`cachedAnchor` stay where they are: the next block
-          // that does move rescans the wider range, and each position is
-          // still visited at most once.
-          if (isKept) continue
-
-          // A block that renders nothing has no first node, so look past it
-          // for the next attached one.
+        // a pure insert queues the contiguous ascending run [e1, e3): every
+        // entry is a mount and none of them is paired up, so the whole run
+        // shares one anchor and can be mounted forward. that creates the rows
+        // in source order - an order apps observe through `setup` and through
+        // where teleported content lands - like every other vapor mount path,
+        // and like the vdom branch this mirrors (`i > e1`, "common sequence +
+        // mount": one anchor resolved past the run, then a forward loop).
+        // the pass below has to stay back-to-front: it anchors a block on the
+        // block after it, whose `newBlocks` entry is only filled once that
+        // block has been visited.
+        if (pureInsert && queuedLength > 0) {
+          // first attached node past the end of the run, else the fragment
+          // anchor; same attachment check as the pass below
           let anchorNode: Node | undefined
-          for (let i = index + 1; i < scanFrom; i++) {
+          for (let i = e3; i < newLength; i++) {
             const node = getBlockFirstNode(newBlocks[i].nodes)
-            // must be attached to *this* list's parent: a node that is still
-            // connected elsewhere (teleport target, suspense pending
-            // container, keep-alive storage) would make insertBefore throw
             if (node && node.parentNode === parent) {
               anchorNode = node
               break
             }
           }
-          if (anchorNode === undefined) {
-            // Landing at the tail: after any rows still leaving, as vdom
-            // anchors on the fragment end.
-            if (cachedAnchor === undefined) cachedAnchor = parentAnchor
-            anchorNode = cachedAnchor
+          if (anchorNode === undefined) anchorNode = parentAnchor
+          for (let q = 0; q < queuedLength; q++) {
+            mount(source, queuedIndices[q], anchorNode)
           }
-          scanFrom = index + 1
-          cachedAnchor = anchorNode
+        } else {
+          // apply back-to-front so every block can anchor on the finalized
+          // block after it (kept blocks count as finalized: relative order
+          // among all unmoved blocks is already correct)
+          let sequenceEnd = sequence ? sequence.length - 1 : -1
+          // nearest attached node at positions >= scanFrom; positions past it
+          // are already scanned, keeping the whole pass O(newLength) even
+          // across runs of blocks that render nothing
+          let scanFrom = newLength
+          let cachedAnchor: Node | undefined
+          for (let q = queuedLength - 1; q >= 0; q--) {
+            const index = queuedIndices[q]
+            let isKept = allKept && sources[q] !== 0
+            if (sequenceEnd >= 0 && sequence![sequenceEnd] === q) {
+              sequenceEnd--
+              // `getSequence` seeds its result with index 0, so it can report
+              // a leading entry that was never selected; skip that marker
+              isKept = sources[q] !== 0
+            }
+            // `scanFrom`/`cachedAnchor` stay where they are: the next block
+            // that does move rescans the wider range, and each position is
+            // still visited at most once.
+            if (isKept) continue
 
-          const block = newBlocks[index]
-          if (block !== undefined) {
-            // relocating an existing row is not a structural enter
-            move(block.nodes, parent!, anchorNode, MoveType.REORDER)
-          } else {
-            mount(source, index, anchorNode)
+            // A block that renders nothing has no first node, so look past it
+            // for the next attached one.
+            let anchorNode: Node | undefined
+            for (let i = index + 1; i < scanFrom; i++) {
+              const node = getBlockFirstNode(newBlocks[i].nodes)
+              // must be attached to *this* list's parent: a node that is still
+              // connected elsewhere (teleport target, suspense pending
+              // container, keep-alive storage) would make insertBefore throw
+              if (node && node.parentNode === parent) {
+                anchorNode = node
+                break
+              }
+            }
+            if (anchorNode === undefined) {
+              // Landing at the tail: after any rows still leaving, as vdom
+              // anchors on the fragment end.
+              if (cachedAnchor === undefined) cachedAnchor = parentAnchor
+              anchorNode = cachedAnchor
+            }
+            scanFrom = index + 1
+            cachedAnchor = anchorNode
+
+            const block = newBlocks[index]
+            if (block !== undefined) {
+              // relocating an existing row is not a structural enter
+              move(block.nodes, parent!, anchorNode, MoveType.REORDER)
+            } else {
+              mount(source, index, anchorNode)
+            }
           }
         }
       }
