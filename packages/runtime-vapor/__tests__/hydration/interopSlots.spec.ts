@@ -1777,6 +1777,121 @@ describe('VDOM interop', () => {
     expect(visible(container)).toBe(`<u>mid</u>`)
   })
 
+  // a component with a client render only (a library component) forwards
+  // the vapor slot as vnodes into a template outlet
+  test('hydrate the fallback of a template outlet a vnode slot forwards an empty vapor slot into', async () => {
+    const data = reactive({ show: false })
+    const App = (ssr: boolean) => {
+      const Child = compile(
+        `${setup}<template><div><slot><p>fallback</p></slot></div></template>`,
+        data as any,
+        {},
+        { vapor: false, ssr },
+      )
+      const Forward = compile(
+        `${setup}<template><components.Child><slot /></components.Child></template>`,
+        data as any,
+        { Child },
+        { vapor: false, ssr: false },
+      )
+      return compile(
+        `${setup}<template>
+          <components.Forward><b v-if="data.show">b</b></components.Forward>
+        </template>`,
+        data as any,
+        { Forward },
+        { vapor: true, ssr },
+      )
+    }
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App(true)),
+    )
+    expect(html).toBe(`<div><!--(--><p>fallback</p><!--)--></div>`)
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+    const p = container.querySelector('p')
+    const app = runtimeVapor
+      .createVaporSSRApp(App(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(container.querySelector('p')).toBe(p)
+
+    data.show = true
+    await nextTick()
+    expect(visible(container)).toBe(`<div><b>b</b></div>`)
+    data.show = false
+    await nextTick()
+    expect(visible(container)).toBe(`<div><p>fallback</p></div>`)
+
+    app.unmount()
+    expect(container.innerHTML).toBe('')
+  })
+
+  // the slot renders the first fallback on its chain that renders something:
+  // the server has to pick the same one
+  test('hydrate the outer fallback of a vdom outlet rendered as a vnode when the inner one renders nothing', async () => {
+    const data = reactive({ show: false, local: false })
+    const App = (ssr: boolean) => {
+      const Child = {
+        render(this: any) {
+          return h('div', [
+            renderSlot(this.$slots, 'default', {}, () => [
+              h('p', 'outer fallback'),
+            ]),
+          ])
+        },
+      }
+      const Forward = compile(
+        `${setup}<template><components.Child><slot><i v-if="data.local">local fallback</i></slot></components.Child></template>`,
+        data as any,
+        { Child },
+        { vapor: false, ssr },
+      )
+      return compile(
+        `${setup}<template>
+          <components.Forward><b v-if="data.show">b</b></components.Forward>
+        </template>`,
+        data as any,
+        { Forward },
+        { vapor: true, ssr },
+      )
+    }
+    const html = await VueServerRenderer.renderToString(
+      runtimeDom.createSSRApp(App(true)),
+    )
+    expect(html).toBe(`<div><!--(--><p>outer fallback</p><!--)--></div>`)
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.innerHTML = html
+    const p = container.querySelector('p')
+    const app = runtimeVapor
+      .createVaporSSRApp(App(false))
+      .use(runtimeVapor.vaporInteropPlugin)
+    app.mount(container)
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+    expect(container.querySelector('p')).toBe(p)
+
+    data.local = true
+    await nextTick()
+    expect(visible(container)).toBe(`<div><i>local fallback</i></div>`)
+    data.show = true
+    await nextTick()
+    expect(visible(container)).toBe(`<div><b>b</b></div>`)
+    data.show = false
+    data.local = false
+    await nextTick()
+    expect(visible(container)).toBe(`<div><p>outer fallback</p></div>`)
+
+    app.unmount()
+    expect(container.innerHTML).toBe('')
+  })
+
   // without `ssrRender` (a render function, or a client-compiled library
   // component) the server renders the outlet as a vnode; the fallback is
   // marked however the vapor slot reached it: `h(Child, null, slots)` renders
@@ -1864,16 +1979,30 @@ describe('VDOM interop', () => {
   // a vdom outlet keeps its fragment around a vapor slot, however little that
   // one renders: the server has to keep its range too
   test.each([
-    ['one vdom component', 1, `<b v-if="data.show">b</b>`],
-    ['two vdom components', 2, `<b v-if="data.show">b</b>`],
+    ['one vdom component', 1, `<b v-if="data.show">b</b>`, 'template'],
+    ['two vdom components', 2, `<b v-if="data.show">b</b>`, 'template'],
     [
       'two vdom components (v-for)',
       2,
       `<b v-for="i in data.show ? 1 : 0" :key="i">b</b>`,
+      'template',
+    ],
+    // a render function renders its outlet as a vnode
+    [
+      'two vdom components into a render function',
+      2,
+      `<b v-if="data.show">b</b>`,
+      'render function',
+    ],
+    [
+      'two vdom components into a render function (v-for)',
+      2,
+      `<b v-for="i in data.show ? 1 : 0" :key="i">b</b>`,
+      'render function',
     ],
   ])(
     'hydrate an empty vapor slot forwarded by %s without a fallback',
-    async (_, levels, content) => {
+    async (_, levels, content, kind) => {
       const data = reactive({ show: false })
       const App = (ssr: boolean) => {
         const components: any = {}
@@ -1887,7 +2016,14 @@ describe('VDOM interop', () => {
               ssr,
             },
           )
-        components.Child = vdom(`<div><slot /></div>`)
+        components.Child =
+          kind === 'template'
+            ? vdom(`<div><slot /></div>`)
+            : {
+                render(this: any) {
+                  return h('div', [renderSlot(this.$slots, 'default')])
+                },
+              }
         components.W1 = vdom(`<components.Child><slot /></components.Child>`)
         components.W2 = vdom(`<components.W1><slot /></components.W1>`)
         return compile(

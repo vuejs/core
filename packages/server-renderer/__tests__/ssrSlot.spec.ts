@@ -450,20 +450,129 @@ describe('ssr: slot', () => {
     })
 
     // the client keeps the fragment of every vdom outlet around a vapor slot
-    test('a vdom outlet keeps the range of an empty vapor slot it forwards', async () => {
-      const Child = { template: `<div><slot/></div>` }
-      const W1 = { components: { Child }, template: `<Child><slot/></Child>` }
-      const W2 = { components: { W1 }, template: `<W1><slot/></W1>` }
-      const template = `<W2><span v-if="false"/></W2>`
-      // what the sfc compiler leaves on a vapor component
+    // as the interop does on the client: only a slot that is all the content
+    // takes the fallback of an enclosing outlet
+    test('an enclosing outlet keeps its fallback from content beside a forwarded vapor slot', async () => {
+      const Child = {
+        render(this: any) {
+          return h('div', [
+            renderSlot(this.$slots, 'default', {}, () => ['fallback']),
+          ])
+        },
+      }
+      const Forward = {
+        components: { Child },
+        template: `<Child>text<slot/></Child>`,
+      }
+      const Listed = {
+        components: { Child },
+        props: ['list'],
+        template: `<Child><template v-for="i in list"><slot/></template></Child>`,
+      }
       const vapor = { __vapor: true }
+      const app = (components: any, template: string) =>
+        renderToString(createApp({ components, template, ...vapor }))
       expect(
-        await renderToString(
-          createApp({ components: { W2 }, template, ...vapor }),
+        await app({ Forward }, `<Forward><span v-if="false"/></Forward>`),
+      ).toBe(`<div><!--[-->text<!--[--><!--]--><!--]--></div>`)
+      expect(
+        await app(
+          { Listed },
+          `<Listed :list="[1]"><span v-if="false"/></Listed>`,
         ),
       ).toBe(`<div><!--[--><!--[--><!--[--><!--]--><!--]--><!--]--></div>`)
-      // a vdom slot: left alone
-      expect(await render(template, { W2 })).toBe(`<div><!--[--><!--]--></div>`)
+      // an outlet given nothing beside the slot leaves an empty fragment,
+      // which is no content: the slot still takes the fallback
+      const Beside = {
+        components: { Child },
+        template: `<Child><slot/><slot name="extra"/></Child>`,
+      }
+      expect(
+        await app({ Beside }, `<Beside><span v-if="false"/></Beside>`),
+      ).toBe(`<div><!--(-->fallback<!--)--></div>`)
     })
+
+    // a component with a client render only (a library component) forwards
+    // the vapor slot as vnodes into a template outlet
+    test('a template outlet marks its fallback when a vnode slot forwards an empty vapor slot', async () => {
+      const Child = { template: `<div><slot><p>fallback</p></slot></div>` }
+      const Forward = {
+        render(this: any) {
+          return h(Child, null, {
+            default: () => [renderSlot(this.$slots, 'default')],
+          })
+        },
+      }
+      const vapor = { __vapor: true }
+      const app = (template: string) =>
+        renderToString(
+          createApp({ components: { Forward }, template, ...vapor }),
+        )
+      expect(await app(`<Forward><span v-if="false"/></Forward>`)).toBe(
+        `<div><!--(--><p>fallback</p><!--)--></div>`,
+      )
+      expect(await app(`<Forward>content</Forward>`)).toBe(
+        `<div><!--[--><!--[-->content<!--]--><!--]--></div>`,
+      )
+    })
+
+    // fallbacks are tried from the innermost outlet out, as on the client
+    test('a forwarded vapor slot renders the first fallback on its chain that renders something', async () => {
+      const Child = {
+        render(this: any) {
+          return h('div', [
+            renderSlot(this.$slots, 'default', {}, () => [
+              h('p', 'outer fallback'),
+            ]),
+          ])
+        },
+      }
+      const Forward = {
+        components: { Child },
+        props: ['local'],
+        template: `<Child><slot><i v-if="local">local fallback</i></slot></Child>`,
+      }
+      const vapor = { __vapor: true }
+      const app = (template: string) =>
+        renderToString(
+          createApp({ components: { Forward }, template, ...vapor }),
+        )
+      expect(await app(`<Forward><span v-if="false"/></Forward>`)).toBe(
+        `<div><!--(--><p>outer fallback</p><!--)--></div>`,
+      )
+      expect(
+        await app(`<Forward :local="true"><span v-if="false"/></Forward>`),
+      ).toBe(`<div><!--[--><!--(--><i>local fallback</i><!--)--><!--]--></div>`)
+    })
+
+    test.each([
+      ['a template', { template: `<div><slot/></div>` }],
+      [
+        'a render function',
+        {
+          render(this: any) {
+            return h('div', [renderSlot(this.$slots, 'default')])
+          },
+        },
+      ],
+    ])(
+      'a vdom outlet (%s) keeps the range of an empty vapor slot it forwards',
+      async (_, Child) => {
+        const W1 = { components: { Child }, template: `<Child><slot/></Child>` }
+        const W2 = { components: { W1 }, template: `<W1><slot/></W1>` }
+        const template = `<W2><span v-if="false"/></W2>`
+        // what the sfc compiler leaves on a vapor component
+        const vapor = { __vapor: true }
+        expect(
+          await renderToString(
+            createApp({ components: { W2 }, template, ...vapor }),
+          ),
+        ).toBe(`<div><!--[--><!--[--><!--[--><!--]--><!--]--><!--]--></div>`)
+        // a vdom slot: left alone
+        expect(await render(template, { W2 })).toBe(
+          `<div><!--[--><!--]--></div>`,
+        )
+      },
+    )
   })
 })

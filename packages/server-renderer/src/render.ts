@@ -11,6 +11,8 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
+  type VaporInVdomInterface,
+  type VdomSlotOutlet,
   handleError,
   mergeProps,
   ssrContextKey,
@@ -19,6 +21,7 @@ import {
 } from '@vue/runtime-dom'
 import {
   NOOP,
+  PatchFlags,
   ShapeFlags,
   escapeHtml,
   escapeHtmlComment,
@@ -30,6 +33,7 @@ import {
   isVoidTag,
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
+import { type SSRSlot, ssrRenderSlot } from './helpers/ssrRenderSlot'
 import { ssrCompile } from './helpers/ssrCompile'
 import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
 
@@ -38,9 +42,13 @@ const {
   setCurrentRenderingInstance,
   setupComponent,
   renderComponentRoot,
+  isVNode,
   normalizeVNode,
   pushWarningContext,
   popWarningContext,
+  VaporSlot,
+  rawVaporSlotKey,
+  invokeSlotFallback,
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
@@ -123,24 +131,66 @@ export function createBuffer() {
   }
 }
 
-// slots written in a vapor component: known where they are created, since
-// they can be passed on as they are (`h(Child, null, slots)`)
-export const vaporSlotFns: WeakSet<object> = new WeakSet()
+// What `renderSlot` asks of the vapor interop for an outlet whose content is
+// a forwarded vapor slot: the outlet then renders as the slot's own would,
+// its fallback in place of content that renders nothing.
+const vaporOutlets: WeakMap<VNodeArrayChildren, VdomSlotOutlet> = new WeakMap()
+const vaporInterface = {
+  attachSlotOutlet(content, fallback, owner) {
+    const lone = isVaporSlotContent(content)
+    if (lone) vaporOutlets.set(content, { fallback, owner })
+    return lone
+  },
+} as VaporInVdomInterface
+
+// Whether the content is one vapor slot, past comments and the fragments of
+// outlets (empty ones too, not lists), as the interop's `findLoneSlot`.
+export function isVaporSlotContent(children: VNodeArrayChildren): boolean {
+  const lone = findVaporSlot(children)
+  vaporSlot = null
+  return lone
+}
+
+let vaporSlot: VNode | null = null
+function findVaporSlot(children: VNodeArrayChildren): boolean {
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (!isVNode(child)) return false
+    if (child.type === VaporSlot) {
+      if (vaporSlot) return false
+      vaporSlot = child
+    } else if (child.type === Fragment) {
+      if (
+        (child.patchFlag > 0 &&
+          child.patchFlag &
+            (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
+        !findVaporSlot(child.children as VNodeArrayChildren)
+      ) {
+        return false
+      }
+    } else if (child.type !== Comment) {
+      return false
+    }
+  }
+  return true
+}
 
 export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
-  if (
-    vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
-    vnode.ctx &&
-    vnode.ctx.type.__vapor
-  ) {
-    const slots = vnode.children as Record<string, unknown>
+  // Slots written in a vapor component are marked as the client marks them,
+  // where they are created since they can be passed on as they are: an
+  // outlet rendered as a vnode (`renderSlot`) then holds them as a vapor
+  // slot, valid however little they render, like the client does.
+  const ctx = vnode.ctx
+  if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN && ctx && ctx.type.__vapor) {
+    const slots = vnode.children as Record<string, any>
     for (const name in slots) {
-      if (isFunction(slots[name])) vaporSlotFns.add(slots[name] as object)
+      if (isFunction(slots[name])) slots[name][rawVaporSlotKey] = slots[name]
     }
+    if (!ctx.appContext.vapor) ctx.appContext.vapor = vaporInterface
   }
   const instance = (vnode.component = createComponentInstance(
     vnode,
@@ -315,6 +365,25 @@ export function renderVNode(
         slotScopeId =
           (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
       }
+      const outlet =
+        vnode.vo && vaporOutlets.get(children as VNodeArrayChildren)
+      if (outlet) {
+        renderVaporOutlet(
+          push,
+          (_, push) =>
+            renderVNodeChildren(
+              push,
+              children as VNodeArrayChildren,
+              parentComponent,
+              slotScopeId,
+            ),
+          null,
+          outlet,
+          parentComponent,
+          slotScopeId,
+        )
+        break
+      }
       // a slot fallback (`renderSlot`) is marked like `ssrRenderSlot` does
       const isFallback = shapeFlag & ShapeFlags.SLOT_FALLBACK
       push(isFallback ? `<!--(-->` : `<!--[-->`) // open
@@ -325,6 +394,24 @@ export function renderVNode(
         slotScopeId,
       )
       push(isFallback ? `<!--)-->` : `<!--]-->`) // close
+      break
+    }
+    case VaporSlot: {
+      // the vapor slot an outlet rendered as a vnode holds: rendered as the
+      // outlet itself would be, with the range and the fallback of that outlet
+      if (vnode.slotScopeIds) {
+        slotScopeId =
+          (slotScopeId ? slotScopeId + ' ' : '') + vnode.slotScopeIds.join(' ')
+      }
+      const { slot, outlets } = vnode.vs!
+      renderVaporOutlet(
+        push,
+        slot,
+        vnode.props,
+        outlets && outlets[0],
+        parentComponent,
+        slotScopeId,
+      )
       break
     }
     default:
@@ -344,6 +431,38 @@ export function renderVNode(
         )
       }
   }
+}
+
+// An outlet rendered as a vnode, as `ssrRenderSlot` renders one written in a
+// template: its range, the fallback when the slot renders nothing.
+function renderVaporOutlet(
+  push: PushFn,
+  slot: SSRSlot,
+  props: Props | null,
+  outlet: VdomSlotOutlet | undefined,
+  parentComponent: ComponentInternalInstance,
+  slotScopeId?: string,
+): void {
+  // the outlet is written in the component whose tree this is
+  const prev = setCurrentRenderingInstance(parentComponent)
+  ssrRenderSlot(
+    { default: slot },
+    'default',
+    props,
+    outlet
+      ? () =>
+          renderVNodeChildren(
+            push,
+            invokeSlotFallback(outlet.fallback, outlet.owner),
+            parentComponent,
+            slotScopeId,
+          )
+      : null,
+    push,
+    parentComponent,
+    slotScopeId,
+  )
+  setCurrentRenderingInstance(prev)
 }
 
 export function renderVNodeChildren(

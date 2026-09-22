@@ -420,8 +420,12 @@ import {
 } from './component'
 import { renderComponentRoot } from './componentRenderUtils'
 import { setCurrentRenderingInstance } from './componentRenderContext'
-import { isVNode, normalizeVNode } from './vnode'
-import { ensureValidVNode } from './helpers/renderSlot'
+import { VaporSlot, isVNode, normalizeVNode } from './vnode'
+import {
+  ensureValidVNode,
+  invokeSlotFallback,
+  rawVaporSlotKey,
+} from './helpers/renderSlot'
 import { popWarningContext, pushWarningContext } from './warning'
 
 const _ssrUtils: {
@@ -435,6 +439,10 @@ const _ssrUtils: {
   ensureValidVNode: typeof ensureValidVNode
   pushWarningContext: typeof pushWarningContext
   popWarningContext: typeof popWarningContext
+  // a vapor slot rendered by a vdom outlet
+  VaporSlot: typeof VaporSlot
+  rawVaporSlotKey: typeof rawVaporSlotKey
+  invokeSlotFallback: typeof invokeSlotFallback
 } = {
   createComponentInstance,
   setupComponent,
@@ -446,6 +454,9 @@ const _ssrUtils: {
   ensureValidVNode,
   pushWarningContext,
   popWarningContext,
+  VaporSlot,
+  rawVaporSlotKey,
+  invokeSlotFallback,
 }
 
 /**
