@@ -10540,4 +10540,225 @@ describe('vdomInterop', () => {
       })
     }
   })
+  // #15583 regression #2: a KeepAlive root is a transparent root, so the
+  // child inside it is the component root and receives the fallthrough
+  // attrs through its own props. A vdom child owns the element those props
+  // land on, so the vapor side must not write them onto that element too:
+  // a reactivated branch hands the fallthrough hook its cached, already
+  // mounted nodes, which used to stack one extra native listener per cycle.
+  describe('KeepAlive root fallthrough into a vdom child', () => {
+    test('installs a listener once, across reactivations', async () => {
+      const calls: string[] = []
+      const data = ref({ ok: true, spy: () => calls.push('c') })
+      const VdomButton = defineComponent({ render: () => h('button', 'btn') })
+      const Child = compile(
+        `<script setup vapor>
+          const data = _data
+          const VdomButton = _components.VdomButton
+        </script>
+        <template>
+          <KeepAlive><VdomButton v-if="data.ok" /></KeepAlive>
+        </template>`,
+        data,
+        { VdomButton },
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child @click="data.spy" /></template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c'])
+
+      data.value.ok = false
+      await nextTick()
+      data.value.ok = true
+      await nextTick()
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c', 'c'])
+
+      // a second cycle must not stack another listener either
+      data.value.ok = false
+      await nextTick()
+      data.value.ok = true
+      await nextTick()
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c', 'c', 'c'])
+    })
+
+    test('a compiled vdom child receives the listener and the class', async () => {
+      const calls: string[] = []
+      const data = ref({ ok: true, spy: () => calls.push('c') })
+      const VdomButton = compile(
+        `<script setup>
+          const label = 'btn'
+        </script>
+        <template><button>{{ label }}</button></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const Child = compile(
+        `<script setup vapor>
+          const data = _data
+          const VdomButton = _components.VdomButton
+        </script>
+        <template>
+          <KeepAlive><VdomButton v-if="data.ok" /></KeepAlive>
+        </template>`,
+        data,
+        { VdomButton },
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child class="outer" @click="data.spy" /></template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      expect(host.querySelector('button')!.className).toBe('outer')
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c'])
+
+      data.value.ok = false
+      await nextTick()
+      data.value.ok = true
+      await nextTick()
+      expect(host.querySelector('button')!.className).toBe('outer')
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c', 'c'])
+    })
+
+    test('a vdom child that declares the event consumes it as an emit', async () => {
+      const calls: string[] = []
+      const data = ref({ ok: true, spy: () => calls.push('c') })
+      const VdomButton = compile(
+        `<script setup>
+          const emit = defineEmits(['click'])
+        </script>
+        <template><button @click="emit('click')">btn</button></template>`,
+        data,
+        {},
+        { vapor: false },
+      )
+      const Child = compile(
+        `<script setup vapor>
+          const data = _data
+          const VdomButton = _components.VdomButton
+        </script>
+        <template>
+          <KeepAlive><VdomButton v-if="data.ok" /></KeepAlive>
+        </template>`,
+        data,
+        { VdomButton },
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child @click="data.spy" /></template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      data.value.ok = false
+      await nextTick()
+      data.value.ok = true
+      await nextTick()
+      // the declared emit is the only route to the handler; a native
+      // listener installed on top of it would report the click twice
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c'])
+    })
+
+    test('a vapor child under a KeepAlive root still inherits attrs', async () => {
+      const calls: string[] = []
+      const data = ref({ ok: true, spy: () => calls.push('c') })
+      const VaporButton = compile(
+        `<script setup vapor>
+          const label = 'btn'
+        </script>
+        <template><button>{{ label }}</button></template>`,
+        data,
+      )
+      const Child = compile(
+        `<script setup vapor>
+          const data = _data
+          const VaporButton = _components.VaporButton
+        </script>
+        <template>
+          <KeepAlive><VaporButton v-if="data.ok" /></KeepAlive>
+        </template>`,
+        data,
+        { VaporButton },
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child class="outer" @click="data.spy" /></template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      expect(host.querySelector('button')!.className).toBe('outer')
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c'])
+
+      data.value.ok = false
+      await nextTick()
+      data.value.ok = true
+      await nextTick()
+      expect(host.querySelector('button')!.className).toBe('outer')
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c', 'c'])
+    })
+
+    test('a native element under a KeepAlive root still inherits attrs', async () => {
+      const calls: string[] = []
+      const data = ref({ ok: true, spy: () => calls.push('c') })
+      const Child = compile(
+        `<script setup vapor>
+          const data = _data
+        </script>
+        <template>
+          <KeepAlive><button v-if="data.ok">btn</button></KeepAlive>
+        </template>`,
+        data,
+      )
+      const App = compile(
+        `<script setup>
+          const data = _data
+          const Child = _components.Child
+        </script>
+        <template><Child class="outer" @click="data.spy" /></template>`,
+        data,
+        { Child },
+        { vapor: false },
+      )
+      const { host } = define(App).render()
+      host.querySelector('button')!.click()
+      data.value.ok = false
+      await nextTick()
+      data.value.ok = true
+      await nextTick()
+      expect(host.querySelector('button')!.className).toBe('outer')
+      host.querySelector('button')!.click()
+      expect(calls).toEqual(['c', 'c'])
+    })
+  })
 })
