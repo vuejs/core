@@ -284,54 +284,6 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
-    test('plain template element with children', async () => {
-      const { container, data } = await testHydration(`
-      <template><div><template><span>{{ data }}</span></template></div></template>
-    `)
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><template><span>foo</span></template></div>"`,
-      )
-      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-
-      data.value = 'bar'
-      await nextTick()
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><template><span>bar</span></template></div>"`,
-      )
-    })
-
-    test('plain template element with children and a following sibling', async () => {
-      const { container, data } = await testHydration(`
-      <template><div><template><span>{{ data }}</span></template><i>{{ data }}</i></div></template>
-    `)
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><template><span>foo</span></template><i>foo</i></div>"`,
-      )
-      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-
-      data.value = 'bar'
-      await nextTick()
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><template><span>bar</span></template><i>bar</i></div>"`,
-      )
-    })
-
-    test('plain template element with multiple children', async () => {
-      const { container, data } = await testHydration(`
-      <template><div><template><span>{{ data }}</span><i>{{ data }}</i></template></div></template>
-    `)
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><template><span>foo</span><i>foo</i></template></div>"`,
-      )
-      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
-
-      data.value = 'bar'
-      await nextTick()
-      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
-        `"<div><template><span>bar</span><i>bar</i></template></div>"`,
-      )
-    })
-
     test('custom element with children', async () => {
       const { container, data } = await testHydration(
         `<template><div><my-el><span>{{ data }}</span></my-el></div></template>`,
@@ -350,6 +302,27 @@ describe('Vapor Mode hydration', () => {
       await nextTick()
       expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
         `"<div><my-el><span>bar</span></my-el></div>"`,
+      )
+    })
+
+    test('custom element with multiple children and a following sibling', async () => {
+      const { container, data } = await testHydration(
+        `<template><div><my-el><span>{{ data }}</span><i>{{ data }}</i></my-el><b>{{ data }}</b></div></template>`,
+        undefined,
+        undefined,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><my-el><span>foo</span><i>foo</i></my-el><b>foo</b></div>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'bar'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<div><my-el><span>bar</span><i>bar</i></my-el><b>bar</b></div>"`,
       )
     })
 

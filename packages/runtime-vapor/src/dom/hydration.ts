@@ -401,13 +401,7 @@ function locateHydrationNodeImpl(claim?: FragmentClaim) {
     // append: skip the preceding logical units (0 when absent — sole-child
     // appends and withHydration entry). Locating through the logical walk
     // also stamps $llc/$lli so mismatch recovery keeps the cache coherent.
-    // The parser parks a server-rendered `<template>`'s children in its
-    // `content` fragment, so that is where its server output is found.
-    const content = (insertionParent as HTMLTemplateElement).content
-    node = locateChildByLogicalIndex(
-      content && !insertionParent.firstChild ? content : insertionParent,
-      insertionIndex || 0,
-    )
+    node = locateChildByLogicalIndex(insertionParent, insertionIndex || 0)
   } else {
     node = currentHydrationNode
   }
