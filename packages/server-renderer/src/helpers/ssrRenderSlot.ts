@@ -1,6 +1,7 @@
 import {
   type ComponentInternalInstance,
   type Slots,
+  type VNodeArrayChildren,
   getCurrentInstance,
   ssrUtils,
 } from '@vue/runtime-dom'
@@ -8,12 +9,12 @@ import {
   type Props,
   type PushFn,
   type SSRBufferItem,
+  isVaporSlotContent,
   renderVNodeChildren,
-  vaporSlotFns,
 } from '../render'
 import { isArray } from '@vue/shared'
 
-const { ensureValidVNode } = ssrUtils
+const { ensureValidVNode, rawVaporSlotKey } = ssrUtils
 
 // vapor slots rendered so far: an outlet reads it around its slot function to
 // learn whether one rendered inside
@@ -64,7 +65,7 @@ export function ssrRenderSlotInner(
   const slotFn = slots[slotName]
   let fallback = false
   if (slotFn) {
-    if (vaporSlotFns.has(slotFn)) vaporSlots++
+    if ((slotFn as any)[rawVaporSlotKey]) vaporSlots++
     const before = vaporSlots
     const slotBuffer: SSRBufferItem[] = []
     const bufferedPush = (item: SSRBufferItem) => {
@@ -78,20 +79,25 @@ export function ssrRenderSlotInner(
       parentComponent,
       slotScopeId ? ' ' + slotScopeId : '',
     )
+    // undefined for an ssr slot; otherwise the vnodes, null for none valid
+    let vnodes: VNodeArrayChildren | null | undefined
     if (isArray(ret)) {
-      const validSlotContent = ensureValidVNode(ret)
+      vnodes = ensureValidVNode(ret)
+      // a forwarded vapor slot is content whatever it renders: what it does
+      // render decides, as for an ssr slot
+      if (vnodes && isVaporSlotContent(vnodes)) {
+        renderVNodeChildren(bufferedPush, vnodes, parentComponent, slotScopeId)
+        vnodes = undefined
+      }
+    }
+    if (vnodes !== undefined) {
       if (!transition) {
-        fallback = !validSlotContent && !!fallbackRenderFn
+        fallback = !vnodes && !!fallbackRenderFn
         push(fallback ? `<!--(-->` : `<!--[-->`)
       }
-      if (validSlotContent) {
+      if (vnodes) {
         // normal slot
-        renderVNodeChildren(
-          push,
-          validSlotContent,
-          parentComponent,
-          slotScopeId,
-        )
+        renderVNodeChildren(push, vnodes, parentComponent, slotScopeId)
       } else if (fallbackRenderFn) {
         fallbackRenderFn()
       } else if (transition) {
