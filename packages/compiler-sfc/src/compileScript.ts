@@ -296,6 +296,28 @@ export function compileScript(
     })
   }
 
+  function checkInvalidDestructuredPropsReference(
+    node: Node | undefined,
+    method: string,
+  ) {
+    if (!node) return
+    const keys: Record<string, string> = Object.create(null)
+    for (const key in ctx.propsDestructuredBindings) {
+      keys[ctx.propsDestructuredBindings[key].local] = key
+    }
+    walkIdentifiers(node, id => {
+      if (id.name in keys) {
+        ctx.error(
+          `\`${method}()\` prop options cannot reference destructured props ` +
+            `because they are hoisted outside of the setup() function. Use the ` +
+            `props argument of the option instead, e.g. ` +
+            `\`default: props => props.${keys[id.name]}\`.`,
+          id,
+        )
+      }
+    })
+  }
+
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
 
@@ -722,6 +744,7 @@ export function compileScript(
   for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
     for (const node of runtimeOptionNodes) {
       checkInvalidScopeReference(node, DEFINE_MODEL)
+      checkInvalidDestructuredPropsReference(node, DEFINE_MODEL)
     }
   }
 

@@ -287,6 +287,39 @@ describe('defineModel()', () => {
     expect(content).toMatch(`set: (v) => { return v + __props.x }`)
   })
 
+  // #15602
+  test('prop option referencing a destructured prop', () => {
+    expect(() =>
+      compile(
+        `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: () => x
+      })
+      </script>
+      `,
+        { propsDestructure: true },
+      ),
+    ).toThrow(`prop options cannot reference destructured props`)
+  })
+
+  test('prop option referencing a local that shadows a destructured prop', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: () => { const x = 1; return x }
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`default: () => { const x = 1; return x }`)
+  })
+
   test('w/ Boolean And Function types, production mode', () => {
     const { content, bindings } = compile(
       `
