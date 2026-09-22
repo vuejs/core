@@ -2638,8 +2638,9 @@ function hydrateVNode(
     slotScopeIds,
     false,
   )
+  // no next node: the vnode ends its parent, move on from there
   if (nextNode) setCurrentHydrationNode(nextNode)
-  else advanceHydrationNode(node)
+  else advanceHydrationNode(parentNode(node)!)
 }
 
 // The fallback block of the outlet at `depth` on the slot's chain (0 is the

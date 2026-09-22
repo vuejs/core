@@ -1192,5 +1192,77 @@ describe('Vapor Mode hydration', () => {
         `Hydration completed but contains mismatches.`,
       ).not.toHaveBeenWarned()
     })
+
+    // the server wraps a group without a tag in a range of its own, outside
+    // the slot's
+    test('without tag should hydrate the slot content inside its own range', async () => {
+      const data = reactive({ items: [1, 2] })
+      const { container, html } = await testHydration(
+        `<template>
+          <components.Child>
+            <li v-for="i in data.items" :key="i">{{ i }}</li>
+          </components.Child>
+        </template>`,
+        {
+          Child: `<template>
+            <TransitionGroup :css="false"><slot /></TransitionGroup>
+          </template>`,
+        },
+        data,
+      )
+      expect(html).toBe(
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><!--]--><!--]--><!--]-->`,
+      )
+      expect(container.innerHTML).toBe(html)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+      expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+      const li = container.querySelector('li')
+
+      data.items.push(3)
+      await nextTick()
+      expect(container.querySelector('li')).toBe(li)
+      expect(container.innerHTML).toBe(
+        `<!--[--><!--[--><!--[--><li>1</li><li>2</li><li>3</li><!--]--><!--]--><!--]-->`,
+      )
+    })
+
+    test.each([
+      [
+        'with tag',
+        `<TransitionGroup tag="ul"><slot /></TransitionGroup>`,
+        (s: string) => `<ul>${s}</ul>`,
+      ],
+      [
+        'without tag',
+        `<TransitionGroup><slot /></TransitionGroup>`,
+        (s: string) => `<!--[-->${s}<!--]-->`,
+      ],
+    ])(
+      '%s should hydrate vdom slot content under a vdom parent',
+      async (_, child, wrap) => {
+        const data = reactive({ label: 'a' })
+        // `compile()` turns a script-less SFC into a vapor one: keep the script
+        const { container, html } = await testWithVDOMApp(
+          `<script setup>const data = _data; const components = _components</script>
+        <template>
+          <components.Child>
+            <li key="one"><input />{{ data.label }}</li>
+          </components.Child>
+        </template>`,
+          { Child: `<template>${child}</template>` },
+          data,
+        )
+        expect(html).toBe(wrap(`<!--[--><li><input>a</li><!--]-->`))
+        expect(container.innerHTML).toBe(html)
+        expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+        expect(`Hydration children mismatch`).not.toHaveBeenWarned()
+
+        data.label = 'b'
+        await nextTick()
+        expect(container.innerHTML).toBe(
+          wrap(`<!--[--><li><input>b</li><!--]-->`),
+        )
+      },
+    )
   })
 })

@@ -68,12 +68,17 @@ import {
 } from '../apiDefineComponent'
 import {
   adoptTemplate,
+  advanceHydrationNode,
+  claimAnchor,
   cleanupHydrationTail,
+  createFragmentClaim,
   currentHydrationNode,
   isHydrating,
+  locateEndAnchor,
   locateHydrationNode,
   nextLogicalSibling,
   setCurrentHydrationNode,
+  trimHydrationBoundary,
 } from '../dom/hydration'
 import { isTransitionEnabled, registerTransitionHooks } from '../transition'
 import { isInteropEnabled } from '../vdomInteropState'
@@ -219,11 +224,19 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
     onUpdated(updated)
     const updateHooks: TransitionGroupUpdateHooks = { beforeUpdate, updated }
 
-    if (isHydrating) locateHydrationNode()
     // The wrapper element is static configuration, not animated content:
     // `tag` is read once. (vdom only remounts the children on a tag change
     // because the parent re-render patches the root vnode type.)
     const tag = props.tag
+    // without a tag the server wraps the group in a range of its own
+    let close: Node | null = null
+    if (isHydrating) {
+      const claim = tag ? undefined : createFragmentClaim()
+      locateHydrationNode(claim)
+      if (claim && claim.start) {
+        close = claimAnchor(locateEndAnchor(claim.start)!)
+      }
+    }
     let isMounted = false
 
     renderEffect(() => {
@@ -289,6 +302,11 @@ const VaporTransitionGroupImpl = /*@__PURE__*/ defineVaporComponent({
         ) {
           // Remove extra SSR nodes left after hydrating the current children.
           cleanupHydrationTail(currentHydrationNode, container)
+        }
+        if (isHydrating && close) {
+          trimHydrationBoundary(close)
+          if (currentHydrationNode === close) advanceHydrationNode(close)
+          close = null
         }
       } finally {
         if (isHydrating && container) {
