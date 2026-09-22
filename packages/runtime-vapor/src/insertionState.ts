@@ -1,12 +1,8 @@
-export type ChildItem = ChildNode & {
-  // logical index, used during hydration to locate the node
-  $idx: number
-}
-
 export type InsertionParent = ParentNode & {
-  // last located logical child (hydration cache).
-  // invariant: whenever $llc is set, $idx is set on that node.
+  // last located logical child and its logical index (hydration cache).
+  // Lives only for the duration of the hydration pass that installed it.
   $llc?: Node | null
+  $lli?: number
 }
 export let insertionParent: InsertionParent | undefined
 export let insertionAnchor: Node | undefined

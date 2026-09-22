@@ -1,5 +1,5 @@
 import { type Namespace, Namespaces } from '@vue/shared'
-import type { ChildItem, InsertionParent } from '../insertionState'
+import type { InsertionParent } from '../insertionState'
 import {
   isHydrating,
   nextLogicalSibling,
@@ -83,7 +83,7 @@ export function next(node: Node, isText?: boolean): Node {
     const parent = node.parentNode
     if (isText) result = resolveBlankTextTarget(result, parent!)
     // advance the $llc cache when `node` is the cached logical child; the
-    // helper enforces the "$llc implies $idx" invariant for us
+    // helper keeps `$lli` in step for us
     if (parent) updateLastLocatedLogicalChild(parent, node, result, 1)
     return result!
   }
@@ -100,29 +100,58 @@ export function _next(node: Node): Node {
   return node.nextSibling!
 }
 
+// Parents holding a `$llc` in the current hydration pass. The cache is only
+// meaningful while the pass walks the DOM: released when the outermost pass
+// ends, so no node keeps an unmounted subtree alive or feeds a later pass a
+// stale position.
+const cachedParents: InsertionParent[] = []
+
+export function setLastLocatedLogicalChild(
+  parent: InsertionParent,
+  child: Node,
+  logicalIndex: number,
+): void {
+  if (parent.$llc === undefined) cachedParents.push(parent)
+  parent.$llc = child
+  parent.$lli = logicalIndex
+}
+
+export function releaseLocatorCache(): void {
+  for (let i = 0; i < cachedParents.length; i++) {
+    cachedParents[i].$llc = undefined
+  }
+  cachedParents.length = 0
+}
+
 export function locateChildByLogicalIndex(
   parent: InsertionParent,
   logicalIndex: number,
 ): Node | null {
-  let child = (parent.$llc ||
-    skipUntrackedAnchors(parent.firstChild)) as ChildItem | null
-  let fromIndex = (child && child.$idx) || 0
+  let child: Node | null
+  let fromIndex: number
+  if (parent.$llc) {
+    child = parent.$llc
+    fromIndex = parent.$lli!
+  } else {
+    child = skipUntrackedAnchors(parent.firstChild)
+    fromIndex = 0
+  }
 
   // if target index is less than cached index, start from the beginning.
   // this can happen when child/nthChild/next updates $llc to a later node
   // before an earlier dynamic node is hydrated
   if (logicalIndex < fromIndex) {
-    child = skipUntrackedAnchors(parent.firstChild) as ChildItem | null
+    child = skipUntrackedAnchors(parent.firstChild)
     fromIndex = 0
   }
 
   while (child) {
     if (fromIndex === logicalIndex) {
-      child.$idx = logicalIndex
-      return (parent.$llc = child)
+      setLastLocatedLogicalChild(parent, child, logicalIndex)
+      return child
     }
 
-    child = nextLogicalSibling(child) as ChildItem | null
+    child = nextLogicalSibling(child)
 
     fromIndex++
   }
@@ -140,9 +169,7 @@ export function updateLastLocatedLogicalChild(
 ): void {
   const insertionParent = parent as InsertionParent
   if (insertionParent.$llc === from) {
-    if (to) {
-      ;(to as ChildItem).$idx = (from as ChildItem).$idx + logicalIndexOffset
-    }
     insertionParent.$llc = to
+    insertionParent.$lli! += logicalIndexOffset
   }
 }

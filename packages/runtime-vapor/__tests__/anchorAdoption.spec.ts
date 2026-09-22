@@ -342,7 +342,7 @@ describe('isAdoptedPlaceholder', () => {
   })
 })
 
-describe('$llc / $idx cache invariants', () => {
+describe('$llc / $lli cache invariants', () => {
   test('locateChildByLogicalIndex stamps and reuses the cache', () => {
     const parent = document.createElement('div') as any
     for (const tag of ['a', 'b', 'i']) {
@@ -350,18 +350,19 @@ describe('$llc / $idx cache invariants', () => {
     }
     const first = locateChildByLogicalIndex(parent, 0)! as any
     expect(first.tagName).toBe('A')
-    expect(first.$idx).toBe(0)
     expect(parent.$llc).toBe(first)
+    expect(parent.$lli).toBe(0)
 
     const third = locateChildByLogicalIndex(parent, 2)! as any
     expect(third.tagName).toBe('I')
-    expect(third.$idx).toBe(2)
     expect(parent.$llc).toBe(third)
+    expect(parent.$lli).toBe(2)
 
     // backward target restarts from firstChild instead of trusting the cache
     const second = locateChildByLogicalIndex(parent, 1)! as any
     expect(second.tagName).toBe('B')
     expect(parent.$llc).toBe(second)
+    expect(parent.$lli).toBe(1)
   })
 
   test('updateLastLocatedLogicalChild only transfers a current cache entry', () => {
@@ -374,13 +375,12 @@ describe('$llc / $idx cache invariants', () => {
     // cached entry transfers with the index offset applied
     updateLastLocatedLogicalChild(parent, a, b, 1)
     expect(parent.$llc).toBe(b)
-    expect(b.$idx).toBe(1)
+    expect(parent.$lli).toBe(1)
 
-    // a stale `from` (not the cached entry) must leave the cache untouched:
-    // installing an unindexed node would alias it to unit 0
+    // a stale `from` (not the cached entry) must leave the cache untouched
     const c = document.createElement('i') as any
     updateLastLocatedLogicalChild(parent, a, c, 1)
     expect(parent.$llc).toBe(b)
-    expect(c.$idx).toBeUndefined()
+    expect(parent.$lli).toBe(1)
   })
 })
