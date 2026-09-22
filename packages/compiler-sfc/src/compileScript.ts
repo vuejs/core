@@ -11,7 +11,7 @@ import {
   type SFCScriptBlock,
 } from './parse'
 import type { ParserPlugin } from '@babel/parser'
-import { generateCodeFrame } from '@vue/shared'
+import { genPropsAccessExp, generateCodeFrame } from '@vue/shared'
 import type {
   ArrayPattern,
   CallExpression,
@@ -313,7 +313,9 @@ export function compileScript(
             `because they are hoisted outside of the setup() function.` +
             (isDefault
               ? ` Use the props argument of the default factory instead, ` +
-                `e.g. default: props => props.${key}`
+                `e.g. default: props => props${genPropsAccessExp(key).slice(
+                  `__props`.length,
+                )}`
               : ``),
           id,
         )
