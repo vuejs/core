@@ -26,7 +26,7 @@ import {
   type VaporComponentInstance,
   currentInstance,
 } from '../../src/component'
-import { compile, ifFlags, makeRender } from '../_utils'
+import { compile, ifFlags, makeRender, renderParity } from '../_utils'
 import { VaporKeepAlive } from '../../src/components/KeepAlive'
 import {
   child,
@@ -5024,5 +5024,71 @@ describe('VaporKeepAlive', () => {
       expect.arrayContaining(['outer-next', 'box', 'inner-next']),
     )
     expect(el.classList).toHaveLength(3)
+  })
+
+  // a slot outlet is a fragment boundary: vdom cannot inherit fallthrough
+  // attrs across it and warns instead. the fallback transform rewrites the
+  // outlet into a `<template>`, which the single-root lookup treats as
+  // transparent, so the fallback used to be compiled as the component root.
+  test('should not pass fallthrough attrs to the fallback of a KeepAlive slot', async () => {
+    const cls: Record<string, string> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        Child: `<template><KeepAlive><slot><components.A /></slot></KeepAlive></template>`,
+        App: `<template><components.Child class="outer" /></template>`,
+      },
+      () => ref(null),
+      (_data, root, mode) => {
+        cls[mode] = root.querySelector('#a')!.className
+      },
+    )
+    expect(cls.vdom).toBe('')
+    expect(cls.vapor).toBe(cls.vdom)
+    expect(vapor.text).toBe(vdom.text)
+    expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
+  })
+
+  test('should not pass fallthrough attrs to the fallback of a slot outlet root', async () => {
+    const cls: Record<string, string> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        Child: `<template><slot><components.A /></slot></template>`,
+        App: `<template><components.Child class="outer" /></template>`,
+      },
+      () => ref(null),
+      (_data, root, mode) => {
+        cls[mode] = root.querySelector('#a')!.className
+      },
+    )
+    expect(cls.vdom).toBe('')
+    expect(cls.vapor).toBe(cls.vdom)
+    expect(vapor.text).toBe(vdom.text)
+    expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
+  })
+
+  test('should render provided content of a KeepAlive slot as vdom does', async () => {
+    const cls: Record<string, string> = {}
+    const usedFallback: Record<string, boolean> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        B: `<template><span id="b">B</span></template>`,
+        Child: `<template><KeepAlive><slot><components.A /></slot></KeepAlive></template>`,
+        App: `<template><components.Child class="outer"><components.B /></components.Child></template>`,
+      },
+      () => ref(null),
+      (_data, root, mode) => {
+        cls[mode] = root.querySelector('#b')!.className
+        usedFallback[mode] = !!root.querySelector('#a')
+      },
+    )
+    expect(usedFallback.vdom).toBe(false)
+    expect(usedFallback.vapor).toBe(usedFallback.vdom)
+    expect(cls.vdom).toBe('')
+    expect(cls.vapor).toBe(cls.vdom)
+    expect(vapor.text).toBe(vdom.text)
+    expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
   })
 })

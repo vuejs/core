@@ -112,6 +112,12 @@ function createFallback(
     return []
   }
 
+  // the fallback is wrapped in a `<template>` below, which the single-root
+  // lookup treats as transparent. that transparency must not apply here: the
+  // outlet is a fragment boundary, so the component root stops at it and
+  // fallthrough attrs never reach the fallback (vdom drops them and warns).
+  context.isSingleRoot = false
+
   context.node = node = extend({}, node, {
     type: NodeTypes.ELEMENT,
     tag: 'template',
