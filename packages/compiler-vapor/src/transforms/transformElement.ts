@@ -478,8 +478,26 @@ function resolveSetupReference(name: string, context: TransformContext) {
         : undefined
 }
 
-// keys cannot be a part of the template and need to be set dynamically
-const dynamicKeys = ['indeterminate']
+/**
+ * Keys with no content attribute behind them. Folded into the template string
+ * the attribute would only sit on the element - lowercased by the html parser
+ * at that - while the dom property, the one place the value lives, was never
+ * assigned. The runtime rule is `key in el` (`shouldSetAsProp` in vdom,
+ * `setProp` in vapor), which the compiler cannot evaluate, so the fold skips
+ * the keys known to fail it and leaves them to a runtime prop setter, which
+ * applies `key in el` itself. The list can only approximate that rule; a key
+ * missing from it is still reachable with a `.prop` binding.
+ */
+const dynamicKeys = [
+  'indeterminate',
+  // media element playback state
+  'volume',
+  'playbackRate',
+  'defaultPlaybackRate',
+  'currentTime',
+  // typed value of an `<input>`
+  'valueAsNumber',
+]
 
 // The attribute value can remain unquoted if it doesn't contain ASCII whitespace
 // or any of " ' ` = < or >.

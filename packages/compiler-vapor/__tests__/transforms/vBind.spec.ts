@@ -1302,4 +1302,75 @@ describe('compiler v-bind', () => {
     expect(code).toContain('[{ id: _k0 }, _obj], k1)')
     expect(code).toContain('[{ title: _k0 }, _obj], k3)')
   })
+
+  // a dom property with no content attribute behind it cannot fold either: in
+  // the template string the attribute would only sit on the element - and the
+  // html parser lowercases it on the way - while the property, the one place
+  // the value lives, was never assigned. So the binding has to reach
+  // `setProp`, which decides with `key in el` the way vdom's
+  // `shouldSetAsProp` does. The plain attribute spelling takes the same path.
+  test.each([
+    [`<video :volume="0.5"/>`, `<video>`, `_setProp(n0, "volume", "0.5")`],
+    [`<video volume="0.5"/>`, `<video>`, `_setProp(n0, "volume", "0.5")`],
+    [
+      `<video :playbackRate="2"/>`,
+      `<video>`,
+      `_setProp(n0, "playbackRate", "2")`,
+    ],
+    [
+      `<video :defaultPlaybackRate="2"/>`,
+      `<video>`,
+      `_setProp(n0, "defaultPlaybackRate", "2")`,
+    ],
+    [
+      `<video :currentTime="3"/>`,
+      `<video>`,
+      `_setProp(n0, "currentTime", "3")`,
+    ],
+    [
+      `<input :valueAsNumber="5"/>`,
+      `<input>`,
+      `_setProp(n0, "valueAsNumber", "5")`,
+    ],
+  ])(
+    'constant props with no content attribute behind them: %s',
+    (template, expectedTemplate, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(`_template("${expectedTemplate}"`)
+      expect(code).toContain(expected)
+    },
+  )
+
+  // the list is consulted before the modifier is, so `^` does not fold either -
+  // it lands on a runtime `setAttr`, which is what `:indeterminate.attr` was
+  // already doing before the list grew
+  test('constant props with no content attribute behind them: .attr', () => {
+    const { code } = compileWithVBind(`<video :volume.attr="0.5"/>`)
+
+    expect(code).toContain(`_template("<video>"`)
+    expect(code).toContain(`_setAttr(n0, "volume", "0.5")`)
+  })
+
+  // the counterpart: a key a content attribute does feed still folds. `muted`
+  // is the ragged edge - the html parser applies the attribute to the muted
+  // state as it creates the element, so the property does end up matching vdom
+  // in a browser, but the markup does not: vdom renders `<video>` and vapor
+  // `<video muted>`. That spelling never reaches the guard above anyway,
+  // `isFoldableBooleanAttr` catches it first, so it is out of scope here and
+  // only pinned to show this change leaves it alone.
+  test.each([
+    [`<input :value="'a'"/>`, `_template("<input value=a>"`],
+    [`<input :checked="true"/>`, `_template("<input checked>"`],
+    [`<video :muted="true"/>`, `_template("<video muted>"`],
+    [`<div :hidden="true"/>`, `_template("<div hidden>"`],
+  ])(
+    'constant props the template string does carry: %s',
+    (template, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(expected)
+      expect(code).not.toContain('_setProp')
+    },
+  )
 })
