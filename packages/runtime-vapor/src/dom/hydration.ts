@@ -21,6 +21,7 @@ import {
   createTextNode,
   locateChildByLogicalIndex,
   parentNode,
+  releaseLocatorCache,
   updateLastLocatedLogicalChild,
 } from './node'
 import { currentRenderContext } from '../renderContext'
@@ -91,12 +92,12 @@ export function withHydratingSlotFallback(fn: () => void): void {
 
 let isOptimized = false
 
+let hydrationDepth = 0
 // dev-only: cursors handed out but not yet handed back, checked when the
 // outermost hydration pass finishes. A leaked cursor means some enclosing
 // scope never had its resume point restored, which shows up far away as a
 // drifted cursor.
 let liveCursors = 0
-let hydrationDepth = 0
 
 function performHydration<T>(
   fn: () => T,
@@ -109,8 +110,8 @@ function performHydration<T>(
     parseAdoptTarget = parseAdoptTargetImpl
     // optimize anchor cache lookup
     ;(Comment.prototype as any).$fe = undefined
-    ;(Node.prototype as any).$idx = undefined
     ;(Node.prototype as any).$llc = undefined
+    ;(Node.prototype as any).$lli = undefined
     ;(Node.prototype as any).$vha = 0
     ;(Node.prototype as any).$rcn = undefined
 
@@ -119,7 +120,7 @@ function performHydration<T>(
   const prev = setIsHydrating(true)
   const prevHydrationNode = currentHydrationNode
   currentHydrationNode = null
-  if (__DEV__) hydrationDepth++
+  hydrationDepth++
   try {
     setup()
     return fn()
@@ -127,8 +128,12 @@ function performHydration<T>(
     cleanup()
     currentHydrationNode = prevHydrationNode
     setIsHydrating(prev)
-    if (__DEV__) {
-      if (--hydrationDepth === 0) {
+    // `isHydrating` is no pass boundary: nested passes and
+    // `runWithoutHydration` flip it mid-walk. Only the outermost exit ends
+    // the walk the locator cache belongs to.
+    if (--hydrationDepth === 0) {
+      releaseLocatorCache()
+      if (__DEV__) {
         if (liveCursors > 0) {
           warn(
             `${liveCursors} hydration cursor(s) were never exited. The ` +
@@ -395,7 +400,7 @@ function locateHydrationNodeImpl(claim?: FragmentClaim) {
   } else if (insertionParent) {
     // append: skip the preceding logical units (0 when absent — sole-child
     // appends and withHydration entry). Locating through the logical walk
-    // also stamps $llc/$idx so mismatch recovery keeps the cache coherent.
+    // also stamps $llc/$lli so mismatch recovery keeps the cache coherent.
     node = locateChildByLogicalIndex(insertionParent, insertionIndex || 0)
   } else {
     node = currentHydrationNode
