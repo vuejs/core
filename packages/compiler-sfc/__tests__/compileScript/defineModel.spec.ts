@@ -288,7 +288,7 @@ describe('defineModel()', () => {
   })
 
   // #15602
-  test('prop option referencing a destructured prop', () => {
+  test('w/ props destructure, prop option referencing a destructured prop', () => {
     expect(() =>
       compile(
         `
@@ -304,7 +304,23 @@ describe('defineModel()', () => {
     ).toThrow(`prop options cannot reference destructured props`)
   })
 
-  test('prop option referencing a local that shadows a destructured prop', () => {
+  test('w/ props destructure, default factory using the props argument', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { x } = defineProps<{ x?: number }>()
+      const modelValue = defineModel({
+        default: props => props.x
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`default: props => props.x`)
+  })
+
+  test('w/ props destructure, local shadowing a destructured prop', () => {
     const { content } = compile(
       `
       <script setup lang="ts">
