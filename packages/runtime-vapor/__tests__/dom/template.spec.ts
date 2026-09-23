@@ -398,6 +398,21 @@ describe('constant props with no content attribute behind them', () => {
 })
 
 describe('DOM prop initialization order', () => {
+  test('initializes option values before an explicit select value', async () => {
+    await renderParity(
+      {
+        App: `<template><select :value="2"><option :value="1">One</option><option :disabled="data" :value="2">Two</option></select></template>`,
+      },
+      () => ref(false),
+      (_data, root) => {
+        const select = root.querySelector('select')!
+        expect(select.value).toBe('2')
+        expect(select.selectedIndex).toBe(1)
+        expect(select.options[1].selected).toBe(true)
+      },
+    )
+  })
+
   test.each([
     [`<input :type="data" :valueAsNumber="5">`, 'number', 5],
     [`<input :type="data" :valueAsNumber.prop="5">`, 'number', 5],

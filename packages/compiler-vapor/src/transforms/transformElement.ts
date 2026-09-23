@@ -538,6 +538,12 @@ function transformNativeElement(
       }
     }
 
+    const needsOrderedProps =
+      tag === 'input' &&
+      propsResult[1].some(
+        ({ key, modifier }) =>
+          key.content === 'valueAsNumber' && modifier !== '^',
+      )
     let hasEffect = false
     for (const prop of propsResult[1]) {
       const { key, values } = prop
@@ -602,7 +608,7 @@ function transformNativeElement(
             tag,
           },
           getEffectIndex,
-          hasEffect,
+          needsOrderedProps && hasEffect,
         )
       }
     }

@@ -1374,4 +1374,14 @@ describe('compiler v-bind', () => {
         `  _renderEffect(() => _setProp(n0, "title", _ctx.title))`,
     )
   })
+
+  test.each([
+    `<div :id="id" :valueAsNumber.prop="5" :title="title" />`,
+    `<input :id="id" :value.prop="5" :title="title" />`,
+    `<input :id="id" :valueAsNumber.attr="5" :title="title" />`,
+  ])('does not split effects for unrelated constant props: %s', template => {
+    const { code } = compileWithVBind(template)
+
+    expect(code.match(/_renderEffect\(/g)).toHaveLength(1)
+  })
 })
