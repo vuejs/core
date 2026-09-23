@@ -47,8 +47,6 @@ export type HelperConfig = {
   needKey?: boolean
   isSVG?: boolean
   acceptRoot?: boolean
-  // the helper takes `forceHydrate` in the flag argument, so a `.prop` binding
-  // has to opt in to writing the property during hydration
   forceHydrate?: boolean
 }
 
@@ -59,10 +57,10 @@ const helpers = {
   setClass: { name: 'setClass' },
   setClassName: { name: 'setClassName' },
   setStyle: { name: 'setStyle' },
-  setValue: { name: 'setValue', forceHydrate: true },
+  setValue: { name: 'setValue' },
   setAttr: { name: 'setAttr', needKey: true },
   setProp: { name: 'setProp', needKey: true },
-  setDOMProp: { name: 'setDOMProp', needKey: true, forceHydrate: true },
+  setDOMProp: { name: 'setDOMProp', needKey: true },
 } as const satisfies Partial<Record<VaporHelper, HelperConfig>>
 
 // only the static key prop will reach here
@@ -92,12 +90,7 @@ export function genSetProp(
       `n${oper.element}`,
       resolvedHelper.needKey ? genExpression(key, context) : false,
       propValue,
-      (resolvedHelper.isSVG ||
-        // vdom force hydrates a `.prop` binding (runtime-core/src/hydration.ts),
-        // and so does `setDynamicProp` - the static path has to do the same or
-        // the property is never written on a hydrated element
-        (modifier === '.' && resolvedHelper.forceHydrate)) &&
-        'true',
+      (resolvedHelper.isSVG || resolvedHelper.forceHydrate) && 'true',
     ),
   ]
 }
@@ -449,7 +442,12 @@ function getRuntimeHelper(
 
   if (modifier) {
     if (modifier === '.') {
-      return getSpecialHelper(key, tagName, isSVG) || helpers.setDOMProp
+      const helper = getSpecialHelper(key, tagName, isSVG) || helpers.setDOMProp
+      // vdom force patches a `.prop` binding during hydration, and so does
+      // `setDynamicProp`; only these two helpers take the flag
+      return helper.name === 'setDOMProp' || helper.name === 'setValue'
+        ? extend({ forceHydrate: true }, helper)
+        : helper
     } else {
       return isSVG ? extend({ isSVG: true }, helpers.setAttr) : helpers.setAttr
     }
