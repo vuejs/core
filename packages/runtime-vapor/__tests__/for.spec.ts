@@ -2599,8 +2599,8 @@ describe('createFor', () => {
       expect(await countMoves([0, 1, 2, 3, 4], [3, 4, 2])).toBe(1)
     })
 
-    // a plain insert shares one anchor, so it is one insert per new row and
-    // nothing else is touched
+    // guard: a plain insert shares one anchor, so it is one insert per new
+    // row and nothing else is touched (already true before the forward mount)
     test('inserting rows only inserts the new rows', async () => {
       expect(await countMoves(range(50), [...range(50), 50, 51, 52])).toBe(3)
     })
@@ -2720,6 +2720,7 @@ describe('createFor', () => {
       expect(landed.vapor).toBe(landed.vdom)
     })
 
+    // guards: these two paths mounted forward already
     test('mounting into an empty list', async () => {
       const { order } = await creationOrder(keyed, [], list =>
         list.push(1, 2, 3),
