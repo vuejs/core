@@ -507,7 +507,7 @@ export function setElementText(
         )
       logMismatchError()
     }
-    if (!forceHydrate) {
+    if (skipHydratedWrite(el as Element, 'textContent', value, forceHydrate)) {
       el.$txt = value as string
       return
     }
@@ -526,7 +526,11 @@ export function setHtml(
   value = value == null ? '' : unsafeToTrustedHTML(value)
   // like vdom, a static key binding replaces the server content during
   // hydration and a spread key keeps it; neither compares nor warns
-  if (isHydrating && !isRecreatedNode(el) && !forceHydrate) {
+  if (
+    isHydrating &&
+    !isRecreatedNode(el) &&
+    skipHydratedWrite(el, 'innerHTML', value, forceHydrate)
+  ) {
     el.$html = value
     return
   }

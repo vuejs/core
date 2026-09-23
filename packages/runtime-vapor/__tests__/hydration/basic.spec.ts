@@ -7,6 +7,7 @@ import {
   testHydration,
   triggerEvent,
 } from './_helpers'
+import { compile } from '../_utils'
 
 setupHydrationTest()
 
@@ -907,6 +908,28 @@ describe('Vapor Mode hydration', () => {
       if (el.includes('textContent')) {
         expect(`Hydration text content mismatch`).toHaveBeenWarned()
       }
+    })
+
+    // vdom force patches every key on a custom element, spread keys included
+    test('spread key on a custom element takes the client content', async () => {
+      const container = document.createElement('div')
+      container.innerHTML =
+        '<div><my-box>server</my-box><my-box>server</my-box></div>'
+      const comp = compile(
+        `<template><div><my-box v-bind="data.a"></my-box><my-box v-bind="data.b"></my-box></div></template>`,
+        ref({
+          a: { textContent: 'client' },
+          b: { innerHTML: '<b>client</b>' },
+        }),
+        {},
+        { compilerOptions: { isCustomElement: tag => tag.startsWith('my-') } },
+      )
+      createVaporSSRApp(comp).mount(container)
+
+      expect(container.innerHTML).toBe(
+        '<div><my-box>client</my-box><my-box><b>client</b></my-box></div>',
+      )
+      expect(`Hydration text content mismatch`).toHaveBeenWarned()
     })
 
     test('empty client content clears the server content', async () => {
