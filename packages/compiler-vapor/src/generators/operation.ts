@@ -101,6 +101,25 @@ export function genEffects(
   context: CodegenContext,
   genExtraFrag?: () => CodeFragment[],
 ): CodeFragment[] {
+  const [frag, push] = buildCodeFragment()
+  let start = 0
+  for (let i = 0; i < effects.length; i++) {
+    const effect = effects[i]
+    if (effect.once) {
+      push(...genReactiveEffects(effects.slice(start, i), context))
+      push(...genOperations(effect.operations, context))
+      start = i + 1
+    }
+  }
+  push(...genReactiveEffects(effects.slice(start), context, genExtraFrag))
+  return frag
+}
+
+function genReactiveEffects(
+  effects: IREffect[],
+  context: CodegenContext,
+  genExtraFrag?: () => CodeFragment[],
+): CodeFragment[] {
   const { helper } = context
   const expressions = effects.flatMap(effect => effect.expressions)
   const [frag, push, unshift] = buildCodeFragment()

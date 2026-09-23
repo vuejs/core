@@ -489,6 +489,19 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > constant DOM props keep their position between dynamic setters 1`] = `
+"import { setProp as _setProp, renderEffect as _renderEffect, template as _template } from 'vue';
+const t0 = _template("<input type=range>", 1)
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setProp(n0, "max", _ctx.max))
+  _setProp(n0, "valueAsNumber", "500")
+  _renderEffect(() => _setProp(n0, "title", _ctx.title))
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > constant boolean class and style bindings are emitted in template 1`] = `
 "import { template as _template } from 'vue';
 const t0 = _template("<div disabled class=active style=color:red;margin-top:4px;>", 3)

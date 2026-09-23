@@ -462,8 +462,31 @@ function matchPatterns(
     }
   }
 
+  const lastOrderedProp = new Map<number, number>()
+  for (let i = 0; i < render.effect.length; i++) {
+    const effect = render.effect[i]
+    if (effect.once) {
+      for (const operation of effect.operations) {
+        if (operation.type === IRNodeTypes.SET_PROP) {
+          lastOrderedProp.set(operation.element, i)
+        }
+      }
+    }
+  }
+
   for (let index = 0; index < render.effect.length; index++) {
     const effect = render.effect[index]
+    // Lifted bindings run at the end of the block, after ordered prop setters.
+    if (
+      effect.once ||
+      effect.operations.some(
+        operation =>
+          operation.type === IRNodeTypes.SET_PROP &&
+          index < (lastOrderedProp.get(operation.element) ?? -1),
+      )
+    ) {
+      continue
+    }
     const selector = matchSelectorPattern(
       effect,
       keyProp.content,

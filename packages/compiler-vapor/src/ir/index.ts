@@ -305,6 +305,7 @@ export interface IRDynamicInfo {
 export interface IREffect {
   expressions: SimpleExpressionNode[]
   operations: OperationNode[]
+  once?: boolean
 }
 
 type Overwrite<T, U> = Pick<T, Exclude<keyof T, keyof U>> &

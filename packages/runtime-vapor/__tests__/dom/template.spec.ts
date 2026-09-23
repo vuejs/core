@@ -396,3 +396,70 @@ describe('constant props with no content attribute behind them', () => {
     ).toHaveBeenWarnedTimes(2)
   })
 })
+
+describe('DOM prop initialization order', () => {
+  test.each([
+    [`<input :type="data" :valueAsNumber="5">`, 'number', 5],
+    [`<input :type="data" :valueAsNumber.prop="5">`, 'number', 5],
+    [`<input type="range" :max="data" :valueAsNumber="500">`, 1000, 500],
+    [`<input type="range" :max="data" :valueAsNumber.prop="500">`, 1000, 500],
+  ])(
+    'initializes preceding dynamic props before %s',
+    async (tpl, initial, value) => {
+      await renderParity(
+        { App: `<template>${tpl}</template>` },
+        () => ref(initial),
+        (_data, root) => {
+          const input = root.querySelector('input')!
+          expect(input.valueAsNumber).toBe(value)
+          expect(input.value).toBe(String(value))
+        },
+      )
+    },
+  )
+
+  test('does not repeat constant setters on reactive updates', async () => {
+    const setter = vi.spyOn(HTMLInputElement.prototype, 'valueAsNumber', 'set')
+    try {
+      await renderParity(
+        {
+          App: `<template><input :type="data.type" :valueAsNumber="5" :title="data.title"></template>`,
+        },
+        () => ref({ type: 'number', title: 'before' }),
+        async (data, root) => {
+          const input = root.querySelector('input')!
+          expect(input.valueAsNumber).toBe(5)
+          const initialCalls = setter.mock.calls.length
+          input.value = '7'
+          data.value.type = 'range'
+          data.value.title = 'after'
+          await nextTick()
+
+          expect(input.type).toBe('range')
+          expect(input.title).toBe('after')
+          expect(input.valueAsNumber).toBe(7)
+          expect(setter).toHaveBeenCalledTimes(initialCalls)
+        },
+      )
+    } finally {
+      setter.mockRestore()
+    }
+  })
+
+  test.each([
+    `<input :type="data.type" :valueAsNumber="5"><components.Child/>`,
+    `<input v-for="type in data.types" :key="type" :type="type" :valueAsNumber="5">`,
+    `<input v-for="type in data.types" :key="type" :type="type === data.type ? 'number' : 'range'" :valueAsNumber="5">`,
+  ])('preserves prop order across block boundaries: %s', async tpl => {
+    await renderParity(
+      {
+        App: `<template>${tpl}</template>`,
+        Child: `<template><span/></template>`,
+      },
+      () => ref({ type: 'number', types: ['number'] }),
+      (_data, root) => {
+        expect(root.querySelector('input')!.valueAsNumber).toBe(5)
+      },
+    )
+  })
+})
