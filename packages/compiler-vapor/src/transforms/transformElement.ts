@@ -479,7 +479,16 @@ function resolveSetupReference(name: string, context: TransformContext) {
 }
 
 // keys cannot be a part of the template and need to be set dynamically
-const dynamicKeys = ['indeterminate']
+const dynamicKeys = [
+  'indeterminate',
+  // media element playback state
+  'volume',
+  'playbackRate',
+  'defaultPlaybackRate',
+  'currentTime',
+  // typed value of an `<input>`
+  'valueAsNumber',
+]
 
 // The attribute value can remain unquoted if it doesn't contain ASCII whitespace
 // or any of " ' ` = < or >.

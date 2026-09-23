@@ -302,3 +302,97 @@ describe('text children of a createElement-backed parent', () => {
     expect(vapor.text).toBe('Tom & Jerry')
   })
 })
+
+// Compare property writes and attributes with VDOM for bindings that cannot fold.
+describe('constant props with no content attribute behind them', () => {
+  // Plain <script setup> lets the compile option select the renderer.
+  test('the two parity legs compile to different renderers', () => {
+    const src =
+      `<script setup>const data = _data</script>` +
+      `<template><video :volume="0.5"></video></template>`
+    expect(compile(src, ref(0), {}, { vapor: false }).__vapor).toBeUndefined()
+    expect(compile(src, ref(0), {}, { vapor: true }).__vapor).toBe(true)
+  })
+
+  async function parity(tpl: string, key: string, selector: string) {
+    const seen: Record<string, unknown> = {}
+    const { vdom, vapor } = await renderParity(
+      { App: `<template>${tpl}</template>` },
+      () => ref(0),
+      (_data, root, mode) => {
+        const el = root.querySelector(selector) as any
+        // HTML parsing lowercases folded attribute names.
+        seen[mode] = { prop: el[key], attr: el.getAttribute(key.toLowerCase()) }
+      },
+    )
+    expect(vapor.after).toBe(vdom.after)
+    expect(seen.vapor).toEqual(seen.vdom)
+    return seen.vdom
+  }
+
+  // Plain attributes use the same folding guard as constant bindings.
+  const noAttr: Array<[string, string, string, Record<string, unknown>]> = [
+    [
+      `<video :volume="0.5"></video>`,
+      'volume',
+      'video',
+      { prop: 0.5, attr: null },
+    ],
+    [
+      `<video volume="0.5"></video>`,
+      'volume',
+      'video',
+      { prop: 0.5, attr: null },
+    ],
+    [
+      `<video :playbackRate="2"></video>`,
+      'playbackRate',
+      'video',
+      { prop: 2, attr: null },
+    ],
+    [
+      `<video :defaultPlaybackRate="2"></video>`,
+      'defaultPlaybackRate',
+      'video',
+      { prop: 2, attr: null },
+    ],
+    [
+      `<video :currentTime="3"></video>`,
+      'currentTime',
+      'video',
+      { prop: 3, attr: null },
+    ],
+    [
+      `<input type="number" :valueAsNumber="5">`,
+      'valueAsNumber',
+      'input',
+      { prop: 5, attr: null },
+    ],
+  ]
+  test.each(noAttr)(
+    '%s writes the dom property and leaves the markup alone',
+    async (tpl, key, selector, expected) => {
+      expect(await parity(tpl, key, selector)).toEqual(expected)
+    },
+  )
+
+  // Properties initialized by content attributes keep folding.
+  const withAttr: Array<[string, string, string, Record<string, unknown>]> = [
+    [`<input :value="'a'">`, 'value', 'input', { prop: 'a', attr: 'a' }],
+    [`<input :checked="true">`, 'checked', 'input', { prop: true, attr: '' }],
+    [`<div :hidden="true"></div>`, 'hidden', 'div', { prop: true, attr: '' }],
+  ]
+  test.each(withAttr)(
+    '%s keeps folding into the template string',
+    async (tpl, key, selector, expected) => {
+      expect(await parity(tpl, key, selector)).toEqual(expected)
+    },
+  )
+
+  test('valueAsNumber on a text input warns the way vdom does', async () => {
+    await parity(`<input :valueAsNumber="5">`, 'valueAsNumber', 'input')
+    expect(
+      `Failed setting prop "valueAsNumber" on <input>`,
+    ).toHaveBeenWarnedTimes(2)
+  })
+})

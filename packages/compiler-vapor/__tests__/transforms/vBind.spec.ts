@@ -1302,4 +1302,63 @@ describe('compiler v-bind', () => {
     expect(code).toContain('[{ id: _k0 }, _obj], k1)')
     expect(code).toContain('[{ title: _k0 }, _obj], k3)')
   })
+
+  // These properties have no content attribute and require a runtime setter.
+  test.each([
+    [`<video :volume="0.5"/>`, `<video>`, `_setProp(n0, "volume", "0.5")`],
+    [`<video volume="0.5"/>`, `<video>`, `_setProp(n0, "volume", "0.5")`],
+    [
+      `<video :playbackRate="2"/>`,
+      `<video>`,
+      `_setProp(n0, "playbackRate", "2")`,
+    ],
+    [
+      `<video :defaultPlaybackRate="2"/>`,
+      `<video>`,
+      `_setProp(n0, "defaultPlaybackRate", "2")`,
+    ],
+    [
+      `<video :currentTime="3"/>`,
+      `<video>`,
+      `_setProp(n0, "currentTime", "3")`,
+    ],
+    [
+      `<input :valueAsNumber="5"/>`,
+      `<input>`,
+      `_setProp(n0, "valueAsNumber", "5")`,
+    ],
+  ])(
+    'constant props with no content attribute behind them: %s',
+    (template, expectedTemplate, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(`_template("${expectedTemplate}"`)
+      expect(code).toContain(expected)
+    },
+  )
+
+  // These keys skip folding even with .attr, which selects setAttr at runtime.
+  test('constant props with no content attribute behind them: .attr', () => {
+    const { code } = compileWithVBind(`<video :volume.attr="0.5"/>`)
+
+    expect(code).toContain(`_template("<video>"`)
+    expect(code).toContain(`_setAttr(n0, "volume", "0.5")`)
+  })
+
+  // Content attributes still fold. The separate isFoldableBooleanAttr branch
+  // keeps muted's existing folding behavior.
+  test.each([
+    [`<input :value="'a'"/>`, `_template("<input value=a>"`],
+    [`<input :checked="true"/>`, `_template("<input checked>"`],
+    [`<video :muted="true"/>`, `_template("<video muted>"`],
+    [`<div :hidden="true"/>`, `_template("<div hidden>"`],
+  ])(
+    'constant props the template string does carry: %s',
+    (template, expected) => {
+      const { code } = compileWithVBind(template)
+
+      expect(code).toContain(expected)
+      expect(code).not.toContain('_setProp')
+    },
+  )
 })
