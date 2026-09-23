@@ -538,6 +538,13 @@ function transformNativeElement(
       }
     }
 
+    const needsOrderedProps =
+      tag === 'input' &&
+      propsResult[1].some(
+        ({ key, modifier }) =>
+          key.content === 'valueAsNumber' && modifier !== '^',
+      )
+    let hasEffect = false
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       const canStringifyAttrName =
@@ -590,7 +597,9 @@ function transformNativeElement(
           appendTemplateProp(key.content, foldedValue)
         }
       } else {
-        context.registerEffect(
+        // Constant setters can depend on preceding dynamic props, e.g.
+        // valueAsNumber needs type and max to be initialized first.
+        hasEffect = context.registerEffect(
           values,
           {
             type: IRNodeTypes.SET_PROP,
@@ -599,6 +608,7 @@ function transformNativeElement(
             tag,
           },
           getEffectIndex,
+          needsOrderedProps && hasEffect,
         )
       }
     }

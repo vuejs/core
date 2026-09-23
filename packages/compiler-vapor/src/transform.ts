@@ -286,26 +286,28 @@ export class TransformContext<T extends AllNode = AllNode> {
     expressions: SimpleExpressionNode[],
     operation: OperationNode | OperationNode[],
     getIndex?: () => number,
-  ): void {
+    preserveOrder = false,
+  ): boolean {
     const operations = [operation].flat()
     expressions = expressions.filter(exp => !isConstantExpression(exp))
-    if (
-      this.inVOnce ||
-      expressions.every(e =>
-        isConstantBinding(e, this.root.options.bindingMetadata),
-      )
-    ) {
-      return this.registerOperation(...operations)
+    const once = expressions.every(e =>
+      isConstantBinding(e, this.root.options.bindingMetadata),
+    )
+    if (this.inVOnce || (once && !preserveOrder)) {
+      this.registerOperation(...operations)
+      return false
     }
 
     const index = getIndex ? getIndex() : this.block.effect.length
     this.block.effect.splice(index, 0, {
       expressions,
       operations,
+      ...(once ? { once: true } : {}),
     })
     if (getIndex) {
       this.shiftEffectBoundaries(index)
     }
+    return true
   }
 
   registerOperation(...node: OperationNode[]): void {
