@@ -1726,6 +1726,7 @@ describe('vdomInterop', () => {
           view: 'A',
           alt: false,
           ready: true,
+          nested: false,
           local: 0,
           n: 0,
           log: (hook: string) => calls.push(hook),
@@ -1736,15 +1737,25 @@ describe('vdomInterop', () => {
           `onUpdated(() => data.value.log('${name} updated'))\n` +
           `onBeforeUnmount(() => data.value.log('${name} beforeUnmount'))\n` +
           `onUnmounted(() => data.value.log('${name} unmounted'))`
+        // A's root: an element, another component, or nothing
+        const Inner = compile(
+          `<script setup>const data = _data</script>` +
+            `<template><i>i{{ data.local || '' }}</i></template>`,
+          data,
+          {},
+          { vapor },
+        )
         const A = compile(
           `<script setup>const data = _data\n` +
+            `const components = _components\n` +
             `const p = defineProps(['n'])\n${lifecycle('A')}</script>` +
-            `<template><div v-if="data.ready && !data.alt" style="display: flex">` +
+            `<template><components.Inner v-if="data.nested && !data.alt"/>` +
+            `<div v-else-if="data.ready && !data.alt" style="display: flex">` +
             `a{{ p.n }}{{ data.local || '' }}</div>` +
             `<section v-else-if="data.ready" style="display: grid">s{{ p.n }}</section>` +
             `</template>`,
           data,
-          {},
+          { Inner },
           { vapor },
         )
         const B = compile(
@@ -2133,6 +2144,100 @@ describe('vdomInterop', () => {
           'beforeUpdate P[b] w>w',
           'beforeUpdate DIV[a01] v>w',
           'updated DIV[a01] v>w',
+        ])
+      })
+
+      test('a parent-driven switch leaves every deactivated component as it was', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(
+            vapor,
+            async (data, { value, view }) => {
+              // A renders its root through Inner
+              data.value.nested = true
+              await nextTick()
+              data.value.log('--')
+              view.value = 'B'
+              value.value = 'w'
+              await nextTick()
+              // A swaps its root in the cache: the new root must carry the
+              // bindings A last received, not the ones B did
+              data.value.alt = true
+              await nextTick()
+            },
+          )
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.findIndex(hook => hook.endsWith(' beforeUnmount')),
+          )
+        }
+
+        const vdom = await run(false)
+        expect(vdom).toEqual([
+          'created P[b] (detached) w',
+          'beforeMount P[b] (detached) w',
+          'mounted P[b] w',
+          'A beforeUpdate',
+          'beforeUnmount I[i] (detached) v',
+          'created SECTION[s0] (detached) v',
+          'beforeMount SECTION[s0] (detached) v',
+          'unmounted I[i] (detached) v',
+          'mounted SECTION[s0] (detached) v',
+          'A updated',
+        ])
+        expect(await run(true)).toEqual([
+          'beforeUpdate I[i] v>w',
+          'created P[b] (detached) w',
+          'beforeMount P[b] (detached) w',
+          'mounted P[b] w',
+          'A beforeUpdate',
+          'beforeUpdate I[i] (detached) v>v',
+          'beforeUnmount I[i] (detached) v',
+          'created SECTION[s0] (detached) v',
+          'beforeMount SECTION[s0] (detached) v',
+          'unmounted I[i] (detached) v',
+          'mounted SECTION[s0] (detached) v',
+          'A updated',
+        ])
+      })
+
+      test('a deactivated component updates itself while the parent updates the active one', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(
+            vapor,
+            async (data, { value }) => {
+              data.value.view = 'B'
+              await nextTick()
+              data.value.log('--')
+              // same tick: the parent patches B, A re-renders in the cache
+              value.value = 'w'
+              data.value.local++
+              await nextTick()
+            },
+          )
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.indexOf('A beforeUnmount'),
+          )
+        }
+
+        expect(await run(false)).toEqual([
+          'B beforeUpdate',
+          'beforeUpdate P[b] v>w',
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] (detached) v>v',
+          'updated P[b] v>w',
+          'B updated',
+          'updated DIV[a01] (detached) v>v',
+          'A updated',
+        ])
+        // B has no new props, so vapor does not re-render it
+        expect(await run(true)).toEqual([
+          'beforeUpdate P[b] v>w',
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] (detached) v>v',
+          'updated P[b] v>w',
+          'updated DIV[a01] (detached) v>v',
+          'A updated',
         ])
       })
 

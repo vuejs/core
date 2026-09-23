@@ -3247,12 +3247,12 @@ function resolveInteropDirsRoot(
   return [owner, el]
 }
 
-// The innermost root-chain component below `comp`; with `vnode`, hands it
-// down the chain first (a renderer-driven update).
+// The innermost root-chain component below `comp`, visiting every one on the
+// way down.
 function innerInteropDirsOwner(
   state: VNodeHookState,
   comp: VaporComponentInstance,
-  vnode?: VNode,
+  visit?: (owner: InteropDirsOwner) => void,
 ): InteropDirsOwner | undefined {
   const owners = state.dirsOwners
   let owner: InteropDirsOwner | undefined
@@ -3263,11 +3263,29 @@ function innerInteropDirsOwner(
       const next = owners.get(comp)
       if (next) {
         owner = next
-        if (vnode) next.vnode = vnode
+        if (visit) visit(next)
       }
     },
   })
   return owner
+}
+
+// A renderer-driven update hands its bindings down the active chain before
+// the render; a component that render deactivates never received them (vdom
+// does not patch it), so it gets its last bindings back once the chain has
+// settled.
+function settleInteropDirsReceived(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+): void {
+  const received = state.dirsReceived
+  if (!received) return
+  state.dirsReceived = null
+  const active = new Set<InteropDirsOwner>()
+  innerInteropDirsOwner(state, instance, owner => active.add(owner))
+  received.forEach(([owner, vnode]) => {
+    if (!active.has(owner)) owner.vnode = vnode
+  })
 }
 
 // vdom mount of the inherited root vnode found from `block`; returns the root
@@ -3340,7 +3358,12 @@ function updateInteropDirs(
   vnode: VNode,
   prevVNode: VNode,
 ): void {
-  const owner = innerInteropDirsOwner(state, instance, vnode)
+  settleInteropDirsReceived(instance, state)
+  const received: [InteropDirsOwner, VNode][] = (state.dirsReceived = [])
+  const owner = innerInteropDirsOwner(state, instance, owner => {
+    received.push([owner, owner.vnode])
+    owner.vnode = vnode
+  })
   const el = owner && owner.el
   if (!el) return
   invokeInteropDirsHook(
@@ -3351,11 +3374,10 @@ function updateInteropDirs(
     prevVNode,
   )
   queueInteropDirsJob(instance, () => {
-    // a root the update replaced was mounted, not patched; one it deactivated
-    // never received these bindings
-    if (owner.el !== el) return
-    if (innerInteropDirsOwner(state, instance) !== owner) {
-      owner.vnode = prevVNode
+    settleInteropDirsReceived(instance, state)
+    // a root the update replaced was mounted, not patched; one it
+    // deactivated was not patched either
+    if (owner.el !== el || innerInteropDirsOwner(state, instance) !== owner) {
       return
     }
     owner.carried = vnode
@@ -3370,10 +3392,16 @@ function beforeInteropDirsSelfUpdate(
   state: VNodeHookState,
   source: VaporComponentInstance,
 ): void {
-  if (state.pendingVNodeUpdate) return
   const owners = state.dirsOwners
   let owner = owners && owners.get(source)
   if (!owner) return
+  // the renderer-driven update in flight already patched the active chain
+  if (
+    state.pendingVNodeUpdate &&
+    (source === instance || isOnInteropRootChain(instance, source))
+  ) {
+    return
+  }
   if (!owner.el) owner = innerInteropDirsOwner(state, source)
   if (!owner || !owner.el || owner.updating) return
   owner.updating = source
@@ -3504,6 +3532,9 @@ interface VNodeHookState {
   // decides — covering ref writes that scheduled no render effect.
   pendingVNodeUpdate: VNode | null
   dirsOwners: Map<VaporComponentInstance, InteropDirsOwner> | null
+  // bindings a renderer-driven update handed down, with what each component
+  // had, until the chain settles
+  dirsReceived: [InteropDirsOwner, VNode][] | null
 }
 
 const vnodeHookStateMap = new WeakMap<VaporComponentInstance, VNodeHookState>()
@@ -3521,6 +3552,7 @@ function ensureVNodeHookState(
       vnode,
       pendingVNodeUpdate: null,
       dirsOwners: null,
+      dirsReceived: null,
     }
     vnodeHookStateMap.set(instance, state)
     ;(instance.bu ||= []).push(() => {
@@ -4003,6 +4035,8 @@ function registerInteropDirsFragment(
     }
   })
   ;(frag.u ||= []).push(() => {
+    // the branch switch is done: the chain has settled
+    settleInteropDirsReceived(instance, state)
     const owner = reactivated
     reactivated = null
     if (!owner || !owner.el || !owner.pending || owner.updating) return
