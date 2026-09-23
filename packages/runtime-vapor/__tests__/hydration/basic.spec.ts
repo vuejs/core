@@ -650,4 +650,82 @@ describe('Vapor Mode hydration', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(`Hydration children mismatch`).not.toHaveBeenWarned()
   })
+
+  // the server markup cannot carry a dom property, so a `.prop` binding has to
+  // be written on the client, as vdom does (runtime-core/src/hydration.ts)
+  describe('.prop binding', () => {
+    test('writes the dom property', async () => {
+      const data = reactive({ n: 1 })
+      const { container } = await testHydration(
+        `<template><div :payload.prop="data.n"></div></template>`,
+        {},
+        data,
+      )
+
+      const el = container.firstChild as any
+      expect(el.payload).toBe(1)
+
+      data.n = 2
+      await nextTick()
+      expect(el.payload).toBe(2)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('writes the value property', async () => {
+      const data = reactive({ txt: 'foo' })
+      const { container } = await testHydration(
+        `<template><div :value.prop="data.txt"></div></template>`,
+        {},
+        data,
+      )
+
+      const el = container.firstChild as any
+      expect(el.value).toBe('foo')
+
+      data.txt = 'bar'
+      await nextTick()
+      expect(el.value).toBe('bar')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+  })
+
+  // the server can only render `value` as an attribute, which a <select>
+  // ignores, so the binding has to select its option on the client
+  test('select value binding', async () => {
+    const data = reactive({ v: 'b' })
+    const { container } = await testHydration(
+      `<template><select :value="data.v"><option value="a">a</option><option value="b">b</option></select></template>`,
+      {},
+      data,
+    )
+
+    const el = container.firstChild as HTMLSelectElement
+    expect(el.value).toBe('b')
+
+    data.v = 'a'
+    await nextTick()
+    expect(el.value).toBe('a')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  // a camelCase aria key compiles to a direct dom property write, which vdom
+  // also performs during hydration; the lowercased `arialabel` is what the
+  // server renders for it
+  test('aria property binding', async () => {
+    const data = reactive({ label: 'foo' })
+    const { container, html } = await testHydration(
+      `<template><div :ariaLabel="data.label"></div></template>`,
+      {},
+      data,
+    )
+
+    expect(html).toBe('<div arialabel="foo"></div>')
+    const el = container.firstChild as HTMLElement
+    expect(el.getAttribute('aria-label')).toBe('foo')
+
+    data.label = 'bar'
+    await nextTick()
+    expect(el.getAttribute('aria-label')).toBe('bar')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
 })

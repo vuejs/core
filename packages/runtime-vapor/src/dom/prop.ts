@@ -90,7 +90,7 @@ const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
 
 export function setProp(el: any, key: string, value: any): void {
   if (key in el) {
-    setDOMProp(el, key, value)
+    setDOMProp(el, key, value, false)
   } else {
     setAttr(el, key, value)
   }
@@ -149,7 +149,10 @@ export function setDOMProp(
   el: any,
   key: string,
   value: any,
-  forceHydrate: boolean = false,
+  // a compiled call is an explicit property binding the server markup cannot
+  // carry, so it is written during hydration; runtime-resolved callers
+  // (setProp, setDynamicProp) pass their own decision
+  forceHydrate: boolean = true,
   attrName?: string,
 ): void {
   if (shouldSkipFallthroughKey(el, key)) {
@@ -410,7 +413,8 @@ function hydrateVShowDisplay(
 export function setValue(
   el: TargetElement,
   value: any,
-  forceHydrate: boolean = false,
+  // same rule as setDOMProp
+  forceHydrate: boolean = true,
 ): void {
   if (shouldSkipFallthroughKey(el, 'value')) {
     return
