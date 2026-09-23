@@ -26,7 +26,7 @@ import {
   type VaporComponentInstance,
   currentInstance,
 } from '../../src/component'
-import { compile, ifFlags, makeRender } from '../_utils'
+import { compile, ifFlags, makeRender, renderParity } from '../_utils'
 import { VaporKeepAlive } from '../../src/components/KeepAlive'
 import {
   child,
@@ -4943,4 +4943,181 @@ describe('VaporKeepAlive', () => {
       expect(disposed.mock.calls.sort()).toEqual([['A'], ['B']])
     },
   )
+
+  test('should inherit fallthrough attrs through a KeepAlive root', async () => {
+    const data = ref({ ok: true, title: 'one' })
+    const A = compile(`<template><div>A</div></template>`, data)
+    const B = compile(`<template><p>B</p></template>`, data)
+    const Child = compile(
+      `<script setup vapor>
+        const data = _data
+        const A = _components.A
+        const B = _components.B
+      </script>
+      <template>
+        <KeepAlive>
+          <A v-if="data.ok" />
+          <B v-else />
+        </KeepAlive>
+      </template>`,
+      data,
+      { A, B },
+    )
+    const App = compile(
+      `<template><components.Child class="cls" :title="data.title" /></template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+
+    const a = host.querySelector('div')!
+    expect(a.className).toBe('cls')
+    expect(a.getAttribute('title')).toBe('one')
+
+    data.value.title = 'two'
+    await nextTick()
+    expect(a.getAttribute('title')).toBe('two')
+
+    // the other branch is a root too, and it is cached on the way back
+    data.value.ok = false
+    await nextTick()
+    const b = host.querySelector('p')!
+    expect(b.className).toBe('cls')
+    expect(b.getAttribute('title')).toBe('two')
+
+    data.value.ok = true
+    await nextTick()
+    expect(host.querySelector('div')!.getAttribute('title')).toBe('two')
+  })
+
+  test('should merge fallthrough class with the class of a KeepAlive root', async () => {
+    const data = ref({ outer: 'outer', inner: 'inner' })
+    const A = compile(
+      `<template><div class="box" :class="data.inner">A</div></template>`,
+      data,
+    )
+    const Child = compile(
+      `<script setup vapor>
+        const A = _components.A
+      </script>
+      <template><KeepAlive><A /></KeepAlive></template>`,
+      data,
+      { A },
+    )
+    const App = compile(
+      `<template><components.Child :class="data.outer" /></template>`,
+      data,
+      { Child },
+    )
+    const { host } = define(App).render()
+    const el = host.querySelector('div')!
+
+    expect([...el.classList]).toEqual(
+      expect.arrayContaining(['outer', 'box', 'inner']),
+    )
+    expect(el.classList).toHaveLength(3)
+
+    data.value.inner = 'inner-next'
+    data.value.outer = 'outer-next'
+    await nextTick()
+    expect([...el.classList]).toEqual(
+      expect.arrayContaining(['outer-next', 'box', 'inner-next']),
+    )
+    expect(el.classList).toHaveLength(3)
+  })
+
+  test('should inherit fallthrough attrs through a KeepAlive root with a dynamic component', async () => {
+    const out: Record<string, string[]> = {}
+    await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        B: `<template><p id="b">B</p></template>`,
+        Child: `<template><KeepAlive><component :is="data.view === 'A' ? components.A : components.B" /></KeepAlive></template>`,
+        App: `<template><components.Child class="outer" :title="data.title" /></template>`,
+      },
+      () => ref({ view: 'A', title: 'one' }),
+      async (data, root, mode) => {
+        const snap = () => root.querySelector('#a, #b')!.outerHTML
+        const seen = [snap()]
+        data.value.view = 'B'
+        await nextTick()
+        seen.push(snap())
+        data.value.title = 'two'
+        await nextTick()
+        seen.push(snap())
+        // A comes back from the cache with the attrs updated meanwhile
+        data.value.view = 'A'
+        await nextTick()
+        seen.push(snap())
+        out[mode] = seen
+      },
+    )
+    expect(out.vdom).toEqual([
+      '<div id="a" class="outer" title="one">A</div>',
+      '<p id="b" class="outer" title="one">B</p>',
+      '<p id="b" class="outer" title="two">B</p>',
+      '<div id="a" class="outer" title="two">A</div>',
+    ])
+    expect(out.vapor).toEqual(out.vdom)
+  })
+
+  test('should pass the attrs of the KeepAlive itself to its child', async () => {
+    const out: Record<string, string> = {}
+    await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        Child: `<template><KeepAlive class="ka" data-x="1"><components.A /></KeepAlive></template>`,
+        App: `<template><components.Child /></template>`,
+      },
+      () => ref(null),
+      (_data, root, mode) => {
+        out[mode] = root.querySelector('#a')!.outerHTML
+      },
+    )
+    expect(out.vdom).toBe('<div id="a" class="ka" data-x="1">A</div>')
+    expect(out.vapor).toBe(out.vdom)
+  })
+
+  test('should not pass fallthrough attrs to the fallback of a KeepAlive slot', async () => {
+    const cls: Record<string, string> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        Child: `<template><KeepAlive><slot><components.A /></slot></KeepAlive></template>`,
+        App: `<template><components.Child class="outer" /></template>`,
+      },
+      () => ref(null),
+      (_data, root, mode) => {
+        cls[mode] = root.querySelector('#a')!.className
+      },
+    )
+    expect(cls.vdom).toBe('')
+    expect(cls.vapor).toBe(cls.vdom)
+    expect(vapor.text).toBe(vdom.text)
+    expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
+  })
+
+  test('should render provided content of a KeepAlive slot as vdom does', async () => {
+    const cls: Record<string, string> = {}
+    const usedFallback: Record<string, boolean> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        B: `<template><span id="b">B</span></template>`,
+        Child: `<template><KeepAlive><slot><components.A /></slot></KeepAlive></template>`,
+        App: `<template><components.Child class="outer"><components.B /></components.Child></template>`,
+      },
+      () => ref(null),
+      (_data, root, mode) => {
+        cls[mode] = root.querySelector('#b')!.className
+        usedFallback[mode] = !!root.querySelector('#a')
+      },
+    )
+    expect(usedFallback.vdom).toBe(false)
+    expect(usedFallback.vapor).toBe(usedFallback.vdom)
+    expect(cls.vdom).toBe('')
+    expect(cls.vapor).toBe(cls.vdom)
+    expect(vapor.text).toBe(vdom.text)
+    expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
+  })
 })

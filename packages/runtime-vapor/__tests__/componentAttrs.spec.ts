@@ -23,7 +23,7 @@ import {
   setStyle,
   template,
 } from '../src'
-import { compile, makeRender } from './_utils'
+import { compile, makeRender, renderParity } from './_utils'
 import {
   VaporBlockShape,
   VaporDynamicComponentFlags,
@@ -2322,5 +2322,24 @@ describe('attribute fallthrough', () => {
 
     const { host } = define(Parent).render()
     expect(host.innerHTML).toBe('<div>child</div>')
+  })
+
+  test('should not pass fallthrough attrs to the fallback of a slot outlet root', async () => {
+    const cls: Record<string, string> = {}
+    const { vdom, vapor } = await renderParity(
+      {
+        A: `<template><div id="a">A</div></template>`,
+        Child: `<template><slot><components.A /></slot></template>`,
+        App: `<template><components.Child class="outer" /></template>`,
+      },
+      () => ref(null),
+      (_data, root, mode) => {
+        cls[mode] = root.querySelector('#a')!.className
+      },
+    )
+    expect(cls.vdom).toBe('')
+    expect(cls.vapor).toBe(cls.vdom)
+    expect(vapor.text).toBe(vdom.text)
+    expect('Extraneous non-props attributes (class)').toHaveBeenWarned()
   })
 })

@@ -702,6 +702,31 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('fallthrough attrs through a KeepAlive root', async () => {
+      const data = ref({ ok: true, title: 'one' })
+      const { container, html } = await testHydration(
+        `<template><components.Child class="outer" :title="data.title" /></template>`,
+        {
+          A: `<template><div class="box">A</div></template>`,
+          Child: `<template><KeepAlive><components.A v-if="data.ok" /></KeepAlive></template>`,
+        },
+        data,
+      )
+      expect(html).toBe('<div class="box outer" title="one">A</div>')
+      const el = () => container.querySelector('div')!
+      expect(el().outerHTML).toBe(html)
+
+      data.value.title = 'two'
+      await nextTick()
+      expect(el().getAttribute('title')).toBe('two')
+
+      data.value.ok = false
+      await nextTick()
+      data.value.ok = true
+      await nextTick()
+      expect(el().outerHTML).toBe('<div class="box outer" title="two">A</div>')
+    })
+
     test('v-if KeepAlive with dynamic component should preserve cached branches', async () => {
       const data = ref({
         current: 'CompA',

@@ -112,6 +112,10 @@ function createFallback(
     return []
   }
 
+  // the outlet is a fragment boundary: the component root must not propagate
+  // into the fallback through the transparent `<template>` wrapper below
+  context.isSingleRoot = false
+
   context.node = node = extend({}, node, {
     type: NodeTypes.ELEMENT,
     tag: 'template',

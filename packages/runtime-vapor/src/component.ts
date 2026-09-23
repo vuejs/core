@@ -1945,6 +1945,15 @@ class FallthroughResolveState implements RootChainVisitor {
     }
     this.innermost = frag
   }
+
+  // A vnode-backed child folds like a vapor component: it took the attrs as
+  // props at creation, and the vdom renderer owns the element they land on
+  // (a KeepAlive reactivation would otherwise re-apply onto cached nodes).
+  // A vdom-fed slot outlet is a fragment boundary like a vapor one.
+  onInteropFragment(frag: InteropFragment): boolean {
+    if (isSlotOutletFragment(frag)) return (this.hasSlotOutlet = true)
+    return !!frag.vnode
+  }
 }
 
 // Effective-root resolution for fallthrough: the shared descent, collecting
