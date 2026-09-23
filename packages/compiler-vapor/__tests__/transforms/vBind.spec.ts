@@ -1303,12 +1303,7 @@ describe('compiler v-bind', () => {
     expect(code).toContain('[{ title: _k0 }, _obj], k3)')
   })
 
-  // a dom property with no content attribute behind it cannot fold either: in
-  // the template string the attribute would only sit on the element - and the
-  // html parser lowercases it on the way - while the property, the one place
-  // the value lives, was never assigned. So the binding has to reach
-  // `setProp`, which decides with `key in el` the way vdom's
-  // `shouldSetAsProp` does. The plain attribute spelling takes the same path.
+  // These properties have no content attribute and require a runtime setter.
   test.each([
     [`<video :volume="0.5"/>`, `<video>`, `_setProp(n0, "volume", "0.5")`],
     [`<video volume="0.5"/>`, `<video>`, `_setProp(n0, "volume", "0.5")`],
@@ -1342,9 +1337,7 @@ describe('compiler v-bind', () => {
     },
   )
 
-  // the list is consulted before the modifier is, so `^` does not fold either -
-  // it lands on a runtime `setAttr`, which is what `:indeterminate.attr` was
-  // already doing before the list grew
+  // These keys skip folding even with .attr, which selects setAttr at runtime.
   test('constant props with no content attribute behind them: .attr', () => {
     const { code } = compileWithVBind(`<video :volume.attr="0.5"/>`)
 
@@ -1352,13 +1345,8 @@ describe('compiler v-bind', () => {
     expect(code).toContain(`_setAttr(n0, "volume", "0.5")`)
   })
 
-  // the counterpart: a key a content attribute does feed still folds. `muted`
-  // is the ragged edge - the html parser applies the attribute to the muted
-  // state as it creates the element, so the property does end up matching vdom
-  // in a browser, but the markup does not: vdom renders `<video>` and vapor
-  // `<video muted>`. That spelling never reaches the guard above anyway,
-  // `isFoldableBooleanAttr` catches it first, so it is out of scope here and
-  // only pinned to show this change leaves it alone.
+  // Content attributes still fold. The separate isFoldableBooleanAttr branch
+  // keeps muted's existing folding behavior.
   test.each([
     [`<input :value="'a'"/>`, `_template("<input value=a>"`],
     [`<input :checked="true"/>`, `_template("<input checked>"`],

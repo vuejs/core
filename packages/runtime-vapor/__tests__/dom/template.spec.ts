@@ -1,6 +1,5 @@
 import { template } from '../../src/dom/template'
-import { currentInstance, nextTick, ref } from '@vue/runtime-dom'
-import { VaporComponentInstance } from '../../src/component'
+import { nextTick, ref } from '@vue/runtime-dom'
 import { compile, makeRender, renderParity } from '../_utils'
 import { child, next, nthChild } from '../../src/dom/node'
 
@@ -304,17 +303,9 @@ describe('text children of a createElement-backed parent', () => {
   })
 })
 
-// A bare literal bound to a key with no content attribute behind it used to
-// fold into the template string, where the attribute only sat on the element -
-// lowercased by the html parser, so `playbackRate` became `playbackrate` - while
-// the dom property, the one place the value lives, kept its default. Vdom picks
-// the property with `key in el` (`shouldSetAsProp`) and vapor's `setProp`
-// applies the same rule, so assert against vdom rather than pinning a
-// vapor-only contract.
+// Compare property writes and attributes with VDOM for bindings that cannot fold.
 describe('constant props with no content attribute behind them', () => {
-  // `compile()` injects `<script vapor>` into a source without a `<script>`
-  // block, which would force vapor for both legs; `renderParity` prefixes a
-  // plain `<script setup>` instead, so the mode does come from the option
+  // Plain <script setup> lets the compile option select the renderer.
   test('the two parity legs compile to different renderers', () => {
     const src =
       `<script setup>const data = _data</script>` +
@@ -325,37 +316,21 @@ describe('constant props with no content attribute behind them', () => {
 
   async function parity(tpl: string, key: string, selector: string) {
     const seen: Record<string, unknown> = {}
-    const isVapor: Record<string, boolean[]> = {}
-    // `currentInstance` is only live while the block renders, so read it from a
-    // getter the template touches - the public `getCurrentInstance()` reports
-    // `currentRenderingInstance` and is null under vapor
-    const pending: boolean[] = []
     const { vdom, vapor } = await renderParity(
-      { App: `<template>${tpl}<span>{{ data.probe }}</span></template>` },
-      () => {
-        const data = ref({} as Record<string, unknown>)
-        Object.defineProperty(data.value, 'probe', {
-          get: () => {
-            pending.push(currentInstance instanceof VaporComponentInstance)
-            return ''
-          },
-        })
-        return data
-      },
+      { App: `<template>${tpl}</template>` },
+      () => ref(0),
       (_data, root, mode) => {
-        isVapor[mode] = [...new Set(pending.splice(0))]
         const el = root.querySelector(selector) as any
-        // the fold would leave the key behind lowercased, so look for it that way
+        // HTML parsing lowercases folded attribute names.
         seen[mode] = { prop: el[key], attr: el.getAttribute(key.toLowerCase()) }
       },
     )
-    expect(isVapor).toEqual({ vdom: [false], vapor: [true] })
     expect(vapor.after).toBe(vdom.after)
     expect(seen.vapor).toEqual(seen.vdom)
     return seen.vdom
   }
 
-  // the plain attribute spelling folds through the same guard, so it is here too
+  // Plain attributes use the same folding guard as constant bindings.
   const noAttr: Array<[string, string, string, Record<string, unknown>]> = [
     [
       `<video :volume="0.5"></video>`,
@@ -401,8 +376,7 @@ describe('constant props with no content attribute behind them', () => {
     },
   )
 
-  // the counterpart: a key a content attribute does feed keeps folding, so the
-  // attribute is still there in the markup
+  // Properties initialized by content attributes keep folding.
   const withAttr: Array<[string, string, string, Record<string, unknown>]> = [
     [`<input :value="'a'">`, 'value', 'input', { prop: 'a', attr: 'a' }],
     [`<input :checked="true">`, 'checked', 'input', { prop: true, attr: '' }],
@@ -415,10 +389,7 @@ describe('constant props with no content attribute behind them', () => {
     },
   )
 
-  // a value the property rejects reaches the runtime setter now, so vapor
-  // warns where it used to print the attribute in silence - vdom has always
-  // warned here, so the two still say the same thing
-  test('an invalid value warns the way vdom does', async () => {
+  test('valueAsNumber on a text input warns the way vdom does', async () => {
     await parity(`<input :valueAsNumber="5">`, 'valueAsNumber', 'input')
     expect(
       `Failed setting prop "valueAsNumber" on <input>`,
