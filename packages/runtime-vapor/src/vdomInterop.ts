@@ -77,6 +77,7 @@ import {
   type VaporComponent,
   VaporComponentInstance,
   createComponent,
+  getRootChainComponent,
   getRootElement,
   isVaporComponent,
   mountComponent,
@@ -443,13 +444,15 @@ const vaporInteropImpl = {
     if (vnode.dirs) {
       // after the component's own `bum`, while the root is still in the DOM;
       // `unmounted` follows the boundary of the unmount pass, like `um`
-      ;(instance.bum ||= []).push(() =>
+      ;(instance.bum ||= []).push(() => {
+        // kept-alive roots first, as VDOM's KeepAlive prunes its cache
+        releaseKeptInteropDirs(instance, vnodeHookState)
         queueInteropDirsJob(
           instance,
           unmountInteropDirs(instance, vnodeHookState),
           resolveUnmountSuspense(instance.suspense),
-        ),
-      )
+        )
+      })
     }
 
     mountComponent(instance, container, selfAnchor)
@@ -3224,6 +3227,28 @@ function unmountInteropDirs(
   return () => invokeInteropDirsHook(instance, target, 'unmounted')
 }
 
+// A kept-alive root is deactivated, not unmounted: its bindings stay on it
+// until KeepAlive drops the component (`comp`) or the whole tree goes.
+function releaseKeptInteropDirs(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  comp?: VaporComponentInstance,
+): void {
+  const kept = state.keptDirsTargets
+  if (!kept) return
+  const suspense = resolveUnmountSuspense(instance.suspense)
+  kept.forEach((target, key) => {
+    if (comp && key !== comp) return
+    kept.delete(key)
+    invokeInteropDirsHook(instance, target, 'beforeUnmount')
+    queueInteropDirsJob(
+      instance,
+      () => invokeInteropDirsHook(instance, target, 'unmounted'),
+      suspense,
+    )
+  })
+}
+
 // renderer-driven update of the inherited root vnode
 function updateInteropDirs(
   instance: VaporComponentInstance,
@@ -3363,6 +3388,8 @@ interface VNodeHookState {
   // decides — covering ref writes that scheduled no render effect.
   pendingVNodeUpdate: VNode | null
   dirsTarget: InteropDirsTarget | null
+  // targets of deactivated kept-alive roots, by their root-chain component
+  keptDirsTargets: Map<VaporComponentInstance, InteropDirsTarget> | null
 }
 
 const vnodeHookStateMap = new WeakMap<VaporComponentInstance, VNodeHookState>()
@@ -3380,6 +3407,7 @@ function ensureVNodeHookState(
       vnode,
       pendingVNodeUpdate: null,
       dirsTarget: null,
+      keptDirsTargets: null,
     }
     vnodeHookStateMap.set(instance, state)
     ;(instance.bu ||= []).push(() => {
@@ -3851,10 +3879,18 @@ function registerInteropDirsFragment(
   registerInteropRootSync(instance, frag)
   if (interopDirsProducers.has(frag)) return
   interopDirsProducers.add(frag)
+  let reactivated: InteropDirsTarget | null = null
   ;(frag.bu ||= []).push(() => {
     const target = state.dirsTarget
     // Fragments off the chain (a deactivated KeepAlive branch) keep their root
-    if (target && getRootElement(frag.nodes) === target.el) {
+    if (!target || getRootElement(frag.nodes) !== target.el) return
+    const comp = isKeepAliveEnabled && getRootChainComponent(frag.nodes)
+    if (comp && comp.shapeFlag! & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+      // deactivated, not unmounted: no hooks, and no `updated` is owed
+      target.updating = false
+      state.dirsTarget = null
+      ;(state.keptDirsTargets ||= new Map()).set(comp, target)
+    } else {
       queueInteropDirsJob(instance, unmountInteropDirs(instance, state))
     }
   })
@@ -3866,10 +3902,25 @@ function registerInteropDirsFragment(
     ) {
       return
     }
+    const kept = state.keptDirsTargets
+    const comp = kept && getRootChainComponent(nodes)
+    const target = comp && kept!.get(comp)
+    if (target) {
+      kept!.delete(comp!)
+      state.dirsTarget = reactivated = target
+      return
+    }
     const dirsRoot = resolveInteropDirsRoot(instance, state, nodes)
     if (dirsRoot) {
       queueInteropDirsJob(instance, mountInteropDirs(instance, state, dirsRoot))
     }
+  })
+  ;(frag.u ||= []).push(() => {
+    // vdom patches a reactivated root once it is back in the DOM
+    if (reactivated && reactivated === state.dirsTarget) {
+      updateInteropDirs(instance, state, state.vnode, reactivated.vnode)
+    }
+    reactivated = null
   })
 }
 
@@ -3884,6 +3935,9 @@ function registerInteropDirsComponent(
     interopDirsSelfUpdate(instance, state, true, comp),
   )
   ;(comp.u ||= []).push(() => interopDirsSelfUpdate(instance, state, false))
+  if (isKeepAliveEnabled) {
+    ;(comp.bum ||= []).push(() => releaseKeptInteropDirs(instance, state, comp))
+  }
 }
 
 function isOnInteropRootChain(

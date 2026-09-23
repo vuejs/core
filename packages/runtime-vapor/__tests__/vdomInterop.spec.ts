@@ -1580,6 +1580,137 @@ describe('vdomInterop', () => {
         ])
       })
 
+      test('a kept-alive root keeps its directives across deactivation', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ view: 'A' })
+          const A = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div style="display: flex">a</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const B = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><p>b</p></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const Wrapper = compile(
+            `<script setup>const data = _data\n` +
+              `const components = _components</script>` +
+              `<template><KeepAlive>` +
+              `<component :is="components[data.view]"/>` +
+              `</KeepAlive></template>`,
+            data,
+            { A, B },
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const visible = ref(false)
+          const { root, done } = mountInBody(() =>
+            withDirectives(h(Wrapper), [
+              [vShow, visible.value],
+              [dir, 'v'],
+            ]),
+          )
+          data.value.view = 'B'
+          await nextTick()
+          data.value.view = 'A'
+          await nextTick()
+          visible.value = true
+          await nextTick()
+          // v-show keeps the display it recorded on the first mount
+          expect(root.querySelector('div')!.style.display).toBe('flex')
+          done()
+          return calls
+        }
+
+        const vdom = await run(false)
+        expect(vdom).toEqual([
+          'created DIV[a] (detached) v',
+          'beforeMount DIV[a] (detached) v',
+          'mounted DIV[a] v',
+          // deactivation runs no hooks
+          'created P[b] (detached) v',
+          'beforeMount P[b] (detached) v',
+          'mounted P[b] v',
+          // reactivation patches the cached root
+          'beforeUpdate DIV[a] v>v',
+          'updated DIV[a] v>v',
+          'beforeUpdate DIV[a] v>v',
+          'updated DIV[a] v>v',
+          'beforeUnmount P[b] (detached) v',
+          'beforeUnmount DIV[a] v',
+          'unmounted P[b] (detached) v',
+          'unmounted DIV[a] (detached) v',
+        ])
+        // plus the doomed `beforeUpdate` before each switch
+        const vapor = [...vdom]
+        vapor.splice(3, 0, 'beforeUpdate DIV[a] v>v')
+        vapor.splice(7, 0, 'beforeUpdate P[b] v>v')
+        expect(await run(true)).toEqual(vapor)
+      })
+
+      test('an evicted kept-alive root unmounts its directives', async () => {
+        const run = async (vapor: boolean) => {
+          const data = ref({ view: 'A' })
+          const views = ['A', 'B', 'C'].map(name =>
+            compile(
+              `<script setup>const data = _data</script>` +
+                `<template><p>${name}</p></template>`,
+              data,
+              {},
+              { vapor },
+            ),
+          )
+          const Wrapper = compile(
+            `<script setup>const data = _data\n` +
+              `const components = _components</script>` +
+              `<template><KeepAlive :max="2">` +
+              `<component :is="components[data.view]"/>` +
+              `</KeepAlive></template>`,
+            data,
+            { A: views[0], B: views[1], C: views[2] },
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const { done } = mountInBody(() =>
+            withDirectives(h(Wrapper), [[dir, 'v']]),
+          )
+          data.value.view = 'B'
+          await nextTick()
+          calls.length = 0
+          // caching B evicts the deactivated A
+          data.value.view = 'C'
+          await nextTick()
+          const evicted = calls.slice()
+          done()
+          return evicted
+        }
+
+        expect(await run(false)).toEqual([
+          'beforeUnmount P[A] (detached) v',
+          'created P[C] (detached) v',
+          'beforeMount P[C] (detached) v',
+          'unmounted P[A] (detached) v',
+          'mounted P[C] v',
+        ])
+        // vapor KeepAlive prunes once the new branch is cached, after its
+        // render
+        expect(await run(true)).toEqual([
+          'beforeUpdate P[B] v>v',
+          'created P[C] (detached) v',
+          'beforeMount P[C] (detached) v',
+          'beforeUnmount P[A] (detached) v',
+          'mounted P[C] v',
+          'unmounted P[A] (detached) v',
+        ])
+      })
+
       // vapor only: a vdom Transition renders a placeholder root while the
       // leave is pending, so the vdom child has no comparable sequence
       test('an out-in leave releases the old root once', async () => {
