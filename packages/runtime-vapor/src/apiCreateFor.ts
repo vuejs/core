@@ -286,12 +286,14 @@ export const createFor = (
         // `newBlocks[index]`, which the reuse pass has already filled in.
         let sources: number[] = EMPTY_ARR as unknown as number[]
         let mountCounter = 0
+        let pureInsert = false
 
         if (oldKeyIndexMap.size === 0) {
-          // pure append/replace: nothing to pair up, so every queued index is
-          // a mount, the planner below is skipped and `sources` is never
+          // pure insert: nothing to pair up, so the queued run [e1, e3) is
+          // mounts only, the planner below is skipped and `sources` is never
           // read - don't build it
           mountCounter = queuedLength
+          pureInsert = true
         } else {
           sources = new Array(queuedLength)
           for (let q = queuedLength - 1; q >= 0; q--) {
@@ -384,6 +386,17 @@ export const createFor = (
           }
           scanFrom = index + 1
           cachedAnchor = anchorNode
+
+          if (pureInsert) {
+            // the whole run shares the anchor just resolved past it, so mount
+            // it forward: rows are created in source order, as vdom's
+            // "common sequence + mount" branch and every other vapor mount
+            // path do
+            for (let i = 0; i < queuedLength; i++) {
+              mount(source, queuedIndices[i], anchorNode)
+            }
+            break
+          }
 
           const block = newBlocks[index]
           if (block !== undefined) {

@@ -2599,6 +2599,12 @@ describe('createFor', () => {
       expect(await countMoves([0, 1, 2, 3, 4], [3, 4, 2])).toBe(1)
     })
 
+    // guard: a plain insert shares one anchor, so it is one insert per new
+    // row and nothing else is touched (already true before the forward mount)
+    test('inserting rows only inserts the new rows', async () => {
+      expect(await countMoves(range(50), [...range(50), 50, 51, 52])).toBe(3)
+    })
+
     test('reordering past a row that renders nothing keeps rows anchored', async () => {
       const list = ref([1, 2, 3])
       const { host } = define(() =>
@@ -2623,6 +2629,136 @@ describe('createFor', () => {
       list.value = [3, 2, 1]
       await nextTick()
       expect(host.innerHTML).toBe('<span>3</span><span>1</span><!--for-->')
+    })
+  })
+
+  describe('insert creates rows in source order', () => {
+    // An insert into a keyed list mounts fresh rows only, so vapor creates
+    // them front to back like vdom's ordered pass. Apps observe that order
+    // through `setup` - directly, or through self registration via `inject` -
+    // so assert on a recorder, not on the dom, which was already correct.
+    const Row =
+      `<script setup>const props = defineProps(['it']); _components.record(props.it)</script>` +
+      `<template><span>{{ it }}</span></template>`
+    const keyed = `<components.Row v-for="it in data.list" :key="it" :it="it" />`
+
+    async function creationOrder(
+      template: string,
+      start: any[],
+      act: (list: any[]) => void,
+    ) {
+      const created: string[] = []
+      const order = {} as Record<'vdom' | 'vapor', string[]>
+      const { vdom, vapor } = await renderParity(
+        { Row, App: `<template><div>${template}</div></template>` },
+        () => ref({ list: [...start] }),
+        async (data, _root, mode) => {
+          // only the update is under test; drop the initial render
+          created.length = 0
+          act(data.value.list)
+          await nextTick()
+          order[mode] = created.slice()
+        },
+        { record: (it: any) => created.push(String(it)) },
+      )
+      expect(vapor.text).toBe(vdom.text)
+      return { order, text: vapor.text }
+    }
+
+    test('appending to a non-empty keyed list', async () => {
+      const { order, text } = await creationOrder(keyed, [1], list =>
+        list.push(2, 3),
+      )
+      expect(order.vapor).toEqual(['2', '3'])
+      expect(order.vapor).toEqual(order.vdom)
+      expect(text).toBe('123')
+    })
+
+    test('inserting in the middle of a keyed list', async () => {
+      const { order, text } = await creationOrder(keyed, [1, 2, 3], list =>
+        list.splice(1, 0, 'a', 'b'),
+      )
+      expect(order.vapor).toEqual(['a', 'b'])
+      expect(order.vapor).toEqual(order.vdom)
+      expect(text).toBe('1ab23')
+    })
+
+    test('inserting at the head of a keyed list', async () => {
+      const { order, text } = await creationOrder(keyed, [1, 2, 3], list =>
+        list.unshift('a', 'b'),
+      )
+      expect(order.vapor).toEqual(['a', 'b'])
+      expect(order.vapor).toEqual(order.vdom)
+      expect(text).toBe('ab123')
+    })
+
+    // the user-visible symptom: a teleport appends its content to the target
+    // as the row is created, so creation order is the order it lands in
+    test('teleported rows land in their target in source order', async () => {
+      const targets: HTMLElement[] = []
+      const landed = {} as Record<'vdom' | 'vapor', string>
+      await renderParity(
+        {
+          App:
+            `<template><Teleport v-for="it in data.list" :key="it" :to="data.target">` +
+            `t{{ it }}</Teleport></template>`,
+        },
+        () => {
+          const target = document.createElement('div')
+          document.body.appendChild(target)
+          targets.push(target)
+          return ref({ list: [1], target })
+        },
+        async (data, _root, mode) => {
+          data.value.list.push(2, 3)
+          await nextTick()
+          landed[mode] = data.value.target.textContent
+        },
+      )
+      targets.forEach(target => target.remove())
+      expect(landed.vapor).toBe('t1t2t3')
+      expect(landed.vapor).toBe(landed.vdom)
+    })
+
+    // guards: these two paths mounted forward already
+    test('mounting into an empty list', async () => {
+      const { order } = await creationOrder(keyed, [], list =>
+        list.push(1, 2, 3),
+      )
+      expect(order.vapor).toEqual(['1', '2', '3'])
+      expect(order.vapor).toEqual(order.vdom)
+    })
+
+    test('appending to an unkeyed list', async () => {
+      const { order } = await creationOrder(
+        `<components.Row v-for="it in data.list" :it="it" />`,
+        [1],
+        list => list.push(2, 3),
+      )
+      expect(order.vapor).toEqual(['2', '3'])
+      expect(order.vapor).toEqual(order.vdom)
+    })
+
+    // vdom does not order rows front to back in general - its reorder pass is
+    // deliberately backwards - and neither does vapor. Only an insert with
+    // nothing to pair up is ordered; these pin the rest to whatever vdom does
+    // so the change is not read as a general ordering contract.
+    test('two separate inserts in one tick stay back to front, like vdom', async () => {
+      const { order, text } = await creationOrder(keyed, [1, 2, 3], list =>
+        list.splice(0, 3, 1, 'a', 'b', 2, 'c', 'd', 3),
+      )
+      expect(order.vapor).toEqual(['d', 'c', 'b', 'a'])
+      expect(order.vapor).toEqual(order.vdom)
+      expect(text).toBe('1ab2cd3')
+    })
+
+    test('an insert mixed with a move stays back to front, like vdom', async () => {
+      const { order, text } = await creationOrder(keyed, [1, 2, 3], list =>
+        list.splice(0, 3, 'a', 3, 'b', 1, 2),
+      )
+      expect(order.vapor).toEqual(['b', 'a'])
+      expect(order.vapor).toEqual(order.vdom)
+      expect(text).toBe('a3b12')
     })
   })
 })
