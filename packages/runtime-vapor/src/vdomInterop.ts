@@ -213,6 +213,7 @@ import {
   resolveUnmountSuspense,
   runWithUnmountSuspense,
 } from './suspense'
+import { isAsyncComponentEnabled } from './asyncComponentState'
 import {
   currentRenderContext,
   deriveSlotScopeIds,
@@ -457,7 +458,7 @@ const vaporInteropImpl = {
           mountVNode,
         )
         if (!mountVNode.dirs) return
-        const [owner, el] = resolveInteropDirsRoot(
+        const [owner, el, pending] = resolveInteropDirsRoot(
           instance,
           vnodeHookState,
           instance,
@@ -466,7 +467,7 @@ const vaporInteropImpl = {
         if (el) {
           mountInteropDirsRoot(instance, owner, el)
           mountVNode.el = el
-        } else if (__DEV__) {
+        } else if (__DEV__ && !pending) {
           warnNonElementRootDirs()
         }
       })
@@ -3267,8 +3268,9 @@ function resolveInteropDirsRoot(
   state: VNodeHookState,
   block: Block,
   inherit: InteropDirsOwner,
-): [InteropDirsOwner, Element | undefined] {
+): [InteropDirsOwner, Element | undefined, pending: boolean] {
   let owner = inherit
+  let pending = false
   const el = getRootElement(block, {
     // a slot outlet is a fragment root in vdom: nothing for directives to
     // land on
@@ -3278,9 +3280,31 @@ function resolveInteropDirsRoot(
     onComponent: comp => {
       registerInteropDirsComponent(instance, state, comp)
       owner = getInteropDirsOwner(state, comp, inherit.vnode)
+      // the chain ends in a root that does not exist yet, not a non-element
+      // root: an async setup mounts once it settles, an async component
+      // renders its branch once it loads
+      if (isPendingInteropDirsRoot(comp)) pending = true
     },
   })
-  return [owner, el]
+  return [owner, el, pending]
+}
+
+function isPendingInteropDirsRoot(comp: VaporComponentInstance): boolean {
+  if (
+    __FEATURE_SUSPENSE__ &&
+    isSuspenseEnabled &&
+    comp.asyncDep &&
+    !comp.asyncResolved
+  ) {
+    return true
+  }
+  const block = comp.block
+  return (
+    isAsyncComponentEnabled &&
+    isAsyncWrapper(comp) &&
+    isFragment(block) &&
+    block.nodes === EMPTY_BLOCK
+  )
 }
 
 // The innermost root-chain component below `comp`, visiting every one on the
@@ -4106,6 +4130,27 @@ function registerInteropDirsComponent(
     afterInteropDirsSelfUpdate(instance, state, comp),
   )
   ;(comp.bum ||= []).push(() => unmountInteropDirs(instance, state, comp))
+  if (
+    __FEATURE_SUSPENSE__ &&
+    isSuspenseEnabled &&
+    comp.asyncDep &&
+    !comp.asyncResolved
+  ) {
+    // a pending async setup renders its root once it settles; `bm` runs
+    // before that root is inserted
+    ;(comp.bm ||= []).push(() => {
+      const owners = state.dirsOwners
+      const owner = owners && owners.get(comp)
+      if (!owner || owner.el || !owner.vnode.dirs) return
+      const [inner, el] = resolveInteropDirsRoot(
+        instance,
+        state,
+        comp.block!,
+        owner,
+      )
+      if (el) mountInteropDirsRoot(instance, inner, el)
+    })
+  }
 }
 
 function isOnInteropRootChain(

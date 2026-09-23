@@ -2413,6 +2413,113 @@ describe('vdomInterop', () => {
         ])
       })
 
+      test('directives mount on a nested root once its async setup resolves', async () => {
+        const run = async (vapor: boolean) => {
+          let resolve!: () => void
+          const data = ref({ p: new Promise<void>(r => (resolve = r)) })
+          const Inner = compile(
+            `<script setup>const data = _data; await data.value.p</script>` +
+              `<template><div>i</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          // the wrapper itself is synchronous: its root is pending, not empty
+          const Wrapper = compile(
+            `<script setup>const components = _components</script>` +
+              `<template><components.Inner/></template>`,
+            data,
+            { Inner },
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const value = ref('v')
+          const { root, done } = mountInBody(() =>
+            h(Suspense, null, {
+              default: () =>
+                withDirectives(h(Wrapper), [
+                  [vShow, false],
+                  [dir, value.value],
+                ]),
+              fallback: () => h('span', 'loading'),
+            }),
+          )
+          expect(calls).toEqual([])
+          resolve()
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          expect(root.querySelector('div')!.style.display).toBe('none')
+          value.value = 'w'
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(run, [
+          'created DIV[i] (detached) v',
+          'beforeMount DIV[i] (detached) v',
+          'mounted DIV[i] v',
+          'beforeUpdate DIV[i] v>w',
+          'updated DIV[i] v>w',
+          'beforeUnmount DIV[i] w',
+          'unmounted DIV[i] (detached) w',
+        ])
+      })
+
+      test('directives mount on a nested root once its async component loads', async () => {
+        const run = async (vapor: boolean) => {
+          let load!: (comp: any) => void
+          const data = ref({})
+          const Inner = compile(
+            `<script setup>const data = _data</script>` +
+              `<template><div>i</div></template>`,
+            data,
+            {},
+            { vapor },
+          )
+          const loader = () => new Promise<any>(r => (load = r))
+          const AsyncInner = vapor
+            ? defineVaporAsyncComponent(loader)
+            : defineAsyncComponent(loader)
+          const Wrapper = compile(
+            `<script setup>const components = _components</script>` +
+              `<template><components.AsyncInner/></template>`,
+            data,
+            { AsyncInner },
+            { vapor },
+          )
+          const calls: string[] = []
+          const dir = trace(calls)
+          const value = ref('v')
+          const { root, done } = mountInBody(() =>
+            withDirectives(h(Wrapper), [
+              [vShow, false],
+              [dir, value.value],
+            ]),
+          )
+          expect(calls).toEqual([])
+          load(Inner)
+          await new Promise(r => setTimeout(r))
+          await nextTick()
+          expect(root.querySelector('div')!.style.display).toBe('none')
+          value.value = 'w'
+          await nextTick()
+          done()
+          return calls
+        }
+
+        await expectParity(run, [
+          'created DIV[i] (detached) v',
+          'beforeMount DIV[i] (detached) v',
+          'mounted DIV[i] v',
+          'beforeUpdate DIV[i] v>w',
+          'updated DIV[i] v>w',
+          'beforeUnmount DIV[i] w',
+          'unmounted DIV[i] (detached) w',
+        ])
+      })
+
       // vapor only: a vdom Transition renders a placeholder root while the
       // leave is pending, so the vdom child has no comparable sequence
       test('an out-in leave releases the old root once', async () => {
