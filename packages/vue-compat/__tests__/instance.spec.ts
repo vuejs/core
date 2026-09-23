@@ -356,6 +356,20 @@ test('$options mutation', () => {
   }).$mount()
 })
 
+// #11164
+test('_setupProxy', () => {
+  const vm = new Vue({
+    compatConfig: { RENDER_FUNCTION: 'suppress-warning' },
+    setup() {
+      return { msg: 'hi' }
+    },
+    render(this: any) {
+      return this._c('div', this._self._setupProxy.msg)
+    },
+  }).$mount()
+  expect(vm.$el.outerHTML).toBe('<div>hi</div>')
+})
+
 test('other private APIs', () => {
   new Vue({
     created() {
