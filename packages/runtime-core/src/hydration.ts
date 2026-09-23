@@ -898,13 +898,10 @@ export const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
   )
 }
 
-/**
- * Dev only
- */
 // attributes whose assignment triggers a (re)fetch of a resource
 const resourceProps = /*@__PURE__*/ new Set(['src', 'srcset', 'href', 'poster'])
 
-function isUnchangedResourceProp(
+export function isUnchangedResourceProp(
   el: Element,
   key: string,
   clientValue: any,
@@ -919,6 +916,9 @@ function isUnchangedResourceProp(
   )
 }
 
+/**
+ * Dev only
+ */
 function propHasMismatch(
   el: Element & { $cls?: string },
   key: string,

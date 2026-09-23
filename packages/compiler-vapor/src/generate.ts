@@ -50,6 +50,8 @@ export class CodegenContext {
   }
 
   delegates: Set<string> = new Set<string>()
+  // hoisted static key lists of setDynamicProps, keyed by their JSON
+  dynamicPropNames: Map<string, string> = new Map()
 
   singleUseAssetComponentNames?: Set<string>
 
@@ -194,10 +196,21 @@ export class CodegenContext {
   }
 
   pName(i: number): string {
-    const map = this.nextIdMap.get('p')
-    let lastId = this.lastIdMap.get('p') || -1
-    this.lastIdMap.set('p', (lastId = getNextId(map, Math.max(i, lastId + 1))))
-    return `p${lastId}`
+    return this.idName('p', i)
+  }
+
+  kName(i: number): string {
+    return this.idName('k', i)
+  }
+
+  private idName(prefix: string, i: number): string {
+    const map = this.nextIdMap.get(prefix)
+    let lastId = this.lastIdMap.get(prefix) || -1
+    this.lastIdMap.set(
+      prefix,
+      (lastId = getNextId(map, Math.max(i, lastId + 1))),
+    )
+    return `${prefix}${lastId}`
   }
 
   constructor(
@@ -281,7 +294,8 @@ export function generate(
   const delegates = genDelegates(context)
   const templates = genTemplates(ir.template.entries, context)
   const imports = genHelperImports(context) + genAssetImports(context)
-  const preamble = imports + templates + delegates
+  const preamble =
+    imports + templates + genDynamicPropNames(context) + delegates
 
   const newlineCount = [...preamble].filter(c => c === '\n').length
   if (newlineCount && !inline) {
@@ -300,6 +314,14 @@ export function generate(
     map: map && map.toJSON(),
     helpers: new Set<string>(Array.from(context.helpers.keys())),
   }
+}
+
+function genDynamicPropNames({ dynamicPropNames }: CodegenContext) {
+  let code = ''
+  for (const [json, id] of dynamicPropNames) {
+    code += `const ${id} = ${json}\n`
+  }
+  return code
 }
 
 function genDelegates({ delegates, helper }: CodegenContext) {

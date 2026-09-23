@@ -32,8 +32,8 @@ import {
   isBlockOperation,
 } from './ir'
 import {
+  isConstantBinding,
   isConstantExpression,
-  isStaticExpression,
   isTransitionNode,
 } from './utils'
 import { newBlock, newDynamic } from './transforms/utils'
@@ -291,9 +291,8 @@ export class TransformContext<T extends AllNode = AllNode> {
     expressions = expressions.filter(exp => !isConstantExpression(exp))
     if (
       this.inVOnce ||
-      expressions.length === 0 ||
       expressions.every(e =>
-        isStaticExpression(e, this.root.options.bindingMetadata),
+        isConstantBinding(e, this.root.options.bindingMetadata),
       )
     ) {
       return this.registerOperation(...operations)

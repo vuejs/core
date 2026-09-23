@@ -42,7 +42,8 @@ describe('mismatch handling', () => {
       `<div v-bind="data"></div>`,
       data,
     )
-    expect(container.innerHTML).toBe('<div>bar</div>')
+    // a key that only comes from a spread is not written, like vdom
+    expect(container.innerHTML).toBe('<div>foo</div>')
     expect(`Hydration text content mismatch`).toHaveBeenWarned()
   })
 
@@ -714,7 +715,9 @@ describe('mismatch handling', () => {
       `<div :id="data"></div>`,
       ref('foo'),
     )
-    expect(missingAttr.innerHTML).toBe('<div></div>')
+    // a static key binding is written during hydration like vdom's
+    // dynamicProps, so the client value wins
+    expect(missingAttr.innerHTML).toBe('<div id="foo"></div>')
     expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
 
     const { container: changedAttr } = await mountWithHydration(
@@ -722,7 +725,7 @@ describe('mismatch handling', () => {
       `<div :id="data"></div>`,
       ref('foo'),
     )
-    expect(changedAttr.innerHTML).toBe('<div id="bar"></div>')
+    expect(changedAttr.innerHTML).toBe('<div id="foo"></div>')
     expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
   })
 
@@ -1376,8 +1379,9 @@ describe('data-allow-mismatch', () => {
       `<div v-bind="data"></div>`,
       data,
     )
+    // a key that only comes from a spread is not written, like vdom
     expect(container.innerHTML).toBe(
-      '<div data-allow-mismatch="text">bar</div>',
+      '<div data-allow-mismatch="text">foo</div>',
     )
     expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
   })
@@ -1561,7 +1565,7 @@ describe('data-allow-mismatch', () => {
       missing,
     )
     expect(missingContainer.innerHTML).toBe(
-      '<section><div data-allow-mismatch="attribute"></div></section>',
+      '<section><div data-allow-mismatch="attribute" id="foo"></div></section>',
     )
 
     missing.value = 'baz'
@@ -1577,7 +1581,7 @@ describe('data-allow-mismatch', () => {
       mismatched,
     )
     expect(mismatchedContainer.innerHTML).toBe(
-      '<section><div id="bar" data-allow-mismatch="attribute"></div></section>',
+      '<section><div id="foo" data-allow-mismatch="attribute"></div></section>',
     )
 
     mismatched.value = 'baz'

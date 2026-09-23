@@ -33,7 +33,7 @@ import {
   shouldSetAsAttr,
   toHandlerKey,
 } from '@vue/shared'
-import { getLiteralExpressionValue } from '../utils'
+import { getLiteralExpressionValue, isConstantBinding } from '../utils'
 import { parseExpression } from '@babel/parser'
 import type {
   ConditionalExpression,
@@ -352,9 +352,49 @@ export function genDynamicProps(
       helper('setDynamicProps'),
       `n${oper.element}`,
       genMulti(DELIMITERS_ARRAY, ...values),
+      genDynamicPropNames(oper, context),
       isSVG && 'true',
     ),
   ]
+}
+
+// vdom writes every static key with a dynamic value during hydration
+// (`dynamicProps`); once such a key is merged with a spread the runtime can no
+// longer tell it apart, so the list is hoisted next to the templates
+function genDynamicPropNames(
+  oper: SetDynamicPropsIRNode,
+  context: CodegenContext,
+): string | false {
+  const { bindingMetadata } = context.options
+  const names = oper.props.flatMap(props =>
+    Array.isArray(props)
+      ? props
+          .filter(
+            ({ key, values, modifier, handler }) =>
+              key.isStatic &&
+              // only to keep the list short: the runtime ignores the flag for
+              // class / style / handlers and `.prop` forces itself
+              modifier !== '.' &&
+              !handler &&
+              key.content !== 'class' &&
+              key.content !== 'style' &&
+              values.some(
+                v => !v.isStatic && !isConstantBinding(v, bindingMetadata),
+              ),
+          )
+          .map(getStaticPropKeyName)
+      : [],
+  )
+  if (!names.length) return false
+  const json = JSON.stringify(names)
+  let id = context.dynamicPropNames.get(json)
+  if (!id) {
+    context.dynamicPropNames.set(
+      json,
+      (id = context.kName(context.dynamicPropNames.size)),
+    )
+  }
+  return id
 }
 
 function genLiteralObjectProps(
@@ -371,23 +411,48 @@ function genLiteralObjectProps(
   )
 }
 
+// the key a static prop is emitted under, which is also the key it is merged
+// under
+export function getStaticPropKeyName({
+  key,
+  modifier,
+  handler,
+  handlerModifiers,
+}: IRProp): string {
+  return (
+    (handler
+      ? toHandlerKey(camelize(key.content))
+      : (modifier || '') + key.content) +
+    getHandlerModifierPostfix(handlerModifiers)
+  )
+}
+
+function getHandlerModifierPostfix(
+  handlerModifiers: IRProp['handlerModifiers'],
+): string {
+  return handlerModifiers && handlerModifiers.options
+    ? handlerModifiers.options.map(capitalize).join('')
+    : ''
+}
+
 export function genPropKey(
-  { key: node, modifier, runtimeCamelize, handler, handlerModifiers }: IRProp,
+  prop: IRProp,
   context: CodegenContext,
 ): CodeFragment[] {
+  const {
+    key: node,
+    modifier,
+    runtimeCamelize,
+    handler,
+    handlerModifiers,
+  } = prop
   const { helper } = context
 
-  const handlerModifierPostfix =
-    handlerModifiers && handlerModifiers.options
-      ? handlerModifiers.options.map(capitalize).join('')
-      : ''
+  const handlerModifierPostfix = getHandlerModifierPostfix(handlerModifiers)
   // static arg was transformed by v-bind transformer
   if (node.isStatic) {
     // only quote keys if necessary
-    const keyName =
-      (handler
-        ? toHandlerKey(camelize(node.content))
-        : (modifier || '') + node.content) + handlerModifierPostfix
+    const keyName = getStaticPropKeyName(prop)
     return [
       [
         isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName),
