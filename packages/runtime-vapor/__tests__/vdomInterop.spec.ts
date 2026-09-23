@@ -1,6 +1,7 @@
 import {
   type FunctionalComponent,
   KeepAlive,
+  type Ref,
   type ShallowRef,
   Suspense,
   Teleport,
@@ -1708,6 +1709,200 @@ describe('vdomInterop', () => {
           'beforeUnmount P[A] (detached) v',
           'mounted P[C] v',
           'unmounted P[A] (detached) v',
+        ])
+      })
+
+      // A and B log their own lifecycle next to the directive hooks, so the
+      // trace pins which component each root goes with.
+      const runKeptAlive = async (
+        vapor: boolean,
+        act: (data: Ref<any>) => Promise<void>,
+      ) => {
+        const calls: string[] = []
+        const data = ref({
+          view: 'A',
+          alt: false,
+          n: 0,
+          log: (hook: string) => calls.push(hook),
+        })
+        const lifecycle = (name: string) =>
+          `import { onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted } from 'vue'\n` +
+          `onBeforeUpdate(() => data.value.log('${name} beforeUpdate'))\n` +
+          `onUpdated(() => data.value.log('${name} updated'))\n` +
+          `onBeforeUnmount(() => data.value.log('${name} beforeUnmount'))\n` +
+          `onUnmounted(() => data.value.log('${name} unmounted'))`
+        const A = compile(
+          `<script setup>const data = _data\n` +
+            `const p = defineProps(['n'])\n${lifecycle('A')}</script>` +
+            `<template><div v-if="!data.alt" style="display: flex">a{{ p.n }}</div>` +
+            `<section v-else style="display: grid">s{{ p.n }}</section></template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const B = compile(
+          `<script setup>const data = _data\n${lifecycle('B')}</script>` +
+            `<template><p>b</p></template>`,
+          data,
+          {},
+          { vapor },
+        )
+        const Wrapper = compile(
+          `<script setup>const data = _data\n` +
+            `const components = _components</script>` +
+            `<template><KeepAlive>` +
+            `<component :is="components[data.view]" :n="data.n"/>` +
+            `</KeepAlive></template>`,
+          data,
+          { A, B },
+          { vapor },
+        )
+        const dir = trace(calls)
+        const { root, done } = mountInBody(() =>
+          withDirectives(h(Wrapper), [
+            [vShow, false],
+            [dir, 'v'],
+          ]),
+        )
+        await act(data)
+        const html = root.innerHTML
+        done()
+        return { calls, html }
+      }
+
+      test('a deactivated component keeps following its own root', async () => {
+        const run = (vapor: boolean) =>
+          runKeptAlive(vapor, async data => {
+            data.value.view = 'B'
+            await nextTick()
+            data.value.log('--')
+            data.value.alt = true
+            await nextTick()
+            data.value.log('--')
+            data.value.view = 'A'
+            await nextTick()
+          })
+
+        const vdom = await run(false)
+        const vapor = await run(true)
+        expect(vdom.html).toBe('<section style="display: none;">s0</section>')
+        expect(vapor.html).toMatch(
+          /^<section style="display: none;">s0<\/section>/,
+        )
+        expect(vdom.calls).toEqual([
+          'created DIV[a0] (detached) v',
+          'beforeMount DIV[a0] (detached) v',
+          'mounted DIV[a0] v',
+          'created P[b] (detached) v',
+          'beforeMount P[b] (detached) v',
+          'mounted P[b] v',
+          '--',
+          // A re-renders in the cache, with its root detached
+          'A beforeUpdate',
+          'beforeUnmount DIV[a0] (detached) v',
+          'created SECTION[s0] (detached) v',
+          'beforeMount SECTION[s0] (detached) v',
+          'unmounted DIV[a0] (detached) v',
+          'mounted SECTION[s0] (detached) v',
+          'A updated',
+          '--',
+          'A beforeUpdate',
+          'beforeUpdate SECTION[s0] v>v',
+          'updated SECTION[s0] v>v',
+          'A updated',
+          'B beforeUnmount',
+          'beforeUnmount P[b] (detached) v',
+          'A beforeUnmount',
+          'beforeUnmount SECTION[s0] v',
+          'unmounted P[b] (detached) v',
+          'B unmounted',
+          'unmounted SECTION[s0] (detached) v',
+          'A unmounted',
+        ])
+        expect(vapor.calls).toEqual([
+          'created DIV[a0] (detached) v',
+          'beforeMount DIV[a0] (detached) v',
+          'mounted DIV[a0] v',
+          'beforeUpdate DIV[a0] v>v',
+          'created P[b] (detached) v',
+          'beforeMount P[b] (detached) v',
+          'mounted P[b] v',
+          '--',
+          'A beforeUpdate',
+          'beforeUnmount DIV[a0] (detached) v',
+          'created SECTION[s0] (detached) v',
+          'beforeMount SECTION[s0] (detached) v',
+          'unmounted DIV[a0] (detached) v',
+          'mounted SECTION[s0] (detached) v',
+          'A updated',
+          '--',
+          'beforeUpdate P[b] v>v',
+          // A has no new props, so vapor does not re-render it on reactivation
+          'beforeUpdate SECTION[s0] v>v',
+          'updated SECTION[s0] v>v',
+          'B beforeUnmount',
+          'beforeUnmount P[b] (detached) v',
+          'A beforeUnmount',
+          'beforeUnmount SECTION[s0] v',
+          'unmounted P[b] (detached) v',
+          'B unmounted',
+          'unmounted SECTION[s0] (detached) v',
+          'A unmounted',
+        ])
+      })
+
+      test('a reactivated root updates once with the props it missed', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(vapor, async data => {
+            data.value.view = 'B'
+            await nextTick()
+            data.value.n++
+            await nextTick()
+            data.value.log('--')
+            data.value.view = 'A'
+            await nextTick()
+          })
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.indexOf('B beforeUnmount'),
+          )
+        }
+
+        expect(await run(false)).toEqual([
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] v>v',
+          'updated DIV[a1] v>v',
+          'A updated',
+        ])
+        // the reactivation patch runs before the render that commits the props
+        expect(await run(true)).toEqual([
+          'beforeUpdate P[b] v>v',
+          'beforeUpdate DIV[a0] v>v',
+          'A beforeUpdate',
+          'updated DIV[a1] v>v',
+          'A updated',
+        ])
+      })
+
+      test('kept-alive roots unmount with their components', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(vapor, async data => {
+            data.value.view = 'B'
+            await nextTick()
+            data.value.log('--')
+          })
+          return calls.slice(calls.indexOf('--') + 1)
+        }
+
+        await expectParity(run, [
+          'A beforeUnmount',
+          'beforeUnmount DIV[a0] (detached) v',
+          'B beforeUnmount',
+          'beforeUnmount P[b] v',
+          'unmounted DIV[a0] (detached) v',
+          'A unmounted',
+          'unmounted P[b] (detached) v',
+          'B unmounted',
         ])
       })
 
