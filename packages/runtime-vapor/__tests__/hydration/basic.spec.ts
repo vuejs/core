@@ -355,11 +355,9 @@ describe('Vapor Mode hydration', () => {
       const input = container.firstChild as HTMLInputElement
       expect((input as any)._trueValue).toBe('yes')
       expect((input as any)._falseValue).toBe('no')
-      // only the properties v-model reads are restored: `setAttr` bails out
-      // while hydrating, so unlike vdom the attributes themselves stay off the
-      // server markup - nothing reads them back
-      expect(input.hasAttribute('true-value')).toBe(false)
-      expect(input.hasAttribute('false-value')).toBe(false)
+      // written like vdom's forcePatch of value-like keys on an input
+      expect(input.getAttribute('true-value')).toBe('yes')
+      expect(input.getAttribute('false-value')).toBe('no')
     })
 
     test('checkbox v-model with static value attributes toggles after hydration', async () => {
@@ -727,5 +725,201 @@ describe('Vapor Mode hydration', () => {
     await nextTick()
     expect(el.getAttribute('aria-label')).toBe('bar')
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
+  // vdom writes every static-key binding during hydration (`dynamicProps`),
+  // whether the compiler routes it to a property setter, to `setProp`, or
+  // merges it with a spread; keys that only come from a spread stay untouched
+  describe('static key bindings', () => {
+    test('non-reflected property through setProp', async () => {
+      const data = reactive({ idx: 1 })
+      const { container } = await testHydration(
+        `<template><select :selectedIndex="data.idx"><option>a</option><option>b</option></select></template>`,
+        {},
+        data,
+      )
+
+      const el = container.firstChild as HTMLSelectElement
+      expect(el.selectedIndex).toBe(1)
+
+      data.idx = 0
+      await nextTick()
+      expect(el.selectedIndex).toBe(0)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('unchanged resource urls are not re-assigned', async () => {
+      const data = reactive({ src: '/a.png', doc: '<p>hi</p>', file: '/a.pdf' })
+      const setters = [
+        vi.spyOn(HTMLImageElement.prototype, 'src', 'set'),
+        vi.spyOn(HTMLIFrameElement.prototype, 'srcdoc', 'set'),
+        vi.spyOn(HTMLObjectElement.prototype, 'data', 'set'),
+      ]
+      const { container } = await testHydration(
+        `<template><div><img :src="data.src"><iframe :srcdoc="data.doc"></iframe><object :data="data.file"></object></div></template>`,
+        {},
+        data,
+      )
+
+      for (const setter of setters) expect(setter).not.toHaveBeenCalled()
+
+      data.src = '/b.png'
+      await nextTick()
+      expect(setters[0]).toHaveBeenCalledTimes(1)
+      expect(container.querySelector('img')!.getAttribute('src')).toBe('/b.png')
+      for (const setter of setters) setter.mockRestore()
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('merged with a spread', async () => {
+      const data = reactive({ v: 'b', idx: 1, label: 'foo', attrs: {} })
+      const { container } = await testHydration(
+        `<template><div>` +
+          `<select :value="data.v" v-bind="data.attrs"><option value="a">a</option><option value="b">b</option></select>` +
+          `<select :selectedIndex="data.idx" v-bind="data.attrs"><option>a</option><option>b</option></select>` +
+          `<span :ariaLabel="data.label" v-bind="data.attrs"></span>` +
+          `</div></template>`,
+        {},
+        data,
+      )
+
+      const [byValue, byIndex] = Array.from(
+        container.querySelectorAll('select'),
+      )
+      const span = container.querySelector('span')!
+      expect(byValue.value).toBe('b')
+      expect(byIndex.selectedIndex).toBe(1)
+      expect(span.getAttribute('aria-label')).toBe('foo')
+
+      data.v = 'a'
+      data.idx = 0
+      data.label = 'bar'
+      await nextTick()
+      expect(byValue.value).toBe('a')
+      expect(byIndex.selectedIndex).toBe(0)
+      expect(span.getAttribute('aria-label')).toBe('bar')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('key that only comes from a spread is left alone', async () => {
+      const data = reactive({ attrs: { value: 'b', 'data-foo': 'client' } })
+      const { container } = await testHydration(
+        `<template><select v-bind="data.attrs"><option value="a">a</option><option value="b">b</option></select></template>`,
+        {},
+        data,
+        {
+          serverData: reactive({ attrs: { value: 'b', 'data-foo': 'server' } }),
+        },
+      )
+
+      const el = container.firstChild as HTMLSelectElement
+      expect(el.value).toBe('a')
+      expect(el.getAttribute('data-foo')).toBe('server')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('mismatched attribute through setAttr takes the client value', async () => {
+      const data = reactive({ v: 'client' })
+      const { container } = await testHydration(
+        `<template><div :spellcheck="data.v" :data-foo="data.v"></div></template>`,
+        {},
+        data,
+        { serverData: reactive({ v: 'server' }) },
+      )
+
+      const el = container.firstChild as HTMLElement
+      expect(el.getAttribute('spellcheck')).toBe('client')
+      expect(el.getAttribute('data-foo')).toBe('client')
+      expect(`Hydration attribute mismatch`).toHaveBeenWarned()
+    })
+
+    test('.attr merged with a spread', async () => {
+      const data = reactive({ v: 'client', attrs: {} })
+      const { container } = await testHydration(
+        `<template><div :spellcheck.attr="data.v" v-bind="data.attrs"></div></template>`,
+        {},
+        data,
+        { serverData: reactive({ v: 'server', attrs: {} }) },
+      )
+
+      expect(
+        (container.firstChild as HTMLElement).getAttribute('spellcheck'),
+      ).toBe('client')
+      expect(`Hydration attribute mismatch`).toHaveBeenWarned()
+    })
+
+    // vdom does not list a constant in dynamicProps, so it is not re-applied
+    test('dynamic element constant attribute is left alone', async () => {
+      const { container } = await testHydration(
+        `<template><component :is="'select'" selectedIndex="1"><option>a</option><option>b</option></component></template>`,
+      )
+
+      expect((container.firstChild as HTMLSelectElement).selectedIndex).toBe(0)
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+
+    // a static key group placed after the spread lives inside rawProps.$
+    test('dynamic element', async () => {
+      const data = reactive({ v: 'b', attrs: {} })
+      const { container } = await testHydration(
+        `<template><div>` +
+          `<component :is="'select'" :value="data.v" v-bind="data.attrs"><option value="a">a</option><option value="b">b</option></component>` +
+          `<component :is="'select'" v-bind="data.attrs" :value="data.v"><option value="a">a</option><option value="b">b</option></component>` +
+          `</div></template>`,
+        {},
+        data,
+      )
+
+      const [before, after] = Array.from(container.querySelectorAll('select'))
+      expect(before.value).toBe('b')
+      expect(after.value).toBe('b')
+
+      data.v = 'a'
+      await nextTick()
+      expect(before.value).toBe('a')
+      expect(after.value).toBe('a')
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+    })
+  })
+
+  // vdom force patches innerHTML / textContent like any other static key
+  // binding, so the client content replaces the server content
+  describe('innerHTML / textContent bindings', () => {
+    test.each([
+      ['v-html', `<div v-html="data.v"></div>`, '<b>s</b>', '<b>c</b>'],
+      ['.prop', `<div :innerHTML.prop="data.v"></div>`, '<b>s</b>', '<b>c</b>'],
+      [':textContent', `<div :textContent="data.v"></div>`, 's', 'c'],
+      [
+        'merged with a spread',
+        `<div :innerHTML="data.v" v-bind="data.attrs"></div>`,
+        '<b>s</b>',
+        '<b>c</b>',
+      ],
+    ])('%s takes the client content', async (_, el, server, client) => {
+      const { container } = await testHydration(
+        `<template><div>${el}</div></template>`,
+        {},
+        reactive({ v: client, attrs: {} }),
+        { serverData: reactive({ v: server, attrs: {} }) },
+      )
+
+      expect((container.firstChild!.firstChild as HTMLElement).innerHTML).toBe(
+        client,
+      )
+      if (el.includes('textContent')) {
+        expect(`Hydration text content mismatch`).toHaveBeenWarned()
+      }
+    })
+
+    test('empty client content clears the server content', async () => {
+      const { container } = await testHydration(
+        `<template><div><div v-html="data.v"></div></div></template>`,
+        {},
+        reactive({ v: '' }),
+        { serverData: reactive({ v: '<svg></svg>' }) },
+      )
+
+      expect(container.innerHTML).toBe('<div><div></div></div>')
+    })
   })
 })

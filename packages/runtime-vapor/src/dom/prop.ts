@@ -29,6 +29,7 @@ import {
   isMapEqual,
   isMismatchAllowed,
   isSetEqual,
+  isUnchangedResourceProp,
   isValidHtmlOrSvgAttribute,
   logMismatchError,
   mergeProps,
@@ -90,7 +91,7 @@ const shouldSkipFallthroughKey = (el: TargetElement, key: string) => {
 
 export function setProp(el: any, key: string, value: any): void {
   if (key in el) {
-    setDOMProp(el, key, value, false)
+    setDOMProp(el, key, value)
   } else {
     setAttr(el, key, value)
   }
@@ -101,6 +102,7 @@ export function setAttr(
   key: string,
   value: any,
   isSVG: boolean = false,
+  forceHydrate: boolean = true,
 ): void {
   if (shouldSkipFallthroughKey(el, key)) {
     return
@@ -119,8 +121,10 @@ export function setAttr(
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       attributeHasMismatch(el, key, value)
-    el[`$${key}`] = value
-    return
+    if (skipHydratedWrite(el, key, value, forceHydrate)) {
+      el[`$${key}`] = value
+      return
+    }
   }
 
   if (value !== el[`$${key}`]) {
@@ -149,9 +153,7 @@ export function setDOMProp(
   el: any,
   key: string,
   value: any,
-  // a compiled call is an explicit property binding the server markup cannot
-  // carry, so it is written during hydration; runtime-resolved callers
-  // (setProp, setDynamicProp) pass their own decision
+  // a compiled call is a static key binding, see skipHydratedWrite
   forceHydrate: boolean = true,
   attrName?: string,
 ): void {
@@ -159,17 +161,18 @@ export function setDOMProp(
     return
   }
 
+  const cacheKey = `$p$${key}`
   if (isHydrating && !isRecreatedNode(el)) {
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       attributeHasMismatch(el, key, value)
-    if (!forceHydrate && !shouldForceHydrate(el, key)) {
+    if (skipHydratedWrite(el, key, value, forceHydrate)) {
+      el[cacheKey] = value
       return
     }
   }
 
   // DOM properties may normalize values differently from reflected attributes,
   // so compare against the previous binding and always perform the initial set.
-  const cacheKey = `$p$${key}`
   if (value === el[cacheKey] && cacheKey in el) {
     return
   }
@@ -413,7 +416,6 @@ function hydrateVShowDisplay(
 export function setValue(
   el: TargetElement,
   value: any,
-  // same rule as setDOMProp
   forceHydrate: boolean = true,
 ): void {
   if (shouldSkipFallthroughKey(el, 'value')) {
@@ -431,7 +433,7 @@ export function setValue(
         'value',
         isString(value) ? getClientText(el, value) : value,
       )
-    if (!forceHydrate && !shouldForceHydrate(el, 'value')) {
+    if (skipHydratedWrite(el, 'value', value, forceHydrate)) {
       return
     }
   }
@@ -485,6 +487,7 @@ export function setText(el: Text & { $txt?: string }, value: string): void {
 export function setElementText(
   el: Node & { $txt?: string },
   value: unknown,
+  forceHydrate: boolean = true,
 ): void {
   value = toDisplayString(value)
   if (isHydrating && !isRecreatedNode(el)) {
@@ -504,6 +507,10 @@ export function setElementText(
         )
       logMismatchError()
     }
+    if (!forceHydrate) {
+      el.$txt = value as string
+      return
+    }
   }
 
   if (el.$txt !== value) {
@@ -511,12 +518,15 @@ export function setElementText(
   }
 }
 
-export function setHtml(el: TargetElement, value: any): void {
+export function setHtml(
+  el: TargetElement,
+  value: any,
+  forceHydrate: boolean = true,
+): void {
   value = value == null ? '' : unsafeToTrustedHTML(value)
-  // Align with vdom hydration: server-rendered innerHTML content is trusted
-  // as-is in all builds; no write, no compare, no warning. Caching the
-  // client value keeps the first post-hydration equal-value update a no-op.
-  if (isHydrating && !isRecreatedNode(el)) {
+  // like vdom, a static key binding replaces the server content during
+  // hydration and a spread key keeps it; neither compares nor warns
+  if (isHydrating && !isRecreatedNode(el) && !forceHydrate) {
     el.$html = value
     return
   }
@@ -525,11 +535,17 @@ export function setHtml(el: TargetElement, value: any): void {
   }
 }
 
-export function setDynamicProps(el: any, args: any[], isSVG?: boolean): void {
+export function setDynamicProps(
+  el: any,
+  args: any[],
+  staticKeys?: string[],
+  isSVG?: boolean,
+): void {
   patchDynamicProps(
     el,
     args.length > 1 ? mergeProps(...args) : args[0] || EMPTY_OBJ,
     isSVG,
+    staticKeys,
   )
 }
 
@@ -537,6 +553,7 @@ export function patchDynamicProps(
   el: any,
   props: Record<string, any>,
   isSVG?: boolean,
+  staticKeys?: string[],
 ): void {
   const cacheKey = `$dprops${isApplyingFallthroughProps ? '$' : ''}`
   const prevProps = el[cacheKey] as Record<string, any> | undefined
@@ -550,6 +567,7 @@ export function patchDynamicProps(
     }
   }
 
+  const hydratedKeys = isHydrating ? staticKeys : undefined
   for (const key of Object.keys(props)) {
     if (isReservedProp(key)) continue
     const value = props[key]
@@ -565,7 +583,13 @@ export function patchDynamicProps(
     ) {
       continue
     }
-    setDynamicProp(el, key, value, isSVG)
+    setDynamicProp(
+      el,
+      key,
+      value,
+      isSVG,
+      hydratedKeys && hydratedKeys.includes(key),
+    )
   }
 
   el[cacheKey] = nextProps
@@ -579,8 +603,8 @@ export function setDynamicProp(
   key: string,
   value: any,
   isSVG: boolean = false,
+  forceHydrate: boolean = false,
 ): void {
-  let forceHydrate = false
   if (key === 'class') {
     setClass(el, value, isSVG)
   } else if (key === 'style') {
@@ -593,16 +617,16 @@ export function setDynamicProp(
     onBinding(el, event, value, options)
   } else if (
     // force hydrate v-bind with .prop modifiers
-    (forceHydrate = key[0] === '.')
-      ? ((key = key.slice(1)), true)
+    key[0] === '.'
+      ? ((key = key.slice(1)), (forceHydrate = true))
       : key[0] === '^'
         ? ((key = key.slice(1)), false)
         : shouldSetAsProp(el, key, value, isSVG)
   ) {
     if (key === 'innerHTML') {
-      setHtml(el, value)
+      setHtml(el, value, forceHydrate)
     } else if (key === 'textContent') {
-      setElementText(el, value)
+      setElementText(el, value, forceHydrate)
     } else if (key === 'value' && canSetValueDirectly(el.tagName)) {
       setValue(el, value, forceHydrate)
     } else {
@@ -619,7 +643,7 @@ export function setDynamicProp(
   ) {
     setDOMProp(el, camelize(key), value, forceHydrate, key)
   } else {
-    setAttr(el, key, value, isSVG)
+    setAttr(el, key, value, isSVG, forceHydrate)
   }
   return value
 }
@@ -780,6 +804,23 @@ function getClientText(el: Node, value: string): string {
     value = value.slice(1)
   }
   return value
+}
+
+// a compiled call is a static key binding and is written during hydration like
+// every key in vdom's dynamicProps; a key setDynamicProp resolves at runtime
+// only when it is one of those static keys or the server markup cannot carry
+// it. Re-assigning an equal src / href can reload the resource, so an
+// unchanged url is adopted as-is.
+function skipHydratedWrite(
+  el: Element,
+  key: string,
+  value: any,
+  forceHydrate: boolean,
+): boolean {
+  return (
+    (!forceHydrate && !shouldForceHydrate(el, key)) ||
+    isUnchangedResourceProp(el, key, value)
+  )
 }
 
 function shouldForceHydrate(el: Element, key: string): boolean {

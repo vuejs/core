@@ -712,6 +712,25 @@ export function resolveDynamicProps(props: RawProps): Record<string, unknown> {
   return mergedRawProps
 }
 
+// the static key bindings of a rawProps object: the own getters, plus the
+// getters of a static group that follows a spread and so sits inside `$`
+export function getStaticBindingKeys(props: RawProps): string[] {
+  const keys: string[] = []
+  for (const key in props) {
+    if (key !== '$' && isFunction(props[key])) keys.push(key)
+  }
+  if (props.$) {
+    for (const source of props.$) {
+      if (!isFunction(source)) {
+        for (const key in source) {
+          if (isFunction(source[key])) keys.push(key)
+        }
+      }
+    }
+  }
+  return keys
+}
+
 function propsSetDevTrap(_: any, key: string | symbol) {
   warn(
     `Attempt to mutate prop ${JSON.stringify(key)} failed. Props are readonly.`,

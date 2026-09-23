@@ -14,10 +14,11 @@ export function render(_ctx) {
 exports[`compiler v-bind > .attr modifier merged with v-bind object 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
+const k0 = ["^fooBar"]
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ "^fooBar": _ctx.id }, _ctx.obj]))
+  _renderEffect(() => _setDynamicProps(n0, [{ "^fooBar": _ctx.id }, _ctx.obj], k0))
   return n0
 }"
 `;
@@ -25,10 +26,11 @@ export function render(_ctx) {
 exports[`compiler v-bind > .attr modifier merged with v-bind object, kebab-case key 1`] = `
 "import { setDynamicProps as _setDynamicProps, renderEffect as _renderEffect, template as _template } from 'vue';
 const t0 = _template("<div>", 1)
+const k0 = ["^data-x"]
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [{ "^data-x": _ctx.id }, _ctx.obj]))
+  _renderEffect(() => _setDynamicProps(n0, [{ "^data-x": _ctx.id }, _ctx.obj], k0))
   return n0
 }"
 `;
@@ -775,7 +777,7 @@ const t0 = _template("<svg>", 1, 1)
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], true))
+  _renderEffect(() => _setDynamicProps(n0, [_ctx.obj], null, true))
   return n0
 }"
 `;

@@ -680,6 +680,7 @@ export { createInternalObject } from './internalObject'
 export {
   MismatchTypes,
   isMismatchAllowed,
+  isUnchangedResourceProp,
   toClassSet,
   isSetEqual,
   warnPropMismatch,

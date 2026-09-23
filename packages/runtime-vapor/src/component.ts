@@ -88,6 +88,7 @@ import {
   type RawProps,
   getKeysFromRawProps,
   getPropsProxyHandlers,
+  getStaticBindingKeys,
   hasFallthroughAttrs,
   normalizePropsOptions,
   resolveDynamicProps,
@@ -1279,7 +1280,12 @@ export function createPlainElement(
   if (rawProps) {
     const isSVG = ns === Namespaces.SVG
     const setFn = () =>
-      patchDynamicProps(el, resolveDynamicProps(rawProps as RawProps), isSVG)
+      patchDynamicProps(
+        el,
+        resolveDynamicProps(rawProps as RawProps),
+        isSVG,
+        isHydrating ? getStaticBindingKeys(rawProps as RawProps) : undefined,
+      )
     if (once) setFn()
     else renderEffect(setFn)
   }

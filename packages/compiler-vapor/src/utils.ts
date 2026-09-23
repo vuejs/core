@@ -49,6 +49,15 @@ export function isConstantExpression(exp: SimpleExpressionNode): boolean {
   )
 }
 
+// vdom's "constant type": the binding gets no effect and is not listed in
+// dynamicProps
+export function isConstantBinding(
+  exp: SimpleExpressionNode,
+  bindings: BindingMetadata,
+): boolean {
+  return isConstantExpression(exp) || isStaticExpression(exp, bindings)
+}
+
 export function isStaticExpression(
   node: SimpleExpressionNode,
   bindings: BindingMetadata,

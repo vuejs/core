@@ -706,16 +706,18 @@ describe('compiler v-bind', () => {
   test('.attr modifier merged with v-bind object', () => {
     const { code } = compileWithVBind(`<div :fooBar.attr="id" v-bind="obj"/>`)
     expect(code).matchSnapshot()
+    expect(code).contains('const k0 = ["^fooBar"]')
     expect(code).contains(
-      '_setDynamicProps(n0, [{ "^fooBar": _ctx.id }, _ctx.obj])',
+      '_setDynamicProps(n0, [{ "^fooBar": _ctx.id }, _ctx.obj], k0)',
     )
   })
 
   test('.attr modifier merged with v-bind object, kebab-case key', () => {
     const { code } = compileWithVBind(`<div :data-x.attr="id" v-bind="obj"/>`)
     expect(code).matchSnapshot()
+    expect(code).contains('const k0 = ["^data-x"]')
     expect(code).contains(
-      '_setDynamicProps(n0, [{ "^data-x": _ctx.id }, _ctx.obj])',
+      '_setDynamicProps(n0, [{ "^data-x": _ctx.id }, _ctx.obj], k0)',
     )
   })
 
@@ -1062,7 +1064,7 @@ describe('compiler v-bind', () => {
       <svg v-bind="obj"/>
     `)
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], true))')
+    expect(code).contains('_setDynamicProps(n0, [_ctx.obj], null, true))')
   })
 
   test('number value', () => {
@@ -1225,4 +1227,61 @@ describe('compiler v-bind', () => {
       expect(code).toContain(expected)
     },
   )
+
+  // the runtime writes these during hydration like vdom's `dynamicProps`, so
+  // the static keys have to survive the merge with the spread
+  test.each([
+    [
+      `<div :id="id" v-bind="obj"/>`,
+      `const k0 = ["id"]`,
+      `[{ id: _ctx.id }, _ctx.obj], k0)`,
+    ],
+    [
+      `<div v-bind="obj" :id="id" :title="title"/>`,
+      `const k0 = ["id","title"]`,
+      `[_ctx.obj, { id: _ctx.id, title: _ctx.title }], k0)`,
+    ],
+    // one hoisted list per distinct key set
+    [
+      `<div :id="a" v-bind="o"/><div :id="b" v-bind="p"/><div :title="c" v-bind="q"/>`,
+      `const k0 = ["id"]\nconst k1 = ["title"]`,
+      `[{ id: _ctx.b }, _ctx.p], k0)`,
+    ],
+    [`<svg :viewBox="v" v-bind="obj"/>`, `const k0 = ["viewBox"]`, `k0, true)`],
+    // a constant value is not a dynamic binding in vdom either
+    [`<div id="foo" v-bind="obj"/>`, ``, `[{ id: "foo" }, _ctx.obj])`],
+    [`<div :id="'foo'" v-bind="obj"/>`, ``, `[{ id: "foo" }, _ctx.obj])`],
+    [`<div :id="1 + 1" v-bind="obj"/>`, ``, `[{ id: 1 + 1 }, _ctx.obj])`],
+    [
+      `<div :id="undefined" v-bind="obj"/>`,
+      ``,
+      `[{ id: undefined }, _ctx.obj])`,
+    ],
+    [`<div :id="FOO" v-bind="obj"/>`, ``, `[{ id: _ctx.FOO }, _ctx.obj])`],
+    // class / style are never in `dynamicProps`, `.prop` forces itself
+    [
+      `<div :class="cls" v-bind="obj"/>`,
+      ``,
+      `[{ class: _ctx.cls }, _ctx.obj])`,
+    ],
+    [
+      `<div :foo.prop="id" v-bind="obj"/>`,
+      ``,
+      `[{ ".foo": _ctx.id }, _ctx.obj])`,
+    ],
+    // a dynamic arg is not a static key
+    [
+      `<div :[key]="id" v-bind="obj"/>`,
+      ``,
+      `[{ [_ctx.key]: _ctx.id }, _ctx.obj])`,
+    ],
+  ])('static keys merged with a spread: %s', (template, hoisted, expected) => {
+    const { code } = compileWithVBind(template, {
+      bindingMetadata: { FOO: BindingTypes.LITERAL_CONST },
+    })
+
+    expect(code).toContain(expected)
+    if (hoisted) expect(code).toContain(hoisted)
+    else expect(code).not.toContain('const k0')
+  })
 })
