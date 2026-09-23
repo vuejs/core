@@ -20,6 +20,7 @@ import {
   isObject,
   isString,
 } from '@vue/shared'
+import { setLastLocatedLogicalChild } from './dom/node'
 import {
   type Block,
   getBlockFirstNode,
@@ -60,7 +61,6 @@ import {
   resolveFragmentAnchor,
 } from './fragment'
 import {
-  type ChildItem,
   insertionAnchor,
   insertionIndex,
   insertionParent,
@@ -537,18 +537,17 @@ export const createFor = (
 
         // optimization: cache the fragment end anchor as $llc (last logical child)
         // so that locateChildByLogicalIndex can skip the entire fragment.
-        // For anchored inserts, reuse the unit index the locator stamped on
-        // the anchor; if it is unstamped (reached via a cache-missed
-        // `next()`), leave `$llc` untouched — `0` is a valid unit index, so
-        // a fallback would alias a stale cache entry to "unit 0", while
-        // skipping the install only costs a restart walk.
+        // For anchored inserts the unit index is known only while the anchor
+        // is the cached child; otherwise skipping the install just costs a
+        // restart walk.
         if (_insertionParent) {
           const idx = _insertionAnchor
-            ? (_insertionAnchor as any as ChildItem).$idx
+            ? _insertionParent.$llc === _insertionAnchor
+              ? _insertionParent.$lli
+              : undefined
             : _insertionIndex || 0
           if (idx !== undefined) {
-            ;(parentAnchor as any as ChildItem).$idx = idx
-            _insertionParent.$llc = parentAnchor
+            setLastLocatedLogicalChild(_insertionParent, parentAnchor, idx)
           }
         }
       } else {
