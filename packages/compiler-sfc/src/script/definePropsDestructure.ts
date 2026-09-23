@@ -111,6 +111,25 @@ export function transformDestructuredProps(
   const parentStack: Node[] = []
   const propsLocalToPublicMap: Record<string, string> = Object.create(null)
 
+  for (const { runtimeOptionNodes } of Object.values(ctx.modelDecls)) {
+    for (const node of runtimeOptionNodes) {
+      walk(node, {
+        enter(child: Node, parent: Node | null) {
+          if (
+            parent &&
+            parent.type.startsWith('TS') &&
+            !TS_NODE_TYPES.includes(parent.type)
+          ) {
+            return this.skip()
+          }
+          if (child.type === 'Identifier') {
+            excludedIds.add(child)
+          }
+        },
+      })
+    }
+  }
+
   for (const key in ctx.propsDestructuredBindings) {
     const { local } = ctx.propsDestructuredBindings[key]
     rootScope[local] = true

@@ -26,6 +26,60 @@ return { modelValue, c, toString }
 }"
 `;
 
+exports[`defineModel() > default + get/set referencing destructured props 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeModels({
+    defaultValue: { type: String, required: true },
+    prefix: { type: String, required: true }
+  }, {
+    "modelValue": { type: String, ...{
+        default: () => defaultValue,
+        } },
+    "modelModifiers": {},
+  }),
+  emits: ["update:modelValue"],
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+      const model = _useModel<string>(__props, "modelValue", {
+        get: (v) => __props.prefix + v,
+        set: (v) => v.substring(__props.prefix.length),
+      })
+      
+return { model }
+}
+
+})"
+`;
+
+exports[`defineModel() > default factory referencing destructured prop 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeModels({
+    defaultValue: { type: String, required: false, default: '' }
+  }, {
+    "modelValue": { type: String, ...{
+        default: () => defaultValue,
+      } },
+    "modelModifiers": {},
+  }),
+  emits: ["update:modelValue"],
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+      const model = _useModel<string>(__props, "modelValue")
+      
+return { model }
+}
+
+})"
+`;
+
 exports[`defineModel() > get / set transformers 1`] = `
 "import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
 
@@ -72,6 +126,31 @@ export default /*@__PURE__*/_defineComponent({
       })
       
 return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > named model + default factory referencing destructured prop 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
+
+export default /*@__PURE__*/_defineComponent({
+  props: /*@__PURE__*/_mergeModels({
+    fallbackValue: { type: Number, required: true }
+  }, {
+    "count": { type: Number, ...{
+        default: () => fallbackValue,
+      } },
+    "countModifiers": {},
+  }),
+  emits: ["update:count"],
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+      const count = _useModel<number>(__props, 'count')
+      
+return { count }
 }
 
 })"

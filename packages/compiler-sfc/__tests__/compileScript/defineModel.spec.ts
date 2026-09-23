@@ -287,6 +287,64 @@ describe('defineModel()', () => {
     expect(content).toMatch(`set: (v) => { return v + __props.x }`)
   })
 
+  test('default factory referencing destructured prop', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { defaultValue = '' } = defineProps<{ defaultValue?: string }>()
+      const model = defineModel<string>({
+        default: () => defaultValue,
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(
+      `const model = _useModel<string>(__props, "modelValue")`,
+    )
+  })
+
+  test('named model + default factory referencing destructured prop', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { fallbackValue } = defineProps<{ fallbackValue: number }>()
+      const count = defineModel<number>('count', {
+        default: () => fallbackValue,
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(
+      `const count = _useModel<number>(__props, 'count')`,
+    )
+  })
+
+  test('default + get/set referencing destructured props', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const { defaultValue, prefix } = defineProps<{ defaultValue: string; prefix: string }>()
+      const model = defineModel<string>({
+        default: () => defaultValue,
+        get: (v) => prefix + v,
+        set: (v) => v.substring(prefix.length),
+      })
+      </script>
+      `,
+      { propsDestructure: true },
+    )
+    assertCode(content)
+    expect(content).toMatch(`_useModel<string>(__props, "modelValue", {`)
+    expect(content).toMatch(`get: (v) => __props.prefix + v`)
+    expect(content).toMatch(
+      `set: (v) => v.substring(__props.prefix.length)`,
+    )
+  })
+
   test('w/ Boolean And Function types, production mode', () => {
     const { content, bindings } = compile(
       `
