@@ -391,7 +391,7 @@ function genDynamicPropNames(
   if (!id) {
     context.dynamicPropNames.set(
       json,
-      (id = `k${context.dynamicPropNames.size}`),
+      (id = context.kName(context.dynamicPropNames.size)),
     )
   }
   return id

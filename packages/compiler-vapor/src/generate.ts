@@ -196,10 +196,21 @@ export class CodegenContext {
   }
 
   pName(i: number): string {
-    const map = this.nextIdMap.get('p')
-    let lastId = this.lastIdMap.get('p') || -1
-    this.lastIdMap.set('p', (lastId = getNextId(map, Math.max(i, lastId + 1))))
-    return `p${lastId}`
+    return this.idName('p', i)
+  }
+
+  kName(i: number): string {
+    return this.idName('k', i)
+  }
+
+  private idName(prefix: string, i: number): string {
+    const map = this.nextIdMap.get(prefix)
+    let lastId = this.lastIdMap.get(prefix) || -1
+    this.lastIdMap.set(
+      prefix,
+      (lastId = getNextId(map, Math.max(i, lastId + 1))),
+    )
+    return `${prefix}${lastId}`
   }
 
   constructor(

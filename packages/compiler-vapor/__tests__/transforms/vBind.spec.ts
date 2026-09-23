@@ -1284,4 +1284,22 @@ describe('compiler v-bind', () => {
     if (hoisted) expect(code).toContain(hoisted)
     else expect(code).not.toContain('const k0')
   })
+
+  test('hoisted static key list avoids user bindings', () => {
+    const { code } = compileWithVBind(
+      `<div :id="k0" v-bind="obj"/><div :title="k0" v-bind="obj"/>`,
+      {
+        bindingMetadata: {
+          k0: BindingTypes.SETUP_REF,
+          k2: BindingTypes.SETUP_CONST,
+        },
+      },
+    )
+
+    expect(code).not.toContain('const k0')
+    expect(code).toContain('const k1 = ["id"]')
+    expect(code).toContain('const k3 = ["title"]')
+    expect(code).toContain('[{ id: _k0 }, _obj], k1)')
+    expect(code).toContain('[{ title: _k0 }, _obj], k3)')
+  })
 })
