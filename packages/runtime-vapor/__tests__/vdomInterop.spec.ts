@@ -1716,12 +1716,17 @@ describe('vdomInterop', () => {
       // trace pins which component each root goes with.
       const runKeptAlive = async (
         vapor: boolean,
-        act: (data: Ref<any>) => Promise<void>,
+        act: (
+          data: Ref<any>,
+          ctl: { visible: Ref<boolean>; value: Ref<string>; view: Ref<any> },
+        ) => Promise<void>,
       ) => {
         const calls: string[] = []
         const data = ref({
           view: 'A',
           alt: false,
+          ready: true,
+          local: 0,
           n: 0,
           log: (hook: string) => calls.push(hook),
         })
@@ -1734,8 +1739,10 @@ describe('vdomInterop', () => {
         const A = compile(
           `<script setup>const data = _data\n` +
             `const p = defineProps(['n'])\n${lifecycle('A')}</script>` +
-            `<template><div v-if="!data.alt" style="display: flex">a{{ p.n }}</div>` +
-            `<section v-else style="display: grid">s{{ p.n }}</section></template>`,
+            `<template><div v-if="data.ready && !data.alt" style="display: flex">` +
+            `a{{ p.n }}{{ data.local || '' }}</div>` +
+            `<section v-else-if="data.ready" style="display: grid">s{{ p.n }}</section>` +
+            `</template>`,
           data,
           {},
           { vapor },
@@ -1747,24 +1754,29 @@ describe('vdomInterop', () => {
           {},
           { vapor },
         )
+        // the view comes from the parent (a prop) or from the wrapper itself
         const Wrapper = compile(
           `<script setup>const data = _data\n` +
-            `const components = _components</script>` +
+            `const components = _components\n` +
+            `const p = defineProps(['view'])</script>` +
             `<template><KeepAlive>` +
-            `<component :is="components[data.view]" :n="data.n"/>` +
+            `<component :is="components[p.view || data.view]" :n="data.n"/>` +
             `</KeepAlive></template>`,
           data,
           { A, B },
           { vapor },
         )
         const dir = trace(calls)
+        const visible = ref(false)
+        const value = ref('v')
+        const view = ref()
         const { root, done } = mountInBody(() =>
-          withDirectives(h(Wrapper), [
-            [vShow, false],
-            [dir, 'v'],
+          withDirectives(h(Wrapper, { view: view.value }), [
+            [vShow, visible.value],
+            [dir, value.value],
           ]),
         )
-        await act(data)
+        await act(data, { visible, value, view })
         const html = root.innerHTML
         done()
         return { calls, html }
@@ -1829,6 +1841,8 @@ describe('vdomInterop', () => {
           'mounted P[b] v',
           '--',
           'A beforeUpdate',
+          // the doomed `beforeUpdate` again: A's render replaces its root
+          'beforeUpdate DIV[a0] (detached) v>v',
           'beforeUnmount DIV[a0] (detached) v',
           'created SECTION[s0] (detached) v',
           'beforeMount SECTION[s0] (detached) v',
@@ -1903,6 +1917,222 @@ describe('vdomInterop', () => {
           'A unmounted',
           'unmounted P[b] (detached) v',
           'B unmounted',
+        ])
+      })
+
+      test('a reactivated root receives the bindings it missed', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls, html } = await runKeptAlive(
+            vapor,
+            async (data, { visible, value }) => {
+              data.value.view = 'B'
+              await nextTick()
+              // both bindings change while A is deactivated
+              visible.value = true
+              value.value = 'w'
+              await nextTick()
+              data.value.log('--')
+              data.value.view = 'A'
+              await nextTick()
+            },
+          )
+          expect(html).toMatch(/^<div style="display: flex;">a0<\/div>/)
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.indexOf('B beforeUnmount'),
+          )
+        }
+
+        expect(await run(false)).toEqual([
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] v>w',
+          'updated DIV[a0] v>w',
+          'A updated',
+        ])
+        expect(await run(true)).toEqual([
+          'beforeUpdate P[b] w>w',
+          'beforeUpdate DIV[a0] v>w',
+          'updated DIV[a0] v>w',
+        ])
+      })
+
+      // coverage guard: the reviewed hole did not reproduce on the previous
+      // model, but nothing pinned it
+      test('a root restored after an empty reactivation is the active root', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls, html } = await runKeptAlive(
+            vapor,
+            async (data, { visible }) => {
+              data.value.view = 'B'
+              await nextTick()
+              data.value.ready = false
+              await nextTick()
+              data.value.view = 'A'
+              await nextTick()
+              data.value.log('--')
+              data.value.ready = true
+              await nextTick()
+              visible.value = true
+              await nextTick()
+            },
+          )
+          expect(html).toMatch(/^<div style="display: flex;">a0<\/div>/)
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.indexOf('B beforeUnmount'),
+          )
+        }
+
+        expect(await run(false)).toEqual([
+          'A beforeUpdate',
+          'created DIV[a0] (detached) v',
+          'beforeMount DIV[a0] (detached) v',
+          'mounted DIV[a0] v',
+          'A updated',
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] v>v',
+          'updated DIV[a0] v>v',
+          'A updated',
+        ])
+        // vapor does not re-render A on the v-show change
+        expect(await run(true)).toEqual([
+          'A beforeUpdate',
+          'created DIV[a0] (detached) v',
+          'beforeMount DIV[a0] (detached) v',
+          'mounted DIV[a0] v',
+          'A updated',
+          'beforeUpdate DIV[a0] v>v',
+          'updated DIV[a0] v>v',
+        ])
+      })
+
+      test('a deactivated component patches its root on its own update', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(vapor, async data => {
+            data.value.view = 'B'
+            await nextTick()
+            data.value.log('--')
+            data.value.local++
+            await nextTick()
+          })
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.indexOf('A beforeUnmount'),
+          )
+        }
+
+        await expectParity(run, [
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] (detached) v>v',
+          'updated DIV[a01] (detached) v>v',
+          'A updated',
+        ])
+      })
+
+      test('a deactivated component swaps its root with the bindings it holds', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(
+            vapor,
+            async (data, { value }) => {
+              data.value.view = 'B'
+              await nextTick()
+              // the parent moves on while A is deactivated
+              value.value = 'w'
+              await nextTick()
+              data.value.log('--')
+              data.value.alt = true
+              await nextTick()
+              data.value.log('--')
+              data.value.view = 'A'
+              await nextTick()
+            },
+          )
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.indexOf('B beforeUnmount'),
+          )
+        }
+
+        const vdom = await run(false)
+        expect(vdom).toEqual([
+          'A beforeUpdate',
+          'beforeUnmount DIV[a0] (detached) v',
+          'created SECTION[s0] (detached) v',
+          'beforeMount SECTION[s0] (detached) v',
+          'unmounted DIV[a0] (detached) v',
+          'mounted SECTION[s0] (detached) v',
+          'A updated',
+          '--',
+          'A beforeUpdate',
+          'beforeUpdate SECTION[s0] v>w',
+          'updated SECTION[s0] v>w',
+          'A updated',
+        ])
+        expect(await run(true)).toEqual([
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] (detached) v>v',
+          'beforeUnmount DIV[a0] (detached) v',
+          'created SECTION[s0] (detached) v',
+          'beforeMount SECTION[s0] (detached) v',
+          'unmounted DIV[a0] (detached) v',
+          'mounted SECTION[s0] (detached) v',
+          'A updated',
+          '--',
+          'beforeUpdate P[b] w>w',
+          'beforeUpdate SECTION[s0] v>w',
+          'updated SECTION[s0] v>w',
+        ])
+      })
+
+      test('a parent-driven switch leaves the deactivated root as it was', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(
+            vapor,
+            async (data, { value, view }) => {
+              data.value.log('--')
+              // one parent render switches the view and changes the binding
+              view.value = 'B'
+              value.value = 'w'
+              await nextTick()
+              data.value.local++
+              await nextTick()
+              view.value = 'A'
+              await nextTick()
+            },
+          )
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.indexOf('B beforeUnmount'),
+          )
+        }
+
+        const vdom = await run(false)
+        expect(vdom).toEqual([
+          'created P[b] (detached) w',
+          'beforeMount P[b] (detached) w',
+          'mounted P[b] w',
+          // A patches its root with the bindings it last received
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] (detached) v>v',
+          'updated DIV[a01] (detached) v>v',
+          'A updated',
+          'A beforeUpdate',
+          'beforeUpdate DIV[a01] v>w',
+          'updated DIV[a01] v>w',
+          'A updated',
+        ])
+        expect(await run(true)).toEqual([
+          'beforeUpdate DIV[a0] v>w',
+          'created P[b] (detached) w',
+          'beforeMount P[b] (detached) w',
+          'mounted P[b] w',
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] (detached) v>v',
+          'updated DIV[a01] (detached) v>v',
+          'A updated',
+          'beforeUpdate P[b] w>w',
+          'beforeUpdate DIV[a01] v>w',
+          'updated DIV[a01] v>w',
         ])
       })
 
