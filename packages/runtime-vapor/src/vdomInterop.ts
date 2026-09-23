@@ -3,7 +3,6 @@ import {
   type ComponentInternalInstance,
   type ConcreteComponent,
   type ElementNamespace,
-  ErrorCodes,
   Fragment,
   type FunctionalComponent,
   type HydrationRenderer,
@@ -21,13 +20,13 @@ import {
   type VNode,
   type VNodeArrayChildren,
   Comment as VNodeComment,
+  type VNodeHook,
   type VNodeNormalizedRef,
   type VaporInVdomInterface,
   VaporSlot as VaporSlotVNode,
   type VdomInVaporInterface,
   type VdomSlotOptions,
   type VdomSlotOutlet,
-  callWithAsyncErrorHandling,
   cloneVNode,
   createCommentVNode,
   createInternalObject,
@@ -41,6 +40,8 @@ import {
   getTransitionRawChildren,
   invokeDirectiveHook,
   invokeSlotFallback,
+  invokeVNodeHook,
+  isAsyncWrapper,
   isEmitListener,
   isKeepAlive,
   isVNode,
@@ -356,8 +357,6 @@ const vaporInteropImpl = {
     anchor: Node | null,
     parentComponent,
     parentSuspense,
-    onBeforeMount,
-    onVnodeBeforeMount,
   ) {
     const selfAnchor = (vnode.anchor = createTextNode())
     vnode.el = selfAnchor
@@ -421,30 +420,51 @@ const vaporInteropImpl = {
     if (rootEl) {
       vnode.el = rootEl
     }
-    // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
-    onVnodeBeforeMount && onVnodeBeforeMount()
-    // invoke directive hooks only when we have a valid root element
-    if (vnode.dirs) {
-      if (rootEl) {
-        onBeforeMount && onBeforeMount()
-      } else {
-        if (__DEV__) {
-          warn(
-            `Runtime directive used on component with non-element root node. ` +
-              `The directives will not function as intended.`,
+    const vnodeHooks = isAsyncWrapper(vnode) ? null : vnode.props
+    const beforeMountHook = vnodeHooks && vnodeHooks.onVnodeBeforeMount
+    if (beforeMountHook || vnode.dirs) {
+      // `bm` runs after the component's own beforeMount hooks, once the block
+      // exists (a pending async setup included) and before it is inserted
+      ;(instance.bm ||= []).push(() => {
+        // align with VDOM: vnode beforeMount runs before directive created/beforeMount.
+        invokeInteropVNodeHook(instance, beforeMountHook, vnode)
+        if (!vnodeHookState.vnode.dirs) return
+        const dirsRoot = resolveInteropDirsRoot(instance, vnodeHookState)
+        if (dirsRoot) {
+          queueInteropDirsJob(
+            instance,
+            mountInteropDirs(instance, vnodeHookState, dirsRoot),
           )
+        } else if (__DEV__) {
+          warnNonElementRootDirs()
         }
-        vnode.dirs = null
-      }
+      })
+    }
+    if (vnode.dirs) {
+      // after the component's own `bum`, while the root is still in the DOM;
+      // `unmounted` follows the boundary of the unmount pass, like `um`
+      ;(instance.bum ||= []).push(() =>
+        queueInteropDirsJob(
+          instance,
+          unmountInteropDirs(instance, vnodeHookState),
+          resolveUnmountSuspense(instance.suspense),
+        ),
+      )
     }
 
     mountComponent(instance, container, selfAnchor)
+    queueInteropVNodeHook(
+      instance,
+      vnodeHooks && vnodeHooks.onVnodeMounted,
+      vnode,
+      parentSuspense,
+    )
 
     simpleSetCurrentInstance(prev)
     return instance
   },
 
-  update(n1, n2, shouldUpdate, onBeforeUpdate, onVnodeBeforeUpdate) {
+  update(n1, n2, shouldUpdate) {
     n2.component = n1.component
     n2.el = n1.el
     n2.anchor = n1.anchor
@@ -457,32 +477,11 @@ const vaporInteropImpl = {
       if (rootEl) {
         n2.el = rootEl
       }
-      // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
-      onVnodeBeforeUpdate && onVnodeBeforeUpdate()
-      // invoke directive hooks only when we have a valid root element
-      if (n2.dirs) {
-        if (rootEl) {
-          onBeforeUpdate && onBeforeUpdate()
-        } else {
-          n2.dirs = null
-        }
-      }
-      vnodeHookState.pendingVNodeUpdate = n2
       if (n2.transition && instance.block) {
         ensureTransitionHooksRegistered()
         setVaporTransitionHooks(instance, n2.transition as VaporTransitionHooks)
       }
-      instance.rawPropsRef!.value = filterReservedProps(n2.props)
-      instance.rawSlotsRef!.value = normalizeInteropSlots(n2.children)
-      queuePostFlushCb(() => {
-        syncVNodeEl(n2, instance)
-        // The ref writes scheduled no render effect (no `u` will consume the
-        // token) when the instance is not mid-update by post-flush time; a
-        // newer driven update owns the slot if the token is no longer ours.
-        if (vnodeHookState.pendingVNodeUpdate === n2 && !instance.isUpdating) {
-          vnodeHookState.pendingVNodeUpdate = null
-        }
-      })
+      updateInteropVNode(instance, vnodeHookState, n2, n1)
     }
   },
 
@@ -503,6 +502,12 @@ const vaporInteropImpl = {
     let slotStartAnchor: Node | null = null
     if (instance) {
       const anchor = vnode.anchor as Node | null
+      const vnodeHooks = isAsyncWrapper(vnode) ? null : vnode.props
+      invokeInteropVNodeHook(
+        instance,
+        vnodeHooks && vnodeHooks.onVnodeBeforeUnmount,
+        vnode,
+      )
       if (instance.block) {
         unmountComponent(instance, container, parentSuspense)
         if (!doRemove) {
@@ -522,6 +527,12 @@ const vaporInteropImpl = {
           instance.pendingBlock = undefined
         }
       }
+      queueInteropVNodeHook(
+        instance,
+        vnodeHooks && vnodeHooks.onVnodeUnmounted,
+        vnode,
+        parentSuspense,
+      )
     } else if (vnode.vb) {
       const anchor = vnode.anchor as Node | null
       // `hydrateSlot()` records the opening marker for VDOM SSR slot fragments
@@ -687,8 +698,6 @@ const vaporInteropImpl = {
     anchor: Node | null,
     parentComponent,
     parentSuspense,
-    onBeforeMount,
-    onVnodeBeforeMount,
   ) {
     // Check vapor's isHydrating (for createVaporSSRApp) and VDOM's
     // isVdomHydrating (for createSSRApp). isVdomHydratingEnabled covers
@@ -707,8 +716,6 @@ const vaporInteropImpl = {
         anchor,
         parentComponent,
         parentSuspense,
-        onBeforeMount,
-        onVnodeBeforeMount,
       ) as VaporComponentInstance
     })
     if (instance && instance.asyncDep && !instance.asyncResolved) {
@@ -852,99 +859,29 @@ const vaporInteropImpl = {
     if (rootEl) {
       vnode.el = rootEl
     }
-    if (vnode.dirs && !rootEl) {
-      if (__DEV__) {
-        warn(
-          `Runtime directive used on component with non-element root node. ` +
-            `The directives will not function as intended.`,
-        )
-      }
-      vnode.dirs = null
-    }
+    if (__DEV__ && vnode.dirs && !rootEl) warnNonElementRootDirs()
     const shouldUpdate = shouldUpdateComponent(cached, vnode)
     if (shouldUpdate) {
-      vnodeHookState.pendingVNodeUpdate = vnode
-      instance.rawPropsRef!.value = filterReservedProps(vnode.props)
-      instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
-      const vnodeBeforeUpdateHook =
-        vnode.props && vnode.props.onVnodeBeforeUpdate
-      if (vnodeBeforeUpdateHook) {
-        callWithAsyncErrorHandling(
-          vnodeBeforeUpdateHook,
-          parentComponent,
-          ErrorCodes.VNODE_HOOK,
-          [vnode, cached],
-        )
-      }
-      if (vnode.ibu) vnode.ibu()
-      if (vnode.dirs) {
-        invokeDirectiveHook(vnode, cached, parentComponent, 'beforeUpdate')
-      }
-      queuePostFlushCb(() => {
-        syncVNodeEl(vnode, instance)
-        if (
-          vnodeHookState.pendingVNodeUpdate === vnode &&
-          !instance.isUpdating
-        ) {
-          vnodeHookState.pendingVNodeUpdate = null
-        }
-      })
-      queuePostRenderEffect(
-        () => {
-          if (vnode.dirs) {
-            invokeDirectiveHook(vnode, cached, parentComponent, 'updated')
-          }
-          const vnodeUpdatedHook = vnode.props && vnode.props.onVnodeUpdated
-          if (vnodeUpdatedHook) {
-            callWithAsyncErrorHandling(
-              vnodeUpdatedHook,
-              parentComponent,
-              ErrorCodes.VNODE_HOOK,
-              [vnode, cached],
-            )
-          }
-          if (vnode.iu) vnode.iu()
-        },
-        undefined,
-        parentSuspense,
-      )
+      updateInteropVNode(instance, vnodeHookState, vnode, cached)
     }
     activate(instance, container, anchor, parentSuspense)
     insert(vnode.anchor as any, container, anchor)
-    const vnodeMountedHook = vnode.props && vnode.props.onVnodeMounted
-    if (vnodeMountedHook) {
-      queuePostRenderEffect(
-        () => {
-          callWithAsyncErrorHandling(
-            vnodeMountedHook,
-            parentComponent,
-            ErrorCodes.VNODE_HOOK,
-            [vnode],
-          )
-        },
-        undefined,
-        parentSuspense,
-      )
-    }
+    queueInteropVNodeHook(
+      instance,
+      vnode.props && vnode.props.onVnodeMounted,
+      vnode,
+      parentSuspense,
+    )
   },
 
   deactivate(vnode, container: ParentNode, parentSuspense) {
     const instance = getVaporInstance(vnode)
     deactivate(instance, container, parentSuspense)
     insert(vnode.anchor as any, container)
-    queuePostRenderEffect(
-      () => {
-        const vnodeHook = vnode.props && vnode.props.onVnodeUnmounted
-        if (vnodeHook) {
-          callWithAsyncErrorHandling(
-            vnodeHook,
-            instance.parent,
-            ErrorCodes.VNODE_HOOK,
-            [vnode],
-          )
-        }
-      },
-      undefined,
+    queueInteropVNodeHook(
+      instance,
+      vnode.props && vnode.props.onVnodeUnmounted,
+      vnode,
       parentSuspense,
     )
   },
@@ -3204,19 +3141,217 @@ function resolveInteropRootEl(
 }
 
 function syncVNodeEl(vnode: VNode, instance: VaporComponentInstance): void {
-  const rootEl = resolveInteropRootEl(instance)
-  if (rootEl) {
-    vnode.el = rootEl
-  } else {
-    vnode.el = vnode.anchor
-    vnode.dirs = null
-  }
+  vnode.el = resolveInteropRootEl(instance) || vnode.anchor
 }
 
 function syncInteropRoot(instance: VaporComponentInstance): void {
   const state = vnodeHookStateMap.get(instance)
   if (!state) return
   syncVNodeEl(state.vnode, instance)
+}
+
+// VDOM inherits a component vnode's directives onto the rendered root vnode,
+// so they mount, patch and unmount with that root element. A vapor child
+// renders past the renderer, so interop plays the root vnode's part: the
+// target is the root element inside its created..beforeUnmount window.
+interface InteropDirsTarget {
+  el: Element
+  // The vnode whose bindings the element carries. A renderer-driven update
+  // only lands here with its `updated`, so a root replaced mid-update still
+  // unmounts with the bindings it was mounted with.
+  vnode: VNode
+  updating: boolean
+}
+
+function invokeInteropDirsHook(
+  instance: VaporComponentInstance,
+  target: InteropDirsTarget,
+  name: Parameters<typeof invokeDirectiveHook>[3],
+  vnode: VNode = target.vnode,
+  prevVNode: VNode | null = null,
+): void {
+  invokeDirectiveHook(
+    // hooks are handed `vnode.el`, which moves on with the root
+    vnode.el === target.el ? vnode : extend({}, vnode, { el: target.el }),
+    prevVNode,
+    instance.parent as ComponentInternalInstance | null,
+    name,
+  )
+}
+
+function queueInteropDirsJob(
+  instance: VaporComponentInstance,
+  job: (() => void) | undefined,
+  suspense: SuspenseBoundary | null = instance.suspense,
+): void {
+  if (job) queuePostRenderEffect(job, undefined, suspense)
+}
+
+function warnNonElementRootDirs(): void {
+  warn(
+    `Runtime directive used on component with non-element root node. ` +
+      `The directives will not function as intended.`,
+  )
+}
+
+// vdom mount of the inherited root vnode; returns the `mounted` job
+function mountInteropDirs(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  el: Element,
+): () => void {
+  const vnode = state.vnode
+  const target: InteropDirsTarget = (state.dirsTarget = {
+    el,
+    vnode,
+    updating: false,
+  })
+  vnode.el = el
+  invokeInteropDirsHook(instance, target, 'created')
+  invokeInteropDirsHook(instance, target, 'beforeMount')
+  return () => invokeInteropDirsHook(instance, target, 'mounted', vnode)
+}
+
+// vdom unmount of the inherited root vnode; returns the `unmounted` job
+function unmountInteropDirs(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+): (() => void) | undefined {
+  const target = state.dirsTarget
+  if (!target) return
+  state.dirsTarget = null
+  invokeInteropDirsHook(instance, target, 'beforeUnmount')
+  return () => invokeInteropDirsHook(instance, target, 'unmounted')
+}
+
+// renderer-driven update of the inherited root vnode
+function updateInteropDirs(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  vnode: VNode,
+  prevVNode: VNode,
+): void {
+  const target = state.dirsTarget
+  if (!target) return
+  invokeInteropDirsHook(instance, target, 'beforeUpdate', vnode, prevVNode)
+  queueInteropDirsJob(instance, () => {
+    // a root replaced during the update was mounted, not patched
+    if (state.dirsTarget !== target) return
+    target.vnode = vnode
+    invokeInteropDirsHook(instance, target, 'updated', vnode, prevVNode)
+  })
+}
+
+// Self-driven update of the root chain. `source` is a nested root-chain
+// component: vdom patches the same inherited root vnode when it re-renders.
+function interopDirsSelfUpdate(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  before: boolean,
+  source?: VaporComponentInstance,
+): void {
+  const target = state.dirsTarget
+  if (
+    !target ||
+    // a `beforeUpdate` is owed exactly one `updated`
+    target.updating === before ||
+    (before &&
+      (state.pendingVNodeUpdate ||
+        (source && !isOnInteropRootChain(instance, source))))
+  ) {
+    return
+  }
+  target.updating = before
+  invokeInteropDirsHook(
+    instance,
+    target,
+    before ? 'beforeUpdate' : 'updated',
+    target.vnode,
+    target.vnode,
+  )
+}
+
+function invokeInteropVNodeHook(
+  instance: VaporComponentInstance,
+  hook: VNodeHook | null | undefined,
+  vnode: VNode,
+  prevVNode: VNode | null = null,
+): void {
+  if (hook) invokeVNodeHook(hook, instance.parent, vnode, prevVNode)
+}
+
+function queueInteropVNodeHook(
+  instance: VaporComponentInstance,
+  hook: VNodeHook | null | undefined,
+  vnode: VNode,
+  suspense: SuspenseBoundary | null,
+): void {
+  if (hook) {
+    queuePostRenderEffect(
+      () => invokeVNodeHook(hook, instance.parent, vnode),
+      undefined,
+      suspense,
+    )
+  }
+}
+
+function invokeInteropVNodeBeforeUpdate(
+  instance: VaporComponentInstance,
+  vnode: VNode,
+  prevVNode: VNode,
+): void {
+  invokeInteropVNodeHook(
+    instance,
+    vnode.props && vnode.props.onVnodeBeforeUpdate,
+    vnode,
+    prevVNode,
+  )
+  if (vnode.ibu) vnode.ibu()
+}
+
+function invokeInteropVNodeUpdated(
+  instance: VaporComponentInstance,
+  vnode: VNode,
+  prevVNode: VNode,
+): void {
+  invokeInteropVNodeHook(
+    instance,
+    vnode.props && vnode.props.onVnodeUpdated,
+    vnode,
+    prevVNode,
+  )
+  if (vnode.iu) vnode.iu()
+}
+
+// Renderer-driven update: props first, then the hooks, as in VDOM.
+function updateInteropVNode(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  vnode: VNode,
+  prevVNode: VNode,
+): void {
+  state.pendingVNodeUpdate = vnode
+  instance.rawPropsRef!.value = filterReservedProps(vnode.props)
+  instance.rawSlotsRef!.value = normalizeInteropSlots(vnode.children)
+  // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
+  invokeInteropVNodeBeforeUpdate(instance, vnode, prevVNode)
+  updateInteropDirs(instance, state, vnode, prevVNode)
+  queuePostFlushCb(() => {
+    syncVNodeEl(vnode, instance)
+    // The ref writes scheduled no render effect (no `u` will consume the
+    // token) when the instance is not mid-update by post-flush time; a
+    // newer driven update owns the slot if the token is no longer ours.
+    if (state.pendingVNodeUpdate === vnode && !instance.isUpdating) {
+      state.pendingVNodeUpdate = null
+    }
+  })
+  if ((vnode.props && vnode.props.onVnodeUpdated) || vnode.iu) {
+    queuePostRenderEffect(
+      () => invokeInteropVNodeUpdated(instance, vnode, prevVNode),
+      undefined,
+      instance.suspense,
+    )
+  }
 }
 
 interface VNodeHookState {
@@ -3227,6 +3362,7 @@ interface VNodeHookState {
   // in update()/activate() clears only its own token — identity, not timing,
   // decides — covering ref writes that scheduled no render effect.
   pendingVNodeUpdate: VNode | null
+  dirsTarget: InteropDirsTarget | null
 }
 
 const vnodeHookStateMap = new WeakMap<VaporComponentInstance, VNodeHookState>()
@@ -3243,46 +3379,37 @@ function ensureVNodeHookState(
     state = {
       vnode,
       pendingVNodeUpdate: null,
+      dirsTarget: null,
     }
     vnodeHookStateMap.set(instance, state)
     ;(instance.bu ||= []).push(() => {
       if (state!.pendingVNodeUpdate) return
-      const vnodeHook =
-        state!.vnode.props && state!.vnode.props.onVnodeBeforeUpdate
-      if (vnodeHook) {
-        callWithAsyncErrorHandling(
-          vnodeHook,
-          instance.parent,
-          ErrorCodes.VNODE_HOOK,
-          [state!.vnode, state!.vnode],
-        )
-      }
-      if (state!.vnode.ibu) state!.vnode.ibu()
+      // align with VDOM: vnode beforeUpdate runs before directive beforeUpdate.
+      invokeInteropVNodeBeforeUpdate(instance, state!.vnode, state!.vnode)
+      interopDirsSelfUpdate(instance, state!, true)
     })
 
     // Sync the outer component vnode before running any updated hooks. Hooks
     // that depend on the latest root, like scoped CSS interop, run immediately
     // after the sync and before component updated hooks / onVnodeUpdated.
-    ;(instance.u ||= []).unshift(() => syncInteropRoot(instance))
+    ;(instance.u ||= []).unshift(() => {
+      syncInteropRoot(instance)
+      // align with VDOM: directive updated runs before the component's own
+      // updated hooks, vnode updated after them.
+      interopDirsSelfUpdate(instance, state!, false)
+    })
     instance.u.push(() => {
       if (state!.pendingVNodeUpdate) {
         state!.pendingVNodeUpdate = null
         return
       }
-      const vnodeHook = state!.vnode.props && state!.vnode.props.onVnodeUpdated
-      if (vnodeHook) {
-        callWithAsyncErrorHandling(
-          vnodeHook,
-          instance.parent,
-          ErrorCodes.VNODE_HOOK,
-          [state!.vnode, state!.vnode],
-        )
-      }
-      if (state!.vnode.iu) state!.vnode.iu()
+      invokeInteropVNodeUpdated(instance, state!.vnode, state!.vnode)
     })
   } else {
     state.vnode = vnode
   }
+  // vdom stops patching bindings the next vnode no longer carries
+  if (!vnode.dirs) state.dirsTarget = null
   return state
 }
 
@@ -3690,6 +3817,87 @@ function registerInteropRootSync(
   if (interopRootSyncFragmentMap.get(frag) === instance) return
   interopRootSyncFragmentMap.set(frag, instance)
   ;(frag.u ||= []).push(() => syncInteropRoot(instance))
+}
+
+// Registered on demand: only instances whose vnode carries directives
+// resolve through `resolveInteropDirsRoot`.
+const interopDirsProducers = new WeakSet<
+  DynamicFragment | VaporComponentInstance
+>()
+
+function resolveInteropDirsRoot(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  block: Block = instance,
+): Element | undefined {
+  return getRootElement(block, {
+    // a slot outlet is a fragment root in vdom: nothing for directives to
+    // land on
+    excludeSlotOutlets: true,
+    onDynamicFragment: frag =>
+      registerInteropDirsFragment(instance, state, frag),
+    onComponent: comp => registerInteropDirsComponent(instance, state, comp),
+  })
+}
+
+// A branch switch is the vdom unmount + mount of the inherited root vnode:
+// the old root is released while still in the DOM (`bu`), the new one is
+// mounted before it is inserted (`bm`).
+function registerInteropDirsFragment(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  frag: DynamicFragment,
+): void {
+  registerInteropRootSync(instance, frag)
+  if (interopDirsProducers.has(frag)) return
+  interopDirsProducers.add(frag)
+  ;(frag.bu ||= []).push(() => {
+    const target = state.dirsTarget
+    // Fragments off the chain (a deactivated KeepAlive branch) keep their root
+    if (target && getRootElement(frag.nodes) === target.el) {
+      queueInteropDirsJob(instance, unmountInteropDirs(instance, state))
+    }
+  })
+  ;(frag.bm ||= []).push(nodes => {
+    if (
+      state.dirsTarget ||
+      !state.vnode.dirs ||
+      !isOnInteropRootChain(instance, frag)
+    ) {
+      return
+    }
+    const dirsRoot = resolveInteropDirsRoot(instance, state, nodes)
+    if (dirsRoot) {
+      queueInteropDirsJob(instance, mountInteropDirs(instance, state, dirsRoot))
+    }
+  })
+}
+
+function registerInteropDirsComponent(
+  instance: VaporComponentInstance,
+  state: VNodeHookState,
+  comp: VaporComponentInstance,
+): void {
+  if (comp === instance || interopDirsProducers.has(comp)) return
+  interopDirsProducers.add(comp)
+  ;(comp.bu ||= []).push(() =>
+    interopDirsSelfUpdate(instance, state, true, comp),
+  )
+  ;(comp.u ||= []).push(() => interopDirsSelfUpdate(instance, state, false))
+}
+
+function isOnInteropRootChain(
+  instance: VaporComponentInstance,
+  producer: DynamicFragment | VaporComponentInstance,
+): boolean {
+  let found = false
+  getRootElement(instance, {
+    excludeSlotOutlets: true,
+    // mid-render `frag.nodes` is still the previous branch: stop at the match
+    onDynamicFragment: frag => frag === producer && (found = true),
+    onComponent: comp => comp === producer && (found = true),
+  })
+  return found
 }
 
 /**

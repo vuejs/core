@@ -343,10 +343,6 @@ export function createHydrationFunctions(
 
           // hydrate vapor component
           if ((vnode.type as ConcreteComponent).__vapor) {
-            const vnodeBeforeMountHook =
-              !isAsyncWrapper(vnode) &&
-              vnode.props &&
-              vnode.props.onVnodeBeforeMount
             getVaporInterface(parentComponent, vnode).hydrate(
               vnode,
               node,
@@ -354,42 +350,7 @@ export function createHydrationFunctions(
               nextNode,
               parentComponent,
               parentSuspense,
-              () => {
-                if (vnode.dirs) {
-                  invokeDirectiveHook(vnode, null, parentComponent, 'created')
-                  invokeDirectiveHook(
-                    vnode,
-                    null,
-                    parentComponent,
-                    'beforeMount',
-                  )
-                }
-              },
-              () => {
-                if (vnodeBeforeMountHook) {
-                  invokeVNodeHook(vnodeBeforeMountHook, parentComponent, vnode)
-                }
-              },
             )
-            if (vnode.dirs) {
-              queueEffectWithSuspense(
-                () =>
-                  invokeDirectiveHook(vnode, null, parentComponent, 'mounted'),
-                undefined,
-                parentSuspense,
-              )
-            }
-            const vnodeMountedHook =
-              !isAsyncWrapper(vnode) &&
-              vnode.props &&
-              vnode.props.onVnodeMounted
-            if (vnodeMountedHook) {
-              queueEffectWithSuspense(
-                () => invokeVNodeHook(vnodeMountedHook, parentComponent, vnode),
-                undefined,
-                parentSuspense,
-              )
-            }
           } else {
             mountComponent(
               vnode,

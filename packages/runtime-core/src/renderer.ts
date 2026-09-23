@@ -1228,78 +1228,20 @@ function baseCreateRenderer(
             parentSuspense,
           )
         } else {
-          const vnodeBeforeMountHook =
-            !isAsyncWrapper(n2) && n2.props && n2.props.onVnodeBeforeMount
           getVaporInterface(parentComponent, n2).mount(
             n2,
             container,
             anchor,
             parentComponent,
             parentSuspense,
-            () => {
-              if (n2.dirs) {
-                invokeDirectiveHook(n2, null, parentComponent, 'created')
-                invokeDirectiveHook(n2, null, parentComponent, 'beforeMount')
-              }
-            },
-            () => {
-              if (vnodeBeforeMountHook) {
-                invokeVNodeHook(vnodeBeforeMountHook, parentComponent, n2)
-              }
-            },
           )
-          if (n2.dirs) {
-            queuePostRenderEffect(
-              () => invokeDirectiveHook(n2, null, parentComponent, 'mounted'),
-              undefined,
-              parentSuspense,
-            )
-          }
-          const vnodeMountedHook =
-            !isAsyncWrapper(n2) && n2.props && n2.props.onVnodeMounted
-          if (vnodeMountedHook) {
-            const scopedVNode = n2
-            queuePostRenderEffect(
-              () =>
-                invokeVNodeHook(vnodeMountedHook, parentComponent, scopedVNode),
-              undefined,
-              parentSuspense,
-            )
-          }
         }
       } else {
-        const shouldUpdate = shouldUpdateComponent(n1, n2, optimized)
         getVaporInterface(parentComponent, n2).update(
           n1,
           n2,
-          shouldUpdate,
-          () => {
-            if (n2.dirs) {
-              invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
-            }
-          },
-          () => {
-            const vnodeBeforeUpdateHook =
-              n2.props && n2.props.onVnodeBeforeUpdate
-            if (vnodeBeforeUpdateHook) {
-              invokeVNodeHook(vnodeBeforeUpdateHook, parentComponent, n2, n1)
-            }
-            if (n2.ibu) n2.ibu()
-          },
+          shouldUpdateComponent(n1, n2, optimized),
         )
-        const vnodeUpdatedHook = n2.props && n2.props.onVnodeUpdated
-        if (shouldUpdate && (vnodeUpdatedHook || n2.dirs || n2.iu)) {
-          queuePostRenderEffect(
-            () => {
-              n2.dirs && invokeDirectiveHook(n2, n1, parentComponent, 'updated')
-              vnodeUpdatedHook &&
-                invokeVNodeHook(vnodeUpdatedHook, parentComponent, n2, n1)
-              n2.iu && n2.iu()
-            },
-            undefined,
-            parentSuspense,
-          )
-        }
       }
     } else if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
@@ -2433,6 +2375,19 @@ function baseCreateRenderer(
       return
     }
 
+    // the vapor interop owns the vnode and directive hooks of its component
+    if (
+      shapeFlag & ShapeFlags.COMPONENT &&
+      isVaporComponent(type as ConcreteComponent)
+    ) {
+      getVaporInterface(parentComponent, vnode).unmount(
+        vnode,
+        doRemove,
+        parentSuspense,
+      )
+      return
+    }
+
     const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
     const shouldInvokeVnodeHook = !isAsyncWrapper(vnode)
 
@@ -2445,35 +2400,7 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT) {
-      if (isVaporComponent(type as ConcreteComponent)) {
-        // invoke directive hooks for vapor components
-        if (dirs) {
-          invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
-        }
-        getVaporInterface(parentComponent, vnode).unmount(
-          vnode,
-          doRemove,
-          parentSuspense,
-        )
-        if (
-          (shouldInvokeVnodeHook &&
-            (vnodeHook = props && props.onVnodeUnmounted)) ||
-          dirs
-        ) {
-          queuePostRenderEffect(
-            () => {
-              dirs &&
-                invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
-              vnodeHook && invokeVNodeHook(vnodeHook, parentComponent, vnode)
-            },
-            undefined,
-            parentSuspense,
-          )
-        }
-        return
-      } else {
-        unmountComponent(vnode.component!, parentSuspense, doRemove)
-      }
+      unmountComponent(vnode.component!, parentSuspense, doRemove)
     } else {
       if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
         vnode.suspense!.unmount(parentSuspense, doRemove)

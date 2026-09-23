@@ -632,6 +632,8 @@ export {
   type VNodeNormalizedRef,
   type VdomSlotOutlet,
   normalizeRef,
+  invokeVNodeHook,
+  type VNodeHook,
 } from './vnode'
 /**
  * @internal
