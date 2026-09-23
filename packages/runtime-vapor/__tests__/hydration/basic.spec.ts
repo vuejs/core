@@ -326,6 +326,50 @@ describe('Vapor Mode hydration', () => {
       )
     })
 
+    test('custom element with an initially empty text child', async () => {
+      const data = ref('')
+      const { container } = await testHydration(
+        `<template><my-el>{{ data }}</my-el></template>`,
+        undefined,
+        data,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el></my-el>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el>foo</my-el>"`,
+      )
+    })
+
+    test('custom element with an initially empty text child after another child', async () => {
+      const data = ref('')
+      const { container } = await testHydration(
+        `<template><my-el><b>head</b>{{ data }}</my-el></template>`,
+        undefined,
+        data,
+        {
+          compilerOptions: { isCustomElement: tag => tag.startsWith('my-') },
+        },
+      )
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el><b>head</b></my-el>"`,
+      )
+      expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+
+      data.value = 'foo'
+      await nextTick()
+      expect(formatHtml(container.innerHTML)).toMatchInlineSnapshot(
+        `"<my-el><b>head</b>foo</my-el>"`,
+      )
+    })
+
     test('element with ref', async () => {
       const { data, container } = await testHydration(
         `<template>

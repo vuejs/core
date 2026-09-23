@@ -40,8 +40,12 @@ export function template(html: string, flags: number = 0, ns?: Namespace) {
     // instead of the enclosing template
     let hydrationCursor: HydrationCursor | null = null
     if (insertionParent) {
-      if (isHydrating) hydrationCursor = enterHydrationCursor()
-      else resetInsertionState()
+      if (isHydrating) {
+        hydrationCursor = enterHydrationCursor(
+          undefined,
+          (adoptTarget ||= parseAdoptTarget(html)).blank,
+        )
+      } else resetInsertionState()
     }
     if (isHydrating) {
       let adopted: Node | null = null
