@@ -2241,6 +2241,77 @@ describe('vdomInterop', () => {
         ])
       })
 
+      test('bindings received while the root was empty survive a later deactivation', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(
+            vapor,
+            async (data, { value }) => {
+              data.value.ready = false
+              await nextTick()
+              // A is active, with no element root, when the binding changes
+              value.value = 'w'
+              await nextTick()
+              data.value.view = 'B'
+              await nextTick()
+              data.value.log('--')
+              data.value.ready = true
+              await nextTick()
+            },
+          )
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.findIndex(hook => hook.endsWith(' beforeUnmount')),
+          )
+        }
+
+        const vdom = await run(false)
+        expect(vdom).toEqual([
+          'A beforeUpdate',
+          'created DIV[a0] (detached) w',
+          'beforeMount DIV[a0] (detached) w',
+          'mounted DIV[a0] (detached) w',
+          'A updated',
+        ])
+        expect(await run(true)).toEqual(vdom)
+      })
+
+      test('a component deactivated by its parent still patches its own update in the same tick', async () => {
+        const run = async (vapor: boolean) => {
+          const { calls } = await runKeptAlive(vapor, async data => {
+            data.value.log('--')
+            // same tick: the wrapper switches A out, A re-renders itself
+            data.value.view = 'B'
+            data.value.local++
+            await nextTick()
+          })
+          return calls.slice(
+            calls.indexOf('--') + 1,
+            calls.findIndex(hook => hook.endsWith(' beforeUnmount')),
+          )
+        }
+
+        const vdom = await run(false)
+        expect(vdom).toEqual([
+          'created P[b] (detached) v',
+          'beforeMount P[b] (detached) v',
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] (detached) v>v',
+          'mounted P[b] v',
+          'updated DIV[a01] (detached) v>v',
+          'A updated',
+        ])
+        expect(await run(true)).toEqual([
+          'beforeUpdate DIV[a0] v>v',
+          'created P[b] (detached) v',
+          'beforeMount P[b] (detached) v',
+          'A beforeUpdate',
+          'beforeUpdate DIV[a0] (detached) v>v',
+          'mounted P[b] v',
+          'updated DIV[a01] (detached) v>v',
+          'A updated',
+        ])
+      })
+
       // vapor only: a vdom Transition renders a placeholder root while the
       // leave is pending, so the vdom child has no comparable sequence
       test('an out-in leave releases the old root once', async () => {

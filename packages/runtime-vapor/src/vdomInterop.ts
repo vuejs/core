@@ -3358,6 +3358,7 @@ function updateInteropDirs(
   vnode: VNode,
   prevVNode: VNode,
 ): void {
+  if (!state.dirsOwners) return
   settleInteropDirsReceived(instance, state)
   const received: [InteropDirsOwner, VNode][] = (state.dirsReceived = [])
   const owner = innerInteropDirsOwner(state, instance, owner => {
@@ -3365,24 +3366,40 @@ function updateInteropDirs(
     owner.vnode = vnode
   })
   const el = owner && owner.el
-  if (!el) return
-  invokeInteropDirsHook(
-    instance,
-    { el, vnode },
-    'beforeUpdate',
-    vnode,
-    prevVNode,
-  )
+  if (el) {
+    invokeInteropDirsHook(
+      instance,
+      { el, vnode },
+      'beforeUpdate',
+      vnode,
+      prevVNode,
+    )
+  }
   queueInteropDirsJob(instance, () => {
     settleInteropDirsReceived(instance, state)
     // a root the update replaced was mounted, not patched; one it
     // deactivated was not patched either
-    if (owner.el !== el || innerInteropDirsOwner(state, instance) !== owner) {
+    if (
+      !el ||
+      owner!.el !== el ||
+      innerInteropDirsOwner(state, instance) !== owner
+    ) {
       return
     }
-    owner.carried = vnode
+    owner!.carried = vnode
     invokeInteropDirsHook(instance, { el, vnode }, 'updated', vnode, prevVNode)
   })
+}
+
+// Whether the re-render that marked `owner` still renders its root: a mark
+// left by a component that switched the root out since is stale.
+function isInteropDirsUpdating(
+  state: VNodeHookState,
+  owner: InteropDirsOwner,
+): boolean {
+  return (
+    !!owner.updating && innerInteropDirsOwner(state, owner.updating) === owner
+  )
 }
 
 // `source` re-renders: vdom patches the inherited root vnode below it again,
@@ -3403,7 +3420,7 @@ function beforeInteropDirsSelfUpdate(
     return
   }
   if (!owner.el) owner = innerInteropDirsOwner(state, source)
-  if (!owner || !owner.el || owner.updating) return
+  if (!owner || !owner.el || isInteropDirsUpdating(state, owner)) return
   owner.updating = source
   invokeInteropDirsHook(
     instance,
@@ -4039,7 +4056,14 @@ function registerInteropDirsFragment(
     settleInteropDirsReceived(instance, state)
     const owner = reactivated
     reactivated = null
-    if (!owner || !owner.el || !owner.pending || owner.updating) return
+    if (
+      !owner ||
+      !owner.el ||
+      !owner.pending ||
+      isInteropDirsUpdating(state, owner)
+    ) {
+      return
+    }
     // the activation patch is owed to the component's own re-render when it
     // has one (new props), and runs on its own otherwise
     owner.updating = owner.comp
